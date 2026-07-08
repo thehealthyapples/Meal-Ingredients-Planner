@@ -77,7 +77,7 @@ nutrition_profile:
   quantitative_values_status: pending_database_validation
   do_not_display_numeric_values_yet: true
   notable_nutrients:
-  - nutrient: high_quality_protein
+  - nutrient: protein
     role: supports protein coverage across meals
     confidence: well_established
   - nutrient: choline
@@ -86,10 +86,16 @@ nutrition_profile:
   - nutrient: vitamin_B12
     role: animal-source micronutrient coverage
     confidence: well_established
-  - nutrient: iodine_and_selenium
+  - nutrient: iodine
     role: contributes to mineral coverage depending on production/feed
     confidence: moderate
-  - nutrient: lutein_and_zeaxanthin
+  - nutrient: selenium
+    role: contributes to mineral coverage depending on production/feed
+    confidence: moderate
+  - nutrient: lutein
+    role: egg-yolk carotenoid context
+    confidence: moderate
+  - nutrient: zeaxanthin
     role: egg-yolk carotenoid context
     confidence: moderate
   editorial_summary: Eggs is useful in THA as a recognised, household-friendly food that can improve meal quality
@@ -98,12 +104,6 @@ benefit_language:
 - area: protein
   approved_wording: Adds a compact, versatile protein source.
   evidence_tone: food_composition
-- area: breakfast_quality
-  approved_wording: Can improve protein content of breakfasts that are otherwise mostly carbohydrate.
-  evidence_tone: meal_composition
-- area: household_adaptability
-  approved_wording: Useful as an optional protein slot, but must be excluded for egg-free members.
-  evidence_tone: platform_logic
 planner_metadata:
   meal_slots:
   - breakfast

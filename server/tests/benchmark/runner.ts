@@ -15,17 +15,22 @@
 
 import { randomUUID } from "node:crypto";
 import type {
-  BenchmarkMode, BenchmarkResult, DimensionKey,
+  BenchmarkEnvironment, BenchmarkMode, BenchmarkResult, DimensionKey,
 } from "./types.js";
 import { resolveBundle, resolveProvenance, judgeDescriptor, loadQuestionsFixture, bundleVersionLabel } from "./bundle.js";
 import { RESULT_SCHEMA_VERSION } from "./bundle.js";
 import { selectQuestions } from "./select.js";
-import { deriveExpectation } from "./expectations.js";
-import { scoreDeterministic, buildQuestionResult, JUDGE_OWNED, DIMENSION_WEIGHTS, DIMENSION_NAMES, type CapturedTurn } from "./scorer.js";
+import { deriveExpectation, registryExecutableCapabilityIds } from "./expectations.js";
+import {
+  scoreDeterministic, buildQuestionResult, applyGateCaps,
+  JUDGE_OWNED, DIMENSION_WEIGHTS, DIMENSION_NAMES, type CapturedTurn,
+} from "./scorer.js";
 import { resolveJudge, type JudgeClient } from "./judge.js";
 import {
   rollupDimensions, rollupDomains, rollupCapabilities, rollupNonCapability, rollupHouseholds, rollupPersonalities,
   safetyPanel, honestGapRate, headlineScore, failedQuestionIds, releaseReadiness, compare,
+  routingPanel, coveragePanel, coverageByDomain, routingFailureReport, qualityPanel, hallucinationPanel,
+  capabilityUtilisationPanel,
 } from "./aggregate.js";
 
 /** The thin, caller-provided wrapper around the ONE Companion seam. */
@@ -70,7 +75,33 @@ function certificationFrameworkOnly(options: RunOptions): BenchmarkResult {
     judge,
     repeats: 1,
     worldMode: "deterministic-households",
-    headline: { score: 0, honestGapRate: 0, gatesFired: 0, questionsScored: 0, meanLatencyMs: 0 },
+    headline: {
+      score: 0, honestGapRate: 0, gatesFired: 0, questionsScored: 0, meanLatencyMs: 0,
+      routingGatesFired: 0, intentResolutionAccuracy: 0, capabilityReach: 0, hallucinationRate: 0,
+    },
+    environment: { llmProviderAvailable: false, judgeInvoked: false },
+    routing: {
+      routingRequiredQuestions: 0, capabilityReachPct: 0, intentResolutionAccuracyPct: 0,
+      capabilityMisses: 0, misroutes: 0, unreachableCapabilities: [], unreachableCapabilityCount: 0,
+      failureReasons: {}, validHonestGaps: 0, invokedCapabilitiesSource: "none",
+    },
+    coverage: {
+      intendedCapabilities: [], invokedCapabilities: [], intendedCoveragePct: 0,
+      registryExecutableCapabilities: registryExecutableCapabilityIds(), registryCoveragePct: 0,
+      untestedCapabilities: registryExecutableCapabilityIds(),
+    },
+    coverageByDomain: [],
+    routingFailures: [],
+    quality: {
+      questionsScored: 0, meanComposite: 0, meanD1Band: 0, meanD5Band: 0, meanD7Band: 0,
+      reachedButEmpty: 0, judgeInvoked: false,
+    },
+    hallucination: { count: 0, rate: 0, questionIds: [], basis: "Not scored — certification is framework-only." },
+    capabilityUtilisation: {
+      probeActive: false, exercised: [], neverExercised: [], neverExercisedCount: 0,
+      registeredUnbound: [], bypassedQuestions: [], bypassedStructural: 0, bypassedDefect: 0,
+      totalInvocations: 0, totalCapabilityTimeMs: 0, capabilityTimeShareOfRun: 0, utilisationPct: 0,
+    },
     dimensions: (Object.keys(DIMENSION_WEIGHTS) as DimensionKey[]).map((key) => ({
       key, name: DIMENSION_NAMES[key], weight: DIMENSION_WEIGHTS[key], points: 0, bandPct: 0,
     })),
@@ -105,11 +136,21 @@ export async function runBenchmark(options: RunOptions): Promise<BenchmarkResult
   const selected = selectQuestions(fixture, options.mode);
   const questionResults = [];
   let anyJudge = false;
+  /** BENCH2 — captured once from the turns themselves; identical for every turn in a run. */
+  let llmProviderAvailable = true;
+  /** BENCH2C — whether a capability probe actually observed this run. */
+  let capabilityProbeActive = false;
 
+  // BENCH2C — the turn runner may own a capability probe that shadows `intelligencePlatform.handle`.
+  // It MUST be removed however this loop ends, so a thrown question can never leave the production
+  // singleton wrapped. `dispose` is optional: a caller-supplied stub TurnRunner has none.
+  try {
   for (let i = 0; i < selected.length; i++) {
     const q = selected[i];
     const exp = deriveExpectation(q);
     const turn = await options.runTurn(q.utterance);
+    llmProviderAvailable = turn.llmProviderAvailable;
+    capabilityProbeActive = turn.capabilityProbeActive;
     const scored = scoreDeterministic(exp, turn);
 
     // Optional judge tier — refine the degree of judge-owned dimensions only.
@@ -122,16 +163,22 @@ export async function runBenchmark(options: RunOptions): Promise<BenchmarkResult
           scored.bands[dim] = { band: verdict.band, points: (verdict.band / 4) * weight, weight, source: "judge", rationale: verdict.rationale };
         }
       }
-      // Recompute composite after judge refinement (gate caps still apply).
+      // Recompute composite after judge refinement. Gate caps still apply, and BENCH2 routes
+      // that recompute through `applyGateCaps` — the same function the deterministic tier used —
+      // so the judge can never lift a question past a gate by re-grading a dimension.
       const raw = (Object.keys(scored.bands) as DimensionKey[]).reduce((s, k) => s + scored.bands[k].points, 0);
       scored.rawComposite = Math.round(raw * 10) / 10;
-      scored.composite = scored.gate === "G3" ? 0 : scored.gate === "G5" ? Math.min(scored.rawComposite, 25) : scored.rawComposite;
+      scored.composite = Math.round(applyGateCaps(scored.rawComposite, scored.gate, scored.routingGate) * 10) / 10;
     }
 
     questionResults.push(buildQuestionResult(exp, turn, householdLabel, scored));
     options.onProgress?.(i + 1, selected.length, q.id);
   }
+  } finally {
+    (options.runTurn as Partial<{ dispose(): void }>).dispose?.();
+  }
 
+  const environment: BenchmarkEnvironment = { llmProviderAvailable, judgeInvoked: anyJudge };
   const dimensions = rollupDimensions(questionResults);
   const domains = rollupDomains(questionResults);
   const capabilities = rollupCapabilities(questionResults);
@@ -144,7 +191,25 @@ export async function runBenchmark(options: RunOptions): Promise<BenchmarkResult
   const gatesFired = Object.values(safety).reduce((s, arr) => s + arr.length, 0);
   const failed = failedQuestionIds(questionResults);
   const cmp = compare(questionResults, domains, dimensions, options.baseline ?? null);
-  const readiness = releaseReadiness(headline, hgRate, safety, failed);
+
+  // BENCH2 — the four separated panels.
+  const routing = routingPanel(questionResults);
+  const coverage = coveragePanel(questionResults);
+  const byDomain = coverageByDomain(questionResults);
+  const routingFailures = routingFailureReport(questionResults);
+  const quality = qualityPanel(questionResults, anyJudge);
+  const hallucination = hallucinationPanel(questionResults);
+  const routingGatesFired = routing.capabilityMisses + routing.misroutes;
+
+  // BENCH2C — the Capability Utilisation Dashboard. `durationMs` is needed for the capability-time
+  // share, so it is computed here rather than at the return statement.
+  const durationMs = Date.now() - started;
+  const capabilityUtilisation = capabilityUtilisationPanel(questionResults, durationMs, capabilityProbeActive);
+
+  const readiness = releaseReadiness(
+    headline, hgRate, safety, failed, routing, hallucination, environment, questionResults,
+    capabilityUtilisation,
+  );
   const meanLatency = questionResults.length
     ? Math.round(questionResults.reduce((s, q) => s + q.latencyMs, 0) / questionResults.length)
     : 0;
@@ -166,7 +231,19 @@ export async function runBenchmark(options: RunOptions): Promise<BenchmarkResult
       gatesFired,
       questionsScored: questionResults.length,
       meanLatencyMs: meanLatency,
+      routingGatesFired,
+      intentResolutionAccuracy: routing.intentResolutionAccuracyPct,
+      capabilityReach: routing.capabilityReachPct,
+      hallucinationRate: hallucination.rate,
     },
+    environment,
+    routing,
+    coverage,
+    coverageByDomain: byDomain,
+    routingFailures,
+    quality,
+    hallucination,
+    capabilityUtilisation,
     dimensions,
     domains,
     capabilities,
@@ -182,6 +259,6 @@ export async function runBenchmark(options: RunOptions): Promise<BenchmarkResult
     releaseReadiness: readiness,
     questions: questionResults,
     baselineRunId: options.baseline?.runId ?? null,
-    durationMs: Date.now() - started,
+    durationMs,
   };
 }

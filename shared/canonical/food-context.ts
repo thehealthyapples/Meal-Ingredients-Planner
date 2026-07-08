@@ -405,6 +405,98 @@ export const FOOD_CONTEXT_SEED: Record<string, FoodContextSeed> = {
 
   // M4.5 — Fermented Food Attribute additions
   kombucha: fc("common", [], "east-asia", ["imported"]),
+
+  // ── NK6R — Canonical Food Identity Governance ───────────────────────────────
+  // Context for the identities minted when NK6Q's rulings and the three hierarchy
+  // amendments were applied. Origin is the food's geographic/culinary home, not
+  // where a UK shopper buys it; null where it is genuinely not one place.
+
+  // Amendment 1 — olive oil grades. All Mediterranean, all imported, all year-round.
+  "olive-oil": fc("mainstream", [], "mediterranean", ["imported"]),
+  "virgin-olive-oil": fc("common", [], "mediterranean", ["imported"]),
+  "refined-olive-oil": fc("mainstream", [], "mediterranean", ["imported"]),
+  "olive-pomace-oil": fc("specialist", [], "mediterranean", ["imported"]),
+
+  // Amendment 2 — cheese parent + families. The families are classification anchors
+  // rather than shelf products; availability reflects how readily a UK shopper meets
+  // an example of the family, and origin is null where the family spans regions.
+  cheese: fc("mainstream", [], null, []),
+  "fresh-cheese": fc("mainstream", [], null, []),
+  "whey-cheese": fc("mainstream", [], "europe", []),
+  "brined-cheese": fc("mainstream", [], "mediterranean", []),
+  "bloomy-rind-cheese": fc("mainstream", [], "europe", []),
+  "washed-rind-cheese": fc("specialist", [], "europe", ["imported"]),
+  "pasta-filata": fc("mainstream", [], "mediterranean", []),
+  "pressed-cheese": fc("mainstream", [], "europe", []),
+  "cooked-pressed-cheese": fc("mainstream", [], "europe", []),
+  // Named cheeses (NK6Q batches 021/022).
+  gorgonzola: fc("common", [], "europe", ["imported"]),
+  roquefort: fc("common", [], "europe", ["imported"]),
+  "grana-padano": fc("mainstream", [], "europe", ["imported"]),
+  "buffalo-mozzarella": fc("common", [], "europe", ["imported"]),
+
+  // Amendment 3 — pasta parent + types.
+  "wheat-pasta": fc("mainstream", [], "mediterranean", []),
+  "wholewheat-pasta": fc("mainstream", [], "mediterranean", []),
+  "chickpea-pasta": fc("common", [], null, []),
+  "lentil-pasta": fc("common", [], null, []),
+  "pea-pasta": fc("specialist", [], null, []),
+  // NK6S — `spinach-pasta` is no longer a canonical food (it is a variety of
+  // `wheat-pasta`). A variety carries no context of its own, so its entry is removed
+  // rather than left here as a pre-staged orphan for a promotion that will not come.
+
+  // Species livers (NK6Q §2.1).
+  "beef-liver": fc("common", [], "united-kingdom", []),
+  "chicken-liver": fc("mainstream", [], "united-kingdom", []),
+  "lamb-liver": fc("mainstream", [], "united-kingdom", []),
+
+  // Milled flours (NK6Q §2.3) — the grain's origin, not the mill's.
+  "plain-wheat-flour": fc("mainstream", [], "middle-east", []),
+  "wholemeal-flour": fc("mainstream", [], "middle-east", []),
+  "oat-flour": fc("common", [], "europe", []),
+  "buckwheat-flour": fc("common", [], "central-asia", ["imported"]),
+  "rye-flour": fc("common", [], "europe", []),
+
+  // Couscous split (NK6Q §2.4 / batch 007).
+  "wholewheat-couscous": fc("common", [], "north-africa", []),
+  "pearl-couscous": fc("common", [], "middle-east", ["imported"]),
+
+  // Plant-part splits (NK6Q §2.5).
+  "fennel-seeds": fc("common", [], "mediterranean", ["imported"]),
+  "fenugreek-leaves": fc("specialist", [], "south-asia", ["imported"]),
+
+  // Separate spices and grades.
+  "white-pepper": fc("common", [], "south-asia", ["imported"]),
+  "smoked-paprika": fc("mainstream", [], "europe", ["imported"]),
+  mutton: fc("specialist", [], "united-kingdom", []),
+  cuttlefish: fc("specialist", [], "mediterranean", []),
+  "semi-skimmed-milk": fc("mainstream", [], "united-kingdom", []),
+  "skimmed-milk": fc("mainstream", [], "united-kingdom", []),
+  "whipping-cream": fc("mainstream", [], "united-kingdom", []),
+
+  // Preparations that own their own facts (NK6Q §4.1).
+  ghee: fc("common", [], "south-asia", ["imported"]),
+  "vanilla-extract": fc("mainstream", [], "central-america", ["imported"]),
+  "toasted-sesame-oil": fc("mainstream", [], "east-asia", ["imported"]),
+  "peanut-butter": fc("mainstream", [], "north-america", []),
+  "preserved-lemons": fc("specialist", [], "north-africa", ["imported"]),
+  "cacao-powder": fc("mainstream", [], "south-america", ["imported"]),
+  "coconut-water": fc("mainstream", [], "southeast-asia", ["imported"]),
+
+  // ── NK6S — the Beverages domain ──────────────────────────────────────────────
+  // The parent and family rows are coarse identities, not specific products, so
+  // availability is that of the class ("can you buy a tea?") and origin is the
+  // class's home, or `global` where the class has no single one.
+  beverage: fc("mainstream", [], "global", []),
+  tea: fc("mainstream", [], "east-asia", []),
+  "herbal-infusion": fc("mainstream", [], "global", []),
+  coffee: fc("mainstream", [], "sub-saharan-africa", ["imported"]),
+  "cocoa-beverage": fc("mainstream", [], "south-america", ["imported"]),
+  juice: fc("mainstream", [], "global", []),
+  "plant-water": fc("common", [], "global", ["imported"]),
+  "fermented-beverage": fc("common", [], "global", []),
+  "plant-beverage": fc("mainstream", [], "global", []),
+  "dairy-beverage": fc("mainstream", [], "united-kingdom", []),
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

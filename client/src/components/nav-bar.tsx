@@ -259,8 +259,18 @@ function SidebarBody({
 
       </nav>
 
-      {/* Bottom section: logout */}
+      {/* Bottom section: Admin (admins only) + logout */}
       <div className="px-2 pt-2 border-t border-border flex flex-col gap-0.5">
+        {isAdmin && (
+          <SidebarNavItem
+            href="/admin"
+            label="Admin"
+            icon={ShieldCheck}
+            isCollapsed={isCollapsed}
+            isActive={location.startsWith("/admin")}
+            onClick={onClose}
+          />
+        )}
         {isCollapsed ? (
           <Tooltip>
             <TooltipTrigger asChild>{logoutBtn}</TooltipTrigger>

@@ -56,6 +56,7 @@ async function main() {
   console.log("");
 
   let totalSuccesses = 0;
+  let totalPartials = 0;
   let totalFailures = 0;
   const results: ImportResult[] = [];
 
@@ -68,15 +69,44 @@ async function main() {
       if (result.success) {
         totalSuccesses++;
         console.log(`✅ ${result.fileName}`);
-        console.log(`   → Inserted: ${result.inserted.foods} food, ${result.inserted.nutrients} nutrients, ${result.inserted.benefits} benefits`);
+        console.log(`   → New rows: ${result.inserted.foods} food, ${result.inserted.nutrients} nutrients, ${result.inserted.benefits} benefits`);
+        const nAlias = result.resolved.nutrients.filter((r) => r.via === "alias");
+        const bAlias = result.resolved.benefits.filter((r) => r.via === "alias");
+        console.log(
+          `   ✓ Resolved: ${result.resolved.nutrients.length} nutrients (${nAlias.length} via alias), ` +
+          `${result.resolved.benefits.length} benefits (${bAlias.length} via alias)`
+        );
+        if (nAlias.length > 0) {
+          console.log(`      ↳ nutrient aliases: ${nAlias.map((r) => `${r.input}→${r.canonicalSlug}`).join(", ")}`);
+        }
+        if (bAlias.length > 0) {
+          console.log(`      ↳ benefit aliases: ${bAlias.map((r) => `${r.input}→${r.canonicalSlug}`).join(", ")}`);
+        }
+        if (result.rejected.nutrients.length > 0) {
+          console.log(`   ⊘ Rejected nutrients: ${result.rejected.nutrients.map((r) => r.input).join(", ")}`);
+        }
+        if (result.rejected.benefits.length > 0) {
+          console.log(`   ⊘ Rejected benefits: ${result.rejected.benefits.map((r) => r.input).join(", ")}`);
+        }
         if (result.warnings.length > 0) {
           console.log(`   ⚠️  Warnings: ${result.warnings.join("; ")}`);
         }
-        if (result.skipped.nutrients.length > 0) {
-          console.log(`   ⊘ Skipped nutrients: ${result.skipped.nutrients.join(", ")}`);
+      } else if (result.partial) {
+        // NK6O — food persisted but INCOMPLETE (a resolved target failed to bind).
+        // Reported distinctly from both a clean success and a hard failure so a
+        // dropped relationship is never masked as success.
+        totalPartials++;
+        console.log(`⚠️  PARTIAL ${result.fileName}`);
+        console.log(`   Food: ${result.foodSlug || "(unknown)"}`);
+        console.log(`   → New rows: ${result.inserted.foods} food, ${result.inserted.nutrients} nutrients, ${result.inserted.benefits} benefits`);
+        if (result.dropped.nutrients.length > 0) {
+          console.log(`   ✗ Dropped nutrients (missing canonical target): ${result.dropped.nutrients.join(", ")}`);
         }
-        if (result.skipped.benefits.length > 0) {
-          console.log(`   ⊘ Skipped benefits: ${result.skipped.benefits.join(", ")}`);
+        if (result.dropped.benefits.length > 0) {
+          console.log(`   ✗ Dropped benefits (missing canonical target): ${result.dropped.benefits.join(", ")}`);
+        }
+        if (result.warnings.length > 0) {
+          console.log(`   ⚠️  Warnings: ${result.warnings.join("; ")}`);
         }
       } else {
         totalFailures++;
@@ -97,8 +127,9 @@ async function main() {
   console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
   console.log(`Summary:`);
   console.log(`  ✅ Successful: ${totalSuccesses}`);
+  console.log(`  ⚠️  Partial (incomplete — target dropped): ${totalPartials}`);
   console.log(`  ❌ Failed: ${totalFailures}`);
-  console.log(`  📊 Total: ${totalSuccesses + totalFailures}`);
+  console.log(`  📊 Total: ${totalSuccesses + totalPartials + totalFailures}`);
 
   // Detailed summary
   if (results.length > 0) {
@@ -119,8 +150,9 @@ async function main() {
 
   console.log("");
 
-  // Exit with appropriate code
-  process.exit(totalFailures > 0 ? 1 : 0);
+  // Exit non-zero on hard failures OR partials — an incomplete import must not
+  // pass silently as success (NK6O).
+  process.exit(totalFailures > 0 || totalPartials > 0 ? 1 : 0);
 }
 
 main().catch((error) => {

@@ -61,6 +61,11 @@ async function run() {
     target: schema.knowledgeNutrients.slug,
     set: {
       name: sqlExcluded("name"), description: sqlExcluded("description"), category: sqlExcluded("category"),
+      // NK6M — `family` is editorial classification content; a re-seed must propagate
+      // it onto EXISTING rows too, else an already-seeded member (e.g. beta-carotene,
+      // lycopene) never receives its parent-family pointer on update. Omitting it here
+      // was why only the newly-inserted carotenoids got classified.
+      family: sqlExcluded("family"),
       source: sqlExcluded("source"), displayOrder: sqlExcluded("display_order"), isActive: sqlExcluded("is_active"),
     },
   });

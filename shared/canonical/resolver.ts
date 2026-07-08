@@ -27,12 +27,19 @@ export interface CanonicalResolution {
   varietyName: string | null;
   diversityGroupSlug: string | null;
   aliasType: AliasType | null;
+  // The knowledge_food identity this canonical food is linked to, when one is
+  // declared on the seed (NK6I). Additive: lets identity-bearing consumers (e.g.
+  // the canonical-food importer) map a resolved canonical food back to the single
+  // knowledge_food identity WITHOUT a second resolver. Null when the canonical
+  // food has no linked knowledge_food.
+  knowledgeFoodSlug: string | null;
 }
 
 interface IndexTarget {
   canonicalSlug: string;
   canonicalName: string;
   diversityGroupSlug: string | null;
+  knowledgeFoodSlug: string | null;
   varietySlug: string | null;
   varietyName: string | null;
   matchType: "canonical" | "variety" | "alias";
@@ -80,6 +87,7 @@ export function buildCanonicalIndex(): CanonicalIndex {
       canonicalSlug: food.slug,
       canonicalName: food.name,
       diversityGroupSlug: food.diversityGroupSlug ?? null,
+      knowledgeFoodSlug: food.knowledgeFoodSlug ?? null,
     };
 
     // Canonical identity: name + slug.
@@ -89,7 +97,7 @@ export function buildCanonicalIndex(): CanonicalIndex {
 
     // Varieties: name + slug. Variety inherits the parent's diversity group.
     for (const v of entry.varieties ?? []) {
-      const varietyTarget: IndexTarget = { ...base, varietySlug: v.slug, varietyName: v.name, matchType: "variety", aliasType: null };
+      const varietyTarget: IndexTarget = { ...base, knowledgeFoodSlug: (v as { knowledgeFoodSlug?: string | null }).knowledgeFoodSlug ?? base.knowledgeFoodSlug, varietySlug: v.slug, varietyName: v.name, matchType: "variety", aliasType: null };
       add(normalizeIngredientKey(v.name), varietyTarget);
       add(slugToKey(v.slug), varietyTarget);
     }
@@ -129,7 +137,7 @@ function inputVariants(norm: string): string[] {
 const UNRESOLVED = (input: string, key: string): CanonicalResolution => ({
   input, normalizedKey: key, matched: false, matchType: "unknown",
   canonicalSlug: null, canonicalName: null, varietySlug: null, varietyName: null,
-  diversityGroupSlug: null, aliasType: null,
+  diversityGroupSlug: null, aliasType: null, knowledgeFoodSlug: null,
 });
 
 /**
@@ -156,6 +164,7 @@ export function resolveCanonicalFood(input: string): CanonicalResolution {
         varietyName: hit.varietyName,
         diversityGroupSlug: hit.diversityGroupSlug,
         aliasType: hit.aliasType,
+        knowledgeFoodSlug: hit.knowledgeFoodSlug,
       };
     }
   }

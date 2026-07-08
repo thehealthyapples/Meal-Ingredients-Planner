@@ -82,7 +82,7 @@ nutrition_profile:
   - nutrient: long_chain_omega_3_EPA_DHA
     role: oily-fish heart-health context; use public-health wording
     confidence: strong
-  - nutrient: high_quality_protein
+  - nutrient: protein
     role: supports protein coverage
     confidence: well_established
   - nutrient: vitamin_D
@@ -97,15 +97,9 @@ nutrition_profile:
   editorial_summary: Salmon is useful in THA as a recognised, household-friendly food that can improve meal quality
     when used in an appropriate context.
 benefit_language:
-- area: oily_fish_exposure
-  approved_wording: Helps include oily fish in the week.
-  evidence_tone: public_health_guidance
 - area: protein
   approved_wording: Provides a high-quality protein option for meals.
   evidence_tone: food_composition
-- area: meal_balance
-  approved_wording: Pairs well with vegetables, whole grains and healthy fats in balanced meals.
-  evidence_tone: dietary_pattern
 planner_metadata:
   meal_slots:
   - lunch

@@ -1,0 +1,220 @@
+record:
+  schema: tha_canonical_food_draft
+  schema_version: 2.0-draft
+  batch_id: batch-001-core-everyday-vegetables
+  status: draft
+  canonical_slug: aubergine
+  display_name: Aubergine
+  duplicate_policy: stop_on_slug_conflict_or_merge_only_with_explicit_approval
+  authored_by: ChatGPT for The Healthy Apples
+  authored_date: '2026-07-07'
+  review_status: requires_claude_import_validation_before_merge
+nk_controls:
+  governing_patterns:
+  - one_canonical_identity
+  - one_owner_per_fact
+  - no_duplicate_entities
+  - progressive_enrichment
+  - honest_gaps_over_fabricated_information
+  ai_usage_rules:
+  - AI may draft editorial wording but must not create new canonical nutrient or benefit vocabulary.
+  - Unresolved nutrients, benefits, aliases or identity conflicts must be rejected for review, not silently minted.
+  numeric_nutrition_policy: do_not_import_numeric_values_until_validated
+  fact_owner_boundary: Food identity belongs to the Knowledge Platform. Nutrient and benefit vocabularies remain TypeScript-owned
+    canonical vocabularies.
+identity:
+  food_category: fruiting_vegetable
+  aliases:
+  - aubergines
+  - eggplant
+  - brinjal
+  - baby aubergine
+  not_same_as:
+  - courgette
+  - mushroom
+  - aubergine parmigiana ready meal
+  - baba ganoush
+  canonical_identity_rule: Aubergine is the canonical identity. Plain fresh, frozen or single-ingredient forms remain variants;
+    ready meals, sauces, snacks and branded prepared products are excluded.
+  plant_count_policy:
+    counts_towards_plant_diversity: true
+    plant_family: Solanaceae
+    plant_part: fruit
+    plant_diversity_note: Count as one plant identity for THA weekly diversity unless a future governed variety rule states
+      otherwise.
+classification:
+  whole_food_status: whole_or_minimally_processed
+  upf_default: false
+  processing_watchouts:
+  - Exclude ready meals, battered products, crisps, sweetened jars, seasoned pouches and sauce-coated prepared products.
+  - Plain fresh, frozen or tinned-in-water forms may remain under this canonical identity when single-ingredient.
+varieties_and_forms:
+  varieties:
+  - name: standard purple aubergine
+    relationship: variety_or_market_form
+  - name: baby aubergine
+    relationship: variety_or_market_form
+  - name: striped aubergine
+    relationship: variety_or_market_form
+  forms:
+  - name: fresh whole
+    relationship: same_canonical_food_when_plain
+  - name: fresh baby
+    relationship: same_canonical_food_when_plain
+  preparation_states:
+  - roasted
+  - grilled
+  - baked
+  - stewed
+  - charred
+  form_policy: Do not create a new canonical identity for cut size, colour, frozen state or plain tinned state unless THA
+    later approves a separate fact owner.
+nutrition_profile:
+  quantitative_values_status: do_not_import_numeric_values_until_validated
+  notable_nutrients:
+  - nutrient: fibre
+    role: Adds fibre within a whole-food meal pattern.
+    confidence: well_established
+  - nutrient: polyphenols
+    role: Adds plant compounds that support food diversity context.
+    confidence: moderate
+  - nutrient: anthocyanins
+    role: Adds purple/red plant pigment context where present in the edible variety.
+    confidence: moderate
+  editorial_summary: A soft-cooking fruiting vegetable that can add body to meat-free meals.
+  vocabulary_policy: All nutrient strings intentionally use existing canonical vocabulary where known; unresolved terms should
+    go to Knowledge Review.
+benefit_language:
+- area: gut-health
+  approved_wording: Aubergine can help add plant variety and fibre context to everyday meals.
+  evidence_tone: high_level_consensus
+  governance_note: Food-first wording only; no gut-disease or microbiome-treatment claim.
+- area: heart-health
+  approved_wording: Aubergine can sit comfortably in heart-health meal patterns when used as part of vegetable-rich cooking.
+  evidence_tone: high_level_consensus
+  governance_note: Pattern-level wording only; no disease prevention claim.
+planner_metadata:
+  meal_slots:
+  - lunch
+  - dinner
+  roles:
+  - roast vegetable
+  - stew vegetable
+  - meat-free main component
+  - curry vegetable
+  good_uses:
+  - ratatouille
+  - curries
+  - traybakes
+  - moussaka-style meals
+  - warm salads
+  nutrition_boost_tags:
+  - plant-diversity
+  - whole-food
+  - vegetable-variety
+  household_notes: A soft-cooking fruiting vegetable that can add body to meat-free meals.
+  adaptation_notes: Usually compatible as a shared component; adapt cooking fat, sauce, toppings and texture to household
+    needs.
+shopping_intelligence:
+  supermarket_locations:
+  - fresh vegetables
+  - frozen vegetables
+  - prepared vegetables when plain
+  buying_notes: Look for plain aubergine without sauces, coatings or seasoning mixes.
+  quality_signals:
+  - firm texture where expected
+  - no visible mould
+  - avoid slimy or heavily bruised pieces
+  budget_notes: Loose, own-brand, frozen plain or seasonal packs are usually the best-value formats when available.
+  search_terms:
+  - aubergine
+  - aubergine
+  - aubergines
+  - eggplant
+  - brinjal
+  - baby aubergine
+cooking_and_storage:
+  storage: Store according to supermarket pack guidance; keep fresh produce cool and dry or refrigerated where appropriate.
+  prep_tips: Wash and prepare aubergine before use. Use plain cooking methods before adding sauces or seasonings.
+  texture_notes: Use cooking time to control whether aubergine stays crisp, soft or mashable.
+  leftover_notes: Cool cooked leftovers promptly and follow normal food-safety guidance before reusing.
+relationships:
+  pairs_well_with:
+  - tomato
+  - garlic
+  - olive-oil
+  - chickpeas
+  - lentils
+  - basil
+  nutrient_complements:
+  - with: extra-virgin-olive-oil
+    reason: Helps turn vegetables into satisfying meals while keeping the meal whole-food-led.
+  - with: lentils
+    reason: Combines vegetable variety with a pulse-based meal component where appropriate.
+  category_neighbours:
+  - tomato
+  - sweet-pepper
+  - courgette
+  - cucumber
+  do_not_replace:
+  - courgette
+  - mushroom
+  - aubergine parmigiana ready meal
+  - baba ganoush
+safety_and_limitations:
+  allergen_profile: Naturally free from common animal allergens unless prepared with other ingredients; always check packaged
+    forms.
+  diet_compatibility:
+  - vegan
+  - vegetarian
+  - gluten-free
+  - dairy-free
+  clinical_caveats: Medical diet suitability, allergy risk and therapeutic claims require professional or user-specific review.
+  storage_safety: Discard if mouldy, slimy, sour-smelling beyond normal fermented contexts, or outside safe storage guidance.
+companion_behaviour:
+  plain_answer: Aubergine is a whole-food vegetable option for adding variety, texture and simple nutrition context to meals.
+  suggested_user_facing_phrases:
+  - Add aubergine to increase whole-food variety.
+  - Use plain aubergine rather than sauce-coated or ready-made versions.
+  - Aubergine works well in ratatouille, curries, traybakes.
+  avoid_phrases:
+  - Do not call this a superfood.
+  - Do not claim it treats, cures, prevents or reverses disease.
+  - Do not invent numeric nutrition values until validated.
+claim_boundaries:
+  do_not_describe_as:
+  - treating disease
+  - curing disease
+  - preventing disease
+  - reversing disease
+  - guaranteed weight loss
+  - detoxifying
+  allowed_framing:
+  - whole-food variety
+  - meal pattern support
+  - nutrient context
+  - household-friendly ingredient use
+  evidence_policy: Evidence-backed claims can be added later through governed enrichment; current wording remains food-first
+    and non-medical.
+consumers:
+  planner: Use as a whole-food component, side, base or topping according to planner roles.
+  pantry: Use aliases and forms for pantry matching and storage guidance.
+  shopping: Use search terms and supermarket locations for basket matching; avoid processed forms.
+  companion: Use plain_answer and suggested phrases with claim boundaries.
+progressive_enrichment:
+  ready_now:
+  - canonical identity
+  - aliases
+  - not_same_as
+  - planner metadata
+  - shopping metadata
+  - qualitative nutrient context
+  - claim-safe companion wording
+  requires_later_validation:
+  - numeric nutrition values
+  - source references
+  - benefit evidence expansion
+  - variety-specific nutrient differences
+  - clinical diet overlays
+  review_queue_policy: Any unresolved vocabulary or identity conflict should be captured for Knowledge Review rather than
+    resolved locally.

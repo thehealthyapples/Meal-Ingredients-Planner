@@ -82,24 +82,18 @@ nutrition_profile:
   - nutrient: folate
     role: contributes to legume micronutrient coverage
     confidence: well_established
-  - nutrient: manganese_and_minerals
+  - nutrient: manganese
     role: adds mineral variety; avoid over-specific claims until numeric values validated
     confidence: moderate
-  - nutrient: slow_release_carbohydrate
-    role: useful meal-balance context without blood-glucose promises
+  - nutrient: copper
+    role: adds mineral variety; avoid over-specific claims until numeric values validated
     confidence: moderate
   editorial_summary: Chickpeas is useful in THA as a recognised, household-friendly food that can improve meal quality
     when used in an appropriate context.
 benefit_language:
-- area: legume_exposure
-  approved_wording: Adds a legume serving and plant diversity to the week.
-  evidence_tone: high_level_consensus
 - area: meat_free_protein
   approved_wording: A useful vegetarian protein slot for bowls, curries and jacket potatoes.
   evidence_tone: food_composition
-- area: meal_enrichment
-  approved_wording: Can be added to many meals to increase fibre and make them more filling.
-  evidence_tone: culinary_practical
 planner_metadata:
   meal_slots:
   - lunch

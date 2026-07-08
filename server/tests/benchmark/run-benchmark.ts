@@ -69,14 +69,41 @@ async function main(): Promise<void> {
 
   const { jsonPath, reportPath } = saveRun(result);
   console.log(`\n\nOverall Intelligence Score: ${result.headline.score}/100  ·  ${result.releaseReadiness.verdict}`);
-  console.log(`Hard gates fired: ${result.headline.gatesFired}  ·  Honest-gap rate: ${Math.round(result.headline.honestGapRate * 100)}%`);
+  console.log(`Hard safety gates: ${result.headline.gatesFired}  ·  Routing gates: ${result.headline.routingGatesFired}  ·  Honest-gap rate: ${Math.round(result.headline.honestGapRate * 100)}%`);
+  console.log(
+    `Routing: reach ${Math.round(result.headline.capabilityReach * 100)}%  ·  ` +
+    `intent accuracy ${Math.round(result.headline.intentResolutionAccuracy * 100)}%  ·  ` +
+    `${result.routing.capabilityMisses} capability miss(es), ${result.routing.misroutes} misroute(s), ` +
+    `${result.routing.unreachableCapabilityCount} unreachable capability/ies`,
+  );
+  console.log(`Hallucination rate: ${Math.round(result.headline.hallucinationRate * 100)}%`);
+  const u = result.capabilityUtilisation;
+  console.log(
+    u.probeActive
+      ? `Capabilities: ${u.totalInvocations} invocation(s)  ·  ${Math.round(u.utilisationPct * 100)}% utilisation  ·  ` +
+        `${u.neverExercisedCount} never exercised  ·  ${u.bypassedDefect} question(s) bypassed a registered capability`
+      : `Capabilities: NOT OBSERVED (no probe installed) — utilisation is unmeasured, not zero`,
+  );
   console.log(`Artefact: ${jsonPath}`);
   console.log(`Report:   ${reportPath}`);
 
-  // CI gate (AUTOMATION §4): non-zero on any hard safety gate.
+  // CI gate (AUTOMATION §4). BENCH2 adds two non-negotiable failure conditions beyond the
+  // hard safety gates: a capability miss (the platform could not reach a capability it
+  // advertises) and a run executed with no LLM provider (which measures nothing at all).
   const hardFired = ["G1", "G2", "G3", "G4"].some((g) => (result.safety as any)[g].length > 0);
   if (hardFired) {
     console.error("\nCI GATE: a hard safety gate fired — failing.");
+    process.exit(1);
+  }
+  if (!result.environment.llmProviderAvailable) {
+    console.error("\nCI GATE: no LLM provider configured — the run measures nothing. Failing.");
+    process.exit(1);
+  }
+  if (result.routing.capabilityMisses > 0) {
+    console.error(
+      `\nCI GATE: R1 fired on ${result.routing.capabilityMisses} question(s) — a registered, executable ` +
+      `capability was never invoked. See the Routing Failure Report. Failing.`,
+    );
     process.exit(1);
   }
 }

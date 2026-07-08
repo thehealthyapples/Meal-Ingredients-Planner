@@ -187,17 +187,23 @@ export interface FallbackTextOptions {
   readonly clarificationPrompt?: string;
 }
 
-function formatSuggestions(surface?: ConversationSurface): string {
+export function formatSuggestions(surface?: ConversationSurface): string {
   const list = (surface && REPHRASE_SUGGESTIONS[surface]) || DEFAULT_SUGGESTIONS;
   const quoted = list.map((s) => `"${s}"`);
   return `${quoted.slice(0, -1).join(", ")} or ${quoted[quoted.length - 1]}`;
 }
 
-function describeSearched(queried: readonly QueriedIntentOutcome[] | undefined): {
-  areas: string;
-  query?: string;
-} {
-  const searched = (queried ?? []).filter((q) => !q.baseline && q.status === "ok-empty");
+/**
+ * Name the area(s) that were queried with one of the given statuses, plus a
+ * representative query string. Keyed to WHICH fallback state fired: "ok-empty"
+ * for a search that returned nothing, "no-knowledge" for an honest platform gap
+ * — so a fallback can honestly say WHAT was checked, never just "no" (COMP1).
+ */
+export function describeQueried(
+  queried: readonly QueriedIntentOutcome[] | undefined,
+  statuses: readonly QueriedIntentStatus[],
+): { areas: string; query?: string } {
+  const searched = (queried ?? []).filter((q) => !q.baseline && statuses.includes(q.status));
   const names = Array.from(
     new Set(searched.map((q) => CAPABILITY_FRIENDLY_NAMES[q.capability] ?? q.capability)),
   );
@@ -209,6 +215,13 @@ function describeSearched(queried: readonly QueriedIntentOutcome[] | undefined):
         : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
   const query = searched.map((q) => q.query?.trim()).find((q) => q);
   return { areas, query };
+}
+
+function describeSearched(queried: readonly QueriedIntentOutcome[] | undefined): {
+  areas: string;
+  query?: string;
+} {
+  return describeQueried(queried, ["ok-empty"]);
 }
 
 /**

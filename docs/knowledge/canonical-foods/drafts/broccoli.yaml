@@ -94,12 +94,6 @@ benefit_language:
 - area: plant_diversity
   approved_wording: Adds cruciferous vegetable diversity to the week.
   evidence_tone: high_level_consensus
-- area: fibre
-  approved_wording: Contributes fibre and volume to meals.
-  evidence_tone: food_composition
-- area: micronutrient_density
-  approved_wording: Useful for vitamin C, vitamin K and folate context.
-  evidence_tone: food_composition
 planner_metadata:
   meal_slots:
   - lunch

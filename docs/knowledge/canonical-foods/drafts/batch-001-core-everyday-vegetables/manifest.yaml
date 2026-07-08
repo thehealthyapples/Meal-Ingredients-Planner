@@ -1,0 +1,55 @@
+batch_id: batch-001-core-everyday-vegetables
+created: '2026-07-07'
+format: zip_of_individual_v2_0_draft_yaml_files
+target_path: docs/knowledge/canonical-foods/drafts/batch-001-core-everyday-vegetables/
+approved_scope: Option A — comprehensive UK supermarket canonical library, starting with Batch 1 core everyday vegetables
+food_count: 30
+smoke_test_files:
+- carrot.yaml
+- onion.yaml
+- tomato.yaml
+full_batch_files:
+- carrot.yaml
+- onion.yaml
+- garlic.yaml
+- shallot.yaml
+- spring-onion.yaml
+- leek.yaml
+- celery.yaml
+- cucumber.yaml
+- tomato.yaml
+- sweet-pepper.yaml
+- aubergine.yaml
+- courgette.yaml
+- cauliflower.yaml
+- cabbage.yaml
+- kale.yaml
+- lettuce.yaml
+- beetroot.yaml
+- parsnip.yaml
+- swede.yaml
+- turnip.yaml
+- radish.yaml
+- potato.yaml
+- sweet-potato.yaml
+- butternut-squash.yaml
+- pumpkin.yaml
+- asparagus.yaml
+- green-beans.yaml
+- garden-peas.yaml
+- sweetcorn.yaml
+- fennel-bulb.yaml
+import_commands:
+  smoke_test_one: npm run import:canonical-foods docs/knowledge/canonical-foods/drafts/batch-001-core-everyday-vegetables/carrot.yaml
+  smoke_test_three: npm run import:canonical-foods docs/knowledge/canonical-foods/drafts/batch-001-core-everyday-vegetables/{carrot,onion,tomato}.yaml
+  full_batch: npm run import:canonical-foods docs/knowledge/canonical-foods/drafts/batch-001-core-everyday-vegetables/*.yaml
+architecture_controls:
+- one canonical identity per food
+- aliases do not create duplicate entities
+- unresolved nutrient/benefit terms must be rejected and reported
+- no numeric nutrition values imported until validated
+- no branded or ultra-processed foods
+known_limitations:
+- Files are editorial drafts and still need Claude/repo schema validation before merge.
+- Nutrient and benefit terms are intentionally conservative to avoid creating vocabulary drift.
+- No production import should occur before smoke test and review of importer warnings.

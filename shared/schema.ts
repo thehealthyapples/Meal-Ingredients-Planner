@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, real, boolean, unique, timestamp, varchar, index, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, real, boolean, unique, uniqueIndex, timestamp, varchar, index, jsonb } from "drizzle-orm/pg-core";
 import type { AdaptationResult, HouseholdSafeForSnapshot } from "./meal-adaptation";
 import type { KnowledgeSourceRef } from "./knowledge/evidence";
 import type { GuestEater } from "./household-eater";
@@ -1562,7 +1562,14 @@ export const knowledgeNutrients = pgTable("knowledge_nutrients", {
   slug: text("slug").notNull().unique(),
   name: text("name").notNull(),
   description: text("description"),
+  // Broad classification: macronutrient | mineral | vitamin | fatty-acid | phytonutrient | other.
   category: text("category"),
+  // NK6M — optional parent family within a category. A nutrient may be classified
+  // beneath a broader canonical family without being merged or aliased into it
+  // (e.g. lutein/zeaxanthin/beta-carotene sit under the `carotenoids` family but
+  // keep their own identity and facts). Null = the nutrient has no parent family
+  // (it is itself top-level, which includes family rows such as `carotenoids`).
+  family: text("family"),
   source: text("source").notNull().default("THA editorial"),
   displayOrder: integer("display_order").notNull().default(0),
   isActive: boolean("is_active").notNull().default(true),
@@ -1663,6 +1670,325 @@ export type InsertKnowledgeFoodBenefit = z.infer<typeof insertKnowledgeFoodBenef
 export type KnowledgeNutrientBenefit = typeof knowledgeNutrientBenefits.$inferSelect;
 export type InsertKnowledgeNutrientBenefit = z.infer<typeof insertKnowledgeNutrientBenefitSchema>;
 
+// ── Knowledge Review Queue (KQ1B — Workbench Phase 0) ────────────────────────
+// A GENERAL, governed review queue for knowledge items that a governed process
+// could not resolve on its own and that need human review. It is a PROPOSAL /
+// worklist layer only: it owns no canonical identity, mints no entity, and does
+// not fork the single GOV2 resolver (docs/architecture/GOV2_CANONICAL_ALIAS_PRINCIPLE.md).
+//
+// Generalisation (KQ1B architectural adjustment): the queue is NOT vocabulary-
+// specific. `reviewType` discriminates the kind of review; the first and only
+// implemented type is "vocabulary" (unresolved nutrient/benefit terms captured
+// from the GOV2 resolver/importer). Future review types (e.g. duplicate-entity,
+// claim-source, relationship) are ADDITIVE: a new `reviewType` value + any
+// type-specific fields tucked into the `details` jsonb — no schema redesign.
+//
+// Dedupe: one row per distinct item, keyed by (reviewType, domain, dedupeKey).
+// Re-sighting the same item increments `occurrenceCount`, refreshes `lastSeenAt`
+// and appends to `contexts` rather than inserting a duplicate row.
+
+/** One place a review item was sighted. Stored in `contexts` (append-on-resight). */
+export interface KnowledgeReviewContext {
+  /** Where the sighting came from, e.g. "importer", "resolver". */
+  source: string;
+  /** Optional provenance detail. */
+  foodSlug?: string;
+  file?: string;
+  path?: string;
+  note?: string;
+  /** ISO timestamp of this sighting. */
+  at?: string;
+}
+
+export const knowledgeReviewQueue = pgTable("knowledge_review_queue", {
+  id: serial("id").primaryKey(),
+  // Discriminator for the kind of review. First implemented value: "vocabulary".
+  reviewType: text("review_type").notNull().default("vocabulary"),
+  // Sub-domain within the review type. For "vocabulary": "nutrient" | "benefit"
+  // | "food". Kept as a column (not buried in details) so it is filterable.
+  domain: text("domain").notNull(),
+  // Stable dedupe discriminator within (reviewType, domain). For "vocabulary"
+  // this is the resolver's normalised term (GOV2 single normaliser).
+  dedupeKey: text("dedupe_key").notNull(),
+  // Human-facing label — the first-seen verbatim string.
+  label: text("label").notNull(),
+  // Origin of the FIRST sighting, e.g. "importer" | "resolver".
+  source: text("source").notNull(),
+  // Every place this item has been sighted (append-on-resight, deduped).
+  contexts: jsonb("contexts").$type<KnowledgeReviewContext[]>().notNull().default(sql`'[]'::jsonb`),
+  // Review-type-specific payload — the additive-extensibility hatch. For
+  // "vocabulary": { normalisedTerm, rawTerm, reason }.
+  details: jsonb("details").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
+  // Number of sightings (incremented on every re-capture).
+  occurrenceCount: integer("occurrence_count").notNull().default(1),
+  // Lifecycle. Phase 0 only ever writes "unresolved"; later phases add
+  // in_review → proposed → approved → applied | handed_off | rejected | deferred.
+  status: text("status").notNull().default("unresolved"),
+  // ── KQ1C — Phase 1 editable review fields (additive) ─────────────────────
+  // These are proposal-layer editorial annotations only. They never touch
+  // canonical identity: `suggestedCanonicalSlug` is a REVIEWER SUGGESTION for
+  // an external LLM to consider, not an applied alias (apply is a later phase).
+  // Reviewer-assigned triage priority: "high" | "medium" | "low" | null.
+  priority: text("priority"),
+  // Editorial classification of where this knowledge originates (distinct from
+  // `source`, which is the capture channel). Free text with common presets.
+  knowledgeOrigin: text("knowledge_origin"),
+  // Free-text reviewer notes for external-LLM/editorial context.
+  reviewNotes: text("review_notes"),
+  // Reviewer's SUGGESTED canonical match (a slug the term might resolve to).
+  // A suggestion for review — never applied to the resolver in Phase 1.
+  suggestedCanonicalSlug: text("suggested_canonical_slug"),
+  firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).notNull().defaultNow(),
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  uniqueReviewItem: unique("uq_knowledge_review_item").on(t.reviewType, t.domain, t.dedupeKey),
+  reviewTypeIdx: index("idx_knowledge_review_type").on(t.reviewType, t.status),
+}));
+
+export const insertKnowledgeReviewQueueSchema = createInsertSchema(knowledgeReviewQueue, {
+  contexts: z.custom<KnowledgeReviewContext[]>().optional(),
+  details: z.custom<Record<string, unknown>>().optional(),
+}).omit({ id: true, createdAt: true, updatedAt: true });
+
+export type KnowledgeReviewQueueItem = typeof knowledgeReviewQueue.$inferSelect;
+export type InsertKnowledgeReviewQueueItem = z.infer<typeof insertKnowledgeReviewQueueSchema>;
+
+// ─── KQ1D — Phase 2: Knowledge Review Package import & proposals ──────────────
+// Additive proposal-layer tables. They own NO canonical identity, mint no
+// entity, write nothing to the resolver, and change no canonical vocabulary
+// (docs/architecture/GOV2_CANONICAL_ALIAS_PRINCIPLE.md). They only PERSIST the
+// editorial decisions an external LLM/reviewer proposed in an exported Knowledge
+// Review Package, linked back to the queue items they resolve, behind a human
+// approval gate. Apply / hand-off / rollback are LATER phases (KQ1A §10).
+
+// One imported Knowledge Review Package. Holds package-level provenance
+// (checksum, schema version, exported-at, reviewing model, source filename) so
+// every proposal it created is traceable to the file it came from.
+export const knowledgeReviewBatches = pgTable("knowledge_review_batches", {
+  id: serial("id").primaryKey(),
+  // "import" today; the shape leaves room for a later persisted "export".
+  direction: text("direction").notNull().default("import"),
+  format: text("format").notNull().default("json"),
+  // The imported package's declared schema version (provenance).
+  schemaVersion: text("schema_version"),
+  // sha256 the package carried over its source items — validated on import.
+  checksum: text("checksum"),
+  // When the package was originally exported from THA (from the envelope).
+  exportedAt: timestamp("exported_at", { withTimezone: true }),
+  // Which external LLM/reviewer produced the decisions (package-level).
+  reviewerModel: text("reviewer_model"),
+  // The uploaded file's name, for audit.
+  sourceFilename: text("source_filename"),
+  // How many items the package contained vs how many proposals were created.
+  itemCount: integer("item_count").notNull().default(0),
+  proposalCount: integer("proposal_count").notNull().default(0),
+  // imported → (later phases) approved → applied → rolled_back.
+  status: text("status").notNull().default("imported"),
+  notes: text("notes"),
+  createdByUserId: integer("created_by_user_id").references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertKnowledgeReviewBatchSchema = createInsertSchema(knowledgeReviewBatches).omit({
+  id: true,
+  createdAt: true,
+});
+export type KnowledgeReviewBatch = typeof knowledgeReviewBatches.$inferSelect;
+export type InsertKnowledgeReviewBatch = z.infer<typeof insertKnowledgeReviewBatchSchema>;
+
+// One proposed editorial decision for a queue term, imported from a package.
+// A PROPOSAL only — created with status "proposed"; a human must approve/reject.
+// Nothing here is ever applied to the resolver or canonical vocabularies in
+// Phase 2 (approval merely records intent; apply is Phase 3).
+export const knowledgeReviewDecisions = pgTable("knowledge_review_decisions", {
+  id: serial("id").primaryKey(),
+  // The package this proposal was imported from.
+  batchId: integer("batch_id").notNull().references(() => knowledgeReviewBatches.id, { onDelete: "cascade" }),
+  // The queue term this proposal resolves (the link the DoD requires).
+  termId: integer("term_id").notNull().references(() => knowledgeReviewQueue.id, { onDelete: "cascade" }),
+  // Denormalised from the term for convenient filtering/display.
+  reviewType: text("review_type").notNull().default("vocabulary"),
+  domain: text("domain"),
+  // alias | new_identity | reject | defer (the reviewer's decision).
+  decisionType: text("decision_type").notNull(),
+  // For "alias": the existing canonical slug + the alt-name to bind (proposal
+  // only — validated for shape, never written to the resolver in Phase 2).
+  targetCanonicalSlug: text("target_canonical_slug"),
+  aliasString: text("alias_string"),
+  // For "new_identity": the hand-off artifact fields (proposed, never minted).
+  proposedNewSlug: text("proposed_new_slug"),
+  proposedNewName: text("proposed_new_name"),
+  proposedNewDescription: text("proposed_new_description"),
+  // Reviewer metadata preserved verbatim (provenance).
+  rationale: text("rationale"),
+  confidence: text("confidence"),
+  // KQ1E — Phase 3: the reviewer (human/agent identity) distinct from the model.
+  // Both are surfaced side-by-side in the Consensus & Comparison workspace.
+  reviewer: text("reviewer"),
+  reviewerModel: text("reviewer_model"),
+  reviewerNotes: text("reviewer_notes"),
+  // The queue term's original context snapshot at import time (preserved so the
+  // proposal stays interpretable even if the queue later changes).
+  originalContext: jsonb("original_context").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
+  // proposed → approved | rejected. No apply/rollback states in Phase 2.
+  status: text("status").notNull().default("proposed"),
+  approvedByUserId: integer("approved_by_user_id").references(() => users.id),
+  approvedAt: timestamp("approved_at", { withTimezone: true }),
+  rejectedAt: timestamp("rejected_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  batchStatusIdx: index("idx_knowledge_review_decision_batch").on(t.batchId, t.status),
+  termIdx: index("idx_knowledge_review_decision_term").on(t.termId),
+}));
+
+export const insertKnowledgeReviewDecisionSchema = createInsertSchema(knowledgeReviewDecisions, {
+  originalContext: z.custom<Record<string, unknown>>().optional(),
+}).omit({ id: true, createdAt: true, updatedAt: true });
+export type KnowledgeReviewDecision = typeof knowledgeReviewDecisions.$inferSelect;
+export type InsertKnowledgeReviewDecision = z.infer<typeof insertKnowledgeReviewDecisionSchema>;
+
+// ════════════════════════════════════════════════════════════════════════════
+// KQ1F — Phase 4: Publish, Release Notes, Rollback & Knowledge Health
+// ════════════════════════════════════════════════════════════════════════════
+// PUBLISHING is the ONLY operation that changes canonical knowledge, and it does
+// so through exactly ONE mechanism: the governed alias overlay below. GOV2 Rule 3
+// classes adding an alias as a CONTENT edit, never a new identity or schema
+// change — so the overlay moves alias *content* into a governed runtime store the
+// single resolver still solely reads; it does NOT move vocabulary ownership
+// (TypeScript stays the owner per NK6F). New-identity decisions are emitted as
+// hand-off artifacts for the TS owner — the Workbench NEVER auto-mints a
+// canonical entity. Every publish creates a Knowledge Release + a rollback point
+// and appends append-only audit rows (complete history preserved).
+
+// The governed alias overlay. The single resolver merges ACTIVE rows on top of
+// its TS-owned seed alias tables at load / reload, under the SAME anti-fork guard
+// as the TS tables: `canonicalSlug` MUST already be a canonical slug or the
+// resolver refuses it. This is the ONLY canonical-adjacent write the Workbench
+// makes. Rollback soft-deletes rows (isActive=false) — never hard-deletes — so
+// the audit trail stays intact and resolution simply reverts to pre-release
+// behaviour. A partial unique index keeps at most ONE active alias per
+// (kind, aliasNormalised) — GOV2 many-to-one: one string → exactly one identity.
+export const knowledgeVocabularyAliases = pgTable("knowledge_vocabulary_aliases", {
+  id: serial("id").primaryKey(),
+  // nutrient | benefit (the canonical vocabulary the alias belongs to).
+  kind: text("kind").notNull(),
+  // The normalised alt-name key (resolver's normaliseVocabularyTerm output).
+  aliasNormalised: text("alias_normalised").notNull(),
+  // The canonical slug this alias resolves to. Anti-fork guarded at merge time.
+  canonicalSlug: text("canonical_slug").notNull(),
+  // Provenance: the approved decision + release that published this alias.
+  decisionId: integer("decision_id").references(() => knowledgeReviewDecisions.id),
+  releaseId: integer("release_id"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  deactivatedAt: timestamp("deactivated_at", { withTimezone: true }),
+}, (t) => ({
+  // Only ONE active alias per (kind, key) — historical inactive rows may coexist,
+  // so a rolled-back alias can be re-published later without a constraint clash.
+  activeAliasUnique: uniqueIndex("uq_knowledge_vocab_alias_active")
+    .on(t.kind, t.aliasNormalised)
+    .where(sql`${t.isActive}`),
+}));
+
+export const insertKnowledgeVocabularyAliasSchema = createInsertSchema(knowledgeVocabularyAliases).omit({
+  id: true,
+  createdAt: true,
+});
+export type KnowledgeVocabularyAlias = typeof knowledgeVocabularyAliases.$inferSelect;
+export type InsertKnowledgeVocabularyAlias = z.infer<typeof insertKnowledgeVocabularyAliasSchema>;
+
+// A rollback point captured at publish time. Holds the deterministic snapshot
+// needed to reverse a release (the overlay rows it created + the prior decision/
+// term statuses), so rollback is exact and non-destructive. `status` flips
+// active → consumed when the release is rolled back.
+export const knowledgeRollbackPoints = pgTable("knowledge_rollback_points", {
+  id: serial("id").primaryKey(),
+  // The release this point can restore (set immediately after the release row
+  // exists; nullable only to sidestep the circular insert ordering).
+  releaseId: integer("release_id"),
+  // { aliasRowIds:number[], handoffCount:number, decisions:[{id,prevStatus}],
+  //   terms:[{id,prevStatus}] } — everything reverse() needs.
+  snapshot: jsonb("snapshot").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
+  status: text("status").notNull().default("active"), // active | consumed
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  consumedAt: timestamp("consumed_at", { withTimezone: true }),
+});
+
+export const insertKnowledgeRollbackPointSchema = createInsertSchema(knowledgeRollbackPoints, {
+  snapshot: z.custom<Record<string, unknown>>().optional(),
+}).omit({ id: true, createdAt: true });
+export type KnowledgeRollbackPoint = typeof knowledgeRollbackPoints.$inferSelect;
+export type InsertKnowledgeRollbackPoint = z.infer<typeof insertKnowledgeRollbackPointSchema>;
+
+// One Knowledge Release — created automatically by every publish operation. It
+// is the human-readable record of exactly what changed and who approved/published
+// it, and it links to the rollback point that can reverse it.
+export const knowledgeReleases = pgTable("knowledge_releases", {
+  id: serial("id").primaryKey(),
+  publishedAt: timestamp("published_at", { withTimezone: true }).notNull().defaultNow(),
+  // The approving admin. `approvedByUserIds` holds the full distinct set when a
+  // release spans decisions approved by more than one admin.
+  approvedByUserId: integer("approved_by_user_id").references(() => users.id),
+  approvedByUserIds: jsonb("approved_by_user_ids").$type<number[]>().notNull().default(sql`'[]'::jsonb`),
+  // The admin who ran publish (may differ from the approver).
+  publishedByUserId: integer("published_by_user_id").references(() => users.id),
+  // The release's change breakdown.
+  aliasesPublished: integer("aliases_published").notNull().default(0),
+  newEntities: integer("new_entities").notNull().default(0),        // new-identity hand-offs emitted
+  updatedEntities: integer("updated_entities").notNull().default(0), // distinct canonical targets that gained an alias
+  rejectedProposals: integer("rejected_proposals").notNull().default(0),
+  deferredProposals: integer("deferred_proposals").notNull().default(0),
+  // Traceability: the packages + proposals this release drew from.
+  linkedBatchIds: jsonb("linked_batch_ids").$type<number[]>().notNull().default(sql`'[]'::jsonb`),
+  linkedProposalIds: jsonb("linked_proposal_ids").$type<number[]>().notNull().default(sql`'[]'::jsonb`),
+  // The rollback point that reverses this release.
+  rollbackId: integer("rollback_id"),
+  notes: text("notes"),
+  status: text("status").notNull().default("published"), // published | rolled_back
+  rolledBackAt: timestamp("rolled_back_at", { withTimezone: true }),
+  rolledBackByUserId: integer("rolled_back_by_user_id").references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertKnowledgeReleaseSchema = createInsertSchema(knowledgeReleases, {
+  approvedByUserIds: z.custom<number[]>().optional(),
+  linkedBatchIds: z.custom<number[]>().optional(),
+  linkedProposalIds: z.custom<number[]>().optional(),
+}).omit({ id: true, createdAt: true });
+export type KnowledgeRelease = typeof knowledgeReleases.$inferSelect;
+export type InsertKnowledgeRelease = z.infer<typeof insertKnowledgeReleaseSchema>;
+
+// Append-only audit history — every governed transition across the Workbench
+// (capture / import / approve / reject / publish / hand-off / rollback). Retained
+// forever with before/after snapshots so a release can be reconstructed. Nothing
+// updates or deletes these rows.
+export const knowledgeReviewAudit = pgTable("knowledge_review_audit", {
+  id: serial("id").primaryKey(),
+  entity: text("entity").notNull(),      // term | batch | decision | alias | release
+  entityId: integer("entity_id"),
+  action: text("action").notNull(),      // approved | rejected | published | handed_off | rolled_back | …
+  actorKind: text("actor_kind").notNull().default("human"), // human | llm | system
+  actorUserId: integer("actor_user_id").references(() => users.id),
+  releaseId: integer("release_id"),
+  before: jsonb("before").$type<Record<string, unknown> | null>(),
+  after: jsonb("after").$type<Record<string, unknown> | null>(),
+  detail: text("detail"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  entityIdx: index("idx_knowledge_review_audit_entity").on(t.entity, t.entityId),
+  releaseIdx: index("idx_knowledge_review_audit_release").on(t.releaseId),
+}));
+
+export const insertKnowledgeReviewAuditSchema = createInsertSchema(knowledgeReviewAudit, {
+  before: z.custom<Record<string, unknown> | null>().optional(),
+  after: z.custom<Record<string, unknown> | null>().optional(),
+}).omit({ id: true, createdAt: true });
+export type KnowledgeReviewAudit = typeof knowledgeReviewAudit.$inferSelect;
+export type InsertKnowledgeReviewAudit = z.infer<typeof insertKnowledgeReviewAuditSchema>;
+
 // ════════════════════════════════════════════════════════════════════════════
 // WS2A — Canonical Food Identity Foundations
 // ════════════════════════════════════════════════════════════════════════════
@@ -1709,8 +2035,25 @@ export const canonicalFoods = pgTable("canonical_food", {
   slug: text("slug").notNull().unique(),
   name: text("name").notNull(),
   category: text("category").notNull(),
+  // DESCRIPTIVE ATTRIBUTE ONLY (NK6R). Texture/format words such as "Hard",
+  // "Soft", "Semi-hard" describe a food; they are NOT a hierarchy level. The
+  // parent/child structure lives in `family` below. Never branch logic on this.
   subcategory: text("subcategory"),
   description: text("description"),
+  // NK6R — optional parent canonical food. A food may sit beneath a broader
+  // canonical identity without being merged or aliased into it: the child keeps
+  // its own slug, display name and facts (GOV2 Rule 1/2), and the parent is a
+  // real canonical identity in its own right — not a category string.
+  //   olive-pomace-oil → olive-oil          (grade under the generic oil)
+  //   stilton → blue-cheese → cheese        (named cheese → family → parent)
+  //   chickpea-pasta → pasta                (pasta type under the generic)
+  // Null = the food is top-level, which includes family rows such as `cheese`
+  // and `blue-cheese`. Self-referencing by slug convention (no FK, mirroring
+  // knowledge_nutrients.family from NK6M); validateCanonicalSeed() enforces that
+  // every family resolves to an existing canonical food and that the graph is
+  // acyclic. Aliasing a child into its parent is a GOV2 fail test — the whole
+  // point of this column is that a hierarchy is NOT an alias.
+  family: text("family"),
   // Optional link OUT to the editorial Knowledge Registry (WS0). Nullable so the
   // spine can hold foods the registry was never meant to cover.
   knowledgeFoodSlug: text("knowledge_food_slug").references(() => knowledgeFoods.slug, { onDelete: "set null" }),

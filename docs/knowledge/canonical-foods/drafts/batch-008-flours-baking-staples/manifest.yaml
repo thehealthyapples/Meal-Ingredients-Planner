@@ -1,0 +1,50 @@
+batch_id: batch-008-flours-baking-staples
+title: Flours and Simple Baking Staples
+status: draft_requires_validation
+created_by: ChatGPT for The Healthy Apples
+created_date: '2026-07-07'
+food_count: 30
+format: individual_yaml_files_one_food_per_file
+import_policy:
+  must_use_fixed_identity_resolver: true
+  must_dry_run_first: true
+  do_not_import_manifest_or_readme: true
+  do_not_use_force_upsert: true
+  merge_existing_identities_only_with_explicit_approval: true
+foods:
+- wholemeal-flour
+- plain-wheat-flour
+- self-raising-flour
+- strong-white-bread-flour
+- strong-wholemeal-bread-flour
+- rye-flour
+- spelt-flour
+- buckwheat-flour
+- oat-flour
+- rice-flour
+- cornflour
+- cornmeal
+- semolina-flour
+- almond-flour
+- coconut-flour
+- chestnut-flour
+- tapioca-flour
+- potato-starch
+- arrowroot
+- baking-powder
+- bicarbonate-of-soda
+- cream-of-tartar
+- active-dry-yeast
+- fresh-yeast
+- sourdough-starter
+- gelatine
+- agar-agar
+- pectin
+- vanilla-pod
+- vanilla-extract
+smoke_test_order:
+- wholemeal-flour
+- plain-wheat-flour
+- self-raising-flour
+notes: Validate through the NK6I/NK6M fixed resolver. Classify safe new imports, existing identities, merge candidates and
+  editorial review items before any import.

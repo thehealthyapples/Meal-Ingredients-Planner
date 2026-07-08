@@ -8304,6 +8304,581 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     }
   });
 
+  // ─── Admin: Knowledge Review Workbench (KQ1C — Phase 1) ────────────────────
+  // Triage workspace over the governed review queue: browse, inline & bulk edit
+  // of editorial review fields, and export for external LLM review (JSON/CSV).
+  // Phase 1 does NOT import, approve, apply aliases, change canonical data, or
+  // roll back — those remain later phases behind a human gate (KQ1A §8/§10).
+
+  // Parse the shared list/filter params from a query object.
+  const parseReviewQueueParams = (q: any) => {
+    const sortByRaw = q.sortBy as string | undefined;
+    const sortBy = (["lastSeenAt", "firstSeenAt", "occurrenceCount", "label", "priority", "status"] as const)
+      .includes(sortByRaw as any)
+      ? (sortByRaw as any)
+      : undefined;
+    return {
+      reviewType: (q.reviewType as string) || undefined,
+      domain: (q.domain as string) || undefined,
+      status: (q.status as string) || undefined,
+      source: (q.source as string) || undefined,
+      priority: (q.priority as string) || undefined,
+      knowledgeOrigin: (q.knowledgeOrigin as string) || undefined,
+      hasSuggestion: q.hasSuggestion === "true" || q.hasSuggestion === true,
+      search: (q.search as string) || undefined,
+      sortBy,
+      sortDir: q.sortDir === "asc" ? ("asc" as const) : ("desc" as const),
+      limit: q.limit ? parseInt(q.limit as string, 10) : undefined,
+      offset: q.offset ? parseInt(q.offset as string, 10) : undefined,
+    };
+  };
+
+  app.get("/api/admin/knowledge-review/queue", assertAdmin, async (req, res) => {
+    try {
+      const { listReviewQueue } = await import("./lib/knowledge-review-store");
+      const result = await listReviewQueue(parseReviewQueueParams(req.query));
+      res.json(result);
+    } catch (err) {
+      console.error("[AdminKnowledgeReview] queue GET error:", err);
+      res.status(500).json({ message: "Failed to load knowledge review queue" });
+    }
+  });
+
+  // Vocabulary for the review-field editors (priorities, editable statuses,
+  // origin presets, and the canonical slugs a suggested match may point at).
+  app.get("/api/admin/knowledge-review/options", assertAdmin, async (_req, res) => {
+    try {
+      const store = await import("./lib/knowledge-review-store");
+      const { NUTRIENT_SEED, HEALTH_BENEFIT_SEED } = await import("@shared/knowledge");
+      res.json({
+        priorities: store.REVIEW_PRIORITIES,
+        statuses: store.EDITABLE_REVIEW_STATUSES,
+        origins: store.KNOWLEDGE_ORIGIN_PRESETS,
+        canonical: {
+          nutrient: NUTRIENT_SEED.map((n) => ({ slug: n.slug, name: n.name })),
+          benefit: HEALTH_BENEFIT_SEED.map((b) => ({ slug: b.slug, name: b.name })),
+        },
+      });
+    } catch (err) {
+      console.error("[AdminKnowledgeReview] options GET error:", err);
+      res.status(500).json({ message: "Failed to load review options" });
+    }
+  });
+
+  // Bulk edit — registered BEFORE the ":id" route so "bulk" is not read as an id.
+  app.patch("/api/admin/knowledge-review/terms/bulk", assertAdmin, async (req, res) => {
+    try {
+      const { bulkUpdateReviewItems } = await import("./lib/knowledge-review-store");
+      const body = req.body ?? {};
+      const ids: number[] = Array.isArray(body.ids)
+        ? body.ids.map((n: any) => parseInt(String(n), 10)).filter((n: number) => Number.isInteger(n))
+        : [];
+      if (ids.length === 0) return res.status(400).json({ message: "No item ids provided" });
+      const updated = await bulkUpdateReviewItems(ids, body.patch ?? {});
+      res.json({ updated });
+    } catch (err: any) {
+      console.error("[AdminKnowledgeReview] bulk PATCH error:", err);
+      res.status(400).json({ message: err?.message || "Failed to bulk edit review items" });
+    }
+  });
+
+  // Inline edit of a single item's review fields.
+  app.patch("/api/admin/knowledge-review/terms/:id", assertAdmin, async (req, res) => {
+    try {
+      const id = parseInt(String(req.params.id), 10);
+      if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ message: "Invalid id" });
+      const { updateReviewItem } = await import("./lib/knowledge-review-store");
+      const row = await updateReviewItem(id, req.body ?? {});
+      if (!row) return res.status(404).json({ message: "Review item not found" });
+      res.json(row);
+    } catch (err: any) {
+      console.error("[AdminKnowledgeReview] term PATCH error:", err);
+      res.status(400).json({ message: err?.message || "Failed to edit review item" });
+    }
+  });
+
+  // Export for external LLM review. scope: selected | filtered | all; format:
+  // json | csv. Stateless read — creates no batch and mutates nothing.
+  app.post("/api/admin/knowledge-review/export", assertAdmin, async (req, res) => {
+    try {
+      const { buildReviewExport, exportToCsv } = await import("./lib/knowledge-review-store");
+      const body = req.body ?? {};
+      const scope = (["selected", "filtered", "all"] as const).includes(body.scope) ? body.scope : "all";
+      const format = body.format === "csv" ? "csv" : "json";
+      const ids: number[] = Array.isArray(body.ids)
+        ? body.ids.map((n: any) => parseInt(String(n), 10)).filter((n: number) => Number.isInteger(n))
+        : [];
+      const filters = scope === "filtered" ? parseReviewQueueParams(body.filters ?? {}) : undefined;
+      const pkg = await buildReviewExport({ scope, ids, filters, exportedAt: new Date().toISOString() });
+      const stamp = pkg.exportedAt.slice(0, 19).replace(/[:T]/g, "-");
+      const filename = `knowledge-review-${scope}-${stamp}.${format}`;
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      if (format === "csv") {
+        res.setHeader("Content-Type", "text/csv; charset=utf-8");
+        res.send(exportToCsv(pkg));
+      } else {
+        res.setHeader("Content-Type", "application/json; charset=utf-8");
+        res.send(JSON.stringify(pkg, null, 2));
+      }
+    } catch (err: any) {
+      console.error("[AdminKnowledgeReview] export error:", err);
+      res.status(500).json({ message: err?.message || "Failed to export review items" });
+    }
+  });
+
+  // ── KQ1D — Phase 2: Knowledge Review Package import & proposals ────────────
+  // Import a reviewed Knowledge Review Package (the exported JSON with each
+  // item's `decision` filled): validate checksum/provenance, then create
+  // `proposed` decision records LINKED to their queue terms. Applies NOTHING to
+  // canonical space — approval is a human gate that records intent only. No
+  // alias apply, no canonical vocabulary/entity change, no rollback (Phase 3+).
+
+  // Import a reviewed package. Body: the package JSON directly, or
+  // { filename?, package: <the package> }.
+  app.post("/api/admin/knowledge-review/import", assertAdmin, async (req, res) => {
+    try {
+      const { importReviewPackage, ReviewPackageError } = await import("./lib/knowledge-review-store");
+      const body = req.body ?? {};
+      const raw = body && typeof body === "object" && "package" in body ? (body as any).package : body;
+      const filename = typeof (body as any)?.filename === "string" ? (body as any).filename : null;
+      const userId = (req.user as any)?.id ?? null;
+      try {
+        const result = await importReviewPackage({ raw, filename, userId, importedAt: new Date().toISOString() });
+        res.json(result);
+      } catch (e: any) {
+        // Validation / provenance failures are client errors (400).
+        if (e instanceof ReviewPackageError) return res.status(400).json({ message: e.message });
+        throw e;
+      }
+    } catch (err: any) {
+      console.error("[AdminKnowledgeReview] import error:", err);
+      res.status(500).json({ message: err?.message || "Failed to import review package" });
+    }
+  });
+
+  // List import batches (provenance records), newest first.
+  app.get("/api/admin/knowledge-review/batches", assertAdmin, async (_req, res) => {
+    try {
+      const { listImportBatches } = await import("./lib/knowledge-review-store");
+      res.json({ batches: await listImportBatches() });
+    } catch (err: any) {
+      console.error("[AdminKnowledgeReview] batches GET error:", err);
+      res.status(500).json({ message: "Failed to load import batches" });
+    }
+  });
+
+  // Batch detail: the batch plus its proposals (with linked term state).
+  app.get("/api/admin/knowledge-review/batches/:id", assertAdmin, async (req, res) => {
+    try {
+      const id = parseInt(String(req.params.id), 10);
+      if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ message: "Invalid id" });
+      const { getBatchDetail } = await import("./lib/knowledge-review-store");
+      const detail = await getBatchDetail(id);
+      if (!detail) return res.status(404).json({ message: "Batch not found" });
+      res.json(detail);
+    } catch (err: any) {
+      console.error("[AdminKnowledgeReview] batch detail GET error:", err);
+      res.status(500).json({ message: "Failed to load batch detail" });
+    }
+  });
+
+  // List proposals across batches (filter by batchId / status).
+  app.get("/api/admin/knowledge-review/decisions", assertAdmin, async (req, res) => {
+    try {
+      const { listDecisions } = await import("./lib/knowledge-review-store");
+      const batchId = req.query.batchId ? parseInt(String(req.query.batchId), 10) : undefined;
+      const status = (req.query.status as string) || undefined;
+      res.json({ decisions: await listDecisions({ batchId: batchId || undefined, status }) });
+    } catch (err: any) {
+      console.error("[AdminKnowledgeReview] decisions GET error:", err);
+      res.status(500).json({ message: "Failed to load proposals" });
+    }
+  });
+
+  // Human gate — approve a single proposal. Records intent; applies nothing.
+  app.post("/api/admin/knowledge-review/decisions/:id/approve", assertAdmin, async (req, res) => {
+    try {
+      const id = parseInt(String(req.params.id), 10);
+      if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ message: "Invalid id" });
+      const { approveDecision, ReviewPackageError } = await import("./lib/knowledge-review-store");
+      const userId = (req.user as any)?.id ?? null;
+      try {
+        res.json(await approveDecision(id, userId));
+      } catch (e: any) {
+        if (e instanceof ReviewPackageError) return res.status(400).json({ message: e.message });
+        throw e;
+      }
+    } catch (err: any) {
+      console.error("[AdminKnowledgeReview] approve error:", err);
+      res.status(500).json({ message: err?.message || "Failed to approve proposal" });
+    }
+  });
+
+  // Human gate — reject a single proposal.
+  app.post("/api/admin/knowledge-review/decisions/:id/reject", assertAdmin, async (req, res) => {
+    try {
+      const id = parseInt(String(req.params.id), 10);
+      if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ message: "Invalid id" });
+      const { rejectDecision, ReviewPackageError } = await import("./lib/knowledge-review-store");
+      const userId = (req.user as any)?.id ?? null;
+      try {
+        res.json(await rejectDecision(id, userId));
+      } catch (e: any) {
+        if (e instanceof ReviewPackageError) return res.status(400).json({ message: e.message });
+        throw e;
+      }
+    } catch (err: any) {
+      console.error("[AdminKnowledgeReview] reject error:", err);
+      res.status(500).json({ message: err?.message || "Failed to reject proposal" });
+    }
+  });
+
+  // ── KQ1E — Phase 3: Consensus & Comparison ─────────────────────────────────
+  // Group proposals BY review item so a human can compare every reviewer/model's
+  // proposal before approving. Returns the four backlog counts (Awaiting Review /
+  // Awaiting Consensus / Conflicting Reviews / Awaiting Approval) plus the per-
+  // term comparison groups with a computed consensus verdict (agreement only, not
+  // truth). Pure read — applies nothing to canonical space.
+  app.get("/api/admin/knowledge-review/consensus", assertAdmin, async (_req, res) => {
+    try {
+      const { getConsensusDashboard } = await import("./lib/knowledge-review-store");
+      res.json(await getConsensusDashboard());
+    } catch (err: any) {
+      console.error("[AdminKnowledgeReview] consensus GET error:", err);
+      res.status(500).json({ message: "Failed to load consensus dashboard" });
+    }
+  });
+
+  // ── KQ1F — Phase 4: Publish, Release Notes, Rollback & Knowledge Health ──────
+  // PUBLISH is the final governed workflow and the ONLY canonical-knowledge write.
+  // It publishes approved proposals (alias → governed overlay the single resolver
+  // reads; new_identity → hand-off artifact, never auto-minted), auto-creates a
+  // Knowledge Release + rollback point, and audits everything. GOV2 ownership is
+  // preserved: no duplicate vocabularies, no minted entity, single resolver.
+
+  // Publish all approved proposals (or a given subset). Creates one release.
+  app.post("/api/admin/knowledge-review/publish", assertAdmin, async (req, res) => {
+    try {
+      const { publishApprovedDecisions, ReviewPackageError } = await import("./lib/knowledge-review-store");
+      const userId = (req.user as any)?.id ?? null;
+      const body = req.body ?? {};
+      const decisionIds = Array.isArray(body.decisionIds)
+        ? body.decisionIds.map((n: any) => parseInt(String(n), 10)).filter((n: number) => Number.isInteger(n) && n > 0)
+        : undefined;
+      const notes = typeof body.notes === "string" ? body.notes : null;
+      try {
+        res.json(await publishApprovedDecisions({ decisionIds, userId, notes, publishedAt: new Date() }));
+      } catch (e: any) {
+        if (e instanceof ReviewPackageError) return res.status(400).json({ message: e.message });
+        throw e;
+      }
+    } catch (err: any) {
+      console.error("[AdminKnowledgeReview] publish error:", err);
+      res.status(500).json({ message: err?.message || "Failed to publish" });
+    }
+  });
+
+  // List Knowledge Releases (newest first).
+  app.get("/api/admin/knowledge-review/releases", assertAdmin, async (_req, res) => {
+    try {
+      const { listReleases } = await import("./lib/knowledge-review-store");
+      res.json(await listReleases());
+    } catch (err: any) {
+      console.error("[AdminKnowledgeReview] releases GET error:", err);
+      res.status(500).json({ message: "Failed to load releases" });
+    }
+  });
+
+  // One release with its aliases, linked proposals, and audit trail.
+  app.get("/api/admin/knowledge-review/releases/:id", assertAdmin, async (req, res) => {
+    try {
+      const id = parseInt(String(req.params.id), 10);
+      if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ message: "Invalid id" });
+      const { getReleaseDetail } = await import("./lib/knowledge-review-store");
+      const detail = await getReleaseDetail(id);
+      if (!detail) return res.status(404).json({ message: "Release not found" });
+      res.json(detail);
+    } catch (err: any) {
+      console.error("[AdminKnowledgeReview] release detail error:", err);
+      res.status(500).json({ message: "Failed to load release" });
+    }
+  });
+
+  // Roll a release back (non-destructive; reverts overlay + proposal states).
+  app.post("/api/admin/knowledge-review/releases/:id/rollback", assertAdmin, async (req, res) => {
+    try {
+      const id = parseInt(String(req.params.id), 10);
+      if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ message: "Invalid id" });
+      const { rollbackRelease, ReviewPackageError } = await import("./lib/knowledge-review-store");
+      const userId = (req.user as any)?.id ?? null;
+      try {
+        res.json(await rollbackRelease(id, userId, new Date()));
+      } catch (e: any) {
+        if (e instanceof ReviewPackageError) return res.status(400).json({ message: e.message });
+        throw e;
+      }
+    } catch (err: any) {
+      console.error("[AdminKnowledgeReview] rollback error:", err);
+      res.status(500).json({ message: err?.message || "Failed to roll back release" });
+    }
+  });
+
+  // Knowledge Health dashboard metrics.
+  app.get("/api/admin/knowledge-review/health", assertAdmin, async (_req, res) => {
+    try {
+      const { getKnowledgeHealth } = await import("./lib/knowledge-review-store");
+      res.json(await getKnowledgeHealth());
+    } catch (err: any) {
+      console.error("[AdminKnowledgeReview] health GET error:", err);
+      res.status(500).json({ message: "Failed to load knowledge health" });
+    }
+  });
+
+  // ── Benchmark Household World (INTQ6) — DEV-only admin operator API ───────────
+  // Wires the existing server/benchmark/ module (fixtures + deterministic seeder)
+  // to the Admin → Benchmark Households page. These routes own no benchmark logic:
+  // they read/reset canonical fixtures and execute runs through the one Companion
+  // seam (server/tests/benchmark/). Every entry point re-asserts the DEV-only guard.
+  // (BENCH1 — restores the missing route registration; see docs/implementation.)
+
+  app.get("/api/admin/benchmark-households", assertAdmin, async (_req, res) => {
+    try {
+      const { assertBenchmarkWorldAllowed, listBenchmarkHouseholdStates, BENCHMARK_WORLD_VERSION } =
+        await import("./benchmark/index.js");
+      assertBenchmarkWorldAllowed();
+      const households = await listBenchmarkHouseholdStates();
+      res.json({ version: BENCHMARK_WORLD_VERSION, households });
+    } catch (err: any) {
+      console.error("[BenchmarkWorld] list error:", err);
+      res.status(500).json({ message: err?.message ?? "Failed to load benchmark households" });
+    }
+  });
+
+  app.get("/api/admin/benchmark-households/:id", assertAdmin, async (req, res) => {
+    try {
+      const { assertBenchmarkWorldAllowed, getBenchmarkHouseholdDetail } =
+        await import("./benchmark/index.js");
+      assertBenchmarkWorldAllowed();
+      res.json(await getBenchmarkHouseholdDetail(String(req.params.id)));
+    } catch (err: any) {
+      console.error("[BenchmarkWorld] detail error:", err);
+      res.status(500).json({ message: err?.message ?? "Failed to load household detail" });
+    }
+  });
+
+  app.post("/api/admin/benchmark-households/seed", assertAdmin, async (_req, res) => {
+    try {
+      const { assertBenchmarkWorldAllowed, seedBenchmarkWorld } = await import("./benchmark/index.js");
+      assertBenchmarkWorldAllowed();
+      const results = await seedBenchmarkWorld();
+      res.json({ results });
+    } catch (err: any) {
+      console.error("[BenchmarkWorld] seed error:", err);
+      res.status(500).json({ message: err?.message ?? "Failed to seed benchmark world" });
+    }
+  });
+
+  app.post("/api/admin/benchmark-households/run-benchmark", assertAdmin, async (req, res) => {
+    try {
+      const { assertBenchmarkWorldAllowed, benchmarkHouseholdIds, resolveBenchmarkOwner, resetBenchmarkHousehold } =
+        await import("./benchmark/index.js");
+      assertBenchmarkWorldAllowed();
+      const { runBenchmark, makeCompanionTurnRunner, saveRun } = await import("./tests/benchmark/index.js");
+
+      const mode = req.body?.mode === "full" ? "full" : "quick";
+      const requested = req.body?.households;
+      const ids: string[] = requested === "all" || !Array.isArray(requested)
+        ? [...benchmarkHouseholdIds()]
+        : requested;
+
+      const runs: Array<{
+        benchmarkHouseholdId: string; runId: string; headline: number;
+        honestGapRate: number; gatesFired: number; verdict: string; questionsScored: number;
+      }> = [];
+
+      for (const id of ids) {
+        await resetBenchmarkHousehold(id);
+        const owner = await resolveBenchmarkOwner(id);
+        if (!owner) continue;
+        const prefs = await storage.getUserPreferences(owner.id).catch(() => undefined);
+        const personality = ((prefs as any)?.companionPersonality as string | undefined) ?? "default";
+        const runTurn = makeCompanionTurnRunner(owner, personality);
+        const result = await runBenchmark({
+          mode, runTurn, worldMode: "benchmark-world", householdLabel: id, baseline: null,
+        });
+        saveRun(result);
+        runs.push({
+          benchmarkHouseholdId: id,
+          runId: result.runId,
+          headline: result.headline.score,
+          honestGapRate: result.headline.honestGapRate,
+          gatesFired: result.headline.gatesFired,
+          verdict: result.releaseReadiness.verdict,
+          questionsScored: result.headline.questionsScored,
+        });
+      }
+      res.json({ runs });
+    } catch (err: any) {
+      console.error("[BenchmarkWorld] run-benchmark error:", err);
+      res.status(500).json({ message: err?.message ?? "Benchmark run failed" });
+    }
+  });
+
+  app.post("/api/admin/benchmark-households/:id/reset", assertAdmin, async (req, res) => {
+    try {
+      const { assertBenchmarkWorldAllowed, resetBenchmarkHousehold } = await import("./benchmark/index.js");
+      assertBenchmarkWorldAllowed();
+      res.json(await resetBenchmarkHousehold(String(req.params.id)));
+    } catch (err: any) {
+      console.error("[BenchmarkWorld] reset error:", err);
+      res.status(500).json({ message: err?.message ?? "Failed to reset household" });
+    }
+  });
+
+  app.post("/api/admin/benchmark-households/:id/impersonate", assertAdmin, async (req, res) => {
+    try {
+      const { assertBenchmarkWorldAllowed, resolveBenchmarkOwner } = await import("./benchmark/index.js");
+      assertBenchmarkWorldAllowed();
+      const id = String(req.params.id);
+      const owner = await resolveBenchmarkOwner(id);
+      if (!owner) return res.status(404).json({ message: "Benchmark household not seeded — seed it first." });
+      const adminUserId = (req.user as any).id;
+      req.login(owner, { keepSessionInfo: true } as any, (err: any) => {
+        if (err) {
+          console.error("[BenchmarkWorld] impersonate login error:", err);
+          return res.status(500).json({ message: "Impersonation failed" });
+        }
+        (req.session as any).benchmarkImpersonation = { adminUserId, benchmarkHouseholdId: id };
+        req.session.save((saveErr) => {
+          if (saveErr) return res.status(500).json({ message: "Impersonation failed" });
+          res.json({ ok: true, benchmarkHouseholdId: id });
+        });
+      });
+    } catch (err: any) {
+      console.error("[BenchmarkWorld] impersonate error:", err);
+      res.status(500).json({ message: err?.message ?? "Impersonation failed" });
+    }
+  });
+
+  // Session-scoped impersonation status + return-to-admin (the current session may
+  // be the benchmark user, whose role is "user" — so these are not assertAdmin).
+  app.get("/api/benchmark-impersonation", (req, res) => {
+    const imp = (req.session as any)?.benchmarkImpersonation;
+    res.json({ impersonating: Boolean(imp), benchmarkHouseholdId: imp?.benchmarkHouseholdId });
+  });
+
+  app.post("/api/benchmark-impersonation/stop", async (req, res) => {
+    try {
+      const imp = (req.session as any)?.benchmarkImpersonation;
+      if (!imp) return res.json({ ok: true });
+      const admin = await storage.getUser(imp.adminUserId);
+      if (!admin) return res.status(500).json({ message: "Original admin session could not be restored" });
+      req.login(admin, { keepSessionInfo: true } as any, (err: any) => {
+        if (err) {
+          console.error("[BenchmarkWorld] stop-impersonation login error:", err);
+          return res.status(500).json({ message: "Failed to return to admin" });
+        }
+        delete (req.session as any).benchmarkImpersonation;
+        req.session.save((saveErr) => {
+          if (saveErr) return res.status(500).json({ message: "Failed to return to admin" });
+          res.json({ ok: true });
+        });
+      });
+    } catch (err: any) {
+      console.error("[BenchmarkWorld] stop-impersonation error:", err);
+      res.status(500).json({ message: err?.message ?? "Failed to return to admin" });
+    }
+  });
+
+  // ── Intelligence → Benchmark dashboard (INTQ4/INTQ5) — admin-only ─────────────
+  // Wires the Admin → Intelligence page (admin-intelligence-page.tsx) to the
+  // already-existing benchmark engine + append-only history (server/tests/benchmark/).
+  // Unlike the Benchmark Household World routes above, this runs a single-world
+  // benchmark against the acting admin's OWN live household through the one Companion
+  // seam; it seeds nothing, so it carries no DEV-only world guard — only assertAdmin.
+  // These routes own no benchmark logic and change no scoring: they resolve bundle
+  // provenance, serve saved run artefacts/reports, and execute runs via the engine.
+  // (BENCH1B — restores the missing route registration; see docs/implementation.)
+
+  app.get("/api/intelligence/benchmark/bundle", assertAdmin, async (_req, res) => {
+    try {
+      const { resolveBundle, resolveProvenance, bundleVersionLabel } = await import("./tests/benchmark/index.js");
+      const bundle = resolveBundle();
+      res.json({ bundleVersion: bundleVersionLabel(bundle), bundle, subject: resolveProvenance() });
+    } catch (err: any) {
+      console.error("[Benchmark] bundle error:", err);
+      res.status(500).json({ message: err?.message ?? "Failed to resolve benchmark bundle" });
+    }
+  });
+
+  app.get("/api/intelligence/benchmark/runs", assertAdmin, async (_req, res) => {
+    try {
+      const { listRuns } = await import("./tests/benchmark/index.js");
+      res.json({ runs: listRuns() });
+    } catch (err: any) {
+      console.error("[Benchmark] runs error:", err);
+      res.status(500).json({ message: err?.message ?? "Failed to load benchmark runs" });
+    }
+  });
+
+  app.get("/api/intelligence/benchmark/runs/:id/report", assertAdmin, async (req, res) => {
+    try {
+      const { loadReport } = await import("./tests/benchmark/index.js");
+      const runId = String(req.params.id);
+      const report = loadReport(runId);
+      if (report === null) return res.status(404).json({ message: "Run report not found" });
+      // Correct, safe artefact filename derived from the run id (already dash-delimited).
+      const safeId = runId.replace(/[^A-Za-z0-9._-]/g, "_");
+      const filename = `benchmark-report-${safeId}.md`;
+      // Default is inline (view in a tab, unchanged). `?download` forces a save with the
+      // named file — the same artefact bytes either way (no content change).
+      const disposition = req.query.download !== undefined ? "attachment" : "inline";
+      res.setHeader("Content-Disposition", `${disposition}; filename="${filename}"`);
+      res.type("text/markdown").send(report);
+    } catch (err: any) {
+      console.error("[Benchmark] report error:", err);
+      res.status(500).json({ message: err?.message ?? "Failed to load benchmark report" });
+    }
+  });
+
+  app.get("/api/intelligence/benchmark/runs/:id", assertAdmin, async (req, res) => {
+    try {
+      const { loadRun } = await import("./tests/benchmark/index.js");
+      const run = loadRun(String(req.params.id));
+      if (!run) return res.status(404).json({ message: "Run not found" });
+      res.json(run);
+    } catch (err: any) {
+      console.error("[Benchmark] run detail error:", err);
+      res.status(500).json({ message: err?.message ?? "Failed to load benchmark run" });
+    }
+  });
+
+  app.post("/api/intelligence/benchmark/run", assertAdmin, async (req, res) => {
+    try {
+      const { runBenchmark, makeCompanionTurnRunner, saveRun, resolveBundle, bundleVersionLabel, selectBaseline } =
+        await import("./tests/benchmark/index.js");
+
+      const requested = req.body?.mode;
+      const mode = requested === "full" || requested === "certification" ? requested : "quick";
+
+      const user = req.user as any;
+      const prefs = await storage.getUserPreferences(user.id).catch(() => undefined);
+      const personality = ((prefs as any)?.companionPersonality as string | undefined) ?? "default";
+
+      // Compare a single-world run against the most recent comparable scored run — the
+      // trend/movement panels are the page's whole point (engine handles a null baseline).
+      const baseline = mode === "certification" ? null : selectBaseline(bundleVersionLabel(resolveBundle()));
+
+      const runTurn = makeCompanionTurnRunner(user, personality);
+      const result = await runBenchmark({ mode, runTurn, worldMode: "single-world", householdLabel: "live", baseline });
+      saveRun(result);
+      res.json(result);
+    } catch (err: any) {
+      console.error("[Benchmark] run error:", err);
+      res.status(500).json({ message: err?.message ?? "Benchmark run failed" });
+    }
+  });
+
   // ── Scan (OCR + Parse) ───────────────────────────────────────────────────────
 
   const scanUpload = multer({

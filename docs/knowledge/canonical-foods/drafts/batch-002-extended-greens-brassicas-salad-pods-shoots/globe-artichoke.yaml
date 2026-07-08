@@ -1,0 +1,225 @@
+record:
+  schema: tha_canonical_food_draft
+  schema_version: 2.0-draft
+  batch_id: batch-002-extended-greens-brassicas-salad-pods-shoots
+  status: draft
+  canonical_slug: globe-artichoke
+  display_name: Globe Artichoke
+  duplicate_policy: stop_on_slug_conflict_or_merge_only_with_explicit_approval
+  authored_by: ChatGPT for The Healthy Apples
+  authored_date: '2026-07-07'
+  review_status: requires_claude_import_validation_before_merge
+nk_controls:
+  governing_patterns:
+  - one_canonical_identity
+  - one_owner_per_fact
+  - no_duplicate_entities
+  - progressive_enrichment
+  - honest_gaps_over_fabricated_information
+  ai_usage_rules:
+  - AI may draft editorial wording but must not create new canonical nutrient or benefit vocabulary.
+  - Unresolved nutrients, benefits, aliases or identity conflicts must be rejected for review, not silently minted.
+  numeric_nutrition_policy: do_not_import_numeric_values_until_validated
+  fact_owner_boundary: Food identity belongs to the Knowledge Platform. Nutrient and benefit vocabularies remain TypeScript-owned
+    canonical vocabularies.
+identity:
+  food_category: flower_vegetable
+  aliases:
+  - artichoke
+  - globe artichokes
+  - fresh artichoke
+  - artichoke hearts plain
+  not_same_as:
+  - jerusalem-artichoke
+  - artichoke dip
+  - marinated artichokes in flavoured oil
+  canonical_identity_rule: Globe Artichoke is the canonical identity for the plain whole-food ingredient. Plain fresh, frozen,
+    tinned-in-water or single-ingredient forms remain variants where appropriate; ready meals, sauces, snacks, dressed mixes
+    and branded prepared products are excluded.
+  plant_count_policy:
+    counts_towards_plant_diversity: true
+    plant_family: Asteraceae
+    plant_part: flower_bud
+    plant_diversity_note: Count as one plant identity for THA weekly diversity unless a future governed variety rule states
+      otherwise.
+classification:
+  whole_food_status: whole_or_minimally_processed
+  upf_default: false
+  processing_watchouts:
+  - Exclude ready meals, battered products, crisps, sweetened jars, seasoned pouches and sauce-coated prepared products.
+  - Plain fresh, frozen or tinned-in-water forms may remain under this canonical identity when single-ingredient.
+varieties_and_forms:
+  varieties:
+  - name: artichoke
+    relationship: alias_or_market_form
+  - name: globe artichokes
+    relationship: alias_or_market_form
+  - name: fresh artichoke
+    relationship: alias_or_market_form
+  - name: artichoke hearts plain
+    relationship: alias_or_market_form
+  forms:
+  - name: fresh whole
+    relationship: same_canonical_food_when_plain
+  - name: plain tinned hearts
+    relationship: same_canonical_food_when_plain
+  - name: plain jarred hearts in water or simple brine
+    relationship: same_canonical_food_when_plain
+  preparation_states:
+  - steamed
+  - boiled
+  - roasted
+  - grilled
+  - used as plain hearts
+  form_policy: Do not create a new canonical identity for cut size, pack format, frozen state or plain tinned state unless
+    THA later approves a separate fact owner.
+nutrition_profile:
+  quantitative_values_status: do_not_import_numeric_values_until_validated
+  notable_nutrients:
+  - nutrient: fibre
+    role: Adds fibre within a whole-food meal pattern.
+    confidence: well_established
+  - nutrient: folate
+    role: Adds folate context within varied plant-led meals.
+    confidence: well_established
+  - nutrient: magnesium
+    role: Adds magnesium context within varied whole-food meals.
+    confidence: well_established
+  editorial_summary: A flower bud vegetable often eaten as hearts or leaves, useful for Mediterranean-style meals and salads.
+  vocabulary_policy: All nutrient strings intentionally use existing canonical vocabulary where known; unresolved terms should
+    go to Knowledge Review.
+benefit_language:
+- area: gut-health
+  approved_wording: Globe Artichoke can help add plant variety and fibre context to everyday meals.
+  evidence_tone: high_level_consensus
+  governance_note: Food-first wording only; no gut-disease or microbiome-treatment claim.
+- area: heart-health
+  approved_wording: Globe Artichoke can sit comfortably in heart-health meal patterns when used as part of vegetable-rich
+    cooking.
+  evidence_tone: high_level_consensus
+  governance_note: Pattern-level wording only; no disease prevention claim.
+planner_metadata:
+  meal_slots:
+  - lunch
+  - dinner
+  roles:
+  - vegetable heart
+  - salad component
+  - Mediterranean vegetable
+  good_uses:
+  - salads
+  - antipasti-style plates
+  - grain bowls
+  - pasta dishes
+  - roasted vegetable meals
+  nutrition_boost_tags:
+  - plant-diversity
+  - whole-food
+  - vegetable-variety
+  household_notes: A flower bud vegetable often eaten as hearts or leaves, useful for Mediterranean-style meals and salads.
+  adaptation_notes: Usually compatible as a shared component; adapt cooking fat, sauce, toppings, texture and spice level
+    to household needs.
+shopping_intelligence:
+  supermarket_locations:
+  - fresh vegetables
+  - tinned vegetables
+  - world foods aisle
+  buying_notes: Look for plain globe artichoke without sauces, coatings, dressings or seasoning mixes.
+  quality_signals:
+  - fresh appearance where expected
+  - no visible mould
+  - avoid slimy, sour-smelling or heavily bruised pieces
+  budget_notes: Loose, own-brand, frozen plain, tinned-in-water or seasonal packs may be better-value formats when available
+    and appropriate.
+  search_terms:
+  - globe artichoke
+  - artichoke
+  - globe artichokes
+  - fresh artichoke
+  - artichoke hearts plain
+cooking_and_storage:
+  storage: Store according to supermarket pack guidance; keep fresh produce cool and dry or refrigerated where appropriate.
+  prep_tips: Wash and prepare globe artichoke before use. Use plain cooking methods before adding sauces or seasonings.
+  texture_notes: Use cooking time to control whether the ingredient stays crisp, tender, wilted or soft.
+  leftover_notes: Cool cooked leftovers promptly and follow normal food-safety guidance before reusing.
+relationships:
+  pairs_well_with:
+  - lemon
+  - olive-oil
+  - beans
+  - tomato
+  - parmesan-cheese
+  nutrient_complements:
+  - with: extra-virgin-olive-oil
+    reason: Helps turn vegetables into satisfying meals while keeping the meal whole-food-led.
+  - with: lentils
+    reason: Combines vegetable variety with a pulse-based meal component where appropriate.
+  category_neighbours:
+  - brussels-sprouts
+  - spring-greens
+  - pak-choi
+  - chinese-leaf
+  - swiss-chard
+  - watercress
+  do_not_replace:
+  - jerusalem-artichoke
+  - artichoke dip
+  - marinated artichokes in flavoured oil
+safety_and_limitations:
+  allergen_profile: Naturally free from common animal allergens unless prepared with other ingredients; always check packaged
+    forms.
+  diet_compatibility:
+  - vegan
+  - vegetarian
+  - gluten-free
+  - dairy-free
+  clinical_caveats: Medical diet suitability, allergy risk and therapeutic claims require professional or user-specific review.
+  storage_safety: Discard if mouldy, slimy, sour-smelling beyond normal fermented contexts, or outside safe storage guidance.
+companion_behaviour:
+  plain_answer: Globe Artichoke is a whole-food ingredient option for adding variety, texture and simple nutrition context
+    to meals.
+  suggested_user_facing_phrases:
+  - Add globe artichoke to increase whole-food variety.
+  - Use plain globe artichoke rather than sauce-coated or ready-made versions.
+  - Globe Artichoke works well in salads, antipasti-style plates, grain bowls.
+  avoid_phrases:
+  - Do not call this a superfood.
+  - Do not claim it treats, cures, prevents or reverses disease.
+  - Do not invent numeric nutrition values until validated.
+claim_boundaries:
+  do_not_describe_as:
+  - treating disease
+  - curing disease
+  - preventing disease
+  - reversing disease
+  - guaranteed weight loss
+  - detoxifying
+  allowed_framing:
+  - whole-food variety
+  - meal pattern support
+  - nutrient context
+  - household-friendly ingredient use
+  evidence_policy: Evidence-backed claims can be added later through governed enrichment; current wording remains food-first
+    and non-medical.
+consumers:
+  planner: Use as a whole-food component, side, base or topping according to planner roles.
+  pantry: Use aliases and forms for pantry matching and storage guidance.
+  shopping: Use search terms and supermarket locations for basket matching; avoid processed forms.
+  companion: Use plain_answer and suggested phrases with claim boundaries.
+progressive_enrichment:
+  ready_now:
+  - canonical identity
+  - aliases
+  - not_same_as
+  - planner metadata
+  - shopping metadata
+  - qualitative nutrient context
+  - claim-safe companion wording
+  requires_later_validation:
+  - numeric nutrition values
+  - source references
+  - benefit evidence expansion
+  - variety-specific nutrient differences
+  - clinical diet overlays
+  review_queue_policy: Any unresolved vocabulary or identity conflict should be captured for Knowledge Review rather than
+    resolved locally.

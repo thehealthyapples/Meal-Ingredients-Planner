@@ -1,0 +1,115 @@
+batch:
+  id: batch-005-extended-tropical-specialist-dried-fruit
+  title: Extended Tropical, Specialist and Plain Dried Fruit
+  status: draft_requires_import_validation
+  created: '2026-07-07'
+  authored_by: ChatGPT for The Healthy Apples
+  food_count: 30
+  scope: Tropical, specialist and plain dried fruits commonly encountered in larger UK supermarkets, world-food aisles, frozen
+    fruit sections or health-food shelves.
+  packaging: individual_yaml_files_one_food_per_file
+  recommended_repo_path: docs/knowledge/canonical-foods/drafts/batch-005-extended-tropical-specialist-dried-fruit/
+  import_policy: dry_run_first_no_force_upsert_no_production_import
+  notes:
+  - Some items are larger-supermarket or seasonal rather than every small shop; Claude should classify identity overlaps before
+    import.
+  - Excludes juices, syrups, sweetened snacks, fruit bars and multi-ingredient mixes.
+foods:
+- slug: papaya
+  display_name: Papaya
+  category: tropical_fruit
+- slug: guava
+  display_name: Guava
+  category: tropical_fruit
+- slug: dragon-fruit
+  display_name: Dragon fruit
+  category: tropical_fruit
+- slug: lychee
+  display_name: Lychee
+  category: tropical_fruit
+- slug: rambutan
+  display_name: Rambutan
+  category: tropical_fruit
+- slug: starfruit
+  display_name: Starfruit
+  category: tropical_fruit
+- slug: persimmon
+  display_name: Persimmon
+  category: specialist_fruit
+- slug: quince
+  display_name: Quince
+  category: specialist_fruit
+- slug: physalis
+  display_name: Physalis
+  category: specialist_fruit
+- slug: kumquat
+  display_name: Kumquat
+  category: citrus_fruit
+- slug: pomelo
+  display_name: Pomelo
+  category: citrus_fruit
+- slug: jackfruit
+  display_name: Jackfruit
+  category: tropical_fruit
+- slug: breadfruit
+  display_name: Breadfruit
+  category: tropical_fruit
+- slug: cherimoya
+  display_name: Cherimoya
+  category: tropical_fruit
+- slug: mangosteen
+  display_name: Mangosteen
+  category: tropical_fruit
+- slug: longan
+  display_name: Longan
+  category: tropical_fruit
+- slug: tamarind
+  display_name: Tamarind
+  category: tropical_fruit
+- slug: dried-banana
+  display_name: Dried banana
+  category: dried_fruit
+- slug: dried-pineapple
+  display_name: Dried pineapple
+  category: dried_fruit
+- slug: dried-papaya
+  display_name: Dried papaya
+  category: dried_fruit
+- slug: dried-gooseberry
+  display_name: Dried gooseberry
+  category: dried_fruit
+- slug: dried-mulberry
+  display_name: Dried mulberry
+  category: dried_fruit
+- slug: dried-sour-cherry
+  display_name: Dried sour cherry
+  category: dried_fruit
+- slug: dried-blueberry
+  display_name: Dried blueberry
+  category: dried_fruit
+- slug: dried-coconut
+  display_name: Dried coconut
+  category: dried_fruit
+- slug: ugli-fruit
+  display_name: Ugli fruit
+  category: citrus_fruit
+- slug: tangelo
+  display_name: Tangelo
+  category: citrus_fruit
+- slug: jostaberry
+  display_name: Jostaberry
+  category: berry
+- slug: boysenberry
+  display_name: Boysenberry
+  category: berry
+- slug: cloudberry
+  display_name: Cloudberry
+  category: berry
+validation_sequence:
+- step: single_file_smoke
+  command: npm run import:canonical-foods -- --dry-run docs/knowledge/canonical-foods/drafts/batch-005-extended-tropical-specialist-dried-fruit/papaya.yaml
+- step: three_file_smoke
+  command: npm run import:canonical-foods -- --dry-run docs/knowledge/canonical-foods/drafts/batch-005-extended-tropical-specialist-dried-fruit/papaya.yaml
+    docs/knowledge/canonical-foods/drafts/batch-005-extended-tropical-specialist-dried-fruit/guava.yaml docs/knowledge/canonical-foods/drafts/batch-005-extended-tropical-specialist-dried-fruit/dragon-fruit.yaml
+- step: full_batch_dry_run
+  command: npm run import:canonical-foods -- --dry-run docs/knowledge/canonical-foods/drafts/batch-005-extended-tropical-specialist-dried-fruit/[food-files-only].yaml

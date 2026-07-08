@@ -23,6 +23,8 @@ export { FOOD_SEED, NUTRIENT_SEED, HEALTH_BENEFIT_SEED };
 export { FOOD_NUTRIENTS, FOOD_BENEFITS, NUTRIENT_BENEFITS };
 export { NUTRIENT_BENEFIT_SOURCES, SOURCED_LAUNCH_BENEFITS } from "./claim-sources";
 export * from "./evidence";
+// GOV2 Canonical Alias Principle — the single shared vocabulary resolver.
+export * from "./canonical-vocabulary-resolver";
 
 const foodSlugs = new Set(FOOD_SEED.map((f) => f.slug));
 const nutrientSlugs = new Set(NUTRIENT_SEED.map((n) => n.slug));

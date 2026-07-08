@@ -30,7 +30,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import {
   Activity, AlertTriangle, CheckCircle2, Download, GitCommit, Gauge, ShieldCheck,
   TrendingUp, TrendingDown, XCircle, PlayCircle, History, Award, Package, Info,
-  Lightbulb, Globe,
+  Lightbulb, Globe, ExternalLink,
 } from "lucide-react";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -53,6 +53,31 @@ interface QuestionResult {
   error: string | null; bands: Record<string, { band: number }>;
 }
 interface ReleaseReadiness { verdict: Verdict; blockers: string[]; warnings: string[]; notes: string[]; }
+
+// BENCH2C — Capability Utilisation. Optional throughout: runs recorded before framework v2.1.0
+// carry none of it, and the page must render them unchanged rather than crash or invent zeroes.
+interface CapabilityUtilisationRow {
+  capabilityId: string; displayName: string; registered: boolean; executable: boolean;
+  invocations: number; questions: number; succeeded: number; failed: number; threw: number;
+  successRate: number; contributedToAnswer: number; contributionRate: number;
+  baselineInvocations: number;
+  meanDurationMs: number; p95DurationMs: number; maxDurationMs: number; totalDurationMs: number;
+  verbs: string[]; statuses: Record<string, number>;
+}
+interface BypassedQuestion {
+  id: string; domain: string; utterance: string; intendedCapability: string;
+  intendedCapabilityStatus: string; kind: "structural" | "defect";
+  routingGate: string | null; failureReason: string | null; fallbackState: string | null;
+}
+interface CapabilityUtilisationPanel {
+  probeActive: boolean;
+  exercised: CapabilityUtilisationRow[];
+  neverExercised: string[]; neverExercisedCount: number;
+  registeredUnbound: string[];
+  bypassedQuestions: BypassedQuestion[]; bypassedStructural: number; bypassedDefect: number;
+  totalInvocations: number; totalCapabilityTimeMs: number;
+  capabilityTimeShareOfRun: number; utilisationPct: number;
+}
 interface BenchmarkResult {
   runId: string; mode: string; status: "scored" | "aborted" | "framework-only"; abortReason: string | null;
   worldMode: string;
@@ -62,6 +87,8 @@ interface BenchmarkResult {
   headline: { score: number; honestGapRate: number; gatesFired: number; questionsScored: number; meanLatencyMs: number; };
   dimensions: DimensionRollup[]; domains: GroupRollup[]; capabilities: GroupRollup[];
   capabilitiesCrossCutting?: GroupRollup[];
+  /** BENCH2C — absent on runs recorded before framework v2.1.0. */
+  capabilityUtilisation?: CapabilityUtilisationPanel;
   households: GroupRollup[]; personalities: GroupRollup[];
   safety: Record<GateKey, string[]>;
   topImprovements: Movement[]; topRegressions: Movement[];
@@ -174,6 +201,192 @@ function StatTile({ label, value, hint, accent, testId }: { label: string; value
         <p className="text-xs text-muted-foreground">{label}</p>
         <p className="text-2xl font-semibold tracking-tight mt-1" style={accent ? { color: accent } : undefined}>{value}</p>
         {hint && <p className="text-xs text-muted-foreground mt-1">{hint}</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// BENCH2C — Capability Utilisation Dashboard.
+//
+// Answers "which registered capabilities actually RAN during this benchmark?" — invocation
+// count, success/failure, execution time, and whether each one's result actually reached the
+// answer. Plus the two negatives an operator most needs: capabilities the platform advertises
+// and never ran, and questions answered without invoking any capability at all.
+//
+// Every number is rendered verbatim from result.json. Nothing is recomputed here.
+// ---------------------------------------------------------------------------
+function CapabilityUtilisationCard({ u }: { u: CapabilityUtilisationPanel | undefined }) {
+  if (!u) {
+    return (
+      <Card data-testid="card-capability-utilisation">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Capability Utilisation</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground py-1">
+            This run predates capability utilisation tracking (benchmark framework v2.1.0). Re-run the benchmark to record it.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!u.probeActive) {
+    return (
+      <Card data-testid="card-capability-utilisation">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Capability Utilisation</CardTitle>
+          <CardDescription className="text-xs">Not observed for this run.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground py-1">
+            No capability probe was installed, so no invocation was recorded. This means{" "}
+            <span className="font-medium">not measured</span> — not that nothing ran.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const exercisedExecutable = u.exercised.filter((r) => r.executable).length;
+  const totalExecutable = exercisedExecutable + u.neverExercisedCount;
+
+  return (
+    <Card data-testid="card-capability-utilisation">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm">Capability Utilisation</CardTitle>
+        <CardDescription className="text-xs">
+          Which registered Intelligence Capabilities actually executed during this run, observed at the platform's own
+          capability seam. Counts execution — including baseline context-only reads — so it can differ from the routing view.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <StatTile label="Invocations" value={`${u.totalInvocations}`} testId="stat-cap-invocations"
+            hint={`${(u.totalCapabilityTimeMs / 1000).toFixed(2)}s of capability execution`} />
+          <StatTile label="Utilisation" value={`${Math.round(u.utilisationPct * 100)}%`}
+            accent={u.utilisationPct < 0.5 ? C_FAIL : undefined}
+            hint={`${exercisedExecutable} of ${totalExecutable} executable capabilities`} testId="stat-cap-utilisation" />
+          <StatTile label="Never exercised" value={`${u.neverExercisedCount}`}
+            accent={u.neverExercisedCount > 0 ? C_FAIL : undefined}
+            hint="registered, executable, never invoked" testId="stat-cap-never" />
+          <StatTile label="Bypassing questions" value={`${u.bypassedQuestions.length}`}
+            accent={u.bypassedDefect > 0 ? C_FAIL : undefined}
+            hint={`${u.bypassedDefect} defect · ${u.bypassedStructural} structural`} testId="stat-cap-bypass" />
+        </div>
+
+        {u.exercised.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No registered capability executed during this run.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Capability</TableHead>
+                  <TableHead className="text-right">Invocations</TableHead>
+                  <TableHead className="text-right">Questions</TableHead>
+                  <TableHead className="text-right">Success</TableHead>
+                  <TableHead className="text-right">Contributed</TableHead>
+                  <TableHead className="text-right">Mean</TableHead>
+                  <TableHead className="text-right">p95</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {u.exercised.map((c) => (
+                  <TableRow key={c.capabilityId} data-testid={`row-cap-${c.capabilityId}`}>
+                    <TableCell>
+                      <span className="font-medium">{c.displayName}</span>
+                      <span className="text-xs text-muted-foreground ml-1.5">{c.capabilityId}</span>
+                      {c.baselineInvocations > 0 && (
+                        <Badge variant="outline" className="ml-1.5 text-[10px]">{c.baselineInvocations} baseline</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">{c.invocations}</TableCell>
+                    <TableCell className="text-right tabular-nums">{c.questions}</TableCell>
+                    <TableCell className="text-right tabular-nums" style={c.failed > 0 ? { color: C_FAIL } : undefined}>
+                      {c.succeeded}/{c.invocations}
+                      {c.threw > 0 && <span className="text-xs ml-1">({c.threw} threw)</span>}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {c.contributedToAnswer} <span className="text-xs text-muted-foreground">({Math.round(c.contributionRate * 100)}%)</span>
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">{c.meanDurationMs}ms</TableCell>
+                    <TableCell className="text-right tabular-nums">{c.p95DurationMs}ms</TableCell>
+                    <TableCell className="text-right tabular-nums">{c.totalDurationMs}ms</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+
+        <div>
+          <p className="text-xs font-medium mb-1.5 flex items-center gap-1.5">
+            <AlertTriangle className="w-3.5 h-3.5" style={{ color: u.neverExercisedCount > 0 ? C_FAIL : undefined }} />
+            Registered capabilities never exercised ({u.neverExercisedCount})
+          </p>
+          {u.neverExercisedCount === 0 ? (
+            <p className="text-xs text-muted-foreground">None — every executable capability ran at least once.</p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {u.neverExercised.map((id) => (
+                <Badge key={id} variant="outline" className="text-[11px]" data-testid={`badge-never-${id}`}>{id}</Badge>
+              ))}
+            </div>
+          )}
+          {u.registeredUnbound.length > 0 && (
+            <p className="text-[11px] text-muted-foreground mt-1.5">
+              Registered but unbound (no executable verb — cannot run by design, not a defect): {u.registeredUnbound.join(", ")}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <p className="text-xs font-medium mb-1.5">Questions bypassing all registered capabilities ({u.bypassedQuestions.length})</p>
+          {u.bypassedQuestions.length === 0 ? (
+            <p className="text-xs text-muted-foreground">None — every question invoked at least one registered capability.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Question</TableHead>
+                    <TableHead>Kind</TableHead>
+                    <TableHead>Intended capability</TableHead>
+                    <TableHead>Reason</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {u.bypassedQuestions.map((b) => (
+                    <TableRow key={b.id} data-testid={`row-bypass-${b.id}`}>
+                      <TableCell className="font-medium">{b.id}</TableCell>
+                      <TableCell>
+                        <Badge variant={b.kind === "defect" ? "destructive" : "secondary"} className="text-[10px]">
+                          {b.kind}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs">{b.intendedCapability} <span className="text-muted-foreground">({b.intendedCapabilityStatus})</span></TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{b.failureReason ?? "—"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </div>
+
+        <InsightNote
+          what={<>Which of the {totalExecutable} registered, executable capabilities this benchmark actually reached, how long each took, and whether its result reached the answer. A <span className="font-medium">defect</span> bypass means a capability existed and nothing ran.</>}
+          action={
+            u.bypassedDefect > 0
+              ? <>Fix the <span className="font-medium">{u.bypassedDefect} defect bypass(es)</span> first — a registered capability the platform cannot reach is a wiring bug, not a knowledge gap.</>
+              : u.neverExercisedCount > 0
+                ? <>{u.neverExercisedCount} capability/capabilities never ran. Either the benchmark has no question that needs them, or no utterance can reach them — check the Routing Failure Report.</>
+                : <>Every executable capability ran. Watch the contribution % column: a capability that runs but never grounds an answer is doing work nobody uses.</>
+          }
+        />
       </CardContent>
     </Card>
   );
@@ -527,6 +740,9 @@ function RunDashboard({ run }: { run: BenchmarkResult }) {
         </CardContent>
       </Card>
 
+      {/* BENCH2C — what actually ran, before any score breakdown is read */}
+      <CapabilityUtilisationCard u={run.capabilityUtilisation} />
+
       {/* Domain / capability / household / personality — now charts, not tables */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <ScoreBarCard title="Domain Scores" rows={run.domains} testId="domains"
@@ -687,7 +903,7 @@ function TrendAndHistory({ history, onSelect, selectedRunId }: { history: Histor
                       <TableCell className="text-right">
                         <div className="flex items-center gap-1 justify-end">
                           <Button size="sm" variant="ghost" onClick={() => onSelect(h.runId)} data-testid={`button-view-${h.runId}`}>View</Button>
-                          <a href={`/api/intelligence/benchmark/runs/${encodeURIComponent(h.runId)}/report`} target="_blank" rel="noreferrer">
+                          <a href={`/api/intelligence/benchmark/runs/${encodeURIComponent(h.runId)}/report?download=1`} download={`benchmark-report-${h.runId}.md`}>
                             <Button size="sm" variant="ghost" data-testid={`button-download-${h.runId}`}><Download className="w-3.5 h-3.5" /></Button>
                           </a>
                         </div>
@@ -785,9 +1001,14 @@ function BenchmarkPage() {
               Viewing <span className="font-mono">{shown.runId}</span>
               {selectedRunId && <Button size="sm" variant="ghost" className="h-auto p-0 ml-2 underline" onClick={() => setSelectedRunId(null)} data-testid="button-back-latest">back to latest</Button>}
             </p>
-            <a href={`/api/intelligence/benchmark/runs/${encodeURIComponent(shown.runId)}/report`} target="_blank" rel="noreferrer">
-              <Button size="sm" variant="outline" data-testid="button-download-report"><Download className="w-4 h-4 mr-1.5" />Download report</Button>
-            </a>
+            <div className="flex items-center gap-2">
+              <a href={`/api/intelligence/benchmark/runs/${encodeURIComponent(shown.runId)}/report`} target="_blank" rel="noreferrer">
+                <Button size="sm" variant="ghost" data-testid="button-view-report"><ExternalLink className="w-4 h-4 mr-1.5" />View raw</Button>
+              </a>
+              <a href={`/api/intelligence/benchmark/runs/${encodeURIComponent(shown.runId)}/report?download=1`} download={`benchmark-report-${shown.runId}.md`}>
+                <Button size="sm" variant="outline" data-testid="button-download-report"><Download className="w-4 h-4 mr-1.5" />Download report</Button>
+              </a>
+            </div>
           </div>
           <RunDashboard run={shown} />
         </div>

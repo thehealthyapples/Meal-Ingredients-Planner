@@ -1,0 +1,50 @@
+batch_id: batch-012-oils-fats-vinegars
+title: Oils, Fats and Vinegars
+status: draft_requires_validation
+created_by: ChatGPT for The Healthy Apples
+created_date: '2026-07-07'
+food_count: 30
+format: individual_yaml_files_one_food_per_file
+import_policy:
+  must_use_fixed_identity_resolver: true
+  must_dry_run_first: true
+  do_not_import_manifest_or_readme: true
+  do_not_use_force_upsert: true
+  merge_existing_identities_only_with_explicit_approval: true
+foods:
+- olive-oil
+- rapeseed-oil
+- avocado-oil
+- walnut-oil
+- sesame-oil
+- toasted-sesame-oil
+- flaxseed-oil
+- sunflower-oil
+- coconut-oil
+- groundnut-oil
+- pumpkin-seed-oil
+- hemp-seed-oil
+- corn-oil
+- grapeseed-oil
+- ghee
+- butter
+- clarified-butter
+- beef-dripping
+- lard
+- goose-fat
+- apple-cider-vinegar
+- balsamic-vinegar
+- red-wine-vinegar
+- white-wine-vinegar
+- rice-vinegar
+- malt-vinegar
+- sherry-vinegar
+- white-vinegar
+- coconut-vinegar
+- champagne-vinegar
+smoke_test_order:
+- olive-oil
+- rapeseed-oil
+- avocado-oil
+notes: Validate through the NK6I/NK6M fixed resolver. Classify safe new imports, existing identities, merge candidates and
+  editorial review items before any import.

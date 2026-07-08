@@ -1,0 +1,114 @@
+batch:
+  id: batch-003-core-everyday-fruit
+  title: Core Everyday Fruit
+  status: draft_requires_import_validation
+  created: '2026-07-07'
+  authored_by: ChatGPT for The Healthy Apples
+  food_count: 30
+  scope: Common everyday fruit, lunchbox fruit, fruit-bowl staples, common melons and fresh fruit usually found in mainstream
+    UK supermarkets.
+  packaging: individual_yaml_files_one_food_per_file
+  recommended_repo_path: docs/knowledge/canonical-foods/drafts/batch-003-core-everyday-fruit/
+  import_policy: dry_run_first_no_force_upsert_no_production_import
+  notes:
+  - Avoids branded prepared fruit pots and syrup-packed products.
+  - Colour/cultivar variants are aliases/forms unless THA approves separate fact ownership.
+foods:
+- slug: apple
+  display_name: Apple
+  category: fruit
+- slug: pear
+  display_name: Pear
+  category: fruit
+- slug: banana
+  display_name: Banana
+  category: fruit
+- slug: grapes
+  display_name: Grapes
+  category: fruit
+- slug: kiwi-fruit
+  display_name: Kiwi fruit
+  category: fruit
+- slug: pineapple
+  display_name: Pineapple
+  category: fruit
+- slug: mango
+  display_name: Mango
+  category: fruit
+- slug: watermelon
+  display_name: Watermelon
+  category: fruit
+- slug: honeydew-melon
+  display_name: Honeydew melon
+  category: fruit
+- slug: cantaloupe-melon
+  display_name: Cantaloupe melon
+  category: fruit
+- slug: galia-melon
+  display_name: Galia melon
+  category: fruit
+- slug: pomegranate
+  display_name: Pomegranate
+  category: fruit
+- slug: avocado
+  display_name: Avocado
+  category: fruit
+- slug: coconut
+  display_name: Coconut
+  category: fruit
+- slug: passion-fruit
+  display_name: Passion fruit
+  category: fruit
+- slug: fig
+  display_name: Fig
+  category: fruit
+- slug: date
+  display_name: Date
+  category: fruit
+- slug: raisin
+  display_name: Raisin
+  category: fruit
+- slug: sultana
+  display_name: Sultana
+  category: fruit
+- slug: prune
+  display_name: Prune
+  category: fruit
+- slug: dried-apricot
+  display_name: Dried apricot
+  category: fruit
+- slug: dried-mango
+  display_name: Dried mango
+  category: fruit
+- slug: dried-fig
+  display_name: Dried fig
+  category: fruit
+- slug: dried-cranberry
+  display_name: Dried cranberry
+  category: fruit
+- slug: goji-berry
+  display_name: Goji berry
+  category: fruit
+- slug: rhubarb
+  display_name: Rhubarb
+  category: fruit
+- slug: plantain
+  display_name: Plantain
+  category: fruit
+- slug: olive
+  display_name: Olive
+  category: fruit
+- slug: dried-apple
+  display_name: Dried apple
+  category: fruit
+- slug: dried-pear
+  display_name: Dried pear
+  category: fruit
+validation_sequence:
+- step: single_file_smoke
+  command: npm run import:canonical-foods -- --dry-run docs/knowledge/canonical-foods/drafts/batch-003-core-everyday-fruit/apple.yaml
+- step: three_file_smoke
+  command: npm run import:canonical-foods -- --dry-run docs/knowledge/canonical-foods/drafts/batch-003-core-everyday-fruit/apple.yaml
+    docs/knowledge/canonical-foods/drafts/batch-003-core-everyday-fruit/pear.yaml docs/knowledge/canonical-foods/drafts/batch-003-core-everyday-fruit/banana.yaml
+- step: full_batch_dry_run
+  command: npm run import:canonical-foods -- --dry-run docs/knowledge/canonical-foods/drafts/batch-003-core-everyday-fruit/[food-files-only].yaml

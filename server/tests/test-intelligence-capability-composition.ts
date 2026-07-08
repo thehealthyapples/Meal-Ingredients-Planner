@@ -126,7 +126,7 @@ async function main(): Promise<void> {
     suggestions: [{ ingredient: "chicken", action: "add", why: "why" }],
     nutritionTags: ["protein"], confidence: "high", priority: 1, matchedTriggers: [],
   };
-  assert(deriveFoodIntelligenceExplainFromUplift([proteinMatch]) === null, "an unmapped tag (protein — registry only has 'plant-protein') is an honest gap, never a guessed slug");
+  assert(deriveFoodIntelligenceExplainFromUplift([proteinMatch]) === null, "the 'protein' tag is deliberately unmapped (an editorial gap, not a guessed slug) even though `protein` is the single canonical nutrient identity (NK6M)");
 
   assert(deriveFoodIntelligenceExplainFromUplift([]) === null, "no matches at all → null");
 

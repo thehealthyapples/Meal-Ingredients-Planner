@@ -1,0 +1,64 @@
+batch_id: batch-002-extended-greens-brassicas-salad-pods-shoots
+created: '2026-07-07'
+format: zip_of_individual_v2_0_draft_yaml_files
+target_path: docs/knowledge/canonical-foods/drafts/batch-002-extended-greens-brassicas-salad-pods-shoots/
+approved_scope: Option A — comprehensive UK supermarket canonical library; Batch 002 extends greens, brassicas, salad leaves,
+  pods and shoots without duplicating Batch 001 identities.
+food_count: 30
+smoke_test_files:
+- brussels-sprouts.yaml
+- pak-choi.yaml
+- watercress.yaml
+full_batch_files:
+- brussels-sprouts.yaml
+- spring-greens.yaml
+- pak-choi.yaml
+- chinese-leaf.yaml
+- swiss-chard.yaml
+- watercress.yaml
+- rocket.yaml
+- lambs-lettuce.yaml
+- radicchio.yaml
+- chicory.yaml
+- frisee.yaml
+- cress.yaml
+- pea-shoots.yaml
+- bean-sprouts.yaml
+- alfalfa-sprouts.yaml
+- okra.yaml
+- mangetout.yaml
+- sugar-snap-peas.yaml
+- runner-beans.yaml
+- broad-beans.yaml
+- baby-corn.yaml
+- globe-artichoke.yaml
+- kohlrabi.yaml
+- romanesco.yaml
+- celeriac.yaml
+- bamboo-shoots.yaml
+- water-chestnuts.yaml
+- samphire.yaml
+- fresh-chilli-pepper.yaml
+- mizuna.yaml
+intentional_duplicate_avoidance:
+- cavolo nero is intentionally not included because Batch 001 kale owns cavolo nero/black kale as aliases.
+- standard cabbage varieties are intentionally not included because Batch 001 cabbage owns green, white, red, savoy, hispi
+  and sweetheart cabbage aliases.
+- standard lettuce varieties are intentionally not included because Batch 001 lettuce owns romaine, little gem, iceberg, cos
+  and butterhead aliases.
+- broccoli and spinach are intentionally not included because they were part of the earlier canonical starter set.
+import_commands:
+  smoke_test_one: npm run import:canonical-foods docs/knowledge/canonical-foods/drafts/batch-002-extended-greens-brassicas-salad-pods-shoots/brussels-sprouts.yaml
+  smoke_test_three: npm run import:canonical-foods docs/knowledge/canonical-foods/drafts/batch-002-extended-greens-brassicas-salad-pods-shoots/{brussels-sprouts,pak-choi,watercress}.yaml
+  full_batch: npm run import:canonical-foods docs/knowledge/canonical-foods/drafts/batch-002-extended-greens-brassicas-salad-pods-shoots/*.yaml
+architecture_controls:
+- one canonical identity per food
+- aliases do not create duplicate entities
+- unresolved nutrient/benefit terms must be rejected and reported
+- no numeric nutrition values imported until validated
+- no branded or ultra-processed foods
+- do not duplicate Batch 001 identities
+known_limitations:
+- Files are editorial drafts and still need Claude/repo schema validation before merge.
+- Nutrient and benefit terms are intentionally conservative to avoid creating vocabulary drift.
+- No production import should occur before smoke test and review of importer warnings.

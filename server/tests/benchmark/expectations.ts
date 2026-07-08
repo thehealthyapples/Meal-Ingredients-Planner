@@ -28,7 +28,7 @@
 
 import { detectWriteIntent } from "../../intelligence/conversation/conversation-gateway.js";
 import { intelligencePlatform } from "../../intelligence/intelligence-platform.js";
-import type { CorrectAnswerType } from "./types.js";
+import type { CapabilityStatus, CorrectAnswerType } from "./types.js";
 import type { QuestionsFixture } from "./bundle.js";
 
 export interface ExpectationRecord {
@@ -47,6 +47,20 @@ export interface ExpectationRecord {
   readonly evidenceExpected: string;
   /** The trust concern the turn must respect (from the fixture). */
   readonly trustConcern: string;
+  /**
+   * BENCH2 — does the intended capability actually exist in the runtime registry, and can it run?
+   * Resolved from `intelligencePlatform.registry`, the same registry the Intent Engine routes through.
+   */
+  readonly intendedCapabilityStatus: CapabilityStatus;
+  /**
+   * BENCH2 — must the platform reach `capabilityFamily` for this question to pass?
+   *
+   * True ONLY when a registered, executable capability exists AND the correct answer is not
+   * structurally an honest gap. This is the single predicate that separates a legitimate
+   * honest gap ("nothing can answer this") from a routing failure ("something could have,
+   * and didn't") — the distinction the pre-BENCH2 benchmark could not make (INTA1 §6.2).
+   */
+  readonly routingRequired: boolean;
 }
 
 /**
@@ -146,6 +160,51 @@ export function isRegistryCapability(family: string): boolean {
   return REGISTRY_CAPABILITY_IDS.has(family);
 }
 
+/**
+ * BENCH2 — every capability the runtime registry declares EXECUTABLE (a handler is bound and
+ * it advertises ≥1 verb it will actually run). This is the platform's own promise about what a
+ * user turn can reach, and therefore the only honest denominator for Capability Coverage.
+ *
+ * Read live from `intelligencePlatform.registry.listExecutable()`, never a copied list — a
+ * capability that is bound tomorrow enters this set with no benchmark change.
+ */
+export function registryExecutableCapabilityIds(): string[] {
+  return intelligencePlatform.registry.listExecutable().map((c) => c.id).sort();
+}
+
+/**
+ * BENCH2C — capabilities the registry knows about but that CANNOT run: no handler is bound, or
+ * the handler declares no executable verb (`administration`, `developer`). They must never appear
+ * in the "never exercised" list as though that were a defect: they are unexercisable by design.
+ */
+export function registryUnboundCapabilityIds(): string[] {
+  return intelligencePlatform.registry
+    .list()
+    .filter((c) => c.executableIntents.length === 0)
+    .map((c) => c.id)
+    .sort();
+}
+
+/** BENCH2C — the registry's own display name for a capability, or the raw id when unregistered. */
+export function registryCapabilityDisplayName(capabilityId: string): string {
+  return intelligencePlatform.registry.get(capabilityId)?.displayName ?? capabilityId;
+}
+
+/**
+ * BENCH2 — classify a capability family against the runtime registry.
+ *
+ * The three states are deliberately not collapsed. `unregistered` and `registered-unbound`
+ * both make an honest gap the CORRECT answer (nothing exists to reach, or nothing can run);
+ * `registered-executable` makes an honest gap a FAILURE, because the platform advertises a
+ * capability it then could not route to. Conflating them is precisely how a completely
+ * unwired capability scored 73.3/100 and passed (INTA1 §6.2).
+ */
+export function resolveCapabilityStatus(family: string): CapabilityStatus {
+  const cap = intelligencePlatform.registry.get(family);
+  if (!cap) return "unregistered";
+  return cap.executableIntents.length > 0 ? "registered-executable" : "registered-unbound";
+}
+
 /** Normalise a compound capability string to its primary Capability-Registry-aligned family token. */
 export function capabilityFamily(raw: string): string {
   if (DISCOVERY_RAW_REDIRECTS[raw]) return DISCOVERY_RAW_REDIRECTS[raw];
@@ -191,16 +250,41 @@ export function deriveExpectation(q: QuestionsFixture["questions"][number]): Exp
     GUARANTEE_MARKERS.some((m) => q.utterance.toLowerCase().includes(m));
   const expectsWriteIntent =
     q.capability.toLowerCase().includes("write-intent") || detectWriteIntent(q.utterance) !== null;
+  const family = capabilityFamily(q.capability);
+  const correctAnswerType = classifyCorrectAnswer(q.capability, q.utterance);
+  const intendedCapabilityStatus = resolveCapabilityStatus(family);
+
+  // BENCH2 — the three exclusions below are NOT leniency. Each names a turn the platform is
+  // architecturally correct to answer WITHOUT reaching a capability, so demanding a route
+  // would make the benchmark wrong rather than strict:
+  //
+  //  · correctAnswerType === "honest-gap" — a safety/medical/guarantee question, or a question
+  //    the fixture marks as structurally unanswerable. Refusing IS the correct behaviour, and
+  //    gate G1 (not R1) is what catches a Companion that answers it anyway.
+  //  · expectsWriteIntent — `detectWriteIntent` short-circuits BEFORE the Intent Resolver runs
+  //    (conversation-gateway.ts) and returns an honest read-only refusal. No capability can be
+  //    reached by construction; gate G3 owns this question's correctness.
+  //  · isSafetyBoundary — same reasoning, driven by the capability string rather than the verb.
+  //
+  // Everything else with a registered, executable capability MUST route. No other escape exists.
+  const routingRequired =
+    intendedCapabilityStatus === "registered-executable" &&
+    correctAnswerType !== "honest-gap" &&
+    !expectsWriteIntent &&
+    !isSafetyBoundary;
+
   return {
     id: q.id,
     category: q.category,
     capabilityRaw: q.capability,
-    capabilityFamily: capabilityFamily(q.capability),
+    capabilityFamily: family,
     utterance: q.utterance,
-    correctAnswerType: classifyCorrectAnswer(q.capability, q.utterance),
+    correctAnswerType,
     expectsWriteIntent,
     isSafetyBoundary,
     evidenceExpected: q.evidenceExpected,
     trustConcern: q.trustConcern,
+    intendedCapabilityStatus,
+    routingRequired,
   };
 }

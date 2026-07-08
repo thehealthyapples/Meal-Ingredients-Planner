@@ -8,6 +8,7 @@ import { useUser } from "@/hooks/use-user";
 import { Loader2 } from "lucide-react";
 
 import { DesktopSidebar, MobileNav, AppRealmContext } from "@/components/nav-bar";
+import { AdminBanner } from "@/components/admin-banner";
 import FloatingAssistant from "@/components/conversation/FloatingAssistant";
 import { WorkspaceHeaderSlotContext } from "@/components/workspace-header";
 import OrchardBackdrop from "@/components/layout/orchard-backdrop";
@@ -33,6 +34,7 @@ import AdminRecipeSourcesPage from "@/pages/admin-recipe-sources-page";
 import AdminCompanionIntelligencePage from "@/pages/admin-companion-intelligence-page";
 import AdminIntelligencePage from "@/pages/admin-intelligence-page";
 import AdminBenchmarkHouseholdsPage from "@/pages/admin-benchmark-households-page";
+import AdminKnowledgeReviewPage from "@/pages/admin-knowledge-review-page";
 import SharedPlanPage from "@/pages/shared-plan-page";
 import PantryPage from "@/pages/pantry-page";
 import PlantDiversityPage from "@/pages/plant-diversity-page";
@@ -184,6 +186,26 @@ function PlannerPageWrapper() {
   );
 }
 
+// ADMIN1D — every Admin page renders the shared Admin domain banner above its
+// content, giving the Admin domain a consistent header and cross-navigation.
+// Wrapped once at module scope (stable component identity → no remount churn).
+const withAdminBanner = (Component: React.ComponentType) => {
+  const Wrapped = () => (
+    <>
+      <AdminBanner />
+      <Component />
+    </>
+  );
+  return Wrapped;
+};
+const AdminHomeChrome = withAdminBanner(AdminPage);
+const AdminUsersChrome = withAdminBanner(AdminUsersPage);
+const AdminIngredientProductsChrome = withAdminBanner(AdminIngredientProductsPage);
+const AdminRecipeSourcesChrome = withAdminBanner(AdminRecipeSourcesPage);
+const AdminCompanionIntelligenceChrome = withAdminBanner(AdminCompanionIntelligencePage);
+const AdminIntelligenceChrome = withAdminBanner(AdminIntelligencePage);
+const AdminBenchmarkHouseholdsChrome = withAdminBanner(AdminBenchmarkHouseholdsPage);
+
 function Router() {
   useRoutingCorrectionTracker();
 
@@ -207,13 +229,14 @@ function Router() {
       <Route path="/planner" component={() => <ProtectedRoute component={PlannerPageWrapper} />} />
       <Route path="/supermarkets" component={() => <ProtectedRoute component={SupermarketsPage} />} />
       <Route path="/profile" component={() => <ProtectedRoute component={ProfilePage} />} />
-      <Route path="/admin" component={() => <ProtectedRoute component={AdminPage} />} />
-      <Route path="/admin/users" component={() => <ProtectedRoute component={AdminUsersPage} />} />
-      <Route path="/admin/ingredient-products" component={() => <ProtectedRoute component={AdminIngredientProductsPage} />} />
-      <Route path="/admin/recipe-sources" component={() => <ProtectedRoute component={AdminRecipeSourcesPage} />} />
-      <Route path="/admin/companion-intelligence" component={() => <ProtectedRoute component={AdminCompanionIntelligencePage} />} />
-      <Route path="/admin/intelligence" component={() => <ProtectedRoute component={AdminIntelligencePage} />} />
-      <Route path="/admin/benchmark-households" component={() => <ProtectedRoute component={AdminBenchmarkHouseholdsPage} />} />
+      <Route path="/admin" component={() => <ProtectedRoute component={AdminHomeChrome} />} />
+      <Route path="/admin/users" component={() => <ProtectedRoute component={AdminUsersChrome} />} />
+      <Route path="/admin/ingredient-products" component={() => <ProtectedRoute component={AdminIngredientProductsChrome} />} />
+      <Route path="/admin/recipe-sources" component={() => <ProtectedRoute component={AdminRecipeSourcesChrome} />} />
+      <Route path="/admin/companion-intelligence" component={() => <ProtectedRoute component={AdminCompanionIntelligenceChrome} />} />
+      <Route path="/admin/intelligence" component={() => <ProtectedRoute component={AdminIntelligenceChrome} />} />
+      <Route path="/admin/benchmark-households" component={() => <ProtectedRoute component={AdminBenchmarkHouseholdsChrome} />} />
+      <Route path="/admin/knowledge-review" component={() => <ProtectedRoute component={AdminKnowledgeReviewPage} />} />
       <Route path="/pantry" component={() => <ProtectedRoute component={PantryPage} />} />
       <Route path="/plant-diversity" component={() => <ProtectedRoute component={PlantDiversityPage} />} />
       <Route path="/diary" component={() => <ProtectedRoute component={FoodDiaryPage} />} />

@@ -79,13 +79,13 @@ nutrition_profile:
   - nutrient: beta_glucan_soluble_fibre
     role: supports cholesterol-lowering context when intake thresholds are met; keep dosage claims out until validated
     confidence: strong
-  - nutrient: whole_grain_carbohydrate
-    role: slow-release breakfast base context
-    confidence: well_established
   - nutrient: fibre
     role: supports gut-health-oriented meal composition
     confidence: well_established
-  - nutrient: magnesium_and_manganese
+  - nutrient: magnesium
+    role: adds mineral diversity; exact values pending validation
+    confidence: moderate
+  - nutrient: manganese
     role: adds mineral diversity; exact values pending validation
     confidence: moderate
   - nutrient: plant_protein
@@ -93,16 +93,11 @@ nutrition_profile:
     confidence: well_established
   editorial_summary: Oats is useful in THA as a recognised, household-friendly food that can improve meal quality
     when used in an appropriate context.
-benefit_language:
-- area: whole_grain
-  approved_wording: Adds a whole-grain base to breakfast or baking.
-  evidence_tone: high_level_consensus
-- area: fibre
-  approved_wording: Useful for soluble fibre, especially beta-glucan.
-  evidence_tone: strong_for_beta_glucan
-- area: household_practicality
-  approved_wording: Cheap, store-cupboard friendly and easy to adapt with toppings.
-  evidence_tone: culinary_practical
+# benefit_language: all three draft areas (whole_grain, fibre, household_practicality)
+# were non-canonical (food classification / misfiled nutrient / platform concept)
+# and were removed under NK6L. Editorial may later add canonical benefit areas
+# (e.g. gut-health, heart-health) with evidence; none are fabricated here.
+benefit_language: []
 planner_metadata:
   meal_slots:
   - breakfast

@@ -126,6 +126,57 @@ Gates are evaluated **after** dimension bands so the report can show *both* "wha
 the gate capped it to" — a gated question still records its bands for diagnosis, but its **contributing** score is the
 capped value.
 
+**Assignability is reported, never assumed.** G1, G3 and G5 are assigned by the deterministic tier. **G2** (dietary
+hard-constraint breach) and **G4** (cross-household leak) require per-household fixture facts the single-world and
+benchmark-world modes do not carry, and are therefore **not evaluated** in those modes. The report states this on the
+Safety panel: an empty gate row means *"not measured"*, never *"clear"*. Before `BENCH2` the report printed
+"Safety verdict: ALL CLEAR" while three of its four hard gates had no code path that could fire them.
+
+## 4.1 ROUTING GATES (added by `BENCH2`, rubric `v2.0.0`)
+
+A hard-gate in §4 is a **Tier-A safety** failure. A **routing gate** is a different kind of failure and must never be
+averaged into the same number: the turn was safe, honest, well-voiced and well-structured — it simply **did not reach a
+capability the platform advertises it has.**
+
+The distinction the rubric could not previously make:
+
+| The situation | Is an honest gap correct? | Gate |
+|---|---|---|
+| **No suitable capability exists** — the intended capability is unregistered, or registered with no bound handler | **Yes.** The Companion correctly recognised nothing can answer this. D2 = 4, D4 = 4. | none |
+| **Routing is structurally not expected** — a write-intent refusal (`detectWriteIntent` short-circuits before the resolver) or a safety-boundary refusal | **Yes.** G3 / G1 own correctness here, not routing. | none |
+| **A registered, executable capability existed and NOTHING was invoked** | **No.** The platform failed to reach itself. | **R1** |
+| **A capability was invoked, but not the intended one** | **No.** | **R2** |
+
+| Gate | Fires when | Composite cap |
+|---|---|---|
+| **R1 Capability miss** | `routingRequired` and no capability was invoked at all. | **≤ 40** |
+| **R2 Misroute** | `routingRequired` and a capability was invoked, but not the intended one. | **≤ 55** |
+
+`routingRequired` is true **only** when the intended capability resolves, against the *runtime* Capability Registry
+(`intelligencePlatform.registry`, never a copied list), to a **registered entry with a bound handler declaring ≥ 1
+executable verb** — AND the correct answer is not structurally an honest gap (§4.1 table row 2).
+
+Three properties are load-bearing:
+
+- **Both caps sit strictly below the 70 pass threshold.** A question whose registered capability was never invoked
+  **fails**, whatever else the turn did well.
+- **Both caps sit strictly above the G5 cap (25).** A routing miss is not a fault. R1 caps lower than R2 because reaching
+  *nothing* is strictly worse than reaching the *wrong thing*: the latter at least exercised the resolver, engine,
+  permission model and a handler end-to-end, and is a matcher-precision problem rather than a matcher-coverage hole.
+- **D2 (Honesty) is never penalised by a routing gate.** A Companion that said "I don't know" when the platform could have
+  known *was honest*. The failure is upstream, in routing, and the gate is where it is recorded. Blurring this would leave
+  D2 unable to measure the one thing it exists to measure.
+
+Every question records **why** routing failed (`intent-unresolved`, `wrong-capability`, `verb-unsupported`,
+`permission-denied`, `capability-not-executable`, `llm-provider-unavailable`, …). Gated questions retain their
+`rawComposite`, so the diagnostic signal survives the cap.
+
+**Why this exists.** `docs/investigations/INTA1_INTELLIGENCE_PLATFORM_WIRING_AUDIT.md` §6.2 established that a completely
+unwired capability scored **73.3/100 and passed**: 36 of 100 questions reached no capability at all, and scored a mean of
+74.3 against 75.0 for questions that did. *A capability that does not work cost 0.7 points.* `no-route` was classified as
+an honest gap — the highest-rewarded outcome in the rubric. The platform could not detect its own unwiring, which is how
+five Critical architecture-drift claims survived undetected.
+
 ## 5. THE JUDGE, PINNED
 
 The judge is part of the versioned bundle. Its specification, frozen at `rubric`/`judge` `v1.0.0`:
@@ -160,6 +211,43 @@ Because the judge is pinned and temperature-0, its scores are treated as reprodu
 
 No dimension, capability, or household is dropped from the average to flatter the number: the headline is the honest mean,
 and the breakdowns exist so a healthy headline can never hide a sick component.
+
+### 6.1 THE FIVE AXES ARE REPORTED SEPARATELY (`BENCH2`)
+
+One mean composite can be healthy while every mechanism producing it is broken. The report therefore renders these five
+as **independent, non-averaged panels**, in this order, and no one of them may be inferred from another:
+
+| Axis | Question it answers | Denominator |
+|---|---|---|
+| **Routing Accuracy** | Did the platform reach the capabilities it advertises? | Routing-required questions only |
+| **Capability Coverage** | What does the suite exercise, of what the registry advertises? | The registry's executable set |
+| **Answer Quality** | Given that it routed correctly, was the answer any good? | Questions that reached the **intended** capability |
+| **Safety** | Did a hard gate fire — and which gates could even fire? | All questions |
+| **Hallucination Rate** | Did it assert where it should have admitted? (gate G1) | All questions |
+
+**Answer Quality is measured only where routing succeeded.** Averaging un-routed honest gaps into D1/D5 made routing
+accuracy and answer quality the same, mutually-flattering number. A platform that does not route cannot claim an
+answer-quality score.
+
+**The environment is part of the score's validity.** A run executed with **no LLM provider** short-circuits the gateway
+before intent resolution and is a **release blocker**, not a 71.25 (the pre-`BENCH2` score with the LLM entirely absent).
+A run executed with **no judge** leaves 68 of 100 weight points as conservative deterministic proxies and is a **warning**:
+Answer Quality is a lower bound, never a measurement.
+
+### 6.2 THE ROUTING METRICS
+
+| Metric | Definition |
+|---|---|
+| **Capability Reach %** | Of routing-required questions, the share where **any** capability was invoked. |
+| **Intent Resolution Accuracy** | Of routing-required questions, the share where the **intended** capability was invoked. |
+| **Capability Misses** | Count of R1 — a registered, executable capability existed and nothing was invoked. |
+| **Misroutes** | Count of R2 — a capability was invoked, but not the intended one. |
+| **Unreachable Capability Count** | Registered, executable capabilities that ≥ 1 question intends and **no** question in the run ever invoked. |
+| **Capability Coverage by Domain** | The same routing truth, per benchmark category. |
+| **Routing Failure Report** | Every question that did not reach its intended capability, with its recorded failure reason. |
+
+`Capability Reach %` and `Intent Resolution Accuracy` are deliberately distinct: reaching the engine at all, and reaching
+the *right* thing, fail for different reasons (matcher coverage vs. matcher precision) and are fixed by different work.
 
 ## 7. WHAT A SCORE IS AND IS NOT
 

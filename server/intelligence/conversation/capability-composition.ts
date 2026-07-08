@@ -37,11 +37,13 @@
  *    table below is a narrow, evidence-checked SUBSET: only tags with a
  *    real, unambiguous entry in the Food Knowledge Registry
  *    (shared/knowledge/nutrients.ts, shared/knowledge/health-benefits.ts)
- *    are mapped. Every unmapped tag ('protein' — the registry only has the
- *    narrower "plant-protein"; 'antioxidant' — the registry only has named
- *    phytonutrients, no generic "antioxidants" slug; 'micronutrient',
- *    'resistant-starch', 'fermented', 'wholefood-swap') is an honest gap,
- *    never a guessed slug.
+ *    are mapped. Every unmapped tag ('protein' — deliberately left unmapped:
+ *    the 'protein' uplift tag is a coarse planner signal we do not yet route to
+ *    a food-intelligence query, an editorial gap not a missing slug (NK6M made
+ *    `protein` the single canonical nutrient identity); 'antioxidant' — the
+ *    registry only has named phytonutrients, no generic "antioxidants" slug;
+ *    'micronutrient', 'resistant-starch', 'fermented', 'wholefood-swap') is an
+ *    honest gap, never a guessed slug.
  */
 
 import type { IntentVerb } from "../types.js";

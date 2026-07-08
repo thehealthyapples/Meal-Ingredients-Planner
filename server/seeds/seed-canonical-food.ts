@@ -67,6 +67,10 @@ async function run() {
     target: schema.canonicalFoods.slug,
     set: {
       name: sqlExcluded("name"), category: sqlExcluded("category"), subcategory: sqlExcluded("subcategory"),
+      // NK6R — `family` is editorial identity structure; a re-seed must propagate it,
+      // otherwise a food that gains a parent (stilton → blue-cheese) never receives
+      // its pointer on update. Omitting it here would silently strip the hierarchy.
+      family: sqlExcluded("family"),
       description: sqlExcluded("description"), knowledgeFoodSlug: sqlExcluded("knowledge_food_slug"),
       diversityGroupSlug: sqlExcluded("diversity_group_slug"), status: sqlExcluded("status"),
       source: sqlExcluded("source"),

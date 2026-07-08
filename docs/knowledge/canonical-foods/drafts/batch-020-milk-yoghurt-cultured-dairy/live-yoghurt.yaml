@@ -1,0 +1,183 @@
+record:
+  schema: tha_canonical_food_draft
+  schema_version: 2.0-draft
+  batch_id: batch-020-milk-yoghurt-cultured-dairy
+  status: draft
+  canonical_slug: live-yoghurt
+  display_name: Live Yoghurt
+  duplicate_policy: stop_on_slug_conflict_or_merge_only_with_explicit_approval
+  authored_by: ChatGPT for The Healthy Apples
+  authored_date: '2026-07-07'
+  review_status: requires_claude_import_validation_before_merge
+nk_controls:
+  governing_patterns:
+  - one_canonical_identity
+  - one_owner_per_fact
+  - no_duplicate_entities
+  - progressive_enrichment
+  - honest_gaps_over_fabricated_information
+  ai_usage_rules:
+  - AI may draft editorial wording but must not create new canonical nutrient or benefit vocabulary.
+  - Unresolved nutrients, benefits, aliases or identity conflicts must be rejected for review, not silently minted.
+  numeric_nutrition_policy: do_not_import_numeric_values_until_validated
+  fact_owner_boundary: Food identity belongs to the Knowledge Platform. Nutrient and benefit vocabularies remain TypeScript-owned
+    canonical vocabularies.
+identity:
+  food_category: dairy
+  aliases:
+  - live yoghurt
+  - live yoghurts
+  - live-yoghurt
+  - live yogurt
+  not_same_as: &id001
+  - live yoghurt flavoured dessert
+  - live yoghurt sweetened pot
+  - live yoghurt spread with additives
+  - branded live yoghurt
+  canonical_identity_rule: Live Yoghurt is the canonical identity for the plain whole-food or simple ingredient form. Plain
+    fresh, frozen, dried, cooked, tinned-in-water/brine, fermented or single-ingredient forms remain variants where appropriate;
+    branded products, ready meals, sweetened products and additive-heavy preparations are excluded unless separately governed.
+  plant_count_policy:
+    counts_towards_plant_diversity: false
+    plant_family: not_applicable
+    plant_part: ingredient_identity
+    plant_diversity_note: Count as one plant identity for THA weekly diversity only when the ingredient is a plant, fungus
+      or sea vegetable and is used in a meaningful whole-food amount.
+classification:
+  whole_food_status: whole_or_minimally_processed
+  upf_default: false
+  processing_watchouts:
+  - Exclude ready meals, flavoured products, sweetened products, coated snacks, processed meat products, sauce-coated prepared
+    products and branded multi-ingredient formats.
+  - Plain fresh, frozen, dried, cooked, fermented, tinned or single-ingredient forms may remain under this canonical identity
+    when the ingredient itself remains the primary fact owner.
+varieties_and_forms:
+  varieties:
+  - name: live yoghurt
+    relationship: alias_or_market_form
+  - name: live yoghurts
+    relationship: alias_or_market_form
+  - name: live-yoghurt
+    relationship: alias_or_market_form
+  - name: live yogurt
+    relationship: alias_or_market_form
+  forms:
+  - name: fresh or chilled where applicable
+    relationship: same_canonical_food_when_plain
+  - name: frozen plain where applicable
+    relationship: same_canonical_food_when_plain
+  - name: dried or ambient plain where applicable
+    relationship: same_canonical_food_when_plain
+  - name: tinned, jarred or fermented plain where appropriate
+    relationship: same_canonical_food_when_plain
+  preparation_states:
+  - raw where appropriate
+  - cooked where appropriate
+  - chopped, sliced, ground or whole where appropriate
+  form_policy: Do not create a new canonical identity for cut size, pack format, frozen state, dried state, cooking state
+    or plain tinned state unless THA later approves a separate fact owner.
+nutrition_profile:
+  quantitative_values_status: do_not_import_numeric_values_until_validated
+  notable_nutrients:
+  - nutrient: protein
+    role: Provides protein context within whole-food meals and THA nutrition explanations.
+    confidence: well_established
+  - nutrient: calcium
+    role: Provides calcium context within whole-food meals and THA nutrition explanations.
+    confidence: well_established
+  - nutrient: iodine
+    role: Provides iodine context within whole-food meals and THA nutrition explanations.
+    confidence: well_established
+  editorial_summary: Live Yoghurt is a common UK supermarket whole-food or simple ingredient that can support meal planning,
+    pantry recognition and Companion explanations when used in plain forms.
+  vocabulary_policy: All nutrient strings intentionally use canonical vocabulary where known; unresolved terms should go to
+    Knowledge Review.
+benefit_language:
+- area: bone-health
+  approved_wording: Live Yoghurt can support bone health meal patterns when used as part of varied, minimally processed meals.
+  evidence_tone: high_level_consensus
+  governance_note: Pattern-level wording only; no disease prevention or treatment claim.
+- area: muscle-recovery
+  approved_wording: Live Yoghurt can support muscle recovery meal patterns when used as part of varied, minimally processed
+    meals.
+  evidence_tone: high_level_consensus
+  governance_note: Pattern-level wording only; no disease prevention or treatment claim.
+planner_metadata:
+  meal_slots:
+  - breakfast
+  - lunch
+  - snack
+  roles:
+  - dairy
+  - whole-food ingredient
+  - pantry and shopping recognition
+  good_uses:
+  - meal planning
+  - shopping list recognition
+  - pantry grouping
+  - simple household meals
+  nutrition_boost_tags:
+  - whole-food
+  - protein-context
+  - minimally-processed
+  household_notes: Live Yoghurt should be treated as a plain ingredient first; household suitability depends on diet pattern,
+    allergies, preparation and accompaniments.
+  adaptation_notes: Adapt form, portion, cooking method and accompaniments to household dietary needs. Do not infer safety
+    for allergies from the food name alone.
+shopping_intelligence:
+  supermarket_locations:
+  - milk, dairy and eggs
+  - cheese
+  - yoghurt and cream
+  buying_notes: Look for plain live yoghurt without sauces, coatings, sweeteners, flavourings or additive-heavy prepared formats.
+  quality_signals:
+  - plain ingredient format
+  - clear ingredient list where packaged
+  - no visible spoilage for fresh forms
+  - avoid leaking, sour-smelling, mouldy or damaged packs unless the food is intentionally fermented
+  budget_notes: Own-brand, frozen plain, dried or larger-pack formats may be better value where appropriate.
+  search_terms:
+  - live yoghurt
+  - live yoghurts
+  - live-yoghurt
+  - live yogurt
+cooking_and_storage:
+  storage: Store according to pack guidance and normal food-safety rules. Keep chilled, frozen, cupboard or dried forms in
+    the correct environment for the product type.
+  prep_tips: Prepare live yoghurt in plain forms first, then add sauces, seasoning or accompaniments separately so THA can
+    keep the ingredient identity clear.
+  texture_notes: Texture varies by form and cooking method; record meaningful changes as preparation state rather than as
+    a new food identity.
+  leftover_notes: Cool cooked leftovers promptly and follow normal food-safety guidance before reusing.
+relationships:
+  pairs_well_with:
+  - olive-oil
+  - garlic
+  - lemon
+  - herbs
+  - whole-grains
+  nutrient_complements:
+  - with: vegetables
+    reason: Combines with vegetables to support diverse, minimally processed meals.
+  - with: whole-grains
+    reason: Can be paired with grains or starchy bases where appropriate for balanced meal construction.
+  category_neighbours: []
+  do_not_replace: *id001
+safety_and_limitations:
+  allergen_profile: Check packaged forms and household allergy settings. Natural allergen risk depends on the food category
+    and preparation environment.
+  diet_compatibility:
+  - vegetarian
+  - gluten-free
+  clinical_caveats: Medical diet suitability, allergy risk, pregnancy suitability and therapeutic claims require professional
+    or user-specific review.
+  storage_safety: Discard if mouldy, slimy, sour-smelling beyond normal fermented contexts, leaking, damaged or outside safe
+    storage guidance.
+companion_behaviour:
+  plain_answer: Live Yoghurt is a whole-food or simple ingredient that THA can recognise for meals, pantry, shopping and nutrition
+    context.
+  suggested_user_facing_phrases:
+  - Use live yoghurt as a plain ingredient where it fits the meal.
+  - Check the form of live yoghurt before treating it as a whole-food item.
+  honest_gap_response: I can recognise live yoghurt as a canonical ingredient, but I should not make therapeutic claims or
+    assume suitability for every household without more context.

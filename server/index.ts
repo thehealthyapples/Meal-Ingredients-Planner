@@ -140,6 +140,17 @@ app.use((req, res, next) => {
 
   await registerRoutes(httpServer, app);
 
+  // KQ1F — load the governed alias overlay (published aliases) into the single
+  // GOV2 resolver at boot, so published aliases resolve from the first request.
+  // Best-effort: a failure here must never block the server from serving.
+  try {
+    const { loadVocabularyOverlayFromDb } = await import("./lib/knowledge-review-store");
+    const overlay = await loadVocabularyOverlayFromDb();
+    console.log(`[Startup] Knowledge alias overlay loaded: ${overlay.nutrient} nutrient + ${overlay.benefit} benefit alias(es)`);
+  } catch (err) {
+    console.error("[Startup] Failed to load knowledge alias overlay (continuing):", err);
+  }
+
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";

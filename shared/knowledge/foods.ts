@@ -8,7 +8,9 @@ import type { InsertKnowledgeFood } from "../schema";
 export const FOOD_SEED: InsertKnowledgeFood[] = [
   // ── Healthy fats ───────────────────────────────────────────────────────────
   { slug: "extra-virgin-olive-oil", name: "Extra Virgin Olive Oil", category: "Healthy fats",
-    subcategory: "Oils", aliases: ["EVOO", "olive oil", "virgin olive oil"],
+    // NK6R — "olive oil" and "virgin olive oil" removed: they name the parent identity
+    // and a sibling grade. EVOO is one grade of olive oil, not a synonym for all of it.
+    subcategory: "Oils", aliases: ["EVOO", "cold pressed olive oil"],
     description: "A cold-pressed oil rich in unsaturated fats and polyphenols, central to the Mediterranean way of eating.",
     commonForms: ["bottle", "drizzle", "dressing"], storageGuidance: "Keep in a cool, dark cupboard away from heat.", seasonality: "Year-round" },
   { slug: "avocado", name: "Avocado", category: "Healthy fats",
@@ -678,15 +680,17 @@ export const FOOD_SEED: InsertKnowledgeFood[] = [
     description: "A warm, sweet spice from tree bark rich in manganese and protective polyphenols.",
     commonForms: ["ground", "sticks"], storageGuidance: "Keep in a sealed jar away from heat and light.", seasonality: "Year-round" },
   { slug: "paprika", name: "Paprika", category: "Spices",
-    subcategory: "Ground spices", aliases: ["sweet paprika", "smoked paprika", "hot paprika"],
-    description: "A ground red pepper spice supplying beta-carotene and vitamin A, with smoked varieties adding extra complexity.",
+    // NK6R — "smoked paprika" removed: smoke-dried pimentón is a distinct spice product.
+    subcategory: "Ground spices", aliases: ["sweet paprika", "hot paprika"],
+    description: "A ground red pepper spice supplying beta-carotene and vitamin A.",
     commonForms: ["ground", "smoked", "sweet"], storageGuidance: "Keep in a sealed jar away from light.", seasonality: "Year-round" },
   { slug: "clementine", name: "Clementine", category: "Fruit",
     subcategory: "Citrus", aliases: ["clementines", "satsuma", "satsumas", "mandarin", "easy peelers"],
     description: "A small, easy-peel citrus fruit rich in vitamin C and folate; a popular everyday winter snack.",
     commonForms: ["whole", "segments"], storageGuidance: "Keep at room temperature for a week or refrigerate.", seasonality: "Winter" },
   { slug: "vanilla", name: "Vanilla", category: "Spices",
-    subcategory: "Sweet spices", aliases: ["vanilla pods", "vanilla extract", "vanilla essence", "vanilla bean"],
+    // NK6R — extract/essence removed: alcohol extraction makes a different product.
+    subcategory: "Sweet spices", aliases: ["vanilla pods", "vanilla bean"],
     description: "A fragrant spice from orchid pods, used to add warmth and sweetness to baking and desserts.",
     commonForms: ["pods", "extract", "paste", "powder"], storageGuidance: "Keep pods in an airtight container; extract keeps in a cool, dark cupboard.", seasonality: "Year-round" },
   { slug: "chilli", name: "Chilli", category: "Spices",
@@ -694,7 +698,8 @@ export const FOOD_SEED: InsertKnowledgeFood[] = [
     description: "A hot pepper supplying vitamin C, beta-carotene and protective polyphenols; available fresh, dried or ground.",
     commonForms: ["fresh", "dried", "flakes", "powder", "paste"], storageGuidance: "Refrigerate fresh; dried and ground keep in a sealed jar.", seasonality: "Year-round" },
   { slug: "black-pepper", name: "Black Pepper", category: "Spices",
-    subcategory: "Peppercorns", aliases: ["ground black pepper", "peppercorns", "white pepper"],
+    // NK6R — "white pepper" removed: the ripe berry, hulled — its own pantry spice.
+    subcategory: "Peppercorns", aliases: ["ground black pepper", "peppercorns"],
     description: "The world's most widely used spice, supplying manganese and protective polyphenols from the piperine compound.",
     commonForms: ["whole peppercorns", "ground"], storageGuidance: "Keep in a sealed container; grind fresh for best flavour.", seasonality: "Year-round" },
   { slug: "cardamom", name: "Cardamom", category: "Spices",
@@ -750,7 +755,9 @@ export const FOOD_SEED: InsertKnowledgeFood[] = [
 
   // ── Wave 7: Dairy and Alternatives ───────────────────────────────────────────
   { slug: "milk", name: "Milk", category: "Dairy",
-    subcategory: "Cow's milk", aliases: ["whole milk", "semi-skimmed milk", "skimmed milk", "full-fat milk"],
+    // NK6R — fat classes removed: skimmed and semi-skimmed are separate foods (as
+    // lactose-free milk already was). Whole milk IS this identity, so it stays.
+    subcategory: "Cow's milk", aliases: ["whole milk", "full-fat milk"],
     description: "A nutrient-dense dairy liquid supplying calcium, vitamin D, vitamin B12 and iodine.",
     commonForms: ["whole", "semi-skimmed", "skimmed", "in cooking", "in drinks"],
     storageGuidance: "Refrigerate and use before the use-by date.",
@@ -774,8 +781,9 @@ export const FOOD_SEED: InsertKnowledgeFood[] = [
     storageGuidance: "Wrap tightly and refrigerate; hard cheese keeps well for weeks.",
     seasonality: "Year-round" },
   { slug: "mozzarella", name: "Mozzarella", category: "Dairy",
-    subcategory: "Fresh cheese", aliases: ["fresh mozzarella", "buffalo mozzarella"],
-    description: "A soft, mild Italian cheese supplying calcium and vitamin B12, traditionally made from buffalo or cow's milk.",
+    // NK6R — "buffalo mozzarella" removed: a different milk source with its own profile.
+    subcategory: "Fresh cheese", aliases: ["fresh mozzarella"],
+    description: "A soft, mild Italian cheese made from cow's milk, supplying calcium and vitamin B12.",
     commonForms: ["ball", "sliced", "grated", "on pizza", "in salads"],
     storageGuidance: "Keep in its liquid in the fridge; use within a day or two of opening.",
     seasonality: "Year-round" },
@@ -792,7 +800,8 @@ export const FOOD_SEED: InsertKnowledgeFood[] = [
     storageGuidance: "Store in brine in the fridge; keeps for several weeks.",
     seasonality: "Year-round" },
   { slug: "parmesan", name: "Parmesan", category: "Dairy",
-    subcategory: "Hard cheese", aliases: ["parmigiano reggiano", "parmigiano-reggiano", "grana padano"],
+    // NK6R — "grana padano" removed: a distinct PDO with its own rules and ageing.
+    subcategory: "Hard cheese", aliases: ["parmigiano reggiano", "parmigiano-reggiano"],
     description: "A hard, aged Italian cheese with an intense umami flavour, very rich in calcium, vitamin B12 and selenium.",
     commonForms: ["block", "grated", "shaved"],
     storageGuidance: "Wrap tightly and refrigerate; keeps for weeks.",
@@ -854,7 +863,8 @@ export const FOOD_SEED: InsertKnowledgeFood[] = [
     storageGuidance: "Refrigerate and use by the use-by date; freeze for longer.",
     seasonality: "Year-round" },
   { slug: "lamb", name: "Lamb", category: "Proteins",
-    subcategory: "Red meat", aliases: ["lamb chops", "lamb mince", "lamb leg", "mutton"],
+    // NK6R — "mutton" removed: the meat of an adult sheep, an age class of its own.
+    subcategory: "Red meat", aliases: ["lamb chops", "lamb mince", "lamb leg"],
     description: "A red meat with a distinctive flavour, supplying iron, zinc and vitamin B12.",
     commonForms: ["chops", "mince", "leg", "shoulder", "rack"],
     storageGuidance: "Refrigerate and use by the use-by date; freeze for longer.",
@@ -934,7 +944,8 @@ export const FOOD_SEED: InsertKnowledgeFood[] = [
     storageGuidance: "Store dry in an airtight container.",
     seasonality: "Year-round" },
   { slug: "buckwheat", name: "Buckwheat", category: "Grains",
-    subcategory: "Pseudo-cereals", aliases: ["buckwheat groats", "kasha", "buckwheat flour"],
+    // NK6R / NK6Q §2.3 — "buckwheat flour" removed: a milled flour is not the whole grain.
+    subcategory: "Pseudo-cereals", aliases: ["buckwheat groats", "kasha"],
     description: "A naturally gluten-free pseudo-cereal rich in fibre, magnesium and manganese, with a nutty flavour.",
     commonForms: ["groats", "flour", "noodles (soba)", "porridge"],
     storageGuidance: "Store in an airtight container.",
@@ -952,20 +963,24 @@ export const FOOD_SEED: InsertKnowledgeFood[] = [
     storageGuidance: "Store in an airtight container.",
     seasonality: "Year-round" },
   { slug: "rye", name: "Rye", category: "Grains",
-    subcategory: "Whole grains", aliases: ["rye bread", "rye flour", "dark rye"],
+    // NK6R / NK6Q §2.3 — "rye flour" removed: a milled flour is not the whole grain.
+    subcategory: "Whole grains", aliases: ["rye bread", "dark rye"],
     description: "A dense, flavourful grain with a high fibre content and a lower glycaemic impact than most wheat products.",
     commonForms: ["bread", "crispbread", "flour", "grains"],
     storageGuidance: "Store grain and flour in an airtight container.",
     seasonality: "Year-round" },
   { slug: "wheat", name: "Wheat", category: "Grains",
-    subcategory: "Whole grains", aliases: ["whole wheat", "wheat flour", "wholemeal flour", "wheat berries"],
+    // NK6R / NK6Q §2.3 — the "…flour" aliases removed: the grain is not the flour.
+    subcategory: "Whole grains", aliases: ["whole wheat", "wheat berries"],
     description: "The world's most widely grown cereal grain, supplying fibre, iron and B vitamins; whole wheat retains the most nutrition.",
     commonForms: ["flour", "berries", "wholemeal", "bread", "pasta"],
     storageGuidance: "Store flour in an airtight container.",
     seasonality: "Year-round" },
   { slug: "couscous", name: "Couscous", category: "Grains",
-    subcategory: "Wheat products", aliases: ["wholewheat couscous", "giant couscous"],
-    description: "Tiny steamed wheat granules that cook quickly, supplying selenium, fibre and folate; a staple of North African and Middle Eastern cooking.",
+    // NK6R — "wholewheat couscous" is a separate whole-grain food; "giant couscous" is
+    // pearl couscous, a different grain entirely (NK6Q §2.4 resolver mis-target).
+    subcategory: "Wheat products", aliases: ["cous cous"],
+    description: "Tiny steamed granules of refined durum wheat that cook quickly, supplying selenium, fibre and folate; a staple of North African and Middle Eastern cooking.",
     commonForms: ["plain", "wholewheat", "giant", "Israeli couscous"],
     storageGuidance: "Store dry in an airtight container.",
     seasonality: "Year-round" },
@@ -976,8 +991,11 @@ export const FOOD_SEED: InsertKnowledgeFood[] = [
     storageGuidance: "Store in an airtight container.",
     seasonality: "Year-round" },
   { slug: "pasta", name: "Pasta", category: "Grains",
-    subcategory: "Wheat products", aliases: ["spaghetti", "penne", "fusilli", "tagliatelle", "wholemeal pasta", "whole wheat pasta"],
-    description: "A versatile wheat-based staple; wholemeal or whole wheat pasta adds significantly more fibre than refined white pasta.",
+    // NK6R Amendment 3 — this record is the fact owner for WHEAT pasta (canonical
+    // `wheat-pasta` links to it). Shapes stay: they are formats of this pasta type.
+    // Wholemeal strings removed: wholewheat pasta is a separate type with more fibre.
+    subcategory: "Wheat products", aliases: ["spaghetti", "penne", "fusilli", "tagliatelle", "rigatoni", "macaroni"],
+    description: "A versatile durum wheat staple, sold dried in every shape; what a pasta is made from decides its fibre and protein.",
     commonForms: ["spaghetti", "penne", "fusilli", "tagliatelle", "lasagne sheets"],
     storageGuidance: "Store dried pasta in a sealed container; refrigerate fresh pasta.",
     seasonality: "Year-round" },
@@ -996,7 +1014,8 @@ export const FOOD_SEED: InsertKnowledgeFood[] = [
 
   // ── Other pantry staples ─────────────────────────────────────────────────────
   { slug: "coconut", name: "Coconut", category: "Healthy fats",
-    subcategory: "Tropical nuts", aliases: ["coconut flesh", "desiccated coconut", "coconut milk", "coconut cream", "coconut water"],
+    // NK6R — "coconut water" removed: the liquid endosperm is a different food from the flesh.
+    subcategory: "Tropical nuts", aliases: ["coconut flesh", "desiccated coconut", "coconut milk", "coconut cream"],
     description: "A tropical drupe with fibre-rich flesh and a rich, distinctive flavour; coconut milk and cream are made from the pressed flesh.",
     commonForms: ["desiccated", "coconut milk", "coconut cream", "coconut water", "flakes"],
     storageGuidance: "Store desiccated coconut airtight; refrigerate opened coconut milk.",
@@ -1008,7 +1027,9 @@ export const FOOD_SEED: InsertKnowledgeFood[] = [
     storageGuidance: "Keep in an airtight container; refrigerate for longer freshness.",
     seasonality: "Year-round" },
   { slug: "dark-chocolate", name: "Dark Chocolate", category: "Healthy fats",
-    subcategory: "Cacao", aliases: ["70% chocolate", "85% chocolate", "cocoa", "cacao", "dark choc"],
+    // NK6R / NK6Q §2.4 — "cocoa"/"cacao" removed: cocoa powder is defatted cocoa solids,
+    // not chocolate. Those strings belong to cacao-powder.
+    subcategory: "Cacao", aliases: ["70% chocolate", "85% chocolate", "dark choc"],
     description: "Dark chocolate (70%+ cocoa) is rich in polyphenols, magnesium and iron from the cacao plant.",
     commonForms: ["bar", "chips", "melted", "cocoa powder"],
     storageGuidance: "Keep in a cool, dry place away from strong odours.",
@@ -1067,7 +1088,8 @@ export const FOOD_SEED: InsertKnowledgeFood[] = [
     source: "USDA FDC / WS0X.2 H1 batch 2026-06-24" },
 
   { slug: "squid", name: "Squid", category: "Proteins",
-    subcategory: "Seafood", aliases: ["calamari", "squid rings", "cuttlefish", "inkfish"],
+    // NK6R — "cuttlefish" removed: a different animal (Sepia), not a squid (Loligo).
+    subcategory: "Seafood", aliases: ["calamari", "squid rings", "inkfish"],
     description: "A lean, firm-textured seafood widely available in UK supermarkets fresh, frozen, or prepared as rings. Rich in protein and selenium.",
     commonForms: ["rings", "whole", "tubes", "frozen"],
     storageGuidance: "Keep chilled and use within use-by date; freeze for longer storage.",
@@ -1108,7 +1130,10 @@ export const FOOD_SEED: InsertKnowledgeFood[] = [
     source: "USDA FDC / WS0X.2 H1 batch 2026-06-24" },
 
   { slug: "liver", name: "Liver", category: "Proteins",
-    subcategory: "Offal", aliases: ["chicken liver", "lamb's liver", "beef liver", "pig's liver", "chicken livers"],
+    // NK6R / NK6Q §2.1 — species livers removed. They differ materially on vitamin A,
+    // copper and iron, and each owns its own identity (as pork-liver and calves-liver
+    // already did). `liver` is the coarse fallback for liver of unknown species.
+    subcategory: "Offal", aliases: ["livers"],
     description: "An organ meat exceptionally rich in iron, vitamin B12, folate, and vitamin A. Chicken and lamb's liver are the most widely available in UK supermarkets.",
     commonForms: ["chicken liver", "lamb's liver", "sliced"],
     storageGuidance: "Keep chilled and use within use-by date; best eaten fresh.",
@@ -1481,8 +1506,11 @@ export const FOOD_SEED: InsertKnowledgeFood[] = [
     source: "USDA FDC / WS0X.2 H1 batch 2026-06-24" },
 
   { slug: "blue-cheese", name: "Blue Cheese", category: "Dairy",
-    subcategory: "Hard and semi-hard cheese", aliases: ["blue-veined cheese", "bleu cheese", "fromage bleu"],
-    description: "A family of cheeses with distinctive blue or green veining, including Stilton, Gorgonzola, and Roquefort. Strongly flavoured and widely available in UK supermarkets.",
+    // NK6R / NK6Q §2.2 — the description used to NAME Stilton, Gorgonzola and Roquefort
+    // while Stilton already had its own identity. They are children of this family, not
+    // instances of it. Reworded so no named cheese is folded into the family record.
+    subcategory: "Semi-hard", aliases: ["blue-veined cheese", "bleu cheese", "fromage bleu"],
+    description: "The family of cheeses veined with blue or green mould. Strongly flavoured, and the record to use when a blue cheese's name is not known.",
     commonForms: ["wedge", "crumbled"],
     storageGuidance: "Wrap tightly in foil and keep refrigerated; consume within a few days of opening.",
     seasonality: "Year-round",
@@ -1537,7 +1565,8 @@ export const FOOD_SEED: InsertKnowledgeFood[] = [
     source: "USDA FDC / WS0X.2 H1 batch 2026-06-24" },
 
   { slug: "double-cream", name: "Double Cream", category: "Dairy",
-    subcategory: "Cream", aliases: ["heavy cream", "whipping cream", "heavy whipping cream"],
+    // NK6R — whipping cream removed: a distinct ~35% fat grade, as single cream already was.
+    subcategory: "Cream", aliases: ["heavy cream"],
     description: "A very thick cream with high fat content used for whipping, pouring, and enriching sauces and desserts. A UK kitchen staple in all supermarkets.",
     commonForms: ["pourable", "whipped", "UHT"],
     storageGuidance: "Keep refrigerated and use within use-by date; UHT keeps in a cupboard until opened.",
@@ -1612,8 +1641,10 @@ export const FOOD_SEED: InsertKnowledgeFood[] = [
     source: "USDA FDC / WS0X.2 H1 batch 2026-06-24" },
 
   { slug: "fenugreek", name: "Fenugreek", category: "Spices",
-    subcategory: "Seeds and pods", aliases: ["fenugreek seeds", "methi seeds", "methi", "fenugreek leaves", "kasuri methi"],
-    description: "A versatile plant whose seeds and dried leaves are central to South Asian cooking, adding a distinctive slightly bitter, maple-like flavour. Widely available in UK supermarkets.",
+    // NK6R / NK6Q §2.5 — leaf strings removed: this record is the SEED spice. The leaf
+    // (methi / kasuri methi) is a different plant part and a separate food.
+    subcategory: "Seeds and pods", aliases: ["fenugreek seeds", "methi seeds"],
+    description: "The hard, slightly bitter, maple-scented seed central to South Asian cooking. Widely available in UK supermarkets.",
     commonForms: ["whole seeds", "ground", "dried leaves"],
     storageGuidance: "Store seeds and ground spice in airtight containers away from light.",
     seasonality: "Year-round",
@@ -1645,8 +1676,9 @@ export const FOOD_SEED: InsertKnowledgeFood[] = [
     source: "USDA FDC / WS0X.2 H1 batch 2026-06-24" },
 
   { slug: "sesame-oil", name: "Sesame Oil", category: "Healthy fats",
-    subcategory: "Oils", aliases: ["toasted sesame oil", "sesame seed oil", "dark sesame oil", "Chinese sesame oil"],
-    description: "An oil pressed from sesame seeds, widely used in East and South-East Asian cooking to add a rich, nutty flavour. Available in all UK supermarkets.",
+    // NK6R — toasted/dark removed: pressed from roasted seeds, it is a finishing condiment.
+    subcategory: "Oils", aliases: ["sesame seed oil", "light sesame oil"],
+    description: "A light oil pressed from raw sesame seeds, neutral enough to cook with. Available in all UK supermarkets.",
     commonForms: ["toasted", "light", "cold-pressed"],
     storageGuidance: "Keep in a cool, dark cupboard; toasted sesame oil is best used within 6 months.",
     seasonality: "Year-round",

@@ -9,10 +9,27 @@
 
 export * from "./types.js";
 export { runBenchmark, type RunOptions, type TurnRunner } from "./runner.js";
-export { makeCompanionTurnRunner } from "./companion-turn.js";
+export { makeCompanionTurnRunner, type BenchmarkTurnRunner } from "./companion-turn.js";
+export {
+  installCapabilityProbe, isCapabilityProbeInstalled,
+  type CapabilityProbeHandle,
+} from "./capability-probe.js";
 export { saveRun, loadRun, loadReport, listRuns, selectBaseline, rebuildIndex, readIndex } from "./history.js";
 export { renderReport } from "./report.js";
 export { resolveBundle, resolveProvenance, bundleVersionLabel, loadQuestionsFixture } from "./bundle.js";
-export { deriveExpectation } from "./expectations.js";
-export { scoreDeterministic } from "./scorer.js";
+export {
+  deriveExpectation, capabilityFamily, isRegistryCapability,
+  resolveCapabilityStatus, registryExecutableCapabilityIds,
+  type ExpectationRecord,
+} from "./expectations.js";
+export {
+  scoreDeterministic, classifyRouting, applyGateCaps, statesALimitation,
+  R1_CAPABILITY_MISS_CAP, R2_MISROUTE_CAP, type CapturedTurn,
+} from "./scorer.js";
+export {
+  routingPanel, coveragePanel, coverageByDomain, routingFailureReport,
+  qualityPanel, hallucinationPanel, capabilityUtilisationPanel,
+  releaseReadiness, failedQuestionIds,
+  PASS_THRESHOLD, INTENT_ACCURACY_FLOOR, CAPABILITY_REACH_FLOOR,
+} from "./aggregate.js";
 export { resolveJudge, disabledJudge, type JudgeClient } from "./judge.js";

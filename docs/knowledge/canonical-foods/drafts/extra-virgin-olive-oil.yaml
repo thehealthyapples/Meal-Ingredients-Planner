@@ -82,21 +82,12 @@ nutrition_profile:
   - nutrient: vitamin_E
     role: minor contribution depending on oil and serving
     confidence: moderate
-  - nutrient: energy_density
-    role: useful fat source but portion-aware due to calorie density
-    confidence: well_established
   editorial_summary: Extra Virgin Olive Oil is useful in THA as a recognised, household-friendly food that can improve
     meal quality when used in an appropriate context.
 benefit_language:
 - area: healthy_fat
   approved_wording: A useful unsaturated-fat choice for dressings and cooking.
   evidence_tone: dietary_pattern
-- area: meal_enrichment
-  approved_wording: Helps turn vegetables and legumes into more satisfying meals.
-  evidence_tone: culinary_practical
-- area: absorption_context
-  approved_wording: Can help carry fat-soluble compounds in meals containing vegetables.
-  evidence_tone: nutrition_context
 planner_metadata:
   meal_slots:
   - breakfast

@@ -1,0 +1,225 @@
+record:
+  schema: tha_canonical_food_draft
+  schema_version: 2.0-draft
+  batch_id: batch-006-legumes-beans-pulses-soy-foods
+  status: draft
+  canonical_slug: red-lentils
+  display_name: Red lentils
+  duplicate_policy: stop_on_slug_conflict_or_merge_only_with_explicit_approval
+  authored_by: ChatGPT for The Healthy Apples
+  authored_date: '2026-07-07'
+  review_status: requires_claude_import_validation_before_merge
+nk_controls:
+  governing_patterns:
+  - one_canonical_identity
+  - one_owner_per_fact
+  - no_duplicate_entities
+  - progressive_enrichment
+  - honest_gaps_over_fabricated_information
+  ai_usage_rules:
+  - AI may draft editorial wording but must not create new canonical nutrient or benefit vocabulary.
+  - Unresolved nutrients, benefits, aliases or identity conflicts must be rejected for review, not silently minted.
+  numeric_nutrition_policy: do_not_import_numeric_values_until_validated
+  fact_owner_boundary: Food identity belongs to the Knowledge Platform. Nutrient and benefit vocabularies remain TypeScript-owned
+    canonical vocabularies.
+identity:
+  food_category: legume
+  aliases:
+  - red lentil
+  - split red lentils
+  - masoor dal
+  not_same_as: &id001
+  - red lentil ready meal
+  - seasoned lentil pouch
+  canonical_identity_rule: Red lentils is the canonical identity for the plain whole-food ingredient. Plain fresh, frozen,
+    dried, cooked, tinned-in-water or single-ingredient forms remain variants where appropriate; juices, sweetened products,
+    sauces, ready meals, snacks and branded prepared products are excluded unless separately governed.
+  plant_count_policy:
+    counts_towards_plant_diversity: true
+    plant_family: Fabaceae
+    plant_part: seed
+    plant_diversity_note: Count as one plant identity for THA weekly diversity unless a future governed variety rule states
+      otherwise.
+classification:
+  whole_food_status: whole_or_minimally_processed
+  upf_default: false
+  processing_watchouts:
+  - Exclude ready meals, flavoured products, juice drinks, sweetened jars, syrup-packed products, crisps, bars, coated snacks
+    and sauce-coated prepared products.
+  - Plain fresh, frozen, dried, cooked or tinned-in-water forms may remain under this canonical identity when single-ingredient.
+varieties_and_forms:
+  varieties:
+  - name: red lentil
+    relationship: alias_or_market_form
+  - name: split red lentils
+    relationship: alias_or_market_form
+  - name: masoor dal
+    relationship: alias_or_market_form
+  forms:
+  - name: fresh
+    relationship: same_canonical_food_when_plain
+  - name: frozen plain
+    relationship: same_canonical_food_when_plain
+  - name: dried plain
+    relationship: same_canonical_food_when_plain
+  - name: tinned in water or juice where appropriate
+    relationship: same_canonical_food_when_plain
+  preparation_states:
+  - raw where appropriate
+  - cooked where appropriate
+  - chopped
+  - pureed from scratch
+  form_policy: Do not create a new canonical identity for cut size, pack format, frozen state, dried state or plain tinned
+    state unless THA later approves a separate fact owner.
+nutrition_profile:
+  quantitative_values_status: do_not_import_numeric_values_until_validated
+  notable_nutrients:
+  - nutrient: plant-protein
+    role: Adds plant-protein context for shared meals, pulses and minimally processed soy foods.
+    confidence: well_established
+  - nutrient: fibre
+    role: Provides fibre context within whole-food meals and weekly plant diversity.
+    confidence: well_established
+  - nutrient: folate
+    role: Contributes folate context within pulses, beans and plant-forward meals.
+    confidence: well_established
+  editorial_summary: Red lentils is a useful whole-food protein and fibre component for soups, stews, salads, curries and
+    shared household meals.
+  vocabulary_policy: All nutrient strings intentionally use existing canonical vocabulary where known; unresolved terms should
+    go to Knowledge Review.
+benefit_language:
+- area: gut-health
+  approved_wording: Red lentils can support gut-health meal patterns by adding whole-food variety and fibre context where
+    appropriate.
+  evidence_tone: high_level_consensus
+  governance_note: Pattern-level wording only; no disease prevention claim.
+- area: heart-health
+  approved_wording: Red lentils can sit comfortably in heart-health meal patterns when used as part of varied, minimally processed
+    meals.
+  evidence_tone: high_level_consensus
+  governance_note: Pattern-level wording only; no disease prevention claim.
+planner_metadata:
+  meal_slots:
+  - lunch
+  - dinner
+  roles:
+  - plant protein
+  - fibre-rich component
+  - shared meal base
+  - pantry staple
+  good_uses:
+  - dals
+  - soups
+  - stews
+  - thickening sauces
+  - family curries
+  nutrition_boost_tags:
+  - plant-diversity
+  - whole-food
+  - fibre-context
+  household_notes: Red lentils is a useful whole-food protein and fibre component for soups, stews, salads, curries and shared
+    household meals.
+  adaptation_notes: Usually compatible as a shared component; adapt texture, portion, cooking fat, sauces, seasoning and toppings
+    to household needs.
+shopping_intelligence:
+  supermarket_locations:
+  - pulses
+  - world foods
+  buying_notes: Look for plain red lentils without sauces, syrup, sweet coatings, flavourings or seasoning mixes.
+  quality_signals:
+  - fresh appearance where expected
+  - no visible mould
+  - avoid slimy, sour-smelling, leaking or heavily bruised pieces
+  - for dried or tinned forms, prefer single-ingredient formats where possible
+  budget_notes: Own-brand, frozen plain, dried or tinned-in-water formats may be better-value where appropriate.
+  search_terms:
+  - red lentils
+  - red lentil
+  - split red lentils
+  - masoor dal
+cooking_and_storage:
+  storage: Store according to supermarket pack guidance; keep fresh produce cool and dry or refrigerated where appropriate.
+    Store dried goods sealed in a cool dry cupboard.
+  prep_tips: Wash, drain, soak, peel, chop or cook red lentils as appropriate for the form. Use plain cooking methods before
+    adding sauces or seasonings.
+  texture_notes: Use preparation and cooking time to control whether the ingredient stays crisp, juicy, tender, soft, chewy
+    or mashable.
+  leftover_notes: Cool cooked leftovers promptly and follow normal food-safety guidance before reusing.
+relationships:
+  pairs_well_with:
+  - onion
+  - garlic
+  - tomato
+  - spinach
+  - rice
+  nutrient_complements:
+  - with: extra-virgin-olive-oil
+    reason: Helps turn pulses into satisfying meals while keeping the meal whole-food-led.
+  - with: leafy-greens
+    reason: Combines plant protein and fibre context with extra vegetable variety.
+  category_neighbours:
+  - lentils
+  - green-lentils
+  - brown-lentils
+  - puy-lentils
+  - chickpeas
+  - black-beans
+  do_not_replace: *id001
+safety_and_limitations:
+  allergen_profile: Naturally free from common animal allergens unless prepared with other ingredients; always check packaged
+    forms.
+  diet_compatibility:
+  - vegan
+  - vegetarian
+  - gluten-free
+  - dairy-free
+  clinical_caveats: Medical diet suitability, allergy risk and therapeutic claims require professional or user-specific review.
+  storage_safety: Discard if mouldy, slimy, sour-smelling beyond normal fermented contexts, leaking, or outside safe storage
+    guidance.
+companion_behaviour:
+  plain_answer: Red lentils is a whole-food ingredient that can help add variety and simple nutrition context to meals.
+  suggested_user_facing_phrases:
+  - Add red lentils to increase whole-food variety.
+  - Use plain red lentils rather than sweetened, flavoured or ready-made versions.
+  - Red lentils works well in dals, soups, stews.
+  avoid_phrases:
+  - Do not call this a superfood.
+  - Do not claim it treats, cures, prevents or reverses disease.
+  - Do not invent numeric nutrition values until validated.
+claim_boundaries:
+  do_not_describe_as:
+  - treating disease
+  - curing disease
+  - preventing disease
+  - reversing disease
+  - guaranteed weight loss
+  - detoxifying
+  allowed_framing:
+  - whole-food variety
+  - meal pattern support
+  - nutrient context
+  - household-friendly ingredient use
+  evidence_policy: Evidence-backed claims can be added later through governed enrichment; current wording remains food-first
+    and non-medical.
+consumers:
+  planner: Use as a whole-food component, side, base, topping or snack according to planner roles.
+  pantry: Use aliases and forms for pantry matching and storage guidance.
+  shopping: Use search terms and supermarket locations for basket matching; avoid processed forms.
+  companion: Use plain_answer and suggested phrases with claim boundaries.
+progressive_enrichment:
+  ready_now:
+  - canonical identity
+  - aliases
+  - not_same_as
+  - planner metadata
+  - shopping metadata
+  - qualitative nutrient context
+  - claim-safe companion wording
+  requires_later_validation:
+  - numeric nutrition values
+  - source references
+  - benefit evidence expansion
+  - variety-specific nutrient differences
+  - clinical diet overlays
+  review_queue_policy: Any unresolved vocabulary or identity conflict should be captured for Knowledge Review rather than
+    resolved locally.

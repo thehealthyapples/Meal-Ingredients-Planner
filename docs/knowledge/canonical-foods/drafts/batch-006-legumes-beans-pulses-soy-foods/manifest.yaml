@@ -1,0 +1,115 @@
+batch:
+  id: batch-006-legumes-beans-pulses-soy-foods
+  title: Legumes, Beans, Pulses and Soy Foods
+  status: draft_requires_import_validation
+  created: '2026-07-07'
+  authored_by: ChatGPT for The Healthy Apples
+  food_count: 30
+  scope: Common dried, tinned, frozen or minimally processed legumes, beans, pulses and soy foods regularly used in UK household
+    cooking.
+  packaging: individual_yaml_files_one_food_per_file
+  recommended_repo_path: docs/knowledge/canonical-foods/drafts/batch-006-legumes-beans-pulses-soy-foods/
+  import_policy: dry_run_first_no_force_upsert_no_production_import
+  notes:
+  - Plain tinned-in-water/brine forms remain the same canonical food where single-ingredient; sauce-coated baked-bean products
+    and ready meals are excluded unless separately governed.
+  - Some starter foods such as lentils and chickpeas may already exist and should become merge/enrichment candidates.
+foods:
+- slug: lentils
+  display_name: Lentils
+  category: legume
+- slug: red-lentils
+  display_name: Red lentils
+  category: legume
+- slug: green-lentils
+  display_name: Green lentils
+  category: legume
+- slug: brown-lentils
+  display_name: Brown lentils
+  category: legume
+- slug: puy-lentils
+  display_name: Puy lentils
+  category: legume
+- slug: chickpeas
+  display_name: Chickpeas
+  category: legume
+- slug: black-beans
+  display_name: Black beans
+  category: legume
+- slug: kidney-beans
+  display_name: Kidney beans
+  category: legume
+- slug: cannellini-beans
+  display_name: Cannellini beans
+  category: legume
+- slug: butter-beans
+  display_name: Butter beans
+  category: legume
+- slug: haricot-beans
+  display_name: Haricot beans
+  category: legume
+- slug: borlotti-beans
+  display_name: Borlotti beans
+  category: legume
+- slug: pinto-beans
+  display_name: Pinto beans
+  category: legume
+- slug: adzuki-beans
+  display_name: Adzuki beans
+  category: legume
+- slug: mung-beans
+  display_name: Mung beans
+  category: legume
+- slug: soya-beans
+  display_name: Soya beans
+  category: legume
+- slug: edamame
+  display_name: Edamame
+  category: legume
+- slug: black-eyed-beans
+  display_name: Black-eyed beans
+  category: legume
+- slug: marrowfat-peas
+  display_name: Marrowfat peas
+  category: legume
+- slug: yellow-split-peas
+  display_name: Yellow split peas
+  category: legume
+- slug: green-split-peas
+  display_name: Green split peas
+  category: legume
+- slug: fava-beans
+  display_name: Fava beans
+  category: legume
+- slug: flageolet-beans
+  display_name: Flageolet beans
+  category: legume
+- slug: mixed-beans
+  display_name: Mixed beans
+  category: legume
+- slug: tofu
+  display_name: Tofu
+  category: soy_food
+- slug: tempeh
+  display_name: Tempeh
+  category: fermented_soy_food
+- slug: lupin-beans
+  display_name: Lupin beans
+  category: legume
+- slug: gram-flour
+  display_name: Gram flour
+  category: pulse_flour
+- slug: chana-dal
+  display_name: Chana dal
+  category: legume
+- slug: toor-dal
+  display_name: Toor dal
+  category: legume
+validation_sequence:
+- step: single_file_smoke
+  command: npm run import:canonical-foods -- --dry-run docs/knowledge/canonical-foods/drafts/batch-006-legumes-beans-pulses-soy-foods/lentils.yaml
+- step: three_file_smoke
+  command: npm run import:canonical-foods -- --dry-run docs/knowledge/canonical-foods/drafts/batch-006-legumes-beans-pulses-soy-foods/lentils.yaml
+    docs/knowledge/canonical-foods/drafts/batch-006-legumes-beans-pulses-soy-foods/red-lentils.yaml docs/knowledge/canonical-foods/drafts/batch-006-legumes-beans-pulses-soy-foods/green-lentils.yaml
+- step: full_batch_dry_run
+  command: npm run import:canonical-foods -- --dry-run docs/knowledge/canonical-foods/drafts/batch-006-legumes-beans-pulses-soy-foods/[food-files-only].yaml

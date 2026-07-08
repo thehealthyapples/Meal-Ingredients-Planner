@@ -85,21 +85,12 @@ nutrition_profile:
   - nutrient: vitamin_K
     role: contributes to micronutrient variety
     confidence: moderate
-  - nutrient: natural_sugars
-    role: fruit sugars in whole-food matrix; do not overstate as low-sugar for all users
-    confidence: well_established
   editorial_summary: Blueberries is useful in THA as a recognised, household-friendly food that can improve meal
     quality when used in an appropriate context.
 benefit_language:
 - area: plant_diversity
   approved_wording: Adds berry diversity to the week.
   evidence_tone: high_level_consensus
-- area: breakfast_quality
-  approved_wording: A simple fruit topping for oats, yoghurt and smoothie bowls.
-  evidence_tone: culinary_practical
-- area: plant_compounds
-  approved_wording: Useful berry source of polyphenol plant compounds.
-  evidence_tone: food_composition_context
 planner_metadata:
   meal_slots:
   - breakfast

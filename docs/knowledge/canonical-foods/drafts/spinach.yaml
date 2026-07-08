@@ -81,8 +81,11 @@ nutrition_profile:
   - nutrient: folate
     role: supports normal cell function and contributes to varied micronutrient intake
     confidence: well_established
-  - nutrient: lutein_and_zeaxanthin
-    role: plant carotenoids associated with eye-health nutrition context
+  - nutrient: lutein
+    role: leafy-green carotenoid associated with eye-health nutrition context
+    confidence: moderate
+  - nutrient: zeaxanthin
+    role: leafy-green carotenoid associated with eye-health nutrition context
     confidence: moderate
   - nutrient: plant_iron
     role: contributes iron, with absorption improved by vitamin-C-rich foods
@@ -96,12 +99,6 @@ benefit_language:
 - area: plant_diversity
   approved_wording: Adds leafy-green diversity to the week.
   evidence_tone: high_level_consensus
-- area: micronutrient_density
-  approved_wording: Useful for folate, vitamin K, magnesium and plant carotenoids.
-  evidence_tone: food_composition
-- area: meal_enrichment
-  approved_wording: Easy to add without changing the identity of many meals.
-  evidence_tone: culinary_practical
 planner_metadata:
   meal_slots:
   - breakfast

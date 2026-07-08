@@ -9,7 +9,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
-import { HISTORY_DIR, bundleVersionLabel } from "./bundle.js";
+import { HISTORY_DIR, RUBRIC_VERSION, bundleVersionLabel } from "./bundle.js";
 import type { BenchmarkResult, HistoryIndexEntry } from "./types.js";
 import { renderReport } from "./report.js";
 
@@ -46,11 +46,20 @@ function indexEntry(result: BenchmarkResult): HistoryIndexEntry {
     commit: result.subject.commit,
     branch: result.subject.branch,
     bundleVersion: bundleVersionLabel(result.bundle),
+    rubricVersion: result.bundle.rubric,
     headlineScore: result.headline.score,
     honestGapRate: result.headline.honestGapRate,
     gatesFired: result.headline.gatesFired,
+    routingGatesFired: result.headline.routingGatesFired,
+    intentResolutionAccuracy: result.headline.intentResolutionAccuracy,
     verdict: result.releaseReadiness.verdict,
   };
+}
+
+/** MAJOR component of a `vX.Y.Z` (or `X.Y.Z`) version string. */
+function major(version: string | undefined): string | null {
+  if (!version) return null;
+  return version.split(".")[0];
 }
 
 /** Persist a run: result.json + report.md + index row. Returns the file paths. */
@@ -91,12 +100,30 @@ export function listRuns(): HistoryIndexEntry[] {
 
 /**
  * Baseline selection (AUTOMATION §4): the most recent SCORED run at a comparable
- * bundle version. INTQ4 compares within the same questions-version MAJOR.
+ * bundle version. INTQ4 compared within the same questions-version MAJOR.
+ *
+ * BENCH2 adds the rubric MAJOR to the comparability key. README §4 states that a changed
+ * dimension set, weight or gate makes scores "not comparable across the boundary" and must be
+ * "reported as a re-baseline, never as a regression/improvement delta." The questions-version
+ * MAJOR alone could not express that: BENCH2 changes no question, so every pre-BENCH2 run would
+ * still have matched, and the first hardened run would have reported its (correct, much lower)
+ * score as a catastrophic regression against a baseline that was never measuring routing at all.
+ *
+ * Index rows written before BENCH2 carry no `rubricVersion`; they therefore never match the v2
+ * rubric and are correctly excluded. `rebuildIndex()` recovers the field from each stored
+ * artefact's own `bundle.rubric`, so history is never rewritten to claim a rubric it did not run.
  */
 export function selectBaseline(bundleVersion: string, excludeRunId?: string): BenchmarkResult | null {
-  const major = bundleVersion.split(".")[0];
+  const questionsMajor = major(bundleVersion);
+  const rubricMajor = major(RUBRIC_VERSION);
   const candidates = readIndex()
-    .filter((e) => e.status === "scored" && e.runId !== excludeRunId && e.bundleVersion.split(".")[0] === major)
+    .filter(
+      (e) =>
+        e.status === "scored" &&
+        e.runId !== excludeRunId &&
+        major(e.bundleVersion) === questionsMajor &&
+        major(e.rubricVersion) === rubricMajor,
+    )
     .sort((a, b) => b.executedAt.localeCompare(a.executedAt));
   for (const c of candidates) {
     const run = loadRun(c.runId);

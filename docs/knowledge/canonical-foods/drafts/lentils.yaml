@@ -89,15 +89,9 @@ nutrition_profile:
   - nutrient: plant_iron
     role: contributes iron; pair with vitamin-C-rich foods for absorption context
     confidence: well_established_with_absorption_context
-  - nutrient: slow_release_carbohydrate
-    role: useful for steady-energy meal framing without making blood-glucose promises
-    confidence: moderate
   editorial_summary: Lentils is useful in THA as a recognised, household-friendly food that can improve meal quality
     when used in an appropriate context.
 benefit_language:
-- area: legume_exposure
-  approved_wording: Adds a legume serving to the week.
-  evidence_tone: high_level_consensus
 - area: meat_free_protein
   approved_wording: Useful plant protein for vegetarian and flexitarian meals.
   evidence_tone: food_composition

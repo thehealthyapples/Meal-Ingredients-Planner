@@ -8,12 +8,47 @@
 ## 0. HOW TO USE THIS TEMPLATE
 
 Every run emits a `report.md` that follows the **exact section order below.** The order is deliberate: **headline →
-regression → safety → breakdowns → failures → provenance.** A reader must see *the number*, *whether it moved*, and
-*whether anything unsafe fired* before any detail. Sections are never reordered or omitted; a section with nothing to
-report says "None" rather than disappearing, so two reports are always diffable.
+regression → routing → coverage → quality → safety → hallucination → breakdowns → routing failures → question failures →
+provenance.** A reader must see *the number*, *whether it moved*, *whether the platform reached the capabilities it
+advertises*, and *whether anything unsafe fired* before any detail. Sections are never reordered or omitted; a section
+with nothing to report says "None" rather than disappearing, so two reports are always diffable.
 
 Everything in `‹angle brackets›` is filled per run from `result.json`. The template is reproduced verbatim below;
 copy it, fill it, done.
+
+### 0.1 `BENCH2` / `BENCH2C` AMENDMENT (framework `v2.0.0` → `v2.1.0`, 2026-07-08)
+
+`BENCH2` inserted four panels and `BENCH2C` a fifth, renumbering the sections that follow them. **The canonical section order is now:**
+
+| § | Section | Added by |
+|---:|---|---|
+| — | **Environment banner** — "read the score in context": no LLM provider / no judge | `BENCH2` |
+| 1 | Headline — now also carries Intent Resolution Accuracy, Capability Reach, Hallucination Rate, and Routing gates fired | amended |
+| 2 | Regression vs Baseline | — |
+| **3** | **Routing Accuracy** — Capability Reach %, Intent Resolution Accuracy, Capability Misses (R1), Misroutes (R2), Unreachable Capability Count, routing-failure histogram | `BENCH2` |
+| **4** | **Capability Coverage** — intended vs invoked vs registry-executable, plus **Capability Coverage by Domain** | `BENCH2` |
+| **5** | **Answer Quality** — mean composite and D1/D5/D7 bands **over questions that reached the intended capability only** | `BENCH2` |
+| 6 | Safety Panel — now states, per gate, whether it is **deterministically assignable**; an empty row means *"not measured"*, never *"clear"* | amended |
+| **7** | **Hallucination Rate** — gate G1, with its derivation stated inline | `BENCH2` |
+| **8** | **Capability Utilisation Dashboard** — §8.1 capabilities exercised (invocations, questions, success/failure, contribution to the answer, mean/p95/max/total execution time, verbs, baseline reads); §8.2 registered capabilities never exercised; §8.3 questions bypassing all registered capabilities, split `defect` vs `structural` | `BENCH2C` |
+| 9 | Dimension Breakdown | (was §4, then §8) |
+| 10 | Domain & Capability Breakdown | (was §5, then §9) |
+| 11 | Household & Personality Breakdown | (was §6, then §10) |
+| **12** | **Routing Failure Report** — every question that did not reach its intended capability, its intended capability's registry status, what was invoked instead, and the recorded failure reason | `BENCH2` |
+| 13 | Failing & Watchlist Questions — now shows the safety gate and the routing gate in separate columns | (was §7, then §12) |
+| 14 | Provenance & Reproducibility | (was §8, then §13) |
+
+> **§8 vs §3.** §3 Routing Accuracy asks *"did the platform reach the capability this question intended?"*. §8 asks
+> *"which capabilities actually executed, how fast, and did their results reach the answer?"*. §8 counts execution, so it
+> includes baseline context-only reads and capability fan-out that §3 excludes by definition. The two are expected to
+> disagree on "invoked"; each states its own definition and neither is derived from the other.
+>
+> The Headline (§1) also carries `Capability invocations` and `Capability utilisation` from `BENCH2C`.
+
+**The five axes — Routing Accuracy, Capability Coverage, Answer Quality, Safety, Hallucination Rate — are reported
+separately and are never averaged into one another** ([`BENCHMARK_SCORING_FRAMEWORK.md`](./BENCHMARK_SCORING_FRAMEWORK.md)
+§6.1). The verbatim skeleton below still shows the pre-`BENCH2` numbering for sections 1–8; where the two disagree, the
+table above is authoritative and the emitted `report.md` follows it.
 
 ---
 
@@ -154,14 +189,20 @@ These govern how §2's deltas are computed and when they are valid.
 1. **Comparability.** Deltas are only computed against a baseline at a **comparable** bundle version — same MAJOR, and
    the compared component versions differing only by MINOR/PATCH ([`README.md`](./README.md) §4). Across a MAJOR
    boundary the report prints a **re-baseline banner** and shows **absolute scores only**, never deltas — a MAJOR change
-   means the two numbers are not on the same scale.
+   means the two numbers are not on the same scale. **`BENCH2`:** comparability requires a matching **rubric** MAJOR as
+   well as a questions MAJOR. A rubric change re-grades every question while leaving the question set untouched, so the
+   questions version alone cannot express it (`server/tests/benchmark/history.ts`, `selectBaseline`).
 2. **Baseline selection.** The default baseline is the **most recent scored run at a comparable bundle version on the
    subject's mainline** ([`BENCHMARK_AUTOMATION.md`](./BENCHMARK_AUTOMATION.md) §4). A run may name an explicit baseline
-   for A/B work; the chosen baseline id is always recorded (§8).
+   for A/B work; the chosen baseline id is always recorded (§14). Run artefacts written before `BENCH2` carry no
+   `rubricVersion` in the history index and are therefore never selected as a baseline for a `v2` rubric run — the
+   intended re-baseline, not a bug.
 3. **Significance threshold.** A headline movement within `±0.5` points is reported as **"flat"** (noise band), not a
    regression/improvement — this prevents judge/turn jitter from manufacturing false trends. Movements beyond it are
    real. (With `repeats > 1`, a movement is significant only if it exceeds the measured run-to-run variance.)
-4. **Per-question pass threshold.** Composite `< 70` is a failing question (§7). Any gate firing is a failure regardless
-   of composite.
-5. **Watchlist.** A question that passed at baseline and fails now is a **regression** and is always listed in §2 and §7,
+4. **Per-question pass threshold.** Composite `< 70` is a failing question (§13). Any gate firing is a failure regardless
+   of composite — **including a routing gate** (`R1` capability miss, `R2` misroute;
+   [`BENCHMARK_SCORING_FRAMEWORK.md`](./BENCHMARK_SCORING_FRAMEWORK.md) §4.1). Both routing caps sit below 70, so a
+   question whose registered, executable capability was never invoked always fails.
+5. **Watchlist.** A question that passed at baseline and fails now is a **regression** and is always listed in §2 and §13,
    even if the headline improved — a rising headline must never hide a specific regression.

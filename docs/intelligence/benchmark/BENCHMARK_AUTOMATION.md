@@ -98,6 +98,135 @@ version):
 Every field a report or a comparison needs is here; nothing in the report is computed from data not in this file, so any
 report is auditable from its artefact alone.
 
+### 3.1 `BENCH2` additions (`schemaVersion` `1.1.0`, additive — no field removed or retyped)
+
+```jsonc
+{
+  "schemaVersion": "1.1.0",
+  "bundle": { "rubric": "v2.0.0", "framework": "v2.0.0", /* questions/households/judge unchanged */ },
+  "headline": {
+    /* …existing… */
+    "routingGatesFired": 49,          // R1 + R2
+    "intentResolutionAccuracy": 0.40, // reached the INTENDED capability, of routing-required questions
+    "capabilityReach": 0.70,          // reached ANY capability, of routing-required questions
+    "hallucinationRate": 0.00         // gate G1 / questionsScored
+  },
+  "environment": { "llmProviderAvailable": true, "judgeInvoked": false },
+
+  "routing": {                        // ROUTING ACCURACY panel
+    "routingRequiredQuestions": 81, "capabilityReachPct": 0.70, "intentResolutionAccuracyPct": 0.40,
+    "capabilityMisses": 24, "misroutes": 25,
+    "unreachableCapabilities": ["diary", "food-intelligence", "…"], "unreachableCapabilityCount": 5,
+    "failureReasons": { "intent-unresolved": 34, "wrong-capability": 32 },
+    "validHonestGaps": 12,
+    "invokedCapabilitiesSource": "resolved-intent"   // | "outcome-only" | "mixed" | "none"
+  },
+  "coverage": {                       // CAPABILITY COVERAGE panel
+    "intendedCapabilities": [...], "invokedCapabilities": [...], "intendedCoveragePct": 0.7,
+    "registryExecutableCapabilities": [...], "registryCoveragePct": 0.5, "untestedCapabilities": [...]
+  },
+  "coverageByDomain": [ { "domain": "Profile & Household", "questions": 10, "routingRequired": 7,
+                          "reachedAny": 2, "reachedIntended": 1, "capabilityReachPct": 0.29,
+                          "intentResolutionAccuracyPct": 0.14, "capabilityMisses": 5,
+                          "misroutes": 1, "validHonestGaps": 3 } ],
+  "routingFailures": [ { "id": "PH-001", "domain": "Profile & Household",
+                         "intendedCapability": "profile", "intendedCapabilityStatus": "registered-executable",
+                         "invokedCapabilities": [], "outcome": "capability-miss",
+                         "failureReason": "intent-unresolved", "routingGate": "R1",
+                         "fallbackState": "no-route", "explanation": "…" } ],
+  "quality": {                        // ANSWER QUALITY panel — reached-intended questions ONLY
+    "questionsScored": 32, "meanComposite": 78.1,
+    "meanD1Band": 2.4, "meanD5Band": 2.8, "meanD7Band": 3.0,
+    "reachedButEmpty": 6, "judgeInvoked": false
+  },
+  "hallucination": { "count": 0, "rate": 0, "questionIds": [], "basis": "Deterministic gate G1: …" },
+
+  "questions": [ {
+      /* …existing… */
+      "routingGate": null,            // "R1" | "R2" | null — independent of the safety `gate`
+      "hallucination": false,
+      "routing": { "intendedCapability": "profile", "intendedCapabilityStatus": "registered-executable",
+                   "routingRequired": true, "invokedCapabilities": ["profile"],
+                   "invokedCapabilitiesSource": "resolved-intent",
+                   "outcome": "reached-intended", "failureReason": null, "explanation": "…" }
+  } ]
+}
+```
+
+`intendedCapabilityStatus` is resolved live from `intelligencePlatform.registry` — never a copied list, so a capability
+bound tomorrow enters the routing-required set with no benchmark change.
+
+`invokedCapabilities` is read from the routed set the gateway **already persists** on the assistant turn
+(`conversation_turns.resolved_intent`, INT39). When that is unreadable, the benchmark falls back to the single primary
+`TurnResult.outcome.capabilityId`, stamps `invokedCapabilitiesSource: "outcome-only"`, and **says so in the report** —
+misroute detection may over-report on multi-capability turns. It never presents a narrower set as if it were complete.
+
+### 3.2 `BENCH2C` additions (`schemaVersion` `1.2.0`, additive — no field removed or retyped)
+
+```jsonc
+{
+  "schemaVersion": "1.2.0",
+  "bundle": { "framework": "v2.1.0", /* rubric/questions/households/judge unchanged */ },
+
+  "capabilityUtilisation": {                   // CAPABILITY UTILISATION DASHBOARD
+    "probeActive": true,                       // false ⇒ "not measured", never "nothing ran"
+    "exercised": [ {
+        "capabilityId": "profile", "displayName": "Profile / Preferences",
+        "registered": true, "executable": true,
+        "invocations": 6, "questions": 4,
+        "succeeded": 6, "failed": 0, "threw": 0, "successRate": 1,
+        "contributedToAnswer": 2, "contributionRate": 0.333,   // reached the LLM's CONTEXT DATA
+        "baselineInvocations": 4,                              // context-only reads, not routed
+        "meanDurationMs": 13, "p95DurationMs": 25, "maxDurationMs": 25, "totalDurationMs": 78,
+        "verbs": ["read"], "statuses": { "ok": 6 }
+    } ],
+    "neverExercised": ["diary", "food-intelligence", "…"],     // registered + executable, never ran
+    "neverExercisedCount": 19,
+    "registeredUnbound": ["administration", "developer"],      // cannot run by design, not a defect
+    "bypassedQuestions": [ {
+        "id": "PH-001", "domain": "Profile & Household", "utterance": "…",
+        "intendedCapability": "profile", "intendedCapabilityStatus": "registered-executable",
+        "kind": "defect",                                      // | "structural"
+        "routingGate": "R1", "failureReason": "intent-unresolved", "fallbackState": "no-route"
+    } ],
+    "bypassedStructural": 12, "bypassedDefect": 24,
+    "totalInvocations": 8, "totalCapabilityTimeMs": 124,
+    "capabilityTimeShareOfRun": 0.02,                          // rest is LLM + gateway
+    "utilisationPct": 0.10                                     // exercised / registry-executable
+  },
+
+  "questions": [ {
+      /* …existing… */
+      "capabilityInvocations": [ {
+          "capabilityId": "profile", "verb": "read", "status": "ok", "ok": true,
+          "durationMs": 12, "threw": false, "errorMessage": null,
+          "contribution": "grounding-data",  // | empty-result | no-knowledge | error | context-only | unknown
+          "baseline": false
+      } ]
+  } ]
+}
+```
+
+**Where the numbers come from, and why there is no duplicate log.** The platform records no capability timing. Rather
+than add one to a production write path, the benchmark installs a **pass-through probe** over
+`intelligencePlatform.handle()` — the single entry point every capability invocation already funnels through
+(`server/tests/benchmark/capability-probe.ts`). It awaits the original, returns its outcome object **unchanged**,
+re-throws errors **unchanged**, records only when `context.userId` matches the benchmark's acting user (a concurrent real
+user's turn passes through unobserved), keeps a **run-scoped in-memory buffer** that is drained per turn and never
+persisted, and reference-counts install/uninstall so the singleton is restored exactly. `runner.ts` disposes it in a
+`finally`, so a thrown question can never leave the platform wrapped.
+
+**This does not weaken the §2 import-surface constraint.** The probe imports no capability handler, no intent engine, no
+permission model, no behaviour engine — it observes one public method, and derives that method's type with `typeof`
+rather than importing `RouteOptions` from `intent-engine.ts`. Every question still executes through
+`conversationGateway.processUserTurn` and nothing else (README §1). The probe is an observer of that path, not a second one.
+
+**Two different notions of "invoked", both correct.** `routing.invokedCapabilities` (BENCH2) is the **routed,
+non-baseline** set — *what answered the question*, read from the persisted `resolved_intent`.
+`capabilityUtilisation.exercised` (BENCH2C) is **everything that executed** — *what the platform ran*, including baseline
+context-only reads and capability-to-capability fan-out that `resolved_intent` deliberately omits. Each panel states its
+own definition; neither is derived from the other, and they are expected to differ.
+
 ## 4. HISTORY & THE CI REGRESSION GATE
 
 ### History
@@ -127,6 +256,21 @@ The runner exits **non-zero** — failing the pipeline — when, versus the sele
 
 A run at a **cross-MAJOR** bundle version establishes a **new baseline** and does not gate on deltas (there is nothing
 comparable to regress against); it still gates on absolute safety (rule 1 always applies).
+
+### `BENCH2` additions to the CI gate (2026-07-08)
+
+Two absolute conditions, evaluated **without** reference to a baseline (rules 1–4 above are relative; these are not):
+
+5. **`R1` (capability miss) fired on any question.** A registered, executable capability existed and was never invoked —
+   the platform cannot reach a capability it advertises. This is a **release blocker**, exactly as a hard safety gate is.
+   `R2` (misroute) is a warning. See [`BENCHMARK_SCORING_FRAMEWORK.md`](./BENCHMARK_SCORING_FRAMEWORK.md) §4.1.
+6. **No LLM provider was configured.** The gateway short-circuits before intent resolution, so the run measures nothing.
+   Before `BENCH2` this scored **71.25/100 — above the pass threshold — with the LLM entirely absent.**
+
+Additionally, `index.json` rows now carry `rubricVersion`, `routingGatesFired` and `intentResolutionAccuracy`, and
+**baseline selection requires a matching rubric MAJOR** as well as a questions MAJOR (`selectBaseline`,
+`server/tests/benchmark/history.ts`). Pre-`BENCH2` rows carry no `rubricVersion` and are therefore never selected against
+a `v2` rubric — the intended re-baseline.
 
 ## 5. SCHEDULED & ON-DEMAND EXECUTION
 

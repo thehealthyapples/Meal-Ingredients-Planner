@@ -106,11 +106,16 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     food: {
       slug: "parsley", name: "Parsley", category: "Herbs", subcategory: "Soft herbs",
       description: "A soft herb used fresh or dried.",
-      knowledgeFoodSlug: "parsley", diversityGroupSlug: "parsley",
+      knowledgeFoodSlug: "parsley", diversityGroupSlug: "parsley", family: null,
     },
+    varieties: [
+      // NK6Q batch 009 — leaf-shape VARIETIES of one herb, promoted from plain aliases.
+      { slug: "flat-leaf-parsley", name: "Flat-Leaf Parsley", displayOrder: 0 },
+      { slug: "curly-parsley", name: "Curly Parsley", displayOrder: 1 },
+    ],
     aliases: [
       { alias: "flat leaf parsley", aliasType: "common_name" },
-      { alias: "curly parsley", aliasType: "common_name" },
+      { alias: "italian parsley", aliasType: "common_name" },
       { alias: "fresh parsley", aliasType: "form" },
       { alias: "dried parsley", aliasType: "form" },
     ],
@@ -190,12 +195,27 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
   {
     food: {
       slug: "paprika", name: "Paprika", category: "Spices", subcategory: "Ground spices",
-      description: "A ground pepper spice; sweet and smoked are the same food here.",
-      knowledgeFoodSlug: "paprika", diversityGroupSlug: "paprika",
+      description: "Sweet red peppers dried and ground to a mild, fruity spice.",
+      knowledgeFoodSlug: "paprika", diversityGroupSlug: "paprika", family: null,
     },
     aliases: [
-      { alias: "smoked paprika", aliasType: "form" },
+      // "smoked paprika" REMOVED (NK6Q batch 010) — smoke-drying over oak makes pimentón a
+      // distinct spice product in flavour and use, not a format of sweet paprika.
       { alias: "sweet paprika", aliasType: "form" },
+      { alias: "ground paprika", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "smoked-paprika", name: "Smoked Paprika", category: "Spices", subcategory: "Ground spices",
+      description: "Peppers slowly smoke-dried over oak before grinding, giving a deep smoky flavour; sold sweet, bittersweet or hot.",
+      knowledgeFoodSlug: null, diversityGroupSlug: "paprika", family: null,
+    },
+    aliases: [
+      // "pimentón" is omitted: it normalises to the same alias_key as "pimenton",
+      // and one key may map to only one alias row (the anti-fork lock).
+      { alias: "pimenton", aliasType: "common_name" },
+      { alias: "spanish smoked paprika", aliasType: "common_name" },
     ],
   },
 
@@ -374,6 +394,7 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     aliases: [
       { alias: "linseed", aliasType: "common_name" },
       { alias: "flax seeds", aliasType: "common_name" },
+      { alias: "flaxseeds", aliasType: "plural" },
       { alias: "ground flaxseed", aliasType: "form" },
       { alias: "ground linseed", aliasType: "form" },
     ],
@@ -405,16 +426,66 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
   },
 
   // ════════════════════════ Healthy fats ════════════════════════
+
+  // ── Olive oil (NK6R Amendment 1) ────────────────────────────────────────────
+  // NK6Q §2.5 recorded a scope INVERSION: the generic `olive-oil` resolved into
+  // the NARROWER `extra-virgin-olive-oil`, because EVOO greedily aliased "olive
+  // oil". The grades genuinely disagree on facts (polyphenol content, smoke
+  // point, extraction method), so under the GOV2 scope test each is its own
+  // identity — and "Olive Oil" is their parent, not their synonym.
+  {
+    food: {
+      slug: "olive-oil", name: "Olive Oil", category: "Healthy fats", subcategory: "Oils",
+      description: "Oil pressed from olives. The parent identity for the olive-oil grades — extra virgin, virgin, refined and pomace — which differ in extraction, polyphenol content and smoke point.",
+      // Editorial content for this identity arrives with the deferred import of
+      // batch-012/olive-oil.yaml (NK6R §7). Honest gap until then.
+      knowledgeFoodSlug: null, diversityGroupSlug: "olive-oil", family: null,
+    },
+    aliases: [
+      { alias: "olive oils", aliasType: "plural" },
+    ],
+  },
   {
     food: {
       slug: "extra-virgin-olive-oil", name: "Extra Virgin Olive Oil", category: "Healthy fats", subcategory: "Oils",
-      description: "A cold-pressed oil rich in unsaturated fats and polyphenols.",
-      knowledgeFoodSlug: "extra-virgin-olive-oil", diversityGroupSlug: "olive-oil",
+      description: "The highest grade of olive oil: mechanically cold-pressed, unrefined, and richest in polyphenols.",
+      knowledgeFoodSlug: "extra-virgin-olive-oil", diversityGroupSlug: "olive-oil", family: "olive-oil",
     },
     aliases: [
-      { alias: "olive oil", aliasType: "common_name" },
+      // "olive oil" and "virgin olive oil" REMOVED — they name the parent and a
+      // sibling grade respectively. Aliasing them here collapsed three identities
+      // into one (GOV2 fail test 5).
       { alias: "evoo", aliasType: "common_name" },
-      { alias: "virgin olive oil", aliasType: "form" },
+      { alias: "cold pressed olive oil", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "virgin-olive-oil", name: "Virgin Olive Oil", category: "Healthy fats", subcategory: "Oils",
+      description: "An unrefined olive oil pressed mechanically like extra virgin, but held to a less strict grade on acidity and flavour.",
+      knowledgeFoodSlug: null, diversityGroupSlug: "olive-oil", family: "olive-oil",
+    },
+  },
+  {
+    food: {
+      slug: "refined-olive-oil", name: "Refined Olive Oil", category: "Healthy fats", subcategory: "Oils",
+      description: "Olive oil refined with heat or solvents, giving a neutral flavour and a higher smoke point but far fewer polyphenols than virgin grades.",
+      knowledgeFoodSlug: null, diversityGroupSlug: "olive-oil", family: "olive-oil",
+    },
+    aliases: [
+      { alias: "light olive oil", aliasType: "common_name" },
+      { alias: "pure olive oil", aliasType: "common_name" },
+      { alias: "mild olive oil", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "olive-pomace-oil", name: "Olive Pomace Oil", category: "Healthy fats", subcategory: "Oils",
+      description: "Oil solvent-extracted from the pomace left after pressing, then refined; the lowest olive-oil grade.",
+      knowledgeFoodSlug: null, diversityGroupSlug: "olive-oil", family: "olive-oil",
+    },
+    aliases: [
+      { alias: "pomace oil", aliasType: "common_name" },
     ],
   },
   {
@@ -676,14 +747,26 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
   {
     food: {
       slug: "fennel", name: "Fennel", category: "Vegetables", subcategory: "Bulb vegetables",
-      description: "An aromatic bulb vegetable with an aniseed flavour; the bulb, fronds and seeds are all the same plant.",
-      knowledgeFoodSlug: "fennel", diversityGroupSlug: "fennel",
+      description: "An aromatic bulb vegetable with an aniseed flavour, eaten raw or roasted. The seed is a separate spice food.",
+      knowledgeFoodSlug: "fennel", diversityGroupSlug: "fennel", family: null,
     },
     aliases: [
+      // "fennel seed(s)" REMOVED (NK6Q §2.5). This identity is the bulb VEGETABLE; the
+      // seed is a different plant part with a different use and profile — exactly as
+      // `coriander-seeds` is separate from the herb `coriander`.
       { alias: "fennel bulb", aliasType: "form" },
       { alias: "florence fennel", aliasType: "common_name" },
-      { alias: "fennel seed", aliasType: "form" },
-      { alias: "fennel seeds", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "fennel-seeds", name: "Fennel Seeds", category: "Spices", subcategory: "Seeds and pods",
+      description: "The dried seed of the fennel plant, used whole or ground as a warm, aniseed-flavoured spice.",
+      knowledgeFoodSlug: null, diversityGroupSlug: "fennel", family: null,
+    },
+    aliases: [
+      { alias: "fennel seed", aliasType: "singular" },
+      { alias: "ground fennel", aliasType: "form" },
     ],
   },
   {
@@ -1189,13 +1272,25 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     food: {
       slug: "lemon", name: "Lemon", category: "Fruit", subcategory: "Citrus",
       description: "A tart citrus fruit rich in vitamin C; belongs to the citrus plant group.",
-      knowledgeFoodSlug: "lemon", diversityGroupSlug: "citrus",
+      knowledgeFoodSlug: "lemon", diversityGroupSlug: "citrus", family: null,
     },
     aliases: [
+      // "preserved lemon" REMOVED (NK6Q batch 013) — salt-fermented, very high in sodium,
+      // and used as a condiment. It is not the fresh fruit.
       { alias: "lemons", aliasType: "plural" },
       { alias: "lemon juice", aliasType: "form" },
       { alias: "lemon zest", aliasType: "form" },
-      { alias: "preserved lemon", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "preserved-lemons", name: "Preserved Lemons", category: "Fermented foods", subcategory: "Preserved fruit",
+      description: "Whole lemons packed in salt and left to ferment until the rind softens; a intensely savoury, very salty condiment used a sliver at a time.",
+      knowledgeFoodSlug: null, diversityGroupSlug: "citrus", family: null, fermented: true,
+    },
+    aliases: [
+      { alias: "preserved lemon", aliasType: "singular" },
+      { alias: "salted lemons", aliasType: "common_name" },
     ],
   },
   {
@@ -1535,14 +1630,25 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
   {
     food: {
       slug: "vanilla", name: "Vanilla", category: "Spices", subcategory: "Sweet spices",
-      description: "A fragrant spice from orchid pods, used to flavour baking and desserts.",
-      knowledgeFoodSlug: "vanilla", diversityGroupSlug: "vanilla",
+      description: "The cured seed pod of a climbing orchid, split and scraped to flavour baking and desserts.",
+      knowledgeFoodSlug: "vanilla", diversityGroupSlug: "vanilla", family: null,
     },
     aliases: [
+      // "vanilla extract" REMOVED (NK6Q batch 008) — alcohol extraction makes a different
+      // pantry product with a different composition and use from the pod.
       { alias: "vanilla pods", aliasType: "form" },
-      { alias: "vanilla extract", aliasType: "form" },
-      { alias: "vanilla paste", aliasType: "form" },
       { alias: "vanilla bean", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "vanilla-extract", name: "Vanilla Extract", category: "Spices", subcategory: "Sweet spices",
+      description: "Vanilla pods macerated in alcohol and water to draw out the flavour; a liquid baking ingredient, not the pod itself.",
+      knowledgeFoodSlug: null, diversityGroupSlug: "vanilla", family: null,
+    },
+    aliases: [
+      { alias: "vanilla essence", aliasType: "common_name" },
+      { alias: "vanilla paste", aliasType: "form" },
     ],
   },
   {
@@ -1565,14 +1671,27 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
   {
     food: {
       slug: "black-pepper", name: "Black Pepper", category: "Spices", subcategory: "Peppercorns",
-      description: "The world's most widely used spice; whole peppercorns and ground pepper are the same food.",
-      knowledgeFoodSlug: "black-pepper", diversityGroupSlug: "black-pepper",
+      description: "The world's most widely used spice, from unripe berries dried with the hull on; whole peppercorns and ground pepper are the same food.",
+      knowledgeFoodSlug: "black-pepper", diversityGroupSlug: "black-pepper", family: null,
     },
     aliases: [
+      // "white pepper" REMOVED (NK6Q batch 010). Same species, but the ripe berry with the
+      // hull removed — a distinct pantry spice with its own flavour and use. Whole-vs-ground
+      // FORMATS stay: those really are the same food.
       { alias: "ground black pepper", aliasType: "form" },
       { alias: "peppercorns", aliasType: "form" },
-      { alias: "white pepper", aliasType: "form" },
       { alias: "black peppercorns", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "white-pepper", name: "White Pepper", category: "Spices", subcategory: "Peppercorns",
+      description: "The ripe peppercorn with its dark hull removed before drying; hotter and more musty than black pepper, and used where dark specks are unwanted.",
+      knowledgeFoodSlug: null, diversityGroupSlug: "black-pepper", family: null,
+    },
+    aliases: [
+      { alias: "white peppercorns", aliasType: "form" },
+      { alias: "ground white pepper", aliasType: "form" },
     ],
   },
   {
@@ -1722,14 +1841,27 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     food: {
       slug: "peanuts", name: "Peanuts", category: "Nuts", subcategory: "Legume nuts",
       description: "Technically a legume, peanuts supply plant protein, magnesium, vitamin E and zinc.",
-      knowledgeFoodSlug: "peanuts", diversityGroupSlug: "peanuts",
+      knowledgeFoodSlug: "peanuts", diversityGroupSlug: "peanuts", family: null,
     },
     aliases: [
+      // "peanut butter" REMOVED (NK6Q batch 013) — a distinct pantry product, and one that
+      // often carries added oil, sugar and salt. Whole nuts and a ground paste with an
+      // ingredient list of its own cannot share a fact owner.
       { alias: "peanut", aliasType: "singular" },
       { alias: "groundnuts", aliasType: "common_name" },
       { alias: "monkey nuts", aliasType: "common_name" },
-      { alias: "peanut butter", aliasType: "form" },
       { alias: "roasted peanuts", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "peanut-butter", name: "Peanut Butter", category: "Healthy fats", subcategory: "Nut butters",
+      description: "Roasted peanuts ground to a paste. Check the label: 100% peanuts is a whole food, but many jars add palm oil, sugar and salt.",
+      knowledgeFoodSlug: null, diversityGroupSlug: "peanuts", family: null,
+    },
+    aliases: [
+      { alias: "crunchy peanut butter", aliasType: "form" },
+      { alias: "smooth peanut butter", aliasType: "form" },
     ],
   },
   {
@@ -1749,15 +1881,39 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
   {
     food: {
       slug: "milk", name: "Milk", category: "Dairy", subcategory: "Cow's milk",
-      description: "A nutrient-dense dairy liquid supplying calcium, vitamin D, vitamin B12 and iodine.",
-      knowledgeFoodSlug: "milk", diversityGroupSlug: null,
+      description: "A nutrient-dense dairy liquid supplying calcium, vitamin D, vitamin B12 and iodine. Whole milk is the default; the reduced-fat classes are separate foods.",
+      knowledgeFoodSlug: "milk", diversityGroupSlug: null, family: null,
     },
     aliases: [
+      // "skimmed milk" REMOVED (NK6Q batch 020) — a fat class, and `semi-skimmed-milk` and
+      // `lactose-free-milk` were already minted as their own identities. "semi-skimmed milk"
+      // REMOVED for the same reason: leaving it here forked the identity that already exists.
+      // "whole milk" STAYS — whole milk IS this identity (NK6Q: Merge).
       { alias: "whole milk", aliasType: "form" },
-      { alias: "semi-skimmed milk", aliasType: "form" },
-      { alias: "skimmed milk", aliasType: "form" },
       { alias: "full-fat milk", aliasType: "form" },
       { alias: "cow's milk", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "semi-skimmed-milk", name: "Semi-Skimmed Milk", category: "Dairy", subcategory: "Cow's milk",
+      description: "Cow's milk with roughly half the fat removed (about 1.7%); the most-bought milk in the UK.",
+      knowledgeFoodSlug: null, diversityGroupSlug: null, family: "milk",
+    },
+    aliases: [
+      { alias: "semi skimmed milk", aliasType: "common_name" },
+      { alias: "2% milk", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "skimmed-milk", name: "Skimmed Milk", category: "Dairy", subcategory: "Cow's milk",
+      description: "Cow's milk with virtually all the fat removed (about 0.1%); the same protein and calcium as whole milk, with less fat-soluble vitamin A and D.",
+      knowledgeFoodSlug: null, diversityGroupSlug: null, family: "milk",
+    },
+    aliases: [
+      { alias: "fat-free milk", aliasType: "common_name" },
+      { alias: "non-fat milk", aliasType: "common_name" },
     ],
   },
   {
@@ -1778,36 +1934,151 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
       { alias: "plain yogurt", aliasType: "form" },
     ],
   },
+  // ── Cheese (NK6R Amendment 2) ───────────────────────────────────────────────
+  // `cheese` is the parent canonical identity. Beneath it sit MEANINGFUL FAMILIES
+  // — groupings by how the cheese is MADE (curd handling, ripening), which is what
+  // actually predicts a cheese's character:
+  //     fresh · whey · brined · bloomy-rind · washed-rind · blue · pasta-filata ·
+  //     pressed · cooked-pressed
+  //
+  // HARD and SOFT ARE NOT HIERARCHY LEVELS. Texture is a DESCRIPTIVE ATTRIBUTE and
+  // lives in `subcategory` ("Hard", "Semi-hard", "Soft", "Fresh"). It cuts across
+  // families — a blue cheese may be soft (Dolcelatte) or hard (aged Stilton) — so
+  // it can never be a parent. Nothing branches on `subcategory`; it is display copy.
+  //
+  // Each named cheese keeps its own identity and facts (GOV2 Rule 1): milk source,
+  // PDO rules and ageing make Gorgonzola and Roquefort disagree on facts with each
+  // other and with the `blue-cheese` family row. The family row remains a legitimate
+  // coarse identity for "some blue cheese" — it is a parent, not a synonym, which is
+  // exactly why NK6Q §2.2 struck `gorgonzola`/`roquefort` from its alias set.
   {
     food: {
-      slug: "cheddar", name: "Cheddar", category: "Dairy", subcategory: "Hard cheese",
-      description: "A firm, tangy British cheese and an excellent source of calcium, vitamin B12 and iodine.",
-      knowledgeFoodSlug: "cheddar", diversityGroupSlug: null,
+      slug: "cheese", name: "Cheese", category: "Dairy", subcategory: "Cheese",
+      description: "Milk curdled, drained and ripened. The parent identity behind the cheese families; how a cheese is made — and from whose milk — decides its texture, flavour and nutrient profile.",
+      // Abstract parent: the families and the named cheeses own the facts (cf. `mushroom`).
+      knowledgeFoodSlug: null, diversityGroupSlug: null, family: null,
     },
     aliases: [
+      { alias: "cheeses", aliasType: "plural" },
+    ],
+  },
+  {
+    food: {
+      slug: "fresh-cheese", name: "Fresh Cheese", category: "Dairy", subcategory: "Cheese",
+      description: "Unripened cheese eaten soon after the curd is set — mild, moist and high in moisture.",
+      knowledgeFoodSlug: null, diversityGroupSlug: null, family: "cheese",
+    },
+    aliases: [
+      { alias: "unripened cheese", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "whey-cheese", name: "Whey Cheese", category: "Dairy", subcategory: "Cheese",
+      description: "Cheese made by recooking the whey left over from another cheese, rather than from the curd itself.",
+      knowledgeFoodSlug: null, diversityGroupSlug: null, family: "cheese",
+    },
+  },
+  {
+    food: {
+      slug: "brined-cheese", name: "Brined Cheese", category: "Dairy", subcategory: "Cheese",
+      description: "Cheese ripened and stored in salt brine, giving a firm, salty, tangy result that keeps well.",
+      knowledgeFoodSlug: null, diversityGroupSlug: null, family: "cheese",
+    },
+    aliases: [
+      { alias: "pickled cheese", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "bloomy-rind-cheese", name: "Bloomy Rind Cheese", category: "Dairy", subcategory: "Cheese",
+      description: "Cheese ripened from the outside in beneath a soft white mould rind, growing creamier with age.",
+      knowledgeFoodSlug: null, diversityGroupSlug: null, family: "cheese",
+    },
+    aliases: [
+      { alias: "soft-ripened cheese", aliasType: "common_name" },
+      { alias: "white rind cheese", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "washed-rind-cheese", name: "Washed Rind Cheese", category: "Dairy", subcategory: "Cheese",
+      description: "Cheese whose rind is repeatedly washed in brine, wine or beer during ripening, producing a pungent aroma and a supple paste.",
+      // No canonical member yet: Taleggio, Reblochon, Raclette, Morbier and Limburger
+      // currently exist as knowledge_foods only (batch 022), awaiting spine promotion.
+      // Declared now so those imports have a correct parent to bind to (NK6R §7).
+      knowledgeFoodSlug: null, diversityGroupSlug: null, family: "cheese",
+    },
+    aliases: [
+      { alias: "smear-ripened cheese", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "pasta-filata", name: "Pasta Filata", category: "Dairy", subcategory: "Cheese",
+      description: "Cheese whose curd is heated and stretched into elastic strands before shaping, giving the characteristic pull and melt.",
+      knowledgeFoodSlug: null, diversityGroupSlug: null, family: "cheese",
+    },
+    aliases: [
+      { alias: "stretched curd cheese", aliasType: "common_name" },
+      { alias: "spun paste cheese", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "pressed-cheese", name: "Pressed Cheese", category: "Dairy", subcategory: "Cheese",
+      description: "Cheese whose curd is pressed to expel whey and then aged, without cooking the curd; firm and sliceable.",
+      knowledgeFoodSlug: null, diversityGroupSlug: null, family: "cheese",
+    },
+    aliases: [
+      { alias: "uncooked pressed cheese", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "cooked-pressed-cheese", name: "Cooked-Pressed Cheese", category: "Dairy", subcategory: "Cheese",
+      description: "Cheese whose curd is heated before pressing and long ageing, producing a dense, granular, intensely savoury result.",
+      knowledgeFoodSlug: null, diversityGroupSlug: null, family: "cheese",
+    },
+  },
+
+  {
+    food: {
+      slug: "cheddar", name: "Cheddar", category: "Dairy", subcategory: "Hard",
+      description: "A firm, tangy British cheese and an excellent source of calcium, vitamin B12 and iodine.",
+      knowledgeFoodSlug: "cheddar", diversityGroupSlug: null, family: "pressed-cheese",
+    },
+    varieties: [
+      // NK6Q batch 021: maturity is a named variety of the same cheese, not a new
+      // fact owner. Mild/mature/extra-mature are the same curd, aged for longer.
+      { slug: "mild-cheddar", name: "Mild Cheddar", displayOrder: 0 },
+      { slug: "mature-cheddar", name: "Mature Cheddar", displayOrder: 1 },
+      { slug: "extra-mature-cheddar", name: "Extra Mature Cheddar", displayOrder: 2 },
+    ],
+    aliases: [
       { alias: "cheddar cheese", aliasType: "form" },
-      { alias: "mature cheddar", aliasType: "form" },
-      { alias: "mild cheddar", aliasType: "form" },
       { alias: "grated cheddar", aliasType: "form" },
     ],
   },
   {
     food: {
-      slug: "mozzarella", name: "Mozzarella", category: "Dairy", subcategory: "Fresh cheese",
-      description: "A soft, mild Italian cheese supplying calcium and vitamin B12.",
-      knowledgeFoodSlug: "mozzarella", diversityGroupSlug: null,
+      slug: "mozzarella", name: "Mozzarella", category: "Dairy", subcategory: "Semi-soft",
+      description: "A mild, stretched-curd Italian cheese made from cow's milk, supplying calcium and vitamin B12.",
+      knowledgeFoodSlug: "mozzarella", diversityGroupSlug: null, family: "pasta-filata",
     },
     aliases: [
+      // "buffalo mozzarella" REMOVED — buffalo milk is a different milk source with a
+      // different profile (NK6Q batch 022). It becomes its own identity; this record
+      // is the cow's-milk mozzarella.
       { alias: "fresh mozzarella", aliasType: "form" },
-      { alias: "buffalo mozzarella", aliasType: "form" },
       { alias: "grated mozzarella", aliasType: "form" },
     ],
   },
   {
     food: {
-      slug: "halloumi", name: "Halloumi", category: "Dairy", subcategory: "Semi-hard cheese",
-      description: "A firm Cypriot cheese with a high melting point; best grilled or pan-fried.",
-      knowledgeFoodSlug: "halloumi", diversityGroupSlug: null,
+      slug: "halloumi", name: "Halloumi", category: "Dairy", subcategory: "Semi-hard",
+      description: "A firm Cypriot brined cheese with a high melting point; best grilled or pan-fried.",
+      knowledgeFoodSlug: "halloumi", diversityGroupSlug: null, family: "brined-cheese",
     },
     aliases: [
       { alias: "grilling cheese", aliasType: "common_name" },
@@ -1816,9 +2087,9 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
   },
   {
     food: {
-      slug: "feta", name: "Feta", category: "Dairy", subcategory: "Soft cheese",
-      description: "A crumbly, tangy Greek cheese made from sheep's and goat's milk, supplying calcium.",
-      knowledgeFoodSlug: "feta", diversityGroupSlug: null,
+      slug: "feta", name: "Feta", category: "Dairy", subcategory: "Soft",
+      description: "A crumbly, tangy Greek brined cheese made from sheep's and goat's milk, supplying calcium.",
+      knowledgeFoodSlug: "feta", diversityGroupSlug: null, family: "brined-cheese",
     },
     aliases: [
       { alias: "feta cheese", aliasType: "form" },
@@ -1827,22 +2098,23 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
   },
   {
     food: {
-      slug: "parmesan", name: "Parmesan", category: "Dairy", subcategory: "Hard cheese",
-      description: "A hard, aged Italian cheese with intense umami flavour, rich in calcium and vitamin B12.",
-      knowledgeFoodSlug: "parmesan", diversityGroupSlug: null,
+      slug: "parmesan", name: "Parmesan", category: "Dairy", subcategory: "Hard",
+      description: "A hard, long-aged Italian cheese with intense umami flavour, rich in calcium and vitamin B12.",
+      knowledgeFoodSlug: "parmesan", diversityGroupSlug: null, family: "cooked-pressed-cheese",
     },
     aliases: [
+      // "grana padano" REMOVED — a distinct PDO with its own production rules and
+      // ageing (NK6Q batch 021). It becomes its own identity in the same family.
       { alias: "parmigiano reggiano", aliasType: "common_name" },
       { alias: "parmigiano-reggiano", aliasType: "common_name" },
-      { alias: "grana padano", aliasType: "common_name" },
       { alias: "grated parmesan", aliasType: "form" },
     ],
   },
   {
     food: {
-      slug: "ricotta", name: "Ricotta", category: "Dairy", subcategory: "Fresh cheese",
-      description: "A soft, mild Italian whey cheese light in flavour and supplying calcium.",
-      knowledgeFoodSlug: "ricotta", diversityGroupSlug: null,
+      slug: "ricotta", name: "Ricotta", category: "Dairy", subcategory: "Fresh",
+      description: "A soft, mild Italian whey cheese, light in flavour and supplying calcium.",
+      knowledgeFoodSlug: "ricotta", diversityGroupSlug: null, family: "whey-cheese",
     },
     aliases: [
       { alias: "ricotta cheese", aliasType: "form" },
@@ -1852,7 +2124,9 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     food: {
       slug: "oat-milk", name: "Oat Milk", category: "Dairy alternatives", subcategory: "Plant milks",
       description: "A plant-based milk made from oats; contributes oat plant diversity and is commonly fortified.",
-      knowledgeFoodSlug: "oat-milk", diversityGroupSlug: "oats",
+      // NK6S — a plant beverage. Domain stays "Dairy alternatives"; the plant it counts
+      // stays `oats`, since a variety-free child keeps its own diversity group.
+      knowledgeFoodSlug: "oat-milk", diversityGroupSlug: "oats", family: "plant-beverage",
     },
     aliases: [
       { alias: "oat drink", aliasType: "common_name" },
@@ -1863,7 +2137,7 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     food: {
       slug: "soy-milk", name: "Soy Milk", category: "Dairy alternatives", subcategory: "Plant milks",
       description: "A plant-based milk made from soybeans, supplying plant protein; commonly fortified.",
-      knowledgeFoodSlug: "soy-milk", diversityGroupSlug: "edamame",
+      knowledgeFoodSlug: "soy-milk", diversityGroupSlug: "edamame", family: "plant-beverage",
     },
     aliases: [
       { alias: "soya milk", aliasType: "common_name" },
@@ -1875,7 +2149,7 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     food: {
       slug: "almond-milk", name: "Almond Milk", category: "Dairy alternatives", subcategory: "Plant milks",
       description: "A plant-based milk made from almonds, supplying some vitamin E; commonly fortified.",
-      knowledgeFoodSlug: "almond-milk", diversityGroupSlug: "almonds",
+      knowledgeFoodSlug: "almond-milk", diversityGroupSlug: "almonds", family: "plant-beverage",
     },
     aliases: [
       { alias: "almond drink", aliasType: "common_name" },
@@ -1885,7 +2159,8 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     food: {
       slug: "kefir", name: "Kefir", category: "Dairy", subcategory: "Fermented dairy",
       description: "A cultured, drinkable ferment rich in live cultures and calcium.",
-      knowledgeFoodSlug: "kefir", diversityGroupSlug: null, fermented: true,
+      // NK6S — the drink IS the food; there is no non-liquid kefir. Domain stays Dairy.
+      knowledgeFoodSlug: "kefir", diversityGroupSlug: null, family: "fermented-beverage", fermented: true,
     },
     aliases: [
       { alias: "milk kefir", aliasType: "common_name" },
@@ -1981,16 +2256,26 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
   {
     food: {
       slug: "lamb", name: "Lamb", category: "Proteins", subcategory: "Red meat",
-      description: "A red meat with a distinctive flavour supplying iron, zinc and vitamin B12.",
-      knowledgeFoodSlug: "lamb", diversityGroupSlug: null,
+      description: "The meat of a young sheep; a red meat with a distinctive flavour supplying iron, zinc and vitamin B12.",
+      knowledgeFoodSlug: "lamb", diversityGroupSlug: null, family: null,
     },
     aliases: [
+      // "mutton" REMOVED (NK6Q batch 018) — the meat of an ADULT sheep, distinct in flavour,
+      // fat and texture. Mirrors `veal` (young beef) being minted separately from `beef`.
+      // Cuts and mince below stay: no THA-approved cut-level fact owner (`form_policy`).
       { alias: "lamb chops", aliasType: "form" },
       { alias: "lamb mince", aliasType: "form" },
       { alias: "lamb leg", aliasType: "form" },
       { alias: "lamb shoulder", aliasType: "form" },
-      { alias: "mutton", aliasType: "common_name" },
+      { alias: "minced lamb", aliasType: "form" },
     ],
+  },
+  {
+    food: {
+      slug: "mutton", name: "Mutton", category: "Proteins", subcategory: "Red meat",
+      description: "The meat of an adult sheep, over a year old; darker, fattier and more strongly flavoured than lamb, and suited to slow cooking.",
+      knowledgeFoodSlug: null, diversityGroupSlug: null, family: null,
+    },
   },
   {
     food: {
@@ -2163,11 +2448,12 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
       knowledgeFoodSlug: "oats", diversityGroupSlug: "oats",
     },
     aliases: [
+      // "oat flour" REMOVED (NK6Q §2.3) — a milled flour is a first-class fact owner,
+      // not a form of the whole grain. Flake FORMATS below stay: they are the same grain.
       { alias: "porridge oats", aliasType: "form" },
       { alias: "rolled oats", aliasType: "form" },
       { alias: "oat flakes", aliasType: "form" },
       { alias: "jumbo oats", aliasType: "form" },
-      { alias: "oat flour", aliasType: "form" },
       { alias: "oatmeal", aliasType: "common_name" },
     ],
   },
@@ -2187,15 +2473,20 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     food: {
       slug: "white-rice", name: "White Rice", category: "Grains", subcategory: "Refined grains",
       description: "A refined grain staple; basmati and jasmine are the most popular varieties in UK households.",
-      knowledgeFoodSlug: "white-rice", diversityGroupSlug: "rice",
+      knowledgeFoodSlug: "white-rice", diversityGroupSlug: "rice", family: null,
     },
+    varieties: [
+      // NK6Q batch 007 — cultivars of the same refined grain, promoted from `form` aliases
+      // to what they actually are: named VARIETIES. Nutrient profile ≈ white rice.
+      { slug: "basmati-rice", name: "Basmati Rice", description: "Long-grain aromatic rice. Brown basmati belongs to brown-rice.", displayOrder: 0 },
+      { slug: "jasmine-rice", name: "Jasmine Rice", description: "Aromatic long-grain rice.", displayOrder: 1 },
+      { slug: "risotto-rice", name: "Risotto Rice", description: "Short-grain, high-starch cultivars such as arborio and carnaroli.", displayOrder: 2 },
+      { slug: "sushi-rice", name: "Sushi Rice", description: "Short-grain rice. Seasoned sushi rice is a preparation, not this food.", displayOrder: 3 },
+    ],
     aliases: [
-      { alias: "basmati rice", aliasType: "form" },
-      { alias: "jasmine rice", aliasType: "form" },
       { alias: "long-grain rice", aliasType: "form" },
-      { alias: "arborio rice", aliasType: "form" },
-      { alias: "risotto rice", aliasType: "form" },
-      { alias: "sushi rice", aliasType: "form" },
+      { alias: "arborio rice", aliasType: "common_name" },
+      { alias: "carnaroli rice", aliasType: "common_name" },
     ],
   },
   {
@@ -2217,9 +2508,9 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
       knowledgeFoodSlug: "buckwheat", diversityGroupSlug: "buckwheat",
     },
     aliases: [
+      // "buckwheat flour" REMOVED (NK6Q §2.3) — see `oats` above.
       { alias: "buckwheat groats", aliasType: "form" },
       { alias: "kasha", aliasType: "common_name" },
-      { alias: "buckwheat flour", aliasType: "form" },
     ],
   },
   {
@@ -2252,8 +2543,8 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
       knowledgeFoodSlug: "rye", diversityGroupSlug: "rye",
     },
     aliases: [
+      // "rye flour" REMOVED (NK6Q §2.3) — see `oats` above.
       { alias: "rye bread", aliasType: "form" },
-      { alias: "rye flour", aliasType: "form" },
       { alias: "dark rye", aliasType: "form" },
       { alias: "rye crispbread", aliasType: "form" },
     ],
@@ -2265,23 +2556,95 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
       knowledgeFoodSlug: "wheat", diversityGroupSlug: "wheat",
     },
     aliases: [
+      // All "…flour" aliases REMOVED (NK6Q §2.3) — the grain is not the flour.
       { alias: "whole wheat", aliasType: "form" },
-      { alias: "wheat flour", aliasType: "form" },
-      { alias: "wholemeal flour", aliasType: "form" },
       { alias: "wheat berries", aliasType: "form" },
-      { alias: "wholewheat flour", aliasType: "form" },
+    ],
+  },
+  // NK6R — the milled flours NK6Q ruled `Separate canonical food`, consistent with the
+  // 19 flours already minted (plain-wheat-flour, semolina-flour, chestnut-flour, …).
+  {
+    food: {
+      slug: "plain-wheat-flour", name: "Plain Wheat Flour", category: "Grains", subcategory: "Flours",
+      description: "White wheat flour with the bran and germ milled out; the default UK baking and thickening flour.",
+      knowledgeFoodSlug: null, diversityGroupSlug: "wheat", family: null,
+    },
+    aliases: [
+      { alias: "wheat flour", aliasType: "common_name" },
+      { alias: "plain flour", aliasType: "common_name" },
+      { alias: "white flour", aliasType: "common_name" },
+      { alias: "all-purpose flour", aliasType: "common_name" },
     ],
   },
   {
     food: {
-      slug: "couscous", name: "Couscous", category: "Grains", subcategory: "Wheat products",
-      description: "Tiny steamed wheat granules that cook quickly; a staple of North African and Middle Eastern cooking.",
-      knowledgeFoodSlug: "couscous", diversityGroupSlug: "wheat",
+      slug: "wholemeal-flour", name: "Wholemeal Flour", category: "Grains", subcategory: "Flours",
+      description: "Wheat flour milled from the whole grain, retaining the bran and germ; the wholemeal counterpart of plain wheat flour.",
+      knowledgeFoodSlug: null, diversityGroupSlug: "wheat", family: null,
     },
     aliases: [
-      { alias: "wholewheat couscous", aliasType: "form" },
-      { alias: "giant couscous", aliasType: "form" },
-      { alias: "Israeli couscous", aliasType: "form" },
+      { alias: "wholewheat flour", aliasType: "common_name" },
+      { alias: "whole wheat flour", aliasType: "common_name" },
+      { alias: "wholemeal wheat flour", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "oat-flour", name: "Oat Flour", category: "Grains", subcategory: "Flours",
+      description: "Flour milled from whole oats; naturally gluten-free when processed separately from wheat.",
+      knowledgeFoodSlug: null, diversityGroupSlug: "oats", family: null,
+    },
+  },
+  {
+    food: {
+      slug: "buckwheat-flour", name: "Buckwheat Flour", category: "Grains", subcategory: "Flours",
+      description: "Flour milled from buckwheat groats; naturally gluten-free, earthy, and the base of galettes and soba.",
+      knowledgeFoodSlug: null, diversityGroupSlug: "buckwheat", family: null,
+    },
+  },
+  {
+    food: {
+      slug: "rye-flour", name: "Rye Flour", category: "Grains", subcategory: "Flours",
+      description: "Flour milled from rye grain; dense, dark and high in fibre, and the base of sourdough rye breads.",
+      knowledgeFoodSlug: null, diversityGroupSlug: "rye", family: null,
+    },
+  },
+  {
+    food: {
+      slug: "couscous", name: "Couscous", category: "Grains", subcategory: "Wheat products",
+      description: "Tiny steamed granules of refined durum wheat semolina that cook quickly; a staple of North African and Middle Eastern cooking.",
+      knowledgeFoodSlug: "couscous", diversityGroupSlug: "wheat", family: null,
+    },
+    aliases: [
+      // "wholewheat couscous" REMOVED — whole-vs-refined is a fact-owning split here as
+      // everywhere (brown-rice ≠ white-rice). "giant couscous" / "Israeli couscous" REMOVED
+      // (NK6Q §2.4 resolver mis-target): giant couscous IS pearl couscous, a different
+      // pasta-like grain, not a form of this one.
+      { alias: "cous cous", aliasType: "misspelling" },
+    ],
+  },
+  {
+    food: {
+      slug: "wholewheat-couscous", name: "Wholewheat Couscous", category: "Grains", subcategory: "Wheat products",
+      description: "Couscous rolled from wholegrain durum wheat, retaining the bran; higher in fibre than refined couscous.",
+      knowledgeFoodSlug: null, diversityGroupSlug: "wheat", family: null,
+    },
+    aliases: [
+      { alias: "wholemeal couscous", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "pearl-couscous", name: "Pearl Couscous", category: "Grains", subcategory: "Wheat products",
+      description: "Larger, toasted spheres of wheat dough, chewier than couscous and cooked like pasta.",
+      knowledgeFoodSlug: null, diversityGroupSlug: "wheat", family: null,
+    },
+    aliases: [
+      // NK6Q §2.4 — these named the wrong food while `pearl-couscous` already existed.
+      { alias: "giant couscous", aliasType: "common_name" },
+      { alias: "Israeli couscous", aliasType: "common_name" },
+      { alias: "mograbiah", aliasType: "common_name" },
+      { alias: "ptitim", aliasType: "common_name" },
     ],
   },
   {
@@ -2296,25 +2659,127 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
       { alias: "cracked wheat", aliasType: "common_name" },
     ],
   },
+  // ── Pasta (NK6R Amendment 3, refined by NK6S) ───────────────────────────────
+  // TYPE and SHAPE are different axes and were previously conflated: the old
+  // `pasta` entry aliased six SHAPES (spaghetti, penne, …) as forms of a single
+  // wheat identity, leaving nowhere for a chickpea or lentil pasta to live.
+  //   • TYPE (wheat, wholewheat, chickpea, lentil, pea) = what it is made FROM.
+  //     Types disagree on fibre, protein and plant group, so each is its own
+  //     canonical identity under the `pasta` parent.
+  //   • SHAPE (penne, fusilli, spaghetti, tagliatelle, …) = a physical format.
+  //     `form_policy`: format is never an identity. Shapes stay FORM ALIASES of
+  //     the type they are made from.
+  //   • NK6S — spinach pasta is NOT a sixth type. It is durum wheat dough with
+  //     spinach folded in for colour: same grain, same plant, same fibre and
+  //     protein class. It is a VARIETY of `wheat-pasta` — a named sub-kind that
+  //     shares its parent's diversity group — exactly as `mature-cheddar` is a
+  //     variety of `cheddar`. Chickpea, lentil and pea pasta remain separate
+  //     TYPES, because each of those changes the plant.
   {
     food: {
-      slug: "pasta", name: "Pasta", category: "Grains", subcategory: "Wheat products",
-      description: "A versatile wheat-based staple; wholemeal pasta adds significantly more fibre than white pasta.",
-      knowledgeFoodSlug: "pasta", diversityGroupSlug: "wheat",
+      slug: "pasta", name: "Pasta", category: "Grains", subcategory: "Pasta",
+      description: "A shaped, dried or fresh dough staple. The parent identity behind the pasta types; what a pasta is made from — wheat, wholewheat, chickpea, lentil, pea — decides its fibre, protein and plant group.",
+      // No single Knowledge Registry food and no single plant: the TYPES own the
+      // facts and the diversity group (cf. `mushroom` above). An unqualified
+      // "pasta" is type-unknown, so it must not claim a plant it may not contain.
+      knowledgeFoodSlug: null, diversityGroupSlug: null, family: null,
+    },
+    aliases: [
+      { alias: "pastas", aliasType: "plural" },
+    ],
+  },
+  {
+    food: {
+      slug: "wheat-pasta", name: "Wheat Pasta", category: "Grains", subcategory: "Pasta",
+      description: "The default UK pasta: durum wheat semolina dough, sold dried in every shape.",
+      knowledgeFoodSlug: "pasta", diversityGroupSlug: "wheat", family: "pasta",
     },
     varieties: [
-      { slug: "wholemeal-pasta", name: "Wholemeal Pasta", displayOrder: 0 },
+      // NK6S — spinach pasta is wheat pasta coloured with spinach. A variety shares
+      // its parent's diversity group, so this counts WHEAT and never a spinach
+      // portion (one food = one plant), which is the same answer NK6R gave it as a
+      // standalone identity — reached now without minting a second fact owner.
+      { slug: "spinach-pasta", name: "Spinach Pasta", description: "Durum wheat dough coloured and lightly flavoured with spinach; sold as tagliatelle, lasagne sheets and fresh sheets.", displayOrder: 0 },
     ],
     aliases: [
+      { alias: "white pasta", aliasType: "common_name" },
+      { alias: "durum wheat pasta", aliasType: "common_name" },
+      { alias: "plain pasta", aliasType: "common_name" },
+      // SHAPES — forms of this type, never identities of their own (NK6Q batch 023).
       { alias: "spaghetti", aliasType: "form" },
       { alias: "penne", aliasType: "form" },
       { alias: "fusilli", aliasType: "form" },
       { alias: "tagliatelle", aliasType: "form" },
       { alias: "rigatoni", aliasType: "form" },
       { alias: "macaroni", aliasType: "form" },
-      { alias: "wholemeal pasta", aliasType: "form" },
+      { alias: "linguine", aliasType: "form" },
+      { alias: "fettuccine", aliasType: "form" },
+      { alias: "farfalle", aliasType: "form" },
+      { alias: "conchiglie", aliasType: "form" },
+      { alias: "orzo", aliasType: "form" },
+      { alias: "lasagne sheets", aliasType: "form" },
+      // NK6S — inherited from the retired `spinach-pasta` identity. An alias resolves
+      // to the FOOD, not the variety, so these reach `wheat-pasta` directly; the
+      // "spinach pasta" string itself reaches the variety via its name/slug.
+      { alias: "pasta verde", aliasType: "common_name" },
+      { alias: "spinach tagliatelle", aliasType: "form" },
     ],
   },
+  {
+    food: {
+      slug: "wholewheat-pasta", name: "Wholewheat Pasta", category: "Grains", subcategory: "Pasta",
+      description: "Pasta made from wholegrain wheat flour, retaining the bran and germ; substantially higher in fibre than white pasta.",
+      // Was a food_variety of `pasta`. Promoted to an identity: whole-vs-refined is
+      // a fact-owning distinction across this platform (brown-rice ≠ white-rice).
+      knowledgeFoodSlug: null, diversityGroupSlug: "wheat", family: "pasta",
+    },
+    aliases: [
+      { alias: "wholemeal pasta", aliasType: "common_name" },
+      { alias: "whole wheat pasta", aliasType: "common_name" },
+      { alias: "brown pasta", aliasType: "common_name" },
+      // Shapes of THIS type — the grain class differs, not the shape (NK6Q batch 023).
+      { alias: "wholewheat spaghetti", aliasType: "form" },
+      { alias: "wholemeal spaghetti", aliasType: "form" },
+      { alias: "wholewheat penne", aliasType: "form" },
+      { alias: "wholemeal penne", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "chickpea-pasta", name: "Chickpea Pasta", category: "Grains", subcategory: "Pasta",
+      description: "Pasta made from chickpea flour; higher in plant protein and fibre than wheat pasta, and naturally gluten-free.",
+      knowledgeFoodSlug: null, diversityGroupSlug: "chickpeas", family: "pasta",
+    },
+    aliases: [
+      { alias: "chickpea penne", aliasType: "form" },
+      { alias: "chickpea fusilli", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "lentil-pasta", name: "Lentil Pasta", category: "Grains", subcategory: "Pasta",
+      description: "Pasta made from lentil flour; higher in plant protein and fibre than wheat pasta, and naturally gluten-free.",
+      knowledgeFoodSlug: null, diversityGroupSlug: "lentils", family: "pasta",
+    },
+    aliases: [
+      { alias: "red lentil pasta", aliasType: "form" },
+      { alias: "green lentil pasta", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "pea-pasta", name: "Pea Pasta", category: "Grains", subcategory: "Pasta",
+      description: "Pasta made from yellow or green pea flour; a naturally gluten-free, higher-protein alternative to wheat pasta.",
+      knowledgeFoodSlug: null, diversityGroupSlug: "peas", family: "pasta",
+    },
+    aliases: [
+      { alias: "green pea pasta", aliasType: "form" },
+      { alias: "yellow pea pasta", aliasType: "form" },
+    ],
+  },
+  // NK6S — `spinach-pasta` was an identity here (NK6R). It is now a VARIETY of
+  // `wheat-pasta` above: the spinach colours the dough, it does not change the
+  // grain, the plant or the nutrient class, so it owns no facts of its own.
   {
     food: {
       slug: "millet", name: "Millet", category: "Grains", subcategory: "Whole grains",
@@ -2343,15 +2808,28 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
   {
     food: {
       slug: "coconut", name: "Coconut", category: "Healthy fats", subcategory: "Tropical nuts",
-      description: "A tropical drupe with fibre-rich flesh; desiccated, coconut milk and coconut cream are all the same plant.",
-      knowledgeFoodSlug: "coconut", diversityGroupSlug: "coconut",
+      description: "A tropical drupe with fibre-rich flesh; desiccated coconut, coconut milk and coconut cream are all pressed or dried from that flesh.",
+      knowledgeFoodSlug: "coconut", diversityGroupSlug: "coconut", family: null,
     },
     aliases: [
+      // "coconut water" REMOVED (NK6Q batch 014) — the clear liquid endosperm is a different
+      // food from the flesh: electrolytes and sugars, essentially no fat.
       { alias: "desiccated coconut", aliasType: "form" },
       { alias: "coconut milk", aliasType: "form" },
       { alias: "coconut cream", aliasType: "form" },
-      { alias: "coconut water", aliasType: "form" },
       { alias: "coconut flakes", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "coconut-water", name: "Coconut Water", category: "Beverages", subcategory: "Plant waters",
+      description: "The clear liquid inside a young green coconut; lightly sweet and a source of potassium, with almost none of the fat of the flesh.",
+      // NK6S — category was the ad-hoc one-member "Drinks" NK6R minted; the domain is
+      // now the real `Beverages`, and this food has a real parent to sit under.
+      knowledgeFoodSlug: null, diversityGroupSlug: "coconut", family: "plant-water",
+    },
+    aliases: [
+      { alias: "coconut juice", aliasType: "common_name" },
     ],
   },
   {
@@ -2370,30 +2848,62 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     food: {
       slug: "dark-chocolate", name: "Dark Chocolate", category: "Healthy fats", subcategory: "Cacao",
       description: "Dark chocolate from 70%+ cocoa content is rich in polyphenols, magnesium and iron from the cacao plant.",
-      knowledgeFoodSlug: "dark-chocolate", diversityGroupSlug: "dark-chocolate",
+      knowledgeFoodSlug: "dark-chocolate", diversityGroupSlug: "dark-chocolate", family: null,
     },
     aliases: [
-      { alias: "cocoa", aliasType: "form" },
-      { alias: "cacao", aliasType: "common_name" },
+      // "cocoa" / "cacao" / "cocoa powder" REMOVED (NK6Q §2.4 resolver mis-target). Cocoa
+      // powder is DEFATTED cocoa solids — it is not chocolate, which is cocoa solids plus
+      // cocoa butter plus sugar. They belong to `cacao-powder` below.
       { alias: "dark choc", aliasType: "form" },
-      { alias: "cocoa powder", aliasType: "form" },
       { alias: "70% chocolate", aliasType: "form" },
       { alias: "85% chocolate", aliasType: "form" },
     ],
   },
   {
     food: {
-      slug: "butter", name: "Butter", category: "Dairy", subcategory: "Dairy fats",
-      description: "A dairy fat made from churned cream, supplying fat-soluble vitamins A and D.",
-      knowledgeFoodSlug: "butter", diversityGroupSlug: null,
+      slug: "cacao-powder", name: "Cacao Powder", category: "Healthy fats", subcategory: "Cacao",
+      description: "Cocoa solids with most of the cocoa butter pressed out, then milled to a powder; intensely bitter, and rich in polyphenols, magnesium and iron.",
+      // NK6Q §2.4 — `cocoa-powder` is a synonym of this identity, NOT of `dark-chocolate`.
+      // Raw cacao vs roasted cocoa is a processing note, not a second identity.
+      knowledgeFoodSlug: null, diversityGroupSlug: "dark-chocolate", family: null,
     },
     aliases: [
+      { alias: "cocoa powder", aliasType: "common_name" },
+      { alias: "cocoa", aliasType: "common_name" },
+      { alias: "cacao", aliasType: "common_name" },
+      { alias: "raw cacao powder", aliasType: "form" },
+      { alias: "unsweetened cocoa powder", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "butter", name: "Butter", category: "Dairy", subcategory: "Dairy fats",
+      description: "A dairy fat made from churned cream, supplying fat-soluble vitamins A and D.",
+      knowledgeFoodSlug: "butter", diversityGroupSlug: null, family: null,
+    },
+    aliases: [
+      // "ghee" / "clarified butter" REMOVED (NK6Q batch 012). Removing the water and milk
+      // solids changes the food: no lactose or casein, and a far higher smoke point. Salt
+      // and shape below really are formats of butter; clarifying is not.
       { alias: "unsalted butter", aliasType: "form" },
       { alias: "salted butter", aliasType: "form" },
       { alias: "block butter", aliasType: "form" },
       { alias: "spreadable butter", aliasType: "form" },
-      { alias: "ghee", aliasType: "form" },
-      { alias: "clarified butter", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "ghee", name: "Ghee", category: "Dairy", subcategory: "Dairy fats",
+      description: "Butter simmered until the water evaporates and the milk solids brown and are strained out; nutty, lactose- and casein-free, with a high smoke point.",
+      // NK6Q batch 012 ruled `ghee` and `clarified-butter` ONE identity, distinct from
+      // butter. Ghee is cooked longer than plain clarified butter; the drafts describe the
+      // same pantry product, so `clarified butter` is recorded here as an alias, not a
+      // second slug (GOV2 Rule 7).
+      knowledgeFoodSlug: null, diversityGroupSlug: null, family: null,
+    },
+    aliases: [
+      { alias: "clarified butter", aliasType: "common_name" },
+      { alias: "desi ghee", aliasType: "common_name" },
     ],
   },
   {
@@ -2423,8 +2933,12 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
       knowledgeFoodSlug: "pollock", diversityGroupSlug: null,
     },
     aliases: [
+      // NK6Q batch 015 — coley/saithe is biologically a distinct Pollachius species, but is
+      // sold and cooked interchangeably as the same near-identical white fish. Market synonym.
       { alias: "pollack", aliasType: "common_name" },
       { alias: "coley", aliasType: "common_name" },
+      { alias: "saithe", aliasType: "common_name" },
+      { alias: "coalfish", aliasType: "common_name" },
       { alias: "Alaska pollock", aliasType: "common_name" },
       { alias: "pollock fillet", aliasType: "form" },
     ],
@@ -2467,13 +2981,24 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
   {
     food: {
       slug: "squid", name: "Squid", category: "Proteins", subcategory: "Seafood",
-      description: "A lean, firm-textured seafood widely available in UK supermarkets fresh, frozen or as rings; rich in protein and selenium.",
-      knowledgeFoodSlug: "squid", diversityGroupSlug: null,
+      description: "A lean, firm-textured cephalopod (Loligo) widely available fresh, frozen or as rings; rich in protein and selenium.",
+      knowledgeFoodSlug: "squid", diversityGroupSlug: null, family: null,
     },
     aliases: [
+      // "cuttlefish" REMOVED (NK6Q batch 016) — a different animal (Sepia), not a squid.
+      // "calamari" STAYS: it is genuinely the culinary name for squid.
       { alias: "calamari", aliasType: "common_name" },
       { alias: "squid rings", aliasType: "form" },
-      { alias: "cuttlefish", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "cuttlefish", name: "Cuttlefish", category: "Proteins", subcategory: "Seafood",
+      description: "A cephalopod (Sepia) with a broader body and thicker flesh than squid; meatier, and the source of culinary squid ink.",
+      knowledgeFoodSlug: null, diversityGroupSlug: null, family: null,
+    },
+    aliases: [
+      { alias: "seppia", aliasType: "common_name" },
     ],
   },
   {
@@ -2491,13 +3016,18 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     food: {
       slug: "crab", name: "Crab", category: "Proteins", subcategory: "Seafood",
       description: "A shellfish widely caught around UK coasts; a rich source of protein, selenium and vitamin B12.",
-      knowledgeFoodSlug: "crab", diversityGroupSlug: null,
+      knowledgeFoodSlug: "crab", diversityGroupSlug: null, family: null,
     },
+    varieties: [
+      // NK6Q batch 016 — the common edible crab, promoted from a plain alias to a VARIETY.
+      // Note "brown crab MEAT" is a different thing (a cut/format), not this variety.
+      { slug: "brown-crab", name: "Brown Crab", description: "The common edible crab (Cancer pagurus).", displayOrder: 0 },
+    ],
     aliases: [
-      { alias: "brown crab", aliasType: "common_name" },
       { alias: "crab meat", aliasType: "form" },
       { alias: "dressed crab", aliasType: "form" },
       { alias: "tinned crab", aliasType: "form" },
+      { alias: "white crab meat", aliasType: "form" },
     ],
   },
   {
@@ -2531,15 +3061,50 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
   {
     food: {
       slug: "liver", name: "Liver", category: "Proteins", subcategory: "Offal",
-      description: "An organ meat exceptionally rich in iron, vitamin B12, folate and vitamin A; chicken and lamb's liver are the most widely available.",
-      knowledgeFoodSlug: "liver", diversityGroupSlug: null,
+      description: "An organ meat exceptionally rich in iron, vitamin B12, folate and vitamin A. The coarse identity for liver whose species is not known; the species livers differ materially and own their own facts.",
+      knowledgeFoodSlug: "liver", diversityGroupSlug: null, family: null,
     },
     aliases: [
-      { alias: "chicken liver", aliasType: "form" },
-      { alias: "chicken livers", aliasType: "form" },
-      { alias: "lamb's liver", aliasType: "form" },
-      { alias: "lamb liver", aliasType: "form" },
-      { alias: "beef liver", aliasType: "form" },
+      // NK6Q §2.1 — every species-specific string REMOVED. This alias set is why
+      // beef/chicken/lamb liver hard-blocked as merges, while `pork-liver` and
+      // `calves-liver` were minted as their own identities in the same run. Species
+      // livers differ materially on vitamin A, copper and iron. `liver` stays as the
+      // coarse fallback only.
+      { alias: "livers", aliasType: "plural" },
+    ],
+  },
+  // NK6R — species livers (NK6Q batches 017/019), consistent with the already-minted
+  // `pork-liver` and `calves-liver`. Editorial nutrition arrives with the deferred import.
+  {
+    food: {
+      slug: "beef-liver", name: "Beef Liver", category: "Proteins", subcategory: "Offal",
+      description: "The liver of cattle; the richest common source of vitamin A and copper among the species livers, with a strong, mineral flavour.",
+      knowledgeFoodSlug: null, diversityGroupSlug: null, family: "liver",
+    },
+    aliases: [
+      { alias: "ox liver", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "chicken-liver", name: "Chicken Liver", category: "Proteins", subcategory: "Offal",
+      description: "The liver of chickens; milder and more delicate than the red-meat livers, and the base of pâté and parfait.",
+      knowledgeFoodSlug: null, diversityGroupSlug: null, family: "liver",
+    },
+    aliases: [
+      { alias: "chicken livers", aliasType: "plural" },
+    ],
+  },
+  {
+    food: {
+      slug: "lamb-liver", name: "Lamb's Liver", category: "Proteins", subcategory: "Offal",
+      description: "The liver of lambs; softer and milder than beef liver, and the usual UK butcher's liver.",
+      knowledgeFoodSlug: null, diversityGroupSlug: null, family: "liver",
+    },
+    aliases: [
+      // The slug itself already keys "lamb liver"; these cover the possessive spellings.
+      { alias: "lambs liver", aliasType: "common_name" },
+      { alias: "sheep's liver", aliasType: "common_name" },
     ],
   },
 
@@ -2917,9 +3482,9 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
 
   {
     food: {
-      slug: "cottage-cheese", name: "Cottage Cheese", category: "Dairy", subcategory: "Fresh cheese",
+      slug: "cottage-cheese", name: "Cottage Cheese", category: "Dairy", subcategory: "Fresh",
       description: "A mild, fresh cheese with a lumpy curd texture; a high-protein, lower-fat dairy food widely available in UK supermarkets.",
-      knowledgeFoodSlug: "cottage-cheese", diversityGroupSlug: null,
+      knowledgeFoodSlug: "cottage-cheese", diversityGroupSlug: null, family: "fresh-cheese",
     },
     aliases: [
       { alias: "low-fat cottage cheese", aliasType: "form" },
@@ -2927,9 +3492,9 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
   },
   {
     food: {
-      slug: "cream-cheese", name: "Cream Cheese", category: "Dairy", subcategory: "Fresh cheese",
+      slug: "cream-cheese", name: "Cream Cheese", category: "Dairy", subcategory: "Soft",
       description: "A soft, creamy fresh cheese used in cooking, baking and as a spread; a UK kitchen staple available in all supermarkets.",
-      knowledgeFoodSlug: "cream-cheese", diversityGroupSlug: null,
+      knowledgeFoodSlug: "cream-cheese", diversityGroupSlug: null, family: "fresh-cheese",
     },
     aliases: [
       { alias: "full-fat cream cheese", aliasType: "form" },
@@ -2960,7 +3525,8 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     food: {
       slug: "buttermilk", name: "Buttermilk", category: "Dairy", subcategory: "Dairy drinks",
       description: "A tangy liquid cultured from low-fat milk; used in baking to create light, tender textures in scones, pancakes and soda bread.",
-      knowledgeFoodSlug: "buttermilk", diversityGroupSlug: null, fermented: true,
+      // NK6S — its own subcategory already declared it a dairy drink. Domain stays Dairy.
+      knowledgeFoodSlug: "buttermilk", diversityGroupSlug: null, family: "dairy-beverage", fermented: true,
     },
     aliases: [
       { alias: "cultured buttermilk", aliasType: "form" },
@@ -2968,22 +3534,24 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
   },
   {
     food: {
-      slug: "blue-cheese", name: "Blue Cheese", category: "Dairy", subcategory: "Blue cheese",
-      description: "A family of cheeses with distinctive blue or green veining, including Gorgonzola and Roquefort; strongly flavoured and widely available in UK supermarkets.",
-      knowledgeFoodSlug: "blue-cheese", diversityGroupSlug: null,
+      slug: "blue-cheese", name: "Blue Cheese", category: "Dairy", subcategory: "Semi-hard",
+      description: "The family of cheeses veined with blue or green mould; strongly flavoured, and the coarse identity for a blue cheese whose name is not known.",
+      knowledgeFoodSlug: "blue-cheese", diversityGroupSlug: null, family: "cheese",
     },
     aliases: [
+      // "gorgonzola" and "roquefort" REMOVED (NK6Q §2.2). This record's own description
+      // used to name them — while `stilton` already had its own identity. Named PDO blue
+      // cheeses differ on milk source, rules and ageing; they are CHILDREN of this family,
+      // not synonyms of it. The greedy alias set is what hard-blocked their import.
       { alias: "blue-veined cheese", aliasType: "common_name" },
       { alias: "bleu cheese", aliasType: "common_name" },
-      { alias: "gorgonzola", aliasType: "common_name" },
-      { alias: "roquefort", aliasType: "common_name" },
     ],
   },
   {
     food: {
-      slug: "gouda", name: "Gouda", category: "Dairy", subcategory: "Hard and semi-hard cheese",
+      slug: "gouda", name: "Gouda", category: "Dairy", subcategory: "Semi-hard",
       description: "A semi-hard Dutch cheese with a smooth, slightly sweet flavour; a good source of calcium and protein, widely available in UK supermarkets.",
-      knowledgeFoodSlug: "gouda", diversityGroupSlug: null,
+      knowledgeFoodSlug: "gouda", diversityGroupSlug: null, family: "pressed-cheese",
     },
     aliases: [
       { alias: "Dutch gouda", aliasType: "common_name" },
@@ -2993,9 +3561,9 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
   },
   {
     food: {
-      slug: "brie", name: "Brie", category: "Dairy", subcategory: "Soft and bloomy cheese",
+      slug: "brie", name: "Brie", category: "Dairy", subcategory: "Soft",
       description: "A soft French cheese with an edible white rind and creamy interior; a source of calcium, protein and B vitamins, widely available in UK supermarkets.",
-      knowledgeFoodSlug: "brie", diversityGroupSlug: null,
+      knowledgeFoodSlug: "brie", diversityGroupSlug: null, family: "bloomy-rind-cheese",
     },
     aliases: [
       { alias: "baked brie", aliasType: "form" },
@@ -3003,9 +3571,9 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
   },
   {
     food: {
-      slug: "camembert", name: "Camembert", category: "Dairy", subcategory: "Soft and bloomy cheese",
+      slug: "camembert", name: "Camembert", category: "Dairy", subcategory: "Soft",
       description: "A soft, creamy French cheese with a white bloomy rind; famous for baking whole and serving with bread, widely available in UK supermarkets.",
-      knowledgeFoodSlug: "camembert", diversityGroupSlug: null,
+      knowledgeFoodSlug: "camembert", diversityGroupSlug: null, family: "bloomy-rind-cheese",
     },
     aliases: [
       { alias: "baked camembert", aliasType: "form" },
@@ -3013,20 +3581,64 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
   },
   {
     food: {
-      slug: "stilton", name: "Stilton", category: "Dairy", subcategory: "Blue cheese",
+      slug: "stilton", name: "Stilton", category: "Dairy", subcategory: "Semi-hard",
       description: "A celebrated English blue cheese with PDO status, made in Derbyshire, Leicestershire and Nottinghamshire; rich and strongly flavoured.",
-      knowledgeFoodSlug: "stilton", diversityGroupSlug: null,
+      knowledgeFoodSlug: "stilton", diversityGroupSlug: null, family: "blue-cheese",
     },
     aliases: [
       { alias: "Blue Stilton", aliasType: "common_name" },
       { alias: "White Stilton", aliasType: "common_name" },
     ],
   },
+  // NK6R — identities NK6Q ruled `Separate canonical food`, unblocked by narrowing the
+  // greedy alias sets above. `knowledgeFoodSlug: null` is an HONEST GAP, not an omission:
+  // the editorial nutrition content lives in the batch-021/022 drafts and is bound when
+  // the deferred governed import runs (NK6R §7). Minting the identity now is what stops
+  // the resolver silently answering "Gorgonzola" with the wrong food.
   {
     food: {
-      slug: "goat-cheese", name: "Goat's Cheese", category: "Dairy", subcategory: "Fresh and soft cheese",
+      slug: "gorgonzola", name: "Gorgonzola", category: "Dairy", subcategory: "Soft",
+      description: "An Italian PDO blue cheese made from cow's milk; sold young and mild (dolce) or aged and firm (piccante).",
+      knowledgeFoodSlug: null, diversityGroupSlug: null, family: "blue-cheese",
+    },
+    aliases: [
+      { alias: "gorgonzola dolce", aliasType: "form" },
+      { alias: "gorgonzola piccante", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "roquefort", name: "Roquefort", category: "Dairy", subcategory: "Soft",
+      description: "A French PDO blue cheese made from sheep's milk and ripened in the caves of Roquefort-sur-Soulzon; sharp, salty and rich.",
+      knowledgeFoodSlug: null, diversityGroupSlug: null, family: "blue-cheese",
+    },
+  },
+  {
+    food: {
+      slug: "grana-padano", name: "Grana Padano", category: "Dairy", subcategory: "Hard",
+      description: "An Italian PDO hard cheese from the Po valley; made under different rules and aged for less time than Parmigiano Reggiano, giving a milder, less granular result.",
+      knowledgeFoodSlug: null, diversityGroupSlug: null, family: "cooked-pressed-cheese",
+    },
+  },
+  {
+    food: {
+      slug: "buffalo-mozzarella", name: "Buffalo Mozzarella", category: "Dairy", subcategory: "Semi-soft",
+      description: "An Italian PDO mozzarella made from water buffalo milk; softer, richer and higher in fat than the cow's-milk cheese.",
+      knowledgeFoodSlug: null, diversityGroupSlug: null, family: "pasta-filata",
+    },
+    aliases: [
+      { alias: "mozzarella di bufala", aliasType: "common_name" },
+      { alias: "buffalo mozzarella cheese", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "goat-cheese", name: "Goat's Cheese", category: "Dairy", subcategory: "Soft",
       description: "A tangy, soft cheese made from goat's milk; lower in lactose than cow's milk cheese, widely available fresh or aged in UK supermarkets.",
-      knowledgeFoodSlug: "goat-cheese", diversityGroupSlug: null,
+      // Family reflects the dominant UK product (the fresh log / chèvre). Milk source is
+      // an attribute of this identity, never a hierarchy level — `hard-goat-cheese` and
+      // `goat-curd` (batch 022) will bind to `pressed-cheese` and `fresh-cheese` in turn.
+      knowledgeFoodSlug: "goat-cheese", diversityGroupSlug: null, family: "fresh-cheese",
     },
     aliases: [
       { alias: "goat cheese", aliasType: "common_name" },
@@ -3036,9 +3648,9 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
   },
   {
     food: {
-      slug: "mascarpone", name: "Mascarpone", category: "Dairy", subcategory: "Fresh cheese",
+      slug: "mascarpone", name: "Mascarpone", category: "Dairy", subcategory: "Soft",
       description: "A thick, rich Italian cream cheese used in tiramisu and as a cooking ingredient; available in all UK supermarkets.",
-      knowledgeFoodSlug: "mascarpone", diversityGroupSlug: null,
+      knowledgeFoodSlug: "mascarpone", diversityGroupSlug: null, family: "fresh-cheese",
     },
     aliases: [
       { alias: "mascarpone cheese", aliasType: "form" },
@@ -3048,13 +3660,21 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
   {
     food: {
       slug: "double-cream", name: "Double Cream", category: "Dairy", subcategory: "Cream",
-      description: "A very thick cream with high fat content, used for whipping, pouring and enriching sauces and desserts; a UK kitchen staple.",
-      knowledgeFoodSlug: "double-cream", diversityGroupSlug: null,
+      description: "The thickest UK cream, around 48% fat; whips stiffly and will not split when boiled.",
+      knowledgeFoodSlug: "double-cream", diversityGroupSlug: null, family: null,
     },
     aliases: [
-      { alias: "whipping cream", aliasType: "form" },
+      // "whipping cream" REMOVED (NK6Q batch 020) — a distinct grade at ~35% fat, consistent
+      // with `single-cream` already being its own identity.
       { alias: "heavy cream", aliasType: "common_name" },
     ],
+  },
+  {
+    food: {
+      slug: "whipping-cream", name: "Whipping Cream", category: "Dairy", subcategory: "Cream",
+      description: "A cream grade of around 35% fat — enough to whip to soft peaks, but lighter than double cream.",
+      knowledgeFoodSlug: null, diversityGroupSlug: null, family: null,
+    },
   },
 
   // ════════════════════════ Nuts & Seeds ════════════════════════════════════════
@@ -3165,15 +3785,28 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
   {
     food: {
       slug: "fenugreek", name: "Fenugreek", category: "Spices", subcategory: "Seeds and pods",
-      description: "A versatile plant whose seeds and dried leaves are central to South Asian cooking, adding a distinctive slightly bitter, maple-like flavour; widely available in UK supermarkets.",
-      knowledgeFoodSlug: "fenugreek", diversityGroupSlug: "fenugreek",
+      description: "The hard, slightly bitter, maple-scented seed of the fenugreek plant, used whole or ground in South Asian cooking. The leaf is a separate food.",
+      knowledgeFoodSlug: "fenugreek", diversityGroupSlug: "fenugreek", family: null,
     },
     aliases: [
+      // Leaf strings REMOVED (NK6Q §2.5 / batch 009). This identity is the SEED spice;
+      // the fresh/dried leaf (methi) is a different plant part. Scope confirmed = seed.
       { alias: "fenugreek seeds", aliasType: "form" },
       { alias: "methi seeds", aliasType: "common_name" },
+      { alias: "ground fenugreek", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "fenugreek-leaves", name: "Fenugreek Leaves", category: "Herbs", subcategory: "Leafy herbs",
+      description: "The leaf of the fenugreek plant — fresh methi cooked as a green, or dried kasuri methi crumbled in as a finishing herb.",
+      knowledgeFoodSlug: null, diversityGroupSlug: "fenugreek", family: null,
+    },
+    aliases: [
       { alias: "methi", aliasType: "common_name" },
-      { alias: "fenugreek leaves", aliasType: "form" },
+      { alias: "methi leaves", aliasType: "common_name" },
       { alias: "kasuri methi", aliasType: "common_name" },
+      { alias: "dried fenugreek leaves", aliasType: "form" },
     ],
   },
   {
@@ -3216,13 +3849,25 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
   {
     food: {
       slug: "sesame-oil", name: "Sesame Oil", category: "Healthy fats", subcategory: "Oils",
-      description: "An oil pressed from sesame seeds widely used in East and South-East Asian cooking to add a rich, nutty flavour; available in all UK supermarkets.",
-      knowledgeFoodSlug: "sesame-oil", diversityGroupSlug: "sesame-seeds",
+      description: "A light oil pressed from raw sesame seeds; neutral enough to cook with.",
+      knowledgeFoodSlug: "sesame-oil", diversityGroupSlug: "sesame-seeds", family: null,
     },
     aliases: [
-      { alias: "toasted sesame oil", aliasType: "form" },
+      // "toasted"/"dark sesame oil" REMOVED (NK6Q batch 012) — pressed from ROASTED seeds,
+      // it is a finishing condiment rather than a cooking oil. Different product, own facts.
       { alias: "sesame seed oil", aliasType: "common_name" },
-      { alias: "dark sesame oil", aliasType: "form" },
+      { alias: "light sesame oil", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "toasted-sesame-oil", name: "Toasted Sesame Oil", category: "Healthy fats", subcategory: "Oils",
+      description: "Oil pressed from roasted sesame seeds; dark, intensely nutty, and used a few drops at a time to finish a dish rather than to cook in.",
+      knowledgeFoodSlug: null, diversityGroupSlug: "sesame-seeds", family: null,
+    },
+    aliases: [
+      { alias: "dark sesame oil", aliasType: "common_name" },
+      { alias: "roasted sesame oil", aliasType: "common_name" },
     ],
   },
 
@@ -3245,7 +3890,9 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     food: {
       slug: "kombucha", name: "Kombucha", category: "Fermented foods", subcategory: "Fermented drinks",
       description: "A naturally fizzy fermented tea made using a SCOBY (symbiotic culture of bacteria and yeast); contains live cultures and organic acids.",
-      knowledgeFoodSlug: null, diversityGroupSlug: null, fermented: true,
+      // NK6S — its own subcategory already declared it a drink. Category (its domain)
+      // is unchanged; only the beverage hierarchy is added.
+      knowledgeFoodSlug: null, diversityGroupSlug: null, family: "fermented-beverage", fermented: true,
     },
     aliases: [
       { alias: "fermented tea", aliasType: "common_name" },
@@ -3305,6 +3952,169 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
       { alias: "whole spelt flour", aliasType: "form" },
       { alias: "white spelt flour", aliasType: "form" },
       { alias: "spelt wholemeal flour", aliasType: "form" },
+    ],
+  },
+
+  // ════════════════════════ NK6S — Beverages ═══════════════════════════════════
+  // Beverages are a FIRST-CLASS canonical domain, not a leftover bucket. NK6R §6.4
+  // minted an ad-hoc `Drinks` category for a single member (`coconut-water`) and
+  // left the batch-014 tea/coffee/juice foods with nowhere to land. NK6S promotes
+  // that placeholder into a real hierarchy rooted at the `beverage` identity.
+  //
+  // Two axes, kept apart (the NK6R §1 discipline):
+  //   • `category` = the food's DOMAIN OF ORIGIN, and it is NOT rewritten by joining
+  //     this tree. A plant milk is still a dairy alternative; kombucha is still a
+  //     fermented food. Only foods with no other domain (tea, coffee, juice, cocoa,
+  //     infusions, plant waters) carry category "Beverages".
+  //   • `family`  = the hierarchy. A food joins it when the DRINK IS THE FOOD.
+  //
+  // Every family row below is a legitimate coarse identity in its own right (the
+  // `blue-cheese` precedent): "tea" names a real thing when the kind is unknown.
+  // Several carry no canonical member yet — the batch-014 drafts bind to them on
+  // promotion. That is the `washed-rind-cheese` precedent: a declared parent is
+  // what stops a future import being forced under a category string. An honest
+  // gap, not dead data.
+  //
+  //   beverage
+  //     ├── tea                 → green, black, white, oolong, matcha (batch 014)
+  //     ├── herbal-infusion     → rooibos, chamomile, nettle, peppermint (batch 014)
+  //     ├── coffee              → beans, ground, instant, decaf (batch 014)
+  //     ├── cocoa-beverage      → drinking chocolate  ⚠ NOT slugged `cocoa`
+  //     ├── juice               → beetroot, carrot, tomato, prune (batch 014)
+  //     ├── plant-water         → coconut-water
+  //     ├── fermented-beverage  → kombucha, kefir
+  //     ├── plant-beverage      → oat-milk, soy-milk, almond-milk
+  //     └── dairy-beverage      → buttermilk
+  //
+  // `milk` is DELIBERATELY not parented here. It is the dairy fact owner and already
+  // parents its own fat classes (`skimmed-milk`, `semi-skimmed-milk`); pulling that
+  // subtree under `beverage` would make a CONSUMPTION attribute into a hierarchy
+  // level — the very move Amendment 2 rejected when it ruled Hard/Soft descriptive.
+  {
+    food: {
+      slug: "beverage", name: "Beverage", category: "Beverages", subcategory: "Beverages",
+      description: "A drink. The parent identity behind the beverage classes; what a beverage is made from — leaf, bean, fruit, grain, nut or milk — decides its nutrients and its plant group.",
+      // Type-unknown, exactly like the `pasta` and `mushroom` parents: an unqualified
+      // "drink" must not claim a knowledge food or a plant it may not contain.
+      knowledgeFoodSlug: null, diversityGroupSlug: null, family: null,
+    },
+    aliases: [
+      { alias: "beverages", aliasType: "plural" },
+      // Preserves the word NK6R's retired `Drinks` category used, as a resolvable alias.
+      { alias: "drink", aliasType: "common_name" },
+      { alias: "drinks", aliasType: "plural" },
+    ],
+  },
+  {
+    food: {
+      slug: "tea", name: "Tea", category: "Beverages", subcategory: "Leaf infusions",
+      description: "An infusion of the leaves of Camellia sinensis; the parent identity behind green, black, white, oolong and matcha, which differ by oxidation rather than by plant.",
+      knowledgeFoodSlug: null, diversityGroupSlug: null, family: "beverage",
+    },
+    aliases: [
+      { alias: "teas", aliasType: "plural" },
+      { alias: "brewed tea", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "herbal-infusion", name: "Herbal Infusion", category: "Beverages", subcategory: "Herbal infusions",
+      description: "An infusion of a plant that is not Camellia sinensis — rooibos, chamomile, nettle, peppermint. Sold as \"herbal tea\", but botanically not tea at all; each plant is its own food.",
+      // The `fennel` / `fennel-seeds` discipline (NK6Q §2.5): a different plant is a
+      // different food. Rooibos is NOT a tea, so it may not sit under `tea`.
+      knowledgeFoodSlug: null, diversityGroupSlug: null, family: "beverage",
+    },
+    aliases: [
+      { alias: "herbal tea", aliasType: "common_name" },
+      { alias: "herbal teas", aliasType: "plural" },
+      { alias: "tisane", aliasType: "common_name" },
+      { alias: "fruit tea", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "coffee", name: "Coffee", category: "Beverages", subcategory: "Coffee",
+      description: "A brewed infusion of roasted coffee beans; the parent identity behind whole-bean, ground, instant and decaffeinated coffee, which differ by processing rather than by plant.",
+      knowledgeFoodSlug: null, diversityGroupSlug: null, family: "beverage",
+    },
+    aliases: [
+      { alias: "brewed coffee", aliasType: "form" },
+      { alias: "black coffee", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "cocoa-beverage", name: "Cocoa Beverage", category: "Beverages", subcategory: "Cocoa",
+      description: "A hot drink made by dissolving cocoa solids in milk or water; a preparation, distinct from the cocoa powder it is made with.",
+      // ⚠ NOT slugged `cocoa`. `cacao-powder` legitimately owns the alias keys "cocoa"
+      // and "cacao" (NK6Q §2.4) — cocoa powder is an INGREDIENT, not a drink. Slugging
+      // this family `cocoa` would be a resolver key collision and validateCanonicalSeed
+      // would refuse to seed. The narrower name is the correct one either way.
+      knowledgeFoodSlug: null, diversityGroupSlug: null, family: "beverage",
+    },
+    aliases: [
+      { alias: "drinking chocolate", aliasType: "common_name" },
+      { alias: "hot chocolate", aliasType: "common_name" },
+      { alias: "hot cocoa", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "juice", name: "Juice", category: "Beverages", subcategory: "Juices",
+      description: "The pressed liquid of a fruit or vegetable. The parent identity behind the named juices; an unqualified juice is source-unknown, so it counts no plant.",
+      // Same rule as the `pasta` parent: type-unknown claims no diversity group.
+      knowledgeFoodSlug: null, diversityGroupSlug: null, family: "beverage",
+    },
+    aliases: [
+      { alias: "juices", aliasType: "plural" },
+    ],
+  },
+  {
+    food: {
+      slug: "plant-water", name: "Plant Water", category: "Beverages", subcategory: "Plant waters",
+      description: "The naturally occurring liquid drawn from a plant — coconut, birch, maple — drunk as-is rather than pressed from flesh.",
+      knowledgeFoodSlug: null, diversityGroupSlug: null, family: "beverage",
+    },
+    aliases: [
+      { alias: "plant waters", aliasType: "plural" },
+    ],
+  },
+  {
+    food: {
+      slug: "fermented-beverage", name: "Fermented Beverage", category: "Beverages", subcategory: "Fermented drinks",
+      description: "A drink transformed by micro-organisms — kombucha, kefir, water kefir — carrying live cultures or their organic acids.",
+      // `fermented` stays a per-food attribute (M4.5): this family is a hierarchy
+      // level, and membership of it is NOT what makes a food fermented.
+      knowledgeFoodSlug: null, diversityGroupSlug: null, family: "beverage", fermented: true,
+    },
+    aliases: [
+      { alias: "fermented drink", aliasType: "common_name" },
+      { alias: "fermented drinks", aliasType: "plural" },
+    ],
+  },
+  {
+    food: {
+      slug: "plant-beverage", name: "Plant Beverage", category: "Beverages", subcategory: "Plant milks",
+      description: "A drink pressed or blended from a grain, nut, seed or pulse and sold in place of dairy milk; each one counts the plant it is made from.",
+      knowledgeFoodSlug: null, diversityGroupSlug: null, family: "beverage",
+    },
+    aliases: [
+      { alias: "plant milk", aliasType: "common_name" },
+      { alias: "plant milks", aliasType: "plural" },
+      { alias: "plant based milk", aliasType: "common_name" },
+      { alias: "non-dairy milk", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "dairy-beverage", name: "Dairy Beverage", category: "Beverages", subcategory: "Dairy drinks",
+      description: "A drink whose base is dairy milk. The coarse identity for drinkable dairy; `milk` itself remains the dairy fact owner and is not parented here.",
+      knowledgeFoodSlug: null, diversityGroupSlug: null, family: "beverage",
+    },
+    aliases: [
+      { alias: "dairy drink", aliasType: "common_name" },
+      { alias: "dairy drinks", aliasType: "plural" },
+      { alias: "milk drink", aliasType: "common_name" },
     ],
   },
 ];

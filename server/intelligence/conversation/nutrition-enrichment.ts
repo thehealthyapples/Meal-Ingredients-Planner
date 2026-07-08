@@ -53,7 +53,7 @@ interface QueryResultLike {
   readonly outcome?: { readonly result?: unknown };
 }
 
-interface FoodRef {
+export interface FoodRef {
   readonly slug: string;
   readonly name: string;
   /** Present only for the full "food" read scope — enough text to check diet compliance honestly. */
@@ -61,7 +61,7 @@ interface FoodRef {
 }
 
 /** Extract a food reference from a nutrition-knowledge result, whatever its scope. */
-function extractFoodRef(result: unknown): FoodRef | null {
+export function extractFoodRef(result: unknown): FoodRef | null {
   if (!result || typeof result !== "object") return null;
   const r = result as Record<string, unknown>;
 

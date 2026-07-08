@@ -156,6 +156,53 @@ export function validateCanonicalSeed(): string[] {
     if (f.knowledgeFoodSlug && !knowledgeSlugs.has(f.knowledgeFoodSlug)) {
       problems.push(`canonical_food "${f.slug}": unknown knowledge_food "${f.knowledgeFoodSlug}"`);
     }
+    // NK6R — `family` is a self-reference by slug (no DB FK). Enforce it here so the
+    // hierarchy can never be seeded dangling or self-parented.
+    if (f.family) {
+      if (f.family === f.slug) {
+        problems.push(`canonical_food "${f.slug}": family points at itself`);
+      } else if (!foodSlugs.has(f.family)) {
+        problems.push(`canonical_food "${f.slug}": unknown family "${f.family}"`);
+      }
+    }
+  }
+
+  // NK6R — the family graph must be a forest, not a cycle. A cycle would make
+  // "walk to the root identity" non-terminating for every consumer of the hierarchy.
+  {
+    const familyOf = new Map(CANONICAL_FOOD_SEED.map((f) => [f.slug, f.family ?? null] as const));
+    const reported = new Set<string>();
+    for (const start of CANONICAL_FOOD_SEED.map((f) => f.slug)) {
+      const path: string[] = [];
+      const seen = new Set<string>();
+      let cur: string | null | undefined = start;
+      while (cur && familyOf.has(cur) && !seen.has(cur)) {
+        seen.add(cur);
+        path.push(cur);
+        cur = familyOf.get(cur);
+      }
+      // Landed back on a node already on this path (and it is not a clean root) = cycle.
+      if (cur && seen.has(cur) && !reported.has(cur)) {
+        for (const s of path) reported.add(s);
+        problems.push(`canonical_food family cycle: ${[...path, cur].join(" → ")}`);
+      }
+    }
+  }
+
+  // NK6R — a food may not be BOTH a child of X and an alias of X. The whole point of
+  // `family` is that a hierarchy is not an alias (GOV2 fail test 5); collapsing the two
+  // would re-create the exact over-merge NK6Q was raised to undo.
+  {
+    const aliasOwner = new Map<string, string>(); // alias_key → owning food slug
+    for (const a of CANONICAL_FOOD_ALIAS_SEED) aliasOwner.set(a.aliasKey, a.canonicalFoodSlug);
+    for (const f of CANONICAL_FOOD_SEED) {
+      if (!f.family) continue;
+      for (const key of [normalizeIngredientKey(f.name), normalizeIngredientKey(f.slug.replace(/-/g, " "))]) {
+        if (aliasOwner.get(key) === f.family) {
+          problems.push(`canonical_food "${f.slug}": is a child of "${f.family}" AND aliased by it ("${key}") — a hierarchy is not an alias`);
+        }
+      }
+    }
   }
 
   // Varieties → parent FK.

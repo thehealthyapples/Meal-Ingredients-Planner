@@ -22,15 +22,35 @@ export const FIXTURE_PATH = resolve(__dirname, "fixtures/companion-benchmark-100
 export const HISTORY_DIR = resolve(REPO_ROOT, "docs/intelligence/benchmark/history");
 
 /** The frozen bundle-component versions this framework release pins (README §4).
- *  FRAMEWORK_VERSION bumped to v1.1.0 by INTQ9 (capability-family normalisation
- *  hardening + the new Cross-Cutting Scores report panel) — a MINOR, comparison-safe
- *  harness/report-shape change per README §4; no question, household, rubric weight/
- *  gate, or judge changed. See README §4 version log and the INTQ9 implementation doc. */
-export const FRAMEWORK_VERSION = "v1.1.0";
+ *
+ *  FRAMEWORK_VERSION was bumped to v1.1.0 by INTQ9 (capability-family normalisation
+ *  hardening + the Cross-Cutting Scores report panel) — a MINOR, comparison-safe
+ *  harness/report-shape change; no question, household, rubric weight/gate, or judge changed.
+ *
+ *  BENCH2 bumps RUBRIC_VERSION to v2.0.0 and FRAMEWORK_VERSION to v2.0.0 — a **MAJOR**,
+ *  comparison-BREAKING change. Two new routing gates (R1/R2) and the first-ever assignment of
+ *  the long-specified fabrication gate (G1) re-grade questions that previously passed, and the
+ *  D4 Capability Routing ladder now scores an un-routed turn 0 rather than 1. README §4 is
+ *  explicit that a rubric change is a re-baseline, never a regression delta — `selectBaseline`
+ *  in history.ts enforces that by requiring a matching rubric MAJOR, so the first BENCH2 run
+ *  establishes a new baseline instead of reporting a −34-point "regression" against a score
+ *  that was never measuring what it claimed. Questions, households and the judge are unchanged.
+ *
+ *  See docs/implementation/BENCH2_INTELLIGENCE_BENCHMARK_HARDENING.md and README §4's version log.
+ *
+ *  BENCH2C bumps FRAMEWORK_VERSION to v2.1.0 — a **MINOR, comparison-safe** change. It adds the
+ *  Capability Utilisation Dashboard (an observation panel and one report section) and changes no
+ *  question, household, rubric dimension/weight/gate, judge, or per-question score. Utilisation is
+ *  purely descriptive: no dimension band and no gate reads a capability invocation record. Runs are
+ *  directly comparable across this boundary — a `v2.0.0` baseline simply carries no utilisation data.
+ *
+ *  See docs/implementation/BENCH2C_CAPABILITY_UTILISATION_DASHBOARD.md and README §4's version log. */
+export const FRAMEWORK_VERSION = "v2.1.0";
 export const HOUSEHOLDS_VERSION = "v1.0.0";
-export const RUBRIC_VERSION = "v1.0.0";
+export const RUBRIC_VERSION = "v2.0.0";
 export const JUDGE_VERSION = "v1.0.0";
-export const RESULT_SCHEMA_VERSION = "1.0.0";
+/** Additive result fields (BENCH2 panels; BENCH2C `capabilityUtilisation` + per-question invocations) — MINOR. */
+export const RESULT_SCHEMA_VERSION = "1.2.0";
 
 /** SCORING_FRAMEWORK §5 — the pinned judge model at rubric/judge v1.0.0. */
 export const JUDGE_MODEL = "claude-opus-4-8";

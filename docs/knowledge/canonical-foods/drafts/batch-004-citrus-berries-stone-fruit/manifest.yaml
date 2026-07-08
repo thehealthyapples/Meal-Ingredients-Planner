@@ -1,0 +1,114 @@
+batch:
+  id: batch-004-citrus-berries-stone-fruit
+  title: Citrus, Berries and Stone Fruit
+  status: draft_requires_import_validation
+  created: '2026-07-07'
+  authored_by: ChatGPT for The Healthy Apples
+  food_count: 30
+  scope: Common citrus fruits, berries, currants and stone fruits found fresh, frozen or plain in UK supermarkets.
+  packaging: individual_yaml_files_one_food_per_file
+  recommended_repo_path: docs/knowledge/canonical-foods/drafts/batch-004-citrus-berries-stone-fruit/
+  import_policy: dry_run_first_no_force_upsert_no_production_import
+  notes:
+  - Keeps citrus/berry/stone-fruit identities separate where the supermarket and nutrition context commonly treats them as
+    distinct foods.
+  - Excludes jams, juices, sweetened compotes, fruit desserts and flavoured products.
+foods:
+- slug: orange
+  display_name: Orange
+  category: citrus_fruit
+- slug: satsuma
+  display_name: Satsuma
+  category: citrus_fruit
+- slug: clementine
+  display_name: Clementine
+  category: citrus_fruit
+- slug: mandarin
+  display_name: Mandarin
+  category: citrus_fruit
+- slug: lemon
+  display_name: Lemon
+  category: citrus_fruit
+- slug: lime
+  display_name: Lime
+  category: citrus_fruit
+- slug: grapefruit
+  display_name: Grapefruit
+  category: citrus_fruit
+- slug: blood-orange
+  display_name: Blood orange
+  category: citrus_fruit
+- slug: strawberry
+  display_name: Strawberry
+  category: berry
+- slug: blueberry
+  display_name: Blueberry
+  category: berry
+- slug: raspberry
+  display_name: Raspberry
+  category: berry
+- slug: blackberry
+  display_name: Blackberry
+  category: berry
+- slug: blackcurrant
+  display_name: Blackcurrant
+  category: berry
+- slug: redcurrant
+  display_name: Redcurrant
+  category: berry
+- slug: gooseberry
+  display_name: Gooseberry
+  category: berry
+- slug: cranberry
+  display_name: Cranberry
+  category: berry
+- slug: cherry
+  display_name: Cherry
+  category: stone_fruit
+- slug: peach
+  display_name: Peach
+  category: stone_fruit
+- slug: nectarine
+  display_name: Nectarine
+  category: stone_fruit
+- slug: plum
+  display_name: Plum
+  category: stone_fruit
+- slug: apricot
+  display_name: Apricot
+  category: stone_fruit
+- slug: greengage
+  display_name: Greengage
+  category: stone_fruit
+- slug: damson
+  display_name: Damson
+  category: stone_fruit
+- slug: whitecurrant
+  display_name: Whitecurrant
+  category: berry
+- slug: tayberry
+  display_name: Tayberry
+  category: berry
+- slug: loganberry
+  display_name: Loganberry
+  category: berry
+- slug: mulberry
+  display_name: Mulberry
+  category: berry
+- slug: elderberry
+  display_name: Elderberry
+  category: berry
+- slug: bilberry
+  display_name: Bilberry
+  category: berry
+- slug: mirabelle-plum
+  display_name: Mirabelle plum
+  category: stone_fruit
+validation_sequence:
+- step: single_file_smoke
+  command: npm run import:canonical-foods -- --dry-run docs/knowledge/canonical-foods/drafts/batch-004-citrus-berries-stone-fruit/orange.yaml
+- step: three_file_smoke
+  command: npm run import:canonical-foods -- --dry-run docs/knowledge/canonical-foods/drafts/batch-004-citrus-berries-stone-fruit/orange.yaml
+    docs/knowledge/canonical-foods/drafts/batch-004-citrus-berries-stone-fruit/satsuma.yaml docs/knowledge/canonical-foods/drafts/batch-004-citrus-berries-stone-fruit/clementine.yaml
+- step: full_batch_dry_run
+  command: npm run import:canonical-foods -- --dry-run docs/knowledge/canonical-foods/drafts/batch-004-citrus-berries-stone-fruit/[food-files-only].yaml

@@ -4,7 +4,7 @@ import { Link } from "wouter";
 import {
   ShieldCheck, Users, Star, Sliders,
   Sparkles, BarChart3, FlaskConical, Eye,
-  ChevronRight,
+  ChevronRight, ClipboardList,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -65,6 +65,14 @@ const ADMIN_SECTIONS = [
     description: "Monitor AI capability benchmarks",
     icon: BarChart3,
     href: "/admin/intelligence",
+    status: "active",
+  },
+  {
+    id: "knowledge-review",
+    title: "Knowledge Review",
+    description: "Review unresolved knowledge terms from the resolver",
+    icon: ClipboardList,
+    href: "/admin/knowledge-review",
     status: "active",
   },
 ];

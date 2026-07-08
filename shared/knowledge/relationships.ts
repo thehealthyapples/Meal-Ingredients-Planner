@@ -13,31 +13,31 @@ export const FOOD_NUTRIENTS: Record<string, string[]> = {
   // Healthy fats
   "extra-virgin-olive-oil": ["unsaturated-fats", "polyphenols", "vitamin-e"],
   "avocado": ["unsaturated-fats", "fibre", "potassium", "vitamin-e"],
-  "walnuts": ["omega-3", "unsaturated-fats", "plant-protein", "magnesium"],
-  "almonds": ["vitamin-e", "magnesium", "plant-protein", "unsaturated-fats"],
+  "walnuts": ["omega-3", "unsaturated-fats", "protein", "magnesium"],
+  "almonds": ["vitamin-e", "magnesium", "protein", "unsaturated-fats"],
   "salmon": ["omega-3", "vitamin-d", "vitamin-b12", "selenium"],
   "sardines": ["omega-3", "calcium", "vitamin-d", "vitamin-b12"],
   // Seeds
-  "pumpkin-seeds": ["magnesium", "zinc", "plant-protein", "iron"],
+  "pumpkin-seeds": ["magnesium", "zinc", "protein", "iron"],
   "sunflower-seeds": ["vitamin-e", "selenium", "magnesium", "unsaturated-fats"],
-  "chia-seeds": ["fibre", "omega-3", "calcium", "plant-protein"],
-  "flaxseed": ["omega-3", "fibre", "plant-protein"],
+  "chia-seeds": ["fibre", "omega-3", "calcium", "protein"],
+  "flaxseed": ["omega-3", "fibre", "protein"],
   "sesame-seeds": ["calcium", "copper", "unsaturated-fats"],
-  "hemp-seeds": ["plant-protein", "magnesium", "omega-3"],
+  "hemp-seeds": ["protein", "magnesium", "omega-3"],
   // Legumes
-  "butter-beans": ["fibre", "plant-protein", "potassium", "iron"],
-  "chickpeas": ["fibre", "plant-protein", "folate", "iron"],
-  "red-lentils": ["plant-protein", "fibre", "iron", "folate"],
-  "black-beans": ["fibre", "plant-protein", "anthocyanins", "folate"],
-  "kidney-beans": ["fibre", "plant-protein", "iron"],
-  "edamame": ["plant-protein", "folate", "fibre", "vitamin-k"],
-  "garden-peas": ["fibre", "plant-protein", "vitamin-c", "vitamin-k"],
+  "butter-beans": ["fibre", "protein", "potassium", "iron"],
+  "chickpeas": ["fibre", "protein", "folate", "iron"],
+  "red-lentils": ["protein", "fibre", "iron", "folate"],
+  "black-beans": ["fibre", "protein", "anthocyanins", "folate"],
+  "kidney-beans": ["fibre", "protein", "iron"],
+  "edamame": ["protein", "folate", "fibre", "vitamin-k"],
+  "garden-peas": ["fibre", "protein", "vitamin-c", "vitamin-k"],
   // Fermented foods
   "kimchi": ["live-cultures", "fibre", "vitamin-c"],
   "sauerkraut": ["live-cultures", "fibre", "vitamin-c"],
-  "kefir": ["live-cultures", "calcium", "plant-protein", "vitamin-b12"],
-  "miso": ["live-cultures", "plant-protein"],
-  "tempeh": ["plant-protein", "live-cultures", "magnesium"],
+  "kefir": ["live-cultures", "calcium", "protein", "vitamin-b12"],
+  "miso": ["live-cultures", "protein"],
+  "tempeh": ["protein", "live-cultures", "magnesium"],
   // Herbs
   "parsley": ["vitamin-k", "vitamin-c", "beta-carotene"],
   "basil": ["polyphenols", "vitamin-k"],
@@ -84,7 +84,7 @@ export const FOOD_NUTRIENTS: Record<string, string[]> = {
   "celery": ["vitamin-k", "potassium", "fibre", "folate"],
   "asparagus": ["folate", "vitamin-k", "fibre", "vitamin-c"],
   "artichoke": ["fibre", "folate", "vitamin-c", "magnesium"],
-  "broad-beans": ["plant-protein", "fibre", "folate", "iron"],
+  "broad-beans": ["protein", "fibre", "folate", "iron"],
   "radicchio": ["anthocyanins", "vitamin-k", "fibre", "folate"],
   "chicory": ["fibre", "vitamin-k", "folate", "vitamin-c"],
 
@@ -108,12 +108,12 @@ export const FOOD_NUTRIENTS: Record<string, string[]> = {
   "chard": ["vitamin-k", "vitamin-c", "magnesium", "beta-carotene"],
   "jerusalem-artichoke": ["fibre", "potassium", "iron"],
   // ── WS0.8 — Wave 3: Beans, Pulses and Legumes ──────────────────────────────
-  "cannellini-beans": ["fibre", "plant-protein", "folate", "iron"],
-  "borlotti-beans": ["fibre", "plant-protein", "iron", "folate"],
-  "haricot-beans": ["fibre", "plant-protein", "folate", "iron"],
-  "green-lentils": ["plant-protein", "fibre", "iron", "folate"],
-  "puy-lentils": ["plant-protein", "fibre", "iron", "folate"],
-  "beluga-lentils": ["plant-protein", "fibre", "iron", "anthocyanins"],
+  "cannellini-beans": ["fibre", "protein", "folate", "iron"],
+  "borlotti-beans": ["fibre", "protein", "iron", "folate"],
+  "haricot-beans": ["fibre", "protein", "folate", "iron"],
+  "green-lentils": ["protein", "fibre", "iron", "folate"],
+  "puy-lentils": ["protein", "fibre", "iron", "folate"],
+  "beluga-lentils": ["protein", "fibre", "iron", "anthocyanins"],
   // ── WS0.8 — Wave 4: Fruit ──────────────────────────────────────────────────
   "raspberry": ["fibre", "vitamin-c", "flavonoids", "folate"],
   "pear": ["fibre", "vitamin-c", "flavonoids", "potassium"],
@@ -163,11 +163,11 @@ export const FOOD_NUTRIENTS: Record<string, string[]> = {
   // ── WS0.8 — Wave 6: Nuts and Seeds ─────────────────────────────────────────
   "hazelnuts": ["vitamin-e", "magnesium", "copper", "unsaturated-fats"],
   "cashews": ["magnesium", "copper", "zinc", "unsaturated-fats"],
-  "pistachios": ["vitamin-b6", "potassium", "copper", "plant-protein"],
+  "pistachios": ["vitamin-b6", "potassium", "copper", "protein"],
   "brazil-nuts": ["selenium", "magnesium", "copper", "zinc"],
   "pine-nuts": ["magnesium", "zinc", "vitamin-e", "copper"],
   "pecans": ["unsaturated-fats", "zinc", "copper", "manganese"],
-  "peanuts": ["plant-protein", "magnesium", "vitamin-e", "zinc"],
+  "peanuts": ["protein", "magnesium", "vitamin-e", "zinc"],
   "macadamia": ["unsaturated-fats", "manganese", "copper", "magnesium"],
   // ── WS0.8 — Wave 7: Dairy and Alternatives ─────────────────────────────────
   "milk": ["calcium", "vitamin-d", "vitamin-b12", "iodine"],
@@ -180,9 +180,9 @@ export const FOOD_NUTRIENTS: Record<string, string[]> = {
   "parmesan": ["calcium", "vitamin-b12", "selenium", "zinc"],
   "ricotta": ["calcium", "vitamin-b12", "selenium"],
   "oat-milk": ["fibre", "manganese", "folate"],
-  "soy-milk": ["plant-protein", "calcium", "vitamin-d", "vitamin-b12"],
+  "soy-milk": ["protein", "calcium", "vitamin-d", "vitamin-b12"],
   "almond-milk": ["vitamin-e", "calcium", "vitamin-d"],
-  "tofu": ["plant-protein", "calcium", "iron", "manganese"],
+  "tofu": ["protein", "calcium", "iron", "manganese"],
   // ── WS0.8 — Wave 8: Proteins ────────────────────────────────────────────────
   "eggs": ["vitamin-d", "vitamin-b12", "selenium", "iodine"],
   "chicken": ["selenium", "vitamin-b6", "zinc", "vitamin-b12"],
@@ -201,7 +201,7 @@ export const FOOD_NUTRIENTS: Record<string, string[]> = {
   "oats": ["fibre", "magnesium", "iron", "zinc"],
   "brown-rice": ["fibre", "magnesium", "manganese", "selenium"],
   "white-rice": ["selenium", "folate", "iron"],
-  "quinoa": ["plant-protein", "fibre", "magnesium", "iron"],
+  "quinoa": ["protein", "fibre", "magnesium", "iron"],
   "buckwheat": ["fibre", "magnesium", "manganese", "iron"],
   "barley": ["fibre", "selenium", "magnesium", "iron"],
   "spelt": ["fibre", "magnesium", "iron", "zinc"],
@@ -261,21 +261,21 @@ export const FOOD_NUTRIENTS: Record<string, string[]> = {
   "physalis": ["vitamin-c", "beta-carotene", "polyphenols"],
   // Grains
   "sorghum": ["fibre", "iron", "magnesium"],
-  "amaranth": ["plant-protein", "iron", "magnesium", "calcium"],
+  "amaranth": ["protein", "iron", "magnesium", "calcium"],
   "farro": ["fibre", "iron", "magnesium", "zinc"],
   "semolina": ["fibre", "iron", "folate"],
   "black-rice": ["anthocyanins", "fibre", "iron"],
   "polenta": ["fibre", "iron"],
   "teff": ["iron", "calcium", "fibre", "magnesium"],
   "rice-flour": ["iron", "folate"],
-  "almond-flour": ["vitamin-e", "magnesium", "plant-protein"],
+  "almond-flour": ["vitamin-e", "magnesium", "protein"],
   "coconut-flour": ["fibre", "manganese"],
   "spelt-flour": ["fibre", "magnesium", "iron", "zinc"],
   "barley-flour": ["fibre", "iron", "magnesium"],
   // Legumes
-  "pinto-beans": ["fibre", "plant-protein", "iron", "folate"],
-  "black-eyed-peas": ["fibre", "plant-protein", "folate", "iron"],
-  "chickpea-flour": ["plant-protein", "fibre", "iron", "folate"],
+  "pinto-beans": ["fibre", "protein", "iron", "folate"],
+  "black-eyed-peas": ["fibre", "protein", "folate", "iron"],
+  "chickpea-flour": ["protein", "fibre", "iron", "folate"],
   // Dairy
   "cottage-cheese": ["calcium", "vitamin-b12", "selenium"],
   "cream-cheese": ["calcium", "vitamin-a"],
@@ -291,8 +291,8 @@ export const FOOD_NUTRIENTS: Record<string, string[]> = {
   "mascarpone": ["calcium"],
   "double-cream": ["vitamin-a", "vitamin-d"],
   // Nuts & Seeds
-  "almond-butter": ["vitamin-e", "magnesium", "plant-protein", "unsaturated-fats"],
-  "tahini": ["calcium", "copper", "unsaturated-fats", "plant-protein"],
+  "almond-butter": ["vitamin-e", "magnesium", "protein", "unsaturated-fats"],
+  "tahini": ["calcium", "copper", "unsaturated-fats", "protein"],
   "nigella-seeds": ["iron", "calcium", "polyphenols"],
   // Herbs
   "marjoram": ["polyphenols", "vitamin-k", "iron"],
@@ -308,15 +308,15 @@ export const FOOD_NUTRIENTS: Record<string, string[]> = {
   "rapeseed-oil": ["vitamin-e", "unsaturated-fats", "vitamin-k"],
   "sesame-oil": ["vitamin-e", "polyphenols", "unsaturated-fats"],
   // Fermented
-  "natto": ["vitamin-k", "plant-protein", "fibre", "live-cultures"],
+  "natto": ["vitamin-k", "protein", "fibre", "live-cultures"],
 };
 
 // ── Food → Health benefits it supports ──────────────────────────────────────
 export const FOOD_BENEFITS: Record<string, string[]> = {
   "extra-virgin-olive-oil": ["heart-health", "anti-inflammatory-support", "brain-health"],
   "avocado": ["heart-health", "skin-health", "digestive-comfort"],
-  "walnuts": ["brain-health", "heart-health", "mood-support", "muscle-recovery"], // FI2: plant-protein+magnesium→muscle-recovery
-  "almonds": ["heart-health", "bone-health", "skin-health", "muscle-recovery"], // FI2: plant-protein+magnesium→muscle-recovery
+  "walnuts": ["brain-health", "heart-health", "mood-support", "muscle-recovery"], // FI2: protein+magnesium→muscle-recovery
+  "almonds": ["heart-health", "bone-health", "skin-health", "muscle-recovery"], // FI2: protein+magnesium→muscle-recovery
   "salmon": ["heart-health", "brain-health", "mood-support", "energy-support"], // FI2: vitamin-b12+selenium→energy-support
   "sardines": ["heart-health", "bone-health", "brain-health", "energy-support"], // FI2: vitamin-b12→energy-support
   "pumpkin-seeds": ["sleep-quality", "heart-health", "immune-support", "mood-support"], // FI2: magnesium→mood-support
@@ -348,7 +348,7 @@ export const FOOD_BENEFITS: Record<string, string[]> = {
   "shiitake-mushrooms": ["immune-support", "heart-health"],
   "oyster-mushrooms": ["immune-support", "heart-health"],
   "kale": ["bone-health", "eye-health", "anti-inflammatory-support", "healthy-ageing", "immune-support"], // FI2: vitamin-c→immune-support
-  "spinach": ["eye-health", "energy-support", "bone-health", "muscle-recovery"], // FI2: iron+plant-protein awareness→muscle-recovery
+  "spinach": ["eye-health", "energy-support", "bone-health", "muscle-recovery"], // FI2: iron+protein awareness→muscle-recovery
   "broccoli": ["immune-support", "anti-inflammatory-support", "healthy-ageing", "eye-health"], // FI2: beta-carotene→eye-health
   "tomatoes": ["heart-health", "skin-health", "healthy-ageing"],
   "sweet-potato": ["eye-health", "immune-support", "gut-health"],
@@ -609,7 +609,7 @@ export const FOOD_BENEFITS: Record<string, string[]> = {
 // ── Nutrient → Health benefits it supports ──────────────────────────────────
 export const NUTRIENT_BENEFITS: Record<string, string[]> = {
   "fibre": ["gut-health", "blood-sugar-balance", "digestive-comfort", "heart-health"],
-  "plant-protein": ["muscle-recovery", "energy-support"],
+  "protein": ["muscle-recovery", "energy-support"],
   "unsaturated-fats": ["heart-health", "brain-health"],
   "omega-3": ["heart-health", "brain-health", "mood-support", "anti-inflammatory-support"],
   "magnesium": ["sleep-quality", "muscle-recovery", "bone-health", "mood-support"],
