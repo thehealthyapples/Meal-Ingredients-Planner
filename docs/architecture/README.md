@@ -27,6 +27,7 @@ Anything in this directory is **governing**: required reading before significant
 | THA Intelligence Platform Architecture | [`THA_INTELLIGENCE_PLATFORM_ARCHITECTURE.md`](./THA_INTELLIGENCE_PLATFORM_ARCHITECTURE.md) |
 | THA AI Capability Registry & Intent Taxonomy | [`THA_AI_CAPABILITY_REGISTRY_AND_INTENT_TAXONOMY.md`](./THA_AI_CAPABILITY_REGISTRY_AND_INTENT_TAXONOMY.md) |
 | THA AI Experience & Conversation Architecture | [`THA_AI_EXPERIENCE_AND_CONVERSATION_ARCHITECTURE.md`](./THA_AI_EXPERIENCE_AND_CONVERSATION_ARCHITECTURE.md) |
+| THA Context Composition Engine Architecture | [`THA_CONTEXT_COMPOSITION_ENGINE_ARCHITECTURE.md`](./THA_CONTEXT_COMPOSITION_ENGINE_ARCHITECTURE.md) |
 | THA Intelligence Discovery & Presentation Principle | [`INTELLIGENCE_DISCOVERY_PRESENTATION_PRINCIPLE.md`](./INTELLIGENCE_DISCOVERY_PRESENTATION_PRINCIPLE.md) |
 | THA Companion Card Experience Principle | [`THA_COMPANION_CARD_EXPERIENCE_PRINCIPLE.md`](./THA_COMPANION_CARD_EXPERIENCE_PRINCIPLE.md) |
 
@@ -50,6 +51,8 @@ Anything in this directory is **governing**: required reading before significant
 | Meals / Cookbook | [`capabilities/meals.md`](./capabilities/meals.md) |
 | Plan Templates | [`capabilities/templates.md`](./capabilities/templates.md) |
 | Analyser (Product / UPF) | [`capabilities/analyser.md`](./capabilities/analyser.md) |
+
+> The Context Composition Engine Architecture (INT17, 2026-07-08) is the single owner of every byte the language model reads as grounding. It names the second view every capability owes — the **Context View** (LLM) alongside the **Full Result** (UI / reports) — and is the only component permitted to serialise, truncate, order, or budget the prompt's CONTEXT DATA block. It supersedes the INT16 Context Compaction Layer, which is deleted, not deprecated. Indexed here at creation, rather than left invisible-by-navigation as `INTA1` §4.1 found four other governing documents to be.
 
 > Each document in `docs/architecture/capabilities/` is the **single canonical Capability Card** for that Intelligence capability — governing architecture, required reading before implementing a binding for it. Promoted from the INT11 Capability Cards specification under EPIC 1.5 (2026-06-30). The Developer Capability Registry below indexes these documents (status, executable intents, owner, link) but does not duplicate their content — the full card exists in exactly one place.
 

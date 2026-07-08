@@ -109,6 +109,11 @@ import { deriveFoodIntelligenceExplainFromUplift } from "./capability-compositio
 import type { UpliftMatchResult } from "../../lib/uplift-types.js";
 import { buildHouseholdNutritionEnrichment } from "./household-nutrition-enrichment.js";
 import {
+  composeContext,
+  CAPABILITY_CONTEXT_BUDGET_CHARS,
+  CONTEXT_TOKEN_BUDGET,
+} from "../context/context-composition-engine.js";
+import {
   companionFeedbackStore,
   type ICompanionFeedbackStore,
 } from "./companion-feedback-store.js";
@@ -249,7 +254,21 @@ export function detectWriteIntent(utterance: string): string | null {
 // Capability data querying (via intelligencePlatform only — no direct storage)
 // ---------------------------------------------------------------------------
 
-const CAP_DATA_MAX_CHARS = 1_800;
+/**
+ * INT17 — the gateway no longer decides what the model sees.
+ *
+ * The per-capability character ceiling and the turn's token budget both live with
+ * the Context Composition Engine that spends them (`server/intelligence/context/`).
+ * `CAP_DATA_MAX_CHARS` is retained here, at its unchanged value of 1,800, purely so
+ * the constant this module has always exported keeps its name and meaning.
+ *
+ * What changed is ownership: the gateway used to serialise each capability's result
+ * itself (`JSON.stringify(...).slice(0, 1800)`), which cut mid-object — handing the
+ * model invalid JSON — and, on a priority-sorted payload, silently deleted every
+ * group below the first. It now hands the Full Results to ONE engine and receives
+ * ONE composed, budgeted, deterministic CONTEXT DATA block back.
+ */
+const CAP_DATA_MAX_CHARS = CAPABILITY_CONTEXT_BUDGET_CHARS;
 
 /**
  * The single seam through which the gateway reaches the Intelligence Platform.
@@ -267,7 +286,14 @@ const defaultHandleIntent: HandleIntentFn = (intent, context) =>
 /** The result of querying one resolved intent through the platform (INT35). */
 interface CapabilityQueryResult {
   readonly status: QueriedIntentStatus;
-  /** JSON grounding data, present only for "ok-data". */
+  /**
+   * INT17: the capability's serialised Full Result, present only for "ok-data".
+   *
+   * This is a PRESENCE MARKER and a payload for non-prompt consumers. It is NOT
+   * what the model reads: the prompt's CONTEXT DATA block is composed from
+   * `outcome.result` by the Context Composition Engine, once, for the whole turn.
+   * Nothing here is truncated, because nothing here reaches the LLM.
+   */
   readonly data: string | null;
   /** The platform's honest outcome, when one was produced (not for thrown faults). */
   readonly outcome?: IntentOutcome;
@@ -302,11 +328,10 @@ async function queryCapability(
       if (intent.verb === "search" && isEmptySearchResult(outcome.result)) {
         return { status: "ok-empty", data: null, outcome };
       }
-      const raw = JSON.stringify(outcome.result);
-      const data = raw.length > CAP_DATA_MAX_CHARS
-        ? raw.slice(0, CAP_DATA_MAX_CHARS) + "… [truncated]"
-        : raw;
-      return { status: "ok-data", data, outcome };
+      // INT17: no truncation, no shaping, no decision about the prompt happens here.
+      // `outcome.result` is carried untouched to the Context Composition Engine,
+      // which is the single owner of what the model is shown.
+      return { status: "ok-data", data: JSON.stringify(outcome.result), outcome };
     }
     // Honest structured non-ok from the platform: gap, not_executable,
     // unsupported_intent, unknown_capability, denied, confirmation_required.
@@ -421,14 +446,12 @@ async function buildGroundedResponse(
   // Query each resolved intent through the platform (verb from resolver, not hardcoded).
   // INT35: per-intent outcomes are retained (not collapsed to null) so the turn can be
   // classified into the four canonical unsuccessful states when no data comes back.
-  const capData: Record<string, string> = {};
   const queryResults = new Map<string, CapabilityQueryResult>();
   let queryable = resolvedIntents.filter(ri => !ri.gap);
   await Promise.all(
     queryable.map(async (ri) => {
       const result = await queryCapability(ri, frame.identity, handleIntent);
       queryResults.set(ri.capability, result);
-      if (result.data) capData[ri.capability] = result.data;
     }),
   );
 
@@ -457,7 +480,6 @@ async function buildGroundedResponse(
       };
       const result = await queryCapability(derivedIntent, frame.identity, handleIntent);
       queryResults.set(derivedIntent.capability, result);
-      if (result.data) capData[derivedIntent.capability] = result.data;
       queryable = [...queryable, derivedIntent];
     }
   }
@@ -668,24 +690,40 @@ async function buildGroundedResponse(
     successOutcomes.find((o) => o.capabilityId != null && !o.capabilityId.endsWith("-discovery")) ??
     successOutcomes[0];
 
-  // COMP6: Assemble context sections including enrichments from Knowledge Assembly.
-  // Enrichments are supplementary context (Tiers 2–3 of GOV1 knowledge search),
-  // distinct from direct capability data (Tier 1). The LLM should synthesize them
-  // naturally into the answer rather than listing them separately.
-  const contextSections = Object.entries(capData)
-    .map(([cap, data]) => `### ${cap}\n${data}`)
-    .join("\n\n");
+  // INT17: THE ONE PLACE THE LLM'S GROUNDING CONTEXT IS ASSEMBLED.
+  //
+  // Every capability's Full Result and every COMP6 enrichment item goes to the
+  // Context Composition Engine, which selects against the user's intent, balances
+  // across contributing capabilities, removes duplicate evidence, preserves entity
+  // ids and provenance, respects one token budget, and emits deterministic
+  // structured context. The gateway no longer serialises, truncates, orders or
+  // budgets anything — it hands over Full Results and receives a prompt block.
+  //
+  // Section order is the RESOLVER's order, not `queryResults`' Map insertion order.
+  // That Map is populated inside `Promise.all`, i.e. in capability COMPLETION
+  // order, so the pre-INT17 prompt varied run-to-run for identical inputs.
+  const composition = composeContext({
+    utterance,
+    capabilities: queryable
+      .filter(ri => queryResults.get(ri.capability)?.status === "ok-data")
+      .map(ri => ({
+        capabilityId: ri.capability,
+        verb:         ri.verb,
+        result:       queryResults.get(ri.capability)!.outcome!.result,
+        confidence:   typeof ri.confidence === "number" ? ri.confidence : 0,
+        baseline:     ri.baseline === true,
+      })),
+    enrichment: enrichment.map(e => ({ title: e.title, body: e.body })),
+    tokenBudget: CONTEXT_TOKEN_BUDGET,
+    perCapabilityCharCeiling: CAP_DATA_MAX_CHARS,
+  });
 
-  // Add enrichments as supplementary context when available
-  const enrichmentSection = enrichment.length > 0
-    ? `### Related Context (enrichment)\n${enrichment
-        .map(e => `• ${e.title}: ${e.body}`)
-        .join("\n")}`
-    : null;
+  const fullContextSections = composition.text;
 
-  const fullContextSections = [contextSections, enrichmentSection]
-    .filter(Boolean)
-    .join("\n\n");
+  // The engine emits the reading instructions its own output actually needs, and
+  // nothing more. A turn that withheld nothing, hoisted nothing and de-duplicated
+  // nothing emits no note at all, and reads exactly the prompt it read before.
+  const compactionNote = composition.formatNote ? `\n${composition.formatNote}` : "";
 
   // Bounded conversation history (last 5 prior turns, oldest-first)
   const historyLines = recentHistory
@@ -712,7 +750,7 @@ USING THE CONTEXT WELL (apply within the HARD RULES above — never to override 
 - SYNTHESISE: when more than one CONTEXT DATA section is present, combine them into ONE coherent answer that connects the facts, rather than reciting each section separately. Include "Related Context" naturally in the main answer rather than as a separate list.
 - BE EVIDENCE-FORWARD: ground each specific claim in the concrete values you were given (names, counts, dates, quantities) — surface the actual data the platform retrieved instead of a vague summary.
 - BE COMPLETE: prefer a substantive, self-contained sentence over a one-word or fragment reply, so the answer stands on its own.
-- WEAVE ENRICHMENTS: when "Related Context" is present, weave it into your answer naturally so the user sees a single coherent narrative, not separate ideas.
+- WEAVE ENRICHMENTS: when "Related Context" is present, weave it into your answer naturally so the user sees a single coherent narrative, not separate ideas.${compactionNote}
 
 FOR FOOD CONVERSATIONS:
 When answering about a specific food, follow these principles:
