@@ -1122,6 +1122,90 @@ const PROFILE_MATCHERS: Matcher[] = [
 ];
 
 // ---------------------------------------------------------------------------
+// Food Intelligence (BENCH4) — verb: report (FI4 Food Opportunity Engine)
+//
+// `food-intelligence` is the platform's first Domain Intelligence capability. It has
+// been registered, bound and executable since FI3/FI4 (`recommend`, `explain`,
+// `report` — see bindings/food-intelligence.ts) and NO user utterance could reach it:
+// the resolver emitted the capability zero times, and no HTTP route invokes it. It was
+// the last capability BENCH3 left on the benchmark's "unreachable" list — INTA1 §3.12's
+// "shipped, tested reasoning engine that no user utterance can reach".
+//
+// WHY `report`, AND NOT `recommend`/`explain`.
+// The three executable verbs are not interchangeable; each is defined by the parameters
+// it can honestly be given (handlers/food-intelligence-read-handler.ts):
+//
+//   recommend {scope, slug}            — needs a canonical benefit/nutrient slug
+//   explain   {scope, slug, foodSlug}  — needs that PLUS a specific food
+//   report    {}                       — needs only the caller's own authenticated id
+//
+// Neither target utterance names a benefit or a nutrient. Emitting `recommend` would
+// therefore require the resolver to INVENT a slug — precisely the fabrication BENCH3
+// refused for the analyser (§3.2 there), and precisely what the handler's own honest-gap
+// contract exists to prevent. `report` needs no slug: FI4's Food Opportunity Engine reads
+// the caller's OWN planner, pantry and shopping activity and returns cited, prioritised,
+// deterministic Food Opportunities — "what could you add?" — which is exactly the question
+// both utterances ask. The benchmark's own expectation table agrees: it aliases BOTH
+// `uplift-engine` (ND-059) and `meal-uplift` (CG-087) onto `food-intelligence` explicitly
+// "because Food Intelligence owns opportunity-engine.ts, the uplift/opportunity surfacing
+// engine" (server/tests/benchmark/expectations.ts).
+//
+// SAFETY — the two invariants these matchers must not break:
+//
+//  1. READ-ONLY. `report` is in READ_ONLY_VERBS (permissions.ts), so `confirmationFor()`
+//     returns "none" and no confirmation round-trip is skipped. food-intelligence is
+//     `capabilityClass: "read-only"` with NO write path (Rule FI1). INTA1 §8.1's standing
+//     constraint — that `detectWriteIntent`'s advisory-frame escape hatch ("can I ADD…",
+//     ND-059) is safe only while no WRITE verb is resolver-reachable — therefore still
+//     holds unchanged. This is the reason `report` is safe where `add` would not be.
+//
+//  2. ONE DELIVERY PATH. `opportunity-delivery` (OD1) sits ABOVE this producer and adds
+//     duplicate-delivery prevention over the same `food-intelligence · report` output
+//     (opportunity-delivery/framework.ts header). It has no resolver matcher, so exactly
+//     one path to those opportunities exists today: this one. If a future workstream ever
+//     adds OPPORTUNITY_DELIVERY_MATCHERS, these two matchers MUST be revisited so the two
+//     never co-fire on one turn — that is the "double delivery path" INT42's
+//     test-intelligence-capability-composition.ts §2 warns against, and it is not reopened
+//     here because no opportunity-delivery intent is emitted.
+//
+// Both matchers are deliberately narrow (an uplift NOUN, or an explicit "make X healthier"
+// frame) so they cannot poach a neighbouring capability's questions. In particular PL-028
+// ("Where can I add more vegetables … this week?") names no uplift noun and keeps its
+// planner route untouched.
+// ---------------------------------------------------------------------------
+
+function foodOpportunityReport(confidence: number): ResolvedIntent {
+  return {
+    capability: "food-intelligence",
+    verb: "report",
+    parameters: {},
+    confidence,
+  };
+}
+
+const FOOD_INTELLIGENCE_MATCHERS: Matcher[] = [
+  // BENCH4 (ND-059): "what simple nutrition boosts can I add this week?"
+  // Requires an uplift NOUN (boost/uplift/upgrade/win) qualified by nutrition, or the
+  // verb form "boost my nutrition". A bare "add more vegetables" (PL-028) carries no
+  // uplift noun and is left to the planner, whose week scan is what that question means.
+  (u) => {
+    const upliftNoun =
+      /\b(?:nutrition(?:al)?|nutrient|health(?:y|ier)?)\s+(?:boosts?|uplifts?|upgrades?|improvements?|wins?)\b/i.test(u);
+    const upliftVerb = /\bboost\s+(?:the\s+|my\s+|our\s+)?(?:nutrition|nutrients?|goodness)\b/i.test(u);
+    if (!upliftNoun && !upliftVerb) return null;
+    return foodOpportunityReport(0.88);
+  },
+
+  // BENCH4 (CG-087): "help me make this meal healthier without making it boring."
+  // Demonstrative/possessive-anchored so a general food-knowledge question ("is white
+  // bread always bad?", FK-080) cannot acquire an uplift route from the word "healthier".
+  (u) => {
+    if (!/\bmak(?:e|ing)\s+(?:this|that|the|my|our|it)\s+(?:meal|dish|recipe|dinner|lunch|breakfast|supper)?\s*(?:healthier|more\s+nutritious|more\s+balanced)\b/i.test(u)) return null;
+    return foodOpportunityReport(0.87);
+  },
+];
+
+// ---------------------------------------------------------------------------
 // Meal Discovery (INT26) — cross-source recipe discovery
 // Routes to "meal-discovery" so the engine can fan out across personal library,
 // THA system meals, meal templates, and (Phase 2) external sources in one pass.
@@ -1665,6 +1749,7 @@ const ALL_SPECIFIC_MATCHERS: Matcher[] = [
   ...DIARY_MATCHERS,
   ...HOUSEHOLD_MATCHERS,
   ...PROFILE_MATCHERS,                     // BENCH3: first utterance-derived route to profile
+  ...FOOD_INTELLIGENCE_MATCHERS,           // BENCH4: first utterance-derived route to food-intelligence
   ...MEAL_DISCOVERY_MATCHERS,
   ...MEALS_MATCHERS,
   ...TEMPLATES_MATCHERS,
