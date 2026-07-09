@@ -113,6 +113,12 @@ export interface TimelineTurn {
   intentConfidence: number | null;
   capabilities: { capability: string; verb: string | null; outcome: string | null; durationMs: number | null }[];
   contextViews: string[];
+  /** NCV1 — false for turns recorded before the rollout, whose views carry no classification. */
+  contextViewsClassified: boolean;
+  /** Views the payload's owner declared in the Context View registry. Empty when unclassified. */
+  nativeContextViews: string[];
+  /** Views the engine derived generically from the payload's structure. Empty when unclassified. */
+  genericContextViews: string[];
   knowledgeSources: string[];
   /** The behaviour (personality voice) that phrased this turn, when recorded. */
   behaviour: string | null;
@@ -364,6 +370,14 @@ function buildTurn(group: TurnGroup): TimelineTurn {
   const contextViews = Array.from(new Set(composition.flatMap((r) => metaStrings(r, "views"))));
   const knowledgeSources = Array.from(new Set(retrievals.flatMap((r) => metaStrings(r, "sources"))));
 
+  // NCV1 — which of this turn's Context Views the payload's owner declared, and which
+  // the engine derived generically. A turn recorded before NCV1 classified neither, so
+  // both lists are empty while `contextViews` is not: absent, never reconstructed —
+  // the same discipline OBS2 applies to a pre-OBS2 turn's behaviour decision.
+  const contextViewsClassified = composition.some((r) => Array.isArray(meta(r).nativeViews));
+  const nativeContextViews = Array.from(new Set(composition.flatMap((r) => metaStrings(r, "nativeViews"))));
+  const genericContextViews = Array.from(new Set(composition.flatMap((r) => metaStrings(r, "genericViews"))));
+
   const attention = rows.some(
     (r) =>
       r.severity === "error" ||
@@ -396,6 +410,9 @@ function buildTurn(group: TurnGroup): TimelineTurn {
         durationMs: r.durationMs,
       })),
     contextViews,
+    contextViewsClassified,
+    nativeContextViews,
+    genericContextViews,
     knowledgeSources,
     behaviour,
     behaviourDecision,

@@ -138,12 +138,53 @@ export interface ContextViewSpec {
 }
 
 /**
- * Keyed `${capabilityId}:${verb}`.
+ * Keyed `${capabilityId}:${verb}`. **The single canonical owner of every Context
+ * View in THA.** Nothing else — no capability, no handler, no gateway, no
+ * Workbench — may define, override, or shadow a view registered here.
  *
  * A spec is a *statement about redundancy and constraint in a known payload
  * shape*. It is not a business rule: it cannot add a fact, reorder a
  * capability's ranking, or change what any field means. Each entry is justified
  * against the module that owns the payload.
+ *
+ * THREE THINGS A SPEC MAY SAY, AND NOTHING ELSE
+ * ---------------------------------------------
+ *   `pinned`      — this path is a CONSTRAINT: emit it always, even empty, even
+ *                   at a starvation budget. Reserved for facts whose absence
+ *                   lets the model state a falsehood (a dietary restriction; an
+ *                   owner's own "this total is not an estimate" caveat).
+ *   `collections[].groupBy`
+ *                 — this field is the collection's BALANCE DIMENSION (a kind),
+ *                   never its ranking. Declared only where the generic
+ *                   `pickGroupField` cannot see it and every item carries it.
+ *   `collections[].keep`
+ *                 — this is the field ALLOWLIST for one collection's ROWS. Its
+ *                   second, quieter job is a safety property the generic path
+ *                   cannot offer: a field added to a row type tomorrow cannot
+ *                   silently reach the language model. Verified: adding `email`
+ *                   to `HouseholdMemberView` reaches the model under the generic
+ *                   derivation and does not under the native view.
+ *
+ *                   It bounds ROWS ONLY. A new TOP-LEVEL scalar on a Full Result
+ *                   still flows to the engine as a leaf and still competes for
+ *                   budget — `keep` cannot see it. What keeps a join secret out
+ *                   of the prompt is the handler's own projection (`household`'s
+ *                   Capability Card excludes `inviteCode` at the source), not
+ *                   this registry. Do not mistake `keep` for a redaction layer.
+ *
+ * A `keep` list is the UNION across the verb's scopes. `deriveContextView` skips
+ * a collection whose key is absent and a field whose value is empty, so one
+ * entry serves every scope a verb can return without a scope-keyed registry
+ * (`meals:read` alone returns three different top-level shapes).
+ *
+ * NOT PINNING IS A DECISION TOO. `pinned` makes `SectionBuilder.rankedScalars()`
+ * drop every zero-relevance leaf — a capability that has declared its core is
+ * taken at its word. A spec that pins nothing therefore behaves, for scalars,
+ * exactly as the generic path did: everything competes and the budget alone
+ * decides. That is the conservative default, and it is why only `profile`,
+ * `shopping` (basket) and `household` (dietary-context) pin anything.
+ *
+ * -- INT17 ------------------------------------------------------------------
  *
  * `profile:read` — the largest single consumer of prompt budget in the platform.
  *    Measured over the 100-question benchmark corpus: `profile:read` is injected
@@ -168,6 +209,134 @@ export interface ContextViewSpec {
  *    `evidence[].detail` is IDENTICAL across all seven `planner-empty-day` items
  *    in the real payload; the engine's duplicate removal hoists it once rather
  *    than paying for it seven times.
+ *
+ * -- NCV1 -------------------------------------------------------------------
+ *
+ * `meals:read` — `meals-read-handler.ts`. Three shapes behind one verb:
+ *    `scope=list` → `meals[MealView]`, `scope=summary` → `meals[MealSummaryView]`,
+ *    `scope=detail` → `meal{}` + `items[MealItemView]`. `keep` is their union.
+ *
+ *    `groupBy: "mealSourceType"` is the whole point. The generic path picks
+ *    `kind` (first match in `GENERIC_GROUP_FIELDS`), whose values are `meal` and
+ *    `drink` — a distinction no meal-quality question asks about. `mealSourceType`
+ *    (scratch / ready meal / …) is the kind CB-017 ("least processed or most
+ *    whole-food based?") and CB-022 ("which meals need better ingredient or
+ *    nutrition data?") actually ask about, and it seats one meal per source type
+ *    before any source type takes a second.
+ *
+ *    Measured on the INT19 §4 P2 payload: the two ready-meal rows that answer
+ *    CB-022 (ids 2151, 2139, both `ingredientCount: 0`) sit late in a payload
+ *    whose leading rows are all `scratch`. Under `kind` they are ordinary members
+ *    of the `meal` group and no lexical token reaches them, so neither is ever
+ *    seated. Under `mealSourceType`, `2151` is the `ready_meal` group's own
+ *    representative and enters the guaranteed core — including on the crowded
+ *    turn where `nutrition-knowledge:read scope=foods` co-resides. Relevance is
+ *    not what fixes this and could not be: the engine may never displace a
+ *    capability's own top item (§4.1). Naming the right balance dimension is.
+ *
+ *    Dropped, and why each is lossless: `userId` (the caller's own id, repeated
+ *    on every row), `categoryId` (an opaque foreign key — no category NAME reaches
+ *    the model, so it cannot be resolved or cited), `sourceUrl` (not an entity
+ *    reference and never cited), `isFreezerEligible` (no question in the corpus
+ *    reads it). `imageUrl` and `createdAt` were already dropped by `NOISE_FIELDS`.
+ *    `ingredients` and `instructions` are KEPT: `scope=list` and `scope=detail`
+ *    carry them and CB-018 ("which meals include salmon?") is answerable only
+ *    from them.
+ *
+ * `meals:search` — `MealSearchView` (a deliberately lightweight projection: no
+ *    ingredients, no instructions). It has no `mealSourceType`, so `groupBy` is
+ *    omitted and the generic detector picks `kind` — which is the correct balance
+ *    dimension for this shape. `keep` drops nothing; the spec exists so the search
+ *    projection is an allowlist rather than an inference.
+ *
+ * `planner:read` — `planner-read-handler.ts`. `scope=week` → `days[PlannerDayView]`,
+ *    each day carrying its own `meals[PlannerMealView]`; `scope=day` → `meals[]`.
+ *
+ *    `groupBy: "dayOfWeek"` makes the balance guarantee say the true thing about a
+ *    week. Generically, `days` matches no field in `GENERIC_GROUP_FIELDS`, so the
+ *    whole week is ONE group: round 0 seats a single day and the remaining six are
+ *    DISCRETIONARY — they survive only if the token budget has room after every
+ *    co-resident capability has taken its core. "What meals are missing from my
+ *    plan?" (PL-025) and "Have I repeated too many meals this week?" (PL-027) are
+ *    unanswerable from one day.
+ *
+ *    Measured, planner co-resident with `nutrition-knowledge:read scope=foods`,
+ *    days reaching the model as the token budget varies:
+ *
+ *        budget   100  200  300  400  600  900
+ *        native     7    7    7    7    7    7
+ *        generic    1    1    1    2    5    7
+ *
+ *    Seven groups of one day each put the whole week in the guaranteed core,
+ *    bounded — as ever — only by the unchanged 1,800-char section ceiling. The
+ *    `_context` it emits improves with it: `{"found":7,"groups":{"0":1,…,"6":1}}`
+ *    names every day of the week, where the generic view could say only `found: 7`.
+ *
+ *    `dayOfWeek` is a calendar coordinate, not a ranking: grouping by it reorders
+ *    nothing and the days are emitted in the capability's own payload order.
+ *
+ * `shopping:read` — `shopping-read-handler.ts`. `scope=list` → `items` + `extras`,
+ *    `scope=unresolved` → `items` (with two extra review fields), `scope=basket` →
+ *    `pricedItems` + `unpricedItems`.
+ *
+ *    NO `groupBy` is declared. `category` is nullable on `ShoppingItemView`, and a
+ *    declared `groupBy` over a nullable field labels the null rows `"all"` — a group
+ *    name that reads to the model like "everything". The generic detector already
+ *    picks `category` when every row has one and declines when they do not, which
+ *    is exactly the honest behaviour. Declaring it would only make the mixed case
+ *    worse.
+ *
+ *    The pins are `scope=basket`'s and exist for one measured reason.
+ *    `totalMatchedPrice` is a sum of prices the Shopping owner already stored;
+ *    `note` is the owner's own statement that it estimates nothing, may span
+ *    stores, and excludes the unpriced and unresolved items counted beside it.
+ *
+ *    On a realistic four-capability turn at the production budget (`shopping` +
+ *    `pantry` + `food-intelligence` + a baseline `profile`), the generic view emits
+ *    the priced ROWS — `[2.50]` — and drops `totalMatchedPrice`, `currency`, `note`
+ *    and all three counts. A model shown prices and no total must either decline or
+ *    add them up itself, and it is told nothing about the six unpriced and five
+ *    unresolved items excluded from the figure it would produce. Under the native
+ *    view all six survive at every budget, down to a starvation budget of 1 token.
+ *
+ *    Generic retention of `note` is worse than absent — it is an accident. Measured
+ *    in isolation at 260 tokens, `note` alone survives, and only because its text
+ *    contains the word "Shopping", which the utterance also contained: a lexical
+ *    coincidence scoring it 2 while every other scalar scores 0. An honesty caveat
+ *    that reaches the model when the question happens to rhyme with it is not a
+ *    caveat. That is what a pin is for (§4.8), and it is why `currency` and the
+ *    three counts are pinned beside it rather than left to compete.
+ *
+ *    None of these paths exist in `scope=list` or `scope=unresolved`, so those
+ *    scopes pin nothing and compose exactly as they did generically.
+ *
+ * `household:read` — `household-read-handler.ts`. `scope=household` →
+ *    `members[HouseholdMemberView]`, `scope=dietary-context` → `members[]` (a
+ *    DIFFERENT shape, from `storage.ts`'s `HouseholdDietaryContext`) + `aggregated{}`,
+ *    `scope=eaters` → `eaters[HouseholdEaterView]`. `keep` is the union over both
+ *    `members` shapes.
+ *
+ *    The three `aggregated.*` pins are the household's hard dietary constraints —
+ *    the same class of fact as `profile.dietRestrictions`, governed by HARD RULE 2
+ *    and the benchmark's G2 gate, and emitted even when empty because "none are
+ *    recorded" and "not recorded" are different facts. They resolve only under
+ *    `scope=dietary-context`; under the other two scopes this spec pins nothing.
+ *
+ *    Measured, `dietary-context` injected as a baseline read on a busy turn
+ *    (`meals` + `food-intelligence`, production budget), household restrictions
+ *    `["Gluten","Peanut"]`: the generic view emits neither `unionRestrictions` nor
+ *    `unionExclusions` — outbid, being zero-relevance scalars on a dinner question —
+ *    and the only restriction reaching the model is `Gluten`, surviving incidentally
+ *    inside the one member row the balance guarantee happened to seat. `Peanut` does
+ *    not reach the model at all. A household hard restriction that a token budget can
+ *    outbid is a restriction the Companion cannot honour; the pins end that.
+ *
+ *    No `groupBy`: households are small, and declaring one would replace the
+ *    single-group `Infinity` item cap with `GROUP_ITEM_CAP`, silently bounding how
+ *    many members a large household may show. `eaters` is auto-detected on `kind`
+ *    (`user` / `child`) by the generic detector already. `keep` drops no field the
+ *    handler surfaces today; it is the row allowlist that keeps the next one from
+ *    reaching the prompt unreviewed.
  */
 export const CONTEXT_VIEW_SPECS: Readonly<Record<string, ContextViewSpec>> = {
   "profile:read": {
@@ -190,7 +359,103 @@ export const CONTEXT_VIEW_SPECS: Readonly<Record<string, ContextViewSpec>> = {
       },
     ],
   },
+  "meals:read": {
+    collections: [
+      {
+        name: "meals",
+        groupBy: "mealSourceType",
+        keep: [
+          "id", "name", "mealSourceType", "isReadyMeal", "isSystemMeal", "kind",
+          "mealFormat", "audience", "dietTypes", "ingredientCount", "servings",
+          "isDrink", "drinkType", "ingredients", "instructions",
+        ],
+      },
+      // `scope=detail` only. `meal` itself is a plain object and flows to the
+      // engine as scalars, ranked against the utterance like any other leaf.
+      { name: "items", groupBy: "type", keep: ["id", "type", "referenceId", "name", "quantity"] },
+    ],
+  },
+  "meals:search": {
+    collections: [
+      {
+        name: "meals",
+        keep: ["id", "name", "kind", "mealFormat", "dietTypes", "servings", "isSystemMeal"],
+      },
+    ],
+  },
+  "planner:read": {
+    collections: [
+      { name: "days", groupBy: "dayOfWeek", keep: ["dayId", "dayOfWeek", "meals"] },
+      // `scope=day` only.
+      { name: "meals", groupBy: "mealType", keep: ["entryId", "mealId", "mealName", "mealType", "audience", "isDrink"] },
+    ],
+  },
+  "shopping:read": {
+    pinned: [
+      "matchedItemCount",
+      "pricedItemCount",
+      "unresolvedItemCount",
+      "totalMatchedPrice",
+      "currency",
+      "note",
+    ],
+    collections: [
+      {
+        name: "items",
+        keep: [
+          "id", "name", "quantity", "unit", "category", "checked",
+          "resolutionState", "shopStatus", "needsReview", "reviewReason",
+          "hasMatch", "matchedStore", "matchedPrice", "confidenceLevel", "confidenceReason",
+        ],
+      },
+      { name: "extras", keep: ["id", "name", "category", "alwaysAdd", "inBasket"] },
+      { name: "pricedItems", keep: ["id", "name", "matchedStore", "matchedPrice"] },
+      { name: "unpricedItems", keep: ["id", "name"] },
+    ],
+  },
+  "household:read": {
+    pinned: [
+      "aggregated.unionDietTypes",
+      "aggregated.unionRestrictions",
+      "aggregated.unionExclusions",
+    ],
+    collections: [
+      {
+        name: "members",
+        keep: [
+          "userId", "displayName", "role", "status",
+          "dietTypes", "dietRestrictions", "excludedIngredients",
+        ],
+      },
+      { name: "eaters", keep: ["id", "displayName", "kind", "userId", "defaultDietTypes", "hardRestrictions"] },
+    ],
+  },
 };
+
+/**
+ * The registered Context View keys, `${capabilityId}:${verb}`, sorted.
+ *
+ * The registry is the canonical owner of Context Views, so it — and only it —
+ * answers the question "is this view native?". The Observation Engine's capture
+ * point (`conversation-gateway.ts`) asks; nothing else may keep its own list.
+ */
+export const NATIVE_CONTEXT_VIEW_KEYS: readonly string[] =
+  Object.keys(CONTEXT_VIEW_SPECS).sort();
+
+/**
+ * Does this `(capability, verb)` have a **native** Context View — one the payload's
+ * owner has declared — rather than a generic derivation over its natural structure?
+ *
+ * TELEMETRY ONLY. The Context Composition Engine never calls this and never branches
+ * on it: a spec-derived view and a generically-derived view are the same `ContextView`
+ * and the engine cannot tell them apart (INT17 §2.1). That indistinguishability is what
+ * makes the eventual migration to capability-owned `contextView()` a pure move, and it
+ * is deliberately preserved here — the fact is read at the *capture point*, to be
+ * recorded, never inside composition, to be acted on.
+ */
+export function hasNativeContextView(capabilityId: string, verb: string): boolean {
+  return `${capabilityId}:${verb}` in CONTEXT_VIEW_SPECS;
+}
 
 // ---------------------------------------------------------------------------
 // Generic structural conventions (shape, never meaning)

@@ -95,6 +95,12 @@ interface IntentsResponse {
 interface ContextViewRow {
   contextView: string; count: number;
   averageCompositionMs?: number | null; budgetExceededCount?: number;
+  /** NCV1 — composed from a `ContextViewSpec` its owning capability declared. */
+  nativeCount?: number;
+  /** NCV1 — derived by the engine from the payload's structure. */
+  genericCount?: number;
+  /** NCV1 — recorded before the rollout, so classified neither way. */
+  unknownCount?: number;
 }
 interface ContextResponse {
   windowDays?: number;
@@ -102,6 +108,8 @@ interface ContextResponse {
   averageCompositionMs?: number | null;
   budgetExceededCount?: number;
   missingContextCount?: number;
+  /** NCV1 — compositions that classified their views. The rest predate the rollout. */
+  classifiedCompositionCount?: number;
   views?: ContextViewRow[];
 }
 
@@ -585,7 +593,12 @@ function ContextTab({ days }: { days: number }) {
       <Card data-testid="card-context-views">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm">Context views</CardTitle>
-          <CardDescription className="text-xs">Compositions by context view over the window.</CardDescription>
+          <CardDescription className="text-xs">
+            Compositions by context view over the window. <strong>Native</strong> views are declared by the
+            capability that owns the payload; <strong>generic</strong> views are derived by the engine from the
+            payload's structure. Turns recorded before the NCV1 rollout classified neither and are shown as
+            not recorded, never as generic.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {views.length === 0 ? (
@@ -596,6 +609,7 @@ function ContextTab({ days }: { days: number }) {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Context view</TableHead>
+                    <TableHead>Composed by</TableHead>
                     <TableHead className="text-right">Compositions</TableHead>
                     <TableHead className="text-right">Avg composition</TableHead>
                     <TableHead className="text-right">Budget exceeded</TableHead>
@@ -605,6 +619,19 @@ function ContextTab({ days }: { days: number }) {
                   {views.map((v) => (
                     <TableRow key={v.contextView} data-testid={`row-context-view-${v.contextView}`}>
                       <TableCell className="font-medium">{v.contextView}</TableCell>
+                      {/* NCV1 — a view is native (its capability declared it), generic (the
+                          engine derived it), or unknown (recorded before the rollout). A row
+                          that classified nothing is shown as unknown, never as generic. */}
+                      <TableCell data-testid={`context-view-origin-${v.contextView}`}>
+                        <span className="inline-flex flex-wrap gap-1">
+                          {(v.nativeCount ?? 0) > 0 && <Badge variant="secondary">native × {fmtInt(v.nativeCount)}</Badge>}
+                          {(v.genericCount ?? 0) > 0 && <Badge variant="outline">generic × {fmtInt(v.genericCount)}</Badge>}
+                          {(v.unknownCount ?? 0) > 0 && (
+                            <Badge variant="outline" className="text-muted-foreground">not recorded × {fmtInt(v.unknownCount)}</Badge>
+                          )}
+                          {(v.nativeCount ?? 0) + (v.genericCount ?? 0) + (v.unknownCount ?? 0) === 0 && DASH}
+                        </span>
+                      </TableCell>
                       <TableCell className="text-right tabular-nums">{fmtInt(v.count)}</TableCell>
                       <TableCell className="text-right tabular-nums">{fmtMs(v.averageCompositionMs)}</TableCell>
                       <TableCell className="text-right tabular-nums" style={(v.budgetExceededCount ?? 0) > 0 ? { color: C_WARN } : undefined}>

@@ -78,6 +78,9 @@ interface TimelineTurn {
   intent?: string | null; intentOutcome?: string | null; intentConfidence?: number | null;
   capabilities?: { capability: string; verb?: string | null; outcome?: string | null; durationMs?: number | null }[];
   contextViews?: string[]; knowledgeSources?: string[];
+  /** NCV1 — false for turns recorded before the rollout, which classified no view. */
+  contextViewsClassified?: boolean;
+  nativeContextViews?: string[]; genericContextViews?: string[];
   behaviour?: string | null;
   behaviourDecision?: TimelineBehaviourDecision | null;
   responseGeneration?: { outcome?: string | null; durationMs?: number | null; model?: string | null } | null;
@@ -184,6 +187,43 @@ function fmtDate(x: string | null | undefined): string {
 }
 function fmtList(xs: string[] | undefined): string {
   return xs && xs.length > 0 ? xs.join(", ") : DASH;
+}
+
+/**
+ * NCV1 — the Context Views this turn composed, and who shaped each one.
+ *
+ * A **native** view was declared by the capability that owns the payload; a
+ * **generic** view was derived by the engine from the payload's structure. A turn
+ * recorded before NCV1 classified neither, and says so — it is never displayed as
+ * if every view had been generic, which is the same honesty rule OBS2 applies to a
+ * pre-BEH1 turn's behaviour decision.
+ */
+function ContextViewsComposed({ turn }: { turn: TimelineTurn }): JSX.Element {
+  const views = turn.contextViews ?? [];
+  if (views.length === 0) return <>{DASH}</>;
+
+  if (turn.contextViewsClassified !== true) {
+    return (
+      <span className="inline-flex flex-wrap items-center gap-1">
+        {views.map((v) => <Badge key={v} variant="outline">{v}</Badge>)}
+        <span className="text-xs text-muted-foreground">· native/generic not recorded (pre-NCV1)</span>
+      </span>
+    );
+  }
+
+  const native = new Set(turn.nativeContextViews ?? []);
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1" data-testid="turn-context-views">
+      {views.map((v) => (
+        <Badge key={v} variant={native.has(v) ? "secondary" : "outline"} data-testid={`context-view-${v}`}>
+          {v}
+          <span className="ml-1 text-[10px] uppercase tracking-wide opacity-70">
+            {native.has(v) ? "native" : "generic"}
+          </span>
+        </Badge>
+      ))}
+    </span>
+  );
 }
 
 function severityColor(e: TimelineEvent): string {
@@ -465,7 +505,7 @@ function TurnCard({ turn, index }: { turn: TimelineTurn; index: number }) {
               </span>
             )}
           </TurnField>
-          <TurnField label="Context views composed">{fmtList(turn.contextViews)}</TurnField>
+          <TurnField label="Context views composed"><ContextViewsComposed turn={turn} /></TurnField>
           <TurnField label="Knowledge sources consulted">{fmtList(turn.knowledgeSources)}</TurnField>
           <TurnField label="Behaviour selected" testId={`turn-${turnKey}-behaviour`}>
             {turn.behaviourDecision?.personalityName ?? turn.behaviour ?? DASH}

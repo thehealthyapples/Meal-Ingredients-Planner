@@ -187,6 +187,11 @@ async function main(): Promise<void> {
     assert(clean.capabilities.length === 1 && clean.capabilities[0].capability === "planner"
       && clean.capabilities[0].outcome === "ok", "capability selected with outcome");
     assert(clean.contextViews.join(",") === "planner:read,profile:read", "context views composed");
+    // NCV1 — this fixture's composition row predates the rollout: it named its views
+    // but classified none. The timeline says so rather than reporting them generic.
+    assert(clean.contextViewsClassified === false, "a pre-NCV1 turn is marked unclassified");
+    assert(clean.nativeContextViews.length === 0 && clean.genericContextViews.length === 0,
+      "…and its views are neither native nor generic — absent, never reconstructed");
     assert(clean.knowledgeSources.join(",") === "planner,profile", "knowledge sources consulted");
     assert(clean.behaviour === "companion", "behaviour (personality) selected");
     assert(clean.responseGeneration?.outcome === "ok" && clean.responseGeneration?.model === "gpt-test",
@@ -212,6 +217,32 @@ async function main(): Promise<void> {
     assert(fallback.behaviour === "coach", "behaviour read from the recovery voice on fallback turns");
     assert(fallback.responseGeneration === null, "no generation stage is an honest null");
     assert(fallback.attention === true, "clarification/recovery turn demands attention");
+
+    // NCV1 — a turn recorded after the rollout classifies every view it composed,
+    // so the timeline can show WHICH capability declared its own Context View and
+    // which the engine had to derive from the payload's structure.
+    const ncv1Rows = [
+      row({ kind: "intent-resolution", atMs: 0, sessionId: "s5", intent: "meals:read", confidence: 0.9,
+            outcome: "resolved", metadata: { turnId: "11" } }),
+      row({ kind: "context-composition", atMs: 30, sessionId: "s5", outcome: "ok", durationMs: 6,
+            metadata: {
+              turnId: "11",
+              views: ["meals:read", "pantry:read", "profile:read"],
+              nativeViews: ["meals:read", "profile:read"],
+              genericViews: ["pantry:read"],
+              budgetExceeded: false,
+            } }),
+    ];
+    const ncv1 = buildExecutionTimeline(ncv1Rows, "s5").turns[0];
+    assert(ncv1.contextViewsClassified === true, "a post-NCV1 turn is marked classified");
+    assert(ncv1.nativeContextViews.join(",") === "meals:read,profile:read",
+      "…naming the Context Views their capability declared");
+    assert(ncv1.genericContextViews.join(",") === "pantry:read",
+      "…and the ones the engine derived generically");
+    assert(
+      ncv1.contextViews.length === ncv1.nativeContextViews.length + ncv1.genericContextViews.length,
+      "…which together account for every view the turn composed",
+    );
   }
 
   // ── §5 timings ────────────────────────────────────────────────────────────

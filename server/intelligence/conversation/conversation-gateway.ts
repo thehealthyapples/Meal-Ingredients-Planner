@@ -117,6 +117,7 @@ import {
   CAPABILITY_CONTEXT_BUDGET_CHARS,
   CONTEXT_TOKEN_BUDGET,
 } from "../context/context-composition-engine.js";
+import { hasNativeContextView } from "../context/context-view.js";
 import {
   companionFeedbackStore,
   type ICompanionFeedbackStore,
@@ -903,6 +904,19 @@ async function buildGroundedResponse(
 
   // OBS1: observe the composition — the engine's own metrics, verbatim, plus
   // wall time. The Context Views used are the `${capabilityId}:${verb}` keys.
+  //
+  // NCV1: and which of them were NATIVE — declared by the payload's owner in the
+  // Context View registry — rather than derived generically from the payload's
+  // natural structure. The engine cannot tell the two apart (INT17 §2.1) and must
+  // not: the question is asked HERE, at the capture point, of the registry that
+  // owns the answer, and the result is telemetry that nothing reads back.
+  //
+  // `views` stays a plain string list, unchanged, because every operator surface
+  // and every stored row already speaks it. `nativeViews` is a subset of it.
+  const composedViews = composition.metrics.perCapability.map((pc) => ({
+    key: `${pc.capabilityId}:${pc.verb}`,
+    native: hasNativeContextView(pc.capabilityId, pc.verb),
+  }));
   recordObservation({
     kind: "context-composition",
     severity: "info",
@@ -915,7 +929,9 @@ async function buildGroundedResponse(
       sections: composition.metrics.sections,
       capabilitiesContributing: composition.metrics.capabilitiesContributing,
       capabilitiesRepresented: composition.metrics.capabilitiesRepresented,
-      views: composition.metrics.perCapability.map((pc) => `${pc.capabilityId}:${pc.verb}`),
+      views: composedViews.map((v) => v.key),
+      nativeViews: composedViews.filter((v) => v.native).map((v) => v.key),
+      genericViews: composedViews.filter((v) => !v.native).map((v) => v.key),
     },
     ...obs,
   });

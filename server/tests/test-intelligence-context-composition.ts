@@ -1,10 +1,17 @@
 /**
- * test-intelligence-context-composition.ts — INT17
- * =================================================
+ * test-intelligence-context-composition.ts — INT17 + NCV1
+ * ========================================================
  * Tests for the Context Composition Engine — the single owner of every byte the
  * language model reads as grounding (`server/intelligence/context/`).
  *
  * No database, no OpenAI API, no network. Pure functions in, strings out.
+ *
+ * §13's A/B is exact and worth stating once: a `ContextViewSpec` is keyed
+ * `${capabilityId}:${verb}`, so composing an identical Full Result under an
+ * UNREGISTERED capability id exercises the generic derivation and changes nothing
+ * else. Every "native vs generic" claim below is that comparison, not a snapshot of
+ * a previous commit — which is only sound because the engine cannot tell the two
+ * apart (INT17 §2.1), the property §13(b) asserts directly.
  *
  * Coverage:
  *   §1  Determinism — same inputs, byte-identical output, always
@@ -19,6 +26,8 @@
  *   §10 Pinned constraints — always emitted, even empty, even at a starvation budget
  *   §11 The format note — emitted only when it says something true about this turn
  *   §12 Degenerate inputs — never throws
+ *   §13 NCV1 — native Context Views: one canonical owner, scope polymorphism, and
+ *       the measured effect of each spec against the generic derivation it replaces
  *
  * Run: npx tsx server/tests/test-intelligence-context-composition.ts
  */
@@ -30,12 +39,19 @@ import {
   CHARS_PER_TOKEN,
   type CompositionCapability,
 } from "../intelligence/context/context-composition-engine.js";
-import { deriveContextView } from "../intelligence/context/context-view.js";
+import {
+  deriveContextView,
+  hasNativeContextView,
+  CONTEXT_VIEW_SPECS,
+  NATIVE_CONTEXT_VIEW_KEYS,
+} from "../intelligence/context/context-view.js";
 import {
   capabilityRelevance,
   contentTokens,
   fieldRelevance,
 } from "../intelligence/context/context-relevance.js";
+import fs from "node:fs";
+import path from "node:path";
 
 // ---------------------------------------------------------------------------
 // Harness
@@ -151,6 +167,67 @@ function profileRead() {
       barcodeScannerEnabled: true,
       plannerShowCalories: true,
     },
+  };
+}
+
+/**
+ * NCV1 fixtures — faithful to the handler view types that own each payload.
+ *
+ * `meals:read scope=summary` (meals-read-handler.ts `MealSummaryView`). The two rows
+ * that answer CB-022 carry `ingredientCount: 0` and sit LATE in a payload whose
+ * leading rows are all `scratch` — exactly the ordering INT19 §4 measured.
+ */
+function mealsSummary() {
+  const scratch = (i: number) => ({
+    id: 1700 + i, userId: 1, name: `Scratch Meal ${i}`, imageUrl: null, servings: 2,
+    categoryId: 3, mealSourceType: "scratch", isReadyMeal: false, isSystemMeal: false,
+    mealFormat: "recipe", dietTypes: ["omnivore"], isFreezerEligible: true, audience: "adult",
+    isDrink: false, drinkType: null, kind: "meal", createdAt: "2026-01-01T00:00:00Z",
+    ingredientCount: 7,
+  });
+  const readyMeal = (id: number, name: string) => ({
+    id, userId: 1, name, imageUrl: null, servings: 2, categoryId: null,
+    mealSourceType: "ready_meal", isReadyMeal: true, isSystemMeal: false, mealFormat: "product",
+    dietTypes: [] as string[], isFreezerEligible: false, audience: "adult", isDrink: false,
+    drinkType: null, kind: "meal", createdAt: "2026-01-01T00:00:00Z", ingredientCount: 0,
+  });
+  return {
+    scope: "summary", mealCount: 10, source: "meals",
+    meals: [
+      ...Array.from({ length: 8 }, (_, i) => scratch(i)),
+      readyMeal(2151, "tuna spaghetti"),
+      readyMeal(2139, "Beef Concarne"),
+    ],
+  };
+}
+
+/** `planner:read scope=week` (planner-read-handler.ts `PlannerWeekReadResult`). */
+function plannerWeek() {
+  return {
+    scope: "week", weekId: 6, weekNumber: 6, weekName: "Week 6",
+    days: Array.from({ length: 7 }, (_, d) => ({
+      dayId: 120 + d,
+      dayOfWeek: d,
+      meals: [{ entryId: 900 + d, mealType: "dinner", audience: "adult", mealId: 1794 + d, mealName: `Dinner ${d}`, isDrink: false }],
+    })),
+  };
+}
+
+/** `shopping:read scope=basket` (shopping-read-handler.ts `ShoppingBasketSummaryResult`). */
+function shoppingBasket() {
+  return {
+    scope: "basket", itemCount: 9, matchedItemCount: 4, pricedItemCount: 3, unresolvedItemCount: 5,
+    totalMatchedPrice: 7.47, currency: "GBP",
+    pricedItems: [
+      { id: 6390, name: "worcestershire sauce", matchedStore: "Tesco", matchedPrice: 2.5 },
+      { id: 6391, name: "basmati rice", matchedStore: "Tesco", matchedPrice: 2.0 },
+      { id: 6392, name: "olive oil", matchedStore: "Sainsburys", matchedPrice: 2.97 },
+    ],
+    unpricedItems: Array.from({ length: 6 }, (_, i) => ({ id: 6400 + i, name: `Unpriced item ${i}` })),
+    note:
+      "Total is the sum of prices the Shopping owner has already stored per item and may " +
+      "span more than one store. Unpriced and unresolved items are listed separately and " +
+      "are NOT included in the total. No prices were estimated and no store was chosen here.",
   };
 }
 
@@ -604,9 +681,234 @@ async function main(): Promise<void> {
     assert(noUtterance.text.includes("planner-empty-day"), "an empty utterance still yields balanced evidence");
   }
 
+  // ── §13 NCV1 — Native Context Views ───────────────────────────────────────
+  section("§13 NCV1: native Context Views for the platform's highest-value capabilities");
+  {
+    // (a) The registry is the ONE canonical owner, and it answers about itself.
+    //     Seven views over six capabilities: `meals` declares one per executable verb.
+    assert(NATIVE_CONTEXT_VIEW_KEYS.length === 7, `seven native Context Views are registered (${NATIVE_CONTEXT_VIEW_KEYS.length})`);
+    assert(
+      new Set(NATIVE_CONTEXT_VIEW_KEYS.map(k => k.split(":")[0])).size === 6,
+      "…across the six capabilities NCV1 prioritised",
+    );
+    for (const key of ["profile:read", "food-intelligence:report", "meals:read", "meals:search", "planner:read", "shopping:read", "household:read"]) {
+      const [id, verb] = key.split(":");
+      const registered = key in CONTEXT_VIEW_SPECS;
+      if (registered) assert(hasNativeContextView(id, verb), `hasNativeContextView agrees for ${key}`);
+    }
+    assert(!hasNativeContextView("pantry", "read"), "an unregistered capability is honestly reported as generic");
+    assert(!hasNativeContextView("meals", "explain"), "…and nativeness is per VERB, not per capability");
+    assert(
+      NATIVE_CONTEXT_VIEW_KEYS.join(",") === Object.keys(CONTEXT_VIEW_SPECS).sort().join(","),
+      "NATIVE_CONTEXT_VIEW_KEYS is exactly the registry's keys — no second list to drift",
+    );
+
+    // One canonical owner: no module outside the registry may declare a Context View.
+    const intelligenceDir = path.resolve(process.cwd(), "server/intelligence");
+    const declaring: string[] = [];
+    const scan = (dir: string): void => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) { scan(full); continue; }
+        if (!entry.name.endsWith(".ts")) continue;
+        const src = fs.readFileSync(full, "utf8");
+        if (/(const|let|var)\s+\w*CONTEXT_VIEW_SPECS/.test(src) || /\bcontextView\s*\(\s*\)\s*[:{]/.test(src)) {
+          declaring.push(path.relative(intelligenceDir, full));
+        }
+      }
+    };
+    scan(intelligenceDir);
+    assert(
+      declaring.length === 1 && declaring[0] === path.join("context", "context-view.ts"),
+      `exactly one module declares Context Views (${declaring.join(", ") || "none"})`,
+    );
+
+    // (b) The engine still cannot tell a native view from a generic one. A spec is
+    //     keyed `${capabilityId}:${verb}`, so the SAME payload under an unregistered
+    //     id exercises the generic path and nothing else changes. That is the A/B
+    //     every assertion below uses, and it is only sound because of this property.
+    const nativeView = deriveContextView("meals", "read", mealsSummary());
+    const genericView = deriveContextView("meals-unregistered", "read", mealsSummary());
+    assert(
+      Object.keys(nativeView).sort().join(",") === Object.keys(genericView).sort().join(","),
+      "a spec-derived and a generically-derived ContextView are the same shape (INT17 §2.1)",
+    );
+
+    // (c) meals — the balance dimension is the one the questions ask about.
+    {
+      const utterance = "Which meals need better ingredient or nutrition data?";
+      const n = composeContext({ utterance, capabilities: [cap("meals", "read", mealsSummary(), 0.9)] });
+      const g = composeContext({ utterance, capabilities: [cap("meals-unregistered", "read", mealsSummary(), 0.9)] });
+      assert(n.text.includes(`"id":2151`) && n.text.includes(`"id":2139`),
+        "CB-022's two answer meals (ingredientCount 0) reach the model under the native view");
+      assert(!g.text.includes(`"id":2151`) && !g.text.includes(`"id":2139`),
+        "…and reached it under NEITHER group of the generic `kind` derivation (the defect)");
+      assert(n.text.includes(`"mealSourceType":"ready_meal"`), "the ready_meal group is seated");
+      assert(!n.text.includes(`"userId"`), "`userId` — the caller's own id on every row — is dropped");
+      assert(!n.text.includes(`"categoryId"`), "`categoryId` — an unresolvable foreign key — is dropped");
+      assert(g.text.includes(`"userId"`), "…both of which the generic derivation emitted");
+      assert(n.metrics.perCapability[0].composedChars < g.metrics.perCapability[0].composedChars,
+        "the native meals section is smaller than the generic one it replaces");
+    }
+
+    // (d) planner — the whole week is guaranteed core, not discretionary.
+    {
+      const utterance = "What meals are missing from my plan?";
+      const foods = { scope: "foods", foods: Array.from({ length: 611 }, (_, i) => ({ slug: `f${i}`, name: `Food ${i}`, category: `cat${i % 40}` })) };
+      const week = plannerWeek();
+      const daysShown = (text: string) =>
+        Array.from({ length: 7 }, (_, d) => d).filter(d => text.includes(`"dayId":${120 + d}`)).length;
+      const run = (id: string, tokenBudget: number) => composeContext({
+        utterance,
+        capabilities: [cap("nutrition-knowledge", "read", foods, 0.9), cap(id, "read", week, 0.8)],
+        tokenBudget,
+      }).text;
+      assert(daysShown(run("planner", 300)) === 7, "all seven planner days reach the model on a crowded turn");
+      assert(daysShown(run("planner-unregistered", 300)) === 1, "…where the generic derivation seated exactly one");
+      assert(daysShown(run("planner", 100)) === 7, "…and seven still reach it at a third of that budget");
+
+      const body = JSON.parse(sections(run("planner", 300)).get("planner")!);
+      assert(Object.keys(body._context.days.groups).length === 7,
+        "_context names every day of the week, including the days it did not print");
+      assert(body._context.days.found === 7, "…and the capability's own true total");
+      assert(body._context.days.shown === undefined, "…and never how many rows this block printed");
+    }
+
+    // (e) shopping — the owner's honesty caveat cannot be outbid.
+    {
+      const basket = shoppingBasket();
+      const busy = (id: string) => composeContext({
+        utterance: "How much will my shopping cost?",
+        capabilities: [
+          cap(id, "read", basket, 0.9),
+          cap("pantry", "read", { items: Array.from({ length: 12 }, (_, i) => ({ id: 4500 + i, name: `Pantry item ${i}`, category: ["dairy", "grain", "veg"][i % 3] })) }, 0.7),
+          cap("food-intelligence", "report", fi, 0.6),
+          cap("profile", "read", profile, 0.5, true),
+        ],
+      }).text;
+      const n = busy("shopping"), g = busy("shopping-unregistered");
+      assert(n.includes(`"totalMatchedPrice"`) && n.includes("No prices were estimated"),
+        "the basket total and the owner's caveat both reach the model on a busy four-capability turn");
+      assert(n.includes(`"unresolvedItemCount"`) && n.includes(`"currency"`),
+        "…with the counts and currency that make the total readable");
+      assert(!g.includes(`"totalMatchedPrice"`) && !g.includes("No prices were estimated"),
+        "…none of which survived the generic derivation, which emitted priced ROWS and no total");
+      assert(g.includes(`"matchedPrice"`), "…leaving the model prices to add up and no statement of what they exclude");
+
+      // Even at a starvation budget the pins hold; and the other scopes pin nothing.
+      const starved = composeContext({ utterance: "cost", capabilities: [cap("shopping", "read", basket)], tokenBudget: 1 }).text;
+      assert(starved.includes("No prices were estimated"), "the caveat survives a starvation budget of one token");
+      const list = deriveContextView("shopping", "read", { scope: "list", itemCount: 1, items: [{ id: 1, name: "Milk", quantity: 1, unit: null, category: "dairy", checked: false, resolutionState: "resolved", shopStatus: "pending", needsReview: false, hasMatch: false, matchedStore: null, matchedPrice: null, confidenceLevel: null }], extras: [] });
+      assert(list.pinned.length === 0, "`scope=list` pins nothing — one spec, and it only speaks where it has something to say");
+    }
+
+    // (f) household — the household's hard restrictions are constraints, not scalars.
+    {
+      const dietary = {
+        scope: "dietary-context",
+        members: [
+          { userId: 1, displayName: "Col", dietTypes: ["keto"], dietRestrictions: ["Gluten"], excludedIngredients: [] as string[] },
+          { userId: 2, displayName: "Sam", dietTypes: [] as string[], dietRestrictions: ["Peanut"], excludedIngredients: ["coriander"] },
+        ],
+        aggregated: { unionDietTypes: ["keto"], unionRestrictions: ["Gluten", "Peanut"], unionExclusions: ["coriander"] },
+      };
+      const busy = (id: string) => composeContext({
+        utterance: "What should we have for dinner tonight?",
+        capabilities: [
+          cap("meals", "read", mealsSummary(), 0.9),
+          cap("food-intelligence", "report", fi, 0.7),
+          cap(id, "read", dietary, 0.4, true),
+        ],
+      }).text;
+      const n = busy("household"), g = busy("household-unregistered");
+      assert(n.includes("Peanut") && n.includes("Gluten"),
+        "both household hard restrictions reach the model as a baseline read on a busy turn");
+      assert(n.includes(`"unionExclusions"`), "…and the household's excluded ingredients with them");
+      assert(!g.includes("Peanut"), "…where the generic derivation lost one restriction entirely (HARD RULE 2 / gate G2)");
+      assert(!g.includes(`"unionRestrictions"`), "…having outbid the aggregate the Companion must honour");
+
+      // Empty is not absent: a household with no restrictions still says so.
+      const none = composeContext({
+        utterance: "dinner",
+        capabilities: [cap("household", "read", { scope: "dietary-context", members: [], aggregated: { unionDietTypes: [], unionRestrictions: [], unionExclusions: [] } })],
+        tokenBudget: 1,
+      }).text;
+      assert(none.includes(`"unionRestrictions":[]`), "an empty restriction set is EMITTED, not omitted (absence ≠ emptiness)");
+
+      // `keep` is a row allowlist — a new ROW field cannot silently reach the model…
+      const withEmail = { scope: "household", id: 4, name: "H", myRole: "owner", members: [{ userId: 1, displayName: "Col", role: "owner", status: "active", email: "col@example.com" }] };
+      const nn = composeContext({ utterance: "who is in my household", capabilities: [cap("household", "read", withEmail, 0.9)] }).text;
+      const gg = composeContext({ utterance: "who is in my household", capabilities: [cap("household-unregistered", "read", withEmail, 0.9)] }).text;
+      assert(!nn.includes("col@example.com"), "a field added to a row type does not reach the model under a native view");
+      assert(gg.includes("col@example.com"), "…where the generic derivation emits it");
+
+      // …but it is NOT a redaction layer. A new TOP-LEVEL scalar still competes.
+      // Stated as a test so nobody mistakes `keep` for a secrets boundary: the
+      // handler's own projection is what keeps `inviteCode` out of the Full Result.
+      const withSecret = { ...withEmail, inviteCode: "JOIN-CODE-9931" };
+      const leak = composeContext({ utterance: "invite code", capabilities: [cap("household", "read", withSecret, 0.9)] }).text;
+      assert(leak.includes("JOIN-CODE-9931"),
+        "`keep` bounds ROWS, never top-level scalars — the handler's projection is the secrets boundary");
+    }
+
+    // (g) Scope polymorphism: one spec per `capability:verb`, many payload shapes.
+    {
+      const shapes: Array<[string, string, unknown]> = [
+        ["meals:read summary", "read", mealsSummary()],
+        ["meals:read detail", "read", { scope: "detail", source: "meals", meal: { id: 1794, name: "Tuna Spaghetti", ingredients: ["tuna"], mealSourceType: "scratch" }, items: [{ id: 11, type: "ingredient", referenceId: 5, name: "Tuna", quantity: "1 tin" }, { id: 13, type: "product", referenceId: null, name: "Olive oil", quantity: "1 tbsp" }] }],
+        ["meals:search", "search", { scope: "search", query: "chicken", mealCount: 1, source: "meals", meals: [{ id: 1, name: "Chicken Curry", imageUrl: null, servings: 4, isSystemMeal: false, dietTypes: [], mealFormat: "recipe", kind: "meal" }] }],
+      ];
+      for (const [label, verb, payload] of shapes) {
+        const { text, metrics } = composeContext({ utterance: "tell me about my meals", capabilities: [cap("meals", verb, payload, 0.9)] });
+        const body = sections(text).get("meals")!;
+        let parses = true; try { JSON.parse(body); } catch { parses = false; }
+        assert(parses && metrics.wellFormed, `${label}: one spec, a different top-level shape, still valid JSON`);
+      }
+      const detailText = composeContext({ utterance: "what is in this meal", capabilities: [cap("meals", "read", { scope: "detail", source: "meals", meal: { id: 1794, name: "Tuna Spaghetti" }, items: [{ id: 11, type: "ingredient", referenceId: 5, name: "Tuna", quantity: "1 tin" }, { id: 13, type: "product", referenceId: null, name: "Olive oil", quantity: "1 tbsp" }] }, 0.9)] }).text;
+      assert(detailText.includes(`"type":"ingredient"`) && detailText.includes(`"type":"product"`),
+        "…and `scope=detail`'s `items` collection is balanced across its own groups");
+      assert(detailText.includes("Tuna Spaghetti"), "…while `meal` flows as scalars, unclaimed by any collection");
+
+      // A declared collection that the scope does not carry is skipped, not fabricated.
+      const searchView = deriveContextView("meals", "read", mealsSummary());
+      assert(searchView.collections.length === 1 && searchView.collections[0].name === "meals",
+        "a declared collection absent from this scope's payload is simply not derived");
+    }
+
+    // (h) The invariants the engine already guaranteed still hold for all six.
+    {
+      const all = [
+        cap("profile", "read", profile, 0.5, true),
+        cap("meals", "read", mealsSummary(), 0.9),
+        cap("planner", "read", plannerWeek(), 0.8),
+        cap("shopping", "read", shoppingBasket(), 0.7),
+        cap("household", "read", { scope: "eaters", eaters: [{ id: "u1", displayName: "Col", kind: "user", userId: 1, defaultDietTypes: ["keto"], hardRestrictions: ["Gluten"] }, { id: "c1", displayName: "Kid", kind: "child", userId: undefined, defaultDietTypes: [], hardRestrictions: ["Peanut"] }] }, 0.6),
+        cap("food-intelligence", "report", fi, 0.85),
+      ];
+      const snapshot = JSON.stringify(all.map(c => c.result));
+      const req = { utterance: "plan my week around the household", capabilities: all };
+      const a = composeContext(req), b = composeContext(req);
+      assert(a.text === b.text, "all six capabilities' native views compose byte-identically across runs");
+      assert(JSON.stringify(all.map(c => c.result)) === snapshot, "…and no Full Result is mutated");
+      assert(a.metrics.capabilitiesRepresented === a.metrics.capabilitiesContributing,
+        "…and every one of the six is represented (the balance guarantee)");
+      assert(a.metrics.wellFormed, "…and every section is well-formed within its ceiling");
+
+      const real = realIds(all.map(c => c.result));
+      const fake = Array.from(emittedIds(a.text)).filter(id => !real.has(id));
+      assert(fake.length === 0, `…and not one of the emitted ids is invented (0 fake of ${emittedIds(a.text).size})`);
+
+      // The §4.6 exception: one oversized item is clipped, never dropped, id intact.
+      const fat = { scope: "list", mealCount: 1, source: "meals", meals: [{ id: 1, name: "Long", mealSourceType: "scratch", instructions: ["step. ".repeat(2000)] }] };
+      const clipped = sections(composeContext({ utterance: "recipe", capabilities: [cap("meals", "read", fat)] }).text).get("meals")!;
+      assert(clipped.length <= CAPABILITY_CONTEXT_BUDGET_CHARS && clipped.includes("[clipped]") && clipped.includes(`"id":1`),
+        "an oversized meal is still clipped to the ceiling, declared, and keeps its id");
+    }
+  }
+
   // ── Summary ───────────────────────────────────────────────────────────────
   console.log(`\n════════════════════════════════════════════════════`);
-  console.log(`  INT17 context composition tests: ${passed} passed, ${failed} failed`);
+  console.log(`  INT17/NCV1 context composition tests: ${passed} passed, ${failed} failed`);
   if (failures.length > 0) {
     console.log(`\n  Failures:`);
     for (const f of failures) console.log(`   ✗ ${f}`);

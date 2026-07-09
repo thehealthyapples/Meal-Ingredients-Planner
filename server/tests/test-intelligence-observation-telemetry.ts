@@ -354,6 +354,47 @@ async function main(): Promise<void> {
     "Context Views are counted across compositions and sorted by use",
   );
 
+  // NCV1 — a view is native, generic, or (for a row recorded before the rollout)
+  // honestly unknown. A row that said nothing is never folded into "generic".
+  assert(context.classifiedCompositionCount === 0, "pre-NCV1 rows classified nothing, and say so");
+  assert(
+    context.views.every((v) => v.unknownCount === v.count && v.nativeCount === 0 && v.genericCount === 0),
+    "…so every pre-NCV1 view is counted as unknown, never as generic",
+  );
+
+  const classified = summarizeContext(
+    [
+      ...contextRows,
+      row({
+        kind: "context-composition", durationMs: 5,
+        metadata: {
+          budgetExceeded: false, capabilitiesContributing: 3,
+          views: ["meals:read", "pantry:read", "profile:read"],
+          nativeViews: ["meals:read", "profile:read"],
+          genericViews: ["pantry:read"],
+        },
+      }),
+      row({
+        kind: "context-composition", durationMs: 5,
+        metadata: {
+          budgetExceeded: false, capabilitiesContributing: 1,
+          views: ["pantry:read"], nativeViews: [], genericViews: ["pantry:read"],
+        },
+      }),
+    ],
+    7,
+  );
+  const view = (name: string) => classified.views.find((v) => v.contextView === name)!;
+  assert(classified.classifiedCompositionCount === 2, "NCV1 rows are counted as classified");
+  assert(view("meals:read").nativeCount === 1 && view("meals:read").genericCount === 0,
+    "a view composed from a registered spec is counted native");
+  assert(view("pantry:read").genericCount === 2 && view("pantry:read").nativeCount === 0,
+    "a view the engine derived generically is counted generic — including when nativeViews is empty");
+  assert(view("planner:report").unknownCount === 2 && view("planner:report").genericCount === 0,
+    "…while the pre-NCV1 rows beside them stay unknown, never reclassified by today's registry");
+  assert(view("pantry:read").count === view("pantry:read").nativeCount + view("pantry:read").genericCount + view("pantry:read").unknownCount,
+    "the three classifications partition every use of a view");
+
   // -------------------------------------------------------------------------
   // §7 summarizeCompanion
   // -------------------------------------------------------------------------

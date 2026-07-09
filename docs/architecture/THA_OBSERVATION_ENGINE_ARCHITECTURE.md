@@ -48,7 +48,7 @@ Twelve kinds (`OBSERVATION_KINDS`), each with a named capture point. Growing the
 |---|---|---|
 | `intent-resolution` | `conversation-gateway.ts` | Resolver ran: top capability/verb, confidence, gap kind, intent counts, duration |
 | `capability-invocation` | `intent-engine.ts` (`route()`) | One `(verb × capability)` routed: outcome + duration — the single choke point, so the single capture point |
-| `context-composition` | `conversation-gateway.ts` | The Context Composition Engine's own metrics, verbatim: tokens, budget, sections, Context Views used |
+| `context-composition` | `conversation-gateway.ts` | The Context Composition Engine's own metrics, verbatim: tokens, budget, sections, Context Views used — and, since NCV1, which of those views were **native** (declared by the payload's owner) and which **generic** (derived by the engine) |
 | `knowledge-retrieval` | `conversation-gateway.ts` | Grounded vs honest gap; the contributing capabilities |
 | `response-generation` | `conversation-gateway.ts` | LLM turn: model, wall time, ok/error |
 | `behaviour-decision` | `conversation-gateway.ts` | The Behaviour Engine's sealed decision for one interaction: the voice applied, the voice requested, override + reason, provenance confidence, the outcome (`voiced` / `voiced-fallback` / `voiced-error` / `not-voiced`), the surfaces touched, and the engine's deterministic reasoning. One row per interaction, on every gateway exit path |
@@ -115,6 +115,14 @@ The rules every capture point obeys, by construction:
 
 Disjoint by architecture. The Notice Engine selects user-facing facts under an attention budget; the Observation Engine records operator-facing execution under a retention budget. No notice is built from an observation; no observation is surfaced to a user. The shared name history is documented (§ header) precisely so the two are never merged.
 
+### 5.1b With the Context Composition Engine (INT17 / NCV1)
+
+The same one-way shape as the Behaviour Engine below, and for the same reason. The Context Composition Engine is a pure module (§4 rule 4), so it records nothing; the gateway records `context-composition` around it and copies the engine's metrics verbatim.
+
+NCV1's native/generic classification is **not** one of those metrics. It is resolved at the capture point by asking the Context View registry — the canonical owner of the answer (`hasNativeContextView`) — precisely so the engine itself never learns which of its inputs was declared and which was inferred. The engine's inability to tell them apart is a governing invariant of INT17 §2.1; observing the difference must not create a way to act on it.
+
+**The classification is never backfilled.** A row written before NCV1 named its views but classified none, and `summarizeContext` reports those uses as `unknown` — never as `generic`. Resolving them against today's registry would answer a question about the present and stamp it on the past, and the rollout the field exists to measure is exactly what changed in between. A row that did not say is not a row that said no.
+
 ### 5.2b With the Behaviour Engine (INT21 / BEH1)
 
 One-way, and worth stating because the Workbench's name invites the confusion. **The Behaviour Engine is observed; it never observes.** It records nothing (it is a pure module — §4 rule 4 — so the gateway captures its decision), and it reads nothing: no voice is chosen, adapted, or suppressed because of telemetry. `summarizeBehaviour`, `buildExecutionTimeline`, and every number on `/admin/behaviour` are Observation Engine projections over `platform_observations`; there is no behaviour table and no materialised behaviour aggregate.
@@ -143,6 +151,7 @@ Two admin-only, read-only pages over the same engine — no other operator surfa
 - **Views:** overview, capabilities, intents, context, companion, knowledge, planner, benchmarks — each a `GET /api/intelligence/observation/<view>` route that fetches one bounded window (`days` ≤ 30) and aggregates with the engine's pure summarizers.
 - **Diagnostics:** `GET /api/intelligence/observation/recent` with kind/capability/severity/session/free-text filters; `GET /api/intelligence/observation/export` (CSV/JSON) for operator evidence.
 - **Honest aggregation:** rates are `null` when there is nothing to judge — never a fabricated 0 or 100%. Neutral outcomes (`confirmation_required`) are excluded from success rates rather than counted as failures.
+- **Context View rollout (NCV1):** the `context` view counts each Context View's uses as `native`, `generic`, or `not recorded`. The three partition every use, so the rollout's reach is readable without a second store — and a pre-NCV1 row is never counted as generic to make the total look complete.
 - The Workbench writes nothing, reads no business data, and holds no state of its own.
 
 ### 6.2 The Behaviour Admin Workbench (`/admin/behaviour`, OBS2 + BEH1)
@@ -155,12 +164,12 @@ One page, two read-only views over the same store. **The Behaviour Engine never 
 - **Honest aggregation:** effectiveness, override rate, and confidence are `null` when there is nothing to judge. Feedback that names no recorded decision is reported as `unattributedFeedback`, never guessed into a voice. The overrides table discloses its own listing cap while the counts stay complete.
 - **Honest coverage:** `not-voiced` decisions are shown, so interactions where the Companion spoke platform-owned copy rather than registry content are counted rather than disguised (INT21 §8.4).
 
-**The Execution Timeline (OBS2)** — the primary debugging and reasoning view for one interaction: it reconstructs the complete execution path — intent identified (with confidence), capabilities invoked, knowledge sources consulted, Context Views composed, behaviour decided (with the engine's own reasoning), response generated, clarifications, recoveries, escalations, and user feedback — chronologically, with per-stage durations and inter-stage gaps, failures highlighted, and every event clickable through to its underlying observation.
+**The Execution Timeline (OBS2)** — the primary debugging and reasoning view for one interaction: it reconstructs the complete execution path — intent identified (with confidence), capabilities invoked, knowledge sources consulted, Context Views composed (each labelled `native` or `generic`, NCV1), behaviour decided (with the engine's own reasoning), response generated, clarifications, recoveries, escalations, and user feedback — chronologically, with per-stage durations and inter-stage gaps, failures highlighted, and every event clickable through to its underlying observation.
 
 - **Routes:** `GET /api/intelligence/observation/timeline/sessions` (the picker — filterable by user, capability, intent, session over the bounded window), `GET .../timeline/session/:sessionId` (the reconstructed timeline), `GET .../timeline/session/:sessionId/export` (JSON/CSV).
 - **Projection, not state:** `execution-timeline.ts` holds only pure functions over `PlatformObservation[]` — no timeline table, no duplicate telemetry.
 - **Honest correlation:** turns are grouped exactly by `metadata.turnId`; rows recorded before OBS2 are grouped by boundary heuristic and labelled `reconstructed`, and uncorrelatable legacy feedback is shown as `unassigned` — never guessed into a turn. A turn recorded before BEH1 shows no behaviour decision — absent, never reconstructed — while OBS2's legacy `personalityId` crumb still names the voice.
-- **Honest gaps:** the user's request text is displayed as "not recorded (privacy)" — the engine's §2.3 rule — and absent stages render as nulls, never fabricated.
+- **Honest gaps:** the user's request text is displayed as "not recorded (privacy)" — the engine's §2.3 rule — and absent stages render as nulls, never fabricated. A turn recorded before NCV1 shows its Context Views with `native/generic not recorded (pre-NCV1)`, never with every view labelled generic (§5.1b).
 
 ---
 

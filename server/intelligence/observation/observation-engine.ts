@@ -417,18 +417,52 @@ export function summarizeIntents(rows: PlatformObservation[], windowDays: number
 // Context view
 // ---------------------------------------------------------------------------
 
+/**
+ * NCV1 — how a Context View was composed on ONE observed turn.
+ *
+ * `native` — the payload's owner declared the view in the Context View registry.
+ * `generic` — the engine derived it from the payload's natural structure.
+ * `unknown` — the row predates NCV1 and recorded no classification. It is reported
+ *   as unknown and NEVER folded into `generic`: a row that did not say is not a row
+ *   that said "no", and the composition of a turn recorded weeks ago cannot be
+ *   recovered by asking today's registry (the registry has since changed — that is
+ *   the whole point of the rollout this field exists to measure).
+ */
+export interface ContextViewUsage {
+  contextView: string;
+  count: number;
+  averageCompositionMs: number | null;
+  budgetExceededCount: number;
+  /** Turns on which this view was composed from a registered `ContextViewSpec`. */
+  nativeCount: number;
+  /** Turns on which the engine derived it generically. */
+  genericCount: number;
+  /** Turns recorded before NCV1, which classified nothing. */
+  unknownCount: number;
+}
+
 export function summarizeContext(rows: PlatformObservation[], windowDays: number): {
   windowDays: number;
   compositionCount: number;
   averageCompositionMs: number | null;
   budgetExceededCount: number;
   missingContextCount: number;
-  views: { contextView: string; count: number; averageCompositionMs: number | null; budgetExceededCount: number }[];
+  /** Compositions that classified their views. `compositionCount - this` are pre-NCV1. */
+  classifiedCompositionCount: number;
+  views: ContextViewUsage[];
 } {
   const composition = ofKind(rows, "context-composition");
-  const viewCounts = new Map<string, number>();
+  const usage = new Map<string, { count: number; native: number; generic: number; unknown: number }>();
+  const bump = (view: string, kind: "native" | "generic" | "unknown"): void => {
+    const row = usage.get(view) ?? { count: 0, native: 0, generic: 0, unknown: 0 };
+    row.count += 1;
+    row[kind] += 1;
+    usage.set(view, row);
+  };
+
   let budgetExceededCount = 0;
   let missingContextCount = 0;
+  let classifiedCompositionCount = 0;
 
   for (const r of composition) {
     const meta = (r.metadata ?? {}) as Record<string, unknown>;
@@ -437,9 +471,18 @@ export function summarizeContext(rows: PlatformObservation[], windowDays: number
       missingContextCount += 1;
     }
     const views = Array.isArray(meta.views) ? (meta.views as unknown[]) : [];
+    // A row is classified when it carries the NCV1 key at all — an empty
+    // `nativeViews: []` beside two views is a true statement (both generic);
+    // an ABSENT key is a pre-NCV1 row that made no statement either way.
+    const classified = Array.isArray(meta.nativeViews);
+    if (classified) classifiedCompositionCount += 1;
+    const native = new Set(
+      classified ? (meta.nativeViews as unknown[]).filter((v): v is string => typeof v === "string") : [],
+    );
+
     for (const view of views) {
       if (typeof view !== "string") continue;
-      viewCounts.set(view, (viewCounts.get(view) ?? 0) + 1);
+      bump(view, !classified ? "unknown" : native.has(view) ? "native" : "generic");
     }
   }
 
@@ -449,15 +492,19 @@ export function summarizeContext(rows: PlatformObservation[], windowDays: number
     averageCompositionMs: round(mean(durations(composition)), 1),
     budgetExceededCount,
     missingContextCount,
-    views: Array.from(viewCounts.entries())
-      .map(([contextView, count]) => ({
+    classifiedCompositionCount,
+    views: Array.from(usage.entries())
+      .map(([contextView, u]) => ({
         contextView,
-        count,
+        count: u.count,
         // Composition is timed per turn, not per view — an honest null, never a guess.
         averageCompositionMs: null,
         budgetExceededCount: 0,
+        nativeCount: u.native,
+        genericCount: u.generic,
+        unknownCount: u.unknown,
       }))
-      .sort((a, b) => b.count - a.count),
+      .sort((a, b) => b.count - a.count || (a.contextView < b.contextView ? -1 : 1)),
   };
 }
 
