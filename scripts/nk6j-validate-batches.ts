@@ -3,7 +3,7 @@
  * NK6J — Read-only validation of Batch 001 & Batch 002 canonical food drafts.
  *
  * SAFETY: This harness performs ZERO writes. It replays the importer's EXACT
- * identity-reconciliation logic (server/lib/canonical-foods-importer.ts →
+ * identity-reconciliation logic (server/lib/canonical-foods-gate.ts →
  * reconcileFoodIdentity / extractFoodIdentity) and the GOV2 vocabulary resolver,
  * plus a single read-only SELECT of existing knowledge_food slugs. It never calls
  * importCanonicalFood and never inserts/updates anything.

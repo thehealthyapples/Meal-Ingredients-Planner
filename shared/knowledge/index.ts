@@ -12,14 +12,21 @@ import type {
   InsertKnowledgeFoodBenefit,
   InsertKnowledgeNutrientBenefit,
 } from "../schema";
-import { FOOD_SEED } from "./foods";
+import { FOOD_SEED, EDITORIAL_FOOD_SEED } from "./foods";
 import { NUTRIENT_SEED } from "./nutrients";
 import { HEALTH_BENEFIT_SEED } from "./health-benefits";
 import { FOOD_NUTRIENTS, FOOD_BENEFITS, NUTRIENT_BENEFITS } from "./relationships";
 import { NUTRIENT_BENEFIT_SOURCES } from "./claim-sources";
 import { validateSourceRef } from "./evidence";
+// KNOW2 — the draft-authored half of the seed, promoted out of the retired
+// second writer (the NK6D importer, now the write-free canonical-foods-gate.ts).
+// Composed in below so the knowledge_* tables have exactly one writer again.
+import { GRADUATED_FOOD_SEED, GRADUATED_FOOD_SOURCE } from "./graduated-foods";
+import { GRADUATED_FOOD_NUTRIENTS, GRADUATED_FOOD_BENEFITS } from "./graduated-relationships";
 
-export { FOOD_SEED, NUTRIENT_SEED, HEALTH_BENEFIT_SEED };
+export { FOOD_SEED, EDITORIAL_FOOD_SEED, NUTRIENT_SEED, HEALTH_BENEFIT_SEED };
+export { GRADUATED_FOOD_SEED, GRADUATED_FOOD_SOURCE } from "./graduated-foods";
+export { GRADUATED_FOOD_NUTRIENTS, GRADUATED_FOOD_BENEFITS } from "./graduated-relationships";
 export { FOOD_NUTRIENTS, FOOD_BENEFITS, NUTRIENT_BENEFITS };
 export { NUTRIENT_BENEFIT_SOURCES, SOURCED_LAUNCH_BENEFITS } from "./claim-sources";
 export * from "./evidence";
@@ -81,8 +88,12 @@ function expandNutrientBenefits(): InsertKnowledgeNutrientBenefit[] {
   return rows;
 }
 
-export const FOOD_NUTRIENT_SEED = expandFoodNutrients();
-export const FOOD_BENEFIT_SEED = expandFoodBenefits();
+// KNOW2 — editorial links first, then the graduated draft links. The graduated
+// rows keep their own per-row `confidence` / `evidenceStrength` / `ranking`,
+// which the compact editorial maps above cannot express (they hardcode
+// "established"/"good"). One array, one writer, two honestly-labelled origins.
+export const FOOD_NUTRIENT_SEED = [...expandFoodNutrients(), ...GRADUATED_FOOD_NUTRIENTS];
+export const FOOD_BENEFIT_SEED = [...expandFoodBenefits(), ...GRADUATED_FOOD_BENEFITS];
 export const NUTRIENT_BENEFIT_SEED = expandNutrientBenefits();
 
 /**
@@ -104,6 +115,37 @@ export function validateKnowledgeSeed(): string[] {
   dupCheck("food", FOOD_SEED.map((f) => f.slug));
   dupCheck("nutrient", NUTRIENT_SEED.map((n) => n.slug));
   dupCheck("benefit", HEALTH_BENEFIT_SEED.map((b) => b.slug));
+
+  // KNOW2 — one owner per fact, enforced rather than declared (Rule KC8).
+  //
+  // 1. A graduated draft may never re-mint an identity the editorial seed owns.
+  //    That is a merge, and a merge is a human decision (GOV2 Rule 7). The
+  //    dupCheck above would also catch it, but this names the actual fault.
+  const editorialSlugs = new Set(EDITORIAL_FOOD_SEED.map((f) => f.slug));
+  for (const f of GRADUATED_FOOD_SEED) {
+    if (editorialSlugs.has(f.slug)) {
+      problems.push(`graduated food "${f.slug}" collides with an editorial identity — a merge is a human decision, not a graduation`);
+    }
+    // 2. Draft-authored rows must never wear the human editorial stamp. This is
+    //    the exact defect KNOW2 repaired: the importer left `source` to its
+    //    column default, so AI-authored identities claimed "THA editorial".
+    if (f.source !== GRADUATED_FOOD_SOURCE) {
+      problems.push(`graduated food "${f.slug}" must carry source "${GRADUATED_FOOD_SOURCE}", not ${JSON.stringify(f.source)}`);
+    }
+  }
+
+  // 3. No relationship pair may be written twice. Two rows for one (food, fact)
+  //    pair means two owners of that fact, whichever half of the seed they sit
+  //    in — and the DB's unique constraint would silently let the second win.
+  const pairCheck = (label: string, pairs: string[]) => {
+    const seen = new Set<string>();
+    for (const p of pairs) {
+      if (seen.has(p)) problems.push(`duplicate ${label} pair: ${p} — one owner per fact`);
+      seen.add(p);
+    }
+  };
+  pairCheck("food↔nutrient", FOOD_NUTRIENT_SEED.map((r) => `${r.foodSlug}→${r.nutrientSlug}`));
+  pairCheck("food↔benefit", FOOD_BENEFIT_SEED.map((r) => `${r.foodSlug}→${r.benefitSlug}`));
 
   for (const r of FOOD_NUTRIENT_SEED) {
     if (!foodSlugs.has(r.foodSlug)) problems.push(`food↔nutrient: unknown food "${r.foodSlug}"`);

@@ -10,6 +10,9 @@
  */
 import {
   FOOD_SEED,
+  EDITORIAL_FOOD_SEED,
+  GRADUATED_FOOD_SEED,
+  GRADUATED_FOOD_SOURCE,
   NUTRIENT_SEED,
   HEALTH_BENEFIT_SEED,
   FOOD_NUTRIENT_SEED,
@@ -42,15 +45,37 @@ async function run() {
   const presentCategories = new Set(FOOD_SEED.map((f) => f.category));
   for (const c of requiredCategories) check(`category present: ${c}`, presentCategories.has(c));
 
-  check("every food has ≥ 1 nutrient link", FOOD_SEED.every((f) => (FOOD_NUTRIENTS[f.slug]?.length ?? 0) >= 1));
-  check("every food has ≥ 1 benefit link", FOOD_SEED.every((f) => (FOOD_BENEFITS[f.slug]?.length ?? 0) >= 1));
-  // Relationship rows carry an explicit source; entity rows inherit the
-  // 'THA editorial' column default. Either way every stored row has a source.
+  // KNOW2 — assert the MVF bar (Rule KC5: identity + ≥1 real fact) over the
+  // COMPOSED seed, not the editorial compact maps. The graduated half carries its
+  // links as explicit rows with per-row confidence, which the maps cannot express;
+  // reading the maps here would have silently exempted all 346 graduated foods.
+  const nutrientLinked = new Set(FOOD_NUTRIENT_SEED.map((r) => r.foodSlug));
+  const benefitLinked = new Set(FOOD_BENEFIT_SEED.map((r) => r.foodSlug));
+  const noNutrient = FOOD_SEED.filter((f) => !nutrientLinked.has(f.slug)).map((f) => f.slug);
+  const noBenefit = FOOD_SEED.filter((f) => !benefitLinked.has(f.slug)).map((f) => f.slug);
+  check("every food has ≥ 1 nutrient link", noNutrient.length === 0, noNutrient.slice(0, 5).join(", "));
+  check("every food has ≥ 1 benefit link", noBenefit.length === 0, noBenefit.slice(0, 5).join(", "));
+  // The editorial compact maps still cover every editorial food — the graduated
+  // half is additive and must never be required to appear in them.
+  check("editorial foods keep their compact-map links", EDITORIAL_FOOD_SEED.every(
+    (f) => (FOOD_NUTRIENTS[f.slug]?.length ?? 0) >= 1 && (FOOD_BENEFITS[f.slug]?.length ?? 0) >= 1));
+
   check("every relationship row carries an explicit source", [
     ...FOOD_NUTRIENT_SEED, ...FOOD_BENEFIT_SEED, ...NUTRIENT_BENEFIT_SEED,
   ].every((r: any) => typeof r.source === "string" && r.source.length > 0));
-  check("entity rows omit source only when relying on the column default", [
-    ...FOOD_SEED, ...NUTRIENT_SEED, ...HEALTH_BENEFIT_SEED,
+  // KNOW2 — a graduated identity must state its draft provenance explicitly.
+  // Relying on the `source` column default is exactly how 346 AI-authored foods
+  // came to be stamped "THA editorial" by the writer this workstream retired.
+  check("every graduated food declares its draft provenance",
+    GRADUATED_FOOD_SEED.every((f: any) => f.source === GRADUATED_FOOD_SOURCE),
+    `expected all ${GRADUATED_FOOD_SEED.length} to be ${JSON.stringify(GRADUATED_FOOD_SOURCE)}`);
+  check("no graduated food claims human editorial authorship",
+    GRADUATED_FOOD_SEED.every((f: any) => f.source !== "THA editorial"));
+  check("no graduated food carries a machine enum as its description",
+    GRADUATED_FOOD_SEED.every((f: any) => f.description == null),
+    "descriptions are honest gaps, not `whole_or_minimally_processed`");
+  check("editorial entity rows omit source only when relying on the column default", [
+    ...EDITORIAL_FOOD_SEED, ...NUTRIENT_SEED, ...HEALTH_BENEFIT_SEED,
   ].every((r: any) => r.source === undefined || (typeof r.source === "string" && r.source.length > 0)));
 
   console.log("  counts:", JSON.stringify(KNOWLEDGE_SEED_COUNTS));

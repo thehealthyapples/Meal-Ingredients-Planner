@@ -14,7 +14,7 @@ import { db } from "../server/db";
 import { sql } from "drizzle-orm";
 import { resolveCanonicalFood } from "@shared/canonical";
 import { resolveNutrientTerm, resolveBenefitTerm } from "@shared/knowledge";
-import { extractNutrients } from "../server/lib/canonical-foods-importer";
+import { extractNutrients } from "../server/lib/canonical-foods-gate";
 
 function extractFoodIdentity(draft: any) {
   const identity = draft.identity || {};

@@ -3,9 +3,17 @@
 // Editorial, human-curated, deterministic. Covers the eight launch categories:
 // Healthy fats, Seeds, Legumes, Fermented foods, Herbs, Mushrooms, Vegetables,
 // Fruit. Edit freely; every row is upserted by slug.
+//
+// KNOW2 — this file is the HUMAN-AUTHORED half of the canonical food identity
+// seed. `GRADUATED_FOOD_SEED` (graduated-foods.ts) holds the draft-authored half,
+// promoted from the NK6 canonical food drafts. The two are composed below into
+// the single `FOOD_SEED` that `server/seeds/seed-knowledge-registry.ts` — the one
+// writer of `knowledge_foods` — upserts. Keep them apart in source so provenance
+// stays legible; they are one owner, not two.
 import type { InsertKnowledgeFood } from "../schema";
+import { GRADUATED_FOOD_SEED } from "./graduated-foods";
 
-export const FOOD_SEED: InsertKnowledgeFood[] = [
+export const EDITORIAL_FOOD_SEED: InsertKnowledgeFood[] = [
   // ── Healthy fats ───────────────────────────────────────────────────────────
   { slug: "extra-virgin-olive-oil", name: "Extra Virgin Olive Oil", category: "Healthy fats",
     // NK6R — "olive oil" and "virgin olive oil" removed: they name the parent identity
@@ -1699,3 +1707,14 @@ export const FOOD_SEED: InsertKnowledgeFood[] = [
     seasonality: "Year-round (frozen)",
     source: "USDA FDC / WS0X.2 H1 batch 2026-06-24" },
 ];
+
+/**
+ * The canonical food identity seed — the ONE dataset the seed runner writes into
+ * `knowledge_foods`. Editorial rows first (they own the launch categories and the
+ * display metadata), then the graduated draft rows.
+ *
+ * Slug collisions between the two halves are impossible by construction and are
+ * asserted by `validateKnowledgeSeed()`; a graduated draft that names an existing
+ * editorial identity is a merge, and a merge is a human decision (GOV2 Rule 7).
+ */
+export const FOOD_SEED: InsertKnowledgeFood[] = [...EDITORIAL_FOOD_SEED, ...GRADUATED_FOOD_SEED];

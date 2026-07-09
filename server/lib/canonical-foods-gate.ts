@@ -1,35 +1,66 @@
 /**
- * NK6D Canonical Foods Importer
+ * Canonical Foods Gate (NK6D importer, converged by KNOW2)
  *
- * Thin translation layer: Parse v2.0-draft YAML → extract knowledge → insert using existing services
- * No new architecture, no new schema, no new tables.
- * Extends existing canonical knowledge persistence.
+ * Parse a v2.0-draft YAML → reconcile its identity → resolve its vocabulary →
+ * emit a graduation record. **This module writes nothing to the knowledge_*
+ * tables.**
+ *
+ * It used to. Until KNOW2 it inserted food identities straight into
+ * `knowledge_foods`, making it a second writer of a table the Source of Truth
+ * Register (Domain 1) assigns to `shared/knowledge/foods.ts` →
+ * `server/seeds/seed-knowledge-registry.ts`. 346 of 610 live foods arrived that
+ * way, unstamped (so they wore the default `source: "THA editorial"` despite
+ * being `authored_by: ChatGPT` drafts) and invisible to the declared owner. The
+ * two writers overwrote each other's identity rows — a later `seed:knowledge`
+ * silently reverted whatever the importer had force-upserted.
+ *
+ * Its role is now Stage 2 of the Knowledge Graduation Pipeline
+ * (`PLATFORM_KNOWLEDGE_COMPLETION_ARCHITECTURE.md` §1):
+ *
+ *     1 CANDIDATE  docs/knowledge/canonical-foods/drafts/*.yaml  (AI-authored)
+ *     2 GATED      this module — structural filter, never a guess
+ *     3 PROMOTED   a human commits the emitted record into shared/knowledge/
+ *     4 PUBLISHED  seed-knowledge-registry.ts, the one writer
+ *
+ * Rule KC9 — automation authors candidates, never publishes them. The gate's
+ * output is a reviewable record, not a row.
  */
 
 import { readFileSync } from "fs";
 import { parse as parseYaml } from "yaml";
-import { db } from "../db";
-import { eq } from "drizzle-orm";
-import {
-  knowledgeFoods,
-  knowledgeFoodNutrients,
-  knowledgeFoodBenefits,
+import type {
+  InsertKnowledgeFood,
+  InsertKnowledgeFoodNutrient,
+  InsertKnowledgeFoodBenefit,
 } from "@shared/schema";
 import {
   resolveNutrientTerm,
   resolveBenefitTerm,
+  FOOD_SEED,
+  NUTRIENT_SEED,
+  HEALTH_BENEFIT_SEED,
+  GRADUATED_FOOD_SOURCE,
   type VocabularyResolution,
 } from "@shared/knowledge";
 // GOV2 Rule 5 — ONE resolver for canonical FOOD identity (aliases → one identity).
-// The importer must resolve the incoming food identity through this shared
-// resolver BEFORE minting, so an alias of an existing food (carrot→carrots,
+// The gate must resolve the incoming food identity through this shared
+// resolver BEFORE emitting, so an alias of an existing food (carrot→carrots,
 // tomato→tomatoes, sweetcorn→corn, fennel-bulb→fennel) can never fork a second
 // identity. No second resolver is introduced (NK6I).
 import { resolveCanonicalFood } from "@shared/canonical";
 import { recordUnresolvedVocabularyTerm } from "./knowledge-review-store";
 
-/** Provenance stamped on relationship rows written by this importer. */
-const FOOD_IMPORT_SOURCE = "NK6 canonical food draft";
+/** Provenance carried by every record this gate emits (never "THA editorial"). */
+const FOOD_IMPORT_SOURCE = GRADUATED_FOOD_SOURCE;
+
+/**
+ * The importer wrote `classification.whole_food_status` into `description`, a
+ * display-copy column served by `/api/knowledge/foods`. A machine enum is not a
+ * description. The gate emits no description at all: a gap renders as a gap
+ * (Principle 6), and authoring prose here would be an unsourced knowledge claim
+ * (NK1 Domain 6 trust gate, ENGINEERING_WORKFLOW STEP 7).
+ */
+const DESCRIPTION_IS_A_HUMAN_ACT = null;
 
 /** A term that resolved through the GOV2 resolver to a canonical slug. */
 export interface ResolvedTerm {
@@ -44,31 +75,45 @@ export interface RejectedTerm {
   reason: string;
 }
 
-export interface ImportResult {
-  success: boolean;
-  // NK6O — set when the food identity was written but one or more resolved
-  // nutrient/benefit targets could NOT be bound (e.g. a resolved canonical slug
-  // is missing from knowledge_nutrients). The food is persisted but INCOMPLETE.
-  // A partial import is deliberately NOT `success: true` — the drop must never be
-  // masked as a clean success (the exact failure that left Batch 006 legumes with
-  // benefits but zero nutrients). `success` and `partial` are mutually exclusive.
-  partial: boolean;
+/**
+ * What the gate hands to the human who will promote it: exactly the rows that
+ * belong in `shared/knowledge/graduated-*.ts`. Nothing is written anywhere.
+ */
+export interface GraduationRecord {
+  food: InsertKnowledgeFood;
+  nutrients: InsertKnowledgeFoodNutrient[];
+  benefits: InsertKnowledgeFoodBenefit[];
+}
+
+/**
+ * Terminal outcomes, per Rule KC2 — a rejected candidate is a named result,
+ * never a silent drop or a silent retry.
+ *
+ *  - `promote`  cleared the gate; `record` holds the rows a human may commit.
+ *  - `existing` the seed already owns this identity; folding the draft in is a
+ *               governed merge, not a graduation (GOV2 Rule 7).
+ *  - `blocked`  the draft's own identity resolves to a DIFFERENT existing food.
+ *               Promoting it would fork the identity.
+ *  - `invalid`  structurally unusable (no slug, unreadable, no bindable facts).
+ */
+export type GateOutcome = "promote" | "existing" | "blocked" | "invalid";
+
+export interface GateResult {
+  outcome: GateOutcome;
   foodSlug: string;
   fileName: string;
   errors: string[];
   warnings: string[];
-  // NK6O — canonical slugs that resolved but failed to bind (missing FK target,
-  // etc.). Populated per-row so ONE bad target drops only itself, never the set.
-  dropped: {
+  /** Populated only when `outcome === "promote"`. */
+  record: GraduationRecord | null;
+  // NK6O, made pre-flight — canonical slugs that resolved but that the seed does
+  // not define, so no row may reference them. The importer discovered this only
+  // when Postgres rejected the foreign key, AFTER the identity was already
+  // written (which is how the Batch 006 legumes ended up with benefits and zero
+  // nutrients). The gate now catches it before anything is emitted.
+  unbindable: {
     nutrients: string[];
     benefits: string[];
-  };
-  // Rows newly written this run (existing canonical rows are preserved, not
-  // re-counted — the relationship inserts are non-destructive upserts).
-  inserted: {
-    foods: number;
-    nutrients: number;
-    benefits: number;
   };
   // Terms that resolved to a canonical identity (exact match or via alias).
   resolved: {
@@ -83,7 +128,7 @@ export interface ImportResult {
   // NK6I — GOV2 canonical FOOD identity reconciliation. When the incoming draft
   // identity resolves (by slug, display name, or a declared alias) to an EXISTING
   // canonical food under a different slug, this records that existing identity and
-  // the draft is BLOCKED (never minted) — a merge is a governed, human-approved
+  // the draft is BLOCKED (never promoted) — a merge is a governed, human-approved
   // decision, not a silent insert (GOV2 Rule 7 / draft duplicate_policy).
   identity: {
     /** The draft's own canonical_slug. */
@@ -105,21 +150,19 @@ export interface ImportResult {
 }
 
 /**
- * Import a single canonical food YAML file
+ * Gate a single canonical food YAML draft and, if it clears, emit the record a
+ * human may promote into `shared/knowledge/`. Reads the draft and the seed;
+ * writes nothing.
  */
-export async function importCanonicalFood(
-  filePath: string,
-  forceUpsert: boolean = false
-): Promise<ImportResult> {
-  const result: ImportResult = {
-    success: false,
-    partial: false,
+export async function gateCanonicalFood(filePath: string): Promise<GateResult> {
+  const result: GateResult = {
+    outcome: "invalid",
     foodSlug: "",
     fileName: filePath.split("/").pop() || filePath,
     errors: [],
     warnings: [],
-    dropped: { nutrients: [], benefits: [] },
-    inserted: { foods: 0, nutrients: 0, benefits: 0 },
+    record: null,
+    unbindable: { nutrients: [], benefits: [] },
     resolved: { nutrients: [], benefits: [] },
     rejected: { nutrients: [], benefits: [] },
     identity: { draftSlug: "", resolvedToSlug: null, matchedOn: null, outcome: "unchecked", aliasOverlaps: [] },
@@ -165,31 +208,35 @@ export async function importCanonicalFood(
       result.identity.resolvedToSlug = identityReconciliation.block.resolvedToSlug;
       result.identity.matchedOn = identityReconciliation.block.matchedOn;
       result.identity.outcome = "alias-of-existing";
-      // Rule 7: STOP. Do not mint a duplicate. A merge into the existing identity
-      // is a governed, human-approved decision — never a silent importer insert.
+      result.outcome = "blocked";
+      // Rule 7: STOP. Do not promote a duplicate. A merge into the existing
+      // identity is a governed, human-approved decision — never an automatic one.
       result.errors.push(
         `Canonical identity conflict: draft "${foodIdentity.slug}" resolves to existing canonical food ` +
         `"${identityReconciliation.block.resolvedToSlug}" (matched on "${identityReconciliation.block.matchedOn}"). ` +
-        `Importing would create a DUPLICATE identity (GOV2 Rule 7). Reconcile the draft slug to the existing ` +
-        `identity or fold its metadata in via a governed, human-approved merge — do not import as-is. ` +
-        `--force-upsert must NOT be used to bypass this.`
+        `Promoting would create a DUPLICATE identity (GOV2 Rule 7). Reconcile the draft slug to the existing ` +
+        `identity or fold its metadata in via a governed, human-approved merge — do not promote as-is.`
       );
       return result;
     }
 
-    // Step 3b: Check for exact slug duplicate against the knowledge_food identity.
-    const existing = await db.query.knowledgeFoods.findFirst({
-      where: (t) => eq(t.slug, foodIdentity.slug),
-    });
+    // Step 3b: Check for exact slug duplicate against the SEED — the owner of
+    // `knowledge_foods` — not against the database. Asking the DB was how the
+    // importer came to treat the published table as the authority on identity;
+    // the seed is the authority, and the DB is its projection (KNOW2).
+    const existing = FOOD_SEED.some((f) => f.slug === foodIdentity.slug);
 
-    if (existing && !forceUpsert) {
+    if (existing) {
       result.identity.outcome = "existing";
+      result.outcome = "existing";
       result.errors.push(
-        `Food slug "${foodIdentity.slug}" already exists. Use --force-upsert to override.`
+        `Food slug "${foodIdentity.slug}" is already owned by the canonical seed. Folding this draft's ` +
+        `metadata into that identity is a governed merge (GOV2 Rule 7), performed by a human in ` +
+        `shared/knowledge/ — there is no automatic override.`
       );
       return result;
     }
-    result.identity.outcome = existing ? "existing" : "new";
+    result.identity.outcome = "new";
 
     // Step 4: Resolve incoming vocabulary through the single GOV2 resolver.
     // Every nutrient/benefit name resolves to a canonical slug (exactly or via
@@ -241,165 +288,74 @@ export async function importCanonicalFood(
     // is unchanged; this only records a review PROPOSAL, it mints nothing).
     await captureRejectedTerms(result, foodIdentity.slug);
 
-    // Step 5: Insert / update food identity.
-    if (forceUpsert && existing) {
-      await db
-        .update(knowledgeFoods)
-        .set(foodIdentity)
-        .where(eq(knowledgeFoods.slug, foodIdentity.slug));
-    } else {
-      await db.insert(knowledgeFoods).values(foodIdentity);
+    // Step 5: Pre-flight bindability. A slug the resolver knows but the seed does
+    // not define cannot appear in a relationship row — `validateKnowledgeSeed()`
+    // would refuse the whole seed, and before KNOW2 Postgres refused the row only
+    // after the identity had already been written. Drop the unbindable target
+    // here, name it, and keep the rest of the food's facts.
+    const seedNutrients = new Set(NUTRIENT_SEED.map((n) => n.slug));
+    const seedBenefits = new Set(HEALTH_BENEFIT_SEED.map((b) => b.slug));
+    const bindableNutrients = nutrientBindings.filter((s) => seedNutrients.has(s));
+    const bindableBenefits = benefitBindings.filter((s) => seedBenefits.has(s));
+    result.unbindable.nutrients = nutrientBindings.filter((s) => !seedNutrients.has(s));
+    result.unbindable.benefits = benefitBindings.filter((s) => !seedBenefits.has(s));
+    for (const s of result.unbindable.nutrients) {
+      result.warnings.push(`Nutrient "${s}" resolves but is not defined by NUTRIENT_SEED — cannot be promoted; seed the vocabulary first.`);
     }
-    result.inserted.foods = 1;
-
-    // Step 6: Bind food → nutrients. NK6O — resilient, ROW-BY-ROW upsert. A single
-    // unbindable target (a resolved slug missing from knowledge_nutrients) drops
-    // ONLY that row and is reported; it can no longer abort the food's entire
-    // nutrient set as the old all-or-nothing multi-row INSERT did (the defect that
-    // left Batch 006 legumes with zero nutrients). Non-destructive: existing
-    // canonical (e.g. editorial-seed) relationships are preserved.
-    if (nutrientBindings.length > 0) {
-      const outcome = await bindFoodNutrients(foodIdentity.slug, nutrientBindings, nutrientConfidence);
-      result.inserted.nutrients = outcome.inserted;
-      result.warnings.push(...outcome.warnings);
-      result.dropped.nutrients.push(...outcome.dropped);
+    for (const s of result.unbindable.benefits) {
+      result.warnings.push(`Benefit "${s}" resolves but is not defined by HEALTH_BENEFIT_SEED — cannot be promoted; seed the vocabulary first.`);
     }
 
-    // Step 7: Bind food → benefits (same resilient, non-destructive upsert).
-    if (benefitBindings.length > 0) {
-      const outcome = await bindFoodBenefits(foodIdentity.slug, benefitBindings);
-      result.inserted.benefits = outcome.inserted;
-      result.warnings.push(...outcome.warnings);
-      result.dropped.benefits.push(...outcome.dropped);
-    }
-
-    // NK6O — honest completeness. A dropped target means the food is persisted but
-    // INCOMPLETE. Report `partial`, never a clean `success` — silently reporting
-    // success while a food loses relationships is the exact bug this repairs.
-    result.partial = result.dropped.nutrients.length > 0 || result.dropped.benefits.length > 0;
-    if (result.partial) {
-      result.warnings.push(
-        `PARTIAL import for "${foodIdentity.slug}": identity written, but ` +
-        [
-          result.dropped.nutrients.length
-            ? `${result.dropped.nutrients.length} nutrient(s) dropped [${result.dropped.nutrients.join(", ")}]`
-            : "",
-          result.dropped.benefits.length
-            ? `${result.dropped.benefits.length} benefit(s) dropped [${result.dropped.benefits.join(", ")}]`
-            : "",
-        ].filter(Boolean).join(" and ") +
-        `. Resolve the missing canonical target(s) (seed the vocabulary), then re-bind — not a clean success.`
+    // Step 6: A food with no bindable fact is not a Minimum Viable Fact (Rule
+    // KC5: identity + at least one real fact). It is a candidate, not knowledge.
+    if (bindableNutrients.length === 0 && bindableBenefits.length === 0) {
+      result.outcome = "invalid";
+      result.errors.push(
+        `Draft "${foodIdentity.slug}" has no bindable nutrient or benefit — identity alone is below the ` +
+        `Minimum Viable Fact bar (Rule KC5). Not promoted.`
       );
+      return result;
     }
-    result.success = !result.partial;
+
+    // Step 7: Emit the graduation record. Identity carries honest draft
+    // provenance and no description (see DESCRIPTION_IS_A_HUMAN_ACT). Rankings
+    // are the de-duplicated binding order, exactly as the importer computed them.
+    result.record = {
+      food: {
+        slug: foodIdentity.slug,
+        name: foodIdentity.name,
+        category: foodIdentity.category,
+        aliases: foodIdentity.aliases,
+        description: DESCRIPTION_IS_A_HUMAN_ACT,
+        source: FOOD_IMPORT_SOURCE,
+      },
+      nutrients: bindableNutrients.map((nutrientSlug, i) => ({
+        foodSlug: foodIdentity.slug,
+        nutrientSlug,
+        confidence: nutrientConfidence.get(nutrientSlug) || "emerging",
+        ranking: i,
+        source: FOOD_IMPORT_SOURCE,
+        // Quantitative values NOT imported (per v2.0-draft numeric policy).
+      })),
+      benefits: bindableBenefits.map((benefitSlug, i) => ({
+        foodSlug: foodIdentity.slug,
+        benefitSlug,
+        // Draft-sourced association: internal signal only, not surfaced.
+        evidenceStrength: "emerging",
+        ranking: i,
+        source: FOOD_IMPORT_SOURCE,
+        // Evidence sources / sign-off NOT imported (human sign-off gate only).
+      })),
+    };
+    result.outcome = "promote";
     return result;
   } catch (error) {
+    result.outcome = "invalid";
     result.errors.push(
       error instanceof Error ? error.message : String(error)
     );
     return result;
   }
-}
-
-/** Outcome of a resilient, row-by-row relationship bind (NK6O). */
-export interface BindOutcome {
-  /** Rows newly inserted this call. */
-  inserted: number;
-  /** Rows skipped because the pair already existed (non-destructive upsert). */
-  alreadyPresent: number;
-  /** Canonical slugs that could not be bound (e.g. missing FK target). */
-  dropped: string[];
-  /** Human-readable notes, one per dropped row. */
-  warnings: string[];
-}
-
-/**
- * NK6O — resilient food→nutrient binding. Insert each resolved nutrient slug as
- * its OWN statement so a single unbindable target (typically a canonical slug the
- * resolver knows but that is absent from `knowledge_nutrients`, tripping the
- * `knowledge_food_nutrients_nutrient_slug_fkey` foreign key) drops only that one
- * row. The previous single multi-row `INSERT … VALUES(rows)` aborted the whole
- * batch on one bad row, silently stripping a food of ALL its nutrients while the
- * import still reported success — exactly what happened to the Batch 006 legumes
- * when `protein` was missing from the table.
- *
- * Reused by the importer (Step 6) and by targeted governed re-binds.
- */
-export async function bindFoodNutrients(
-  foodSlug: string,
-  bindings: string[],
-  confidence: Map<string, string>,
-): Promise<BindOutcome> {
-  const outcome: BindOutcome = { inserted: 0, alreadyPresent: 0, dropped: [], warnings: [] };
-  for (let i = 0; i < bindings.length; i++) {
-    const nutrientSlug = bindings[i];
-    try {
-      const written = await db
-        .insert(knowledgeFoodNutrients)
-        .values({
-          foodSlug,
-          nutrientSlug,
-          confidence: confidence.get(nutrientSlug) || "emerging",
-          ranking: i,
-          source: FOOD_IMPORT_SOURCE,
-          isActive: true,
-          // Quantitative values NOT imported (per v2.0-draft numeric policy).
-        })
-        .onConflictDoNothing({ target: [knowledgeFoodNutrients.foodSlug, knowledgeFoodNutrients.nutrientSlug] })
-        .returning({ id: knowledgeFoodNutrients.id });
-      if (written.length > 0) outcome.inserted++;
-      else outcome.alreadyPresent++;
-    } catch (error) {
-      // Row isolation: this one target could not bind — record and continue.
-      outcome.dropped.push(nutrientSlug);
-      outcome.warnings.push(
-        `Dropped nutrient "${nutrientSlug}" for food "${foodSlug}" ` +
-        `(canonical target likely missing from knowledge_nutrients): ` +
-        `${error instanceof Error ? error.message : "unknown error"}`
-      );
-    }
-  }
-  return outcome;
-}
-
-/**
- * NK6O — resilient food→benefit binding, symmetric to {@link bindFoodNutrients}.
- * One unbindable benefit target drops only its own row, never the food's set.
- */
-export async function bindFoodBenefits(
-  foodSlug: string,
-  bindings: string[],
-): Promise<BindOutcome> {
-  const outcome: BindOutcome = { inserted: 0, alreadyPresent: 0, dropped: [], warnings: [] };
-  for (let i = 0; i < bindings.length; i++) {
-    const benefitSlug = bindings[i];
-    try {
-      const written = await db
-        .insert(knowledgeFoodBenefits)
-        .values({
-          foodSlug,
-          benefitSlug,
-          // Draft-sourced association: internal signal only, not surfaced.
-          evidenceStrength: "emerging",
-          ranking: i,
-          source: FOOD_IMPORT_SOURCE,
-          isActive: true,
-          // Evidence sources / sign-off NOT imported (human sign-off gate only).
-        })
-        .onConflictDoNothing({ target: [knowledgeFoodBenefits.foodSlug, knowledgeFoodBenefits.benefitSlug] })
-        .returning({ id: knowledgeFoodBenefits.id });
-      if (written.length > 0) outcome.inserted++;
-      else outcome.alreadyPresent++;
-    } catch (error) {
-      outcome.dropped.push(benefitSlug);
-      outcome.warnings.push(
-        `Dropped benefit "${benefitSlug}" for food "${foodSlug}" ` +
-        `(canonical target likely missing from knowledge_health_benefits): ` +
-        `${error instanceof Error ? error.message : "unknown error"}`
-      );
-    }
-  }
-  return outcome;
 }
 
 /**
@@ -408,7 +364,7 @@ export async function bindFoodBenefits(
  * outage cannot fail an import. Each rejection carries its food + file context
  * so the queue dedupes distinct terms while counting every sighting.
  */
-async function captureRejectedTerms(result: ImportResult, foodSlug: string): Promise<void> {
+async function captureRejectedTerms(result: GateResult, foodSlug: string): Promise<void> {
   const captures: Array<{ domain: "nutrient" | "benefit"; term: RejectedTerm }> = [
     ...result.rejected.nutrients.map((term) => ({ domain: "nutrient" as const, term })),
     ...result.rejected.benefits.map((term) => ({ domain: "benefit" as const, term })),
@@ -497,9 +453,18 @@ function reconcileFoodIdentity(
 }
 
 /**
- * Extract food identity from v2.0-draft YAML
+ * Extract food identity from v2.0-draft YAML.
+ *
+ * `scientificName`, `plantFamily` and `countsToDiversity` are NOT columns of
+ * `knowledge_foods`. The importer passed them to Drizzle anyway, which dropped
+ * them silently on every one of the 346 rows it wrote. They are returned here
+ * because the identity reconciler and the graduation emitter read them, and
+ * because naming the gap is better than pretending the draft carried less than
+ * it does — but `gateCanonicalFood` builds its record field-by-field and never
+ * relies on an insert to discard them. Plant-diversity policy already has an
+ * owner in `shared/canonical/foods.ts`; it does not belong in this table.
  */
-function extractFoodIdentity(draft: any) {
+export function extractFoodIdentity(draft: any) {
   const identity = draft.identity || {};
   const record = draft.record || {};
 
@@ -535,7 +500,7 @@ export function extractNutrients(draft: any): ExtractedNutrient[] {
  * Extract benefits from v2.0-draft YAML. Returns the RAW incoming framing term
  * (`benefit_language[].area`) for the resolver to resolve or reject.
  */
-function extractBenefits(draft: any): ExtractedBenefit[] {
+export function extractBenefits(draft: any): ExtractedBenefit[] {
   const benefitLanguage = draft.benefit_language || [];
   return benefitLanguage.map((b: any) => ({
     term: String(b.area || b.slug || ""),
