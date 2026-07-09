@@ -252,28 +252,34 @@ export interface ContextViewSpec {
  * `planner:read` — `planner-read-handler.ts`. `scope=week` → `days[PlannerDayView]`,
  *    each day carrying its own `meals[PlannerMealView]`; `scope=day` → `meals[]`.
  *
- *    `groupBy: "dayOfWeek"` makes the balance guarantee say the true thing about a
- *    week. Generically, `days` matches no field in `GENERIC_GROUP_FIELDS`, so the
- *    whole week is ONE group: round 0 seats a single day and the remaining six are
- *    DISCRETIONARY — they survive only if the token budget has room after every
- *    co-resident capability has taken its core. "What meals are missing from my
- *    plan?" (PL-025) and "Have I repeated too many meals this week?" (PL-027) are
- *    unanswerable from one day.
+ *    **NO `groupBy`, and the reason is the most useful thing NCV1 learned.**
  *
- *    Measured, planner co-resident with `nutrition-knowledge:read scope=foods`,
- *    days reaching the model as the token budget varies:
+ *    `groupBy: "dayOfWeek"` is the obvious declaration: seven groups of one day
+ *    each put the whole week into the guaranteed core, where generically the week
+ *    is ONE group and only the first day is guaranteed. Measured in isolation it
+ *    does exactly that — 7/7 days at every budget from 100 tokens up, against
+ *    generic's 1 at 300 and 5 at the production budget of 600.
  *
- *        budget   100  200  300  400  600  900
- *        native     7    7    7    7    7    7
- *        generic    1    1    1    2    5    7
+ *    It was measured on the real corpus too, and it made the platform worse:
+ *    **PL-023 −7.5 composite, ND-059 −5.0**, against **PL-025 +2.5**. An empty
+ *    planner day emits `{dayId, dayOfWeek}` — `meals: []` is dropped by the
+ *    engine's emptiness rule — so for a household whose week is empty, seven
+ *    guaranteed core seats buy seven rows of nothing, and spend the budget that
+ *    `pantry` and `food-intelligence` needed. Asked for nutrition boosts, the
+ *    Companion read seven empty days and answered *"You don't have any meals
+ *    planned for this week yet, so I can't suggest specific nutrition boosts"*,
+ *    where before it had offered the unused pantry Milk.
  *
- *    Seven groups of one day each put the whole week in the guaranteed core,
- *    bounded — as ever — only by the unchanged 1,800-char section ceiling. The
- *    `_context` it emits improves with it: `{"found":7,"groups":{"0":1,…,"6":1}}`
- *    names every day of the week, where the generic view could say only `found: 7`.
+ *    That is `THA_CONTEXT_COMPOSITION_ENGINE_ARCHITECTURE.md` §8 item 7 — a
+ *    capability with many groups crowding out a capability with few — reproduced
+ *    by a declaration meant to help. The balance guarantee is a guarantee about
+ *    EVIDENCE; multiplying groups multiplies the core whether or not the groups
+ *    carry any. A balance dimension must be worth its seats.
  *
- *    `dayOfWeek` is a calendar coordinate, not a ranking: grouping by it reorders
- *    nothing and the days are emitted in the capability's own payload order.
+ *    So `days` keeps the generic single group and this spec states only its field
+ *    allowlist. Naming planner's balance dimension is a real question, deferred to
+ *    a workstream that can measure it against a household whose planner is full —
+ *    the benchmark's user 1 cannot answer it, because their week is empty.
  *
  * `shopping:read` — `shopping-read-handler.ts`. `scope=list` → `items` + `extras`,
  *    `scope=unresolved` → `items` (with two extra review fields), `scope=basket` →
@@ -385,9 +391,12 @@ export const CONTEXT_VIEW_SPECS: Readonly<Record<string, ContextViewSpec>> = {
   },
   "planner:read": {
     collections: [
-      { name: "days", groupBy: "dayOfWeek", keep: ["dayId", "dayOfWeek", "meals"] },
+      // No `groupBy` on either collection: an empty planner day is not evidence, and
+      // a balance dimension that seats rows carrying none spends the core on nothing.
+      // See the note above — this was measured, not assumed.
+      { name: "days", keep: ["dayId", "dayOfWeek", "meals"] },
       // `scope=day` only.
-      { name: "meals", groupBy: "mealType", keep: ["entryId", "mealId", "mealName", "mealType", "audience", "isDrink"] },
+      { name: "meals", keep: ["entryId", "mealId", "mealName", "mealType", "audience", "isDrink"] },
     ],
   },
   "shopping:read": {

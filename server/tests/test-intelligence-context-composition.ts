@@ -751,27 +751,39 @@ async function main(): Promise<void> {
         "the native meals section is smaller than the generic one it replaces");
     }
 
-    // (d) planner — the whole week is guaranteed core, not discretionary.
+    // (d) planner — the spec declares an allowlist and DELIBERATELY no balance
+    //     dimension. `groupBy: "dayOfWeek"` was implemented, measured on the real
+    //     corpus, and reverted: it cost PL-023 −7.5 and ND-059 −5.0 composite for
+    //     PL-025 +2.5, because an empty planner day emits `{dayId, dayOfWeek}` and
+    //     seven guaranteed core seats then buy seven rows of nothing — crowding out
+    //     the `pantry` and `food-intelligence` evidence that answered the question
+    //     (architecture §8 item 7). A balance dimension must be worth its seats.
     {
-      const utterance = "What meals are missing from my plan?";
-      const foods = { scope: "foods", foods: Array.from({ length: 611 }, (_, i) => ({ slug: `f${i}`, name: `Food ${i}`, category: `cat${i % 40}` })) };
       const week = plannerWeek();
-      const daysShown = (text: string) =>
-        Array.from({ length: 7 }, (_, d) => d).filter(d => text.includes(`"dayId":${120 + d}`)).length;
-      const run = (id: string, tokenBudget: number) => composeContext({
-        utterance,
-        capabilities: [cap("nutrition-knowledge", "read", foods, 0.9), cap(id, "read", week, 0.8)],
-        tokenBudget,
-      }).text;
-      assert(daysShown(run("planner", 300)) === 7, "all seven planner days reach the model on a crowded turn");
-      assert(daysShown(run("planner-unregistered", 300)) === 1, "…where the generic derivation seated exactly one");
-      assert(daysShown(run("planner", 100)) === 7, "…and seven still reach it at a third of that budget");
+      const view = deriveContextView("planner", "read", week);
+      const days = view.collections.find(c => c.name === "days")!;
+      assert(days.groupsTotal === 1, "planner's `days` keeps ONE group — no balance dimension is declared");
+      assert(days.total === 7, "…while `_context` still reports all seven days the capability found");
 
-      const body = JSON.parse(sections(run("planner", 300)).get("planner")!);
-      assert(Object.keys(body._context.days.groups).length === 7,
-        "_context names every day of the week, including the days it did not print");
-      assert(body._context.days.found === 7, "…and the capability's own true total");
-      assert(body._context.days.shown === undefined, "…and never how many rows this block printed");
+      // The allowlist is what the spec does say, and it holds.
+      const emptyWeek = { scope: "week", weekId: 6, weekNumber: 6, weekName: "Week 6", days: [{ dayId: 120, dayOfWeek: 0, meals: [], internalNote: "scheduler-v3" }] };
+      const n = composeContext({ utterance: "what is on my plan", capabilities: [cap("planner", "read", emptyWeek, 0.9)] }).text;
+      const g = composeContext({ utterance: "what is on my plan", capabilities: [cap("planner-unregistered", "read", emptyWeek, 0.9)] }).text;
+      assert(!n.includes("scheduler-v3"), "a field outside planner's row allowlist does not reach the model");
+      assert(g.includes("scheduler-v3"), "…where the generic derivation emits it");
+      assert(n.includes(`"dayId":120`), "…and the day's own reference is kept");
+
+      // And the crowding the reverted `groupBy` caused is, itself, a test: a
+      // co-resident capability must keep its evidence on a planner turn.
+      const foods = { scope: "foods", foods: Array.from({ length: 611 }, (_, i) => ({ slug: `f${i}`, name: `Food ${i}`, category: `cat${i % 40}` })) };
+      const crowded = composeContext({
+        utterance: "what nutrition boosts can I add this week",
+        capabilities: [cap("planner", "read", week, 0.8), cap("nutrition-knowledge", "read", foods, 0.9)],
+        tokenBudget: 300,
+      });
+      const plannerCore = crowded.metrics.perCapability.find(p => p.capabilityId === "planner")!;
+      assert(plannerCore.groupsShown === 1,
+        "planner takes ONE guaranteed core seat, leaving the rest of the budget to the capabilities that answer");
     }
 
     // (e) shopping — the owner's honesty caveat cannot be outbid.
