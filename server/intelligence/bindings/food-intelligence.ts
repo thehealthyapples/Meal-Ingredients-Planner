@@ -34,13 +34,14 @@ export const FOOD_INTELLIGENCE_CAPABILITY_ID = "food-intelligence";
 
 /**
  * The verbs this read-only binding actually executes: `recommend` (the primary
- * join+rank+explain output), `explain` (a single-candidate drill-down), and (FI4)
- * `report` (the caller's own prioritised Food Opportunities). Declared here so the
- * registry can surface truthful executableIntents and discovery cannot
- * over-advertise (INT6A discipline, applied to FI3's new capability and its FI4
- * extension).
+ * join+rank+explain output), `explain` (a single-candidate drill-down), (FI4)
+ * `report` (the caller's own prioritised Food Opportunities), and (COMP1)
+ * `compare` (a structured, cited comparison of two or more named foods/products
+ * via the sibling Food Comparison Engine). Declared here so the registry can
+ * surface truthful executableIntents and discovery cannot over-advertise (INT6A
+ * discipline, applied to FI3's new capability and its FI4/COMP1 extensions).
  */
-export const FOOD_INTELLIGENCE_EXECUTABLE_INTENTS: readonly IntentVerb[] = ["recommend", "explain", "report"];
+export const FOOD_INTELLIGENCE_EXECUTABLE_INTENTS: readonly IntentVerb[] = ["recommend", "explain", "report", "compare"];
 
 /**
  * Bind the read-only Food Intelligence handler to a platform.

@@ -344,6 +344,7 @@ export {
   type FoodIntelligenceRecommendResult,
   type FoodIntelligenceExplainResult,
   type FoodOpportunityReportResult,
+  type FoodComparisonResult,
 } from "./handlers/food-intelligence-read-handler.js";
 export {
   createEngineFoodIntelligenceReadPort,
@@ -380,6 +381,27 @@ export {
   type FoodOpportunityBundle,
   type FoodOpportunityRequest,
 } from "./food-intelligence/opportunity-engine.js";
+
+// COMP1 — the Food Comparison Engine (sibling to the Food Intelligence and Food
+// Opportunity Engines): composes structured, cited, honest-gapped comparisons of
+// two or more named foods/products from existing owners, executed via the SAME
+// food-intelligence capability's new `compare` verb.
+export {
+  assembleFoodComparison,
+  buildComparison,
+  COMPARISON_DIMENSION_KEYS,
+  type FoodComparisonRequest,
+  type FoodComparisonBundle,
+  type FoodComparisonTrust,
+  type ComparisonSubject,
+  type ComparisonSubjectKind,
+  type ComparisonDimensionKey,
+  type ComparisonDimensionEntry,
+  type ComparisonDimensionOutcome,
+  type ComparisonRecommendation,
+  type ComparisonEvidence,
+  type SubjectFacts,
+} from "./food-intelligence/comparison-engine.js";
 
 // OD1 — twentieth live capability binding (Opportunity Delivery Framework): the
 // platform's own governance layer over Domain Intelligence opportunity producers

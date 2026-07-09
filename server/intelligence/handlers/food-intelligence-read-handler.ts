@@ -41,6 +41,12 @@ import {
 import type { FoodIntelligenceReadPort } from "./food-intelligence-read-port.js";
 import type { FoodIntelligenceBundle, FoodIntelligenceRecommendation, FoodIntelligenceTrust } from "../food-intelligence/engine.js";
 import type { FoodOpportunity, FoodOpportunityTrust } from "../food-intelligence/opportunity-engine.js";
+import type {
+  ComparisonDimensionOutcome,
+  ComparisonRecommendation,
+  ComparisonSubject,
+  FoodComparisonTrust,
+} from "../food-intelligence/comparison-engine.js";
 import { toInt, gap } from "./_read-kit.js";
 
 // ---------------------------------------------------------------------------
@@ -71,6 +77,16 @@ export interface FoodOpportunityReportResult {
   readonly source: "food-opportunity-engine";
 }
 
+/** COMP1 — the `compare` verb's result: a structured, cited, honest-gapped comparison. */
+export interface FoodComparisonResult {
+  readonly subjects: readonly ComparisonSubject[];
+  readonly dimensions: readonly ComparisonDimensionOutcome[];
+  readonly recommendation: ComparisonRecommendation | null;
+  readonly recommendationGap: string | null;
+  readonly trust: FoodComparisonTrust;
+  readonly source: "food-comparison-engine";
+}
+
 // ---------------------------------------------------------------------------
 // Parameter coercion (food-intelligence specific — not shared plumbing)
 // ---------------------------------------------------------------------------
@@ -86,6 +102,15 @@ function toSlug(value: unknown): string | undefined {
 }
 
 const MAX_EXPLAIN_LOOKUP_LIMIT = 20;
+
+/** COMP1 — coerce the `items` parameter to a list of non-empty strings. */
+function toItems(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((v): v is string => typeof v === "string")
+    .map((v) => v.trim())
+    .filter((v) => v.length > 0);
+}
 
 // ---------------------------------------------------------------------------
 // Verb implementations
@@ -227,6 +252,56 @@ async function handleReport(
   };
 }
 
+/**
+ * COMP1 — `compare`: a structured, deterministic comparison of two or more named
+ * foods/products, composed entirely from existing owners (canonical seed,
+ * evidence-gated Food Knowledge Registry, the caller's OWN product scan history,
+ * household restrictions + planner familiarity). Works for anonymous callers too
+ * (Stage 1: no household context, no scan history — products then gap honestly).
+ * A comparison where fewer than two items resolve to any owner is an honest gap,
+ * never a one-sided or fabricated comparison.
+ */
+async function handleCompare(
+  intent: Intent,
+  context: IntelligenceContext,
+  port: FoodIntelligenceReadPort,
+): Promise<FoodComparisonResult> {
+  const params = intent.parameters ?? {};
+  const items = toItems(params.items);
+
+  if (items.length < 2) {
+    throw gap(
+      "A food comparison needs { items } — a list of at least two food or product names " +
+        '(e.g. { items: ["broccoli", "spinach"] }). THA will not compare an item against nothing.',
+    );
+  }
+
+  const bundle = await port.assembleFoodComparison({
+    items,
+    userId: toInt(context.userId),
+  });
+
+  if (!bundle.trust.isGrounded) {
+    const unresolved = bundle.subjects
+      .filter((s) => s.kind === "unresolved")
+      .map((s) => JSON.stringify(s.query));
+    throw gap(
+      `Honest gap: fewer than two of the requested items resolved to a canonical food or to a product ` +
+        `in your own scan history (unresolved: ${unresolved.join(", ")}). The Food Comparison Engine ` +
+        "will not fabricate an identity, a score, or a difference for an item no owner has evidence about.",
+    );
+  }
+
+  return {
+    subjects: bundle.subjects,
+    dimensions: bundle.dimensions,
+    recommendation: bundle.recommendation,
+    recommendationGap: bundle.recommendationGap,
+    trust: bundle.trust,
+    source: "food-comparison-engine",
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Handler factory
 // ---------------------------------------------------------------------------
@@ -248,10 +323,12 @@ export function createFoodIntelligenceReadHandler(
         return handleExplain(intent, context, await resolvePort());
       case "report":
         return handleReport(intent, context, await resolvePort());
+      case "compare":
+        return handleCompare(intent, context, await resolvePort());
       default:
         throw new CapabilityExecutionError(
           "gap",
-          `Food Intelligence is bound to the Intelligence Platform read-only (FI3; extended FI4): "${intent.verb}" ` +
+          `Food Intelligence is bound to the Intelligence Platform read-only (FI3; extended FI4, COMP1): "${intent.verb}" ` +
             "is not executable via the platform. Food Intelligence never writes to any business domain — " +
             "every write remains owned by that domain's own registered capability (Rule FI1).",
           intent.verb,

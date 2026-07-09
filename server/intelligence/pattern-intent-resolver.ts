@@ -1183,6 +1183,60 @@ function foodOpportunityReport(confidence: number): ResolvedIntent {
   };
 }
 
+// ---------------------------------------------------------------------------
+// COMP1 — Food Comparison: verb `compare` (Food Comparison Engine)
+//
+// Named-items comparison questions route to food-intelligence:compare with the
+// two item strings as parameters — everything else (identity resolution, scan-
+// history matching, evidence, honest gaps) belongs to the Comparison Engine,
+// never to this resolver (the resolver derives parameters from the utterance
+// alone and may not read storage).
+//
+// GUARDS. cleanComparisonItem rejects captures that are not plausibly a named
+// food/product: demonstratives and pronouns ("these two products" — that form
+// stays with the analyser's PR-067 matcher and its honest gap), question words,
+// and other capabilities' domain nouns ("compare my shopping list to my
+// pantry" keeps its INT33 compound route). `compare` is in the capability's
+// supportedIntents (COMP1) and in READ_ONLY_VERBS (permissions.ts), so the
+// VALIDATE gate admits it and no confirmation round-trip is skipped.
+// ---------------------------------------------------------------------------
+
+const COMPARISON_ITEM_STOPWORDS =
+  /\b(?:these|those|this|that|them|they|it|which|what|who|me|you|us|tell|say|two|both|products?|items?|options?|things?|ones?|list|lists|pantry|planner|week|diary|meals?|recipes?|shopping|basket|household)\b/i;
+
+/** Strip a trailing "…and tell me which is better/healthier" style clause. */
+function stripComparisonTrailer(u: string): string {
+  return u.replace(
+    /[,;:–—-]?\s*(?:and\s+)?(?:tell\s+me\s+|say\s+)?which\s+(?:one\s+)?is\s+(?:better|healthier|best)\b[^]*$/i,
+    "",
+  );
+}
+
+/** Normalise one captured comparison item; null when it is not a plausible named item. */
+function cleanComparisonItem(raw: string): string | null {
+  const item = raw
+    .trim()
+    .replace(/^(?:a|an|the|some|my|our)\s+/i, "")
+    .replace(/[?.!,;:]+$/, "")
+    .trim()
+    .toLowerCase();
+  if (!item || item.length > 40) return null;
+  if (COMPARISON_ITEM_STOPWORDS.test(item)) return null;
+  return item;
+}
+
+function foodComparison(rawA: string, rawB: string, confidence: number): ResolvedIntent | null {
+  const a = cleanComparisonItem(rawA);
+  const b = cleanComparisonItem(rawB);
+  if (!a || !b || a === b) return null;
+  return {
+    capability: "food-intelligence",
+    verb: "compare",
+    parameters: { items: [a, b] },
+    confidence,
+  };
+}
+
 const FOOD_INTELLIGENCE_MATCHERS: Matcher[] = [
   // BENCH4 (ND-059): "what simple nutrition boosts can I add this week?"
   // Requires an uplift NOUN (boost/uplift/upgrade/win) qualified by nutrition, or the
@@ -1202,6 +1256,41 @@ const FOOD_INTELLIGENCE_MATCHERS: Matcher[] = [
   (u) => {
     if (!/\bmak(?:e|ing)\s+(?:this|that|the|my|our|it)\s+(?:meal|dish|recipe|dinner|lunch|breakfast|supper)?\s*(?:healthier|more\s+nutritious|more\s+balanced)\b/i.test(u)) return null;
     return foodOpportunityReport(0.87);
+  },
+
+  // COMP1: "compare cheddar and brie" / "compare butter with margarine"
+  // Named-items form only. Demonstrative/pronoun captures ("these two products") are
+  // rejected by cleanComparisonItem, leaving the analyser's PR-067 matcher to own that
+  // form (it gaps honestly — no named items means nothing the comparison engine could
+  // resolve). Domain nouns (list/pantry/planner/…) are likewise rejected so the INT33
+  // cross-domain compounds keep their questions.
+  (u) => {
+    const scrubbed = stripComparisonTrailer(u);
+    const m = scrubbed.match(/\bcompare\s+(.+?)\s+(?:and|vs\.?|versus|with|against|to)\s+(.+?)\s*$/i);
+    if (!m) return null;
+    return foodComparison(m[1], m[2], 0.87);
+  },
+
+  // COMP1: "which is better, oat milk or cow's milk?" / "which is healthier: X or Y"
+  (u) => {
+    const m = u.match(/\bwhich\s+(?:one\s+)?is\s+(?:better|healthier|the\s+(?:better|healthier)\s+(?:choice|option))\s*[,:;–—-]?\s*(.+?)\s+or\s+(.+?)[?.!]?\s*$/i);
+    if (!m) return null;
+    return foodComparison(m[1], m[2], 0.87);
+  },
+
+  // COMP1: "is greek yoghurt healthier than regular yoghurt?"
+  (u) => {
+    const m = u.match(/\bis\s+(.+?)\s+(?:better|healthier|a\s+(?:better|healthier)\s+(?:choice|option))\s+than\s+(.+?)[?.!]?\s*$/i);
+    if (!m) return null;
+    return foodComparison(m[1], m[2], 0.87);
+  },
+
+  // COMP1: bare "salmon vs mackerel" — whole-utterance anchored so "vs" in a longer
+  // sentence cannot hijack an unrelated question.
+  (u) => {
+    const m = u.match(/^\s*(.+?)\s+(?:vs\.?|versus)\s+(.+?)[?.!]?\s*$/i);
+    if (!m) return null;
+    return foodComparison(m[1], m[2], 0.85);
   },
 ];
 

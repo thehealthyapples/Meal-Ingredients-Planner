@@ -25,13 +25,19 @@ import type {
   FoodOpportunityBundle,
   FoodOpportunityRequest,
 } from "../food-intelligence/opportunity-engine.js";
+import type {
+  FoodComparisonBundle,
+  FoodComparisonRequest,
+} from "../food-intelligence/comparison-engine.js";
 
-/** The read-only owning-surface. Forwards to the Food Intelligence Engine and (FI4) the Food Opportunity Engine. */
+/** The read-only owning-surface. Forwards to the Food Intelligence Engine, (FI4) the Food Opportunity Engine and (COMP1) the Food Comparison Engine. */
 export interface FoodIntelligenceReadPort {
   /** Engine — deterministic join+rank+explain bundle for one benefit or nutrient. */
   assembleFoodIntelligence(request: FoodIntelligenceRequest): Promise<FoodIntelligenceBundle>;
   /** Opportunity Engine (FI4) — deterministic, prioritised Food Opportunities from the caller's own existing business-domain activity. */
   identifyOpportunities(request: FoodOpportunityRequest): Promise<FoodOpportunityBundle>;
+  /** Comparison Engine (COMP1) — deterministic, cited comparison of two or more named foods/products, with honest gaps. */
+  assembleFoodComparison(request: FoodComparisonRequest): Promise<FoodComparisonBundle>;
 }
 
 /**
@@ -43,8 +49,10 @@ export interface FoodIntelligenceReadPort {
 export async function createEngineFoodIntelligenceReadPort(): Promise<FoodIntelligenceReadPort> {
   const engine = await import("../food-intelligence/engine.js");
   const opportunityEngine = await import("../food-intelligence/opportunity-engine.js");
+  const comparisonEngine = await import("../food-intelligence/comparison-engine.js");
   return {
     assembleFoodIntelligence: (request) => engine.assembleFoodIntelligence(request),
     identifyOpportunities: (request) => opportunityEngine.identifyOpportunities(request),
+    assembleFoodComparison: (request) => comparisonEngine.assembleFoodComparison(request),
   };
 }
