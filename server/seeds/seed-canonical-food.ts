@@ -24,6 +24,8 @@ import {
   CANONICAL_FOOD_ALIAS_SEED,
   CANONICAL_SEED_COUNTS,
   validateCanonicalSeed,
+  canonicalSeedBindingWarnings,
+  KNOWLEDGE_BINDING_COVERAGE,
 } from "@shared/canonical";
 
 const { Pool } = pg;
@@ -49,8 +51,18 @@ async function run() {
     process.exit(1);
   }
 
+  // KNOW3 — bindings the audit accepted but could not verify by name equality
+  // (e.g. `peas → garden-peas`). Non-fatal, and never silent: an unprinted
+  // warning is an unknown, not a tracked gap.
+  const bindingWarnings = canonicalSeedBindingWarnings();
+  if (bindingWarnings.length > 0) {
+    console.warn(`Canonical → knowledge bindings resting on editorial judgement (${bindingWarnings.length}):`);
+    for (const w of bindingWarnings) console.warn("  ⚠ " + w);
+  }
+
   console.log("Seeding Canonical Food Identity (idempotent upsert)…");
   console.log("  Planned:", JSON.stringify(CANONICAL_SEED_COUNTS));
+  console.log("  Knowledge bindings:", JSON.stringify(KNOWLEDGE_BINDING_COVERAGE));
 
   // ── 1. Diversity groups ───────────────────────────────────────────────────
   await db.insert(schema.diversityGroups).values(DIVERSITY_GROUP_SEED).onConflictDoUpdate({

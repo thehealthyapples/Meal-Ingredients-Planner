@@ -98,6 +98,13 @@ async function main() {
         console.log(`      ⚠ alias "${o.alias}" also names existing "${o.resolvedToSlug}" — review scope before promoting`);
       }
     }
+    // KNOW3 — the canonical half of the promotion. Omitting it orphans the two
+    // identities from each other, and `npm run seed:canonical` will refuse.
+    if (r.record!.canonicalBinding) {
+      const b = r.record!.canonicalBinding;
+      const target = b.varietySlug ? `variety "${b.varietySlug}"` : `canonical food "${b.canonicalFoodSlug}"`;
+      console.log(`      🔗 binding owed: ${target} → knowledgeFoodSlug: "${b.knowledgeFoodSlug}"  (matched on "${b.matchedOn}")`);
+    }
   }
   for (const r of existing) console.log(`🔵 EXISTING ${r.fileName}  →  the seed already owns "${r.foodSlug}"; a merge is a human decision`);
   for (const r of blocked) console.log(`⛔ BLOCKED  ${r.fileName}  →  ${r.errors.join("; ")}`);
@@ -125,6 +132,13 @@ async function main() {
   const benefits = promote.flatMap((r) => r.record!.benefits.map((b) =>
     `  { foodSlug: ${ts(b.foodSlug)}, benefitSlug: ${ts(b.benefitSlug)}, evidenceStrength: ${ts(b.evidenceStrength)}, ranking: ${b.ranking}, source: GRADUATED_FOOD_SOURCE },`));
 
+  // KNOW3 — canonical bindings owed by this batch. These are edits to an EXISTING
+  // canonical food, not new rows: the reviewer sets the field in place.
+  const bindings = promote
+    .map((r) => r.record!.canonicalBinding)
+    .filter((b): b is NonNullable<typeof b> => b !== null)
+    .map((b) => `  // ${b.varietySlug ? `variety ${b.varietySlug} (of ${b.canonicalFoodSlug})` : `food ${b.canonicalFoodSlug}`}: knowledgeFoodSlug: ${ts(b.knowledgeFoodSlug)},`);
+
   const emitted = [
     `// ${promote.length} candidate(s) cleared the gate. Review, then append:`,
     ``,
@@ -136,6 +150,14 @@ async function main() {
     ``,
     `// → shared/knowledge/graduated-relationships.ts, into GRADUATED_FOOD_BENEFITS`,
     ...benefits,
+    ...(bindings.length
+      ? [
+          ``,
+          `// → shared/canonical/foods.ts — set knowledgeFoodSlug on the EXISTING entry.`,
+          `//   Same commit as the rows above; seed:canonical refuses without it.`,
+          ...bindings,
+        ]
+      : []),
     ``,
   ].join("\n");
 

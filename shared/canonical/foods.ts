@@ -1418,7 +1418,7 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     food: {
       slug: "grapefruit", name: "Grapefruit", category: "Fruit", subcategory: "Citrus",
       description: "A large, bitter-sweet citrus fruit rich in vitamin C and folate; belongs to the citrus plant group.",
-      knowledgeFoodSlug: null, diversityGroupSlug: "citrus",
+      knowledgeFoodSlug: "grapefruit", diversityGroupSlug: "citrus",
     },
     aliases: [
       { alias: "grapefruits", aliasType: "plural" },
@@ -1898,7 +1898,7 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     food: {
       slug: "semi-skimmed-milk", name: "Semi-Skimmed Milk", category: "Dairy", subcategory: "Cow's milk",
       description: "Cow's milk with roughly half the fat removed (about 1.7%); the most-bought milk in the UK.",
-      knowledgeFoodSlug: null, diversityGroupSlug: null, family: "milk",
+      knowledgeFoodSlug: "semi-skimmed-milk", diversityGroupSlug: null, family: "milk",
     },
     aliases: [
       { alias: "semi skimmed milk", aliasType: "common_name" },
@@ -2570,7 +2570,7 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     food: {
       slug: "plain-wheat-flour", name: "Plain Wheat Flour", category: "Grains", subcategory: "Flours",
       description: "White wheat flour with the bran and germ milled out; the default UK baking and thickening flour.",
-      knowledgeFoodSlug: null, diversityGroupSlug: "wheat", family: null,
+      knowledgeFoodSlug: "plain-wheat-flour", diversityGroupSlug: "wheat", family: null,
     },
     aliases: [
       { alias: "wheat flour", aliasType: "common_name" },
@@ -2640,7 +2640,7 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     food: {
       slug: "pearl-couscous", name: "Pearl Couscous", category: "Grains", subcategory: "Wheat products",
       description: "Larger, toasted spheres of wheat dough, chewier than couscous and cooked like pasta.",
-      knowledgeFoodSlug: null, diversityGroupSlug: "wheat", family: null,
+      knowledgeFoodSlug: "pearl-couscous", diversityGroupSlug: "wheat", family: null,
     },
     aliases: [
       // NK6Q §2.4 — these named the wrong food while `pearl-couscous` already existed.
@@ -2734,7 +2734,10 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
       description: "Pasta made from wholegrain wheat flour, retaining the bran and germ; substantially higher in fibre than white pasta.",
       // Was a food_variety of `pasta`. Promoted to an identity: whole-vs-refined is
       // a fact-owning distinction across this platform (brown-rice ≠ white-rice).
-      knowledgeFoodSlug: null, diversityGroupSlug: "wheat", family: "pasta",
+      // KNOW3 — knowledge also mints `wholewheat-spaghetti`, which this food treats
+      // as a shape (see the `form` aliases below). Nothing binds it; the facts of
+      // wholewheat pasta are the facts of wholewheat spaghetti, so no claim is lost.
+      knowledgeFoodSlug: "wholewheat-pasta", diversityGroupSlug: "wheat", family: "pasta",
     },
     aliases: [
       { alias: "wholemeal pasta", aliasType: "common_name" },
@@ -2868,7 +2871,7 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
       description: "Cocoa solids with most of the cocoa butter pressed out, then milled to a powder; intensely bitter, and rich in polyphenols, magnesium and iron.",
       // NK6Q §2.4 — `cocoa-powder` is a synonym of this identity, NOT of `dark-chocolate`.
       // Raw cacao vs roasted cocoa is a processing note, not a second identity.
-      knowledgeFoodSlug: null, diversityGroupSlug: "dark-chocolate", family: null,
+      knowledgeFoodSlug: "cacao-powder", diversityGroupSlug: "dark-chocolate", family: null,
     },
     aliases: [
       { alias: "cocoa powder", aliasType: "common_name" },
@@ -3895,7 +3898,7 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
       description: "A naturally fizzy fermented tea made using a SCOBY (symbiotic culture of bacteria and yeast); contains live cultures and organic acids.",
       // NK6S — its own subcategory already declared it a drink. Category (its domain)
       // is unchanged; only the beverage hierarchy is added.
-      knowledgeFoodSlug: null, diversityGroupSlug: null, family: "fermented-beverage", fermented: true,
+      knowledgeFoodSlug: "kombucha", diversityGroupSlug: null, family: "fermented-beverage", fermented: true,
     },
     aliases: [
       { alias: "fermented tea", aliasType: "common_name" },

@@ -120,7 +120,11 @@ function getIndex(): CanonicalIndex {
 // Candidate normalised forms to try, in priority order. Faithful first (the raw
 // normalised key), then plural→singular forms so "cherry tomatoes" can reach the
 // "cherry tomato" variety and "shiitake mushrooms" the "shiitake mushroom" one.
-function inputVariants(norm: string): string[] {
+//
+// KNOW3 — exported so `knowledge-binding.ts` matches canonical identities against
+// knowledge identities through THIS normalisation and no other. A private variant
+// list there would be a second normalisation step, which GOV2 Rule 5 forbids.
+export function ingredientKeyVariants(norm: string): string[] {
   const out: string[] = [norm];
   const push = (s: string) => { if (s && !out.includes(s)) out.push(s); };
 
@@ -132,6 +136,11 @@ function inputVariants(norm: string): string[] {
   if (last.length > 2 && last.endsWith("s")) push([...words.slice(0, -1), last.slice(0, -1)].join(" "));
 
   return out;
+}
+
+/** "cherry-tomato" → ["cherry tomato", …]. The identity keys a slug spells. */
+export function slugKey(slug: string): string {
+  return slugToKey(slug);
 }
 
 const UNRESOLVED = (input: string, key: string): CanonicalResolution => ({
@@ -150,7 +159,7 @@ export function resolveCanonicalFood(input: string): CanonicalResolution {
   if (!key) return UNRESOLVED(input, key);
 
   const { byKey } = getIndex();
-  for (const candidate of inputVariants(key)) {
+  for (const candidate of ingredientKeyVariants(key)) {
     const hit = byKey.get(candidate);
     if (hit) {
       return {

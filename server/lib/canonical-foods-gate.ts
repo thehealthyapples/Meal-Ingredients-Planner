@@ -76,6 +76,21 @@ export interface RejectedTerm {
 }
 
 /**
+ * KNOW3 — a canonical food (or variety) that this draft's identity names, and
+ * that carries NO knowledge binding. Promoting the draft creates the knowledge
+ * food it should point at, so the promotion is incomplete without also setting
+ * `knowledgeFoodSlug` in `shared/canonical/foods.ts`.
+ */
+export interface RequiredCanonicalBinding {
+  canonicalFoodSlug: string;
+  /** Set when the draft names a VARIETY of that food, not the food itself. */
+  varietySlug: string | null;
+  knowledgeFoodSlug: string;
+  /** The draft identity string that reached the unbound canonical identity. */
+  matchedOn: string;
+}
+
+/**
  * What the gate hands to the human who will promote it: exactly the rows that
  * belong in `shared/knowledge/graduated-*.ts`. Nothing is written anywhere.
  */
@@ -83,6 +98,11 @@ export interface GraduationRecord {
   food: InsertKnowledgeFood;
   nutrients: InsertKnowledgeFoodNutrient[];
   benefits: InsertKnowledgeFoodBenefit[];
+  /**
+   * The canonical-side edit that must land in the SAME commit as the rows above.
+   * Null when no canonical food names this identity, or when it is already bound.
+   */
+  canonicalBinding: RequiredCanonicalBinding | null;
 }
 
 /**
@@ -146,6 +166,16 @@ export interface GateResult {
      * hard block — the alias set, not the food's own identity, is what overlaps.
      */
     aliasOverlaps: Array<{ alias: string; resolvedToSlug: string }>;
+    /**
+     * KNOW3 — the draft's own identity names an existing canonical food that has
+     * NO knowledge binding. `isForeignIdentity()` cannot see this: it compares
+     * `resolution.knowledgeFoodSlug`, which is null here, so the draft looks new.
+     * That blindness is how seven canonical foods came to sit beside an identically
+     * named knowledge food with nothing joining them.
+     *
+     * Not a block — the draft IS new knowledge. It is the binding that is owed.
+     */
+    requiredBinding: RequiredCanonicalBinding | null;
   };
 }
 
@@ -165,7 +195,7 @@ export async function gateCanonicalFood(filePath: string): Promise<GateResult> {
     unbindable: { nutrients: [], benefits: [] },
     resolved: { nutrients: [], benefits: [] },
     rejected: { nutrients: [], benefits: [] },
-    identity: { draftSlug: "", resolvedToSlug: null, matchedOn: null, outcome: "unchecked", aliasOverlaps: [] },
+    identity: { draftSlug: "", resolvedToSlug: null, matchedOn: null, outcome: "unchecked", aliasOverlaps: [], requiredBinding: null },
   };
 
   try {
@@ -237,6 +267,23 @@ export async function gateCanonicalFood(filePath: string): Promise<GateResult> {
       return result;
     }
     result.identity.outcome = "new";
+
+    // Step 3c: KNOW3 — the draft is new knowledge, and it names a canonical food
+    // that carries no knowledge binding. Recorded only now: a blocked or already-
+    // owned draft is never promoted, so it owes nothing. Promoting the rows without
+    // the canonical edit leaves the two identities orphaned from each other, and
+    // `validateCanonicalSeed()` then refuses to seed — which is the point. Say so
+    // here, while the reviewer is looking, rather than at the seed's expense.
+    result.identity.requiredBinding = identityReconciliation.requiredBinding;
+    if (identityReconciliation.requiredBinding) {
+      const b = identityReconciliation.requiredBinding;
+      const target = b.varietySlug ? `variety "${b.varietySlug}" of canonical food "${b.canonicalFoodSlug}"` : `canonical food "${b.canonicalFoodSlug}"`;
+      result.warnings.push(
+        `${target} names this draft (matched on "${b.matchedOn}") but declares no knowledgeFoodSlug. ` +
+        `Promoting requires the canonical binding knowledgeFoodSlug: "${b.knowledgeFoodSlug}" in shared/canonical/foods.ts, ` +
+        `in the same commit — or a reasoned entry in DEFERRED_KNOWLEDGE_BINDINGS. seed:canonical refuses until one exists.`
+      );
+    }
 
     // Step 4: Resolve incoming vocabulary through the single GOV2 resolver.
     // Every nutrient/benefit name resolves to a canonical slug (exactly or via
@@ -346,6 +393,7 @@ export async function gateCanonicalFood(filePath: string): Promise<GateResult> {
         source: FOOD_IMPORT_SOURCE,
         // Evidence sources / sign-off NOT imported (human sign-off gate only).
       })),
+      canonicalBinding: identityReconciliation.requiredBinding,
     };
     result.outcome = "promote";
     return result;
@@ -414,6 +462,7 @@ function reconcileFoodIdentity(
 ): {
   block: { resolvedToSlug: string; matchedOn: string } | null;
   aliasOverlaps: Array<{ alias: string; resolvedToSlug: string }>;
+  requiredBinding: RequiredCanonicalBinding | null;
 } {
   const isForeignIdentity = (res: ReturnType<typeof resolveCanonicalFood>): string | null =>
     res.matched && res.knowledgeFoodSlug && res.knowledgeFoodSlug !== foodIdentity.slug
@@ -428,13 +477,29 @@ function reconcileFoodIdentity(
   ].filter((c) => typeof c === "string" && c.trim().length > 0);
 
   let block: { resolvedToSlug: string; matchedOn: string } | null = null;
+  let requiredBinding: RequiredCanonicalBinding | null = null;
   for (const candidate of identityCandidates) {
-    const foreign = isForeignIdentity(resolveCanonicalFood(candidate));
+    const res = resolveCanonicalFood(candidate);
+    const foreign = isForeignIdentity(res);
     if (foreign) {
       block = { resolvedToSlug: foreign, matchedOn: candidate };
       break;
     }
+    // KNOW3 — the same resolution, read for what `isForeignIdentity` discards: a
+    // canonical identity that matched but carries no knowledge binding. The draft
+    // is not a fork (nothing to fork onto); it is the knowledge food this canonical
+    // identity has been missing. Record the binding it owes.
+    if (!requiredBinding && res.matched && res.canonicalSlug && !res.knowledgeFoodSlug) {
+      requiredBinding = {
+        canonicalFoodSlug: res.canonicalSlug,
+        varietySlug: res.varietySlug,
+        knowledgeFoodSlug: foodIdentity.slug,
+        matchedOn: candidate,
+      };
+    }
   }
+  // A blocked draft is never promoted, so it owes no binding.
+  if (block) requiredBinding = null;
 
   // Declared-alias overlaps (soft signal), deduplicated by target identity.
   const aliasOverlaps: Array<{ alias: string; resolvedToSlug: string }> = [];
@@ -449,7 +514,7 @@ function reconcileFoodIdentity(
     }
   }
 
-  return { block, aliasOverlaps };
+  return { block, aliasOverlaps, requiredBinding };
 }
 
 /**

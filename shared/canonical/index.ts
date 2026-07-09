@@ -11,6 +11,7 @@ import { DIVERSITY_GROUP_SEED } from "./diversity-groups";
 import { CANONICAL_SEED, type AliasType } from "./foods";
 import { FOOD_CONTEXT_SEED, validateFoodContext } from "./food-context";
 import { buildCanonicalIndex } from "./resolver";
+import { auditKnowledgeBindings } from "./knowledge-binding";
 
 export { DIVERSITY_GROUP_SEED } from "./diversity-groups";
 export { CANONICAL_SEED } from "./foods";
@@ -32,9 +33,28 @@ export {
 export {
   resolveCanonicalFood,
   buildCanonicalIndex,
+  ingredientKeyVariants,
   type CanonicalResolution,
   type ResolutionMatchType,
 } from "./resolver";
+// KNOW3 — canonical → knowledge food binding (audit only; owns no fact).
+export {
+  auditKnowledgeBindings,
+  canonicalSeedBindingWarnings,
+  resolveKnowledgeBinding,
+  knowledgeFoodClaims,
+  bindables,
+  bindableKey,
+  identityKeys,
+  DEFERRED_KNOWLEDGE_BINDINGS,
+  KNOWLEDGE_BINDING_COVERAGE,
+  type KnowledgeBinding,
+  type BindingAudit,
+  type BindingContext,
+  type Bindable,
+  type BindableKey,
+  type DeferredBinding,
+} from "./knowledge-binding";
 
 // ── Flattened insert arrays (consumed by the seed runner) ─────────────────────
 
@@ -264,6 +284,15 @@ export function validateCanonicalSeed(): string[] {
   for (const c of conflicts) {
     problems.push(`Resolver key collision "${c.key}" between ${c.foods.join(" and ")} (one food, one meaning violation)`);
   }
+
+  // KNOW3 — canonical → knowledge food binding. A canonical food that a knowledge
+  // food of the same name exists for MUST declare `knowledgeFoodSlug`, and no two
+  // canonical identities may bind the same knowledge food. An ambiguous match is
+  // not guessed: it is refused here unless a human has recorded the reason in
+  // DEFERRED_KNOWLEDGE_BINDINGS. This is the gate that makes a missed binding
+  // unshippable — `canonical-foods-gate.ts` can only warn, because it runs before
+  // the knowledge food it would bind to exists in the seed.
+  problems.push(...auditKnowledgeBindings().problems);
 
   return problems;
 }
