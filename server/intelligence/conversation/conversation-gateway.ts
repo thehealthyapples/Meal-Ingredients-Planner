@@ -112,6 +112,10 @@ import {
 import { buildNutritionEnrichment } from "./nutrition-enrichment.js";
 import { assembleKnowledge, type KnowledgePackage } from "./knowledge-assembly.js";
 import { deriveFoodIntelligenceExplainFromUplift } from "./capability-composition.js";
+import {
+  deriveFoodContextQueries,
+  toBaselineContextIntent,
+} from "./food-intelligence-composition.js";
 import type { UpliftMatchResult } from "../../lib/uplift-types.js";
 import { buildHouseholdNutritionEnrichment } from "./household-nutrition-enrichment.js";
 import {
@@ -608,6 +612,40 @@ async function buildGroundedResponse(
     }
   }
 
+  // INT50 — Food Intelligence composition: when this turn is grounded by a
+  // food-knowledge capability (Food Intelligence, Nutrition Knowledge, Uplift,
+  // Opportunity Delivery, Nutrition Discovery), derive the caller's OWN
+  // household context reads — household dietary-context always; pantry /
+  // planner (only with an active week in view) / shopping when the turn is
+  // recommendation-shaped — so the answer is composed across the platform's
+  // existing capabilities instead of a single source. Every derived query is
+  // a registered (verb × capability) pair executed through the same
+  // queryCapability seam; each is BASELINE (grounding-only, the profile
+  // always-on vocabulary), so composition never counts as routing, never
+  // flips turn classification, and never claims the primary outcome. A
+  // capability the resolver already routed this turn is never re-queried
+  // (the INT42 rule). See food-intelligence-composition.ts for the full
+  // boundary statement.
+  const composedContext = deriveFoodContextQueries(
+    queryable.map((ri) => ({
+      capability: ri.capability,
+      verb: ri.verb as IntentVerb,
+      baseline: ri.baseline === true,
+      okData: queryResults.get(ri.capability)?.status === "ok-data",
+    })),
+    { activePlannerWeekId: frame.activePlannerWeekId },
+  );
+  if (composedContext.length > 0) {
+    const derivedContextIntents = composedContext.map(toBaselineContextIntent);
+    await Promise.all(
+      derivedContextIntents.map(async (di) => {
+        const result = await queryCapability(di, frame.identity, handleIntent, obs);
+        queryResults.set(di.capability, result);
+      }),
+    );
+    queryable = [...queryable, ...derivedContextIntents];
+  }
+
   // INT35: describe every queried intent for classification + logging (deduplicated
   // per capability by the resolver, so the capability key is unique).
   const queried: QueriedIntentOutcome[] = queryable.map((ri) => {
@@ -710,6 +748,14 @@ async function buildGroundedResponse(
       sources: queried.filter((q) => q.status === "ok-data").map((q) => q.capability),
       queriedCount: queried.length,
       enrichmentCount: knowledgePackage.enrichments.length,
+      // INT50 — which context reads the Food Intelligence composition seam
+      // derived this turn, and the deterministic reason each was composed.
+      // Telemetry only (nothing reads it back); explains every composition
+      // decision to operators. Empty on every non-food turn.
+      composedContext: composedContext.map((c) => ({
+        capability: c.capability,
+        reason: c.reason,
+      })),
     },
     ...obs,
   });
