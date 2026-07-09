@@ -193,6 +193,7 @@ const STAGE_LABELS: Record<string, string> = {
   "knowledge-retrieval": "Knowledge consulted",
   "context-composition": "Context composed",
   "behaviour-decision": "Behaviour decided",
+  "behaviour-selection": "Companion voice selected",
   "response-generation": "Response generated",
   "recovery": "Recovery action",
   "escalation": "Escalation",

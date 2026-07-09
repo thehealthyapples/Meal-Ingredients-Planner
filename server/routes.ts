@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, hashPassword } from "./auth";
 import { api } from "@shared/routes";
+import { PERSONALITY_IDS } from "@shared/companion-personality";
 import { z } from "zod";
 import axios from "axios";
 import * as cheerio from "cheerio";
@@ -62,7 +63,12 @@ import {
   summarizeBenchmarks,
   summarizeBehaviour,
 } from "./intelligence/observation/observation-engine";
-import { describeBehaviourRegistry } from "./intelligence/conversation/behaviour-engine";
+import {
+  describeBehaviourRegistry,
+  resolveBehaviour,
+  sealBehaviourDecision,
+  buildCompanionExperience,
+} from "./intelligence/conversation/behaviour-engine";
 import {
   buildExecutionTimeline,
   summarizeTimelineSessions,
@@ -980,6 +986,12 @@ export async function registerRoutes(
       maxExtraPrepMinutes: z.number().int().min(0).nullable().optional(),
       maxTotalCookTime: z.number().int().min(0).nullable().optional(),
       preferLessProcessed: z.boolean().optional(),
+      // CP2 — the user's Companion voice. Validated against the ONE closed set
+      // (shared/companion-personality.ts), so an unregistered voice is rejected
+      // at the write rather than silently normalised at every later read. The
+      // Behaviour Engine's fail-safe default still covers rows written before
+      // this validation existed.
+      companionPersonality: z.enum(PERSONALITY_IDS).optional(),
     }).optional(),
   });
 
@@ -1001,8 +1013,44 @@ export async function registerRoutes(
         await storage.updateUserProfile(req.user!.id, profileFields);
       }
 
+      // CP2 — the Companion voice the user is replacing, read BEFORE the write
+      // so the selection observation can name both ends honestly. Only read
+      // when the request actually carries a voice change.
+      const requestedVoice = parsed.preferences?.companionPersonality;
+      const previousVoice =
+        requestedVoice !== undefined
+          ? (await storage.getUserPreferences(req.user!.id))?.companionPersonality ?? null
+          : null;
+
       if (parsed.preferences) {
         await storage.upsertUserPreferences(req.user!.id, parsed.preferences as any);
+      }
+
+      // CP2 — record the SELECTION, at the one place a voice is chosen.
+      //
+      // This is the other half of the behaviour telemetry BEH1 began: a
+      // `behaviour-decision` says which voice SPOKE an interaction; a
+      // `behaviour-selection` says when a user CHOSE one. Captured by the route
+      // (which already performs I/O), never by the Behaviour Engine, which is
+      // pure and records nothing (Observation Engine §4 rule 4). Nothing reads
+      // this back — no voice, threshold, or default adapts to it.
+      //
+      // A no-op re-selection (same voice) is still recorded: "the user opened
+      // the picker and confirmed their voice" is a different fact from "the
+      // user never looked", and inferring one from the other would be a guess.
+      if (requestedVoice !== undefined) {
+        const { recordObservation } = await import("./intelligence/observation/observation-engine.js");
+        recordObservation({
+          kind: "behaviour-selection",
+          severity: "info",
+          outcome: previousVoice === requestedVoice ? "unchanged" : "changed",
+          userId: req.user!.id,
+          surface: "settings",
+          metadata: {
+            personalityId: requestedVoice,
+            previousPersonality: previousVoice,
+          },
+        });
       }
 
       // Bridge: sync users.diet_pattern → user_preferences.diet_types.
@@ -8718,7 +8766,7 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         const owner = await resolveBenchmarkOwner(id);
         if (!owner) continue;
         const prefs = await storage.getUserPreferences(owner.id).catch(() => undefined);
-        const personality = ((prefs as any)?.companionPersonality as string | undefined) ?? "default";
+        const personality = prefs?.companionPersonality ?? "default";
         const runTurn = makeCompanionTurnRunner(owner, personality);
         const result = await runBenchmark({
           mode, runTurn, worldMode: "benchmark-world", householdLabel: id, baseline: null,
@@ -8880,7 +8928,7 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
 
       const user = req.user as any;
       const prefs = await storage.getUserPreferences(user.id).catch(() => undefined);
-      const personality = ((prefs as any)?.companionPersonality as string | undefined) ?? "default";
+      const personality = prefs?.companionPersonality ?? "default";
 
       // Compare a single-world run against the most recent comparable scored run — the
       // trend/movement panels are the page's whole point (engine handles a null baseline).
@@ -11893,6 +11941,71 @@ Generate a complete recipe using these as the foundation.`;
     } catch (err) {
       console.error("[ConversationGateway] GET /turns error:", err);
       res.status(500).json({ message: "Failed to fetch conversation turns" });
+    }
+  });
+
+  /**
+   * CP2 — the Companion panel's empty-state text, in the user's chosen voice.
+   *
+   * This route exists so the CLIENT holds no copy of the Companion's words. It
+   * returns Personality Registry content only: a day-seeded greeting, the
+   * invitation, and the `internal-error` disclosure the client renders when a
+   * request never reaches the server. No household fact crosses it; nothing
+   * here is grounding, so the Context Composition Engine is not involved.
+   *
+   * The greeting is day-seeded rather than random (INT21 §4.1): the same user
+   * on the same day sees the same greeting, so the panel never re-renders a
+   * different line under them. The engine is pure and holds no clock, so the
+   * SEED is computed here and passed in.
+   */
+  app.get("/api/intelligence/companion/experience", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const user = req.user as import("@shared/schema").User;
+
+    try {
+      // The user's voice choice, read fresh from its one owner — exactly as the
+      // gateway reads it per turn. Never cached, never copied onto a turn.
+      const prefs = await storage.getUserPreferences(user.id);
+      const behaviour = resolveBehaviour(prefs?.companionPersonality);
+
+      const dayOfYear = Math.floor(
+        (Date.now() - new Date(new Date().getUTCFullYear(), 0, 0).getTime()) / 86_400_000,
+      );
+      const experience = buildCompanionExperience(behaviour.personalityId, dayOfYear);
+
+      // BEH1 capture discipline: the engine seals (pure), the ROUTE records.
+      const decision = sealBehaviourDecision({
+        resolution: behaviour,
+        outcome: "voiced-experience",
+        surfaces: ["greeting-voicing"],
+      });
+      const { recordObservation } = await import("./intelligence/observation/observation-engine.js");
+      recordObservation({
+        kind: "behaviour-decision",
+        severity: "info",
+        outcome: decision.outcome,
+        confidence: decision.confidence,
+        userId: user.id,
+        surface: "companion-experience",
+        metadata: {
+          personalityId: decision.personalityId,
+          personalityName: decision.personalityName,
+          requestedPersonality: decision.requestedPersonality,
+          overrideApplied: decision.overrideApplied,
+          overrideReason: decision.overrideReason,
+          confidenceBasis: decision.confidenceBasis,
+          surfaces: decision.surfaces,
+          reasoning: decision.reasoning,
+          fallbackState: decision.fallbackState,
+          guidanceCount: decision.guidanceCount,
+          notVoicedReason: decision.notVoicedReason,
+        },
+      });
+
+      res.json(experience);
+    } catch (err) {
+      console.error("[CompanionExperience] GET /experience error:", err);
+      res.status(500).json({ message: "Failed to build companion experience" });
     }
   });
 

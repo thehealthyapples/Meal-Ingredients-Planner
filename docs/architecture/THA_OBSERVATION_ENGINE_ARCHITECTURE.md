@@ -42,7 +42,7 @@ Two correlation identifiers tie observations together (OBS2): `sessionId` (the c
 
 ### 2.2 The closed kind taxonomy
 
-Twelve kinds (`OBSERVATION_KINDS`), each with a named capture point. Growing the vocabulary is an architecture decision (extend the union, document the capture point); an event that fits no kind is not recorded — never guessed into one. The twelfth kind, `behaviour-decision`, was added by BEH1 (2026-07-09) through exactly this path: no new store, no new seam, no new column, no migration.
+Thirteen kinds (`OBSERVATION_KINDS`), each with a named capture point. Growing the vocabulary is an architecture decision (extend the union, document the capture point); an event that fits no kind is not recorded — never guessed into one. The twelfth kind, `behaviour-decision`, was added by BEH1 (2026-07-09), and the thirteenth, `behaviour-selection`, by CP2 (2026-07-09) — both through exactly this path: no new store, no new seam, no new column, no migration.
 
 | Kind | Capture point | What it records |
 |---|---|---|
@@ -51,7 +51,8 @@ Twelve kinds (`OBSERVATION_KINDS`), each with a named capture point. Growing the
 | `context-composition` | `conversation-gateway.ts` | The Context Composition Engine's own metrics, verbatim: tokens, budget, sections, Context Views used — and, since NCV1, which of those views were **native** (declared by the payload's owner) and which **generic** (derived by the engine) |
 | `knowledge-retrieval` | `conversation-gateway.ts` | Grounded vs honest gap; the contributing capabilities |
 | `response-generation` | `conversation-gateway.ts` | LLM turn: model, wall time, ok/error |
-| `behaviour-decision` | `conversation-gateway.ts` | The Behaviour Engine's sealed decision for one interaction: the voice applied, the voice requested, override + reason, provenance confidence, the outcome (`voiced` / `voiced-fallback` / `voiced-error` / `not-voiced`), the surfaces touched, and the engine's deterministic reasoning. One row per interaction, on every gateway exit path |
+| `behaviour-decision` | `conversation-gateway.ts` (five exit paths) · `routes.ts` (the Companion experience route) | The Behaviour Engine's sealed decision for one interaction: the voice applied, the voice requested, override + reason, provenance confidence, the outcome (`voiced` / `voiced-fallback` / `voiced-error` / `voiced-escalation` / `voiced-degradation` / `voiced-experience` / `not-voiced`), the surfaces touched, and the engine's deterministic reasoning. One row per interaction, at every surface that speaks |
+| `behaviour-selection` | `routes.ts` → `PUT /api/profile` | CP2: the user **chose** a Companion voice. The voice selected, the voice replaced, and whether the save `changed` it or re-confirmed it (`unchanged`). Distinct from `behaviour-decision`, which records the voice that **spoke**: neither is derivable from the other. Read by nothing |
 | `clarification` | `conversation-gateway.ts` | The resolver could not understand — a clarification surfaced |
 | `recovery` | `conversation-gateway.ts` | A turn fell back: fallback state + recovery path taken |
 | `escalation` | `conversation-gateway.ts` | Refusal/redirect to manual action (e.g. the write-intent guard) |
@@ -59,7 +60,7 @@ Twelve kinds (`OBSERVATION_KINDS`), each with a named capture point. Growing the
 | `user-feedback` | `routes.ts` (feedback route) | Thumbs up/down: rating, reason code, `hasNote` — never the note text |
 | `benchmark-run` | `tests/benchmark/runner.ts` | One benchmark execution: headline score, gap rate, latency, duration |
 
-The `behaviour-decision` row is recorded by the **gateway**, never by the Behaviour Engine — §4 rule 4 is why. Its `metadata.reasoning` describes the engine's own transform (which seam it touched, whose disclosure it re-wrapped, how many already-eligible suggestions it reordered); it never carries a household fact, an utterance, or an answer.
+The `behaviour-decision` and `behaviour-selection` rows are recorded by the **callers** — the gateway, the experience route, the preferences route — and never by the Behaviour Engine, which is pure. §4 rule 4 is why. A capture point per *speaking surface* is the rule; a capture point inside the engine is the violation. `metadata.reasoning` describes the engine's own transform (which seam it touched, whose disclosure it re-wrapped, how many already-eligible suggestions it reordered); it never carries a household fact, an utterance, or an answer. A `behaviour-selection` carries two personality ids and nothing else.
 
 Domain intelligence (planner, shopping, food intelligence, discovery…) is deliberately **not** a separate kind: every domain capability is invoked through the one Intent Engine choke point and therefore appears as `capability-invocation` rows sliced by capability id. New analytical needs are met by the closed-but-growable `kind` vocabulary plus the JSONB `metadata` bag — never by schema redesign.
 
@@ -83,7 +84,7 @@ Domain intelligence (planner, shopping, food intelligence, discovery…) is deli
 | The store contract + DB-free test double | `observation-contract.ts` (must stay importable without a database) | n/a |
 | The Workbench UI | `client/src/pages/admin-observation-workbench-page.tsx` over `GET /api/intelligence/observation/*` (admin-only, read-only) | n/a |
 | The Execution Timeline projections (OBS2) | `execution-timeline.ts` — pure functions over `PlatformObservation[]` | Never persisted — computed per request |
-| The behaviour analytics projection (BEH1) | `observation-engine.ts` (`summarizeBehaviour`) — one more pure summarizer, joining `behaviour-decision` to `user-feedback` by `metadata.turnId` | Never persisted — computed per request |
+| The behaviour analytics projection (BEH1, extended by CP2) | `observation-engine.ts` (`summarizeBehaviour`) — one more pure summarizer, joining `behaviour-decision` to `user-feedback` by `metadata.turnId`, and folding in `behaviour-selection` rows as the voices users chose | Never persisted — computed per request |
 | The Behaviour Admin Workbench UI (OBS2, BEH1) | `client/src/pages/admin-behaviour-workbench-page.tsx` over `GET /api/intelligence/observation/behaviour` and `GET /api/intelligence/observation/timeline/*` (admin-only, read-only) | n/a |
 
 Consequences:
@@ -193,7 +194,7 @@ Hard stops, in the spirit of `ENGINEERING_WORKFLOW.md` STEP 7:
 | Requirement | Met by |
 |---|---|
 | One canonical Observation Engine defined | §0 mandate; §3 ownership; §7 second-system stops |
-| What is observed | §2 — closed twelve-kind taxonomy, one capture point per kind, never-observed list |
+| What is observed | §2 — closed thirteen-kind taxonomy, a named capture point for every kind, never-observed list |
 | Who owns observations | §3 — store, seam, vocabulary, views, each owned once |
 | Capture cannot alter behaviour | §4 discipline; §7 stops; `OBS_DISABLE_CAPTURE` |
 | Integration with Intent Engine, Notice Engine, Behaviour Engine, INT35, benchmarks, operations | §5 |

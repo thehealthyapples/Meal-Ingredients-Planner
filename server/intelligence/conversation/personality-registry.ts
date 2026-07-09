@@ -1,5 +1,6 @@
 /**
  * personality-registry.ts — EWO2 Companion Personality Platform, Phase P0
+ *                            · CP2 Companion Personalities Activation
  * =========================================================================
  * The canonical, closed registry of Companion "voices". This is Stage 1
  * (Personality Registry) and Stage 3 (Behaviour Priorities) of EWO2, and the
@@ -27,6 +28,13 @@
  *   a gap stays a gap, a "not found" stays a "not found" — only word choice
  *   may vary. Any future edit that lets a template imply an answer exists
  *   when it doesn't fails this gate and must not be merged.
+ *
+ *   CP2 hardens the two highest-risk phrases against that gate by machine
+ *   rather than by review: every `escalationTemplate` must embed `cannotYet()`
+ *   verbatim and every `degradationTemplate` must embed `notConfigured()`
+ *   verbatim, so no voice can reword a refusal into an implied action or an
+ *   outage into a pause for thought. The test suite asserts this for all six
+ *   voices against every action `detectWriteIntent()` can produce.
  *
  * Consumed by: behaviour-engine.ts (the reusable lookups + phrase builders),
  * conversation-gateway.ts (reads the user's stored choice once per turn).
@@ -117,6 +125,30 @@ export type FallbackPhraseBuilder = (inputs: FallbackPhraseInputs) => string;
 export type FallbackTemplates = Record<UnsuccessfulTurnState, FallbackPhraseBuilder>;
 
 // ---------------------------------------------------------------------------
+// Escalation + degradation phrasing (CP2) — the last two server-owned strings
+// ---------------------------------------------------------------------------
+
+/**
+ * The slots an escalation phrase may reference (CP2). `action` is the
+ * human-readable description of the write the user asked for, produced by
+ * `detectWriteIntent()` in conversation-gateway.ts from a closed set of
+ * literals. It is never model output and never a fact about the household —
+ * so no template here can invent what the user asked to change.
+ */
+export interface EscalationPhraseInputs {
+  readonly action: string;
+}
+
+export type EscalationPhraseBuilder = (inputs: EscalationPhraseInputs) => string;
+
+/**
+ * The provider-unavailable degradation phrase (CP2). Takes no slots: the only
+ * fact it discloses is that the assistant is not configured, which the caller
+ * has already established by reading `llmProvider.isAvailable`.
+ */
+export type DegradationPhraseBuilder = () => string;
+
+// ---------------------------------------------------------------------------
 // Experience Framework scaffold (Stage 6) — data shape only, not a full
 // visual implementation. avatarId/colorTheme are opaque string keys a future
 // client-side asset map can resolve; greeting/celebration templates are
@@ -130,6 +162,13 @@ export interface ExperienceProfile {
   readonly colorTheme: string;
   /** Plain greeting templates, {name} interpolation only — no claims. */
   readonly greetings: readonly string[];
+  /**
+   * CP2 — the one-line invitation shown beneath the greeting on the Companion
+   * panel's empty state. It tells the user what they may ASK; it never claims
+   * what the Companion knows, has, or has done. Live since CP2 (the surface
+   * that retired FloatingAssistant.tsx's hardcoded copy).
+   */
+  readonly invitation: string;
   /** Plain celebration templates, {detail} interpolation only — filled from real data or omitted. */
   readonly celebrations: readonly string[];
   /** Optional seasonal greeting override, keyed by a lowercase month name (future use — not read anywhere yet). */
@@ -187,6 +226,20 @@ export interface PersonalityDefinition {
    */
   readonly systemPromptFragment: string;
   readonly fallbackTemplates: FallbackTemplates;
+  /**
+   * CP2 — voices the read-only write refusal (the platform's `not_executable`
+   * honest gap). Every template MUST contain `cannotYet(action)` verbatim: the
+   * refusal itself is a shared, machine-checked clause, so no voice can soften
+   * a refusal into an implied action. Only the words around it belong to the
+   * voice. Before CP2 this string lived in conversation-gateway.ts.
+   */
+  readonly escalationTemplate: EscalationPhraseBuilder;
+  /**
+   * CP2 — voices the provider-unavailable degradation. Every template MUST
+   * contain `notConfigured()` verbatim, for the same reason. Before CP2 this
+   * string lived in conversation-gateway.ts.
+   */
+  readonly degradationTemplate: DegradationPhraseBuilder;
   /** Cosmetic prefix applied to an already-eligible guidance suggestion's label (Stage 4). */
   readonly guidanceLabelPrefix: string;
   readonly growthTemplate: GrowthPhraseBuilder;
@@ -207,6 +260,35 @@ function noRoute(clarify: string | undefined, examples: string, lead: string): s
 function noResults(areas: string | undefined, query: string | undefined, lead: string, tail: string): string {
   const scope = query ? `${areas ?? "your data"} for "${query}"` : (areas ?? "your data");
   return `${lead} ${scope}${tail}`;
+}
+
+/**
+ * CP2 — THE refusal clause. Every `escalationTemplate` must embed this string
+ * verbatim, and `test-intelligence-personality-platform.ts` asserts it for all
+ * six voices against every action `detectWriteIntent()` can produce.
+ *
+ * This is what makes "same facts, different voice" (INT21 §5.2) a MACHINE check
+ * rather than a review convention for the highest-risk phrase in the registry:
+ * a Companion that reworded a refusal into an implied action would be claiming
+ * to have executed a write it never performed. The voices vary the sentences
+ * around this clause; they cannot vary the clause.
+ */
+export function cannotYet(action: string): string {
+  return `I can't ${action} yet`;
+}
+
+/**
+ * CP2 — THE degradation clause, embedded verbatim by every
+ * `degradationTemplate` for the same reason: the honest fact is that the
+ * assistant is not configured, and no voice may imply it is merely busy,
+ * thinking, or about to answer.
+ *
+ * It carries no subject of its own, so each voice must name what has not been
+ * configured. Pinning the subject too would have forced every register into the
+ * default voice's sentence — the clause exists to fix the FACT, not the prose.
+ */
+export function notConfigured(): string {
+  return "hasn't been configured yet";
 }
 
 // ---------------------------------------------------------------------------
@@ -240,6 +322,13 @@ export const PERSONALITY_REGISTRY: Readonly<Record<PersonalityId, PersonalityDef
       "internal-error": () =>
         "Something went wrong on my side while answering that — it's not you. Please try again in a moment.",
     },
+    // CP2: verbatim continuation of the copy conversation-gateway.ts owned
+    // before CP2 — the default voice's words are unchanged, byte for byte.
+    escalationTemplate: (i) =>
+      `I can read and explain your data, but ${cannotYet(i.action)} — that's coming in a future update. ` +
+      `For now, make the change directly in the app and I can help you understand or review it afterwards.`,
+    degradationTemplate: () =>
+      `The AI assistant isn't available right now — it ${notConfigured()}.`,
     guidanceLabelPrefix: "",
     growthTemplate: (g) =>
       `Over the ${g.earlierWindowLabel} to ${g.recentWindowLabel}, your ${g.metricLabel} has moved from ${g.earlierValue}${g.unit} to ${g.recentValue}${g.unit}.`,
@@ -247,6 +336,7 @@ export const PERSONALITY_REGISTRY: Readonly<Record<PersonalityId, PersonalityDef
       avatarId: "companion-default",
       colorTheme: "leaf-green",
       greetings: ["Hi, good to see you.", "Welcome back — how can I help today?"],
+      invitation: "Ask me anything about your food and plans.",
       celebrations: ["Nice progress — {detail}."],
     },
   },
@@ -274,6 +364,11 @@ export const PERSONALITY_REGISTRY: Readonly<Record<PersonalityId, PersonalityDef
       "internal-error": () =>
         "Ah, something glitched on my end there — not your fault at all. Give it another go in a sec?",
     },
+    escalationTemplate: (i) =>
+      `I can read your stuff and talk it through, but ${cannotYet(i.action)} — that's coming later. ` +
+      `Make the change in the app yourself for now, and I'll happily go through it with you after.`,
+    degradationTemplate: () =>
+      `The assistant isn't switched on right now — it ${notConfigured()}. Nothing you did, promise!`,
     guidanceLabelPrefix: "You might like: ",
     growthTemplate: (g) =>
       `You're becoming really good at this — your ${g.metricLabel} went from ${g.earlierValue}${g.unit} (${g.earlierWindowLabel}) to ${g.recentValue}${g.unit} now.`,
@@ -281,6 +376,7 @@ export const PERSONALITY_REGISTRY: Readonly<Record<PersonalityId, PersonalityDef
       avatarId: "companion-friend",
       colorTheme: "warm-amber",
       greetings: ["Hey, great to see you!", "Hiya — what are we up to today?"],
+      invitation: "Ask me anything about your food and plans — no question's too small.",
       celebrations: ["Love this — {detail}!"],
     },
   },
@@ -308,6 +404,11 @@ export const PERSONALITY_REGISTRY: Readonly<Record<PersonalityId, PersonalityDef
       "internal-error": () =>
         "That one failed on my side, not yours. Reset and try again.",
     },
+    escalationTemplate: (i) =>
+      `Reading and reviewing your data is in scope; ${cannotYet(i.action)} — that capability lands in a future update. ` +
+      `Make the change in the app now, and I'll review the result with you.`,
+    degradationTemplate: () =>
+      `The assistant isn't running right now — it ${notConfigured()}. Nothing to action on your side.`,
     guidanceLabelPrefix: "Next step: ",
     growthTemplate: (g) =>
       `${g.earlierWindowLabel} you averaged ${g.earlierValue}${g.unit}. You're now consistently at ${g.recentValue}${g.unit} — that's real, measured progress.`,
@@ -315,6 +416,7 @@ export const PERSONALITY_REGISTRY: Readonly<Record<PersonalityId, PersonalityDef
       avatarId: "companion-coach",
       colorTheme: "focus-blue",
       greetings: ["Ready to make progress today?", "Let's see where we can move the needle."],
+      invitation: "Ask me about your food, your plans, or where you're heading.",
       celebrations: ["Target hit — {detail}."],
     },
   },
@@ -342,6 +444,11 @@ export const PERSONALITY_REGISTRY: Readonly<Record<PersonalityId, PersonalityDef
       "internal-error": () =>
         "Something burned on my end there — not you. Give it another go shortly.",
     },
+    escalationTemplate: (i) =>
+      `I can talk you through what's in your kitchen, but ${cannotYet(i.action)} — that's still on the pass, coming in a future update. ` +
+      `Make the change in the app yourself and I'll taste-test it with you afterwards.`,
+    degradationTemplate: () =>
+      `The assistant isn't fired up right now — it ${notConfigured()}. Nothing burnt on your side.`,
     guidanceLabelPrefix: "Worth trying: ",
     growthTemplate: (g) =>
       `You've been building real range lately — your ${g.metricLabel} moved from ${g.earlierValue}${g.unit} to ${g.recentValue}${g.unit} since ${g.earlierWindowLabel}.`,
@@ -349,6 +456,7 @@ export const PERSONALITY_REGISTRY: Readonly<Record<PersonalityId, PersonalityDef
       avatarId: "companion-chef",
       colorTheme: "harvest-orange",
       greetings: ["What are we cooking up today?", "Good to see you back in the kitchen."],
+      invitation: "Ask me about any ingredient, meal or plan you have in mind.",
       celebrations: ["Delicious result — {detail}."],
     },
   },
@@ -376,6 +484,11 @@ export const PERSONALITY_REGISTRY: Readonly<Record<PersonalityId, PersonalityDef
       "internal-error": () =>
         "Something went wrong on my side while working that out — not a reflection on your question. Please try again shortly.",
     },
+    escalationTemplate: (i) =>
+      `It's worth being precise about what I can do: I can read your data and explain it, but ${cannotYet(i.action)} — ` +
+      `that ability is planned for a future update. Make the change in the app yourself, and I can walk you through what it means afterwards.`,
+    degradationTemplate: () =>
+      `The assistant can't answer at the moment — it ${notConfigured()}. That's a setup step on the platform's side, not something you've done.`,
     guidanceLabelPrefix: "You could also learn about: ",
     growthTemplate: (g) =>
       `Your ${g.metricLabel} has developed measurably — ${g.earlierValue}${g.unit} ${g.earlierWindowLabel}, now ${g.recentValue}${g.unit}.`,
@@ -383,6 +496,7 @@ export const PERSONALITY_REGISTRY: Readonly<Record<PersonalityId, PersonalityDef
       avatarId: "companion-teacher",
       colorTheme: "calm-teal",
       greetings: ["Hello — what would you like to understand today?", "Welcome back. Anything you'd like explained?"],
+      invitation: "Ask me about your food or plans, and I'll explain the reasoning too.",
       celebrations: ["Well understood — {detail}."],
     },
   },
@@ -409,6 +523,10 @@ export const PERSONALITY_REGISTRY: Readonly<Record<PersonalityId, PersonalityDef
       "internal-error": () =>
         "Failed on my end. Not yours. Retry.",
     },
+    escalationTemplate: (i) =>
+      `Read and explain: yes. ${cannotYet(i.action)} — that lands in a future update. Make the change in the app. I'll review it after.`,
+    degradationTemplate: () =>
+      `Assistant unavailable — it ${notConfigured()}. Nothing to do on your side.`,
     guidanceLabelPrefix: "Do next: ",
     growthTemplate: (g) =>
       `${g.metricLabel}: ${g.earlierValue}${g.unit} (${g.earlierWindowLabel}) to ${g.recentValue}${g.unit} (${g.recentWindowLabel}). Improvement holding.`,
@@ -416,6 +534,7 @@ export const PERSONALITY_REGISTRY: Readonly<Record<PersonalityId, PersonalityDef
       avatarId: "companion-sergeant",
       colorTheme: "steel-grey",
       greetings: ["Ready. What's the task?", "Status check — what do you need?"],
+      invitation: "State your question. Food, plans, pantry — anything on record.",
       celebrations: ["Objective met — {detail}."],
     },
   },

@@ -1,6 +1,21 @@
 /**
  * behaviour-engine.ts — EWO2 Companion Personality Platform, Stage 2
  *                        · BEH1 Behaviour Engine Activation (decision layer)
+ *                        · CP2 Companion Personalities Activation (the voices)
+ * =========================================================================
+ *
+ * CP2 — WHAT "ACTIVATION" MEANT HERE:
+ * BEH1 activated the DECISION. CP2 activates the VOICES that decision selects.
+ * Three things were true before CP2 and are not now:
+ *   1. `user_preferences.companionPersonality` was never declared in
+ *      shared/schema.ts, so it was invisible to Drizzle and every user silently
+ *      received the default voice. Five of the six personalities were dead code.
+ *   2. No surface let a user choose a voice.
+ *   3. Three strings the Companion says reached the user without passing
+ *      through this engine (INT21 §8.4). CP2 retires all three; the engine
+ *      gains `voiceEscalation`, `voiceDegradation` and `buildCompanionExperience`,
+ *      and the registry gains the content they read.
+ * CP2 adds no engine, no second registry, no template mechanism, and no fact.
  * =========================================================================
  * The reusable engine that turns a `PersonalityId` (personality-registry.ts)
  * into concrete, additive phrasing choices at each of the Companion's
@@ -58,6 +73,7 @@ import {
   type BehaviourProfile,
   type FallbackPhraseInputs,
   type GrowthPhraseInputs,
+  type EscalationPhraseInputs,
 } from "./personality-registry.js";
 import type { UnsuccessfulTurnState } from "./turn-fallback.js";
 import type { GuidanceSuggestion } from "./companion-guidance.js";
@@ -94,6 +110,29 @@ export function voiceFallback(
   inputs: FallbackPhraseInputs,
 ): string {
   return getPersonality(personalityId).fallbackTemplates[state](inputs);
+}
+
+// ---------------------------------------------------------------------------
+// Escalation + degradation phrasing (CP2) — the two strings that used to live
+// in conversation-gateway.ts, now registry content like every other word.
+// ---------------------------------------------------------------------------
+
+/**
+ * Voices the read-only write refusal. `inputs.action` is `detectWriteIntent()`'s
+ * own closed-set description of the mutation the user asked for — a
+ * caller-verified string, never model output and never a household fact.
+ *
+ * The refusal clause itself is identical in all six voices (personality-
+ * registry.ts's `cannotYet`), so this transform can change how the refusal
+ * sounds and can never change that it IS a refusal.
+ */
+export function voiceEscalation(personalityId: PersonalityId, inputs: EscalationPhraseInputs): string {
+  return getPersonality(personalityId).escalationTemplate(inputs);
+}
+
+/** Voices the provider-unavailable degradation. Takes no facts — see `notConfigured`. */
+export function voiceDegradation(personalityId: PersonalityId): string {
+  return getPersonality(personalityId).degradationTemplate();
 }
 
 // ---------------------------------------------------------------------------
@@ -161,6 +200,40 @@ export function buildCelebration(personalityId: PersonalityId, detail: string, s
   return template.replace("{detail}", detail);
 }
 
+/** The one-line invitation shown beneath the greeting. States what may be ASKED — never what is known. */
+export function buildInvitation(personalityId: PersonalityId): string {
+  return getPersonality(personalityId).experience.invitation;
+}
+
+/**
+ * CP2 — the Companion panel's empty-state text, in the user's voice.
+ *
+ * Every string here already exists somewhere above; this composes them into
+ * the one payload the client renders, so the client holds no copy of its own.
+ * `transportError` deliberately REUSES the `internal-error` fallback template
+ * rather than adding a seventh disclosure: a request that never reached the
+ * server is, from the user's side, exactly the failure that template exists to
+ * disclose honestly. No new registry content, no second phrasing of one fact.
+ */
+export interface CompanionExperience {
+  readonly personalityId: PersonalityId;
+  readonly personalityName: string;
+  readonly greeting: string;
+  readonly invitation: string;
+  readonly transportError: string;
+}
+
+export function buildCompanionExperience(personalityId: PersonalityId, seed = 0): CompanionExperience {
+  const p = getPersonality(personalityId);
+  return {
+    personalityId: p.id,
+    personalityName: p.displayName,
+    greeting: buildGreeting(personalityId, seed),
+    invitation: buildInvitation(personalityId),
+    transportError: voiceFallback("internal-error", personalityId, { suggestionExamples: "" }),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Growth Model phrasing (Stage 7) — voices real, precomputed numbers only
 // ---------------------------------------------------------------------------
@@ -215,9 +288,13 @@ export function phraseNotice(notice: Notice, personalityId: PersonalityId): stri
 /**
  * The seams a behaviour decision may touch. Closed, and closed to what is
  * genuinely LIVE — a surface is listed here only once the engine actually
- * transforms output at it. `phraseGrowth`, `phraseNotice`, `buildGreeting`
- * and `buildCelebration` remain dormant (INT21 §8.2), so they name no surface
- * yet; BEH-P1/BEH-P2 add theirs when their routes are wired.
+ * transforms output at it.
+ *
+ * CP2 adds the three surfaces it wired (`escalation-voicing`,
+ * `degradation-voicing`, `greeting-voicing`) and no others. `phraseGrowth`,
+ * `phraseNotice` and `buildCelebration` are still code-complete and dormant —
+ * their route belongs to NTC-P1, not to this workstream — so they continue to
+ * name NO surface. A surface here is a promise that a transform ran.
  */
 export const BEHAVIOUR_SURFACES = [
   /** The additive tone paragraph appended AFTER the gateway's five hard rules. */
@@ -226,35 +303,70 @@ export const BEHAVIOUR_SURFACES = [
   "fallback-voicing",
   /** An already-eligible guidance set, stably reordered and cosmetically relabelled. */
   "guidance-voicing",
+  /** CP2 — the read-only write refusal, voiced from the registry (was gateway copy). */
+  "escalation-voicing",
+  /** CP2 — the provider-unavailable degradation, voiced from the registry (was gateway copy). */
+  "degradation-voicing",
+  /** CP2 — the Companion panel's empty-state greeting + invitation (was hardcoded in the client). */
+  "greeting-voicing",
 ] as const;
 
 export type BehaviourSurface = (typeof BEHAVIOUR_SURFACES)[number];
 
 /**
- * What the behaviour decision produced for this interaction.
+ * What the behaviour decision produced for this interaction. Each value names a
+ * DIFFERENT thing the Companion said, because an operator who sees only
+ * "voiced" cannot tell an answer from a refusal.
  *
- *  - `voiced`          — the turn was answered and the voice shaped it.
- *  - `voiced-fallback` — an honest gap fired; the voice phrased the SAME
- *                        disclosure `turn-fallback.ts` classified.
- *  - `voiced-error`    — generation failed; the voice phrased the
- *                        `internal-error` disclosure.
- *  - `not-voiced`      — no Behaviour Engine transform ran for this
- *                        interaction. Recorded honestly rather than implied:
- *                        the interaction still produced words, but they were
- *                        platform-owned copy, not registry content. This is
- *                        the grandfathered debt INT21 §8/§10 names, made
- *                        visible instead of silent.
+ *  - `voiced`             — the turn was answered and the voice shaped it.
+ *  - `voiced-fallback`    — an honest gap fired; the voice phrased the SAME
+ *                           disclosure `turn-fallback.ts` classified.
+ *  - `voiced-error`       — generation failed; the voice phrased the
+ *                           `internal-error` disclosure.
+ *  - `voiced-escalation`  — CP2. The user asked for a write; the voice phrased
+ *                           the platform's `not_executable` refusal. The
+ *                           refusal clause is identical in every voice.
+ *  - `voiced-degradation` — CP2. No LLM provider is configured; the voice
+ *                           phrased that fact.
+ *  - `voiced-experience`  — CP2. A non-turn Companion surface (the panel's
+ *                           empty-state greeting + invitation) was voiced.
+ *  - `not-voiced`         — no Behaviour Engine transform ran for this
+ *                           interaction. Recorded honestly rather than implied:
+ *                           the interaction still produced words, but they were
+ *                           platform-owned copy, not registry content.
+ *
+ * `not-voiced` is RETAINED although CP2 leaves no gateway path that emits it.
+ * It is the mechanism by which INT21 §10's "any voiced surface presented as
+ * voiced when no transform ran — stop" stays enforceable: a future surface that
+ * speaks without the engine must say so. Its count falling to zero is the
+ * measurement that CP2 closed the debt — deleting the value would have hidden
+ * the debt rather than paid it.
  */
-export const BEHAVIOUR_OUTCOMES = ["voiced", "voiced-fallback", "voiced-error", "not-voiced"] as const;
+export const BEHAVIOUR_OUTCOMES = [
+  "voiced",
+  "voiced-fallback",
+  "voiced-error",
+  "voiced-escalation",
+  "voiced-degradation",
+  "voiced-experience",
+  "not-voiced",
+] as const;
 
 export type BehaviourOutcome = (typeof BEHAVIOUR_OUTCOMES)[number];
 
 /**
  * Why the applied voice differs from the requested one — i.e. why the engine's
  * fail-safe default (INT21 §4.1: "there is no error state at the voice seam")
- * fired. `none` is the overwhelmingly common case: `companionPersonality` is a
- * `notNull` column defaulting to `'companion'`, so a stored preference is
- * normally present and recognised.
+ * fired.
+ *
+ * CP2 CORRECTION: this comment used to claim `none` was "the overwhelmingly
+ * common case" because `companionPersonality` is a `notNull` column defaulting
+ * to `'companion'`. The COLUMN was — but it was never declared in
+ * `shared/schema.ts`, so Drizzle omitted it from every SELECT and the gateway
+ * read `undefined` on every turn. Until CP2, `no-stored-preference` fired for
+ * 100% of interactions and `confidence` was 0 for 100% of interactions. With
+ * the column declared and a Settings selector shipped, `none` is now genuinely
+ * the common case — which is exactly what the recorded telemetry should show.
  */
 export const BEHAVIOUR_OVERRIDE_REASONS = [
   "none",
@@ -404,6 +516,25 @@ function explainBehaviourDecision(input: BehaviourDecisionInput): string[] {
         "none added, dropped, retargeted, or made eligible by this engine (companion-guidance.ts owns eligibility).",
     );
   }
+  if (surfaces.includes("escalation-voicing")) {
+    reasoning.push(
+      "Voiced the read-only write refusal in this personality's register. " +
+        "That the utterance was a write, and that the platform refuses it, remain conversation-gateway.ts's " +
+        "detectWriteIntent — unchanged; the refusal clause itself is identical in all six voices.",
+    );
+  }
+  if (surfaces.includes("degradation-voicing")) {
+    reasoning.push(
+      "Voiced the provider-unavailable degradation in this personality's register. " +
+        "Whether a provider is configured is llm-provider.ts's; this engine only phrased the answer.",
+    );
+  }
+  if (surfaces.includes("greeting-voicing")) {
+    reasoning.push(
+      "Voiced the Companion panel's empty-state greeting and invitation from the Personality Registry. " +
+        "Day-seeded template choice only — no fact about the household was read, inserted, or implied.",
+    );
+  }
 
   if (outcome === "not-voiced") {
     reasoning.push(
@@ -453,6 +584,8 @@ export interface PersonalityDescription {
   readonly priorities: string[];
   readonly guidanceLabelPrefix: string;
   readonly systemPromptFragment: string;
+  /** CP2 — the now-live experience surface, so the Workbench shows a voice as the user meets it. */
+  readonly invitation: string;
 }
 
 /**
@@ -476,6 +609,7 @@ export function describeBehaviourRegistry(): PersonalityDescription[] {
       priorities: [...p.priorities],
       guidanceLabelPrefix: p.guidanceLabelPrefix,
       systemPromptFragment: p.systemPromptFragment,
+      invitation: p.experience.invitation,
     };
   });
 }

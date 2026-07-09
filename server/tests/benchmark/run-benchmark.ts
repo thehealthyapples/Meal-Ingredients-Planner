@@ -52,7 +52,7 @@ async function main(): Promise<void> {
   }
 
   const prefs = await storage.getUserPreferences(userId).catch(() => undefined);
-  const personality = (prefs?.companionPersonality as string | undefined) ?? "default";
+  const personality = prefs?.companionPersonality ?? "default";
 
   const bundle = resolveBundle();
   const baseline = selectBaseline(bundleVersionLabel(bundle));

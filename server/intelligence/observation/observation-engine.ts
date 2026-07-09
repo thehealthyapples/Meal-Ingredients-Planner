@@ -51,6 +51,7 @@ export const OBSERVATION_KINDS = [
   "knowledge-retrieval",    // knowledge assembly: grounded vs honest gap
   "response-generation",    // LLM turn: model, duration, ok/error
   "behaviour-decision",     // BEH1: the voice applied to one interaction — provenance, surfaces, outcome
+  "behaviour-selection",    // CP2: the user CHOSE a voice (captured at PUT /api/profile, never by the engine)
   "clarification",          // the resolver could not understand — clarification surfaced
   "recovery",               // turn fell back: state + recovery path taken
   "escalation",             // refusal/redirect to manual action (e.g. write-intent guard)
@@ -574,6 +575,17 @@ export interface BehaviourPersonalitySummary {
   voiced: number;
   voicedFallback: number;
   voicedError: number;
+  /** CP2 — the read-only write refusal, voiced. */
+  voicedEscalation: number;
+  /** CP2 — the provider-unavailable degradation, voiced. */
+  voicedDegradation: number;
+  /** CP2 — a non-turn Companion surface (the panel's greeting + invitation), voiced. */
+  voicedExperience: number;
+  /**
+   * Interactions where no voice transform ran. CP2 leaves no gateway path that
+   * emits this; a non-zero count means a surface is speaking outside the
+   * Behaviour Engine and should be found, not tolerated.
+   */
   notVoiced: number;
   overrides: number;
   /** Decisions that later attracted at least one feedback rating. */
@@ -613,6 +625,19 @@ export interface BehaviourObservationSummary {
     unattributedFeedback: number;
     note: string;
   };
+  /**
+   * CP2 — the voices users CHOSE in this window, from `behaviour-selection`
+   * rows. Distinct from `byPersonality`, which counts the voices that SPOKE.
+   * A platform whose users never change voice, and one whose selector is
+   * broken, look identical in `byPersonality` and different here.
+   */
+  selections: {
+    total: number;
+    changed: number;
+    unchanged: number;
+    byPersonality: { personalityId: string; count: number }[];
+    note: string;
+  };
   byDay: { day: string; decisions: number; overrides: number }[];
   correlationNote: string;
 }
@@ -620,6 +645,11 @@ export interface BehaviourObservationSummary {
 const BEHAVIOUR_EFFECTIVENESS_NOTE =
   "Effectiveness is the user-feedback rate observed on turns a voice phrased — an operator signal only. " +
   "No component reads it, and nothing adapts to it: telemetry is never an input to behaviour.";
+
+const BEHAVIOUR_SELECTION_NOTE =
+  "A selection is recorded when a user saves a Companion voice in Settings, including a re-save of the voice " +
+  "they already had (counted as `unchanged`). Absence of selections means nobody changed voice in the window — " +
+  "never that nobody could.";
 
 const BEHAVIOUR_CORRELATION_NOTE =
   "Feedback is attributed to a voice only when both rows carry the same turn correlation id. " +
@@ -632,6 +662,7 @@ export function summarizeBehaviour(
 ): BehaviourObservationSummary {
   const decisions = ofKind(rows, "behaviour-decision");
   const feedback = ofKind(rows, "user-feedback");
+  const selections = ofKind(rows, "behaviour-selection");
 
   const metaOf = (r: PlatformObservation): Record<string, unknown> =>
     (r.metadata ?? {}) as Record<string, unknown>;
@@ -670,6 +701,9 @@ export function summarizeBehaviour(
     voiced: 0,
     voicedFallback: 0,
     voicedError: 0,
+    voicedEscalation: 0,
+    voicedDegradation: 0,
+    voicedExperience: 0,
     notVoiced: 0,
     overrides: 0,
     ratedDecisions: 0,
@@ -690,6 +724,9 @@ export function summarizeBehaviour(
     if (d.outcome === "voiced") entry.voiced += 1;
     else if (d.outcome === "voiced-fallback") entry.voicedFallback += 1;
     else if (d.outcome === "voiced-error") entry.voicedError += 1;
+    else if (d.outcome === "voiced-escalation") entry.voicedEscalation += 1;
+    else if (d.outcome === "voiced-degradation") entry.voicedDegradation += 1;
+    else if (d.outcome === "voiced-experience") entry.voicedExperience += 1;
     else if (d.outcome === "not-voiced") entry.notVoiced += 1;
 
     const overrideApplied = metaOf(d).overrideApplied === true;
@@ -763,6 +800,14 @@ export function summarizeBehaviour(
       rate: judged > 0 ? round(helpful / judged) : null,
       unattributedFeedback,
       note: BEHAVIOUR_EFFECTIVENESS_NOTE,
+    },
+    selections: {
+      total: selections.length,
+      changed: selections.filter((s) => s.outcome === "changed").length,
+      unchanged: selections.filter((s) => s.outcome === "unchanged").length,
+      byPersonality: toCounts(countBy(selections, (s) => metaStr(s, "personalityId")))
+        .map(({ key, count }) => ({ personalityId: key, count })),
+      note: BEHAVIOUR_SELECTION_NOTE,
     },
     byDay: Array.from(byDayMap.entries())
       .map(([day, v]) => ({ day, ...v }))

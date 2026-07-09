@@ -86,6 +86,8 @@ import {
   systemPromptFragment,
   voiceFallback,
   voiceGuidanceSuggestions,
+  voiceEscalation,
+  voiceDegradation,
   resolveBehaviour,
   sealBehaviourDecision,
   type BehaviourDecision,
@@ -425,9 +427,14 @@ async function buildGroundedResponse(
    * The Behaviour Engine seals the decision (pure); the GATEWAY records it,
    * because the Observation Engine's capture discipline forbids a pure module
    * from recording its own telemetry (Observation Engine §4 rule 4). Exactly
-   * one of these fires per interaction, on every exit path — including the
-   * paths where no voice transform ran at all, which are recorded honestly as
-   * `not-voiced` rather than left silent.
+   * one of these fires per interaction, on every exit path.
+   *
+   * CP2: all five exit paths now VOICE. The two that BEH1 recorded honestly as
+   * `not-voiced` (the write-intent refusal and the provider-unavailable copy)
+   * are registry content in the user's register, so the gateway emits no
+   * `not-voiced` decision at all. The outcome value survives in the engine's
+   * vocabulary precisely so a future unvoiced surface must still declare
+   * itself — see BEHAVIOUR_OUTCOMES.
    *
    * Severity mirrors the decision, never editorialises it: a fallback voiced
    * in the user's register is a healthy outcome (the recovery row already
@@ -470,19 +477,18 @@ async function buildGroundedResponse(
       metadata: { reason: "write-intent-refusal", writeAction },
       ...obs,
     });
-    // BEH1: the refusal copy below is platform-owned, not Personality Registry
-    // content — no voice transform runs. Recorded as `not-voiced` so the debt
-    // INT21 §8/§10 names is visible in telemetry rather than implied by silence.
+    // CP2: the refusal is now Personality Registry content, voiced in the
+    // user's chosen register — the last of BEH1's two `not-voiced` gateway
+    // paths to close. `writeAction` is detectWriteIntent's own closed-set
+    // description, so the template fills a caller-verified slot and invents
+    // nothing. WHICH utterances are writes, and that the platform refuses
+    // them, is still decided above this line and is untouched by the voice.
     recordBehaviourDecision({
       resolution: behaviour,
-      outcome: "not-voiced",
-      surfaces: [],
-      notVoicedReason: "escalation-copy-not-registry-owned",
+      outcome: "voiced-escalation",
+      surfaces: ["escalation-voicing"],
     });
-    const text =
-      `I can read and explain your data, but I can't ${writeAction} yet — ` +
-      `that's coming in a future update. For now, make the change directly in ` +
-      `the app and I can help you understand or review it afterwards.`;
+    const text = voiceEscalation(personalityId, { action: writeAction });
     return {
       text,
       entityRefs: [],
@@ -509,16 +515,17 @@ async function buildGroundedResponse(
 
   // Provider unavailable → graceful degradation (no API key configured)
   if (!llmProvider.isAvailable) {
-    // BEH1: same honesty as the write-intent guard — this degradation copy is
-    // platform-owned, so no voice was applied and the decision says so.
+    // CP2: the degradation copy is now registry content too. Whether a provider
+    // exists is llm-provider.ts's fact, checked on the line above; the voice
+    // only phrases it. Every voice embeds `notConfigured()` verbatim, so no
+    // register can imply the assistant is merely busy rather than absent.
     recordBehaviourDecision({
       resolution: behaviour,
-      outcome: "not-voiced",
-      surfaces: [],
-      notVoicedReason: "provider-unavailable-copy-not-registry-owned",
+      outcome: "voiced-degradation",
+      surfaces: ["degradation-voicing"],
     });
     return {
-      text: "The AI assistant isn't available right now — it hasn't been configured yet.",
+      text: voiceDegradation(personalityId),
       entityRefs: [],
       discoveries: [],
       guidance: [],

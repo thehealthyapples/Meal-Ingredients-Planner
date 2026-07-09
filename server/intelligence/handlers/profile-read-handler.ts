@@ -118,6 +118,15 @@ export interface ProfilePreferencesView {
   readonly maxTotalCookTime: number | null;
   readonly preferLessProcessed: boolean;
   readonly includeRegulatoryAdditivesInScoring: boolean;
+  // CP2 — `companionPersonality` and `mutedOpportunityTypes` are DELIBERATELY
+  // ABSENT, and this view is an explicit allowlist rather than a spread so they
+  // stay that way. The Companion's voice is an instruction about how to speak,
+  // never a fact for the model to cite: it reaches the prompt only as the
+  // Behaviour Engine's tone fragment, appended AFTER the hard rules and outside
+  // the CONTEXT DATA block the Context Composition Engine owns (INT21 §7.1).
+  // Surfacing it here would make the user's voice choice grounding evidence,
+  // which the model could then quote back as a fact about the household.
+  // `test-intelligence-personality-platform.ts` §9 asserts its absence.
 }
 
 export interface ProfileReadResult {

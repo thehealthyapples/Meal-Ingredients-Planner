@@ -694,6 +694,15 @@ export const userPreferences = pgTable("user_preferences", {
   // "planner-empty-day") the user has muted. Filtered out before delivery;
   // empty means no muting, never a fabricated default preference.
   mutedOpportunityTypes: text("muted_opportunity_types").array().notNull().default([]),
+  // EWO2/CP2 — the user's chosen Companion voice. One column, one owner: this
+  // is the ONLY store of the personality choice (INT21 §5.1). The Behaviour
+  // Engine reads it fresh every turn via the gateway and normalises any
+  // unrecognised value to the platform default, so a bad row degrades to the
+  // default voice rather than an error. Declared here by CP2: the column has
+  // existed in Postgres since EWO2 but was never added to this schema, so
+  // Drizzle omitted it from every SELECT and the value was invisible at
+  // runtime — every user silently received the default voice.
+  companionPersonality: text("companion_personality").notNull().default("companion"),
 });
 
 export const insertUserPreferencesSchema = createInsertSchema(userPreferences).pick({
@@ -729,6 +738,7 @@ export const insertUserPreferencesSchema = createInsertSchema(userPreferences).p
   preferLessProcessed: true,
   includeRegulatoryAdditivesInScoring: true,
   mutedOpportunityTypes: true,
+  companionPersonality: true,
 });
 
 export type UserPreferences = typeof userPreferences.$inferSelect;

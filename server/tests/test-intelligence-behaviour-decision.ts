@@ -561,11 +561,24 @@ async function main(): Promise<void> {
   }
 
   {
-    assert(BEHAVIOUR_SURFACES.length === 3, "the surface vocabulary is closed to the three live seams");
-    assert(BEHAVIOUR_OUTCOMES.length === 4, "the outcome vocabulary is closed");
+    // CP2 wired three more seams (escalation, degradation, greeting) and named
+    // the three outcomes they produce. The vocabularies stay closed — they grew
+    // by exactly what shipped, and by nothing that is merely imaginable.
+    assert(BEHAVIOUR_SURFACES.length === 6, "the surface vocabulary is closed to the six live seams");
+    assert(BEHAVIOUR_OUTCOMES.length === 7, "the outcome vocabulary is closed");
     assert(
-      !BEHAVIOUR_SURFACES.some((s) => (s as string).includes("notice") || (s as string).includes("greeting")),
-      "dormant seams claim no surface until their routes are wired (BEH-P1/BEH-P2)",
+      !BEHAVIOUR_SURFACES.some(
+        (s) =>
+          (s as string).includes("notice") ||
+          (s as string).includes("growth") ||
+          (s as string).includes("celebration"),
+      ),
+      "dormant seams (phraseNotice / phraseGrowth / buildCelebration) claim no surface until NTC-P1 wires their route",
+    );
+    assert(
+      BEHAVIOUR_OUTCOMES.includes("not-voiced"),
+      "`not-voiced` is retained even though CP2 leaves no gateway path that emits it — " +
+        "it is how a future unvoiced surface is forced to declare itself",
     );
   }
 

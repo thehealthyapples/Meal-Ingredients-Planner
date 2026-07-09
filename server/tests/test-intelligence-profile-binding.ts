@@ -124,6 +124,7 @@ const PREFS_1: UserPreferences = {
   preferLessProcessed: true,
   includeRegulatoryAdditivesInScoring: true,
   mutedOpportunityTypes: [],
+  companionPersonality: "companion",
 };
 
 const calls: string[] = [];

@@ -112,6 +112,8 @@ interface SessionsResponse { windowDays?: number; sessions?: TimelineSession[] }
 interface BehaviourPersonalitySummary {
   personalityId: string;
   decisions: number; voiced: number; voicedFallback: number; voicedError: number; notVoiced: number;
+  // CP2 — the three surfaces this workstream brought under the engine.
+  voicedEscalation?: number; voicedDegradation?: number; voicedExperience?: number;
   overrides: number; ratedDecisions: number; helpful: number; notHelpful: number;
   effectiveness?: number | null;
 }
@@ -134,6 +136,12 @@ interface BehaviourTelemetry {
     ratedDecisions?: number; helpful?: number; notHelpful?: number;
     rate?: number | null; unattributedFeedback?: number; note?: string;
   };
+  // CP2 — the voices users CHOSE, as opposed to the voices that SPOKE.
+  selections?: {
+    total?: number; changed?: number; unchanged?: number;
+    byPersonality?: { personalityId: string; count: number }[];
+    note?: string;
+  };
   byDay?: { day: string; decisions: number; overrides: number }[];
   correlationNote?: string;
 }
@@ -144,6 +152,7 @@ interface PersonalityDescription {
   priorities?: string[];
   guidanceLabelPrefix?: string;
   systemPromptFragment?: string;
+  invitation?: string;
 }
 
 interface BehaviourResponse { telemetry?: BehaviourTelemetry; registry?: PersonalityDescription[] }
@@ -673,6 +682,7 @@ function BehaviourView({ days }: { days: number }) {
   const personalities = t.byPersonality ?? [];
   const overrides = t.overrides ?? {};
   const effectiveness = t.effectiveness ?? {};
+  const selections = t.selections ?? {};
   const decisions = t.decisions ?? 0;
 
   const displayName = (id: string): string => registry.find((p) => p.id === id)?.displayName ?? id;
@@ -793,7 +803,10 @@ function BehaviourView({ days }: { days: number }) {
                     <TableHead className="text-right">Voiced</TableHead>
                     <TableHead className="text-right">Honest gap</TableHead>
                     <TableHead className="text-right">Errors</TableHead>
-                    <TableHead className="text-right">Not voiced</TableHead>
+                    <TableHead className="text-right" title="The read-only write refusal, voiced (CP2).">Refusals</TableHead>
+                    <TableHead className="text-right" title="Provider-unavailable degradation, voiced (CP2).">Degraded</TableHead>
+                    <TableHead className="text-right" title="Greeting + invitation on the Companion panel, voiced (CP2).">Experience</TableHead>
+                    <TableHead className="text-right" title="No voice transform ran. CP2 leaves no path that emits this — any count above zero means a surface is speaking outside the Behaviour Engine.">Not voiced</TableHead>
                     <TableHead className="text-right">Overrides</TableHead>
                     <TableHead className="text-right">Rated</TableHead>
                     <TableHead className="text-right">Effectiveness</TableHead>
@@ -809,6 +822,9 @@ function BehaviourView({ days }: { days: number }) {
                       <TableCell className="text-right tabular-nums" style={p.voicedError > 0 ? { color: C_BAD } : undefined}>
                         {p.voicedError || DASH}
                       </TableCell>
+                      <TableCell className="text-right tabular-nums">{p.voicedEscalation || DASH}</TableCell>
+                      <TableCell className="text-right tabular-nums">{p.voicedDegradation || DASH}</TableCell>
+                      <TableCell className="text-right tabular-nums">{p.voicedExperience || DASH}</TableCell>
                       <TableCell className="text-right tabular-nums" style={p.notVoiced > 0 ? { color: C_WARN } : undefined}>
                         {p.notVoiced || DASH}
                       </TableCell>
@@ -835,6 +851,49 @@ function BehaviourView({ days }: { days: number }) {
             </p>
           )}
           {t.correlationNote && <p className="text-[10px] text-muted-foreground mt-2">{t.correlationNote}</p>}
+        </CardContent>
+      </Card>
+
+      {/* CP2 — the voices users CHOSE. Distinct from the table above, which
+          counts the voices that SPOKE. Before CP2 no user could choose one. */}
+      <Card data-testid="card-behaviour-selections">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Companion voice selected</CardTitle>
+          <CardDescription className="text-xs">
+            Voices chosen by users in Settings during this window.
+            {selections.note ? ` ${selections.note}` : ""}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {(selections.total ?? 0) === 0 ? (
+            <EmptyNote>No user changed their Companion voice in this window.</EmptyNote>
+          ) : (
+            <>
+              <div className="flex flex-wrap gap-4 mb-3">
+                <StatTile label="Selections" value={String(selections.total ?? 0)} testId="stat-behaviour-selections" />
+                <StatTile label="Changed" value={String(selections.changed ?? 0)} testId="stat-behaviour-selections-changed" />
+                <StatTile label="Re-confirmed" value={String(selections.unchanged ?? 0)} testId="stat-behaviour-selections-unchanged" />
+              </div>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Voice chosen</TableHead>
+                      <TableHead className="text-right">Selections</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(selections.byPersonality ?? []).map((s) => (
+                      <TableRow key={s.personalityId} data-testid={`row-behaviour-selection-${s.personalityId}`}>
+                        <TableCell className="text-sm font-medium">{displayName(s.personalityId)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{s.count}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 

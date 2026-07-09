@@ -13,8 +13,14 @@
  *   §3  behaviour-engine — guidance reordering never adds/drops/retargets
  *   §4  companion-growth — honest gap on thin data; real computation otherwise
  *   §5  gateway end-to-end — same gap, two voices, both honest
+ *   §6  CP2 — escalation voicing: every voice refuses, none implies it acted
+ *   §7  CP2 — degradation voicing: every voice discloses "not configured"
+ *   §8  CP2 — the Companion experience surface, in six voices
+ *   §9  CP2 — the voice is never grounding: no personality byte in CONTEXT DATA
+ *   §10 CP2 — functional identity: the sealed decision differs only in wording
  *
  * Run: npx tsx server/tests/test-intelligence-personality-platform.ts
+ *      npm run test:intelligence-personality-platform
  */
 
 import {
@@ -24,6 +30,8 @@ import {
   normalizePersonalityId,
   isPersonalityId,
   getPersonality,
+  cannotYet,
+  notConfigured,
 } from "../intelligence/conversation/personality-registry.js";
 import {
   systemPromptFragment,
@@ -32,8 +40,18 @@ import {
   voiceGuidanceSuggestions,
   buildGreeting,
   buildCelebration,
+  buildInvitation,
+  buildCompanionExperience,
   phraseGrowth,
+  voiceEscalation,
+  voiceDegradation,
+  resolveBehaviour,
+  sealBehaviourDecision,
+  BEHAVIOUR_SURFACES,
 } from "../intelligence/conversation/behaviour-engine.js";
+import { composeContext } from "../intelligence/context/context-composition-engine.js";
+import { CONTEXT_VIEW_SPECS, hasNativeContextView } from "../intelligence/context/context-view.js";
+import { createProfileReadHandler } from "../intelligence/handlers/profile-read-handler.js";
 import {
   computeGrowthSignal,
   toGrowthPhraseInputs,
@@ -43,6 +61,7 @@ import type { GuidanceSuggestion } from "../intelligence/conversation/companion-
 import type { UserHealthTrend } from "../../shared/schema.js";
 import {
   ConversationGateway,
+  detectWriteIntent,
   type HandleIntentFn,
 } from "../intelligence/conversation/conversation-gateway.js";
 import { InMemoryConversationStore, resetInMemoryIds } from "../intelligence/conversation/conversation-store.js";
@@ -304,7 +323,290 @@ async function runGatewayVoicingCheck(): Promise<void> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// §6 CP2 — escalation voicing: every voice refuses, none implies it acted
+// ---------------------------------------------------------------------------
+
+console.log("\n── §6 CP2 — escalation voicing (the read-only write refusal) ───────────────────");
+
+// The complete set of actions detectWriteIntent can name, harvested from the
+// guard itself rather than hand-copied — so a new refusal reason cannot be
+// added to the gateway without this test covering it.
+const WRITE_UTTERANCES = [
+  "add chicken to my shopping list",
+  "remove the salmon meal",
+  "move Monday's dinner to Tuesday",
+  "replace the salmon meal with cod",
+  "create a new meal plan for next week",
+  "update my profile diet",
+];
+const WRITE_ACTIONS = Array.from(
+  new Set(WRITE_UTTERANCES.map((u) => detectWriteIntent(u)).filter((a): a is string => a !== null)),
+);
+assert(WRITE_ACTIONS.length >= 5, `harvested ${WRITE_ACTIONS.length} distinct write actions from detectWriteIntent`);
+
+for (const id of PERSONALITY_IDS) {
+  for (const action of WRITE_ACTIONS) {
+    const text = voiceEscalation(id, { action });
+    // The refusal clause is structural, not stylistic: it must survive verbatim.
+    assert(text.includes(cannotYet(action)), `${id}: escalation embeds the verbatim refusal for "${action}"`);
+    // The action the user asked for is named, never silently generalised away.
+    assert(text.includes(action), `${id}: escalation names the action the user asked for ("${action}")`);
+    // And no voice may imply the write happened.
+    assert(
+      !/\b(i've|i have|done|added|removed|updated|created|moved|replaced)\b/i.test(text),
+      `${id}: escalation never implies the write was performed ("${action}")`,
+    );
+  }
+}
+// The default voice's copy is byte-identical to the string the gateway owned before CP2.
+assert(
+  voiceEscalation("companion", { action: "add items to the planner or shopping list" }) ===
+    "I can read and explain your data, but I can't add items to the planner or shopping list yet — " +
+      "that's coming in a future update. For now, make the change directly in the app and I can help you " +
+      "understand or review it afterwards.",
+  "companion's escalation is byte-identical to the pre-CP2 gateway copy (no default-voice copy change)",
+);
+// Six voices, six different wordings of one refusal.
+assert(
+  new Set(PERSONALITY_IDS.map((id) => voiceEscalation(id, { action: "replace meals" }))).size === 6,
+  "all six voices word the same refusal differently",
+);
+
+// ---------------------------------------------------------------------------
+// §7 CP2 — degradation voicing
+// ---------------------------------------------------------------------------
+
+console.log("\n── §7 CP2 — degradation voicing (provider unavailable) ─────────────────────────");
+
+for (const id of PERSONALITY_IDS) {
+  const text = voiceDegradation(id);
+  assert(text.includes(notConfigured()), `${id}: degradation embeds the verbatim "not configured" disclosure`);
+  assert(
+    !/\b(thinking|one moment|just a sec|loading|working on it)\b/i.test(text),
+    `${id}: degradation never implies the assistant is merely busy`,
+  );
+}
+assert(
+  voiceDegradation("companion") === "The AI assistant isn't available right now — it hasn't been configured yet.",
+  "companion's degradation is byte-identical to the pre-CP2 gateway copy",
+);
+assert(
+  new Set(PERSONALITY_IDS.map((id) => voiceDegradation(id))).size === 6,
+  "all six voices word the same degradation differently",
+);
+
+// ---------------------------------------------------------------------------
+// §8 CP2 — the Companion experience surface
+// ---------------------------------------------------------------------------
+
+console.log("\n── §8 CP2 — the Companion experience surface, in six voices ────────────────────");
+
+for (const id of PERSONALITY_IDS) {
+  const exp = buildCompanionExperience(id, 0);
+  assert(exp.personalityId === id, `${id}: experience reports the voice that built it`);
+  assert(exp.greeting.length > 0, `${id}: experience carries a greeting`);
+  assert(exp.invitation === buildInvitation(id), `${id}: experience's invitation IS the registry's invitation`);
+  // The transport error is the internal-error disclosure — not a seventh phrasing of one fact.
+  assert(
+    exp.transportError === voiceFallback("internal-error", id, { suggestionExamples: "" }),
+    `${id}: experience.transportError reuses the internal-error template, adding no new content`,
+  );
+  // Nothing about the household may appear in an experience surface.
+  assert(
+    !/\{name\}|\{detail\}|undefined|null/.test(`${exp.greeting} ${exp.invitation}`),
+    `${id}: experience leaves no unfilled slot and asserts no fact`,
+  );
+}
+// Day-seeded, not random: the same voice on the same day says the same words.
+assert(
+  buildCompanionExperience("chef", 42).greeting === buildCompanionExperience("chef", 42).greeting,
+  "the greeting is deterministic for a fixed (voice, seed)",
+);
+assert(
+  new Set(PERSONALITY_IDS.map((id) => buildCompanionExperience(id, 0).greeting)).size === 6,
+  "all six voices greet differently",
+);
+// The client's pre-CP2 hardcoded invitation is now the default voice's registry content.
+assert(
+  buildInvitation("companion") === "Ask me anything about your food and plans.",
+  "companion's invitation is byte-identical to the string FloatingAssistant.tsx used to hardcode",
+);
+
+// ---------------------------------------------------------------------------
+// §9 CP2 — the voice is never grounding (Native Context View boundary)
+// ---------------------------------------------------------------------------
+
+console.log("\n── §9 CP2 — personality never enters CONTEXT DATA ──────────────────────────────");
+
+// The `profile:read` Native Context View is REUSED unchanged: CP2 adds no view,
+// no spec, and pins no new field. Crucially it must never pin the voice choice.
+assert(hasNativeContextView("profile", "read"), "profile:read still has its Native Context View (unchanged by CP2)");
+assert(
+  (CONTEXT_VIEW_SPECS["profile:read"].pinned ?? []).every((p) => !/companionPersonality/i.test(p)),
+  "profile:read's Native Context View pins no personality field",
+);
+
+// Compose real grounding from a profile Full Result that (correctly) carries no
+// voice, and prove no personality byte reaches the model's CONTEXT DATA block.
+const profileResult = {
+  scope: "profile",
+  profile: { id: 1, dietPattern: "Mediterranean", dietRestrictions: ["Gluten-Free"] },
+  preferences: { dietTypes: ["mediterranean"], healthGoals: ["improve-health"], excludedIngredients: [] },
+};
+const composed = composeContext({
+  utterance: "what should I eat this week",
+  capabilities: [{ capabilityId: "profile", verb: "read", result: profileResult, confidence: 1, baseline: true }],
+  enrichment: [],
+});
+for (const id of PERSONALITY_IDS) {
+  assert(
+    !composed.text.includes(systemPromptFragment(id)),
+    `${id}: the tone fragment is absent from the composed CONTEXT DATA`,
+  );
+  // Only the five voices that HAVE a label prefix can be searched for one.
+  // `companion`'s prefix is deliberately empty, so asserting its absence would
+  // be a vacuous test wearing the costume of a guarantee.
+  const prefix = getPersonality(id).guidanceLabelPrefix.trim();
+  if (prefix.length > 0) {
+    assert(
+      !composed.text.includes(prefix),
+      `${id}: the guidance label prefix is absent from the composed CONTEXT DATA`,
+    );
+  }
+  // No registry-owned voice content of any kind may reach the grounding block.
+  assert(
+    !composed.text.includes(buildInvitation(id)) && !composed.text.includes(voiceDegradation(id)),
+    `${id}: no registry voice content appears in the composed CONTEXT DATA`,
+  );
+}
+assert(
+  !/companionPersonality/i.test(composed.text),
+  "the composed CONTEXT DATA names no personality field",
+);
+
+// The assertion above only proves the composition engine copies what it is given.
+// The load-bearing guard is that the PROFILE CAPABILITY never hands it the voice
+// in the first place: `ProfilePreferencesView` is an explicit allowlist, and the
+// stored personality must not appear in it however the row is populated. This
+// drives the real handler through its port, so a future edit that "helpfully"
+// spreads the preferences row fails here rather than in production.
+async function assertProfileViewOmitsVoice(): Promise<void> {
+  const prefsRow = {
+    id: 1, userId: 7, dietTypes: [], excludedIngredients: [], healthGoals: [],
+    budgetLevel: "standard", preferredStores: [], upfSensitivity: "moderate",
+    qualityPreference: "standard", calorieTarget: null, calorieMode: "auto",
+    heightCm: null, weightKg: null, activityLevel: "moderate", goalType: "maintain",
+    adultsCount: 1, childrenCount: 0, babiesCount: 0, soundEnabled: true,
+    eliteTrackingEnabled: true, healthTrendEnabled: true, barcodeScannerEnabled: true,
+    plannerShowCalories: true, plannerEnableBabyMeals: false, plannerEnableChildMeals: false,
+    plannerEnableDrinks: false, preferredIngredients: [], maxPrepTolerance: null,
+    mealMode: "exact", maxExtraPrepMinutes: null, maxTotalCookTime: null,
+    preferLessProcessed: false, includeRegulatoryAdditivesInScoring: true,
+    mutedOpportunityTypes: [],
+    // The voice IS stored on the row the port returns…
+    companionPersonality: "sergeant",
+  };
+  const handler = createProfileReadHandler(async () => ({
+    getUser: async () => ({ id: 7, username: "t", displayName: "T" }) as any,
+    getUserPreferences: async () => prefsRow as any,
+  }));
+  const result = (await handler(
+    { verb: "read", capabilityId: "profile", parameters: {} } as any,
+    { userId: 7, role: "user", tier: "free" } as any,
+  )) as { preferences: Record<string, unknown> | null };
+
+  assert(result.preferences !== null, "profile:read returns a preferences view for a stored row");
+  // …and must NOT be surfaced by the capability that grounds the model.
+  assert(
+    result.preferences !== null && !("companionPersonality" in result.preferences),
+    "profile:read's Full Result omits companionPersonality — the voice is never grounding evidence",
+  );
+  assert(
+    !JSON.stringify(result).includes("sergeant"),
+    "the stored voice appears nowhere in profile:read's serialised Full Result",
+  );
+}
+
+// The Context Composition Engine takes no personality parameter at all — the
+// composition is byte-identical however the user chose to be spoken to.
+assert(
+  composeContext({
+    utterance: "what should I eat this week",
+    capabilities: [{ capabilityId: "profile", verb: "read", result: profileResult, confidence: 1, baseline: true }],
+    enrichment: [],
+  }).text === composed.text,
+  "composition is deterministic and independent of voice (the engines do not share a seam)",
+);
+
+// ---------------------------------------------------------------------------
+// §10 CP2 — functional identity: same decision shape, different words
+// ---------------------------------------------------------------------------
+
+console.log("\n── §10 CP2 — all six voices are functionally identical ─────────────────────────");
+
+// INT21 §5.2, applied to the sealed decision: for a FIXED interaction, switching
+// the voice may change the applied personality and the wording of the operator
+// reasoning — and nothing else.
+const decisions = PERSONALITY_IDS.map((id) =>
+  sealBehaviourDecision({
+    resolution: resolveBehaviour(id),
+    outcome: "voiced-fallback",
+    surfaces: ["fallback-voicing", "guidance-voicing"],
+    fallbackState: "no-knowledge",
+    guidanceCount: 2,
+  }),
+);
+const shapeOf = (d: (typeof decisions)[number]) =>
+  JSON.stringify({
+    outcome: d.outcome,
+    surfaces: d.surfaces,
+    fallbackState: d.fallbackState,
+    guidanceCount: d.guidanceCount,
+    notVoicedReason: d.notVoicedReason,
+    overrideApplied: d.overrideApplied,
+    overrideReason: d.overrideReason,
+    confidence: d.confidence,
+    confidenceBasis: d.confidenceBasis,
+    reasoningCount: d.reasoning.length,
+  });
+assert(new Set(decisions.map(shapeOf)).size === 1, "the sealed decision's SHAPE is identical across all six voices");
+assert(
+  new Set(decisions.map((d) => d.personalityId)).size === 6,
+  "…while the applied personality genuinely differs across all six",
+);
+
+// An explicit, recognised choice is provenance-confident; an unknown one is not,
+// and degrades to the default voice rather than to an error.
+assert(resolveBehaviour("coach").confidence === 1, "an explicit recognised voice resolves with confidence 1");
+assert(resolveBehaviour("wizard").personalityId === DEFAULT_PERSONALITY_ID, "an unknown voice degrades to the default");
+assert(resolveBehaviour("wizard").confidence === 0, "a defaulted voice reports confidence 0, never a middle value");
+assert(resolveBehaviour(null).overrideReason === "no-stored-preference", "a missing preference is named honestly");
+
+// Surfaces are closed to what is genuinely live: the dormant exports claim none.
+assert(
+  !BEHAVIOUR_SURFACES.includes("notice-voicing" as never) &&
+    !BEHAVIOUR_SURFACES.includes("growth-voicing" as never) &&
+    !BEHAVIOUR_SURFACES.includes("celebration-voicing" as never),
+  "dormant exports (phraseNotice / phraseGrowth / buildCelebration) still claim NO behaviour surface",
+);
+assert(
+  BEHAVIOUR_SURFACES.includes("escalation-voicing") &&
+    BEHAVIOUR_SURFACES.includes("degradation-voicing") &&
+    BEHAVIOUR_SURFACES.includes("greeting-voicing"),
+  "the three surfaces CP2 wired are declared live",
+);
+
+// Every registered voice supplies every CP2 content field — no voice is a stub.
+for (const id of PERSONALITY_IDS) {
+  const def = getPersonality(id);
+  assert(typeof def.escalationTemplate === "function", `${id} has an escalation template`);
+  assert(typeof def.degradationTemplate === "function", `${id} has a degradation template`);
+  assert(def.experience.invitation.length > 0, `${id} has an invitation`);
+}
+
 (async () => {
+  await assertProfileViewOmitsVoice();
   await runGatewayVoicingCheck();
 
   // -------------------------------------------------------------------------

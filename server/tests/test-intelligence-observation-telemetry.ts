@@ -151,9 +151,11 @@ async function main(): Promise<void> {
   // The vocabulary is closed but growable: extending it is an architecture
   // decision (extend the union + document the capture point). BEH1 added the
   // twelfth kind, `behaviour-decision`, captured in conversation-gateway.ts.
+  // CP2 added the thirteenth, `behaviour-selection` — the user CHOOSING a voice,
+  // captured at PUT /api/profile, the one place a voice is chosen.
   assert(
-    OBSERVATION_KINDS.length === 12 && new Set(OBSERVATION_KINDS).size === 12,
-    "the observation taxonomy is the closed 12-kind vocabulary",
+    OBSERVATION_KINDS.length === 13 && new Set(OBSERVATION_KINDS).size === 13,
+    "the observation taxonomy is the closed 13-kind vocabulary",
   );
   assert(
     OBSERVATION_KINDS.includes("behaviour-decision"),

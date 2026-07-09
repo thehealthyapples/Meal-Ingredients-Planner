@@ -29,7 +29,7 @@ async function main() {
     const owner = await resolveBenchmarkOwner(id);
     if (!owner) { console.error(`${id}: no owner — skipping`); continue; }
     const prefs = await storage.getUserPreferences(owner.id).catch(() => undefined);
-    const personality = (prefs?.companionPersonality as string | undefined) ?? "default";
+    const personality = prefs?.companionPersonality ?? "default";
     const runTurn = makeCompanionTurnRunner(owner, personality);
     const result = await runBenchmark({
       mode: "full",

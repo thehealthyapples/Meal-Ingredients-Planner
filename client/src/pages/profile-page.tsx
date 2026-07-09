@@ -23,10 +23,19 @@ import {
   Volume2, Scan, Loader2, ArrowLeft, Check, Store,
   Sparkles, Mail, Trash2,
   Copy, LogOut, UserMinus, Pencil, X, RefreshCw,
-  ChevronDown,
+  ChevronDown, MessageSquare,
 } from "lucide-react";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
+import { cn } from "@/lib/utils";
 import { normalizeIngredientKey } from "@shared/normalize";
+// CP2 — the ONE closed personality set, shared verbatim with the server's
+// Personality Registry. The picker never declares a second list.
+import {
+  PERSONALITY_IDS,
+  PERSONALITY_DISPLAY,
+  normalizePersonalityId,
+  type PersonalityId,
+} from "@shared/companion-personality";
 import { WorkspaceHeader } from "@/components/workspace-header";
 import { apiRequest, queryClient as qc } from "@/lib/queryClient";
 import { DIET_PATTERNS, DIET_RESTRICTIONS, EATING_SCHEDULES, ONBOARDING_DIET_OPTIONS, ALLERGY_OPTIONS, DIET_PATTERN_OPTIONS, ALLERGY_INTOLERANCE_OPTIONS, formatDietLabel } from "@/lib/diets";
@@ -347,6 +356,10 @@ export default function ProfilePage() {
           onSave={(prefs) => savePreferences(prefs)}
         />
         <MealPlanSection />
+        <CompanionVoiceSettings
+          prefs={prefs}
+          onSelect={(personalityId) => saveField("companionPersonality", personalityId)}
+        />
         <FeatureToggles
           prefs={prefs}
           onToggle={(field, value) => saveField(field, value)}
@@ -1700,6 +1713,71 @@ function FeatureToggles({ prefs, onToggle }: { prefs: any; onToggle: (field: str
                 className="shrink-0"
               />
             </div>
+          );
+        })}
+      </div>
+    </Card>
+  );
+}
+
+/**
+ * CP2 — the Companion voice picker.
+ *
+ * The list, the display names and the descriptions all come from
+ * `shared/companion-personality.ts`, the one closed set shared verbatim with
+ * the server's Personality Registry. This component holds no second list, and
+ * it never renders a voice's phrasing — the registry owns every word the
+ * Companion says, and the Behaviour Engine is the only thing allowed to say it.
+ *
+ * Choosing a voice changes HOW the Companion speaks, never what it knows, what
+ * it can do, or what it will ask you to confirm (INT21 §5.2). The copy below
+ * says so, because a user who believed otherwise would be misled.
+ */
+function CompanionVoiceSettings({
+  prefs,
+  onSelect,
+}: {
+  prefs: any;
+  onSelect: (personalityId: PersonalityId) => void;
+}) {
+  const selected: PersonalityId = normalizePersonalityId(prefs?.companionPersonality);
+
+  return (
+    <Card className="p-4 sm:p-5" data-testid="card-companion-voice">
+      <div className="flex items-center gap-2 mb-1">
+        <MessageSquare className="h-4 w-4 text-muted-foreground" />
+        <h3 className="text-sm font-medium">Companion voice</h3>
+      </div>
+      <p className="text-xs text-muted-foreground mb-3">
+        Changes how Apple talks to you. Same answers, same data, same checks before anything changes.
+      </p>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {PERSONALITY_IDS.map((id) => {
+          const display = PERSONALITY_DISPLAY[id];
+          const isSelected = id === selected;
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => onSelect(id)}
+              aria-pressed={isSelected}
+              className={cn(
+                "text-left rounded-lg border p-3 transition-colors",
+                isSelected
+                  ? "border-primary bg-primary/5"
+                  : "border-border/60 hover:bg-muted/50",
+              )}
+              data-testid={`button-companion-voice-${id}`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-medium">{display.displayName}</span>
+                {isSelected && <Check className="h-4 w-4 text-primary shrink-0" />}
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
+                {display.description}
+              </p>
+            </button>
           );
         })}
       </div>

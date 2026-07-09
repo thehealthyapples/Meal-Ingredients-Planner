@@ -197,12 +197,29 @@ interface TurnApiResponse {
   fallbackState?: "no-route" | "no-knowledge" | "no-results" | "internal-error";
 }
 
-// INT35B: honest fallback shown when the request itself fails to reach the
-// server (network / 500) — the one unsuccessful path INT35's server-side states
-// cannot reach. Mirrors the gateway's internal-error copy so the live Companion
-// always answers honestly rather than silently dropping the turn.
-const TRANSPORT_ERROR_TEXT =
-  "Something went wrong on my side while answering that — it's not you. Please try again in a moment.";
+/**
+ * CP2 — the Companion's own words for this panel, fetched from the Behaviour
+ * Engine (GET /api/intelligence/companion/experience) in the user's chosen
+ * voice. The client stores none of them.
+ *
+ * Before CP2 this file hardcoded the empty-state greeting and a
+ * `TRANSPORT_ERROR_TEXT` const that was a VERBATIM COPY of the `companion`
+ * personality's `internal-error` template — a second voice nobody chose, which
+ * silently stayed in the default register no matter which voice the user
+ * picked. Both are gone; both now arrive as registry content below.
+ */
+interface CompanionExperience {
+  personalityId: string;
+  personalityName: string;
+  greeting: string;
+  invitation: string;
+  /**
+   * INT35B: shown when the request never reaches the server — the one
+   * unsuccessful path INT35's server-side states cannot classify. It IS the
+   * `internal-error` disclosure, voiced; not a seventh phrasing of one fact.
+   */
+  transportError: string;
+}
 
 interface TurnsApiResponse {
   turns: TurnRecord[];
@@ -1217,6 +1234,15 @@ export default function FloatingAssistant() {
     staleTime: 0,
   });
 
+  // CP2: the Companion's own words for this panel, in the user's chosen voice.
+  // Every string below comes from the Personality Registry via the Behaviour
+  // Engine — the client stores none of them. Fetched when the panel opens, so
+  // it is already resolved by the time a turn can fail in transport.
+  const { data: experience } = useQuery<CompanionExperience>({
+    queryKey: ["/api/intelligence/companion/experience"],
+    enabled: isOpen,
+  });
+
   // Merge server turns with optimistic turns (server wins on ID overlap)
   const serverTurns: TurnRecord[] = turnsData?.turns ?? [];
   const serverIds = new Set(serverTurns.map((t) => t.id));
@@ -1224,6 +1250,11 @@ export default function FloatingAssistant() {
   const allTurns: TurnRecord[] = [...serverTurns, ...pendingOptimistic];
 
   const hasHistory = allTurns.length > 0;
+
+  // CP2: set only when a turn failed in transport AND the Companion's voice was
+  // never fetched, so no registry text exists to answer with. Renders platform
+  // chrome, never an assistant turn — see the mutation's onError below.
+  const [transportFailed, setTransportFailed] = useState(false);
 
   // Submit turn mutation
   const { mutate: sendTurn, isPending } = useMutation<TurnApiResponse, Error, string>({
@@ -1236,6 +1267,7 @@ export default function FloatingAssistant() {
       return res.json() as Promise<TurnApiResponse>;
     },
     onMutate: (utterance: string) => {
+      setTransportFailed(false);
       // Optimistic user turn
       const id = nextOptimisticId.current--;
       const userTurn: TurnRecord = {
@@ -1293,11 +1325,22 @@ export default function FloatingAssistant() {
       // INT35B: keep the user's turn and append an honest assistant error bubble
       // (rather than silently dropping the question), so a transport failure is
       // handled consistently with the INT35 internal-error fallback.
+      //
+      // CP2: the bubble's words are registry content in the user's voice. If
+      // the experience payload never loaded we do NOT know the user's voice, so
+      // we must not put words in the Companion's mouth (INT21 §10 — no voiced
+      // surface presented as voiced when no transform ran). We surface a plain,
+      // clearly platform-owned connection notice instead.
+      const voicedError = experience?.transportError;
+      if (!voicedError) {
+        setTransportFailed(true);
+        return;
+      }
       const id = nextOptimisticId.current--;
       const errorTurn: TurnRecord = {
         id,
         role: "assistant",
-        utterance: TRANSPORT_ERROR_TEXT,
+        utterance: voicedError,
         createdAt: new Date().toISOString(),
       };
       setOptimisticTurns((prev) => [...prev, errorTurn]);
@@ -1452,22 +1495,29 @@ export default function FloatingAssistant() {
                 <div className="flex-1 overflow-y-auto flex flex-col justify-end">
                   {!isTurnsLoading && (
                     <>
-                      {/* Empty-state greeting */}
-                      <div className="px-4 pt-6 pb-2 text-center">
-                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                          <Leaf className="h-6 w-6 text-primary/70" />
+                      {/* CP2 — empty-state greeting, in the user's chosen voice.
+                          Rendered only once the registry text has arrived: an
+                          empty panel is honest, an invented greeting is not. */}
+                      {experience && (
+                        <div className="px-4 pt-6 pb-2 text-center">
+                          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                            <Leaf className="h-6 w-6 text-primary/70" />
+                          </div>
+                          <p
+                            className="text-sm font-medium text-foreground"
+                            style={{ fontFamily: "var(--font-display)" }}
+                            data-testid="text-assistant-greeting"
+                          >
+                            {experience.greeting}
+                          </p>
+                          <p
+                            className="text-xs text-muted-foreground mt-1"
+                            data-testid="text-assistant-invitation"
+                          >
+                            {experience.invitation}
+                          </p>
                         </div>
-                        <p
-                          className="text-sm font-medium text-foreground"
-                          style={{ fontFamily: "var(--font-display)" }}
-                          data-testid="text-assistant-greeting"
-                        >
-                          Hi, I'm Apple!
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Ask me anything about your food and plans.
-                        </p>
-                      </div>
+                      )}
                       <QuickActions
                         surface={surface}
                         onSelect={handleQuickAction}
@@ -1475,6 +1525,19 @@ export default function FloatingAssistant() {
                     </>
                   )}
                 </div>
+              )}
+
+              {/* CP2 — platform chrome, deliberately NOT the Companion's voice.
+                  Shown only when a turn failed in transport before the user's
+                  voice could be fetched, so no registry text exists to say it
+                  in. Speaking here would be a voice nobody chose. */}
+              {transportFailed && (
+                <p
+                  className="px-4 pb-2 text-xs text-destructive"
+                  data-testid="text-assistant-transport-error"
+                >
+                  Couldn't reach the assistant. Check your connection and try again.
+                </p>
               )}
 
               {/* Input */}

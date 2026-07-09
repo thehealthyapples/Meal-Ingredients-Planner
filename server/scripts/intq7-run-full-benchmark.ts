@@ -32,7 +32,7 @@ async function main() {
       continue;
     }
     const prefs = await storage.getUserPreferences(owner.id).catch(() => undefined);
-    const personality = (prefs?.companionPersonality as string | undefined) ?? "default";
+    const personality = prefs?.companionPersonality ?? "default";
     console.log(`${id}: owner userId=${owner.id} personality=${personality} — running FULL (100 questions)`);
 
     const runTurn = makeCompanionTurnRunner(owner, personality);
