@@ -1920,7 +1920,10 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     food: {
       slug: "yoghurt", name: "Yoghurt", category: "Dairy", subcategory: "Fermented dairy",
       description: "A cultured dairy food supplying calcium and vitamin B12; includes live, natural and Greek-style varieties.",
-      knowledgeFoodSlug: "live-yogurt", diversityGroupSlug: null, fermented: true,
+      // KNOW1 — was "live-yogurt", a duplicate WS0 entry FI2 had already stripped of
+      // every nutrient and benefit, so canonical Yoghurt resolved to zero facts.
+      // Repointed to the correctly-categorised match (Dairy on both sides).
+      knowledgeFoodSlug: "yoghurt", diversityGroupSlug: null, fermented: true,
     },
     varieties: [
       { slug: "greek-yoghurt", name: "Greek Yoghurt", description: "Strained yoghurt with a much higher protein content and richer texture.", displayOrder: 0, knowledgeFoodSlug: "greek-yoghurt" },

@@ -1627,6 +1627,24 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  // KNOW1 — retire the `live-yogurt` duplicate WS0 knowledge food.
+  //
+  // `seed-knowledge-registry.ts` is an idempotent, additive-only UPSERT with no
+  // delete path, so removing `live-yogurt` from FOOD_SEED does not remove a row
+  // already seeded into an environment. This statement does, and cascades to that
+  // food's `knowledge_food_nutrients` / `knowledge_food_benefits` rows via the
+  // existing ON DELETE CASCADE foreign keys (shared/schema.ts). It is a no-op where
+  // the row never existed, and a real cleanup where it did.
+  //
+  // Safe to run before or after re-seeding: canonical Yoghurt now points at the
+  // `yoghurt` knowledge food, which this statement does not touch.
+  {
+    id: "2026-07-09_know1_retire_live_yogurt_duplicate",
+    statements: [
+      `DELETE FROM knowledge_foods WHERE slug = 'live-yogurt'`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

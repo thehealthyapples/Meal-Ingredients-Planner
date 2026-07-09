@@ -103,10 +103,12 @@ export const FOOD_SEED: InsertKnowledgeFood[] = [
     subcategory: "Fermented dairy", aliases: ["milk kefir"],
     description: "A cultured, drinkable ferment rich in live cultures and calcium.",
     commonForms: ["plain", "in smoothies"], storageGuidance: "Keep refrigerated.", seasonality: "Year-round" },
-  { slug: "live-yogurt", name: "Live Yogurt", category: "Fermented foods",
-    subcategory: "Fermented dairy", aliases: ["natural yogurt", "plain yogurt"],
-    description: "Natural yogurt with live cultures, supplying calcium and protein.",
-    commonForms: ["plain", "Greek-style"], storageGuidance: "Keep refrigerated.", seasonality: "Year-round" },
+  // KNOW1 — `live-yogurt` retired here as a duplicate of `yoghurt`. `yoghurt`'s own
+  // alias list already declared "live yoghurt" as one of its own terms, i.e. WS0's
+  // editorial data always asserted these were one food. Its US-spelling aliases moved
+  // onto `yoghurt` (below); its nutrient/benefit rows were already merged there by FI2
+  // (2eda5d3), which left this entry behind with zero facts. See
+  // docs/implementation/KNOW1_FOOD_INTELLIGENCE_EXPANSION.md §W1.
   { slug: "miso", name: "Miso", category: "Fermented foods",
     subcategory: "Fermented soya", aliases: ["miso paste"],
     description: "A savoury fermented soya bean paste used to add depth and live cultures.",
@@ -763,7 +765,11 @@ export const FOOD_SEED: InsertKnowledgeFood[] = [
     storageGuidance: "Refrigerate and use before the use-by date.",
     seasonality: "Year-round" },
   { slug: "yoghurt", name: "Yoghurt", category: "Dairy",
-    subcategory: "Fermented dairy", aliases: ["natural yoghurt", "plain yoghurt", "live yoghurt", "yogurt"],
+    subcategory: "Fermented dairy",
+    // KNOW1 — the last three are the US-spelling terms the retired `live-yogurt`
+    // entry carried (its two aliases plus its own name). Absorbed so no
+    // previously-reachable term becomes unreachable.
+    aliases: ["natural yoghurt", "plain yoghurt", "live yoghurt", "yogurt", "live yogurt", "natural yogurt", "plain yogurt"],
     description: "A cultured dairy food supplying calcium and vitamin B12; live yoghurt also contains beneficial cultures.",
     commonForms: ["plain", "natural", "in dips", "in marinades", "with fruit"],
     storageGuidance: "Keep refrigerated and use before the use-by date.",

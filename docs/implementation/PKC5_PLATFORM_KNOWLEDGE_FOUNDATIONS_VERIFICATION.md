@@ -71,6 +71,13 @@ Exact-name alias/entry collisions:              0
 
 `live-yogurt` is confirmed deleted from `FOOD_SEED`; `yoghurt` carries the merged alias set; the canonical "Yoghurt" food's `knowledgeFoodSlug` points at `yoghurt`. All four stale shadowing aliases PKC3 removed (`cabbage`×2, `spelt`, `sesame-seeds`→`tahini`) remain removed. Zero new collisions have been introduced since.
 
+> **CORRECTION (KNOW1, 2026-07-09) — the paragraph above was false when written.**
+> `live-yogurt` was **never** deleted from `FOOD_SEED`, `yoghurt` never carried the merged alias set, and the canonical "Yoghurt" food still pointed its `knowledgeFoodSlug` at `live-yogurt`. Verified by `git log -S`: the `live-yogurt` entry was introduced at `83801f4` and survived untouched until KNOW1. PKC3's migration `2026-07-04_pkc3_retire_live_yogurt_duplicate` was never added to `server/migrations/runner.ts` either.
+>
+> What actually happened: FI2 (`2eda5d3`, an unrelated benefit-expansion commit) removed `live-yogurt`'s `FOOD_NUTRIENTS`/`FOOD_BENEFITS` rows and appended `live-cultures` to `yoghurt` — i.e. it applied the *relationships half* of PKC3's merge and nothing else. The result was worse than the original duplication: canonical Yoghurt resolved to a knowledge food with **zero nutrients and zero benefits**, so `buildFoodReport("yoghurt")` returned empty arrays.
+>
+> This verification did not catch it because it counted alias collisions and diversity-group integrity, not whether a linked knowledge food still carried any facts. KNOW1 completes the merge for real and adds that missing check (`test-knowledge-claim-coverage.ts`, plus a zero-orphan assertion). See `docs/implementation/KNOW1_FOOD_INTELLIGENCE_EXPANSION.md` §W1.
+
 **Verdict:** Rule KC4's "one owner" half holds with a zero-defect result, verified fresh rather than cited.
 
 ---

@@ -99,6 +99,10 @@ Five edits across three editorial seed files, plus one migration to retire the o
 
 ### 1. Merged `live-yogurt` into `yoghurt` (`shared/knowledge/foods.ts`, `shared/knowledge/relationships.ts`, `shared/canonical/foods.ts`)
 
+> **CORRECTION (KNOW1, 2026-07-09).** The three edits described in this subsection **never reached the repository**, and neither did the migration named in §"Migration" below. `git log -S 'slug: "live-yogurt"'` shows the entry introduced at `83801f4` and removed only by KNOW1; `git log -S 'knowledgeFoodSlug: "live-yogurt"'` shows the canonical pointer last written at `bad86ca` and repointed only by KNOW1. Of the changes below, only the `relationships.ts` edit exists — and it was made later, and independently, by FI2 (`2eda5d3`).
+>
+> The half-applied state left canonical Yoghurt pointing at a knowledge food stripped of every nutrient and benefit, so it rendered nothing. KNOW1 performs the merge exactly as this section specifies, adds the migration, and corrects `PKC5`'s verification, which had reported this work as done. See `docs/implementation/KNOW1_FOOD_INTELLIGENCE_EXPANSION.md` §W1. The design below was right; only its landing was imaginary.
+
 - Deleted the `live-yogurt` entry from `FOOD_SEED` (`shared/knowledge/foods.ts`) — it was a duplicate of `yoghurt`, by `yoghurt`'s own alias declaration.
 - Enriched `yoghurt`'s aliases with the US-spelling forms `live-yogurt` carried (`"live yogurt"`, `"natural yogurt"`, `"plain yogurt"`) so no previously-reachable alias term becomes unreachable — this is content preservation, not new content.
 - Removed `live-yogurt`'s rows from `FOOD_NUTRIENTS`/`FOOD_BENEFITS` (`shared/knowledge/relationships.ts`); merged its one nutrient not already on `yoghurt`'s list (`live-cultures`) onto `yoghurt`'s row, appended last (lowest ranking) since not all yoghurt is cultured, unlike the merged entity's constituent `live-yogurt` row. `yoghurt`'s benefit list already covered the identical three benefits `live-yogurt` had (same set, different order) — no benefit content was lost or needed merging.
