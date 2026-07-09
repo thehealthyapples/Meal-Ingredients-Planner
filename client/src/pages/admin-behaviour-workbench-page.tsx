@@ -1,14 +1,22 @@
 /**
- * admin-behaviour-workbench-page.tsx — OBS2 Behaviour Admin Workbench
+ * admin-behaviour-workbench-page.tsx — OBS2 Execution Timeline
+ *                                     · BEH1 Behaviour view
  * ====================================================================
- * The Execution Timeline: the primary debugging and reasoning view for
- * Companion behaviour. It reconstructs the complete execution path of an
- * individual interaction — intent resolution, capability invocations,
- * knowledge retrieval, context composition, behaviour (voice) selection,
- * response generation, clarifications, recoveries, escalations and user
- * feedback — READ-ONLY from the Observation Engine's timeline projections
- * (/api/intelligence/observation/timeline/*). The Behaviour Engine owns no
- * timeline data; no telemetry or state is duplicated here.
+ * The Behaviour Admin Workbench, in two read-only views over the same
+ * Observation Engine store:
+ *
+ *  · Behaviour (BEH1) — what the Companion's voice decided across a window:
+ *    the active behaviour selected, the personality applied (live from the one
+ *    Personality Registry), behaviour outcome, provenance confidence,
+ *    effectiveness, overrides, and analytics.
+ *  · Execution Timeline (OBS2) — the complete execution path of one
+ *    interaction, including that turn's sealed behaviour decision and the
+ *    engine's own reasoning for it.
+ *
+ * The Behaviour Engine owns no telemetry and no timeline data; every number
+ * here is an Observation Engine projection computed on read, and every voice
+ * definition is read live from the registry rather than copied. Nothing on
+ * this page writes, and nothing the platform does reads it back.
  *
  * The page renders whatever the server reports; nulls render as "—", never a
  * fabricated value, and the user's request text is honestly shown as "not
@@ -27,6 +35,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -51,6 +60,16 @@ interface TimelineEvent {
   userId?: number | null; sessionId?: string | null; metadata?: unknown;
 }
 
+interface TimelineBehaviourDecision {
+  personalityId?: string | null; personalityName?: string | null;
+  requestedPersonality?: string | null;
+  overrideApplied?: boolean; overrideReason?: string | null;
+  confidence?: number | null; confidenceBasis?: string | null;
+  outcome?: string | null; surfaces?: string[]; reasoning?: string[];
+  fallbackState?: string | null; guidanceCount?: number | null;
+  notVoicedReason?: string | null;
+}
+
 interface TimelineTurn {
   turnId?: string | null;
   correlation?: "exact" | "reconstructed";
@@ -60,6 +79,7 @@ interface TimelineTurn {
   capabilities?: { capability: string; verb?: string | null; outcome?: string | null; durationMs?: number | null }[];
   contextViews?: string[]; knowledgeSources?: string[];
   behaviour?: string | null;
+  behaviourDecision?: TimelineBehaviourDecision | null;
   responseGeneration?: { outcome?: string | null; durationMs?: number | null; model?: string | null } | null;
   clarifications?: { outcome?: string | null; hasPrompt?: boolean }[];
   recoveries?: { outcome?: string | null; recoveryPath?: string | null }[];
@@ -85,6 +105,46 @@ interface TimelineSession {
 }
 interface SessionsResponse { windowDays?: number; sessions?: TimelineSession[] }
 
+// BEH1 — the behaviour view: telemetry (Observation Engine) + registry (Behaviour Engine).
+interface BehaviourPersonalitySummary {
+  personalityId: string;
+  decisions: number; voiced: number; voicedFallback: number; voicedError: number; notVoiced: number;
+  overrides: number; ratedDecisions: number; helpful: number; notHelpful: number;
+  effectiveness?: number | null;
+}
+
+interface BehaviourTelemetry {
+  windowDays?: number;
+  decisions?: number;
+  averageConfidence?: number | null;
+  overrideRate?: number | null;
+  byPersonality?: BehaviourPersonalitySummary[];
+  byOutcome?: { outcome: string; count: number }[];
+  bySurface?: { surface: string; count: number }[];
+  overrides?: {
+    total?: number;
+    byReason?: { reason: string; count: number }[];
+    recent?: { observedAt: string; requestedPersonality?: string | null; appliedPersonalityId?: string | null; reason?: string | null }[];
+    recentLimit?: number;
+  };
+  effectiveness?: {
+    ratedDecisions?: number; helpful?: number; notHelpful?: number;
+    rate?: number | null; unattributedFeedback?: number; note?: string;
+  };
+  byDay?: { day: string; decisions: number; overrides: number }[];
+  correlationNote?: string;
+}
+
+interface PersonalityDescription {
+  id: string; displayName: string; description: string; isDefault?: boolean;
+  behaviour?: Record<string, number>;
+  priorities?: string[];
+  guidanceLabelPrefix?: string;
+  systemPromptFragment?: string;
+}
+
+interface BehaviourResponse { telemetry?: BehaviourTelemetry; registry?: PersonalityDescription[] }
+
 // ---------------------------------------------------------------------------
 // Formatting helpers — null/undefined always render as "—", never 0.
 // ---------------------------------------------------------------------------
@@ -95,6 +155,28 @@ function fmtMs(v: number | null | undefined): string {
 }
 function fmtConf(v: number | null | undefined): string {
   return v === null || v === undefined ? DASH : v.toFixed(2);
+}
+/** A rate is either a real percentage or an honest "—". Never a fabricated 0%. */
+function fmtRate(v: number | null | undefined): string {
+  return v === null || v === undefined ? DASH : `${(v * 100).toFixed(0)}%`;
+}
+function fmtCount(v: number | null | undefined): string {
+  return v === null || v === undefined ? DASH : String(v);
+}
+/** Human labels for the closed behaviour-outcome vocabulary. */
+const OUTCOME_LABELS: Record<string, string> = {
+  "voiced": "Voiced",
+  "voiced-fallback": "Voiced (honest gap)",
+  "voiced-error": "Voiced (internal error)",
+  "not-voiced": "Not voiced",
+};
+
+/** A voiced honest gap is a healthy outcome, so it is not coloured as a problem. */
+function outcomeColor(outcome: string): { color: string } | undefined {
+  if (outcome === "voiced") return { color: C_GOOD };
+  if (outcome === "voiced-error") return { color: C_BAD };
+  if (outcome === "not-voiced") return { color: C_WARN };
+  return undefined;
 }
 function fmtDate(x: string | null | undefined): string {
   if (!x) return DASH;
@@ -252,6 +334,72 @@ function EventFlow({ events, turnKey }: { events: TimelineEvent[]; turnKey: stri
 }
 
 // ---------------------------------------------------------------------------
+// BEH1 — the sealed behaviour decision for one turn, with the engine's own
+// reasoning. Absent for turns recorded before BEH1: stated, never reconstructed.
+// ---------------------------------------------------------------------------
+function BehaviourDecisionPanel({ decision, turnKey }: { decision: TimelineBehaviourDecision | null | undefined; turnKey: string }) {
+  if (!decision) {
+    return (
+      <div className="rounded-md border border-dashed p-3" data-testid={`turn-${turnKey}-behaviour-absent`}>
+        <p className="text-xs font-medium mb-1">Behaviour decision</p>
+        <p className="text-xs text-muted-foreground">
+          Not recorded — this turn predates the Behaviour Engine's decision capture (BEH1). Shown as absent rather than reconstructed.
+        </p>
+      </div>
+    );
+  }
+
+  const notVoiced = decision.outcome === "not-voiced";
+  return (
+    <div className="rounded-md border p-3 space-y-2" data-testid={`turn-${turnKey}-behaviour-decision`}>
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-xs font-medium">Behaviour decision</p>
+        <Badge variant="outline" className="text-[10px]" style={notVoiced ? { color: C_WARN } : undefined}>
+          {OUTCOME_LABELS[decision.outcome ?? ""] ?? decision.outcome ?? DASH}
+        </Badge>
+        {decision.overrideApplied && (
+          <Badge
+            variant="outline"
+            className="text-[10px]"
+            style={{ color: C_WARN }}
+            title="The applied voice is not the one requested — the engine's fail-safe default fired."
+          >
+            override: {decision.overrideReason ?? "unknown"}
+          </Badge>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2 text-xs">
+        <DetailField label="Personality applied" value={decision.personalityName ?? decision.personalityId ?? DASH} />
+        <DetailField label="Requested" value={decision.requestedPersonality ?? "none stored"} />
+        <DetailField label="Confidence" value={fmtConf(decision.confidence)} />
+        <DetailField label="Confidence basis" value={decision.confidenceBasis ?? DASH} />
+        <DetailField label="Surfaces applied" value={(decision.surfaces ?? []).join(", ") || "none"} />
+        <DetailField label="Gap voiced" value={decision.fallbackState ?? DASH} />
+        <DetailField label="Suggestions voiced" value={fmtCount(decision.guidanceCount)} />
+        <DetailField label="Not-voiced reason" value={decision.notVoicedReason ?? DASH} />
+      </div>
+
+      <div>
+        <p className="text-xs font-medium mb-1">Behaviour reasoning</p>
+        {(decision.reasoning ?? []).length === 0 ? (
+          <p className="text-xs text-muted-foreground">Not recorded.</p>
+        ) : (
+          <ul className="list-disc pl-4 space-y-1" data-testid={`turn-${turnKey}-behaviour-reasoning`}>
+            {(decision.reasoning ?? []).map((r, i) => (
+              <li key={i} className="text-xs text-muted-foreground">{r}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <p className="text-[10px] text-muted-foreground">
+        The Behaviour Engine changes how an already-true, already-selected fact is said — never what is true, permitted, selected, or confirmed.
+      </p>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // One turn card — the reconstructed execution path of a conversation turn.
 // ---------------------------------------------------------------------------
 function TurnCard({ turn, index }: { turn: TimelineTurn; index: number }) {
@@ -319,7 +467,9 @@ function TurnCard({ turn, index }: { turn: TimelineTurn; index: number }) {
           </TurnField>
           <TurnField label="Context views composed">{fmtList(turn.contextViews)}</TurnField>
           <TurnField label="Knowledge sources consulted">{fmtList(turn.knowledgeSources)}</TurnField>
-          <TurnField label="Behaviour selected">{turn.behaviour ?? DASH}</TurnField>
+          <TurnField label="Behaviour selected" testId={`turn-${turnKey}-behaviour`}>
+            {turn.behaviourDecision?.personalityName ?? turn.behaviour ?? DASH}
+          </TurnField>
           <TurnField label="Response generated">
             {turn.responseGeneration
               ? `${turn.responseGeneration.outcome ?? DASH}${turn.responseGeneration.model ? ` · ${turn.responseGeneration.model}` : ""} · ${fmtMs(turn.responseGeneration.durationMs)}`
@@ -359,6 +509,8 @@ function TurnCard({ turn, index }: { turn: TimelineTurn; index: number }) {
             )}
           </TurnField>
         </div>
+
+        <BehaviourDecisionPanel decision={turn.behaviourDecision} turnKey={turnKey} />
 
         <div>
           <p className="text-xs font-medium mb-2">Execution flow — click any event for the underlying observation</p>
@@ -447,6 +599,301 @@ function SessionTimeline({ sessionId, onBack }: { sessionId: string; onBack: () 
           </CardContent>
         </Card>
       )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// BEH1 — The Behaviour view: what the Companion's voice decided, over a window.
+// ---------------------------------------------------------------------------
+function StatTile({ label, value, hint, testId }: { label: string; value: string; hint?: string; testId?: string }) {
+  return (
+    <div className="rounded-md border p-3" data-testid={testId}>
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="text-xl font-semibold tabular-nums mt-0.5">{value}</p>
+      {hint && <p className="text-[10px] text-muted-foreground mt-1 leading-snug">{hint}</p>}
+    </div>
+  );
+}
+
+function BehaviourView({ days }: { days: number }) {
+  const { data, isPending, isError } = useQuery<BehaviourResponse>({
+    queryKey: ["/api/intelligence/observation/behaviour", { days }],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/intelligence/observation/behaviour?days=${days}`);
+      return res.json();
+    },
+  });
+
+  if (isPending) return <PageSkeleton />;
+  if (isError) return <LoadError what="the behaviour view" />;
+
+  const t = data?.telemetry ?? {};
+  const registry = data?.registry ?? [];
+  const personalities = t.byPersonality ?? [];
+  const overrides = t.overrides ?? {};
+  const effectiveness = t.effectiveness ?? {};
+  const decisions = t.decisions ?? 0;
+
+  const displayName = (id: string): string => registry.find((p) => p.id === id)?.displayName ?? id;
+
+  return (
+    <div className="space-y-4">
+      {/* Behaviour analytics — the window at a glance. */}
+      <Card data-testid="card-behaviour-analytics">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Behaviour analytics</CardTitle>
+          <CardDescription className="text-xs">
+            Every behaviour decision the Companion made in the last {t.windowDays ?? days} day
+            {(t.windowDays ?? days) === 1 ? "" : "s"}, projected on read from the Observation Engine. Rates are null when
+            there is nothing to judge — never a fabricated 0%.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <StatTile label="Behaviour decisions" value={fmtCount(decisions)} testId="stat-behaviour-decisions" />
+            <StatTile
+              label="Behaviour confidence"
+              value={fmtConf(t.averageConfidence)}
+              hint="Voice provenance: the share of decisions applying an explicit stored preference. Not a quality score."
+              testId="stat-behaviour-confidence"
+            />
+            <StatTile
+              label="Behaviour effectiveness"
+              value={fmtRate(effectiveness.rate)}
+              hint={`${fmtCount(effectiveness.ratedDecisions)} rated · ${fmtCount(effectiveness.helpful)} helpful · ${fmtCount(effectiveness.notHelpful)} not helpful`}
+              testId="stat-behaviour-effectiveness"
+            />
+            <StatTile
+              label="Behaviour overrides"
+              value={fmtCount(overrides.total)}
+              hint={`${fmtRate(t.overrideRate)} of decisions applied the fail-safe default voice`}
+              testId="stat-behaviour-overrides"
+            />
+          </div>
+
+          {decisions === 0 ? (
+            <EmptyNote>No behaviour decisions recorded in this window.</EmptyNote>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <p className="text-xs font-medium mb-2">Behaviour outcome</p>
+                <div className="space-y-1">
+                  {(t.byOutcome ?? []).map((o) => (
+                    <div key={o.outcome} className="flex items-center justify-between text-xs" data-testid={`behaviour-outcome-${o.outcome}`}>
+                      <span style={outcomeColor(o.outcome)}>{OUTCOME_LABELS[o.outcome] ?? o.outcome}</span>
+                      <span className="tabular-nums">{o.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-medium mb-2">Surfaces the voice touched</p>
+                <div className="space-y-1">
+                  {(t.bySurface ?? []).length === 0 ? (
+                    <EmptyNote>No voice surface was applied in this window.</EmptyNote>
+                  ) : (t.bySurface ?? []).map((s) => (
+                    <div key={s.surface} className="flex items-center justify-between text-xs">
+                      <span className="font-mono">{s.surface}</span>
+                      <span className="tabular-nums">{s.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {(t.byDay ?? []).length > 0 && (
+            <div>
+              <p className="text-xs font-medium mb-2">Decisions per day</p>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Day</TableHead>
+                      <TableHead className="text-right">Decisions</TableHead>
+                      <TableHead className="text-right">Overrides</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(t.byDay ?? []).map((d) => (
+                      <TableRow key={d.day}>
+                        <TableCell className="text-xs">{d.day}</TableCell>
+                        <TableCell className="text-right tabular-nums">{d.decisions}</TableCell>
+                        <TableCell className="text-right tabular-nums">{d.overrides || DASH}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Active behaviour selected + outcome + confidence + effectiveness, per voice. */}
+      <Card data-testid="card-behaviour-active">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Active behaviour selected</CardTitle>
+          <CardDescription className="text-xs">
+            The voice actually applied to each interaction, with the outcome it produced and the feedback that followed.
+            {effectiveness.note ? ` ${effectiveness.note}` : ""}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {personalities.length === 0 ? (
+            <EmptyNote>No voice has been applied in this window.</EmptyNote>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Behaviour</TableHead>
+                    <TableHead className="text-right">Decisions</TableHead>
+                    <TableHead className="text-right">Voiced</TableHead>
+                    <TableHead className="text-right">Honest gap</TableHead>
+                    <TableHead className="text-right">Errors</TableHead>
+                    <TableHead className="text-right">Not voiced</TableHead>
+                    <TableHead className="text-right">Overrides</TableHead>
+                    <TableHead className="text-right">Rated</TableHead>
+                    <TableHead className="text-right">Effectiveness</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {personalities.map((p) => (
+                    <TableRow key={p.personalityId} data-testid={`row-behaviour-${p.personalityId}`}>
+                      <TableCell className="text-sm font-medium">{displayName(p.personalityId)}</TableCell>
+                      <TableCell className="text-right tabular-nums">{p.decisions}</TableCell>
+                      <TableCell className="text-right tabular-nums">{p.voiced || DASH}</TableCell>
+                      <TableCell className="text-right tabular-nums">{p.voicedFallback || DASH}</TableCell>
+                      <TableCell className="text-right tabular-nums" style={p.voicedError > 0 ? { color: C_BAD } : undefined}>
+                        {p.voicedError || DASH}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums" style={p.notVoiced > 0 ? { color: C_WARN } : undefined}>
+                        {p.notVoiced || DASH}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">{p.overrides || DASH}</TableCell>
+                      <TableCell className="text-right tabular-nums">{p.ratedDecisions || DASH}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {p.effectiveness === null || p.effectiveness === undefined ? (
+                          <span className="text-muted-foreground" title="No feedback on turns this voice phrased — unscored, not zero.">{DASH}</span>
+                        ) : (
+                          <span style={{ color: p.effectiveness >= 0.5 ? C_GOOD : C_BAD }}>{fmtRate(p.effectiveness)}</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+          {(effectiveness.unattributedFeedback ?? 0) > 0 && (
+            <p className="text-xs text-muted-foreground mt-3" data-testid="text-behaviour-unattributed">
+              {effectiveness.unattributedFeedback} feedback rating
+              {effectiveness.unattributedFeedback === 1 ? "" : "s"} in this window name no recorded behaviour decision.
+              Counted here, attributed to no voice.
+            </p>
+          )}
+          {t.correlationNote && <p className="text-[10px] text-muted-foreground mt-2">{t.correlationNote}</p>}
+        </CardContent>
+      </Card>
+
+      {/* Behaviour overrides. */}
+      <Card data-testid="card-behaviour-overrides">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Behaviour overrides</CardTitle>
+          <CardDescription className="text-xs">
+            An override is the engine's fail-safe default firing: the requested voice could not be resolved, so the platform
+            default was applied. The user always hears a voice — never an error.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {(overrides.total ?? 0) === 0 ? (
+            <EmptyNote>No overrides in this window — every decision applied the voice the user chose.</EmptyNote>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-2">
+                {(overrides.byReason ?? []).map((r) => (
+                  <Badge key={r.reason} variant="outline" style={{ color: C_WARN }}>
+                    {r.reason}: {r.count}
+                  </Badge>
+                ))}
+              </div>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>When</TableHead>
+                      <TableHead>Requested</TableHead>
+                      <TableHead>Applied</TableHead>
+                      <TableHead>Reason</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(overrides.recent ?? []).map((o, i) => (
+                      <TableRow key={i}>
+                        <TableCell className="text-xs whitespace-nowrap">{fmtDate(o.observedAt)}</TableCell>
+                        <TableCell className="text-xs font-mono">{o.requestedPersonality ?? "none stored"}</TableCell>
+                        <TableCell className="text-xs">{displayName(o.appliedPersonalityId ?? "")}</TableCell>
+                        <TableCell className="text-xs">{o.reason ?? DASH}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              {(overrides.total ?? 0) > (overrides.recent ?? []).length && (
+                <p className="text-xs text-muted-foreground">
+                  Showing the {overrides.recentLimit ?? (overrides.recent ?? []).length} most recent of {overrides.total} overrides.
+                  The counts above are complete.
+                </p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Personality applied — read live from the one Personality Registry. */}
+      <Card data-testid="card-behaviour-registry">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Personality applied</CardTitle>
+          <CardDescription className="text-xs">
+            The closed set of voices, read live from the one Personality Registry — not a copy captured at record time.
+            A behaviour profile dimension picks words; no dimension is read by any business-logic path, confirmation check,
+            or capability gate.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {registry.length === 0 ? (
+            <EmptyNote>The personality registry did not load.</EmptyNote>
+          ) : registry.map((p) => {
+            const used = personalities.find((x) => x.personalityId === p.id);
+            return (
+              <div key={p.id} className="rounded-md border p-3 space-y-2" data-testid={`card-personality-${p.id}`}>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-sm font-medium">{p.displayName}</p>
+                  {p.isDefault && <Badge variant="secondary" className="text-[10px]">platform default</Badge>}
+                  <span className="ml-auto text-xs text-muted-foreground tabular-nums">
+                    {used ? `${used.decisions} decision${used.decisions === 1 ? "" : "s"} this window` : "not applied this window"}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground">{p.description}</p>
+                <div className="flex flex-wrap gap-1">
+                  {Object.entries(p.behaviour ?? {}).map(([dim, value]) => (
+                    <Badge key={dim} variant="outline" className="text-[10px] font-normal">
+                      {dim} {value}
+                    </Badge>
+                  ))}
+                </div>
+                <div className="grid gap-1 text-xs sm:grid-cols-2">
+                  <DetailField label="Priorities" value={(p.priorities ?? []).join(", ") || DASH} />
+                  <DetailField label="Guidance label prefix" value={p.guidanceLabelPrefix ? `"${p.guidanceLabelPrefix}"` : "none"} />
+                </div>
+                <p className="text-xs text-muted-foreground italic">{p.systemPromptFragment}</p>
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -598,6 +1045,7 @@ function SessionPicker({ days, onSelect }: { days: number; onSelect: (sessionId:
 export default function AdminBehaviourWorkbenchPage() {
   const { user, isLoading } = useUser();
   const [days, setDays] = useState(7);
+  const [tab, setTab] = useState<"behaviour" | "timeline">("behaviour");
   const [selectedSession, setSelectedSession] = useState<string | null>(null);
 
   if (isLoading) return null;
@@ -611,7 +1059,8 @@ export default function AdminBehaviourWorkbenchPage() {
             Behaviour Workbench
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Execution Timeline — the primary debugging and reasoning view for Companion behaviour, read-only from the Observation Engine (OBS2)
+            The Companion's decision layer — which voice spoke, why, and what followed. Read-only from the Observation
+            Engine; the Behaviour Engine owns the decision, never the telemetry.
           </p>
         </div>
         {!selectedSession && (
@@ -634,7 +1083,18 @@ export default function AdminBehaviourWorkbenchPage() {
       {selectedSession ? (
         <SessionTimeline sessionId={selectedSession} onBack={() => setSelectedSession(null)} />
       ) : (
-        <SessionPicker days={days} onSelect={setSelectedSession} />
+        <Tabs value={tab} onValueChange={(v) => setTab(v as "behaviour" | "timeline")}>
+          <TabsList data-testid="tabs-behaviour-workbench">
+            <TabsTrigger value="behaviour" data-testid="tab-behaviour">Behaviour</TabsTrigger>
+            <TabsTrigger value="timeline" data-testid="tab-timeline">Execution Timeline</TabsTrigger>
+          </TabsList>
+          <TabsContent value="behaviour" className="mt-4">
+            <BehaviourView days={days} />
+          </TabsContent>
+          <TabsContent value="timeline" className="mt-4">
+            <SessionPicker days={days} onSelect={setSelectedSession} />
+          </TabsContent>
+        </Tabs>
       )}
     </div>
   );

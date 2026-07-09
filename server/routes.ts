@@ -60,7 +60,9 @@ import {
   summarizeKnowledge,
   summarizePlanner,
   summarizeBenchmarks,
+  summarizeBehaviour,
 } from "./intelligence/observation/observation-engine";
+import { describeBehaviourRegistry } from "./intelligence/conversation/behaviour-engine";
 import {
   buildExecutionTimeline,
   summarizeTimelineSessions,
@@ -12238,6 +12240,28 @@ Generate a complete recipe using these as the foundation.`;
     } catch (err) {
       console.error("[ObservationWorkbench] GET export error:", err);
       res.status(500).json({ message: "Failed to export observations" });
+    }
+  });
+
+  // ── BEH1 — Behaviour view (the Behaviour Admin Workbench API, admin-only) ──
+  // Two halves from their two owners, joined for display and never merged:
+  //  · `telemetry` — a pure Observation Engine projection of `behaviour-decision`
+  //    rows (what the voice actually did, and what feedback followed).
+  //  · `registry`  — a read-only description of the one Personality Registry
+  //    (what each voice IS), read live so the page never shows a stale copy.
+  // Nothing here is persisted, and no behaviour reads any of it back.
+  app.get("/api/intelligence/observation/behaviour", assertAdmin, async (req, res) => {
+    try {
+      const { observationStore } = await import("./intelligence/observation/observation-store.js");
+      const { since, days } = observationWindow(req);
+      const rows = await observationStore.listSince(since);
+      res.json({
+        telemetry: summarizeBehaviour(rows, days),
+        registry: describeBehaviourRegistry(),
+      });
+    } catch (err) {
+      console.error("[BehaviourWorkbench] GET behaviour error:", err);
+      res.status(500).json({ message: "Failed to build behaviour view" });
     }
   });
 

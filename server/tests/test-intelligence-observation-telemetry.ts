@@ -148,9 +148,16 @@ async function main(): Promise<void> {
   delete process.env.OBS_DISABLE_CAPTURE;
   assert(disabledStore.all().length === 0, "OBS_DISABLE_CAPTURE=1 disables capture entirely");
 
+  // The vocabulary is closed but growable: extending it is an architecture
+  // decision (extend the union + document the capture point). BEH1 added the
+  // twelfth kind, `behaviour-decision`, captured in conversation-gateway.ts.
   assert(
-    OBSERVATION_KINDS.length === 11 && new Set(OBSERVATION_KINDS).size === 11,
-    "the observation taxonomy is the closed 11-kind vocabulary",
+    OBSERVATION_KINDS.length === 12 && new Set(OBSERVATION_KINDS).size === 12,
+    "the observation taxonomy is the closed 12-kind vocabulary",
+  );
+  assert(
+    OBSERVATION_KINDS.includes("behaviour-decision"),
+    "behaviour-decision is a first-class observation kind, not a metadata crumb",
   );
 
   // -------------------------------------------------------------------------

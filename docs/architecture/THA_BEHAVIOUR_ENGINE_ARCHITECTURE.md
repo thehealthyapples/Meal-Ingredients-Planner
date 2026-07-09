@@ -2,10 +2,10 @@
 
 **Status:** GOVERNING ARCHITECTURE — Intelligence Governance (canonical). Established by workstream `INT21`, 2026-07-08.
 **Classification:** Intelligence Governance — the single owner of the Companion's voice: every transform between an already-true, already-selected fact and the words the user reads.
-**Governing documents:** `THA_INTELLIGENCE_PLATFORM_ARCHITECTURE.md` (TIP1), `THA_AI_CAPABILITY_REGISTRY_AND_INTENT_TAXONOMY.md` (TIP2), `THA_AI_EXPERIENCE_AND_CONVERSATION_ARCHITECTURE.md` (TIP3), `THA_COMPANION_PLATFORM_ARCHITECTURE.md` (CPA1), `THA_CONTEXT_COMPOSITION_ENGINE_ARCHITECTURE.md` (INT17), `THA_COMPANION_NOTICE_ENGINE_ARCHITECTURE.md` (INT20), `PLATFORM_QUALITY_ARCHITECTURE.md`
-**Implementation record:** `docs/implementation/INT21_BEHAVIOUR_ENGINE_ARCHITECTURE.md`
+**Governing documents:** `THA_INTELLIGENCE_PLATFORM_ARCHITECTURE.md` (TIP1), `THA_AI_CAPABILITY_REGISTRY_AND_INTENT_TAXONOMY.md` (TIP2), `THA_AI_EXPERIENCE_AND_CONVERSATION_ARCHITECTURE.md` (TIP3), `THA_COMPANION_PLATFORM_ARCHITECTURE.md` (CPA1), `THA_CONTEXT_COMPOSITION_ENGINE_ARCHITECTURE.md` (INT17), `THA_COMPANION_NOTICE_ENGINE_ARCHITECTURE.md` (INT20), `THA_OBSERVATION_ENGINE_ARCHITECTURE.md` (OBS1/OBS2), `PLATFORM_QUALITY_ARCHITECTURE.md`
+**Implementation records:** `docs/implementation/INT21_BEHAVIOUR_ENGINE_ARCHITECTURE.md`, `docs/implementation/BEH1_BEHAVIOUR_ENGINE_ACTIVATION.md`
 **Direct precedent:** `docs/investigations/EWO1_COMPANION_PLATFORM_FOUNDATION.md` (the invariant), `docs/implementation/EWO2_COMPANION_PERSONALITY_PLATFORM_IMPLEMENTATION.md` (the engine + registry as built), `docs/implementation/EWX1_LIVING_COMPANION_EXPERIENCE.md` (`phraseNotice`), CPA1 §4.1/§4.2/§5.1 (the engine's Companion-layer position)
-**Rollback:** `rollback-int21-pre-behaviour-engine` → `fbc0a3e`
+**Rollback:** `rollback-int21-pre-behaviour-engine` → `fbc0a3e`; BEH1: `rollback/before-beh1-behaviour-engine-20260709` → `22e5bc7`
 
 ---
 
@@ -66,6 +66,29 @@ The engine's transforms are generic; every word of voice content lives in exactl
 ### 2.3 One decision, not data
 
 Like the Notice Engine (INT20 §3), the Behaviour Engine owns a decision, not a fact: **given this already-produced content and this user's chosen voice, what are the exact words?** Everything it touches belongs to someone else — the gap classification to `turn-fallback.ts`, the suggestions to `companion-guidance.ts`, the growth numbers to `companion-growth.ts`, the notices to the Notice Engine's Silence Rules, the grounding to the Context Composition Engine, the user's personality choice to `user_preferences.companionPersonality` (the Profile capability, read fresh every turn, never cached). The engine persists nothing, reads nothing, and calls nothing: every export is a pure function, `(already-produced content, PersonalityId) → voiced content`.
+
+### 2.4 The behaviour decision — the engine's one decision, made explicit (BEH1)
+
+**Activated by workstream `BEH1`, 2026-07-09.** §2.3's decision was, until BEH1, invisible: a bare `PersonalityId` threaded through the gateway and applied at three seams, surviving in telemetry only as a `personalityId` crumb on two *other* observation kinds. It is now a **first-class, sealed value produced exactly once per interaction**, and it is the canonical record of what the Companion's voice decided.
+
+| Contract | Owner | Shape |
+|---|---|---|
+| `resolveBehaviour(storedPreference)` | the engine | Decides the voice, once, before any seam is touched. **Total**: every input — `null`, an unknown id, a malformed value — resolves to a registered voice. There is no error state at the voice seam (§4.1). |
+| `sealBehaviourDecision(input)` | the engine | Closes the decision with its outcome, the surfaces it genuinely touched, and a deterministic reasoning trail. |
+| Recording the decision | **the caller (the gateway)** | The engine is pure and records nothing — Observation Engine §4 rule 4. |
+
+**The decision's fields, and why each one is honest rather than merely plausible:**
+
+- **Active behaviour selected / personality applied** — the registered voice that actually spoke, plus the raw preference that requested it.
+- **Behaviour confidence** is **voice *provenance*, never quality.** A deterministic transform has no honest confidence in its own phrasing; what the engine genuinely does or does not know is whether the applied voice is the voice the user *chose*. So confidence is `1` when an explicit, recognised preference resolved and `0` when the platform default was applied instead. There is no middle value, because there is no middle knowledge. It is not a model score, and — per Observation Engine §7 — nothing reads it back.
+- **Behaviour override** is the engine's fail-safe default firing (§4.1), recorded with the value that failed to resolve and the reason (`no-stored-preference` | `unrecognised-preference`). It is **not an operator control**: no surface may force a voice.
+- **Behaviour outcome** is a closed set: `voiced`, `voiced-fallback`, `voiced-error`, and **`not-voiced`** — the last recording, honestly, the interactions where *no voice transform ran at all* and the words the user read were platform-owned copy. §10's "second voice" stop and §8.2's grandfathered strings are thereby measurable rather than merely asserted.
+- **Behaviour reasoning** is a deterministic, operator-facing explanation in which every sentence states something the engine itself did, and names the owner of whatever it did not. It is never shown to a user, never a voice surface, and never carries a fact about the household.
+- **Behaviour surfaces** is closed to what is genuinely *live*. A dormant export names no surface: `phraseGrowth`, `phraseNotice`, `buildGreeting` and `buildCelebration` claim none until BEH-P1/BEH-P2 wire their routes.
+
+**Behaviour effectiveness is not a field of the decision.** It is an Observation Engine projection — the user-feedback rate observed on turns a voice phrased, joined by the turn correlation id, `null` when nothing is rated. It exists for an operator to read and for nothing to act on. **No component reads a behaviour decision or its effectiveness back; no voice, threshold, or default adapts to it.** Autonomous learning is not authorised by this document (§9, §10).
+
+The §5.2 acceptance criterion extends to the decision itself: *for any fixed interaction, switching `PersonalityId` may change the applied personality and the wording of the operator reasoning — and nothing else.* The outcome, the surfaces touched, the disclosed gap state, the suggestion count, and the provenance are identical across all six voices.
 
 ---
 
@@ -188,7 +211,18 @@ The boundary is absolute in both directions, and INT17 §6 already states its ha
 
 **Selection, then phrasing — in that order, with nothing in between.** The Notice Engine's Silence Rules decide *which* facts (at most two) reach the user; `phraseNotice` decides the *words*, per the user's voice. The engine pair shares one fact shape (`Notice`), one direction of flow, and the verbatim discipline: producer `explanation`/`suggestedAction` cross both engines unreworded (optionally prefixed at the voice seam, exactly like guidance labels). Day-seeded phrasing variety never feeds back into selection — a fact is not resurfaced because its wording changed. When NTC-P1 wires the notice route, the route composes the two engines in this order; any other composition (voicing before selection, a second phraser beside the panel) is a violation of both documents.
 
-### 7.3 With the Intelligence Platform (TIP1–TIP3) and the Companion Platform (CPA1)
+### 7.3 With the Observation Engine (OBS1/OBS2) — BEH1
+
+**The engine is observed; it never observes.** The direction is absolute and one-way:
+
+- The Behaviour Engine **records nothing.** It is a pure module, and the Observation Engine's capture discipline (§4 rule 4) forbids pure modules from recording their own telemetry. `conversation-gateway.ts` — a component that already performs I/O — is the single documented capture point for the `behaviour-decision` kind, on every one of its five exit paths.
+- The Behaviour Engine **reads nothing.** No observation, no aggregate, no timeline. A voice is never chosen, adapted, prioritised, or suppressed because of what telemetry says. `OBS_DISABLE_CAPTURE=1` must always remain a functional no-op: if disabling capture changed a single word, that word was illegally reading telemetry.
+- The Behaviour Engine **owns no timeline data and no analytics.** Despite the Workbench's name, `summarizeBehaviour` and `buildExecutionTimeline` are Observation Engine projections over `platform_observations`, computed on read. There is no behaviour table, no materialised aggregate, and no second store of the decision.
+- The one thing that crosses in the other direction is **registry description, not telemetry**: the Workbench reads `describeBehaviourRegistry()` live per request so a voice is displayed as it is *defined today*, never as a stale copy captured at record time. Telemetry and registry are joined for display and never merged, never persisted together.
+
+The pair therefore mirrors §7.1 and §7.2: **the Behaviour Engine decides the words; the Observation Engine records that it did. Neither reads the other's decision.**
+
+### 7.4 With the Intelligence Platform (TIP1–TIP3) and the Companion Platform (CPA1)
 
 - **The pipeline is upstream and unchanged.** Identity, permission, intent resolution, capability invocation, honest-gap classification: all decided before the engine sees a word. The engine holds no reference to the Capability Registry, performs no I/O, and is **not a capability** (CPA1 §7 — the Companion Platform registers zero capabilities). Nothing about voice may shortcut, soften, or restyle a confirmation: the tier is decided server-side by capability class, and every personality and every future locale asks it.
 - **CPA1 remains the governing frame.** One Companion, five responsibilities, one hard invariant. This document adds component depth to §4.1/§4.2 — the ownership boundary (§2–§3), the transform contract (§4), the acceptance criterion (§5.2), and the localisation rules (§6) — and changes none of CPA1's rules. TIP3's Persona model is likewise unchanged: entry surface and Context Frame stay TIP3's; the Personality slot is this engine's, exactly as EWO1 split it.
@@ -198,13 +232,20 @@ The boundary is absolute in both directions, and INT17 §6 already states its ha
 
 ## 8. CURRENT STATE — THE HONEST BASELINE
 
-Verified against the branch (`int1-intelligence-platform`, 2026-07-08), not asserted from prior documents:
+Verified against the branch (`int1-intelligence-platform`), not asserted from prior documents. Updated by BEH1, 2026-07-09.
 
-1. **One engine, one registry, live at one seam.** `behaviour-engine.ts` and `personality-registry.ts` exist exactly once; `conversation-gateway.ts` is the only live consumer (`voiceFallback` at the write-intent gap and unsuccessful-turn classification plus the internal-error path; `voiceGuidanceSuggestions` on both success- and recovery-path suggestion sets; `systemPromptFragment` appended as the labelled paragraph after hard rules 1–5). The engine's test suite (`test-intelligence-personality-platform.ts`) asserts disclosure preservation across all six voices.
-2. **Two exports are code-complete and dormant.** `phraseGrowth` and `phraseNotice` have no live route on this branch — the same dormancy INT20 §7 records for the notice chain; NTC-P1 activates both together. `buildGreeting`/`buildCelebration` are called only via `phraseNotice`; `FloatingAssistant.tsx`'s empty-state greeting remains hardcoded (CPA1 G5).
-3. **The `ExperienceProfile` is a data scaffold** — `avatarId`, `colorTheme`, `voiceProfileId` populated but rendered nowhere (CPA1 G5). `voiceProfileId` is the declared slot for future TTS voice; it is named here so audio, when it comes, is one more field on a shipped registry entry, not a new mechanism.
-4. **No localisation machinery exists** — no locale preference, no i18n library, no translated template, no language field anywhere in `server/intelligence`, `shared/companion-personality.ts`, or the client Companion surfaces. §6 is a design for greenfield, stated before the first workstream needs it.
-5. **Known residual risk, named:** voice content review is a human gate. The registry's header states the merge rule (no template may imply an answer exists when it doesn't), and the test suite enforces the four fallback states' disclosures — but a future personality or locale PR that weakens a disclosure *in wording* is caught by review and the §5.2 acceptance criterion, not by a type. This is the same class of residual risk PQA accepts for all reviewed reference data.
+1. **One engine, one registry, live at one seam.** `behaviour-engine.ts` and `personality-registry.ts` exist exactly once; `conversation-gateway.ts` is the only live consumer (`voiceFallback` at the unsuccessful-turn classification plus the internal-error path; `voiceGuidanceSuggestions` on both success- and recovery-path suggestion sets; `systemPromptFragment` appended as the labelled paragraph after hard rules 1–5). The engine's test suite (`test-intelligence-personality-platform.ts`) asserts disclosure preservation across all six voices. `routes.ts` additionally reads `describeBehaviourRegistry()` for the read-only Workbench — a description of the registry, not a phrasing seam.
+2. **The decision is activated and recorded (BEH1).** Every interaction seals exactly one behaviour decision, on all five gateway exit paths, captured as one `behaviour-decision` observation. `test-intelligence-behaviour-decision.ts` (114 assertions, DB-free) asserts the engine records nothing, imports no Observation Engine / Intent Engine / Capability Registry / storage module, performs no I/O, and uses no clock or randomness.
+3. **Two exports remain code-complete and dormant.** `phraseGrowth` and `phraseNotice` have no live route on this branch — the same dormancy INT20 §7 records for the notice chain; NTC-P1 activates both together. `buildGreeting`/`buildCelebration` are called only via `phraseNotice`. Neither claims a `BehaviourSurface` until its route exists.
+4. **Three voiced strings remain outside the engine — the complete list, counted, not estimated:**
+   - `client/src/components/conversation/FloatingAssistant.tsx:1465` — the hardcoded empty-state greeting (CPA1 G5; BEH-P1 retires it).
+   - `conversation-gateway.ts` — the write-intent refusal copy.
+   - `conversation-gateway.ts` — the provider-unavailable degradation copy.
+
+   Both gateway strings are now recorded as `not-voiced` behaviour decisions, so the debt is measured on every interaction it occurs on rather than merely asserted here. **Voice-surface ownership is therefore 5 of 8 (63%)**: grounded-answer tone, the four honest-gap disclosures, guidance labels and order, growth statements, and voiced notices are engine-owned; the three strings above are not. Grandfathered strings are debt scheduled by §9 — never precedent (§10).
+5. **The `ExperienceProfile` is a data scaffold** — `avatarId`, `colorTheme`, `voiceProfileId` populated but rendered nowhere (CPA1 G5). `voiceProfileId` is the declared slot for future TTS voice; it is named here so audio, when it comes, is one more field on a shipped registry entry, not a new mechanism.
+6. **No localisation machinery exists** — no locale preference, no i18n library, no translated template, no language field anywhere in `server/intelligence`, `shared/companion-personality.ts`, or the client Companion surfaces. §6 is a design for greenfield, stated before the first workstream needs it.
+7. **Known residual risk, named:** voice content review is a human gate. The registry's header states the merge rule (no template may imply an answer exists when it doesn't), and the test suite enforces the four fallback states' disclosures — but a future personality or locale PR that weakens a disclosure *in wording* is caught by review and the §5.2 acceptance criterion, not by a type. BEH1 adds a machine check for the decision's **shape** (outcome, surfaces, counts, and disclosed gap state identical across all six voices) but cannot type-check prose. This is the same class of residual risk PQA accepts for all reviewed reference data.
 
 ---
 
@@ -212,7 +253,9 @@ Verified against the branch (`int1-intelligence-platform`, 2026-07-08), not asse
 
 Each item is a separately gated workstream under `ENGINEERING_WORKFLOW.md`. **Nothing below is authorised by this document.**
 
-**BEH-P1 — Wire the dormant experience text.** Call `buildGreeting`/`buildCelebration` from the Companion panel's empty state (closing CPA1 G5's text half). *Exit: no hardcoded greeting; every greeting is registry content in the user's voice.*
+**BEH1 — Behaviour Engine Activation. ✅ DELIVERED (2026-07-09).** The decision layer (§2.4), its capture on every interaction, its Execution Timeline projection, and the Behaviour Admin Workbench. Record: `docs/implementation/BEH1_BEHAVIOUR_ENGINE_ACTIVATION.md`. It changed no voice content, no business logic, and no word the user reads.
+
+**BEH-P1 — Wire the dormant experience text.** Call `buildGreeting`/`buildCelebration` from the Companion panel's empty state (closing CPA1 G5's text half). BEH1's `not-voiced` telemetry now measures the two gateway-owned strings (§8.4); retiring them means adding an escalation/degradation template per personality, and belongs here rather than inside an activation. *Exit: no hardcoded greeting, no platform-owned voiced string; every word the user reads is registry content in the user's voice, and `not-voiced` decisions fall to zero.*
 
 **BEH-P2 — Voice the activated notice seam** (jointly with NTC-P1, which owns the route). *Exit: every ambient notice reaches the user through `phraseNotice`; no notice text exists outside the registry.*
 
@@ -238,6 +281,11 @@ Hard stops, in the spirit of `ENGINEERING_WORKFLOW.md` STEP 7, CPA1 §12, INT17 
 - **Any per-language fork — a registry, engine, assistant, store, or pipeline variant per locale — stop.** A missing translation falls back; it never forks.
 - **Any non-deterministic phrasing — a clock-driven, random, or model-generated template pick on a deterministic surface — stop.** Day-seeded is the ceiling of variety; honesty surfaces never depend on a model call.
 - **Any `BehaviourProfile` dimension read by business logic, a confirmation check, or a capability gate — stop.** Registry numbers pick words, never behaviour of the platform.
+- **Any behaviour decision that is read back by anything — routing, a voice choice, a threshold, a default, a "learned" preference — stop.** The decision is recorded as telemetry and consumed only by operator views (§7.3). Effectiveness is a number an operator reads, not a signal the platform acts on. Autonomous learning is a separately gated workstream and is not authorised here.
+- **Any behaviour decision recorded by the engine itself, or any observation the engine reads — stop.** The engine is pure; the gateway captures. `OBS_DISABLE_CAPTURE=1` must remain a functional no-op.
+- **Any "confidence" reported for a deterministic transform as though it were a quality or model score — stop.** Behaviour confidence is voice *provenance* (§2.4): the engine either knows the user's chosen voice or it does not, and it says which.
+- **Any voiced surface presented as voiced when no transform ran — stop.** `not-voiced` exists so platform-owned copy is counted as debt, never disguised as the Companion's voice.
+- **Any second Behaviour Workbench, behaviour table, or materialised behaviour aggregate — stop.** One admin-only, read-only Workbench; every number in it is an Observation Engine projection computed on read.
 
 ---
 
@@ -246,17 +294,18 @@ Hard stops, in the spirit of `ENGINEERING_WORKFLOW.md` STEP 7, CPA1 §12, INT17 
 | Requirement | Met by |
 |---|---|
 | One canonical Behaviour Engine defined | §0 mandate; §2 (the seam + the registry as one component); §10 (second-engine stop) |
-| What it owns | §2 — every voice surface, the registry content, one decision (words) |
-| What it must never own | §3 — nine named boundaries, each with its owner |
+| What it owns | §2 — every voice surface, the registry content, one decision (words), sealed and recorded per interaction (§2.4) |
+| What it must never own | §3 — nine named boundaries, each with its owner; §7.3 — observations, timelines, analytics |
 | How facts become voice | §4 — the transform contract, two modes, slot-fill-never-authorship |
-| How personalities are applied | §5 — data-driven, one seam, closed set, §5.2 acceptance test |
+| How personalities are applied | §5 — data-driven, one seam, closed set, §5.2 acceptance test (extended to the decision by §2.4) |
 | How multilingual fits without duplicating knowledge | §6 — three orthogonal axes, four rules, template-dimension-only locale |
-| Integration with CCE and Notice Engine | §7.1 / §7.2 (+ §7.3 TIP1–3/CPA1) |
-| No implementation, no business logic changes | This document and its INT21 record are the only artefacts |
-| One governing architecture for voice, tone, personality, future localisation | This document; growth path §9 (BEH-P1…P5, each separately gated) |
+| Integration with CCE, Notice Engine and Observation Engine | §7.1 / §7.2 / §7.3 (+ §7.4 TIP1–3/CPA1) |
+| The decision is observable for every interaction | §2.4; five capture points; Execution Timeline projection (OBS2 §6.2) |
+| No business logic changes, no voice content changes | BEH1 record §12 Scope Lock; §8 baseline unchanged for every user-facing word |
+| One governing architecture for voice, tone, personality, future localisation | This document; growth path §9 (BEH1 delivered; BEH-P1…P5 each separately gated) |
 
 ---
 
-*Required reading before changing any Companion voice content, adding a personality, wiring any surface that speaks to the user, or beginning any localisation work in THA.*
-*Implementation record: `docs/implementation/INT21_BEHAVIOUR_ENGINE_ARCHITECTURE.md`.*
-*Rollback: `rollback-int21-pre-behaviour-engine` → `fbc0a3e`.*
+*Required reading before changing any Companion voice content, adding a personality, wiring any surface that speaks to the user, recording anything about a behaviour decision, or beginning any localisation work in THA.*
+*Implementation records: `docs/implementation/INT21_BEHAVIOUR_ENGINE_ARCHITECTURE.md`, `docs/implementation/BEH1_BEHAVIOUR_ENGINE_ACTIVATION.md`.*
+*Rollback: `rollback-int21-pre-behaviour-engine` → `fbc0a3e`; BEH1: `rollback/before-beh1-behaviour-engine-20260709` → `22e5bc7`.*

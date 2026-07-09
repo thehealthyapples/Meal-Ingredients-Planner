@@ -50,6 +50,7 @@ export const OBSERVATION_KINDS = [
   "context-composition",    // Context Composition Engine composed grounding: timings + budget
   "knowledge-retrieval",    // knowledge assembly: grounded vs honest gap
   "response-generation",    // LLM turn: model, duration, ok/error
+  "behaviour-decision",     // BEH1: the voice applied to one interaction — provenance, surfaces, outcome
   "clarification",          // the resolver could not understand — clarification surfaced
   "recovery",               // turn fell back: state + recovery path taken
   "escalation",             // refusal/redirect to manual action (e.g. write-intent guard)
@@ -502,6 +503,224 @@ export function summarizeCompanion(rows: PlatformObservation[], windowDays: numb
       errors: generation.filter((r) => r.severity === "error").length,
       averageDurationMs: round(mean(durations(generation)), 0),
     },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Behaviour view (BEH1) — the Behaviour Admin Workbench's telemetry half
+// ---------------------------------------------------------------------------
+//
+// A pure projection of `behaviour-decision` rows, joined to `user-feedback`
+// rows by the OBS2 turn correlation id. It is an OPERATOR view, exactly like
+// every other summarizer here: nothing in the platform reads it back, no voice
+// adapts to it, and `OBS_DISABLE_CAPTURE=1` removing it changes no behaviour.
+// "Effectiveness" therefore means "the feedback observed on turns this voice
+// phrased" — never a quality score the platform acts on. There is no learning
+// loop here, autonomous or otherwise (BEH1 Scope Lock).
+
+/** How many override rows the view lists individually. Counts are never truncated. */
+const BEHAVIOUR_RECENT_OVERRIDES_LIMIT = 20;
+
+export interface BehaviourPersonalitySummary {
+  personalityId: string;
+  decisions: number;
+  voiced: number;
+  voicedFallback: number;
+  voicedError: number;
+  notVoiced: number;
+  overrides: number;
+  /** Decisions that later attracted at least one feedback rating. */
+  ratedDecisions: number;
+  helpful: number;
+  notHelpful: number;
+  /** helpful / (helpful + notHelpful). `null` when this voice has no ratings — never a fabricated 0. */
+  effectiveness: number | null;
+}
+
+export interface BehaviourObservationSummary {
+  windowDays: number;
+  decisions: number;
+  /** Mean voice-provenance confidence: the share of decisions applying an explicit stored preference. */
+  averageConfidence: number | null;
+  overrideRate: number | null;
+  byPersonality: BehaviourPersonalitySummary[];
+  byOutcome: { outcome: string; count: number }[];
+  bySurface: { surface: string; count: number }[];
+  overrides: {
+    total: number;
+    byReason: { reason: string; count: number }[];
+    recent: {
+      observedAt: string;
+      requestedPersonality: string | null;
+      appliedPersonalityId: string | null;
+      reason: string | null;
+    }[];
+    recentLimit: number;
+  };
+  effectiveness: {
+    ratedDecisions: number;
+    helpful: number;
+    notHelpful: number;
+    rate: number | null;
+    /** Feedback in the window that names no recorded behaviour decision — shown, never guessed into one. */
+    unattributedFeedback: number;
+    note: string;
+  };
+  byDay: { day: string; decisions: number; overrides: number }[];
+  correlationNote: string;
+}
+
+const BEHAVIOUR_EFFECTIVENESS_NOTE =
+  "Effectiveness is the user-feedback rate observed on turns a voice phrased — an operator signal only. " +
+  "No component reads it, and nothing adapts to it: telemetry is never an input to behaviour.";
+
+const BEHAVIOUR_CORRELATION_NOTE =
+  "Feedback is attributed to a voice only when both rows carry the same turn correlation id. " +
+  "Turns recorded before the Behaviour Engine's decision capture (BEH1) have no decision row and are absent here, " +
+  "not reconstructed; their feedback is counted as unattributed.";
+
+export function summarizeBehaviour(
+  rows: PlatformObservation[],
+  windowDays: number,
+): BehaviourObservationSummary {
+  const decisions = ofKind(rows, "behaviour-decision");
+  const feedback = ofKind(rows, "user-feedback");
+
+  const metaOf = (r: PlatformObservation): Record<string, unknown> =>
+    (r.metadata ?? {}) as Record<string, unknown>;
+  const metaStr = (r: PlatformObservation, key: string): string | null => {
+    const v = metaOf(r)[key];
+    return typeof v === "string" && v ? v : null;
+  };
+
+  // Join key: the OBS2 per-turn correlation id, carried in the metadata bag.
+  const personalityByTurn = new Map<string, string>();
+  for (const d of decisions) {
+    const turnId = metaStr(d, "turnId");
+    const personalityId = metaStr(d, "personalityId");
+    if (turnId && personalityId) personalityByTurn.set(turnId, personalityId);
+  }
+
+  // Ratings per turn, then per voice. A turn with several ratings counts once
+  // as "rated" but contributes each rating to the up/down tallies.
+  const ratedTurns = new Map<string, { helpful: number; notHelpful: number }>();
+  let unattributedFeedback = 0;
+  for (const f of feedback) {
+    const turnId = metaStr(f, "turnId");
+    if (!turnId || !personalityByTurn.has(turnId)) {
+      unattributedFeedback += 1;
+      continue;
+    }
+    const entry = ratedTurns.get(turnId) ?? { helpful: 0, notHelpful: 0 };
+    if (f.outcome === "up") entry.helpful += 1;
+    else if (f.outcome === "down") entry.notHelpful += 1;
+    ratedTurns.set(turnId, entry);
+  }
+
+  const blank = (personalityId: string): BehaviourPersonalitySummary => ({
+    personalityId,
+    decisions: 0,
+    voiced: 0,
+    voicedFallback: 0,
+    voicedError: 0,
+    notVoiced: 0,
+    overrides: 0,
+    ratedDecisions: 0,
+    helpful: 0,
+    notHelpful: 0,
+    effectiveness: null,
+  });
+
+  const byPersonality = new Map<string, BehaviourPersonalitySummary>();
+  const surfaceCounts = new Map<string, number>();
+  const byDayMap = new Map<string, { decisions: number; overrides: number }>();
+  const overrideRows: PlatformObservation[] = [];
+
+  for (const d of decisions) {
+    const personalityId = metaStr(d, "personalityId") ?? "unknown";
+    const entry = byPersonality.get(personalityId) ?? blank(personalityId);
+    entry.decisions += 1;
+    if (d.outcome === "voiced") entry.voiced += 1;
+    else if (d.outcome === "voiced-fallback") entry.voicedFallback += 1;
+    else if (d.outcome === "voiced-error") entry.voicedError += 1;
+    else if (d.outcome === "not-voiced") entry.notVoiced += 1;
+
+    const overrideApplied = metaOf(d).overrideApplied === true;
+    if (overrideApplied) {
+      entry.overrides += 1;
+      overrideRows.push(d);
+    }
+
+    const turnId = metaStr(d, "turnId");
+    const rating = turnId ? ratedTurns.get(turnId) : undefined;
+    if (rating) {
+      entry.ratedDecisions += 1;
+      entry.helpful += rating.helpful;
+      entry.notHelpful += rating.notHelpful;
+    }
+    byPersonality.set(personalityId, entry);
+
+    const surfaces = metaOf(d).surfaces;
+    for (const s of Array.isArray(surfaces) ? (surfaces as unknown[]) : []) {
+      if (typeof s !== "string") continue;
+      surfaceCounts.set(s, (surfaceCounts.get(s) ?? 0) + 1);
+    }
+
+    const day = dayOf(d.observedAt);
+    const dayEntry = byDayMap.get(day) ?? { decisions: 0, overrides: 0 };
+    dayEntry.decisions += 1;
+    if (overrideApplied) dayEntry.overrides += 1;
+    byDayMap.set(day, dayEntry);
+  }
+
+  const personalities = Array.from(byPersonality.values()).map((p) => {
+    const judged = p.helpful + p.notHelpful;
+    return { ...p, effectiveness: judged > 0 ? round(p.helpful / judged) : null };
+  });
+
+  const helpful = personalities.reduce((a, p) => a + p.helpful, 0);
+  const notHelpful = personalities.reduce((a, p) => a + p.notHelpful, 0);
+  const judged = helpful + notHelpful;
+  const overrideTotal = overrideRows.length;
+
+  return {
+    windowDays,
+    decisions: decisions.length,
+    averageConfidence: round(mean(confidences(decisions))),
+    overrideRate: decisions.length > 0 ? round(overrideTotal / decisions.length) : null,
+    byPersonality: personalities.sort((a, b) => b.decisions - a.decisions),
+    byOutcome: toCounts(countBy(decisions, (r) => r.outcome)).map(({ key, count }) => ({ outcome: key, count })),
+    bySurface: toCounts(surfaceCounts).map(({ key, count }) => ({ surface: key, count })),
+    overrides: {
+      total: overrideTotal,
+      byReason: toCounts(countBy(overrideRows, (r) => metaStr(r, "overrideReason"))).map(({ key, count }) => ({
+        reason: key,
+        count,
+      })),
+      recent: overrideRows
+        .slice()
+        .sort((a, b) => b.observedAt.getTime() - a.observedAt.getTime())
+        .slice(0, BEHAVIOUR_RECENT_OVERRIDES_LIMIT)
+        .map((r) => ({
+          observedAt: r.observedAt.toISOString(),
+          requestedPersonality: metaStr(r, "requestedPersonality"),
+          appliedPersonalityId: metaStr(r, "personalityId"),
+          reason: metaStr(r, "overrideReason"),
+        })),
+      recentLimit: BEHAVIOUR_RECENT_OVERRIDES_LIMIT,
+    },
+    effectiveness: {
+      ratedDecisions: personalities.reduce((a, p) => a + p.ratedDecisions, 0),
+      helpful,
+      notHelpful,
+      rate: judged > 0 ? round(helpful / judged) : null,
+      unattributedFeedback,
+      note: BEHAVIOUR_EFFECTIVENESS_NOTE,
+    },
+    byDay: Array.from(byDayMap.entries())
+      .map(([day, v]) => ({ day, ...v }))
+      .sort((a, b) => a.day.localeCompare(b.day)),
+    correlationNote: BEHAVIOUR_CORRELATION_NOTE,
   };
 }
 

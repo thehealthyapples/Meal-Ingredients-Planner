@@ -3,7 +3,7 @@
 **Status:** GOVERNING ARCHITECTURE — Intelligence Governance (canonical). Established by workstream `OBS1`, 2026-07-08.
 **Classification:** Intelligence Governance — the single owner of runtime observations: the platform's one telemetry system, recording what the Intelligence Platform actually did, how confidently, how fast, and with what outcome.
 **Governing documents:** `THA_INTELLIGENCE_PLATFORM_ARCHITECTURE.md` (TIP1), `THA_AI_CAPABILITY_REGISTRY_AND_INTENT_TAXONOMY.md` (TIP2), `THA_CONTEXT_COMPOSITION_ENGINE_ARCHITECTURE.md` (INT17), `PLATFORM_QUALITY_ARCHITECTURE.md`
-**Implementation records:** `docs/implementation/OBS1_OBSERVATION_ENGINE_ACTIVATION.md`, `docs/implementation/OBS2_EXECUTION_TIMELINE.md`
+**Implementation records:** `docs/implementation/OBS1_OBSERVATION_ENGINE_ACTIVATION.md`, `docs/implementation/OBS2_EXECUTION_TIMELINE.md`, `docs/implementation/BEH1_BEHAVIOUR_ENGINE_ACTIVATION.md` (the twelfth kind)
 **Naming history:** This filename was established by INT20 for the Companion's ambient-notice component. OBS1 (2026-07-08) reassigned the **Observation Engine** name to the platform telemetry service defined here; the ambient-notice architecture continues unchanged in meaning as the **Notice Engine** (`THA_COMPANION_NOTICE_ENGINE_ARCHITECTURE.md`). The two are disjoint: **notices are user-facing facts about the household's own data; observations are operator-facing telemetry about platform execution.**
 
 ---
@@ -42,7 +42,7 @@ Two correlation identifiers tie observations together (OBS2): `sessionId` (the c
 
 ### 2.2 The closed kind taxonomy
 
-Eleven kinds (`OBSERVATION_KINDS`), each with a named capture point. Growing the vocabulary is an architecture decision (extend the union, document the capture point); an event that fits no kind is not recorded — never guessed into one.
+Twelve kinds (`OBSERVATION_KINDS`), each with a named capture point. Growing the vocabulary is an architecture decision (extend the union, document the capture point); an event that fits no kind is not recorded — never guessed into one. The twelfth kind, `behaviour-decision`, was added by BEH1 (2026-07-09) through exactly this path: no new store, no new seam, no new column, no migration.
 
 | Kind | Capture point | What it records |
 |---|---|---|
@@ -51,12 +51,15 @@ Eleven kinds (`OBSERVATION_KINDS`), each with a named capture point. Growing the
 | `context-composition` | `conversation-gateway.ts` | The Context Composition Engine's own metrics, verbatim: tokens, budget, sections, Context Views used |
 | `knowledge-retrieval` | `conversation-gateway.ts` | Grounded vs honest gap; the contributing capabilities |
 | `response-generation` | `conversation-gateway.ts` | LLM turn: model, wall time, ok/error |
+| `behaviour-decision` | `conversation-gateway.ts` | The Behaviour Engine's sealed decision for one interaction: the voice applied, the voice requested, override + reason, provenance confidence, the outcome (`voiced` / `voiced-fallback` / `voiced-error` / `not-voiced`), the surfaces touched, and the engine's deterministic reasoning. One row per interaction, on every gateway exit path |
 | `clarification` | `conversation-gateway.ts` | The resolver could not understand — a clarification surfaced |
 | `recovery` | `conversation-gateway.ts` | A turn fell back: fallback state + recovery path taken |
 | `escalation` | `conversation-gateway.ts` | Refusal/redirect to manual action (e.g. the write-intent guard) |
 | `manual-override` | `intent-engine.ts` | A confirmation-gated intent was explicitly confirmed and executed |
 | `user-feedback` | `routes.ts` (feedback route) | Thumbs up/down: rating, reason code, `hasNote` — never the note text |
 | `benchmark-run` | `tests/benchmark/runner.ts` | One benchmark execution: headline score, gap rate, latency, duration |
+
+The `behaviour-decision` row is recorded by the **gateway**, never by the Behaviour Engine — §4 rule 4 is why. Its `metadata.reasoning` describes the engine's own transform (which seam it touched, whose disclosure it re-wrapped, how many already-eligible suggestions it reordered); it never carries a household fact, an utterance, or an answer.
 
 Domain intelligence (planner, shopping, food intelligence, discovery…) is deliberately **not** a separate kind: every domain capability is invoked through the one Intent Engine choke point and therefore appears as `capability-invocation` rows sliced by capability id. New analytical needs are met by the closed-but-growable `kind` vocabulary plus the JSONB `metadata` bag — never by schema redesign.
 
@@ -80,7 +83,8 @@ Domain intelligence (planner, shopping, food intelligence, discovery…) is deli
 | The store contract + DB-free test double | `observation-contract.ts` (must stay importable without a database) | n/a |
 | The Workbench UI | `client/src/pages/admin-observation-workbench-page.tsx` over `GET /api/intelligence/observation/*` (admin-only, read-only) | n/a |
 | The Execution Timeline projections (OBS2) | `execution-timeline.ts` — pure functions over `PlatformObservation[]` | Never persisted — computed per request |
-| The Behaviour Admin Workbench UI (OBS2) | `client/src/pages/admin-behaviour-workbench-page.tsx` over `GET /api/intelligence/observation/timeline/*` (admin-only, read-only) | n/a |
+| The behaviour analytics projection (BEH1) | `observation-engine.ts` (`summarizeBehaviour`) — one more pure summarizer, joining `behaviour-decision` to `user-feedback` by `metadata.turnId` | Never persisted — computed per request |
+| The Behaviour Admin Workbench UI (OBS2, BEH1) | `client/src/pages/admin-behaviour-workbench-page.tsx` over `GET /api/intelligence/observation/behaviour` and `GET /api/intelligence/observation/timeline/*` (admin-only, read-only) | n/a |
 
 Consequences:
 
@@ -111,6 +115,14 @@ The rules every capture point obeys, by construction:
 
 Disjoint by architecture. The Notice Engine selects user-facing facts under an attention budget; the Observation Engine records operator-facing execution under a retention budget. No notice is built from an observation; no observation is surfaced to a user. The shared name history is documented (§ header) precisely so the two are never merged.
 
+### 5.2b With the Behaviour Engine (INT21 / BEH1)
+
+One-way, and worth stating because the Workbench's name invites the confusion. **The Behaviour Engine is observed; it never observes.** It records nothing (it is a pure module — §4 rule 4 — so the gateway captures its decision), and it reads nothing: no voice is chosen, adapted, or suppressed because of telemetry. `summarizeBehaviour`, `buildExecutionTimeline`, and every number on `/admin/behaviour` are Observation Engine projections over `platform_observations`; there is no behaviour table and no materialised behaviour aggregate.
+
+The one value the Workbench takes from the Behaviour Engine is `describeBehaviourRegistry()` — a live, read-only **description of the voices**, not telemetry, so a personality is displayed as it is defined today rather than as a copy captured at record time. Telemetry and registry are joined for display and never merged, never persisted together.
+
+"Behaviour effectiveness" is therefore an operator reading, never a platform signal: it is the user-feedback rate observed on turns a voice phrased, `null` when nothing is rated. §7's "no behaviour reads an observation" stop applies to it without exception — including any future learning loop.
+
 ### 5.3 With INT35 observability and the benchmark platform
 
 - The **INT35/INT35B unsuccessful-query log** (`logUnsuccessfulQuery`, admin learning routes) predates this engine and remains separately owned. It stores a PII-scrubbed truncated utterance without user attribution — content this engine's privacy rules forbid it to hold. The two answer different questions ("what exactly did users ask that we failed?" vs "how is the platform executing?"); convergence, if ever, is its own gated workstream.
@@ -133,13 +145,21 @@ Two admin-only, read-only pages over the same engine — no other operator surfa
 - **Honest aggregation:** rates are `null` when there is nothing to judge — never a fabricated 0 or 100%. Neutral outcomes (`confirmation_required`) are excluded from success rates rather than counted as failures.
 - The Workbench writes nothing, reads no business data, and holds no state of its own.
 
-### 6.2 The Behaviour Admin Workbench — the Execution Timeline (`/admin/behaviour`, OBS2)
+### 6.2 The Behaviour Admin Workbench (`/admin/behaviour`, OBS2 + BEH1)
 
-The primary debugging and reasoning view for Companion behaviour: it reconstructs the complete execution path of one interaction — intent identified (with confidence), capabilities invoked, knowledge sources consulted, Context Views composed, behaviour (voice) selected, response generated, clarifications, recoveries, escalations, and user feedback — chronologically, with per-stage durations and inter-stage gaps, failures highlighted, and every event clickable through to its underlying observation.
+One page, two read-only views over the same store. **The Behaviour Engine never owns timeline or analytics data**; despite the page's name, every byte it shows is Observation Engine telemetry (the sole exception being the live registry description of §5.2b, which is voice metadata, not a runtime record).
+
+**The Behaviour view (BEH1)** — what the Companion's voice decided across a window: the active behaviour selected, the personality applied (with its 12-dimension profile, read live from the registry), behaviour outcome, provenance confidence, effectiveness, overrides, and analytics.
+
+- **Route:** `GET /api/intelligence/observation/behaviour` → `{ telemetry, registry }` — two halves from their two owners, joined for display only.
+- **Honest aggregation:** effectiveness, override rate, and confidence are `null` when there is nothing to judge. Feedback that names no recorded decision is reported as `unattributedFeedback`, never guessed into a voice. The overrides table discloses its own listing cap while the counts stay complete.
+- **Honest coverage:** `not-voiced` decisions are shown, so interactions where the Companion spoke platform-owned copy rather than registry content are counted rather than disguised (INT21 §8.4).
+
+**The Execution Timeline (OBS2)** — the primary debugging and reasoning view for one interaction: it reconstructs the complete execution path — intent identified (with confidence), capabilities invoked, knowledge sources consulted, Context Views composed, behaviour decided (with the engine's own reasoning), response generated, clarifications, recoveries, escalations, and user feedback — chronologically, with per-stage durations and inter-stage gaps, failures highlighted, and every event clickable through to its underlying observation.
 
 - **Routes:** `GET /api/intelligence/observation/timeline/sessions` (the picker — filterable by user, capability, intent, session over the bounded window), `GET .../timeline/session/:sessionId` (the reconstructed timeline), `GET .../timeline/session/:sessionId/export` (JSON/CSV).
-- **Projection, not state:** `execution-timeline.ts` holds only pure functions over `PlatformObservation[]` — no timeline table, no duplicate telemetry. **The Behaviour Engine never owns timeline data**; despite the page's name, every byte it shows is Observation Engine telemetry.
-- **Honest correlation:** turns are grouped exactly by `metadata.turnId`; rows recorded before OBS2 are grouped by boundary heuristic and labelled `reconstructed`, and uncorrelatable legacy feedback is shown as `unassigned` — never guessed into a turn.
+- **Projection, not state:** `execution-timeline.ts` holds only pure functions over `PlatformObservation[]` — no timeline table, no duplicate telemetry.
+- **Honest correlation:** turns are grouped exactly by `metadata.turnId`; rows recorded before OBS2 are grouped by boundary heuristic and labelled `reconstructed`, and uncorrelatable legacy feedback is shown as `unassigned` — never guessed into a turn. A turn recorded before BEH1 shows no behaviour decision — absent, never reconstructed — while OBS2's legacy `personalityId` crumb still names the voice.
 - **Honest gaps:** the user's request text is displayed as "not recorded (privacy)" — the engine's §2.3 rule — and absent stages render as nulls, never fabricated.
 
 ---
@@ -164,14 +184,15 @@ Hard stops, in the spirit of `ENGINEERING_WORKFLOW.md` STEP 7:
 | Requirement | Met by |
 |---|---|
 | One canonical Observation Engine defined | §0 mandate; §3 ownership; §7 second-system stops |
-| What is observed | §2 — closed eleven-kind taxonomy, one capture point per kind, never-observed list |
+| What is observed | §2 — closed twelve-kind taxonomy, one capture point per kind, never-observed list |
 | Who owns observations | §3 — store, seam, vocabulary, views, each owned once |
 | Capture cannot alter behaviour | §4 discipline; §7 stops; `OBS_DISABLE_CAPTURE` |
-| Integration with Intent Engine, Notice Engine, INT35, benchmarks, operations | §5 |
-| Operator surface | §6 — the Observation Admin Workbench and the Behaviour Admin Workbench (Execution Timeline) |
+| Integration with Intent Engine, Notice Engine, Behaviour Engine, INT35, benchmarks, operations | §5 |
+| Operator surface | §6 — the Observation Admin Workbench and the Behaviour Admin Workbench (Behaviour view + Execution Timeline) |
+| Growing the vocabulary is an architecture decision, not a schema redesign | §2.2 — BEH1's twelfth kind added with no store, seam, column, or migration |
 | No conflict with the former use of this name | Naming history (header); `THA_COMPANION_NOTICE_ENGINE_ARCHITECTURE.md`; INT20 record re-scope note |
 
 ---
 
 *Required reading before recording any new runtime telemetry, adding an observation kind, or building any operator view over platform execution anywhere in THA.*
-*Implementation records: `docs/implementation/OBS1_OBSERVATION_ENGINE_ACTIVATION.md`, `docs/implementation/OBS2_EXECUTION_TIMELINE.md`.*
+*Implementation records: `docs/implementation/OBS1_OBSERVATION_ENGINE_ACTIVATION.md`, `docs/implementation/OBS2_EXECUTION_TIMELINE.md`, `docs/implementation/BEH1_BEHAVIOUR_ENGINE_ACTIVATION.md`.*

@@ -86,8 +86,12 @@ import {
   systemPromptFragment,
   voiceFallback,
   voiceGuidanceSuggestions,
+  resolveBehaviour,
+  sealBehaviourDecision,
+  type BehaviourDecision,
+  type BehaviourDecisionInput,
+  type BehaviourResolution,
 } from "./behaviour-engine.js";
-import { normalizePersonalityId, type PersonalityId } from "./personality-registry.js";
 import { storage } from "../../storage.js";
 import {
   buildNativeDiscoveryResponse,
@@ -375,7 +379,9 @@ async function buildGroundedResponse(
   // EWO2 — Companion Personality Platform: the user's stored voice choice,
   // read once per turn by the caller (never cached beyond this request, per
   // EWO1 §6). Changes WORDING at the seams below only — see behaviour-engine.ts.
-  personalityId: PersonalityId,
+  // BEH1 — it arrives as a resolved BehaviourResolution (voice + provenance),
+  // so the one decision this turn is made once, by the engine, before any seam.
+  behaviour: BehaviourResolution,
   // FI5 — the caller's own authenticated user id (already resolved by
   // processUserTurn), used ONLY to resolve their own household for the
   // household-nutrition enrichment below — never a client-suppliable id.
@@ -409,6 +415,48 @@ async function buildGroundedResponse(
   // OBS2 adds turnId so the Execution Timeline can group a turn exactly.
   const obs = { userId, sessionId, surface: frame.surface as string, turnId };
 
+  // BEH1 — the voice this turn, decided once by the engine before any seam.
+  const personalityId = behaviour.personalityId;
+
+  /**
+   * BEH1 — record the Companion's behaviour decision for this interaction.
+   *
+   * The Behaviour Engine seals the decision (pure); the GATEWAY records it,
+   * because the Observation Engine's capture discipline forbids a pure module
+   * from recording its own telemetry (Observation Engine §4 rule 4). Exactly
+   * one of these fires per interaction, on every exit path — including the
+   * paths where no voice transform ran at all, which are recorded honestly as
+   * `not-voiced` rather than left silent.
+   *
+   * Severity mirrors the decision, never editorialises it: a fallback voiced
+   * in the user's register is a healthy outcome (the recovery row already
+   * carries the warning), so only a failed generation is a warning here.
+   */
+  const recordBehaviourDecision = (input: BehaviourDecisionInput): BehaviourDecision => {
+    const decision = sealBehaviourDecision(input);
+    recordObservation({
+      kind: "behaviour-decision",
+      severity: decision.outcome === "voiced-error" ? "warning" : "info",
+      outcome: decision.outcome,
+      confidence: decision.confidence,
+      metadata: {
+        personalityId: decision.personalityId,
+        personalityName: decision.personalityName,
+        requestedPersonality: decision.requestedPersonality,
+        overrideApplied: decision.overrideApplied,
+        overrideReason: decision.overrideReason,
+        confidenceBasis: decision.confidenceBasis,
+        surfaces: decision.surfaces,
+        reasoning: decision.reasoning,
+        fallbackState: decision.fallbackState,
+        guidanceCount: decision.guidanceCount,
+        notVoicedReason: decision.notVoicedReason,
+      },
+      ...obs,
+    });
+    return decision;
+  };
+
   // Write-intent guard (INT18 Risk R4 / INT24) — honest gap, no resolver, no LLM
   const writeAction = detectWriteIntent(utterance);
   if (writeAction) {
@@ -420,6 +468,15 @@ async function buildGroundedResponse(
       recoveryPath: "manual-action-redirect",
       metadata: { reason: "write-intent-refusal", writeAction },
       ...obs,
+    });
+    // BEH1: the refusal copy below is platform-owned, not Personality Registry
+    // content — no voice transform runs. Recorded as `not-voiced` so the debt
+    // INT21 §8/§10 names is visible in telemetry rather than implied by silence.
+    recordBehaviourDecision({
+      resolution: behaviour,
+      outcome: "not-voiced",
+      surfaces: [],
+      notVoicedReason: "escalation-copy-not-registry-owned",
     });
     const text =
       `I can read and explain your data, but I can't ${writeAction} yet — ` +
@@ -451,6 +508,14 @@ async function buildGroundedResponse(
 
   // Provider unavailable → graceful degradation (no API key configured)
   if (!llmProvider.isAvailable) {
+    // BEH1: same honesty as the write-intent guard — this degradation copy is
+    // platform-owned, so no voice was applied and the decision says so.
+    recordBehaviourDecision({
+      resolution: behaviour,
+      outcome: "not-voiced",
+      surfaces: [],
+      notVoicedReason: "provider-unavailable-copy-not-registry-owned",
+    });
     return {
       text: "The AI assistant isn't available right now — it hasn't been configured yet.",
       entityRefs: [],
@@ -706,6 +771,19 @@ async function buildGroundedResponse(
       ...obs,
     });
 
+    // BEH1: the voice phrased the SAME disclosure turn-fallback.ts classified,
+    // and reordered/relabelled the SAME recovery suggestions companion-guidance.ts
+    // resolved. The tone fragment never ran — this path makes no LLM call.
+    recordBehaviourDecision({
+      resolution: behaviour,
+      outcome: "voiced-fallback",
+      surfaces: recoverySuggestions.length > 0
+        ? ["fallback-voicing", "guidance-voicing"]
+        : ["fallback-voicing"],
+      fallbackState,
+      guidanceCount: recoverySuggestions.length,
+    });
+
     return {
       text,
       entityRefs: [],
@@ -924,6 +1002,17 @@ entityRefs must ONLY contain items that appear in the context data above with a 
       metadata: { model: response.model, personalityId },
       ...obs,
     });
+    // BEH1: the turn was answered in the user's voice. Recorded once here
+    // rather than at each return below, because both the parsed and the
+    // raw-content return paths carry the same already-applied transforms.
+    recordBehaviourDecision({
+      resolution: behaviour,
+      outcome: "voiced",
+      surfaces: guidance.length > 0
+        ? ["system-prompt-fragment", "guidance-voicing"]
+        : ["system-prompt-fragment"],
+      guidanceCount: guidance.length,
+    });
   } catch (err) {
     console.error("[ConversationGateway] LLM call failed:", err);
     logUnsuccessfulQuery({
@@ -948,6 +1037,14 @@ entityRefs must ONLY contain items that appear in the context data above with a 
       outcome: "internal-error",
       recoveryPath: "honest-disclosure",
       ...obs,
+    });
+    // BEH1: the tone fragment reached the model before it failed; the voice
+    // then phrased the internal-error disclosure. Both surfaces genuinely ran.
+    recordBehaviourDecision({
+      resolution: behaviour,
+      outcome: "voiced-error",
+      surfaces: ["system-prompt-fragment", "fallback-voicing"],
+      fallbackState: "internal-error",
     });
     return {
       text: voiceFallback("internal-error", personalityId, { suggestionExamples: "" }),
@@ -1097,8 +1194,13 @@ export class ConversationGateway {
     // Never cached beyond this request, never written into a conversation
     // turn — mirrors how the Context Frame itself is re-read every turn
     // (EWO1 §6 non-duplication guarantee).
+    //
+    // BEH1 — the raw stored value goes to the Behaviour Engine, which is the
+    // single owner of the decision "which voice speaks this interaction, and
+    // do we actually know it is the one the user chose?". The gateway performs
+    // the read (I/O); the engine performs the decision (pure).
     const prefs = await storage.getUserPreferences(userId);
-    const personalityId = normalizePersonalityId(prefs?.companionPersonality);
+    const behaviour = resolveBehaviour(prefs?.companionPersonality);
 
     // 2. Prior entity refs (pronoun resolution)
     const priorEntityRefs = await this.store.getLastEntityRefs(thread.id);
@@ -1133,7 +1235,7 @@ export class ConversationGateway {
         this.llmProvider,
         this.intentResolver,
         this.handleIntent,
-        personalityId,
+        behaviour,
         userId,
         // OBS1: thread id as the observation correlation id (telemetry only).
         String(thread.id),

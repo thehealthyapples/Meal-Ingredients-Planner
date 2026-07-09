@@ -13,6 +13,10 @@
  *    Behaviour Engine data is read; the Behaviour Engine never owns timeline
  *    data. There is no timeline table — every view here is computed on read
  *    from platform_observations (no duplicate telemetry or state).
+ *  - BEH1: the Behaviour Engine's sealed decision reaches this projection the
+ *    same way every other stage does — as an observation row the gateway
+ *    recorded. This module never calls the Behaviour Engine, and the Behaviour
+ *    Engine never calls this module.
  *  - Correlation uses the Observation Engine's own identifiers: sessionId
  *    (conversation thread) groups an interaction; metadata.turnId (the
  *    persisted user-turn id, recorded since OBS2) groups one turn exactly.
@@ -60,6 +64,34 @@ export interface TimelineEvent {
   metadata: Record<string, unknown>;
 }
 
+/**
+ * BEH1 — the Behaviour Engine's sealed decision for one turn, projected from
+ * its `behaviour-decision` observation. Read-only telemetry: the Behaviour
+ * Engine owns the decision, the Observation Engine owns this row, and the
+ * timeline owns neither — it projects.
+ */
+export interface TimelineBehaviourDecision {
+  /** The voice actually applied. */
+  personalityId: string | null;
+  personalityName: string | null;
+  /** The raw stored preference this turn, or null when none was stored. */
+  requestedPersonality: string | null;
+  overrideApplied: boolean;
+  overrideReason: string | null;
+  /** Voice provenance (1 = the user's explicit choice; 0 = platform default) — never a quality score. */
+  confidence: number | null;
+  confidenceBasis: string | null;
+  outcome: string | null;
+  /** The seams the transform genuinely touched. Empty on a `not-voiced` turn. */
+  surfaces: string[];
+  /** The engine's own deterministic explanation of the decision. */
+  reasoning: string[];
+  fallbackState: string | null;
+  guidanceCount: number | null;
+  /** Present only when no voice transform ran — states which copy spoke instead. */
+  notVoicedReason: string | null;
+}
+
 /** One reconstructed conversation turn. Every field is honest-null when the
  *  window simply did not record that stage — never a fabricated value. */
 export interface TimelineTurn {
@@ -84,6 +116,8 @@ export interface TimelineTurn {
   knowledgeSources: string[];
   /** The behaviour (personality voice) that phrased this turn, when recorded. */
   behaviour: string | null;
+  /** BEH1 — the full sealed decision. Null for turns recorded before BEH1. */
+  behaviourDecision: TimelineBehaviourDecision | null;
   responseGeneration: { outcome: string | null; durationMs: number | null; model: string | null } | null;
   clarifications: { outcome: string | null; hasPrompt: boolean }[];
   recoveries: { outcome: string | null; recoveryPath: string | null }[];
@@ -152,6 +186,7 @@ const STAGE_LABELS: Record<string, string> = {
   "clarification": "Clarification requested",
   "knowledge-retrieval": "Knowledge consulted",
   "context-composition": "Context composed",
+  "behaviour-decision": "Behaviour decided",
   "response-generation": "Response generated",
   "recovery": "Recovery action",
   "escalation": "Escalation",
@@ -187,6 +222,30 @@ function metaString(row: PlatformObservation, key: string): string | null {
   return typeof value === "string" ? value : null;
 }
 
+function metaNumber(row: PlatformObservation, key: string): number | null {
+  const value = meta(row)[key];
+  return typeof value === "number" ? value : null;
+}
+
+/** BEH1 — project a `behaviour-decision` row into the turn's decision record. */
+function toBehaviourDecision(row: PlatformObservation): TimelineBehaviourDecision {
+  return {
+    personalityId: metaString(row, "personalityId"),
+    personalityName: metaString(row, "personalityName"),
+    requestedPersonality: metaString(row, "requestedPersonality"),
+    overrideApplied: meta(row).overrideApplied === true,
+    overrideReason: metaString(row, "overrideReason"),
+    // The provenance confidence lives in the row's own column, not the bag.
+    confidence: row.confidence,
+    confidenceBasis: metaString(row, "confidenceBasis"),
+    outcome: row.outcome,
+    surfaces: metaStrings(row, "surfaces"),
+    reasoning: metaStrings(row, "reasoning"),
+    fallbackState: metaString(row, "fallbackState"),
+    guidanceCount: metaNumber(row, "guidanceCount"),
+    notVoicedReason: metaString(row, "notVoicedReason"),
+  };
+}
 
 function byTime(a: PlatformObservation, b: PlatformObservation): number {
   return a.observedAt.getTime() - b.observedAt.getTime() || a.id - b.id;
@@ -289,9 +348,15 @@ function buildTurn(group: TurnGroup): TimelineTurn {
   const composition = ofKind("context-composition");
   const retrievals = ofKind("knowledge-retrieval");
 
-  // The behaviour (personality) is recorded on whichever voiced the turn:
-  // the generation observation on success, the recovery observation on fallback.
+  // BEH1 — the Behaviour Engine's sealed decision is the canonical record of
+  // the voice for this turn. Turns recorded before BEH1 carry no decision row,
+  // so the legacy signal is preserved: the personality crumb OBS2 wrote into
+  // whichever observation voiced the turn (generation on success, recovery on
+  // fallback). Absent both, the voice is honestly unknown — never guessed.
+  const decisionRow = ofKind("behaviour-decision")[0] ?? null;
+  const behaviourDecision = decisionRow ? toBehaviourDecision(decisionRow) : null;
   const behaviour =
+    behaviourDecision?.personalityId ??
     (generation && metaString(generation, "personalityId")) ??
     ofKind("recovery").map((r) => metaString(r, "personalityId")).find((p) => p != null) ??
     null;
@@ -333,6 +398,7 @@ function buildTurn(group: TurnGroup): TimelineTurn {
     contextViews,
     knowledgeSources,
     behaviour,
+    behaviourDecision,
     responseGeneration: generation
       ? { outcome: generation.outcome, durationMs: generation.durationMs, model: metaString(generation, "model") }
       : null,
