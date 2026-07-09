@@ -41,9 +41,18 @@ export interface SmartCandidate {
   };
 }
 
+/** PLAN1 — the owner each reason was read from. Optional: sessions persisted
+ *  before PLAN1 carry `reasons` without the evidence trail. */
+export interface PlannerExplanationEvidence {
+  dimension: string;
+  source: string;
+  detail: string;
+}
+
 export interface MealExplanation {
   title: string;
   reasons: string[];
+  evidence?: PlannerExplanationEvidence[];
   scoreBreakdown: { healthScore: number; upfScore: number; budgetScore: number; preferenceMatch: number };
 }
 

@@ -2,6 +2,12 @@ import type { Meal, MealTemplate, UserPreferences } from "@shared/schema";
 import { fetchExternalCandidates, enrichExternalCandidates, type ExternalMealCandidate } from "./external-meal-service";
 import { scoreMeal, convertMealToCandidate, convertExternalToCandidate, type ScoredCandidate } from "./meal-scoring-service";
 import { generateMealExplanation, type MealExplanation } from "./explainability-service";
+import {
+  buildPlannerExplanationContext,
+  mealPlantGroups,
+  EMPTY_PLANNER_EXPLANATION_CONTEXT,
+  type PlannerExplanationContext,
+} from "./planner-explanation-context";
 import { resolveActiveRestrictions, resolveIngredientRestrictions } from "@shared/restrictions/restriction-resolver.js";
 import type { RestrictionDefinition } from "@shared/restrictions/restriction-types.js";
 import { shouldExcludeRecipe } from "@shared/dietRules";
@@ -510,6 +516,15 @@ export async function generateSmartSuggestion(
           return null;
         });
 
+  // PLAN1 — the evidence a recommendation is explained by (pantry, seasonality,
+  // household planner history). Read once per run, concurrently with the above.
+  // A failure degrades explanations to honest gaps; it never fails generation.
+  const explanationContextPromise: Promise<PlannerExplanationContext> =
+    buildPlannerExplanationContext(settings.userId).catch(err => {
+      console.error("[SmartSuggest] Planner explanation context build failed:", err);
+      return EMPTY_PLANNER_EXPLANATION_CONTEXT;
+    });
+
   const rawExternalCandidates = await fetchExternalCandidates({
     cuisine: settings.preferredCuisine,
     query: settings.preferredCuisine || undefined,
@@ -722,6 +737,11 @@ export async function generateSmartSuggestion(
   const usedIngredients: string[] = [];
   const usedIds = new Set<string | number>();
   const entries: SmartSuggestEntry[] = [];
+  // PLAN1 — diversity groups already counted this week, so a meal is only credited
+  // with the plants it genuinely ADDS. Deduplicated by group, exactly as the
+  // 30-plants counter dedupes (all tomato varieties are one plant).
+  const weekPlantGroups = new Set<string>();
+  const explanationContext = await explanationContextPromise;
   let totalCost = 0;
   let totalUPF = 0;
   let mealCount = 0;
@@ -767,6 +787,9 @@ export async function generateSmartSuggestion(
           totalCost += lockedCandidate.estimatedCost || 4;
           totalUPF += lockedCandidate.estimatedUPFScore || 0;
           mealCount++;
+          for (const group of Array.from(mealPlantGroups(lockedCandidate.ingredients).keys())) {
+            weekPlantGroups.add(group);
+          }
           if (lockedCandidate.primaryProtein === "fish" || lockedCandidate.primaryProtein === "seafood") fishCount++;
           if (lockedCandidate.primaryProtein === "beef" || lockedCandidate.primaryProtein === "lamb" || lockedCandidate.primaryProtein === "pork") redMeatCount++;
           continue;
@@ -902,7 +925,23 @@ export async function generateSmartSuggestion(
         : scored[0];
 
       if (chosen) {
-        const explanation = generateMealExplanation(chosen, prefs);
+        // The week AS AT this choice — captured before the mutations below, so
+        // "first fish meal this week" and "adds 2 new plants" describe the plan
+        // this meal is joining, not the one it has already changed.
+        const explanation = generateMealExplanation(chosen, prefs, {
+          context: explanationContext,
+          week: {
+            mealsChosen: mealCount,
+            usedProteins,
+            plantGroups: weekPlantGroups,
+            fishCount,
+            fishTarget: settings.fishPerWeek ?? null,
+            redMeatCount,
+            redMeatTarget: settings.redMeatPerWeek ?? null,
+            costSoFar: totalCost,
+            weeklyBudget: settings.maxWeeklyBudget ?? null,
+          },
+        });
         entries.push({
           dayOfWeek: dayIdx,
           day: DAYS[dayIdx],
@@ -920,6 +959,9 @@ export async function generateSmartSuggestion(
         totalCost += chosen.estimatedCost || 4;
         totalUPF += chosen.estimatedUPFScore || 0;
         mealCount++;
+        for (const group of Array.from(mealPlantGroups(chosen.ingredients).keys())) {
+          weekPlantGroups.add(group);
+        }
 
         if (chosen.primaryProtein === "fish" || chosen.primaryProtein === "seafood") fishCount++;
         if (chosen.primaryProtein === "beef" || chosen.primaryProtein === "lamb" || chosen.primaryProtein === "pork") redMeatCount++;
