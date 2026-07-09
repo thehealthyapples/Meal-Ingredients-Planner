@@ -214,9 +214,35 @@ export async function runBenchmark(options: RunOptions): Promise<BenchmarkResult
     ? Math.round(questionResults.reduce((s, q) => s + q.latencyMs, 0) / questionResults.length)
     : 0;
 
+  // OBS1: observe the benchmark execution (fire-and-forget; a missing or
+  // unreachable observation store never affects a benchmark run).
+  const obsRunId = makeRunId(subject.commit);
+  try {
+    const { recordObservation } = await import("../../intelligence/observation/observation-engine.js");
+    recordObservation({
+      kind: "benchmark-run",
+      severity: "info",
+      outcome: "scored",
+      sessionId: obsRunId,
+      durationMs,
+      metadata: {
+        runId: obsRunId,
+        mode: options.mode,
+        headlineScore: headline,
+        honestGapRate: hgRate,
+        meanLatencyMs: meanLatency,
+        questionsScored: questionResults.length,
+        gatesFired,
+        hallucinationRate: hallucination.rate,
+      },
+    });
+  } catch (err) {
+    console.error("[Benchmark] observation capture unavailable:", err instanceof Error ? err.message : err);
+  }
+
   return {
     schemaVersion: RESULT_SCHEMA_VERSION,
-    runId: makeRunId(subject.commit),
+    runId: obsRunId,
     mode: options.mode,
     status: "scored",
     abortReason: null,

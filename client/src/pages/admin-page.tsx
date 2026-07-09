@@ -4,7 +4,7 @@ import { Link } from "wouter";
 import {
   ShieldCheck, Users, Star, Sliders,
   Sparkles, BarChart3, FlaskConical, Eye,
-  ChevronRight, ClipboardList,
+  ChevronRight, ClipboardList, Activity, ListTree,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -73,6 +73,22 @@ const ADMIN_SECTIONS = [
     description: "Review unresolved knowledge terms from the resolver",
     icon: ClipboardList,
     href: "/admin/knowledge-review",
+    status: "active",
+  },
+  {
+    id: "observations",
+    title: "Observation Workbench",
+    description: "Runtime telemetry across the Intelligence Platform — capability health, intent quality, context composition, companion outcomes and diagnostics.",
+    icon: Activity,
+    href: "/admin/observations",
+    status: "active",
+  },
+  {
+    id: "behaviour",
+    title: "Behaviour Workbench",
+    description: "Execution Timeline — reconstruct the complete execution path of an individual Companion interaction from Observation Engine telemetry.",
+    icon: ListTree,
+    href: "/admin/behaviour",
     status: "active",
   },
 ];

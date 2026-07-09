@@ -34,6 +34,8 @@ import AdminRecipeSourcesPage from "@/pages/admin-recipe-sources-page";
 import AdminCompanionIntelligencePage from "@/pages/admin-companion-intelligence-page";
 import AdminIntelligencePage from "@/pages/admin-intelligence-page";
 import AdminBenchmarkHouseholdsPage from "@/pages/admin-benchmark-households-page";
+import AdminObservationWorkbenchPage from "@/pages/admin-observation-workbench-page";
+import AdminBehaviourWorkbenchPage from "@/pages/admin-behaviour-workbench-page";
 import AdminKnowledgeReviewPage from "@/pages/admin-knowledge-review-page";
 import SharedPlanPage from "@/pages/shared-plan-page";
 import PantryPage from "@/pages/pantry-page";
@@ -205,6 +207,8 @@ const AdminRecipeSourcesChrome = withAdminBanner(AdminRecipeSourcesPage);
 const AdminCompanionIntelligenceChrome = withAdminBanner(AdminCompanionIntelligencePage);
 const AdminIntelligenceChrome = withAdminBanner(AdminIntelligencePage);
 const AdminBenchmarkHouseholdsChrome = withAdminBanner(AdminBenchmarkHouseholdsPage);
+const AdminObservationsChrome = withAdminBanner(AdminObservationWorkbenchPage);
+const AdminBehaviourChrome = withAdminBanner(AdminBehaviourWorkbenchPage);
 
 function Router() {
   useRoutingCorrectionTracker();
@@ -236,6 +240,8 @@ function Router() {
       <Route path="/admin/companion-intelligence" component={() => <ProtectedRoute component={AdminCompanionIntelligenceChrome} />} />
       <Route path="/admin/intelligence" component={() => <ProtectedRoute component={AdminIntelligenceChrome} />} />
       <Route path="/admin/benchmark-households" component={() => <ProtectedRoute component={AdminBenchmarkHouseholdsChrome} />} />
+      <Route path="/admin/observations" component={() => <ProtectedRoute component={AdminObservationsChrome} />} />
+      <Route path="/admin/behaviour" component={() => <ProtectedRoute component={AdminBehaviourChrome} />} />
       <Route path="/admin/knowledge-review" component={() => <ProtectedRoute component={AdminKnowledgeReviewPage} />} />
       <Route path="/pantry" component={() => <ProtectedRoute component={PantryPage} />} />
       <Route path="/plant-diversity" component={() => <ProtectedRoute component={PlantDiversityPage} />} />

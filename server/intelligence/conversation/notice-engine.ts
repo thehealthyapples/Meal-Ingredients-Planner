@@ -1,16 +1,20 @@
 /**
- * observation-engine.ts — EWX1 Living Companion Experience, Stage 1
+ * notice-engine.ts — EWX1 Living Companion Experience, Stage 1
  * =========================================================================
- * "Observations should be generated from existing platform intelligence...
- *  Observations must never fabricate knowledge."
+ * The Companion **Notice Engine** (EWX1) — ambient notices under the
+ * Silence Rules.
+ * Renamed from observation-engine.ts under OBS1 (2026-07-08) — the Observation Engine name now belongs to the platform telemetry service.
+ *
+ * "Notices should be generated from existing platform intelligence...
+ *  Notices must never fabricate knowledge."
  *
  * This module contains NO new business logic and performs NO reasoning of
  * its own. It is a thin, pure ADAPTER that wraps facts already computed by
- * existing, unmodified owners into one common `Observation` shape, so the
+ * existing, unmodified owners into one common `Notice` shape, so the
  * Companion can voice them consistently (via behaviour-engine.ts's
- * `phraseObservation`) wherever it is present in the platform (Stage 7).
+ * `phraseNotice`) wherever it is present in the platform (Stage 7).
  *
- * EVERY fact an Observation carries traces to an existing owner:
+ * EVERY fact a Notice carries traces to an existing owner:
  *   - nutrition-trend      → companion-growth.ts's `computeGrowthSignal`
  *                            (EWO2 Stage 7 — reads `storage.getUserHealthTrends`)
  *   - streak-milestone     → `storage.getUserStreak` (existing table, INT/streak
@@ -35,27 +39,27 @@
  *                            headline string.
  *
  * HARD INVARIANT (mirrors EWO1 §5 / EWO2's Core Principle, extended to
- * observations): an Observation may summarise or select from data that
+ * notices): a Notice may summarise or select from data that
  * already exists. It may NEVER compute a new metric, invent a threshold that
  * implies more certainty than the underlying data supports, or claim a
  * "just happened" milestone the platform cannot actually date. Where the
- * underlying data is cumulative/all-time (diversity), the Observation is
+ * underlying data is cumulative/all-time (diversity), the Notice is
  * phrased as a present-state fact, never as "you just achieved this".
  *
  * SILENCE RULES (Stage 6) live here too — `applySilenceRules` is a pure,
  * stateless filter (no new persisted state, no new table) that:
- *   - drops any observation whose underlying signal was thin/absent (never
+ *   - drops any notice whose underlying signal was thin/absent (never
  *     surfaces a guess)
- *   - only lets a milestone-shaped observation (streak/diversity) through
+ *   - only lets a milestone-shaped notice (streak/diversity) through
  *     when the number is a "notable" round figure — a stateless, honest
  *     heuristic for "worth mentioning", not a fabricated "you just crossed
  *     this" claim (this module cannot know exactly when a threshold was
  *     crossed without new persisted state — see SUGGESTIONS in the EWX1 doc)
- *   - caps the total number of observations returned per gather, so the
+ *   - caps the total number of notices returned per gather, so the
  *     Companion never reads as a notification feed
  *   - de-duplicates by id
  *
- * Run tests: npx tsx server/tests/test-intelligence-observation-engine.ts
+ * Run tests: npx tsx server/tests/test-intelligence-notice-engine.ts
  */
 
 import type { UserHealthTrend, UserStreak } from "../../../shared/schema.js";
@@ -67,15 +71,15 @@ import {
 import type { GrowthPhraseInputs } from "./personality-registry.js";
 
 // ---------------------------------------------------------------------------
-// Observation shape
+// Notice shape
 // ---------------------------------------------------------------------------
 
 /**
- * The closed set of observation categories (Stage 1 examples from the brief,
+ * The closed set of notice categories (Stage 1 examples from the brief,
  * minus the ones with no existing, honest data source — see the EWX1 doc's
  * Trust Validation for which brief examples were NOT implemented and why).
  */
-export type ObservationCategory =
+export type NoticeCategory =
   | "nutrition-trend"
   | "streak-milestone"
   | "diversity-milestone"
@@ -84,14 +88,14 @@ export type ObservationCategory =
   | "shopping-opportunity"
   | "seasonal-highlight";
 
-export type ObservationPriority = "high" | "medium" | "low";
+export type NoticePriority = "high" | "medium" | "low";
 
-export interface Observation {
+export interface Notice {
   readonly id: string;
-  readonly category: ObservationCategory;
-  readonly priority: ObservationPriority;
+  readonly category: NoticeCategory;
+  readonly priority: NoticePriority;
   /**
-   * The verified fact this observation carries, in the SAME shape the source
+   * The verified fact this notice carries, in the SAME shape the source
    * owner already produced it — never a value this module computed itself,
    * except `growth` (a straight pass of companion-growth.ts's own signal).
    */
@@ -111,7 +115,7 @@ export interface Observation {
 // ---------------------------------------------------------------------------
 
 /** Wraps companion-growth.ts's own signal — returns [] on the honest null (thin data). */
-export function observeNutritionTrend(trends: readonly UserHealthTrend[], now: Date = new Date()): Observation[] {
+export function noticeNutritionTrend(trends: readonly UserHealthTrend[], now: Date = new Date()): Notice[] {
   const signal = computeGrowthSignal(trends, now);
   if (!signal) return [];
   return [
@@ -128,11 +132,11 @@ export function observeNutritionTrend(trends: readonly UserHealthTrend[], now: D
  * A streak is "notable" (worth mentioning) only at a round multiple — a
  * stateless heuristic for what deserves a moment, not a persisted
  * "just crossed" detector (see module header). Zero/undefined streak is
- * silence, not a fabricated "starting from zero" observation.
+ * silence, not a fabricated "starting from zero" notice.
  */
 const STREAK_NOTABLE_MULTIPLE = 7;
 
-export function observeStreak(streak: UserStreak | undefined): Observation[] {
+export function noticeStreak(streak: UserStreak | undefined): Notice[] {
   if (!streak || streak.currentEliteStreak <= 0) return [];
   if (streak.currentEliteStreak % STREAK_NOTABLE_MULTIPLE !== 0) return [];
   return [
@@ -149,10 +153,10 @@ export function observeStreak(streak: UserStreak | undefined): Observation[] {
   ];
 }
 
-/** Same "notable round number" discipline as observeStreak, applied to the household's all-time plant count. */
+/** Same "notable round number" discipline as noticeStreak, applied to the household's all-time plant count. */
 const DIVERSITY_NOTABLE_MULTIPLE = 10;
 
-export function observeDiversity(plantDiversity: number): Observation[] {
+export function noticeDiversity(plantDiversity: number): Notice[] {
   if (plantDiversity <= 0) return [];
   if (plantDiversity % DIVERSITY_NOTABLE_MULTIPLE !== 0) return [];
   return [
@@ -169,7 +173,7 @@ export function observeDiversity(plantDiversity: number): Observation[] {
  * A single already-produced Food Opportunity (OD1's `DeliverableOpportunity`,
  * `server/intelligence/opportunity-delivery/framework.ts`) — the SAME shape
  * FI5's `/api/intelligence/food-opportunities` route already returns.
- * `domain` selects the Observation category — content is copied verbatim,
+ * `domain` selects the Notice category — content is copied verbatim,
  * never reworded (Trust: "every opportunity's content is a verbatim
  * projection of what a registered producer capability already returned").
  * An unmapped domain is an honest no-op (filtered out), never a guess.
@@ -177,19 +181,19 @@ export function observeDiversity(plantDiversity: number): Observation[] {
 export interface OpportunityLike {
   readonly id: string;
   readonly domain: string;
-  readonly priority: ObservationPriority;
+  readonly priority: NoticePriority;
   readonly explanation: string;
   readonly suggestedAction: string;
 }
 
-const DOMAIN_TO_CATEGORY: Readonly<Record<string, ObservationCategory>> = {
+const DOMAIN_TO_CATEGORY: Readonly<Record<string, NoticeCategory>> = {
   planner: "planner-gap",
   pantry: "pantry-opportunity",
   shopping: "shopping-opportunity",
 };
 
-export function observeOpportunities(opportunities: readonly OpportunityLike[]): Observation[] {
-  const result: Observation[] = [];
+export function noticeOpportunities(opportunities: readonly OpportunityLike[]): Notice[] {
+  const result: Notice[] = [];
   for (const o of opportunities) {
     const category = DOMAIN_TO_CATEGORY[o.domain];
     if (!category) continue;
@@ -206,13 +210,13 @@ export function observeOpportunities(opportunities: readonly OpportunityLike[]):
 /**
  * Wraps a single already-chosen seasonal headline (WS11's `seasonalStories()`
  * — the SAME derivation `/api/home/intelligence` and
- * `/api/planner/weeks/:weekId/intelligence` already compute) into an
- * Observation. `headline` is `null` when the season has nothing worth
+ * `/api/planner/weeks/:weekId/intelligence` already compute) into a
+ * Notice. `headline` is `null` when the season has nothing worth
  * mentioning yet (WS11's own "not enough of a season yet — staying silent"
  * discipline) — an honest no-op, never a guess. This is a pure pass-through:
  * the caller derives the headline, this function only shapes it.
  */
-export function observeSeasonal(headline: string | null): Observation[] {
+export function noticeSeasonal(headline: string | null): Notice[] {
   if (!headline) return [];
   return [
     {
@@ -230,9 +234,9 @@ export function observeSeasonal(headline: string | null): Observation[] {
 // persisted state.
 // ---------------------------------------------------------------------------
 
-export const MAX_OBSERVATIONS_PER_MOMENT = 2;
+export const MAX_NOTICES_PER_MOMENT = 2;
 
-const PRIORITY_RANK: Record<ObservationPriority, number> = { high: 0, medium: 1, low: 2 };
+const PRIORITY_RANK: Record<NoticePriority, number> = { high: 0, medium: 1, low: 2 };
 
 /**
  * Ranks by priority (safety/actionable gaps first), de-duplicates by id, and
@@ -240,11 +244,11 @@ const PRIORITY_RANK: Record<ObservationPriority, number> = { high: 0, medium: 1,
  * decided — callers must never re-sort or re-slice a gathered list themselves.
  */
 export function applySilenceRules(
-  observations: readonly Observation[],
-  maxCount: number = MAX_OBSERVATIONS_PER_MOMENT,
-): Observation[] {
+  notices: readonly Notice[],
+  maxCount: number = MAX_NOTICES_PER_MOMENT,
+): Notice[] {
   const seen = new Set<string>();
-  const deduped = observations.filter((o) => {
+  const deduped = notices.filter((o) => {
     if (seen.has(o.id)) return false;
     seen.add(o.id);
     return true;
@@ -256,7 +260,7 @@ export function applySilenceRules(
 }
 
 // ---------------------------------------------------------------------------
-// toGrowthPhraseInputs re-export — behaviour-engine.ts's phraseObservation
+// toGrowthPhraseInputs re-export — behaviour-engine.ts's phraseNotice
 // needs this adapter for the "growth" fact kind without importing
 // companion-growth.ts a second time under a different path.
 // ---------------------------------------------------------------------------

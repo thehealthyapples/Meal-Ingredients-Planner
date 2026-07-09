@@ -127,6 +127,7 @@ import {
 } from "./companion-action-store.js";
 import type { ConversationTurn, Conversation, ConversationThread, CompanionActionProposal } from "../../../shared/schema.js";
 import type { Intent, IntelligenceContext, IntentOutcome, IntentVerb } from "../types.js";
+import { recordObservation } from "../observation/observation-engine.js";
 import { randomUUID } from "node:crypto";
 
 // ---------------------------------------------------------------------------
@@ -278,10 +279,13 @@ const CAP_DATA_MAX_CHARS = CAPABILITY_CONTEXT_BUDGET_CHARS;
 export type HandleIntentFn = (
   intent: Intent,
   context: IntelligenceContext,
+  // OBS2 — optional correlation context for the invocation observation the
+  // Intent Engine records (telemetry only; injected test stubs may ignore it).
+  options?: { observation?: { sessionId?: string; surface?: string; turnId?: string } },
 ) => Promise<IntentOutcome>;
 
-const defaultHandleIntent: HandleIntentFn = (intent, context) =>
-  intelligencePlatform.handle(intent, context);
+const defaultHandleIntent: HandleIntentFn = (intent, context, options) =>
+  intelligencePlatform.handle(intent, context, options);
 
 /** The result of querying one resolved intent through the platform (INT35). */
 interface CapabilityQueryResult {
@@ -314,6 +318,8 @@ async function queryCapability(
   intent: ResolvedIntent,
   identity: ReturnType<typeof intelligencePlatform.contextFor>,
   handleIntent: HandleIntentFn,
+  // OBS2 — correlation for the invocation observation only; never read by routing.
+  observation?: { sessionId?: string; surface?: string; turnId?: string },
 ): Promise<CapabilityQueryResult> {
   try {
     const outcome = await handleIntent(
@@ -323,6 +329,7 @@ async function queryCapability(
         parameters:   { ...intent.parameters },
       },
       identity,
+      observation ? { observation } : undefined,
     );
     if (outcome.status === "ok" && outcome.result != null) {
       if (intent.verb === "search" && isEmptySearchResult(outcome.result)) {
@@ -373,6 +380,14 @@ async function buildGroundedResponse(
   // processUserTurn), used ONLY to resolve their own household for the
   // household-nutrition enrichment below — never a client-suppliable id.
   userId: number,
+  // OBS1 — correlation id for observation capture (the active thread id).
+  // Telemetry-only: no behaviour reads it. Optional so existing test callers
+  // are unchanged; absent means observations record without a session.
+  sessionId?: string,
+  // OBS2 — per-turn correlation id (the persisted user-turn id). Telemetry
+  // only, like sessionId: every observation this turn emits carries it so the
+  // Execution Timeline can group the turn's events exactly.
+  turnId?: string,
 ): Promise<{
   text: string;
   entityRefs: EntityRef[];
@@ -389,9 +404,23 @@ async function buildGroundedResponse(
   actionDrafts: CompanionActionProposalDraft[];
 }> {
 
+  // OBS1 — shared correlation fields for every observation this turn emits.
+  // Capture is fire-and-forget and changes nothing about the turn.
+  // OBS2 adds turnId so the Execution Timeline can group a turn exactly.
+  const obs = { userId, sessionId, surface: frame.surface as string, turnId };
+
   // Write-intent guard (INT18 Risk R4 / INT24) — honest gap, no resolver, no LLM
   const writeAction = detectWriteIntent(utterance);
   if (writeAction) {
+    // OBS1: the refusal redirects the user to manual action — an escalation.
+    recordObservation({
+      kind: "escalation",
+      severity: "info",
+      outcome: "not_executable",
+      recoveryPath: "manual-action-redirect",
+      metadata: { reason: "write-intent-refusal", writeAction },
+      ...obs,
+    });
     const text =
       `I can read and explain your data, but I can't ${writeAction} yet — ` +
       `that's coming in a future update. For now, make the change directly in ` +
@@ -441,7 +470,29 @@ async function buildGroundedResponse(
     activePlannerWeekId: frame.activePlannerWeekId,
     selectedMealId:      frame.selectedMealId,
   };
+  const resolveStarted = Date.now();
   const resolvedIntents = await intentResolver.resolve(utterance, hints);
+
+  // OBS1: observe the resolution itself — top routed intent + confidence.
+  // No utterance is recorded (privacy rule: shapes and scores, not content).
+  {
+    const top = resolvedIntents[0];
+    const gapKind = resolvedIntents.map((ri) => ri.gap?.kind).find((k) => k != null);
+    recordObservation({
+      kind: "intent-resolution",
+      severity: "info",
+      outcome: gapKind ?? "resolved",
+      capability: top?.capability,
+      verb: top?.verb,
+      confidence: typeof top?.confidence === "number" ? top.confidence : undefined,
+      durationMs: Date.now() - resolveStarted,
+      metadata: {
+        intentCount: resolvedIntents.length,
+        routedCount: resolvedIntents.filter((ri) => !ri.gap && ri.baseline !== true).length,
+      },
+      ...obs,
+    });
+  }
 
   // Query each resolved intent through the platform (verb from resolver, not hardcoded).
   // INT35: per-intent outcomes are retained (not collapsed to null) so the turn can be
@@ -450,7 +501,7 @@ async function buildGroundedResponse(
   let queryable = resolvedIntents.filter(ri => !ri.gap);
   await Promise.all(
     queryable.map(async (ri) => {
-      const result = await queryCapability(ri, frame.identity, handleIntent);
+      const result = await queryCapability(ri, frame.identity, handleIntent, obs);
       queryResults.set(ri.capability, result);
     }),
   );
@@ -478,7 +529,7 @@ async function buildGroundedResponse(
         parameters: derived.parameters,
         confidence: 0.75,
       };
-      const result = await queryCapability(derivedIntent, frame.identity, handleIntent);
+      const result = await queryCapability(derivedIntent, frame.identity, handleIntent, obs);
       queryResults.set(derivedIntent.capability, result);
       queryable = [...queryable, derivedIntent];
     }
@@ -521,6 +572,27 @@ async function buildGroundedResponse(
     });
   }
 
+  // OBS1: a clarification observation whenever the resolver surfaced a gap the
+  // user will be asked to resolve — an unmatched utterance or an explicit
+  // needs-clarification / ambiguous resolution.
+  {
+    const clarificationGap = resolvedIntents
+      .map((ri) => ri.gap)
+      .find((g) => g != null && (g.kind === "needs-clarification" || g.kind === "ambiguous"));
+    if (resolverUnmatched || clarificationGap) {
+      recordObservation({
+        kind: "clarification",
+        severity: "warning",
+        outcome: clarificationGap?.kind ?? "unknown",
+        metadata: {
+          hasClarificationPrompt: Boolean(clarificationGap?.clarificationPrompt),
+          queriedCapabilities: queried.map((q) => q.capability),
+        },
+        ...obs,
+      });
+    }
+  }
+
   // INT38/INT39: cross-domain "Next Step" guidance — build early so it's available
   // for both success and failure paths (guidance is used on recovery path too).
   const successCapabilityIds: string[] = [];
@@ -543,6 +615,7 @@ async function buildGroundedResponse(
   // COMP5: Assemble complete knowledge context for this turn.
   // This stage orchestrates all available platform knowledge (Tiers 1–3)
   // and determines gap state AFTER searching, not before.
+  const knowledgeStarted = Date.now();
   const knowledgePackage = await assembleKnowledge({
     queryResults,
     queried,
@@ -551,6 +624,21 @@ async function buildGroundedResponse(
     discoveries,
     utterance,
     userId,
+  });
+
+  // OBS1: observe knowledge retrieval — grounded (canonical capability data)
+  // vs honest gap. `sources` are the capabilities whose data grounds the turn.
+  recordObservation({
+    kind: "knowledge-retrieval",
+    severity: knowledgePackage.gapState === null ? "info" : "warning",
+    outcome: knowledgePackage.gapState === null ? "ok" : knowledgePackage.gapState,
+    durationMs: Date.now() - knowledgeStarted,
+    metadata: {
+      sources: queried.filter((q) => q.status === "ok-data").map((q) => q.capability),
+      queriedCount: queried.length,
+      enrichmentCount: knowledgePackage.enrichments.length,
+    },
+    ...obs,
   });
 
   // INT35: classify the turn. A non-null state means NO routed capability produced
@@ -602,6 +690,22 @@ async function buildGroundedResponse(
     // EWO2 Stage 3/4: personality reorders + relabels the SAME eligible
     // suggestions companion-guidance.ts already resolved — never a different set.
     const recoverySuggestions = voiceGuidanceSuggestions(buildRecoverySuggestions(attemptedCapabilityIds), personalityId);
+
+    // OBS1: observe the recovery path taken for this fallback turn.
+    // OBS2: personalityId is the behaviour (voice) that phrased the disclosure.
+    recordObservation({
+      kind: "recovery",
+      severity: fallbackState === "internal-error" ? "error" : "warning",
+      outcome: fallbackState,
+      recoveryPath: recoverySuggestions.length > 0 ? "recovery-suggestions" : "honest-disclosure",
+      metadata: {
+        gapKind: gapKind ?? null,
+        capabilities: attemptedCapabilityIds,
+        personalityId,
+      },
+      ...obs,
+    });
+
     return {
       text,
       entityRefs: [],
@@ -702,6 +806,7 @@ async function buildGroundedResponse(
   // Section order is the RESOLVER's order, not `queryResults`' Map insertion order.
   // That Map is populated inside `Promise.all`, i.e. in capability COMPLETION
   // order, so the pre-INT17 prompt varied run-to-run for identical inputs.
+  const compositionStarted = Date.now();
   const composition = composeContext({
     utterance,
     capabilities: queryable
@@ -716,6 +821,25 @@ async function buildGroundedResponse(
     enrichment: enrichment.map(e => ({ title: e.title, body: e.body })),
     tokenBudget: CONTEXT_TOKEN_BUDGET,
     perCapabilityCharCeiling: CAP_DATA_MAX_CHARS,
+  });
+
+  // OBS1: observe the composition — the engine's own metrics, verbatim, plus
+  // wall time. The Context Views used are the `${capabilityId}:${verb}` keys.
+  recordObservation({
+    kind: "context-composition",
+    severity: "info",
+    outcome: composition.metrics.budgetExceeded ? "budget-exceeded" : "ok",
+    durationMs: Date.now() - compositionStarted,
+    metadata: {
+      estimatedTokens: composition.metrics.estimatedTokens,
+      tokenBudget: composition.metrics.tokenBudget,
+      budgetExceeded: composition.metrics.budgetExceeded,
+      sections: composition.metrics.sections,
+      capabilitiesContributing: composition.metrics.capabilitiesContributing,
+      capabilitiesRepresented: composition.metrics.capabilitiesRepresented,
+      views: composition.metrics.perCapability.map((pc) => `${pc.capabilityId}:${pc.verb}`),
+    },
+    ...obs,
   });
 
   const fullContextSections = composition.text;
@@ -781,6 +905,7 @@ entityRefs must ONLY contain items that appear in the context data above with a 
 
   // Delegate to the injected provider (OpenAI in production, NoOp / stub in tests)
   let rawContent = "";
+  const generationStarted = Date.now();
   try {
     const response = await llmProvider.complete({
       messages,
@@ -789,6 +914,16 @@ entityRefs must ONLY contain items that appear in the context data above with a 
       jsonMode: true,
     });
     rawContent = response.content;
+    // OBS1: observe the successful generation (model + wall time; no content).
+    // OBS2: personalityId names the behaviour (voice) selected for this turn.
+    recordObservation({
+      kind: "response-generation",
+      severity: "info",
+      outcome: "ok",
+      durationMs: Date.now() - generationStarted,
+      metadata: { model: response.model, personalityId },
+      ...obs,
+    });
   } catch (err) {
     console.error("[ConversationGateway] LLM call failed:", err);
     logUnsuccessfulQuery({
@@ -797,6 +932,22 @@ entityRefs must ONLY contain items that appear in the context data above with a 
       surface:   frame.surface,
       utterance,
       intents:   queried.map(q => ({ capability: q.capability, verb: q.verb, status: q.status })),
+    });
+    // OBS1: the failed generation and the recovery path it forced.
+    recordObservation({
+      kind: "response-generation",
+      severity: "error",
+      outcome: "error",
+      durationMs: Date.now() - generationStarted,
+      metadata: { model: llmProvider.modelName, personalityId },
+      ...obs,
+    });
+    recordObservation({
+      kind: "recovery",
+      severity: "error",
+      outcome: "internal-error",
+      recoveryPath: "honest-disclosure",
+      ...obs,
     });
     return {
       text: voiceFallback("internal-error", personalityId, { suggestionExamples: "" }),
@@ -984,6 +1135,11 @@ export class ConversationGateway {
         this.handleIntent,
         personalityId,
         userId,
+        // OBS1: thread id as the observation correlation id (telemetry only).
+        String(thread.id),
+        // OBS2: the just-persisted user turn id as the per-turn correlation id,
+        // so the Execution Timeline groups this turn's observations exactly.
+        String(userTurn.id),
       );
 
     // 6. Record assistant turn. INT39: fallbackState and resolvedIntent are

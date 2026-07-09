@@ -1593,6 +1593,40 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    // OBS1 — Observation Engine (canonical platform telemetry). One durable,
+    // bounded-retention store of runtime observations across the Intelligence
+    // Platform. Sole owner: server/intelligence/observation/observation-store.ts.
+    // Additive only; supersedes the never-created platform_turn_outcomes design
+    // (EWO-PRO1), whose store is retired by OBS1 rather than completed, so the
+    // platform has exactly one telemetry system.
+    id: "2026-07-08_platform_observations",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS platform_observations (
+        id            SERIAL PRIMARY KEY,
+        observed_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        kind          TEXT NOT NULL,
+        severity      TEXT NOT NULL DEFAULT 'info',
+        outcome       TEXT,
+        user_id       INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        session_id    TEXT,
+        surface       TEXT,
+        capability    TEXT,
+        verb          TEXT,
+        intent        TEXT,
+        context_view  TEXT,
+        confidence    REAL,
+        duration_ms   INTEGER,
+        recovery_path TEXT,
+        metadata      JSONB NOT NULL DEFAULT '{}'::jsonb
+      )`,
+      `CREATE INDEX IF NOT EXISTS platform_observations_observed_at_idx ON platform_observations (observed_at)`,
+      `CREATE INDEX IF NOT EXISTS platform_observations_kind_observed_at_idx ON platform_observations (kind, observed_at)`,
+      `CREATE INDEX IF NOT EXISTS platform_observations_capability_idx ON platform_observations (capability)`,
+      `CREATE INDEX IF NOT EXISTS platform_observations_session_idx ON platform_observations (session_id)`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

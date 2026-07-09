@@ -168,7 +168,11 @@ export interface OperationsStatus {
   readonly database: DatabaseStatus;
   /** Circuit state + failure accounting for every outbound dependency called. */
   readonly dependencies: DependencyHealth[];
-  /** Aggregate turn-outcome counts from the durable sink (PII-free by construction). */
+  /**
+   * Aggregate observation counts by kind from the Observation Engine's durable
+   * store (OBS1 — replaced the never-completed turn-outcome sink; recovery and
+   * clarification observations are the turn-outcome evidence).
+   */
   readonly turnOutcomes24h: unknown;
   readonly configuration: ReturnType<typeof environmentAvailability>;
 }
@@ -179,14 +183,14 @@ export async function buildOperationsStatus(): Promise<OperationsStatus> {
 
   const database = await checkDatabase();
 
-  // The durable sink is optional evidence — an unreachable table must not
-  // take the operations endpoint down with it.
+  // The durable telemetry store is optional evidence — an unreachable table
+  // must not take the operations endpoint down with it.
   let turnOutcomes24h: unknown = null;
   try {
-    const { turnOutcomeStore } = await import(
-      "../intelligence/conversation/turn-outcome-store.js"
+    const { observationStore } = await import(
+      "../intelligence/observation/observation-store.js"
     );
-    turnOutcomes24h = await turnOutcomeStore.countByStateSince(
+    turnOutcomes24h = await observationStore.countByKindSince(
       new Date(Date.now() - 24 * 60 * 60 * 1000),
     );
   } catch (err) {

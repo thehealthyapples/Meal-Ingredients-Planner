@@ -167,6 +167,18 @@ export interface IConversationStore {
   getTurnOwner(turnId: number): Promise<{ userId: number; role: ConversationRole } | null>;
 
   /**
+   * OBS2 — resolve a turn's observation correlation identifiers: its thread id
+   * (the Observation Engine's sessionId for conversation telemetry) and, for
+   * an assistant turn, the user turn that started the exchange (the Observation
+   * Engine's turnId). Read-only ids only — no utterance, no business data —
+   * used solely so the user-feedback observation can join the Execution
+   * Timeline of the turn it rates. Returns null when the turn does not exist.
+   */
+  getTurnObservationRef(
+    turnId: number,
+  ): Promise<{ threadId: number; precedingUserTurnId: number | null } | null>;
+
+  /**
    * INT39 — the assistant-turn Goal Completion signal rows, optionally bounded
    * to turns created at/after `since`, ordered by thread then time so callers
    * can walk each thread's turn sequence (recovery-after-failure analytics).
@@ -370,6 +382,29 @@ export class DatabaseConversationStore implements IConversationStore {
     }
   }
 
+  async getTurnObservationRef(
+    turnId: number,
+  ): Promise<{ threadId: number; precedingUserTurnId: number | null } | null> {
+    const client = await pool.connect();
+    try {
+      const { rows } = await client.query<{ thread_id: number; preceding_user_turn_id: number | null }>(
+        `SELECT t.thread_id AS thread_id,
+                (SELECT MAX(u.id) FROM conversation_turns u
+                 WHERE u.thread_id = t.thread_id AND u.role = 'user' AND u.id < t.id) AS preceding_user_turn_id
+         FROM conversation_turns t
+         WHERE t.id = $1`,
+        [turnId],
+      );
+      if (!rows[0]) return null;
+      return {
+        threadId: rows[0].thread_id,
+        precedingUserTurnId: rows[0].preceding_user_turn_id,
+      };
+    } finally {
+      client.release();
+    }
+  }
+
   async listAssistantTurnGoalSignals(since?: Date): Promise<GoalSignalTurn[]> {
     const client = await pool.connect();
     try {
@@ -544,6 +579,17 @@ export class InMemoryConversationStore implements IConversationStore {
     const conversation = this.conversations.get(thread.conversationId);
     if (!conversation) return null;
     return { userId: conversation.userId, role: turn.role as ConversationRole };
+  }
+
+  async getTurnObservationRef(
+    turnId: number,
+  ): Promise<{ threadId: number; precedingUserTurnId: number | null } | null> {
+    const turn = this.turns.get(turnId);
+    if (!turn) return null;
+    const precedingUserTurnId = Array.from(this.turns.values())
+      .filter((t) => t.threadId === turn.threadId && t.role === "user" && t.id < turn.id)
+      .reduce<number | null>((max, t) => (max === null || t.id > max ? t.id : max), null);
+    return { threadId: turn.threadId, precedingUserTurnId };
   }
 
   async listAssistantTurnGoalSignals(since?: Date): Promise<GoalSignalTurn[]> {

@@ -15,7 +15,7 @@ import { Link, useLocation } from "wouter";
 import { useUser } from "@/hooks/use-user";
 import { cn } from "@/lib/utils";
 import {
-  ShieldCheck, LayoutGrid, Users, Star, Sliders, Sparkles, BarChart3, FlaskConical,
+  ShieldCheck, LayoutGrid, Users, Star, Sliders, Sparkles, BarChart3, FlaskConical, Activity, ListTree,
 } from "lucide-react";
 
 // Existing Admin routes only (registered in App.tsx). Order mirrors the hub cards.
@@ -27,6 +27,8 @@ const ADMIN_NAV = [
   { href: "/admin/companion-intelligence", label: "Companion Intelligence", icon: Sparkles },
   { href: "/admin/intelligence", label: "Intelligence Dashboard", icon: BarChart3 },
   { href: "/admin/benchmark-households", label: "Benchmark Households", icon: FlaskConical },
+  { href: "/admin/observations", label: "Observations", icon: Activity },
+  { href: "/admin/behaviour", label: "Behaviour", icon: ListTree },
 ] as const;
 
 export function AdminBanner() {

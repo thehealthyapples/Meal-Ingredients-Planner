@@ -1,10 +1,11 @@
 // EWX1 — Living Companion Experience, Stage 1/7.
 //
-// The ONE client-side owner of the Companion Observation read. Every field
+// The ONE client-side owner of the Companion notice read (the Notice Engine,
+// renamed from "observation engine" under OBS1). Every field
 // returned here is a verbatim projection of what
 // GET /api/intelligence/companion/observations already computed (which is
 // itself a thin, read-only wrapper over existing platform intelligence —
-// see server/intelligence/conversation/observation-engine.ts). This hook
+// see server/intelligence/conversation/notice-engine.ts). This hook
 // performs no filtering, ranking or rewording of its own — Silence Rules and
 // personality voicing are both already applied server-side.
 

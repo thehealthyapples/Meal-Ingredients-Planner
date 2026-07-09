@@ -22,6 +22,7 @@ import {
   type IntelligenceContext,
   type IntentOutcome,
 } from "./types.js";
+import { recordObservation } from "./observation/observation-engine.js";
 
 export interface RouteOptions {
   /**
@@ -30,6 +31,19 @@ export interface RouteOptions {
    * the engine decides whether confirmation was required.
    */
   readonly confirmed?: boolean;
+  /**
+   * OBS2 — correlation context for the capability-invocation observation this
+   * route emits. TELEMETRY ONLY: nothing in the routing pipeline reads it, and
+   * absent means the observation records without session/turn correlation
+   * (exactly the pre-OBS2 behaviour). The conversation gateway passes its
+   * thread id (sessionId), surface, and user-turn id (turnId) so the
+   * Execution Timeline can place each invocation inside its turn.
+   */
+  readonly observation?: {
+    readonly sessionId?: string;
+    readonly surface?: string;
+    readonly turnId?: string;
+  };
 }
 
 /**
@@ -43,8 +57,75 @@ export class IntentEngine {
   /**
    * Route (and, where a handler is bound, execute) a typed intent.
    * Pipeline: LOCATE → VALIDATE → PERMISSION → CONFIRM → INVOKE → RESPOND.
+   *
+   * OBS1: this is the platform's single capability-invocation choke point, so
+   * it is the single capability-invocation capture point. Observation capture
+   * is fire-and-forget and changes no outcome, no message, and no timing
+   * visible to the caller.
    */
   async route(
+    intent: Intent,
+    context: IntelligenceContext,
+    options: RouteOptions = {},
+  ): Promise<IntentOutcome> {
+    const started = Date.now();
+    try {
+      const outcome = await this.routeInner(intent, context, options);
+      this.observe(intent, context, options, started, outcome.status);
+      return outcome;
+    } catch (err) {
+      // Genuine fault propagating to the caller — observed as an error, rethrown unchanged.
+      this.observe(intent, context, options, started, "error");
+      throw err;
+    }
+  }
+
+  /** Fire-and-forget observation of one routed intent (OBS1). Never throws. */
+  private observe(
+    intent: Intent,
+    context: IntelligenceContext,
+    options: RouteOptions,
+    started: number,
+    outcome: string,
+  ): void {
+    const userId = context.userId !== undefined ? Number(context.userId) : undefined;
+    const base = {
+      userId: Number.isInteger(userId) ? (userId as number) : undefined,
+      capability: intent.capabilityId,
+      verb: intent.verb,
+      durationMs: Date.now() - started,
+      outcome,
+      // OBS2: caller-supplied correlation (telemetry only, absent when unrouted).
+      sessionId: options.observation?.sessionId,
+      surface: options.observation?.surface,
+      turnId: options.observation?.turnId,
+    };
+    recordObservation({
+      kind: "capability-invocation",
+      severity:
+        outcome === "error" ? "error"
+        : outcome === "ok" || outcome === "confirmation_required" ? "info"
+        : "warning",
+      ...base,
+    });
+    // A confirmed invocation of a confirmation-gated intent is an explicit
+    // manual override of the platform's default refusal — observed as its own
+    // kind. Only counted when the tier genuinely required confirmation.
+    if (options.confirmed === true && outcome === "ok") {
+      const capability = this.registry.get(intent.capabilityId);
+      const tier = capability ? confirmationFor(capability, intent.verb) : "none";
+      if (tier !== "none") {
+        recordObservation({
+          kind: "manual-override",
+          severity: "info",
+          metadata: { confirmationTier: tier },
+          ...base,
+        });
+      }
+    }
+  }
+
+  private async routeInner(
     intent: Intent,
     context: IntelligenceContext,
     options: RouteOptions = {},

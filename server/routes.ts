@@ -51,6 +51,21 @@ import { runCategoryNormalisation } from "./lib/normalise-categories";
 import { matchSubstitutionRules, collectProhibitedPhrases } from "@shared/substitution-rules";
 import { runAmbiguousCategoryBackfill } from "./lib/backfill-ambiguous-categories";
 import { isAdmin, hasPremiumAccess, assertAdmin } from "./lib/access";
+import {
+  summarizeOverview,
+  summarizeCapabilities,
+  summarizeIntents,
+  summarizeContext,
+  summarizeCompanion,
+  summarizeKnowledge,
+  summarizePlanner,
+  summarizeBenchmarks,
+} from "./intelligence/observation/observation-engine";
+import {
+  buildExecutionTimeline,
+  summarizeTimelineSessions,
+  timelineToCsv,
+} from "./intelligence/observation/execution-timeline";
 import { enrichRetailData, STORE_TAG_MAP, UK_RETAILER_STORE_TAGS } from "./lib/retailIntelligence";
 import { getCanonicalProduct, isCompatibleSwap } from "./lib/productCanonicaliser";
 import { getHouseholdForUser } from "./lib/household";
@@ -11938,6 +11953,35 @@ Generate a complete recipe using these as the foundation.`;
         reasonCode: rating === "down" ? reasonCode : undefined,
         note,
       });
+
+      // OBS1: observe the feedback signal (rating + reason shape only — the
+      // note's presence is recorded, never its text).
+      // OBS2: correlate it into the Execution Timeline of the turn it rates —
+      // sessionId is the thread id, turnId the user turn that opened the
+      // exchange. Best-effort ids only; a lookup failure never fails feedback.
+      const { recordObservation } = await import("./intelligence/observation/observation-engine.js");
+      let observationRef: { threadId: number; precedingUserTurnId: number | null } | null = null;
+      try {
+        observationRef = await new DatabaseConversationStore().getTurnObservationRef(turnId);
+      } catch (refErr) {
+        console.error("[CompanionFeedback] observation correlation lookup failed:", refErr);
+      }
+      recordObservation({
+        kind: "user-feedback",
+        severity: "info",
+        outcome: saved.rating,
+        userId: user.id,
+        sessionId: observationRef ? String(observationRef.threadId) : undefined,
+        turnId: observationRef?.precedingUserTurnId != null
+          ? String(observationRef.precedingUserTurnId)
+          : undefined,
+        metadata: {
+          conversationTurnId: turnId,
+          reasonCode: saved.reasonCode ?? null,
+          hasNote: Boolean(saved.note),
+        },
+      });
+
       res.json({ rating: saved.rating, reasonCode: saved.reasonCode, note: saved.note });
     } catch (err) {
       console.error("[CompanionFeedback] POST feedback error:", err);
@@ -12079,6 +12123,186 @@ Generate a complete recipe using these as the foundation.`;
     } catch (err) {
       console.error("[CompanionActions] POST cancel error:", err);
       res.status(500).json({ message: "Failed to cancel Companion Action" });
+    }
+  });
+
+  // ── OBS1 — Observation Engine: the Observation Admin Workbench API (admin-only) ──
+  // READ-ONLY views over the platform_observations telemetry store. Every route
+  // fetches one bounded window and aggregates with the Observation Engine's pure
+  // summarizers — no business data is read, no state is written, and observation
+  // metadata never contains utterances or capability payloads (privacy rules in
+  // observation-engine.ts).
+
+  const OBSERVATION_WINDOW_MAX_DAYS = 30;
+  const observationWindow = (req: import("express").Request): { since: Date; days: number } => {
+    const raw = Number(req.query.days);
+    const days = Number.isFinite(raw) ? Math.min(Math.max(Math.round(raw), 1), OBSERVATION_WINDOW_MAX_DAYS) : 7;
+    return { since: new Date(Date.now() - days * 24 * 60 * 60 * 1000), days };
+  };
+
+  const observationView = (
+    path: string,
+    build: (rows: import("@shared/schema").PlatformObservation[], days: number) => unknown,
+  ) => {
+    app.get(`/api/intelligence/observation/${path}`, assertAdmin, async (req, res) => {
+      try {
+        const { observationStore } = await import("./intelligence/observation/observation-store.js");
+        const { since, days } = observationWindow(req);
+        const rows = await observationStore.listSince(since);
+        res.json(build(rows, days));
+      } catch (err) {
+        console.error(`[ObservationWorkbench] GET ${path} error:`, err);
+        res.status(500).json({ message: `Failed to build observation ${path} view` });
+      }
+    });
+  };
+
+  observationView("overview", (rows, days) => summarizeOverview(rows, days));
+  observationView("capabilities", (rows, days) => summarizeCapabilities(rows, days));
+  observationView("intents", (rows, days) => summarizeIntents(rows, days));
+  observationView("context", (rows, days) => summarizeContext(rows, days));
+  observationView("companion", (rows, days) => summarizeCompanion(rows, days));
+  observationView("knowledge", (rows, days) => summarizeKnowledge(rows, days));
+  observationView("planner", (rows, days) => summarizePlanner(rows, days));
+
+  // Benchmark view: sourced from benchmark-run observations across the full
+  // retention window (runs are sparse; a days filter would usually hide them).
+  app.get("/api/intelligence/observation/benchmarks", assertAdmin, async (_req, res) => {
+    try {
+      const { observationStore } = await import("./intelligence/observation/observation-store.js");
+      const rows = await observationStore.listRecent({ kind: "benchmark-run", limit: 200 });
+      res.json(summarizeBenchmarks(rows));
+    } catch (err) {
+      console.error("[ObservationWorkbench] GET benchmarks error:", err);
+      res.status(500).json({ message: "Failed to build observation benchmarks view" });
+    }
+  });
+
+  // Diagnostics: recent observations with filters, search and session correlation.
+  app.get("/api/intelligence/observation/recent", assertAdmin, async (req, res) => {
+    try {
+      const { observationStore } = await import("./intelligence/observation/observation-store.js");
+      const str = (v: unknown): string | undefined =>
+        typeof v === "string" && v.trim() ? v.trim() : undefined;
+      const rawLimit = Number(req.query.limit);
+      const observations = await observationStore.listRecent({
+        kind: str(req.query.kind),
+        capability: str(req.query.capability),
+        severity: str(req.query.severity),
+        sessionId: str(req.query.sessionId),
+        q: str(req.query.q),
+        limit: Number.isFinite(rawLimit) ? rawLimit : 200,
+      });
+      res.json({ observations });
+    } catch (err) {
+      console.error("[ObservationWorkbench] GET recent error:", err);
+      res.status(500).json({ message: "Failed to list recent observations" });
+    }
+  });
+
+  // Export: the window's observations as CSV or JSON (operator evidence).
+  app.get("/api/intelligence/observation/export", assertAdmin, async (req, res) => {
+    try {
+      const { observationStore } = await import("./intelligence/observation/observation-store.js");
+      const { since, days } = observationWindow(req);
+      const rows = await observationStore.listSince(since);
+
+      if (req.query.format === "json") {
+        res.setHeader("Content-Disposition", `attachment; filename="observations-${days}d.json"`);
+        return res.json(rows);
+      }
+
+      const esc = (v: unknown): string => {
+        if (v === null || v === undefined) return "";
+        const s = typeof v === "object" ? JSON.stringify(v) : String(v);
+        return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+      };
+      const header = [
+        "id", "observedAt", "kind", "severity", "outcome", "userId", "sessionId",
+        "surface", "capability", "verb", "intent", "contextView", "confidence",
+        "durationMs", "recoveryPath", "metadata",
+      ];
+      const csv = [
+        header.join(","),
+        ...rows.map((r) =>
+          [
+            r.id, r.observedAt.toISOString(), r.kind, r.severity, r.outcome, r.userId,
+            r.sessionId, r.surface, r.capability, r.verb, r.intent, r.contextView,
+            r.confidence, r.durationMs, r.recoveryPath, r.metadata,
+          ].map(esc).join(","),
+        ),
+      ].join("\n");
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", `attachment; filename="observations-${days}d.csv"`);
+      res.send(csv);
+    } catch (err) {
+      console.error("[ObservationWorkbench] GET export error:", err);
+      res.status(500).json({ message: "Failed to export observations" });
+    }
+  });
+
+  // ── OBS2 — Execution Timeline (the Behaviour Admin Workbench API, admin-only) ──
+  // READ-ONLY projections over the same platform_observations rows — the
+  // Observation Engine owns every byte the timeline shows (the Behaviour
+  // Engine never owns timeline data, and no timeline state is materialised).
+
+  // Sessions listing: the timeline picker, filterable by user / capability /
+  // intent / session over the bounded window (date filter = the window).
+  app.get("/api/intelligence/observation/timeline/sessions", assertAdmin, async (req, res) => {
+    try {
+      const { observationStore } = await import("./intelligence/observation/observation-store.js");
+      const { since, days } = observationWindow(req);
+      const str = (v: unknown): string | undefined =>
+        typeof v === "string" && v.trim() ? v.trim() : undefined;
+      const rawUserId = Number(req.query.userId);
+      const rows = await observationStore.listSince(since);
+      res.json({
+        windowDays: days,
+        sessions: summarizeTimelineSessions(rows, {
+          userId: Number.isFinite(rawUserId) ? rawUserId : undefined,
+          capability: str(req.query.capability),
+          intent: str(req.query.intent),
+          sessionId: str(req.query.sessionId),
+        }),
+      });
+    } catch (err) {
+      console.error("[ExecutionTimeline] GET sessions error:", err);
+      res.status(500).json({ message: "Failed to list timeline sessions" });
+    }
+  });
+
+  // One session's full execution timeline, reconstructed on read.
+  app.get("/api/intelligence/observation/timeline/session/:sessionId", assertAdmin, async (req, res) => {
+    try {
+      const { observationStore } = await import("./intelligence/observation/observation-store.js");
+      const sessionId = String(req.params.sessionId);
+      const rows = await observationStore.listRecent({ sessionId, limit: 1000 });
+      res.json(buildExecutionTimeline(rows, sessionId));
+    } catch (err) {
+      console.error("[ExecutionTimeline] GET session error:", err);
+      res.status(500).json({ message: "Failed to build execution timeline" });
+    }
+  });
+
+  // Export one session's timeline as JSON (the structured timeline) or CSV
+  // (one row per event, carrying its turn correlation).
+  app.get("/api/intelligence/observation/timeline/session/:sessionId/export", assertAdmin, async (req, res) => {
+    try {
+      const { observationStore } = await import("./intelligence/observation/observation-store.js");
+      const sessionId = String(req.params.sessionId);
+      const rows = await observationStore.listRecent({ sessionId, limit: 1000 });
+      const timeline = buildExecutionTimeline(rows, sessionId);
+
+      if (req.query.format === "json") {
+        res.setHeader("Content-Disposition", `attachment; filename="execution-timeline-${sessionId}.json"`);
+        return res.json(timeline);
+      }
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", `attachment; filename="execution-timeline-${sessionId}.csv"`);
+      res.send(timelineToCsv(timeline));
+    } catch (err) {
+      console.error("[ExecutionTimeline] GET export error:", err);
+      res.status(500).json({ message: "Failed to export execution timeline" });
     }
   });
 

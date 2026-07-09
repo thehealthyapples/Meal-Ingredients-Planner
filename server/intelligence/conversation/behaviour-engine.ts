@@ -34,7 +34,7 @@ import {
 } from "./personality-registry.js";
 import type { UnsuccessfulTurnState } from "./turn-fallback.js";
 import type { GuidanceSuggestion } from "./companion-guidance.js";
-import { toGrowthPhraseInputs, type Observation } from "./observation-engine.js";
+import { toGrowthPhraseInputs, type Notice } from "./notice-engine.js";
 
 export type { PersonalityId, BehaviourProfile } from "./personality-registry.js";
 export { normalizePersonalityId, DEFAULT_PERSONALITY_ID, PERSONALITY_IDS } from "./personality-registry.js";
@@ -143,20 +143,20 @@ export function phraseGrowth(inputs: GrowthPhraseInputs, personalityId: Personal
 }
 
 // ---------------------------------------------------------------------------
-// Observation phrasing (EWX1 Stage 3 — Behaviour Integration) — the SAME
-// underlying observation, voiced differently per personality, by dispatching
+// Notice phrasing (EWX1 Stage 3 — Behaviour Integration) — the SAME
+// underlying notice, voiced differently per personality, by dispatching
 // to the EXISTING per-personality templates above. No new template content is
 // added by this function: a "friend" notices a streak differently from a
 // "coach" because `buildCelebration`/`growthTemplate`/`guidanceLabelPrefix`
 // already differ per personality (EWO2) — this function only routes each
-// Observation's fact shape to the right existing builder. Content produced by
+// Notice's fact shape to the right existing builder. Content produced by
 // an existing capability (the "opportunity" fact kind, from OD1/FI4) is never
 // reworded — only its already-honest suggestedAction is optionally prefixed,
 // exactly like voiceGuidanceLabel does for guidance suggestions.
 // ---------------------------------------------------------------------------
 
-export function phraseObservation(observation: Observation, personalityId: PersonalityId): string {
-  const { fact } = observation;
+export function phraseNotice(notice: Notice, personalityId: PersonalityId): string {
+  const { fact } = notice;
   switch (fact.kind) {
     case "growth":
       return phraseGrowth(toGrowthPhraseInputs(fact.signal), personalityId);
@@ -167,7 +167,7 @@ export function phraseObservation(observation: Observation, personalityId: Perso
     case "opportunity":
       return voiceGuidanceLabel(fact.suggestedAction, personalityId);
     case "seasonal":
-      // Reuses the SAME generic prefix mechanism opportunity observations
+      // Reuses the SAME generic prefix mechanism opportunity notices
       // already use — no new per-personality template content is added for
       // seasonal phrasing (IA2).
       return voiceGuidanceLabel(fact.headline, personalityId);

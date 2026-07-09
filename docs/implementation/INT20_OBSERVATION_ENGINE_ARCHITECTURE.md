@@ -1,5 +1,7 @@
 # INT20 — Observation Engine Architecture
 
+> **Re-scoped by OBS1 (2026-07-08).** The component this workstream governed is now the **Notice Engine** (`THA_COMPANION_NOTICE_ENGINE_ARCHITECTURE.md`); the Observation Engine name was reassigned to the platform telemetry service. This record is preserved unchanged below as history.
+
 > **Status: COMPLETE.** This workstream designs the Observation Engine as the next canonical
 > Intelligence Platform component and establishes its governing architecture at
 > `docs/architecture/THA_OBSERVATION_ENGINE_ARCHITECTURE.md`. **Documentation only** — no code,

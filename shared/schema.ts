@@ -2495,3 +2495,55 @@ export const insertHouseholdLearningSignalSchema = createInsertSchema(householdL
 
 export type HouseholdLearningSignal = typeof householdLearningSignals.$inferSelect;
 export type InsertHouseholdLearningSignal = z.infer<typeof insertHouseholdLearningSignalSchema>;
+
+// ---------------------------------------------------------------------------
+// OBS1 — Observation Engine (canonical platform telemetry)
+// ---------------------------------------------------------------------------
+// platform_observations: the single durable store of runtime observations
+// across the Intelligence Platform — intent resolution, capability invocation,
+// context composition, knowledge retrieval, response generation, recovery,
+// clarification, escalation, manual overrides, user feedback, and benchmark
+// runs. Sole owner: server/intelligence/observation/observation-store.ts.
+//
+// Extensibility rule: new analytical needs are met by the closed-but-growable
+// `kind` vocabulary plus the JSONB `metadata` bag — never by schema redesign.
+// Privacy rule: no utterance or capability result payload is ever stored next
+// to a user id; metadata carries shapes and counts, not content (the one
+// exception is the pre-existing PII-scrubbed fallback log discipline, which
+// stores a truncated utterance with NO user attribution).
+// Retention: bounded operational window (pruned by the store), not an archive.
+export const platformObservations = pgTable("platform_observations", {
+  id: serial("id").primaryKey(),
+  observedAt: timestamp("observed_at", { withTimezone: true }).notNull().defaultNow(),
+  /** Closed ObservationKind vocabulary — see server/intelligence/observation/observation-engine.ts */
+  kind: text("kind").notNull(),
+  severity: text("severity").notNull().default("info"), // "info" | "warning" | "error"
+  /** Outcome vocabulary: IntentOutcomeStatus values plus "ok" | "error" | "gap" | "clarification" */
+  outcome: text("outcome"),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+  /** Correlation id: conversation thread id for turns, benchmark run id for benchmark observations. */
+  sessionId: text("session_id"),
+  surface: text("surface"),
+  capability: text("capability"),
+  verb: text("verb"),
+  /** Convenience projection "<capability>:<verb>" for intent-level grouping. */
+  intent: text("intent"),
+  contextView: text("context_view"),
+  confidence: real("confidence"),
+  durationMs: integer("duration_ms"),
+  recoveryPath: text("recovery_path"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
+}, (table) => ({
+  observedAtIdx: index("platform_observations_observed_at_idx").on(table.observedAt),
+  kindObservedAtIdx: index("platform_observations_kind_observed_at_idx").on(table.kind, table.observedAt),
+  capabilityIdx: index("platform_observations_capability_idx").on(table.capability),
+  sessionIdx: index("platform_observations_session_idx").on(table.sessionId),
+}));
+
+export const insertPlatformObservationSchema = createInsertSchema(platformObservations).omit({
+  id: true,
+  observedAt: true,
+});
+
+export type PlatformObservation = typeof platformObservations.$inferSelect;
+export type InsertPlatformObservation = z.infer<typeof insertPlatformObservationSchema>;
