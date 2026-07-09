@@ -752,18 +752,22 @@ async function main(): Promise<void> {
     }
 
     // (d) planner — the spec declares an allowlist and DELIBERATELY no balance
-    //     dimension. `groupBy: "dayOfWeek"` was implemented, measured on the real
-    //     corpus, and reverted: it cost PL-023 −7.5 and ND-059 −5.0 composite for
-    //     PL-025 +2.5, because an empty planner day emits `{dayId, dayOfWeek}` and
-    //     seven guaranteed core seats then buy seven rows of nothing — crowding out
-    //     the `pantry` and `food-intelligence` evidence that answered the question
-    //     (architecture §8 item 7). A balance dimension must be worth its seats.
+    //     dimension. `groupBy: "dayOfWeek"` was implemented, measured, and reverted:
+    //     `dayOfWeek` has exactly one row per value, so `_context.days.groups`
+    //     degenerates to `{"0":1,…,"6":1}` — one entry per row, saying nothing the
+    //     rows do not, and inviting the model to read the `1` as a meal count. A
+    //     balance dimension must name a KIND that several rows SHARE.
     {
       const week = plannerWeek();
       const view = deriveContextView("planner", "read", week);
       const days = view.collections.find(c => c.name === "days")!;
       assert(days.groupsTotal === 1, "planner's `days` keeps ONE group — no balance dimension is declared");
       assert(days.total === 7, "…while `_context` still reports all seven days the capability found");
+
+      const body = JSON.parse(sections(composeContext({ utterance: "what is on my plan this week", capabilities: [cap("planner", "read", week, 0.9)] }).text).get("planner")!);
+      assert(body._context.days.found === 7, "_context reports the capability's own true total");
+      assert(body._context.days.groups === undefined,
+        "…and emits no degenerate one-entry-per-row `groups` map");
 
       // The allowlist is what the spec does say, and it holds.
       const emptyWeek = { scope: "week", weekId: 6, weekNumber: 6, weekName: "Week 6", days: [{ dayId: 120, dayOfWeek: 0, meals: [], internalNote: "scheduler-v3" }] };
@@ -773,17 +777,22 @@ async function main(): Promise<void> {
       assert(g.includes("scheduler-v3"), "…where the generic derivation emits it");
       assert(n.includes(`"dayId":120`), "…and the day's own reference is kept");
 
-      // And the crowding the reverted `groupBy` caused is, itself, a test: a
-      // co-resident capability must keep its evidence on a planner turn.
-      const foods = { scope: "foods", foods: Array.from({ length: 611 }, (_, i) => ({ slug: `f${i}`, name: `Food ${i}`, category: `cat${i % 40}` })) };
-      const crowded = composeContext({
+      // The measurement that refuted the first explanation, kept as a regression
+      // test: a many-group capability does NOT displace a co-resident capability's
+      // guaranteed core. Round 0 is guaranteed per capability, so §8 item 7's
+      // crowding costs discretionary budget, never core evidence.
+      const fiPayload = { source: "food-opportunity-engine", opportunities: [
+        { id: "planner-empty-day:120", type: "planner-empty-day", owningDomain: "planner", explanation: "Monday has no meals planned yet." },
+        { id: "pantry-item-unused-in-plan:4508", type: "pantry-item-unused-in-plan", owningDomain: "pantry", explanation: "Milk is in your pantry but unused." },
+      ]};
+      const emptyDays = { scope: "week", weekId: 1, weekNumber: 1, weekName: "Week 1", days: Array.from({ length: 7 }, (_, d) => ({ dayId: 85 + d, dayOfWeek: d, meals: [] as unknown[] })) };
+      const together = composeContext({
         utterance: "what nutrition boosts can I add this week",
-        capabilities: [cap("planner", "read", week, 0.8), cap("nutrition-knowledge", "read", foods, 0.9)],
-        tokenBudget: 300,
+        capabilities: [cap("planner", "read", emptyDays, 0.85), cap("food-intelligence", "report", fiPayload, 0.8)],
       });
-      const plannerCore = crowded.metrics.perCapability.find(p => p.capabilityId === "planner")!;
-      assert(plannerCore.groupsShown === 1,
-        "planner takes ONE guaranteed core seat, leaving the rest of the budget to the capabilities that answer");
+      assert(together.text.includes("pantry-item-unused-in-plan") && together.text.includes("Milk"),
+        "a co-resident capability keeps its guaranteed core evidence beside a seven-day planner week");
+      assert(together.metrics.capabilitiesRepresented === 2, "…and both capabilities are represented");
     }
 
     // (e) shopping — the owner's honesty caveat cannot be outbid.

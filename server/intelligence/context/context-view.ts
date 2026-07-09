@@ -254,32 +254,48 @@ export interface ContextViewSpec {
  *
  *    **NO `groupBy`, and the reason is the most useful thing NCV1 learned.**
  *
- *    `groupBy: "dayOfWeek"` is the obvious declaration: seven groups of one day
- *    each put the whole week into the guaranteed core, where generically the week
- *    is ONE group and only the first day is guaranteed. Measured in isolation it
- *    does exactly that — 7/7 days at every budget from 100 tokens up, against
- *    generic's 1 at 300 and 5 at the production budget of 600.
+ *    `groupBy: "dayOfWeek"` is the obvious declaration — seven groups, one day
+ *    each, the whole week in the guaranteed core. It was implemented, measured,
+ *    and reverted.
  *
- *    It was measured on the real corpus too, and it made the platform worse:
- *    **PL-023 −7.5 composite, ND-059 −5.0**, against **PL-025 +2.5**. An empty
- *    planner day emits `{dayId, dayOfWeek}` — `meals: []` is dropped by the
- *    engine's emptiness rule — so for a household whose week is empty, seven
- *    guaranteed core seats buy seven rows of nothing, and spend the budget that
- *    `pantry` and `food-intelligence` needed. Asked for nutrition boosts, the
- *    Companion read seven empty days and answered *"You don't have any meals
- *    planned for this week yet, so I can't suggest specific nutrition boosts"*,
- *    where before it had offered the unused pantry Milk.
+ *    **A balance dimension must name a KIND that several rows SHARE.** `dayOfWeek`
+ *    has exactly one row per value, so declaring it degenerates every mechanism
+ *    that rests on it:
  *
- *    That is `THA_CONTEXT_COMPOSITION_ENGINE_ARCHITECTURE.md` §8 item 7 — a
- *    capability with many groups crowding out a capability with few — reproduced
- *    by a declaration meant to help. The balance guarantee is a guarantee about
- *    EVIDENCE; multiplying groups multiplies the core whether or not the groups
- *    carry any. A balance dimension must be worth its seats.
+ *      · `_context.days.groups` becomes `{"0":1,"1":1,…,"6":1}` — one entry per
+ *        row, stating nothing the rows do not, and inviting the model to read the
+ *        `1` as a meal count rather than a day count. Compare `food-intelligence`,
+ *        where `{"planner-empty-day":7}` is true and useful precisely because
+ *        seven opportunities really do share one type.
+ *      · The balance guarantee becomes "print every row" — the thing a budget
+ *        exists to prevent. Round 0 is bounded only by the 1,800-char section
+ *        ceiling, never by the token budget.
  *
- *    So `days` keeps the generic single group and this spec states only its field
- *    allowlist. Naming planner's balance dimension is a real question, deferred to
- *    a workstream that can measure it against a household whose planner is full —
- *    the benchmark's user 1 cannot answer it, because their week is empty.
+ *    Measured deterministically against the benchmark household's real planner
+ *    state — a week of seven EMPTY days, each emitting a bare `{dayId, dayOfWeek}`
+ *    because the emptiness rule drops `meals: []` — composed beside `pantry` and
+ *    `food-intelligence` at the production budget:
+ *
+ *        with groupBy    planner 7 rows / 360 chars    pantry 4 of 6 items
+ *        without         planner 5 rows / 222 chars    pantry 5 of 6 items
+ *
+ *    Note what did NOT happen, because the first draft of this note asserted it
+ *    and the measurement refuted it: **no capability lost its guaranteed core.**
+ *    The Milk and restriction-conflict evidence reached the model either way; the
+ *    balance guarantee held exactly as designed, because round 0 is guaranteed per
+ *    capability. This is not §8 item 7's core displacement. The cost is seven rows
+ *    asserting a day with no meals, a degenerate `_context`, and one pantry item
+ *    of discretionary budget.
+ *
+ *    On the 100-question corpus the declaration scored PL-023 at 74.3 in 3 of 3
+ *    runs, against 81.8 in 6 of 6 runs without it, across two different live-world
+ *    states. Consistent, not conclusive: `single-world` mode runs against a live
+ *    household, and that household drifted mid-session.
+ *
+ *    So `days` keeps its single generic group and this spec states only its field
+ *    allowlist. Naming planner's balance dimension is a real question — `mealType`
+ *    over a full week is the candidate — deferred to a workstream that can measure
+ *    it against a household whose planner is not empty.
  *
  * `shopping:read` — `shopping-read-handler.ts`. `scope=list` → `items` + `extras`,
  *    `scope=unresolved` → `items` (with two extra review fields), `scope=basket` →
