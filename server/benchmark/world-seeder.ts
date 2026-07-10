@@ -9,11 +9,22 @@
  *   - DEV ONLY. Every entry point calls `assertBenchmarkWorldAllowed()` and
  *     refuses to run when NODE_ENV === "production". There is no override.
  *   - EXISTING WRITE PATHS ONLY for seeding: accounts via storage.createUser,
- *     households via storage.createHouseholdForUser, meals/planner/pantry/
+ *     households via storage.createHouseholdForUser, the partner adult via the
+ *     production invite/accept path storage.joinHousehold, meals/planner/pantry/
  *     shopping/diary/preferences via the same storage methods the app uses,
- *     evidence via the canonical EL1 store + detection framework. No parallel
- *     schema, no second identity space — a benchmark household IS an ordinary
- *     household with frozen contents (BENCHMARK_HOUSEHOLDS.md §1 discipline).
+ *     meal nutrition + allergens via the same autoAnalyzeMeal derivation the
+ *     meals route runs, evidence via the canonical EL1 orchestrator
+ *     recordOutcomeAndDetect. No parallel schema, no second identity space — a
+ *     benchmark household IS an ordinary household with frozen contents
+ *     (BENCHMARK_HOUSEHOLDS.md §1 discipline).
+ *
+ *     BENCHINT2 (2026-07-10) converged the last three of these. Before it, the
+ *     seeder called storage.createMeal without production's derivation step, so
+ *     every benchmark meal had no nutrition and no allergens; re-implemented
+ *     evidence detection against the raw store with no time window; and attached
+ *     the partner by raw membership DELETE + INSERT, orphaning their solo
+ *     household. See docs/implementation/benchmarking/
+ *     BENCHINT2_BENCHMARK_RUNTIME_CONVERGENCE.md.
  *   - DETERMINISTIC RESET: wipe-then-reseed is total — same fixture in, same
  *     content out, every time. Recency (diary/evidence dayOffsets) is relative
  *     to the reset instant; database row ids are not part of the contract.
@@ -52,7 +63,12 @@ import {
   type BenchmarkHouseholdFixture,
 } from "./world-fixtures.js";
 import { evidenceLearningStore } from "../intelligence/evidence-learning/evidence-learning-store.js";
-import { detectPatterns } from "../intelligence/evidence-learning/framework.js";
+import { recordOutcomeAndDetect } from "../intelligence/evidence-learning/framework.js";
+// BENCHINT2 (D2) — the ONE owner of post-create meal derivation. Production's meals route calls
+// exactly this after `storage.createMeal`; so does the seeder, now. Before this, benchmark meals
+// carried zero nutrition rows and zero allergen rows, and the Companion Benchmark was measuring
+// food reasoning against a world with no food data.
+import { autoAnalyzeMeal } from "../services/meal-analysis.js";
 
 // ---------------------------------------------------------------------------
 // Environment guard — the world exists in DEV only
@@ -148,25 +164,29 @@ async function ensureHousehold(fixture: BenchmarkHouseholdFixture, owner: User):
   await db.update(households).set({ name: fixture.householdName }).where(eq(households.id, householdId));
 
   // Attach the partner account as an active member where the fixture has one.
+  //
+  // BENCHINT2 (D11) — through the production invite/accept path, `storage.joinHousehold`, which is
+  // the one way a second adult joins a household in the product. It supersedes a raw
+  // `DELETE householdMembers WHERE userId = …` + `INSERT`, which left the partner's auto-created
+  // solo household with zero members — a state no production flow can produce. `joinHousehold`
+  // instead marks the prior membership `left`, exactly as a real second adult's does.
   const partnerFixture = fixture.accounts.find((a) => a.key === "partner");
   if (partnerFixture) {
     const partner = await ensureAccount(fixture, "partner");
-    const existing = await db.select().from(householdMembers).where(
-      and(eq(householdMembers.householdId, householdId), eq(householdMembers.userId, partner.id)),
+    const activeInTarget = await db.select().from(householdMembers).where(
+      and(
+        eq(householdMembers.householdId, householdId),
+        eq(householdMembers.userId, partner.id),
+        eq(householdMembers.status, "active"),
+      ),
     );
-    if (existing.length === 0) {
-      // The partner may still carry a solo household from a previous partial
-      // seed — remove that membership first so the benchmark household is
-      // their one active household.
-      await db.delete(householdMembers).where(eq(householdMembers.userId, partner.id));
-      await db.insert(householdMembers).values({
-        householdId,
-        userId: partner.id,
-        role: "member",
-        status: "active",
-        joinedAt: new Date(),
-        invitedByUserId: owner.id,
-      });
+    if (activeInTarget.length === 0) {
+      const [target] = await db.select({ inviteCode: households.inviteCode })
+        .from(households).where(eq(households.id, householdId));
+      if (!target?.inviteCode) {
+        throw new Error(`${fixture.id}: household ${householdId} has no invite code to join through`);
+      }
+      await storage.joinHousehold(partner.id, target.inviteCode);
     }
   }
   return householdId;
@@ -333,6 +353,20 @@ async function reseedHousehold(
   }
 
   // 4. Cookbook meals
+  //
+  // BENCHINT2 (D2) — `storage.createMeal` writes the meal row and nothing else. Production's
+  // `POST /api/meals` then runs `autoAnalyzeMeal`, which DERIVES the meal's `nutrition` row and its
+  // `meal_allergens` rows from the ingredients. The seeder used to stop after `createMeal`, so
+  // every benchmark meal had neither — and the Companion's nutrition reasoning, household nutrition
+  // enrichment and Food Intelligence ranking all read exactly those two tables.
+  //
+  // Awaited, not fire-and-forget as the route does it, because a seeded world must be complete when
+  // `resetBenchmarkHousehold` returns. Sequential awaits also keep each call under the derivation's
+  // own `MAX_CONCURRENT_ANALYSES` bound, which silently skips analysis when exceeded.
+  //
+  // `autoAnalyzeMeal` swallows its own failures (an unreachable OpenFoodFacts leaves nutrition
+  // absent rather than fabricated) and derives allergens with no network at all. An offline seed
+  // therefore still produces correct allergens — an honest gap in nutrition, never a false number.
   const mealIdByName = new Map<string, number>();
   for (const meal of fixture.meals) {
     const created = await storage.createMeal(owner.id, {
@@ -348,6 +382,7 @@ async function reseedHousehold(
       audience: "adult",
       kind: "meal",
     });
+    await autoAnalyzeMeal(created.id);
     mealIdByName.set(meal.name, created.id);
     counts.meals++;
   }
@@ -404,56 +439,42 @@ async function reseedHousehold(
     counts.diaryMetrics++;
   }
 
-  // 8. Evidence (EL1) — appended through the canonical store, then signals
-  //    derived by the canonical detector over exactly these events. No score,
-  //    signal or pattern is invented here: detection maths stays in EL1.
-  const dimensions = new Set<string>();
+  // 8. Evidence (EL1) — through the canonical orchestrator, once per event.
+  //
+  // BENCHINT2 (D7) — `recordOutcomeAndDetect` is the ONE path by which production records an
+  // outcome: it appends the event and re-detects over that event's own dimension within
+  // EVIDENCE_WINDOW_DAYS. The seeder used to call the low-level `recordEvent` and then re-implement
+  // detection itself, with `listEvents` carrying NO window filter. The arithmetic matched — the
+  // emission path and the window did not.
+  //
+  // `occurredAt` backdates each event to its fixture day-offset, which the orchestrator now accepts
+  // explicitly rather than forcing a parallel path to exist for it.
+  //
+  // Signals are counted by the dimensions that produced one, not by summing per-event returns:
+  // `upsertSignal` is idempotent per dimension, so N events over one dimension yield one row.
+  const signalledDimensions = new Set<string>();
   for (const ev of fixture.evidence) {
     const subjectId = ev.mealName
       ? `meal:${mealIdByName.get(ev.mealName) ?? ev.mealName}`
       : (ev.subjectId ?? ev.subjectKey);
-    await evidenceLearningStore.recordEvent({
-      householdId,
-      domain: "food-intelligence",
-      subjectType: ev.subjectType,
-      subjectId,
-      subjectKey: ev.subjectKey,
-      outcomeType: ev.outcomeType,
-      direction: ev.direction,
-      sourceCapabilityId: ev.sourceCapabilityId,
-      occurredAt: offsetDate(ev.dayOffset),
-    });
-    counts.evidenceEvents++;
-    dimensions.add(`${ev.subjectType}|${ev.subjectKey}`);
-  }
-  for (const dim of Array.from(dimensions)) {
-    const [subjectType, subjectKey] = dim.split("|");
-    const events = await evidenceLearningStore.listEvents({
-      householdId, domain: "food-intelligence", subjectType, subjectKey,
-    });
-    const [pattern] = detectPatterns(events.map((e) => ({
-      id: e.id,
-      domain: e.domain,
-      subjectType: e.subjectType,
-      subjectKey: e.subjectKey,
-      direction: e.direction as "positive" | "negative" | "neutral",
-    })));
-    if (pattern) {
-      await evidenceLearningStore.upsertSignal({
+    const { signal } = await recordOutcomeAndDetect(
+      {
         householdId,
-        domain: pattern.domain,
-        subjectType: pattern.subjectType,
-        subjectKey: pattern.subjectKey,
-        direction: pattern.direction,
-        evidenceCount: pattern.evidenceCount,
-        consistency: pattern.consistency,
-        confidence: pattern.confidence,
-        supportingEventIds: pattern.supportingEventIds,
-        rationale: pattern.rationale,
-      });
-      counts.learningSignals++;
-    }
+        domain: "food-intelligence",
+        subjectType: ev.subjectType,
+        subjectId,
+        subjectKey: ev.subjectKey,
+        outcomeType: ev.outcomeType,
+        direction: ev.direction,
+        sourceCapabilityId: ev.sourceCapabilityId,
+        occurredAt: offsetDate(ev.dayOffset),
+      },
+      evidenceLearningStore,
+    );
+    counts.evidenceEvents++;
+    if (signal) signalledDimensions.add(`${ev.subjectType}|${ev.subjectKey}`);
   }
+  counts.learningSignals = signalledDimensions.size;
 
   return counts;
 }

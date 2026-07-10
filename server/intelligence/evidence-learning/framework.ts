@@ -208,6 +208,21 @@ export interface RecordOutcomeRequest {
   readonly direction: EvidenceDirection;
   readonly context?: Record<string, unknown> | null;
   readonly sourceCapabilityId: string;
+  /**
+   * When the outcome actually happened. Omitted by every live caller, because a live outcome
+   * happens now, and the store defaults to `NOW()`.
+   *
+   * It exists for callers reconstructing a household's accumulated history rather than observing
+   * it as it occurs — today, only the Benchmark World seeder, whose fixtures express evidence as
+   * day-offsets from the reset instant. Before this, that seeder had to bypass this orchestrator
+   * and re-implement detection against the raw store, which is how it came to run detection with
+   * no `EVIDENCE_WINDOW_DAYS` filter at all (BENCHINT1 D7).
+   *
+   * This does not weaken the window. A backdated event still enters detection through the same
+   * `since` filter below, so an event older than EVIDENCE_WINDOW_DAYS is recorded and then
+   * correctly ignored by detection — exactly as an event that aged out would be.
+   */
+  readonly occurredAt?: Date;
 }
 
 export interface RecordOutcomeResult {

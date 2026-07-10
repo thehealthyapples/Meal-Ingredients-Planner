@@ -10,17 +10,17 @@
  *   - engine metrics: budgetExceeded, enrichment, duplicates
  */
 import fs from "node:fs";
-import { storage } from "../../../storage.js";
-import { intelligencePlatform } from "../../../intelligence/intelligence-platform.js";
-import { ConversationGateway } from "../../../intelligence/conversation/conversation-gateway.js";
-import { InMemoryConversationStore } from "../../../intelligence/conversation/conversation-store.js";
-import { patternIntentResolver } from "../../../intelligence/pattern-intent-resolver.js";
+import { storage } from "../../storage.js";
+import { intelligencePlatform } from "../../intelligence/intelligence-platform.js";
+import { ConversationGateway } from "../../intelligence/conversation/conversation-gateway.js";
+import { InMemoryConversationStore } from "../../intelligence/conversation/conversation-store.js";
+import { patternIntentResolver } from "../../intelligence/pattern-intent-resolver.js";
 import {
   composeContext,
   CONTEXT_TOKEN_BUDGET,
   CAPABILITY_CONTEXT_BUDGET_CHARS,
-} from "../../../intelligence/context/context-composition-engine.js";
-import type { ILlmProvider, LlmRequest, LlmResponse } from "../../../intelligence/conversation/llm-provider.js";
+} from "../../intelligence/context/context-composition-engine.js";
+import type { ILlmProvider, LlmRequest, LlmResponse } from "../../intelligence/conversation/llm-provider.js";
 
 const CORPUS = JSON.parse(fs.readFileSync("server/tests/benchmark/fixtures/companion-benchmark-100.v1.json", "utf8"));
 const CANNED = JSON.stringify({ text: "x", entityRefs: [] });

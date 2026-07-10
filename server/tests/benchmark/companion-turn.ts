@@ -12,6 +12,14 @@
  * into a capability handler, the intent engine, the permission model, or the
  * behaviour engine (AUTOMATION §2 import-surface constraint).
  *
+ * BENCHINT2 adds per-question conversation isolation (BENCHINT1 D1/D8). It introduces no
+ * benchmark execution path: it drives the SAME thread lifecycle production already owns.
+ * `IConversationStore.openThread` documents "Does NOT auto-close the previous thread — call
+ * closeThread() explicitly", and `processUserTurn` opens a fresh thread whenever none is active.
+ * Closing the active thread around each question therefore makes every benchmark question a
+ * fresh conversation session, using only the production lifecycle, with no gateway change and
+ * no `isBenchmark` flag anywhere in production code.
+ *
  * BENCH2 adds two purely observational captures, both read-only and neither of which
  * changes a single line of Companion behaviour:
  *
@@ -28,6 +36,7 @@
  */
 
 import { conversationGateway } from "../../intelligence/conversation/conversation-gateway.js";
+import { DatabaseConversationStore } from "../../intelligence/conversation/conversation-store.js";
 import { createDefaultLlmProvider } from "../../intelligence/conversation/llm-provider.js";
 import { intelligencePlatform } from "../../intelligence/intelligence-platform.js";
 import {
@@ -125,6 +134,30 @@ function joinContributions(
 }
 
 /**
+ * BENCHINT2 — the production conversation lifecycle, driven from outside.
+ *
+ * `DatabaseConversationStore` is stateless (it takes a client off the shared pool per call), which
+ * is why `server/routes.ts` constructs it ad hoc in five places rather than passing a singleton.
+ * Constructing one here reads and writes exactly the rows the gateway's own store does.
+ */
+const conversationStore = new DatabaseConversationStore();
+
+/**
+ * Close the acting user's active conversation thread, if one is open.
+ *
+ * Returns the closed thread id, or null when nothing was open. `closeThread` is idempotent, so a
+ * double close is a no-op, and the next `processUserTurn` finds no active thread and opens a fresh
+ * one — the ordinary production branch at `conversation-gateway.ts:1256-1258`.
+ */
+async function closeActiveThread(userId: number): Promise<number | null> {
+  const conversation = await conversationStore.getOrCreateConversation(userId);
+  const active = await conversationStore.getActiveThread(conversation.id);
+  if (!active) return null;
+  await conversationStore.closeThread(active.id);
+  return active.id;
+}
+
+/**
  * A `TurnRunner` that also owns a BENCH2C capability probe.
  *
  * `dispose()` MUST be called when the run ends — `runner.ts` does so in a `finally`. Existing
@@ -155,7 +188,20 @@ export function makeCompanionTurnRunner(user: User, personality: string): Benchm
   const llmProviderAvailable = createDefaultLlmProvider().isAvailable;
   const probe = installCapabilityProbe(ctx.userId);
 
+  /**
+   * BENCHINT2 (D8) — a `single-world` run acts as a real, logged-in operator whose Companion
+   * thread may already be open, carrying their own last conversation. Close it once, before the
+   * first question, so no benchmark question is ever answered with a non-benchmark turn in its
+   * prompt window. Every subsequent question is isolated by the `finally` below.
+   */
+  let openingThreadClosed = false;
+
   const runTurn = async (utterance: string): Promise<CapturedTurn> => {
+    if (!openingThreadClosed) {
+      await closeActiveThread(user.id);
+      openingThreadClosed = true;
+    }
+
     const startedAt = Date.now();
     // Discard anything left over from a prior turn's teardown so a turn can never be credited
     // with another turn's invocations. Turns run strictly sequentially (runner.ts).
@@ -171,6 +217,7 @@ export function makeCompanionTurnRunner(user: User, personality: string): Benchm
       const reachedCapability = result.outcome?.capabilityId ?? null;
       const invoked = readInvokedCapabilities(result.assistantTurn, reachedCapability);
       return {
+        threadId: result.threadId,
         text: result.text ?? "",
         entityRefCount: result.entityRefs?.length ?? 0,
         outcomeStatus: result.outcome?.status ?? null,
@@ -195,6 +242,7 @@ export function makeCompanionTurnRunner(user: User, personality: string): Benchm
       // error into an honest gap (gate G5). Capture it, never crash the run.
       // Whatever the probe saw before the throw is still true, and is kept.
       return {
+        threadId: null,
         text: "",
         entityRefCount: 0,
         outcomeStatus: null,
@@ -214,6 +262,25 @@ export function makeCompanionTurnRunner(user: User, personality: string): Benchm
         personality,
         llmProviderAvailable,
       };
+    } finally {
+      // BENCHINT2 (D1) — end this question's conversation session. The next question therefore
+      // opens a fresh thread and is answered with an empty CONVERSATION HISTORY and no inherited
+      // entityRefs, which is what EXECUTION_PROCESS §1 step 3a has always required. Runs both on
+      // success and after a thrown turn, so one bad question cannot contaminate the next.
+      //
+      // A failure here is NOT swallowed. Silent failure would leave the thread open and quietly
+      // restore cross-question contamination, producing a scored artefact that looks valid and is
+      // not. An unclosable thread means the conversation store is unreachable, in which case the
+      // run's remaining scores are worthless anyway — aborting is the honest outcome.
+      try {
+        await closeActiveThread(user.id);
+      } catch (err) {
+        throw new Error(
+          "[Benchmark] conversation isolation failed — could not close the question's thread. " +
+            "Aborting rather than scoring contaminated turns. Cause: " +
+            (err instanceof Error ? err.message : String(err)),
+        );
+      }
     }
   };
 

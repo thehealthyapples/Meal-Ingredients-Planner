@@ -43,9 +43,29 @@ Invoked via a `package.json` script alongside the existing suite:
 - It imports **exactly one** Companion seam: `conversationGateway` (its `processUserTurn`). It must **not** import a
   capability handler, binding, the intent engine, the permission model, or the behaviour engine directly — the benchmark
   observes the one Companion, it does not reach inside it.
-- It imports the platform's **existing** stores only for **seeding fixtures**, never for reading answers back (answers
-  come from `TurnResult` alone).
+- It imports the platform's **existing** stores only for **seeding fixtures** and for **conversation lifecycle**, never
+  for reading answers back (answers come from `TurnResult` alone).
 - The judge client is the **only** outbound network dependency.
+
+**Amended under `BENCHINT2` (2026-07-10)**, to describe what the harness does rather than what it was hoped to do. Three
+clarifications, each narrower than it looks:
+
+1. **Conversation lifecycle is a permitted store use.** `companion-turn.ts` constructs a `DatabaseConversationStore` to
+   close the acting user's active thread around every question, so each question is a fresh conversation session
+   (`BENCHMARK_EXECUTION_PROCESS.md` §1 step 3a). It calls only `getOrCreateConversation` / `getActiveThread` /
+   `closeThread` — the same lifecycle `IConversationStore.openThread` documents as the caller's responsibility. It reads
+   **no** turn content: the answer still comes from `TurnResult` alone. Before this the thread was never closed, and a
+   100-question run was one 200-turn conversation in which every question was answered with its predecessors in the
+   prompt (`BENCHINT1` D1).
+2. **Type-only imports of the platform's vocabulary are permitted, and preferred.** `scorer.ts` imports the
+   `IntentOutcomeStatus` and `UnsuccessfulTurnState` unions as *types*, erased at runtime, so that "which outcomes are an
+   honest gap" is derived from the platform's own union rather than hand-copied beside it (`BENCHINT1` D6). A hand-copied
+   set drifts silently; an exhaustive `Record` over the union fails the build.
+3. **`context-composition-verification/` is not a carve-out; it has moved out.** It constructed a `ConversationGateway`
+   with an in-memory store and a stub LLM provider — legitimate for verifying one engine out of band, and a flat
+   contradiction of the constraint above while it lived under `server/tests/benchmark/`. It is now
+   `server/tests/context-composition/` (`BENCHINT1` D12). **Every** file remaining under `server/tests/benchmark/`
+   satisfies the constraint as written.
 
 The runner is invoked with the resolved bundle and a benchmark-only database connection; it performs process steps 0–6
 and exits non-zero on abort or on a CI-gate failure (§4).

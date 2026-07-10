@@ -55,8 +55,28 @@ export const RESULT_SCHEMA_VERSION = "1.2.0";
 /** SCORING_FRAMEWORK §5 — the pinned judge model at rubric/judge v1.0.0. */
 export const JUDGE_MODEL = "claude-opus-4-8";
 
-/** Frozen benchmark clock (EXECUTION_PROCESS §5). */
-export const BENCHMARK_CLOCK = "2026-07-04T00:00:00Z";
+/**
+ * The clock a run actually had.
+ *
+ * BENCHINT2 (D10). This was `BENCHMARK_CLOCK = "2026-07-04T00:00:00Z"`, a frozen instant stamped
+ * into every artefact's provenance as though the run had been executed at it. Nothing ever injected
+ * it. The Companion builds its temporal anchor from `new Date()`, and the world seeder dates diary
+ * entries and evidence relative to the reset instant — both real wall-clock reads.
+ *
+ * Injecting the frozen instant would mean threading a benchmark clock through the context frame's
+ * temporal anchor: a benchmark-specific pathway inside the production runtime, which BENCHINT2's
+ * constraints forbid outright. So the artefact stops claiming what the run did not have.
+ *
+ * A run IS reproducible in structure — same fixture, same selection, same order. It is NOT
+ * reproducible in temporal grounding: "what should I cook this week?" resolves differently in July
+ * than in December. `clock: "wall"` says exactly that, and says it in the artefact where a reader
+ * comparing two runs months apart will see it.
+ *
+ * Freezing the clock for real remains open (see BENCHINT2 §Remaining actions). It requires the
+ * temporal anchor to become an injectable input of the Context Composition Engine — a platform
+ * change with production value of its own, not a benchmark accommodation.
+ */
+export const BENCHMARK_CLOCK = "wall";
 
 function sha256(input: string): string {
   return "sha256:" + createHash("sha256").update(input).digest("hex").slice(0, 32);

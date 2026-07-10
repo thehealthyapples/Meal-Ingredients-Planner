@@ -251,7 +251,13 @@ export interface BenchmarkProvenance {
   readonly capabilityRegistryVersion: string;
   /** Content fingerprint of the shared knowledge seed (INTQ4 link requirement). */
   readonly knowledgeVersion: string;
-  /** Frozen benchmark clock (EXECUTION_PROCESS §5). */
+  /**
+   * The clock the run had. `"wall"` — the real system clock — for every run today.
+   *
+   * BENCHINT2 (D10): this field previously always carried a frozen ISO instant that nothing ever
+   * injected, so the artefact asserted a temporal grounding the run did not have. It now reports
+   * the truth. See `BENCHMARK_CLOCK` in bundle.ts.
+   */
   readonly clock: string;
   /** ISO timestamp the run executed. */
   readonly executedAt: string;

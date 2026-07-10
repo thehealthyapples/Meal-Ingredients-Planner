@@ -16,11 +16,11 @@
  * Usage: tsx server/tests/benchmark/context-composition-verification/probe.ts <label>
  */
 import fs from "node:fs";
-import { storage } from "../../../storage.js";
-import { intelligencePlatform } from "../../../intelligence/intelligence-platform.js";
-import { ConversationGateway } from "../../../intelligence/conversation/conversation-gateway.js";
-import { InMemoryConversationStore } from "../../../intelligence/conversation/conversation-store.js";
-import type { ILlmProvider, LlmRequest, LlmResponse } from "../../../intelligence/conversation/llm-provider.js";
+import { storage } from "../../storage.js";
+import { intelligencePlatform } from "../../intelligence/intelligence-platform.js";
+import { ConversationGateway } from "../../intelligence/conversation/conversation-gateway.js";
+import { InMemoryConversationStore } from "../../intelligence/conversation/conversation-store.js";
+import type { ILlmProvider, LlmRequest, LlmResponse } from "../../intelligence/conversation/llm-provider.js";
 
 const LABEL = process.argv[2] ?? "after";
 const CORPUS = JSON.parse(

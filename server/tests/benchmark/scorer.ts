@@ -42,6 +42,12 @@ import type {
 } from "./types.js";
 import type { ExpectationRecord } from "./expectations.js";
 import { capabilityFamily } from "./expectations.js";
+// BENCHINT2 (D6) — TYPE-ONLY imports of the platform's own outcome vocabulary. Erased at runtime,
+// so the AUTOMATION §2 import surface is unchanged: no capability handler, intent engine,
+// permission model or behaviour engine is reachable through a type. The scorer no longer keeps a
+// second, hand-maintained copy of what the platform means by "honest gap".
+import type { IntentOutcomeStatus } from "../../intelligence/types.js";
+import type { UnsuccessfulTurnState } from "../../intelligence/conversation/turn-fallback.js";
 
 /** The dimension weights (SCORING_FRAMEWORK §1). Sum = 100. */
 export const DIMENSION_WEIGHTS: Record<DimensionKey, number> = {
@@ -80,6 +86,13 @@ export const R2_MISROUTE_CAP = 55;
 
 /** The subset of a TurnResult the scorer reads — the captured turn (EXECUTION_PROCESS §4.3). */
 export interface CapturedTurn {
+  /**
+   * BENCHINT2 — the conversation thread this question ran in. Purely observational: no dimension
+   * band, gate or rollup reads it. It exists so a run can *prove* per-question conversation
+   * isolation (BENCHINT1 D1) rather than assert it — every scored question in an isolated run
+   * carries a distinct thread id. Optional because a caller-supplied stub `TurnRunner` has none.
+   */
+  readonly threadId?: number | null;
   readonly text: string;
   readonly entityRefCount: number;
   readonly outcomeStatus: string | null;
@@ -148,18 +161,48 @@ export function statesALimitation(text: string): boolean {
   return LIMITATION_MARKERS.some((m) => t.includes(m));
 }
 
-const HONEST_GAP_OUTCOMES = new Set([
-  "gap", "not_executable", "unsupported_intent", "unknown_capability", "denied",
-]);
-const HONEST_GAP_FALLBACKS = new Set(["no-route", "no-knowledge", "no-results"]);
+/**
+ * BENCHINT2 (D6) — "which platform outcomes are an honest gap?" is a question about the platform's
+ * vocabulary, and the platform owns that vocabulary. These are exhaustive `Record`s over the two
+ * canonical unions, not literal `Set`s that shadow them.
+ *
+ * The point is the compiler. Adding an eighth `IntentOutcomeStatus` in `intelligence/types.ts`, or
+ * a fifth `UnsuccessfulTurnState` in `conversation/turn-fallback.ts`, now FAILS THE BUILD here
+ * until someone states whether the new member is an honest gap. Before this, a new status silently
+ * scored as "not an honest gap" — the benchmark would have kept reporting a number, and the number
+ * would have been wrong.
+ */
+const HONEST_GAP_BY_OUTCOME: Readonly<Record<IntentOutcomeStatus, boolean>> = {
+  gap: true,
+  not_executable: true,
+  unsupported_intent: true,
+  unknown_capability: true,
+  denied: true,
+  // Not gaps: the platform answered, or asked the user to confirm a write.
+  ok: false,
+  confirmation_required: false,
+};
+
+const HONEST_GAP_BY_FALLBACK: Readonly<Record<UnsuccessfulTurnState, boolean>> = {
+  "no-route": true,
+  "no-knowledge": true,
+  "no-results": true,
+  // Not a gap — a fault. `classify` treats it separately and G5 zeroes the question.
+  "internal-error": false,
+};
+
+/** Both maps are keyed by a union, but the captured turn carries plain strings (it crossed a JSON
+ *  boundary). An unrecognised string is `undefined`, which is neither `true` nor an honest gap. */
+const isHonestGapOutcome = (s: string): boolean => HONEST_GAP_BY_OUTCOME[s as IntentOutcomeStatus] === true;
+const isHonestGapFallback = (s: string): boolean => HONEST_GAP_BY_FALLBACK[s as UnsuccessfulTurnState] === true;
 
 function classify(turn: CapturedTurn): Classified {
   const threw = turn.error !== null;
   const internalError = threw || turn.fallbackState === "internal-error";
   const honestGap =
     !internalError &&
-    ((turn.fallbackState !== null && HONEST_GAP_FALLBACKS.has(turn.fallbackState)) ||
-      (turn.outcomeStatus !== null && HONEST_GAP_OUTCOMES.has(turn.outcomeStatus)));
+    ((turn.fallbackState !== null && isHonestGapFallback(turn.fallbackState)) ||
+      (turn.outcomeStatus !== null && isHonestGapOutcome(turn.outcomeStatus)));
   const proposedWrite = turn.actionCount > 0 || turn.outcomeStatus === "confirmation_required";
   const emptyText = turn.text.trim().length === 0;
   const success =
