@@ -5192,16 +5192,28 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     }
   });
 
+  // TRUST1-S3A: `meals` is user-owned (shared/schema.ts:98, userId NOT NULL), and this route
+  // took a meal by sequential integer id with no session and no ownership check — so any
+  // anonymous caller could mutate any household's meal by counting upwards. The guard is the
+  // codebase's canonical ownership idiom, unchanged from its three sibling meal routes
+  // (routes.ts:1251, :9983, :10420): authenticate, then require ownership.
+  //
+  // The non-owner case returns 404, NOT 403 — deliberately, and this is the whole
+  // anti-enumeration property. A 403 would confirm the row exists, turning the guard into an
+  // oracle that still leaks which meal ids are real. "Not yours" and "not there" must be
+  // indistinguishable from outside.
   app.post("/api/meals/:id/link-template", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
       const linkSchema = z.object({
         templateId: z.number().int().positive().optional(),
         sourceType: z.enum(['scratch', 'ready_meal', 'hybrid']).optional(),
       });
       const body = linkSchema.parse(req.body);
-      const mealId = parseInt(req.params.id);
+      const mealId = Number(req.params.id);
+      if (!Number.isInteger(mealId)) return res.status(400).json({ message: "Invalid meal ID" });
       const meal = await storage.getMeal(mealId);
-      if (!meal) return res.status(404).json({ message: "Meal not found" });
+      if (!meal || meal.userId !== req.user!.id) return res.status(404).json({ message: "Meal not found" });
 
       let templateId = body.templateId;
       if (!templateId) {

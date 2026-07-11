@@ -246,13 +246,17 @@ const PUBLIC_WRITE_ALLOWLIST: Record<string, string> = {
  * below makes that impossible to do by accident.
  */
 const KNOWN_UNGUARDED_DEFERRED: Record<string, string> = {
-  "post /api/meals/:id/link-template":
-    "LIVE DEFECT (server/routes.ts). Anonymous cross-user IDOR: fetches a meal by integer id with no " +
-    "ownership check, then calls storage.updateMealTemplateId / updateMealSourceType, both of which " +
-    "filter on meals.id alone (server/storage.ts:1004) while `meals` HAS a userId column. Any " +
-    "anonymous caller can mutate any household's meal by guessing a sequential id. NOT fixed in S3: " +
-    "it needs an OWNERSHIP check, not a guard, which is a change to who may mutate a meal and is " +
-    "outside S3's approved scope. Requires its own approved task.",
+  // EMPTY — and it got here the way a defect register is supposed to.
+  //
+  // S3 recorded exactly one entry: `post /api/meals/:id/link-template`, an anonymous cross-user
+  // IDOR on the user-owned `meals` table that S3's scope did not permit it to fix. **TRUST1-S3A
+  // fixed it** (routes.ts, authenticate + ownership), so the entry was RETIRED rather than
+  // rewritten, and the register is now empty.
+  //
+  // This is the point of the mechanism. The register was never an allowlist; it was a debt with a
+  // name on it, and the "no dead entries" assertion below is what forced this file to be edited the
+  // moment the debt was paid. A register that can only shrink, and that fails the build when an
+  // entry stops being true, cannot quietly become a list of things everyone has agreed to ignore.
 };
 
 function keyOf(r: RouteReg): string {
@@ -339,11 +343,12 @@ function staticAudit(): void {
     unaccounted.map((r) => `UNGUARDED: ${r.verb.toUpperCase()} ${r.path} (${r.file}:${r.line})`).join("\n      "),
   );
 
-  // ── The deferred-defect register must not grow by accident.
+  // ── The deferred-defect register must not grow by accident. TRUST1-S3A retired its only entry
+  //    (the link-template IDOR), so it is now EMPTY and must stay that way.
   check(
-    "the deferred-defect register still holds exactly its 1 known entry (it must SHRINK, never grow)",
-    Object.keys(KNOWN_UNGUARDED_DEFERRED).length === 1,
-    `it now holds ${Object.keys(KNOWN_UNGUARDED_DEFERRED).length}`,
+    "the deferred-defect register is empty — S3A paid its only debt (it must SHRINK, never grow)",
+    Object.keys(KNOWN_UNGUARDED_DEFERRED).length === 0,
+    `it now holds ${Object.keys(KNOWN_UNGUARDED_DEFERRED).length}: ${Object.keys(KNOWN_UNGUARDED_DEFERRED).join(", ")}`,
   );
 
   // ── No DEAD allowlist entries. An allowlist entry for a route that is currently guarded is a
