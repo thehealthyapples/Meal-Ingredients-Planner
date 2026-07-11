@@ -1,0 +1,110 @@
+# TRUST1-S10 — CI Pipeline Foundation
+# =====================================
+# The Healthy Apples had no CI. No Actions, no test gate, nothing on any path to production ran
+# any check at all — `deploy.sh` built the bundle and pushed to main, from which Render
+# auto-deploys, without ever running the tests. Every test this programme has written (the
+# fail-closed test, the reset-token allowlist, the log-redaction test, the route-guard audit,
+# the rate-limit suite) was advisory until something refused to proceed when it failed.
+#
+# This workflow is that something.
+#
+# SCOPE — deliberately narrow. This BUILDS and RUNS the gate. It does not ENFORCE it and it
+# does not deploy:
+#   - Branch protection / required status checks  -> TRUST1-V3  (NOT done here)
+#   - deploy.sh hardening                         -> TRUST1-O7  (NOT done here)
+#   - Deployment, release automation, CD          -> explicitly out of scope
+# Nothing below pushes, publishes, releases, or deploys anything.
+#
+# NO PRODUCTION SECRETS. This workflow requires none and reads none. The only two variables
+# the server treats as REQUIRED (server/lib/platform-status.ts) are supplied by the job itself:
+#   DATABASE_URL   -> the ephemeral Postgres service container below
+#   SESSION_SECRET -> generated per-run with `openssl rand`; never reused, never a real secret
+# OPENAI_API_KEY and the integration keys are FEATURE/INTEGRATION vars: absent, they degrade
+# features but are not fatal, and no suite in `npm test` makes a live call to a paid API.
+
+name: CI
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+# A newer push to the same branch makes an in-flight run obsolete. Cancel it rather than pay
+# for it — but never cancel a run on main, where the result is the record of what landed.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: typecheck · test · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: tha_ci
+        ports:
+          - 5432:5432
+        # Without a healthcheck the job races the container and fails on a cold connection.
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      # The Postgres service container above. Ephemeral, empty, destroyed with the runner.
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/tha_ci
+      NODE_ENV: test
+      CI: "true"
+
+    steps:
+      - name: Check out the commit under test
+        uses: actions/checkout@v4
+
+      # Node is pinned by `engines.node` in package.json — the single source of truth, read
+      # directly by setup-node. A .nvmrc was the obvious alternative and is NOT used: it is a
+      # new file at the repository root, which REPOSITORY_CONVENTIONS.md §2's root allowlist
+      # forbids (and .engineering/scripts/repo-structure-verify.sh mechanically rejects). One
+      # version, one owner, no stray root file.
+      - name: Use the pinned Node version (engines.node)
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: package.json
+          cache: npm
+
+      # TRUST1-S1 made a missing SESSION_SECRET fatal: the server now refuses to boot without
+      # it, in every environment. That is correct, and it means CI must supply one. It is
+      # generated fresh per run and exists only for the life of the job — it is not a
+      # production secret, is not stored anywhere, and grants access to nothing.
+      - name: Generate an ephemeral SESSION_SECRET
+        run: echo "SESSION_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+
+      - name: Install dependencies from the lockfile
+        run: npm ci
+
+      # Fails the pipeline on a migration failure, which is the point: a migration CI cannot
+      # apply to an empty database is a migration production cannot apply either.
+      - name: Set up the test database (schema + ordered migrations)
+        run: npm run ci:setup-db
+
+      # `tsc --noEmit` exits non-zero on this repository today (175 pre-existing errors), so it
+      # cannot be a pass/fail gate. This fails on typecheck REGRESSIONS — a new error — against
+      # a recorded baseline. See scripts/ci/typecheck-gate.ts.
+      - name: Typecheck (regression gate)
+        run: npm run typecheck:ci
+
+      # All 65 suites, including all six TRUST1 security suites. Sequential, as `npm test` is.
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
