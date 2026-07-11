@@ -122,7 +122,7 @@ import multer from "multer";
 import { intelligencePlatform } from "./intelligence/index.js";
 
 import { extractDestination, type ScanMode, type ExtractionMethod, type ExtractionConfidence } from "./services/recipeParser";
-import { saveMediaFile, deleteMediaFile } from "./lib/media-storage";
+import { saveMediaFile, deleteMediaFile, MediaStorageUnavailableError } from "./lib/media-storage";
 import { isLikelyNonEnglishIngredients, hasEnglishIngredients } from "./lib/ingredient-language";
 import { logProductEvent, extractDomain } from "./lib/product-event-logger";
 import { EventTypes, CLIENT_TRACKABLE_EVENTS } from "@shared/product-events";
@@ -1239,6 +1239,16 @@ export async function registerRoutes(
         const url = await saveMediaFile(req.file.buffer, effectiveMime, (req as any).user!.id);
         return res.json({ url });
       } catch (err) {
+        // OPS1 — media storage is not configured in this environment. Decline
+        // the upload honestly rather than writing bytes that will not survive.
+        // The household is told to try later; nothing is half-saved, because the
+        // meal row is only updated by the separate PATCH below, once a URL exists.
+        if (err instanceof MediaStorageUnavailableError) {
+          console.error(`[media-upload] storage unavailable: ${err.reason}`);
+          return res.status(503).json({
+            message: "Photo storage is temporarily unavailable. Your recipe is safe — please try adding the photo again shortly.",
+          });
+        }
         console.error("[media-upload] save error:", err);
         return res.status(500).json({ message: "Failed to save image. Please try again." });
       }
@@ -1246,8 +1256,10 @@ export async function registerRoutes(
   });
 
   // PATCH /api/meals/:id/image — set or clear a meal's display image URL.
-  // Accepts { imageUrl: string | null }.  Deletes the previous locally-uploaded
-  // file when the URL changes, if applicable.
+  // Accepts { imageUrl: string | null }.  Deletes the previously-uploaded media
+  // when the URL changes, from whichever provider is active (OPS1). Media THA
+  // did not upload — DALL·E images, publisher recipe photos — is left alone, and
+  // a failed delete never blocks the row update.
   app.patch("/api/meals/:id/image", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 

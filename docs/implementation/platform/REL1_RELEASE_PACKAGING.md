@@ -360,7 +360,7 @@ fix that, because the recipes are not a file — they are rows.
 This is a Cookbook/seeding decision (a reviewed migration? a guarded one-shot seed command? an
 explicit operator step in `RELEASE.md`?), and it needs an owner before Cookbook is released.
 
-### 🟠 BLOCKER 2 — `uploads/` is ephemeral on the deploy target
+### ✅ ~~🟠 BLOCKER 2~~ — CLOSED by `OPS1` (2026-07-11) — `uploads/` is ephemeral on the deploy target
 
 `server/lib/media-storage.ts:24-26` resolves meal photos to `process.cwd()/uploads/meal-photos`.
 The deploy target is Replit **autoscale** (`.replit`: `deploymentTarget = "autoscale"`). That disk
@@ -378,6 +378,16 @@ scope, and it is a genuine data-loss blocker for any release that lets household
 > `process.cwd()/uploads/meal-photos` is still ephemeral and photos are still lost on redeploy. Only
 > the evidence changes — and it changes to a platform whose disk semantics must be confirmed in the
 > **Render dashboard**, not inferred from this repository. Fix the storage; do not fix Replit.
+
+> **✅ CLOSED — `OPS1`, 2026-07-11.** The storage was fixed. Meal photos now go to **S3-compatible
+> object storage** (Cloudflare R2, approved 2026-07-11), behind the same `saveMediaFile` /
+> `deleteMediaFile` interface REL1 read — no route, no client, and no database change. Critically,
+> **local disk can no longer be reached in production by inheritance.** An unconfigured production
+> deploy resolves to `unavailable` and declines uploads with a 503 rather than writing bytes to a
+> disk that is about to be destroyed; a half-configured bucket declines too, rather than falling back.
+> Local disk remains a legitimate production choice with a mounted volume — but only when a human
+> types it. See `OPS1_PRODUCTION_MEDIA_STORAGE.md`. **The blocker is closed in code; it closes in
+> production the moment the `MEDIA_*` variables are set in Render** (`RELEASE.md` § Media storage).
 
 ### ~~🟡 BLOCKER 3 — `.replit` is modified and uncommitted~~ — ✅ CLOSED by `REL2`
 

@@ -271,13 +271,15 @@ This is a **governance gap, not a code defect**: the Render Dashboard is, today,
 
 **Until then, the gate prints this limitation on every run.** A green deployment gate does not mean the deployment is verified.
 
-### 🟠 BLOCKER B — `uploads/` is ephemeral on the deploy target *(inherited from REL1, corrected by REL2)*
+### ✅ ~~🟠 BLOCKER B~~ — CLOSED by `OPS1` (2026-07-11) — `uploads/` is ephemeral on the deploy target *(inherited from REL1, corrected by REL2)*
 
 `server/lib/media-storage.ts:24-26` resolves meal photos to `process.cwd()/uploads/meal-photos`. **The blocker is real; REL1's stated platform was not.** REL1 named Replit autoscale, having believed the dead `[deployment]` block. Production is Render.
 
 **The conclusion survives the correction:** a Render web service's filesystem is likewise rebuilt on every deploy and is not shared between instances, so uploaded meal photos are still lost on redeploy while `/uploads/meal-photos/...` URLs persist in the database pointing at them. Only the evidence changes — and it changes to a platform whose disk semantics must be **confirmed in the Render dashboard**, not inferred from this repository (see Blocker A; the two are linked).
 
 This needs **object storage**. It is a media-storage behaviour change, explicitly out of REL2's scope, and it remains a genuine data-loss blocker for any release that lets households upload photos.
+
+> **✅ CLOSED — `OPS1`, 2026-07-11.** REL2 said this "needs its own workstream and approval." It got both: the provider — **S3-compatible object storage, Cloudflare R2 the approved bucket** — was approved by Colin on 2026-07-11, and `OPS1` implemented it behind the existing upload pipeline's unchanged interface. REL2's own correction held: the fix was to the storage, not to Replit. **The root cause named here is now unreachable** — production can no longer inherit local disk. Unconfigured production resolves to `unavailable` and declines the upload with a 503; a half-configured bucket declines rather than falling back to a doomed disk. See `OPS1_PRODUCTION_MEDIA_STORAGE.md`. The blocker is closed in code and closes in production when the `MEDIA_*` variables are set in Render (`RELEASE.md` § Media storage) — which is the same dashboard visit Blocker A already requires.
 
 ### ✅ CLOSED — REL1 Blocker 3 (`.replit` modified and uncommitted)
 
@@ -306,7 +308,7 @@ What REL2 did **not** do is the part worth stating plainly: **it did not close t
 ## NEXT STEPS
 
 1. **Blocker A** — a human with Render dashboard access records the live settings in `RELEASE.md`, or adopts a Blueprint deliberately. Cheap, safe, unblocks review of the deployment.
-2. **Blocker B** — object storage for meal photos. A media-storage behaviour change; needs its own workstream and approval. Confirm Render's disk semantics in the dashboard while doing Blocker A.
+2. ~~**Blocker B** — object storage for meal photos.~~ **✅ DONE — `OPS1` (2026-07-11).** Approved and implemented. What remains is the dashboard half: provision the R2 bucket and set the `MEDIA_*` variables — the same Render visit Blocker A already requires.
 3. Nothing is awaiting deployment approval from REL2, because **REL2 deploys nothing.**
 
 **Commit status:** REL2's six files are committed. Unrelated concurrent work (`docs/product/`, `PDA1`, product-inventory scripts, `.engineering/session/*`) remains **uncommitted in the working tree and is deliberately not part of REL2's commit.** The branch is unpushed.

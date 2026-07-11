@@ -8,7 +8,7 @@ import { seedFoodKnowledge } from "./lib/seed-food-knowledge";
 import { seedPantryKnowledge } from "./seeds/seed-pantry-knowledge";
 import { runMigrations } from "./migrations/runner";
 import { storage } from "./storage";
-import { getUploadDir } from "./lib/media-storage";
+import { getUploadDir, isLocalMediaProvider, logMediaStorageStatus } from "./lib/media-storage";
 import { auditStartupEnvironment } from "./lib/platform-status";
 
 const app = express();
@@ -116,11 +116,16 @@ app.use((req, res, next) => {
   // does not delay server startup. Idempotent: only inserts missing defaults,
   // never overwrites user-created or user-modified items.
   storage.syncAllPantryDefaults().catch(err => console.error("[Pantry Sync] Error:", err));
-  // Serve locally-uploaded meal photos.
-  // PRODUCTION NOTE: Replace with object storage (R2/S3) for multi-instance deployments.
-  const uploadDir = getUploadDir();
-  console.log(`[Startup] Meal photo uploads stored in: ${uploadDir}`);
-  app.use("/uploads/meal-photos", express.static(uploadDir));
+  // OPS1 — media storage. The provider is chosen from the environment
+  // (server/lib/media-storage.ts); this is the only place the choice is visible
+  // to the server, and it is visible for exactly one reason: the local provider
+  // needs Express to serve its bytes. Object storage serves its own, so the
+  // static mount does not exist at all when it is active — one serving path,
+  // never two.
+  logMediaStorageStatus();
+  if (isLocalMediaProvider()) {
+    app.use("/uploads/meal-photos", express.static(getUploadDir()));
+  }
 
   await registerRoutes(httpServer, app);
 

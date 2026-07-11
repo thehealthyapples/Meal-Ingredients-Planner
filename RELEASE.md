@@ -205,6 +205,38 @@ If THA ever genuinely adopts a second target, that is an architectural decision:
 this section first**, then update the gate. A deployment target that exists only in a config file
 is a deployment target nobody has agreed to.
 
+### Media storage — required before households can upload photos (`OPS1`)
+
+Uploaded meal photos do **not** live on the web service's disk. Render rebuilds that disk on every
+deploy and does not share it between instances, so a photo written there is destroyed by the next
+release while its URL survives in the `meals` row, pointing at nothing. That was `REL1` Blocker 2 /
+`REL2` Blocker B, and `OPS1` closes it: meal photos are stored in **S3-compatible object storage**
+(Cloudflare R2 is the approved bucket) and served directly from it. THA never proxies media.
+
+**Set these in the Render dashboard before the first release that lets households upload photos:**
+
+| Variable | Value |
+|---|---|
+| `MEDIA_STORAGE_PROVIDER` | `s3` |
+| `MEDIA_S3_BUCKET` | the bucket name |
+| `MEDIA_S3_ACCESS_KEY_ID` | R2 / S3 access key |
+| `MEDIA_S3_SECRET_ACCESS_KEY` | R2 / S3 secret |
+| `MEDIA_S3_ENDPOINT` | `https://<account-id>.r2.cloudflarestorage.com` (omit for AWS S3 proper) |
+| `MEDIA_PUBLIC_BASE_URL` | the bucket's public origin, no trailing slash — it is served straight into `<img src>` |
+| `MEDIA_S3_REGION` | optional; defaults to `auto`, which is what R2 requires |
+
+**If they are not set, production does not fall back to local disk — it declines.** Photo uploads
+return `503` with an honest message, nothing is written, and the boot log carries
+`[Startup] Media storage UNAVAILABLE`. Every other feature is unaffected. This is deliberate: the
+old behaviour was to write the photo, report success, and lose it. A half-configured bucket (some
+variables set, others missing) also declines, and also does not fall back — bytes written where they
+cannot be read back are worse than bytes not written.
+
+A persistent volume is the other legitimate answer: `MEDIA_STORAGE_PROVIDER=local` with `UPLOAD_DIR`
+pointing at a **mounted Render disk**. It must be typed explicitly, because a Render disk cannot be
+attached to more than one instance and therefore pins the service to a single instance. Object
+storage is the approved default for exactly that reason.
+
 ### What is NOT reproducible from the repository — and why that is stated, not hidden
 
 **Render's service configuration is not in version control.** There is no `render.yaml`. The build
