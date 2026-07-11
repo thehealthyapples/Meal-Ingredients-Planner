@@ -193,6 +193,9 @@ export function routingPanel(questions: QuestionResult[]): RoutingPanel {
     intentResolutionAccuracyPct: pct(reachedIntended, required.length),
     capabilityMisses: questions.filter((q) => q.routingGate === "R1").length,
     misroutes: questions.filter((q) => q.routingGate === "R2").length,
+    misroutesReachingSecondary: questions.filter(
+      (q) => q.routingGate === "R2" && q.routing.outcome === "reached-secondary",
+    ).length,
     unreachableCapabilities,
     unreachableCapabilityCount: unreachableCapabilities.length,
     failureReasons,
@@ -535,7 +538,18 @@ export function releaseReadiness(
   }
   if (routing.misroutes > 0) {
     const ids = questions.filter((q) => q.routingGate === "R2").map((q) => q.id);
-    warnings.push(`R2 (misroute) fired on ${routing.misroutes} question(s): ${ids.join(", ")} — a capability ran, but not the intended one.`);
+    // BENCHINT4: both numbers, always. "12 misroutes" and "12 misroutes, 6 of which reached the
+    // question's own secondary capability" describe very different platforms.
+    const secondaryIds = questions
+      .filter((q) => q.routingGate === "R2" && q.routing.outcome === "reached-secondary")
+      .map((q) => q.id);
+    const secondaryNote = secondaryIds.length
+      ? ` Of these, ${secondaryIds.length} reached a capability the question's own compound expectation names as ` +
+        `a secondary (${secondaryIds.join(", ")}) — still a misroute, because the primary was not reached.`
+      : "";
+    warnings.push(
+      `R2 (misroute) fired on ${routing.misroutes} question(s): ${ids.join(", ")} — a capability ran, but not the intended one.${secondaryNote}`,
+    );
   }
   if (routing.routingRequiredQuestions > 0) {
     if (routing.intentResolutionAccuracyPct < INTENT_ACCURACY_FLOOR) {

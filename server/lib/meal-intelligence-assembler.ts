@@ -7,7 +7,9 @@
 // Canonical ownership map (Architecture Principle 2):
 //   Meal identity/ingredients/instructions  → DB `meals`
 //   Meal nutrition                          → DB `nutrition`
-//   Food identity + knowledge               → CANONICAL_SEED + WS0 registry
+//   Food identity + nutrients               → CANONICAL_SEED + WS0 registry
+//   Health benefit CLAIMS                   → the Layer-2 evidence gate, via
+//                                             getEvidenceBackedFoodReport (KNOW4)
 //   Food discovery                          → shared/discovery/engine (WS8)
 //   Seasonality                             → shared/discovery/seasonal-map
 //   Household planner history               → DB `planner_entries` / `planner_weeks`
@@ -27,8 +29,8 @@ import {
 } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { resolveCanonicalFood } from "@shared/canonical/resolver";
-import { buildFoodReport } from "@shared/canonical/food-report-adapter";
 import type { FoodReportKnowledge } from "@shared/canonical/food-report-adapter";
+import { getEvidenceBackedFoodReport } from "./food-report-evidence";
 import {
   seasonForDate,
   SEASON_SEED,
@@ -248,9 +250,17 @@ async function assembleNutrition(
   };
 }
 
-function assembleFoods(ingredients: string[]): ResolvedFoodIntelligence[] {
-  const resolved: ResolvedFoodIntelligence[] = [];
+/**
+ * Resolve a meal's ingredients to their canonical food reports.
+ *
+ * KNOW4 — this reads the EVIDENCE-GATED report, not the raw seed adapter. A
+ * meal's benefit chips are the same claims the Food page renders, so they must
+ * pass through the same Layer-2 gate (Rule KC4 — one owner, one mouth). One
+ * gated read per distinct canonical food, resolved concurrently.
+ */
+async function assembleFoods(ingredients: string[]): Promise<ResolvedFoodIntelligence[]> {
   const seenSlugs = new Set<string>();
+  const pending: { ingredient: string; resolution: ReturnType<typeof resolveCanonicalFood> }[] = [];
 
   for (const ingredient of ingredients) {
     const resolution = resolveCanonicalFood(ingredient);
@@ -261,17 +271,25 @@ function assembleFoods(ingredients: string[]): ResolvedFoodIntelligence[] {
     if (seenSlugs.has(resolution.canonicalSlug)) continue;
     seenSlugs.add(resolution.canonicalSlug);
 
-    const report = buildFoodReport(resolution.canonicalSlug);
-    if (!report) continue;
+    pending.push({ ingredient, resolution });
+  }
 
+  const reports = await Promise.all(
+    pending.map((p) => getEvidenceBackedFoodReport(p.resolution.canonicalSlug!)),
+  );
+
+  const resolved: ResolvedFoodIntelligence[] = [];
+  pending.forEach(({ ingredient, resolution }, i) => {
+    const report = reports[i];
+    if (!report) return;
     resolved.push({
       ingredient,
-      canonicalSlug: resolution.canonicalSlug,
+      canonicalSlug: resolution.canonicalSlug!,
       canonicalName: resolution.canonicalName!,
       diversityGroupSlug: resolution.diversityGroupSlug,
       report,
     });
-  }
+  });
 
   return resolved;
 }
@@ -476,8 +494,9 @@ export async function getMealIntelligence(
   if (householdResult) sources.push("household");
   if (plannerResult) sources.push("planner");
 
-  // Phase 3: pure (synchronous) sections derived from ingredients
-  const foods = assembleFoods(ingredients);
+  // Phase 3: sections derived from ingredients. The food reports are evidence-
+  // gated (KNOW4), so this phase reads the database and is no longer pure.
+  const foods = await assembleFoods(ingredients);
   const healthBenefits = assembleHealthBenefits(foods);
   const seasonality = assembleSeasonality(foods, now);
 

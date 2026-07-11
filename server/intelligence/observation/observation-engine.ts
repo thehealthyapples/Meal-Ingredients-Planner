@@ -52,6 +52,7 @@ export const OBSERVATION_KINDS = [
   "response-generation",    // LLM turn: model, duration, ok/error
   "behaviour-decision",     // BEH1: the voice applied to one interaction — provenance, surfaces, outcome
   "behaviour-selection",    // CP2: the user CHOSE a voice (captured at PUT /api/profile, never by the engine)
+  "delivery-decision",      // DEC1: one delivery moment sealed by the Decision Engine — producers, suppression accounting, budget, learning influence (captured in opportunity-delivery-handler.ts's `report`)
   "clarification",          // the resolver could not understand — clarification surfaced
   "recovery",               // turn fell back: state + recovery path taken
   "escalation",             // refusal/redirect to manual action (e.g. write-intent guard)

@@ -164,6 +164,15 @@ async function closeActiveThread(userId: number): Promise<number | null> {
  * callers that only ever invoke the function itself (`server/routes.ts`, `run-benchmark.ts`)
  * keep working unchanged: this is a callable function with two extra properties, not a new type.
  */
+/**
+ * A failure of the run's conversation isolation, not of a question.
+ *
+ * `runTurn` converts a thrown question into a scored `internal-error` turn (gate G5) — that is
+ * correct for a platform error, and wrong for this: a contaminated prompt window invalidates
+ * every remaining score, so it must escape the per-question catch and abort the run.
+ */
+export class BenchmarkIsolationError extends Error {}
+
 export interface BenchmarkTurnRunner extends TurnRunner {
   /** Remove the capability probe and restore the platform singleton. Idempotent. */
   dispose(): void;
@@ -196,6 +205,28 @@ export function makeCompanionTurnRunner(user: User, personality: string): Benchm
    */
   let openingThreadClosed = false;
 
+  /**
+   * BENCHINT4 (SH-042-A) — every question must be answered in a thread of its own.
+   *
+   * BENCHINT2 (D1) closes the thread in the `finally` below so the next question opens a fresh
+   * one, and states the standard plainly: contaminated turns are not to be scored. Nothing
+   * ENFORCED it. The artefact `2026-07-10T10-48-57Z__8e10ea3` was produced by a process in
+   * which the close never ran: all 100 questions were answered in conversation thread 1, which
+   * had been open since 2026-07-01 and by then held 13,044 turns. SH-042 ("Which items should
+   * I check for allergens or additives?") routed only to `analyser:read {scope:"additives"}`,
+   * yet answered with the acting user's real shopping items — because the CONVERSATION HISTORY
+   * block carried SH-039's and SH-040's answers, which enumerate them. The run scored
+   * `hallucination: false` on an answer no capability had grounded.
+   *
+   * A reused thread is therefore not a warning: it means the prompt window contains another
+   * question's answer, and every score downstream of it is measuring the wrong thing. The run
+   * aborts, exactly as it aborts when the thread cannot be closed at all.
+   *
+   * This is a harness integrity check. It observes the thread id the gateway already returns
+   * and changes no routing, no capability and no production behaviour.
+   */
+  const threadsSeen = new Set<number>();
+
   const runTurn = async (utterance: string): Promise<CapturedTurn> => {
     if (!openingThreadClosed) {
       await closeActiveThread(user.id);
@@ -214,6 +245,20 @@ export function makeCompanionTurnRunner(user: User, personality: string): Benchm
         {},
         ctx,
       );
+      // A thread this run has already used means the previous question's answer was in this
+      // question's prompt window. Abort: the remaining scores would be measuring contamination.
+      if (typeof result.threadId === "number") {
+        if (threadsSeen.has(result.threadId)) {
+          throw new BenchmarkIsolationError(
+            `[Benchmark] conversation isolation failed — question "${utterance}" was answered in ` +
+              `conversation thread ${result.threadId}, which an earlier question in this run already ` +
+              `used. The prompt window therefore carried an earlier answer (see BENCHINT4 §4, anomaly ` +
+              `SH-042-A). Aborting rather than scoring contaminated turns.`,
+          );
+        }
+        threadsSeen.add(result.threadId);
+      }
+
       const reachedCapability = result.outcome?.capabilityId ?? null;
       const invoked = readInvokedCapabilities(result.assistantTurn, reachedCapability);
       return {
@@ -238,6 +283,10 @@ export function makeCompanionTurnRunner(user: User, personality: string): Benchm
         llmProviderAvailable,
       };
     } catch (err) {
+      // BENCHINT4: a contaminated prompt window is not a question-level outcome. It invalidates
+      // every score that follows, so it escapes this catch and aborts the run.
+      if (err instanceof BenchmarkIsolationError) throw err;
+
       // A throw is a scored outcome: the platform failed to convert an internal
       // error into an honest gap (gate G5). Capture it, never crash the run.
       // Whatever the probe saw before the throw is still true, and is kept.

@@ -159,7 +159,7 @@ async function main(): Promise<void> {
   assert(shoppingOpportunities.length === 1, "exactly one restriction-conflicting item surfaced", String(shoppingOpportunities.length));
   assert(shoppingOpportunities[0].id === "shopping-restriction-conflict:1", "the unchecked walnut item is flagged; the checked one is not (already actioned)");
   assert(shoppingOpportunities[0].owningDomain === "shopping", "owning domain is 'shopping'");
-  assert(shoppingOpportunities[0].priority === "high", "a restriction conflict is high priority (safety-relevant)");
+  assert(shoppingOpportunities[0].priority === "critical", "a restriction conflict is critical — Rule T0's additive face (ATTN1)");
   assert(
     shoppingOpportunities[0].evidence.some((e) => e.source === "household-eaters"),
     "evidence names the household restriction that produced the match",

@@ -434,6 +434,7 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     permissions: { minimumRole: "user", knowledgeClass: "public", ownershipScoped: true, audited: false },
     capabilityClass: "read-only",
     aiAccess: "R",
+    discoveryOf: "meals",
     availability: "registered",
   },
   {
@@ -546,6 +547,7 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     permissions: { minimumRole: "user", knowledgeClass: "public", ownershipScoped: true, audited: false },
     capabilityClass: "read-only",
     aiAccess: "R",
+    discoveryOf: "nutrition-knowledge",
     availability: "registered",
   },
   {
@@ -560,6 +562,7 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     permissions: { minimumRole: "user", knowledgeClass: "public", ownershipScoped: true, audited: false },
     capabilityClass: "read-only",
     aiAccess: "R",
+    discoveryOf: "planner",
     availability: "registered",
   },
   {
@@ -574,6 +577,7 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     permissions: { minimumRole: "user", knowledgeClass: "public", ownershipScoped: true, audited: false },
     capabilityClass: "read-only",
     aiAccess: "R",
+    discoveryOf: "pantry",
     availability: "registered",
   },
   {
@@ -588,6 +592,7 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     permissions: { minimumRole: "user", knowledgeClass: "public", ownershipScoped: true, audited: false },
     capabilityClass: "read-only",
     aiAccess: "R",
+    discoveryOf: "diary",
     availability: "registered",
   },
   {
@@ -602,6 +607,7 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     permissions: { minimumRole: "user", knowledgeClass: "public", ownershipScoped: true, audited: false },
     capabilityClass: "read-only",
     aiAccess: "R",
+    discoveryOf: "shopping",
     availability: "registered",
   },
   {
@@ -616,6 +622,7 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     permissions: { minimumRole: "user", knowledgeClass: "public", ownershipScoped: true, audited: false },
     capabilityClass: "read-only",
     aiAccess: "R",
+    discoveryOf: "household",
     availability: "registered",
   },
   {
@@ -733,6 +740,7 @@ export class CapabilityRegistry {
   constructor(seed: readonly Capability[] = SEED_CAPABILITIES, gaps: readonly CapabilityGap[] = SEED_GAPS) {
     for (const cap of seed) this.register(cap);
     for (const gap of gaps) this.registerGap(gap);
+    this.validateDiscoveryRelationships();
   }
 
   /** Register (or replace) a capability descriptor. */
@@ -835,5 +843,69 @@ export class CapabilityRegistry {
   /** The structured enrichment a capability declares for itself, if any (honest — no fabricated default). */
   getEnrichment(capabilityId: string): CapabilityEnrichment | undefined {
     return this.capabilities.get(capabilityId)?.enrichment;
+  }
+
+  // ---------------------------------------------------------------------------
+  // BENCHINT4 — Owner ↔ Discovery relationship (extension, not a second registry)
+  //
+  // Three declarative lookups over the `discoveryOf` field. They RANK NOTHING and
+  // SELECT NOTHING: each answers a question about who owns what, and every routing,
+  // merging and ordering decision stays with the component that already owns it.
+  // ---------------------------------------------------------------------------
+
+  /** True when this capability is the discovery sibling of some owning capability. */
+  isDiscoveryCapability(capabilityId: string): boolean {
+    return this.capabilities.get(capabilityId)?.discoveryOf != null;
+  }
+
+  /** The owning capability id this discovery capability serves, or undefined for an owner. */
+  discoveryOwnerOf(capabilityId: string): string | undefined {
+    return this.capabilities.get(capabilityId)?.discoveryOf;
+  }
+
+  /**
+   * True when `a` and `b` are the SAME capability, or an owner and its own discovery
+   * sibling. Two owners, or two discovery capabilities, are never the same entity family
+   * however alike their ids look.
+   *
+   * This is the predicate INT17 §4.5 depends on to keep `alsoIn` truthful. It lives here
+   * because the relationship it reads is registry metadata; the POLICY of when merging is
+   * permitted stays in the Context Composition Engine, which never imports this class.
+   */
+  sameEntityFamily(a: string, b: string): boolean {
+    if (a === b) return true;
+    return this.discoveryOwnerOf(a) === b || this.discoveryOwnerOf(b) === a;
+  }
+
+  /**
+   * Fail loudly at construction if the declared owner ↔ discovery graph is not well formed.
+   *
+   * Silence is the failure mode this whole field exists to remove: INT17 §8 open item 5
+   * records that when the old stem rule could not see a pair, "merging silently stops for it
+   * — safely (it emits twice), but silently". A typo, a self-reference, a dangling owner or
+   * two siblings claiming one owner would each reintroduce exactly that silence, so each
+   * throws here instead, at import time, in every process that loads the platform.
+   */
+  private validateDiscoveryRelationships(): void {
+    const claimedOwners = new Map<string, string>();
+    for (const cap of Array.from(this.capabilities.values())) {
+      const owner = cap.discoveryOf;
+      if (owner == null) continue;
+      if (owner === cap.id) {
+        throw new Error(`Capability "${cap.id}" declares itself its own discovery owner.`);
+      }
+      const ownerCap = this.capabilities.get(owner);
+      if (!ownerCap) {
+        throw new Error(`Capability "${cap.id}" declares discoveryOf "${owner}", which is not a registered capability.`);
+      }
+      if (ownerCap.discoveryOf != null) {
+        throw new Error(`Capability "${cap.id}" declares discoveryOf "${owner}", but "${owner}" is itself a discovery capability. A discovery sibling must name an OWNER.`);
+      }
+      const existing = claimedOwners.get(owner);
+      if (existing) {
+        throw new Error(`Capabilities "${existing}" and "${cap.id}" both declare discoveryOf "${owner}". An owner has at most one discovery sibling.`);
+      }
+      claimedOwners.set(owner, cap.id);
+    }
   }
 }

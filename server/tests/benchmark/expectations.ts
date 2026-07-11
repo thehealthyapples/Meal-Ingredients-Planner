@@ -12,7 +12,7 @@
  * vs unknown) and the safety posture the turn must hold.
  *
  * INTQ9 — capability-family normalisation hardening (measurement accuracy only,
- * see docs/implementation/INTQ9_BENCHMARK_MEASUREMENT_ACCURACY_HARDENING_IMPLEMENTATION.md).
+ * see docs/implementation/benchmarking/INTQ9_BENCHMARK_MEASUREMENT_ACCURACY_HARDENING_IMPLEMENTATION.md).
  * The Benchmark 100 fixture's `capability` field is free-form question-authoring
  * shorthand (e.g. "additive.lookup", "nutrition-report + uplift"), not the
  * Capability Registry's own id spelling. The original `capabilityFamily()` only
@@ -28,6 +28,7 @@
 
 import { detectWriteIntent } from "../../intelligence/conversation/conversation-gateway.js";
 import { intelligencePlatform } from "../../intelligence/intelligence-platform.js";
+import type { IntentVerb } from "../../intelligence/types.js";
 import type { CapabilityStatus, CorrectAnswerType } from "./types.js";
 import type { QuestionsFixture } from "./bundle.js";
 
@@ -37,6 +38,18 @@ export interface ExpectationRecord {
   readonly capabilityRaw: string;
   /** Normalised primary capability token (maps toward the Capability Registry). */
   readonly capabilityFamily: string;
+  /**
+   * BENCHINT4 — the capability families the fixture names after its primary, normalised the
+   * same way. 45 of 100 fixture questions carry a compound capability; before this field the
+   * benchmark discarded every token after the first and could not tell "reached the fixture's
+   * own secondary" from "reached something unrelated".
+   */
+  readonly secondaryCapabilityFamilies: readonly string[];
+  /**
+   * BENCHINT4 — the verb the fixture's primary token names (`planner.suggest` → `suggest`), or
+   * null when it names none. `intendedCapabilityStatus` is resolved at THIS granularity.
+   */
+  readonly capabilityVerb: IntentVerb | null;
   readonly utterance: string;
   readonly correctAnswerType: CorrectAnswerType;
   /** A write-intent question must surface a proposal or honest refusal, never a claimed write (gate G3). */
@@ -199,10 +212,79 @@ export function registryCapabilityDisplayName(capabilityId: string): string {
  * capability it then could not route to. Conflating them is precisely how a completely
  * unwired capability scored 73.3/100 and passed (INTA1 §6.2).
  */
-export function resolveCapabilityStatus(family: string): CapabilityStatus {
+export function resolveCapabilityStatus(family: string, verb?: IntentVerb | null): CapabilityStatus {
   const cap = intelligencePlatform.registry.get(family);
   if (!cap) return "unregistered";
+
+  // BENCHINT4 (T1.2) — VERB GRANULARITY.
+  //
+  // Without the verb, this asks only "can this capability run ANYTHING?". That is how
+  // `planner.suggest` came to be `registered-executable`: `planner` can `read`, so the
+  // benchmark required a route to an operation `planner` does not have — `suggest` is not in
+  // its `supportedIntents` at all. `nutrition-report.report` and `meal-discovery.recommend`
+  // pass the same way, and both are declared honest gaps by their own bindings. Three of the
+  // twelve R2 misroutes were the benchmark demanding a route to something unrunnable
+  // (BENCHINT3 §6.3).
+  //
+  // A fixture verb the capability does not SUPPORT, or supports but cannot EXECUTE, is
+  // `registered-unbound` at verb granularity: an honest gap is the correct answer and no route
+  // is required. The registry is read live, exactly as the capability-granular check above —
+  // this is an extension of the existing lookup, not a second source of truth.
+  if (verb) {
+    if (!cap.supportedIntents.includes(verb)) return "registered-unbound";
+    return cap.executableIntents.includes(verb) ? "registered-executable" : "registered-unbound";
+  }
+
   return cap.executableIntents.length > 0 ? "registered-executable" : "registered-unbound";
+}
+
+/** Every verb the Intent Engine recognises — the closed set a fixture token must land in. */
+const KNOWN_INTENT_VERBS: ReadonlySet<string> = new Set<IntentVerb>([
+  "read", "explain", "search", "recommend", "suggest", "generate",
+  "add", "move", "replace", "delete", "import", "export", "analyse", "compare",
+]);
+
+/**
+ * The verb a fixture's PRIMARY capability token names, or null when it names none.
+ *
+ * `"planner.suggest + meals"` → `"suggest"`. `"shopping-list + analyser"` → null.
+ *
+ * Returns null unless the suffix is a member of the closed `IntentVerb` set, so a fixture token
+ * whose dot-suffix is a scope rather than a verb (`"nutrition.meal-search"`, redirected to
+ * `nutrition-discovery` above) never silently becomes an unbound verb and un-requires its route.
+ * A token this function cannot read as a verb falls back to capability granularity — the
+ * pre-BENCHINT4 behaviour — which is the safe direction: it keeps the route required.
+ */
+export function capabilityVerb(raw: string): IntentVerb | null {
+  if (DISCOVERY_RAW_REDIRECTS[raw]) return null;
+  const primary = raw.split("+")[0].split("/")[0].trim();
+  const suffix = primary.split(".")[1]?.trim().toLowerCase();
+  if (!suffix || !KNOWN_INTENT_VERBS.has(suffix)) return null;
+  return suffix as IntentVerb;
+}
+
+/**
+ * BENCHINT4 (T1.1) — the capability families the fixture names AFTER its primary.
+ *
+ * `"meal-discovery.search + household.read"` → `["household"]`. Each token is normalised through
+ * the same `capabilityFamily()` the primary uses, so an exact registry id compares to an exact
+ * registry id. The primary is never repeated, and duplicates collapse.
+ *
+ * `"nutrition-report + planner/diary"` yields `["planner"]`: `capabilityFamily` keeps the first
+ * alternative of a `/` pair, exactly as it does for the primary token. Recording only the first
+ * is a deliberate under-count — naming a capability the fixture merely allows as an alternative
+ * would make `reached-secondary` easier to earn than the fixture intends.
+ */
+export function secondaryCapabilityFamilies(raw: string): string[] {
+  const primary = capabilityFamily(raw);
+  const tokens = raw.split("+").slice(1);
+  const out: string[] = [];
+  for (const t of tokens) {
+    const fam = capabilityFamily(t.trim());
+    if (!fam || fam === primary || out.includes(fam)) continue;
+    out.push(fam);
+  }
+  return out;
 }
 
 /** Normalise a compound capability string to its primary Capability-Registry-aligned family token. */
@@ -252,7 +334,12 @@ export function deriveExpectation(q: QuestionsFixture["questions"][number]): Exp
     q.capability.toLowerCase().includes("write-intent") || detectWriteIntent(q.utterance) !== null;
   const family = capabilityFamily(q.capability);
   const correctAnswerType = classifyCorrectAnswer(q.capability, q.utterance);
-  const intendedCapabilityStatus = resolveCapabilityStatus(family);
+
+  // BENCHINT4 (T1.2): the status is resolved at (capability, verb) granularity. A fixture that
+  // names an operation the capability cannot run no longer requires a route to it.
+  const verb = capabilityVerb(q.capability);
+  const intendedCapabilityStatus = resolveCapabilityStatus(family, verb);
+  const secondaries = secondaryCapabilityFamilies(q.capability);
 
   // BENCH2 — the three exclusions below are NOT leniency. Each names a turn the platform is
   // architecturally correct to answer WITHOUT reaching a capability, so demanding a route
@@ -278,6 +365,8 @@ export function deriveExpectation(q: QuestionsFixture["questions"][number]): Exp
     category: q.category,
     capabilityRaw: q.capability,
     capabilityFamily: family,
+    secondaryCapabilityFamilies: secondaries,
+    capabilityVerb: verb,
     utterance: q.utterance,
     correctAnswerType,
     expectsWriteIntent,

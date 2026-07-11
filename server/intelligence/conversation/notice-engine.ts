@@ -28,6 +28,15 @@
  *                            field is a VERBATIM projection of what that
  *                            capability already produced. This module never
  *                            rewords or re-derives an opportunity's content.
+ *                            COACH1: that projection now includes the
+ *                            producer's `evidence` array, previously dropped,
+ *                            and an opportunity that cites nothing is dropped
+ *                            rather than surfaced uncited (Rule E1).
+ *
+ * COACH1 — every Notice additionally carries `source`, naming the existing owner its
+ * fact was read from. This is provenance, not content: it adds no fact, no metric and
+ * no judgement, and lets any surface answer "which owner said this?" for every notice
+ * category rather than only for opportunities. The engine still concludes nothing.
  *   - seasonal-highlight   → `shared/seasonal/engine.ts`'s `seasonalStories()`
  *                            (WS11 — already read by the Home Intelligence and
  *                            Planner Intelligence Strip routes; the Companion
@@ -63,6 +72,20 @@
  */
 
 import type { UserHealthTrend, UserStreak } from "../../../shared/schema.js";
+// ATTN1 — the one canonical Attention vocabulary. shared/attention is PURE and
+// zero-I/O, so this import keeps the adapter's zero-dependency footprint on the
+// platform's I/O modules intact (the rationale that used to justify a local
+// `NoticePriority` union, now retired under Principle 8).
+import { type AttentionLevel } from "../../../shared/attention/index.js";
+// DEC1 — the one canonical Decision mechanics (same zero-I/O argument as the
+// vocabulary above). The Silence Rules below stay this module's own governed
+// seam (INT20) — they CONSUME the shared rank/dedupe mechanics; the local sort
+// and dedupe they used to carry are retired (Principle 8).
+import {
+  dedupeById,
+  orderByAttention,
+  type EvidenceCitation,
+} from "../../../shared/attention/decision.js";
 import {
   computeGrowthSignal,
   toGrowthPhraseInputs,
@@ -88,12 +111,28 @@ export type NoticeCategory =
   | "shopping-opportunity"
   | "seasonal-highlight";
 
-export type NoticePriority = "high" | "medium" | "low";
+
+/**
+ * COACH1 — one supporting fact, copied verbatim from the producing owner.
+ * DEC1 — an alias of the one canonical `EvidenceCitation`
+ * (shared/attention/decision.ts, pure `shared/` code — not an I/O dependency).
+ * The local re-declaration this used to be, justified by the zero-dependency
+ * footprint ATTN1's shared-module argument already dissolved, is retired
+ * (Principle 8).
+ */
+export type NoticeEvidence = EvidenceCitation;
 
 export interface Notice {
   readonly id: string;
   readonly category: NoticeCategory;
-  readonly priority: NoticePriority;
+  readonly priority: AttentionLevel;
+  /**
+   * COACH1 — the named, existing owner this notice's fact was read from. Provenance,
+   * never content: no notice can exist without one, so "which owner said this?" is
+   * always answerable at the surface, for every category rather than only for
+   * opportunities. This module never invents a source; each producer states its own.
+   */
+  readonly source: string;
   /**
    * The verified fact this notice carries, in the SAME shape the source
    * owner already produced it — never a value this module computed itself,
@@ -103,9 +142,28 @@ export interface Notice {
     | { readonly kind: "growth"; readonly signal: GrowthSignal }
     | { readonly kind: "streak"; readonly currentStreak: number; readonly bestStreak: number }
     | { readonly kind: "diversity"; readonly plantCount: number }
-    | { readonly kind: "opportunity"; readonly explanation: string; readonly suggestedAction: string }
+    | {
+        readonly kind: "opportunity";
+        readonly explanation: string;
+        readonly suggestedAction: string;
+        /** COACH1 — the producer's own evidence, verbatim and in order. Never empty (see `noticeOpportunities`). */
+        readonly evidence: readonly NoticeEvidence[];
+      }
     | { readonly kind: "seasonal"; readonly headline: string };
 }
+
+/**
+ * COACH1 — the named owners behind each notice category. Every string here is an
+ * existing, registered owner that some producer below actually read; none is a
+ * label invented for display.
+ */
+export const NOTICE_SOURCE = {
+  healthTrends: "user_health_trends",
+  streak: "user_streaks",
+  nutritionCentre: "nutrition-centre",
+  opportunityDelivery: "opportunity-delivery",
+  seasonalStories: "seasonal-stories",
+} as const;
 
 // ---------------------------------------------------------------------------
 // Producers — one per existing data source, each a pure function over
@@ -123,6 +181,7 @@ export function noticeNutritionTrend(trends: readonly UserHealthTrend[], now: Da
       id: "nutrition-trend",
       category: "nutrition-trend",
       priority: "low",
+      source: NOTICE_SOURCE.healthTrends,
       fact: { kind: "growth", signal },
     },
   ];
@@ -144,6 +203,7 @@ export function noticeStreak(streak: UserStreak | undefined): Notice[] {
       id: "streak-milestone",
       category: "streak-milestone",
       priority: "medium",
+      source: NOTICE_SOURCE.streak,
       fact: {
         kind: "streak",
         currentStreak: streak.currentEliteStreak,
@@ -164,6 +224,7 @@ export function noticeDiversity(plantDiversity: number): Notice[] {
       id: "diversity-milestone",
       category: "diversity-milestone",
       priority: "low",
+      source: NOTICE_SOURCE.nutritionCentre,
       fact: { kind: "diversity", plantCount: plantDiversity },
     },
   ];
@@ -177,13 +238,20 @@ export function noticeDiversity(plantDiversity: number): Notice[] {
  * never reworded (Trust: "every opportunity's content is a verbatim
  * projection of what a registered producer capability already returned").
  * An unmapped domain is an honest no-op (filtered out), never a guess.
+ *
+ * COACH1 — `evidence` is optional on the INPUT only, because an upstream producer
+ * that supplies none is a producer that has cited nothing. Such an opportunity is
+ * dropped rather than surfaced uncited (see `noticeOpportunities`), so `evidence` is
+ * required on the OUTPUT fact. That asymmetry is Rule E1 ("no citation, no card")
+ * made structural at the coaching boundary.
  */
 export interface OpportunityLike {
   readonly id: string;
   readonly domain: string;
-  readonly priority: NoticePriority;
+  readonly priority: AttentionLevel;
   readonly explanation: string;
   readonly suggestedAction: string;
+  readonly evidence?: readonly NoticeEvidence[];
 }
 
 const DOMAIN_TO_CATEGORY: Readonly<Record<string, NoticeCategory>> = {
@@ -192,16 +260,46 @@ const DOMAIN_TO_CATEGORY: Readonly<Record<string, NoticeCategory>> = {
   shopping: "shopping-opportunity",
 };
 
+/**
+ * COACH1 changes this producer in exactly two ways, and adds no reasoning to it:
+ *
+ *  1. `evidence` is carried through, verbatim and in order. Before COACH1 this
+ *     adapter copied `explanation` and `suggestedAction` and silently discarded the
+ *     producer's `evidence` array, so no coaching notice could ever say where its
+ *     claim came from. Carrying it is a wider verbatim projection, not a new fact —
+ *     it makes the module header's existing promise true for the whole opportunity
+ *     rather than for two of its three content fields.
+ *
+ *  2. An opportunity carrying NO evidence is dropped, exactly as an unmapped domain
+ *     already is. Both are the same honest no-op: the engine surfaces what a named
+ *     owner supplied, and stays silent otherwise. This is a filter, never a
+ *     judgement — no metric, threshold, cluster or ranking is introduced (the
+ *     Notice Engine's §9 stop rule), and no opportunity's content is examined.
+ *
+ * FI4's own generators each attach at least one evidence entry, so in production
+ * this drop is unreachable. It exists so that a future producer cannot make the
+ * platform assert something uncited merely by forgetting to cite it.
+ */
 export function noticeOpportunities(opportunities: readonly OpportunityLike[]): Notice[] {
   const result: Notice[] = [];
   for (const o of opportunities) {
     const category = DOMAIN_TO_CATEGORY[o.domain];
     if (!category) continue;
+
+    const evidence = o.evidence ?? [];
+    if (evidence.length === 0) continue; // Rule E1 — no citation, no card.
+
     result.push({
       id: `opportunity:${o.id}`,
       category,
       priority: o.priority,
-      fact: { kind: "opportunity", explanation: o.explanation, suggestedAction: o.suggestedAction },
+      source: NOTICE_SOURCE.opportunityDelivery,
+      fact: {
+        kind: "opportunity",
+        explanation: o.explanation,
+        suggestedAction: o.suggestedAction,
+        evidence,
+      },
     });
   }
   return result;
@@ -223,6 +321,7 @@ export function noticeSeasonal(headline: string | null): Notice[] {
       id: "seasonal-highlight",
       category: "seasonal-highlight",
       priority: "low",
+      source: NOTICE_SOURCE.seasonalStories,
       fact: { kind: "seasonal", headline },
     },
   ];
@@ -236,27 +335,30 @@ export function noticeSeasonal(headline: string | null): Notice[] {
 
 export const MAX_NOTICES_PER_MOMENT = 2;
 
-const PRIORITY_RANK: Record<NoticePriority, number> = { high: 0, medium: 1, low: 2 };
-
 /**
- * Ranks by priority (safety/actionable gaps first), de-duplicates by id, and
- * caps the total count. This is the ONLY place presentation order/volume is
- * decided — callers must never re-sort or re-slice a gathered list themselves.
+ * De-duplicates by id, ranks by attention (safety first, then actionable
+ * gaps), and caps the total count. This is the ONLY place presentation
+ * order/volume is decided — callers must never re-sort or re-slice a gathered
+ * list themselves.
+ *
+ * DEC1 — the dedupe and the rank are the canonical shared mechanics
+ * (shared/attention/decision.ts); the local copies this function used to carry
+ * are retired, golden-identity tested byte-identical
+ * (test-dec1-decision-engine.ts). The MAX_NOTICES_PER_MOMENT cap stays HERE,
+ * deliberately: it is the presentation-edge attention budget (INT20), a
+ * different budget from the Decision Engine's delivery limit, and it carries
+ * no critical exemption — two criticals may legitimately consume it.
+ *
+ * ATTN1 invariant A3 — `critical` fills the attention budget FIRST: it is the
+ * top rank, so no combination of `high` notices can consume the
+ * MAX_NOTICES_PER_MOMENT budget ahead of a harm signal (closes ATTN1 finding
+ * F5).
  */
 export function applySilenceRules(
   notices: readonly Notice[],
   maxCount: number = MAX_NOTICES_PER_MOMENT,
 ): Notice[] {
-  const seen = new Set<string>();
-  const deduped = notices.filter((o) => {
-    if (seen.has(o.id)) return false;
-    seen.add(o.id);
-    return true;
-  });
-  return deduped
-    .slice()
-    .sort((a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority])
-    .slice(0, maxCount);
+  return orderByAttention(dedupeById(notices)).slice(0, maxCount);
 }
 
 // ---------------------------------------------------------------------------

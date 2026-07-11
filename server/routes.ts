@@ -95,6 +95,20 @@ import {
   summarizeTimelineSessions,
   timelineToCsv,
 } from "./intelligence/observation/execution-timeline";
+// COACH1 — the Companion Notice Engine's pure producers + the Silence Rules. This
+// route is the ONE governed proactive channel named by
+// docs/architecture/THA_COMPANION_NOTICE_ENGINE_ARCHITECTURE.md §7 as missing.
+import {
+  noticeNutritionTrend,
+  noticeStreak,
+  noticeDiversity,
+  noticeOpportunities,
+  noticeSeasonal,
+  applySilenceRules,
+  MAX_NOTICES_PER_MOMENT,
+  type Notice,
+  type OpportunityLike,
+} from "./intelligence/conversation/notice-engine";
 import { enrichRetailData, STORE_TAG_MAP, UK_RETAILER_STORE_TAGS } from "./lib/retailIntelligence";
 import { getCanonicalProduct, isCompatibleSwap } from "./lib/productCanonicaliser";
 import { getHouseholdForUser } from "./lib/household";
@@ -11467,6 +11481,127 @@ Generate a complete recipe using these as the foundation.`;
       console.error("[PlannerIntelligence] error:", err);
       res.status(500).json({ message: "Failed to build planner intelligence" });
     }
+  });
+
+  // ── COACH1 — Proactive Coaching ─────────────────────────────────────────────
+  //
+  // The ONE governed proactive channel. THA_COMPANION_NOTICE_ENGINE_ARCHITECTURE.md
+  // §7 records this route as the missing piece that left the Notice Engine
+  // "code-complete, pure, and tested — and dormant". This is that route, and it is
+  // deliberately the only thing COACH1 adds to the HTTP surface: §9's first stop rule
+  // forbids "any second ambient-notice channel", so coaching arrives here or not at all.
+  //
+  // This handler REASONS ABOUT NOTHING. It fetches from five existing owners, hands
+  // each to the Notice Engine's own pure producer, and lets `applySilenceRules` decide
+  // order and volume. It never re-sorts, re-slices, re-words, filters or scores —
+  // those belong to the engine, and the engine concludes nothing either. Every
+  // coaching moment a household ever sees is therefore a verbatim projection of a
+  // fact a named owner already computed.
+  //
+  // Read-only. Ownership-scoped: every read is keyed on the authenticated user's own
+  // id, never a client-supplied one. Persists nothing — a Notice is request-scoped.
+  //
+  // Each producer degrades independently (progressive enrichment, Principle 3): a
+  // household with no planner, no streak or no household row simply contributes no
+  // notice from that owner. It never blocks the others, and it never yields a
+  // fabricated stand-in. Silence is a first-class outcome — an empty `notices` array
+  // is a correct, complete answer, and the platform never pads it.
+  app.get("/api/intelligence/companion/notices", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const user = req.user as import("@shared/schema").User;
+    const userId = user.id;
+
+    const gathered: Notice[] = [];
+    const sources: string[] = [];
+
+    // 1. Planner gaps, pantry usage and shopping opportunities — through the
+    //    registered `opportunity-delivery` capability, on the ordinary Intent Engine
+    //    path. Never by importing OD1's framework or its store directly, so the
+    //    delivery lifecycle, `mutedOpportunityTypes`, LEARN1's household learning and
+    //    COACH1's seen-yields-to-unseen ordering all apply exactly once, where they live.
+    try {
+      const outcome = await intelligencePlatform.handle(
+        { capabilityId: "opportunity-delivery", verb: "report" },
+        intelligencePlatform.contextFor(user),
+      );
+      if (outcome.status === "ok") {
+        const opportunities =
+          (outcome.result as { opportunities?: readonly OpportunityLike[] } | null | undefined)?.opportunities ?? [];
+        gathered.push(...noticeOpportunities(opportunities));
+        sources.push("opportunity-delivery");
+      }
+    } catch (err) {
+      console.error("[COACH1] opportunity-delivery unavailable:", err);
+    }
+
+    // 2. Nutrition trend — the honest signal THA actually owns. NOT a "nutrition gap":
+    //    no reference intake, RDA or target value is stored anywhere in this codebase,
+    //    so no gap against a target can be computed without fabricating the target.
+    //    See docs/implementation/intelligence/COACH1_PROACTIVE_COACHING.md §2.
+    try {
+      const trends = await storage.getUserHealthTrends(userId, 90);
+      gathered.push(...noticeNutritionTrend(trends));
+      sources.push("user_health_trends");
+    } catch (err) {
+      console.error("[COACH1] health trends unavailable:", err);
+    }
+
+    // 3. Streak milestone.
+    try {
+      const streak = await storage.getUserStreak(userId);
+      gathered.push(...noticeStreak(streak));
+      sources.push("user_streaks");
+    } catch (err) {
+      console.error("[COACH1] streak unavailable:", err);
+    }
+
+    // 4. Plant diversity — read from the existing household owner
+    //    (`assembleNutritionCentre`), never recounted here. Plant diversity is a
+    //    CONTESTED domain (ARCHITECTURE_PRINCIPLES.md); a second count computed in
+    //    this route would be a third owner and would move convergence backwards.
+    try {
+      const householdId = await getHouseholdForUser(userId);
+      if (householdId != null) {
+        const centre = await assembleNutritionCentre(householdId);
+        // `overview` is null for a household with no planner history — that owner's
+        // own honest gap. A gap is silence here, never a fabricated `plantDiversity: 0`.
+        if (centre.available && centre.overview) {
+          gathered.push(...noticeDiversity(centre.overview.plantDiversity));
+          sources.push("nutrition-centre");
+        }
+      }
+    } catch (err) {
+      console.error("[COACH1] nutrition centre unavailable:", err);
+    }
+
+    // 5. Seasonal highlight — the caller derives the one headline and the engine only
+    //    shapes it, exactly as notice-engine.ts's header requires and as
+    //    /api/home/intelligence already does.
+    try {
+      const history = await buildHouseholdHistory(userId);
+      if (history.entries.length > 0) {
+        const enjoys = Array.from(new Set(history.entries.map((e) => e.food)));
+        const seasonal = seasonalStories({ household: history, enjoys, limitPerBlock: 3 });
+        const block =
+          seasonal.blocks.find((b) => b.type === "looking_ahead") ??
+          seasonal.blocks.find((b) => b.type === "discoveries");
+        gathered.push(...noticeSeasonal(block?.cards[0]?.headline ?? null));
+        sources.push("seasonal-stories");
+      }
+    } catch (err) {
+      console.error("[COACH1] seasonal stories unavailable:", err);
+    }
+
+    // The Silence Rules are the ONLY place order and volume are decided.
+    const notices = applySilenceRules(gathered);
+
+    res.json({
+      notices,
+      // `gathered` is what the owners honestly offered; `notices` is what the attention
+      // budget allowed through. Reporting both makes the silence auditable rather than
+      // indistinguishable from having nothing to say.
+      trust: { sources, gatheredCount: gathered.length, cap: MAX_NOTICES_PER_MOMENT },
+    });
   });
 
   // ── INT18 Phase 1 — Conversation Gateway routes ─────────────────────────────

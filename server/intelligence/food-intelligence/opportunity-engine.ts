@@ -58,17 +58,26 @@ import type {
 import type { RestrictionDefinition } from "@shared/restrictions/restriction-types.js";
 import { resolveIngredientRestrictions } from "@shared/restrictions/restriction-resolver.js";
 import { resolveCanonicalFood } from "@shared/canonical/resolver.js";
+import { type AttentionLevel } from "@shared/attention/index.js";
+// DEC1 — the one canonical Decision mechanics module (shared/attention/decision.ts).
+// The module-local sort + clamp pair this file used to declare is retired
+// (Principle 8); ordering and budgeting now have exactly one implementation.
+import {
+  DELIVERY_DEFAULT_LIMIT,
+  DELIVERY_MAX_LIMIT,
+  orderByAttention,
+  clampWithCriticalExemption,
+  type EvidenceCitation,
+} from "@shared/attention/decision.js";
 import { resolveHouseholdSignal, type HouseholdSignal } from "./engine.js";
 import { createStoragePlannerReadPort } from "../handlers/planner-read-port.js";
 import { createStoragePantryReadPort } from "../handlers/pantry-read-port.js";
 import { createStorageShoppingReadPort } from "../handlers/shopping-read-port.js";
 
 // ---------------------------------------------------------------------------
-// Limits
+// Limits — DEC1: the delivery budget pair lives once, in shared/attention/decision.ts
+// (previously declared here byte-for-byte identically to OD1's copy).
 // ---------------------------------------------------------------------------
-
-const DEFAULT_OPPORTUNITY_LIMIT = 10;
-const MAX_OPPORTUNITY_LIMIT = 30;
 
 /** `dayOfWeek: 0 = Monday` — the existing planner convention (server/storage.ts:3222, server/routes.ts:10842), reused for display only, not redefined. */
 const PLANNER_DAY_NAMES: readonly string[] = [
@@ -99,23 +108,27 @@ export type FoodOpportunityType =
   | "pantry-item-unused-in-plan"
   | "shopping-restriction-conflict";
 
-export type FoodOpportunityPriority = "high" | "medium" | "low";
+// ATTN1 — attention is the one canonical vocabulary in shared/attention. The
+// module-local `FoodOpportunityPriority` union this file used to declare is
+// retired (Principle 8); the sort function below stays layer-independent.
 
 /** The Business Domain that owns the activity this opportunity was generated from (and where its suggested action would be taken). */
 export type FoodOpportunityDomain = "planner" | "pantry" | "shopping";
 
-/** One supporting fact for an opportunity — always a real, named read from an existing owner (Rule E1: no citation, no card). */
-export interface FoodOpportunityEvidence {
-  readonly source: string;
-  readonly detail: string;
-}
+/**
+ * One supporting fact for an opportunity — always a real, named read from an
+ * existing owner (Rule E1: no citation, no card). DEC1 — an alias of the one
+ * canonical `EvidenceCitation` (shared/attention/decision.ts); the local
+ * re-declaration this used to be is retired (Principle 8).
+ */
+export type FoodOpportunityEvidence = EvidenceCitation;
 
 export interface FoodOpportunity {
   /** Deterministic, stable per underlying record — never regenerated differently for the same activity. */
   readonly id: string;
   readonly type: FoodOpportunityType;
   readonly owningDomain: FoodOpportunityDomain;
-  readonly priority: FoodOpportunityPriority;
+  readonly priority: AttentionLevel;
   /** Plain-language explanation of why this is an opportunity (Rule T1 — food, not bodies). */
   readonly explanation: string;
   readonly evidence: readonly FoodOpportunityEvidence[];
@@ -169,7 +182,7 @@ export function identifyPlannerGapOpportunities(
 
   // Deterministic, evidence-based priority: half or more of the week unplanned
   // is a bigger gap than a single stray day.
-  const priority: FoodOpportunityPriority = emptyDays.length / days.length >= 0.5 ? "high" : "medium";
+  const priority: AttentionLevel = emptyDays.length / days.length >= 0.5 ? "high" : "medium";
 
   return emptyDays
     .slice()
@@ -234,6 +247,11 @@ export function identifyPantryUnusedOpportunities(
  * Rule T0 (which excludes a recommendation outright), this NEVER removes or
  * modifies the caller's own shopping list item — it only surfaces the conflict
  * as a suggestion for the human to review (no autonomous action, FI4 scope).
+ *
+ * ATTN1 — this is T0's ADDITIVE face, and the platform's one `critical`
+ * emitter: never fail to surface an unsafe thing the household already has.
+ * `shopping-restriction-conflict` is the sole member of the closed
+ * CRITICAL_TYPES allowlist (shared/attention — invariant A2).
  */
 export function identifyShoppingRestrictionOpportunities(
   shoppingItems: readonly ShoppingListItem[],
@@ -252,7 +270,7 @@ export function identifyShoppingRestrictionOpportunities(
       id: `shopping-restriction-conflict:${item.id}`,
       type: "shopping-restriction-conflict",
       owningDomain: "shopping",
-      priority: "high",
+      priority: "critical",
       explanation: `"${item.productName}" on your shopping list conflicts with a stored household restriction (${restrictionNames}).`,
       evidence: [
         { source: "shopping-list", detail: `"${item.productName}" is on your current, unchecked shopping list.` },
@@ -268,28 +286,25 @@ export function identifyShoppingRestrictionOpportunities(
 // Prioritisation — pure, deterministic, no re-derived score
 // ---------------------------------------------------------------------------
 
-const PRIORITY_RANK: Readonly<Record<FoodOpportunityPriority, number>> = { high: 0, medium: 1, low: 2 };
-
 /**
- * Stable-sort opportunities by priority (high → medium → low), preserving each
- * generator's own internal order within a priority tier, then clamp to `limit`.
- * PURE — no I/O, no randomness, no clock reads (Rule LT3 — the brain stays
- * deterministic).
+ * Stable-sort opportunities by attention (critical → high → medium → low),
+ * preserving each generator's own internal order within a tier, then clamp to
+ * `limit`. PURE — no I/O, no randomness, no clock reads (Rule LT3 — the brain
+ * stays deterministic).
+ *
+ * DEC1 — both steps are the canonical shared mechanics
+ * (shared/attention/decision.ts): the local sort and clamp this function used
+ * to carry are retired, and behaviour is golden-identity tested to be
+ * byte-identical (test-dec1-decision-engine.ts). ATTN1 invariant A3 is
+ * unchanged — `critical` is exempt from the clamp, so a safety signal can
+ * never be silently dropped by a cap (bounded by design: a household has few
+ * active hard restrictions, and ids are item-scoped).
  */
 export function prioritizeOpportunities(
   opportunities: readonly FoodOpportunity[],
-  limit: number = DEFAULT_OPPORTUNITY_LIMIT,
+  limit: number = DELIVERY_DEFAULT_LIMIT,
 ): FoodOpportunity[] {
-  const clampedLimit = Math.min(Math.max(limit, 1), MAX_OPPORTUNITY_LIMIT);
-  return opportunities
-    .map((opportunity, index) => ({ opportunity, index }))
-    .sort((a, b) => {
-      const rankDiff = PRIORITY_RANK[a.opportunity.priority] - PRIORITY_RANK[b.opportunity.priority];
-      if (rankDiff !== 0) return rankDiff;
-      return a.index - b.index;
-    })
-    .slice(0, clampedLimit)
-    .map(({ opportunity }) => opportunity);
+  return clampWithCriticalExemption(orderByAttention(opportunities), limit, DELIVERY_MAX_LIMIT);
 }
 
 // ---------------------------------------------------------------------------
@@ -368,7 +383,7 @@ export async function identifyOpportunities(request: FoodOpportunityRequest): Pr
   }
 
   return {
-    opportunities: prioritizeOpportunities(opportunities, request.limit ?? DEFAULT_OPPORTUNITY_LIMIT),
+    opportunities: prioritizeOpportunities(opportunities, request.limit ?? DELIVERY_DEFAULT_LIMIT),
     trust: { householdAware: true },
     metadata: { assembledAt: now.toISOString(), sources: Array.from(sources) },
   };

@@ -611,7 +611,9 @@ function dimensionRationale(dim: keyof QuestionResult["bands"], band: number, q:
       if (band === 0) return q.routing.outcome === "capability-miss"
         ? "Capability miss — a registered, executable capability was never invoked"
         : "Internal error in routing";
-      if (band === 1) return "Misroute — a capability ran, but not the intended one";
+      if (band === 1) return q.routing.outcome === "reached-secondary"
+        ? "Misroute — this question's own secondary capability ran, but not its primary"
+        : "Misroute — a capability ran, but not the intended one";
       if (band === 2) return q.routing.outcome === "reached-other"
         ? "Wrong capability reached (routing not required)"
         : "No capability reached, and none was required, but no honest gap was surfaced";

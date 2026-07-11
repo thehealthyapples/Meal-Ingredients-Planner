@@ -237,6 +237,23 @@ function adapterStillIsolates(): void {
     "an isolation failure aborts rather than silently scoring contaminated turns",
     /conversation isolation failed/.test(src),
   );
+
+  // BENCHINT4 (SH-042-A). The checks above prove the adapter CONTAINS the close. They cannot
+  // prove it RAN: the artefact `2026-07-10T10-48-57Z__8e10ea3` was produced by a process where
+  // it did not, and all 100 questions were answered in one 13,044-turn thread. Nothing noticed,
+  // because nothing ever compared one question's thread id with the next. Now something does.
+  check(
+    "a reused conversation thread is detected, not assumed away",
+    /threadsSeen/.test(src),
+  );
+  check(
+    "…and it is raised as an isolation failure, not a question-level outcome",
+    /throw new BenchmarkIsolationError/.test(src),
+  );
+  check(
+    "…which escapes the per-question catch, so the run aborts instead of scoring the rest",
+    /if \(err instanceof BenchmarkIsolationError\) throw err;/.test(src),
+  );
   // The adapter's prose necessarily NAMES the flags it promises not to introduce, so scan the call
   // site rather than the file: `processUserTurn` must still receive exactly the five production
   // arguments — user id, utterance, a real surface, empty surface hints, and the platform context.

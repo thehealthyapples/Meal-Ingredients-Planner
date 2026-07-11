@@ -259,6 +259,27 @@ export interface Capability {
   readonly guidance?: CapabilityGuidance;
   /** INT41 — structured, capability-owned contextual enrichment. Optional. */
   readonly enrichment?: CapabilityEnrichment;
+  /**
+   * BENCHINT4 — the id of the OWNING capability this one is the discovery sibling of.
+   * Present on a discovery capability, absent on an owner. Declarative metadata, not logic.
+   *
+   * The owner ↔ discovery relationship is load-bearing architecture: the Context
+   * Composition Engine uses it to decide when two capabilities may be merged without
+   * asserting a false provenance (INT17 §4.5 — merging a MEAL called "Peas" with a PANTRY
+   * ITEM called "Peas" would make `alsoIn` a lie), and the Conversation Gateway uses it to
+   * prefer a domain owner over its discovery sibling when choosing `primaryOutcome`.
+   *
+   * Before BENCHINT4 that relationship existed in THREE uncoordinated places and nowhere
+   * authoritative: a `-discovery` suffix + depluralised-stem rule in the Context Composition
+   * Engine, an inline `endsWith("-discovery")` in the Conversation Gateway, and a prose
+   * comment in the Intent Resolver that no code enforced. INT17 §8 open item 5 warned that a
+   * registry pair the stem rule could not see would silently stop merging. This field is the
+   * single canonical statement, and both consumers now read it.
+   *
+   * It carries NO routing information. The registry declares who is whose sibling; it does
+   * not rank, score, or select. Confidence remains wholly a resolver concern (BENCHINT3 §6.1).
+   */
+  readonly discoveryOf?: string;
 }
 
 // ---------------------------------------------------------------------------

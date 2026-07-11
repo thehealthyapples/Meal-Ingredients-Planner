@@ -8,11 +8,11 @@
  * fully unit-testable. Coverage is intentionally specific to known patterns;
  * low-recall cases fall through to keyword fallbacks at lower confidence.
  *
- * Resolution pipeline per call (INT23 §10 routing table / INT33 update):
+ * Resolution pipeline per call (INT23 §10 routing table / INT33 / COMP2 update):
  *   0. Compound matchers    — cross-domain questions, 2–3 intents, confidence 0.80–0.88
  *   1. Specific pattern rules  — entity extraction, confidence 0.80–0.92
- *   2. Surface-primary rule    — surface → primary capability, confidence 0.65
  *   3. Keyword fallbacks       — vocabulary scan, confidence 0.55–0.65
+ *   2. Surface-primary rule    — surface → primary capability, confidence 0.65
  *   4. Profile always-on       — confidence 0.50 (personalisation context; baseline)
  *   5. Deduplicate by capability (keep highest confidence per capability)
  *   6. Sort descending, cap at MAX_INTENTS = 4
@@ -21,6 +21,16 @@
  * the always-on profile intent carries gap { kind: "unknown" } so the gateway
  * can answer "I did not understand" (with rephrase suggestions) instead of a
  * generic non-answer. Surface-primary (step 2) is context, not understanding.
+ *
+ * COMP2: households state situations as often as they ask questions. Conversational
+ * statements — an ingredient on hand, a dislike, a budget, time pressure — are
+ * matched by the same two mechanisms (steps 0 and 1) onto the same registered
+ * (verb × capability) pairs. Where such a statement is recognised but names no
+ * entity any capability could be searched for, the profile baseline carries
+ * gap { kind: "needs-clarification" } and the gateway asks one specific question
+ * instead of guessing. Step 2 is evaluated after step 3 so that decision can see
+ * whether anything utterance-derived routed; collection order is irrelevant
+ * downstream because step 5 keeps the highest confidence per capability.
  *
  * HARD BOUNDARIES (inherited from IIntentResolver):
  *  • No storage reads, no platform calls, no business logic.
@@ -634,6 +644,28 @@ const NUTRITION_DISCOVERY_MATCHERS: Matcher[] = [
     if (!/\b(?:at\s+least|over|more\s+than)\s+\d+\s*g\s+protein\b/i.test(u)) return null;
     return { capability: "nutrition-discovery", verb: "search", parameters: { query: u.trim().toLowerCase() }, confidence: 0.86 };
   },
+
+  // BENCHINT4 (RC1, T2.4) — superlative / comparative nutrient forms.
+  // "Which meals are highest in protein?" (CB-016) matched NO nutrition-discovery entry:
+  // every one above requires a numeric threshold or an adjacency descriptor
+  // (`high-protein`, `low-carb`). The superlative frame — "highest in X", "most X",
+  // "richest in X" — is the form a person actually says, and `protein` was already in
+  // KNOWN_NUTRIENT_TERMS. The vocabulary existed; no matcher consulted it in this shape.
+  //
+  // Three guards, each load-bearing:
+  //  · a MEAL noun, so "which foods are highest in iron" stays with nutrition-knowledge;
+  //  · a superlative/comparative, so "meals with protein" does not become a ranking query;
+  //  · KNOWN_NUTRIENT_TERMS, so CB-017 ("Which meals are the least processed or most
+  //    whole-food based?") does not fire — "processed" and "whole-food" are concepts, not
+  //    nutrients, and INT17 §4.1 measured what happens when a lexical rule mistakes one
+  //    for the other. ND-058's "strongest nutritionally" likewise carries no nutrient term
+  //    and correctly stays with `nutrition-knowledge`, which is what its fixture intends.
+  (u) => {
+    if (!/\b(?:meals?|recipes?|dishes?)\b/i.test(u)) return null;
+    if (!/\b(?:highest|lowest|most|least|richest|poorest|strongest|top|best|greatest)\b/i.test(u)) return null;
+    if (!KNOWN_NUTRIENT_TERMS.test(u)) return null;
+    return { capability: "nutrition-discovery", verb: "search", parameters: { query: u.trim().toLowerCase() }, confidence: 0.85 };
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -922,6 +954,31 @@ const SHOPPING_MATCHERS: Matcher[] = [
     };
   },
 
+  // BENCHINT4 (RC1, T2.7): "Which items should I check for allergens or additives?" (SH-042).
+  //
+  // The shopping keyword fallback requires `shopping list|basket|grocery|groceries`; this
+  // utterance's subject noun is the bare "items", which is shopping vocabulary NOWHERE else
+  // in this file except the SH-036 matcher immediately above — whose second guard already
+  // treats `items` as a shopping noun once a review-shaped verb is present. This extends the
+  // same precedent to the review-shaped verb `check` and its label vocabulary.
+  //
+  // `analyser:read {scope:"additives"}` still fires at 0.78 and is CORRECT: the fixture names
+  // `shopping-list + analyser`, and the additives table is what an allergen/additive check is
+  // read against. This matcher supplies the list the check is performed ON — the owner the
+  // question is actually about — and outranks the analyser so the shopping list is the
+  // turn's primary outcome. Neither displaces the other; both ground the answer.
+  (u) => {
+    if (!/\bitems?\b/i.test(u)) return null;
+    if (!/\b(?:check|inspect|examine|watch\s+out\s+for|look\s+out\s+for)\b/i.test(u)) return null;
+    if (!/\b(?:allergens?|allergies|allergy|additives?|e[-. ]?numbers?|ingredients?|labels?)\b/i.test(u)) return null;
+    return {
+      capability: "shopping",
+      verb: "read",
+      parameters: { scope: "list" },
+      confidence: 0.80,
+    };
+  },
+
   // BENCH3 (SH-037): "do any items have missing or suspicious product matches or prices?"
   // Low-confidence / absent product matches are precisely what `unresolved` reports.
   (u) => {
@@ -1106,7 +1163,14 @@ const PROFILE_MATCHERS: Matcher[] = [
   // PH-007: "what are my health goals?" / "what are my goals?"
   // Interrogative-anchored, or a qualified "health/nutrition goals". A bare "my goals"
   // is NOT enough: CB-021 ("recommend one meal that fits my goals") is a meal-discovery
-  // question that merely mentions goals, and must not acquire a profile route from it.
+  // question that merely mentions goals, and must not acquire a profile route FROM THIS
+  // MATCHER.
+  //
+  // BENCHINT4: it acquires one from MEAL_GOAL_FIT_COMPOUND instead, which pairs the profile
+  // read with the `meal-discovery:search` the question is actually about. That is the
+  // routing this comment prescribed and no code performed — for two workstreams, the
+  // destination was named here and never reached. The distinction it draws is preserved
+  // exactly: a *bare* goals mention still earns no profile route on its own.
   (u) => (/\bwhat\s+(?:are\s+)?my\s+(?:health\s+|nutrition\s+|dietary\s+)?goals\b/i.test(u)
     || /\bmy\s+(?:health|nutrition)\s+goals\b/i.test(u)
     ? profileRead(0.87)
@@ -1295,6 +1359,387 @@ const FOOD_INTELLIGENCE_MATCHERS: Matcher[] = [
 ];
 
 // ---------------------------------------------------------------------------
+// COMP2 — Natural Conversation
+//
+// Every matcher above answers a QUESTION. Households do not only ask questions:
+// they state a situation and expect the other party to work out what follows.
+// "We've got half a cauliflower", "the kids don't fancy chicken", "we've only
+// got £30 left" carry no interrogative, no capability noun and no verb the
+// resolver knew, so before COMP2 all three collapsed to the INT35 no-route
+// ("I'm not sure I understood that").
+//
+// COMP2 adds NOTHING but matchers. No new capability, no new verb, no new
+// engine, no conversation state, no knowledge store. Each conversational shape
+// is mapped onto the SAME (verb × capability) pairs the registry already
+// executes, and every parameter is derived from the utterance alone — the
+// resolver still never reads storage and never invents an entity.
+//
+// FOUR SHAPES, and the honest route each one has:
+//
+//   1. INGREDIENT ON HAND — "we've got half a cauliflower"
+//      → meal-discovery · search { query: <ingredient> }  (matches meal
+//        ingredients: meal-discovery-engine.ts matchesMeal)
+//      + pantry-discovery · search { query: "" }          (what else is in)
+//
+//   2. DISLIKE / EXCLUSION — "the kids don't fancy chicken"
+//      → planner-discovery · search { query: <food> }     (where it is planned)
+//      + household-discovery · search { query: "" }       (who "the kids" are)
+//      NOT meal-discovery: there is no query that means "anything but chicken",
+//      and inventing the food they DO want is exactly the fabrication the
+//      platform forbids. The plan is searched for the food that was named.
+//
+//   3. BUDGET — "can we eat cheaply this week?" / "we've only got £30 left"
+//      → shopping · read { scope: "basket" }              (the ONLY priced view)
+//      + planner · read                                   (only with a week signal)
+//      THA owns no budget store. The £30 is never persisted, never echoed back as
+//      a stored fact, and never passed as a parameter no handler reads: it is a
+//      signal that the priced basket is the relevant grounding, nothing more.
+//      When nothing is priced, shopping-read-handler.ts returns its honest gap.
+//
+//   4. TIME / EFFORT PRESSURE — "I need something quick tonight"
+//      → meal-discovery · search { query: "quick" | "easy" }
+//      Speed and effort words are normalised onto the two terms the stored data
+//      actually carries (meal names and MealTemplate.styleTags). This is query
+//      normalisation, the same thing toSlug() does for foods — the handler still
+//      searches honestly and returns matches or an empty result.
+//
+// EVERY verb emitted here is `search` or `read`, both in READ_ONLY_VERBS
+// (permissions.ts), so confirmationFor() returns "none" and no confirmation
+// round-trip is skipped. COMP2 opens no write path — INTA1 §8.1's standing
+// constraint on detectWriteIntent's advisory-frame escape hatch still holds.
+//
+// CLARIFICATION (see CONVERSATIONAL_CLARIFIERS below) is reserved for the two
+// shapes that are recognisable but carry no groundable entity at all. It is
+// never used where a capability can honestly be searched.
+// ---------------------------------------------------------------------------
+
+/**
+ * Statement frames are anchored to the START of the utterance (after an optional
+ * discourse marker). This is the guard that keeps "do I have flour in my pantry"
+ * — a question owned by pantry-discovery — from being read as a possession
+ * statement because it happens to contain the substring "I have".
+ */
+const STATEMENT_START = String.raw`^\s*(?:(?:so|well|ok|okay|right|erm|um|hey)[,\s]+)?`;
+
+/** "we've got X" / "we got X" / "I've only got X" / "I have got X". */
+const ON_HAND_GOT_FRAME = new RegExp(
+  STATEMENT_START + String.raw`(?:we|i)(?:['’]ve|\s+have|\s+had)?\s+(?:only\s+|just\s+|still\s+)*got\s+(.+)$`,
+  "i",
+);
+
+/** "we have half a cauliflower" / "I've some leftover rice" (no "got"). */
+const ON_HAND_HAVE_FRAME = new RegExp(
+  STATEMENT_START + String.raw`(?:we|i)(?:['’]ve|\s+have)\s+(?:only\s+|just\s+|still\s+)*(?!got\b)(.+)$`,
+  "i",
+);
+
+/** "there's chicken in the fridge" / "there are peas in the freezer". */
+const ON_HAND_THERES_FRAME = new RegExp(
+  STATEMENT_START + String.raw`there(?:['’]s|\s+is|\s+are)\s+(.+?)\s+in\s+the\s+(?:fridge|freezer|pantry|cupboard|larder)\b`,
+  "i",
+);
+
+/** Quantity and partitive words that precede a named food in natural speech. */
+const QUANTITY_PREFIX =
+  /^(?:(?:about|around|roughly|maybe)\s+)?(?:(?:a|an|the|some|any|lots\s+of|loads\s+of|plenty\s+of|couple\s+of|few|two|three|four|half(?:\s+a|\s+an)?|bit\s+of|little|leftover|left[\s-]?over|spare|extra|last|remaining|frozen|fresh)\s+)+/i;
+
+/** Container nouns: "a bag of frozen peas" → "frozen peas". */
+const CONTAINER_PREFIX =
+  /^(?:bag|packet|pack|tin|can|jar|box|bunch|head|block|tub|carton|punnet|bottle|handful|portion|serving|piece|slice|chunk|lump)s?\s+of\s+/i;
+
+/** Trailing clauses that qualify possession rather than name the food. */
+const ON_HAND_TRAILER = new RegExp(
+  String.raw`\s+(?:left(?:\s+over)?|leftover|going\s+(?:spare|off|begging)|spare|to\s+use\s+up|that\s+needs?\s+using|` +
+    String.raw`in\s+(?:the|my|our)\s+(?:fridge|freezer|pantry|cupboard|larder|kitchen|house|home)|at\s+home|` +
+    String.raw`for\s+(?:dinner|tea|lunch|supper|breakfast|tonight|tomorrow)|tonight|tomorrow|today|this\s+week)\b[^]*$`,
+  "i",
+);
+
+/**
+ * Terms that are never a named food: pronouns, vague quantities, other
+ * capabilities' domain nouns, and profile/household facts that must not be
+ * mistaken for an ingredient ("I have a nut allergy" is not a cooking request).
+ */
+const CONVERSATIONAL_STOPWORD =
+  /\b(?:it|that|this|them|they|those|these|anything|something|nothing|much|lots|loads|enough|time|money|budget|cash|idea|ideas|clue|plan|planner|list|basket|week|weekend|dinner|lunch|breakfast|tea|supper|food|foods|meal|meals|recipe|recipes|ingredients?|allerg(?:y|ies|ic)|intolerances?|coeliac|vegan|vegetarian|guests?|people|kids|children|everyone|nobody)\b/i;
+
+/** Vague possessions that name no food — the one case worth a clarifying question. */
+const VAGUE_ON_HAND =
+  /^(?:some(?:thing)?|a\s+bit|a\s+few\s+bits|bits(?:\s+and\s+(?:bobs|pieces))?|stuff|things|leftovers?|odds\s+and\s+ends|not\s+much)(?:\s+left(?:\s+over)?|\s+in)?$/i;
+
+/**
+ * A quantity word left standing alone once its prefixes are stripped: "we've got
+ * some (left over)" reduces to "some", which is a quantity, not a food. Searching
+ * meal-discovery for "some" would match arbitrary ingredients by substring — the
+ * fabrication this guard exists to prevent. Such captures produce no intent, and
+ * the vague-possession clarifier asks which ingredient is meant.
+ */
+const BARE_QUANTITY_TERM =
+  /^(?:some|any|bit|bits|stuff|things?|leftovers?|odds|ends|lot|lots|loads|few|much|extra|spare|more|less|left)$/i;
+
+/** Take the first clause only: "half a cauliflower, what can we make?" → "half a cauliflower". */
+function firstClause(raw: string): string {
+  const cut = raw.search(/[,;:!?]|\.|…|\s+[–—-]\s+/);
+  const clause = cut > 0 ? raw.slice(0, cut) : raw;
+  return clause.split(/\s+(?:and|plus|&|with)\s+/i)[0];
+}
+
+/**
+ * Normalise a conversational possession/exclusion capture to a single named food,
+ * or null when the capture is not plausibly one. Null means "emit no intent" —
+ * never "guess an intent", and never "invent a food".
+ */
+function cleanFoodTerm(raw: string): string | null {
+  let s = firstClause(raw).trim().toLowerCase();
+  s = s.replace(ON_HAND_TRAILER, "");
+  s = s.replace(QUANTITY_PREFIX, "").replace(CONTAINER_PREFIX, "").replace(QUANTITY_PREFIX, "");
+  s = s.replace(/^[^a-z]+/, "").replace(/[^a-z]+$/, "").trim();
+  if (!s || s.length > 32) return null;
+  if (/[0-9£$€]/.test(s)) return null;
+  if (BARE_QUANTITY_TERM.test(s)) return null;
+  if (CONVERSATIONAL_STOPWORD.test(s)) return null;
+  if (s.split(/\s+/).length > 3) return null;
+  return s;
+}
+
+/** The possession capture for this utterance, before cleaning. Null when no frame matched. */
+function onHandCapture(u: string): string | null {
+  const m =
+    u.match(ON_HAND_THERES_FRAME) ?? u.match(ON_HAND_GOT_FRAME) ?? u.match(ON_HAND_HAVE_FRAME);
+  return m?.[1] ?? null;
+}
+
+/**
+ * INGREDIENT ON HAND — "we've got half a cauliflower".
+ * Multi-intent by nature: the food they named is searched for meals, and the
+ * pantry is read so the answer can honestly say what else is in. Only the FIRST
+ * named ingredient is searched — meal-discovery takes one query string, and
+ * "cauliflower and rice" matches no stored ingredient (matchesMeal uses includes).
+ */
+const ON_HAND_COMPOUND: CompoundMatcher = (u) => {
+  const capture = onHandCapture(u);
+  if (capture === null) return null;
+  const food = cleanFoodTerm(capture);
+  if (!food) return null;
+  return [
+    { capability: "meal-discovery",   verb: "search", parameters: { query: food }, confidence: 0.84 },
+    { capability: "pantry-discovery", verb: "search", parameters: { query: "" },   confidence: 0.80 },
+  ];
+};
+
+// ---------------------------------------------------------------------------
+// DISLIKE / EXCLUSION
+// ---------------------------------------------------------------------------
+
+/** Who is doing the disliking, when the subject is someone other than the speaker. */
+const HOUSEHOLD_SUBJECT =
+  /\b(?:the|my|our)\s+(?:kids?|children|boys|girls|little\s+ones|family|twins|son|daughter|partner|husband|wife)\b|\b(?:everyone|everybody|nobody|no[\s-]?one)\b/i;
+
+/** "don't fancy chicken" / "won't eat fish". */
+const DISLIKE_NEGATED_VERB =
+  /\b(?:don['’]?t|do\s+not|doesn['’]?t|does\s+not|won['’]?t|will\s+not)\s+(?:really\s+|much\s+)?(?:fancy|like|want|eat|touch|go\s+for|feel\s+like)\s+(.+)$/i;
+
+/** "aren't keen on fish" / "not in the mood for pasta". */
+const DISLIKE_NEGATED_ADJ =
+  /\b(?:aren['’]?t|are\s+not|isn['’]?t|is\s+not|not)\s+(?:really\s+)?(?:keen\s+on|into|in\s+the\s+mood\s+for|fussed\s+about|bothered\s+about)\s+(.+)$/i;
+
+/** "the kids hate broccoli" / "we're sick of pasta". */
+const DISLIKE_POSITIVE_VERB =
+  /\b(?:hates?|can['’]?t\s+stand|sick\s+of|fed\s+up\s+(?:with|of)|bored\s+of|tired\s+of|had\s+enough\s+of)\s+(.+)$/i;
+
+/**
+ * "nobody wants fish" — the negation is carried by the SUBJECT, not the verb, so
+ * the verb is positive and none of the three rules above sees it. Restricted to
+ * inherently-negative subjects: "everyone wants fish" must never reach here.
+ */
+const DISLIKE_NEGATIVE_SUBJECT =
+  /\b(?:nobody|no\s?-?\s?one|none\s+of\s+(?:them|us))\s+(?:really\s+)?(?:wants?|likes?|fancies|fancy|eats?|will\s+eat|would\s+eat)\s+(.+)$/i;
+
+interface DislikeCapture {
+  /** Raw text following the dislike verb — not yet validated as a food. */
+  readonly capture: string;
+  /** Whether the disliking party is the household or the speaker. */
+  readonly subject: "household" | "self";
+}
+
+/**
+ * The dislike rules, most specific first. `subject` is fixed where the rule's own
+ * subject determines it; otherwise it is read from the text preceding the match.
+ */
+const DISLIKE_RULES: ReadonlyArray<{ readonly re: RegExp; readonly subject?: "household" }> = [
+  { re: DISLIKE_NEGATIVE_SUBJECT, subject: "household" },
+  { re: DISLIKE_NEGATED_VERB },
+  { re: DISLIKE_NEGATED_ADJ },
+  { re: DISLIKE_POSITIVE_VERB },
+];
+
+/**
+ * Locate a dislike statement and decide who it is about. Null when none is present,
+ * and null when a rule matched but the subject is neither the household nor the
+ * speaker ("the dog won't eat chicken") — an unrecognised subject is left unrouted
+ * rather than attributed to someone the platform has no record of.
+ */
+function dislikeCapture(u: string): DislikeCapture | null {
+  for (const rule of DISLIKE_RULES) {
+    const m = u.match(rule.re);
+    if (!m?.[1] || m.index === undefined) continue;
+    if (rule.subject) return { capture: m[1], subject: rule.subject };
+    const before = u.slice(0, m.index);
+    if (HOUSEHOLD_SUBJECT.test(before)) return { capture: m[1], subject: "household" };
+    if (/\b(?:i|we)\b/i.test(before)) return { capture: m[1], subject: "self" };
+    return null;
+  }
+  return null;
+}
+
+/**
+ * DISLIKE / EXCLUSION — "the kids don't fancy chicken".
+ * The named food is searched IN THE PLAN (where does it appear, so it can be
+ * swapped), and — when the subject is the household — the household is read so
+ * the answer can name who is meant and what their recorded preferences are.
+ * Nothing here proposes a replacement: the platform has no honest query for
+ * "anything but chicken", and the swap belongs to the user, not the resolver.
+ */
+const DISLIKE_COMPOUND: CompoundMatcher = (u) => {
+  const found = dislikeCapture(u);
+  if (!found) return null;
+  const food = cleanFoodTerm(found.capture);
+  if (!food) return null;
+  const plannerSearch: ResolvedIntent = {
+    capability: "planner-discovery",
+    verb: "search",
+    parameters: { query: food },
+    confidence: 0.85,
+  };
+  if (found.subject === "self") return [plannerSearch];
+  return [
+    plannerSearch,
+    { capability: "household-discovery", verb: "search", parameters: { query: "" }, confidence: 0.83 },
+  ];
+};
+
+// ---------------------------------------------------------------------------
+// BUDGET
+// ---------------------------------------------------------------------------
+
+const MONEY_AMOUNT = /£\s?\d+(?:[.,]\d{1,2})?|\b\d+\s*(?:pounds?|quid)\b/i;
+
+const CHEAP_SIGNAL =
+  /\b(?:cheap(?:ly|er|est)?|budget|save\s+money|saving\s+money|keep\s+(?:the\s+)?(?:costs?|bill|spending)\s+down|food\s+bill|spend\s+less|afford|affordable|frugal|economical|inexpensive)\b/i;
+
+/** A cheapness word only means "food budget" alongside a food/shopping context. */
+const BUDGET_FOOD_CONTEXT =
+  /\b(?:eat|eating|food|meals?|dinners?|shop|shopping|groceries|grocery|cook|cooking|week|list|basket|spend)\b/i;
+
+/** A week/plan signal justifies reading the plan alongside the priced basket. */
+const BUDGET_WEEK_SIGNAL = /\b(?:this\s+week|next\s+week|the\s+week|week|plan(?:ner|ned)?|meals?|dinners?)\b/i;
+
+/**
+ * BUDGET — "can we eat cheaply this week?" / "we've only got £30 left".
+ * The basket is the only view in the platform that carries stored prices, so it
+ * is the only honest grounding for a money question. The amount itself is never
+ * stored, never treated as a known budget, and never passed to a handler.
+ *
+ * The week is READ, not SEARCHED. planner-discovery matches a query as a substring
+ * of a meal name (planner-discovery-engine.ts), and a budget utterance names no
+ * meal — a search for "can we eat cheaply this week?" could never match anything,
+ * yet would still let the fallback claim the meal plan had been searched. The
+ * planner read returns the week's actual entries, which is what a question about
+ * eating cheaply this week needs. Parameters mirror PLANNER_MATCHERS exactly: the
+ * active week when the surface supplied one, otherwise {} — the planner handler
+ * names the identifier it needs rather than the resolver inventing a week.
+ */
+const BUDGET_COMPOUND: CompoundMatcher = (u, lower, hints) => {
+  const budgetish = MONEY_AMOUNT.test(u) || (CHEAP_SIGNAL.test(u) && BUDGET_FOOD_CONTEXT.test(lower));
+  if (!budgetish) return null;
+  const intents: ResolvedIntent[] = [
+    { capability: "shopping", verb: "read", parameters: { scope: "basket" }, confidence: 0.84 },
+  ];
+  if (BUDGET_WEEK_SIGNAL.test(lower)) {
+    intents.push({
+      capability: "planner",
+      verb: "read",
+      parameters: hints.activePlannerWeekId != null
+        ? { scope: "week", weekId: hints.activePlannerWeekId }
+        : {},
+      confidence: 0.82,
+    });
+  }
+  return intents;
+};
+
+// ---------------------------------------------------------------------------
+// TIME / EFFORT PRESSURE
+// ---------------------------------------------------------------------------
+
+const SPEED_SIGNAL =
+  /\b(?:quick(?:ly|er|est)?|fast|speedy|in\s+a\s+(?:hurry|rush)|no\s+time|not\s+got\s+much\s+time|haven['’]?t\s+got\s+(?:much\s+)?time|short\s+on\s+time|(?:15|20|30)\s*min(?:ute)?s?|half\s+an\s+hour)\b/i;
+
+const EFFORT_SIGNAL =
+  /\b(?:easy|simple|low[\s-]effort|minimal\s+effort|fuss[\s-]?free|no\s+fuss|can['’]?t\s+be\s+bothered|lazy)\b/i;
+
+/** A speed word is only a meal request alongside an eating/cooking frame. */
+const TIME_MEAL_FRAME =
+  /\b(?:something|anything|dinner|tea|lunch|breakfast|supper|meals?|cook|make|eat|tonight|this\s+evening)\b/i;
+
+const CONVERSATIONAL_MATCHERS: Matcher[] = [
+  // COMP2: "I need something quick tonight." / "something easy for tea."
+  // Speed and effort words are normalised onto "quick" / "easy" — the terms the
+  // stored meal names and MealTemplate.styleTags actually carry.
+  (u, lower) => {
+    const speed = SPEED_SIGNAL.test(u);
+    const effort = EFFORT_SIGNAL.test(u);
+    if (!speed && !effort) return null;
+    if (!TIME_MEAL_FRAME.test(lower)) return null;
+    return {
+      capability: "meal-discovery",
+      verb: "search",
+      parameters: { query: speed ? "quick" : "easy" },
+      confidence: 0.84,
+    };
+  },
+];
+
+// ---------------------------------------------------------------------------
+// COMP2 — clarification
+//
+// A clarifier fires ONLY for an utterance whose shape is understood but which
+// names no entity any capability could be searched for. It never runs alongside
+// a route: resolve() discards a pending clarification the moment any matcher
+// produced an utterance-derived intent, because a question the platform can
+// answer must be answered, not asked back.
+//
+// The prompt is carried on the always-on profile intent as
+// gap { kind: "needs-clarification" } — the same carrier INT35 already uses for
+// gap { kind: "unknown" }. The gateway (conversation-gateway.ts) excludes gapped
+// intents from `queryable`, so the turn classifies "no-route" and turn-fallback.ts
+// voices the prompt verbatim in place of the generic rephrase message.
+// ---------------------------------------------------------------------------
+
+type ClarificationMatcher = (utterance: string, lower: string) => string | null;
+
+const CONVERSATIONAL_CLARIFIERS: ClarificationMatcher[] = [
+  // "We've got some left over" — a possession statement naming no food.
+  (u) => {
+    const capture = onHandCapture(u);
+    if (capture === null) return null;
+    if (cleanFoodTerm(capture) !== null) return null;
+    if (!VAGUE_ON_HAND.test(firstClause(capture).trim().replace(/[.…!?]+$/, ""))) return null;
+    return "What have you got in? Name the ingredient and I'll look for meals that use it.";
+  },
+
+  // "The kids don't fancy it" — an exclusion naming no food.
+  (u) => {
+    const found = dislikeCapture(u);
+    if (!found) return null;
+    if (cleanFoodTerm(found.capture) !== null) return null;
+    const bare = firstClause(found.capture).trim().replace(/[.…!?]+$/, "").toLowerCase();
+    if (!/^(?:it|that|this|them|those|these|much)$/.test(bare)) return null;
+    return "Which food is that? Name it and I can check where it appears in your meal plan.";
+  },
+];
+
+// ---------------------------------------------------------------------------
 // Meal Discovery (INT26) — cross-source recipe discovery
 // Routes to "meal-discovery" so the engine can fan out across personal library,
 // THA system meals, meal templates, and (Phase 2) external sources in one pass.
@@ -1459,6 +1904,32 @@ const MEAL_DISCOVERY_MATCHERS: Matcher[] = [
       verb: "search",
       parameters: { query: "" },
       confidence: 0.79,
+    };
+  },
+
+  // BENCHINT4 (RC1, T2.5) — the interrogative ingredient filter.
+  // "Which meals include salmon?" (CB-018). The matchers above cover the IMPERATIVE
+  // ("find me a recipe for X") and OPEN ("what can I cook with X") forms; the plain
+  // interrogative filter had no matcher in either capability, so the 0.48 `meals`
+  // coverage floor decided the turn.
+  //
+  // The owner is `meal-discovery`, per the ownership contract now recorded on the
+  // Capability Registry (`meal-discovery.discoveryOf === "meals"`, capability-registry.ts)
+  // and the Meals Capability Card: an ingredient filter carrying NO ownership qualifier is
+  // a discovery query. The guard below enforces exactly that boundary — an utterance that
+  // does carry the qualifier ("what chicken meals do I have", CB-012) belongs to `meals`
+  // and is left to MEALS_MATCHERS, which is why this matcher declines it rather than
+  // competing with it.
+  (u) => {
+    if (/\b(?:do\s+i\s+have|have\s+i\s+got|my\s+(?:meals?|cookbook|recipes?))\b/i.test(u)) return null;
+    const m = u.match(/\b(?:which|what)\s+(?:meals?|recipes?|dishes?)\s+(?:include|contain|have|use|feature)\s+(.+?)[?.!]?\s*$/i);
+    const query = m?.[1]?.trim();
+    if (!query) return null;
+    return {
+      capability: "meal-discovery",
+      verb: "search",
+      parameters: { query: query.toLowerCase() },
+      confidence: 0.84,
     };
   },
 ];
@@ -1708,6 +2179,26 @@ const EXCLUDED_CAPITALIZED_WORDS = new Set([
   "Are", "Is", "Do", "Did", "Be", "Been", "Being", "Show", "Tell", "Give",
   "Find", "Search", "List", "Help", "Please", "Just", "Get", "Make", "Take",
   "Use", "Let", "Keep", "See", "Check", "Look",
+  // BENCHINT4 (T2.8) — CALENDAR TOKENS ARE NOT PEOPLE.
+  //
+  // PL-030 ("What would be a good quick dinner for Tuesday?") satisfied every clause of
+  // HOUSEHOLD_MEMBER_PLANNER_COMPOUND: "Tuesday" is a capitalised, non-sentence-initial,
+  // non-excluded word; "for Tuesday" is a name-introduction context; "dinner" is meal
+  // context. The turn was therefore routed to `household-discovery:search {query:"tuesday"}`
+  // at confidence 0.86 — ABOVE the 0.84 `meal-discovery:search` that actually answered it.
+  //
+  // It was harmless only because the gateway's `primaryOutcome` rule takes the first
+  // `ok-data` outcome and household-discovery returned `empty-result`. A weekday is never a
+  // household member, and a matcher that ranks one above the capability that answers is
+  // mis-scoped whether or not today's downstream rules happen to absorb it.
+  //
+  // WEEKDAYS AND RELATIVE-DAY WORDS ONLY. Month names are deliberately NOT listed: "April",
+  // "June", "May" and "March" are ordinary English given names, and a household member
+  // called June must stay reachable by name. No weekday is a given name, so this set costs
+  // nothing. A month used as a planner date is a separate, unproven case — it is recorded
+  // as a remaining gap rather than guessed at here.
+  "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday",
+  "Today", "Tomorrow", "Tonight", "Yesterday", "Weekend",
 ]);
 
 function extractPersonName(u: string): string | null {
@@ -1796,13 +2287,71 @@ const DIARY_NUTRITION_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
   ];
 };
 
+/**
+ * BENCHINT4 (RC1, T2.5) — Meal Discovery + Household: household-wide meal suitability.
+ * "Which meals are suitable for everyone in my household?" (CB-019).
+ *
+ * `household-meal-matcher.ts` is the registry's declared `owningService` for exactly this
+ * question (capability-registry.ts, `household`), and before this matcher NO route reached
+ * it: two independent keyword fallbacks fired (`household` on "everyone in", `meals` on
+ * "meals") and the turn was grounded on a coincidence. The compound states the pairing the
+ * question actually asks for, at a confidence above both floors.
+ *
+ * `meal-discovery` carries an EMPTY query deliberately: the constraint is the household's
+ * dietary profile, which the resolver may not read (HARD BOUNDARIES, top of file). The
+ * household read supplies it and the answer generator composes the two.
+ */
+const HOUSEHOLD_MEAL_SUITABILITY_COMPOUND: CompoundMatcher = (u, _lower, _hints) => {
+  if (!/\b(?:which|what)\s+(?:meals?|recipes?|dishes?)\b/i.test(u)) return null;
+  if (!/\b(?:suitable|safe|ok|okay|fine|work|suit)\s+for\s+(?:everyone|everybody|all\s+of\s+us|(?:the\s+|my\s+|our\s+)(?:whole\s+)?(?:family|household))\b/i.test(u)) return null;
+  return [
+    { capability: "meal-discovery", verb: "search", parameters: { query: "" },                confidence: 0.86 },
+    { capability: "household",      verb: "read",   parameters: { scope: "household" },       confidence: 0.84 },
+  ];
+};
+
+/**
+ * BENCHINT4 (RC1, T2.6) — Meal Discovery + Profile: a meal recommended against stored goals.
+ * "Recommend one meal that fits my goals and explain why." (CB-021).
+ *
+ * This implements the routing the resolver has DOCUMENTED since BENCH3 and never performed.
+ * PROFILE_MATCHERS' own comment names this utterance and deliberately withholds a bare
+ * "my goals" profile route from it, on the grounds that CB-021 "is a meal-discovery question
+ * that merely mentions goals" — and then no meal-discovery matcher implemented it. The
+ * comment named the destination and the code never went there; this is that code.
+ *
+ * The verb is `search`, NOT the `recommend` the utterance literally asks for: `recommend` is
+ * declared but unbound on `meal-discovery` (bindings/meal-discovery.ts) and would return an
+ * honest gap. `profile:read` is emitted NON-baseline so the personalisation read is a routed
+ * intent this turn — the fixture names `profile` as its secondary, and a baseline read is
+ * stripped from `resolvedIntent` by design (conversation-gateway.ts).
+ */
+const MEAL_GOAL_FIT_COMPOUND: CompoundMatcher = (u, _lower, _hints) => {
+  if (!/\b(?:recommend|suggest|pick|choose|find|give\s+me)\b/i.test(u)) return null;
+  if (!/\b(?:meals?|recipes?|dish(?:es)?)\b/i.test(u)) return null;
+  if (!/\b(?:fits?|matches?|suits?|aligns?\s+with)\s+(?:my|our)\s+(?:health\s+|nutrition\s+|dietary\s+)?goals?\b/i.test(u)) return null;
+  return [
+    { capability: "meal-discovery", verb: "search", parameters: { query: "" },          confidence: 0.86 },
+    { capability: "profile",        verb: "read",   parameters: { scope: "profile" },   confidence: 0.84 },
+  ];
+};
+
 const ALL_COMPOUND_MATCHERS: CompoundMatcher[] = [
   NUTRITION_DISCOVERY_PLANNER_COMPOUND,
   HOUSEHOLD_MEMBER_PLANNER_COMPOUND,
+  HOUSEHOLD_MEAL_SUITABILITY_COMPOUND,
+  MEAL_GOAL_FIT_COMPOUND,
   PLANNER_PANTRY_COMPOUND,
   NUTRITION_SHOPPING_PANTRY_COMPOUND,
   PANTRY_NUTRITION_COMPOUND,
   DIARY_NUTRITION_COMPOUND,
+  // COMP2 — conversational statements. Each is anchored to a statement frame or a
+  // money/dislike signal no question-shaped matcher above claims, so none of them
+  // can poach an existing route; where they do overlap a capability, deduplication
+  // keeps whichever intent carries the higher confidence, exactly as before.
+  ON_HAND_COMPOUND,
+  DISLIKE_COMPOUND,
+  BUDGET_COMPOUND,
 ];
 
 // ---------------------------------------------------------------------------
@@ -1839,6 +2388,7 @@ const ALL_SPECIFIC_MATCHERS: Matcher[] = [
   ...HOUSEHOLD_MATCHERS,
   ...PROFILE_MATCHERS,                     // BENCH3: first utterance-derived route to profile
   ...FOOD_INTELLIGENCE_MATCHERS,           // BENCH4: first utterance-derived route to food-intelligence
+  ...CONVERSATIONAL_MATCHERS,              // COMP2: time/effort-pressure statements
   ...MEAL_DISCOVERY_MATCHERS,
   ...MEALS_MATCHERS,
   ...TEMPLATES_MATCHERS,
@@ -1857,9 +2407,85 @@ interface KeywordFallback {
   readonly confidence: number;
 }
 
+/**
+ * BENCHINT4 (RC2, T2.3) — the planner fallback matched the VERB "plan".
+ *
+ * `/(?:meal\s+)?plan/` fired on CG-085 ("I want to build muscle but also lower
+ * cholesterol. How should I plan?"), routing a nutrition question to the planner and
+ * producing `gap / no-knowledge` — the most harmful of the twelve R2 misroutes, because
+ * the user asked about health goals and was told the platform knows nothing about their
+ * meal plan. Nothing else was proposed, so a coverage floor became the routing decision.
+ *
+ * The lookbehind admits `plan` only as a NOUN — preceded by a determiner, possessive,
+ * adjective or the noun-modifiers `meal` / `week's` — and rejects it after a pronoun or
+ * `to`, which is where the verb lives ("should I plan", "help me plan", "I plan to").
+ *
+ * `week` / `weekly` are deliberately RETAINED. BENCHINT3 T2.3 proposed removing the bare
+ * noun `week` as well (on ND-054's "How many plants have I eaten this week?"), but that
+ * token is the ONLY planner route for PL-027 ("Have I repeated too many meals this week?",
+ * fixture `planner.read`): strip it and the utterance proposes no planner intent at all,
+ * demoting PL-027 from `reached-intended` to `capability-miss` — gate R1, which caps at 40,
+ * BELOW R2's 55. The measured cost of the removal is strictly worse than the defect it closes.
+ *
+ * PL-028 ("Where can I add more vegetables to my plan this week?") does NOT depend on it: its
+ * planner route comes from a noun-phrase matcher at 0.75, on "my plan", and survives the token's
+ * removal. That distinction is measured, not assumed — an earlier draft of this comment claimed
+ * both questions depended on `week`, and only one does.
+ *
+ * ND-054's planner route is a CONTRIBUTING cause there (its primary root cause is RC4, a missing
+ * capability surface), never a gate.
+ * Evidence: `docs/implementation/benchmarking/BENCHINT4_INTENT_ROUTING_CONVERGENCE.md` §4.2.
+ */
+const PLANNER_FALLBACK_PATTERN =
+  /\b(?:planner|schedule|week(?:ly)?)\b|(?<!\b(?:to|i|we|you|they|he|she|me|us)\s)\bplans?\b/i;
+
+/**
+ * BENCHINT4 (RC2, T2.1) — the nutrition NOUN fallback.
+ *
+ * `nutrition(?:al)?\b` could not match "nutritionally": the optional group ends at
+ * `nutritional` and the trailing `ly` defeats the `\b`. ND-058 ("Which meals were strongest
+ * nutritionally this week?") therefore never proposed `nutrition-knowledge` at all — the one
+ * adverbial form a person is most likely to say was the one form the fallback could not see.
+ * `nutrition(?:al(?:ly)?)?` closes it. Confidence and every other token are unchanged.
+ */
+const NUTRITION_NOUN_FALLBACK_PATTERN =
+  /\b(?:nutrients?|vitamins?|minerals?|nutrition(?:al(?:ly)?)?|(?:health\s+)?benefits?)\b/i;
+
+/**
+ * BENCHINT4 (RC2, T2.2) — the nutrient / benefit VOCABULARY floor.
+ *
+ * The noun fallback above contained NO nutrient names and NO benefit names, though both
+ * canonical vocabularies sit 2,100 lines above it: `KNOWN_NUTRIENT_TERMS` could not see
+ * "protein" (CB-016) and `KNOWN_BENEFIT_TERMS` could not see "cholesterol" or "muscle"
+ * (CG-085), so neither question ever proposed a nutrition capability. This entry consults
+ * those two vocabularies DIRECTLY rather than restating their words in a third list: a term
+ * added to either now reaches routing with no edit here, and the two can never drift.
+ *
+ * WHY IT IS A SEPARATE ENTRY, AND WHY ITS CONFIDENCE IS 0.49.
+ *
+ * A nutrient word is weaker evidence of a nutrition-knowledge question than the word
+ * "nutrition" itself: "high-protein meals I have planned" is a planner question that merely
+ * names a nutrient. Folding this vocabulary into the 0.58 noun fallback made it fire on such
+ * turns and, at 0.58, it OUTRANKED the 0.50 personalisation baseline — displacing `profile`
+ * from the `MAX_INTENTS` cap on exactly the compound turns INT33's tests pin. It also handed
+ * the Context Composition Engine `nutrition-knowledge:read {scope:"foods"}` — the entire
+ * 611-food registry, whose eight guaranteed core seats crowd out real evidence (INT17 §8
+ * open item 7) — on turns that never asked for it.
+ *
+ * So this is a COVERAGE FLOOR, and it takes the coverage-floor band the `meals` entry below
+ * already documents: strictly beneath the always-on `profile` baseline (0.50), which it must
+ * never displace, and above the `meals` floor (0.48) so the two never tie. When a nutrition
+ * noun IS present the 0.58 entry fires too, and deduplication keeps the higher confidence —
+ * so no turn that routed nutrition-knowledge before routes it more weakly now.
+ */
+const NUTRIENT_BENEFIT_VOCABULARY_PATTERN = new RegExp(
+  `${KNOWN_NUTRIENT_TERMS.source}|${KNOWN_BENEFIT_TERMS.source}`,
+  "i",
+);
+
 const KEYWORD_FALLBACKS: KeywordFallback[] = [
   {
-    pattern: /\b(?:planner|week(?:ly)?|(?:meal\s+)?plan|schedule)\b/i,
+    pattern: PLANNER_FALLBACK_PATTERN,
     capability: "planner",
     parameters: {},
     confidence: 0.60,
@@ -1889,10 +2515,18 @@ const KEYWORD_FALLBACKS: KeywordFallback[] = [
     confidence: 0.60,
   },
   {
-    pattern: /\b(?:nutrients?|vitamins?|minerals?|nutrition(?:al)?|(?:health\s+)?benefits?)\b/i,
+    pattern: NUTRITION_NOUN_FALLBACK_PATTERN,
     capability: "nutrition-knowledge",
     parameters: { scope: "foods" },
     confidence: 0.58,
+  },
+  {
+    // BENCHINT4 (T2.2) — coverage floor. Same capability as the entry above; deduplication
+    // keeps the higher confidence when both fire. Must never displace the 0.50 baseline.
+    pattern: NUTRIENT_BENEFIT_VOCABULARY_PATTERN,
+    capability: "nutrition-knowledge",
+    parameters: { scope: "foods" },
+    confidence: 0.49,
   },
   {
     pattern: /\b(?:plan\s+)?templates?\b/i,
@@ -2018,12 +2652,6 @@ export class PatternIntentResolver implements IIntentResolver {
       }
     }
 
-    // 2. Surface-based primary capability (medium confidence)
-    const primaryCap = SURFACE_CAP[hints.surface];
-    if (primaryCap) {
-      collected.push(buildSurfacePrimary(primaryCap, hints));
-    }
-
     // 3. Keyword fallbacks (lower confidence)
     for (const fb of KEYWORD_FALLBACKS) {
       if (fb.pattern.test(lower)) {
@@ -2037,17 +2665,46 @@ export class PatternIntentResolver implements IIntentResolver {
       }
     }
 
+    // COMP2: a recognised conversational statement that named no groundable entity.
+    // Only genuinely required when NOTHING utterance-derived routed — a question the
+    // platform can answer is answered, never asked back. Evaluated after steps 0/1/3
+    // for exactly that reason, which is why step 2 now follows rather than precedes
+    // them (deduplication and sorting make the collection order irrelevant: no
+    // surface-primary confidence, 0.65, collides with a keyword fallback's).
+    let clarificationPrompt: string | null = null;
+    if (!understood) {
+      for (const clarify of CONVERSATIONAL_CLARIFIERS) {
+        clarificationPrompt = clarify(utterance, lower);
+        if (clarificationPrompt !== null) break;
+      }
+    }
+
+    // 2. Surface-based primary capability (medium confidence). Suppressed while a
+    //    clarification is pending: surface primary is a ROUTED intent, so leaving it
+    //    in would ground the turn on whatever page the user is looking at and the
+    //    gateway would never reach the "no-route" branch that voices the prompt.
+    const primaryCap = SURFACE_CAP[hints.surface];
+    if (primaryCap && clarificationPrompt === null) {
+      collected.push(buildSurfacePrimary(primaryCap, hints));
+    }
+
     // 4. Profile — always included for personalisation context. Marked baseline
     //    (INT35): it never counts as understanding the question. When NO
-    //    utterance-derived matcher fired, it also carries the "unknown" gap so
-    //    the gateway knows the utterance itself was not understood.
+    //    utterance-derived matcher fired, it also carries a gap so the gateway
+    //    knows the utterance itself was not answered: "needs-clarification" with a
+    //    prompt when COMP2 recognised the shape but not the entity, "unknown"
+    //    otherwise.
     collected.push({
       capability: "profile",
       verb: "read",
       parameters: {},
       confidence: 0.50,
       baseline: true,
-      ...(understood ? {} : { gap: { kind: "unknown" as const } }),
+      ...(understood
+        ? {}
+        : clarificationPrompt !== null
+          ? { gap: { kind: "needs-clarification" as const, clarificationPrompt } }
+          : { gap: { kind: "unknown" as const } }),
     });
 
     // 5. Deduplicate (keep highest confidence per capability), sort, cap

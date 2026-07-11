@@ -237,7 +237,12 @@ const cap = (
   result: unknown,
   confidence = 0.8,
   baseline = false,
-): CompositionCapability => ({ capabilityId, verb, result, confidence, baseline });
+  // BENCHINT4: the owner ↔ discovery relationship is DECLARED by the Capability Registry and
+  // handed to the engine on the input, exactly as the Conversation Gateway now hands it in.
+  // The engine no longer re-derives it from the id string, so a test that omits it is asking
+  // the engine to merge two capabilities it has not been told are siblings.
+  discoveryOf?: string,
+): CompositionCapability => ({ capabilityId, verb, result, confidence, baseline, discoveryOf });
 
 /** The union of every id-like scalar reachable in a payload. */
 function realIds(v: unknown, out = new Set<string>()): Set<string> {
@@ -553,10 +558,32 @@ async function main(): Promise<void> {
     const discovery = { scope: "search", results: [{ id: "personal:1794", internalId: 1794, name: "Vegetarian Breakfast", sourceType: "personal" }] };
     const merged = composeContext({
       utterance: "vegetarian meals",
-      capabilities: [cap("meals", "read", meals, 0.9), cap("meal-discovery", "search", discovery, 0.8)],
+      capabilities: [cap("meals", "read", meals, 0.9), cap("meal-discovery", "search", discovery, 0.8, false, "meals")],
     });
     assert(merged.metrics.duplicatesRemoved === 1, "the same meal from meals + meal-discovery is emitted once");
     assert(merged.text.includes(`"alsoIn":["meal-discovery"]`), "…and the second capability is named on the survivor");
+
+    // BENCHINT4 — the DECLARATION is what permits the merge, not the shape of the id.
+    // Without `discoveryOf` the engine has not been told these are siblings, and it must not
+    // guess from the `-discovery` suffix. This is the safe direction (emit twice, assert no
+    // false provenance) and it is the reason the registry validates the graph at construction:
+    // an undeclared pair now throws there rather than silently un-merging here.
+    const undeclared = composeContext({
+      utterance: "vegetarian meals",
+      capabilities: [cap("meals", "read", meals, 0.9), cap("meal-discovery", "search", discovery, 0.8)],
+    });
+    assert(undeclared.metrics.duplicatesRemoved === 0,
+      "an UNDECLARED owner/discovery pair is never merged on the strength of its id");
+    assert(!undeclared.text.includes(`"alsoIn"`),
+      "…and no `alsoIn` provenance is asserted for a relationship nobody declared");
+
+    // A discovery capability never merges with an owner it does not name.
+    const wrongOwner = composeContext({
+      utterance: "vegetarian meals",
+      capabilities: [cap("meals", "read", meals, 0.9), cap("meal-discovery", "search", discovery, 0.8, false, "pantry")],
+    });
+    assert(wrongOwner.metrics.duplicatesRemoved === 0,
+      "a discovery capability does not merge with an owner it does not declare");
 
     // …but NEVER across unrelated capabilities. A meal named Peas is not a pantry item named Peas.
     const mealPeas = { meals: [{ id: 3, name: "Peas" }] };

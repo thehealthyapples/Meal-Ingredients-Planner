@@ -11,11 +11,12 @@
 
 import { useQuery } from "@tanstack/react-query";
 import type { InteractionKind } from "@shared/companion-interaction";
+import type { AttentionLevel } from "@shared/attention/index";
 
 export interface CompanionObservation {
   readonly category: string;
   readonly interactionKind: InteractionKind;
-  readonly priority: "high" | "medium" | "low";
+  readonly priority: AttentionLevel;
   readonly text: string;
 }
 

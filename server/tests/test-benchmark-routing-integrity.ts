@@ -56,6 +56,8 @@ function expectation(over: Partial<ExpectationRecord> = {}): ExpectationRecord {
     category: "Profile & Household",
     capabilityRaw: "profile.read",
     capabilityFamily: "profile",
+    secondaryCapabilityFamilies: [],
+    capabilityVerb: "read",
     utterance: "What diet am I following?",
     correctAnswerType: "unknown",
     expectsWriteIntent: false,
@@ -214,6 +216,76 @@ console.log("\n2. Misroute is distinct from a capability miss");
   );
   eq("multi-capability turn including the intended one is reached-intended", s.routing.outcome, "reached-intended");
   eq("multi-capability turn fires no routing gate", s.routingGate, null);
+}
+
+// ── 2b. BENCHINT4 (T1.1): reaching the fixture's OWN secondary ──────────────
+
+console.log("\n2b. Reaching a question's own secondary capability is a NAMED misroute, not a pass");
+
+{
+  // SH-042's shape: fixture "shopping-list + analyser"; the turn reached `analyser` only.
+  const s = scoreDeterministic(
+    expectation({ capabilityFamily: "shopping", secondaryCapabilityFamilies: ["analyser"], capabilityVerb: null }),
+    turn({ reachedCapability: "analyser", invokedCapabilities: ["analyser"] }),
+  );
+  eq("reaching the fixture's own secondary is reached-secondary", s.routing.outcome, "reached-secondary");
+  eq("…and names it as such", s.routing.failureReason, "secondary-capability");
+  eq("…and STILL fires R2 — the primary was not reached", s.routingGate, "R2");
+  eq("…scoring exactly as a misroute does, so the headline does not move", s.bands.D4.band, 1);
+  check("…and still failing", s.composite <= R2_MISROUTE_CAP, `composite ${s.composite}`);
+  check("…carrying the secondary set for the report", s.routing.secondaryCapabilities.includes("analyser"));
+}
+
+{
+  // An unrelated capability is still a plain misroute — the new state must not swallow it.
+  const s = scoreDeterministic(
+    expectation({ capabilityFamily: "shopping", secondaryCapabilityFamilies: ["analyser"] }),
+    turn({ reachedCapability: "planner", invokedCapabilities: ["planner"] }),
+  );
+  eq("an unnamed capability is still reached-other", s.routing.outcome, "reached-other");
+  eq("…with the wrong-capability reason", s.routing.failureReason, "wrong-capability");
+}
+
+{
+  // Reaching the PRIMARY still wins, even when a secondary also ran.
+  const s = scoreDeterministic(
+    expectation({ capabilityFamily: "shopping", secondaryCapabilityFamilies: ["analyser"] }),
+    turn({ reachedCapability: "shopping", invokedCapabilities: ["shopping", "analyser"] }),
+  );
+  eq("primary + secondary together is reached-intended", s.routing.outcome, "reached-intended");
+  eq("…and fires no gate", s.routingGate, null);
+}
+
+// ── 2c. BENCHINT4 (T1.2): routingRequired is verb-aware ─────────────────────
+
+console.log("\n2c. A fixture verb the capability cannot run does not require a route");
+
+{
+  // `planner` can read/explain/add. It cannot `suggest` — the verb is not even supported.
+  eq("planner.read is registered-executable", resolveCapabilityStatus("planner", "read"), "registered-executable");
+  eq("planner.suggest is registered-unbound at verb granularity",
+    resolveCapabilityStatus("planner", "suggest"), "registered-unbound");
+  // `analyser` supports `explain` but declares it an honest gap — not executable.
+  eq("analyser.explain is registered-unbound (supported, not executable)",
+    resolveCapabilityStatus("analyser", "explain"), "registered-unbound");
+  eq("analyser.read is registered-executable", resolveCapabilityStatus("analyser", "read"), "registered-executable");
+  // Omitting the verb preserves the pre-BENCHINT4, capability-granular answer.
+  eq("without a verb, the capability-granular answer is unchanged",
+    resolveCapabilityStatus("planner"), "registered-executable");
+}
+
+{
+  // A question whose verb cannot run must not be gated for failing to route to it.
+  const s = scoreDeterministic(
+    expectation({
+      capabilityFamily: "planner",
+      capabilityVerb: "suggest",
+      intendedCapabilityStatus: "registered-unbound",
+      routingRequired: false,
+    }),
+    turn({ reachedCapability: "meal-discovery", invokedCapabilities: ["meal-discovery"], fallbackState: null }),
+  );
+  eq("an unrunnable fixture verb fires no routing gate", s.routingGate, null);
 }
 
 // ── 3. Structural honest gaps never fire a routing gate ─────────────────────

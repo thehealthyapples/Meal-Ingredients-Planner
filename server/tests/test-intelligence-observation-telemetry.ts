@@ -152,14 +152,20 @@ async function main(): Promise<void> {
   // decision (extend the union + document the capture point). BEH1 added the
   // twelfth kind, `behaviour-decision`, captured in conversation-gateway.ts.
   // CP2 added the thirteenth, `behaviour-selection` — the user CHOOSING a voice,
-  // captured at PUT /api/profile, the one place a voice is chosen.
+  // captured at PUT /api/profile, the one place a voice is chosen. DEC1 added
+  // the fourteenth, `delivery-decision` — the Decision Engine's sealed record
+  // of one delivery moment, captured in opportunity-delivery-handler.ts.
   assert(
-    OBSERVATION_KINDS.length === 13 && new Set(OBSERVATION_KINDS).size === 13,
-    "the observation taxonomy is the closed 13-kind vocabulary",
+    OBSERVATION_KINDS.length === 14 && new Set(OBSERVATION_KINDS).size === 14,
+    "the observation taxonomy is the closed 14-kind vocabulary",
   );
   assert(
     OBSERVATION_KINDS.includes("behaviour-decision"),
     "behaviour-decision is a first-class observation kind, not a metadata crumb",
+  );
+  assert(
+    OBSERVATION_KINDS.includes("delivery-decision"),
+    "delivery-decision is a first-class observation kind, not a metadata crumb (DEC1)",
   );
 
   // -------------------------------------------------------------------------

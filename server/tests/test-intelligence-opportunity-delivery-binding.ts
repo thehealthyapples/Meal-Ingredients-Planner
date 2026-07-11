@@ -34,6 +34,8 @@ import {
   type DeliverableOpportunity,
   type ExistingDeliveryRecord,
   type OpportunityDeliveryBundle,
+  type ConfirmedUnderstandingFetch,
+  type OpportunityOutcomeReporter,
 } from "../intelligence/opportunity-delivery/framework.js";
 import { InMemoryOpportunityDeliveryStore } from "../intelligence/opportunity-delivery/delivery-store.js";
 import {
@@ -155,6 +157,12 @@ async function main(): Promise<void> {
   const store = new InMemoryOpportunityDeliveryStore();
   const producerCalls: string[] = [];
 
+  // LEARN1 seams, held at their pre-LEARN1 identity so this suite keeps asserting OD1's
+  // own behaviour: a household that has confirmed nothing gets exactly the ordering it
+  // always got, and evidence capture never touches this database-free test.
+  const noUnderstanding: ConfirmedUnderstandingFetch = async () => [];
+  const noReporter: OpportunityOutcomeReporter = async () => ({ recorded: true });
+
   function fakeFoodIntelligenceOk(): IntentOutcome {
     return {
       status: "ok",
@@ -196,17 +204,17 @@ async function main(): Promise<void> {
     return fakeFoodIntelligenceOk();
   }
 
-  const emptyBundle = await collectOpportunities({ userId: undefined }, { store, fetchProducer });
+  const emptyBundle = await collectOpportunities({ userId: undefined }, { store, fetchProducer, fetchConfirmedUnderstanding: noUnderstanding });
   assert(emptyBundle.opportunities.length === 0 && !emptyBundle.trust.resolved, "no userId → honest empty bundle, never fabricated");
   assert(producerCalls.length === 0, "an anonymous request never reaches a producer");
 
   section("§2 collectOpportunities — a producer honest gap degrades to zero opportunities, not an error");
-  const gapBundle = await collectOpportunities({ userId: 999 }, { store, fetchProducer });
+  const gapBundle = await collectOpportunities({ userId: 999 }, { store, fetchProducer, fetchConfirmedUnderstanding: noUnderstanding });
   assert(gapBundle.opportunities.length === 0 && !gapBundle.trust.resolved, "producer gap (no household) → empty, honest bundle");
 
   section("§2 collectOpportunities — ok: adapts, prioritises, groups and persists new opportunities");
   producerCalls.length = 0;
-  const bundle1 = await collectOpportunities({ userId: 1 }, { store, fetchProducer });
+  const bundle1 = await collectOpportunities({ userId: 1 }, { store, fetchProducer, fetchConfirmedUnderstanding: noUnderstanding });
   assert(bundle1.trust.resolved, "at least one producer resolved");
   assert(bundle1.opportunities.length === 2, "both producer opportunities delivered", String(bundle1.opportunities.length));
   assert(bundle1.opportunities[0].priority === "high", "high-priority opportunity ordered first");
@@ -218,14 +226,14 @@ async function main(): Promise<void> {
   section("§2 collectOpportunities — a second report never redelivers a duplicate row");
   const beforeSecondCall = await store.getRecords(1, ["food-intelligence:planner-empty-day:1", "food-intelligence:pantry-item-unused-in-plan:2"]);
   assert(beforeSecondCall.size === 2, "both opportunities were persisted after the first report");
-  const bundle2 = await collectOpportunities({ userId: 1 }, { store, fetchProducer });
+  const bundle2 = await collectOpportunities({ userId: 1 }, { store, fetchProducer, fetchConfirmedUnderstanding: noUnderstanding });
   assert(bundle2.opportunities.length === 2, "the same still-open opportunities are still delivered on a second report");
   const afterSecondCall = await store.getRecords(1, ["food-intelligence:planner-empty-day:1", "food-intelligence:pantry-item-unused-in-plan:2"]);
   assert(afterSecondCall.size === 2, "still exactly two delivery records — no duplicate row was inserted");
 
   section("§2 collectOpportunities — muted preference filters an opportunity out of delivery");
   store.setMutedOpportunityTypes(2, ["pantry-item-unused-in-plan"]);
-  const bundle3 = await collectOpportunities({ userId: 2 }, { store, fetchProducer });
+  const bundle3 = await collectOpportunities({ userId: 2 }, { store, fetchProducer, fetchConfirmedUnderstanding: noUnderstanding });
   assert(
     bundle3.opportunities.length === 1 && bundle3.opportunities[0].type === "planner-empty-day",
     "the muted type is excluded from delivery for this user",
@@ -233,20 +241,20 @@ async function main(): Promise<void> {
   );
 
   section("§2 resolveOpportunity — honest gap when this user was never delivered the opportunity");
-  const neverDelivered = await resolveOpportunity(1, "food-intelligence:does-not-exist:99", "dismissed", store);
+  const neverDelivered = await resolveOpportunity(1, "food-intelligence:does-not-exist:99", "dismissed", store, noReporter);
   assert(neverDelivered === null, "resolving an opportunity id with no delivery record is an honest gap (null), never fabricated");
 
   section("§2 resolveOpportunity — dismiss suppresses the opportunity from all future reports");
-  const dismissed = await resolveOpportunity(1, "food-intelligence:pantry-item-unused-in-plan:2", "dismissed", store);
+  const dismissed = await resolveOpportunity(1, "food-intelligence:pantry-item-unused-in-plan:2", "dismissed", store, noReporter);
   assert(dismissed?.status === "dismissed" && dismissed.resolvedAt !== null, "dismissed is terminal and stamps resolvedAt");
-  const bundleAfterDismiss = await collectOpportunities({ userId: 1 }, { store, fetchProducer });
+  const bundleAfterDismiss = await collectOpportunities({ userId: 1 }, { store, fetchProducer, fetchConfirmedUnderstanding: noUnderstanding });
   assert(
     bundleAfterDismiss.opportunities.length === 1 && bundleAfterDismiss.opportunities[0].type === "planner-empty-day",
     "a dismissed opportunity never reappears in a future report",
   );
 
   section("§2 resolveOpportunity — idempotent: re-resolving an already-terminal opportunity is a no-op");
-  const redismissed = await resolveOpportunity(1, "food-intelligence:pantry-item-unused-in-plan:2", "accepted", store);
+  const redismissed = await resolveOpportunity(1, "food-intelligence:pantry-item-unused-in-plan:2", "accepted", store, noReporter);
   assert(
     redismissed?.status === "dismissed",
     "a second resolve call on an already-terminal opportunity returns its existing (unchanged) status, never transitions again",
@@ -254,9 +262,9 @@ async function main(): Promise<void> {
   );
 
   section("§2 resolveOpportunity — acknowledge is non-terminal: opportunity remains deliverable");
-  const acknowledged = await resolveOpportunity(1, "food-intelligence:planner-empty-day:1", "acknowledged", store);
+  const acknowledged = await resolveOpportunity(1, "food-intelligence:planner-empty-day:1", "acknowledged", store, noReporter);
   assert(acknowledged?.status === "acknowledged" && acknowledged.resolvedAt === null, "acknowledged has no resolvedAt (non-terminal)");
-  const bundleAfterAck = await collectOpportunities({ userId: 1 }, { store, fetchProducer });
+  const bundleAfterAck = await collectOpportunities({ userId: 1 }, { store, fetchProducer, fetchConfirmedUnderstanding: noUnderstanding });
   assert(
     bundleAfterAck.opportunities.some((o) => o.id === "food-intelligence:planner-empty-day:1"),
     "an acknowledged (non-terminal) opportunity is still delivered on a future report",
@@ -273,15 +281,16 @@ async function main(): Promise<void> {
     return {
       collectOpportunities: async (request): Promise<OpportunityDeliveryBundle> => {
         bindingCalls.push(`collectOpportunities(${request.userId})`);
+        const noLearning = { confirmedUnderstandingCount: 0, influenced: [] };
         if (request.userId === 999) {
-          return { opportunities: [], grouped: {}, trust: { resolved: false }, metadata: { assembledAt: new Date().toISOString(), sources: [] } };
+          return { opportunities: [], grouped: {}, trust: { resolved: false }, metadata: { assembledAt: new Date().toISOString(), sources: [], learning: noLearning } };
         }
         const opp = makeOpportunity({ id: "food-intelligence:planner-empty-day:1" });
         return {
           opportunities: [opp],
           grouped: { planner: [opp] },
           trust: { resolved: true },
-          metadata: { assembledAt: new Date().toISOString(), sources: ["food-intelligence"] },
+          metadata: { assembledAt: new Date().toISOString(), sources: ["food-intelligence"], learning: noLearning },
         };
       },
       resolveOpportunity: async (userId, opportunityId, status) => {

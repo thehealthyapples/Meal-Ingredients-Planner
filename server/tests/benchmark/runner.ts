@@ -82,7 +82,8 @@ function certificationFrameworkOnly(options: RunOptions): BenchmarkResult {
     environment: { llmProviderAvailable: false, judgeInvoked: false },
     routing: {
       routingRequiredQuestions: 0, capabilityReachPct: 0, intentResolutionAccuracyPct: 0,
-      capabilityMisses: 0, misroutes: 0, unreachableCapabilities: [], unreachableCapabilityCount: 0,
+      capabilityMisses: 0, misroutes: 0, misroutesReachingSecondary: 0,
+      unreachableCapabilities: [], unreachableCapabilityCount: 0,
       failureReasons: {}, validHonestGaps: 0, invokedCapabilitiesSource: "none",
     },
     coverage: {

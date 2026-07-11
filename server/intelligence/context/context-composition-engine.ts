@@ -173,6 +173,17 @@ export interface CompositionCapability {
   readonly confidence: number;
   /** True when this capability was injected by surface context, not by the utterance. */
   readonly baseline: boolean;
+  /**
+   * BENCHINT4 — the id of the OWNING capability this one is the discovery sibling of, as
+   * DECLARED by the Capability Registry (`Capability.discoveryOf`). Undefined for an owner.
+   *
+   * The engine reads this relationship; it does not compute it, and it does not import the
+   * registry to obtain it. §6's "holds no reference to the Capability Registry" is a property
+   * of this module and is preserved: the caller — the Conversation Gateway, which already
+   * holds the registry — passes the declared value in, exactly as it already passes the
+   * resolver's `confidence` and `baseline` rather than re-deriving them.
+   */
+  readonly discoveryOf?: string;
 }
 
 /** A supplementary knowledge item (COMP6 enrichment). Not a Context View. */
@@ -293,40 +304,35 @@ const sameValue = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSO
 /**
  * May two capabilities' evidence be merged when it shares a name and an id?
  *
- * ONLY a capability and its own discovery sibling. This is the platform's own
- * structural pairing — `conversation-gateway.ts` already prefers the owning
- * capability over its `-discovery` sibling when choosing `primaryOutcome`, on the
- * grounds that the owner is the Source-of-Truth owner of the same data.
+ * ONLY a capability and its own discovery sibling. Without this restriction a name+id
+ * match could merge a MEAL called "Peas" with a PANTRY ITEM called "Peas", and the
+ * surviving row's `alsoIn` would assert a provenance that is not true. Merging is only
+ * safe where the two capabilities are, by construction, describing the same entity (§4.5).
  *
- * Without this restriction a name+id match could merge a MEAL called "Peas" with
- * a PANTRY ITEM called "Peas", and the surviving row's `alsoIn` would assert a
- * provenance that is not true. Merging is only safe where the two capabilities
- * are, by construction, describing the same entity.
- */
-const DISCOVERY_SUFFIX = "-discovery";
-
-/**
- * The domain a capability id belongs to.
+ * BENCHINT4 — THE RELATIONSHIP IS NOW READ, NOT RE-DERIVED.
  *
- * The registry's owner/discovery pairs are not a clean suffix relation — the
- * owner of `meal-discovery` is `meals` (depluralised), and the owner of
- * `nutrition-discovery` is `nutrition-knowledge` (a different second segment). The
- * stable part is the FIRST hyphen segment, singularised.
+ * This function used to reconstruct the pairing from the id STRING: a `-discovery` suffix
+ * plus a "first hyphen segment, singularised" stem rule, because `meal-discovery`'s owner is
+ * `meals` and `nutrition-discovery`'s is `nutrition-knowledge`. It was one of three
+ * uncoordinated statements of a relationship the platform never wrote down — and §8 open
+ * item 5 warned that a registry pair the stem rule could not see would silently stop merging.
+ *
+ * The Capability Registry now declares it (`Capability.discoveryOf`) and validates the graph
+ * at construction. The gateway reads it there and passes it in on `CompositionCapability`.
+ * The engine consumes the DECLARATION and owns only the POLICY — which pairs may merge —
+ * exactly as before. It still imports nothing, performs no I/O, and holds no reference to the
+ * registry (§6). Open item 5 is closed: an undeclared pair is now a construction-time throw,
+ * not a silent behaviour change.
+ *
+ * The predicate operates on the composition inputs rather than on bare ids, because the
+ * declaration travels with the input. That is the whole of the change.
  */
-function domainStem(id: string): string {
-  const base = id.endsWith(DISCOVERY_SUFFIX) ? id.slice(0, -DISCOVERY_SUFFIX.length) : id;
-  return base.split("-")[0].replace(/s$/, "");
-}
-
-function sameEntityFamily(a: string, b: string): boolean {
-  if (a === b) return true;
-  const aDiscovery = a.endsWith(DISCOVERY_SUFFIX);
-  const bDiscovery = b.endsWith(DISCOVERY_SUFFIX);
-  // Two owners, or two discovery capabilities, describe different entities even
-  // when a name and an id happen to coincide. Only an owner and ITS OWN discovery
-  // sibling are, by construction, describing the same thing.
-  if (aDiscovery === bDiscovery) return false;
-  return domainStem(a) === domainStem(b);
+function sameEntityFamily(a: CompositionCapability, b: CompositionCapability): boolean {
+  if (a.capabilityId === b.capabilityId) return true;
+  // Two owners, or two discovery capabilities, describe different entities even when a name
+  // and an id happen to coincide. Only an owner and ITS OWN discovery sibling are, by
+  // construction, describing the same thing.
+  return a.discoveryOf === b.capabilityId || b.discoveryOf === a.capabilityId;
 }
 
 // ---------------------------------------------------------------------------
@@ -464,7 +470,7 @@ export function composeContext(request: CompositionRequest): ComposedContext {
         let round = 0;
         for (const { evidence, score } of ordered) {
           const prior = seen.get(evidence.dedupeKey);
-          if (prior && sameEntityFamily(prior.cap.input.capabilityId, cap.input.capabilityId)) {
+          if (prior && sameEntityFamily(prior.cap.input, cap.input)) {
             if (!prior.alsoIn.includes(cap.input.capabilityId)) prior.alsoIn.push(cap.input.capabilityId);
             duplicatesRemoved++;
             continue;

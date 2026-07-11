@@ -1571,7 +1571,7 @@
       "category": "Product Intelligence",
       "utterance": "Does this product fit my household restrictions?",
       "rationale": "Tests product safety check.",
-      "capability": "product-analysis + household",
+      "capability": "household.read + product-analysis",
       "maturityHorizons": {
         "launch": "Check known allergens/ingredients; state confidence.",
         "y1": "Use restrictions and label data.",

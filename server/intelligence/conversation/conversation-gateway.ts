@@ -914,17 +914,25 @@ async function buildGroundedResponse(
   //
   // Selection rule: among the routed (non-baseline) capabilities that produced
   // grounding data this turn, prefer a domain-OWNING capability over its
-  // discovery/search sibling (`*-discovery`) — the owning capability is the
-  // Source-of-Truth owner of the data and the more useful signal to surface —
-  // otherwise fall back to the highest-confidence match (queryable is already
-  // ordered by the resolver's descending confidence).
+  // discovery/search sibling — the owning capability is the Source-of-Truth owner
+  // of the data and the more useful signal to surface — otherwise fall back to the
+  // highest-confidence match (queryable is already ordered by the resolver's
+  // descending confidence).
+  //
+  // BENCHINT4: "is this a discovery sibling?" is asked of the Capability Registry, which
+  // declares the answer (`Capability.discoveryOf`), instead of being re-derived here from
+  // an `endsWith("-discovery")` on the id. That inline string rule was one of three
+  // uncoordinated statements of the same relationship, and the only one a new capability
+  // could contradict without any code noticing. The registry is now the single owner of the
+  // fact, and it fails loudly at construction on a malformed pair.
   const successOutcomes = queryable
     .filter((ri) => ri.baseline !== true && queryResults.get(ri.capability)?.status === "ok-data")
     .map((ri) => queryResults.get(ri.capability)?.outcome)
     .filter((o): o is IntentOutcome => o != null);
   const primaryOutcome =
-    successOutcomes.find((o) => o.capabilityId != null && !o.capabilityId.endsWith("-discovery")) ??
-    successOutcomes[0];
+    successOutcomes.find(
+      (o) => o.capabilityId != null && !intelligencePlatform.registry.isDiscoveryCapability(o.capabilityId),
+    ) ?? successOutcomes[0];
 
   // INT17: THE ONE PLACE THE LLM'S GROUNDING CONTEXT IS ASSEMBLED.
   //
@@ -949,6 +957,11 @@ async function buildGroundedResponse(
         result:       queryResults.get(ri.capability)!.outcome!.result,
         confidence:   typeof ri.confidence === "number" ? ri.confidence : 0,
         baseline:     ri.baseline === true,
+        // BENCHINT4: the registry's declared owner ↔ discovery relationship, handed to the
+        // engine as data. The engine's cross-capability merge guard (INT17 §4.5) reads it
+        // instead of re-deriving the pairing from the id string, and the engine still holds
+        // no reference to the registry (INT17 §6).
+        discoveryOf:  intelligencePlatform.registry.discoveryOwnerOf(ri.capability),
       })),
     enrichment: enrichment.map(e => ({ title: e.title, body: e.body })),
     tokenBudget: CONTEXT_TOKEN_BUDGET,

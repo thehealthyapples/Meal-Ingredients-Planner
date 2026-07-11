@@ -243,6 +243,7 @@ function failureReasonFor(
   outcome: RoutingOutcome,
 ): RoutingFailureReason | null {
   if (outcome === "reached-intended") return null;
+  if (outcome === "reached-secondary") return "secondary-capability";
   if (outcome === "reached-other") return "wrong-capability";
   if (c.internalError) return "internal-error";
 
@@ -277,6 +278,7 @@ const REASON_EXPLANATION: Record<RoutingFailureReason, string> = {
   "verb-unsupported":          "The capability exists but does not support the resolved verb.",
   "capability-not-executable": "The capability is registered but no execution handler is bound.",
   "permission-denied":         "The acting identity is not permitted to invoke this capability.",
+  "secondary-capability":      "A capability this question's own compound expectation names was invoked, but not its primary.",
   "confirmation-required":     "A confirmation tier blocked invocation before the handler ran.",
   "registered-honest-gap":     "The registry itself declares this (capability, verb) an honest gap.",
   "write-intent-declined":     "The write-intent guard honestly declined before the resolver ran — read-only by design.",
@@ -296,9 +298,12 @@ export function classifyRouting(
   // compares to an exact registry id and nothing is matched by coincidence of spelling.
   const invoked = Array.from(new Set(turn.invokedCapabilities.map((id) => capabilityFamily(id))));
   const reachedIntended = invoked.includes(exp.capabilityFamily);
+  // BENCHINT4 (T1.1) — did the turn reach a capability the FIXTURE ITSELF names as a secondary?
+  const reachedSecondary = exp.secondaryCapabilityFamilies.some((f) => invoked.includes(f));
 
   let outcome: RoutingOutcome;
   if (reachedIntended) outcome = "reached-intended";
+  else if (reachedSecondary) outcome = "reached-secondary";
   else if (invoked.length > 0) outcome = "reached-other";
   else if (exp.routingRequired) outcome = "capability-miss";
   else outcome = "honest-gap-valid";
@@ -311,7 +316,12 @@ export function classifyRouting(
   let gate: RoutingGateKey | null = null;
   if (exp.routingRequired && !c.internalError) {
     if (outcome === "capability-miss") gate = "R1";
-    else if (outcome === "reached-other") gate = "R2";
+    // BENCHINT4 (T1.1): `reached-secondary` gates exactly as `reached-other` does. The fixture
+    // named a primary and the platform did not reach it; that a sibling the fixture also names
+    // did run is a better failure, not a pass. Forgiving it here would move the headline for a
+    // reason unrelated to the platform's behaviour — the two states are reported separately
+    // instead, so the trend line stays readable across this change (BENCHINT3 §8 task 2).
+    else if (outcome === "reached-other" || outcome === "reached-secondary") gate = "R2";
   }
 
   // `failureReason` is null only for "reached-intended" (see failureReasonFor), so every other
@@ -328,6 +338,7 @@ export function classifyRouting(
   return {
     record: {
       intendedCapability: exp.capabilityFamily,
+      secondaryCapabilities: exp.secondaryCapabilityFamilies,
       intendedCapabilityStatus: exp.intendedCapabilityStatus,
       routingRequired: exp.routingRequired,
       invokedCapabilities: invoked,
@@ -358,7 +369,12 @@ export function scoreDeterministic(exp: ExpectationRecord, turn: CapturedTurn): 
   if (c.internalError) d4 = 0;
   else if (routing.outcome === "reached-intended") d4 = 4;
   else if (routing.outcome === "capability-miss") d4 = 0;
-  else if (routing.outcome === "reached-other") d4 = exp.routingRequired ? 1 : 2;
+  // BENCHINT4: `reached-secondary` scores exactly as `reached-other`. It is a distinct LABEL on
+  // the same failure, not a softer one — see the gate note in `classifyRouting`. Giving it its
+  // own band would move the headline on the first post-change run for a reason that has nothing
+  // to do with the platform, which is the interpretability trap BENCHINT3 §7 warned about.
+  else if (routing.outcome === "reached-other" || routing.outcome === "reached-secondary")
+    d4 = exp.routingRequired ? 1 : 2;
   else /* honest-gap-valid */ d4 = c.honestGap || c.proposedWrite ? 4 : 2;
 
   // ── D3 Safety & Permission (deterministic) ──

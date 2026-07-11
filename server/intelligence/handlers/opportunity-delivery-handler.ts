@@ -96,6 +96,35 @@ async function handleReport(
 
   const bundle = await port.collectOpportunities({ userId, limit });
 
+  // DEC1 capture discipline (mirrors BEH1's): the Decision Engine SEALS the
+  // decision (pure, inside collectOpportunities); this one platform choke
+  // point RECORDS it — every consuming surface reaches `report` through here,
+  // so each delivery moment is recorded exactly once. Fire-and-forget,
+  // exception-isolated: telemetry never fails the user's own report. Nothing
+  // reads the record back, and it is never serialised onto the wire result
+  // below (operator-facing only).
+  if (bundle.decision) {
+    const decision = bundle.decision;
+    try {
+      const { recordObservation } = await import("../observation/observation-engine.js");
+      recordObservation({
+        kind: "delivery-decision",
+        severity: "info",
+        outcome: !bundle.trust.resolved
+          ? "no-producer-reached"
+          : decision.delivered > 0
+            ? "delivered"
+            : "nothing-to-deliver",
+        userId,
+        capability: intent.capabilityId,
+        verb: intent.verb,
+        metadata: { ...decision },
+      });
+    } catch {
+      // Capture is a side effect of the report, never a precondition for it.
+    }
+  }
+
   return {
     opportunities: bundle.opportunities,
     grouped: bundle.grouped,

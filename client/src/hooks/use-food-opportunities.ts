@@ -14,6 +14,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import type { AttentionLevel } from "@shared/attention/index";
 
 export interface FoodOpportunityEvidence {
   readonly source: string;
@@ -25,7 +26,7 @@ export interface FoodOpportunity {
   readonly capabilityId: string;
   readonly domain: string;
   readonly type: string;
-  readonly priority: "high" | "medium" | "low";
+  readonly priority: AttentionLevel;
   readonly explanation: string;
   readonly evidence: readonly FoodOpportunityEvidence[];
   readonly suggestedAction: string;

@@ -50,6 +50,8 @@ function expectation(over: Partial<ExpectationRecord> = {}): ExpectationRecord {
     category: "Profile & Household",
     capabilityRaw: "profile.read",
     capabilityFamily: "profile",
+    secondaryCapabilityFamilies: [],
+    capabilityVerb: "read",
     utterance: "What diet am I following?",
     correctAnswerType: "unknown",
     expectsWriteIntent: false,

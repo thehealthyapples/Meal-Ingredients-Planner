@@ -121,15 +121,36 @@ console.log("\n── §3 noticeOpportunities — verbatim pass-through, no rewo
 
 {
   const input: OpportunityLike[] = [
-    { id: "a1", domain: "planner", priority: "high", explanation: "Tuesday has no meals planned yet.", suggestedAction: "Add a meal to Tuesday." },
-    { id: "b2", domain: "pantry", priority: "low", explanation: "Kale is in your pantry unused.", suggestedAction: "Plan a meal using kale." },
-    { id: "c3", domain: "some-future-domain", priority: "low", explanation: "unmapped", suggestedAction: "unmapped" },
+    { id: "a1", domain: "planner", priority: "high", explanation: "Tuesday has no meals planned yet.", suggestedAction: "Add a meal to Tuesday.", evidence: [{ source: "planner-week", detail: "Week 3 has 1 of 7 day(s) with zero planner entries." }] },
+    { id: "b2", domain: "pantry", priority: "low", explanation: "Kale is in your pantry unused.", suggestedAction: "Plan a meal using kale.", evidence: [{ source: "pantry-items", detail: "Kale is a current pantry item with no matching planner entry." }] },
+    // Unmapped domain — still fully cited, so the ONLY reason it can be dropped is the domain.
+    { id: "c3", domain: "some-future-domain", priority: "low", explanation: "unmapped", suggestedAction: "unmapped", evidence: [{ source: "somewhere", detail: "cited" }] },
   ];
   const obs = noticeOpportunities(input);
   assert(obs.length === 2, "unmapped domain is filtered out, not guessed into a category");
   assert(obs[0]?.category === "planner-gap", "planner domain maps to planner-gap");
   assert(obs[0]?.fact.kind === "opportunity" && obs[0].fact.explanation === input[0]!.explanation, "explanation copied verbatim, not reworded");
   assert(obs[1]?.category === "pantry-opportunity", "pantry domain maps to pantry-opportunity");
+
+  // COACH1 — evidence is carried verbatim and in order, and every notice names its owner.
+  assert(
+    obs[0]?.fact.kind === "opportunity" && obs[0].fact.evidence.length === 1 && obs[0].fact.evidence[0]!.source === "planner-week",
+    "COACH1: the producer's evidence is carried through, not dropped",
+  );
+  assert(
+    obs[0]?.fact.kind === "opportunity" && obs[0].fact.evidence[0]!.detail === input[0]!.evidence![0]!.detail,
+    "COACH1: evidence detail copied verbatim, not reworded",
+  );
+  assert(obs[0]?.source === "opportunity-delivery", "COACH1: an opportunity notice names its owning capability");
+}
+
+// COACH1 — Rule E1 at the coaching boundary: an uncited opportunity is dropped.
+{
+  const uncited: OpportunityLike[] = [
+    { id: "no-cite", domain: "planner", priority: "high", explanation: "e", suggestedAction: "a" },
+    { id: "empty-cite", domain: "pantry", priority: "low", explanation: "e", suggestedAction: "a", evidence: [] },
+  ];
+  assert(noticeOpportunities(uncited).length === 0, "COACH1: no citation, no card — an uncited opportunity never becomes a notice");
 }
 
 // ---------------------------------------------------------------------------
@@ -156,11 +177,12 @@ assert(noticeSeasonal(null).length === 0, "no seasonal headline → no notice (h
 console.log("\n── §4 applySilenceRules — cap, de-dup, priority ordering ───────────────────────");
 
 {
+  const cited = [{ source: "planner-week", detail: "d" }];
   const many: Notice[] = [
-    { id: "low-1", category: "pantry-opportunity", priority: "low", fact: { kind: "opportunity", explanation: "e", suggestedAction: "a" } },
-    { id: "high-1", category: "planner-gap", priority: "high", fact: { kind: "opportunity", explanation: "e", suggestedAction: "a" } },
-    { id: "med-1", category: "shopping-opportunity", priority: "medium", fact: { kind: "opportunity", explanation: "e", suggestedAction: "a" } },
-    { id: "high-1", category: "planner-gap", priority: "high", fact: { kind: "opportunity", explanation: "e", suggestedAction: "a" } }, // duplicate id
+    { id: "low-1", category: "pantry-opportunity", priority: "low", source: "opportunity-delivery", fact: { kind: "opportunity", explanation: "e", suggestedAction: "a", evidence: cited } },
+    { id: "high-1", category: "planner-gap", priority: "high", source: "opportunity-delivery", fact: { kind: "opportunity", explanation: "e", suggestedAction: "a", evidence: cited } },
+    { id: "med-1", category: "shopping-opportunity", priority: "medium", source: "opportunity-delivery", fact: { kind: "opportunity", explanation: "e", suggestedAction: "a", evidence: cited } },
+    { id: "high-1", category: "planner-gap", priority: "high", source: "opportunity-delivery", fact: { kind: "opportunity", explanation: "e", suggestedAction: "a", evidence: cited } }, // duplicate id
   ];
   const result = applySilenceRules(many);
   assert(result.length <= MAX_NOTICES_PER_MOMENT, `never exceeds the cap (${MAX_NOTICES_PER_MOMENT})`);
@@ -179,18 +201,26 @@ console.log("\n── §5 phraseNotice — voices every fact kind for all 6 pers
     id: "streak-milestone",
     category: "streak-milestone",
     priority: "medium",
+    source: "user_streaks",
     fact: { kind: "streak", currentStreak: 14, bestStreak: 20 },
   };
   const oppObs: Notice = {
     id: "opportunity:x",
     category: "planner-gap",
     priority: "high",
-    fact: { kind: "opportunity", explanation: "Tuesday has no meals planned yet.", suggestedAction: "Add a meal to Tuesday." },
+    source: "opportunity-delivery",
+    fact: {
+      kind: "opportunity",
+      explanation: "Tuesday has no meals planned yet.",
+      suggestedAction: "Add a meal to Tuesday.",
+      evidence: [{ source: "planner-week", detail: "Week 3 has 1 of 7 day(s) with zero planner entries." }],
+    },
   };
   const seasonalObs: Notice = {
     id: "seasonal-highlight",
     category: "seasonal-highlight",
     priority: "low",
+    source: "seasonal-stories",
     fact: { kind: "seasonal", headline: "Looking ahead to autumn, you may enjoy pumpkin." },
   };
   const texts = new Set<string>();

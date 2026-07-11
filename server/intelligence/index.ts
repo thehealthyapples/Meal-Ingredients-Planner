@@ -363,6 +363,20 @@ export {
   type HouseholdSignal,
 } from "./food-intelligence/engine.js";
 
+// ATTN1 — the one canonical Attention vocabulary (shared/attention), replacing
+// the three module-local priority unions and rank maps (FI4, OD1, Notice
+// Engine) retired under ATTN1. Re-exported here so intelligence consumers reach
+// it through the same barrel as everything else they already import.
+export {
+  ATTENTION_RANK,
+  ATTENTION_LABELS,
+  CRITICAL_TYPES,
+  isAttentionLevel,
+  isCritical,
+  assertCriticalAllowed,
+  type AttentionLevel,
+} from "../../shared/attention/index.js";
+
 // FI4 — the Food Opportunity Engine (ambient, sibling to the Food Intelligence
 // Engine above): identifies and prioritises deterministic Food Opportunities
 // from the caller's own existing planner, pantry and shopping activity.
@@ -374,7 +388,6 @@ export {
   prioritizeOpportunities,
   type FoodOpportunity,
   type FoodOpportunityType,
-  type FoodOpportunityPriority,
   type FoodOpportunityDomain,
   type FoodOpportunityEvidence,
   type FoodOpportunityTrust,
@@ -430,8 +443,11 @@ export {
   selectSurface,
   filterMutedTypes,
   partitionForDelivery,
+  sealDeliveryDecision,
+  type DeliveryDecision,
+  type DeliveryDecisionInput,
+  type ProducerContribution,
   type DeliverableOpportunity,
-  type OpportunityPriority,
   type OpportunityEvidence,
   type OpportunityDeliveryTrust,
   type OpportunityDeliveryBundle,

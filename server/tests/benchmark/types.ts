@@ -34,7 +34,7 @@ export type CorrectAnswerType = "grounded" | "honest-gap" | "unknown";
 // capability that EXISTS AND IS EXECUTABLE but was never reached (a routing
 // failure that the platform must never be credited for). Both surfaced as
 // `fallbackState: "no-route"` and both scored ~73/100 — see
-// docs/investigations/INTA1_INTELLIGENCE_PLATFORM_WIRING_AUDIT.md §6.2.
+// docs/investigations/intelligence/INTA1_INTELLIGENCE_PLATFORM_WIRING_AUDIT.md §6.2.
 //
 // These types make the distinction first-class and machine-checkable. Nothing
 // here reaches inside the Companion: every field is derived from the captured
@@ -69,6 +69,20 @@ export type CapabilityStatus =
  */
 export type RoutingOutcome =
   | "reached-intended"
+  /**
+   * BENCHINT4 (T1.1) — the intended capability was not reached, but a capability the FIXTURE
+   * ITSELF names as a secondary was. 45 of the 100 fixture questions carry a compound
+   * capability ("shopping-list + analyser"), and `capabilityFamily()` keeps only the primary
+   * token. Before this state existed, a turn that invoked the fixture's own secondary was
+   * scored identically to a turn that invoked something wholly unrelated — six of the twelve
+   * R2 misroutes in `2026-07-10T10-48-57Z__8e10ea3` were of the former kind (BENCHINT3 §1).
+   *
+   * It is still a routing failure and still fires gate R2: the question names a primary and
+   * the platform did not reach it. The state exists so the Routing Failure Report can say
+   * WHICH kind of failure it was, not to forgive it. Widening R2's pass set would move the
+   * headline for a reason unrelated to the platform's behaviour.
+   */
+  | "reached-secondary"
   | "reached-other"
   | "capability-miss"
   | "honest-gap-valid";
@@ -79,6 +93,8 @@ export type RoutingFailureReason =
   | "intent-unresolved"
   /** A capability was invoked, but not the intended one. */
   | "wrong-capability"
+  /** BENCHINT4 — the fixture's own SECONDARY capability was invoked; its primary was not. */
+  | "secondary-capability"
   /** The engine's LOCATE step found no such capability id (`unknown_capability`). */
   | "capability-unregistered"
   /** The capability exists but does not support the resolved verb (`unsupported_intent`). */
@@ -109,6 +125,13 @@ export type RoutingGateKey = "R1" | "R2";
 export interface RoutingRecord {
   /** The Capability-Registry-aligned capability this question intends to exercise. */
   readonly intendedCapability: string;
+  /**
+   * BENCHINT4 — the other capabilities the fixture's compound expectation names
+   * ("shopping-list + analyser" → `["analyser"]`). Empty for a single-capability question.
+   * Reaching one of these is `reached-secondary`, which is reported distinctly from a misroute
+   * into an unrelated capability and still gated.
+   */
+  readonly secondaryCapabilities: readonly string[];
   /** Whether that capability exists in the runtime registry and can execute. */
   readonly intendedCapabilityStatus: CapabilityStatus;
   /**
@@ -359,6 +382,12 @@ export interface RoutingPanel {
   readonly capabilityMisses: number;
   /** R2 count — a capability was invoked, but not the intended one. */
   readonly misroutes: number;
+  /**
+   * BENCHINT4 — of `misroutes`, how many reached a capability the question's OWN compound
+   * expectation names as a secondary. Reported alongside, never subtracted from, `misroutes`:
+   * both numbers are needed to read the trend line across the change that introduced this one.
+   */
+  readonly misroutesReachingSecondary: number;
   /** Registered+executable capabilities the fixture intends but that NO question in this run ever invoked. */
   readonly unreachableCapabilities: string[];
   readonly unreachableCapabilityCount: number;

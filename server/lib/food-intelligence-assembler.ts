@@ -6,7 +6,12 @@
 //
 // Canonical ownership map (Architecture Principle 2):
 //   Food identity / overview / description   → CANONICAL_SEED (WS2A) via buildFoodReport
-//   Nutrients + health benefits + context    → WS0 knowledge bridge via buildFoodReport
+//   Nutrients + context                      → WS0 knowledge bridge via buildFoodReport
+//   Health benefit CLAIMS                    → the Layer-2 evidence gate, reached
+//                                              through getEvidenceBackedFoodReport
+//                                              (KNOW4 — never the raw seed; a claim
+//                                              renders only with a SourceRef and a
+//                                              human reviewedAt sign-off)
 //   Seasonality                              → shared/discovery/seasonal-map
 //   Meals using this food                    → DB `meals` (system Cookbook)
 //   Household planner history                → DB `planner_entries` / `planner_days` / `planner_weeks`
@@ -21,8 +26,9 @@ import { db } from "../db";
 import { meals, plannerEntries, plannerDays, plannerWeeks } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { resolveCanonicalFood } from "@shared/canonical/resolver";
-import { buildFoodReport, isCanonicalFood } from "@shared/canonical/food-report-adapter";
+import { isCanonicalFood } from "@shared/canonical/food-report-adapter";
 import type { FoodReportKnowledge } from "@shared/canonical/food-report-adapter";
+import { getEvidenceBackedFoodReport } from "./food-report-evidence";
 import {
   seasonForDate,
   SEASON_SEED,
@@ -365,7 +371,8 @@ export async function getFoodIntelligence(
   const now = new Date();
   const sources: string[] = [];
 
-  const report = buildFoodReport(foodSlug);
+  // Benefit claims come from the evidence gate, never the raw seed (KNOW4).
+  const report = await getEvidenceBackedFoodReport(foodSlug);
 
   // Unknown / non-canonical slug → safe empty model.
   if (!report) {
