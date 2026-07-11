@@ -220,6 +220,8 @@ The following domains have been identified by reading all TypeScript files under
 | Authoritative Source | **DB: `meals` table** |
 | Supporting tables | `meal_categories`, `meal_diets`, `meal_allergens`, `meal_items` |
 | Storage | PostgreSQL via Drizzle ORM (`shared/schema.ts`) |
+| Write funnel | `storage.createMeal()` — every new meal row, including seeded ones (`THA_RECIPE_ACQUISITION_ARCHITECTURE.md` §5) |
+| Seed | `scripts/import-tha-founding-cookbook-500.ts` — the **single canonical seeder** for the 500 THA Founding Cookbook recipes, in every environment including production (`CBK1`, 2026-07-11). Keyed on `acquisition_source_key` (`tha_original:THA-###`), which is the canonical identity of a founding recipe and is enforced unique by `meals_tha_original_source_key_uniq`. Verified by `npm run verify:cookbook-seed`. `server/lib/seed-ready-meals.ts` separately owns the ready-meal rows and the `meal_categories` vocabulary. |
 | Status | **Authoritative — declared** |
 
 ---

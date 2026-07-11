@@ -36,41 +36,18 @@
 import { execFileSync } from "node:child_process";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { classifyDatabaseTarget, redactUrl } from "./database-target";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 /**
- * Hosts that are, by construction, throwaway: a loopback address, a CI service container, or
- * the Replit-managed development Postgres (`helium`). A database reachable only from inside the
- * machine that created it has never held a production row.
+ * Which hosts are disposable and which are managed is NOT decided here — `./database-target.ts` is
+ * the single owner of that classification, because the cookbook seeder (CBK1) must answer the same
+ * question by the same rules. What stays here is this guard's *policy*, which is stricter than any
+ * other caller's: a managed host is refused unconditionally, with no override, because `push` can
+ * drop a column and the data in it. If you believe you need to push a schema to a managed database,
+ * the thing you actually need is a reviewed migration in `server/migrations/runner.ts`.
  */
-const DISPOSABLE_HOSTS: ReadonlyArray<string> = [
-  "localhost",
-  "127.0.0.1",
-  "::1",
-  "0.0.0.0",
-  "postgres", // the GitHub Actions Postgres service container, addressed by service name
-  "helium", // Replit's local development Postgres
-];
-
-/**
- * Substrings that identify a managed database provider. A managed host is where real user data
- * lives, so `push` is refused against one unconditionally — there is deliberately no override.
- * If you believe you need to push a schema to a managed database, the thing you actually need is
- * a reviewed migration in `server/migrations/runner.ts`.
- */
-const MANAGED_PROVIDER_MARKERS: ReadonlyArray<string> = [
-  "neon.tech",
-  "render.com",
-  "amazonaws.com",
-  "supabase.co",
-  "supabase.com",
-  "azure.com",
-  "cloudsql",
-  "digitalocean.com",
-  "heroku",
-  "planetscale",
-];
 
 /**
  * For a host that is neither obviously disposable nor obviously managed, the operator must say so
@@ -87,10 +64,8 @@ export class UnsafeSchemaTargetError extends Error {
   }
 }
 
-/** Strip credentials so a connection string can be logged or put in an error message. */
-export function redactUrl(url: string): string {
-  return url.replace(/:\/\/[^@]*@/, "://<redacted>@");
-}
+/** Re-exported for callers that already import it from this module. Owned by `./database-target.ts`. */
+export { redactUrl };
 
 /**
  * Throws unless `url` is a database it is safe to run a destructive, unreviewed schema mutation
@@ -100,10 +75,7 @@ export function redactUrl(url: string): string {
  * @param context what the caller is about to do, quoted back in the refusal message
  */
 export function assertDisposableDatabase(url: string | undefined, context: string): void {
-  // Explicitly typed as never-returning so TypeScript narrows `url` to `string` after the guard
-  // clause below. Control-flow analysis only does that for a `const` with an explicit annotation —
-  // without it, `new URL(url)` does not compile.
-  const refuse: (reason: string, remedy: string) => never = (reason, remedy) => {
+  const refuse = (reason: string, remedy: string): never => {
     throw new UnsafeSchemaTargetError(
       `TRUST1-O8 — REFUSING to ${context}.\n\n` +
         `  Reason: ${reason}\n\n` +
@@ -122,51 +94,42 @@ export function assertDisposableDatabase(url: string | undefined, context: strin
     );
   }
 
-  if (!url) {
-    refuse(
-      "DATABASE_URL is not set.",
-      "Point DATABASE_URL at a disposable database (a local Postgres or a CI service container).",
-    );
+  const target = classifyDatabaseTarget(url);
+
+  switch (target.kind) {
+    case "missing":
+      return refuse(
+        "DATABASE_URL is not set.",
+        "Point DATABASE_URL at a disposable database (a local Postgres or a CI service container).",
+      );
+
+    case "unparseable":
+      // An unparseable URL is not a safe URL. Fail closed.
+      return refuse(
+        `DATABASE_URL is not a parseable connection string (${target.redacted}).`,
+        "This guard cannot prove the target is disposable, so it refuses.",
+      );
+
+    // 2. A managed provider is where real user data lives. No override, ever.
+    case "managed":
+      return refuse(
+        `DATABASE_URL points at a managed database provider (${target.marker}) — host '${target.host}'.`,
+        "A managed host is where production data lives. There is no override for this.",
+      );
+
+    // 3. A loopback / CI / Replit-local host is disposable by construction. Allowed.
+    case "disposable":
+      return;
+
+    // 4. Anything else is unproven. The operator must assert disposability explicitly.
+    case "unrecognised":
+      if (process.env[OVERRIDE_ENV] === OVERRIDE_PHRASE) return;
+      return refuse(
+        `DATABASE_URL points at '${target.host}', which this guard does not recognise as disposable.`,
+        `If it genuinely is a throwaway database that has never held user data, say so explicitly:\n` +
+          `    ${OVERRIDE_ENV}="${OVERRIDE_PHRASE}" <your command>`,
+      );
   }
-
-  let host: string;
-  try {
-    host = new URL(url).hostname.toLowerCase();
-  } catch {
-    // An unparseable URL is not a safe URL. Fail closed.
-    return refuse(
-      `DATABASE_URL is not a parseable connection string (${redactUrl(url)}).`,
-      "This guard cannot prove the target is disposable, so it refuses.",
-    );
-  }
-
-  if (!host) {
-    refuse(
-      `DATABASE_URL has no host (${redactUrl(url)}).`,
-      "This guard cannot prove the target is disposable, so it refuses.",
-    );
-  }
-
-  // 2. A managed provider is where real user data lives. No override, ever.
-  const managed = MANAGED_PROVIDER_MARKERS.find(marker => host.includes(marker));
-  if (managed) {
-    refuse(
-      `DATABASE_URL points at a managed database provider (${managed}) — host '${host}'.`,
-      "A managed host is where production data lives. There is no override for this.",
-    );
-  }
-
-  // 3. A loopback / CI / Replit-local host is disposable by construction. Allowed.
-  if (DISPOSABLE_HOSTS.includes(host)) return;
-
-  // 4. Anything else is unproven. The operator must assert disposability explicitly.
-  if (process.env[OVERRIDE_ENV] === OVERRIDE_PHRASE) return;
-
-  refuse(
-    `DATABASE_URL points at '${host}', which this guard does not recognise as disposable.`,
-    `If it genuinely is a throwaway database that has never held user data, say so explicitly:\n` +
-      `    ${OVERRIDE_ENV}="${OVERRIDE_PHRASE}" <your command>`,
-  );
 }
 
 /**

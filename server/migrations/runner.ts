@@ -1674,6 +1674,26 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    // CBK1 — The founding cookbook's canonical identity, enforced.
+    //
+    // `acquisition_source_key` ("tha_original:THA-###") is the identity of a THA founding recipe
+    // and the idempotency key the canonical seeder reconciles on. Until now nothing stopped the
+    // same recipe existing twice: the seeder simply took care not to do it, and a duplicate would
+    // have been a silent, permanent, globally-visible defect (system meals are shown to every
+    // user). "One canonical identity per entity" was declared and unenforced.
+    //
+    // The index is deliberately narrow — the founding cookbook's key space only. Other system
+    // meals (the ready-meal seed) carry a NULL key, and user meals may legitimately share an
+    // acquisition key with one another; neither is constrained here.
+    id: "2026-07-11_cbk1_cookbook_canonical_identity",
+    statements: [
+      `CREATE UNIQUE INDEX IF NOT EXISTS meals_tha_original_source_key_uniq
+         ON meals (acquisition_source_key)
+         WHERE is_system_meal = true AND acquisition_source_key LIKE 'tha_original:%'`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

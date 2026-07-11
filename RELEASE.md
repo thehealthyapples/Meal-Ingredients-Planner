@@ -203,7 +203,7 @@ they are **not part of the production runtime**, and production must never read 
 | Excluded | Why | Guard |
 |---|---|---|
 | `data/development_world/` | Development-only fixture world (50 synthetic households). Its admin surface is DEV-only by design. | `assertDevelopmentWorldAllowed()` — refuses when `NODE_ENV=production`, no override |
-| `data/cookbook/` | **Seed source**, not a runtime asset. The 500 founding recipes reach production as rows in the `meals` table, never as files. | Importer refuses when `NODE_ENV=production` |
+| `data/cookbook/` | **Seed source**, not a runtime asset. The 500 founding recipes reach production as rows in the `meals` table, never as files — written by the canonical seeder at release time (Step 4a), never read by the server. | No server runtime file reads it (packaging gate, Check 4). The seeder refuses a production target unless the operator passes `--production` |
 | `data/usda-snapshot/`, `data/alternatives/`, `data/discovery/`, `data/seasonal/`, `data/stories/` | Build/analysis inputs and workstream report output | Read only by `scripts/` and `server/scripts/` |
 | `scripts/`, `docs/`, `.engineering/`, `server/tests/`, `attached_assets/` | Tooling, documentation, tests, and design source | Not imported by `server/index.ts`; never enter `dist/` |
 
@@ -264,6 +264,44 @@ After deploy, open Render Logs and confirm:
 
 If you see `Schema head mismatch` or a migration failure, paste the printed SQL into the Neon SQL Editor and run it manually, then redeploy.
 
+### Step 4a — Seed the THA Founding Cookbook (`CBK1`)
+
+**This is the canonical mechanism by which the 500 THA founding recipes reach a production
+database.** There is no other, and there must never be a second one. It is idempotent: run it on
+every release, or only when the cookbook changes — the result is the same.
+
+It must run **after Step 3**, and specifically after the app has started at least once. The seeder
+resolves `meal_categories` by name, and those categories are created at server boot by
+`seedReadyMeals()`. Seeding a database that has never booted the app is refused, loudly, rather
+than filing 500 recipes under category ids that do not exist.
+
+**Dry run first (preview only — writes nothing):**
+```bash
+DATABASE_URL="<prod neon url>" npm run seed:cookbook -- --dry-run
+```
+
+**Apply if the output looks correct:**
+```bash
+DATABASE_URL="<prod neon url>" npm run seed:cookbook -- --production
+```
+
+`--production` is required against a production database and must be typed every time. Without it
+the seeder refuses — a managed database host counts as production **even when `NODE_ENV` is unset**,
+which is the normal shape of the command above.
+
+**Then verify (read-only, safe against prod):**
+```bash
+DATABASE_URL="<prod neon url>" npm run verify:cookbook-seed   # must PASS
+```
+
+This checks all 500 recipes are present, that no recipe was duplicated, that every recipe identity
+matches the committed source, and that provenance is canonical (`tha_library` / `authored`). **The
+seed does not get to mark its own homework.**
+
+> **`--rollback` is refused against a production database, always, with no override.** It deletes
+> all 500 recipes. Re-running the seed repairs a bad seed in place — deleting first is never the
+> remedy. (See *Production Data Rules* below.)
+
 ### Step 4 — Data reconciliation / backfill
 
 After every deploy that adds new runtime-critical fields, run the item resolution backfill against prod:
@@ -289,6 +327,7 @@ Check these exact paths are working in the deployed prod app:
 
 | Path | What to check |
 |------|---------------|
+| Cookbook | The THA library is populated, not empty. `npm run verify:cookbook-seed` is the mechanical check (Step 4a). |
 | Planner | Week selector shows 6 weeks. Click a day, add a meal. No 500 error. |
 | Shopping list | Add an item manually. Add from planner. Both appear on the list. |
 | Shopping list — chooser | Add an ambiguous item (e.g. "berries"). Review prompt appears. Select a variant. Item resolves. |
@@ -319,7 +358,12 @@ Check these exact paths are working in the deployed prod app:
 | Sync pantry defaults | `storage.syncAllPantryDefaults()` | Every server start (background, idempotent) |
 
 **What does NOT auto-run:**
-- `server/scripts/backfill-item-resolution.ts` — must be run manually per release
+- `server/scripts/backfill-item-resolution.ts` — must be run manually per release (Step 4)
+- `scripts/import-tha-founding-cookbook-500.ts` — the canonical cookbook seeder. Run manually per
+  release (Step 4a). It is **deliberately not a boot-time seed**: `data/cookbook/` is a seed source
+  and is not part of the production release package, so no server runtime path may read it
+  (packaging gate, Check 4). Making it auto-run would either put the corpus in the runtime bundle
+  or create a second seeding pipeline. Both are refused.
 
 ---
 
