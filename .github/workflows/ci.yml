@@ -39,6 +39,12 @@ permissions:
   contents: read
 
 jobs:
+  # TRUST1-V3 — this job's `name` IS the required status check on main. GitHub matches a required
+  # check by the job name, so "typecheck · test · build" is an API identifier, not a label:
+  # rename it and the required context never reports again, and every pull request waits forever
+  # on a check that no longer exists. It is recorded in scripts/ci/branch-protection.json and
+  # `npm run verify:branch-protection` fails if the two ever drift apart.
+  # The gate is documented in .engineering/protocols/PRE_DEPLOYMENT_VERIFICATION_GATE.md.
   verify:
     name: typecheck · test · build
     runs-on: ubuntu-latest

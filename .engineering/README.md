@@ -83,6 +83,7 @@ was performed.** They never share a folder.
 | How rollback protection works | [`protocols/ROLLBACK_PROTECTION_PROTOCOL.md`](./protocols/ROLLBACK_PROTECTION_PROTOCOL.md) |
 | How session recovery works | [`protocols/ENGINEERING_SESSION_RECOVERY_PROTOCOL.md`](./protocols/ENGINEERING_SESSION_RECOVERY_PROTOCOL.md) |
 | When I may push or deploy | [`protocols/COMMIT_PUSH_DEPLOY_PROTOCOL.md`](./protocols/COMMIT_PUSH_DEPLOY_PROTOCOL.md) |
+| What must be green before a merge reaches production — and the emergency bypass | [`protocols/PRE_DEPLOYMENT_VERIFICATION_GATE.md`](./protocols/PRE_DEPLOYMENT_VERIFICATION_GATE.md) |
 | What `.engineering/` may never do | [`standards/ENGINEERING_BOUNDARIES.md`](./standards/ENGINEERING_BOUNDARIES.md) |
 | What GREEN / AMBER / RED mean | [`standards/RISK_AND_SCOPE_STANDARD.md`](./standards/RISK_AND_SCOPE_STANDARD.md) |
 | What counts as verified | [`standards/VERIFICATION_STANDARD.md`](./standards/VERIFICATION_STANDARD.md) |

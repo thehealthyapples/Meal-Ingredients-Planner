@@ -1,0 +1,41 @@
+{
+  "$comment": [
+    "TRUST1-V3 — the pre-deployment verification gate, as data.",
+    "",
+    "This file is the SINGLE SOURCE OF TRUTH for what 'main is protected' means. It is read by",
+    "scripts/ci/verify-branch-protection.ts, which (a) asserts the required check name still",
+    "matches the CI job that produces it, and (b) asserts the live GitHub setting matches this",
+    "payload. The protocol at .engineering/protocols/PRE_DEPLOYMENT_VERIFICATION_GATE.md explains",
+    "WHY each setting is here; it does not restate the values. Change them here, nowhere else.",
+    "",
+    "'protection' is verbatim the request body of the GitHub classic branch-protection API:",
+    "  PUT /repos/{owner}/{repo}/branches/{branch}/protection",
+    "Nothing in this repository ever sends it. A named human applies it — branch protection on",
+    "main is production configuration, and COMMIT_PUSH_DEPLOY_PROTOCOL.md §3 forbids an agent",
+    "from changing production configuration. `npm run verify:branch-protection -- --print-apply`",
+    "prints the exact command for that human to run."
+  ],
+
+  "branch": "main",
+  "workflow": ".github/workflows/ci.yml",
+  "job": "verify",
+  "requiredCheck": "typecheck · test · build",
+
+  "protection": {
+    "required_status_checks": {
+      "strict": true,
+      "contexts": ["typecheck · test · build"]
+    },
+    "enforce_admins": true,
+    "required_pull_request_reviews": {
+      "required_approving_review_count": 0,
+      "dismiss_stale_reviews": true,
+      "require_code_owner_reviews": false
+    },
+    "restrictions": null,
+    "allow_force_pushes": false,
+    "allow_deletions": false,
+    "required_linear_history": false,
+    "required_conversation_resolution": true
+  }
+}
