@@ -423,7 +423,31 @@ This resolves `shopping_list` rows still in `resolution_state = 'raw'`. It is id
 > Skip this step if you made no changes to the shopping list add/import paths
 > and no new items have been added since last run.
 
-### Step 5 — Verify live paths
+### Step 5 — Verify the database (mechanical gate, `REL3`)
+
+Run the production verifier. It is **read-only** — SELECTs only — and safe against prod:
+
+```bash
+DATABASE_URL="<prod neon url>" npm run verify:prod   # must not FAIL
+```
+
+It derives what it expects from `server/migrations/runner.ts` (the canonical migration runner), so
+it cannot go stale. It reports:
+
+- **Schema migration state** — every reviewed migration applied. A missing one is a **FAIL**: the
+  tables and indexes it creates are not there, and the features that need them are broken.
+- **Schema migration provenance** — migrations recorded in the database that this code does not
+  contain. A **WARN**: nothing is missing, but this database ran a build you are not deploying.
+- **Cookbook seed** — delegated to `verify:cookbook-seed` (Step 4a).
+- **TRUST1 controls a database can witness** — S5's shared `auth_rate_limits` counter, CBK1's
+  canonical-identity index.
+
+> **What it cannot tell you.** `SESSION_SECRET` (TRUST1-S1, which **fails closed** — if it is
+> missing in Render the app does not start), secure cookies, route guards, and log redaction are
+> environment and HTTP-layer facts. A PASS here says **nothing** about them. Check them in the
+> Render dashboard; `verify:prod` does not, and does not pretend to.
+
+### Step 5b — Verify live paths
 
 Check these exact paths are working in the deployed prod app:
 

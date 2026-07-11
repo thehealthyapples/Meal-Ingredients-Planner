@@ -1697,6 +1697,41 @@ const MIGRATIONS: Migration[] = [
   // ← Add new migrations here, appended to the end
 ];
 
+// ─── WHAT THE CODE EXPECTS OF A DATABASE (REL3) ──────────────────────────────
+// The list above is the single source of truth for which migrations exist. These two accessors
+// are the only sanctioned way to ask it that question from outside this file.
+//
+// They exist because `scripts/verify-prod.ts` used to carry its OWN copy of the answer — a
+// string literal, `"2026-06-18_ws0_knowledge_registry"`, hand-updated. It was 20 migrations
+// stale, which meant the production verifier reported "Schema at head: PASS" against a database
+// missing `auth_rate_limits` (TRUST1-S5's shared counter) and the founding cookbook's unique
+// index (CBK1). A verifier that says PASS while production is 20 migrations behind is worse than
+// no verifier: it is a false assurance, and the release checklist believed it.
+//
+// The fix is not a better literal — it is having no literal. There is one migration list, it
+// lives here, and `runMigrations()` below consumes `expectedMigrationHead()` for its own parity
+// log too, so the runner and the verifier cannot disagree about the head even in principle.
+// This creates no second owner: nothing here applies, records, or orders a migration.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Every reviewed migration id, in the order the runner applies them. */
+export const MIGRATION_IDS: ReadonlyArray<string> = MIGRATIONS.map(m => m.id);
+
+/**
+ * The migration a fully-migrated database is expected to be at: the last entry, by definition —
+ * the runner applies in order and the list is append-only (see the header of this file).
+ */
+export function expectedMigrationHead(): string {
+  const head = MIGRATIONS[MIGRATIONS.length - 1]?.id;
+  if (!head) {
+    // Unreachable while any migration exists. Throwing rather than returning null keeps every
+    // caller honest: there is no "expected head" for an empty list, and a verifier must not
+    // quietly compare a database against `undefined` and call it a match.
+    throw new Error("[Migrations] The migration list is empty — there is no expected head.");
+  }
+  return head;
+}
+
 export interface MigrationResult {
   lastAppliedId: string | null;
   newlyApplied: number;
@@ -1774,8 +1809,9 @@ export async function runMigrations(): Promise<MigrationResult> {
 
     const lastAppliedId = latest[0]?.id ?? null;
 
-    // Log parity summary: confirms the migration state matches the code expectations
-    const expectedHead = MIGRATIONS[MIGRATIONS.length - 1]?.id ?? null;
+    // Log parity summary: confirms the migration state matches the code expectations.
+    // Same accessor `scripts/verify-prod.ts` uses — one owner of "what head should this be at?".
+    const expectedHead = expectedMigrationHead();
     if (lastAppliedId && lastAppliedId === expectedHead) {
       console.log(`[Migrations] Schema at head: ${lastAppliedId}`);
     } else if (lastAppliedId) {
