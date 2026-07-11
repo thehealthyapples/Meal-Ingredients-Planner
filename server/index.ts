@@ -9,6 +9,7 @@ import { seedPantryKnowledge } from "./seeds/seed-pantry-knowledge";
 import { runMigrations } from "./migrations/runner";
 import { storage } from "./storage";
 import { getUploadDir } from "./lib/media-storage";
+import { auditStartupEnvironment } from "./lib/platform-status";
 
 const app = express();
 const httpServer = createServer(app);
@@ -67,60 +68,24 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // ── Env var audit ────────────────────────────────────────────────────────────
-  // Log the presence/absence of required and optional secrets at startup so
-  // production misconfigurations surface immediately in server logs rather than
-  // failing silently at request time.
-  const isProduction = process.env.NODE_ENV === "production";
-
-  // Keys that must be present for the server to function at all.
-  const REQUIRED_ENV: { key: string; impact: string }[] = [
-    { key: "DATABASE_URL",   impact: "database connection will fail" },
-    { key: "SESSION_SECRET", impact: "user sessions will not work" },
-  ];
-
-  // Keys that enable specific features; absence degrades functionality but is
-  // not fatal. In production we emit ERROR so they appear prominently in logs.
-  const FEATURE_ENV: { key: string; impact: string }[] = [
-    { key: "OPENAI_API_KEY",      impact: "AI scan/text-import falls back to heuristic parser" },
-    { key: "SMTP_HOST",           impact: "email delivery will fail" },
-  ];
-
-  // Keys that activate optional data integrations. Absence simply disables the source.
-  const INTEGRATION_ENV: { key: string; impact: string }[] = [
-    { key: "WHISK_API_KEY",       impact: "Whisk recipe source disabled" },
-    { key: "USDA_API_KEY",        impact: "USDA uses public DEMO_KEY (rate-limited)" },
-    { key: "EDAMAM_APP_ID",       impact: "Edamam recipe source disabled" },
-    { key: "EDAMAM_APP_KEY",      impact: "Edamam recipe source disabled" },
-    { key: "SPOONACULAR_API_KEY", impact: "Spoonacular price lookup disabled" },
-  ];
-
-  const missing: string[] = [];
-  for (const { key, impact } of REQUIRED_ENV) {
-    if (!process.env[key]) {
-      missing.push(key);
-      console.error(`[Startup] MISSING required env var: ${key} — ${impact}`);
-    }
-  }
-  for (const { key, impact } of FEATURE_ENV) {
-    if (!process.env[key]) {
-      // In production, missing feature env vars are elevated to ERROR so they
-      // surface prominently in log aggregators and alerting pipelines.
-      const log = isProduction ? console.error : console.warn;
-      log(`[Startup] ${isProduction ? "MISSING" : "Optional env var not set:"} ${key} — ${impact}`);
-    } else {
-      console.log(`[Startup] ${key} ✓`);
-    }
-  }
-  for (const { key, impact } of INTEGRATION_ENV) {
-    if (!process.env[key]) {
-      console.warn(`[Startup] Integration not configured: ${key} — ${impact}`);
-    } else {
-      console.log(`[Startup] ${key} ✓`);
-    }
-  }
-  if (missing.length === 0) {
-    console.log("[Startup] All required env vars present");
+  // ── Required environment: fail closed ────────────────────────────────────────
+  // TRUST1-S1. The audit below reads the canonical environment inventory owned by
+  // server/lib/platform-status.ts. It used to be declared a second time inline here, and the two
+  // copies had already drifted — the inline one never learned about THEMEALDB_API_KEY. One fact,
+  // one owner.
+  //
+  // The audit already returned the missing REQUIRED keys. Nothing ever read them: absence was
+  // logged and the server booted anyway, so a missing SESSION_SECRET scrolled past among four
+  // hundred other lines while the platform ran on a published signing key. Absence is now fatal,
+  // in every environment including development. A crash is noticed; a silent downgrade is not.
+  const missing = auditStartupEnvironment();
+  if (missing.length > 0) {
+    console.error(
+      `\n[Startup] FATAL — refusing to start. Missing required environment variable(s): ${missing.join(", ")}.\n` +
+        `          These are required in every environment, including development.\n` +
+        `          See .env.example for what each one is and how to set it.\n`,
+    );
+    process.exit(1);
   }
 
   await runMigrations();

@@ -2,7 +2,7 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { Express } from "express";
 import session from "express-session";
-import { scrypt, randomBytes, timingSafeEqual } from "crypto";
+import { scrypt, randomBytes, timingSafeEqual, createHash } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser } from "@shared/schema";
@@ -34,11 +34,62 @@ async function comparePasswords(supplied: string, stored: string) {
 
 const isProduction = process.env.NODE_ENV === "production" || process.env.ENABLE_REGISTRATION === "true";
 
+/**
+ * TRUST1-S1 — the session secret fails closed.
+ *
+ * This value signs every session cookie, so it *is* the user's identity. Until TRUST1-S1 it fell
+ * back, whenever the environment variable was unset, to a literal committed to this repository —
+ * which meant a single missing variable silently downgraded the platform to a signing key that
+ * anyone with read access to the repo, in any clone or fork, forever, could use to forge a cookie
+ * for any account, including an admin's. That is a total authentication bypass gated on a
+ * configuration mistake, and a configuration mistake is not a safe thing to gate it on.
+ *
+ * Note that the defect's *shape* is not written out anywhere above, and must not be: the test
+ * scans every executable file for it as a literal pattern and exempts nothing, not even prose.
+ * A rule with a comment exemption is a rule with a hole in it.
+ *
+ * There is therefore no fallback. Absence is fatal, in every environment including development:
+ * a crash is noticed, and a silent downgrade to a published key is not.
+ *
+ * The burned literal is matched by DIGEST, never by value — reintroducing the string here to
+ * compare against it would put it straight back in the source it was removed from. It is refused
+ * because rotation, not deletion, is what actually closed this: the string is in this repository's
+ * git history permanently and cannot be unpublished.
+ */
+const BURNED_SESSION_SECRET_SHA256 =
+  "73d30df8ac62143a2a5e3f39732f6938ff20defa9b66626262e1d309936ae140";
+
+export function requireSessionSecret(): string {
+  const secret = process.env.SESSION_SECRET;
+
+  // `SESSION_SECRET=` on the command line yields "", not undefined — both are absent.
+  if (!secret || secret.trim() === "") {
+    throw new Error(
+      "SESSION_SECRET is not set. Refusing to start.\n" +
+        "  It signs every session cookie, so without it sessions cannot be trusted.\n" +
+        "  Set it to a high-entropy random value, e.g.\n" +
+        "      SESSION_SECRET=$(openssl rand -base64 32)\n" +
+        "  See .env.example.",
+    );
+  }
+
+  if (createHash("sha256").update(secret).digest("hex") === BURNED_SESSION_SECRET_SHA256) {
+    throw new Error(
+      "SESSION_SECRET is set to the compromised value that was previously hardcoded in this\n" +
+        "  repository. It is published in this repo's git history and can never be private again.\n" +
+        "  Refusing to start. Rotate it to a value that has never been committed:\n" +
+        "      SESSION_SECRET=$(openssl rand -base64 32)",
+    );
+  }
+
+  return secret;
+}
+
 export function setupAuth(app: Express) {
   app.set("trust proxy", 1);
 
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || "r3pl1t_s3cr3t_k3y_123456",
+    secret: requireSessionSecret(),
     resave: false,
     saveUninitialized: false,
     store: storage.sessionStore,
