@@ -8,8 +8,6 @@ import type {
   InsertKnowledgeFood,
   InsertKnowledgeNutrient,
   InsertKnowledgeHealthBenefit,
-  InsertKnowledgeFoodNutrient,
-  InsertKnowledgeFoodBenefit,
   InsertKnowledgeNutrientBenefit,
 } from "../schema";
 import { FOOD_SEED, EDITORIAL_FOOD_SEED } from "./foods";
@@ -17,18 +15,38 @@ import { NUTRIENT_SEED } from "./nutrients";
 import { HEALTH_BENEFIT_SEED } from "./health-benefits";
 import { FOOD_NUTRIENTS, FOOD_BENEFITS, NUTRIENT_BENEFITS } from "./relationships";
 import { NUTRIENT_BENEFIT_SOURCES } from "./claim-sources";
+import { FOOD_NUTRIENT_SOURCES } from "./composition-sources";
 import { validateSourceRef } from "./evidence";
 // KNOW2 — the draft-authored half of the seed, promoted out of the retired
 // second writer (the NK6D importer, now the write-free canonical-foods-gate.ts).
-// Composed in below so the knowledge_* tables have exactly one writer again.
+// Composed with the editorial half in ./food-relationships so the knowledge_*
+// tables have exactly one writer again.
 import { GRADUATED_FOOD_SEED, GRADUATED_FOOD_SOURCE } from "./graduated-foods";
-import { GRADUATED_FOOD_NUTRIENTS, GRADUATED_FOOD_BENEFITS } from "./graduated-relationships";
+// KNOW4 — the composition moved to ./food-relationships so the client-bundled
+// food report adapter can reach the unified links without importing the
+// sourced-claim pack. This module re-exports it; it is not a second copy.
+import { FOOD_NUTRIENT_SEED, FOOD_BENEFIT_SEED } from "./food-relationships";
 
 export { FOOD_SEED, EDITORIAL_FOOD_SEED, NUTRIENT_SEED, HEALTH_BENEFIT_SEED };
 export { GRADUATED_FOOD_SEED, GRADUATED_FOOD_SOURCE } from "./graduated-foods";
 export { GRADUATED_FOOD_NUTRIENTS, GRADUATED_FOOD_BENEFITS } from "./graduated-relationships";
 export { FOOD_NUTRIENTS, FOOD_BENEFITS, NUTRIENT_BENEFITS };
+export {
+  FOOD_NUTRIENT_SEED,
+  FOOD_BENEFIT_SEED,
+  FOOD_NUTRIENT_LINKS,
+  FOOD_BENEFIT_LINKS,
+} from "./food-relationships";
 export { NUTRIENT_BENEFIT_SOURCES, SOURCED_LAUNCH_BENEFITS } from "./claim-sources";
+// KNOW5 — the composition edge's citation pack. Deliberately NOT re-exported
+// through ./food-relationships: that module is client-bundled and must not ship
+// citations for claims the browser may never speak.
+export {
+  FOOD_NUTRIENT_SOURCES,
+  FOOD_NUTRIENT_SOURCE_BY_PAIR,
+  attachCompositionSources,
+  type SourcedFoodNutrientClaim,
+} from "./composition-sources";
 export * from "./evidence";
 // GOV2 Canonical Alias Principle — the single shared vocabulary resolver.
 export * from "./canonical-vocabulary-resolver";
@@ -36,31 +54,6 @@ export * from "./canonical-vocabulary-resolver";
 const foodSlugs = new Set(FOOD_SEED.map((f) => f.slug));
 const nutrientSlugs = new Set(NUTRIENT_SEED.map((n) => n.slug));
 const benefitSlugs = new Set(HEALTH_BENEFIT_SEED.map((b) => b.slug));
-
-/**
- * Expand the compact relationship maps into typed insert rows. Array order
- * becomes `ranking` (0 = most prominent). Confidence/evidence default to a
- * conservative "established"/"good" — these are editable per row later.
- */
-function expandFoodNutrients(): InsertKnowledgeFoodNutrient[] {
-  const rows: InsertKnowledgeFoodNutrient[] = [];
-  for (const [foodSlug, nutrients] of Object.entries(FOOD_NUTRIENTS)) {
-    nutrients.forEach((nutrientSlug, i) => {
-      rows.push({ foodSlug, nutrientSlug, ranking: i, confidence: "established", source: "THA editorial" });
-    });
-  }
-  return rows;
-}
-
-function expandFoodBenefits(): InsertKnowledgeFoodBenefit[] {
-  const rows: InsertKnowledgeFoodBenefit[] = [];
-  for (const [foodSlug, benefits] of Object.entries(FOOD_BENEFITS)) {
-    benefits.forEach((benefitSlug, i) => {
-      rows.push({ foodSlug, benefitSlug, ranking: i, evidenceStrength: "good", source: "THA editorial" });
-    });
-  }
-  return rows;
-}
 
 // PKC Phase 0: merge the sourced claim pack (claim-sources.ts) into the
 // expanded rows. Sourced pairs carry sourceRefs + evidenceStrength
@@ -88,12 +81,6 @@ function expandNutrientBenefits(): InsertKnowledgeNutrientBenefit[] {
   return rows;
 }
 
-// KNOW2 — editorial links first, then the graduated draft links. The graduated
-// rows keep their own per-row `confidence` / `evidenceStrength` / `ranking`,
-// which the compact editorial maps above cannot express (they hardcode
-// "established"/"good"). One array, one writer, two honestly-labelled origins.
-export const FOOD_NUTRIENT_SEED = [...expandFoodNutrients(), ...GRADUATED_FOOD_NUTRIENTS];
-export const FOOD_BENEFIT_SEED = [...expandFoodBenefits(), ...GRADUATED_FOOD_BENEFITS];
 export const NUTRIENT_BENEFIT_SEED = expandNutrientBenefits();
 
 /**
@@ -175,6 +162,25 @@ export function validateKnowledgeSeed(): string[] {
       for (const p of validateSourceRef(ref)) problems.push(`claim-sources: ${pair}: ${p}`);
     }
   }
+
+  // KNOW5 — the composition claim pack obeys the same two rules as the
+  // nutrient↔benefit pack: it may only CITE existing food→nutrient links, never
+  // create one, and every citation must clear Layer 1. A citation that invents a
+  // link is an uncited claim wearing a source (finding F1, in a new disguise).
+  const fnPairs = new Set(FOOD_NUTRIENT_SEED.map((r) => `${r.foodSlug}→${r.nutrientSlug}`));
+  const seenCompositionPairs = new Set<string>();
+  for (const s of FOOD_NUTRIENT_SOURCES) {
+    const pair = `${s.foodSlug}→${s.nutrientSlug}`;
+    if (seenCompositionPairs.has(pair)) problems.push(`composition-sources: duplicate entry for ${pair}`);
+    seenCompositionPairs.add(pair);
+    if (!fnPairs.has(pair)) {
+      problems.push(`composition-sources: ${pair} is not an existing food→nutrient link — citations may not introduce new claims`);
+    }
+    if (s.sourceRefs.length === 0) problems.push(`composition-sources: ${pair} has no sourceRefs`);
+    for (const ref of s.sourceRefs) {
+      for (const p of validateSourceRef(ref)) problems.push(`composition-sources: ${pair}: ${p}`);
+    }
+  }
   return problems;
 }
 
@@ -185,4 +191,7 @@ export const KNOWLEDGE_SEED_COUNTS = {
   foodNutrients: FOOD_NUTRIENT_SEED.length,
   foodBenefits: FOOD_BENEFIT_SEED.length,
   nutrientBenefits: NUTRIENT_BENEFIT_SEED.length,
+  // KNOW5 — how many composition links carry a citation. Everything else is an
+  // uncited premise and can license no benefit chip.
+  citedFoodNutrients: FOOD_NUTRIENT_SOURCES.length,
 } as const;

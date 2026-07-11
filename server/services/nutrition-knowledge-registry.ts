@@ -15,11 +15,28 @@
 //     the evidence signal before it can reach the UI.
 //   • PKC Phase 0 (Rule KC8) — the Layer-2 claim-trust gate: a benefit claim
 //     reaches a user ONLY if it is evidence-backed (≥1 valid SourceRef + human
-//     reviewedAt sign-off, shared/knowledge/evidence.ts). Food-level benefit
-//     chips render only when corroborated through the nutrient bridge: the
-//     food contributes a nutrient whose link to that benefit is evidence-
-//     backed. Unsourced claims are honest gaps — absent, never rendered.
-import { isEvidenceBackedClaim, type KnowledgeSourceRef } from "@shared/knowledge/evidence";
+//     reviewedAt sign-off, shared/knowledge/evidence.ts). Unsourced claims are
+//     honest gaps — absent, never rendered.
+//   • KNOW5 — the gate now spans the FULL CHAIN. A food-level benefit chip
+//     requires BOTH edges of the nutrient bridge to be evidence-backed:
+//       food → nutrient      (the food-specific premise — the composition edge)
+//       nutrient → benefit   (the physiological claim)
+//     Before KNOW5 only the second was gated, so a chip inherited a genuine
+//     NHS/EFSA citation that attested "fibre supports gut health" while its
+//     premise — "this food is a notable fibre source" — was an unreviewed AI
+//     draft. `plain-wheat-flour → gut-health [NHS]` rendered on that hole.
+//     The chip now carries the citations for BOTH edges, and its Evidence
+//     Confidence is derived from the chain, never from an authored `confidence`
+//     column (which an AI draft may set to "established" about itself).
+import {
+  deriveClaimConfidence,
+  deriveEvidenceConfidence,
+  isEvidenceBackedClaim,
+  isRenderableConfidence,
+  strongerConfidence,
+  type EvidenceConfidence,
+  type KnowledgeSourceRef,
+} from "@shared/knowledge/evidence";
 import { normalizeIngredientKey } from "@shared/normalize";
 import { resolveIngredientAlias } from "@shared/ingredient-aliases";
 import { db } from "../db";
@@ -79,12 +96,24 @@ export async function getHealthBenefitBySlug(slug: string): Promise<KnowledgeHea
 export interface FoodNutrientLink {
   nutrient: KnowledgeNutrient;
   amount: string | null;
+  /** Authored editorial signal. STORAGE ONLY — the gate never reads it. */
   confidence: string;
   ranking: number;
   source: string;
+  /** KNOW5 — Layer-2 claim-trust fields on the composition edge. */
+  sourceRefs: KnowledgeSourceRef[];
+  reviewedAt: Date | null;
+  reviewedBy: string | null;
+  /** Derived from the citations + sign-off above. Never authored. */
+  evidenceConfidence: EvidenceConfidence;
 }
 
-/** Nutrients a food notably contributes, most prominent first. */
+/** Nutrients a food notably contributes, most prominent first.
+ *
+ *  Composition is NOT a health claim, so this list is not evidence-gated: a food
+ *  showing its nutrients and no benefit chip is the honest state KNOW5 creates.
+ *  Each link reports its own `evidenceConfidence` so a caller can see which
+ *  premises are cited and which are still Under Review. */
 export async function getNutrientsForFood(foodSlug: string): Promise<FoodNutrientLink[]> {
   const links = await db
     .select()
@@ -97,7 +126,18 @@ export async function getNutrientsForFood(foodSlug: string): Promise<FoodNutrien
   return links
     .map((l) => {
       const nutrient = bySlug.get(l.nutrientSlug);
-      return nutrient ? { nutrient, amount: l.amount, confidence: l.confidence, ranking: l.ranking, source: l.source } : null;
+      if (!nutrient) return null;
+      return {
+        nutrient,
+        amount: l.amount,
+        confidence: l.confidence,
+        ranking: l.ranking,
+        source: l.source,
+        sourceRefs: l.sourceRefs,
+        reviewedAt: l.reviewedAt,
+        reviewedBy: l.reviewedBy,
+        evidenceConfidence: deriveClaimConfidence(l),
+      };
     })
     .filter((x): x is FoodNutrientLink => x !== null);
 }
@@ -144,9 +184,12 @@ export async function getFoodsForNutrient(nutrientSlug: string): Promise<Knowled
 }
 
 /** Reverse lookup: foods that support a health benefit.
- *  PKC Phase 0: user-facing — only foods whose chip for this benefit would
- *  render, i.e. the food carries the benefit editorially AND contributes a
- *  nutrient whose link to this benefit is evidence-backed (nutrient bridge). */
+ *
+ *  KNOW5: this must apply exactly the same full-chain gate as
+ *  getFoodBenefitsForDisplay(), or the benefit page lists a food whose own page
+ *  refuses to show the chip. The food carries the benefit editorially AND
+ *  contributes a nutrient via an evidence-backed COMPOSITION link whose link to
+ *  this benefit is itself evidence-backed. */
 export async function getFoodsForBenefit(benefitSlug: string): Promise<KnowledgeFood[]> {
   const links = await db
     .select()
@@ -170,7 +213,9 @@ export async function getFoodsForBenefit(benefitSlug: string): Promise<Knowledge
       inArray(knowledgeFoodNutrients.nutrientSlug, backedNutrients),
       eq(knowledgeFoodNutrients.isActive, true),
     ));
-  const corroborated = new Set(fnLinks.map((l) => l.foodSlug));
+  // The composition premise must itself be cited and signed off. An uncited
+  // premise corroborates nothing, however well-cited the nutrient claim is.
+  const corroborated = new Set(fnLinks.filter((l) => isEvidenceBackedClaim(l)).map((l) => l.foodSlug));
   return foodsBySlugs(links.map((l) => l.foodSlug).filter((s) => corroborated.has(s)));
 }
 
@@ -185,24 +230,50 @@ export interface DisplayBenefit {
   benefit: KnowledgeHealthBenefit;
   ranking: number;
   source: string;
-  /** The citations that earned this claim the right to render. */
+  /** The citations that earned this claim the right to render. For a food-level
+   *  chip these span the WHOLE chain: the composition premise and the
+   *  nutrient→benefit claim, deduplicated by URL. */
   sourceRefs: KnowledgeSourceRef[];
+  /** Derived from the evidence chain and review status. Never `under-review` —
+   *  such a claim is absent from this list entirely. */
+  confidence: EvidenceConfidence;
 }
 
-/** Food → benefits, via the nutrient bridge: a food's benefit chip renders only
- *  when the food editorially carries the benefit AND contributes a nutrient
- *  whose link to that benefit is evidence-backed. The chip inherits the
- *  corroborating claim's citations. */
+/** Food → benefits, via the nutrient bridge. A chip renders only when the food
+ *  editorially carries the benefit AND contributes a nutrient through a cited,
+ *  signed-off COMPOSITION link whose link to that benefit is itself cited and
+ *  signed off. The chip carries the citations for both edges.
+ *
+ *  The food→benefit row's own evidence, if it has any, raises the chip from
+ *  Strong (derived through the bridge) to Established (directly cited). It can
+ *  never license a chip on its own — that would be the uncited food-specific
+ *  claim this workstream exists to eliminate. */
 export async function getFoodBenefitsForDisplay(foodSlug: string): Promise<DisplayBenefit[]> {
   const direct = await getBenefitsForFood(foodSlug);
   if (direct.length === 0) return [];
   const backed = await backedBenefitsViaNutrientBridge(foodSlug);
-  return direct
-    .filter((l) => backed.has(l.benefit.slug))
-    .map((l) => {
-      const b = backed.get(l.benefit.slug)!;
-      return { benefit: l.benefit, ranking: l.ranking, source: b.source, sourceRefs: b.sourceRefs };
+
+  const out: DisplayBenefit[] = [];
+  for (const link of direct) {
+    const route = backed.get(link.benefit.slug);
+    if (!route) continue; // chain incomplete → Under Review → honest gap.
+
+    // Corroboration from the food→benefit row itself, if it is evidence-backed.
+    const confidence = deriveEvidenceConfidence({
+      composition: route.composition,
+      nutrientBenefit: route.nutrientBenefit,
+      foodBenefit: link,
     });
+    if (!isRenderableConfidence(confidence)) continue;
+
+    const sourceRefs = [...route.sourceRefs];
+    if (isEvidenceBackedClaim(link)) {
+      const seen = new Set(sourceRefs.map((r) => r.url));
+      for (const ref of link.sourceRefs) if (!seen.has(ref.url)) sourceRefs.push(ref);
+    }
+    out.push({ benefit: link.benefit, ranking: link.ranking, source: route.source, sourceRefs, confidence });
+  }
+  return out;
 }
 
 /** Nutrient → benefits: only evidence-backed claims (valid SourceRef + sign-off). */
@@ -210,18 +281,42 @@ export async function getNutrientBenefitsForDisplay(nutrientSlug: string): Promi
   const links = await getBenefitsForNutrient(nutrientSlug);
   return links
     .filter((l) => isEvidenceBackedClaim(l))
-    .map(({ benefit, ranking, source, sourceRefs }) => ({ benefit, ranking, source, sourceRefs }));
+    .map(({ benefit, ranking, source, sourceRefs, reviewedAt }) => ({
+      benefit,
+      ranking,
+      source,
+      sourceRefs,
+      confidence: deriveClaimConfidence({ sourceRefs, reviewedAt }),
+    }));
 }
 
-/** Evidence-backed benefits reachable from a food's nutrients, with the
- *  citations that back them (deduplicated by URL). */
-async function backedBenefitsViaNutrientBridge(
-  foodSlug: string,
-): Promise<Map<string, { source: string; sourceRefs: KnowledgeSourceRef[] }>> {
-  const fnLinks = await db
+/** One completed evidence chain from a food to a benefit, and the citations that
+ *  earned it. `composition` and `nutrientBenefit` are the two gated edges. */
+interface BackedRoute {
+  source: string;
+  sourceRefs: KnowledgeSourceRef[];
+  composition: { sourceRefs: KnowledgeSourceRef[]; reviewedAt: Date | null };
+  nutrientBenefit: { sourceRefs: KnowledgeSourceRef[]; reviewedAt: Date | null };
+  confidence: EvidenceConfidence;
+}
+
+/**
+ * Benefits reachable from a food's nutrients where BOTH edges of the bridge are
+ * evidence-backed, with the citations from both (deduplicated by URL).
+ *
+ * Where several nutrients reach the same benefit, the best-evidenced route wins
+ * and every qualifying route's citations are merged onto it — a user seeing one
+ * chip should see every source that supports it.
+ */
+async function backedBenefitsViaNutrientBridge(foodSlug: string): Promise<Map<string, BackedRoute>> {
+  const allFnLinks = await db
     .select()
     .from(knowledgeFoodNutrients)
     .where(and(eq(knowledgeFoodNutrients.foodSlug, foodSlug), eq(knowledgeFoodNutrients.isActive, true)));
+
+  // KNOW5 — the composition edge is gated here, before it can corroborate
+  // anything. An unreviewed premise is not a premise.
+  const fnLinks = allFnLinks.filter((l) => isEvidenceBackedClaim(l));
   if (fnLinks.length === 0) return new Map();
 
   const nbLinks = await db
@@ -232,18 +327,52 @@ async function backedBenefitsViaNutrientBridge(
       eq(knowledgeNutrientBenefits.isActive, true),
     ));
 
-  const backed = new Map<string, { source: string; sourceRefs: KnowledgeSourceRef[] }>();
-  for (const link of nbLinks) {
-    if (!isEvidenceBackedClaim(link)) continue;
-    const existing = backed.get(link.benefitSlug);
+  const compositionByNutrient = new Map(fnLinks.map((l) => [l.nutrientSlug, l]));
+  const backed = new Map<string, BackedRoute>();
+
+  for (const nb of nbLinks) {
+    if (!isEvidenceBackedClaim(nb)) continue;
+    const composition = compositionByNutrient.get(nb.nutrientSlug);
+    if (!composition) continue;
+
+    // foodBenefit is unknown at this level; the caller folds it in. A route is
+    // therefore at best `strong` here, and may be lifted to `established`.
+    const confidence = deriveEvidenceConfidence({ composition, nutrientBenefit: nb });
+    if (!isRenderableConfidence(confidence)) continue;
+
+    const existing = backed.get(nb.benefitSlug);
     if (!existing) {
-      backed.set(link.benefitSlug, { source: link.source, sourceRefs: [...link.sourceRefs] });
-    } else {
-      const seen = new Set(existing.sourceRefs.map((r) => r.url));
-      for (const ref of link.sourceRefs) if (!seen.has(ref.url)) existing.sourceRefs.push(ref);
+      backed.set(nb.benefitSlug, {
+        source: nb.source,
+        sourceRefs: dedupeByUrl([...composition.sourceRefs, ...nb.sourceRefs]),
+        composition,
+        nutrientBenefit: nb,
+        confidence,
+      });
+      continue;
+    }
+
+    // Merge citations from this additional route; keep the strongest chain.
+    existing.sourceRefs = dedupeByUrl([...existing.sourceRefs, ...composition.sourceRefs, ...nb.sourceRefs]);
+    if (strongerConfidence(confidence, existing.confidence) === confidence && confidence !== existing.confidence) {
+      existing.source = nb.source;
+      existing.composition = composition;
+      existing.nutrientBenefit = nb;
+      existing.confidence = confidence;
     }
   }
   return backed;
+}
+
+function dedupeByUrl(refs: KnowledgeSourceRef[]): KnowledgeSourceRef[] {
+  const seen = new Set<string>();
+  const out: KnowledgeSourceRef[] = [];
+  for (const ref of refs) {
+    if (seen.has(ref.url)) continue;
+    seen.add(ref.url);
+    out.push(ref);
+  }
+  return out;
 }
 
 // ── Internal join helpers ──────────────────────────────────────────────────────

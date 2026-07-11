@@ -8,8 +8,9 @@
 //
 // Authority model (WS2D Option A+):
 //   Identity  → WS2A canonical seed  (CANONICAL_SEED / foods.ts)
-//   Knowledge → WS0 knowledge seed   (FOOD_NUTRIENTS / FOOD_BENEFITS / NUTRIENT_SEED / HEALTH_BENEFIT_SEED)
+//   Knowledge → WS0 knowledge seed   (FOOD_NUTRIENT_LINKS / NUTRIENT_SEED)
 //   Context   → NUTRITION_CONTEXT    (WS2F typed context facts — WS2D Stage S2 seed shape)
+//   Benefits  → NOT HERE. See "Health benefits" below.
 //
 // This module is READ-ONLY. It:
 //   • never duplicates data stores — reads existing registries only
@@ -18,6 +19,29 @@
 //     (preparations, mixed-food containers and unknown strings all return null)
 //   • keeps the WS2A identity FK bridge (knowledgeFoodSlug) as the only seam
 //     between identity and knowledge — zero dangling FKs is maintained
+//
+// KNOW4 — the knowledge it reads is now the UNIFIED seed. Before KNOW4 this
+// adapter read the compact editorial maps (`FOOD_NUTRIENTS`), which describe
+// only the 264 human-authored knowledge foods. The 346 graduated foods KNOW2
+// promoted into the same declared owner were invisible to it, so the seven
+// canonical foods KNOW3 bound to graduated knowledge surfaced nothing at all.
+// It now reads `FOOD_NUTRIENT_LINKS` — the same two halves, composed once, by
+// their owner. No fact is authored here and no store is added.
+//
+// Health benefits — why this adapter returns none.
+//   A food→benefit link is a CLAIM. PKC Phase 0 (Rule KC8) admits a claim to a
+//   user only when it clears the Layer-2 evidence gate: a valid `SourceRef`
+//   AND a human `reviewedAt` sign-off. `reviewedAt` is a database column that
+//   only a human sets (Rule KC9) — it exists nowhere in the seed, so no
+//   seed-only, DB-free module can evaluate the gate. This adapter therefore
+//   cannot know whether a benefit may be spoken, and so it never speaks one:
+//   `healthBenefits` and every variety's `additionalBenefits` are always empty.
+//   The one mouth for benefit claims is `getEvidenceBackedFoodReport()`
+//   (server/lib/food-report-evidence.ts), which composes this report with the
+//   gate. That was PKC2's stated contract; KNOW4 is where it becomes true.
+//   This is also why the graduated benefit links are not read here: they are
+//   AI-drafted candidates (`GRADUATED_FOOD_SOURCE`), the exact class of claim
+//   the gate exists to hold back.
 //
 // NOT in scope for WS2F:
 //   Pairings · Healthier Alternatives · Nutrition Boost Ideas ·
@@ -29,9 +53,8 @@
 // catalogue plus per-variety additional knowledge — the display layer splits it.
 
 import { CANONICAL_SEED } from "./foods";
-import { FOOD_NUTRIENTS, FOOD_BENEFITS } from "../knowledge/relationships";
+import { FOOD_NUTRIENT_LINKS } from "../knowledge/food-relationships";
 import { NUTRIENT_SEED } from "../knowledge/nutrients";
-import { HEALTH_BENEFIT_SEED } from "../knowledge/health-benefits";
 import { NUTRITION_CONTEXT } from "./nutrition-context";
 import { varietyLabel } from "./variety";
 
@@ -57,6 +80,8 @@ export interface FoodReportVariety {
   /** Short label with parent food name stripped, e.g. "Cherry" from "Cherry Tomato". */
   label: string;
   additionalNutrients: string[];
+  /** Always empty from this adapter — a claim it cannot gate. Populated only by
+   *  `getEvidenceBackedFoodReport()`. See the "Health benefits" note above. */
   additionalBenefits: string[];
 }
 
@@ -70,9 +95,11 @@ export interface FoodReportVariety {
 export interface FoodReportKnowledge {
   canonicalSlug: string;
   overview: FoodReportOverview;
-  /** Top nutrients (max 5). Empty when WS0 has no data for this food. */
+  /** Top nutrients (max 5), editorial links before graduated ones. Empty when
+   *  the food has no knowledge link, or the knowledge seed has no data for it. */
   keyNutrients: string[];
-  /** Health benefits from WS0 nutrient bridge. Empty when WS0 has no data. */
+  /** Always empty from this adapter — a claim it cannot gate. Populated only by
+   *  `getEvidenceBackedFoodReport()`. See the "Health benefits" note above. */
   healthBenefits: string[];
   /** Curated context lines from NUTRITION_CONTEXT. Empty when none authored. */
   nutritionContext: string[];
@@ -83,28 +110,19 @@ export interface FoodReportKnowledge {
 // ─── Internal lookup maps (built once from seed constants) ───────────────────
 
 const nutrientDisplayName = new Map(NUTRIENT_SEED.map((n) => [n.slug, n.name]));
-const benefitDisplayName = new Map(HEALTH_BENEFIT_SEED.map((b) => [b.slug, b.name]));
+
+/** Nutrient slugs a knowledge food links, in the seed's own order. A nutrient
+ *  the seed no longer defines (retired vocabulary) has no display name and is
+ *  dropped rather than rendered as its raw slug. */
+function nutrientSlugsFor(knowledgeSlug: string | null | undefined): readonly string[] {
+  if (!knowledgeSlug) return [];
+  return FOOD_NUTRIENT_LINKS.get(knowledgeSlug) ?? [];
+}
 
 function toNutrientDisplayNames(slugs: readonly string[]): string[] {
   return slugs
     .map((s) => nutrientDisplayName.get(s) ?? null)
     .filter((n): n is string => n !== null);
-}
-
-function toBenefitDisplayNames(slugs: readonly string[]): string[] {
-  return slugs
-    .map((s) => benefitDisplayName.get(s) ?? null)
-    .filter((b): b is string => b !== null);
-}
-
-function getKeyNutrients(knowledgeSlug: string | null | undefined): string[] {
-  if (!knowledgeSlug) return [];
-  return toNutrientDisplayNames((FOOD_NUTRIENTS[knowledgeSlug] ?? []).slice(0, 5));
-}
-
-function getHealthBenefits(knowledgeSlug: string | null | undefined): string[] {
-  if (!knowledgeSlug) return [];
-  return toBenefitDisplayNames(FOOD_BENEFITS[knowledgeSlug] ?? []);
 }
 
 // ─── Adapter ─────────────────────────────────────────────────────────────────
@@ -132,25 +150,14 @@ export function buildFoodReport(canonicalSlug: string): FoodReportKnowledge | nu
   // avoid a circular dependency risk — instead we resolve inline here.
   const description = (food.description ?? null) ?? "";
 
-  // Build the parent's nutrient / benefit slug sets for deduplication.
-  const parentNutrientSlugs = new Set<string>(
-    knowledgeSlug ? (FOOD_NUTRIENTS[knowledgeSlug] ?? []) : [],
-  );
-  const parentBenefitSlugs = new Set<string>(
-    knowledgeSlug ? (FOOD_BENEFITS[knowledgeSlug] ?? []) : [],
-  );
+  // Build the parent's nutrient slug set for deduplication.
+  const parentNutrientSlugs = new Set<string>(nutrientSlugsFor(knowledgeSlug));
 
   // Build per-variety knowledge. A variety shows only ADDITIONAL facts — those
   // not already surfaced by the canonical parent — so the reader never sees a
   // repeated fact between the "shared" and "variety" sections.
   const varieties: FoodReportVariety[] = (entry.varieties ?? []).map((v) => {
-    const vKnowledgeSlug = v.knowledgeFoodSlug ?? null;
-    const allVarietyNutrientSlugs = vKnowledgeSlug
-      ? (FOOD_NUTRIENTS[vKnowledgeSlug] ?? [])
-      : [];
-    const allVarietyBenefitSlugs = vKnowledgeSlug
-      ? (FOOD_BENEFITS[vKnowledgeSlug] ?? [])
-      : [];
+    const allVarietyNutrientSlugs = nutrientSlugsFor(v.knowledgeFoodSlug);
 
     return {
       slug: v.slug,
@@ -159,9 +166,8 @@ export function buildFoodReport(canonicalSlug: string): FoodReportKnowledge | nu
       additionalNutrients: toNutrientDisplayNames(
         allVarietyNutrientSlugs.filter((s) => !parentNutrientSlugs.has(s)),
       ),
-      additionalBenefits: toBenefitDisplayNames(
-        allVarietyBenefitSlugs.filter((s) => !parentBenefitSlugs.has(s)),
-      ),
+      // A claim this module cannot gate. getEvidenceBackedFoodReport() fills it.
+      additionalBenefits: [],
     };
   });
 
@@ -172,8 +178,9 @@ export function buildFoodReport(canonicalSlug: string): FoodReportKnowledge | nu
       category: food.category,
       description,
     },
-    keyNutrients: getKeyNutrients(knowledgeSlug),
-    healthBenefits: getHealthBenefits(knowledgeSlug),
+    keyNutrients: toNutrientDisplayNames(nutrientSlugsFor(knowledgeSlug).slice(0, 5)),
+    // A claim this module cannot gate. getEvidenceBackedFoodReport() fills it.
+    healthBenefits: [],
     nutritionContext: NUTRITION_CONTEXT[canonicalSlug] ?? [],
     varieties,
   };

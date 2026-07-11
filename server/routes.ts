@@ -5674,11 +5674,15 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
   // so the Food panel search can match by food, benefit, nutrient, attribute and
   // season — not just by name. This OWNS NOTHING and is NOT a second search engine:
   // it is an index projection of the same canonical knowledge the Food page reads.
+  //
+  // KNOW4 — the benefit terms come from the evidence-gated report, so a user can
+  // never find a food by a claim the platform is not allowed to make about it.
+  // One gated read per DISTINCT canonical food, not one per pantry item.
   app.get("/api/pantry/search-index", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
       const { resolveCanonicalFood } = await import("@shared/canonical/resolver");
-      const { buildFoodReport } = await import("@shared/canonical/food-report-adapter");
+      const { getEvidenceBackedFoodReport } = await import("./lib/food-report-evidence");
       const { CANONICAL_SEED } = await import("@shared/canonical/foods");
       const { seasonForDate, SEASON_SEED, SEASON_LABEL } = await import(
         "@shared/discovery/seasonal-map"
@@ -5691,17 +5695,32 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       const items = await storage.getPantryItems(req.user!.id);
       const index: Array<{ ingredientKey: string; terms: string[] }> = [];
 
-      for (const it of items) {
-        if (it.isDeleted) continue;
-        const display = it.displayName || it.ingredientKey;
-        const r = resolveCanonicalFood(display);
+      // Resolve every live item once, then fetch each distinct food's gated
+      // report concurrently. A pantry of 200 items over 40 foods costs 40 reads.
+      const resolved = items
+        .filter((it) => !it.isDeleted)
+        .map((it) => ({
+          item: it,
+          slug: resolveCanonicalFood(it.displayName || it.ingredientKey).canonicalSlug,
+        }));
+      const distinctSlugs = Array.from(
+        new Set(resolved.map((r) => r.slug).filter((s): s is string => !!s)),
+      );
+      const reports = new Map(
+        await Promise.all(
+          distinctSlugs.map(
+            async (slug) => [slug, await getEvidenceBackedFoodReport(slug)] as const,
+          ),
+        ),
+      );
+
+      for (const { item: it, slug } of resolved) {
         const terms = new Set<string>();
-        if (!r.canonicalSlug) {
+        if (!slug) {
           index.push({ ingredientKey: it.ingredientKey, terms: [] });
           continue;
         }
-        const slug = r.canonicalSlug;
-        const report = buildFoodReport(slug);
+        const report = reports.get(slug) ?? null;
         if (report) {
           for (const b of report.healthBenefits) terms.add(b.toLowerCase());
           for (const n of report.keyNutrients) terms.add(n.toLowerCase());

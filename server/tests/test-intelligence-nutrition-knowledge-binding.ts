@@ -99,7 +99,23 @@ function makePort(): NutritionKnowledgeReadPort {
     getFoodBenefitsForDisplay: async (foodSlug) => {
       calls.push(`getFoodBenefitsForDisplay(${foodSlug})`);
       if (foodSlug !== "broccoli") return [];
-      return [{ benefit: benefitObj("heart-health", "Heart health", "Supports cardiovascular health."), ranking: 1, source: "EFSA", sourceRefs: [] }];
+      // KNOW5 — a rendered chip always carries the citations for its whole
+      // evidence chain and a derived Evidence Confidence. `strong` is the
+      // correct level here: the claim is evidenced but derived via the nutrient
+      // bridge, with no source naming broccoli and heart health together.
+      return [{
+        benefit: benefitObj("heart-health", "Heart health", "Supports cardiovascular health."),
+        ranking: 1,
+        source: "EFSA",
+        sourceRefs: [{
+          body: "EFSA",
+          title: "Commission Regulation (EU) No 432/2012",
+          url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32012R0432",
+          evidenceLevel: "established" as const,
+          lastReviewed: "2026-07-03",
+        }],
+        confidence: "strong" as const,
+      }];
     },
     searchKnowledgeRegistry: async (query) => {
       calls.push(`searchKnowledgeRegistry(${query})`);

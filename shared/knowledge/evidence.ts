@@ -94,3 +94,129 @@ export function isEvidenceBackedClaim(row: ClaimEvidenceFields): boolean {
   if (!Array.isArray(row.sourceRefs) || row.sourceRefs.length === 0) return false;
   return row.sourceRefs.some((ref) => isValidSourceRef(ref));
 }
+
+// ── Review-state integrity (KNOW5) ────────────────────────────────────────────
+
+/** The review columns every claim table carries. `reviewedBy` names the human. */
+export interface ClaimReviewFields {
+  reviewedAt: Date | string | null;
+  reviewedBy?: string | null;
+}
+
+/**
+ * A sign-off must name its reviewer. An anonymous `reviewed_at` is a rubber
+ * stamp wearing the costume of a human gate (KNOW5 finding F3): it records that
+ * *someone* approved a health claim without recording who, so it can never be
+ * audited or withdrawn. Enforced at the sign-off boundary, not at render time —
+ * pre-KNOW5 sign-offs are legitimately anonymous and are not retroactively
+ * invalidated, but no new one may be.
+ */
+export function validateReviewState(row: ClaimReviewFields): string[] {
+  const problems: string[] = [];
+  if (row.reviewedAt && !row.reviewedBy) problems.push("reviewedAt is set without reviewedBy — a sign-off must name its reviewer");
+  if (!row.reviewedAt && row.reviewedBy) problems.push("reviewedBy is set without reviewedAt — a reviewer without a sign-off");
+  return problems;
+}
+
+// ── Evidence Confidence (KNOW5) ───────────────────────────────────────────────
+//
+// One vocabulary for "how well evidenced is this claim", derived SOLELY from the
+// evidence chain and the review status. It is never authored, never stored, and
+// never inherited from a `confidence` / `evidenceStrength` column — those are
+// editorial self-assessments (an AI draft may call itself `established`) and the
+// gate ignores them. Confidence is computed from what a claim can actually cite
+// and who actually signed it off.
+
+export type EvidenceConfidence = "established" | "strong" | "emerging" | "under-review";
+
+export const EVIDENCE_CONFIDENCE_LABELS: Readonly<Record<EvidenceConfidence, string>> = {
+  established: "Established",
+  strong: "Strong",
+  emerging: "Emerging",
+  "under-review": "Under Review",
+};
+
+/** Only `under-review` is a gap. Everything else has cleared the Layer-2 gate. */
+export function isRenderableConfidence(confidence: EvidenceConfidence): boolean {
+  return confidence !== "under-review";
+}
+
+/** Rank for picking the best-evidenced route to a benefit. Higher is stronger. */
+const CONFIDENCE_RANK: Readonly<Record<EvidenceConfidence, number>> = {
+  "under-review": 0,
+  emerging: 1,
+  strong: 2,
+  established: 3,
+};
+
+export function strongerConfidence(a: EvidenceConfidence, b: EvidenceConfidence): EvidenceConfidence {
+  return CONFIDENCE_RANK[a] >= CONFIDENCE_RANK[b] ? a : b;
+}
+
+/**
+ * The evidence level a single edge has actually earned: the strongest level
+ * among its *structurally valid* citations, or null if the edge is not
+ * evidence-backed at all. One established source is enough to establish an edge;
+ * an invalid citation contributes nothing, whatever level it claims.
+ */
+export function edgeEvidenceLevel(row: ClaimEvidenceFields): "established" | "emerging" | null {
+  if (!isEvidenceBackedClaim(row)) return null;
+  const levels = (row.sourceRefs as unknown[]).filter(isValidSourceRef).map((ref) => ref.evidenceLevel);
+  return levels.includes("established") ? "established" : "emerging";
+}
+
+/** Confidence of one standalone claim (e.g. nutrient → benefit, food → nutrient). */
+export function deriveClaimConfidence(row: ClaimEvidenceFields): EvidenceConfidence {
+  const level = edgeEvidenceLevel(row);
+  if (level === null) return "under-review";
+  return level;
+}
+
+/**
+ * The full chain a food-level benefit chip depends on.
+ *
+ * `composition` and `nutrientBenefit` are BOTH required. Before KNOW5 only the
+ * second was gated, so a chip could render an NHS citation for "fibre supports
+ * gut health" on top of an unreviewed AI premise that white flour is a notable
+ * fibre source. Requiring both is the whole point of this workstream.
+ *
+ * `foodBenefit` is the food→benefit row's own evidence, if it has any. It is
+ * optional corroboration — it can raise confidence but never grants a chip.
+ */
+export interface BenefitEvidenceChain {
+  /** food → nutrient: the food-specific premise. */
+  composition: ClaimEvidenceFields;
+  /** nutrient → benefit: the physiological claim. */
+  nutrientBenefit: ClaimEvidenceFields;
+  /** food → benefit: a direct citation for this food's claim, if one exists. */
+  foodBenefit?: ClaimEvidenceFields | null;
+}
+
+/**
+ * Evidence Confidence for a derived benefit claim.
+ *
+ *   Under Review  any required edge is unsourced or unreviewed → the chip does
+ *                 not render. An honest gap (Principle 6).
+ *   Emerging      the chain is complete, but its weakest citation is `emerging`.
+ *                 Never presented as established (ENGINEERING_WORKFLOW STEP 7).
+ *   Strong        every edge is established, but the food-specific claim is
+ *                 DERIVED through the nutrient bridge — no source speaks about
+ *                 this food and this benefit together.
+ *   Established   every edge is established AND the food→benefit claim is itself
+ *                 directly cited and signed off.
+ *
+ * The weakest link governs: a chain is never stronger than the edge that
+ * supports it least.
+ */
+export function deriveEvidenceConfidence(chain: BenefitEvidenceChain): EvidenceConfidence {
+  const composition = edgeEvidenceLevel(chain.composition);
+  const nutrientBenefit = edgeEvidenceLevel(chain.nutrientBenefit);
+
+  // A missing required edge is a gap, not a weak claim.
+  if (composition === null || nutrientBenefit === null) return "under-review";
+  if (composition === "emerging" || nutrientBenefit === "emerging") return "emerging";
+
+  const foodBenefit = chain.foodBenefit ? edgeEvidenceLevel(chain.foodBenefit) : null;
+  if (foodBenefit === "emerging") return "emerging";
+  return foodBenefit === "established" ? "established" : "strong";
+}

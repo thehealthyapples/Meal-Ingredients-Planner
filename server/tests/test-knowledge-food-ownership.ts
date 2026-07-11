@@ -51,26 +51,68 @@ function sourceFiles(dir: string): string[] {
 }
 
 /**
- * The seed runner is the ONE writer. Anything else that inserts or updates a
- * knowledge_* table is a second owner, whatever it calls itself.
+ * The seed runner is the ONE writer of knowledge FACTS. Anything else that
+ * inserts or updates a knowledge_* table is a second owner, whatever it calls
+ * itself.
+ *
+ * KNOW5 adds one further permitted writer, and the boundary between them is a
+ * column split, not a table split:
+ *
+ *   seed-knowledge-registry.ts   owns the FACTS   (identity, links, citations,
+ *                                                  is_active) and is forbidden
+ *                                                  from writing a sign-off.
+ *   signoff-knowledge-claims.ts  owns the REVIEW  (reviewed_at, reviewed_by) and
+ *                                                  writes nothing else.
+ *
+ * That split already governed knowledge_nutrient_benefits before KNOW5 (the
+ * sign-off gate has always been the only thing that sets reviewed_at). KNOW5
+ * extends the composition edge into the same regime, so the gate now touches
+ * knowledgeFoodNutrients too. Rule KC9 requires exactly this: automation authors
+ * candidates and a human publishes them, which means the publishing write cannot
+ * live in the seed.
  *
  * We scan for Drizzle writes (`.insert(x)` / `.update(x)`) whose target names a
  * knowledge food table. Comments and type-only mentions are ignored — only the
  * call itself counts.
  */
 const OWNER = "server/seeds/seed-knowledge-registry.ts";
+const SIGNOFF_GATE = "server/seeds/signoff-knowledge-claims.ts";
 const KNOWLEDGE_FOOD_TABLES = ["knowledgeFoods", "knowledgeFoodNutrients", "knowledgeFoodBenefits"];
 const WRITE_CALL = new RegExp(`\\.(insert|update)\\s*\\(\\s*(?:schema\\.)?(${KNOWLEDGE_FOOD_TABLES.join("|")})\\b`);
+
+/** Source with block and line comments stripped, so prose is never a writer. */
+function codeOf(file: string): string {
+  return readFileSync(file, "utf-8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+}
+
+/**
+ * The test suite is excluded from the RUNTIME writer scan. This check exists to
+ * find a second owner in code that ships; a test is not an owner, it is a driver
+ * of one. test-know5-evidence-contract.ts deliberately writes these tables — it
+ * imports the seed runner's own reconciliation helpers and exercises them inside
+ * a transaction it then rolls back, which is the only way to prove that
+ * "publishing is reversible" is more than a comment. Excluding the directory
+ * keeps that proof possible without licensing a second owner anywhere real.
+ */
+const NOT_RUNTIME = "server/tests";
 
 function writersOfKnowledgeFoods(): string[] {
   const writers: string[] = [];
   for (const file of [...sourceFiles("server"), ...sourceFiles("shared"), ...sourceFiles("scripts")]) {
-    const src = readFileSync(file, "utf-8");
-    // Strip block and line comments so prose about the retired writer is not a writer.
-    const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
-    if (WRITE_CALL.test(code)) writers.push(file.replace(/\\/g, "/"));
+    const path = file.replace(/\\/g, "/");
+    if (path.startsWith(NOT_RUNTIME + "/")) continue;
+    if (WRITE_CALL.test(codeOf(file))) writers.push(path);
   }
   return writers.sort();
+}
+
+/** The columns a `.set({ … })` call assigns, across a whole file. */
+function assignedColumns(file: string): Set<string> {
+  const cols = new Set<string>();
+  for (const m of Array.from(codeOf(file).matchAll(/\.set\s*\(\s*\{([^}]*)\}/g))) {
+    for (const c of Array.from(m[1].matchAll(/(\w+)\s*:/g))) cols.add(c[1]);
+  }
+  return cols;
 }
 
 async function run() {
@@ -78,11 +120,30 @@ async function run() {
 
   const writers = writersOfKnowledgeFoods();
   check(
-    "exactly one module writes the knowledge food tables",
-    writers.length === 1 && writers[0] === OWNER,
+    "exactly two modules write the knowledge food tables: the seed runner and the sign-off gate",
+    writers.length === 2 && writers[0] === OWNER && writers[1] === SIGNOFF_GATE,
     `found: ${writers.join(", ") || "(none)"}`,
   );
-  check("that module is the declared seed runner (SoT Register Domain 1)", writers[0] === OWNER, `got ${writers[0]}`);
+  check("the fact writer is the declared seed runner (SoT Register Domain 1)", writers.includes(OWNER));
+
+  // KNOW5 — the column split that keeps "two writers" from meaning "two owners".
+  const seedCols = assignedColumns(OWNER);
+  const gateCols = assignedColumns(SIGNOFF_GATE);
+  check(
+    "the seed never writes a sign-off (Rule KC9: automation authors, never publishes)",
+    !seedCols.has("reviewedAt") && !seedCols.has("reviewedBy"),
+    `seed assigns: ${Array.from(seedCols).join(", ")}`,
+  );
+  check(
+    "the sign-off gate writes ONLY the review columns — never a fact",
+    Array.from(gateCols).every((c) => c === "reviewedAt" || c === "reviewedBy"),
+    `gate assigns: ${Array.from(gateCols).join(", ")}`,
+  );
+  check("the sign-off gate does set reviewedBy (no anonymous sign-off)", gateCols.has("reviewedBy"));
+  check(
+    "the seed owns is_active, so retirement is reversible and belongs to the fact owner",
+    seedCols.has("isActive"),
+  );
 
   const gate = "server/lib/canonical-foods-gate.ts";
   check("the retired importer no longer exists", !existsSync("server/lib/canonical-foods-importer.ts"));

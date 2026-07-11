@@ -4,15 +4,22 @@
 // Consumes buildFoodReport() from the WS2F adapter — no logic duplicated here.
 //
 // Sections rendered (in order):
-//   Overview · Key Nutrients · Health Benefits · Nutrition Context ·
+//   Overview · Key Nutrients · Nutrition Context ·
 //   Your Variety · Broaden Your Variety · Variety Additional Knowledge
 //
 // Rules:
 //   • Returns null when buildFoodReport() returns null (no crash, no placeholders)
 //   • Omits any section that has no data
 //   • Never fabricates content
-//   • Health benefits carry the THA disclaimer
 //   • Variety additional knowledge shown only when variety has unique facts
+//
+// KNOW4 — this component renders NO health benefits, and it is the absence that
+// is deliberate. A benefit is a claim, and PKC Phase 0 admits a claim only with
+// a valid SourceRef and a human `reviewedAt` sign-off — a database column no
+// browser bundle can read. buildFoodReport() therefore returns no benefits, and
+// a component that calls it in the browser has nothing it is entitled to say.
+// The gated claims live behind getEvidenceBackedFoodReport() on the server; a
+// surface that wants to render them must fetch them, not derive them here.
 
 import { useMemo } from "react";
 import { Check } from "lucide-react";
@@ -20,7 +27,6 @@ import {
   buildFoodReport,
   type FoodReportVariety,
 } from "@shared/canonical/food-report-adapter";
-import { HEALTH_DISCLAIMER } from "@/lib/health-benefits-model";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -38,9 +44,9 @@ export interface FoodReportProps {
 // ─── Variety Additional Knowledge ─────────────────────────────────────────────
 
 function VarietyAdditionalKnowledge({ variety }: { variety: FoodReportVariety }) {
-  const hasNutrients = variety.additionalNutrients.length > 0;
-  const hasBenefits = variety.additionalBenefits.length > 0;
-  if (!hasNutrients && !hasBenefits) return null;
+  // `variety.additionalBenefits` is always empty here (see the header note), so
+  // only the nutrient half of a variety's extra knowledge can be shown.
+  if (variety.additionalNutrients.length === 0) return null;
 
   return (
     <div
@@ -50,30 +56,16 @@ function VarietyAdditionalKnowledge({ variety }: { variety: FoodReportVariety })
       <p className="text-[10px] text-muted-foreground/45 font-medium mb-1">
         Also in {variety.label}:
       </p>
-      {hasNutrients && (
-        <div className="flex flex-wrap gap-1 mb-1">
-          {variety.additionalNutrients.map((n) => (
-            <span
-              key={n}
-              className="inline-flex items-center px-1.5 py-px rounded-full text-[10px] bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40"
-            >
-              {n}
-            </span>
-          ))}
-        </div>
-      )}
-      {hasBenefits && (
-        <div className="flex flex-wrap gap-1">
-          {variety.additionalBenefits.map((b) => (
-            <span
-              key={b}
-              className="inline-flex items-center px-1.5 py-px rounded-full text-[10px] bg-muted/50 text-foreground/60 border border-border/40"
-            >
-              {b}
-            </span>
-          ))}
-        </div>
-      )}
+      <div className="flex flex-wrap gap-1">
+        {variety.additionalNutrients.map((n) => (
+          <span
+            key={n}
+            className="inline-flex items-center px-1.5 py-px rounded-full text-[10px] bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40"
+          >
+            {n}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
@@ -94,9 +86,7 @@ export function FoodReport({ canonicalSlug, eatenVarietyLabels }: FoodReportProp
 
   if (!report) return null;
 
-  const hasVarietyKnowledge = report.varieties.some(
-    (v) => v.additionalNutrients.length > 0 || v.additionalBenefits.length > 0,
-  );
+  const hasVarietyKnowledge = report.varieties.some((v) => v.additionalNutrients.length > 0);
 
   return (
     <div
@@ -134,27 +124,7 @@ export function FoodReport({ canonicalSlug, eatenVarietyLabels }: FoodReportProp
         </div>
       )}
 
-      {/* Health Benefits */}
-      {report.healthBenefits.length > 0 && (
-        <div>
-          <p className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide mb-1.5">
-            Health Benefits
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {report.healthBenefits.map((b) => (
-              <span
-                key={b}
-                className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] bg-muted/50 text-foreground/70 border border-border/40"
-              >
-                {b}
-              </span>
-            ))}
-          </div>
-          <p className="text-[10px] text-muted-foreground/35 leading-relaxed mt-1.5">
-            {HEALTH_DISCLAIMER}
-          </p>
-        </div>
-      )}
+      {/* Health Benefits — deliberately absent. See the KNOW4 note in the header. */}
 
       {/* Nutrition Context */}
       {report.nutritionContext.length > 0 && (

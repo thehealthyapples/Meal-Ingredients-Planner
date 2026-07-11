@@ -5,6 +5,12 @@
  *   Overview · Key Nutrients · Health Benefits · Nutrition Context ·
  *   Variety Knowledge (shared + optional variety-specific additional facts)
  *
+ * KNOW4 — the adapter no longer speaks health benefits. A benefit link is a
+ * claim, and this module is seed-only: it cannot read `reviewedAt` and so
+ * cannot evaluate the Layer-2 evidence gate. `healthBenefits` is therefore
+ * always empty here, and the gated composer (server/lib/food-report-evidence.ts)
+ * is the one mouth for benefit claims. The assertions below say so directly.
+ *
  * Also validates:
  *   • WS2A identity authority preserved (validateCanonicalSeed → 0 problems)
  *   • WS0 knowledge authority preserved (validateKnowledgeSeed → 0 problems)
@@ -85,8 +91,8 @@ function run() {
     check("tomato: has Lycopene", contains(tomato.keyNutrients, "Lycopene"));
     check("tomato: has Vitamin C", contains(tomato.keyNutrients, "Vitamin C"));
     check("tomato: keyNutrients max 5", tomato.keyNutrients.length <= 5);
-    check("tomato: healthBenefits ≥ 1", tomato.healthBenefits.length >= 1);
-    check("tomato: has Heart Health", contains(tomato.healthBenefits, "Heart Health"));
+    // KNOW4: an ungated claim never leaves this adapter (see header).
+    check("tomato: healthBenefits empty (claims need the evidence gate)", tomato.healthBenefits.length === 0);
     check("tomato: nutritionContext non-empty", tomato.nutritionContext.length >= 1);
     check("tomato: 3 varieties", tomato.varieties.length === 3);
     const cherry = tomato.varieties.find((v) => v.slug === "cherry-tomato");
@@ -110,7 +116,15 @@ function run() {
     check("spinach: has Folate", contains(spinach.keyNutrients, "Folate"));
     check("spinach: has Iron", contains(spinach.keyNutrients, "Iron"));
     check("spinach: has Vitamin K", contains(spinach.keyNutrients, "Vitamin K"));
-    check("spinach: healthBenefits ≥ 1", spinach.healthBenefits.length >= 1);
+    // KNOW4: spinach is described by BOTH seed halves — editorial (folate, iron,
+    // vitamin-k, beta-carotene) and graduated (magnesium). The unified read
+    // surfaces the graduated link too, appended after the editorial ones.
+    check("spinach: has Magnesium (graduated link, unified seed)", contains(spinach.keyNutrients, "Magnesium"));
+    check(
+      "spinach: editorial nutrients precede graduated ones",
+      spinach.keyNutrients.indexOf("Folate") < spinach.keyNutrients.indexOf("Magnesium"),
+    );
+    check("spinach: healthBenefits empty (claims need the evidence gate)", spinach.healthBenefits.length === 0);
     check("spinach: nutritionContext non-empty (iron absorption)", spinach.nutritionContext.length >= 1);
     // WS2F Amendment: spinach uses the variety model (baby + mature).
     check("spinach: 2 varieties (baby-spinach, mature-spinach)", spinach.varieties.length === 2);

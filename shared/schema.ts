@@ -1600,6 +1600,16 @@ export const knowledgeHealthBenefits = pgTable("knowledge_health_benefits", {
 });
 
 // ── Food ↔ Nutrient ──────────────────────────────────────────────────────────
+// KNOW5 — the COMPOSITION EVIDENCE CONTRACT. This edge asserts the food-specific
+// premise ("this food is a notable source of that nutrient") on which every
+// benefit chip rests. Before KNOW5 it carried no evidence columns at all, so a
+// chip could inherit a genuine NHS/EFSA citation earned by the *nutrient-level*
+// sentence while its food-specific premise was an unreviewed AI draft.
+//
+// It now carries the same Layer-2 shape as the nutrient↔benefit edge:
+// sourceRefs (Layer-1 validated) + reviewedAt (human sign-off) + reviewedBy
+// (reviewer identity). NULL reviewedAt means "not reviewed", which is the truth
+// for every pre-KNOW5 row — no backfill, and no row is grandfathered in.
 export const knowledgeFoodNutrients = pgTable("knowledge_food_nutrients", {
   id: serial("id").primaryKey(),
   foodSlug: text("food_slug").notNull().references(() => knowledgeFoods.slug, { onDelete: "cascade" }),
@@ -1607,10 +1617,14 @@ export const knowledgeFoodNutrients = pgTable("knowledge_food_nutrients", {
   // Optional editorial amount string, e.g. "high", "150mg per 30g". Never a fabricated precise figure.
   amount: text("amount"),
   // Editorial confidence in the association: 'established' | 'good' | 'emerging'.
+  // STORAGE ONLY. It is authored, not earned, and the render gate never reads it.
   confidence: text("confidence").notNull().default("established"),
   // Lower = more prominent. Used to order "top nutrients" for a food.
   ranking: integer("ranking").notNull().default(0),
   source: text("source").notNull().default("THA editorial"),
+  sourceRefs: jsonb("source_refs").$type<KnowledgeSourceRef[]>().notNull().default(sql`'[]'::jsonb`),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  reviewedBy: text("reviewed_by"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => ({
@@ -1619,9 +1633,18 @@ export const knowledgeFoodNutrients = pgTable("knowledge_food_nutrients", {
 
 // ── Food ↔ Health Benefit ────────────────────────────────────────────────────
 // evidenceStrength is STORED ONLY — it must not be surfaced to users yet.
-// PKC Phase 0 (Rule KC8): sourceRefs + reviewedAt are the Layer-2 claim-trust
-// fields. A claim renders only when both pass shared/knowledge/evidence.ts.
-// reviewedAt is set exclusively by the human sign-off gate, never by seeds.
+//
+// This row is the editorial ASSERTION that a food supports a benefit. It is not
+// itself the licence to render: a chip earns that through the evidence chain
+// (composition edge ⋈ nutrient↔benefit edge), both Layer-2 gated.
+//
+// KNOW5 resolves gap G4 — sourceRefs/reviewedAt here were written by nothing and
+// read by nothing, implying a food-level review that never happened. They now
+// have exactly one defined meaning: a food→benefit row that is itself
+// evidence-backed carries a citation for the *food-specific* claim, which lifts
+// the derived chip's Evidence Confidence from Strong to Established. It can only
+// ever ADD evidence — never substitute for the chain, and never license a chip on
+// its own. reviewedBy names the human who signed off; seeds never set either.
 export const knowledgeFoodBenefits = pgTable("knowledge_food_benefits", {
   id: serial("id").primaryKey(),
   foodSlug: text("food_slug").notNull().references(() => knowledgeFoods.slug, { onDelete: "cascade" }),
@@ -1632,6 +1655,7 @@ export const knowledgeFoodBenefits = pgTable("knowledge_food_benefits", {
   source: text("source").notNull().default("THA editorial"),
   sourceRefs: jsonb("source_refs").$type<KnowledgeSourceRef[]>().notNull().default(sql`'[]'::jsonb`),
   reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  reviewedBy: text("reviewed_by"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => ({
@@ -1648,6 +1672,7 @@ export const knowledgeNutrientBenefits = pgTable("knowledge_nutrient_benefits", 
   source: text("source").notNull().default("THA editorial"),
   sourceRefs: jsonb("source_refs").$type<KnowledgeSourceRef[]>().notNull().default(sql`'[]'::jsonb`),
   reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  reviewedBy: text("reviewed_by"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => ({
@@ -1657,7 +1682,9 @@ export const knowledgeNutrientBenefits = pgTable("knowledge_nutrient_benefits", 
 export const insertKnowledgeFoodSchema = createInsertSchema(knowledgeFoods).omit({ id: true, createdAt: true });
 export const insertKnowledgeNutrientSchema = createInsertSchema(knowledgeNutrients).omit({ id: true, createdAt: true });
 export const insertKnowledgeHealthBenefitSchema = createInsertSchema(knowledgeHealthBenefits).omit({ id: true, createdAt: true });
-export const insertKnowledgeFoodNutrientSchema = createInsertSchema(knowledgeFoodNutrients).omit({ id: true, createdAt: true });
+export const insertKnowledgeFoodNutrientSchema = createInsertSchema(knowledgeFoodNutrients, {
+  sourceRefs: z.custom<KnowledgeSourceRef[]>().optional(),
+}).omit({ id: true, createdAt: true });
 // sourceRefs overridden: drizzle-zod cannot derive a jsonb column's $type<T>()
 // generic, so the default-inferred schema type doesn't match KnowledgeSourceRef[].
 export const insertKnowledgeFoodBenefitSchema = createInsertSchema(knowledgeFoodBenefits, {
@@ -2017,7 +2044,7 @@ export type InsertKnowledgeReviewAudit = z.infer<typeof insertKnowledgeReviewAud
 //     food's varieties (cherry/plum/heirloom tomato) share ONE group and can
 //     never inflate the 30-plants count.
 //
-// See docs/investigations/WS2A_CANONICAL_FOOD_FOUNDATIONS_IMPLEMENTATION.md.
+// See docs/investigations/knowledge/WS2A_CANONICAL_FOOD_FOUNDATIONS_IMPLEMENTATION.md.
 
 // ── Diversity Group ──────────────────────────────────────────────────────────
 // What the 30-plants-a-week counter counts ONCE. All tomato varieties → the
