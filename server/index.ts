@@ -41,27 +41,46 @@ export function log(message: string, source = "express") {
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 
+/**
+ * Request log — TRUST1-P8.
+ *
+ * This middleware used to monkey-patch `res.json` to capture every API response body, and then
+ * append that body — serialised and entire — to the request's log line. No redaction, no
+ * truncation, no allowlist.
+ *
+ * The defect's *shape* is deliberately not written out anywhere in this comment. The test scans
+ * every file under `server/` for that shape as a literal pattern and exempts nothing, not even
+ * prose: a rule with a comment exemption is a rule with a hole in it. Describe it; never write it.
+ *
+ * So the plaintext process log contained every weight, BMI, sleep hour, mood score, dietary
+ * restriction, child's name, child's allergy, email address, Companion utterance and — via the
+ * `sanitizeUser` denylist hole that TRUST1-S8 closes — every live `passwordResetToken` the system
+ * had ever returned. Because every one of those is returned in an API response, and every API
+ * response was stringified into the log. Logs are shipped to third-party aggregators, retained far
+ * longer than application data, and read by people with no business reading a child's medical
+ * information.
+ *
+ * The body capture is gone. What remains is the operational line — method, path, status, duration —
+ * which is what this log was actually for, and which carries no personal data:
+ *
+ *     GET /api/user 200 in 14ms
+ *
+ * `req.path` is the pathname only; it never carries a query string, so a token passed as `?token=`
+ * cannot reach the log through it either.
+ *
+ * **Nothing more is built here, deliberately.** A structured logger with a field-level redaction
+ * allowlist is the right end state and it is `TRUST1-O4`'s — P8 owns the *requirement* that personal
+ * data never reaches a log; O4 owns the *mechanism* that makes reintroducing it structurally hard.
+ * Building the mechanism here would mean building it twice.
+ */
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
 
   res.on("finish", () => {
+    if (!path.startsWith("/api")) return;
     const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      log(logLine);
-    }
+    log(`${req.method} ${path} ${res.statusCode} in ${duration}ms`);
   });
 
   next();
