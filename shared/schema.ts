@@ -2584,3 +2584,31 @@ export const insertPlatformObservationSchema = createInsertSchema(platformObserv
 
 export type PlatformObservation = typeof platformObservations.$inferSelect;
 export type InsertPlatformObservation = z.infer<typeof insertPlatformObservationSchema>;
+
+// ─── TRUST1-S5 — authentication rate limiting ────────────────────────────────
+// The shared counter behind every authentication rate limit (server/lib/auth-rate-limit.ts).
+//
+// Declared here for one specific reason beyond tidiness: `scripts/migrate-prod.sh` runs
+// `drizzle-kit push --force` against the production database, and a table that exists in Postgres
+// but not in this file is a table drizzle-kit will offer to DROP. The migration runner creates it;
+// this declaration is what stops the next production push from deleting it.
+//
+// NO PERSONAL DATA. `key` is an HMAC-SHA256 of an IP address or an email address under
+// SESSION_SECRET — never the value itself. An IP is personal data under UK GDPR, and this table is
+// consulted on every login attempt on the platform, so a plaintext key would have quietly built the
+// exact record TRUST1-P8 is busy deleting from the logs.
+//
+// Rows are ephemeral operational state, not records: they expire on their own, the store prunes
+// them, and rotating SESSION_SECRET orphans all of them harmlessly.
+export const authRateLimits = pgTable("auth_rate_limits", {
+  /** HMAC-SHA256(policy + IP | email | user id, SESSION_SECRET), prefixed by policy id. */
+  key: text("key").primaryKey(),
+  hits: integer("hits").notNull().default(0),
+  /** End of the current fixed window. A row whose expiry has passed is reset, not accumulated. */
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  expiresAtIdx: index("auth_rate_limits_expires_at_idx").on(table.expiresAt),
+}));
+
+export type AuthRateLimit = typeof authRateLimits.$inferSelect;

@@ -1645,6 +1645,35 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  // TRUST1-S5 — authentication rate limiting.
+  //
+  // The shared counter behind every authentication rate limit. It lives in Postgres, not in a
+  // process, because THA deploys to Render `autoscale` (multiple instances) and an in-memory
+  // counter would make the real limit N × the configured one — silently, and differently on every
+  // deploy. Every instance shares this table, so the configured limit is the actual limit.
+  //
+  // `key` is an HMAC-SHA256 of the IP or the email address under SESSION_SECRET, never the value
+  // itself. There is deliberately NO personal data in this table: an IP address is personal data
+  // under UK GDPR, and building a plaintext record of who-tried-to-log-in-from-where inside the
+  // programme that is removing personal data from the logs (TRUST1-P8) would be an own goal.
+  //
+  // Rows are ephemeral operational state, not records. They expire on their own, the store prunes
+  // them opportunistically, and rotating SESSION_SECRET orphans every one of them — all three are
+  // fine and none of them lose anything anyone needs.
+  {
+    id: "2026-07-11_trust1_s5_auth_rate_limits",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS auth_rate_limits (
+         key        TEXT PRIMARY KEY,
+         hits       INTEGER NOT NULL DEFAULT 0,
+         expires_at TIMESTAMPTZ NOT NULL,
+         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+       )`,
+      // The pruner's only access path.
+      `CREATE INDEX IF NOT EXISTS auth_rate_limits_expires_at_idx ON auth_rate_limits (expires_at)`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

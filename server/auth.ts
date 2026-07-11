@@ -8,6 +8,11 @@ import { storage } from "./storage";
 import { User as SelectUser } from "@shared/schema";
 import { sendVerificationEmail, sendPasswordResetEmail } from "./email";
 import { sanitizeUser } from "./lib/sanitizeUser";
+// TRUST1-S5. `authRateLimit(route)` returns that route's middleware chain — per-IP, and per-account
+// where an account can be identified. server/lib/auth-rate-limit.ts is the ONE owner of every limit,
+// every window, and the policy list; nothing here decides a number. It throws on an unknown route
+// rather than returning an empty chain, so a typo below cannot silently unguard an endpoint.
+import { authRateLimit } from "./lib/auth-rate-limit";
 
 declare global {
   namespace Express {
@@ -233,7 +238,7 @@ export function setupAuth(app: Express) {
     });
   });
 
-  app.post("/api/register", async (req, res) => {
+  app.post("/api/register", ...authRateLimit("/api/register"), async (req, res) => {
     if (!isProduction) {
       return res.status(403).json({ message: "Private beta — registration is currently closed. Request access to join." });
     }
@@ -289,7 +294,7 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.get("/api/verify-email", async (req, res) => {
+  app.get("/api/verify-email", ...authRateLimit("/api/verify-email"), async (req, res) => {
     const { token } = req.query;
 
     if (!token || typeof token !== "string") {
@@ -320,7 +325,7 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/login", (req, res, next) => {
+  app.post("/api/login", ...authRateLimit("/api/login"), (req, res, next) => {
     passport.authenticate("local", (err: any, user: SelectUser | false) => {
       if (err) return next(err);
       if (!user) return res.status(401).json({ message: "Invalid username or password" });
@@ -340,7 +345,7 @@ export function setupAuth(app: Express) {
     })(req, res, next);
   });
 
-  app.post("/api/resend-verification", async (req, res) => {
+  app.post("/api/resend-verification", ...authRateLimit("/api/resend-verification"), async (req, res) => {
     const { email } = req.body;
     if (!email || typeof email !== "string") {
       return res.status(400).json({ message: "Email is required." });
@@ -367,7 +372,7 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/forgot-password", async (req, res) => {
+  app.post("/api/forgot-password", ...authRateLimit("/api/forgot-password"), async (req, res) => {
     const { username } = req.body;
     const safeResponse = { message: "If that email is registered, a reset link has been sent." };
 
@@ -390,7 +395,7 @@ export function setupAuth(app: Express) {
     res.json(safeResponse);
   });
 
-  app.post("/api/reset-password", async (req, res) => {
+  app.post("/api/reset-password", ...authRateLimit("/api/reset-password"), async (req, res) => {
     const { token, newPassword } = req.body;
 
     if (!token || typeof token !== "string") {
@@ -420,7 +425,7 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/change-password", async (req, res) => {
+  app.post("/api/change-password", ...authRateLimit("/api/change-password"), async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Not logged in." });
     }
@@ -464,7 +469,7 @@ export function setupAuth(app: Express) {
     res.json(sanitizeUser(req.user as SelectUser));
   });
 
-  app.post("/api/demo/start", async (req, res, next) => {
+  app.post("/api/demo/start", ...authRateLimit("/api/demo/start"), async (req, res, next) => {
     try {
       const user = await storage.createDemoUser();
       await storage.seedDemoData(user.id).catch(e =>
