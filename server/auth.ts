@@ -32,7 +32,77 @@ async function comparePasswords(supplied: string, stored: string) {
   return timingSafeEqual(hashedBuf, suppliedBuf);
 }
 
+/**
+ * NOT AN ENVIRONMENT CHECK. Despite its name, this constant is TRUE whenever the private-beta
+ * registration flow is closed — which includes a developer running locally with
+ * ENABLE_REGISTRATION=true. It gates registration and email-verification behaviour (see its four
+ * call sites below) and it says NOTHING about where the code is deployed.
+ *
+ * Do not reach for it when you mean "are we in production". For that, use
+ * `isProductionDeployment()`. TRUST1-S2 explains, at length, what happens if you confuse the two.
+ */
 const isProduction = process.env.NODE_ENV === "production" || process.env.ENABLE_REGISTRATION === "true";
+
+/** Session lifetime. Unchanged by TRUST1-S2; `TRUST1-S7` revisits it (idle timeout, 7 days). */
+export const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * TRUST1-S2 — is this a production *deployment*?
+ *
+ * `NODE_ENV` alone. Deliberately, and this is the whole task.
+ *
+ * The obvious implementation of S2 was to reuse the `isProduction` constant directly above, and it
+ * would have caused a production-grade outage on every developer's laptop. That constant is
+ * `NODE_ENV === "production" || ENABLE_REGISTRATION === "true"` — so for anyone running locally with
+ * ENABLE_REGISTRATION=true, it is TRUE, and the session cookie would have been marked `Secure` over
+ * plain HTTP.
+ *
+ * The failure mode is not a visible error. `express-session` refuses to *send* a `Secure` cookie
+ * over an insecure connection at all (`express-session/index.js:235` — `if (cookie.secure &&
+ * !issecure(req, trustProxy)) return`). So no `Set-Cookie` header is emitted, the browser stores
+ * nothing, and `POST /api/login` returns **200 with a user object** while establishing no session
+ * whatsoever. The developer sees a login that succeeds and then behaves as though they are logged
+ * out, with nothing in the log to say why.
+ *
+ * Hence a separate predicate with an honest name. Registration policy and deployment environment
+ * are two different facts and they get two different functions.
+ *
+ * Read from `process.env` at call time rather than captured at module load, so this is testable
+ * across the environment matrix without re-importing the module.
+ */
+export function isProductionDeployment(): boolean {
+  return process.env.NODE_ENV === "production";
+}
+
+/**
+ * TRUST1-S2 — the flags on the cookie that *is* the user's identity.
+ *
+ * `httpOnly` and `sameSite` were already correct and are preserved exactly. `secure` was hardcoded
+ * `false`, which meant the session cookie was transmitted in plaintext on any request that reached
+ * the app over HTTP — and `app.set("trust proxy", 1)` confirms the app sits behind a TLS-terminating
+ * proxy, which is precisely the topology in which a downgraded or misrouted request is possible.
+ *
+ * The three flags are one protection, not three:
+ *   httpOnly  — script cannot read it        (XSS cannot steal the session)
+ *   sameSite  — another site cannot send it  (CSRF cannot ride the session)
+ *   secure    — the network cannot see it    (interception cannot copy the session)
+ *
+ * In production, a secure-flagged cookie combined with `trust proxy` means the cookie is issued only
+ * when `X-Forwarded-Proto: https` — so a request that somehow arrives over plaintext gets no session
+ * cookie rather than a plaintext one. Failing closed is the point.
+ *
+ * The flag is never written as a literal here. It is computed, always — the test scans this file for
+ * a hardcoded value and exempts nothing, not even prose, because a rule with a comment exemption is
+ * a rule with a hole in it.
+ */
+export function sessionCookieOptions(): session.CookieOptions {
+  return {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: isProductionDeployment(),
+    maxAge: SESSION_MAX_AGE_MS,
+  };
+}
 
 /**
  * TRUST1-S1 — the session secret fails closed.
@@ -93,12 +163,7 @@ export function setupAuth(app: Express) {
     resave: false,
     saveUninitialized: false,
     store: storage.sessionStore,
-    cookie: {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: false,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    },
+    cookie: sessionCookieOptions(),
   };
 
   app.use(session(sessionSettings));
