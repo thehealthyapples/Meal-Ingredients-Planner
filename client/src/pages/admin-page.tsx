@@ -4,7 +4,7 @@ import { Link } from "wouter";
 import {
   ShieldCheck, Users, Star, Sliders,
   Sparkles, BarChart3, FlaskConical, Eye,
-  ChevronRight, ClipboardList, Activity, ListTree,
+  ChevronRight, ClipboardList, Activity, ListTree, Globe2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -57,6 +57,14 @@ const ADMIN_SECTIONS = [
     description: "Manage benchmark test households",
     icon: FlaskConical,
     href: "/admin/benchmark-households",
+    status: "active",
+  },
+  {
+    id: "development-world",
+    title: "Development World",
+    description: "Read-only view of the 50 Development World households (DEV only)",
+    icon: Globe2,
+    href: "/admin/development-world",
     status: "active",
   },
   {

@@ -8461,6 +8461,37 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     }
   });
 
+  // ── Development World (DEVWORLD3) — DEV-only, READ-ONLY admin view ───────────
+  // Displays the 50 Development World households DEVWORLD2 imported. These routes
+  // own no world logic and no write path: GET-only, no seed / reset / impersonate.
+  // Each re-asserts the DEV-only guard. See server/development-world/ and
+  // docs/implementation/development_world/DEVWORLD3_DEVELOPMENT_WORLD_ADMIN_HOUSEHOLDS.md.
+
+  app.get("/api/admin/development-world", assertAdmin, async (_req, res) => {
+    try {
+      const { assertDevelopmentWorldAllowed, listDevelopmentWorldHouseholdStates, DEVELOPMENT_WORLD_VERSION, developmentWorldValidation } =
+        await import("./development-world/index.js");
+      assertDevelopmentWorldAllowed();
+      const households = await listDevelopmentWorldHouseholdStates();
+      res.json({ version: DEVELOPMENT_WORLD_VERSION(), validation: developmentWorldValidation(), households });
+    } catch (err: any) {
+      console.error("[DevelopmentWorld] list error:", err);
+      res.status(500).json({ message: err?.message ?? "Failed to load development world households" });
+    }
+  });
+
+  app.get("/api/admin/development-world/:id", assertAdmin, async (req, res) => {
+    try {
+      const { assertDevelopmentWorldAllowed, getDevelopmentWorldHouseholdDetail } =
+        await import("./development-world/index.js");
+      assertDevelopmentWorldAllowed();
+      res.json(await getDevelopmentWorldHouseholdDetail(String(req.params.id)));
+    } catch (err: any) {
+      console.error("[DevelopmentWorld] detail error:", err);
+      res.status(500).json({ message: err?.message ?? "Failed to load household detail" });
+    }
+  });
+
   // Session-scoped impersonation status + return-to-admin (the current session may
   // be the benchmark user, whose role is "user" — so these are not assertAdmin).
   app.get("/api/benchmark-impersonation", (req, res) => {

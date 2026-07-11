@@ -34,6 +34,8 @@ import AdminRecipeSourcesPage from "@/pages/admin-recipe-sources-page";
 import AdminCompanionIntelligencePage from "@/pages/admin-companion-intelligence-page";
 import AdminIntelligencePage from "@/pages/admin-intelligence-page";
 import AdminBenchmarkHouseholdsPage from "@/pages/admin-benchmark-households-page";
+import AdminDevelopmentWorldPage from "@/pages/admin-development-world-page";
+import AdminDevelopmentWorldHouseholdPage from "@/pages/admin-development-world-household-page";
 import AdminObservationWorkbenchPage from "@/pages/admin-observation-workbench-page";
 import AdminBehaviourWorkbenchPage from "@/pages/admin-behaviour-workbench-page";
 import AdminKnowledgeReviewPage from "@/pages/admin-knowledge-review-page";
@@ -185,6 +187,8 @@ const AdminRecipeSourcesChrome = withAdminBanner(AdminRecipeSourcesPage);
 const AdminCompanionIntelligenceChrome = withAdminBanner(AdminCompanionIntelligencePage);
 const AdminIntelligenceChrome = withAdminBanner(AdminIntelligencePage);
 const AdminBenchmarkHouseholdsChrome = withAdminBanner(AdminBenchmarkHouseholdsPage);
+const AdminDevelopmentWorldChrome = withAdminBanner(AdminDevelopmentWorldPage);
+const AdminDevelopmentWorldHouseholdChrome = withAdminBanner(AdminDevelopmentWorldHouseholdPage);
 const AdminObservationsChrome = withAdminBanner(AdminObservationWorkbenchPage);
 const AdminBehaviourChrome = withAdminBanner(AdminBehaviourWorkbenchPage);
 
@@ -219,6 +223,8 @@ function Router() {
       <Route path="/admin/companion-intelligence" component={() => <ProtectedRoute component={AdminCompanionIntelligenceChrome} />} />
       <Route path="/admin/intelligence" component={() => <ProtectedRoute component={AdminIntelligenceChrome} />} />
       <Route path="/admin/benchmark-households" component={() => <ProtectedRoute component={AdminBenchmarkHouseholdsChrome} />} />
+      <Route path="/admin/development-world/:id" component={() => <ProtectedRoute component={AdminDevelopmentWorldHouseholdChrome} />} />
+      <Route path="/admin/development-world" component={() => <ProtectedRoute component={AdminDevelopmentWorldChrome} />} />
       <Route path="/admin/observations" component={() => <ProtectedRoute component={AdminObservationsChrome} />} />
       <Route path="/admin/behaviour" component={() => <ProtectedRoute component={AdminBehaviourChrome} />} />
       <Route path="/admin/knowledge-review" component={() => <ProtectedRoute component={AdminKnowledgeReviewPage} />} />
