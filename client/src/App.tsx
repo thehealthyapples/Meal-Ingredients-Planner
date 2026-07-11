@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Switch, Route, Redirect, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider, useQuery } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useUser } from "@/hooks/use-user";
 import { Loader2 } from "lucide-react";
 
-import { DesktopSidebar, MobileNav, AppRealmContext } from "@/components/nav-bar";
+import { BottomNav, AppRealmContext } from "@/components/nav-bar";
 import { AdminBanner } from "@/components/admin-banner";
 import FloatingAssistant from "@/components/conversation/FloatingAssistant";
 import { WorkspaceHeaderSlotContext } from "@/components/workspace-header";
@@ -44,6 +44,7 @@ import FoodDiaryPage from "@/pages/food-diary-page";
 import PartnersPage from "@/pages/partners-page";
 import QuickMealPage from "@/pages/quick-meal-page";
 import HomePage from "@/pages/home-page";
+import HomeExperiencePage from "@/pages/home-experience-page";
 import DashboardPage from "@/pages/dashboard";
 import FoodDetailPage from "@/pages/food-detail-page";
 import ShoppingWorkspacePage from "@/pages/shopping-workspace-page";
@@ -53,13 +54,6 @@ let _contentRenderMeasured = false;
 // Tracks the page the routing system landed the user on, so fast page switches
 // can be detected and recorded as correction events.
 let _routingLanding: { path: string; at: number } | null = null;
-
-function routeToPath(route: string): string {
-  if (route === "planner") return "/planner";
-  if (route === "cookbook") return "/cookbook";
-  if (route === "analyser") return "/analyser";
-  return "/shopping-workspace";
-}
 
 // Detects when a user navigates away from their routed landing page within 15s
 // and posts a routing_correction event so future routing can learn from it.
@@ -94,15 +88,6 @@ function useRoutingCorrectionTracker() {
 function HomeRoute() {
   const { user, isLoading } = useUser();
 
-  // isPending (not isLoading) so the spinner shows even on the tick before the
-  // fetch starts - isLoading is false in TanStack Query v5 until isFetching=true.
-  const { data: routingData, isPending: isLoadingRoute } = useQuery<{ route: string }>({
-    queryKey: ["/api/routing"],
-    enabled: !!user && !!user.onboardingCompleted,
-    staleTime: 60_000,
-    retry: false,
-  });
-
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -113,18 +98,10 @@ function HomeRoute() {
 
   if (user) {
     if (!user.onboardingCompleted) return <Redirect to="/onboarding" />;
-
-    if (isLoadingRoute) {
-      return (
-        <div className="flex h-screen items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary/50" />
-        </div>
-      );
-    }
-
-    const path = routingData ? routeToPath(routingData.route) : "/shopping-workspace";
-    _routingLanding = { path, at: Date.now() };
-    return <Redirect to={path} />;
+    // UX0 — Home is the default destination after login. The prior intent-based
+    // routing (planner/cookbook/analyser/shopping) is superseded as the landing;
+    // its telemetry (routeToPath / useRoutingCorrectionTracker) is now dormant.
+    return <Redirect to="/home" />;
   }
 
   return <HomePage />;
@@ -157,10 +134,11 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
           <div className="relative z-10 flex flex-col h-[100dvh]">
             {user?.isDemo && <TrialBanner />}
             <SiteBanner />
-            {/* Slot target: WorkspaceHeader portals here so the brand banner spans full width above the sidebar */}
+            {/* Slot target: WorkspaceHeader portals here so the brand banner spans full width */}
             <div ref={setHeaderSlot} className="shrink-0 w-full" data-testid="ws-header-slot" />
+            {/* UX1 — the canonical BottomNav is the sole primary navigation on all
+                screen sizes; the left DesktopSidebar is retired (dormant in nav-bar.tsx). */}
             <div className="flex flex-1 overflow-hidden">
-              <DesktopSidebar />
               <main className="flex-1 overflow-y-auto overflow-x-hidden main-safe bg-background/25 flex flex-col">
                 {isLoading ? (
                   <div className="flex h-full items-center justify-center">
@@ -171,7 +149,7 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
                 )}
               </main>
             </div>
-            <MobileNav />
+            <BottomNav />
           </div>
         </div>
         <FloatingAssistant />
@@ -219,6 +197,7 @@ function Router() {
       <Route path="/onboarding" component={() => <OrchardShell><OnboardingPage /></OrchardShell>} />
 
       <Route path="/" component={HomeRoute} />
+      <Route path="/home" component={() => <ProtectedRoute component={HomeExperiencePage} />} />
       <Route path="/dashboard" component={() => <ProtectedRoute component={DashboardPage} />} />
       <Route path="/meals/:id" component={() => <ProtectedRoute component={MealDetailPage} />} />
       <Route path="/foods/:slug" component={() => <ProtectedRoute component={FoodDetailPage} />} />

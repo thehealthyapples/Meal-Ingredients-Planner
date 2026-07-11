@@ -13,7 +13,7 @@ import {
   LogOut, ShieldCheck,
   Search, ChevronLeft, ChevronRight,
   Microscope, BookOpen, Heart, ChefHat,
-  User, BarChart3,
+  User, BarChart3, Home,
 } from "lucide-react";
 import { api } from "@shared/routes";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
@@ -32,28 +32,30 @@ function PantryIcon({ className }: { className?: string }) {
   );
 }
 
-const NAV_ITEMS_MAIN = [
-  { href: "/planner", label: "Planner", icon: CalendarDays },
-  { href: "/plant-diversity", label: "Nutrition", icon: BarChart3 },
-  { href: "/cookbook", label: "Cookbook", icon: ChefHat },
-  { href: "/pantry", label: "Pantry", icon: PantryIcon },
-  { href: "/analyser", label: "Analyser", icon: Microscope },
-  { href: "/shopping-workspace", label: "Shopping", icon: ShoppingCart },
-  { href: "/my-diary", label: "Diary", icon: BookOpen },
-];
-
-// Mobile bottom nav — Shopping accessed via basket icon in header; Dashboard via THA logo.
-// hasWorkspace: true → repeat-tap on active page opens that page's workspace drawer
-const MOBILE_BOTTOM_ITEMS = [
+// UX1 — Canonical navigation. ONE ordered list is the single source of truth for
+// every navigation surface (the canonical BottomNav on all screen sizes, and the
+// retired-but-retained DesktopSidebar kept dormant for safe rollback).
+// hasWorkspace: true → repeat-tap on the active page opens that page's workspace drawer.
+const NAV_ITEMS = [
+  { href: "/home", label: "Home", icon: Home, hasWorkspace: false },
   { href: "/planner", label: "Planner", icon: CalendarDays, hasWorkspace: true },
-  { href: "/plant-diversity", label: "Nutrition", icon: BarChart3, hasWorkspace: true },
   { href: "/cookbook", label: "Cookbook", icon: ChefHat, hasWorkspace: true },
+  { href: "/shopping-workspace", label: "Shopping", icon: ShoppingCart, hasWorkspace: false },
   { href: "/pantry", label: "Pantry", icon: PantryIcon, hasWorkspace: true },
-  { href: "/analyser", label: "Analyser", icon: Microscope, hasWorkspace: true },
+  { href: "/plant-diversity", label: "Nutrition", icon: BarChart3, hasWorkspace: true },
   { href: "/my-diary", label: "Diary", icon: BookOpen, hasWorkspace: true },
+  { href: "/analyser", label: "Analyser", icon: Microscope, hasWorkspace: true },
 ];
 
 const REALM_STYLES: Record<string, { active: string; hover: string; inactive: string; mobileActive: string; mobileInactive: string }> = {
+  "/home": {
+    // orchard/apple green — the calm brand-green home anchor
+    active:         "bg-[hsl(132,24%,88%)] text-[hsl(132,36%,20%)] dark:bg-[hsl(132,15%,17%)] dark:text-[hsl(132,26%,70%)]",
+    hover:          "hover:bg-[hsl(132,18%,92%)] hover:text-[hsl(132,30%,26%)] dark:hover:bg-[hsl(132,10%,14%)] dark:hover:text-[hsl(132,20%,58%)]",
+    inactive:       "bg-[hsl(132,10%,94%)] text-[hsl(132,20%,40%)] dark:bg-[hsl(132,8%,12%)] dark:text-[hsl(132,12%,46%)]",
+    mobileActive:   "bg-[hsl(132,24%,86%)] text-[hsl(132,36%,20%)] dark:bg-[hsl(132,15%,19%)] dark:text-[hsl(132,26%,70%)]",
+    mobileInactive: "bg-[hsl(132,12%,92%)] text-[hsl(132,18%,42%)] dark:bg-[hsl(132,8%,14%)] dark:text-[hsl(132,10%,44%)]",
+  },
   "/dashboard": {
     active:         "bg-[hsl(42,45%,88%)] text-[hsl(42,58%,20%)] dark:bg-[hsl(42,22%,17%)] dark:text-[hsl(42,48%,72%)]",
     hover:          "hover:bg-[hsl(42,38%,93%)] hover:text-[hsl(42,52%,28%)] dark:hover:bg-[hsl(42,14%,14%)] dark:hover:text-[hsl(42,38%,60%)]",
@@ -245,7 +247,7 @@ function SidebarBody({
     <div className="flex flex-col flex-1 min-h-0 py-3">
       {/* Main nav */}
       <nav className="flex flex-col gap-0.5 px-2 flex-1 overflow-y-auto">
-        {NAV_ITEMS_MAIN.map((item) => (
+        {NAV_ITEMS.map((item) => (
           <SidebarNavItem
             key={item.href}
             href={item.href}
@@ -650,8 +652,24 @@ export function DesktopSidebar() {
   );
 }
 
-/* ── Mobile Nav Item — tap navigates; repeat-tap on active page opens workspace ── */
-function MobileNavItem({
+/* ── Canonical active-page aliases ──────────────────────────────────────────────
+ * Routes that render the same page as a canonical nav destination, so the nav
+ * pill stays clearly highlighted regardless of which alias the user is on. */
+const NAV_ACTIVE_ALIASES: Record<string, string[]> = {
+  "/my-diary": ["/diary"],
+  "/cookbook": ["/meals"],
+  "/planner": ["/weekly-planner"],
+  "/analyser": ["/products"],
+  "/shopping-workspace": ["/basket", "/analyse-basket"],
+};
+
+function isNavItemActive(basePath: string, location: string): boolean {
+  if (location === basePath) return true;
+  return NAV_ACTIVE_ALIASES[basePath]?.includes(location) ?? false;
+}
+
+/* ── Bottom Nav Item — tap navigates; repeat-tap on active page opens workspace ── */
+function BottomNavItem({
   href,
   label,
   icon: Icon,
@@ -683,7 +701,8 @@ function MobileNavItem({
     <button
       type="button"
       onClick={handleClick}
-      className={`flex flex-col items-center gap-0.5 px-1.5 py-2 rounded-lg transition-colors min-w-[44px] min-h-[44px] justify-center select-none ${
+      aria-current={isActive ? "page" : undefined}
+      className={`flex flex-col items-center gap-0.5 px-1.5 md:px-4 py-2 rounded-lg transition-colors min-w-[44px] md:min-w-[64px] min-h-[44px] justify-center select-none ${
         isActive
           ? realm ? realm.mobileActive : "bg-accent text-primary"
           : realm ? realm.mobileInactive : "text-muted-foreground"
@@ -691,13 +710,13 @@ function MobileNavItem({
       data-testid={`mobile-nav-${label.toLowerCase().replace(/\s+/g, "-")}`}
     >
       <Icon className={`h-5 w-5 ${isActive ? "stroke-[2.5]" : ""}`} />
-      <span className="text-[10px] font-medium leading-tight">{label}</span>
+      <span className="text-[10px] md:text-[11px] font-medium leading-tight">{label}</span>
     </button>
   );
 }
 
-/* ── Mobile Bottom Nav ── */
-export function MobileNav() {
+/* ── Canonical Bottom Nav (UX1) — primary navigation on Desktop, Tablet & Mobile ── */
+export function BottomNav() {
   const [location] = useLocation();
   const { user } = useUser();
 
@@ -705,16 +724,18 @@ export function MobileNav() {
 
   return (
     <nav
-      className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-xl border-t border-border"
+      className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-xl border-t border-border"
       style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       data-testid="mobile-bottom-nav"
+      aria-label="Primary"
     >
-      <div className="flex items-center justify-around px-1 py-1 max-w-lg mx-auto">
-        {MOBILE_BOTTOM_ITEMS.map((item) => {
-          const isActive = location === item.href.split("?")[0] || (item.href === "/my-diary" && location === "/diary");
-          const realm = REALM_STYLES[item.href.split("?")[0]];
+      <div className="flex items-center justify-around md:justify-center md:gap-2 px-1 py-1 max-w-lg md:max-w-3xl mx-auto">
+        {NAV_ITEMS.map((item) => {
+          const base = item.href.split("?")[0];
+          const isActive = isNavItemActive(base, location);
+          const realm = REALM_STYLES[base];
           return (
-            <MobileNavItem
+            <BottomNavItem
               key={item.href}
               href={item.href}
               label={item.label}

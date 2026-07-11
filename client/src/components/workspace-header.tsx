@@ -225,7 +225,7 @@ export function WorkspaceHeader({
                 className="flex items-center gap-3 shrink-0"
                 style={{ gridRow: "1 / 3", gridColumn: "1" }}
               >
-                <Link href="/dashboard" aria-label="Dashboard" className="flex-shrink-0">
+                <Link href="/home" aria-label="Home" className="flex-shrink-0">
                   <img
                     src="/logo-long.png"
                     alt="The Healthy Apples"
@@ -287,7 +287,7 @@ export function WorkspaceHeader({
             >
               {/* Col 1: Brand — logo + divider */}
               <div className="flex items-center gap-3 shrink-0">
-                <Link href="/dashboard" aria-label="Dashboard" className="flex-shrink-0">
+                <Link href="/home" aria-label="Home" className="flex-shrink-0">
                   <img
                     src="/logo-long.png"
                     alt="The Healthy Apples"
@@ -330,7 +330,7 @@ export function WorkspaceHeader({
             {/* Row 1: title | basket + search toggle + profile */}
             <div className="flex items-center justify-between h-14">
               <div className="flex items-center gap-2 min-w-0">
-                <Link href="/dashboard" aria-label="Dashboard" className="flex-shrink-0">
+                <Link href="/home" aria-label="Home" className="flex-shrink-0">
                   <img
                     src="/logo-long.png"
                     alt="The Healthy Apples"
