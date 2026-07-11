@@ -55,6 +55,12 @@ The documents referenced by that README are the **governing architecture** for T
 - `docs/architecture/ARCHITECTURE_PRINCIPLES.md` (the eight governing principles)
 - `docs/architecture/THA_SOURCE_OF_TRUTH_ARCHITECTURE_REGISTER.md` (domain ownership register)
 
+**For any user-facing implementation, it additionally always includes:**
+
+- `docs/architecture/THA_EXPERIENCE_ARCHITECTURE.md` (how THA behaves and feels — **prevails over UI in any conflict**)
+- `docs/architecture/THA_UI_ARCHITECTURE.md` (how THA looks)
+- `docs/architecture/THA_PRODUCT_KNOWLEDGE_REGISTRY_ARCHITECTURE.md` (what THA *is* — and the registry this change must keep true)
+
 These are required reading. Do not proceed until the README and its governing documents have been read.
 
 **If any proposed change conflicts with the governing architecture: STOP. Explain why. Do not continue until approved.**
@@ -108,7 +114,7 @@ or `docs/investigations/`) or to the repository root — the only file permitted
 either root is that tree's index `README.md`. This is enforced by
 `.engineering/scripts/repo-structure-verify.sh`; run it after filing.
 
-Every workstream implementation document must contain all six sections:
+Every workstream implementation document must contain all seven sections:
 
 ### Architecture Compliance
 *(See checklist below — copy and complete it.)*
@@ -117,6 +123,22 @@ Every workstream implementation document must contain all six sections:
 - What success looks like
 - What must not break
 - Manual test steps
+
+### Product Registry Impact
+*(Added under `PKR2`, 2026-07-11. Mandatory for every **user-facing** implementation. Governed by [`THA_PRODUCT_KNOWLEDGE_REGISTRY_ARCHITECTURE.md`](./THA_PRODUCT_KNOWLEDGE_REGISTRY_ARCHITECTURE.md), and — since `PKR3` — by [`PLATFORM_KNOWLEDGE_COMPLETION_ARCHITECTURE.md`](./PLATFORM_KNOWLEDGE_COMPLETION_ARCHITECTURE.md) §9, which makes **Product Knowledge** a first-class platform knowledge domain and the registry its canonical owner.)*
+
+The test is one question: **would a person's answer to "what is THA?" be different after this change?** If yes, the Product Knowledge Registry is stale until updated — and updating it is part of *this* change, not a follow-up.
+
+**Why this is a Definition of Done item and not a documentation chore (PKCA Rule KC15):** Product Knowledge is the one knowledge domain that **decays by default**. A food fact left alone stays true; a product fact left alone becomes false the moment the product moves. Maintenance is therefore not a follow-up — it *is* the work, and this is the only moment it is cheap, while the person changing the product still remembers what they changed.
+
+- Registry affected: YES / NO *(if unsure, it is YES)*
+- Entries **created**: [id — name — visibility — owner, or NONE]
+- Entries **updated**: [id — what changed, or NONE]
+- Entries **retired**: [id — replaced by, or NONE]
+- Any entry set to `public` or `household`: [justify each, or N/A]
+- Product knowledge written into a prompt, template, or fallback string: **must be NO** (Rule PKR27)
+
+*(See the Product Registry Compliance block below — copy and complete it.)*
 
 ### Data Impact
 - Reads existing data: YES / NO
@@ -339,6 +361,17 @@ ARCHITECTURE COMPLIANCE CHECKLIST
   If this is transactional state, enrichment is not being added.
   Explain: [entity type and enrichment approach]
 
+□ Knowledge domain compliance
+  If this introduces or extends a KNOWLEDGE DOMAIN, it fills a row in
+  PLATFORM_KNOWLEDGE_COMPLETION_ARCHITECTURE.md §1.1 — naming its Candidate
+  source, its Gate, its Confirmation authority, its Published form, and its
+  terminal rejection state. It does NOT invent a new lifecycle (Rule KC1;
+  Risk R1). Which existing row is the closest analogue?
+  If this changes what THA *is*, the domain is PRODUCT KNOWLEDGE and its
+  canonical owner is the Product Knowledge Registry (PKCA §9) — complete the
+  Product Registry Compliance block below.
+  Explain: [which §1.1 row this fills or extends, or N/A]
+
 □ Honest gaps over fabricated information
   Missing knowledge renders as empty/absent, never as invented content.
   Explain: [how gaps are handled]
@@ -380,6 +413,93 @@ For every AI-related implementation confirm:
 ```
 
 **If any check fails: STOP. Explain why. Do not continue.**
+
+---
+
+## EXPERIENCE & UI GOVERNANCE COMPLIANCE
+
+**Adopted under `ARCH-VERIFY1` (2026-07-11), closing a governance gap.** This section applies to **every user-facing implementation** — anything a person sees, reads, hears, or does — in addition to the general Architecture Compliance Checklist above.
+
+Two governing documents own the user-facing layer, and each holds its own full checklist. **This workflow does not restate them** (that would create a second owner of the same law, which drifts); it makes them mandatory and names the precedence between them:
+
+| Document | Owns | Its checklist |
+|---|---|---|
+| [`THA_EXPERIENCE_ARCHITECTURE.md`](./THA_EXPERIENCE_ARCHITECTURE.md) (EXP1, + EXP2 Premium Experience Principles) | How THA **behaves and feels** — Home, progressive disclosure, calm before capability, one primary action, journeys, companion conduct, trust, language, errors, notifications, accessibility, and the premium standard of craft | **UX Governance Checklist** — its § 18, *including the Premium Standard block* |
+| [`THA_UI_ARCHITECTURE.md`](./THA_UI_ARCHITECTURE.md) (UIA2) | How THA **looks** — the Calm Orchard visual language, visual hierarchy, layout, colour, typography, spacing, motion, brand identity, state presentation, Visual Trust, design tokens, and one-owner-per-visual-concern | **UI Governance Checklist** — its § 18 |
+
+```
+----------------------------------------
+EXPERIENCE & UI GOVERNANCE COMPLIANCE
+----------------------------------------
+
+For every user-facing implementation confirm:
+
+✓ The UX Governance Checklist (THA_EXPERIENCE_ARCHITECTURE.md § 18) has been
+    completed IN FULL — including the Premium Standard block (§ 17)
+✓ The UI Governance Checklist (THA_UI_ARCHITECTURE.md § 18) has been
+    completed IN FULL
+✓ Any conflict between them was resolved in the EXPERIENCE Architecture's
+    favour — Experience governs behaviour, UI governs presentation, and
+    Experience prevails (EXPERIENCE § 2.1, UI § 2)
+✓ Nothing in this change owns a fact, an entity, or a decision at the
+    presentation layer — every value shown is read from its single owner, and
+    gaps render as honest absence, never invented content (Core Principle 6)
+✓ Any new visual pattern RETIRED its predecessor in this same change — no
+    dormant predecessors, no two owners of one visual concern (UI Principle 5)
+```
+
+**If any check fails: STOP. Explain why. Do not continue.**
+
+> **Why this block exists.** Both checklists have always declared that they *"stand beside the Architecture Compliance Checklist in `ENGINEERING_WORKFLOW.md`"* — but until now this workflow had never heard of either document, so neither checklist was ever reachable by anyone following the workflow. A governing rule that only fires when its author happens to remember it is not enforced; it is hoped for (`PLATFORM_KNOWLEDGE_COMPLETION_ARCHITECTURE.md` Rule KC8). This block makes the two checklists reachable from the one document every implementation is required to read.
+
+> **Not applicable to non-user-facing work.** A migration, a query optimisation, a server-side refactor, or a governance document changes nothing a person sees and owes these checklists nothing. The question is simply: *will a person see, read, hear, or do anything differently?*
+
+---
+
+## PRODUCT REGISTRY COMPLIANCE
+
+**Adopted under `PKR2` (2026-07-11); anchored in the domain law under `PKR3` (2026-07-11).** This section applies to **every user-facing implementation** in addition to the general Architecture Compliance Checklist above. It enforces [`THA_PRODUCT_KNOWLEDGE_REGISTRY_ARCHITECTURE.md`](./THA_PRODUCT_KNOWLEDGE_REGISTRY_ARCHITECTURE.md), whose § 19 holds the full Product Registry Governance Checklist, and [`PLATFORM_KNOWLEDGE_COMPLETION_ARCHITECTURE.md`](./PLATFORM_KNOWLEDGE_COMPLETION_ARCHITECTURE.md) § 9, which governs **Product Knowledge** as a platform knowledge domain (Rules KC12–KC15).
+
+The Product Knowledge Registry is the single source of truth for **what THA is** — the canonical owner of the Product Knowledge domain, alongside Food, Nutrition, Recipes and Household Knowledge. It is queried by the Intelligence Platform and read by the Companion, permission-aware. A stale entry is therefore not a documentation defect — it is the Companion telling a household something false, in the product's own voice.
+
+**Discovery is not ownership (PKCA § 9.3).** An investigation or audit **discovers**; the registry **owns**; implementations **maintain**. A finding that stays inside the document that found it has not been transferred to an owner, and will be rediscovered from scratch by whoever asks next. If this change discovered something true about THA that the registry does not yet hold, the registry gets an entry — with a named human owner and a deliberate visibility — in this change.
+
+```
+----------------------------------------
+PRODUCT REGISTRY COMPLIANCE
+----------------------------------------
+
+For every user-facing implementation confirm:
+
+✓ Registry impact assessed — would "what is THA?" answer differently now?
+✓ Every new page, route, journey, feature, capability, dialog, drawer,
+    wizard, notification, integration, API and setting has a registry entry
+✓ Every entry names a human owner
+✓ Every entry declares a visibility: public / household / admin / developer
+    — chosen deliberately, never defaulted. Absence of a label is never
+    permission; it fails closed to `developer` (Rule PKR22)
+✓ Visibility keys on ROLE, never on subscription tier — a free household may
+    still be TOLD what premium does (Rule PKR24)
+✓ The registry labels; server/lib/access.ts authorises. No registry value
+    determines who a user is or grants access to anything (Rule PKR25)
+✓ Permission filtering happens BEFORE prompt composition — never by asking
+    the model to withhold what it has been shown (Rule PKR26)
+✓ NO product knowledge written into a prompt, template, fallback string,
+    fine-tune, or capability code. The Companion queries; it never duplicates
+    (Rule PKR27)
+✓ Every replaced surface has its predecessor's entry RETIRED in this change
+    (Rule PKR14)
+✓ Anything shipped-but-unlinked is in Hidden Experiences, visibility: admin
+✓ Every new claim has a Marketing Message entry citing what substantiates it
+✓ The implementation report names every entry created, updated or retired
+```
+
+**If any check fails: STOP. Explain why. Do not continue.**
+
+> **Not applicable to non-user-facing work.** A refactor, a query optimisation, a
+> bug fix, or a spacing adjustment does not change what THA *is* and owes the
+> registry nothing. The question is not "did I touch the UI?" — it is "would a
+> person's answer to *what is THA?* be different now?"
 
 ---
 
@@ -489,6 +609,14 @@ Remaining Architectural Risks:
 
 ---
 
+## PRODUCT REGISTRY IMPACT
+
+[Registry affected YES/NO; entries created / updated / retired, each with id,
+visibility and owner; justification for any public or household visibility.
+Mandatory for user-facing implementations — see PRODUCT REGISTRY COMPLIANCE.]
+
+---
+
 ## DATA IMPACT
 
 [Data Impact section]
@@ -551,9 +679,10 @@ The file must:
 
 1. The project document has been created.
 2. The project document has been saved in its canonical location (see File Requirements above).
-3. The project document has been staged with git (`git add <canonical path>`).
-4. The project document has been committed locally with an appropriate commit message.
-5. Claude has reported:
+3. **For user-facing implementations: every affected Product Knowledge Registry entry has been created, updated, or retired — in this change — and named in the project document.** *(Added under `PKR2`, 2026-07-11. A user-facing task with a stale registry is not complete, however finished the code is; see [`THA_PRODUCT_KNOWLEDGE_REGISTRY_ARCHITECTURE.md`](./THA_PRODUCT_KNOWLEDGE_REGISTRY_ARCHITECTURE.md) § 16, and — for why this is a knowledge-domain obligation rather than a documentation chore — [`PLATFORM_KNOWLEDGE_COMPLETION_ARCHITECTURE.md`](./PLATFORM_KNOWLEDGE_COMPLETION_ARCHITECTURE.md) § 9.7, Rule KC15.)*
+4. The project document has been staged with git (`git add <canonical path>`).
+5. The project document has been committed locally with an appropriate commit message.
+6. Claude has reported:
 
 ```
 Project File Created:     <canonical path>

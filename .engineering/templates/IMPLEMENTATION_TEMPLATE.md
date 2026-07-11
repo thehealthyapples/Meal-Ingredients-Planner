@@ -45,6 +45,41 @@
 
 ---
 
+## PRODUCT REGISTRY COMPLIANCE
+
+*(User-facing implementations only. Copy the block from `docs/architecture/ENGINEERING_WORKFLOW.md`.)*
+
+---
+
+## PRODUCT REGISTRY IMPACT
+
+*(Mandatory for every user-facing implementation. Added under `PKR2` (2026-07-11).
+Governed by `docs/architecture/THA_PRODUCT_KNOWLEDGE_REGISTRY_ARCHITECTURE.md`.)*
+
+The test is one question: **would a person's answer to "what is THA?" be different
+after this change?** If yes, the Product Knowledge Registry is stale until updated —
+and updating it belongs to *this* change, not a follow-up ticket. The registry is
+read by the Companion, so a stale entry is not a documentation defect; it is the
+product telling a household something false in its own voice.
+
+```
+PRODUCT REGISTRY IMPACT
+=======================
+Registry affected: YES / NO        (if unsure, it is YES)
+
+Entries created:   [id — name — visibility — owner]   or NONE
+Entries updated:   [id — what changed]                or NONE
+Entries retired:   [id — replaced by]                 or NONE
+
+Any entry set to `public` or `household`: [justify each]  or N/A
+  Restrictive labels need no defence. Permissive ones do.
+
+Product knowledge written into a prompt, template, fallback
+string, fine-tune, or capability code: MUST BE NO   (Rule PKR27)
+```
+
+---
+
 ## DOMAIN IMPACT
 
 [Copy and complete the Domain Impact Declaration from `docs/architecture/ENGINEERING_WORKFLOW.md`.]
