@@ -29,10 +29,20 @@ externalPort = 3002
 [env]
 PORT = "5000"
 
-[deployment]
-deploymentTarget = "autoscale"
-run = ["node", "./dist/index.cjs"]
-build = ["npm", "run", "build"]
+# NO [deployment] BLOCK — THIS IS DELIBERATE (REL2, 2026-07-11).
+#
+# THA does not deploy from Replit. Production is GitHub -> Render (auto-deploy on
+# push to `main`), with Neon as the production database. RELEASE.md is the single
+# canonical owner of that fact; see its "Deployment Configuration" section.
+#
+# This file previously declared `deploymentTarget = "autoscale"` with its own
+# build/run commands. Nothing released from it, but it read as the deployment
+# configuration, and it misled: REL1 diagnosed the ephemeral-uploads blocker
+# against Replit autoscale — the wrong platform — because this block was here.
+#
+# Do not re-add it. `npm run verify:deployment-config` fails the release if it
+# returns. If THA ever genuinely adopts a second deployment target, that is an
+# architectural decision: declare it in RELEASE.md first, then update the gate.
 
 [workflows]
 runButton = "Project"

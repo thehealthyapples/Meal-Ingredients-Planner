@@ -369,11 +369,31 @@ and invisible to other instances**, while `/uploads/meal-photos/...` URLs persis
 pointing at them. This needs object storage. It is a media-storage behaviour change, out of REL1's
 scope, and it is a genuine data-loss blocker for any release that lets households upload photos.
 
-### 🟡 BLOCKER 3 — `.replit` is modified and uncommitted
+> **⚠️ CORRECTION — `REL2`, 2026-07-11.** *The blocker is real. The platform named above is not.*
+> THA does not deploy to Replit autoscale. Production is **Render** (GitHub auto-deploy on push to
+> `main`) — `RELEASE.md` § Deployment Configuration. REL1 read `.replit`'s `[deployment]` block and
+> believed it; that block was dead configuration THA had never released from, and `REL2` has removed
+> it for exactly this reason. **The conclusion survives the correction:** a Render web service's
+> filesystem is likewise rebuilt on every deploy and not shared between instances, so
+> `process.cwd()/uploads/meal-photos` is still ephemeral and photos are still lost on redeploy. Only
+> the evidence changes — and it changes to a platform whose disk semantics must be confirmed in the
+> **Render dashboard**, not inferred from this repository. Fix the storage; do not fix Replit.
+
+### ~~🟡 BLOCKER 3 — `.replit` is modified and uncommitted~~ — ✅ CLOSED by `REL2`
 
 The deploy configuration itself is dirty in the working tree (`M .replit`) and was not authored by
 REL1, so REL1 did not commit it. **The deployed configuration is therefore not the one in the
 repository.** Someone who knows why it changed needs to commit it or revert it before a deploy.
+
+> **✅ RESOLVED — `REL2`, 2026-07-11.** The uncommitted change was `exposeLocalhost = true` on the
+> port-5599 mapping, added by workspace tooling. Nothing in the repository binds port 5599 (the
+> server binds only `0.0.0.0:5000`; Vite runs in middleware mode), the flag had never appeared in
+> any commit in the file's history, and its only effect would have been to publish a
+> localhost-bound service. It was **reverted, not committed.** REL2 also found and removed the
+> larger drift REL1 had not looked for: the `[deployment]` block itself. `.replit` is now committed
+> and clean, and `npm run verify:deployment-config` fails the release if it ever drifts again — the
+> check that would have caught this on the day it appeared. See
+> `docs/implementation/platform/REL2_DEPLOYMENT_CONFIGURATION_CONVERGENCE.md`.
 
 ### Not blockers, but noted
 

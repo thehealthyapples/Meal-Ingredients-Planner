@@ -171,6 +171,60 @@ Captured immediately before Phase 0 of the THA planner architecture revamp begin
 
 ---
 
+## Deployment Configuration
+
+**This section is the canonical definition of where THA deploys and what governs it.**
+Established under `REL2` (2026-07-11). Enforced by `npm run verify:deployment-config`
+(`scripts/ci/verify-deployment-config.ts`).
+
+THA has **exactly one deployment target.**
+
+| | |
+|---|---|
+| **Production target** | **Render** — auto-deploys on push to `main` |
+| Trigger | A GitHub push. Nothing else. There is no deploy CLI, API token, or manual step |
+| Build | `npm run build` (`script/build.ts` → `dist/index.cjs` + `dist/public/`) |
+| Start | `npm start` → `node dist/index.cjs` |
+| Port | `PORT` — the server falls back to `5000` (`server/index.ts`) |
+| Database | Neon, owned by Render as a service environment variable |
+| Schema | Migrations auto-run at boot (see *What auto-runs on deploy*) |
+
+### THA does not deploy from Replit
+
+Replit is the **development environment**. It is not a deployment target, and `.replit` is not the
+deployment configuration — it configures the workspace (the run button, port forwarding, the
+`postMerge` hook).
+
+`.replit` used to declare `[deployment] deploymentTarget = "autoscale"` with its own build and run
+commands. Nothing ever released from it. But a dead deployment declaration does not sit quietly —
+**it gets believed.** `REL1` read that block and diagnosed the ephemeral-uploads blocker against
+Replit autoscale, which is not the platform THA runs on. The block was removed under `REL2`, and
+`verify:deployment-config` fails the release if it returns.
+
+If THA ever genuinely adopts a second target, that is an architectural decision: **declare it in
+this section first**, then update the gate. A deployment target that exists only in a config file
+is a deployment target nobody has agreed to.
+
+### What is NOT reproducible from the repository — and why that is stated, not hidden
+
+**Render's service configuration is not in version control.** There is no `render.yaml`. The build
+command, start command, environment variables, health check and instance settings live in the
+**Render dashboard**, and nothing in this repository can read them or verify they match the table
+above.
+
+`REL2` deliberately did **not** invent one. A Render service created from the dashboard *ignores* a
+`render.yaml`, so committing an unverified file would create a second source of truth that Render
+never reads and that drifts silently from the real config — a worse failure than the honest gap, and
+a direct breach of *one owner per fact*. The gate therefore prints this limitation on **every run,
+pass or fail**: a green result means THA's own configuration is committed and coherent; it does not
+mean Render agrees with it.
+
+**This is an open deployment blocker** (`REL2` Blocker A). Closing it means a human with dashboard
+access either adopts a Render Blueprint deliberately, or records the live settings here — where they
+can at least be reviewed.
+
+---
+
 ## The Release Package
 
 **This section is the canonical definition of what THA ships.** Established under `REL1`
@@ -227,7 +281,21 @@ had the files. Only git knew. `npm run verify:release-packaging` is the check th
 
 Use this every release. Do not skip steps.
 
-### Step 0 — Release packaging gate
+### Step 0 — Deployment configuration gate
+
+```bash
+npm run verify:deployment-config   # must PASS — proves the config that deploys is the config in git
+```
+
+Fails if `.replit` is uncommitted or modified, if a rival `[deployment]` block reappears, if a
+port mapping silently exposes a localhost-bound service, if the declared `PORT` disagrees with the
+server, if `[postMerge]` points at a file absent from a clean checkout, or if `npm start` and the
+build emit different artefacts. **A FAIL here means the configuration you are about to deploy is
+not the one in the repository.**
+
+Read the NOTE it prints. It states what it cannot check: Render's own dashboard config.
+
+### Step 0b — Release packaging gate
 
 ```bash
 npm run verify:release-packaging   # must PASS — proves a clean checkout can reproduce prod
@@ -236,6 +304,8 @@ npm run verify:release-packaging   # must PASS — proves a clean checkout can r
 Fails if any runtime asset is untracked, any asset directory has uncommitted files, or any
 server runtime path resolves to a file the repository does not contain. **A FAIL here means the
 deploy would ship code that reads files that will not be there.**
+
+Both gates run, in this order, ahead of typecheck/test/build in `npm run release:check`.
 
 ### Step 1 — Git clean
 
