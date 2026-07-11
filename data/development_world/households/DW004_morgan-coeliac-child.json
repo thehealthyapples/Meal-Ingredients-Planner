@@ -1,0 +1,1514 @@
+{
+  "id": "DW004",
+  "slug": "morgan-coeliac-child",
+  "archetype": "Coeliac child household",
+  "householdName": "Morgan Family (Dev)",
+  "summary": "Family with one coeliac child; gluten-free safety matters more than cuisine variety.",
+  "fictional": true,
+  "coldStart": false,
+  "accounts": [
+    {
+      "key": "owner",
+      "username": "morgan.coeliac.child.owner@dev.thehealthyapples.dev",
+      "displayName": "Laura Morgan (Dev)",
+      "firstName": "Laura",
+      "dietPattern": "Mediterranean",
+      "dietRestrictions": [
+        "Gluten-Free"
+      ],
+      "eatingSchedule": "None",
+      "subscriptionTier": "premium"
+    },
+    {
+      "key": "partner",
+      "username": "morgan.coeliac.child.partner@dev.thehealthyapples.dev",
+      "displayName": "Ben Morgan (Dev)",
+      "firstName": "Ben",
+      "dietPattern": "Mediterranean",
+      "dietRestrictions": [
+        "Gluten-Free"
+      ],
+      "eatingSchedule": "None",
+      "subscriptionTier": "premium"
+    }
+  ],
+  "eaters": [
+    {
+      "displayName": "Laura",
+      "accountKey": "owner",
+      "ageYears": 38,
+      "defaultDietTypes": [],
+      "hardRestrictions": [
+        "gluten"
+      ]
+    },
+    {
+      "displayName": "Ben",
+      "accountKey": "partner",
+      "ageYears": 40,
+      "defaultDietTypes": [],
+      "hardRestrictions": []
+    },
+    {
+      "displayName": "Noah",
+      "ageYears": 9,
+      "defaultDietTypes": [],
+      "hardRestrictions": [
+        "gluten"
+      ]
+    }
+  ],
+  "preferences": {
+    "dietTypes": [
+      "Mediterranean"
+    ],
+    "excludedIngredients": [],
+    "healthGoals": [
+      "heart_health",
+      "steady_energy"
+    ],
+    "goalType": "maintain",
+    "budgetLevel": "standard",
+    "activityLevel": "moderate",
+    "preferredStores": [
+      "Tesco",
+      "Asda"
+    ],
+    "calorieTarget": null,
+    "heightCm": null,
+    "weightKg": null,
+    "adultsCount": 2,
+    "childrenCount": 1,
+    "maxTotalCookTime": 45,
+    "plannerEnableChildMeals": true,
+    "companionPersonality": "companion"
+  },
+  "persona": {
+    "lifestyle": "Family with one coeliac child; gluten-free safety matters more than cuisine variety.",
+    "shoppingHabits": "Primary shops: Tesco, Asda. One big weekly shop plus freezer top-ups.",
+    "cookingConfidence": "moderate",
+    "weeknightCookingTime": "30-45 minutes",
+    "budget": "standard",
+    "kitchenEquipment": [
+      "hob",
+      "oven",
+      "microwave",
+      "slow cooker",
+      "freezer"
+    ],
+    "lifeEvents": [
+      "school term routine"
+    ],
+    "mealStory": "Favourite meals and dislikes are persona context unless a future favourite-meals schema is introduced.",
+    "favouriteMealRefsNarrativeOnly": [
+      {
+        "recipe_id": "THA-190",
+        "import_key": "tha_original:THA-190",
+        "name": "Moroccan-Style Kidney Bean, Courgette & Green Bean Frittata",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-096",
+        "import_key": "tha_original:THA-096",
+        "name": "Thai-Style Greek Yoghurt, Kale & Peas Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-099",
+        "import_key": "tha_original:THA-099",
+        "name": "Mediterranean-Style Cottage Cheese, Cauliflower & Red Pepper Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      }
+    ],
+    "dislikedIngredientsNarrativeOnly": [
+      "overly spicy food"
+    ]
+  },
+  "pantry": [
+    {
+      "ingredient": "frozen veg",
+      "category": "freezer"
+    },
+    {
+      "ingredient": "gluten-free oats (unverified)",
+      "category": "larder"
+    },
+    {
+      "ingredient": "potatoes",
+      "category": "larder"
+    },
+    {
+      "ingredient": "lentils",
+      "category": "larder"
+    },
+    {
+      "ingredient": "carrots",
+      "category": "fridge"
+    },
+    {
+      "ingredient": "onions",
+      "category": "larder"
+    },
+    {
+      "ingredient": "tinned chickpeas",
+      "category": "larder"
+    },
+    {
+      "ingredient": "brown rice",
+      "category": "larder"
+    },
+    {
+      "ingredient": "tinned lentils",
+      "category": "larder"
+    },
+    {
+      "ingredient": "corn tortillas",
+      "category": "larder"
+    },
+    {
+      "ingredient": "black beans",
+      "category": "larder"
+    },
+    {
+      "ingredient": "sweet potatoes",
+      "category": "larder"
+    },
+    {
+      "ingredient": "mixed seeds",
+      "category": "larder"
+    },
+    {
+      "ingredient": "wholewheat pasta",
+      "category": "larder"
+    },
+    {
+      "ingredient": "olive oil",
+      "category": "larder"
+    },
+    {
+      "ingredient": "quinoa",
+      "category": "larder"
+    },
+    {
+      "ingredient": "garlic",
+      "category": "larder"
+    },
+    {
+      "ingredient": "tomato puree",
+      "category": "larder"
+    }
+  ],
+  "cookbookRefs": {
+    "adoptedMealRefs": [
+      {
+        "recipe_id": "THA-190",
+        "import_key": "tha_original:THA-190",
+        "name": "Moroccan-Style Kidney Bean, Courgette & Green Bean Frittata",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-096",
+        "import_key": "tha_original:THA-096",
+        "name": "Thai-Style Greek Yoghurt, Kale & Peas Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-099",
+        "import_key": "tha_original:THA-099",
+        "name": "Mediterranean-Style Cottage Cheese, Cauliflower & Red Pepper Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-114",
+        "import_key": "tha_original:THA-114",
+        "name": "Mediterranean-Style Cottage Cheese, Cucumber & Red Pepper Frittata",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-129",
+        "import_key": "tha_original:THA-129",
+        "name": "Mediterranean-Style Cottage Cheese, Cauliflower & Red Pepper Jacket Potato",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-144",
+        "import_key": "tha_original:THA-144",
+        "name": "Mediterranean-Style Cottage Cheese, Cucumber & Red Pepper Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-159",
+        "import_key": "tha_original:THA-159",
+        "name": "Mediterranean-Style Cottage Cheese, Cauliflower & Red Pepper Lunch Bowl 2",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-331",
+        "import_key": "tha_original:THA-331",
+        "name": "Indian-Style Split Pea, Butternut Squash & Carrot Skillet",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-202",
+        "import_key": "tha_original:THA-202",
+        "name": "Indonesian-Style Black Bean, Parsnip & Swede One-Pot",
+        "category": "dinner",
+        "cuisine": "Indonesian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-005",
+        "import_key": "tha_original:THA-005",
+        "name": "Gentle Taco Rice Bowls",
+        "category": "dinner",
+        "cuisine": "Mexican-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 40
+      },
+      {
+        "recipe_id": "THA-009",
+        "import_key": "tha_original:THA-009",
+        "name": "Salmon, Broccoli & Brown Rice Traybake",
+        "category": "dinner",
+        "cuisine": "Nordic-Mediterranean inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 45
+      },
+      {
+        "recipe_id": "THA-205",
+        "import_key": "tha_original:THA-205",
+        "name": "Spanish-Style Green Pea, Broccoli & Spring Onion Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-008",
+        "import_key": "tha_original:THA-008",
+        "name": "Lentil & Root Vegetable Cottage Pie",
+        "category": "dinner",
+        "cuisine": "British family kitchen",
+        "difficulty": "medium",
+        "servings": 6,
+        "total_minutes": 70
+      },
+      {
+        "recipe_id": "THA-196",
+        "import_key": "tha_original:THA-196",
+        "name": "Indian-Style Chickpea, Red Pepper & Carrot Skillet",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-201",
+        "import_key": "tha_original:THA-201",
+        "name": "Indian-Style Chicken Thigh, Butternut Squash & Cabbage Skillet",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-206",
+        "import_key": "tha_original:THA-206",
+        "name": "Indian-Style Kidney Bean, Red Pepper & Kale Skillet",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-211",
+        "import_key": "tha_original:THA-211",
+        "name": "Indian-Style Butter Bean, Butternut Squash & Carrot Skillet",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-216",
+        "import_key": "tha_original:THA-216",
+        "name": "Indian-Style Chicken Thigh, Red Pepper & Cabbage Skillet",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-221",
+        "import_key": "tha_original:THA-221",
+        "name": "Indian-Style Split Pea, Butternut Squash & Kale Skillet",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-226",
+        "import_key": "tha_original:THA-226",
+        "name": "Indian-Style Cannellini Bean, Red Pepper & Carrot Skillet",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-477",
+        "import_key": "tha_original:THA-477",
+        "name": "Chinese-Style Red Cabbage, Parsnip & Greek Yoghurt Roasted Veg",
+        "category": "side",
+        "cuisine": "Chinese-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-459",
+        "import_key": "tha_original:THA-459",
+        "name": "Georgian-Style Pumpkin, Celery & Feta Slaw",
+        "category": "side",
+        "cuisine": "Georgian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-483",
+        "import_key": "tha_original:THA-483",
+        "name": "Chinese-Style Cherry Tomato, Celery & Egg Snack Bites",
+        "category": "snack",
+        "cuisine": "Chinese-inspired",
+        "difficulty": "easy",
+        "servings": 8,
+        "total_minutes": 30
+      },
+      {
+        "recipe_id": "THA-495",
+        "import_key": "tha_original:THA-495",
+        "name": "Georgian-Style Red Cabbage, Red Pepper & Halloumi Fruit Pot",
+        "category": "snack",
+        "cuisine": "Georgian-inspired",
+        "difficulty": "easy",
+        "servings": 8,
+        "total_minutes": 30
+      },
+      {
+        "recipe_id": "THA-484",
+        "import_key": "tha_original:THA-484",
+        "name": "West African-Style Sweetcorn, Aubergine & Edamame Dip Plate",
+        "category": "snack",
+        "cuisine": "West African-inspired",
+        "difficulty": "easy",
+        "servings": 8,
+        "total_minutes": 30
+      }
+    ],
+    "regularMealRefs": [
+      {
+        "recipe_id": "THA-190",
+        "import_key": "tha_original:THA-190",
+        "name": "Moroccan-Style Kidney Bean, Courgette & Green Bean Frittata",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-096",
+        "import_key": "tha_original:THA-096",
+        "name": "Thai-Style Greek Yoghurt, Kale & Peas Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-099",
+        "import_key": "tha_original:THA-099",
+        "name": "Mediterranean-Style Cottage Cheese, Cauliflower & Red Pepper Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-114",
+        "import_key": "tha_original:THA-114",
+        "name": "Mediterranean-Style Cottage Cheese, Cucumber & Red Pepper Frittata",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-129",
+        "import_key": "tha_original:THA-129",
+        "name": "Mediterranean-Style Cottage Cheese, Cauliflower & Red Pepper Jacket Potato",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-144",
+        "import_key": "tha_original:THA-144",
+        "name": "Mediterranean-Style Cottage Cheese, Cucumber & Red Pepper Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-159",
+        "import_key": "tha_original:THA-159",
+        "name": "Mediterranean-Style Cottage Cheese, Cauliflower & Red Pepper Lunch Bowl 2",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-331",
+        "import_key": "tha_original:THA-331",
+        "name": "Indian-Style Split Pea, Butternut Squash & Carrot Skillet",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-202",
+        "import_key": "tha_original:THA-202",
+        "name": "Indonesian-Style Black Bean, Parsnip & Swede One-Pot",
+        "category": "dinner",
+        "cuisine": "Indonesian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-005",
+        "import_key": "tha_original:THA-005",
+        "name": "Gentle Taco Rice Bowls",
+        "category": "dinner",
+        "cuisine": "Mexican-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 40
+      }
+    ],
+    "discoveryQueueMealRefs": [
+      {
+        "recipe_id": "THA-307",
+        "import_key": "tha_original:THA-307",
+        "name": "Indonesian-Style Haricot Bean, Tomato & Swede One-Pot",
+        "category": "dinner",
+        "cuisine": "Indonesian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-220",
+        "import_key": "tha_original:THA-220",
+        "name": "Spanish-Style Lentil, Radish & Spring Onion Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-231",
+        "import_key": "tha_original:THA-231",
+        "name": "Indian-Style Chicken Thigh, Butternut Squash & Cabbage Skillet 2",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-236",
+        "import_key": "tha_original:THA-236",
+        "name": "Indian-Style Edamame, Red Pepper & Kale Skillet",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-135",
+        "import_key": "tha_original:THA-135",
+        "name": "Moroccan-Style Egg, Pumpkin & Parsnip Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-111",
+        "import_key": "tha_original:THA-111",
+        "name": "Thai-Style Greek Yoghurt, Cherry Tomato & Peas Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-498",
+        "import_key": "tha_original:THA-498",
+        "name": "Chinese-Style Kale, Celery & Egg Snack Bites",
+        "category": "snack",
+        "cuisine": "Chinese-inspired",
+        "difficulty": "easy",
+        "servings": 8,
+        "total_minutes": 30
+      }
+    ],
+    "notes": "References only. Recipe bodies remain owned by the THA Original Founding Cookbook."
+  },
+  "planner": [
+    {
+      "week": 1,
+      "dayOfWeek": 0,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-331",
+        "import_key": "tha_original:THA-331",
+        "name": "Indian-Style Split Pea, Butternut Squash & Carrot Skillet",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Laura",
+        "Ben",
+        "Noah"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 1,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-202",
+        "import_key": "tha_original:THA-202",
+        "name": "Indonesian-Style Black Bean, Parsnip & Swede One-Pot",
+        "category": "dinner",
+        "cuisine": "Indonesian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Laura",
+        "Ben",
+        "Noah"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 1,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-099",
+        "import_key": "tha_original:THA-099",
+        "name": "Mediterranean-Style Cottage Cheese, Cauliflower & Red Pepper Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Laura",
+        "Ben",
+        "Noah"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 2,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-005",
+        "import_key": "tha_original:THA-005",
+        "name": "Gentle Taco Rice Bowls",
+        "category": "dinner",
+        "cuisine": "Mexican-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 40
+      },
+      "eaters": [
+        "Laura",
+        "Ben",
+        "Noah"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 2,
+      "mealType": "snacks",
+      "mealRef": {
+        "recipe_id": "THA-483",
+        "import_key": "tha_original:THA-483",
+        "name": "Chinese-Style Cherry Tomato, Celery & Egg Snack Bites",
+        "category": "snack",
+        "cuisine": "Chinese-inspired",
+        "difficulty": "easy",
+        "servings": 8,
+        "total_minutes": 30
+      },
+      "eaters": [
+        "Laura",
+        "Ben",
+        "Noah"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 3,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-009",
+        "import_key": "tha_original:THA-009",
+        "name": "Salmon, Broccoli & Brown Rice Traybake",
+        "category": "dinner",
+        "cuisine": "Nordic-Mediterranean inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 45
+      },
+      "eaters": [
+        "Laura",
+        "Ben",
+        "Noah"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 3,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-129",
+        "import_key": "tha_original:THA-129",
+        "name": "Mediterranean-Style Cottage Cheese, Cauliflower & Red Pepper Jacket Potato",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Laura",
+        "Ben",
+        "Noah"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 4,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-205",
+        "import_key": "tha_original:THA-205",
+        "name": "Spanish-Style Green Pea, Broccoli & Spring Onion Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Laura",
+        "Ben",
+        "Noah"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 5,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-008",
+        "import_key": "tha_original:THA-008",
+        "name": "Lentil & Root Vegetable Cottage Pie",
+        "category": "dinner",
+        "cuisine": "British family kitchen",
+        "difficulty": "medium",
+        "servings": 6,
+        "total_minutes": 70
+      },
+      "eaters": [
+        "Laura",
+        "Ben",
+        "Noah"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 5,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-159",
+        "import_key": "tha_original:THA-159",
+        "name": "Mediterranean-Style Cottage Cheese, Cauliflower & Red Pepper Lunch Bowl 2",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Laura",
+        "Ben",
+        "Noah"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 6,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-196",
+        "import_key": "tha_original:THA-196",
+        "name": "Indian-Style Chickpea, Red Pepper & Carrot Skillet",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Laura",
+        "Ben",
+        "Noah"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 0,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-201",
+        "import_key": "tha_original:THA-201",
+        "name": "Indian-Style Chicken Thigh, Butternut Squash & Cabbage Skillet",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Laura",
+        "Ben",
+        "Noah"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 1,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-206",
+        "import_key": "tha_original:THA-206",
+        "name": "Indian-Style Kidney Bean, Red Pepper & Kale Skillet",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Laura",
+        "Ben",
+        "Noah"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 1,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-114",
+        "import_key": "tha_original:THA-114",
+        "name": "Mediterranean-Style Cottage Cheese, Cucumber & Red Pepper Frittata",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Laura",
+        "Ben",
+        "Noah"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 2,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-211",
+        "import_key": "tha_original:THA-211",
+        "name": "Indian-Style Butter Bean, Butternut Squash & Carrot Skillet",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Laura",
+        "Ben",
+        "Noah"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 2,
+      "mealType": "snacks",
+      "mealRef": {
+        "recipe_id": "THA-495",
+        "import_key": "tha_original:THA-495",
+        "name": "Georgian-Style Red Cabbage, Red Pepper & Halloumi Fruit Pot",
+        "category": "snack",
+        "cuisine": "Georgian-inspired",
+        "difficulty": "easy",
+        "servings": 8,
+        "total_minutes": 30
+      },
+      "eaters": [
+        "Laura",
+        "Ben",
+        "Noah"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 3,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-216",
+        "import_key": "tha_original:THA-216",
+        "name": "Indian-Style Chicken Thigh, Red Pepper & Cabbage Skillet",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Laura",
+        "Ben",
+        "Noah"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 3,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-144",
+        "import_key": "tha_original:THA-144",
+        "name": "Mediterranean-Style Cottage Cheese, Cucumber & Red Pepper Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Laura",
+        "Ben",
+        "Noah"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 4,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-221",
+        "import_key": "tha_original:THA-221",
+        "name": "Indian-Style Split Pea, Butternut Squash & Kale Skillet",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Laura",
+        "Ben",
+        "Noah"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 5,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-226",
+        "import_key": "tha_original:THA-226",
+        "name": "Indian-Style Cannellini Bean, Red Pepper & Carrot Skillet",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Laura",
+        "Ben",
+        "Noah"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 5,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-190",
+        "import_key": "tha_original:THA-190",
+        "name": "Moroccan-Style Kidney Bean, Courgette & Green Bean Frittata",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Laura",
+        "Ben",
+        "Noah"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 6,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-331",
+        "import_key": "tha_original:THA-331",
+        "name": "Indian-Style Split Pea, Butternut Squash & Carrot Skillet",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Laura",
+        "Ben",
+        "Noah"
+      ]
+    }
+  ],
+  "weekEaterOverrides": [],
+  "freezer": [
+    {
+      "mealRef": {
+        "recipe_id": "THA-331",
+        "import_key": "tha_original:THA-331",
+        "name": "Indian-Style Split Pea, Butternut Squash & Carrot Skillet",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "totalPortions": 4,
+      "remainingPortions": 2,
+      "frozenDayOffset": -14
+    },
+    {
+      "mealRef": {
+        "recipe_id": "THA-202",
+        "import_key": "tha_original:THA-202",
+        "name": "Indonesian-Style Black Bean, Parsnip & Swede One-Pot",
+        "category": "dinner",
+        "cuisine": "Indonesian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "totalPortions": 4,
+      "remainingPortions": 2,
+      "frozenDayOffset": -14
+    }
+  ],
+  "shoppingExtras": [
+    {
+      "name": "natural yoghurt",
+      "category": "grocery",
+      "alwaysAdd": false
+    },
+    {
+      "name": "wholegrain bread",
+      "category": "grocery",
+      "alwaysAdd": false
+    },
+    {
+      "name": "milk or plant milk",
+      "category": "grocery",
+      "alwaysAdd": true
+    },
+    {
+      "name": "school fruit",
+      "category": "grocery",
+      "alwaysAdd": true
+    },
+    {
+      "name": "coffee",
+      "category": "grocery",
+      "alwaysAdd": false
+    }
+  ],
+  "generateShoppingList": true,
+  "diaryEntries": [
+    {
+      "dayOffset": -1,
+      "mealSlot": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-190",
+        "import_key": "tha_original:THA-190",
+        "name": "Moroccan-Style Kidney Bean, Courgette & Green Bean Frittata",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-190",
+        "import_key": "tha_original:THA-190",
+        "name": "Moroccan-Style Kidney Bean, Courgette & Green Bean Frittata",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      }
+    },
+    {
+      "dayOffset": -2,
+      "mealSlot": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-096",
+        "import_key": "tha_original:THA-096",
+        "name": "Thai-Style Greek Yoghurt, Kale & Peas Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-096",
+        "import_key": "tha_original:THA-096",
+        "name": "Thai-Style Greek Yoghurt, Kale & Peas Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      }
+    },
+    {
+      "dayOffset": -3,
+      "mealSlot": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-099",
+        "import_key": "tha_original:THA-099",
+        "name": "Mediterranean-Style Cottage Cheese, Cauliflower & Red Pepper Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-099",
+        "import_key": "tha_original:THA-099",
+        "name": "Mediterranean-Style Cottage Cheese, Cauliflower & Red Pepper Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      }
+    },
+    {
+      "dayOffset": -4,
+      "mealSlot": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-114",
+        "import_key": "tha_original:THA-114",
+        "name": "Mediterranean-Style Cottage Cheese, Cucumber & Red Pepper Frittata",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-114",
+        "import_key": "tha_original:THA-114",
+        "name": "Mediterranean-Style Cottage Cheese, Cucumber & Red Pepper Frittata",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      }
+    },
+    {
+      "dayOffset": -5,
+      "mealSlot": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-129",
+        "import_key": "tha_original:THA-129",
+        "name": "Mediterranean-Style Cottage Cheese, Cauliflower & Red Pepper Jacket Potato",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-129",
+        "import_key": "tha_original:THA-129",
+        "name": "Mediterranean-Style Cottage Cheese, Cauliflower & Red Pepper Jacket Potato",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      }
+    },
+    {
+      "dayOffset": -6,
+      "mealSlot": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-144",
+        "import_key": "tha_original:THA-144",
+        "name": "Mediterranean-Style Cottage Cheese, Cucumber & Red Pepper Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-144",
+        "import_key": "tha_original:THA-144",
+        "name": "Mediterranean-Style Cottage Cheese, Cucumber & Red Pepper Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      }
+    },
+    {
+      "dayOffset": -7,
+      "mealSlot": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-159",
+        "import_key": "tha_original:THA-159",
+        "name": "Mediterranean-Style Cottage Cheese, Cauliflower & Red Pepper Lunch Bowl 2",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-159",
+        "import_key": "tha_original:THA-159",
+        "name": "Mediterranean-Style Cottage Cheese, Cauliflower & Red Pepper Lunch Bowl 2",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      }
+    },
+    {
+      "dayOffset": -8,
+      "mealSlot": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-331",
+        "import_key": "tha_original:THA-331",
+        "name": "Indian-Style Split Pea, Butternut Squash & Carrot Skillet",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-331",
+        "import_key": "tha_original:THA-331",
+        "name": "Indian-Style Split Pea, Butternut Squash & Carrot Skillet",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      }
+    }
+  ],
+  "diaryMetrics": [
+    {
+      "dayOffset": -1,
+      "moodApples": 4,
+      "energyApples": 4,
+      "sleepHours": 7.6,
+      "stuckToPlan": false
+    },
+    {
+      "dayOffset": -2,
+      "moodApples": 4,
+      "energyApples": 3,
+      "sleepHours": 6.2,
+      "stuckToPlan": true
+    },
+    {
+      "dayOffset": -3,
+      "moodApples": 3,
+      "energyApples": 4,
+      "sleepHours": 6.5,
+      "stuckToPlan": true
+    },
+    {
+      "dayOffset": -4,
+      "moodApples": 4,
+      "energyApples": 4,
+      "sleepHours": 6.9,
+      "stuckToPlan": false
+    },
+    {
+      "dayOffset": -5,
+      "moodApples": 4,
+      "energyApples": 3,
+      "sleepHours": 7.2,
+      "stuckToPlan": true
+    }
+  ],
+  "evidence": [
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-190",
+      "mealRef": {
+        "recipe_id": "THA-190",
+        "import_key": "tha_original:THA-190",
+        "name": "Moroccan-Style Kidney Bean, Courgette & Green Bean Frittata",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "outcomeType": "completed",
+      "direction": "positive",
+      "dayOffset": -2,
+      "sourceCapabilityId": "planner"
+    },
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-096",
+      "mealRef": {
+        "recipe_id": "THA-096",
+        "import_key": "tha_original:THA-096",
+        "name": "Thai-Style Greek Yoghurt, Kale & Peas Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "outcomeType": "completed",
+      "direction": "positive",
+      "dayOffset": -5,
+      "sourceCapabilityId": "planner"
+    },
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-099",
+      "mealRef": {
+        "recipe_id": "THA-099",
+        "import_key": "tha_original:THA-099",
+        "name": "Mediterranean-Style Cottage Cheese, Cauliflower & Red Pepper Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "outcomeType": "completed",
+      "direction": "positive",
+      "dayOffset": -8,
+      "sourceCapabilityId": "planner"
+    },
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-114",
+      "mealRef": {
+        "recipe_id": "THA-114",
+        "import_key": "tha_original:THA-114",
+        "name": "Mediterranean-Style Cottage Cheese, Cucumber & Red Pepper Frittata",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "outcomeType": "completed",
+      "direction": "positive",
+      "dayOffset": -11,
+      "sourceCapabilityId": "planner"
+    },
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-129",
+      "mealRef": {
+        "recipe_id": "THA-129",
+        "import_key": "tha_original:THA-129",
+        "name": "Mediterranean-Style Cottage Cheese, Cauliflower & Red Pepper Jacket Potato",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "outcomeType": "completed",
+      "direction": "positive",
+      "dayOffset": -14,
+      "sourceCapabilityId": "planner"
+    },
+    {
+      "subjectType": "swap",
+      "subjectKey": "ingredient:wholegrain",
+      "subjectId": "swap:dw004:white-to-wholegrain",
+      "outcomeType": "accepted",
+      "direction": "positive",
+      "dayOffset": -12,
+      "sourceCapabilityId": "meals"
+    },
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-307",
+      "mealRef": {
+        "recipe_id": "THA-307",
+        "import_key": "tha_original:THA-307",
+        "name": "Indonesian-Style Haricot Bean, Tomato & Swede One-Pot",
+        "category": "dinner",
+        "cuisine": "Indonesian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "outcomeType": "rejected",
+      "direction": "negative",
+      "dayOffset": -18,
+      "sourceCapabilityId": "planner"
+    }
+  ],
+  "knownGaps": [
+    "Recipe bodies are not authored here; the Cookbook remains the owner of names, ingredients, method and nutrition derivation.",
+    "No nutrition, allergen rows, learning signals, observations, conversations or opportunity deliveries are seeded by this world.",
+    "Ready-meal/product references are not authored in this foundation pack because no product meal export was supplied with stable product IDs.",
+    "Gluten-free breakfast coverage is intentionally sparse; planner should produce honest gaps or alternatives rather than unsafe assumptions."
+  ],
+  "qualityPurpose": {
+    "tests": [
+      "coeliac child household",
+      "meal-reference import",
+      "planner realism",
+      "honest gaps"
+    ],
+    "reasoningQuestions": [
+      "What should Laura cook tonight?",
+      "What meals has this household repeated?",
+      "What dietary gaps should THA admit?"
+    ]
+  }
+}

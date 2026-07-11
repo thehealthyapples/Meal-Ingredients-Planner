@@ -1,0 +1,108 @@
+{
+  "id": "DW050",
+  "slug": "knight-cold-start",
+  "archetype": "True cold-start household",
+  "householdName": "Knight Household (Dev)",
+  "summary": "Brand new household with no pantry, planner, cookbook or history. Used to test honest onboarding gaps.",
+  "fictional": true,
+  "coldStart": true,
+  "accounts": [
+    {
+      "key": "owner",
+      "username": "knight.cold.start.owner@dev.thehealthyapples.dev",
+      "displayName": "Emma Knight (Dev)",
+      "firstName": "Emma",
+      "dietPattern": null,
+      "dietRestrictions": [],
+      "eatingSchedule": "None",
+      "subscriptionTier": "free"
+    }
+  ],
+  "eaters": [
+    {
+      "displayName": "Emma",
+      "accountKey": "owner",
+      "ageYears": 26,
+      "defaultDietTypes": [],
+      "hardRestrictions": []
+    }
+  ],
+  "preferences": {
+    "dietTypes": [],
+    "excludedIngredients": [],
+    "healthGoals": [
+      "eat_healthier",
+      "cook_more_from_scratch"
+    ],
+    "goalType": "maintain",
+    "budgetLevel": "standard",
+    "activityLevel": "moderate",
+    "preferredStores": [
+      "Tesco"
+    ],
+    "calorieTarget": null,
+    "heightCm": null,
+    "weightKg": null,
+    "adultsCount": 1,
+    "childrenCount": 0,
+    "maxTotalCookTime": 45,
+    "plannerEnableChildMeals": false,
+    "companionPersonality": "companion"
+  },
+  "persona": {
+    "lifestyle": "Brand new household with no pantry, planner, cookbook or history. Used to test honest onboarding gaps.",
+    "shoppingHabits": "Primary shops: Tesco. One big weekly shop plus freezer top-ups.",
+    "cookingConfidence": "moderate",
+    "weeknightCookingTime": "30-45 minutes",
+    "budget": "standard",
+    "kitchenEquipment": [
+      "hob",
+      "oven",
+      "microwave",
+      "slow cooker",
+      "freezer"
+    ],
+    "lifeEvents": [
+      "ordinary working week"
+    ],
+    "mealStory": "Favourite meals and dislikes are persona context unless a future favourite-meals schema is introduced.",
+    "favouriteMealRefsNarrativeOnly": [],
+    "dislikedIngredientsNarrativeOnly": [
+      "excess salt"
+    ]
+  },
+  "pantry": [],
+  "cookbookRefs": {
+    "adoptedMealRefs": [],
+    "regularMealRefs": [],
+    "discoveryQueueMealRefs": [],
+    "notes": "References only. Recipe bodies remain owned by the THA Original Founding Cookbook."
+  },
+  "planner": [],
+  "weekEaterOverrides": [],
+  "freezer": [],
+  "shoppingExtras": [],
+  "generateShoppingList": false,
+  "diaryEntries": [],
+  "diaryMetrics": [],
+  "evidence": [],
+  "knownGaps": [
+    "Recipe bodies are not authored here; the Cookbook remains the owner of names, ingredients, method and nutrition derivation.",
+    "No nutrition, allergen rows, learning signals, observations, conversations or opportunity deliveries are seeded by this world.",
+    "Ready-meal/product references are not authored in this foundation pack because no product meal export was supplied with stable product IDs.",
+    "This is the true cold-start household: no planner, pantry, cookbook references, diary or evidence."
+  ],
+  "qualityPurpose": {
+    "tests": [
+      "true cold-start household",
+      "meal-reference import",
+      "planner realism",
+      "honest gaps"
+    ],
+    "reasoningQuestions": [
+      "What should Emma cook tonight?",
+      "What meals has this household repeated?",
+      "What dietary gaps should THA admit?"
+    ]
+  }
+}

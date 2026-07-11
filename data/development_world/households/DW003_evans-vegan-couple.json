@@ -1,0 +1,1534 @@
+{
+  "id": "DW003",
+  "slug": "evans-vegan-couple",
+  "archetype": "Vegan professional couple",
+  "householdName": "Evans Household (Dev)",
+  "summary": "Plant-based couple who batch cook, track plant diversity and like global flavours.",
+  "fictional": true,
+  "coldStart": false,
+  "accounts": [
+    {
+      "key": "owner",
+      "username": "evans.vegan.couple.owner@dev.thehealthyapples.dev",
+      "displayName": "Megan Evans (Dev)",
+      "firstName": "Megan",
+      "dietPattern": "Vegan",
+      "dietRestrictions": [],
+      "eatingSchedule": "None",
+      "subscriptionTier": "friends_family"
+    },
+    {
+      "key": "partner",
+      "username": "evans.vegan.couple.partner@dev.thehealthyapples.dev",
+      "displayName": "Sophie Evans (Dev)",
+      "firstName": "Sophie",
+      "dietPattern": "Vegan",
+      "dietRestrictions": [],
+      "eatingSchedule": "None",
+      "subscriptionTier": "friends_family"
+    }
+  ],
+  "eaters": [
+    {
+      "displayName": "Megan",
+      "accountKey": "owner",
+      "ageYears": 34,
+      "defaultDietTypes": [
+        "Vegan"
+      ],
+      "hardRestrictions": []
+    },
+    {
+      "displayName": "Sophie",
+      "accountKey": "partner",
+      "ageYears": 36,
+      "defaultDietTypes": [
+        "Vegan"
+      ],
+      "hardRestrictions": []
+    }
+  ],
+  "preferences": {
+    "dietTypes": [
+      "Vegan"
+    ],
+    "excludedIngredients": [],
+    "healthGoals": [
+      "family_meals",
+      "packed_lunches"
+    ],
+    "goalType": "maintain",
+    "budgetLevel": "standard",
+    "activityLevel": "moderate",
+    "preferredStores": [
+      "Sainsbury's",
+      "Waitrose"
+    ],
+    "calorieTarget": null,
+    "heightCm": null,
+    "weightKg": null,
+    "adultsCount": 2,
+    "childrenCount": 0,
+    "maxTotalCookTime": 70,
+    "plannerEnableChildMeals": false,
+    "companionPersonality": "coach"
+  },
+  "persona": {
+    "lifestyle": "Plant-based couple who batch cook, track plant diversity and like global flavours.",
+    "shoppingHabits": "Primary shops: Sainsbury's, Waitrose. One big weekly shop plus freezer top-ups.",
+    "cookingConfidence": "high",
+    "weeknightCookingTime": "45-75 minutes",
+    "budget": "standard",
+    "kitchenEquipment": [
+      "hob",
+      "oven",
+      "microwave",
+      "food processor",
+      "slow cooker",
+      "air fryer",
+      "freezer"
+    ],
+    "lifeEvents": [
+      "ordinary working week"
+    ],
+    "mealStory": "Favourite meals and dislikes are persona context unless a future favourite-meals schema is introduced.",
+    "favouriteMealRefsNarrativeOnly": [
+      {
+        "recipe_id": "THA-014",
+        "import_key": "tha_original:THA-014",
+        "name": "Californian-Style Split Pea, Broccoli & Fennel Breakfast Hash",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-013",
+        "import_key": "tha_original:THA-013",
+        "name": "North African-Style Lentil, Celery & Mushroom Toast Plate",
+        "category": "breakfast",
+        "cuisine": "North African-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-024",
+        "import_key": "tha_original:THA-024",
+        "name": "Californian-Style Lentil, Broccoli & Radish Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      }
+    ],
+    "dislikedIngredientsNarrativeOnly": [
+      "excess salt"
+    ]
+  },
+  "pantry": [
+    {
+      "ingredient": "wholewheat pasta",
+      "category": "larder"
+    },
+    {
+      "ingredient": "spinach",
+      "category": "fridge"
+    },
+    {
+      "ingredient": "tofu",
+      "category": "larder"
+    },
+    {
+      "ingredient": "black beans",
+      "category": "larder"
+    },
+    {
+      "ingredient": "onions",
+      "category": "larder"
+    },
+    {
+      "ingredient": "brown rice",
+      "category": "larder"
+    },
+    {
+      "ingredient": "butter beans",
+      "category": "larder"
+    },
+    {
+      "ingredient": "carrots",
+      "category": "fridge"
+    },
+    {
+      "ingredient": "frozen peas",
+      "category": "freezer"
+    },
+    {
+      "ingredient": "lentils",
+      "category": "larder"
+    },
+    {
+      "ingredient": "quinoa",
+      "category": "larder"
+    },
+    {
+      "ingredient": "chickpeas",
+      "category": "larder"
+    },
+    {
+      "ingredient": "tinned chopped tomatoes",
+      "category": "larder"
+    },
+    {
+      "ingredient": "mixed seeds",
+      "category": "larder"
+    },
+    {
+      "ingredient": "cannellini beans",
+      "category": "larder"
+    },
+    {
+      "ingredient": "sweet potatoes",
+      "category": "larder"
+    },
+    {
+      "ingredient": "olive oil",
+      "category": "larder"
+    }
+  ],
+  "cookbookRefs": {
+    "adoptedMealRefs": [
+      {
+        "recipe_id": "THA-014",
+        "import_key": "tha_original:THA-014",
+        "name": "Californian-Style Split Pea, Broccoli & Fennel Breakfast Hash",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-013",
+        "import_key": "tha_original:THA-013",
+        "name": "North African-Style Lentil, Celery & Mushroom Toast Plate",
+        "category": "breakfast",
+        "cuisine": "North African-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-024",
+        "import_key": "tha_original:THA-024",
+        "name": "Californian-Style Lentil, Broccoli & Radish Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-029",
+        "import_key": "tha_original:THA-029",
+        "name": "Californian-Style Edamame, Radish & Fennel Toast Plate",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-034",
+        "import_key": "tha_original:THA-034",
+        "name": "Californian-Style Haricot Bean, Broccoli & Aubergine Breakfast Hash",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-097",
+        "import_key": "tha_original:THA-097",
+        "name": "Peruvian-Style Tofu, Fennel & Mushroom Jacket Potato",
+        "category": "lunch",
+        "cuisine": "Peruvian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-088",
+        "import_key": "tha_original:THA-088",
+        "name": "British Edamame, Onion & Aubergine Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "British family kitchen",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-002",
+        "import_key": "tha_original:THA-002",
+        "name": "Chickpea, Lemon & Spinach Soup",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 40
+      },
+      {
+        "recipe_id": "THA-094",
+        "import_key": "tha_original:THA-094",
+        "name": "Mediterranean-Style Lentil, Cucumber & Pak Choi Frittata",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-109",
+        "import_key": "tha_original:THA-109",
+        "name": "Mediterranean-Style Black Bean, Cauliflower & Pak Choi Jacket Potato",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-124",
+        "import_key": "tha_original:THA-124",
+        "name": "Mediterranean-Style Kidney Bean, Cucumber & Pak Choi Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-139",
+        "import_key": "tha_original:THA-139",
+        "name": "Mediterranean-Style Split Pea, Cauliflower & Pak Choi Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-364",
+        "import_key": "tha_original:THA-364",
+        "name": "Australian cafe-Style Split Pea, Celery & Beetroot Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-203",
+        "import_key": "tha_original:THA-203",
+        "name": "Ethiopian-Style Edamame, Asparagus & Onion Stew",
+        "category": "dinner",
+        "cuisine": "Ethiopian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-004",
+        "import_key": "tha_original:THA-004",
+        "name": "Golden Potato, Chickpea & Spinach Curry",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 45
+      },
+      {
+        "recipe_id": "THA-197",
+        "import_key": "tha_original:THA-197",
+        "name": "Indonesian-Style Haricot Bean, Tomato & Sweetcorn One-Pot",
+        "category": "dinner",
+        "cuisine": "Indonesian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-205",
+        "import_key": "tha_original:THA-205",
+        "name": "Spanish-Style Green Pea, Broccoli & Spring Onion Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-374",
+        "import_key": "tha_original:THA-374",
+        "name": "Australian cafe-Style Lentil, Celery & Cucumber Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-379",
+        "import_key": "tha_original:THA-379",
+        "name": "Australian cafe-Style Edamame, Cabbage & Beetroot Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-389",
+        "import_key": "tha_original:THA-389",
+        "name": "Australian cafe-Style Black Bean, Cabbage & Cucumber Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-394",
+        "import_key": "tha_original:THA-394",
+        "name": "Australian cafe-Style Chickpea, Celery & Beetroot Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-404",
+        "import_key": "tha_original:THA-404",
+        "name": "Australian cafe-Style Kidney Bean, Celery & Cucumber Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-419",
+        "import_key": "tha_original:THA-419",
+        "name": "Australian cafe-Style Split Pea, Cabbage & Cucumber Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-424",
+        "import_key": "tha_original:THA-424",
+        "name": "Australian cafe-Style Cannellini Bean, Celery & Beetroot Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-434",
+        "import_key": "tha_original:THA-434",
+        "name": "Australian cafe-Style Edamame, Celery & Cucumber Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-466",
+        "import_key": "tha_original:THA-466",
+        "name": "Persian-Style Sweetcorn, Pak Choi & Haricot Bean Grain Salad",
+        "category": "side",
+        "cuisine": "Persian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-463",
+        "import_key": "tha_original:THA-463",
+        "name": "West African-Style Cauliflower, Spinach & Green Pea Herb Potatoes",
+        "category": "side",
+        "cuisine": "West African-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      }
+    ],
+    "regularMealRefs": [
+      {
+        "recipe_id": "THA-014",
+        "import_key": "tha_original:THA-014",
+        "name": "Californian-Style Split Pea, Broccoli & Fennel Breakfast Hash",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-013",
+        "import_key": "tha_original:THA-013",
+        "name": "North African-Style Lentil, Celery & Mushroom Toast Plate",
+        "category": "breakfast",
+        "cuisine": "North African-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-024",
+        "import_key": "tha_original:THA-024",
+        "name": "Californian-Style Lentil, Broccoli & Radish Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-029",
+        "import_key": "tha_original:THA-029",
+        "name": "Californian-Style Edamame, Radish & Fennel Toast Plate",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-034",
+        "import_key": "tha_original:THA-034",
+        "name": "Californian-Style Haricot Bean, Broccoli & Aubergine Breakfast Hash",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-097",
+        "import_key": "tha_original:THA-097",
+        "name": "Peruvian-Style Tofu, Fennel & Mushroom Jacket Potato",
+        "category": "lunch",
+        "cuisine": "Peruvian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-088",
+        "import_key": "tha_original:THA-088",
+        "name": "British Edamame, Onion & Aubergine Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "British family kitchen",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-002",
+        "import_key": "tha_original:THA-002",
+        "name": "Chickpea, Lemon & Spinach Soup",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 40
+      },
+      {
+        "recipe_id": "THA-094",
+        "import_key": "tha_original:THA-094",
+        "name": "Mediterranean-Style Lentil, Cucumber & Pak Choi Frittata",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-109",
+        "import_key": "tha_original:THA-109",
+        "name": "Mediterranean-Style Black Bean, Cauliflower & Pak Choi Jacket Potato",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      }
+    ],
+    "discoveryQueueMealRefs": [
+      {
+        "recipe_id": "THA-380",
+        "import_key": "tha_original:THA-380",
+        "name": "Spanish-Style Cannellini Bean, Radish & Courgette Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-194",
+        "import_key": "tha_original:THA-194",
+        "name": "Australian cafe-Style Green Pea, Celery & Cucumber Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-208",
+        "import_key": "tha_original:THA-208",
+        "name": "Ethiopian-Style Haricot Bean, Peas & Leek Stew",
+        "category": "dinner",
+        "cuisine": "Ethiopian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-218",
+        "import_key": "tha_original:THA-218",
+        "name": "Ethiopian-Style Chickpea, Peas & Onion Stew",
+        "category": "dinner",
+        "cuisine": "Ethiopian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-127",
+        "import_key": "tha_original:THA-127",
+        "name": "Peruvian-Style Lentil, Fennel & Mushroom Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "Peruvian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-103",
+        "import_key": "tha_original:THA-103",
+        "name": "British Chickpea, Red Cabbage & Aubergine Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "British family kitchen",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      }
+    ],
+    "notes": "References only. Recipe bodies remain owned by the THA Original Founding Cookbook."
+  },
+  "planner": [
+    {
+      "week": 1,
+      "dayOfWeek": 0,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-364",
+        "import_key": "tha_original:THA-364",
+        "name": "Australian cafe-Style Split Pea, Celery & Beetroot Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Megan",
+        "Sophie"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 0,
+      "mealType": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-013",
+        "import_key": "tha_original:THA-013",
+        "name": "North African-Style Lentil, Celery & Mushroom Toast Plate",
+        "category": "breakfast",
+        "cuisine": "North African-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "eaters": [
+        "Megan",
+        "Sophie"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 1,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-203",
+        "import_key": "tha_original:THA-203",
+        "name": "Ethiopian-Style Edamame, Asparagus & Onion Stew",
+        "category": "dinner",
+        "cuisine": "Ethiopian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Megan",
+        "Sophie"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 1,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-002",
+        "import_key": "tha_original:THA-002",
+        "name": "Chickpea, Lemon & Spinach Soup",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 40
+      },
+      "eaters": [
+        "Megan",
+        "Sophie"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 2,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-004",
+        "import_key": "tha_original:THA-004",
+        "name": "Golden Potato, Chickpea & Spinach Curry",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 45
+      },
+      "eaters": [
+        "Megan",
+        "Sophie"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 2,
+      "mealType": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-029",
+        "import_key": "tha_original:THA-029",
+        "name": "Californian-Style Edamame, Radish & Fennel Toast Plate",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "eaters": [
+        "Megan",
+        "Sophie"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 3,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-197",
+        "import_key": "tha_original:THA-197",
+        "name": "Indonesian-Style Haricot Bean, Tomato & Sweetcorn One-Pot",
+        "category": "dinner",
+        "cuisine": "Indonesian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Megan",
+        "Sophie"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 3,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-109",
+        "import_key": "tha_original:THA-109",
+        "name": "Mediterranean-Style Black Bean, Cauliflower & Pak Choi Jacket Potato",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Megan",
+        "Sophie"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 4,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-205",
+        "import_key": "tha_original:THA-205",
+        "name": "Spanish-Style Green Pea, Broccoli & Spring Onion Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Megan",
+        "Sophie"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 4,
+      "mealType": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-014",
+        "import_key": "tha_original:THA-014",
+        "name": "Californian-Style Split Pea, Broccoli & Fennel Breakfast Hash",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "eaters": [
+        "Megan",
+        "Sophie"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 5,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-374",
+        "import_key": "tha_original:THA-374",
+        "name": "Australian cafe-Style Lentil, Celery & Cucumber Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Megan",
+        "Sophie"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 5,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-139",
+        "import_key": "tha_original:THA-139",
+        "name": "Mediterranean-Style Split Pea, Cauliflower & Pak Choi Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Megan",
+        "Sophie"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 6,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-379",
+        "import_key": "tha_original:THA-379",
+        "name": "Australian cafe-Style Edamame, Cabbage & Beetroot Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Megan",
+        "Sophie"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 0,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-389",
+        "import_key": "tha_original:THA-389",
+        "name": "Australian cafe-Style Black Bean, Cabbage & Cucumber Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Megan",
+        "Sophie"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 0,
+      "mealType": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-024",
+        "import_key": "tha_original:THA-024",
+        "name": "Californian-Style Lentil, Broccoli & Radish Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "eaters": [
+        "Megan",
+        "Sophie"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 1,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-394",
+        "import_key": "tha_original:THA-394",
+        "name": "Australian cafe-Style Chickpea, Celery & Beetroot Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Megan",
+        "Sophie"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 1,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-094",
+        "import_key": "tha_original:THA-094",
+        "name": "Mediterranean-Style Lentil, Cucumber & Pak Choi Frittata",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Megan",
+        "Sophie"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 2,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-404",
+        "import_key": "tha_original:THA-404",
+        "name": "Australian cafe-Style Kidney Bean, Celery & Cucumber Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Megan",
+        "Sophie"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 2,
+      "mealType": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-034",
+        "import_key": "tha_original:THA-034",
+        "name": "Californian-Style Haricot Bean, Broccoli & Aubergine Breakfast Hash",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "eaters": [
+        "Megan",
+        "Sophie"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 3,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-419",
+        "import_key": "tha_original:THA-419",
+        "name": "Australian cafe-Style Split Pea, Cabbage & Cucumber Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Megan",
+        "Sophie"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 3,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-124",
+        "import_key": "tha_original:THA-124",
+        "name": "Mediterranean-Style Kidney Bean, Cucumber & Pak Choi Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Megan",
+        "Sophie"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 4,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-424",
+        "import_key": "tha_original:THA-424",
+        "name": "Australian cafe-Style Cannellini Bean, Celery & Beetroot Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Megan",
+        "Sophie"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 4,
+      "mealType": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-013",
+        "import_key": "tha_original:THA-013",
+        "name": "North African-Style Lentil, Celery & Mushroom Toast Plate",
+        "category": "breakfast",
+        "cuisine": "North African-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "eaters": [
+        "Megan",
+        "Sophie"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 5,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-434",
+        "import_key": "tha_original:THA-434",
+        "name": "Australian cafe-Style Edamame, Celery & Cucumber Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Megan",
+        "Sophie"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 5,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-097",
+        "import_key": "tha_original:THA-097",
+        "name": "Peruvian-Style Tofu, Fennel & Mushroom Jacket Potato",
+        "category": "lunch",
+        "cuisine": "Peruvian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Megan",
+        "Sophie"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 6,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-364",
+        "import_key": "tha_original:THA-364",
+        "name": "Australian cafe-Style Split Pea, Celery & Beetroot Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Megan",
+        "Sophie"
+      ]
+    }
+  ],
+  "weekEaterOverrides": [],
+  "freezer": [],
+  "shoppingExtras": [
+    {
+      "name": "bananas",
+      "category": "grocery",
+      "alwaysAdd": false
+    },
+    {
+      "name": "natural yoghurt",
+      "category": "grocery",
+      "alwaysAdd": false
+    },
+    {
+      "name": "wholegrain bread",
+      "category": "grocery",
+      "alwaysAdd": false
+    },
+    {
+      "name": "milk or plant milk",
+      "category": "grocery",
+      "alwaysAdd": true
+    },
+    {
+      "name": "school fruit",
+      "category": "grocery",
+      "alwaysAdd": true
+    }
+  ],
+  "generateShoppingList": true,
+  "diaryEntries": [
+    {
+      "dayOffset": -1,
+      "mealSlot": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-014",
+        "import_key": "tha_original:THA-014",
+        "name": "Californian-Style Split Pea, Broccoli & Fennel Breakfast Hash",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-014",
+        "import_key": "tha_original:THA-014",
+        "name": "Californian-Style Split Pea, Broccoli & Fennel Breakfast Hash",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      }
+    },
+    {
+      "dayOffset": -2,
+      "mealSlot": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-013",
+        "import_key": "tha_original:THA-013",
+        "name": "North African-Style Lentil, Celery & Mushroom Toast Plate",
+        "category": "breakfast",
+        "cuisine": "North African-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-013",
+        "import_key": "tha_original:THA-013",
+        "name": "North African-Style Lentil, Celery & Mushroom Toast Plate",
+        "category": "breakfast",
+        "cuisine": "North African-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      }
+    },
+    {
+      "dayOffset": -3,
+      "mealSlot": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-024",
+        "import_key": "tha_original:THA-024",
+        "name": "Californian-Style Lentil, Broccoli & Radish Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-024",
+        "import_key": "tha_original:THA-024",
+        "name": "Californian-Style Lentil, Broccoli & Radish Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      }
+    },
+    {
+      "dayOffset": -4,
+      "mealSlot": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-029",
+        "import_key": "tha_original:THA-029",
+        "name": "Californian-Style Edamame, Radish & Fennel Toast Plate",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-029",
+        "import_key": "tha_original:THA-029",
+        "name": "Californian-Style Edamame, Radish & Fennel Toast Plate",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      }
+    },
+    {
+      "dayOffset": -5,
+      "mealSlot": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-034",
+        "import_key": "tha_original:THA-034",
+        "name": "Californian-Style Haricot Bean, Broccoli & Aubergine Breakfast Hash",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-034",
+        "import_key": "tha_original:THA-034",
+        "name": "Californian-Style Haricot Bean, Broccoli & Aubergine Breakfast Hash",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      }
+    },
+    {
+      "dayOffset": -6,
+      "mealSlot": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-097",
+        "import_key": "tha_original:THA-097",
+        "name": "Peruvian-Style Tofu, Fennel & Mushroom Jacket Potato",
+        "category": "lunch",
+        "cuisine": "Peruvian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-097",
+        "import_key": "tha_original:THA-097",
+        "name": "Peruvian-Style Tofu, Fennel & Mushroom Jacket Potato",
+        "category": "lunch",
+        "cuisine": "Peruvian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      }
+    },
+    {
+      "dayOffset": -7,
+      "mealSlot": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-088",
+        "import_key": "tha_original:THA-088",
+        "name": "British Edamame, Onion & Aubergine Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "British family kitchen",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-088",
+        "import_key": "tha_original:THA-088",
+        "name": "British Edamame, Onion & Aubergine Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "British family kitchen",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      }
+    },
+    {
+      "dayOffset": -8,
+      "mealSlot": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-002",
+        "import_key": "tha_original:THA-002",
+        "name": "Chickpea, Lemon & Spinach Soup",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 40
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-002",
+        "import_key": "tha_original:THA-002",
+        "name": "Chickpea, Lemon & Spinach Soup",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 40
+      }
+    }
+  ],
+  "diaryMetrics": [
+    {
+      "dayOffset": -1,
+      "moodApples": 3,
+      "energyApples": 4,
+      "sleepHours": 7.2,
+      "stuckToPlan": false
+    },
+    {
+      "dayOffset": -2,
+      "moodApples": 4,
+      "energyApples": 4,
+      "sleepHours": 7.6,
+      "stuckToPlan": true
+    },
+    {
+      "dayOffset": -3,
+      "moodApples": 4,
+      "energyApples": 3,
+      "sleepHours": 6.2,
+      "stuckToPlan": true
+    },
+    {
+      "dayOffset": -4,
+      "moodApples": 3,
+      "energyApples": 4,
+      "sleepHours": 6.5,
+      "stuckToPlan": false
+    },
+    {
+      "dayOffset": -5,
+      "moodApples": 4,
+      "energyApples": 4,
+      "sleepHours": 6.9,
+      "stuckToPlan": true
+    }
+  ],
+  "evidence": [
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-014",
+      "mealRef": {
+        "recipe_id": "THA-014",
+        "import_key": "tha_original:THA-014",
+        "name": "Californian-Style Split Pea, Broccoli & Fennel Breakfast Hash",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "outcomeType": "completed",
+      "direction": "positive",
+      "dayOffset": -2,
+      "sourceCapabilityId": "planner"
+    },
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-013",
+      "mealRef": {
+        "recipe_id": "THA-013",
+        "import_key": "tha_original:THA-013",
+        "name": "North African-Style Lentil, Celery & Mushroom Toast Plate",
+        "category": "breakfast",
+        "cuisine": "North African-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "outcomeType": "completed",
+      "direction": "positive",
+      "dayOffset": -5,
+      "sourceCapabilityId": "planner"
+    },
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-024",
+      "mealRef": {
+        "recipe_id": "THA-024",
+        "import_key": "tha_original:THA-024",
+        "name": "Californian-Style Lentil, Broccoli & Radish Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "outcomeType": "completed",
+      "direction": "positive",
+      "dayOffset": -8,
+      "sourceCapabilityId": "planner"
+    },
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-029",
+      "mealRef": {
+        "recipe_id": "THA-029",
+        "import_key": "tha_original:THA-029",
+        "name": "Californian-Style Edamame, Radish & Fennel Toast Plate",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "outcomeType": "completed",
+      "direction": "positive",
+      "dayOffset": -11,
+      "sourceCapabilityId": "planner"
+    },
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-034",
+      "mealRef": {
+        "recipe_id": "THA-034",
+        "import_key": "tha_original:THA-034",
+        "name": "Californian-Style Haricot Bean, Broccoli & Aubergine Breakfast Hash",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "outcomeType": "completed",
+      "direction": "positive",
+      "dayOffset": -14,
+      "sourceCapabilityId": "planner"
+    },
+    {
+      "subjectType": "swap",
+      "subjectKey": "ingredient:wholegrain",
+      "subjectId": "swap:dw003:white-to-wholegrain",
+      "outcomeType": "accepted",
+      "direction": "positive",
+      "dayOffset": -12,
+      "sourceCapabilityId": "meals"
+    },
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-380",
+      "mealRef": {
+        "recipe_id": "THA-380",
+        "import_key": "tha_original:THA-380",
+        "name": "Spanish-Style Cannellini Bean, Radish & Courgette Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "outcomeType": "rejected",
+      "direction": "negative",
+      "dayOffset": -18,
+      "sourceCapabilityId": "planner"
+    }
+  ],
+  "knownGaps": [
+    "Recipe bodies are not authored here; the Cookbook remains the owner of names, ingredients, method and nutrition derivation.",
+    "No nutrition, allergen rows, learning signals, observations, conversations or opportunity deliveries are seeded by this world.",
+    "Ready-meal/product references are not authored in this foundation pack because no product meal export was supplied with stable product IDs."
+  ],
+  "qualityPurpose": {
+    "tests": [
+      "vegan professional couple",
+      "meal-reference import",
+      "planner realism",
+      "honest gaps"
+    ],
+    "reasoningQuestions": [
+      "What should Megan cook tonight?",
+      "What meals has this household repeated?",
+      "What dietary gaps should THA admit?"
+    ]
+  }
+}

@@ -143,11 +143,20 @@ const SOURCE = path.join(DATA_DIR, "development_world_foundation_50.v1.json");
 const VALIDATION_MANIFEST = path.join(DATA_DIR, "manifests", "validation_manifest.json");
 
 // Parsed-once cache (module scope) — the dataset is a committed, immutable file.
+// Committed under REL1 (2026-07-11); before that it was untracked, so a clean
+// checkout resolved SOURCE to nothing and this reader threw a bare ENOENT.
 let cachedWorld: WorldFile | null = null;
 let cachedValidation: ValidationManifest | null = null;
 
 function loadWorld(): WorldFile {
   if (cachedWorld) return cachedWorld;
+  if (!fs.existsSync(SOURCE)) {
+    throw new Error(
+      `Development World dataset is missing at ${SOURCE}. It is a committed, dev-only ` +
+        `asset (REL1) and is never read in production — a clean checkout should contain it. ` +
+        `Run: npm run verify:release-packaging`,
+    );
+  }
   const raw = JSON.parse(fs.readFileSync(SOURCE, "utf8"));
   if (!raw.world || !Array.isArray(raw.households)) {
     throw new Error("Development World file is malformed: missing world/households.");

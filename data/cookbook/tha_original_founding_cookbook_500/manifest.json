@@ -1,0 +1,21 @@
+{
+  "files": [
+    "README.md",
+    "tha_original_founding_cookbook_500.json",
+    "tha_original_founding_cookbook_500.csv",
+    "tha_original_founding_cookbook_500.md",
+    "claude_import_prompt.md",
+    "validation_report.json",
+    "batches/"
+  ],
+  "recipe_count": 500,
+  "category_counts": {
+    "breakfast": 75,
+    "lunch": 110,
+    "dinner": 270,
+    "side": 25,
+    "snack": 20
+  },
+  "naming": "clean display names; no repeated The Healthy Apples prefix",
+  "legacy_batch_001": "first 10 include legacy_recipe_name for matching existing prefixed dev rows"
+}

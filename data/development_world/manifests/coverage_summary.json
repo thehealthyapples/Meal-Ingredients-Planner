@@ -1,0 +1,47 @@
+{
+  "households": 50,
+  "accounts": 96,
+  "eaters": 140,
+  "pantryItems": 775,
+  "plannerEntries": 1352,
+  "diaryEntries": 392,
+  "evidenceEvents": 343,
+  "uniqueAuthoredCookbookRefs": 328,
+  "coldStartHouseholds": 1,
+  "subscriptionTierSpread": {
+    "premium": 60,
+    "friends_family": 13,
+    "free": 23
+  },
+  "companionPersonalitySpread": {
+    "companion": 13,
+    "teacher": 7,
+    "coach": 9,
+    "friend": 10,
+    "sergeant": 4,
+    "chef": 7
+  },
+  "budgetSpread": {
+    "standard": 34,
+    "budget": 13,
+    "premium": 3
+  },
+  "dietPatternSpread": {
+    "Flexitarian": 18,
+    "Vegetarian": 3,
+    "Vegan": 1,
+    "Mediterranean": 10,
+    "DASH": 5,
+    "None": 9,
+    "Low-Carb": 1,
+    "Carnivore": 1,
+    "MIND": 2
+  },
+  "categoryMealRefSpread": {
+    "breakfast": 235,
+    "lunch": 343,
+    "dinner": 637,
+    "side": 98,
+    "snack": 135
+  }
+}

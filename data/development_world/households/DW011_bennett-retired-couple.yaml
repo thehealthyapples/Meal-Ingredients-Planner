@@ -1,0 +1,1196 @@
+id: DW011
+slug: bennett-retired-couple
+archetype: Retired couple
+householdName: Bennett Household (Dev)
+summary: Retired couple with traditional tastes, batch soups and careful budgets.
+fictional: true
+coldStart: false
+accounts:
+- key: owner
+  username: bennett.retired.couple.owner@dev.thehealthyapples.dev
+  displayName: Margaret Bennett (Dev)
+  firstName: Margaret
+  dietPattern: Flexitarian
+  dietRestrictions: &id001 []
+  eatingSchedule: None
+  subscriptionTier: free
+- key: partner
+  username: bennett.retired.couple.partner@dev.thehealthyapples.dev
+  displayName: Alan Bennett (Dev)
+  firstName: Alan
+  dietPattern: Flexitarian
+  dietRestrictions: *id001
+  eatingSchedule: None
+  subscriptionTier: free
+eaters:
+- displayName: Margaret
+  accountKey: owner
+  ageYears: 72
+  defaultDietTypes: []
+  hardRestrictions: []
+- displayName: Alan
+  accountKey: partner
+  ageYears: 74
+  defaultDietTypes: []
+  hardRestrictions: []
+preferences:
+  dietTypes:
+  - Flexitarian
+  excludedIngredients: []
+  healthGoals:
+  - reduce_upf
+  - increase_plants
+  goalType: maintain
+  budgetLevel: budget
+  activityLevel: low
+  preferredStores:
+  - Morrisons
+  - Iceland
+  calorieTarget: null
+  heightCm: null
+  weightKg: null
+  adultsCount: 2
+  childrenCount: 0
+  maxTotalCookTime: 25
+  plannerEnableChildMeals: false
+  companionPersonality: friend
+persona:
+  lifestyle: Retired couple with traditional tastes, batch soups and careful budgets.
+  shoppingHabits: 'Primary shops: Morrisons, Iceland. Small frequent shops.'
+  cookingConfidence: low
+  weeknightCookingTime: 15-25 minutes
+  budget: budget
+  kitchenEquipment:
+  - hob
+  - oven
+  - microwave
+  - air fryer
+  lifeEvents:
+  - ordinary working week
+  mealStory: Favourite meals and dislikes are persona context unless a future favourite-meals schema is introduced.
+  favouriteMealRefsNarrativeOnly:
+  - recipe_id: THA-019
+    import_key: tha_original:THA-019
+    name: Californian-Style Cannellini Bean, Radish & Aubergine Egg Skillet
+    category: breakfast
+    cuisine: Californian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-015
+    import_key: tha_original:THA-015
+    name: French country-Style Cod, Red Pepper & Pumpkin Egg Skillet
+    category: breakfast
+    cuisine: French country-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-012
+    import_key: tha_original:THA-012
+    name: Malaysian-Style Cottage Cheese, Asparagus & Peas Breakfast Wrap
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  dislikedIngredientsNarrativeOnly:
+  - excess salt
+pantry:
+- ingredient: lentils
+  category: larder
+- ingredient: pasta
+  category: larder
+- ingredient: frozen mixed vegetables
+  category: freezer
+- ingredient: tinned chopped tomatoes
+  category: larder
+- ingredient: tuna tins
+  category: larder
+- ingredient: mixed seeds
+  category: larder
+- ingredient: olive oil
+  category: larder
+- ingredient: potatoes
+  category: larder
+- ingredient: tomato puree
+  category: larder
+- ingredient: rolled oats
+  category: larder
+- ingredient: onions
+  category: larder
+- ingredient: garlic
+  category: larder
+- ingredient: chickpeas
+  category: larder
+- ingredient: frozen peas
+  category: freezer
+- ingredient: carrots
+  category: fridge
+cookbookRefs:
+  adoptedMealRefs:
+  - recipe_id: THA-019
+    import_key: tha_original:THA-019
+    name: Californian-Style Cannellini Bean, Radish & Aubergine Egg Skillet
+    category: breakfast
+    cuisine: Californian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-015
+    import_key: tha_original:THA-015
+    name: French country-Style Cod, Red Pepper & Pumpkin Egg Skillet
+    category: breakfast
+    cuisine: French country-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-012
+    import_key: tha_original:THA-012
+    name: Malaysian-Style Cottage Cheese, Asparagus & Peas Breakfast Wrap
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-017
+    import_key: tha_original:THA-017
+    name: Malaysian-Style Cottage Cheese, Peas & Pumpkin Toast Plate
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-022
+    import_key: tha_original:THA-022
+    name: Malaysian-Style Cottage Cheese, Asparagus & Spinach Breakfast Hash
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-142
+    import_key: tha_original:THA-142
+    name: Peruvian-Style Black Bean, Sweetcorn & Mushroom Frittata
+    category: lunch
+    cuisine: Peruvian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-086
+    import_key: tha_original:THA-086
+    name: Thai-Style Sardine, Kale & Pumpkin Frittata
+    category: lunch
+    cuisine: Thai-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-088
+    import_key: tha_original:THA-088
+    name: British Edamame, Onion & Aubergine Stuffed Pitta
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-093
+    import_key: tha_original:THA-093
+    name: British Feta, Red Cabbage & Radish Jacket Potato
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-098
+    import_key: tha_original:THA-098
+    name: British Sardine, Onion & Fennel Frittata
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-103
+    import_key: tha_original:THA-103
+    name: British Chickpea, Red Cabbage & Aubergine Lunch Bowl
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-108
+    import_key: tha_original:THA-108
+    name: British Feta, Onion & Radish Stuffed Pitta
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-294
+    import_key: tha_original:THA-294
+    name: Australian cafe-Style Chicken Thigh, Celery & Tomato Rice Bowl 4
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-004
+    import_key: tha_original:THA-004
+    name: Golden Potato, Chickpea & Spinach Curry
+    category: dinner
+    cuisine: Indian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 45
+  - recipe_id: THA-003
+    import_key: tha_original:THA-003
+    name: Basil Tomato Wholewheat Pasta
+    category: dinner
+    cuisine: Italian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-006
+    import_key: tha_original:THA-006
+    name: Roast Vegetable & Butter Bean Traybake
+    category: dinner
+    cuisine: Mediterranean-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 55
+  - recipe_id: THA-005
+    import_key: tha_original:THA-005
+    name: Gentle Taco Rice Bowls
+    category: dinner
+    cuisine: Mexican-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 40
+  - recipe_id: THA-299
+    import_key: tha_original:THA-299
+    name: Australian cafe-Style Butter Bean, Cabbage & Cucumber Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-304
+    import_key: tha_original:THA-304
+    name: Australian cafe-Style Green Pea, Celery & Beetroot Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-309
+    import_key: tha_original:THA-309
+    name: Australian cafe-Style Chicken Thigh, Cabbage & Tomato Rice Bowl 4
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-314
+    import_key: tha_original:THA-314
+    name: Australian cafe-Style Cannellini Bean, Celery & Cucumber Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-319
+    import_key: tha_original:THA-319
+    name: Australian cafe-Style Lentil, Cabbage & Beetroot Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-324
+    import_key: tha_original:THA-324
+    name: Australian cafe-Style Chicken Thigh, Celery & Tomato Rice Bowl 5
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-329
+    import_key: tha_original:THA-329
+    name: Australian cafe-Style Haricot Bean, Cabbage & Cucumber Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-334
+    import_key: tha_original:THA-334
+    name: Australian cafe-Style Black Bean, Celery & Beetroot Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-467
+    import_key: tha_original:THA-467
+    name: Chinese-Style Red Cabbage, Cauliflower & Tuna Roasted Veg
+    category: side
+    cuisine: Chinese-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-459
+    import_key: tha_original:THA-459
+    name: Georgian-Style Pumpkin, Celery & Feta Slaw
+    category: side
+    cuisine: Georgian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-489
+    import_key: tha_original:THA-489
+    name: West African-Style Fennel, Radish & Greek Yoghurt Dip Plate
+    category: snack
+    cuisine: West African-inspired
+    difficulty: easy
+    servings: 8
+    total_minutes: 30
+  - recipe_id: THA-483
+    import_key: tha_original:THA-483
+    name: Chinese-Style Cherry Tomato, Celery & Egg Snack Bites
+    category: snack
+    cuisine: Chinese-inspired
+    difficulty: easy
+    servings: 8
+    total_minutes: 30
+  - recipe_id: THA-485
+    import_key: tha_original:THA-485
+    name: Georgian-Style Red Cabbage, Spinach & Cannellini Bean Fruit Pot
+    category: snack
+    cuisine: Georgian-inspired
+    difficulty: easy
+    servings: 8
+    total_minutes: 30
+  regularMealRefs:
+  - recipe_id: THA-019
+    import_key: tha_original:THA-019
+    name: Californian-Style Cannellini Bean, Radish & Aubergine Egg Skillet
+    category: breakfast
+    cuisine: Californian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-015
+    import_key: tha_original:THA-015
+    name: French country-Style Cod, Red Pepper & Pumpkin Egg Skillet
+    category: breakfast
+    cuisine: French country-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-012
+    import_key: tha_original:THA-012
+    name: Malaysian-Style Cottage Cheese, Asparagus & Peas Breakfast Wrap
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-017
+    import_key: tha_original:THA-017
+    name: Malaysian-Style Cottage Cheese, Peas & Pumpkin Toast Plate
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-022
+    import_key: tha_original:THA-022
+    name: Malaysian-Style Cottage Cheese, Asparagus & Spinach Breakfast Hash
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-142
+    import_key: tha_original:THA-142
+    name: Peruvian-Style Black Bean, Sweetcorn & Mushroom Frittata
+    category: lunch
+    cuisine: Peruvian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-086
+    import_key: tha_original:THA-086
+    name: Thai-Style Sardine, Kale & Pumpkin Frittata
+    category: lunch
+    cuisine: Thai-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-088
+    import_key: tha_original:THA-088
+    name: British Edamame, Onion & Aubergine Stuffed Pitta
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-093
+    import_key: tha_original:THA-093
+    name: British Feta, Red Cabbage & Radish Jacket Potato
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-098
+    import_key: tha_original:THA-098
+    name: British Sardine, Onion & Fennel Frittata
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  discoveryQueueMealRefs:
+  - recipe_id: THA-199
+    import_key: tha_original:THA-199
+    name: Australian cafe-Style Split Pea, Cabbage & Beetroot Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-204
+    import_key: tha_original:THA-204
+    name: Australian cafe-Style Chicken Thigh, Celery & Tomato Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-209
+    import_key: tha_original:THA-209
+    name: Australian cafe-Style Lentil, Cabbage & Cucumber Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-214
+    import_key: tha_original:THA-214
+    name: Australian cafe-Style Edamame, Celery & Beetroot Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-157
+    import_key: tha_original:THA-157
+    name: Peruvian-Style Kidney Bean, Fennel & Mushroom Jacket Potato
+    category: lunch
+    cuisine: Peruvian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-091
+    import_key: tha_original:THA-091
+    name: Thai-Style Kidney Bean, Cherry Tomato & Spinach Lunch Bowl
+    category: lunch
+    cuisine: Thai-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-486
+    import_key: tha_original:THA-486
+    name: Greek-Style Cucumber, Parsnip & Feta Oat Bars
+    category: snack
+    cuisine: Greek-inspired
+    difficulty: easy
+    servings: 8
+    total_minutes: 30
+  notes: References only. Recipe bodies remain owned by the THA Original Founding Cookbook.
+planner:
+- week: 1
+  dayOfWeek: 0
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-294
+    import_key: tha_original:THA-294
+    name: Australian cafe-Style Chicken Thigh, Celery & Tomato Rice Bowl 4
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  eaters: &id002
+  - Margaret
+  - Alan
+- week: 1
+  dayOfWeek: 0
+  mealType: breakfast
+  mealRef:
+    recipe_id: THA-015
+    import_key: tha_original:THA-015
+    name: French country-Style Cod, Red Pepper & Pumpkin Egg Skillet
+    category: breakfast
+    cuisine: French country-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  eaters: *id002
+- week: 1
+  dayOfWeek: 1
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-004
+    import_key: tha_original:THA-004
+    name: Golden Potato, Chickpea & Spinach Curry
+    category: dinner
+    cuisine: Indian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 45
+  eaters: *id002
+- week: 1
+  dayOfWeek: 1
+  mealType: lunch
+  mealRef:
+    recipe_id: THA-088
+    import_key: tha_original:THA-088
+    name: British Edamame, Onion & Aubergine Stuffed Pitta
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  eaters: *id002
+- week: 1
+  dayOfWeek: 2
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-003
+    import_key: tha_original:THA-003
+    name: Basil Tomato Wholewheat Pasta
+    category: dinner
+    cuisine: Italian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  eaters: *id002
+- week: 1
+  dayOfWeek: 2
+  mealType: breakfast
+  mealRef:
+    recipe_id: THA-017
+    import_key: tha_original:THA-017
+    name: Malaysian-Style Cottage Cheese, Peas & Pumpkin Toast Plate
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  eaters: *id002
+- week: 1
+  dayOfWeek: 2
+  mealType: snacks
+  mealRef:
+    recipe_id: THA-489
+    import_key: tha_original:THA-489
+    name: West African-Style Fennel, Radish & Greek Yoghurt Dip Plate
+    category: snack
+    cuisine: West African-inspired
+    difficulty: easy
+    servings: 8
+    total_minutes: 30
+  eaters: *id002
+- week: 1
+  dayOfWeek: 3
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-006
+    import_key: tha_original:THA-006
+    name: Roast Vegetable & Butter Bean Traybake
+    category: dinner
+    cuisine: Mediterranean-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 55
+  eaters: *id002
+- week: 1
+  dayOfWeek: 3
+  mealType: lunch
+  mealRef:
+    recipe_id: THA-098
+    import_key: tha_original:THA-098
+    name: British Sardine, Onion & Fennel Frittata
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  eaters: *id002
+- week: 1
+  dayOfWeek: 4
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-005
+    import_key: tha_original:THA-005
+    name: Gentle Taco Rice Bowls
+    category: dinner
+    cuisine: Mexican-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 40
+  eaters: *id002
+- week: 1
+  dayOfWeek: 4
+  mealType: breakfast
+  mealRef:
+    recipe_id: THA-019
+    import_key: tha_original:THA-019
+    name: Californian-Style Cannellini Bean, Radish & Aubergine Egg Skillet
+    category: breakfast
+    cuisine: Californian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  eaters: *id002
+- week: 1
+  dayOfWeek: 5
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-299
+    import_key: tha_original:THA-299
+    name: Australian cafe-Style Butter Bean, Cabbage & Cucumber Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+- week: 1
+  dayOfWeek: 5
+  mealType: lunch
+  mealRef:
+    recipe_id: THA-108
+    import_key: tha_original:THA-108
+    name: British Feta, Onion & Radish Stuffed Pitta
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  eaters: *id002
+- week: 1
+  dayOfWeek: 6
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-304
+    import_key: tha_original:THA-304
+    name: Australian cafe-Style Green Pea, Celery & Beetroot Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+- week: 2
+  dayOfWeek: 0
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-309
+    import_key: tha_original:THA-309
+    name: Australian cafe-Style Chicken Thigh, Cabbage & Tomato Rice Bowl 4
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+- week: 2
+  dayOfWeek: 0
+  mealType: breakfast
+  mealRef:
+    recipe_id: THA-012
+    import_key: tha_original:THA-012
+    name: Malaysian-Style Cottage Cheese, Asparagus & Peas Breakfast Wrap
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  eaters: *id002
+- week: 2
+  dayOfWeek: 1
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-314
+    import_key: tha_original:THA-314
+    name: Australian cafe-Style Cannellini Bean, Celery & Cucumber Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+- week: 2
+  dayOfWeek: 1
+  mealType: lunch
+  mealRef:
+    recipe_id: THA-093
+    import_key: tha_original:THA-093
+    name: British Feta, Red Cabbage & Radish Jacket Potato
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  eaters: *id002
+- week: 2
+  dayOfWeek: 2
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-319
+    import_key: tha_original:THA-319
+    name: Australian cafe-Style Lentil, Cabbage & Beetroot Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+- week: 2
+  dayOfWeek: 2
+  mealType: breakfast
+  mealRef:
+    recipe_id: THA-022
+    import_key: tha_original:THA-022
+    name: Malaysian-Style Cottage Cheese, Asparagus & Spinach Breakfast Hash
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  eaters: *id002
+- week: 2
+  dayOfWeek: 2
+  mealType: snacks
+  mealRef:
+    recipe_id: THA-483
+    import_key: tha_original:THA-483
+    name: Chinese-Style Cherry Tomato, Celery & Egg Snack Bites
+    category: snack
+    cuisine: Chinese-inspired
+    difficulty: easy
+    servings: 8
+    total_minutes: 30
+  eaters: *id002
+- week: 2
+  dayOfWeek: 3
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-324
+    import_key: tha_original:THA-324
+    name: Australian cafe-Style Chicken Thigh, Celery & Tomato Rice Bowl 5
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+- week: 2
+  dayOfWeek: 3
+  mealType: lunch
+  mealRef:
+    recipe_id: THA-103
+    import_key: tha_original:THA-103
+    name: British Chickpea, Red Cabbage & Aubergine Lunch Bowl
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  eaters: *id002
+- week: 2
+  dayOfWeek: 4
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-329
+    import_key: tha_original:THA-329
+    name: Australian cafe-Style Haricot Bean, Cabbage & Cucumber Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+- week: 2
+  dayOfWeek: 4
+  mealType: breakfast
+  mealRef:
+    recipe_id: THA-015
+    import_key: tha_original:THA-015
+    name: French country-Style Cod, Red Pepper & Pumpkin Egg Skillet
+    category: breakfast
+    cuisine: French country-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  eaters: *id002
+- week: 2
+  dayOfWeek: 5
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-334
+    import_key: tha_original:THA-334
+    name: Australian cafe-Style Black Bean, Celery & Beetroot Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+- week: 2
+  dayOfWeek: 5
+  mealType: lunch
+  mealRef:
+    recipe_id: THA-142
+    import_key: tha_original:THA-142
+    name: Peruvian-Style Black Bean, Sweetcorn & Mushroom Frittata
+    category: lunch
+    cuisine: Peruvian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  eaters: *id002
+- week: 2
+  dayOfWeek: 6
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-294
+    import_key: tha_original:THA-294
+    name: Australian cafe-Style Chicken Thigh, Celery & Tomato Rice Bowl 4
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+weekEaterOverrides: []
+freezer: []
+shoppingExtras:
+- name: washing-up liquid
+  category: household
+  alwaysAdd: false
+- name: apples
+  category: grocery
+  alwaysAdd: false
+- name: bananas
+  category: grocery
+  alwaysAdd: false
+- name: natural yoghurt
+  category: grocery
+  alwaysAdd: false
+- name: wholegrain bread
+  category: grocery
+  alwaysAdd: false
+generateShoppingList: true
+diaryEntries:
+- dayOffset: -1
+  mealSlot: breakfast
+  mealRef:
+    recipe_id: THA-019
+    import_key: tha_original:THA-019
+    name: Californian-Style Cannellini Bean, Radish & Aubergine Egg Skillet
+    category: breakfast
+    cuisine: Californian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  fromPlannerMealRef:
+    recipe_id: THA-019
+    import_key: tha_original:THA-019
+    name: Californian-Style Cannellini Bean, Radish & Aubergine Egg Skillet
+    category: breakfast
+    cuisine: Californian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+- dayOffset: -2
+  mealSlot: breakfast
+  mealRef:
+    recipe_id: THA-015
+    import_key: tha_original:THA-015
+    name: French country-Style Cod, Red Pepper & Pumpkin Egg Skillet
+    category: breakfast
+    cuisine: French country-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  fromPlannerMealRef:
+    recipe_id: THA-015
+    import_key: tha_original:THA-015
+    name: French country-Style Cod, Red Pepper & Pumpkin Egg Skillet
+    category: breakfast
+    cuisine: French country-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+- dayOffset: -3
+  mealSlot: breakfast
+  mealRef:
+    recipe_id: THA-012
+    import_key: tha_original:THA-012
+    name: Malaysian-Style Cottage Cheese, Asparagus & Peas Breakfast Wrap
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  fromPlannerMealRef:
+    recipe_id: THA-012
+    import_key: tha_original:THA-012
+    name: Malaysian-Style Cottage Cheese, Asparagus & Peas Breakfast Wrap
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+- dayOffset: -4
+  mealSlot: breakfast
+  mealRef:
+    recipe_id: THA-017
+    import_key: tha_original:THA-017
+    name: Malaysian-Style Cottage Cheese, Peas & Pumpkin Toast Plate
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  fromPlannerMealRef:
+    recipe_id: THA-017
+    import_key: tha_original:THA-017
+    name: Malaysian-Style Cottage Cheese, Peas & Pumpkin Toast Plate
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+- dayOffset: -5
+  mealSlot: breakfast
+  mealRef:
+    recipe_id: THA-022
+    import_key: tha_original:THA-022
+    name: Malaysian-Style Cottage Cheese, Asparagus & Spinach Breakfast Hash
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  fromPlannerMealRef:
+    recipe_id: THA-022
+    import_key: tha_original:THA-022
+    name: Malaysian-Style Cottage Cheese, Asparagus & Spinach Breakfast Hash
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+- dayOffset: -6
+  mealSlot: lunch
+  mealRef:
+    recipe_id: THA-142
+    import_key: tha_original:THA-142
+    name: Peruvian-Style Black Bean, Sweetcorn & Mushroom Frittata
+    category: lunch
+    cuisine: Peruvian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  fromPlannerMealRef:
+    recipe_id: THA-142
+    import_key: tha_original:THA-142
+    name: Peruvian-Style Black Bean, Sweetcorn & Mushroom Frittata
+    category: lunch
+    cuisine: Peruvian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+- dayOffset: -7
+  mealSlot: lunch
+  mealRef:
+    recipe_id: THA-086
+    import_key: tha_original:THA-086
+    name: Thai-Style Sardine, Kale & Pumpkin Frittata
+    category: lunch
+    cuisine: Thai-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  fromPlannerMealRef:
+    recipe_id: THA-086
+    import_key: tha_original:THA-086
+    name: Thai-Style Sardine, Kale & Pumpkin Frittata
+    category: lunch
+    cuisine: Thai-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+- dayOffset: -8
+  mealSlot: lunch
+  mealRef:
+    recipe_id: THA-088
+    import_key: tha_original:THA-088
+    name: British Edamame, Onion & Aubergine Stuffed Pitta
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  fromPlannerMealRef:
+    recipe_id: THA-088
+    import_key: tha_original:THA-088
+    name: British Edamame, Onion & Aubergine Stuffed Pitta
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+diaryMetrics:
+- dayOffset: -1
+  moodApples: 4
+  energyApples: 3
+  sleepHours: 6.5
+  stuckToPlan: false
+- dayOffset: -2
+  moodApples: 3
+  energyApples: 4
+  sleepHours: 6.9
+  stuckToPlan: true
+- dayOffset: -3
+  moodApples: 4
+  energyApples: 4
+  sleepHours: 7.2
+  stuckToPlan: true
+- dayOffset: -4
+  moodApples: 4
+  energyApples: 3
+  sleepHours: 7.6
+  stuckToPlan: false
+- dayOffset: -5
+  moodApples: 3
+  energyApples: 4
+  sleepHours: 6.2
+  stuckToPlan: true
+evidence:
+- subjectType: meal
+  subjectKey: recipe:THA-019
+  mealRef:
+    recipe_id: THA-019
+    import_key: tha_original:THA-019
+    name: Californian-Style Cannellini Bean, Radish & Aubergine Egg Skillet
+    category: breakfast
+    cuisine: Californian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  outcomeType: completed
+  direction: positive
+  dayOffset: -2
+  sourceCapabilityId: planner
+- subjectType: meal
+  subjectKey: recipe:THA-015
+  mealRef:
+    recipe_id: THA-015
+    import_key: tha_original:THA-015
+    name: French country-Style Cod, Red Pepper & Pumpkin Egg Skillet
+    category: breakfast
+    cuisine: French country-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  outcomeType: completed
+  direction: positive
+  dayOffset: -5
+  sourceCapabilityId: planner
+- subjectType: meal
+  subjectKey: recipe:THA-012
+  mealRef:
+    recipe_id: THA-012
+    import_key: tha_original:THA-012
+    name: Malaysian-Style Cottage Cheese, Asparagus & Peas Breakfast Wrap
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  outcomeType: completed
+  direction: positive
+  dayOffset: -8
+  sourceCapabilityId: planner
+- subjectType: meal
+  subjectKey: recipe:THA-017
+  mealRef:
+    recipe_id: THA-017
+    import_key: tha_original:THA-017
+    name: Malaysian-Style Cottage Cheese, Peas & Pumpkin Toast Plate
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  outcomeType: completed
+  direction: positive
+  dayOffset: -11
+  sourceCapabilityId: planner
+- subjectType: meal
+  subjectKey: recipe:THA-022
+  mealRef:
+    recipe_id: THA-022
+    import_key: tha_original:THA-022
+    name: Malaysian-Style Cottage Cheese, Asparagus & Spinach Breakfast Hash
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  outcomeType: completed
+  direction: positive
+  dayOffset: -14
+  sourceCapabilityId: planner
+- subjectType: swap
+  subjectKey: ingredient:wholegrain
+  subjectId: swap:dw011:white-to-wholegrain
+  outcomeType: accepted
+  direction: positive
+  dayOffset: -12
+  sourceCapabilityId: meals
+- subjectType: meal
+  subjectKey: recipe:THA-199
+  mealRef:
+    recipe_id: THA-199
+    import_key: tha_original:THA-199
+    name: Australian cafe-Style Split Pea, Cabbage & Beetroot Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  outcomeType: rejected
+  direction: negative
+  dayOffset: -18
+  sourceCapabilityId: planner
+knownGaps:
+- Recipe bodies are not authored here; the Cookbook remains the owner of names, ingredients, method and nutrition derivation.
+- No nutrition, allergen rows, learning signals, observations, conversations or opportunity deliveries are seeded by this
+  world.
+- Ready-meal/product references are not authored in this foundation pack because no product meal export was supplied with
+  stable product IDs.
+qualityPurpose:
+  tests:
+  - retired couple
+  - meal-reference import
+  - planner realism
+  - honest gaps
+  reasoningQuestions:
+  - What should Margaret cook tonight?
+  - What meals has this household repeated?
+  - What dietary gaps should THA admit?

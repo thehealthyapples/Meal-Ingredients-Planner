@@ -1,0 +1,1631 @@
+{
+  "id": "DW041",
+  "slug": "barker-more-plants",
+  "archetype": "Meat-heavy household adding plants",
+  "householdName": "Barker Household (Dev)",
+  "summary": "Meat-heavy habits, open to adding beans and vegetables without judgement.",
+  "fictional": true,
+  "coldStart": false,
+  "accounts": [
+    {
+      "key": "owner",
+      "username": "barker.more.plants.owner@dev.thehealthyapples.dev",
+      "displayName": "Darren Barker (Dev)",
+      "firstName": "Darren",
+      "dietPattern": "Carnivore",
+      "dietRestrictions": [],
+      "eatingSchedule": "None",
+      "subscriptionTier": "free"
+    },
+    {
+      "key": "partner",
+      "username": "barker.more.plants.partner@dev.thehealthyapples.dev",
+      "displayName": "Lisa Barker (Dev)",
+      "firstName": "Lisa",
+      "dietPattern": "Carnivore",
+      "dietRestrictions": [],
+      "eatingSchedule": "None",
+      "subscriptionTier": "free"
+    }
+  ],
+  "eaters": [
+    {
+      "displayName": "Darren",
+      "accountKey": "owner",
+      "ageYears": 49,
+      "defaultDietTypes": [],
+      "hardRestrictions": []
+    },
+    {
+      "displayName": "Lisa",
+      "accountKey": "partner",
+      "ageYears": 47,
+      "defaultDietTypes": [],
+      "hardRestrictions": []
+    },
+    {
+      "displayName": "Jake",
+      "ageYears": 17,
+      "defaultDietTypes": [],
+      "hardRestrictions": []
+    }
+  ],
+  "preferences": {
+    "dietTypes": [
+      "Carnivore"
+    ],
+    "excludedIngredients": [],
+    "healthGoals": [
+      "reduce_upf",
+      "increase_plants"
+    ],
+    "goalType": "build",
+    "budgetLevel": "budget",
+    "activityLevel": "high",
+    "preferredStores": [
+      "Asda",
+      "Farmfoods"
+    ],
+    "calorieTarget": null,
+    "heightCm": null,
+    "weightKg": null,
+    "adultsCount": 2,
+    "childrenCount": 1,
+    "maxTotalCookTime": 25,
+    "plannerEnableChildMeals": true,
+    "companionPersonality": "friend"
+  },
+  "persona": {
+    "lifestyle": "Meat-heavy habits, open to adding beans and vegetables without judgement.",
+    "shoppingHabits": "Primary shops: Asda, Farmfoods. Small frequent shops.",
+    "cookingConfidence": "low",
+    "weeknightCookingTime": "15-25 minutes",
+    "budget": "budget",
+    "kitchenEquipment": [
+      "hob",
+      "oven",
+      "microwave",
+      "air fryer"
+    ],
+    "lifeEvents": [
+      "school term routine"
+    ],
+    "mealStory": "Favourite meals and dislikes are persona context unless a future favourite-meals schema is introduced.",
+    "favouriteMealRefsNarrativeOnly": [
+      {
+        "recipe_id": "THA-011",
+        "import_key": "tha_original:THA-011",
+        "name": "Pakistani-Style Feta, Parsnip & Cauliflower Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "Pakistani-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-019",
+        "import_key": "tha_original:THA-019",
+        "name": "Californian-Style Cannellini Bean, Radish & Aubergine Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-015",
+        "import_key": "tha_original:THA-015",
+        "name": "French country-Style Cod, Red Pepper & Pumpkin Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "French country-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      }
+    ],
+    "dislikedIngredientsNarrativeOnly": [
+      "overly spicy food"
+    ]
+  },
+  "pantry": [
+    {
+      "ingredient": "tomato puree",
+      "category": "larder"
+    },
+    {
+      "ingredient": "tinned tomatoes",
+      "category": "larder"
+    },
+    {
+      "ingredient": "black beans",
+      "category": "larder"
+    },
+    {
+      "ingredient": "frozen mixed vegetables",
+      "category": "freezer"
+    },
+    {
+      "ingredient": "garlic",
+      "category": "larder"
+    },
+    {
+      "ingredient": "wholewheat pasta",
+      "category": "larder"
+    },
+    {
+      "ingredient": "onions",
+      "category": "larder"
+    },
+    {
+      "ingredient": "baked potatoes",
+      "category": "larder"
+    },
+    {
+      "ingredient": "tuna tins",
+      "category": "larder"
+    },
+    {
+      "ingredient": "tinned chopped tomatoes",
+      "category": "larder"
+    },
+    {
+      "ingredient": "olive oil",
+      "category": "larder"
+    },
+    {
+      "ingredient": "rice",
+      "category": "larder"
+    },
+    {
+      "ingredient": "low-salt stock cubes",
+      "category": "larder"
+    },
+    {
+      "ingredient": "potatoes",
+      "category": "larder"
+    },
+    {
+      "ingredient": "lentils",
+      "category": "larder"
+    }
+  ],
+  "cookbookRefs": {
+    "adoptedMealRefs": [
+      {
+        "recipe_id": "THA-011",
+        "import_key": "tha_original:THA-011",
+        "name": "Pakistani-Style Feta, Parsnip & Cauliflower Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "Pakistani-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-019",
+        "import_key": "tha_original:THA-019",
+        "name": "Californian-Style Cannellini Bean, Radish & Aubergine Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-015",
+        "import_key": "tha_original:THA-015",
+        "name": "French country-Style Cod, Red Pepper & Pumpkin Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "French country-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-020",
+        "import_key": "tha_original:THA-020",
+        "name": "French country-Style Tuna, Butternut Squash & Red Cabbage Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "French country-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-030",
+        "import_key": "tha_original:THA-030",
+        "name": "French country-Style Mackerel, Butternut Squash & Red Pepper Breakfast Hash",
+        "category": "breakfast",
+        "cuisine": "French country-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-150",
+        "import_key": "tha_original:THA-150",
+        "name": "Moroccan-Style Egg, Courgette & Parsnip Frittata 2",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-092",
+        "import_key": "tha_original:THA-092",
+        "name": "Peruvian-Style Cod, Sweetcorn & Cherry Tomato Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Peruvian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-091",
+        "import_key": "tha_original:THA-091",
+        "name": "Thai-Style Kidney Bean, Cherry Tomato & Spinach Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-096",
+        "import_key": "tha_original:THA-096",
+        "name": "Thai-Style Greek Yoghurt, Kale & Peas Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-101",
+        "import_key": "tha_original:THA-101",
+        "name": "Thai-Style Tuna, Cherry Tomato & Pumpkin Jacket Potato",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-111",
+        "import_key": "tha_original:THA-111",
+        "name": "Thai-Style Greek Yoghurt, Cherry Tomato & Peas Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-116",
+        "import_key": "tha_original:THA-116",
+        "name": "Thai-Style Cod, Kale & Pumpkin Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-208",
+        "import_key": "tha_original:THA-208",
+        "name": "Ethiopian-Style Haricot Bean, Peas & Leek Stew",
+        "category": "dinner",
+        "cuisine": "Ethiopian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-004",
+        "import_key": "tha_original:THA-004",
+        "name": "Golden Potato, Chickpea & Spinach Curry",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 45
+      },
+      {
+        "recipe_id": "THA-197",
+        "import_key": "tha_original:THA-197",
+        "name": "Indonesian-Style Haricot Bean, Tomato & Sweetcorn One-Pot",
+        "category": "dinner",
+        "cuisine": "Indonesian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-006",
+        "import_key": "tha_original:THA-006",
+        "name": "Roast Vegetable & Butter Bean Traybake",
+        "category": "dinner",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 55
+      },
+      {
+        "recipe_id": "THA-005",
+        "import_key": "tha_original:THA-005",
+        "name": "Gentle Taco Rice Bowls",
+        "category": "dinner",
+        "cuisine": "Mexican-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 40
+      },
+      {
+        "recipe_id": "THA-009",
+        "import_key": "tha_original:THA-009",
+        "name": "Salmon, Broccoli & Brown Rice Traybake",
+        "category": "dinner",
+        "cuisine": "Nordic-Mediterranean inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 45
+      },
+      {
+        "recipe_id": "THA-195",
+        "import_key": "tha_original:THA-195",
+        "name": "Spanish-Style Chicken Thigh, Broccoli & Asparagus Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-200",
+        "import_key": "tha_original:THA-200",
+        "name": "Spanish-Style Butter Bean, Radish & Courgette Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-210",
+        "import_key": "tha_original:THA-210",
+        "name": "Spanish-Style Chicken Thigh, Radish & Asparagus Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-215",
+        "import_key": "tha_original:THA-215",
+        "name": "Spanish-Style Cannellini Bean, Broccoli & Courgette Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-220",
+        "import_key": "tha_original:THA-220",
+        "name": "Spanish-Style Lentil, Radish & Spring Onion Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-225",
+        "import_key": "tha_original:THA-225",
+        "name": "Spanish-Style Chicken Thigh, Broccoli & Asparagus Noodle Bowl 2",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-230",
+        "import_key": "tha_original:THA-230",
+        "name": "Spanish-Style Haricot Bean, Radish & Courgette Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-467",
+        "import_key": "tha_original:THA-467",
+        "name": "Chinese-Style Red Cabbage, Cauliflower & Tuna Roasted Veg",
+        "category": "side",
+        "cuisine": "Chinese-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-469",
+        "import_key": "tha_original:THA-469",
+        "name": "Georgian-Style Pumpkin, Mushroom & Butter Bean Slaw",
+        "category": "side",
+        "cuisine": "Georgian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-500",
+        "import_key": "tha_original:THA-500",
+        "name": "Georgian-Style Onion, Red Cabbage & Haricot Bean Fruit Pot",
+        "category": "snack",
+        "cuisine": "Georgian-inspired",
+        "difficulty": "easy",
+        "servings": 8,
+        "total_minutes": 30
+      },
+      {
+        "recipe_id": "THA-481",
+        "import_key": "tha_original:THA-481",
+        "name": "Greek-Style Cauliflower, Green Bean & Butter Bean Oat Bars",
+        "category": "snack",
+        "cuisine": "Greek-inspired",
+        "difficulty": "easy",
+        "servings": 8,
+        "total_minutes": 30
+      },
+      {
+        "recipe_id": "THA-482",
+        "import_key": "tha_original:THA-482",
+        "name": "Persian-Style Courgette, Pumpkin & Tofu Seeded Muffins",
+        "category": "snack",
+        "cuisine": "Persian-inspired",
+        "difficulty": "easy",
+        "servings": 8,
+        "total_minutes": 30
+      }
+    ],
+    "regularMealRefs": [
+      {
+        "recipe_id": "THA-011",
+        "import_key": "tha_original:THA-011",
+        "name": "Pakistani-Style Feta, Parsnip & Cauliflower Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "Pakistani-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-019",
+        "import_key": "tha_original:THA-019",
+        "name": "Californian-Style Cannellini Bean, Radish & Aubergine Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-015",
+        "import_key": "tha_original:THA-015",
+        "name": "French country-Style Cod, Red Pepper & Pumpkin Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "French country-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-020",
+        "import_key": "tha_original:THA-020",
+        "name": "French country-Style Tuna, Butternut Squash & Red Cabbage Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "French country-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-030",
+        "import_key": "tha_original:THA-030",
+        "name": "French country-Style Mackerel, Butternut Squash & Red Pepper Breakfast Hash",
+        "category": "breakfast",
+        "cuisine": "French country-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-150",
+        "import_key": "tha_original:THA-150",
+        "name": "Moroccan-Style Egg, Courgette & Parsnip Frittata 2",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-092",
+        "import_key": "tha_original:THA-092",
+        "name": "Peruvian-Style Cod, Sweetcorn & Cherry Tomato Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Peruvian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-091",
+        "import_key": "tha_original:THA-091",
+        "name": "Thai-Style Kidney Bean, Cherry Tomato & Spinach Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-096",
+        "import_key": "tha_original:THA-096",
+        "name": "Thai-Style Greek Yoghurt, Kale & Peas Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-101",
+        "import_key": "tha_original:THA-101",
+        "name": "Thai-Style Tuna, Cherry Tomato & Pumpkin Jacket Potato",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      }
+    ],
+    "discoveryQueueMealRefs": [
+      {
+        "recipe_id": "THA-327",
+        "import_key": "tha_original:THA-327",
+        "name": "Indonesian-Style Chicken Thigh, Tomato & Broccoli One-Pot 5",
+        "category": "dinner",
+        "cuisine": "Indonesian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-235",
+        "import_key": "tha_original:THA-235",
+        "name": "Spanish-Style Black Bean, Broccoli & Spring Onion Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-204",
+        "import_key": "tha_original:THA-204",
+        "name": "Australian cafe-Style Chicken Thigh, Celery & Tomato Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-209",
+        "import_key": "tha_original:THA-209",
+        "name": "Australian cafe-Style Lentil, Cabbage & Cucumber Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-109",
+        "import_key": "tha_original:THA-109",
+        "name": "Mediterranean-Style Black Bean, Cauliflower & Pak Choi Jacket Potato",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-085",
+        "import_key": "tha_original:THA-085",
+        "name": "Moroccan-Style Butter Bean, Pumpkin & Green Bean Jacket Potato",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-484",
+        "import_key": "tha_original:THA-484",
+        "name": "West African-Style Sweetcorn, Aubergine & Edamame Dip Plate",
+        "category": "snack",
+        "cuisine": "West African-inspired",
+        "difficulty": "easy",
+        "servings": 8,
+        "total_minutes": 30
+      }
+    ],
+    "notes": "References only. Recipe bodies remain owned by the THA Original Founding Cookbook."
+  },
+  "planner": [
+    {
+      "week": 1,
+      "dayOfWeek": 0,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-208",
+        "import_key": "tha_original:THA-208",
+        "name": "Ethiopian-Style Haricot Bean, Peas & Leek Stew",
+        "category": "dinner",
+        "cuisine": "Ethiopian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Darren",
+        "Lisa",
+        "Jake"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 0,
+      "mealType": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-019",
+        "import_key": "tha_original:THA-019",
+        "name": "Californian-Style Cannellini Bean, Radish & Aubergine Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "eaters": [
+        "Darren",
+        "Lisa",
+        "Jake"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 1,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-004",
+        "import_key": "tha_original:THA-004",
+        "name": "Golden Potato, Chickpea & Spinach Curry",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 45
+      },
+      "eaters": [
+        "Darren",
+        "Lisa",
+        "Jake"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 1,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-091",
+        "import_key": "tha_original:THA-091",
+        "name": "Thai-Style Kidney Bean, Cherry Tomato & Spinach Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Darren",
+        "Lisa",
+        "Jake"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 2,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-197",
+        "import_key": "tha_original:THA-197",
+        "name": "Indonesian-Style Haricot Bean, Tomato & Sweetcorn One-Pot",
+        "category": "dinner",
+        "cuisine": "Indonesian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Darren",
+        "Lisa",
+        "Jake"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 2,
+      "mealType": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-020",
+        "import_key": "tha_original:THA-020",
+        "name": "French country-Style Tuna, Butternut Squash & Red Cabbage Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "French country-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "eaters": [
+        "Darren",
+        "Lisa",
+        "Jake"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 2,
+      "mealType": "snacks",
+      "mealRef": {
+        "recipe_id": "THA-500",
+        "import_key": "tha_original:THA-500",
+        "name": "Georgian-Style Onion, Red Cabbage & Haricot Bean Fruit Pot",
+        "category": "snack",
+        "cuisine": "Georgian-inspired",
+        "difficulty": "easy",
+        "servings": 8,
+        "total_minutes": 30
+      },
+      "eaters": [
+        "Darren",
+        "Lisa",
+        "Jake"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 3,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-006",
+        "import_key": "tha_original:THA-006",
+        "name": "Roast Vegetable & Butter Bean Traybake",
+        "category": "dinner",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 55
+      },
+      "eaters": [
+        "Darren",
+        "Lisa",
+        "Jake"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 3,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-101",
+        "import_key": "tha_original:THA-101",
+        "name": "Thai-Style Tuna, Cherry Tomato & Pumpkin Jacket Potato",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Darren",
+        "Lisa",
+        "Jake"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 4,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-005",
+        "import_key": "tha_original:THA-005",
+        "name": "Gentle Taco Rice Bowls",
+        "category": "dinner",
+        "cuisine": "Mexican-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 40
+      },
+      "eaters": [
+        "Darren",
+        "Lisa",
+        "Jake"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 4,
+      "mealType": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-011",
+        "import_key": "tha_original:THA-011",
+        "name": "Pakistani-Style Feta, Parsnip & Cauliflower Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "Pakistani-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "eaters": [
+        "Darren",
+        "Lisa",
+        "Jake"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 5,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-009",
+        "import_key": "tha_original:THA-009",
+        "name": "Salmon, Broccoli & Brown Rice Traybake",
+        "category": "dinner",
+        "cuisine": "Nordic-Mediterranean inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 45
+      },
+      "eaters": [
+        "Darren",
+        "Lisa",
+        "Jake"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 5,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-116",
+        "import_key": "tha_original:THA-116",
+        "name": "Thai-Style Cod, Kale & Pumpkin Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Darren",
+        "Lisa",
+        "Jake"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 6,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-195",
+        "import_key": "tha_original:THA-195",
+        "name": "Spanish-Style Chicken Thigh, Broccoli & Asparagus Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Darren",
+        "Lisa",
+        "Jake"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 0,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-200",
+        "import_key": "tha_original:THA-200",
+        "name": "Spanish-Style Butter Bean, Radish & Courgette Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Darren",
+        "Lisa",
+        "Jake"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 0,
+      "mealType": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-015",
+        "import_key": "tha_original:THA-015",
+        "name": "French country-Style Cod, Red Pepper & Pumpkin Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "French country-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "eaters": [
+        "Darren",
+        "Lisa",
+        "Jake"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 1,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-210",
+        "import_key": "tha_original:THA-210",
+        "name": "Spanish-Style Chicken Thigh, Radish & Asparagus Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Darren",
+        "Lisa",
+        "Jake"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 1,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-096",
+        "import_key": "tha_original:THA-096",
+        "name": "Thai-Style Greek Yoghurt, Kale & Peas Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Darren",
+        "Lisa",
+        "Jake"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 2,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-215",
+        "import_key": "tha_original:THA-215",
+        "name": "Spanish-Style Cannellini Bean, Broccoli & Courgette Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Darren",
+        "Lisa",
+        "Jake"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 2,
+      "mealType": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-030",
+        "import_key": "tha_original:THA-030",
+        "name": "French country-Style Mackerel, Butternut Squash & Red Pepper Breakfast Hash",
+        "category": "breakfast",
+        "cuisine": "French country-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "eaters": [
+        "Darren",
+        "Lisa",
+        "Jake"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 2,
+      "mealType": "snacks",
+      "mealRef": {
+        "recipe_id": "THA-481",
+        "import_key": "tha_original:THA-481",
+        "name": "Greek-Style Cauliflower, Green Bean & Butter Bean Oat Bars",
+        "category": "snack",
+        "cuisine": "Greek-inspired",
+        "difficulty": "easy",
+        "servings": 8,
+        "total_minutes": 30
+      },
+      "eaters": [
+        "Darren",
+        "Lisa",
+        "Jake"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 3,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-220",
+        "import_key": "tha_original:THA-220",
+        "name": "Spanish-Style Lentil, Radish & Spring Onion Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Darren",
+        "Lisa",
+        "Jake"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 3,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-111",
+        "import_key": "tha_original:THA-111",
+        "name": "Thai-Style Greek Yoghurt, Cherry Tomato & Peas Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Darren",
+        "Lisa",
+        "Jake"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 4,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-225",
+        "import_key": "tha_original:THA-225",
+        "name": "Spanish-Style Chicken Thigh, Broccoli & Asparagus Noodle Bowl 2",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Darren",
+        "Lisa",
+        "Jake"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 4,
+      "mealType": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-019",
+        "import_key": "tha_original:THA-019",
+        "name": "Californian-Style Cannellini Bean, Radish & Aubergine Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "eaters": [
+        "Darren",
+        "Lisa",
+        "Jake"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 5,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-230",
+        "import_key": "tha_original:THA-230",
+        "name": "Spanish-Style Haricot Bean, Radish & Courgette Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Darren",
+        "Lisa",
+        "Jake"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 5,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-150",
+        "import_key": "tha_original:THA-150",
+        "name": "Moroccan-Style Egg, Courgette & Parsnip Frittata 2",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Darren",
+        "Lisa",
+        "Jake"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 6,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-208",
+        "import_key": "tha_original:THA-208",
+        "name": "Ethiopian-Style Haricot Bean, Peas & Leek Stew",
+        "category": "dinner",
+        "cuisine": "Ethiopian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Darren",
+        "Lisa",
+        "Jake"
+      ]
+    }
+  ],
+  "weekEaterOverrides": [],
+  "freezer": [],
+  "shoppingExtras": [
+    {
+      "name": "washing-up liquid",
+      "category": "household",
+      "alwaysAdd": false
+    },
+    {
+      "name": "apples",
+      "category": "grocery",
+      "alwaysAdd": false
+    },
+    {
+      "name": "bananas",
+      "category": "grocery",
+      "alwaysAdd": false
+    },
+    {
+      "name": "natural yoghurt",
+      "category": "grocery",
+      "alwaysAdd": false
+    },
+    {
+      "name": "wholegrain bread",
+      "category": "grocery",
+      "alwaysAdd": false
+    }
+  ],
+  "generateShoppingList": true,
+  "diaryEntries": [
+    {
+      "dayOffset": -1,
+      "mealSlot": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-011",
+        "import_key": "tha_original:THA-011",
+        "name": "Pakistani-Style Feta, Parsnip & Cauliflower Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "Pakistani-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-011",
+        "import_key": "tha_original:THA-011",
+        "name": "Pakistani-Style Feta, Parsnip & Cauliflower Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "Pakistani-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      }
+    },
+    {
+      "dayOffset": -2,
+      "mealSlot": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-019",
+        "import_key": "tha_original:THA-019",
+        "name": "Californian-Style Cannellini Bean, Radish & Aubergine Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-019",
+        "import_key": "tha_original:THA-019",
+        "name": "Californian-Style Cannellini Bean, Radish & Aubergine Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      }
+    },
+    {
+      "dayOffset": -3,
+      "mealSlot": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-015",
+        "import_key": "tha_original:THA-015",
+        "name": "French country-Style Cod, Red Pepper & Pumpkin Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "French country-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-015",
+        "import_key": "tha_original:THA-015",
+        "name": "French country-Style Cod, Red Pepper & Pumpkin Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "French country-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      }
+    },
+    {
+      "dayOffset": -4,
+      "mealSlot": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-020",
+        "import_key": "tha_original:THA-020",
+        "name": "French country-Style Tuna, Butternut Squash & Red Cabbage Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "French country-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-020",
+        "import_key": "tha_original:THA-020",
+        "name": "French country-Style Tuna, Butternut Squash & Red Cabbage Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "French country-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      }
+    },
+    {
+      "dayOffset": -5,
+      "mealSlot": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-030",
+        "import_key": "tha_original:THA-030",
+        "name": "French country-Style Mackerel, Butternut Squash & Red Pepper Breakfast Hash",
+        "category": "breakfast",
+        "cuisine": "French country-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-030",
+        "import_key": "tha_original:THA-030",
+        "name": "French country-Style Mackerel, Butternut Squash & Red Pepper Breakfast Hash",
+        "category": "breakfast",
+        "cuisine": "French country-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      }
+    },
+    {
+      "dayOffset": -6,
+      "mealSlot": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-150",
+        "import_key": "tha_original:THA-150",
+        "name": "Moroccan-Style Egg, Courgette & Parsnip Frittata 2",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-150",
+        "import_key": "tha_original:THA-150",
+        "name": "Moroccan-Style Egg, Courgette & Parsnip Frittata 2",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      }
+    },
+    {
+      "dayOffset": -7,
+      "mealSlot": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-092",
+        "import_key": "tha_original:THA-092",
+        "name": "Peruvian-Style Cod, Sweetcorn & Cherry Tomato Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Peruvian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-092",
+        "import_key": "tha_original:THA-092",
+        "name": "Peruvian-Style Cod, Sweetcorn & Cherry Tomato Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Peruvian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      }
+    },
+    {
+      "dayOffset": -8,
+      "mealSlot": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-091",
+        "import_key": "tha_original:THA-091",
+        "name": "Thai-Style Kidney Bean, Cherry Tomato & Spinach Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-091",
+        "import_key": "tha_original:THA-091",
+        "name": "Thai-Style Kidney Bean, Cherry Tomato & Spinach Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      }
+    }
+  ],
+  "diaryMetrics": [
+    {
+      "dayOffset": -1,
+      "moodApples": 4,
+      "energyApples": 3,
+      "sleepHours": 6.5,
+      "stuckToPlan": false
+    },
+    {
+      "dayOffset": -2,
+      "moodApples": 3,
+      "energyApples": 4,
+      "sleepHours": 6.9,
+      "stuckToPlan": true
+    },
+    {
+      "dayOffset": -3,
+      "moodApples": 4,
+      "energyApples": 4,
+      "sleepHours": 7.2,
+      "stuckToPlan": true
+    },
+    {
+      "dayOffset": -4,
+      "moodApples": 4,
+      "energyApples": 3,
+      "sleepHours": 7.6,
+      "stuckToPlan": false
+    },
+    {
+      "dayOffset": -5,
+      "moodApples": 3,
+      "energyApples": 4,
+      "sleepHours": 6.2,
+      "stuckToPlan": true
+    }
+  ],
+  "evidence": [
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-011",
+      "mealRef": {
+        "recipe_id": "THA-011",
+        "import_key": "tha_original:THA-011",
+        "name": "Pakistani-Style Feta, Parsnip & Cauliflower Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "Pakistani-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "outcomeType": "completed",
+      "direction": "positive",
+      "dayOffset": -2,
+      "sourceCapabilityId": "planner"
+    },
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-019",
+      "mealRef": {
+        "recipe_id": "THA-019",
+        "import_key": "tha_original:THA-019",
+        "name": "Californian-Style Cannellini Bean, Radish & Aubergine Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "outcomeType": "completed",
+      "direction": "positive",
+      "dayOffset": -5,
+      "sourceCapabilityId": "planner"
+    },
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-015",
+      "mealRef": {
+        "recipe_id": "THA-015",
+        "import_key": "tha_original:THA-015",
+        "name": "French country-Style Cod, Red Pepper & Pumpkin Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "French country-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "outcomeType": "completed",
+      "direction": "positive",
+      "dayOffset": -8,
+      "sourceCapabilityId": "planner"
+    },
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-020",
+      "mealRef": {
+        "recipe_id": "THA-020",
+        "import_key": "tha_original:THA-020",
+        "name": "French country-Style Tuna, Butternut Squash & Red Cabbage Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "French country-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "outcomeType": "completed",
+      "direction": "positive",
+      "dayOffset": -11,
+      "sourceCapabilityId": "planner"
+    },
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-030",
+      "mealRef": {
+        "recipe_id": "THA-030",
+        "import_key": "tha_original:THA-030",
+        "name": "French country-Style Mackerel, Butternut Squash & Red Pepper Breakfast Hash",
+        "category": "breakfast",
+        "cuisine": "French country-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "outcomeType": "completed",
+      "direction": "positive",
+      "dayOffset": -14,
+      "sourceCapabilityId": "planner"
+    },
+    {
+      "subjectType": "swap",
+      "subjectKey": "ingredient:wholegrain",
+      "subjectId": "swap:dw041:white-to-wholegrain",
+      "outcomeType": "accepted",
+      "direction": "positive",
+      "dayOffset": -12,
+      "sourceCapabilityId": "meals"
+    },
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-327",
+      "mealRef": {
+        "recipe_id": "THA-327",
+        "import_key": "tha_original:THA-327",
+        "name": "Indonesian-Style Chicken Thigh, Tomato & Broccoli One-Pot 5",
+        "category": "dinner",
+        "cuisine": "Indonesian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "outcomeType": "rejected",
+      "direction": "negative",
+      "dayOffset": -18,
+      "sourceCapabilityId": "planner"
+    }
+  ],
+  "knownGaps": [
+    "Recipe bodies are not authored here; the Cookbook remains the owner of names, ingredients, method and nutrition derivation.",
+    "No nutrition, allergen rows, learning signals, observations, conversations or opportunity deliveries are seeded by this world.",
+    "Ready-meal/product references are not authored in this foundation pack because no product meal export was supplied with stable product IDs."
+  ],
+  "qualityPurpose": {
+    "tests": [
+      "meat-heavy household adding plants",
+      "meal-reference import",
+      "planner realism",
+      "honest gaps"
+    ],
+    "reasoningQuestions": [
+      "What should Darren cook tonight?",
+      "What meals has this household repeated?",
+      "What dietary gaps should THA admit?"
+    ]
+  }
+}

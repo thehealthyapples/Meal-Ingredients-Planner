@@ -1,0 +1,1195 @@
+id: DW010
+slug: ross-empty-nesters
+archetype: Mediterranean empty nesters
+householdName: Ross Household (Dev)
+summary: Empty nesters trying to cook smaller portions without losing enjoyment.
+fictional: true
+coldStart: false
+accounts:
+- key: owner
+  username: ross.empty.nesters.owner@dev.thehealthyapples.dev
+  displayName: Janet Ross (Dev)
+  firstName: Janet
+  dietPattern: Mediterranean
+  dietRestrictions: &id001 []
+  eatingSchedule: None
+  subscriptionTier: premium
+- key: partner
+  username: ross.empty.nesters.partner@dev.thehealthyapples.dev
+  displayName: Phil Ross (Dev)
+  firstName: Phil
+  dietPattern: Mediterranean
+  dietRestrictions: *id001
+  eatingSchedule: None
+  subscriptionTier: premium
+eaters:
+- displayName: Janet
+  accountKey: owner
+  ageYears: 61
+  defaultDietTypes: []
+  hardRestrictions: []
+- displayName: Phil
+  accountKey: partner
+  ageYears: 63
+  defaultDietTypes: []
+  hardRestrictions: []
+preferences:
+  dietTypes:
+  - Mediterranean
+  excludedIngredients: []
+  healthGoals:
+  - eat_healthier
+  - cook_more_from_scratch
+  goalType: maintain
+  budgetLevel: premium
+  activityLevel: moderate
+  preferredStores:
+  - Waitrose
+  - Sainsbury's
+  calorieTarget: null
+  heightCm: null
+  weightKg: null
+  adultsCount: 2
+  childrenCount: 0
+  maxTotalCookTime: 45
+  plannerEnableChildMeals: false
+  companionPersonality: chef
+persona:
+  lifestyle: Empty nesters trying to cook smaller portions without losing enjoyment.
+  shoppingHabits: 'Primary shops: Waitrose, Sainsbury''s. One big weekly shop plus freezer top-ups.'
+  cookingConfidence: moderate
+  weeknightCookingTime: 30-45 minutes
+  budget: premium
+  kitchenEquipment:
+  - hob
+  - oven
+  - microwave
+  - slow cooker
+  - freezer
+  lifeEvents:
+  - ordinary working week
+  mealStory: Favourite meals and dislikes are persona context unless a future favourite-meals schema is introduced.
+  favouriteMealRefsNarrativeOnly:
+  - recipe_id: THA-061
+    import_key: tha_original:THA-061
+    name: Pakistani-Style Feta, Parsnip & Green Bean Toast Plate
+    category: breakfast
+    cuisine: Pakistani-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-001
+    import_key: tha_original:THA-001
+    name: Apple, Oat & Cinnamon Morning Bowl
+    category: breakfast
+    cuisine: British family kitchen
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-014
+    import_key: tha_original:THA-014
+    name: Californian-Style Split Pea, Broccoli & Fennel Breakfast Hash
+    category: breakfast
+    cuisine: Californian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  dislikedIngredientsNarrativeOnly:
+  - excess salt
+pantry:
+- ingredient: garlic
+  category: larder
+- ingredient: mixed seeds
+  category: larder
+- ingredient: black beans
+  category: larder
+- ingredient: carrots
+  category: fridge
+- ingredient: potatoes
+  category: larder
+- ingredient: low-salt stock cubes
+  category: larder
+- ingredient: brown rice
+  category: larder
+- ingredient: tomato puree
+  category: larder
+- ingredient: chickpeas
+  category: larder
+- ingredient: lentils
+  category: larder
+- ingredient: tinned chopped tomatoes
+  category: larder
+- ingredient: olive oil
+  category: larder
+- ingredient: frozen peas
+  category: freezer
+- ingredient: rolled oats
+  category: larder
+cookbookRefs:
+  adoptedMealRefs:
+  - recipe_id: THA-061
+    import_key: tha_original:THA-061
+    name: Pakistani-Style Feta, Parsnip & Green Bean Toast Plate
+    category: breakfast
+    cuisine: Pakistani-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-001
+    import_key: tha_original:THA-001
+    name: Apple, Oat & Cinnamon Morning Bowl
+    category: breakfast
+    cuisine: British family kitchen
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-014
+    import_key: tha_original:THA-014
+    name: Californian-Style Split Pea, Broccoli & Fennel Breakfast Hash
+    category: breakfast
+    cuisine: Californian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-019
+    import_key: tha_original:THA-019
+    name: Californian-Style Cannellini Bean, Radish & Aubergine Egg Skillet
+    category: breakfast
+    cuisine: Californian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-024
+    import_key: tha_original:THA-024
+    name: Californian-Style Lentil, Broccoli & Radish Breakfast Wrap
+    category: breakfast
+    cuisine: Californian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-107
+    import_key: tha_original:THA-107
+    name: Peruvian-Style Mackerel, Fennel & Cherry Tomato Lunch Bowl
+    category: lunch
+    cuisine: Peruvian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-086
+    import_key: tha_original:THA-086
+    name: Thai-Style Sardine, Kale & Pumpkin Frittata
+    category: lunch
+    cuisine: Thai-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-088
+    import_key: tha_original:THA-088
+    name: British Edamame, Onion & Aubergine Stuffed Pitta
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-093
+    import_key: tha_original:THA-093
+    name: British Feta, Red Cabbage & Radish Jacket Potato
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-098
+    import_key: tha_original:THA-098
+    name: British Sardine, Onion & Fennel Frittata
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-103
+    import_key: tha_original:THA-103
+    name: British Chickpea, Red Cabbage & Aubergine Lunch Bowl
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-108
+    import_key: tha_original:THA-108
+    name: British Feta, Onion & Radish Stuffed Pitta
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-273
+    import_key: tha_original:THA-273
+    name: Ethiopian-Style Chicken Thigh, Asparagus & Butternut Squash Stew 3
+    category: dinner
+    cuisine: Ethiopian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-004
+    import_key: tha_original:THA-004
+    name: Golden Potato, Chickpea & Spinach Curry
+    category: dinner
+    cuisine: Indian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 45
+  - recipe_id: THA-197
+    import_key: tha_original:THA-197
+    name: Indonesian-Style Haricot Bean, Tomato & Sweetcorn One-Pot
+    category: dinner
+    cuisine: Indonesian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-003
+    import_key: tha_original:THA-003
+    name: Basil Tomato Wholewheat Pasta
+    category: dinner
+    cuisine: Italian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-006
+    import_key: tha_original:THA-006
+    name: Roast Vegetable & Butter Bean Traybake
+    category: dinner
+    cuisine: Mediterranean-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 55
+  - recipe_id: THA-005
+    import_key: tha_original:THA-005
+    name: Gentle Taco Rice Bowls
+    category: dinner
+    cuisine: Mexican-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 40
+  - recipe_id: THA-009
+    import_key: tha_original:THA-009
+    name: Salmon, Broccoli & Brown Rice Traybake
+    category: dinner
+    cuisine: Nordic-Mediterranean inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 45
+  - recipe_id: THA-195
+    import_key: tha_original:THA-195
+    name: Spanish-Style Chicken Thigh, Broccoli & Asparagus Noodle Bowl
+    category: dinner
+    cuisine: Spanish-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-200
+    import_key: tha_original:THA-200
+    name: Spanish-Style Butter Bean, Radish & Courgette Noodle Bowl
+    category: dinner
+    cuisine: Spanish-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-205
+    import_key: tha_original:THA-205
+    name: Spanish-Style Green Pea, Broccoli & Spring Onion Noodle Bowl
+    category: dinner
+    cuisine: Spanish-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-210
+    import_key: tha_original:THA-210
+    name: Spanish-Style Chicken Thigh, Radish & Asparagus Noodle Bowl
+    category: dinner
+    cuisine: Spanish-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-215
+    import_key: tha_original:THA-215
+    name: Spanish-Style Cannellini Bean, Broccoli & Courgette Noodle Bowl
+    category: dinner
+    cuisine: Spanish-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-220
+    import_key: tha_original:THA-220
+    name: Spanish-Style Lentil, Radish & Spring Onion Noodle Bowl
+    category: dinner
+    cuisine: Spanish-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-458
+    import_key: tha_original:THA-458
+    name: West African-Style Cucumber, Pumpkin & Cod Herb Potatoes
+    category: side
+    cuisine: West African-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-457
+    import_key: tha_original:THA-457
+    name: Chinese-Style Red Cabbage, Green Bean & Split Pea Roasted Veg
+    category: side
+    cuisine: Chinese-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-491
+    import_key: tha_original:THA-491
+    name: Greek-Style Cauliflower, Aubergine & Split Pea Oat Bars
+    category: snack
+    cuisine: Greek-inspired
+    difficulty: easy
+    servings: 8
+    total_minutes: 30
+  - recipe_id: THA-482
+    import_key: tha_original:THA-482
+    name: Persian-Style Courgette, Pumpkin & Tofu Seeded Muffins
+    category: snack
+    cuisine: Persian-inspired
+    difficulty: easy
+    servings: 8
+    total_minutes: 30
+  - recipe_id: THA-484
+    import_key: tha_original:THA-484
+    name: West African-Style Sweetcorn, Aubergine & Edamame Dip Plate
+    category: snack
+    cuisine: West African-inspired
+    difficulty: easy
+    servings: 8
+    total_minutes: 30
+  regularMealRefs:
+  - recipe_id: THA-061
+    import_key: tha_original:THA-061
+    name: Pakistani-Style Feta, Parsnip & Green Bean Toast Plate
+    category: breakfast
+    cuisine: Pakistani-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-001
+    import_key: tha_original:THA-001
+    name: Apple, Oat & Cinnamon Morning Bowl
+    category: breakfast
+    cuisine: British family kitchen
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-014
+    import_key: tha_original:THA-014
+    name: Californian-Style Split Pea, Broccoli & Fennel Breakfast Hash
+    category: breakfast
+    cuisine: Californian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-019
+    import_key: tha_original:THA-019
+    name: Californian-Style Cannellini Bean, Radish & Aubergine Egg Skillet
+    category: breakfast
+    cuisine: Californian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-024
+    import_key: tha_original:THA-024
+    name: Californian-Style Lentil, Broccoli & Radish Breakfast Wrap
+    category: breakfast
+    cuisine: Californian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-107
+    import_key: tha_original:THA-107
+    name: Peruvian-Style Mackerel, Fennel & Cherry Tomato Lunch Bowl
+    category: lunch
+    cuisine: Peruvian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-086
+    import_key: tha_original:THA-086
+    name: Thai-Style Sardine, Kale & Pumpkin Frittata
+    category: lunch
+    cuisine: Thai-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-088
+    import_key: tha_original:THA-088
+    name: British Edamame, Onion & Aubergine Stuffed Pitta
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-093
+    import_key: tha_original:THA-093
+    name: British Feta, Red Cabbage & Radish Jacket Potato
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-098
+    import_key: tha_original:THA-098
+    name: British Sardine, Onion & Fennel Frittata
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  discoveryQueueMealRefs:
+  - recipe_id: THA-257
+    import_key: tha_original:THA-257
+    name: Indonesian-Style Black Bean, Tomato & Sweetcorn One-Pot
+    category: dinner
+    cuisine: Indonesian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-225
+    import_key: tha_original:THA-225
+    name: Spanish-Style Chicken Thigh, Broccoli & Asparagus Noodle Bowl 2
+    category: dinner
+    cuisine: Spanish-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-194
+    import_key: tha_original:THA-194
+    name: Australian cafe-Style Green Pea, Celery & Cucumber Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-199
+    import_key: tha_original:THA-199
+    name: Australian cafe-Style Split Pea, Cabbage & Beetroot Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-122
+    import_key: tha_original:THA-122
+    name: Peruvian-Style Sardine, Sweetcorn & Cherry Tomato Frittata
+    category: lunch
+    cuisine: Peruvian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-091
+    import_key: tha_original:THA-091
+    name: Thai-Style Kidney Bean, Cherry Tomato & Spinach Lunch Bowl
+    category: lunch
+    cuisine: Thai-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-483
+    import_key: tha_original:THA-483
+    name: Chinese-Style Cherry Tomato, Celery & Egg Snack Bites
+    category: snack
+    cuisine: Chinese-inspired
+    difficulty: easy
+    servings: 8
+    total_minutes: 30
+  notes: References only. Recipe bodies remain owned by the THA Original Founding Cookbook.
+planner:
+- week: 1
+  dayOfWeek: 0
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-273
+    import_key: tha_original:THA-273
+    name: Ethiopian-Style Chicken Thigh, Asparagus & Butternut Squash Stew 3
+    category: dinner
+    cuisine: Ethiopian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  eaters: &id002
+  - Janet
+  - Phil
+- week: 1
+  dayOfWeek: 0
+  mealType: breakfast
+  mealRef:
+    recipe_id: THA-001
+    import_key: tha_original:THA-001
+    name: Apple, Oat & Cinnamon Morning Bowl
+    category: breakfast
+    cuisine: British family kitchen
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  eaters: *id002
+- week: 1
+  dayOfWeek: 1
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-004
+    import_key: tha_original:THA-004
+    name: Golden Potato, Chickpea & Spinach Curry
+    category: dinner
+    cuisine: Indian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 45
+  eaters: *id002
+- week: 1
+  dayOfWeek: 1
+  mealType: lunch
+  mealRef:
+    recipe_id: THA-088
+    import_key: tha_original:THA-088
+    name: British Edamame, Onion & Aubergine Stuffed Pitta
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  eaters: *id002
+- week: 1
+  dayOfWeek: 2
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-197
+    import_key: tha_original:THA-197
+    name: Indonesian-Style Haricot Bean, Tomato & Sweetcorn One-Pot
+    category: dinner
+    cuisine: Indonesian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+- week: 1
+  dayOfWeek: 2
+  mealType: breakfast
+  mealRef:
+    recipe_id: THA-019
+    import_key: tha_original:THA-019
+    name: Californian-Style Cannellini Bean, Radish & Aubergine Egg Skillet
+    category: breakfast
+    cuisine: Californian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  eaters: *id002
+- week: 1
+  dayOfWeek: 2
+  mealType: snacks
+  mealRef:
+    recipe_id: THA-491
+    import_key: tha_original:THA-491
+    name: Greek-Style Cauliflower, Aubergine & Split Pea Oat Bars
+    category: snack
+    cuisine: Greek-inspired
+    difficulty: easy
+    servings: 8
+    total_minutes: 30
+  eaters: *id002
+- week: 1
+  dayOfWeek: 3
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-003
+    import_key: tha_original:THA-003
+    name: Basil Tomato Wholewheat Pasta
+    category: dinner
+    cuisine: Italian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  eaters: *id002
+- week: 1
+  dayOfWeek: 3
+  mealType: lunch
+  mealRef:
+    recipe_id: THA-098
+    import_key: tha_original:THA-098
+    name: British Sardine, Onion & Fennel Frittata
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  eaters: *id002
+- week: 1
+  dayOfWeek: 4
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-006
+    import_key: tha_original:THA-006
+    name: Roast Vegetable & Butter Bean Traybake
+    category: dinner
+    cuisine: Mediterranean-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 55
+  eaters: *id002
+- week: 1
+  dayOfWeek: 4
+  mealType: breakfast
+  mealRef:
+    recipe_id: THA-061
+    import_key: tha_original:THA-061
+    name: Pakistani-Style Feta, Parsnip & Green Bean Toast Plate
+    category: breakfast
+    cuisine: Pakistani-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  eaters: *id002
+- week: 1
+  dayOfWeek: 5
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-005
+    import_key: tha_original:THA-005
+    name: Gentle Taco Rice Bowls
+    category: dinner
+    cuisine: Mexican-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 40
+  eaters: *id002
+- week: 1
+  dayOfWeek: 5
+  mealType: lunch
+  mealRef:
+    recipe_id: THA-108
+    import_key: tha_original:THA-108
+    name: British Feta, Onion & Radish Stuffed Pitta
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  eaters: *id002
+- week: 1
+  dayOfWeek: 6
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-009
+    import_key: tha_original:THA-009
+    name: Salmon, Broccoli & Brown Rice Traybake
+    category: dinner
+    cuisine: Nordic-Mediterranean inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 45
+  eaters: *id002
+- week: 2
+  dayOfWeek: 0
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-195
+    import_key: tha_original:THA-195
+    name: Spanish-Style Chicken Thigh, Broccoli & Asparagus Noodle Bowl
+    category: dinner
+    cuisine: Spanish-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+- week: 2
+  dayOfWeek: 0
+  mealType: breakfast
+  mealRef:
+    recipe_id: THA-014
+    import_key: tha_original:THA-014
+    name: Californian-Style Split Pea, Broccoli & Fennel Breakfast Hash
+    category: breakfast
+    cuisine: Californian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  eaters: *id002
+- week: 2
+  dayOfWeek: 1
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-200
+    import_key: tha_original:THA-200
+    name: Spanish-Style Butter Bean, Radish & Courgette Noodle Bowl
+    category: dinner
+    cuisine: Spanish-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+- week: 2
+  dayOfWeek: 1
+  mealType: lunch
+  mealRef:
+    recipe_id: THA-093
+    import_key: tha_original:THA-093
+    name: British Feta, Red Cabbage & Radish Jacket Potato
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  eaters: *id002
+- week: 2
+  dayOfWeek: 2
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-205
+    import_key: tha_original:THA-205
+    name: Spanish-Style Green Pea, Broccoli & Spring Onion Noodle Bowl
+    category: dinner
+    cuisine: Spanish-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+- week: 2
+  dayOfWeek: 2
+  mealType: breakfast
+  mealRef:
+    recipe_id: THA-024
+    import_key: tha_original:THA-024
+    name: Californian-Style Lentil, Broccoli & Radish Breakfast Wrap
+    category: breakfast
+    cuisine: Californian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  eaters: *id002
+- week: 2
+  dayOfWeek: 2
+  mealType: snacks
+  mealRef:
+    recipe_id: THA-482
+    import_key: tha_original:THA-482
+    name: Persian-Style Courgette, Pumpkin & Tofu Seeded Muffins
+    category: snack
+    cuisine: Persian-inspired
+    difficulty: easy
+    servings: 8
+    total_minutes: 30
+  eaters: *id002
+- week: 2
+  dayOfWeek: 3
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-210
+    import_key: tha_original:THA-210
+    name: Spanish-Style Chicken Thigh, Radish & Asparagus Noodle Bowl
+    category: dinner
+    cuisine: Spanish-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+- week: 2
+  dayOfWeek: 3
+  mealType: lunch
+  mealRef:
+    recipe_id: THA-103
+    import_key: tha_original:THA-103
+    name: British Chickpea, Red Cabbage & Aubergine Lunch Bowl
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  eaters: *id002
+- week: 2
+  dayOfWeek: 4
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-215
+    import_key: tha_original:THA-215
+    name: Spanish-Style Cannellini Bean, Broccoli & Courgette Noodle Bowl
+    category: dinner
+    cuisine: Spanish-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+- week: 2
+  dayOfWeek: 4
+  mealType: breakfast
+  mealRef:
+    recipe_id: THA-001
+    import_key: tha_original:THA-001
+    name: Apple, Oat & Cinnamon Morning Bowl
+    category: breakfast
+    cuisine: British family kitchen
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  eaters: *id002
+- week: 2
+  dayOfWeek: 5
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-220
+    import_key: tha_original:THA-220
+    name: Spanish-Style Lentil, Radish & Spring Onion Noodle Bowl
+    category: dinner
+    cuisine: Spanish-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+- week: 2
+  dayOfWeek: 5
+  mealType: lunch
+  mealRef:
+    recipe_id: THA-107
+    import_key: tha_original:THA-107
+    name: Peruvian-Style Mackerel, Fennel & Cherry Tomato Lunch Bowl
+    category: lunch
+    cuisine: Peruvian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  eaters: *id002
+- week: 2
+  dayOfWeek: 6
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-273
+    import_key: tha_original:THA-273
+    name: Ethiopian-Style Chicken Thigh, Asparagus & Butternut Squash Stew 3
+    category: dinner
+    cuisine: Ethiopian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+weekEaterOverrides: []
+freezer: []
+shoppingExtras:
+- name: kitchen roll
+  category: household
+  alwaysAdd: false
+- name: washing-up liquid
+  category: household
+  alwaysAdd: false
+- name: apples
+  category: grocery
+  alwaysAdd: false
+- name: bananas
+  category: grocery
+  alwaysAdd: false
+- name: natural yoghurt
+  category: grocery
+  alwaysAdd: false
+generateShoppingList: true
+diaryEntries:
+- dayOffset: -1
+  mealSlot: breakfast
+  mealRef:
+    recipe_id: THA-061
+    import_key: tha_original:THA-061
+    name: Pakistani-Style Feta, Parsnip & Green Bean Toast Plate
+    category: breakfast
+    cuisine: Pakistani-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  fromPlannerMealRef:
+    recipe_id: THA-061
+    import_key: tha_original:THA-061
+    name: Pakistani-Style Feta, Parsnip & Green Bean Toast Plate
+    category: breakfast
+    cuisine: Pakistani-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+- dayOffset: -2
+  mealSlot: breakfast
+  mealRef:
+    recipe_id: THA-001
+    import_key: tha_original:THA-001
+    name: Apple, Oat & Cinnamon Morning Bowl
+    category: breakfast
+    cuisine: British family kitchen
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  fromPlannerMealRef:
+    recipe_id: THA-001
+    import_key: tha_original:THA-001
+    name: Apple, Oat & Cinnamon Morning Bowl
+    category: breakfast
+    cuisine: British family kitchen
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+- dayOffset: -3
+  mealSlot: breakfast
+  mealRef:
+    recipe_id: THA-014
+    import_key: tha_original:THA-014
+    name: Californian-Style Split Pea, Broccoli & Fennel Breakfast Hash
+    category: breakfast
+    cuisine: Californian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  fromPlannerMealRef:
+    recipe_id: THA-014
+    import_key: tha_original:THA-014
+    name: Californian-Style Split Pea, Broccoli & Fennel Breakfast Hash
+    category: breakfast
+    cuisine: Californian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+- dayOffset: -4
+  mealSlot: breakfast
+  mealRef:
+    recipe_id: THA-019
+    import_key: tha_original:THA-019
+    name: Californian-Style Cannellini Bean, Radish & Aubergine Egg Skillet
+    category: breakfast
+    cuisine: Californian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  fromPlannerMealRef:
+    recipe_id: THA-019
+    import_key: tha_original:THA-019
+    name: Californian-Style Cannellini Bean, Radish & Aubergine Egg Skillet
+    category: breakfast
+    cuisine: Californian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+- dayOffset: -5
+  mealSlot: breakfast
+  mealRef:
+    recipe_id: THA-024
+    import_key: tha_original:THA-024
+    name: Californian-Style Lentil, Broccoli & Radish Breakfast Wrap
+    category: breakfast
+    cuisine: Californian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  fromPlannerMealRef:
+    recipe_id: THA-024
+    import_key: tha_original:THA-024
+    name: Californian-Style Lentil, Broccoli & Radish Breakfast Wrap
+    category: breakfast
+    cuisine: Californian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+- dayOffset: -6
+  mealSlot: lunch
+  mealRef:
+    recipe_id: THA-107
+    import_key: tha_original:THA-107
+    name: Peruvian-Style Mackerel, Fennel & Cherry Tomato Lunch Bowl
+    category: lunch
+    cuisine: Peruvian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  fromPlannerMealRef:
+    recipe_id: THA-107
+    import_key: tha_original:THA-107
+    name: Peruvian-Style Mackerel, Fennel & Cherry Tomato Lunch Bowl
+    category: lunch
+    cuisine: Peruvian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+- dayOffset: -7
+  mealSlot: lunch
+  mealRef:
+    recipe_id: THA-086
+    import_key: tha_original:THA-086
+    name: Thai-Style Sardine, Kale & Pumpkin Frittata
+    category: lunch
+    cuisine: Thai-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  fromPlannerMealRef:
+    recipe_id: THA-086
+    import_key: tha_original:THA-086
+    name: Thai-Style Sardine, Kale & Pumpkin Frittata
+    category: lunch
+    cuisine: Thai-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+- dayOffset: -8
+  mealSlot: lunch
+  mealRef:
+    recipe_id: THA-088
+    import_key: tha_original:THA-088
+    name: British Edamame, Onion & Aubergine Stuffed Pitta
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  fromPlannerMealRef:
+    recipe_id: THA-088
+    import_key: tha_original:THA-088
+    name: British Edamame, Onion & Aubergine Stuffed Pitta
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+diaryMetrics:
+- dayOffset: -1
+  moodApples: 4
+  energyApples: 4
+  sleepHours: 6.2
+  stuckToPlan: false
+- dayOffset: -2
+  moodApples: 4
+  energyApples: 3
+  sleepHours: 6.5
+  stuckToPlan: true
+- dayOffset: -3
+  moodApples: 3
+  energyApples: 4
+  sleepHours: 6.9
+  stuckToPlan: true
+- dayOffset: -4
+  moodApples: 4
+  energyApples: 4
+  sleepHours: 7.2
+  stuckToPlan: false
+- dayOffset: -5
+  moodApples: 4
+  energyApples: 3
+  sleepHours: 7.6
+  stuckToPlan: true
+evidence:
+- subjectType: meal
+  subjectKey: recipe:THA-061
+  mealRef:
+    recipe_id: THA-061
+    import_key: tha_original:THA-061
+    name: Pakistani-Style Feta, Parsnip & Green Bean Toast Plate
+    category: breakfast
+    cuisine: Pakistani-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  outcomeType: completed
+  direction: positive
+  dayOffset: -2
+  sourceCapabilityId: planner
+- subjectType: meal
+  subjectKey: recipe:THA-001
+  mealRef:
+    recipe_id: THA-001
+    import_key: tha_original:THA-001
+    name: Apple, Oat & Cinnamon Morning Bowl
+    category: breakfast
+    cuisine: British family kitchen
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  outcomeType: completed
+  direction: positive
+  dayOffset: -5
+  sourceCapabilityId: planner
+- subjectType: meal
+  subjectKey: recipe:THA-014
+  mealRef:
+    recipe_id: THA-014
+    import_key: tha_original:THA-014
+    name: Californian-Style Split Pea, Broccoli & Fennel Breakfast Hash
+    category: breakfast
+    cuisine: Californian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  outcomeType: completed
+  direction: positive
+  dayOffset: -8
+  sourceCapabilityId: planner
+- subjectType: meal
+  subjectKey: recipe:THA-019
+  mealRef:
+    recipe_id: THA-019
+    import_key: tha_original:THA-019
+    name: Californian-Style Cannellini Bean, Radish & Aubergine Egg Skillet
+    category: breakfast
+    cuisine: Californian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  outcomeType: completed
+  direction: positive
+  dayOffset: -11
+  sourceCapabilityId: planner
+- subjectType: meal
+  subjectKey: recipe:THA-024
+  mealRef:
+    recipe_id: THA-024
+    import_key: tha_original:THA-024
+    name: Californian-Style Lentil, Broccoli & Radish Breakfast Wrap
+    category: breakfast
+    cuisine: Californian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  outcomeType: completed
+  direction: positive
+  dayOffset: -14
+  sourceCapabilityId: planner
+- subjectType: swap
+  subjectKey: ingredient:wholegrain
+  subjectId: swap:dw010:white-to-wholegrain
+  outcomeType: accepted
+  direction: positive
+  dayOffset: -12
+  sourceCapabilityId: meals
+- subjectType: meal
+  subjectKey: recipe:THA-257
+  mealRef:
+    recipe_id: THA-257
+    import_key: tha_original:THA-257
+    name: Indonesian-Style Black Bean, Tomato & Sweetcorn One-Pot
+    category: dinner
+    cuisine: Indonesian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  outcomeType: rejected
+  direction: negative
+  dayOffset: -18
+  sourceCapabilityId: planner
+knownGaps:
+- Recipe bodies are not authored here; the Cookbook remains the owner of names, ingredients, method and nutrition derivation.
+- No nutrition, allergen rows, learning signals, observations, conversations or opportunity deliveries are seeded by this
+  world.
+- Ready-meal/product references are not authored in this foundation pack because no product meal export was supplied with
+  stable product IDs.
+qualityPurpose:
+  tests:
+  - mediterranean empty nesters
+  - meal-reference import
+  - planner realism
+  - honest gaps
+  reasoningQuestions:
+  - What should Janet cook tonight?
+  - What meals has this household repeated?
+  - What dietary gaps should THA admit?

@@ -1,0 +1,1207 @@
+id: DW001
+slug: foster-busy-family
+archetype: Busy dual-career family
+householdName: Foster Family (Dev)
+summary: Two working parents with two primary-school children; mild food preferences, little weeknight time.
+fictional: true
+coldStart: false
+accounts:
+- key: owner
+  username: foster.busy.family.owner@dev.thehealthyapples.dev
+  displayName: Amelia Foster (Dev)
+  firstName: Amelia
+  dietPattern: Flexitarian
+  dietRestrictions: &id001 []
+  eatingSchedule: None
+  subscriptionTier: premium
+- key: partner
+  username: foster.busy.family.partner@dev.thehealthyapples.dev
+  displayName: Tom Foster (Dev)
+  firstName: Tom
+  dietPattern: Flexitarian
+  dietRestrictions: *id001
+  eatingSchedule: None
+  subscriptionTier: premium
+eaters:
+- displayName: Amelia
+  accountKey: owner
+  ageYears: 42
+  defaultDietTypes: []
+  hardRestrictions: []
+- displayName: Tom
+  accountKey: partner
+  ageYears: 44
+  defaultDietTypes: []
+  hardRestrictions: []
+- displayName: Mia
+  ageYears: 10
+  defaultDietTypes: []
+  hardRestrictions: []
+- displayName: Oscar
+  ageYears: 7
+  defaultDietTypes: []
+  hardRestrictions: []
+preferences:
+  dietTypes:
+  - Flexitarian
+  excludedIngredients: []
+  healthGoals:
+  - reduce_upf
+  - increase_plants
+  goalType: maintain
+  budgetLevel: standard
+  activityLevel: moderate
+  preferredStores:
+  - Tesco
+  - Sainsbury's
+  calorieTarget: null
+  heightCm: null
+  weightKg: null
+  adultsCount: 2
+  childrenCount: 2
+  maxTotalCookTime: 45
+  plannerEnableChildMeals: true
+  companionPersonality: companion
+persona:
+  lifestyle: Two working parents with two primary-school children; mild food preferences, little weeknight time.
+  shoppingHabits: 'Primary shops: Tesco, Sainsbury''s. One big weekly shop plus freezer top-ups.'
+  cookingConfidence: moderate
+  weeknightCookingTime: 30-45 minutes
+  budget: standard
+  kitchenEquipment:
+  - hob
+  - oven
+  - microwave
+  - slow cooker
+  - freezer
+  lifeEvents:
+  - school term routine
+  mealStory: Favourite meals and dislikes are persona context unless a future favourite-meals schema is introduced.
+  favouriteMealRefsNarrativeOnly:
+  - recipe_id: THA-044
+    import_key: tha_original:THA-044
+    name: Californian-Style Chickpea, Broccoli & Fennel Breakfast Wrap
+    category: breakfast
+    cuisine: Californian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-015
+    import_key: tha_original:THA-015
+    name: French country-Style Cod, Red Pepper & Pumpkin Egg Skillet
+    category: breakfast
+    cuisine: French country-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-012
+    import_key: tha_original:THA-012
+    name: Malaysian-Style Cottage Cheese, Asparagus & Peas Breakfast Wrap
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  dislikedIngredientsNarrativeOnly:
+  - overly spicy food
+pantry:
+- ingredient: garlic
+  category: larder
+- ingredient: carrots
+  category: fridge
+- ingredient: olive oil
+  category: larder
+- ingredient: black beans
+  category: larder
+- ingredient: wholewheat pasta
+  category: larder
+- ingredient: brown rice
+  category: larder
+- ingredient: tinned chopped tomatoes
+  category: larder
+- ingredient: mixed seeds
+  category: larder
+- ingredient: rolled oats
+  category: larder
+- ingredient: potatoes
+  category: larder
+- ingredient: low-salt stock cubes
+  category: larder
+- ingredient: onions
+  category: larder
+- ingredient: chickpeas
+  category: larder
+- ingredient: lentils
+  category: larder
+- ingredient: frozen peas
+  category: freezer
+cookbookRefs:
+  adoptedMealRefs:
+  - recipe_id: THA-044
+    import_key: tha_original:THA-044
+    name: Californian-Style Chickpea, Broccoli & Fennel Breakfast Wrap
+    category: breakfast
+    cuisine: Californian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-015
+    import_key: tha_original:THA-015
+    name: French country-Style Cod, Red Pepper & Pumpkin Egg Skillet
+    category: breakfast
+    cuisine: French country-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-012
+    import_key: tha_original:THA-012
+    name: Malaysian-Style Cottage Cheese, Asparagus & Peas Breakfast Wrap
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-017
+    import_key: tha_original:THA-017
+    name: Malaysian-Style Cottage Cheese, Peas & Pumpkin Toast Plate
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-022
+    import_key: tha_original:THA-022
+    name: Malaysian-Style Cottage Cheese, Asparagus & Spinach Breakfast Hash
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-123
+    import_key: tha_original:THA-123
+    name: British Feta, Red Cabbage & Radish Lunch Bowl
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-002
+    import_key: tha_original:THA-002
+    name: Chickpea, Lemon & Spinach Soup
+    category: lunch
+    cuisine: Mediterranean-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 40
+  - recipe_id: THA-085
+    import_key: tha_original:THA-085
+    name: Moroccan-Style Butter Bean, Pumpkin & Green Bean Jacket Potato
+    category: lunch
+    cuisine: Moroccan-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-090
+    import_key: tha_original:THA-090
+    name: Moroccan-Style Egg, Courgette & Parsnip Frittata
+    category: lunch
+    cuisine: Moroccan-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-095
+    import_key: tha_original:THA-095
+    name: Moroccan-Style Mackerel, Pumpkin & Cauliflower Lunch Bowl
+    category: lunch
+    cuisine: Moroccan-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-100
+    import_key: tha_original:THA-100
+    name: Moroccan-Style Cannellini Bean, Courgette & Green Bean Stuffed Pitta
+    category: lunch
+    cuisine: Moroccan-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-105
+    import_key: tha_original:THA-105
+    name: Moroccan-Style Egg, Pumpkin & Parsnip Jacket Potato
+    category: lunch
+    cuisine: Moroccan-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-229
+    import_key: tha_original:THA-229
+    name: Australian cafe-Style Chickpea, Cabbage & Beetroot Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-008
+    import_key: tha_original:THA-008
+    name: Lentil & Root Vegetable Cottage Pie
+    category: dinner
+    cuisine: British family kitchen
+    difficulty: medium
+    servings: 6
+    total_minutes: 70
+  - recipe_id: THA-007
+    import_key: tha_original:THA-007
+    name: Chicken, Leek & Wholewheat Orzo One-Pot
+    category: dinner
+    cuisine: British-Mediterranean family kitchen
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-198
+    import_key: tha_original:THA-198
+    name: Ethiopian-Style Chicken Thigh, Peas & Butternut Squash Stew
+    category: dinner
+    cuisine: Ethiopian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-004
+    import_key: tha_original:THA-004
+    name: Golden Potato, Chickpea & Spinach Curry
+    category: dinner
+    cuisine: Indian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 45
+  - recipe_id: THA-197
+    import_key: tha_original:THA-197
+    name: Indonesian-Style Haricot Bean, Tomato & Sweetcorn One-Pot
+    category: dinner
+    cuisine: Indonesian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-202
+    import_key: tha_original:THA-202
+    name: Indonesian-Style Black Bean, Parsnip & Swede One-Pot
+    category: dinner
+    cuisine: Indonesian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-207
+    import_key: tha_original:THA-207
+    name: Indonesian-Style Chicken Thigh, Tomato & Broccoli One-Pot
+    category: dinner
+    cuisine: Indonesian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-212
+    import_key: tha_original:THA-212
+    name: Indonesian-Style Tofu, Parsnip & Sweetcorn One-Pot
+    category: dinner
+    cuisine: Indonesian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-217
+    import_key: tha_original:THA-217
+    name: Indonesian-Style Kidney Bean, Tomato & Swede One-Pot
+    category: dinner
+    cuisine: Indonesian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-222
+    import_key: tha_original:THA-222
+    name: Indonesian-Style Chicken Thigh, Parsnip & Broccoli One-Pot
+    category: dinner
+    cuisine: Indonesian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-227
+    import_key: tha_original:THA-227
+    name: Indonesian-Style Green Pea, Tomato & Sweetcorn One-Pot
+    category: dinner
+    cuisine: Indonesian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-232
+    import_key: tha_original:THA-232
+    name: Indonesian-Style Split Pea, Parsnip & Swede One-Pot
+    category: dinner
+    cuisine: Indonesian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-469
+    import_key: tha_original:THA-469
+    name: Georgian-Style Pumpkin, Mushroom & Butter Bean Slaw
+    category: side
+    cuisine: Georgian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-460
+    import_key: tha_original:THA-460
+    name: Greek-Style Kale, Aubergine & Black Bean Bean Salad
+    category: side
+    cuisine: Greek-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-500
+    import_key: tha_original:THA-500
+    name: Georgian-Style Onion, Red Cabbage & Haricot Bean Fruit Pot
+    category: snack
+    cuisine: Georgian-inspired
+    difficulty: easy
+    servings: 8
+    total_minutes: 30
+  - recipe_id: THA-481
+    import_key: tha_original:THA-481
+    name: Greek-Style Cauliflower, Green Bean & Butter Bean Oat Bars
+    category: snack
+    cuisine: Greek-inspired
+    difficulty: easy
+    servings: 8
+    total_minutes: 30
+  - recipe_id: THA-482
+    import_key: tha_original:THA-482
+    name: Persian-Style Courgette, Pumpkin & Tofu Seeded Muffins
+    category: snack
+    cuisine: Persian-inspired
+    difficulty: easy
+    servings: 8
+    total_minutes: 30
+  regularMealRefs:
+  - recipe_id: THA-044
+    import_key: tha_original:THA-044
+    name: Californian-Style Chickpea, Broccoli & Fennel Breakfast Wrap
+    category: breakfast
+    cuisine: Californian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-015
+    import_key: tha_original:THA-015
+    name: French country-Style Cod, Red Pepper & Pumpkin Egg Skillet
+    category: breakfast
+    cuisine: French country-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-012
+    import_key: tha_original:THA-012
+    name: Malaysian-Style Cottage Cheese, Asparagus & Peas Breakfast Wrap
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-017
+    import_key: tha_original:THA-017
+    name: Malaysian-Style Cottage Cheese, Peas & Pumpkin Toast Plate
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-022
+    import_key: tha_original:THA-022
+    name: Malaysian-Style Cottage Cheese, Asparagus & Spinach Breakfast Hash
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-123
+    import_key: tha_original:THA-123
+    name: British Feta, Red Cabbage & Radish Lunch Bowl
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-002
+    import_key: tha_original:THA-002
+    name: Chickpea, Lemon & Spinach Soup
+    category: lunch
+    cuisine: Mediterranean-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 40
+  - recipe_id: THA-085
+    import_key: tha_original:THA-085
+    name: Moroccan-Style Butter Bean, Pumpkin & Green Bean Jacket Potato
+    category: lunch
+    cuisine: Moroccan-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-090
+    import_key: tha_original:THA-090
+    name: Moroccan-Style Egg, Courgette & Parsnip Frittata
+    category: lunch
+    cuisine: Moroccan-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-095
+    import_key: tha_original:THA-095
+    name: Moroccan-Style Mackerel, Pumpkin & Cauliflower Lunch Bowl
+    category: lunch
+    cuisine: Moroccan-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  discoveryQueueMealRefs:
+  - recipe_id: THA-216
+    import_key: tha_original:THA-216
+    name: Indian-Style Chicken Thigh, Red Pepper & Cabbage Skillet
+    category: dinner
+    cuisine: Indian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-237
+    import_key: tha_original:THA-237
+    name: Indonesian-Style Chicken Thigh, Tomato & Broccoli One-Pot 2
+    category: dinner
+    cuisine: Indonesian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-003
+    import_key: tha_original:THA-003
+    name: Basil Tomato Wholewheat Pasta
+    category: dinner
+    cuisine: Italian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-006
+    import_key: tha_original:THA-006
+    name: Roast Vegetable & Butter Bean Traybake
+    category: dinner
+    cuisine: Mediterranean-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 55
+  - recipe_id: THA-108
+    import_key: tha_original:THA-108
+    name: British Feta, Onion & Radish Stuffed Pitta
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-089
+    import_key: tha_original:THA-089
+    name: Mediterranean-Style Tuna, Cauliflower & Red Cabbage Jacket Potato
+    category: lunch
+    cuisine: Mediterranean-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-490
+    import_key: tha_original:THA-490
+    name: Georgian-Style Onion, Pak Choi & Lentil Fruit Pot
+    category: snack
+    cuisine: Georgian-inspired
+    difficulty: easy
+    servings: 8
+    total_minutes: 30
+  notes: References only. Recipe bodies remain owned by the THA Original Founding Cookbook.
+planner:
+- week: 1
+  dayOfWeek: 0
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-229
+    import_key: tha_original:THA-229
+    name: Australian cafe-Style Chickpea, Cabbage & Beetroot Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  eaters: &id002
+  - Amelia
+  - Tom
+  - Mia
+  - Oscar
+- week: 1
+  dayOfWeek: 0
+  mealType: breakfast
+  mealRef:
+    recipe_id: THA-015
+    import_key: tha_original:THA-015
+    name: French country-Style Cod, Red Pepper & Pumpkin Egg Skillet
+    category: breakfast
+    cuisine: French country-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  eaters: *id002
+- week: 1
+  dayOfWeek: 1
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-008
+    import_key: tha_original:THA-008
+    name: Lentil & Root Vegetable Cottage Pie
+    category: dinner
+    cuisine: British family kitchen
+    difficulty: medium
+    servings: 6
+    total_minutes: 70
+  eaters: *id002
+- week: 1
+  dayOfWeek: 1
+  mealType: lunch
+  mealRef:
+    recipe_id: THA-085
+    import_key: tha_original:THA-085
+    name: Moroccan-Style Butter Bean, Pumpkin & Green Bean Jacket Potato
+    category: lunch
+    cuisine: Moroccan-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  eaters: *id002
+- week: 1
+  dayOfWeek: 2
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-007
+    import_key: tha_original:THA-007
+    name: Chicken, Leek & Wholewheat Orzo One-Pot
+    category: dinner
+    cuisine: British-Mediterranean family kitchen
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+- week: 1
+  dayOfWeek: 2
+  mealType: breakfast
+  mealRef:
+    recipe_id: THA-017
+    import_key: tha_original:THA-017
+    name: Malaysian-Style Cottage Cheese, Peas & Pumpkin Toast Plate
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  eaters: *id002
+- week: 1
+  dayOfWeek: 2
+  mealType: snacks
+  mealRef:
+    recipe_id: THA-500
+    import_key: tha_original:THA-500
+    name: Georgian-Style Onion, Red Cabbage & Haricot Bean Fruit Pot
+    category: snack
+    cuisine: Georgian-inspired
+    difficulty: easy
+    servings: 8
+    total_minutes: 30
+  eaters: *id002
+- week: 1
+  dayOfWeek: 3
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-198
+    import_key: tha_original:THA-198
+    name: Ethiopian-Style Chicken Thigh, Peas & Butternut Squash Stew
+    category: dinner
+    cuisine: Ethiopian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+- week: 1
+  dayOfWeek: 3
+  mealType: lunch
+  mealRef:
+    recipe_id: THA-095
+    import_key: tha_original:THA-095
+    name: Moroccan-Style Mackerel, Pumpkin & Cauliflower Lunch Bowl
+    category: lunch
+    cuisine: Moroccan-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  eaters: *id002
+- week: 1
+  dayOfWeek: 4
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-004
+    import_key: tha_original:THA-004
+    name: Golden Potato, Chickpea & Spinach Curry
+    category: dinner
+    cuisine: Indian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 45
+  eaters: *id002
+- week: 1
+  dayOfWeek: 4
+  mealType: breakfast
+  mealRef:
+    recipe_id: THA-044
+    import_key: tha_original:THA-044
+    name: Californian-Style Chickpea, Broccoli & Fennel Breakfast Wrap
+    category: breakfast
+    cuisine: Californian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  eaters: *id002
+- week: 1
+  dayOfWeek: 5
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-197
+    import_key: tha_original:THA-197
+    name: Indonesian-Style Haricot Bean, Tomato & Sweetcorn One-Pot
+    category: dinner
+    cuisine: Indonesian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+- week: 1
+  dayOfWeek: 5
+  mealType: lunch
+  mealRef:
+    recipe_id: THA-105
+    import_key: tha_original:THA-105
+    name: Moroccan-Style Egg, Pumpkin & Parsnip Jacket Potato
+    category: lunch
+    cuisine: Moroccan-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  eaters: *id002
+- week: 1
+  dayOfWeek: 6
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-202
+    import_key: tha_original:THA-202
+    name: Indonesian-Style Black Bean, Parsnip & Swede One-Pot
+    category: dinner
+    cuisine: Indonesian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+- week: 2
+  dayOfWeek: 0
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-207
+    import_key: tha_original:THA-207
+    name: Indonesian-Style Chicken Thigh, Tomato & Broccoli One-Pot
+    category: dinner
+    cuisine: Indonesian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+- week: 2
+  dayOfWeek: 0
+  mealType: breakfast
+  mealRef:
+    recipe_id: THA-012
+    import_key: tha_original:THA-012
+    name: Malaysian-Style Cottage Cheese, Asparagus & Peas Breakfast Wrap
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  eaters: *id002
+- week: 2
+  dayOfWeek: 1
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-212
+    import_key: tha_original:THA-212
+    name: Indonesian-Style Tofu, Parsnip & Sweetcorn One-Pot
+    category: dinner
+    cuisine: Indonesian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+- week: 2
+  dayOfWeek: 1
+  mealType: lunch
+  mealRef:
+    recipe_id: THA-090
+    import_key: tha_original:THA-090
+    name: Moroccan-Style Egg, Courgette & Parsnip Frittata
+    category: lunch
+    cuisine: Moroccan-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  eaters: *id002
+- week: 2
+  dayOfWeek: 2
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-217
+    import_key: tha_original:THA-217
+    name: Indonesian-Style Kidney Bean, Tomato & Swede One-Pot
+    category: dinner
+    cuisine: Indonesian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+- week: 2
+  dayOfWeek: 2
+  mealType: breakfast
+  mealRef:
+    recipe_id: THA-022
+    import_key: tha_original:THA-022
+    name: Malaysian-Style Cottage Cheese, Asparagus & Spinach Breakfast Hash
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  eaters: *id002
+- week: 2
+  dayOfWeek: 2
+  mealType: snacks
+  mealRef:
+    recipe_id: THA-481
+    import_key: tha_original:THA-481
+    name: Greek-Style Cauliflower, Green Bean & Butter Bean Oat Bars
+    category: snack
+    cuisine: Greek-inspired
+    difficulty: easy
+    servings: 8
+    total_minutes: 30
+  eaters: *id002
+- week: 2
+  dayOfWeek: 3
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-222
+    import_key: tha_original:THA-222
+    name: Indonesian-Style Chicken Thigh, Parsnip & Broccoli One-Pot
+    category: dinner
+    cuisine: Indonesian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+- week: 2
+  dayOfWeek: 3
+  mealType: lunch
+  mealRef:
+    recipe_id: THA-100
+    import_key: tha_original:THA-100
+    name: Moroccan-Style Cannellini Bean, Courgette & Green Bean Stuffed Pitta
+    category: lunch
+    cuisine: Moroccan-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  eaters: *id002
+- week: 2
+  dayOfWeek: 4
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-227
+    import_key: tha_original:THA-227
+    name: Indonesian-Style Green Pea, Tomato & Sweetcorn One-Pot
+    category: dinner
+    cuisine: Indonesian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+- week: 2
+  dayOfWeek: 4
+  mealType: breakfast
+  mealRef:
+    recipe_id: THA-015
+    import_key: tha_original:THA-015
+    name: French country-Style Cod, Red Pepper & Pumpkin Egg Skillet
+    category: breakfast
+    cuisine: French country-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  eaters: *id002
+- week: 2
+  dayOfWeek: 5
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-232
+    import_key: tha_original:THA-232
+    name: Indonesian-Style Split Pea, Parsnip & Swede One-Pot
+    category: dinner
+    cuisine: Indonesian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+- week: 2
+  dayOfWeek: 5
+  mealType: lunch
+  mealRef:
+    recipe_id: THA-123
+    import_key: tha_original:THA-123
+    name: British Feta, Red Cabbage & Radish Lunch Bowl
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  eaters: *id002
+- week: 2
+  dayOfWeek: 6
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-229
+    import_key: tha_original:THA-229
+    name: Australian cafe-Style Chickpea, Cabbage & Beetroot Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+weekEaterOverrides: []
+freezer: []
+shoppingExtras:
+- name: washing-up liquid
+  category: household
+  alwaysAdd: false
+- name: apples
+  category: grocery
+  alwaysAdd: false
+- name: bananas
+  category: grocery
+  alwaysAdd: false
+- name: natural yoghurt
+  category: grocery
+  alwaysAdd: false
+- name: wholegrain bread
+  category: grocery
+  alwaysAdd: false
+generateShoppingList: true
+diaryEntries:
+- dayOffset: -1
+  mealSlot: breakfast
+  mealRef:
+    recipe_id: THA-044
+    import_key: tha_original:THA-044
+    name: Californian-Style Chickpea, Broccoli & Fennel Breakfast Wrap
+    category: breakfast
+    cuisine: Californian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  fromPlannerMealRef:
+    recipe_id: THA-044
+    import_key: tha_original:THA-044
+    name: Californian-Style Chickpea, Broccoli & Fennel Breakfast Wrap
+    category: breakfast
+    cuisine: Californian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+- dayOffset: -2
+  mealSlot: breakfast
+  mealRef:
+    recipe_id: THA-015
+    import_key: tha_original:THA-015
+    name: French country-Style Cod, Red Pepper & Pumpkin Egg Skillet
+    category: breakfast
+    cuisine: French country-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  fromPlannerMealRef:
+    recipe_id: THA-015
+    import_key: tha_original:THA-015
+    name: French country-Style Cod, Red Pepper & Pumpkin Egg Skillet
+    category: breakfast
+    cuisine: French country-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+- dayOffset: -3
+  mealSlot: breakfast
+  mealRef:
+    recipe_id: THA-012
+    import_key: tha_original:THA-012
+    name: Malaysian-Style Cottage Cheese, Asparagus & Peas Breakfast Wrap
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  fromPlannerMealRef:
+    recipe_id: THA-012
+    import_key: tha_original:THA-012
+    name: Malaysian-Style Cottage Cheese, Asparagus & Peas Breakfast Wrap
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+- dayOffset: -4
+  mealSlot: breakfast
+  mealRef:
+    recipe_id: THA-017
+    import_key: tha_original:THA-017
+    name: Malaysian-Style Cottage Cheese, Peas & Pumpkin Toast Plate
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  fromPlannerMealRef:
+    recipe_id: THA-017
+    import_key: tha_original:THA-017
+    name: Malaysian-Style Cottage Cheese, Peas & Pumpkin Toast Plate
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+- dayOffset: -5
+  mealSlot: breakfast
+  mealRef:
+    recipe_id: THA-022
+    import_key: tha_original:THA-022
+    name: Malaysian-Style Cottage Cheese, Asparagus & Spinach Breakfast Hash
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  fromPlannerMealRef:
+    recipe_id: THA-022
+    import_key: tha_original:THA-022
+    name: Malaysian-Style Cottage Cheese, Asparagus & Spinach Breakfast Hash
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+- dayOffset: -6
+  mealSlot: lunch
+  mealRef:
+    recipe_id: THA-123
+    import_key: tha_original:THA-123
+    name: British Feta, Red Cabbage & Radish Lunch Bowl
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  fromPlannerMealRef:
+    recipe_id: THA-123
+    import_key: tha_original:THA-123
+    name: British Feta, Red Cabbage & Radish Lunch Bowl
+    category: lunch
+    cuisine: British family kitchen
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+- dayOffset: -7
+  mealSlot: lunch
+  mealRef:
+    recipe_id: THA-002
+    import_key: tha_original:THA-002
+    name: Chickpea, Lemon & Spinach Soup
+    category: lunch
+    cuisine: Mediterranean-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 40
+  fromPlannerMealRef:
+    recipe_id: THA-002
+    import_key: tha_original:THA-002
+    name: Chickpea, Lemon & Spinach Soup
+    category: lunch
+    cuisine: Mediterranean-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 40
+- dayOffset: -8
+  mealSlot: lunch
+  mealRef:
+    recipe_id: THA-085
+    import_key: tha_original:THA-085
+    name: Moroccan-Style Butter Bean, Pumpkin & Green Bean Jacket Potato
+    category: lunch
+    cuisine: Moroccan-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  fromPlannerMealRef:
+    recipe_id: THA-085
+    import_key: tha_original:THA-085
+    name: Moroccan-Style Butter Bean, Pumpkin & Green Bean Jacket Potato
+    category: lunch
+    cuisine: Moroccan-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+diaryMetrics:
+- dayOffset: -1
+  moodApples: 4
+  energyApples: 4
+  sleepHours: 6.5
+  stuckToPlan: false
+- dayOffset: -2
+  moodApples: 4
+  energyApples: 3
+  sleepHours: 6.9
+  stuckToPlan: true
+- dayOffset: -3
+  moodApples: 3
+  energyApples: 4
+  sleepHours: 7.2
+  stuckToPlan: true
+- dayOffset: -4
+  moodApples: 4
+  energyApples: 4
+  sleepHours: 7.6
+  stuckToPlan: false
+- dayOffset: -5
+  moodApples: 4
+  energyApples: 3
+  sleepHours: 6.2
+  stuckToPlan: true
+evidence:
+- subjectType: meal
+  subjectKey: recipe:THA-044
+  mealRef:
+    recipe_id: THA-044
+    import_key: tha_original:THA-044
+    name: Californian-Style Chickpea, Broccoli & Fennel Breakfast Wrap
+    category: breakfast
+    cuisine: Californian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  outcomeType: completed
+  direction: positive
+  dayOffset: -2
+  sourceCapabilityId: planner
+- subjectType: meal
+  subjectKey: recipe:THA-015
+  mealRef:
+    recipe_id: THA-015
+    import_key: tha_original:THA-015
+    name: French country-Style Cod, Red Pepper & Pumpkin Egg Skillet
+    category: breakfast
+    cuisine: French country-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  outcomeType: completed
+  direction: positive
+  dayOffset: -5
+  sourceCapabilityId: planner
+- subjectType: meal
+  subjectKey: recipe:THA-012
+  mealRef:
+    recipe_id: THA-012
+    import_key: tha_original:THA-012
+    name: Malaysian-Style Cottage Cheese, Asparagus & Peas Breakfast Wrap
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  outcomeType: completed
+  direction: positive
+  dayOffset: -8
+  sourceCapabilityId: planner
+- subjectType: meal
+  subjectKey: recipe:THA-017
+  mealRef:
+    recipe_id: THA-017
+    import_key: tha_original:THA-017
+    name: Malaysian-Style Cottage Cheese, Peas & Pumpkin Toast Plate
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  outcomeType: completed
+  direction: positive
+  dayOffset: -11
+  sourceCapabilityId: planner
+- subjectType: meal
+  subjectKey: recipe:THA-022
+  mealRef:
+    recipe_id: THA-022
+    import_key: tha_original:THA-022
+    name: Malaysian-Style Cottage Cheese, Asparagus & Spinach Breakfast Hash
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  outcomeType: completed
+  direction: positive
+  dayOffset: -14
+  sourceCapabilityId: planner
+- subjectType: swap
+  subjectKey: ingredient:wholegrain
+  subjectId: swap:dw001:white-to-wholegrain
+  outcomeType: accepted
+  direction: positive
+  dayOffset: -12
+  sourceCapabilityId: meals
+- subjectType: meal
+  subjectKey: recipe:THA-216
+  mealRef:
+    recipe_id: THA-216
+    import_key: tha_original:THA-216
+    name: Indian-Style Chicken Thigh, Red Pepper & Cabbage Skillet
+    category: dinner
+    cuisine: Indian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 50
+  outcomeType: rejected
+  direction: negative
+  dayOffset: -18
+  sourceCapabilityId: planner
+knownGaps:
+- Recipe bodies are not authored here; the Cookbook remains the owner of names, ingredients, method and nutrition derivation.
+- No nutrition, allergen rows, learning signals, observations, conversations or opportunity deliveries are seeded by this
+  world.
+- Ready-meal/product references are not authored in this foundation pack because no product meal export was supplied with
+  stable product IDs.
+qualityPurpose:
+  tests:
+  - busy dual-career family
+  - meal-reference import
+  - planner realism
+  - honest gaps
+  reasoningQuestions:
+  - What should Amelia cook tonight?
+  - What meals has this household repeated?
+  - What dietary gaps should THA admit?

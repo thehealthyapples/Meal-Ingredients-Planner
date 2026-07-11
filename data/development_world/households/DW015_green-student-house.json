@@ -1,0 +1,1648 @@
+{
+  "id": "DW015",
+  "slug": "green-student-house",
+  "archetype": "Student shared house",
+  "householdName": "Green Road Student House (Dev)",
+  "summary": "Four students sharing cheap meals, limited equipment and uneven cooking confidence.",
+  "fictional": true,
+  "coldStart": false,
+  "accounts": [
+    {
+      "key": "owner",
+      "username": "green.student.house.owner@dev.thehealthyapples.dev",
+      "displayName": "Callum Green (Dev)",
+      "firstName": "Callum",
+      "dietPattern": null,
+      "dietRestrictions": [],
+      "eatingSchedule": "None",
+      "subscriptionTier": "free"
+    }
+  ],
+  "eaters": [
+    {
+      "displayName": "Callum",
+      "accountKey": "owner",
+      "ageYears": 20,
+      "defaultDietTypes": [],
+      "hardRestrictions": []
+    },
+    {
+      "displayName": "Jade",
+      "ageYears": 21,
+      "defaultDietTypes": [],
+      "hardRestrictions": []
+    },
+    {
+      "displayName": "Mo",
+      "ageYears": 20,
+      "defaultDietTypes": [],
+      "hardRestrictions": []
+    },
+    {
+      "displayName": "Ellis",
+      "ageYears": 22,
+      "defaultDietTypes": [],
+      "hardRestrictions": []
+    }
+  ],
+  "preferences": {
+    "dietTypes": [],
+    "excludedIngredients": [],
+    "healthGoals": [
+      "eat_healthier",
+      "cook_more_from_scratch"
+    ],
+    "goalType": "maintain",
+    "budgetLevel": "budget",
+    "activityLevel": "low",
+    "preferredStores": [
+      "Aldi",
+      "Lidl"
+    ],
+    "calorieTarget": null,
+    "heightCm": null,
+    "weightKg": null,
+    "adultsCount": 4,
+    "childrenCount": 3,
+    "maxTotalCookTime": 25,
+    "plannerEnableChildMeals": true,
+    "companionPersonality": "friend"
+  },
+  "persona": {
+    "lifestyle": "Four students sharing cheap meals, limited equipment and uneven cooking confidence.",
+    "shoppingHabits": "Primary shops: Aldi, Lidl. Small frequent shops.",
+    "cookingConfidence": "low",
+    "weeknightCookingTime": "15-25 minutes",
+    "budget": "budget",
+    "kitchenEquipment": [
+      "hob",
+      "oven",
+      "microwave",
+      "air fryer"
+    ],
+    "lifeEvents": [
+      "school term routine"
+    ],
+    "mealStory": "Favourite meals and dislikes are persona context unless a future favourite-meals schema is introduced.",
+    "favouriteMealRefsNarrativeOnly": [
+      {
+        "recipe_id": "THA-012",
+        "import_key": "tha_original:THA-012",
+        "name": "Malaysian-Style Cottage Cheese, Asparagus & Peas Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "Malaysian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-013",
+        "import_key": "tha_original:THA-013",
+        "name": "North African-Style Lentil, Celery & Mushroom Toast Plate",
+        "category": "breakfast",
+        "cuisine": "North African-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-011",
+        "import_key": "tha_original:THA-011",
+        "name": "Pakistani-Style Feta, Parsnip & Cauliflower Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "Pakistani-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      }
+    ],
+    "dislikedIngredientsNarrativeOnly": [
+      "overly spicy food"
+    ]
+  },
+  "pantry": [
+    {
+      "ingredient": "baked potatoes",
+      "category": "larder"
+    },
+    {
+      "ingredient": "beans",
+      "category": "larder"
+    },
+    {
+      "ingredient": "mixed seeds",
+      "category": "larder"
+    },
+    {
+      "ingredient": "tomato puree",
+      "category": "larder"
+    },
+    {
+      "ingredient": "potatoes",
+      "category": "larder"
+    },
+    {
+      "ingredient": "rice",
+      "category": "larder"
+    },
+    {
+      "ingredient": "frozen peas",
+      "category": "freezer"
+    },
+    {
+      "ingredient": "lentils",
+      "category": "larder"
+    },
+    {
+      "ingredient": "low-salt stock cubes",
+      "category": "larder"
+    },
+    {
+      "ingredient": "tinned chopped tomatoes",
+      "category": "larder"
+    },
+    {
+      "ingredient": "pasta",
+      "category": "larder"
+    },
+    {
+      "ingredient": "garlic",
+      "category": "larder"
+    },
+    {
+      "ingredient": "carrots",
+      "category": "fridge"
+    },
+    {
+      "ingredient": "chickpeas",
+      "category": "larder"
+    }
+  ],
+  "cookbookRefs": {
+    "adoptedMealRefs": [
+      {
+        "recipe_id": "THA-012",
+        "import_key": "tha_original:THA-012",
+        "name": "Malaysian-Style Cottage Cheese, Asparagus & Peas Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "Malaysian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-013",
+        "import_key": "tha_original:THA-013",
+        "name": "North African-Style Lentil, Celery & Mushroom Toast Plate",
+        "category": "breakfast",
+        "cuisine": "North African-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-011",
+        "import_key": "tha_original:THA-011",
+        "name": "Pakistani-Style Feta, Parsnip & Cauliflower Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "Pakistani-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-016",
+        "import_key": "tha_original:THA-016",
+        "name": "Pakistani-Style Feta, Tomato & Green Bean Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "Pakistani-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-021",
+        "import_key": "tha_original:THA-021",
+        "name": "Pakistani-Style Feta, Parsnip & Fennel Toast Plate",
+        "category": "breakfast",
+        "cuisine": "Pakistani-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-171",
+        "import_key": "tha_original:THA-171",
+        "name": "Thai-Style Greek Yoghurt, Cherry Tomato & Peas Lunch Bowl 2",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-088",
+        "import_key": "tha_original:THA-088",
+        "name": "British Edamame, Onion & Aubergine Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "British family kitchen",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-002",
+        "import_key": "tha_original:THA-002",
+        "name": "Chickpea, Lemon & Spinach Soup",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 40
+      },
+      {
+        "recipe_id": "THA-089",
+        "import_key": "tha_original:THA-089",
+        "name": "Mediterranean-Style Tuna, Cauliflower & Red Cabbage Jacket Potato",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-094",
+        "import_key": "tha_original:THA-094",
+        "name": "Mediterranean-Style Lentil, Cucumber & Pak Choi Frittata",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-099",
+        "import_key": "tha_original:THA-099",
+        "name": "Mediterranean-Style Cottage Cheese, Cauliflower & Red Pepper Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-104",
+        "import_key": "tha_original:THA-104",
+        "name": "Mediterranean-Style Cod, Cucumber & Red Cabbage Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-434",
+        "import_key": "tha_original:THA-434",
+        "name": "Australian cafe-Style Edamame, Celery & Cucumber Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-004",
+        "import_key": "tha_original:THA-004",
+        "name": "Golden Potato, Chickpea & Spinach Curry",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 45
+      },
+      {
+        "recipe_id": "THA-003",
+        "import_key": "tha_original:THA-003",
+        "name": "Basil Tomato Wholewheat Pasta",
+        "category": "dinner",
+        "cuisine": "Italian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-006",
+        "import_key": "tha_original:THA-006",
+        "name": "Roast Vegetable & Butter Bean Traybake",
+        "category": "dinner",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 55
+      },
+      {
+        "recipe_id": "THA-005",
+        "import_key": "tha_original:THA-005",
+        "name": "Gentle Taco Rice Bowls",
+        "category": "dinner",
+        "cuisine": "Mexican-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 40
+      },
+      {
+        "recipe_id": "THA-439",
+        "import_key": "tha_original:THA-439",
+        "name": "Australian cafe-Style Haricot Bean, Cabbage & Beetroot Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-444",
+        "import_key": "tha_original:THA-444",
+        "name": "Australian cafe-Style Chicken Thigh, Celery & Tomato Rice Bowl 9",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-449",
+        "import_key": "tha_original:THA-449",
+        "name": "Australian cafe-Style Chickpea, Cabbage & Cucumber Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-454",
+        "import_key": "tha_original:THA-454",
+        "name": "Australian cafe-Style Tofu, Celery & Beetroot Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-194",
+        "import_key": "tha_original:THA-194",
+        "name": "Australian cafe-Style Green Pea, Celery & Cucumber Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-199",
+        "import_key": "tha_original:THA-199",
+        "name": "Australian cafe-Style Split Pea, Cabbage & Beetroot Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-204",
+        "import_key": "tha_original:THA-204",
+        "name": "Australian cafe-Style Chicken Thigh, Celery & Tomato Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-209",
+        "import_key": "tha_original:THA-209",
+        "name": "Australian cafe-Style Lentil, Cabbage & Cucumber Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-459",
+        "import_key": "tha_original:THA-459",
+        "name": "Georgian-Style Pumpkin, Celery & Feta Slaw",
+        "category": "side",
+        "cuisine": "Georgian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-460",
+        "import_key": "tha_original:THA-460",
+        "name": "Greek-Style Kale, Aubergine & Black Bean Bean Salad",
+        "category": "side",
+        "cuisine": "Greek-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-490",
+        "import_key": "tha_original:THA-490",
+        "name": "Georgian-Style Onion, Pak Choi & Lentil Fruit Pot",
+        "category": "snack",
+        "cuisine": "Georgian-inspired",
+        "difficulty": "easy",
+        "servings": 8,
+        "total_minutes": 30
+      },
+      {
+        "recipe_id": "THA-481",
+        "import_key": "tha_original:THA-481",
+        "name": "Greek-Style Cauliflower, Green Bean & Butter Bean Oat Bars",
+        "category": "snack",
+        "cuisine": "Greek-inspired",
+        "difficulty": "easy",
+        "servings": 8,
+        "total_minutes": 30
+      },
+      {
+        "recipe_id": "THA-482",
+        "import_key": "tha_original:THA-482",
+        "name": "Persian-Style Courgette, Pumpkin & Tofu Seeded Muffins",
+        "category": "snack",
+        "cuisine": "Persian-inspired",
+        "difficulty": "easy",
+        "servings": 8,
+        "total_minutes": 30
+      }
+    ],
+    "regularMealRefs": [
+      {
+        "recipe_id": "THA-012",
+        "import_key": "tha_original:THA-012",
+        "name": "Malaysian-Style Cottage Cheese, Asparagus & Peas Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "Malaysian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-013",
+        "import_key": "tha_original:THA-013",
+        "name": "North African-Style Lentil, Celery & Mushroom Toast Plate",
+        "category": "breakfast",
+        "cuisine": "North African-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-011",
+        "import_key": "tha_original:THA-011",
+        "name": "Pakistani-Style Feta, Parsnip & Cauliflower Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "Pakistani-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-016",
+        "import_key": "tha_original:THA-016",
+        "name": "Pakistani-Style Feta, Tomato & Green Bean Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "Pakistani-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-021",
+        "import_key": "tha_original:THA-021",
+        "name": "Pakistani-Style Feta, Parsnip & Fennel Toast Plate",
+        "category": "breakfast",
+        "cuisine": "Pakistani-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-171",
+        "import_key": "tha_original:THA-171",
+        "name": "Thai-Style Greek Yoghurt, Cherry Tomato & Peas Lunch Bowl 2",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-088",
+        "import_key": "tha_original:THA-088",
+        "name": "British Edamame, Onion & Aubergine Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "British family kitchen",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-002",
+        "import_key": "tha_original:THA-002",
+        "name": "Chickpea, Lemon & Spinach Soup",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 40
+      },
+      {
+        "recipe_id": "THA-089",
+        "import_key": "tha_original:THA-089",
+        "name": "Mediterranean-Style Tuna, Cauliflower & Red Cabbage Jacket Potato",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-094",
+        "import_key": "tha_original:THA-094",
+        "name": "Mediterranean-Style Lentil, Cucumber & Pak Choi Frittata",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      }
+    ],
+    "discoveryQueueMealRefs": [
+      {
+        "recipe_id": "THA-359",
+        "import_key": "tha_original:THA-359",
+        "name": "Australian cafe-Style Green Pea, Cabbage & Cucumber Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-364",
+        "import_key": "tha_original:THA-364",
+        "name": "Australian cafe-Style Split Pea, Celery & Beetroot Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-369",
+        "import_key": "tha_original:THA-369",
+        "name": "Australian cafe-Style Chicken Thigh, Cabbage & Tomato Rice Bowl 6",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-374",
+        "import_key": "tha_original:THA-374",
+        "name": "Australian cafe-Style Lentil, Celery & Cucumber Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-191",
+        "import_key": "tha_original:THA-191",
+        "name": "Thai-Style Mackerel, Cherry Tomato & Pumpkin Lunch Bowl 2",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-093",
+        "import_key": "tha_original:THA-093",
+        "name": "British Feta, Red Cabbage & Radish Jacket Potato",
+        "category": "lunch",
+        "cuisine": "British family kitchen",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-488",
+        "import_key": "tha_original:THA-488",
+        "name": "Chinese-Style Kale, Cherry Tomato & Chickpea Snack Bites",
+        "category": "snack",
+        "cuisine": "Chinese-inspired",
+        "difficulty": "easy",
+        "servings": 8,
+        "total_minutes": 30
+      }
+    ],
+    "notes": "References only. Recipe bodies remain owned by the THA Original Founding Cookbook."
+  },
+  "planner": [
+    {
+      "week": 1,
+      "dayOfWeek": 0,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-434",
+        "import_key": "tha_original:THA-434",
+        "name": "Australian cafe-Style Edamame, Celery & Cucumber Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Callum",
+        "Jade",
+        "Mo",
+        "Ellis"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 0,
+      "mealType": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-013",
+        "import_key": "tha_original:THA-013",
+        "name": "North African-Style Lentil, Celery & Mushroom Toast Plate",
+        "category": "breakfast",
+        "cuisine": "North African-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "eaters": [
+        "Callum",
+        "Jade",
+        "Mo",
+        "Ellis"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 1,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-004",
+        "import_key": "tha_original:THA-004",
+        "name": "Golden Potato, Chickpea & Spinach Curry",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 45
+      },
+      "eaters": [
+        "Callum",
+        "Jade",
+        "Mo",
+        "Ellis"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 1,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-002",
+        "import_key": "tha_original:THA-002",
+        "name": "Chickpea, Lemon & Spinach Soup",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 40
+      },
+      "eaters": [
+        "Callum",
+        "Jade",
+        "Mo",
+        "Ellis"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 2,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-003",
+        "import_key": "tha_original:THA-003",
+        "name": "Basil Tomato Wholewheat Pasta",
+        "category": "dinner",
+        "cuisine": "Italian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Callum",
+        "Jade",
+        "Mo",
+        "Ellis"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 2,
+      "mealType": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-016",
+        "import_key": "tha_original:THA-016",
+        "name": "Pakistani-Style Feta, Tomato & Green Bean Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "Pakistani-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "eaters": [
+        "Callum",
+        "Jade",
+        "Mo",
+        "Ellis"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 2,
+      "mealType": "snacks",
+      "mealRef": {
+        "recipe_id": "THA-490",
+        "import_key": "tha_original:THA-490",
+        "name": "Georgian-Style Onion, Pak Choi & Lentil Fruit Pot",
+        "category": "snack",
+        "cuisine": "Georgian-inspired",
+        "difficulty": "easy",
+        "servings": 8,
+        "total_minutes": 30
+      },
+      "eaters": [
+        "Callum",
+        "Jade",
+        "Mo",
+        "Ellis"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 3,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-006",
+        "import_key": "tha_original:THA-006",
+        "name": "Roast Vegetable & Butter Bean Traybake",
+        "category": "dinner",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 55
+      },
+      "eaters": [
+        "Callum",
+        "Jade",
+        "Mo",
+        "Ellis"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 3,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-094",
+        "import_key": "tha_original:THA-094",
+        "name": "Mediterranean-Style Lentil, Cucumber & Pak Choi Frittata",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Callum",
+        "Jade",
+        "Mo",
+        "Ellis"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 4,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-005",
+        "import_key": "tha_original:THA-005",
+        "name": "Gentle Taco Rice Bowls",
+        "category": "dinner",
+        "cuisine": "Mexican-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 40
+      },
+      "eaters": [
+        "Callum",
+        "Jade",
+        "Mo",
+        "Ellis"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 4,
+      "mealType": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-012",
+        "import_key": "tha_original:THA-012",
+        "name": "Malaysian-Style Cottage Cheese, Asparagus & Peas Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "Malaysian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "eaters": [
+        "Callum",
+        "Jade",
+        "Mo",
+        "Ellis"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 5,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-439",
+        "import_key": "tha_original:THA-439",
+        "name": "Australian cafe-Style Haricot Bean, Cabbage & Beetroot Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Callum",
+        "Jade",
+        "Mo",
+        "Ellis"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 5,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-104",
+        "import_key": "tha_original:THA-104",
+        "name": "Mediterranean-Style Cod, Cucumber & Red Cabbage Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Callum",
+        "Jade",
+        "Mo",
+        "Ellis"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 6,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-444",
+        "import_key": "tha_original:THA-444",
+        "name": "Australian cafe-Style Chicken Thigh, Celery & Tomato Rice Bowl 9",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Callum",
+        "Jade",
+        "Mo",
+        "Ellis"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 0,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-449",
+        "import_key": "tha_original:THA-449",
+        "name": "Australian cafe-Style Chickpea, Cabbage & Cucumber Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Callum",
+        "Jade",
+        "Mo",
+        "Ellis"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 0,
+      "mealType": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-011",
+        "import_key": "tha_original:THA-011",
+        "name": "Pakistani-Style Feta, Parsnip & Cauliflower Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "Pakistani-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "eaters": [
+        "Callum",
+        "Jade",
+        "Mo",
+        "Ellis"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 1,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-454",
+        "import_key": "tha_original:THA-454",
+        "name": "Australian cafe-Style Tofu, Celery & Beetroot Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Callum",
+        "Jade",
+        "Mo",
+        "Ellis"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 1,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-089",
+        "import_key": "tha_original:THA-089",
+        "name": "Mediterranean-Style Tuna, Cauliflower & Red Cabbage Jacket Potato",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Callum",
+        "Jade",
+        "Mo",
+        "Ellis"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 2,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-194",
+        "import_key": "tha_original:THA-194",
+        "name": "Australian cafe-Style Green Pea, Celery & Cucumber Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Callum",
+        "Jade",
+        "Mo",
+        "Ellis"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 2,
+      "mealType": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-021",
+        "import_key": "tha_original:THA-021",
+        "name": "Pakistani-Style Feta, Parsnip & Fennel Toast Plate",
+        "category": "breakfast",
+        "cuisine": "Pakistani-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "eaters": [
+        "Callum",
+        "Jade",
+        "Mo",
+        "Ellis"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 2,
+      "mealType": "snacks",
+      "mealRef": {
+        "recipe_id": "THA-481",
+        "import_key": "tha_original:THA-481",
+        "name": "Greek-Style Cauliflower, Green Bean & Butter Bean Oat Bars",
+        "category": "snack",
+        "cuisine": "Greek-inspired",
+        "difficulty": "easy",
+        "servings": 8,
+        "total_minutes": 30
+      },
+      "eaters": [
+        "Callum",
+        "Jade",
+        "Mo",
+        "Ellis"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 3,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-199",
+        "import_key": "tha_original:THA-199",
+        "name": "Australian cafe-Style Split Pea, Cabbage & Beetroot Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Callum",
+        "Jade",
+        "Mo",
+        "Ellis"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 3,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-099",
+        "import_key": "tha_original:THA-099",
+        "name": "Mediterranean-Style Cottage Cheese, Cauliflower & Red Pepper Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Callum",
+        "Jade",
+        "Mo",
+        "Ellis"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 4,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-204",
+        "import_key": "tha_original:THA-204",
+        "name": "Australian cafe-Style Chicken Thigh, Celery & Tomato Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Callum",
+        "Jade",
+        "Mo",
+        "Ellis"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 4,
+      "mealType": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-013",
+        "import_key": "tha_original:THA-013",
+        "name": "North African-Style Lentil, Celery & Mushroom Toast Plate",
+        "category": "breakfast",
+        "cuisine": "North African-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "eaters": [
+        "Callum",
+        "Jade",
+        "Mo",
+        "Ellis"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 5,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-209",
+        "import_key": "tha_original:THA-209",
+        "name": "Australian cafe-Style Lentil, Cabbage & Cucumber Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Callum",
+        "Jade",
+        "Mo",
+        "Ellis"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 5,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-171",
+        "import_key": "tha_original:THA-171",
+        "name": "Thai-Style Greek Yoghurt, Cherry Tomato & Peas Lunch Bowl 2",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Callum",
+        "Jade",
+        "Mo",
+        "Ellis"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 6,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-434",
+        "import_key": "tha_original:THA-434",
+        "name": "Australian cafe-Style Edamame, Celery & Cucumber Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Callum",
+        "Jade",
+        "Mo",
+        "Ellis"
+      ]
+    }
+  ],
+  "weekEaterOverrides": [],
+  "freezer": [],
+  "shoppingExtras": [
+    {
+      "name": "kitchen roll",
+      "category": "household",
+      "alwaysAdd": false
+    },
+    {
+      "name": "washing-up liquid",
+      "category": "household",
+      "alwaysAdd": false
+    },
+    {
+      "name": "apples",
+      "category": "grocery",
+      "alwaysAdd": false
+    },
+    {
+      "name": "bananas",
+      "category": "grocery",
+      "alwaysAdd": false
+    },
+    {
+      "name": "natural yoghurt",
+      "category": "grocery",
+      "alwaysAdd": false
+    }
+  ],
+  "generateShoppingList": true,
+  "diaryEntries": [
+    {
+      "dayOffset": -1,
+      "mealSlot": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-012",
+        "import_key": "tha_original:THA-012",
+        "name": "Malaysian-Style Cottage Cheese, Asparagus & Peas Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "Malaysian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-012",
+        "import_key": "tha_original:THA-012",
+        "name": "Malaysian-Style Cottage Cheese, Asparagus & Peas Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "Malaysian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      }
+    },
+    {
+      "dayOffset": -2,
+      "mealSlot": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-013",
+        "import_key": "tha_original:THA-013",
+        "name": "North African-Style Lentil, Celery & Mushroom Toast Plate",
+        "category": "breakfast",
+        "cuisine": "North African-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-013",
+        "import_key": "tha_original:THA-013",
+        "name": "North African-Style Lentil, Celery & Mushroom Toast Plate",
+        "category": "breakfast",
+        "cuisine": "North African-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      }
+    },
+    {
+      "dayOffset": -3,
+      "mealSlot": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-011",
+        "import_key": "tha_original:THA-011",
+        "name": "Pakistani-Style Feta, Parsnip & Cauliflower Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "Pakistani-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-011",
+        "import_key": "tha_original:THA-011",
+        "name": "Pakistani-Style Feta, Parsnip & Cauliflower Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "Pakistani-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      }
+    },
+    {
+      "dayOffset": -4,
+      "mealSlot": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-016",
+        "import_key": "tha_original:THA-016",
+        "name": "Pakistani-Style Feta, Tomato & Green Bean Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "Pakistani-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-016",
+        "import_key": "tha_original:THA-016",
+        "name": "Pakistani-Style Feta, Tomato & Green Bean Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "Pakistani-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      }
+    },
+    {
+      "dayOffset": -5,
+      "mealSlot": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-021",
+        "import_key": "tha_original:THA-021",
+        "name": "Pakistani-Style Feta, Parsnip & Fennel Toast Plate",
+        "category": "breakfast",
+        "cuisine": "Pakistani-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-021",
+        "import_key": "tha_original:THA-021",
+        "name": "Pakistani-Style Feta, Parsnip & Fennel Toast Plate",
+        "category": "breakfast",
+        "cuisine": "Pakistani-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      }
+    },
+    {
+      "dayOffset": -6,
+      "mealSlot": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-171",
+        "import_key": "tha_original:THA-171",
+        "name": "Thai-Style Greek Yoghurt, Cherry Tomato & Peas Lunch Bowl 2",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-171",
+        "import_key": "tha_original:THA-171",
+        "name": "Thai-Style Greek Yoghurt, Cherry Tomato & Peas Lunch Bowl 2",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      }
+    },
+    {
+      "dayOffset": -7,
+      "mealSlot": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-088",
+        "import_key": "tha_original:THA-088",
+        "name": "British Edamame, Onion & Aubergine Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "British family kitchen",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-088",
+        "import_key": "tha_original:THA-088",
+        "name": "British Edamame, Onion & Aubergine Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "British family kitchen",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      }
+    },
+    {
+      "dayOffset": -8,
+      "mealSlot": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-002",
+        "import_key": "tha_original:THA-002",
+        "name": "Chickpea, Lemon & Spinach Soup",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 40
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-002",
+        "import_key": "tha_original:THA-002",
+        "name": "Chickpea, Lemon & Spinach Soup",
+        "category": "lunch",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 40
+      }
+    }
+  ],
+  "diaryMetrics": [
+    {
+      "dayOffset": -1,
+      "moodApples": 3,
+      "energyApples": 4,
+      "sleepHours": 6.2,
+      "stuckToPlan": false
+    },
+    {
+      "dayOffset": -2,
+      "moodApples": 4,
+      "energyApples": 4,
+      "sleepHours": 6.5,
+      "stuckToPlan": true
+    },
+    {
+      "dayOffset": -3,
+      "moodApples": 4,
+      "energyApples": 3,
+      "sleepHours": 6.9,
+      "stuckToPlan": true
+    },
+    {
+      "dayOffset": -4,
+      "moodApples": 3,
+      "energyApples": 4,
+      "sleepHours": 7.2,
+      "stuckToPlan": false
+    },
+    {
+      "dayOffset": -5,
+      "moodApples": 4,
+      "energyApples": 4,
+      "sleepHours": 7.6,
+      "stuckToPlan": true
+    }
+  ],
+  "evidence": [
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-012",
+      "mealRef": {
+        "recipe_id": "THA-012",
+        "import_key": "tha_original:THA-012",
+        "name": "Malaysian-Style Cottage Cheese, Asparagus & Peas Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "Malaysian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "outcomeType": "completed",
+      "direction": "positive",
+      "dayOffset": -2,
+      "sourceCapabilityId": "planner"
+    },
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-013",
+      "mealRef": {
+        "recipe_id": "THA-013",
+        "import_key": "tha_original:THA-013",
+        "name": "North African-Style Lentil, Celery & Mushroom Toast Plate",
+        "category": "breakfast",
+        "cuisine": "North African-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "outcomeType": "completed",
+      "direction": "positive",
+      "dayOffset": -5,
+      "sourceCapabilityId": "planner"
+    },
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-011",
+      "mealRef": {
+        "recipe_id": "THA-011",
+        "import_key": "tha_original:THA-011",
+        "name": "Pakistani-Style Feta, Parsnip & Cauliflower Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "Pakistani-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "outcomeType": "completed",
+      "direction": "positive",
+      "dayOffset": -8,
+      "sourceCapabilityId": "planner"
+    },
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-016",
+      "mealRef": {
+        "recipe_id": "THA-016",
+        "import_key": "tha_original:THA-016",
+        "name": "Pakistani-Style Feta, Tomato & Green Bean Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "Pakistani-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "outcomeType": "completed",
+      "direction": "positive",
+      "dayOffset": -11,
+      "sourceCapabilityId": "planner"
+    },
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-021",
+      "mealRef": {
+        "recipe_id": "THA-021",
+        "import_key": "tha_original:THA-021",
+        "name": "Pakistani-Style Feta, Parsnip & Fennel Toast Plate",
+        "category": "breakfast",
+        "cuisine": "Pakistani-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "outcomeType": "completed",
+      "direction": "positive",
+      "dayOffset": -14,
+      "sourceCapabilityId": "planner"
+    },
+    {
+      "subjectType": "swap",
+      "subjectKey": "ingredient:wholegrain",
+      "subjectId": "swap:dw015:white-to-wholegrain",
+      "outcomeType": "accepted",
+      "direction": "positive",
+      "dayOffset": -12,
+      "sourceCapabilityId": "meals"
+    },
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-359",
+      "mealRef": {
+        "recipe_id": "THA-359",
+        "import_key": "tha_original:THA-359",
+        "name": "Australian cafe-Style Green Pea, Cabbage & Cucumber Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "outcomeType": "rejected",
+      "direction": "negative",
+      "dayOffset": -18,
+      "sourceCapabilityId": "planner"
+    }
+  ],
+  "knownGaps": [
+    "Recipe bodies are not authored here; the Cookbook remains the owner of names, ingredients, method and nutrition derivation.",
+    "No nutrition, allergen rows, learning signals, observations, conversations or opportunity deliveries are seeded by this world.",
+    "Ready-meal/product references are not authored in this foundation pack because no product meal export was supplied with stable product IDs."
+  ],
+  "qualityPurpose": {
+    "tests": [
+      "student shared house",
+      "meal-reference import",
+      "planner realism",
+      "honest gaps"
+    ],
+    "reasoningQuestions": [
+      "What should Callum cook tonight?",
+      "What meals has this household repeated?",
+      "What dietary gaps should THA admit?"
+    ]
+  }
+}

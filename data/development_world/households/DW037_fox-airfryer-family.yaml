@@ -1,0 +1,1202 @@
+id: DW037
+slug: fox-airfryer-family
+archetype: Air-fryer family
+householdName: Fox Family (Dev)
+summary: Uses air fryer constantly, wants healthier versions of convenience habits.
+fictional: true
+coldStart: false
+accounts:
+- key: owner
+  username: fox.airfryer.family.owner@dev.thehealthyapples.dev
+  displayName: Leanne Fox (Dev)
+  firstName: Leanne
+  dietPattern: null
+  dietRestrictions: &id001 []
+  eatingSchedule: None
+  subscriptionTier: free
+- key: partner
+  username: fox.airfryer.family.partner@dev.thehealthyapples.dev
+  displayName: Matt Fox (Dev)
+  firstName: Matt
+  dietPattern: null
+  dietRestrictions: *id001
+  eatingSchedule: None
+  subscriptionTier: free
+eaters:
+- displayName: Leanne
+  accountKey: owner
+  ageYears: 36
+  defaultDietTypes: []
+  hardRestrictions: []
+- displayName: Matt
+  accountKey: partner
+  ageYears: 38
+  defaultDietTypes: []
+  hardRestrictions: []
+- displayName: Archie
+  ageYears: 9
+  defaultDietTypes: []
+  hardRestrictions: []
+preferences:
+  dietTypes: []
+  excludedIngredients: []
+  healthGoals:
+  - budget_control
+  - reduce_food_waste
+  goalType: maintain
+  budgetLevel: budget
+  activityLevel: low
+  preferredStores:
+  - Aldi
+  - Iceland
+  calorieTarget: null
+  heightCm: null
+  weightKg: null
+  adultsCount: 2
+  childrenCount: 1
+  maxTotalCookTime: 25
+  plannerEnableChildMeals: true
+  companionPersonality: teacher
+persona:
+  lifestyle: Uses air fryer constantly, wants healthier versions of convenience habits.
+  shoppingHabits: 'Primary shops: Aldi, Iceland. Small frequent shops.'
+  cookingConfidence: low
+  weeknightCookingTime: 15-25 minutes
+  budget: budget
+  kitchenEquipment:
+  - hob
+  - oven
+  - microwave
+  - air fryer
+  lifeEvents:
+  - school term routine
+  mealStory: Favourite meals and dislikes are persona context unless a future favourite-meals schema is introduced.
+  favouriteMealRefsNarrativeOnly:
+  - recipe_id: THA-032
+    import_key: tha_original:THA-032
+    name: Malaysian-Style Cottage Cheese, Asparagus & Pumpkin Breakfast Wrap
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-013
+    import_key: tha_original:THA-013
+    name: North African-Style Lentil, Celery & Mushroom Toast Plate
+    category: breakfast
+    cuisine: North African-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-011
+    import_key: tha_original:THA-011
+    name: Pakistani-Style Feta, Parsnip & Cauliflower Egg Skillet
+    category: breakfast
+    cuisine: Pakistani-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  dislikedIngredientsNarrativeOnly:
+  - overly spicy food
+pantry:
+- ingredient: low-salt stock cubes
+  category: larder
+- ingredient: baked potatoes
+  category: larder
+- ingredient: olive oil
+  category: larder
+- ingredient: lentils
+  category: larder
+- ingredient: pasta
+  category: larder
+- ingredient: tinned chopped tomatoes
+  category: larder
+- ingredient: brown rice
+  category: larder
+- ingredient: wholewheat pasta
+  category: larder
+- ingredient: tomato puree
+  category: larder
+- ingredient: frozen peas
+  category: freezer
+- ingredient: rolled oats
+  category: larder
+- ingredient: carrots
+  category: fridge
+- ingredient: rice
+  category: larder
+- ingredient: chickpeas
+  category: larder
+- ingredient: mixed seeds
+  category: larder
+- ingredient: black beans
+  category: larder
+cookbookRefs:
+  adoptedMealRefs:
+  - recipe_id: THA-032
+    import_key: tha_original:THA-032
+    name: Malaysian-Style Cottage Cheese, Asparagus & Pumpkin Breakfast Wrap
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-013
+    import_key: tha_original:THA-013
+    name: North African-Style Lentil, Celery & Mushroom Toast Plate
+    category: breakfast
+    cuisine: North African-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-011
+    import_key: tha_original:THA-011
+    name: Pakistani-Style Feta, Parsnip & Cauliflower Egg Skillet
+    category: breakfast
+    cuisine: Pakistani-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-016
+    import_key: tha_original:THA-016
+    name: Pakistani-Style Feta, Tomato & Green Bean Breakfast Wrap
+    category: breakfast
+    cuisine: Pakistani-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-021
+    import_key: tha_original:THA-021
+    name: Pakistani-Style Feta, Parsnip & Fennel Toast Plate
+    category: breakfast
+    cuisine: Pakistani-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-169
+    import_key: tha_original:THA-169
+    name: Mediterranean-Style Chickpea, Cauliflower & Pak Choi Jacket Potato
+    category: lunch
+    cuisine: Mediterranean-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-085
+    import_key: tha_original:THA-085
+    name: Moroccan-Style Butter Bean, Pumpkin & Green Bean Jacket Potato
+    category: lunch
+    cuisine: Moroccan-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-087
+    import_key: tha_original:THA-087
+    name: Peruvian-Style Halloumi, Fennel & Celery Lunch Bowl
+    category: lunch
+    cuisine: Peruvian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-092
+    import_key: tha_original:THA-092
+    name: Peruvian-Style Cod, Sweetcorn & Cherry Tomato Stuffed Pitta
+    category: lunch
+    cuisine: Peruvian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-097
+    import_key: tha_original:THA-097
+    name: Peruvian-Style Tofu, Fennel & Mushroom Jacket Potato
+    category: lunch
+    cuisine: Peruvian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-102
+    import_key: tha_original:THA-102
+    name: Peruvian-Style Halloumi, Sweetcorn & Celery Frittata
+    category: lunch
+    cuisine: Peruvian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-107
+    import_key: tha_original:THA-107
+    name: Peruvian-Style Mackerel, Fennel & Cherry Tomato Lunch Bowl
+    category: lunch
+    cuisine: Peruvian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-349
+    import_key: tha_original:THA-349
+    name: Australian cafe-Style Kidney Bean, Cabbage & Beetroot Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-004
+    import_key: tha_original:THA-004
+    name: Golden Potato, Chickpea & Spinach Curry
+    category: dinner
+    cuisine: Indian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 45
+  - recipe_id: THA-003
+    import_key: tha_original:THA-003
+    name: Basil Tomato Wholewheat Pasta
+    category: dinner
+    cuisine: Italian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-006
+    import_key: tha_original:THA-006
+    name: Roast Vegetable & Butter Bean Traybake
+    category: dinner
+    cuisine: Mediterranean-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 55
+  - recipe_id: THA-005
+    import_key: tha_original:THA-005
+    name: Gentle Taco Rice Bowls
+    category: dinner
+    cuisine: Mexican-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 40
+  - recipe_id: THA-354
+    import_key: tha_original:THA-354
+    name: Australian cafe-Style Chicken Thigh, Celery & Tomato Rice Bowl 6
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-359
+    import_key: tha_original:THA-359
+    name: Australian cafe-Style Green Pea, Cabbage & Cucumber Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-364
+    import_key: tha_original:THA-364
+    name: Australian cafe-Style Split Pea, Celery & Beetroot Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-369
+    import_key: tha_original:THA-369
+    name: Australian cafe-Style Chicken Thigh, Cabbage & Tomato Rice Bowl 6
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-374
+    import_key: tha_original:THA-374
+    name: Australian cafe-Style Lentil, Celery & Cucumber Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-379
+    import_key: tha_original:THA-379
+    name: Australian cafe-Style Edamame, Cabbage & Beetroot Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-384
+    import_key: tha_original:THA-384
+    name: Australian cafe-Style Chicken Thigh, Celery & Tomato Rice Bowl 7
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-389
+    import_key: tha_original:THA-389
+    name: Australian cafe-Style Black Bean, Cabbage & Cucumber Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-479
+    import_key: tha_original:THA-479
+    name: Georgian-Style Pumpkin, Cherry Tomato & Tuna Slaw
+    category: side
+    cuisine: Georgian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-460
+    import_key: tha_original:THA-460
+    name: Greek-Style Kale, Aubergine & Black Bean Bean Salad
+    category: side
+    cuisine: Greek-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-499
+    import_key: tha_original:THA-499
+    name: West African-Style Fennel, Aubergine & Chickpea Dip Plate
+    category: snack
+    cuisine: West African-inspired
+    difficulty: easy
+    servings: 8
+    total_minutes: 30
+  - recipe_id: THA-483
+    import_key: tha_original:THA-483
+    name: Chinese-Style Cherry Tomato, Celery & Egg Snack Bites
+    category: snack
+    cuisine: Chinese-inspired
+    difficulty: easy
+    servings: 8
+    total_minutes: 30
+  - recipe_id: THA-485
+    import_key: tha_original:THA-485
+    name: Georgian-Style Red Cabbage, Spinach & Cannellini Bean Fruit Pot
+    category: snack
+    cuisine: Georgian-inspired
+    difficulty: easy
+    servings: 8
+    total_minutes: 30
+  regularMealRefs:
+  - recipe_id: THA-032
+    import_key: tha_original:THA-032
+    name: Malaysian-Style Cottage Cheese, Asparagus & Pumpkin Breakfast Wrap
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-013
+    import_key: tha_original:THA-013
+    name: North African-Style Lentil, Celery & Mushroom Toast Plate
+    category: breakfast
+    cuisine: North African-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-011
+    import_key: tha_original:THA-011
+    name: Pakistani-Style Feta, Parsnip & Cauliflower Egg Skillet
+    category: breakfast
+    cuisine: Pakistani-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-016
+    import_key: tha_original:THA-016
+    name: Pakistani-Style Feta, Tomato & Green Bean Breakfast Wrap
+    category: breakfast
+    cuisine: Pakistani-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-021
+    import_key: tha_original:THA-021
+    name: Pakistani-Style Feta, Parsnip & Fennel Toast Plate
+    category: breakfast
+    cuisine: Pakistani-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  - recipe_id: THA-169
+    import_key: tha_original:THA-169
+    name: Mediterranean-Style Chickpea, Cauliflower & Pak Choi Jacket Potato
+    category: lunch
+    cuisine: Mediterranean-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-085
+    import_key: tha_original:THA-085
+    name: Moroccan-Style Butter Bean, Pumpkin & Green Bean Jacket Potato
+    category: lunch
+    cuisine: Moroccan-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-087
+    import_key: tha_original:THA-087
+    name: Peruvian-Style Halloumi, Fennel & Celery Lunch Bowl
+    category: lunch
+    cuisine: Peruvian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-092
+    import_key: tha_original:THA-092
+    name: Peruvian-Style Cod, Sweetcorn & Cherry Tomato Stuffed Pitta
+    category: lunch
+    cuisine: Peruvian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-097
+    import_key: tha_original:THA-097
+    name: Peruvian-Style Tofu, Fennel & Mushroom Jacket Potato
+    category: lunch
+    cuisine: Peruvian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  discoveryQueueMealRefs:
+  - recipe_id: THA-229
+    import_key: tha_original:THA-229
+    name: Australian cafe-Style Chickpea, Cabbage & Beetroot Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-234
+    import_key: tha_original:THA-234
+    name: Australian cafe-Style Chicken Thigh, Celery & Tomato Rice Bowl 2
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-239
+    import_key: tha_original:THA-239
+    name: Australian cafe-Style Kidney Bean, Cabbage & Cucumber Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-244
+    import_key: tha_original:THA-244
+    name: Australian cafe-Style Butter Bean, Celery & Beetroot Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  - recipe_id: THA-125
+    import_key: tha_original:THA-125
+    name: Moroccan-Style Tuna, Pumpkin & Cauliflower Jacket Potato
+    category: lunch
+    cuisine: Moroccan-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-112
+    import_key: tha_original:THA-112
+    name: Peruvian-Style Green Pea, Sweetcorn & Mushroom Stuffed Pitta
+    category: lunch
+    cuisine: Peruvian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  - recipe_id: THA-498
+    import_key: tha_original:THA-498
+    name: Chinese-Style Kale, Celery & Egg Snack Bites
+    category: snack
+    cuisine: Chinese-inspired
+    difficulty: easy
+    servings: 8
+    total_minutes: 30
+  notes: References only. Recipe bodies remain owned by the THA Original Founding Cookbook.
+planner:
+- week: 1
+  dayOfWeek: 0
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-349
+    import_key: tha_original:THA-349
+    name: Australian cafe-Style Kidney Bean, Cabbage & Beetroot Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  eaters: &id002
+  - Leanne
+  - Matt
+  - Archie
+- week: 1
+  dayOfWeek: 0
+  mealType: breakfast
+  mealRef:
+    recipe_id: THA-013
+    import_key: tha_original:THA-013
+    name: North African-Style Lentil, Celery & Mushroom Toast Plate
+    category: breakfast
+    cuisine: North African-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  eaters: *id002
+- week: 1
+  dayOfWeek: 1
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-004
+    import_key: tha_original:THA-004
+    name: Golden Potato, Chickpea & Spinach Curry
+    category: dinner
+    cuisine: Indian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 45
+  eaters: *id002
+- week: 1
+  dayOfWeek: 1
+  mealType: lunch
+  mealRef:
+    recipe_id: THA-087
+    import_key: tha_original:THA-087
+    name: Peruvian-Style Halloumi, Fennel & Celery Lunch Bowl
+    category: lunch
+    cuisine: Peruvian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  eaters: *id002
+- week: 1
+  dayOfWeek: 2
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-003
+    import_key: tha_original:THA-003
+    name: Basil Tomato Wholewheat Pasta
+    category: dinner
+    cuisine: Italian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  eaters: *id002
+- week: 1
+  dayOfWeek: 2
+  mealType: breakfast
+  mealRef:
+    recipe_id: THA-016
+    import_key: tha_original:THA-016
+    name: Pakistani-Style Feta, Tomato & Green Bean Breakfast Wrap
+    category: breakfast
+    cuisine: Pakistani-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  eaters: *id002
+- week: 1
+  dayOfWeek: 2
+  mealType: snacks
+  mealRef:
+    recipe_id: THA-499
+    import_key: tha_original:THA-499
+    name: West African-Style Fennel, Aubergine & Chickpea Dip Plate
+    category: snack
+    cuisine: West African-inspired
+    difficulty: easy
+    servings: 8
+    total_minutes: 30
+  eaters: *id002
+- week: 1
+  dayOfWeek: 3
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-006
+    import_key: tha_original:THA-006
+    name: Roast Vegetable & Butter Bean Traybake
+    category: dinner
+    cuisine: Mediterranean-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 55
+  eaters: *id002
+- week: 1
+  dayOfWeek: 3
+  mealType: lunch
+  mealRef:
+    recipe_id: THA-097
+    import_key: tha_original:THA-097
+    name: Peruvian-Style Tofu, Fennel & Mushroom Jacket Potato
+    category: lunch
+    cuisine: Peruvian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  eaters: *id002
+- week: 1
+  dayOfWeek: 4
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-005
+    import_key: tha_original:THA-005
+    name: Gentle Taco Rice Bowls
+    category: dinner
+    cuisine: Mexican-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 40
+  eaters: *id002
+- week: 1
+  dayOfWeek: 4
+  mealType: breakfast
+  mealRef:
+    recipe_id: THA-032
+    import_key: tha_original:THA-032
+    name: Malaysian-Style Cottage Cheese, Asparagus & Pumpkin Breakfast Wrap
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  eaters: *id002
+- week: 1
+  dayOfWeek: 5
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-354
+    import_key: tha_original:THA-354
+    name: Australian cafe-Style Chicken Thigh, Celery & Tomato Rice Bowl 6
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+- week: 1
+  dayOfWeek: 5
+  mealType: lunch
+  mealRef:
+    recipe_id: THA-107
+    import_key: tha_original:THA-107
+    name: Peruvian-Style Mackerel, Fennel & Cherry Tomato Lunch Bowl
+    category: lunch
+    cuisine: Peruvian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  eaters: *id002
+- week: 1
+  dayOfWeek: 6
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-359
+    import_key: tha_original:THA-359
+    name: Australian cafe-Style Green Pea, Cabbage & Cucumber Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+- week: 2
+  dayOfWeek: 0
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-364
+    import_key: tha_original:THA-364
+    name: Australian cafe-Style Split Pea, Celery & Beetroot Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+- week: 2
+  dayOfWeek: 0
+  mealType: breakfast
+  mealRef:
+    recipe_id: THA-011
+    import_key: tha_original:THA-011
+    name: Pakistani-Style Feta, Parsnip & Cauliflower Egg Skillet
+    category: breakfast
+    cuisine: Pakistani-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  eaters: *id002
+- week: 2
+  dayOfWeek: 1
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-369
+    import_key: tha_original:THA-369
+    name: Australian cafe-Style Chicken Thigh, Cabbage & Tomato Rice Bowl 6
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+- week: 2
+  dayOfWeek: 1
+  mealType: lunch
+  mealRef:
+    recipe_id: THA-092
+    import_key: tha_original:THA-092
+    name: Peruvian-Style Cod, Sweetcorn & Cherry Tomato Stuffed Pitta
+    category: lunch
+    cuisine: Peruvian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  eaters: *id002
+- week: 2
+  dayOfWeek: 2
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-374
+    import_key: tha_original:THA-374
+    name: Australian cafe-Style Lentil, Celery & Cucumber Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+- week: 2
+  dayOfWeek: 2
+  mealType: breakfast
+  mealRef:
+    recipe_id: THA-021
+    import_key: tha_original:THA-021
+    name: Pakistani-Style Feta, Parsnip & Fennel Toast Plate
+    category: breakfast
+    cuisine: Pakistani-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  eaters: *id002
+- week: 2
+  dayOfWeek: 2
+  mealType: snacks
+  mealRef:
+    recipe_id: THA-483
+    import_key: tha_original:THA-483
+    name: Chinese-Style Cherry Tomato, Celery & Egg Snack Bites
+    category: snack
+    cuisine: Chinese-inspired
+    difficulty: easy
+    servings: 8
+    total_minutes: 30
+  eaters: *id002
+- week: 2
+  dayOfWeek: 3
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-379
+    import_key: tha_original:THA-379
+    name: Australian cafe-Style Edamame, Cabbage & Beetroot Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+- week: 2
+  dayOfWeek: 3
+  mealType: lunch
+  mealRef:
+    recipe_id: THA-102
+    import_key: tha_original:THA-102
+    name: Peruvian-Style Halloumi, Sweetcorn & Celery Frittata
+    category: lunch
+    cuisine: Peruvian-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  eaters: *id002
+- week: 2
+  dayOfWeek: 4
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-384
+    import_key: tha_original:THA-384
+    name: Australian cafe-Style Chicken Thigh, Celery & Tomato Rice Bowl 7
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+- week: 2
+  dayOfWeek: 4
+  mealType: breakfast
+  mealRef:
+    recipe_id: THA-013
+    import_key: tha_original:THA-013
+    name: North African-Style Lentil, Celery & Mushroom Toast Plate
+    category: breakfast
+    cuisine: North African-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  eaters: *id002
+- week: 2
+  dayOfWeek: 5
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-389
+    import_key: tha_original:THA-389
+    name: Australian cafe-Style Black Bean, Cabbage & Cucumber Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+- week: 2
+  dayOfWeek: 5
+  mealType: lunch
+  mealRef:
+    recipe_id: THA-169
+    import_key: tha_original:THA-169
+    name: Mediterranean-Style Chickpea, Cauliflower & Pak Choi Jacket Potato
+    category: lunch
+    cuisine: Mediterranean-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  eaters: *id002
+- week: 2
+  dayOfWeek: 6
+  mealType: dinner
+  mealRef:
+    recipe_id: THA-349
+    import_key: tha_original:THA-349
+    name: Australian cafe-Style Kidney Bean, Cabbage & Beetroot Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  eaters: *id002
+weekEaterOverrides: []
+freezer: []
+shoppingExtras:
+- name: apples
+  category: grocery
+  alwaysAdd: false
+- name: bananas
+  category: grocery
+  alwaysAdd: false
+- name: natural yoghurt
+  category: grocery
+  alwaysAdd: false
+- name: wholegrain bread
+  category: grocery
+  alwaysAdd: false
+- name: milk or plant milk
+  category: grocery
+  alwaysAdd: true
+generateShoppingList: true
+diaryEntries:
+- dayOffset: -1
+  mealSlot: breakfast
+  mealRef:
+    recipe_id: THA-032
+    import_key: tha_original:THA-032
+    name: Malaysian-Style Cottage Cheese, Asparagus & Pumpkin Breakfast Wrap
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  fromPlannerMealRef:
+    recipe_id: THA-032
+    import_key: tha_original:THA-032
+    name: Malaysian-Style Cottage Cheese, Asparagus & Pumpkin Breakfast Wrap
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+- dayOffset: -2
+  mealSlot: breakfast
+  mealRef:
+    recipe_id: THA-013
+    import_key: tha_original:THA-013
+    name: North African-Style Lentil, Celery & Mushroom Toast Plate
+    category: breakfast
+    cuisine: North African-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  fromPlannerMealRef:
+    recipe_id: THA-013
+    import_key: tha_original:THA-013
+    name: North African-Style Lentil, Celery & Mushroom Toast Plate
+    category: breakfast
+    cuisine: North African-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+- dayOffset: -3
+  mealSlot: breakfast
+  mealRef:
+    recipe_id: THA-011
+    import_key: tha_original:THA-011
+    name: Pakistani-Style Feta, Parsnip & Cauliflower Egg Skillet
+    category: breakfast
+    cuisine: Pakistani-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  fromPlannerMealRef:
+    recipe_id: THA-011
+    import_key: tha_original:THA-011
+    name: Pakistani-Style Feta, Parsnip & Cauliflower Egg Skillet
+    category: breakfast
+    cuisine: Pakistani-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+- dayOffset: -4
+  mealSlot: breakfast
+  mealRef:
+    recipe_id: THA-016
+    import_key: tha_original:THA-016
+    name: Pakistani-Style Feta, Tomato & Green Bean Breakfast Wrap
+    category: breakfast
+    cuisine: Pakistani-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  fromPlannerMealRef:
+    recipe_id: THA-016
+    import_key: tha_original:THA-016
+    name: Pakistani-Style Feta, Tomato & Green Bean Breakfast Wrap
+    category: breakfast
+    cuisine: Pakistani-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+- dayOffset: -5
+  mealSlot: breakfast
+  mealRef:
+    recipe_id: THA-021
+    import_key: tha_original:THA-021
+    name: Pakistani-Style Feta, Parsnip & Fennel Toast Plate
+    category: breakfast
+    cuisine: Pakistani-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  fromPlannerMealRef:
+    recipe_id: THA-021
+    import_key: tha_original:THA-021
+    name: Pakistani-Style Feta, Parsnip & Fennel Toast Plate
+    category: breakfast
+    cuisine: Pakistani-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+- dayOffset: -6
+  mealSlot: lunch
+  mealRef:
+    recipe_id: THA-169
+    import_key: tha_original:THA-169
+    name: Mediterranean-Style Chickpea, Cauliflower & Pak Choi Jacket Potato
+    category: lunch
+    cuisine: Mediterranean-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  fromPlannerMealRef:
+    recipe_id: THA-169
+    import_key: tha_original:THA-169
+    name: Mediterranean-Style Chickpea, Cauliflower & Pak Choi Jacket Potato
+    category: lunch
+    cuisine: Mediterranean-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+- dayOffset: -7
+  mealSlot: lunch
+  mealRef:
+    recipe_id: THA-085
+    import_key: tha_original:THA-085
+    name: Moroccan-Style Butter Bean, Pumpkin & Green Bean Jacket Potato
+    category: lunch
+    cuisine: Moroccan-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+  fromPlannerMealRef:
+    recipe_id: THA-085
+    import_key: tha_original:THA-085
+    name: Moroccan-Style Butter Bean, Pumpkin & Green Bean Jacket Potato
+    category: lunch
+    cuisine: Moroccan-inspired
+    difficulty: medium
+    servings: 4
+    total_minutes: 35
+- dayOffset: -8
+  mealSlot: lunch
+  mealRef:
+    recipe_id: THA-087
+    import_key: tha_original:THA-087
+    name: Peruvian-Style Halloumi, Fennel & Celery Lunch Bowl
+    category: lunch
+    cuisine: Peruvian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+  fromPlannerMealRef:
+    recipe_id: THA-087
+    import_key: tha_original:THA-087
+    name: Peruvian-Style Halloumi, Fennel & Celery Lunch Bowl
+    category: lunch
+    cuisine: Peruvian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 35
+diaryMetrics:
+- dayOffset: -1
+  moodApples: 4
+  energyApples: 4
+  sleepHours: 6.9
+  stuckToPlan: false
+- dayOffset: -2
+  moodApples: 4
+  energyApples: 3
+  sleepHours: 7.2
+  stuckToPlan: true
+- dayOffset: -3
+  moodApples: 3
+  energyApples: 4
+  sleepHours: 7.6
+  stuckToPlan: true
+- dayOffset: -4
+  moodApples: 4
+  energyApples: 4
+  sleepHours: 6.2
+  stuckToPlan: false
+- dayOffset: -5
+  moodApples: 4
+  energyApples: 3
+  sleepHours: 6.5
+  stuckToPlan: true
+evidence:
+- subjectType: meal
+  subjectKey: recipe:THA-032
+  mealRef:
+    recipe_id: THA-032
+    import_key: tha_original:THA-032
+    name: Malaysian-Style Cottage Cheese, Asparagus & Pumpkin Breakfast Wrap
+    category: breakfast
+    cuisine: Malaysian-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  outcomeType: completed
+  direction: positive
+  dayOffset: -2
+  sourceCapabilityId: planner
+- subjectType: meal
+  subjectKey: recipe:THA-013
+  mealRef:
+    recipe_id: THA-013
+    import_key: tha_original:THA-013
+    name: North African-Style Lentil, Celery & Mushroom Toast Plate
+    category: breakfast
+    cuisine: North African-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  outcomeType: completed
+  direction: positive
+  dayOffset: -5
+  sourceCapabilityId: planner
+- subjectType: meal
+  subjectKey: recipe:THA-011
+  mealRef:
+    recipe_id: THA-011
+    import_key: tha_original:THA-011
+    name: Pakistani-Style Feta, Parsnip & Cauliflower Egg Skillet
+    category: breakfast
+    cuisine: Pakistani-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  outcomeType: completed
+  direction: positive
+  dayOffset: -8
+  sourceCapabilityId: planner
+- subjectType: meal
+  subjectKey: recipe:THA-016
+  mealRef:
+    recipe_id: THA-016
+    import_key: tha_original:THA-016
+    name: Pakistani-Style Feta, Tomato & Green Bean Breakfast Wrap
+    category: breakfast
+    cuisine: Pakistani-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  outcomeType: completed
+  direction: positive
+  dayOffset: -11
+  sourceCapabilityId: planner
+- subjectType: meal
+  subjectKey: recipe:THA-021
+  mealRef:
+    recipe_id: THA-021
+    import_key: tha_original:THA-021
+    name: Pakistani-Style Feta, Parsnip & Fennel Toast Plate
+    category: breakfast
+    cuisine: Pakistani-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 20
+  outcomeType: completed
+  direction: positive
+  dayOffset: -14
+  sourceCapabilityId: planner
+- subjectType: swap
+  subjectKey: ingredient:wholegrain
+  subjectId: swap:dw037:white-to-wholegrain
+  outcomeType: accepted
+  direction: positive
+  dayOffset: -12
+  sourceCapabilityId: meals
+- subjectType: meal
+  subjectKey: recipe:THA-229
+  mealRef:
+    recipe_id: THA-229
+    import_key: tha_original:THA-229
+    name: Australian cafe-Style Chickpea, Cabbage & Beetroot Rice Bowl
+    category: dinner
+    cuisine: Australian cafe-inspired
+    difficulty: easy
+    servings: 4
+    total_minutes: 50
+  outcomeType: rejected
+  direction: negative
+  dayOffset: -18
+  sourceCapabilityId: planner
+knownGaps:
+- Recipe bodies are not authored here; the Cookbook remains the owner of names, ingredients, method and nutrition derivation.
+- No nutrition, allergen rows, learning signals, observations, conversations or opportunity deliveries are seeded by this
+  world.
+- Ready-meal/product references are not authored in this foundation pack because no product meal export was supplied with
+  stable product IDs.
+qualityPurpose:
+  tests:
+  - air-fryer family
+  - meal-reference import
+  - planner realism
+  - honest gaps
+  reasoningQuestions:
+  - What should Leanne cook tonight?
+  - What meals has this household repeated?
+  - What dietary gaps should THA admit?

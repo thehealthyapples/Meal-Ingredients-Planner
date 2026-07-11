@@ -1,0 +1,1602 @@
+{
+  "id": "DW023",
+  "slug": "holland-low-confidence",
+  "archetype": "Low cooking confidence household",
+  "householdName": "Holland Household (Dev)",
+  "summary": "Low confidence, wants step-by-step easy meals and avoids unfamiliar ingredients.",
+  "fictional": true,
+  "coldStart": false,
+  "accounts": [
+    {
+      "key": "owner",
+      "username": "holland.low.confidence.owner@dev.thehealthyapples.dev",
+      "displayName": "Amy Holland (Dev)",
+      "firstName": "Amy",
+      "dietPattern": null,
+      "dietRestrictions": [],
+      "eatingSchedule": "None",
+      "subscriptionTier": "free"
+    },
+    {
+      "key": "partner",
+      "username": "holland.low.confidence.partner@dev.thehealthyapples.dev",
+      "displayName": "Ryan Holland (Dev)",
+      "firstName": "Ryan",
+      "dietPattern": null,
+      "dietRestrictions": [],
+      "eatingSchedule": "None",
+      "subscriptionTier": "free"
+    }
+  ],
+  "eaters": [
+    {
+      "displayName": "Amy",
+      "accountKey": "owner",
+      "ageYears": 30,
+      "defaultDietTypes": [],
+      "hardRestrictions": []
+    },
+    {
+      "displayName": "Ryan",
+      "accountKey": "partner",
+      "ageYears": 30,
+      "defaultDietTypes": [],
+      "hardRestrictions": []
+    }
+  ],
+  "preferences": {
+    "dietTypes": [],
+    "excludedIngredients": [],
+    "healthGoals": [
+      "family_meals",
+      "packed_lunches"
+    ],
+    "goalType": "maintain",
+    "budgetLevel": "budget",
+    "activityLevel": "low",
+    "preferredStores": [
+      "Tesco"
+    ],
+    "calorieTarget": null,
+    "heightCm": null,
+    "weightKg": null,
+    "adultsCount": 2,
+    "childrenCount": 0,
+    "maxTotalCookTime": 25,
+    "plannerEnableChildMeals": false,
+    "companionPersonality": "teacher"
+  },
+  "persona": {
+    "lifestyle": "Low confidence, wants step-by-step easy meals and avoids unfamiliar ingredients.",
+    "shoppingHabits": "Primary shops: Tesco. Small frequent shops.",
+    "cookingConfidence": "low",
+    "weeknightCookingTime": "15-25 minutes",
+    "budget": "budget",
+    "kitchenEquipment": [
+      "hob",
+      "oven",
+      "microwave",
+      "air fryer"
+    ],
+    "lifeEvents": [
+      "ordinary working week"
+    ],
+    "mealStory": "Favourite meals and dislikes are persona context unless a future favourite-meals schema is introduced.",
+    "favouriteMealRefsNarrativeOnly": [
+      {
+        "recipe_id": "THA-064",
+        "import_key": "tha_original:THA-064",
+        "name": "Californian-Style Green Pea, Broccoli & Aubergine Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-015",
+        "import_key": "tha_original:THA-015",
+        "name": "French country-Style Cod, Red Pepper & Pumpkin Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "French country-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-012",
+        "import_key": "tha_original:THA-012",
+        "name": "Malaysian-Style Cottage Cheese, Asparagus & Peas Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "Malaysian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      }
+    ],
+    "dislikedIngredientsNarrativeOnly": [
+      "excess salt"
+    ]
+  },
+  "pantry": [
+    {
+      "ingredient": "black beans",
+      "category": "larder"
+    },
+    {
+      "ingredient": "rice",
+      "category": "larder"
+    },
+    {
+      "ingredient": "onions",
+      "category": "larder"
+    },
+    {
+      "ingredient": "mixed seeds",
+      "category": "larder"
+    },
+    {
+      "ingredient": "brown rice",
+      "category": "larder"
+    },
+    {
+      "ingredient": "wholewheat pasta",
+      "category": "larder"
+    },
+    {
+      "ingredient": "frozen mixed vegetables",
+      "category": "freezer"
+    },
+    {
+      "ingredient": "carrots",
+      "category": "fridge"
+    },
+    {
+      "ingredient": "tinned tomatoes",
+      "category": "larder"
+    },
+    {
+      "ingredient": "baked potatoes",
+      "category": "larder"
+    },
+    {
+      "ingredient": "rolled oats",
+      "category": "larder"
+    },
+    {
+      "ingredient": "tomato puree",
+      "category": "larder"
+    },
+    {
+      "ingredient": "tinned chopped tomatoes",
+      "category": "larder"
+    },
+    {
+      "ingredient": "low-salt stock cubes",
+      "category": "larder"
+    },
+    {
+      "ingredient": "tuna tins",
+      "category": "larder"
+    },
+    {
+      "ingredient": "potatoes",
+      "category": "larder"
+    },
+    {
+      "ingredient": "chickpeas",
+      "category": "larder"
+    }
+  ],
+  "cookbookRefs": {
+    "adoptedMealRefs": [
+      {
+        "recipe_id": "THA-064",
+        "import_key": "tha_original:THA-064",
+        "name": "Californian-Style Green Pea, Broccoli & Aubergine Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-015",
+        "import_key": "tha_original:THA-015",
+        "name": "French country-Style Cod, Red Pepper & Pumpkin Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "French country-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-012",
+        "import_key": "tha_original:THA-012",
+        "name": "Malaysian-Style Cottage Cheese, Asparagus & Peas Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "Malaysian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-017",
+        "import_key": "tha_original:THA-017",
+        "name": "Malaysian-Style Cottage Cheese, Peas & Pumpkin Toast Plate",
+        "category": "breakfast",
+        "cuisine": "Malaysian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-022",
+        "import_key": "tha_original:THA-022",
+        "name": "Malaysian-Style Cottage Cheese, Asparagus & Spinach Breakfast Hash",
+        "category": "breakfast",
+        "cuisine": "Malaysian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-120",
+        "import_key": "tha_original:THA-120",
+        "name": "Moroccan-Style Egg, Courgette & Parsnip Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-087",
+        "import_key": "tha_original:THA-087",
+        "name": "Peruvian-Style Halloumi, Fennel & Celery Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "Peruvian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-086",
+        "import_key": "tha_original:THA-086",
+        "name": "Thai-Style Sardine, Kale & Pumpkin Frittata",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-091",
+        "import_key": "tha_original:THA-091",
+        "name": "Thai-Style Kidney Bean, Cherry Tomato & Spinach Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-096",
+        "import_key": "tha_original:THA-096",
+        "name": "Thai-Style Greek Yoghurt, Kale & Peas Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-101",
+        "import_key": "tha_original:THA-101",
+        "name": "Thai-Style Tuna, Cherry Tomato & Pumpkin Jacket Potato",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-106",
+        "import_key": "tha_original:THA-106",
+        "name": "Thai-Style Split Pea, Kale & Spinach Frittata",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-429",
+        "import_key": "tha_original:THA-429",
+        "name": "Australian cafe-Style Chicken Thigh, Cabbage & Tomato Rice Bowl 8",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-004",
+        "import_key": "tha_original:THA-004",
+        "name": "Golden Potato, Chickpea & Spinach Curry",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 45
+      },
+      {
+        "recipe_id": "THA-003",
+        "import_key": "tha_original:THA-003",
+        "name": "Basil Tomato Wholewheat Pasta",
+        "category": "dinner",
+        "cuisine": "Italian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-006",
+        "import_key": "tha_original:THA-006",
+        "name": "Roast Vegetable & Butter Bean Traybake",
+        "category": "dinner",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 55
+      },
+      {
+        "recipe_id": "THA-005",
+        "import_key": "tha_original:THA-005",
+        "name": "Gentle Taco Rice Bowls",
+        "category": "dinner",
+        "cuisine": "Mexican-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 40
+      },
+      {
+        "recipe_id": "THA-434",
+        "import_key": "tha_original:THA-434",
+        "name": "Australian cafe-Style Edamame, Celery & Cucumber Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-439",
+        "import_key": "tha_original:THA-439",
+        "name": "Australian cafe-Style Haricot Bean, Cabbage & Beetroot Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-444",
+        "import_key": "tha_original:THA-444",
+        "name": "Australian cafe-Style Chicken Thigh, Celery & Tomato Rice Bowl 9",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-449",
+        "import_key": "tha_original:THA-449",
+        "name": "Australian cafe-Style Chickpea, Cabbage & Cucumber Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-454",
+        "import_key": "tha_original:THA-454",
+        "name": "Australian cafe-Style Tofu, Celery & Beetroot Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-194",
+        "import_key": "tha_original:THA-194",
+        "name": "Australian cafe-Style Green Pea, Celery & Cucumber Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-199",
+        "import_key": "tha_original:THA-199",
+        "name": "Australian cafe-Style Split Pea, Cabbage & Beetroot Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-204",
+        "import_key": "tha_original:THA-204",
+        "name": "Australian cafe-Style Chicken Thigh, Celery & Tomato Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-465",
+        "import_key": "tha_original:THA-465",
+        "name": "Greek-Style Cherry Tomato, Radish & Cottage Cheese Bean Salad",
+        "category": "side",
+        "cuisine": "Greek-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-010",
+        "import_key": "tha_original:THA-010",
+        "name": "Roasted Carrot, Chickpea & Herb Grain Salad",
+        "category": "side",
+        "cuisine": "Middle Eastern-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 45
+      },
+      {
+        "recipe_id": "THA-488",
+        "import_key": "tha_original:THA-488",
+        "name": "Chinese-Style Kale, Cherry Tomato & Chickpea Snack Bites",
+        "category": "snack",
+        "cuisine": "Chinese-inspired",
+        "difficulty": "easy",
+        "servings": 8,
+        "total_minutes": 30
+      },
+      {
+        "recipe_id": "THA-485",
+        "import_key": "tha_original:THA-485",
+        "name": "Georgian-Style Red Cabbage, Spinach & Cannellini Bean Fruit Pot",
+        "category": "snack",
+        "cuisine": "Georgian-inspired",
+        "difficulty": "easy",
+        "servings": 8,
+        "total_minutes": 30
+      },
+      {
+        "recipe_id": "THA-481",
+        "import_key": "tha_original:THA-481",
+        "name": "Greek-Style Cauliflower, Green Bean & Butter Bean Oat Bars",
+        "category": "snack",
+        "cuisine": "Greek-inspired",
+        "difficulty": "easy",
+        "servings": 8,
+        "total_minutes": 30
+      }
+    ],
+    "regularMealRefs": [
+      {
+        "recipe_id": "THA-064",
+        "import_key": "tha_original:THA-064",
+        "name": "Californian-Style Green Pea, Broccoli & Aubergine Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-015",
+        "import_key": "tha_original:THA-015",
+        "name": "French country-Style Cod, Red Pepper & Pumpkin Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "French country-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-012",
+        "import_key": "tha_original:THA-012",
+        "name": "Malaysian-Style Cottage Cheese, Asparagus & Peas Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "Malaysian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-017",
+        "import_key": "tha_original:THA-017",
+        "name": "Malaysian-Style Cottage Cheese, Peas & Pumpkin Toast Plate",
+        "category": "breakfast",
+        "cuisine": "Malaysian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-022",
+        "import_key": "tha_original:THA-022",
+        "name": "Malaysian-Style Cottage Cheese, Asparagus & Spinach Breakfast Hash",
+        "category": "breakfast",
+        "cuisine": "Malaysian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      {
+        "recipe_id": "THA-120",
+        "import_key": "tha_original:THA-120",
+        "name": "Moroccan-Style Egg, Courgette & Parsnip Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-087",
+        "import_key": "tha_original:THA-087",
+        "name": "Peruvian-Style Halloumi, Fennel & Celery Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "Peruvian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-086",
+        "import_key": "tha_original:THA-086",
+        "name": "Thai-Style Sardine, Kale & Pumpkin Frittata",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-091",
+        "import_key": "tha_original:THA-091",
+        "name": "Thai-Style Kidney Bean, Cherry Tomato & Spinach Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-096",
+        "import_key": "tha_original:THA-096",
+        "name": "Thai-Style Greek Yoghurt, Kale & Peas Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      }
+    ],
+    "discoveryQueueMealRefs": [
+      {
+        "recipe_id": "THA-414",
+        "import_key": "tha_original:THA-414",
+        "name": "Australian cafe-Style Chicken Thigh, Celery & Tomato Rice Bowl 8",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-419",
+        "import_key": "tha_original:THA-419",
+        "name": "Australian cafe-Style Split Pea, Cabbage & Cucumber Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-424",
+        "import_key": "tha_original:THA-424",
+        "name": "Australian cafe-Style Cannellini Bean, Celery & Beetroot Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-209",
+        "import_key": "tha_original:THA-209",
+        "name": "Australian cafe-Style Lentil, Cabbage & Cucumber Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-145",
+        "import_key": "tha_original:THA-145",
+        "name": "Moroccan-Style Green Pea, Pumpkin & Green Bean Jacket Potato",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-092",
+        "import_key": "tha_original:THA-092",
+        "name": "Peruvian-Style Cod, Sweetcorn & Cherry Tomato Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Peruvian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-486",
+        "import_key": "tha_original:THA-486",
+        "name": "Greek-Style Cucumber, Parsnip & Feta Oat Bars",
+        "category": "snack",
+        "cuisine": "Greek-inspired",
+        "difficulty": "easy",
+        "servings": 8,
+        "total_minutes": 30
+      }
+    ],
+    "notes": "References only. Recipe bodies remain owned by the THA Original Founding Cookbook."
+  },
+  "planner": [
+    {
+      "week": 1,
+      "dayOfWeek": 0,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-429",
+        "import_key": "tha_original:THA-429",
+        "name": "Australian cafe-Style Chicken Thigh, Cabbage & Tomato Rice Bowl 8",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Amy",
+        "Ryan"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 0,
+      "mealType": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-015",
+        "import_key": "tha_original:THA-015",
+        "name": "French country-Style Cod, Red Pepper & Pumpkin Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "French country-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "eaters": [
+        "Amy",
+        "Ryan"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 1,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-004",
+        "import_key": "tha_original:THA-004",
+        "name": "Golden Potato, Chickpea & Spinach Curry",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 45
+      },
+      "eaters": [
+        "Amy",
+        "Ryan"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 1,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-086",
+        "import_key": "tha_original:THA-086",
+        "name": "Thai-Style Sardine, Kale & Pumpkin Frittata",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Amy",
+        "Ryan"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 2,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-003",
+        "import_key": "tha_original:THA-003",
+        "name": "Basil Tomato Wholewheat Pasta",
+        "category": "dinner",
+        "cuisine": "Italian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Amy",
+        "Ryan"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 2,
+      "mealType": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-017",
+        "import_key": "tha_original:THA-017",
+        "name": "Malaysian-Style Cottage Cheese, Peas & Pumpkin Toast Plate",
+        "category": "breakfast",
+        "cuisine": "Malaysian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "eaters": [
+        "Amy",
+        "Ryan"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 2,
+      "mealType": "snacks",
+      "mealRef": {
+        "recipe_id": "THA-488",
+        "import_key": "tha_original:THA-488",
+        "name": "Chinese-Style Kale, Cherry Tomato & Chickpea Snack Bites",
+        "category": "snack",
+        "cuisine": "Chinese-inspired",
+        "difficulty": "easy",
+        "servings": 8,
+        "total_minutes": 30
+      },
+      "eaters": [
+        "Amy",
+        "Ryan"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 3,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-006",
+        "import_key": "tha_original:THA-006",
+        "name": "Roast Vegetable & Butter Bean Traybake",
+        "category": "dinner",
+        "cuisine": "Mediterranean-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 55
+      },
+      "eaters": [
+        "Amy",
+        "Ryan"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 3,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-096",
+        "import_key": "tha_original:THA-096",
+        "name": "Thai-Style Greek Yoghurt, Kale & Peas Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Amy",
+        "Ryan"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 4,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-005",
+        "import_key": "tha_original:THA-005",
+        "name": "Gentle Taco Rice Bowls",
+        "category": "dinner",
+        "cuisine": "Mexican-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 40
+      },
+      "eaters": [
+        "Amy",
+        "Ryan"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 4,
+      "mealType": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-064",
+        "import_key": "tha_original:THA-064",
+        "name": "Californian-Style Green Pea, Broccoli & Aubergine Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "eaters": [
+        "Amy",
+        "Ryan"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 5,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-434",
+        "import_key": "tha_original:THA-434",
+        "name": "Australian cafe-Style Edamame, Celery & Cucumber Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Amy",
+        "Ryan"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 5,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-106",
+        "import_key": "tha_original:THA-106",
+        "name": "Thai-Style Split Pea, Kale & Spinach Frittata",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Amy",
+        "Ryan"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 6,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-439",
+        "import_key": "tha_original:THA-439",
+        "name": "Australian cafe-Style Haricot Bean, Cabbage & Beetroot Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Amy",
+        "Ryan"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 0,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-444",
+        "import_key": "tha_original:THA-444",
+        "name": "Australian cafe-Style Chicken Thigh, Celery & Tomato Rice Bowl 9",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Amy",
+        "Ryan"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 0,
+      "mealType": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-012",
+        "import_key": "tha_original:THA-012",
+        "name": "Malaysian-Style Cottage Cheese, Asparagus & Peas Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "Malaysian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "eaters": [
+        "Amy",
+        "Ryan"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 1,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-449",
+        "import_key": "tha_original:THA-449",
+        "name": "Australian cafe-Style Chickpea, Cabbage & Cucumber Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Amy",
+        "Ryan"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 1,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-091",
+        "import_key": "tha_original:THA-091",
+        "name": "Thai-Style Kidney Bean, Cherry Tomato & Spinach Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Amy",
+        "Ryan"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 2,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-454",
+        "import_key": "tha_original:THA-454",
+        "name": "Australian cafe-Style Tofu, Celery & Beetroot Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Amy",
+        "Ryan"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 2,
+      "mealType": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-022",
+        "import_key": "tha_original:THA-022",
+        "name": "Malaysian-Style Cottage Cheese, Asparagus & Spinach Breakfast Hash",
+        "category": "breakfast",
+        "cuisine": "Malaysian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "eaters": [
+        "Amy",
+        "Ryan"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 2,
+      "mealType": "snacks",
+      "mealRef": {
+        "recipe_id": "THA-485",
+        "import_key": "tha_original:THA-485",
+        "name": "Georgian-Style Red Cabbage, Spinach & Cannellini Bean Fruit Pot",
+        "category": "snack",
+        "cuisine": "Georgian-inspired",
+        "difficulty": "easy",
+        "servings": 8,
+        "total_minutes": 30
+      },
+      "eaters": [
+        "Amy",
+        "Ryan"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 3,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-194",
+        "import_key": "tha_original:THA-194",
+        "name": "Australian cafe-Style Green Pea, Celery & Cucumber Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Amy",
+        "Ryan"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 3,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-101",
+        "import_key": "tha_original:THA-101",
+        "name": "Thai-Style Tuna, Cherry Tomato & Pumpkin Jacket Potato",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Amy",
+        "Ryan"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 4,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-199",
+        "import_key": "tha_original:THA-199",
+        "name": "Australian cafe-Style Split Pea, Cabbage & Beetroot Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Amy",
+        "Ryan"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 4,
+      "mealType": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-015",
+        "import_key": "tha_original:THA-015",
+        "name": "French country-Style Cod, Red Pepper & Pumpkin Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "French country-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "eaters": [
+        "Amy",
+        "Ryan"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 5,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-204",
+        "import_key": "tha_original:THA-204",
+        "name": "Australian cafe-Style Chicken Thigh, Celery & Tomato Rice Bowl",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Amy",
+        "Ryan"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 5,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-120",
+        "import_key": "tha_original:THA-120",
+        "name": "Moroccan-Style Egg, Courgette & Parsnip Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Amy",
+        "Ryan"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 6,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-429",
+        "import_key": "tha_original:THA-429",
+        "name": "Australian cafe-Style Chicken Thigh, Cabbage & Tomato Rice Bowl 8",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Amy",
+        "Ryan"
+      ]
+    }
+  ],
+  "weekEaterOverrides": [],
+  "freezer": [],
+  "shoppingExtras": [
+    {
+      "name": "bananas",
+      "category": "grocery",
+      "alwaysAdd": false
+    },
+    {
+      "name": "natural yoghurt",
+      "category": "grocery",
+      "alwaysAdd": false
+    },
+    {
+      "name": "wholegrain bread",
+      "category": "grocery",
+      "alwaysAdd": false
+    },
+    {
+      "name": "milk or plant milk",
+      "category": "grocery",
+      "alwaysAdd": true
+    },
+    {
+      "name": "school fruit",
+      "category": "grocery",
+      "alwaysAdd": true
+    }
+  ],
+  "generateShoppingList": true,
+  "diaryEntries": [
+    {
+      "dayOffset": -1,
+      "mealSlot": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-064",
+        "import_key": "tha_original:THA-064",
+        "name": "Californian-Style Green Pea, Broccoli & Aubergine Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-064",
+        "import_key": "tha_original:THA-064",
+        "name": "Californian-Style Green Pea, Broccoli & Aubergine Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      }
+    },
+    {
+      "dayOffset": -2,
+      "mealSlot": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-015",
+        "import_key": "tha_original:THA-015",
+        "name": "French country-Style Cod, Red Pepper & Pumpkin Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "French country-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-015",
+        "import_key": "tha_original:THA-015",
+        "name": "French country-Style Cod, Red Pepper & Pumpkin Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "French country-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      }
+    },
+    {
+      "dayOffset": -3,
+      "mealSlot": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-012",
+        "import_key": "tha_original:THA-012",
+        "name": "Malaysian-Style Cottage Cheese, Asparagus & Peas Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "Malaysian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-012",
+        "import_key": "tha_original:THA-012",
+        "name": "Malaysian-Style Cottage Cheese, Asparagus & Peas Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "Malaysian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      }
+    },
+    {
+      "dayOffset": -4,
+      "mealSlot": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-017",
+        "import_key": "tha_original:THA-017",
+        "name": "Malaysian-Style Cottage Cheese, Peas & Pumpkin Toast Plate",
+        "category": "breakfast",
+        "cuisine": "Malaysian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-017",
+        "import_key": "tha_original:THA-017",
+        "name": "Malaysian-Style Cottage Cheese, Peas & Pumpkin Toast Plate",
+        "category": "breakfast",
+        "cuisine": "Malaysian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      }
+    },
+    {
+      "dayOffset": -5,
+      "mealSlot": "breakfast",
+      "mealRef": {
+        "recipe_id": "THA-022",
+        "import_key": "tha_original:THA-022",
+        "name": "Malaysian-Style Cottage Cheese, Asparagus & Spinach Breakfast Hash",
+        "category": "breakfast",
+        "cuisine": "Malaysian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-022",
+        "import_key": "tha_original:THA-022",
+        "name": "Malaysian-Style Cottage Cheese, Asparagus & Spinach Breakfast Hash",
+        "category": "breakfast",
+        "cuisine": "Malaysian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      }
+    },
+    {
+      "dayOffset": -6,
+      "mealSlot": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-120",
+        "import_key": "tha_original:THA-120",
+        "name": "Moroccan-Style Egg, Courgette & Parsnip Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-120",
+        "import_key": "tha_original:THA-120",
+        "name": "Moroccan-Style Egg, Courgette & Parsnip Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      }
+    },
+    {
+      "dayOffset": -7,
+      "mealSlot": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-087",
+        "import_key": "tha_original:THA-087",
+        "name": "Peruvian-Style Halloumi, Fennel & Celery Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "Peruvian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-087",
+        "import_key": "tha_original:THA-087",
+        "name": "Peruvian-Style Halloumi, Fennel & Celery Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "Peruvian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      }
+    },
+    {
+      "dayOffset": -8,
+      "mealSlot": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-086",
+        "import_key": "tha_original:THA-086",
+        "name": "Thai-Style Sardine, Kale & Pumpkin Frittata",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-086",
+        "import_key": "tha_original:THA-086",
+        "name": "Thai-Style Sardine, Kale & Pumpkin Frittata",
+        "category": "lunch",
+        "cuisine": "Thai-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      }
+    }
+  ],
+  "diaryMetrics": [
+    {
+      "dayOffset": -1,
+      "moodApples": 4,
+      "energyApples": 3,
+      "sleepHours": 7.2,
+      "stuckToPlan": false
+    },
+    {
+      "dayOffset": -2,
+      "moodApples": 3,
+      "energyApples": 4,
+      "sleepHours": 7.6,
+      "stuckToPlan": true
+    },
+    {
+      "dayOffset": -3,
+      "moodApples": 4,
+      "energyApples": 4,
+      "sleepHours": 6.2,
+      "stuckToPlan": true
+    },
+    {
+      "dayOffset": -4,
+      "moodApples": 4,
+      "energyApples": 3,
+      "sleepHours": 6.5,
+      "stuckToPlan": false
+    },
+    {
+      "dayOffset": -5,
+      "moodApples": 3,
+      "energyApples": 4,
+      "sleepHours": 6.9,
+      "stuckToPlan": true
+    }
+  ],
+  "evidence": [
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-064",
+      "mealRef": {
+        "recipe_id": "THA-064",
+        "import_key": "tha_original:THA-064",
+        "name": "Californian-Style Green Pea, Broccoli & Aubergine Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "Californian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "outcomeType": "completed",
+      "direction": "positive",
+      "dayOffset": -2,
+      "sourceCapabilityId": "planner"
+    },
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-015",
+      "mealRef": {
+        "recipe_id": "THA-015",
+        "import_key": "tha_original:THA-015",
+        "name": "French country-Style Cod, Red Pepper & Pumpkin Egg Skillet",
+        "category": "breakfast",
+        "cuisine": "French country-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "outcomeType": "completed",
+      "direction": "positive",
+      "dayOffset": -5,
+      "sourceCapabilityId": "planner"
+    },
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-012",
+      "mealRef": {
+        "recipe_id": "THA-012",
+        "import_key": "tha_original:THA-012",
+        "name": "Malaysian-Style Cottage Cheese, Asparagus & Peas Breakfast Wrap",
+        "category": "breakfast",
+        "cuisine": "Malaysian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "outcomeType": "completed",
+      "direction": "positive",
+      "dayOffset": -8,
+      "sourceCapabilityId": "planner"
+    },
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-017",
+      "mealRef": {
+        "recipe_id": "THA-017",
+        "import_key": "tha_original:THA-017",
+        "name": "Malaysian-Style Cottage Cheese, Peas & Pumpkin Toast Plate",
+        "category": "breakfast",
+        "cuisine": "Malaysian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "outcomeType": "completed",
+      "direction": "positive",
+      "dayOffset": -11,
+      "sourceCapabilityId": "planner"
+    },
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-022",
+      "mealRef": {
+        "recipe_id": "THA-022",
+        "import_key": "tha_original:THA-022",
+        "name": "Malaysian-Style Cottage Cheese, Asparagus & Spinach Breakfast Hash",
+        "category": "breakfast",
+        "cuisine": "Malaysian-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 20
+      },
+      "outcomeType": "completed",
+      "direction": "positive",
+      "dayOffset": -14,
+      "sourceCapabilityId": "planner"
+    },
+    {
+      "subjectType": "swap",
+      "subjectKey": "ingredient:wholegrain",
+      "subjectId": "swap:dw023:white-to-wholegrain",
+      "outcomeType": "accepted",
+      "direction": "positive",
+      "dayOffset": -12,
+      "sourceCapabilityId": "meals"
+    },
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-414",
+      "mealRef": {
+        "recipe_id": "THA-414",
+        "import_key": "tha_original:THA-414",
+        "name": "Australian cafe-Style Chicken Thigh, Celery & Tomato Rice Bowl 8",
+        "category": "dinner",
+        "cuisine": "Australian cafe-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "outcomeType": "rejected",
+      "direction": "negative",
+      "dayOffset": -18,
+      "sourceCapabilityId": "planner"
+    }
+  ],
+  "knownGaps": [
+    "Recipe bodies are not authored here; the Cookbook remains the owner of names, ingredients, method and nutrition derivation.",
+    "No nutrition, allergen rows, learning signals, observations, conversations or opportunity deliveries are seeded by this world.",
+    "Ready-meal/product references are not authored in this foundation pack because no product meal export was supplied with stable product IDs."
+  ],
+  "qualityPurpose": {
+    "tests": [
+      "low cooking confidence household",
+      "meal-reference import",
+      "planner realism",
+      "honest gaps"
+    ],
+    "reasoningQuestions": [
+      "What should Amy cook tonight?",
+      "What meals has this household repeated?",
+      "What dietary gaps should THA admit?"
+    ]
+  }
+}

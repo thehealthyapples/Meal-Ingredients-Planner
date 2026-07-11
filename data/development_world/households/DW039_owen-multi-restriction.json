@@ -1,0 +1,1441 @@
+{
+  "id": "DW039",
+  "slug": "owen-multi-restriction",
+  "archetype": "Gluten dairy egg complexity",
+  "householdName": "Owen Family (Dev)",
+  "summary": "Child has gluten, dairy and egg restrictions; planner must surface honest gaps.",
+  "fictional": true,
+  "coldStart": false,
+  "accounts": [
+    {
+      "key": "owner",
+      "username": "owen.multi.restriction.owner@dev.thehealthyapples.dev",
+      "displayName": "Sian Owen (Dev)",
+      "firstName": "Sian",
+      "dietPattern": "Flexitarian",
+      "dietRestrictions": [
+        "Gluten-Free",
+        "Dairy-Free",
+        "Eggs"
+      ],
+      "eatingSchedule": "None",
+      "subscriptionTier": "premium"
+    },
+    {
+      "key": "partner",
+      "username": "owen.multi.restriction.partner@dev.thehealthyapples.dev",
+      "displayName": "Rhys Owen (Dev)",
+      "firstName": "Rhys",
+      "dietPattern": "Flexitarian",
+      "dietRestrictions": [
+        "Gluten-Free",
+        "Dairy-Free",
+        "Eggs"
+      ],
+      "eatingSchedule": "None",
+      "subscriptionTier": "premium"
+    }
+  ],
+  "eaters": [
+    {
+      "displayName": "Sian",
+      "accountKey": "owner",
+      "ageYears": 41,
+      "defaultDietTypes": [],
+      "hardRestrictions": [
+        "gluten",
+        "dairy",
+        "eggs"
+      ]
+    },
+    {
+      "displayName": "Rhys",
+      "accountKey": "partner",
+      "ageYears": 42,
+      "defaultDietTypes": [],
+      "hardRestrictions": []
+    },
+    {
+      "displayName": "Cerys",
+      "ageYears": 8,
+      "defaultDietTypes": [],
+      "hardRestrictions": [
+        "gluten",
+        "dairy",
+        "eggs"
+      ]
+    }
+  ],
+  "preferences": {
+    "dietTypes": [
+      "Flexitarian"
+    ],
+    "excludedIngredients": [],
+    "healthGoals": [
+      "heart_health",
+      "steady_energy"
+    ],
+    "goalType": "maintain",
+    "budgetLevel": "standard",
+    "activityLevel": "moderate",
+    "preferredStores": [
+      "Tesco"
+    ],
+    "calorieTarget": null,
+    "heightCm": null,
+    "weightKg": null,
+    "adultsCount": 2,
+    "childrenCount": 1,
+    "maxTotalCookTime": 45,
+    "plannerEnableChildMeals": true,
+    "companionPersonality": "teacher"
+  },
+  "persona": {
+    "lifestyle": "Child has gluten, dairy and egg restrictions; planner must surface honest gaps.",
+    "shoppingHabits": "Primary shops: Tesco. One big weekly shop plus freezer top-ups.",
+    "cookingConfidence": "moderate",
+    "weeknightCookingTime": "30-45 minutes",
+    "budget": "standard",
+    "kitchenEquipment": [
+      "hob",
+      "oven",
+      "microwave",
+      "slow cooker",
+      "freezer"
+    ],
+    "lifeEvents": [
+      "school term routine"
+    ],
+    "mealStory": "Favourite meals and dislikes are persona context unless a future favourite-meals schema is introduced.",
+    "favouriteMealRefsNarrativeOnly": [
+      {
+        "recipe_id": "THA-145",
+        "import_key": "tha_original:THA-145",
+        "name": "Moroccan-Style Green Pea, Pumpkin & Green Bean Jacket Potato",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-155",
+        "import_key": "tha_original:THA-155",
+        "name": "Moroccan-Style Mackerel, Pumpkin & Cauliflower Lunch Bowl 2",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-160",
+        "import_key": "tha_original:THA-160",
+        "name": "Moroccan-Style Lentil, Courgette & Green Bean Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      }
+    ],
+    "dislikedIngredientsNarrativeOnly": [
+      "overly spicy food"
+    ]
+  },
+  "pantry": [
+    {
+      "ingredient": "corn tortillas",
+      "category": "larder"
+    },
+    {
+      "ingredient": "frozen peas",
+      "category": "freezer"
+    },
+    {
+      "ingredient": "gluten-free oats (unverified)",
+      "category": "larder"
+    },
+    {
+      "ingredient": "sweet potatoes",
+      "category": "larder"
+    },
+    {
+      "ingredient": "frozen veg",
+      "category": "freezer"
+    },
+    {
+      "ingredient": "garlic",
+      "category": "larder"
+    },
+    {
+      "ingredient": "tinned chopped tomatoes",
+      "category": "larder"
+    },
+    {
+      "ingredient": "quinoa",
+      "category": "larder"
+    },
+    {
+      "ingredient": "black beans",
+      "category": "larder"
+    },
+    {
+      "ingredient": "low-salt stock cubes",
+      "category": "larder"
+    },
+    {
+      "ingredient": "onions",
+      "category": "larder"
+    },
+    {
+      "ingredient": "carrots",
+      "category": "fridge"
+    },
+    {
+      "ingredient": "tomato puree",
+      "category": "larder"
+    },
+    {
+      "ingredient": "tinned lentils",
+      "category": "larder"
+    },
+    {
+      "ingredient": "lentils",
+      "category": "larder"
+    },
+    {
+      "ingredient": "brown rice",
+      "category": "larder"
+    },
+    {
+      "ingredient": "potatoes",
+      "category": "larder"
+    },
+    {
+      "ingredient": "coconut yoghurt",
+      "category": "larder"
+    }
+  ],
+  "cookbookRefs": {
+    "adoptedMealRefs": [
+      {
+        "recipe_id": "THA-145",
+        "import_key": "tha_original:THA-145",
+        "name": "Moroccan-Style Green Pea, Pumpkin & Green Bean Jacket Potato",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-155",
+        "import_key": "tha_original:THA-155",
+        "name": "Moroccan-Style Mackerel, Pumpkin & Cauliflower Lunch Bowl 2",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-160",
+        "import_key": "tha_original:THA-160",
+        "name": "Moroccan-Style Lentil, Courgette & Green Bean Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-170",
+        "import_key": "tha_original:THA-170",
+        "name": "Moroccan-Style Sardine, Courgette & Cauliflower Frittata 2",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-175",
+        "import_key": "tha_original:THA-175",
+        "name": "Moroccan-Style Black Bean, Pumpkin & Green Bean Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-185",
+        "import_key": "tha_original:THA-185",
+        "name": "Moroccan-Style Tuna, Pumpkin & Cauliflower Jacket Potato 2",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-190",
+        "import_key": "tha_original:THA-190",
+        "name": "Moroccan-Style Kidney Bean, Courgette & Green Bean Frittata",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-265",
+        "import_key": "tha_original:THA-265",
+        "name": "Spanish-Style Split Pea, Broccoli & Spring Onion Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-196",
+        "import_key": "tha_original:THA-196",
+        "name": "Indian-Style Chickpea, Red Pepper & Carrot Skillet",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-202",
+        "import_key": "tha_original:THA-202",
+        "name": "Indonesian-Style Black Bean, Parsnip & Swede One-Pot",
+        "category": "dinner",
+        "cuisine": "Indonesian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-009",
+        "import_key": "tha_original:THA-009",
+        "name": "Salmon, Broccoli & Brown Rice Traybake",
+        "category": "dinner",
+        "cuisine": "Nordic-Mediterranean inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 45
+      },
+      {
+        "recipe_id": "THA-280",
+        "import_key": "tha_original:THA-280",
+        "name": "Spanish-Style Edamame, Radish & Spring Onion Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-295",
+        "import_key": "tha_original:THA-295",
+        "name": "Spanish-Style Chickpea, Broccoli & Spring Onion Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-325",
+        "import_key": "tha_original:THA-325",
+        "name": "Spanish-Style Cannellini Bean, Broccoli & Spring Onion Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-340",
+        "import_key": "tha_original:THA-340",
+        "name": "Spanish-Style Haricot Bean, Radish & Spring Onion Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-355",
+        "import_key": "tha_original:THA-355",
+        "name": "Spanish-Style Tofu, Broccoli & Spring Onion Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-370",
+        "import_key": "tha_original:THA-370",
+        "name": "Spanish-Style Green Pea, Radish & Spring Onion Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-385",
+        "import_key": "tha_original:THA-385",
+        "name": "Spanish-Style Lentil, Broccoli & Spring Onion Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-400",
+        "import_key": "tha_original:THA-400",
+        "name": "Spanish-Style Black Bean, Radish & Spring Onion Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-415",
+        "import_key": "tha_original:THA-415",
+        "name": "Spanish-Style Kidney Bean, Broccoli & Spring Onion Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-463",
+        "import_key": "tha_original:THA-463",
+        "name": "West African-Style Cauliflower, Spinach & Green Pea Herb Potatoes",
+        "category": "side",
+        "cuisine": "West African-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-473",
+        "import_key": "tha_original:THA-473",
+        "name": "West African-Style Cauliflower, Pumpkin & Mackerel Herb Potatoes",
+        "category": "side",
+        "cuisine": "West African-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      }
+    ],
+    "regularMealRefs": [
+      {
+        "recipe_id": "THA-145",
+        "import_key": "tha_original:THA-145",
+        "name": "Moroccan-Style Green Pea, Pumpkin & Green Bean Jacket Potato",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-155",
+        "import_key": "tha_original:THA-155",
+        "name": "Moroccan-Style Mackerel, Pumpkin & Cauliflower Lunch Bowl 2",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-160",
+        "import_key": "tha_original:THA-160",
+        "name": "Moroccan-Style Lentil, Courgette & Green Bean Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-170",
+        "import_key": "tha_original:THA-170",
+        "name": "Moroccan-Style Sardine, Courgette & Cauliflower Frittata 2",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-175",
+        "import_key": "tha_original:THA-175",
+        "name": "Moroccan-Style Black Bean, Pumpkin & Green Bean Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-185",
+        "import_key": "tha_original:THA-185",
+        "name": "Moroccan-Style Tuna, Pumpkin & Cauliflower Jacket Potato 2",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-190",
+        "import_key": "tha_original:THA-190",
+        "name": "Moroccan-Style Kidney Bean, Courgette & Green Bean Frittata",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-265",
+        "import_key": "tha_original:THA-265",
+        "name": "Spanish-Style Split Pea, Broccoli & Spring Onion Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-196",
+        "import_key": "tha_original:THA-196",
+        "name": "Indian-Style Chickpea, Red Pepper & Carrot Skillet",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-202",
+        "import_key": "tha_original:THA-202",
+        "name": "Indonesian-Style Black Bean, Parsnip & Swede One-Pot",
+        "category": "dinner",
+        "cuisine": "Indonesian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      }
+    ],
+    "discoveryQueueMealRefs": [
+      {
+        "recipe_id": "THA-436",
+        "import_key": "tha_original:THA-436",
+        "name": "Indian-Style Green Pea, Red Pepper & Carrot Skillet",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-217",
+        "import_key": "tha_original:THA-217",
+        "name": "Indonesian-Style Kidney Bean, Tomato & Swede One-Pot",
+        "category": "dinner",
+        "cuisine": "Indonesian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-205",
+        "import_key": "tha_original:THA-205",
+        "name": "Spanish-Style Green Pea, Broccoli & Spring Onion Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-220",
+        "import_key": "tha_original:THA-220",
+        "name": "Spanish-Style Lentil, Radish & Spring Onion Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      {
+        "recipe_id": "THA-110",
+        "import_key": "tha_original:THA-110",
+        "name": "Moroccan-Style Sardine, Courgette & Cauliflower Frittata",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      {
+        "recipe_id": "THA-115",
+        "import_key": "tha_original:THA-115",
+        "name": "Moroccan-Style Haricot Bean, Pumpkin & Green Bean Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      }
+    ],
+    "notes": "References only. Recipe bodies remain owned by the THA Original Founding Cookbook."
+  },
+  "planner": [
+    {
+      "week": 1,
+      "dayOfWeek": 0,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-265",
+        "import_key": "tha_original:THA-265",
+        "name": "Spanish-Style Split Pea, Broccoli & Spring Onion Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Sian",
+        "Rhys",
+        "Cerys"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 1,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-196",
+        "import_key": "tha_original:THA-196",
+        "name": "Indian-Style Chickpea, Red Pepper & Carrot Skillet",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Sian",
+        "Rhys",
+        "Cerys"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 1,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-160",
+        "import_key": "tha_original:THA-160",
+        "name": "Moroccan-Style Lentil, Courgette & Green Bean Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Sian",
+        "Rhys",
+        "Cerys"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 2,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-202",
+        "import_key": "tha_original:THA-202",
+        "name": "Indonesian-Style Black Bean, Parsnip & Swede One-Pot",
+        "category": "dinner",
+        "cuisine": "Indonesian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Sian",
+        "Rhys",
+        "Cerys"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 3,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-009",
+        "import_key": "tha_original:THA-009",
+        "name": "Salmon, Broccoli & Brown Rice Traybake",
+        "category": "dinner",
+        "cuisine": "Nordic-Mediterranean inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 45
+      },
+      "eaters": [
+        "Sian",
+        "Rhys",
+        "Cerys"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 3,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-175",
+        "import_key": "tha_original:THA-175",
+        "name": "Moroccan-Style Black Bean, Pumpkin & Green Bean Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Sian",
+        "Rhys",
+        "Cerys"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 4,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-280",
+        "import_key": "tha_original:THA-280",
+        "name": "Spanish-Style Edamame, Radish & Spring Onion Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Sian",
+        "Rhys",
+        "Cerys"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 5,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-295",
+        "import_key": "tha_original:THA-295",
+        "name": "Spanish-Style Chickpea, Broccoli & Spring Onion Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Sian",
+        "Rhys",
+        "Cerys"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 5,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-190",
+        "import_key": "tha_original:THA-190",
+        "name": "Moroccan-Style Kidney Bean, Courgette & Green Bean Frittata",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Sian",
+        "Rhys",
+        "Cerys"
+      ]
+    },
+    {
+      "week": 1,
+      "dayOfWeek": 6,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-325",
+        "import_key": "tha_original:THA-325",
+        "name": "Spanish-Style Cannellini Bean, Broccoli & Spring Onion Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Sian",
+        "Rhys",
+        "Cerys"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 0,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-340",
+        "import_key": "tha_original:THA-340",
+        "name": "Spanish-Style Haricot Bean, Radish & Spring Onion Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Sian",
+        "Rhys",
+        "Cerys"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 1,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-355",
+        "import_key": "tha_original:THA-355",
+        "name": "Spanish-Style Tofu, Broccoli & Spring Onion Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Sian",
+        "Rhys",
+        "Cerys"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 1,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-170",
+        "import_key": "tha_original:THA-170",
+        "name": "Moroccan-Style Sardine, Courgette & Cauliflower Frittata 2",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Sian",
+        "Rhys",
+        "Cerys"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 2,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-370",
+        "import_key": "tha_original:THA-370",
+        "name": "Spanish-Style Green Pea, Radish & Spring Onion Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Sian",
+        "Rhys",
+        "Cerys"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 3,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-385",
+        "import_key": "tha_original:THA-385",
+        "name": "Spanish-Style Lentil, Broccoli & Spring Onion Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Sian",
+        "Rhys",
+        "Cerys"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 3,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-185",
+        "import_key": "tha_original:THA-185",
+        "name": "Moroccan-Style Tuna, Pumpkin & Cauliflower Jacket Potato 2",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Sian",
+        "Rhys",
+        "Cerys"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 4,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-400",
+        "import_key": "tha_original:THA-400",
+        "name": "Spanish-Style Black Bean, Radish & Spring Onion Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Sian",
+        "Rhys",
+        "Cerys"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 5,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-415",
+        "import_key": "tha_original:THA-415",
+        "name": "Spanish-Style Kidney Bean, Broccoli & Spring Onion Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Sian",
+        "Rhys",
+        "Cerys"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 5,
+      "mealType": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-145",
+        "import_key": "tha_original:THA-145",
+        "name": "Moroccan-Style Green Pea, Pumpkin & Green Bean Jacket Potato",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "eaters": [
+        "Sian",
+        "Rhys",
+        "Cerys"
+      ]
+    },
+    {
+      "week": 2,
+      "dayOfWeek": 6,
+      "mealType": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-265",
+        "import_key": "tha_original:THA-265",
+        "name": "Spanish-Style Split Pea, Broccoli & Spring Onion Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "eaters": [
+        "Sian",
+        "Rhys",
+        "Cerys"
+      ]
+    }
+  ],
+  "weekEaterOverrides": [],
+  "freezer": [
+    {
+      "mealRef": {
+        "recipe_id": "THA-265",
+        "import_key": "tha_original:THA-265",
+        "name": "Spanish-Style Split Pea, Broccoli & Spring Onion Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "totalPortions": 4,
+      "remainingPortions": 3,
+      "frozenDayOffset": -13
+    },
+    {
+      "mealRef": {
+        "recipe_id": "THA-196",
+        "import_key": "tha_original:THA-196",
+        "name": "Indian-Style Chickpea, Red Pepper & Carrot Skillet",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "totalPortions": 4,
+      "remainingPortions": 3,
+      "frozenDayOffset": -13
+    }
+  ],
+  "shoppingExtras": [
+    {
+      "name": "natural yoghurt",
+      "category": "grocery",
+      "alwaysAdd": false
+    },
+    {
+      "name": "wholegrain bread",
+      "category": "grocery",
+      "alwaysAdd": false
+    },
+    {
+      "name": "milk or plant milk",
+      "category": "grocery",
+      "alwaysAdd": true
+    },
+    {
+      "name": "school fruit",
+      "category": "grocery",
+      "alwaysAdd": true
+    },
+    {
+      "name": "coffee",
+      "category": "grocery",
+      "alwaysAdd": false
+    }
+  ],
+  "generateShoppingList": true,
+  "diaryEntries": [
+    {
+      "dayOffset": -1,
+      "mealSlot": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-145",
+        "import_key": "tha_original:THA-145",
+        "name": "Moroccan-Style Green Pea, Pumpkin & Green Bean Jacket Potato",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-145",
+        "import_key": "tha_original:THA-145",
+        "name": "Moroccan-Style Green Pea, Pumpkin & Green Bean Jacket Potato",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      }
+    },
+    {
+      "dayOffset": -2,
+      "mealSlot": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-155",
+        "import_key": "tha_original:THA-155",
+        "name": "Moroccan-Style Mackerel, Pumpkin & Cauliflower Lunch Bowl 2",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-155",
+        "import_key": "tha_original:THA-155",
+        "name": "Moroccan-Style Mackerel, Pumpkin & Cauliflower Lunch Bowl 2",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      }
+    },
+    {
+      "dayOffset": -3,
+      "mealSlot": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-160",
+        "import_key": "tha_original:THA-160",
+        "name": "Moroccan-Style Lentil, Courgette & Green Bean Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-160",
+        "import_key": "tha_original:THA-160",
+        "name": "Moroccan-Style Lentil, Courgette & Green Bean Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      }
+    },
+    {
+      "dayOffset": -4,
+      "mealSlot": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-170",
+        "import_key": "tha_original:THA-170",
+        "name": "Moroccan-Style Sardine, Courgette & Cauliflower Frittata 2",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-170",
+        "import_key": "tha_original:THA-170",
+        "name": "Moroccan-Style Sardine, Courgette & Cauliflower Frittata 2",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      }
+    },
+    {
+      "dayOffset": -5,
+      "mealSlot": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-175",
+        "import_key": "tha_original:THA-175",
+        "name": "Moroccan-Style Black Bean, Pumpkin & Green Bean Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-175",
+        "import_key": "tha_original:THA-175",
+        "name": "Moroccan-Style Black Bean, Pumpkin & Green Bean Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      }
+    },
+    {
+      "dayOffset": -6,
+      "mealSlot": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-185",
+        "import_key": "tha_original:THA-185",
+        "name": "Moroccan-Style Tuna, Pumpkin & Cauliflower Jacket Potato 2",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-185",
+        "import_key": "tha_original:THA-185",
+        "name": "Moroccan-Style Tuna, Pumpkin & Cauliflower Jacket Potato 2",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      }
+    },
+    {
+      "dayOffset": -7,
+      "mealSlot": "lunch",
+      "mealRef": {
+        "recipe_id": "THA-190",
+        "import_key": "tha_original:THA-190",
+        "name": "Moroccan-Style Kidney Bean, Courgette & Green Bean Frittata",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-190",
+        "import_key": "tha_original:THA-190",
+        "name": "Moroccan-Style Kidney Bean, Courgette & Green Bean Frittata",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      }
+    },
+    {
+      "dayOffset": -8,
+      "mealSlot": "dinner",
+      "mealRef": {
+        "recipe_id": "THA-265",
+        "import_key": "tha_original:THA-265",
+        "name": "Spanish-Style Split Pea, Broccoli & Spring Onion Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "fromPlannerMealRef": {
+        "recipe_id": "THA-265",
+        "import_key": "tha_original:THA-265",
+        "name": "Spanish-Style Split Pea, Broccoli & Spring Onion Noodle Bowl",
+        "category": "dinner",
+        "cuisine": "Spanish-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      }
+    }
+  ],
+  "diaryMetrics": [
+    {
+      "dayOffset": -1,
+      "moodApples": 3,
+      "energyApples": 4,
+      "sleepHours": 7.6,
+      "stuckToPlan": false
+    },
+    {
+      "dayOffset": -2,
+      "moodApples": 4,
+      "energyApples": 4,
+      "sleepHours": 6.2,
+      "stuckToPlan": true
+    },
+    {
+      "dayOffset": -3,
+      "moodApples": 4,
+      "energyApples": 3,
+      "sleepHours": 6.5,
+      "stuckToPlan": true
+    },
+    {
+      "dayOffset": -4,
+      "moodApples": 3,
+      "energyApples": 4,
+      "sleepHours": 6.9,
+      "stuckToPlan": false
+    },
+    {
+      "dayOffset": -5,
+      "moodApples": 4,
+      "energyApples": 4,
+      "sleepHours": 7.2,
+      "stuckToPlan": true
+    }
+  ],
+  "evidence": [
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-145",
+      "mealRef": {
+        "recipe_id": "THA-145",
+        "import_key": "tha_original:THA-145",
+        "name": "Moroccan-Style Green Pea, Pumpkin & Green Bean Jacket Potato",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "outcomeType": "completed",
+      "direction": "positive",
+      "dayOffset": -2,
+      "sourceCapabilityId": "planner"
+    },
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-155",
+      "mealRef": {
+        "recipe_id": "THA-155",
+        "import_key": "tha_original:THA-155",
+        "name": "Moroccan-Style Mackerel, Pumpkin & Cauliflower Lunch Bowl 2",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "outcomeType": "completed",
+      "direction": "positive",
+      "dayOffset": -5,
+      "sourceCapabilityId": "planner"
+    },
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-160",
+      "mealRef": {
+        "recipe_id": "THA-160",
+        "import_key": "tha_original:THA-160",
+        "name": "Moroccan-Style Lentil, Courgette & Green Bean Stuffed Pitta",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "outcomeType": "completed",
+      "direction": "positive",
+      "dayOffset": -8,
+      "sourceCapabilityId": "planner"
+    },
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-170",
+      "mealRef": {
+        "recipe_id": "THA-170",
+        "import_key": "tha_original:THA-170",
+        "name": "Moroccan-Style Sardine, Courgette & Cauliflower Frittata 2",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "outcomeType": "completed",
+      "direction": "positive",
+      "dayOffset": -11,
+      "sourceCapabilityId": "planner"
+    },
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-175",
+      "mealRef": {
+        "recipe_id": "THA-175",
+        "import_key": "tha_original:THA-175",
+        "name": "Moroccan-Style Black Bean, Pumpkin & Green Bean Lunch Bowl",
+        "category": "lunch",
+        "cuisine": "Moroccan-inspired",
+        "difficulty": "easy",
+        "servings": 4,
+        "total_minutes": 35
+      },
+      "outcomeType": "completed",
+      "direction": "positive",
+      "dayOffset": -14,
+      "sourceCapabilityId": "planner"
+    },
+    {
+      "subjectType": "swap",
+      "subjectKey": "ingredient:wholegrain",
+      "subjectId": "swap:dw039:white-to-wholegrain",
+      "outcomeType": "accepted",
+      "direction": "positive",
+      "dayOffset": -12,
+      "sourceCapabilityId": "meals"
+    },
+    {
+      "subjectType": "meal",
+      "subjectKey": "recipe:THA-436",
+      "mealRef": {
+        "recipe_id": "THA-436",
+        "import_key": "tha_original:THA-436",
+        "name": "Indian-Style Green Pea, Red Pepper & Carrot Skillet",
+        "category": "dinner",
+        "cuisine": "Indian-inspired",
+        "difficulty": "medium",
+        "servings": 4,
+        "total_minutes": 50
+      },
+      "outcomeType": "rejected",
+      "direction": "negative",
+      "dayOffset": -18,
+      "sourceCapabilityId": "planner"
+    }
+  ],
+  "knownGaps": [
+    "Recipe bodies are not authored here; the Cookbook remains the owner of names, ingredients, method and nutrition derivation.",
+    "No nutrition, allergen rows, learning signals, observations, conversations or opportunity deliveries are seeded by this world.",
+    "Ready-meal/product references are not authored in this foundation pack because no product meal export was supplied with stable product IDs.",
+    "Gluten-free breakfast coverage is intentionally sparse; planner should produce honest gaps or alternatives rather than unsafe assumptions."
+  ],
+  "qualityPurpose": {
+    "tests": [
+      "gluten dairy egg complexity",
+      "meal-reference import",
+      "planner realism",
+      "honest gaps"
+    ],
+    "reasoningQuestions": [
+      "What should Sian cook tonight?",
+      "What meals has this household repeated?",
+      "What dietary gaps should THA admit?"
+    ]
+  }
+}

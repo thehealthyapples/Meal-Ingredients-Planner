@@ -171,9 +171,71 @@ Captured immediately before Phase 0 of the THA planner architecture revamp begin
 
 ---
 
+## The Release Package
+
+**This section is the canonical definition of what THA ships.** Established under `REL1`
+(2026-07-11). Enforced by `npm run verify:release-packaging`
+(`scripts/ci/verify-release-packaging.ts`).
+
+The deploy is a **clean checkout of `main` plus `npm run build`**. Nothing is copied by hand.
+If a file is not committed, it is not in production — there is no other channel.
+
+### What production loads
+
+| Artefact | Produced / sourced by | Loaded by |
+|---|---|---|
+| `dist/index.cjs` | `npm run build` (esbuild) | `npm start` — the server |
+| `dist/public/**` | `npm run build` (vite) | `server/static.ts` — the SPA |
+| `eng.traineddata` | Committed at the repo root | `tesseract.js` via `server/services/ocr.ts`, resolved from the working directory |
+| `server/data/canonical-map.json`<br>`server/data/ambiguity-map.json` | Committed | `server/lib/item-resolver.ts` — **inlined into `dist/index.cjs` at build time**, not read from disk at runtime |
+| `migrations/` + `server/migrations/runner.ts` | Committed | Applied at boot (see *What auto-runs on deploy*) |
+| Production database (Neon) | Migrations + seeds | Everything else — recipes, foods, households |
+
+**`eng.traineddata` is the only file production reads from the filesystem at runtime** other
+than its own build output. That is why it lives at the root and why moving it is a behaviour
+change (`docs/architecture/REPOSITORY_CONVENTIONS.md` §2).
+
+### What is intentionally excluded from production
+
+These are committed to the repository — so a clean checkout can reproduce the platform — but
+they are **not part of the production runtime**, and production must never read them.
+
+| Excluded | Why | Guard |
+|---|---|---|
+| `data/development_world/` | Development-only fixture world (50 synthetic households). Its admin surface is DEV-only by design. | `assertDevelopmentWorldAllowed()` — refuses when `NODE_ENV=production`, no override |
+| `data/cookbook/` | **Seed source**, not a runtime asset. The 500 founding recipes reach production as rows in the `meals` table, never as files. | Importer refuses when `NODE_ENV=production` |
+| `data/usda-snapshot/`, `data/alternatives/`, `data/discovery/`, `data/seasonal/`, `data/stories/` | Build/analysis inputs and workstream report output | Read only by `scripts/` and `server/scripts/` |
+| `scripts/`, `docs/`, `.engineering/`, `server/tests/`, `attached_assets/` | Tooling, documentation, tests, and design source | Not imported by `server/index.ts`; never enter `dist/` |
+
+`data/` as a whole is a **development and seed-source tree**. No production code path may read
+it. Check 4 of the packaging gate enforces exactly this: any server runtime file that reaches
+into repo-root `data/` must refuse to run in production, or the gate fails.
+
+### The rule this exists to enforce
+
+> **Production code must never depend on a file that is absent from the repository.**
+
+Before `REL1`, `data/development_world/` and `data/cookbook/` were untracked while
+`server/development-world/world-reader.ts` read the first of them at runtime and *described it
+in a comment as "a committed, immutable file."* The code would have shipped; the data would not.
+Typecheck, tests and the build all passed, because they ran against a working tree that still
+had the files. Only git knew. `npm run verify:release-packaging` is the check that asks git.
+
+---
+
 ## Release Checklist
 
 Use this every release. Do not skip steps.
+
+### Step 0 — Release packaging gate
+
+```bash
+npm run verify:release-packaging   # must PASS — proves a clean checkout can reproduce prod
+```
+
+Fails if any runtime asset is untracked, any asset directory has uncommitted files, or any
+server runtime path resolves to a file the repository does not contain. **A FAIL here means the
+deploy would ship code that reads files that will not be there.**
 
 ### Step 1 — Git clean
 

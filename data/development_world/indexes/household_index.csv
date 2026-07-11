@@ -1,0 +1,51 @@
+id,slug,householdName,archetype,accounts,eaters,dietPattern,restrictions,budget,tier,personality,plannerEntries,evidenceEvents,uniqueMealRefs,coldStart
+DW001,foster-busy-family,Foster Family (Dev),Busy dual-career family,2,4,Flexitarian,,standard,premium,companion,28,7,37,False
+DW002,patel-vegetarian-teen,Patel Family (Dev),Vegetarian-led family,2,4,Vegetarian,,standard,premium,teacher,28,7,37,False
+DW003,evans-vegan-couple,Evans Household (Dev),Vegan professional couple,2,2,Vegan,,standard,friends_family,coach,26,7,33,False
+DW004,morgan-coeliac-child,Morgan Family (Dev),Coeliac child household,2,3,Mediterranean,gluten,standard,premium,companion,22,7,32,False
+DW005,kelly-dairy-free-toddler,Kelly Family (Dev),Dairy-free toddler family,2,3,Flexitarian,dairy,standard,premium,friend,26,7,33,False
+DW006,ahmed-nut-allergy,Ahmed Family (Dev),Tree-nut allergy family,2,4,Mediterranean,tree nuts,standard,premium,companion,28,7,37,False
+DW007,wright-sesame-safety,Wright Family (Dev),Sesame allergy household,2,3,DASH,sesame,standard,premium,sergeant,28,7,37,False
+DW008,turner-type2-diabetes,Turner Household (Dev),Type 2 diabetes management,2,2,DASH,,standard,premium,coach,28,7,37,False
+DW009,clarke-dash-blood-pressure,Clarke Household (Dev),Blood-pressure aware household,2,2,DASH,,budget,free,teacher,28,7,37,False
+DW010,ross-empty-nesters,Ross Household (Dev),Mediterranean empty nesters,2,2,Mediterranean,,premium,premium,chef,28,7,37,False
+DW011,bennett-retired-couple,Bennett Household (Dev),Retired couple,2,2,Flexitarian,,budget,free,friend,28,7,37,False
+DW012,reid-widower,Reid Household (Dev),Elderly widower,1,1,,,budget,free,companion,28,7,37,False
+DW013,price-single-parent,Price Family (Dev),Single parent twins,1,3,Flexitarian,,budget,friends_family,friend,28,7,37,False
+DW014,mason-blended-weekend,Mason Family (Dev),Blended weekend family,2,4,Flexitarian,,standard,premium,companion,28,7,37,False
+DW015,green-student-house,Green Road Student House (Dev),Student shared house,1,4,,,budget,free,friend,28,7,37,False
+DW016,woods-young-couple,Woods Household (Dev),Young professional couple,2,2,Mediterranean,,standard,premium,coach,28,7,37,False
+DW017,hill-shift-worker,Hill Household (Dev),Nurse shift-worker household,2,2,Flexitarian,,standard,premium,companion,28,7,37,False
+DW018,cooper-delivery-driver,Cooper Household (Dev),Irregular-hours driver,2,3,,,budget,free,sergeant,28,7,37,False
+DW019,ward-strength-training,Ward Household (Dev),Strength-training couple,2,2,Low-Carb,,standard,premium,coach,28,7,37,False
+DW020,roberts-runner-family,Roberts Family (Dev),Runner training family,2,4,Mediterranean,,standard,premium,coach,28,7,37,False
+DW021,young-budget-family,Young Family (Dev),Budget-conscious family,2,4,,,budget,free,friend,28,7,37,False
+DW022,sinclair-foodie,Sinclair Household (Dev),Affluent food lovers,2,2,Mediterranean,,premium,friends_family,chef,28,7,37,False
+DW023,holland-low-confidence,Holland Household (Dev),Low cooking confidence household,2,2,,,budget,free,teacher,28,7,37,False
+DW024,parker-picky-child,Parker Family (Dev),Picky child household,2,4,Flexitarian,,standard,premium,friend,28,7,37,False
+DW025,ellis-sensory-autism,Ellis Family (Dev),Autism sensory household,2,3,Flexitarian,,standard,premium,companion,28,7,37,False
+DW026,grant-adhd-time-pressure,Grant Household (Dev),ADHD time-pressure household,2,3,,,standard,premium,sergeant,28,7,37,False
+DW027,cole-new-baby,Cole Family (Dev),New baby household,2,3,Flexitarian,,standard,premium,friend,28,7,37,False
+DW028,hughes-toddler-daycare,Hughes Family (Dev),Toddler daycare family,2,3,Flexitarian,dairy,standard,premium,companion,26,7,33,False
+DW029,fletcher-teen-sports,Fletcher Family (Dev),Teenage sports household,2,4,Flexitarian,,standard,premium,coach,28,7,37,False
+DW030,kaur-multigenerational,Kaur Family (Dev),Multigenerational South Asian household,2,4,Vegetarian,,standard,friends_family,chef,28,7,37,False
+DW031,campbell-caribbean-british,Campbell Household (Dev),Caribbean-British household,2,3,Flexitarian,,standard,premium,chef,28,7,37,False
+DW032,tan-east-asian-inspired,Tan Family (Dev),East-Asian inspired family,2,3,Mediterranean,soy,standard,premium,teacher,28,7,37,False
+DW033,nasser-middle-eastern-veg,Nasser Household (Dev),Middle Eastern vegetarian household,2,3,Vegetarian,,standard,friends_family,chef,28,7,37,False
+DW034,white-rural-limited-access,White Household (Dev),Rural limited-store household,2,3,Flexitarian,,budget,free,companion,28,7,37,False
+DW035,gray-urban-no-freezer,Gray Household (Dev),Urban flat no freezer,2,2,Mediterranean,,standard,premium,friend,28,7,37,False
+DW036,marshall-batch-freezer,Marshall Family (Dev),Batch-cook freezer household,2,4,Flexitarian,,standard,premium,coach,28,7,37,False
+DW037,fox-airfryer-family,Fox Family (Dev),Air-fryer family,2,3,,,budget,free,teacher,28,7,37,False
+DW038,stevens-slow-cooker,Stevens Household (Dev),Slow-cooker Sunday batch,2,2,DASH,,standard,premium,companion,28,7,37,False
+DW039,owen-multi-restriction,Owen Family (Dev),Gluten dairy egg complexity,2,3,Flexitarian,dairy;eggs;gluten,standard,premium,teacher,20,7,28,False
+DW040,stone-flexitarian,Stone Household (Dev),Flexitarian reducer,2,3,Flexitarian,,standard,premium,coach,28,7,37,False
+DW041,barker-more-plants,Barker Household (Dev),Meat-heavy household adding plants,2,3,Carnivore,,budget,free,friend,28,7,37,False
+DW042,miles-gut-sensitive,Miles Household (Dev),Gut-sensitive household,2,2,Mediterranean,,standard,premium,companion,28,7,37,False
+DW043,sharp-menopause-support,Sharp Household (Dev),Menopause support household,2,2,MIND,,standard,premium,coach,28,7,37,False
+DW044,pearson-soft-meals,Pearson Household (Dev),Older soft-meal household,2,2,DASH,,budget,free,companion,28,7,37,False
+DW045,spencer-packed-lunch,Spencer Family (Dev),Packed-lunch heavy family,2,4,Flexitarian,,standard,premium,teacher,28,7,37,False
+DW046,walsh-weekend-host,Walsh Household (Dev),Weekend hosting household,2,2,Mediterranean,,premium,friends_family,chef,28,7,37,False
+DW047,king-planner-perfectionist,King Household (Dev),Planner perfectionist,2,3,MIND,,standard,premium,sergeant,28,7,37,False
+DW048,hayes-convenience-risk,Hayes Household (Dev),Ready-meal risk household,2,2,,,budget,free,friend,28,7,37,False
+DW049,woodhouse-community-cook,Woodhouse Household (Dev),Community cooking household,2,2,Flexitarian,,standard,friends_family,chef,28,7,37,False
+DW050,knight-cold-start,Knight Household (Dev),True cold-start household,1,1,,,standard,free,companion,0,0,0,True
