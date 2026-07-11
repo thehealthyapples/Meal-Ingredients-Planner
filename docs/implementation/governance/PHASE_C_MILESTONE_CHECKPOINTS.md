@@ -221,17 +221,24 @@ Phase C performs no cleanup or reorganisation, so these were recorded rather tha
 > product decision, not a checkpoint step, and it is now safely committed and awaiting its own
 > gate. Typecheck parity (175 → 175) is the strongest signal available without crossing that line.
 
-### Still outstanding: the branch is not backed up off-machine
+### ~~Still outstanding: the branch is not backed up off-machine~~ — RESOLVED 2026-07-11
 
-`int1-intelligence-platform` now carries **36 local-only commits** (27 before Phase C, plus
-these nine) and still exists on **neither `origin` nor `gitsafe-backup`**. The Phase C backup
-archive lives on the same disk as the repository.
+*When this document was written, `int1-intelligence-platform` carried 37 local-only commits
+and existed on neither `origin` nor `gitsafe-backup`; the only backup was on the same disk as
+the repository. That was true at the time of writing and is no longer true.*
 
-**Recommended next action, before anything else:**
+**Resolved.** The branch was pushed to `origin` (no force, upstream set), and
+`origin/int1-intelligence-platform` was verified to contain the current local HEAD
+(`7dde4bb`) and all ten Phase C milestones. Local-only commits: **0**.
 
-```
-git push -u origin int1-intelligence-platform
-```
+`gitsafe-backup` rejected the push — its pre-receive hook permits `main` only. It was left
+rejected rather than forced.
+
+See [`PHASE_C_REMOTE_BACKUP_CONFIRMATION.md`](./PHASE_C_REMOTE_BACKUP_CONFIRMATION.md).
+
+**Still local-only:** the rollback tags in § 4. Every commit they point at is on `origin`, so
+no history is at risk — only the SHA-to-rollback-point mapping, which this document already
+records. `git push origin --tags` closes it.
 
 ---
 
