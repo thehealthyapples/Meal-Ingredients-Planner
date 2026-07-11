@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+#
+# `call` — the developer launcher dispatcher.
+#
+#   call <launcher> [args...]
+#
+# Looks up `scripts/dev/launchers/<launcher>.sh` and execs it, forwarding any
+# extra arguments. Adding a new launcher means adding one executable file to
+# that directory — no changes to this dispatcher, the PATH wiring, or `.replit`.
+#
+# See docs/implementation/engineering/ENGINEERING_CLAUDE_LAUNCHER.md
+set -euo pipefail
+
+# Resolve this script's real location so `call` works from any working directory
+# and keeps working if the repository is cloned somewhere else.
+SELF="${BASH_SOURCE[0]}"
+while [[ -L "$SELF" ]]; do
+  SELF="$(readlink -f "$SELF")"
+done
+DEV_DIR="$(cd "$(dirname "$SELF")/.." && pwd)"
+LAUNCHER_DIR="$DEV_DIR/launchers"
+
+list_launchers() {
+  local f name
+  for f in "$LAUNCHER_DIR"/*.sh; do
+    [[ -e "$f" ]] || continue
+    name="$(basename "$f" .sh)"
+    printf '  call %s\n' "$name"
+  done
+}
+
+if [[ $# -eq 0 ]]; then
+  echo "usage: call <launcher> [args...]"
+  echo
+  echo "available launchers:"
+  list_launchers
+  exit 64
+fi
+
+NAME="$1"
+shift
+
+case "$NAME" in
+  -h|--help|help)
+    echo "usage: call <launcher> [args...]"
+    echo
+    echo "available launchers:"
+    list_launchers
+    exit 0
+    ;;
+esac
+
+LAUNCHER="$LAUNCHER_DIR/$NAME.sh"
+
+if [[ ! -f "$LAUNCHER" ]]; then
+  echo "call: unknown launcher '$NAME'" >&2
+  echo >&2
+  echo "available launchers:" >&2
+  list_launchers >&2
+  exit 127
+fi
+
+if [[ ! -x "$LAUNCHER" ]]; then
+  echo "call: launcher '$NAME' is not executable ($LAUNCHER)" >&2
+  echo "call: run  chmod +x $LAUNCHER  and commit the mode bit" >&2
+  exit 126
+fi
+
+exec "$LAUNCHER" "$@"

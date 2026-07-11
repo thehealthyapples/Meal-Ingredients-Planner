@@ -1,0 +1,20 @@
+# shellcheck shell=bash
+#
+# Sourced automatically by Replit's ~/.bashrc for every interactive shell tab.
+#
+# This file is TRACKED IN GIT DESPITE `.config/` BEING IGNORED (the ignore rule
+# lives in the system-wide /etc/.gitignore, and Replit will not let us edit that).
+# It was added with `git add -f`. If you ever `git rm` it, a plain `git add` will
+# NOT bring it back — force-add it again, or run scripts/dev/install.sh.
+#
+# Keep this a stub. Real logic belongs in scripts/dev/, which git tracks normally.
+#
+# See docs/implementation/engineering/ENGINEERING_CLAUDE_LAUNCHER.md
+
+__repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." 2>/dev/null && pwd)"
+
+if [ -n "$__repo_root" ] && [ -f "$__repo_root/scripts/dev/shell/replit-bashrc.sh" ]; then
+  . "$__repo_root/scripts/dev/shell/replit-bashrc.sh"
+fi
+
+unset __repo_root
