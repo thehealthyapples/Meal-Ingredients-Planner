@@ -1,5 +1,49 @@
 # Database Migrations
 
+## The one rule
+
+> **A production schema changes in exactly one way: a reviewed migration appended to
+> `server/migrations/runner.ts`.**
+>
+> There is no second way. `drizzle-kit push` cannot reach production, `scripts/migrate-prod.sh` no
+> longer exists, and a git merge no longer touches any database.
+
+Established by **`TRUST1-O8`** (2026-07-11) — see
+[`docs/implementation/platform/TRUST1_O8_PRODUCTION_SCHEMA_PROTECTION.md`](docs/implementation/platform/TRUST1_O8_PRODUCTION_SCHEMA_PROTECTION.md).
+
+Until then THA had **two owners of one schema**. The reviewed runner below was one. The other was
+`drizzle-kit push --force` — a diff-and-sync that DROPS whatever the code does not mention, with no
+review, no transaction, and no version record — which ran against the production database from
+`scripts/migrate-prod.sh`, and ran **automatically after every git merge** via `scripts/post-merge.sh`
+and `.replit`'s `[postMerge]` hook. A merge could destroy production data. Those paths are gone.
+
+`server/tests/test-trust1-o8-production-schema-protection.ts` fails the build if any of them return.
+
+### The two mechanisms, and which one is real
+
+| | **Reviewed migrations** | **Declarative schema** |
+|---|---|---|
+| File | `server/migrations/runner.ts` | `shared/schema.ts` |
+| Applied by | `runMigrations()` at server boot | `drizzle-kit push`, via `scripts/db/schema-push-guard.ts` |
+| Where | **Every environment, including production** | **CI and disposable dev databases only** — the guard refuses a managed host, and refuses `NODE_ENV=production`, with no override |
+| Transactional | Yes | No |
+| Versioned | Yes — `schema_migrations` | No |
+| Can drop a column | Only if you write `DROP` and someone reviews it | **Yes, silently, to make the database match the code** |
+
+Both exist because the runner is not self-sufficient: it contains `ALTER TABLE`s and backfills, and
+**~46 of the 88 tables in `shared/schema.ts` have no `CREATE TABLE` in any migration** — they exist
+only because `push` once created them. Run `npm run verify:schema-coverage` for the current figure.
+That gap is real, it is `TRUST1-O8`'s honestly-reported residual, and it means **a brand-new table
+added to `shared/schema.ts` will NOT appear in production unless you also write a migration for it.**
+
+> ### If you add a table or column, read this
+>
+> Adding it to `shared/schema.ts` gives you types and a working *dev* database. **It does not
+> change production.** Production only ever sees what `server/migrations/runner.ts` applies at boot.
+> Add it in **both** places, or the feature will work perfectly in dev and 500 in production.
+
+---
+
 ## Overview
 
 Migrations are managed by a lightweight SQL runner at `server/migrations/runner.ts`.
@@ -64,6 +108,30 @@ Look for these lines in the console:
 If you see `Up to date — no pending migrations`, everything is already applied.
 
 **No manual step is ever needed under normal circumstances.**
+
+---
+
+## `npm run db:push` — what it is now
+
+It syncs a **disposable** database (CI, or your local dev database) to `shared/schema.ts`. It runs
+through `scripts/db/schema-push-guard.ts`, which **fails closed**:
+
+- **Refuses** any managed-provider host (Neon, Render, RDS, Supabase, …) — **no override exists**.
+- **Refuses** `NODE_ENV=production` — **no override exists**.
+- **Refuses** a missing, unparseable, or unrecognised target unless you state, exactly, that it is
+  disposable: `ALLOW_SCHEMA_PUSH="i-know-this-is-a-disposable-database"`.
+
+It is **not** a deployment step and it is **not** how schema reaches production. It never was safe
+as one; it just used to be allowed.
+
+---
+
+## Current migrations
+
+The table below was accurate when it was written and has not been maintained since — it lists 5 of
+the **82** migrations now in `server/migrations/runner.ts`. It is kept for the `meal_plan_templates`
+detail that follows it. **`server/migrations/runner.ts` is the list; this is not.** Left honestly
+stale rather than silently deleted, because a reader who trusts it should know why it is short.
 
 ---
 

@@ -1,5 +1,11 @@
 import pg from "pg";
+import { guardAdHocDdl } from "./db/schema-push-guard.js";
 const { Pool } = pg;
+
+// TRUST1-O8 — ad-hoc DDL is not a reviewed migration. Refuse to run it against a
+// production database. Schema changes reach production only via server/migrations/runner.ts.
+guardAdHocDdl("run ad-hoc DDL (scripts/nk6o-add-family-column.ts)");
+
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 // NK6M: additive, nullable knowledge_nutrients.family column. Matches the drizzle
 // schema (shared/schema.ts: family: text("family")). IF NOT EXISTS = idempotent.

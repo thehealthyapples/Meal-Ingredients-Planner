@@ -15,14 +15,21 @@
  *                           reimplemented — so a migration that would fail in production
  *                           fails here first.
  *
- * This script is for CI and local throwaway databases. It is NOT a production migration path:
- * production migration convergence is TRUST1-O8 (Phase 1), and `--force` here is safe only
- * because the target is a disposable, empty database that has never held a row of user data.
+ * This script is for CI and local throwaway databases. It is NOT a production migration path.
+ *
+ * TRUST1-O8 UPDATE. S10 wrote its own denylist of managed hosts here, plus a
+ * `CI_ALLOW_REMOTE_DB=i-know-what-i-am-doing` escape hatch. Both are gone. The check now lives in
+ * ONE place — `scripts/db/schema-push-guard.ts`, the only module in the repository permitted to
+ * invoke `drizzle-kit push` — and it fails closed with no override for a managed host. A second
+ * copy of a safety check is a second thing to forget to update, and an escape hatch on the control
+ * standing between a typo and irreversible data loss is not a control.
  */
 
 import { execFileSync } from "node:child_process";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { runGuardedSchemaPush, UnsafeSchemaTargetError } from "../db/schema-push-guard.js";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -31,35 +38,17 @@ function die(message: string): never {
   process.exit(1);
 }
 
-const url = process.env.DATABASE_URL;
-if (!url) {
-  die("DATABASE_URL is not set. CI must provide a throwaway database (a Postgres service container).");
-}
-
-// Refuse to run against anything that looks like a real database. This script pushes schema
-// with --force; pointing it at production would be a data-loss event, and "it was obviously
-// only ever meant for CI" is not a control.
-const FORBIDDEN = ["neon.tech", "amazonaws.com", "render.com", "supabase"];
-const hit = FORBIDDEN.find(h => url.includes(h));
-if (hit && process.env.CI_ALLOW_REMOTE_DB !== "i-know-what-i-am-doing") {
-  die(
-    `DATABASE_URL points at a managed host (${hit}). This script runs \`drizzle-kit push --force\`\n` +
-      `         and is only ever safe against a disposable, empty database.\n` +
-      `         Refusing. This is TRUST1-O8 territory, not S10's.`,
-  );
-}
-
-console.log("[ci:db] target:", url.replace(/:\/\/[^@]*@/, "://<redacted>@"));
-
 // ── 1. Declarative schema ────────────────────────────────────────────────────
-console.log("[ci:db] 1/2  drizzle-kit push  (tables from shared/schema.ts)");
+// The guard proves the target is disposable before a single DDL statement runs, and refuses
+// outright if it cannot. CI's Postgres service container is on localhost, so it passes.
+console.log("[ci:db] 1/4  drizzle-kit push  (tables from shared/schema.ts)");
 try {
-  execFileSync("npx", ["drizzle-kit", "push", "--force"], {
-    cwd: REPO_ROOT,
-    stdio: "inherit",
-    env: process.env,
-  });
-} catch {
+  runGuardedSchemaPush("build the CI test database (npm run ci:setup-db)");
+} catch (err) {
+  if (err instanceof UnsafeSchemaTargetError) {
+    console.error(`\n${err.message}\n`);
+    die("refusing to build a test database on top of a non-disposable one.");
+  }
   die("drizzle-kit push failed. The schema in shared/schema.ts could not be applied.");
 }
 

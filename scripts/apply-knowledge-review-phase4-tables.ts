@@ -11,11 +11,16 @@
  * Usage:  tsx scripts/apply-knowledge-review-phase4-tables.ts
  */
 import pg from "pg";
+import { guardAdHocDdl } from "./db/schema-push-guard.js";
 
 if (!process.env.DATABASE_URL) {
   console.error("DATABASE_URL is not set.");
   process.exit(1);
 }
+
+// TRUST1-O8 — ad-hoc DDL is not a reviewed migration. Refuse to run it against a
+// production database. Schema changes reach production only via server/migrations/runner.ts.
+guardAdHocDdl("run ad-hoc DDL (scripts/apply-knowledge-review-phase4-tables.ts)");
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 

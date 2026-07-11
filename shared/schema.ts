@@ -2588,10 +2588,17 @@ export type InsertPlatformObservation = z.infer<typeof insertPlatformObservation
 // ─── TRUST1-S5 — authentication rate limiting ────────────────────────────────
 // The shared counter behind every authentication rate limit (server/lib/auth-rate-limit.ts).
 //
-// Declared here for one specific reason beyond tidiness: `scripts/migrate-prod.sh` runs
-// `drizzle-kit push --force` against the production database, and a table that exists in Postgres
-// but not in this file is a table drizzle-kit will offer to DROP. The migration runner creates it;
-// this declaration is what stops the next production push from deleting it.
+// Declared here for one specific reason beyond tidiness: a table that exists in Postgres but not
+// in this file is a table drizzle-kit will offer to DROP. The migration runner creates it; this
+// declaration is what stops a `drizzle-kit push` from deleting it.
+//
+// TRUST1-O8 UPDATE: the production push path this originally defended against
+// (`scripts/migrate-prod.sh`, `drizzle-kit push --force` straight at the production database) is
+// GONE — deleted, along with the post-merge hook that pushed a schema after every git merge.
+// `push` now survives only behind `scripts/db/schema-push-guard.ts`, which cannot reach a managed
+// database. The declaration below is kept regardless: it is correct, it is what keeps a *dev* push
+// from dropping the table, and O8 found a second table that lacked exactly this protection
+// (`barcode_lookup_events`, declared below) and had been silently exposed to it for months.
 //
 // NO PERSONAL DATA. `key` is an HMAC-SHA256 of an IP address or an email address under
 // SESSION_SECRET — never the value itself. An IP is personal data under UK GDPR, and this table is
@@ -2612,3 +2619,45 @@ export const authRateLimits = pgTable("auth_rate_limits", {
 }));
 
 export type AuthRateLimit = typeof authRateLimits.$inferSelect;
+
+// ─── TRUST1-O8 — barcode lookup events ───────────────────────────────────────
+// Operational telemetry for Open Food Facts barcode lookups. Written by server/routes.ts via raw
+// SQL (`INSERT INTO barcode_lookup_events …`), created by the reviewed migration
+// `2026-04-02_add_barcode_lookup_events`.
+//
+// THIS DECLARATION IS A DATA-LOSS FIX, and it is the sharpest evidence TRUST1-O8 found that risk
+// R6 was never theoretical. The table has existed in Postgres since April and has never existed in
+// this file. Drizzle offers to DROP any table it finds in the database but not in the schema —
+// and `scripts/migrate-prod.sh` ran `drizzle-kit push --force`, which does not ask. Every
+// production push since April was therefore an offer to destroy this table and every row in it,
+// accepted automatically. TRUST1-S5 spotted the hazard and defended its own table (above); nothing
+// generalised that defence, so this one stayed exposed.
+//
+// The push paths are gone now. This declaration closes the hole behind them, and matches the
+// migration's DDL exactly — plain `integer` user_id (the migration declares no foreign key, and
+// adding one here would make the next dev push try to create it), and a `timestamp` WITHOUT time
+// zone, because the migration says TIMESTAMP and not TIMESTAMPTZ. A declaration that does not
+// mirror the DDL is not protection; it is a queued ALTER TABLE.
+//
+// NOTE: nothing reads through this Drizzle table object today — routes.ts still uses raw SQL, and
+// O8 deliberately does not change that (it would be a behaviour change in an unrelated feature).
+// The declaration exists to make the table VISIBLE to drizzle-kit, which is the entire point.
+export const barcodeLookupEvents = pgTable("barcode_lookup_events", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id"),
+  barcode: text("barcode").notNull(),
+  lookupSource: text("lookup_source").notNull().default("off"),
+  status: text("status").notNull(),
+  httpStatus: integer("http_status").notNull(),
+  offProductCode: text("off_product_code"),
+  offProductName: text("off_product_name"),
+  failureReason: text("failure_reason"),
+  requestUrl: text("request_url"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  barcodeIdx: index("idx_barcode_lookup_events_barcode").on(table.barcode),
+  userIdIdx: index("idx_barcode_lookup_events_user_id").on(table.userId),
+  statusIdx: index("idx_barcode_lookup_events_status").on(table.status),
+}));
+
+export type BarcodeLookupEvent = typeof barcodeLookupEvents.$inferSelect;
