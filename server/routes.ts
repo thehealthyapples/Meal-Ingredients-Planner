@@ -5082,7 +5082,11 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     }
   });
 
+  // TRUST1-S3: authenticated, not admin. The Analyser's "Link to template"
+  // (client/src/pages/products-page.tsx) creates a template as a signed-in
+  // household on a ProtectedRoute page, so assertAdmin here would break it.
   app.post("/api/meal-templates", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
       const data = insertMealTemplateSchema.parse(req.body);
       const template = await storage.createMealTemplate(data);
@@ -5094,7 +5098,9 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     }
   });
 
-  app.patch("/api/meal-templates/:id", async (req, res) => {
+  // TRUST1-S3: meal_templates is global platform content (no userId column,
+  // shared/schema.ts:49). Mutating or destroying an existing row is an admin act.
+  app.patch("/api/meal-templates/:id", assertAdmin, async (req, res) => {
     try {
       const updateSchema = z.object({
         name: z.string().min(1).optional(),
@@ -5102,7 +5108,10 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         description: z.string().nullable().optional(),
       });
       const data = updateSchema.parse(req.body);
-      const template = await storage.updateMealTemplate(parseInt(req.params.id), data);
+      // String(): adding the middleware argument widens Express's inferred `req.params` to
+      // ParamsDictionary | ParamsArray. Same idiom as every other assertAdmin route with an :id
+      // (routes.ts:7150, :7430) — the guard is what changed the overload, not the parameter.
+      const template = await storage.updateMealTemplate(parseInt(String(req.params.id), 10), data);
       if (!template) return res.status(404).json({ message: "Template not found" });
       res.json(template);
     } catch (err) {
@@ -5112,9 +5121,9 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     }
   });
 
-  app.delete("/api/meal-templates/:id", async (req, res) => {
+  app.delete("/api/meal-templates/:id", assertAdmin, async (req, res) => {
     try {
-      await storage.deleteMealTemplate(parseInt(req.params.id));
+      await storage.deleteMealTemplate(parseInt(String(req.params.id), 10));
       res.sendStatus(204);
     } catch (err) {
       console.error("Error deleting meal template:", err);
@@ -5132,7 +5141,9 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     }
   });
 
+  // TRUST1-S3: authenticated, not admin — same Analyser call path as the create above.
   app.post("/api/meal-templates/:id/products", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
       const data = insertMealTemplateProductSchema.parse({ ...req.body, mealTemplateId: parseInt(req.params.id) });
       const product = await storage.addMealTemplateProduct(data);
@@ -5144,9 +5155,9 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     }
   });
 
-  app.delete("/api/meal-template-products/:id", async (req, res) => {
+  app.delete("/api/meal-template-products/:id", assertAdmin, async (req, res) => {
     try {
-      await storage.removeMealTemplateProduct(parseInt(req.params.id));
+      await storage.removeMealTemplateProduct(parseInt(String(req.params.id), 10));
       res.sendStatus(204);
     } catch (err) {
       console.error("Error removing template product:", err);
@@ -5154,14 +5165,23 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     }
   });
 
+  // TRUST1-S3 (recorded decision B): a read wearing a POST — resolveTemplate
+  // writes nothing. It is guarded anyway because it returns a full Meal row
+  // selected on mealTemplateId alone (storage.ts getMealsForTemplate applies no
+  // userId filter), so anonymously it disclosed another household's meal.
+  // Auth closes the ANONYMOUS disclosure only. The cross-household leak survives
+  // for any signed-in caller; its root cause is the missing userId filter, shared
+  // with GET /api/meal-templates/:id, and it is NOT fixed here — see
+  // TRUST1_S3_SECURE_MEAL_TEMPLATE_ENDPOINTS.md § Route Audit Results.
   app.post("/api/meal-templates/:id/resolve", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
       const resolveSchema = z.object({
         sourceType: z.enum(['scratch', 'ready_meal', 'hybrid']).optional(),
       });
       const body = resolveSchema.parse(req.body);
       const { resolveTemplate } = await import("./meal-resolution-service");
-      const userId = req.isAuthenticated() ? req.user!.id : undefined;
+      const userId = req.user!.id;
       const resolved = await resolveTemplate(parseInt(req.params.id), userId, body.sourceType);
       if (!resolved) return res.status(404).json({ message: "Template not found" });
       res.json(resolved);
@@ -10737,7 +10757,10 @@ Generate a complete recipe using these as the foundation.`;
     }
   });
 
-  app.post('/api/admin/backfill-classifications', (req, res, next) => next(), async (req, res) => {
+  // TRUST1-S3: the middleware slot held `(req, res, next) => next()` — a no-op
+  // where a guard belongs. Anonymous callers could rewrite every user's shopping
+  // list (dryRun defaults to false). Replaced with the canonical guard.
+  app.post('/api/admin/backfill-classifications', assertAdmin, async (req, res) => {
     try {
       const batchSize = Math.min(Number(req.body.batchSize) || 50, 200);
       const dryRun    = req.body.dryRun === true;
@@ -10755,7 +10778,7 @@ Generate a complete recipe using these as the foundation.`;
   // POST /api/admin/normalise-categories
   // Re-evaluates ALL shopping_list items using the current canonical resolver
   // and corrects any category that no longer matches.  Safe to run repeatedly.
-  app.post('/api/admin/normalise-categories', (req, res, next) => next(), async (req, res) => {
+  app.post('/api/admin/normalise-categories', assertAdmin, async (req, res) => {
     try {
       const dryRun = req.body.dryRun === true;
       const triggerUserId = req.user?.id ?? 0;
@@ -10768,7 +10791,7 @@ Generate a complete recipe using these as the foundation.`;
     }
   });
 
-  app.post('/api/admin/backfill-ambiguous-categories', (req, res, next) => next(), async (req, res) => {
+  app.post('/api/admin/backfill-ambiguous-categories', assertAdmin, async (req, res) => {
     try {
       const dryRun = req.body.dryRun === true;
       const triggerUserId = req.user?.id ?? 0;
