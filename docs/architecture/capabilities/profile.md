@@ -3,10 +3,10 @@
 **Capability ID:** `profile`
 **Classification:** Governing Architecture — Canonical Capability Definition
 **Status:** Capability Card complete — **bound under INT12** (`availability: "available"`)
-**Promoted:** EPIC 1.5 (2026-06-30), from `docs/implementation/INT11_CAPABILITY_CARDS_SPECIFICATION.md` (INT11, EPIC 1, 2026-06-30)
-**Bound:** INT12 (2026-06-30) — see `docs/implementation/INT12_PROFILE_CAPABILITY_BINDING_IMPLEMENTATION.md` for the completed binding (port, handler, binding, tests).
+**Promoted:** EPIC 1.5 (2026-06-30), from `docs/implementation/governance/INT11_CAPABILITY_CARDS_SPECIFICATION.md` (INT11, EPIC 1, 2026-06-30)
+**Bound:** INT12 (2026-06-30) — see `docs/implementation/intelligence/INT12_PROFILE_CAPABILITY_BINDING_IMPLEMENTATION.md` for the completed binding (port, handler, binding, tests).
 
-> This document is the single canonical Capability Card for `profile`. It is governing architecture: required reading before any future binding implementation for this capability. The [Developer Capability Registry](../INTELLIGENCE_DEVELOPER_CAPABILITY_REGISTRY.md) indexes this card (implementation status, binding status, executable intents, owner, link) but does not duplicate its content — this is the only place the full card lives. The original investigation evidence and methodology remain in `docs/implementation/INT11_CAPABILITY_CARDS_SPECIFICATION.md`.
+> This document is the single canonical Capability Card for `profile`. It is governing architecture: required reading before any future binding implementation for this capability. The [Developer Capability Registry](../INTELLIGENCE_DEVELOPER_CAPABILITY_REGISTRY.md) indexes this card (implementation status, binding status, executable intents, owner, link) but does not duplicate its content — this is the only place the full card lives. The original investigation evidence and methodology remain in `docs/implementation/governance/INT11_CAPABILITY_CARDS_SPECIFICATION.md`.
 
 ---
 
@@ -66,4 +66,4 @@ Trust rules:            Never surface another user's profile (structural, not a 
 
 ---
 
-**Source investigation:** `docs/implementation/INT11_CAPABILITY_CARDS_SPECIFICATION.md` (INT11, EPIC 1, 2026-06-30)
+**Source investigation:** `docs/implementation/governance/INT11_CAPABILITY_CARDS_SPECIFICATION.md` (INT11, EPIC 1, 2026-06-30)

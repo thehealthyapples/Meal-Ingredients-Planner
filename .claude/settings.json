@@ -1,0 +1,25 @@
+{
+  "$comment": "Shared project settings. Engineering Session Recovery hooks keep .engineering/session/ recovery files current automatically. See .engineering/protocols/ENGINEERING_SESSION_RECOVERY_PROTOCOL.md. Personal overrides live in settings.local.json (gitignored).",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.engineering/hooks/session-recovery-start.sh\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.engineering/hooks/session-recovery-stop.sh\""
+          }
+        ]
+      }
+    ]
+  }
+}

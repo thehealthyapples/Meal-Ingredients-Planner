@@ -25,7 +25,7 @@
 | **Points to commit** | `bae3b99` (`bae3b992e021abe32182dcf13f9aff7f1e708a95`) |
 | **Current branch** | `safety/preserve-since-last-prod-20260617-1613` |
 | **Restore command** | `git reset --hard rollback/launch-roadmap-20260618` |
-| **Undo this doc only** | `rm docs/investigations/THA_LAUNCH_ROADMAP.md` |
+| **Undo this doc only** | `rm docs/investigations/governance/THA_LAUNCH_ROADMAP.md` |
 
 **Required rollback steps — completed before investigation began:**
 
@@ -462,7 +462,7 @@ Sequenced fast-follows, each behind its own rollback point and approval.
 personalisation depth and automation maturity grow. The two structural walls — the KMS *discovered↔
 published* wall and the Intelligence *generic↔personalised* (G1) wall — never move.
 
-**Nutrition → Food Intelligence:** the long-term Nutrition/Recommendation-Engine vision referenced in this section (formerly citing `docs/investigations/THA_PERSONALISED_NUTRITION_INTELLIGENCE_ARCHITECTURE.md` and `NUT2_FUTURE_STATE_NUTRITION_VISION.md`) was promoted to governing architecture as **`docs/architecture/THA_FOOD_INTELLIGENCE_PLATFORM_ARCHITECTURE.md`** under EWO-FI1 (2026-07-03). Future Food Intelligence workstreams cite that document; the two investigations above remain historical evidence only.
+**Nutrition → Food Intelligence:** the long-term Nutrition/Recommendation-Engine vision referenced in this section (formerly citing `docs/investigations/intelligence/THA_PERSONALISED_NUTRITION_INTELLIGENCE_ARCHITECTURE.md` and `NUT2_FUTURE_STATE_NUTRITION_VISION.md`) was promoted to governing architecture as **`docs/architecture/THA_FOOD_INTELLIGENCE_PLATFORM_ARCHITECTURE.md`** under EWO-FI1 (2026-07-03). Future Food Intelligence workstreams cite that document; the two investigations above remain historical evidence only.
 
 ---
 

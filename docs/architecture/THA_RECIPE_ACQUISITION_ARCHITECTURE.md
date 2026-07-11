@@ -2,7 +2,7 @@
 
 **Status:** GOVERNING — required reading before any implementation that fetches, imports, stores, generates or displays recipe content.
 **Adopted:** 2026-07-02 (EWO-FS3)
-**Evidence base:** `docs/investigations/FS1_THA_KNOWLEDGE_SOURCE_AND_LICENSING_AUDIT.md`, `docs/investigations/FS2_RECIPE_ACQUISITION_ARCHITECTURE_AND_LICENSING_REVIEW.md`
+**Evidence base:** `docs/investigations/knowledge/FS1_THA_KNOWLEDGE_SOURCE_AND_LICENSING_AUDIT.md`, `docs/investigations/cookbook/FS2_RECIPE_ACQUISITION_ARCHITECTURE_AND_LICENSING_REVIEW.md`
 **Canonical policy owner (code):** `shared/recipe-acquisition.ts`
 **Canonical provenance store:** `meals.acquisition_lane / acquisition_type / acquisition_source_key / licence_ref / attribution_text`
 

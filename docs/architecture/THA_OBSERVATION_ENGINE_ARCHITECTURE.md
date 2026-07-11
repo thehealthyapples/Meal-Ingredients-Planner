@@ -3,7 +3,7 @@
 **Status:** GOVERNING ARCHITECTURE — Intelligence Governance (canonical). Established by workstream `OBS1`, 2026-07-08.
 **Classification:** Intelligence Governance — the single owner of runtime observations: the platform's one telemetry system, recording what the Intelligence Platform actually did, how confidently, how fast, and with what outcome.
 **Governing documents:** `THA_INTELLIGENCE_PLATFORM_ARCHITECTURE.md` (TIP1), `THA_AI_CAPABILITY_REGISTRY_AND_INTENT_TAXONOMY.md` (TIP2), `THA_CONTEXT_COMPOSITION_ENGINE_ARCHITECTURE.md` (INT17), `PLATFORM_QUALITY_ARCHITECTURE.md`
-**Implementation records:** `docs/implementation/OBS1_OBSERVATION_ENGINE_ACTIVATION.md`, `docs/implementation/OBS2_EXECUTION_TIMELINE.md`, `docs/implementation/BEH1_BEHAVIOUR_ENGINE_ACTIVATION.md` (the twelfth kind)
+**Implementation records:** `docs/implementation/intelligence/OBS1_OBSERVATION_ENGINE_ACTIVATION.md`, `docs/implementation/intelligence/OBS2_EXECUTION_TIMELINE.md`, `docs/implementation/intelligence/BEH1_BEHAVIOUR_ENGINE_ACTIVATION.md` (the twelfth kind)
 **Naming history:** This filename was established by INT20 for the Companion's ambient-notice component. OBS1 (2026-07-08) reassigned the **Observation Engine** name to the platform telemetry service defined here; the ambient-notice architecture continues unchanged in meaning as the **Notice Engine** (`THA_COMPANION_NOTICE_ENGINE_ARCHITECTURE.md`). The two are disjoint: **notices are user-facing facts about the household's own data; observations are operator-facing telemetry about platform execution.**
 
 ---
@@ -205,4 +205,4 @@ Hard stops, in the spirit of `ENGINEERING_WORKFLOW.md` STEP 7:
 ---
 
 *Required reading before recording any new runtime telemetry, adding an observation kind, or building any operator view over platform execution anywhere in THA.*
-*Implementation records: `docs/implementation/OBS1_OBSERVATION_ENGINE_ACTIVATION.md`, `docs/implementation/OBS2_EXECUTION_TIMELINE.md`, `docs/implementation/BEH1_BEHAVIOUR_ENGINE_ACTIVATION.md`.*
+*Implementation records: `docs/implementation/intelligence/OBS1_OBSERVATION_ENGINE_ACTIVATION.md`, `docs/implementation/intelligence/OBS2_EXECUTION_TIMELINE.md`, `docs/implementation/intelligence/BEH1_BEHAVIOUR_ENGINE_ACTIVATION.md`.*

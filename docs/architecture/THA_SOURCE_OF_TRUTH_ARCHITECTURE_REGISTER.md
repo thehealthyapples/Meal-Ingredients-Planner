@@ -808,6 +808,9 @@ who reads all three will notice. A user who trusts THA will wonder which is "rig
 | Ingredient Normalization | `server/lib/ingredient-normalization-service.ts` |
 | Membership | DB `users.subscriptionTier` column |
 | User Preferences | DB `user_preferences` table |
+| Attention Vocabulary (levels, rank, labels, `critical` allowlist) | `shared/attention/index.ts` (ATTN1, 2026-07-09 — reference vocabulary per Principle 5; replaced the three module-local priority unions/rank maps in FI4, OD1 and the Notice Engine; no DB owner — `opportunity_deliveries.priority` remains a non-authoritative snapshot) |
+| Decision mechanics (attention ordering, delivery budget clamp, id dedupe, `EvidenceCitation`) | `shared/attention/decision.ts` (DEC1, 2026-07-09 — reference mechanics per Principle 5; replaced the three module-local sort/clamp/dedupe/evidence copies in FI4, OD1 and the Notice Engine, golden-identity tested byte-identical) |
+| Decision Engine (ambient surfacing: eligibility, muting, lifecycle suppression, learning re-weight, rank, budget, surface routing, sealed `DeliveryDecision`) | `server/intelligence/opportunity-delivery/framework.ts` (OD1 framework, designated canonical by DEC1 2026-07-09 — governance: `THA_DECISION_ENGINE_ARCHITECTURE.md`; the decision record is a `delivery-decision` observation, never a table, and nothing reads it back) |
 
 ---
 

@@ -70,7 +70,7 @@ This investigation is grounded in the live codebase, not a greenfield assumption
 **Knowledge artifacts that exist as files today (the raw material for Part 1):**
 - Governance/architecture: `docs/ARCHITECTURE_PRINCIPLES.md`, `docs/ENGINEERING_WORKFLOW.md`, the SoT Register
 - Operational docs: `docs/release-notes.md`, `docs/release-matrix.md`, `docs/roles-and-subscriptions.md`, `docs/admin-users.md`, `docs/change-control.md`, `docs/preferred-products.md`, `docs/share-plans.md`, etc.
-- Investigations / ADR-equivalents: `docs/investigations/*` (~100+ files), `docs/investigations/THA_LAUNCH_ROADMAP.md`
+- Investigations / ADR-equivalents: `docs/investigations/*` (~100+ files), `docs/investigations/governance/THA_LAUNCH_ROADMAP.md`
 - DB-resident knowledge: `knowledge_*` tables (food knowledge), `food_knowledge` (additives)
 
 **Key finding:** THA already has the three pillars TIP needs — an identity/permission system, an AI SDK, and domain intelligence assemblers. **TIP is an integration and governance layer, not a new platform.** This is decisive for the recommended architecture.
@@ -171,7 +171,7 @@ For each knowledge area: its **authoritative owner** (unchanged), **consumers**,
 | Release Notes | `docs/release-notes.md` + `release-matrix.md` | public (user-facing subset) / admin (internal) | Users, Admins | Authored at release; re-indexed on merge |
 | Investigations | `docs/investigations/*` | developer | Developers | Authored per workstream; re-indexed on merge |
 | ADRs | `docs/investigations/*` architecture docs (ADR-equivalent today) | developer | Developers | Same lifecycle as investigations |
-| Product Roadmap | `docs/investigations/THA_LAUNCH_ROADMAP.md` | admin (internal) / public (published subset) | Admins; Users (published items only) | Admin-owned; published subset gated explicitly |
+| Product Roadmap | `docs/investigations/governance/THA_LAUNCH_ROADMAP.md` | admin (internal) / public (published subset) | Admins; Users (published items only) | Admin-owned; published subset gated explicitly |
 | Workflow Documentation | `docs/ENGINEERING_WORKFLOW.md` | developer | Developers | Repo-owned; re-indexed on merge |
 | Known Issues | Issue tracker / a `known_issues` source | admin (internal) / public (acknowledged subset) | Admins; Users (acknowledged only) | Admin-curated; feeds from Feedback Intelligence |
 | Feature Documentation | Operational docs + DB feature metadata | public | Users | Editorial; re-indexed on change |

@@ -6,7 +6,7 @@
 **Governing documents:** [`ARCHITECTURE_PRINCIPLES.md`](./ARCHITECTURE_PRINCIPLES.md), [`THA_SOURCE_OF_TRUTH_ARCHITECTURE_REGISTER.md`](./THA_SOURCE_OF_TRUTH_ARCHITECTURE_REGISTER.md), [`ENGINEERING_WORKFLOW.md`](./ENGINEERING_WORKFLOW.md)
 **Sits within:** [`THA_INTELLIGENCE_PLATFORM_ARCHITECTURE.md`](./THA_INTELLIGENCE_PLATFORM_ARCHITECTURE.md) (the platform), [`THA_AI_EXPERIENCE_AND_CONVERSATION_ARCHITECTURE.md`](./THA_AI_EXPERIENCE_AND_CONVERSATION_ARCHITECTURE.md) (the experience)
 
-> **What this document is.** A single governing principle that draws a hard ownership boundary between what the Conversation does, what canonical THA pages do, and what external sources do. It **names and elevates** a rule that the platform architecture already implies (TIP1 "knowledge indexed, never re-owned"; TIP3 "conversation holds references, never business data") and that the Intelligence Platform now enforces structurally in code (see [INT36](../implementation/INT36_NATIVE_THA_DISCOVERY_RESPONSES.md)). It introduces **no new entity, owner, service, capability, or business logic** — it clarifies ownership so no future workstream blurs it.
+> **What this document is.** A single governing principle that draws a hard ownership boundary between what the Conversation does, what canonical THA pages do, and what external sources do. It **names and elevates** a rule that the platform architecture already implies (TIP1 "knowledge indexed, never re-owned"; TIP3 "conversation holds references, never business data") and that the Intelligence Platform now enforces structurally in code (see [INT36](../implementation/intelligence/INT36_NATIVE_THA_DISCOVERY_RESPONSES.md)). It introduces **no new entity, owner, service, capability, or business logic** — it clarifies ownership so no future workstream blurs it.
 
 ---
 
@@ -97,7 +97,7 @@ This principle is the discovery→presentation face of rules already in force. I
 
 ## ENFORCEMENT
 
-- **In code (today):** [INT36 — Native THA Discovery Responses](../implementation/INT36_NATIVE_THA_DISCOVERY_RESPONSES.md) enforces the firewall structurally — discovery cards carry only `ThaEntityRef` (`{ type, id }`), the builder never reads `sourceUrl`, and provenance remains solely on the Meal Detail read projection. This principle is the governing statement that implementation satisfies.
+- **In code (today):** [INT36 — Native THA Discovery Responses](../implementation/intelligence/INT36_NATIVE_THA_DISCOVERY_RESPONSES.md) enforces the firewall structurally — discovery cards carry only `ThaEntityRef` (`{ type, id }`), the builder never reads `sourceUrl`, and provenance remains solely on the Meal Detail read projection. This principle is the governing statement that implementation satisfies.
 - **In review:** Any Intelligence discovery, response-shaping, or presentation change must confirm compliance under the **AI ARCHITECTURE COMPLIANCE** block of [`ENGINEERING_WORKFLOW.md`](./ENGINEERING_WORKFLOW.md). A change that lets the Conversation render/edit an entity, that surfaces an external URL as a primary discovery link, or that copies presentation/provenance across the boundary **must STOP, explain why, and not continue until approved.**
 
 **Fail tests:**

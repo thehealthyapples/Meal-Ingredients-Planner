@@ -52,7 +52,7 @@ Per the mandate: *if any proposal fails these principles — STOP.* The TIP2 reg
 This registry is not aspirational. It was built by enumerating the **live** system:
 
 1. **Capabilities** were derived from the actual HTTP surface in `server/routes.ts` (≈200 endpoints across 30+ path groups) cross-referenced with the client surface in `client/src/pages/` (24 pages).
-2. **Owners** were taken from `docs/investigations/THA_SOURCE_OF_TRUTH_ARCHITECTURE_REGISTER.md` (27 declared domains) — TIP2 **inherits** those ownership declarations and does not re-declare them.
+2. **Owners** were taken from `docs/investigations/governance/THA_SOURCE_OF_TRUTH_ARCHITECTURE_REGISTER.md` (27 declared domains) — TIP2 **inherits** those ownership declarations and does not re-declare them.
 3. **Permission primitives** were read from `server/lib/access.ts`: `isAdmin()`, `getTier()`, `hasPremiumAccess()`, `assertAdmin` (middleware), `requirePremium` (middleware); plus the Passport `req.isAuthenticated()` guard used 204× in routes.
 4. **Audit primitive** is the existing `storage.createAuditLog({ adminUserId, action, targetUserId?, metadata? })` writing to the `admin_audit_log` table — reuse, never rebuild.
 

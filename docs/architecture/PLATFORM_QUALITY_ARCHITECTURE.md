@@ -3,7 +3,7 @@
 **Status:** GOVERNING ARCHITECTURE — promoted from investigation `PLATFORM_QUALITY_ARCHITECTURE_INVESTIGATION.md` (workstream `EWO-PQA1`), 2026-07-03. No code, schema, runtime, or API changes.
 **Classification:** Platform Governance (canonical, cross-cutting — applies to every domain, not Intelligence-specific)
 **Governing documents:** `docs/architecture/ARCHITECTURE_PRINCIPLES.md`, `docs/architecture/THA_SOURCE_OF_TRUTH_ARCHITECTURE_REGISTER.md`, `docs/architecture/ENGINEERING_WORKFLOW.md`, `docs/architecture/THA_INTELLIGENCE_PLATFORM_ARCHITECTURE.md`
-**Source investigation:** `docs/investigations/PLATFORM_QUALITY_ARCHITECTURE_INVESTIGATION.md`
+**Source investigation:** `docs/investigations/platform/PLATFORM_QUALITY_ARCHITECTURE_INVESTIGATION.md`
 
 ---
 
@@ -196,7 +196,7 @@ This document is architecture, not implementation (Rule 8 applies — governance
 1. **Add `performanceBudget` metadata to the Capability Registry** (e.g. `real-time` / `cached` / `batch-acceptable`), so Performance gains the same registry-anchored enforcement Security and Privacy already have.
 2. **Add `accessibilityProfile` metadata to the Capability Registry** (or equivalent), so surfaces beyond the conversation plane inherit a declared accessibility contract rather than relying on ad hoc review.
 3. **Give the Observability turn-classification log an external, durable sink** (it is currently an in-memory, 200-entry, process-local ring buffer per `turn-fallback.ts`) so operational excellence (§8) has evidence to audit against beyond a single process's uptime.
-   ✅ **Closed under EWO-PRO1 (2026-07-03):** `platform_turn_outcomes` table, sole owner `server/intelligence/conversation/turn-outcome-store.ts`, wired as a fire-and-forget sink registered at startup; bounded retention (30 days / 5,000 rows); admin read at `/api/admin/platform/turn-outcomes`. The in-memory ring buffer remains as the process-local recent-window cache the INT35B/C aggregations read — the durable table is the canonical historical record. See `docs/implementation/PLATFORM_RESILIENCE_AND_OPERATIONS_IMPLEMENTATION.md`.
+   ✅ **Closed under EWO-PRO1 (2026-07-03):** `platform_turn_outcomes` table, sole owner `server/intelligence/conversation/turn-outcome-store.ts`, wired as a fire-and-forget sink registered at startup; bounded retention (30 days / 5,000 rows); admin read at `/api/admin/platform/turn-outcomes`. The in-memory ring buffer remains as the process-local recent-window cache the INT35B/C aggregations read — the durable table is the canonical historical record. See `docs/implementation/platform/PLATFORM_RESILIENCE_AND_OPERATIONS_IMPLEMENTATION.md`.
 4. **Insert the Platform Quality Compliance Checklist (§5) into `ENGINEERING_WORKFLOW.md`** as a mandatory section, alongside the existing Architecture Compliance Checklist and AI Architecture Compliance block.
    ✅ **Closed under EWO-PRO1 (2026-07-03):** inserted as the "PLATFORM QUALITY COMPLIANCE CHECKLIST" section of `ENGINEERING_WORKFLOW.md`, with a matching section added to the implementation template.
 5. **Adopt a platform-wide accessibility standard** (a stated WCAG conformance level and the keyboard/screen-reader/motion requirements that follow from it), rather than the current single-surface discipline in the Companion Card Experience Principle.
@@ -206,5 +206,5 @@ Each of these is a governed workstream in its own right (Rule 8: governance revi
 ---
 
 *Required reading before any implementation that registers a new capability, adds a new conversational surface, or touches security, privacy, performance, observability, accessibility, or trust behaviour anywhere in THA.*
-*Source investigation: `docs/investigations/PLATFORM_QUALITY_ARCHITECTURE_INVESTIGATION.md`.*
+*Source investigation: `docs/investigations/platform/PLATFORM_QUALITY_ARCHITECTURE_INVESTIGATION.md`.*
 *Rollback: this document only — `git checkout HEAD docs/architecture/PLATFORM_QUALITY_ARCHITECTURE.md` (or delete the file to revert). No code was changed to produce it.*

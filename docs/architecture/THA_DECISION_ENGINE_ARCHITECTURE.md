@@ -1,8 +1,8 @@
 # THA Decision Engine Architecture (DEC1)
 
-**Status:** Governing architecture — promoted from investigation `docs/investigations/DEC1_CANONICAL_DECISION_ENGINE.md` under DEC1 (2026-07-09). Indexed in `docs/architecture/README.md` under Intelligence Governance.
+**Status:** Governing architecture — promoted from investigation `docs/investigations/intelligence/DEC1_CANONICAL_DECISION_ENGINE.md` under DEC1 (2026-07-09). Indexed in `docs/architecture/README.md` under Intelligence Governance.
 **Owner of this document's subject:** the Decision stage of the Intelligence Platform.
-**Implementation record:** `docs/implementation/DEC1_CANONICAL_DECISION_ENGINE.md`.
+**Implementation record:** `docs/implementation/intelligence/DEC1_CANONICAL_DECISION_ENGINE.md`.
 
 ---
 

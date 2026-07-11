@@ -171,7 +171,7 @@ Every question records **why** routing failed (`intent-unresolved`, `wrong-capab
 `permission-denied`, `capability-not-executable`, `llm-provider-unavailable`, …). Gated questions retain their
 `rawComposite`, so the diagnostic signal survives the cap.
 
-**Why this exists.** `docs/investigations/INTA1_INTELLIGENCE_PLATFORM_WIRING_AUDIT.md` §6.2 established that a completely
+**Why this exists.** `docs/investigations/intelligence/INTA1_INTELLIGENCE_PLATFORM_WIRING_AUDIT.md` §6.2 established that a completely
 unwired capability scored **73.3/100 and passed**: 36 of 100 questions reached no capability at all, and scored a mean of
 74.3 against 75.0 for questions that did. *A capability that does not work cost 0.7 points.* `no-route` was classified as
 an honest gap — the highest-rewarded outcome in the rubric. The platform could not detect its own unwiring, which is how

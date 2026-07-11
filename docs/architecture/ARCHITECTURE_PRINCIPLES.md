@@ -2,7 +2,7 @@
 
 **Status:** GOVERNING — required reading before any significant implementation
 **Adopted:** 2026-06-25
-**Source investigation:** `docs/investigations/THA_CORE_ARCHITECTURE_PRINCIPLES.md`
+**Source investigation:** `docs/investigations/governance/THA_CORE_ARCHITECTURE_PRINCIPLES.md`
 **Source register:** `docs/architecture/THA_SOURCE_OF_TRUTH_ARCHITECTURE_REGISTER.md`
 **Supersedes:** Nothing — these principles *generalise* the Source of Truth Register's 8 governance rules from "source of truth governance" to "entity architecture". Both documents remain in force; the Register's rules become the enforcement mechanism for these principles.
 

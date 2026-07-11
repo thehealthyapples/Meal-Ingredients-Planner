@@ -3,9 +3,9 @@
 **Capability ID:** `analyser`
 **Classification:** Governing Architecture — Canonical Capability Definition
 **Status:** Bound under INT17
-**Promoted:** EPIC 1.5 (2026-06-30), from `docs/implementation/INT11_CAPABILITY_CARDS_SPECIFICATION.md` (INT11, EPIC 1, 2026-06-30)
+**Promoted:** EPIC 1.5 (2026-06-30), from `docs/implementation/governance/INT11_CAPABILITY_CARDS_SPECIFICATION.md` (INT11, EPIC 1, 2026-06-30)
 
-> This document is the single canonical Capability Card for `analyser`. It is governing architecture: required reading before any future binding implementation for this capability. The [Developer Capability Registry](../INTELLIGENCE_DEVELOPER_CAPABILITY_REGISTRY.md) indexes this card (implementation status, binding status, executable intents, owner, link) but does not duplicate its content — this is the only place the full card lives. The original investigation evidence and methodology remain in `docs/implementation/INT11_CAPABILITY_CARDS_SPECIFICATION.md`.
+> This document is the single canonical Capability Card for `analyser`. It is governing architecture: required reading before any future binding implementation for this capability. The [Developer Capability Registry](../INTELLIGENCE_DEVELOPER_CAPABILITY_REGISTRY.md) indexes this card (implementation status, binding status, executable intents, owner, link) but does not duplicate its content — this is the only place the full card lives. The original investigation evidence and methodology remain in `docs/implementation/governance/INT11_CAPABILITY_CARDS_SPECIFICATION.md`.
 
 ---
 
@@ -81,4 +81,27 @@ Trust rules:            Never fabricate a UPF classification, health score, or N
 
 ---
 
-**Source investigation:** `docs/implementation/INT11_CAPABILITY_CARDS_SPECIFICATION.md` (INT11, EPIC 1, 2026-06-30)
+## Governance decision — the per-product read (BENCHINT4, 2026-07-10)
+
+**Decision: `analyser` does not gain a product-scoped read. A question about a specific product is an honest gap, and that is the correct answer.**
+
+This settles the decision BENCHINT3 §4.11 raised and BENCHINT3 §8 task 14 referred here. It is recorded on the card because it is a capability-ownership decision, not a routing one.
+
+**The question.** `PR-070` — *"Does this product fit my household restrictions?"* The Companion Benchmark's fixture named `product-analysis + household`, which normalises to this capability. The platform routed it to `household:read`, answered from the household's stored restrictions, and was scored a misroute for doing so.
+
+**Why the gap is correct, and the route was not.**
+
+1. **There is no stored per-product analysis to read.** The Honest gaps section above establishes this at file:line: `analyzeProduct` / `analyzeProductUPF` are pure computation over caller-supplied text, and barcode lookup live-fetches OpenFoodFacts and recomputes on every call. Nothing is persisted. A read-only capability binding has nothing to return.
+2. **The utterance has no referent.** *"This product"* names nothing. The Companion turn carries `surfaceHints: {}` on both the benchmark and the production `floating` surface, so no product is in scope. There is no product to analyse even if a read existed.
+3. **Forcing the one executable scope onto it would fabricate.** `read { scope: "additives" }` returns the static additives reference table. Handing that to the answer generator for a question about a specific product invites it to present a generic additive list as a finding about that product. `analyserUnexecutable()` in `pattern-intent-resolver.ts` exists to refuse exactly this, and the Trust rules above already forbid the fabrication it would enable.
+
+**Consequences, recorded so they are not re-litigated:**
+
+- `explain`, `analyse` and `report` remain declared-but-unbound. Under BENCHINT4's verb-aware expectation record, a fixture naming `analyser.explain` is `registered-unbound` **at verb granularity** and no longer requires a route — which is what an honest gap means, stated in the measurement rather than only in prose.
+- `household` is the capability that genuinely owns "my household's restrictions". PR-070's fixture row is re-targeted to `household.read + product-analysis`: household answers, and `product-analysis` is retained as the named secondary precisely to record that the analyser half is a gap.
+- **This is not a permanent refusal.** Reversing it requires two things together, and neither alone is sufficient: (a) a stored, product-scoped analysis owned by a real owning service, and (b) a product referent reaching the turn through `surfaceHints`. Until both exist, a per-product read cannot be grounded, and an ungrounded read is the failure mode this platform is built to refuse.
+
+---
+
+**Source investigation:** `docs/implementation/governance/INT11_CAPABILITY_CARDS_SPECIFICATION.md` (INT11, EPIC 1, 2026-06-30)
+**Governance decision:** `docs/implementation/benchmarking/BENCHINT4_INTENT_ROUTING_CONVERGENCE.md` §6 (BENCHINT4, 2026-07-10) — closes BENCHINT3 §8 task 14.

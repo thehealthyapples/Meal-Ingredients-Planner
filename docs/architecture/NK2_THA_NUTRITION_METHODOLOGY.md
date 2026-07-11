@@ -3,7 +3,7 @@
 **Status:** Investigation and design (no implementation)  
 **Date:** 2026-07-07  
 **Purpose:** Define THA's canonical Nutrition Methodology — the decision principles, prioritisation philosophy, and practical guidance approach that every business service should follow when applying nutrition knowledge to help households make better food decisions.  
-**Governing documents:** `docs/architecture/ARCHITECTURE_PRINCIPLES.md`, `docs/architecture/THA_MASTER_EVOLUTION_ROADMAP.md`, `docs/investigations/NK1_CANONICAL_NUTRITION_KNOWLEDGE_PLATFORM.md`, `docs/architecture/THA_FOOD_INTELLIGENCE_PLATFORM_ARCHITECTURE.md`
+**Governing documents:** `docs/architecture/ARCHITECTURE_PRINCIPLES.md`, `docs/architecture/THA_MASTER_EVOLUTION_ROADMAP.md`, `docs/architecture/NK1_CANONICAL_NUTRITION_KNOWLEDGE_PLATFORM.md`, `docs/architecture/THA_FOOD_INTELLIGENCE_PLATFORM_ARCHITECTURE.md`
 
 ---
 

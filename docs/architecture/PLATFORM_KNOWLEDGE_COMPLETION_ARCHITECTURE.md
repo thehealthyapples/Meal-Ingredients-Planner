@@ -3,7 +3,7 @@
 **Status:** GOVERNING ARCHITECTURE — promoted from investigation `PLATFORM_KNOWLEDGE_COMPLETION_ARCHITECTURE_INVESTIGATION.md` (workstream `EWO-PKCA1`), 2026-07-03. No code, schema, runtime, or API changes.
 **Classification:** Platform Governance (canonical, cross-cutting — applies to every knowledge domain, not Food Intelligence-specific)
 **Governing documents:** `docs/architecture/ARCHITECTURE_PRINCIPLES.md`, `docs/architecture/THA_SOURCE_OF_TRUTH_ARCHITECTURE_REGISTER.md`, `docs/architecture/ENGINEERING_WORKFLOW.md`, `docs/architecture/THA_INTELLIGENCE_PLATFORM_ARCHITECTURE.md`, `docs/architecture/THA_FOOD_INTELLIGENCE_PLATFORM_ARCHITECTURE.md`, `docs/architecture/PLATFORM_QUALITY_ARCHITECTURE.md`
-**Source investigation:** `docs/investigations/PLATFORM_KNOWLEDGE_COMPLETION_ARCHITECTURE_INVESTIGATION.md`
+**Source investigation:** `docs/investigations/platform/PLATFORM_KNOWLEDGE_COMPLETION_ARCHITECTURE_INVESTIGATION.md`
 
 ---
 

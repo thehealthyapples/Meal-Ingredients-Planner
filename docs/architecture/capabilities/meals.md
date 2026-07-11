@@ -3,9 +3,9 @@
 **Capability ID:** `meals`
 **Classification:** Governing Architecture — Canonical Capability Definition
 **Status:** Bound under INT15 — `read` executable, scoped to `list`/`summary`/`detail`; `explain`/`search`/`recommend` remain unbound (`search` is an unresolved open decision — see card; `recommend` ranking lives at the route layer; `explain` has no stored rationale)
-**Promoted:** EPIC 1.5 (2026-06-30), from `docs/implementation/INT11_CAPABILITY_CARDS_SPECIFICATION.md` (INT11, EPIC 1, 2026-06-30)
+**Promoted:** EPIC 1.5 (2026-06-30), from `docs/implementation/governance/INT11_CAPABILITY_CARDS_SPECIFICATION.md` (INT11, EPIC 1, 2026-06-30)
 
-> This document is the single canonical Capability Card for `meals`. It is governing architecture: required reading before any future binding implementation for this capability. The [Developer Capability Registry](../INTELLIGENCE_DEVELOPER_CAPABILITY_REGISTRY.md) indexes this card (implementation status, binding status, executable intents, owner, link) but does not duplicate its content — this is the only place the full card lives. The original investigation evidence and methodology remain in `docs/implementation/INT11_CAPABILITY_CARDS_SPECIFICATION.md`.
+> This document is the single canonical Capability Card for `meals`. It is governing architecture: required reading before any future binding implementation for this capability. The [Developer Capability Registry](../INTELLIGENCE_DEVELOPER_CAPABILITY_REGISTRY.md) indexes this card (implementation status, binding status, executable intents, owner, link) but does not duplicate its content — this is the only place the full card lives. The original investigation evidence and methodology remain in `docs/implementation/governance/INT11_CAPABILITY_CARDS_SPECIFICATION.md`.
 
 ---
 
@@ -95,4 +95,32 @@ Trust rules:            Never fabricate ingredient quantities or nutritional val
 
 ---
 
-**Source investigation:** `docs/implementation/INT11_CAPABILITY_CARDS_SPECIFICATION.md` (INT11, EPIC 1, 2026-06-30)
+## Governance decision — the `meals` ↔ `meal-discovery` ownership boundary (BENCHINT4, 2026-07-10)
+
+**Decision: an ownership-qualified meal query belongs to `meals`. An unqualified one belongs to `meal-discovery`. The qualifier is the boundary.**
+
+This settles BENCHINT3 §6.2 and closes BENCHINT3 §8 task 13. It changes no behaviour: it records, as governing architecture, the rule the Intent Resolver already follows.
+
+**Card correction.** `search` is now an executable intent of this capability (`MEALS_EXECUTABLE_INTENTS = ["read", "search"]`; the registry reports `executableIntents: ["read", "search"]`). The "pending open decision" language above predates that binding and is superseded by this section. The scoping question it worried about — *can search leak another user's private meal?* — is answered by the Permission model, not by withholding the verb.
+
+**The rule.**
+
+| Utterance carries… | Owner | Example |
+|---|---|---|
+| an ownership qualifier (*my meals*, *my cookbook*, *do I have*, *have I got*) | **`meals`** | CB-012 — "What chicken meals **do I have**?" |
+| no ownership qualifier | **`meal-discovery`** | CB-018 — "Which meals include salmon?" |
+
+Both questions filter meals by an ingredient. They are not the same question: the first asks the user's own library, the second asks what exists. `meals` is USER-scoped (`storage.getMeals` filters by `userId`) plus system meals; `meal-discovery` searches the discoverable corpus. Routing an unqualified query to `meals` silently narrows the answer to what the user already owns, and routing a qualified query to `meal-discovery` silently widens it past what they asked for. Neither error is visible in the answer text.
+
+**Why this is recorded here, and not only in code.**
+
+Until BENCHINT4 this rule existed in exactly one place: a prose comment in `pattern-intent-resolver.ts`, enforced by nothing. It was the third and least durable of three uncoordinated statements of the owner ↔ discovery relationship (BENCHINT3 §6.2). The other two — a stem rule in the Context Composition Engine and an inline `endsWith("-discovery")` in the Conversation Gateway — have been consolidated onto the Capability Registry (`Capability.discoveryOf`), which now validates the graph at construction. This card is where the *product* half of the relationship lives: the registry knows `meal-discovery` is the discovery sibling of `meals`; it does not and must not know which utterances belong to which.
+
+The comment contradicted itself before it was enforced: it declared CB-021 a `meal-discovery` question while no `meal-discovery` matcher could route it. BENCHINT4 implements that routing. `test-intent-resolver-routing-attribution.ts` now pins both directions — CB-012 must stay with `meals`, CB-018 must reach `meal-discovery` — so the boundary cannot drift silently again.
+
+**Known inconsistency, not yet reconciled.** The Companion Benchmark fixture assigns CB-012 to `meal-discovery.search`, contradicting this decision. The platform routes it to `meals` and answers correctly, and is scored a misroute for it. Re-targeting that fixture row to `meals.search` is a corpus change and is recorded as outstanding in `BENCHINT4_INTENT_ROUTING_CONVERGENCE.md` §7 — it is not applied here, because a Capability Card does not own the benchmark corpus.
+
+---
+
+**Source investigation:** `docs/implementation/governance/INT11_CAPABILITY_CARDS_SPECIFICATION.md` (INT11, EPIC 1, 2026-06-30)
+**Governance decision:** `docs/implementation/benchmarking/BENCHINT4_INTENT_ROUTING_CONVERGENCE.md` §6 (BENCHINT4, 2026-07-10) — closes BENCHINT3 §8 task 13. See the sibling card, [`meal-discovery.md`](./meal-discovery.md).

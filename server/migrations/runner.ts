@@ -1225,7 +1225,7 @@ const MIGRATIONS: Migration[] = [
     // no other row is touched. Idempotent: re-running overwrites with same values.
     //
     // Canonical metadata source:
-    //   docs/investigations/STARTER_SHELL_EXISTING_TEMPLATE_ENRICHMENT.md
+    //   docs/investigations/cookbook/STARTER_SHELL_EXISTING_TEMPLATE_ENRICHMENT.md
     //
     // IDs: 633 Cooked Breakfast, 287 Overnight Oats, 291 Breakfast Wrap,
     //      166 Pasta Salad, 109 Sausage & Mash, 78 Shepherd's Pie

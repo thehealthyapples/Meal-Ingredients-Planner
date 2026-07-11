@@ -4,8 +4,8 @@
 **Classification:** Domain Intelligence (canonical)
 **Date:** 2026-07-03
 **Author:** Architecture promotion (Claude Code)
-**Promoted from:** `docs/investigations/NUT2_FUTURE_STATE_NUTRITION_VISION.md` (EWO-NUT2, approved 2026-07-02)
-**Absorbs governing rules from:** `docs/investigations/THA_PERSONALISED_NUTRITION_INTELLIGENCE_ARCHITECTURE.md` (the join+rank+explain engine design; Rules G1, T0–T2, P1–P3, E1–E2, GO1–GO2, LT1–LT3 — reproduced here as governing rules rather than left in an investigation)
+**Promoted from:** `docs/investigations/knowledge/NUT2_FUTURE_STATE_NUTRITION_VISION.md` (EWO-NUT2, approved 2026-07-02)
+**Absorbs governing rules from:** `docs/investigations/intelligence/THA_PERSONALISED_NUTRITION_INTELLIGENCE_ARCHITECTURE.md` (the join+rank+explain engine design; Rules G1, T0–T2, P1–P3, E1–E2, GO1–GO2, LT1–LT3 — reproduced here as governing rules rather than left in an investigation)
 **Governing documents:** `docs/architecture/ARCHITECTURE_PRINCIPLES.md`, `docs/architecture/THA_SOURCE_OF_TRUTH_ARCHITECTURE_REGISTER.md`, `docs/architecture/ENGINEERING_WORKFLOW.md`, `docs/architecture/THA_INTELLIGENCE_PLATFORM_ARCHITECTURE.md`, `docs/architecture/THA_AI_CAPABILITY_REGISTRY_AND_INTENT_TAXONOMY.md`, `docs/architecture/THA_AI_EXPERIENCE_AND_CONVERSATION_ARCHITECTURE.md`, `docs/architecture/THA_COMPANION_CARD_EXPERIENCE_PRINCIPLE.md`, `docs/architecture/INTELLIGENCE_DISCOVERY_PRESENTATION_PRINCIPLE.md`
 
 ---
@@ -17,12 +17,12 @@
 | Git status at start | Working tree already dirty with substantial prior uncommitted INT35–NUT1/FS-series/NUT2 work on this branch (pre-existing, unrelated to this task) |
 | HEAD at start | `8ae0f7ef0f137e2f9baf86ef1727e7d17bc99af5` |
 | Rollback tag | `rollback/before-fi1-food-intelligence-platform-promotion-20260703` → `8ae0f7e` |
-| This task's writes | `docs/architecture/THA_FOOD_INTELLIGENCE_PLATFORM_ARCHITECTURE.md` (this file), `docs/implementation/FI1_FOOD_INTELLIGENCE_PLATFORM_ARCHITECTURE_PROMOTION.md`, one row in `docs/architecture/README.md`, one pointer stub at `docs/investigations/NUT2_FUTURE_STATE_NUTRITION_VISION.md`, references in `docs/architecture/THA_MASTER_EVOLUTION_ROADMAP.md` §11 |
+| This task's writes | `docs/architecture/THA_FOOD_INTELLIGENCE_PLATFORM_ARCHITECTURE.md` (this file), `docs/implementation/governance/FI1_FOOD_INTELLIGENCE_PLATFORM_ARCHITECTURE_PROMOTION.md`, one row in `docs/architecture/README.md`, one pointer stub at `docs/investigations/knowledge/NUT2_FUTURE_STATE_NUTRITION_VISION.md`, references in `docs/architecture/THA_MASTER_EVOLUTION_ROADMAP.md` §11 |
 | Code modified | None |
 | Schema modified | None |
 | Runtime modified | None |
 
-**This is a governance promotion only.** No application code, database schema, services, routes, or prompts were modified. See `docs/implementation/FI1_FOOD_INTELLIGENCE_PLATFORM_ARCHITECTURE_PROMOTION.md` for the full change log.
+**This is a governance promotion only.** No application code, database schema, services, routes, or prompts were modified. See `docs/implementation/governance/FI1_FOOD_INTELLIGENCE_PLATFORM_ARCHITECTURE_PROMOTION.md` for the full change log.
 
 ---
 
@@ -136,7 +136,7 @@ This is Food Intelligence's internal structure — how it stays non-fabricating 
 ### 4.2 Plane 2 — Personal Intelligence (what Food Intelligence remembers about a household)
 
 - **Content:** household composition, eater restrictions/patterns/tastes, goals, planner/shopping/diary/pantry history (read, not owned — §3), the personalisation event log, and consented external signal summaries (§6).
-- **Owner:** the existing transactional single-owner Business Domain stores (`household_eaters`, planner/shopping/diary tables, `user_preferences`) plus the **personalisation event log** — built under EWO-EL1 (2026-07-03) as the reusable, domain-agnostic **Evidence & Learning Platform** (`server/intelligence/evidence-learning/` → DB `household_evidence_events` + `household_learning_signals`) rather than a Food-Intelligence-owned store, so any future Domain Intelligence layer (not only Food Intelligence) can be a consumer. A genuinely new fact at a genuinely new scope, passing the Principle 2 scope test. See `docs/implementation/EL1_EVIDENCE_AND_LEARNING_PLATFORM.md`.
+- **Owner:** the existing transactional single-owner Business Domain stores (`household_eaters`, planner/shopping/diary tables, `user_preferences`) plus the **personalisation event log** — built under EWO-EL1 (2026-07-03) as the reusable, domain-agnostic **Evidence & Learning Platform** (`server/intelligence/evidence-learning/` → DB `household_evidence_events` + `household_learning_signals`) rather than a Food-Intelligence-owned store, so any future Domain Intelligence layer (not only Food Intelligence) can be a consumer. A genuinely new fact at a genuinely new scope, passing the Principle 2 scope test. See `docs/implementation/knowledge/EL1_EVIDENCE_AND_LEARNING_PLATFORM.md`.
 - **Behaviour rules:**
   - **Rule P1 — Learning re-weights, never authors.** Personalisation only adjusts the *weights* of transparent ranking signals; it never invents a fact.
   - **Rule P2 — Decay over delete for negatives.** Rejections decay rather than hard-block.
@@ -270,7 +270,7 @@ Food Intelligence requires **no new platform** — it registers capabilities on 
 | Component | What it is | Extends / replaces | SoT impact |
 |---|---|---|---|
 | **Food Intelligence Engine** | The deterministic join + rank + explain service (the Stages 1–5 capability ladder from `THA_PERSONALISED_NUTRITION_INTELLIGENCE_ARCHITECTURE.md`). One engine, many entry points (goals, Simply Better, Choose Better, weekly story, Companion). | Extends: uplift engine, meal scoring, WX8 assembler patterns. Replaces nothing at introduction; long-term becomes the single ranking path, retiring ad-hoc per-surface ranking surface-by-surface (Principle 8). | New service; reads Planes 1+2 only, owns no business-domain fact |
-| **Personalisation Event Log** ✅ built (EWO-EL1, 2026-07-03) | Built as the **Evidence & Learning Platform** — captures structured household outcomes, accumulates them, and deterministically detects explainable patterns (never from a single observation) that require explicit household confirmation before ever informing a preference. Generalised beyond Food Intelligence into a reusable platform capability (`evidence-learning` on the Capability Registry) so any future Domain Intelligence layer can be a consumer, not only Food Intelligence — see `docs/implementation/EL1_EVIDENCE_AND_LEARNING_PLATFORM.md`. | Extends household state; replaces nothing. | New single-owner transactional stores: `household_evidence_events` (append-only) + `household_learning_signals` (derived, confirmation-gated) |
+| **Personalisation Event Log** ✅ built (EWO-EL1, 2026-07-03) | Built as the **Evidence & Learning Platform** — captures structured household outcomes, accumulates them, and deterministically detects explainable patterns (never from a single observation) that require explicit household confirmation before ever informing a preference. Generalised beyond Food Intelligence into a reusable platform capability (`evidence-learning` on the Capability Registry) so any future Domain Intelligence layer can be a consumer, not only Food Intelligence — see `docs/implementation/knowledge/EL1_EVIDENCE_AND_LEARNING_PLATFORM.md`. | Extends household state; replaces nothing. | New single-owner transactional stores: `household_evidence_events` (append-only) + `household_learning_signals` (derived, confirmation-gated) |
 | **Goals capability** | Goal CRUD + alias resolution (Rules GO1/GO2), registered on the Capability Registry with read/write intents. | Extends profile/household capabilities. | Goals table = new single-owner store |
 | **Signals Gateway capability** | Consent management, per-signal summarisation, closed-vocabulary flags (§6). | Extends diary-metrics pattern (S-0 already exists there — Diary remains owner of self-reported metrics; the gateway owns only external-signal summaries, a different fact at a different scope). | New store for external signal summaries + consents |
 | **Community capability** | Share/browse/import of meals, plans, stories; re-grounding on import; nomination-to-editorial flow. | Extends meals/templates/planner import paths (Business Domain owned). | New store for shares/social metadata only — shared meals remain `meals`-owned |
@@ -322,7 +322,7 @@ Carried forward from NUT2 §9 as forward-looking guidance (not a commitment made
 
 - **What success looks like:** the approved NUT2 vision has a permanent home in `docs/architecture/`; the domain is named Food Intelligence at the architecture layer; the three-layer separation (Business Domains / Domain Intelligence / Intelligence Platform) is explicit and testable (§2); Food Intelligence's enrich-never-own boundary is a named, citable rule (Rule FI1, §3); future Food Intelligence EWOs cite this document, not the NUT2 investigation.
 - **What must not break:** nothing can — no code, schema, route, or data was touched.
-- **Manual verification:** `git status` shows exactly the files listed in ROLLBACK PROTECTION; rollback tag exists (`git tag -l 'rollback/before-fi1*'`); `docs/architecture/README.md` lists this document; `docs/investigations/NUT2_FUTURE_STATE_NUTRITION_VISION.md` is a pointer stub.
+- **Manual verification:** `git status` shows exactly the files listed in ROLLBACK PROTECTION; rollback tag exists (`git tag -l 'rollback/before-fi1*'`); `docs/architecture/README.md` lists this document; `docs/investigations/knowledge/NUT2_FUTURE_STATE_NUTRITION_VISION.md` is a pointer stub.
 
 ## 11. DATA IMPACT
 

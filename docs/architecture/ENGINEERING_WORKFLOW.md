@@ -1,8 +1,28 @@
 # THA ENGINEERING WORKFLOW
 
 **Adopted:** 2026-06-25
+**Amended:** 2026-07-10 (`EOM1`) — see *Document ownership* below.
 **Supersedes:** `docs/change-control.md` is unchanged — this document adds architecture governance on top of it.
 **Governing document:** `docs/architecture/ARCHITECTURE_PRINCIPLES.md`
+
+---
+
+## Document ownership (amended under EOM1, 2026-07-10)
+
+This document is **Application Governance**. It answers: *is this change
+architecturally correct?* It is the canonical home of the **Architecture
+Compliance Checklist**, the **AI Architecture Compliance** block, **Domain Impact**,
+the **Trust and Claims hard stops**, and **Architecture Convergence Status**. These
+remain governing and are unchanged.
+
+The **process** of an engineering session — how to take rollback protection, open
+and resume a session, verify, build, review, commit, push, and deploy — is
+**Engineering Governance** and is now owned by
+[`.engineering/OPERATING_MANUAL.md`](../../.engineering/OPERATING_MANUAL.md).
+
+Neither document restates the other. The Operating Manual tells you *when* to run
+the checklist below; this document tells you *what it contains*. Step headings and
+numbers here are unchanged, so every existing citation of `STEP N` remains valid.
 
 ---
 
@@ -14,11 +34,13 @@ Steps 1–3 are mandatory before any implementation begins. Steps 4–7 govern t
 
 ## STEP 1 — ROLLBACK PROTECTION (before anything else)
 
-1. Confirm git status. Report whether the tree is clean or intentionally dirty.
-2. Create a rollback tag: `git tag rollback/before-<workstream-name>-<YYYYMMDD> HEAD`
-3. Report the rollback identifier before proceeding.
+**Process owner:** [`.engineering/protocols/ROLLBACK_PROTECTION_PROTOCOL.md`](../../.engineering/protocols/ROLLBACK_PROTECTION_PROTOCOL.md)
+— how to create, resolve, record, and use a rollback tag, and what a tag does
+*not* protect.
 
-**No implementation may begin until the rollback identifier is reported.**
+The governing rule, unchanged:
+
+**No implementation may begin until the rollback identifier is created and reported.**
 
 ---
 
@@ -56,9 +78,35 @@ If any item fails, implementation must stop and explain why before proceeding.
 - Wait for explicit approval before the next decision.
 - Do not generate implementation until all decisions are approved.
 
+**Process owner:** [`.engineering/OPERATING_MANUAL.md`](../../.engineering/OPERATING_MANUAL.md)
+Step 5 (Implement) and [`.engineering/standards/RISK_AND_SCOPE_STANDARD.md`](../../.engineering/standards/RISK_AND_SCOPE_STANDARD.md)
+— risk rating, scope lock, and the handling of out-of-scope discoveries.
+
 ---
 
 ## STEP 5 — MANDATORY SECTIONS IN EVERY IMPLEMENTATION DOCUMENT
+
+### Document location (file it by workstream — before writing a word)
+
+Every report is filed by **workstream**, never at a folder root. The workstream
+vocabulary and its rules are governed by
+[`REPOSITORY_CONVENTIONS.md`](./REPOSITORY_CONVENTIONS.md) §4 and are **identical**
+for both trees:
+
+- An **investigation / audit / assessment / root-cause analysis** →
+  `docs/investigations/<workstream>/<EWO_ID>_<SUBJECT>.md`
+- An **implementation report** (has a Rollback Identifier + Changes Made) →
+  `docs/implementation/<workstream>/<EWO_ID>_<SUBJECT>.md`
+
+Pick the `<workstream>` from the table in `REPOSITORY_CONVENTIONS.md` §4
+(`intelligence`, `knowledge`, `benchmarking`, `cookbook`, `planner`, `ux`,
+`platform`, `governance`, `engineering`, `admin`, `development_world`). If a
+report does not fit an existing folder, place it in the closest one rather than
+creating a folder of one; materialise a new workstream folder only when a document
+genuinely needs it. **Never** write a report to a folder root (`docs/implementation/`
+or `docs/investigations/`) or to the repository root — the only file permitted at
+either root is that tree's index `README.md`. This is enforced by
+`.engineering/scripts/repo-structure-verify.sh`; run it after filing.
 
 Every workstream implementation document must contain all six sections:
 
@@ -337,7 +385,15 @@ For every AI-related implementation confirm:
 
 ## IMPLEMENTATION TEMPLATE
 
-Use this template for every new workstream implementation document:
+**Relocated under `EOM1` (2026-07-10).** The canonical, copyable template now
+lives at
+[`.engineering/templates/IMPLEMENTATION_TEMPLATE.md`](../../.engineering/templates/IMPLEMENTATION_TEMPLATE.md),
+alongside the investigation, release, and repository-housekeeping templates.
+Document shapes are engineering governance; the compliance content they invoke
+remains governing here.
+
+The copy below is retained for reference only. **If it disagrees with the
+template file, the template file wins.**
 
 ```markdown
 # [WORKSTREAM NAME] — Implementation
@@ -471,21 +527,36 @@ Every investigation, implementation, review, audit, repair, release, prompt, arc
 
 The file must:
 - use the same name as the task or report (SCREAMING_SNAKE_CASE.md)
-- be saved under `docs/investigations/`
+- be saved in its **canonical location**, per [`REPOSITORY_CONVENTIONS.md`](./REPOSITORY_CONVENTIONS.md) § 3
 - include relevant sections where applicable: Summary, Findings, Decisions, Architecture Compliance, Changes Made, Validation Performed, Data Impact, Trust Check, Rollback Information, Outcome, and Next Steps
+
+> **Amended under `EOM1` (2026-07-10).** This step previously required *every*
+> project document to be saved under `docs/investigations/`. That predates the
+> `docs/implementation/` split and contradicted `REPOSITORY_CONVENTIONS.md`, which
+> is the canonical authority on location. The rule is unchanged in substance —
+> every task produces a document — only the destination now defers to the
+> conventions:
+>
+> | Document | Canonical home |
+> |---|---|
+> | Investigation, audit, root-cause analysis | `docs/investigations/` |
+> | Implementation report | `docs/implementation/<workstream>/` |
+> | Report about the engineering tooling itself | `.engineering/reports/implementation/` |
+>
+> Start from a template in [`.engineering/templates/`](../../.engineering/templates/).
 
 ### Completion Gate
 
 **No task, prompt, investigation, implementation, review, release, or architecture decision is considered complete until ALL of the following have occurred:**
 
 1. The project document has been created.
-2. The project document has been saved under `docs/investigations/`
-3. The project document has been staged with git (`git add docs/investigations/<filename>.md`).
+2. The project document has been saved in its canonical location (see File Requirements above).
+3. The project document has been staged with git (`git add <canonical path>`).
 4. The project document has been committed locally with an appropriate commit message.
 5. Claude has reported:
 
 ```
-Project File Created:     docs/investigations/<filename>.md
+Project File Created:     <canonical path>
 Git Commit SHA:           <full SHA of the documentation commit>
 Current Branch:           <branch name>
 Rollback Identifier:      <rollback tag name> → <commit SHA>
@@ -493,10 +564,15 @@ Rollback Identifier:      <rollback tag name> → <commit SHA>
 
 ### Commit Rule
 
+**Process owner:** [`.engineering/protocols/COMMIT_PUSH_DEPLOY_PROTOCOL.md`](../../.engineering/protocols/COMMIT_PUSH_DEPLOY_PROTOCOL.md).
+
+The governing rules, unchanged:
+
 - **Local commit is mandatory.** No task is complete without a committed documentation record.
 - **Pushing to GitHub is NOT automatically required.** Pushing is governed by the release workflow in `docs/change-control.md`.
 - The documentation commit may be included in a later feature or release push.
 - Staging alone (without committing) does not satisfy this requirement.
+- **Deployment is never implied.** It requires explicit, separate approval.
 
 ### Scope
 

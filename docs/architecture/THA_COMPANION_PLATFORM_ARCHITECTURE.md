@@ -3,8 +3,8 @@
 **Status:** GOVERNING ARCHITECTURE — promoted from investigation `THA_COMPANION_PLATFORM_ARCHITECTURE_INVESTIGATION.md` (workstream `EWO-CPA1`), 2026-07-03. No code, schema, runtime, or API changes.
 **Classification:** Intelligence Governance (canonical — the single user-facing assistant's voice, behaviour, and observation layer)
 **Governing documents:** `docs/architecture/THA_INTELLIGENCE_PLATFORM_ARCHITECTURE.md` (TIP1), `docs/architecture/THA_AI_CAPABILITY_REGISTRY_AND_INTENT_TAXONOMY.md` (TIP2), `docs/architecture/THA_AI_EXPERIENCE_AND_CONVERSATION_ARCHITECTURE.md` (TIP3), `docs/architecture/THA_COMPANION_CARD_EXPERIENCE_PRINCIPLE.md`, `docs/architecture/PLATFORM_QUALITY_ARCHITECTURE.md`
-**Source investigation:** `docs/investigations/THA_COMPANION_PLATFORM_ARCHITECTURE_INVESTIGATION.md`
-**Direct precedent:** `docs/investigations/EWO1_COMPANION_PLATFORM_FOUNDATION.md`, `docs/implementation/EWO2_COMPANION_PERSONALITY_PLATFORM_IMPLEMENTATION.md`, `docs/implementation/EWX1_LIVING_COMPANION_EXPERIENCE.md`
+**Source investigation:** `docs/investigations/intelligence/THA_COMPANION_PLATFORM_ARCHITECTURE_INVESTIGATION.md`
+**Direct precedent:** `docs/investigations/intelligence/EWO1_COMPANION_PLATFORM_FOUNDATION.md`, `docs/implementation/intelligence/EWO2_COMPANION_PERSONALITY_PLATFORM_IMPLEMENTATION.md`, `docs/implementation/ux/EWX1_LIVING_COMPANION_EXPERIENCE.md`
 
 ---
 
@@ -304,5 +304,5 @@ Each of these is a governed workstream in its own right — none is authorised b
 ---
 
 *Required reading before implementing any new Companion capability, any change to voice/behaviour/observation, or any new conversational surface in THA.*
-*Source investigation: `docs/investigations/THA_COMPANION_PLATFORM_ARCHITECTURE_INVESTIGATION.md`.*
+*Source investigation: `docs/investigations/intelligence/THA_COMPANION_PLATFORM_ARCHITECTURE_INVESTIGATION.md`.*
 *Rollback: this document only — `git checkout HEAD -- docs/architecture/THA_COMPANION_PLATFORM_ARCHITECTURE.md` (or delete the file to revert). No code was changed to produce it.*

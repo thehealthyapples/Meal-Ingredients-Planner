@@ -7,4 +7,4 @@ vite.config.ts.*
 *.tar.gz
 *.zip
 .env
-build
+build.claude/scheduled_tasks.lock

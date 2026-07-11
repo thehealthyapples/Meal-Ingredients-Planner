@@ -75,7 +75,7 @@ Trust rules:            <list>
 | **Handler file** | `server/intelligence/handlers/planner-read-handler.ts` |
 | **Binding file** | `server/intelligence/bindings/planner.ts` |
 | **Test file** | `server/tests/test-intelligence-planner-binding.ts` |
-| **Implementation report** | `docs/implementation/INT2_FIRST_CAPABILITY_BINDING_IMPLEMENTATION.md` |
+| **Implementation report** | `docs/implementation/intelligence/INT2_FIRST_CAPABILITY_BINDING_IMPLEMENTATION.md` |
 
 **Port methods:**
 
@@ -126,7 +126,7 @@ Trust rules:            <list>
 | **Handler file** | `server/intelligence/handlers/shopping-read-handler.ts` |
 | **Binding file** | `server/intelligence/bindings/shopping.ts` |
 | **Test file** | `server/tests/test-intelligence-shopping-binding.ts` |
-| **Implementation report** | `docs/implementation/INT3_SHOPPING_CAPABILITY_BINDING_IMPLEMENTATION.md` |
+| **Implementation report** | `docs/implementation/intelligence/INT3_SHOPPING_CAPABILITY_BINDING_IMPLEMENTATION.md` |
 
 **Port methods:**
 
@@ -170,7 +170,7 @@ Trust rules:            <list>
 | **Handler file** | `server/intelligence/handlers/nutrition-knowledge-read-handler.ts` |
 | **Binding file** | `server/intelligence/bindings/nutrition-knowledge.ts` |
 | **Test file** | `server/tests/test-intelligence-nutrition-knowledge-binding.ts` |
-| **Implementation report** | `docs/implementation/INT4_NUTRITION_KNOWLEDGE_CAPABILITY_BINDING_IMPLEMENTATION.md` |
+| **Implementation report** | `docs/implementation/intelligence/INT4_NUTRITION_KNOWLEDGE_CAPABILITY_BINDING_IMPLEMENTATION.md` |
 
 **Port methods:**
 
@@ -223,7 +223,7 @@ Trust rules:            <list>
 | **Handler file** | `server/intelligence/handlers/pantry-read-handler.ts` |
 | **Binding file** | `server/intelligence/bindings/pantry.ts` |
 | **Test file** | `server/tests/test-intelligence-pantry-binding.ts` |
-| **Implementation report** | `docs/implementation/INT8_PANTRY_READ_ONLY_CAPABILITY_IMPLEMENTATION.md` |
+| **Implementation report** | `docs/implementation/intelligence/INT8_PANTRY_READ_ONLY_CAPABILITY_IMPLEMENTATION.md` |
 
 **Port methods:**
 
@@ -267,7 +267,7 @@ Trust rules:            <list>
 | **Handler file** | `server/intelligence/handlers/diary-read-handler.ts` |
 | **Binding file** | `server/intelligence/bindings/diary.ts` |
 | **Test file** | `server/tests/test-intelligence-diary-binding.ts` |
-| **Implementation report** | `docs/implementation/INT10_DIARY_CAPABILITY_BINDING_IMPLEMENTATION.md` |
+| **Implementation report** | `docs/implementation/intelligence/INT10_DIARY_CAPABILITY_BINDING_IMPLEMENTATION.md` |
 
 **Port methods:**
 
@@ -311,7 +311,7 @@ Trust rules:            <list>
 | **Handler file** | `server/intelligence/handlers/profile-read-handler.ts` |
 | **Binding file** | `server/intelligence/bindings/profile.ts` |
 | **Test file** | `server/tests/test-intelligence-profile-binding.ts` |
-| **Implementation report** | `docs/implementation/INT12_PROFILE_CAPABILITY_BINDING_IMPLEMENTATION.md` |
+| **Implementation report** | `docs/implementation/intelligence/INT12_PROFILE_CAPABILITY_BINDING_IMPLEMENTATION.md` |
 | **Canonical Capability Card** | [`docs/architecture/capabilities/profile.md`](./capabilities/profile.md) |
 
 **Port methods:**
@@ -355,7 +355,7 @@ Trust rules:            <list>
 | **Handler file** | `server/intelligence/handlers/household-read-handler.ts` |
 | **Binding file** | `server/intelligence/bindings/household.ts` |
 | **Test file** | `server/tests/test-intelligence-household-binding.ts` |
-| **Implementation report** | `docs/implementation/INT13_HOUSEHOLD_CAPABILITY_BINDING_IMPLEMENTATION.md` |
+| **Implementation report** | `docs/implementation/intelligence/INT13_HOUSEHOLD_CAPABILITY_BINDING_IMPLEMENTATION.md` |
 | **Canonical Capability Card** | [`capabilities/household.md`](./capabilities/household.md) |
 
 **Port methods:**
@@ -402,7 +402,7 @@ Trust rules:            <list>
 | **Handler file** | `server/intelligence/handlers/partners-read-handler.ts` |
 | **Binding file** | `server/intelligence/bindings/partners.ts` |
 | **Test file** | `server/tests/test-intelligence-partners-binding.ts` |
-| **Implementation report** | `docs/implementation/INT14_PARTNERS_CAPABILITY_BINDING_IMPLEMENTATION.md` |
+| **Implementation report** | `docs/implementation/intelligence/INT14_PARTNERS_CAPABILITY_BINDING_IMPLEMENTATION.md` |
 | **Canonical Capability Card** | [`capabilities/partners.md`](./capabilities/partners.md) |
 
 **Port methods:**
@@ -443,7 +443,7 @@ Trust rules:            <list>
 | **Handler file** | `server/intelligence/handlers/meals-read-handler.ts` |
 | **Binding file** | `server/intelligence/bindings/meals.ts` |
 | **Test file** | `server/tests/test-intelligence-meals-binding.ts` |
-| **Implementation report** | `docs/implementation/INT15_MEALS_CAPABILITY_BINDING_IMPLEMENTATION.md` |
+| **Implementation report** | `docs/implementation/intelligence/INT15_MEALS_CAPABILITY_BINDING_IMPLEMENTATION.md` |
 | **Canonical Capability Card** | [`capabilities/meals.md`](./capabilities/meals.md) |
 
 **Port methods:**
@@ -495,7 +495,7 @@ Trust rules:            <list>
 | **Handler file** | `server/intelligence/handlers/templates-read-handler.ts` |
 | **Binding file** | `server/intelligence/bindings/templates.ts` |
 | **Test file** | `server/tests/test-intelligence-templates-binding.ts` |
-| **Implementation report** | `docs/implementation/INT16_TEMPLATES_CAPABILITY_BINDING_IMPLEMENTATION.md` |
+| **Implementation report** | `docs/implementation/intelligence/INT16_TEMPLATES_CAPABILITY_BINDING_IMPLEMENTATION.md` |
 | **Canonical Capability Card** | [`capabilities/templates.md`](./capabilities/templates.md) |
 
 **Port methods:**
@@ -546,7 +546,7 @@ Trust rules:            <list>
 | **Handler file** | `server/intelligence/handlers/analyser-read-handler.ts` |
 | **Binding file** | `server/intelligence/bindings/analyser.ts` |
 | **Test file** | `server/tests/test-intelligence-analyser-binding.ts` |
-| **Implementation report** | `docs/implementation/INT17_ANALYSER_CAPABILITY_BINDING_IMPLEMENTATION.md` |
+| **Implementation report** | `docs/implementation/intelligence/INT17_ANALYSER_CAPABILITY_BINDING_IMPLEMENTATION.md` |
 | **Canonical Capability Card** | [`capabilities/analyser.md`](./capabilities/analyser.md) |
 
 **Port methods:**
@@ -596,7 +596,7 @@ The capabilities below are registered in the runtime registry (`availability: "r
 | **Trust rules** | Never fabricate nutritional values; only surface what the diary owner stored |
 | **Next recommended action** | Locate diary read methods in routes; confirm owner exposes day-level and entry-level reads; run INT7A Factory |
 
-> **Note:** `diary` has since been bound under INT10 (`server/intelligence/bindings/diary.ts`, `availability: "available"`). The row above is kept for historical Phase 2 record-keeping; see the full **Diary (INT10)** entry under Phase 1 — Completed Bindings above, or `docs/implementation/INT10_DIARY_CAPABILITY_BINDING_IMPLEMENTATION.md`, for the completed binding.
+> **Note:** `diary` has since been bound under INT10 (`server/intelligence/bindings/diary.ts`, `availability: "available"`). The row above is kept for historical Phase 2 record-keeping; see the full **Diary (INT10)** entry under Phase 1 — Completed Bindings above, or `docs/implementation/intelligence/INT10_DIARY_CAPABILITY_BINDING_IMPLEMENTATION.md`, for the completed binding.
 
 ---
 
@@ -617,7 +617,7 @@ Six entries were upgraded from rough Phase 2 stubs to fully evidence-grounded **
 | Plan Templates | Capability Card complete | **Bound (INT16)** | `read` | `server/storage.ts` | [`capabilities/templates.md`](./capabilities/templates.md) |
 | Analyser (Product / UPF) | Capability Card complete | **Bound (INT17)** | `read` (additives only) | `server/storage.ts` | [`capabilities/analyser.md`](./capabilities/analyser.md) |
 
-> Full evidence, owner corrections, allowed scopes, honest gaps, trust rules, permission models, and open governance decisions are recorded once, in each canonical document above. The original investigation report — `docs/implementation/INT11_CAPABILITY_CARDS_SPECIFICATION.md` — remains as historical record of how the cards were produced; it is not the canonical source for the cards themselves any longer.
+> Full evidence, owner corrections, allowed scopes, honest gaps, trust rules, permission models, and open governance decisions are recorded once, in each canonical document above. The original investigation report — `docs/implementation/governance/INT11_CAPABILITY_CARDS_SPECIFICATION.md` — remains as historical record of how the cards were produced; it is not the canonical source for the cards themselves any longer.
 
 ---
 

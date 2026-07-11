@@ -3,8 +3,8 @@
 **Status:** GOVERNING ARCHITECTURE — Intelligence Governance (canonical). Established by workstream `INT17`, 2026-07-08.
 **Classification:** Intelligence Governance — the single owner of every byte the language model reads as grounding.
 **Governing documents:** `THA_INTELLIGENCE_PLATFORM_ARCHITECTURE.md` (TIP1), `THA_AI_CAPABILITY_REGISTRY_AND_INTENT_TAXONOMY.md` (TIP2), `THA_AI_EXPERIENCE_AND_CONVERSATION_ARCHITECTURE.md` (TIP3), `THA_COMPANION_PLATFORM_ARCHITECTURE.md` (CPA1), `PLATFORM_QUALITY_ARCHITECTURE.md`
-**Implementation record:** `docs/implementation/INT17_CONTEXT_COMPOSITION_ENGINE.md` (design + first measurement), `docs/implementation/INT18_CONTEXT_COMPOSITION_ENGINE_IMPLEMENTATION.md` (promotion to canonical + independent re-verification), `docs/implementation/INT19_CONTEXT_COMPOSITION_ENGINE_BASELINE_AND_ROLLOUT.md` (n=3 baseline + capability audit), `docs/implementation/NCV1_NATIVE_CONTEXT_VIEW_ROLLOUT.md` (§2.1's rollout, executed for six capabilities; §6 observation of composition)
-**Direct precedent:** `docs/implementation/BENCH4_FOOD_INTELLIGENCE_REACHABILITY.md` §5 (the defect), `docs/implementation/INT16_CONTEXT_COMPACTION_LAYER.md` (the superseded experiment — **CLOSED**, proof-of-concept succeeded), `docs/investigations/INTA1_INTELLIGENCE_PLATFORM_WIRING_AUDIT.md` §8.3 (the standing constraint)
+**Implementation record:** `docs/implementation/intelligence/INT17_CONTEXT_COMPOSITION_ENGINE.md` (design + first measurement), `docs/implementation/intelligence/INT18_CONTEXT_COMPOSITION_ENGINE_IMPLEMENTATION.md` (promotion to canonical + independent re-verification), `docs/implementation/intelligence/INT19_CONTEXT_COMPOSITION_ENGINE_BASELINE_AND_ROLLOUT.md` (n=3 baseline + capability audit), `docs/implementation/intelligence/NCV1_NATIVE_CONTEXT_VIEW_ROLLOUT.md` (§2.1's rollout, executed for six capabilities; §6 observation of composition)
+**Direct precedent:** `docs/implementation/benchmarking/BENCH4_FOOD_INTELLIGENCE_REACHABILITY.md` §5 (the defect), `docs/implementation/intelligence/INT16_CONTEXT_COMPACTION_LAYER.md` (the superseded experiment — **CLOSED**, proof-of-concept succeeded), `docs/investigations/intelligence/INTA1_INTELLIGENCE_PLATFORM_WIRING_AUDIT.md` §8.3 (the standing constraint)
 **Rollback:** `int17-rollback-20260708`, `int18-rollback-20260708`, `rollback/before-ncv1-native-context-views-20260709`
 
 ---
@@ -287,7 +287,7 @@ This document is architecture. Named so none is lost; none is authorised here.
 ---
 
 *Required reading before changing anything that reaches the LLM prompt, adding a `ContextViewSpec`, or introducing any new grounding surface in THA.*
-*Design record: `docs/implementation/INT17_CONTEXT_COMPOSITION_ENGINE.md`.*
-*Promotion + independent verification record: `docs/implementation/INT18_CONTEXT_COMPOSITION_ENGINE_IMPLEMENTATION.md`.*
-*Superseded experiment (CLOSED): `docs/implementation/INT16_CONTEXT_COMPACTION_LAYER.md`.*
+*Design record: `docs/implementation/intelligence/INT17_CONTEXT_COMPOSITION_ENGINE.md`.*
+*Promotion + independent verification record: `docs/implementation/intelligence/INT18_CONTEXT_COMPOSITION_ENGINE_IMPLEMENTATION.md`.*
+*Superseded experiment (CLOSED): `docs/implementation/intelligence/INT16_CONTEXT_COMPACTION_LAYER.md`.*
 *Rollback: `int17-rollback-20260708` (INT17 engine), `int18-rollback-20260708` (INT18 promotion).*

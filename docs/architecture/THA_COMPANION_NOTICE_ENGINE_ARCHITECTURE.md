@@ -5,8 +5,8 @@
 **Status:** GOVERNING ARCHITECTURE — Intelligence Governance (canonical). Established by workstream `INT20`, 2026-07-08.
 **Classification:** Intelligence Governance — the single owner of what the platform proactively notices, and of the attention budget under which any notice reaches the user.
 **Governing documents:** `THA_INTELLIGENCE_PLATFORM_ARCHITECTURE.md` (TIP1), `THA_AI_CAPABILITY_REGISTRY_AND_INTENT_TAXONOMY.md` (TIP2), `THA_AI_EXPERIENCE_AND_CONVERSATION_ARCHITECTURE.md` (TIP3), `THA_COMPANION_PLATFORM_ARCHITECTURE.md` (CPA1), `THA_CONTEXT_COMPOSITION_ENGINE_ARCHITECTURE.md` (INT17), `PLATFORM_QUALITY_ARCHITECTURE.md`
-**Implementation record:** `docs/implementation/INT20_OBSERVATION_ENGINE_ARCHITECTURE.md`
-**Direct precedent:** `docs/implementation/FI4_AMBIENT_FOOD_INTELLIGENCE_OPPORTUNITY_ENGINE.md` (the producer), `docs/implementation/OD1_OPPORTUNITY_DELIVERY_FRAMEWORK.md` (the delivery lifecycle), `docs/implementation/INT35B_COMPANION_LEARNING_AND_OBSERVABILITY.md` / `INT35C_GOVERNED_COMPANION_LEARNING_AND_DASHBOARD.md` (evidence & learning), CPA1 §4.3/§5.2 (the engine's Companion-layer position)
+**Implementation record:** `docs/implementation/intelligence/INT20_OBSERVATION_ENGINE_ARCHITECTURE.md`
+**Direct precedent:** `docs/implementation/intelligence/FI4_AMBIENT_FOOD_INTELLIGENCE_OPPORTUNITY_ENGINE.md` (the producer), `docs/implementation/intelligence/OD1_OPPORTUNITY_DELIVERY_FRAMEWORK.md` (the delivery lifecycle), `docs/implementation/intelligence/INT35B_COMPANION_LEARNING_AND_OBSERVABILITY.md` / `INT35C_GOVERNED_COMPANION_LEARNING_AND_DASHBOARD.md` (evidence & learning), CPA1 §4.3/§5.2 (the engine's Companion-layer position)
 **Rollback:** `rollback-int20-pre-observation-engine` → `fbc0a3e`
 
 ---
@@ -243,5 +243,5 @@ Hard stops, in the spirit of `ENGINEERING_WORKFLOW.md` STEP 7, CPA1 §12, and IN
 ---
 
 *Required reading before adding any proactive notice, ambient insight, nudge, or notice source anywhere in THA — including any new route or page section that tells the user something they did not ask about.*
-*Implementation record: `docs/implementation/INT20_OBSERVATION_ENGINE_ARCHITECTURE.md`.*
+*Implementation record: `docs/implementation/intelligence/INT20_OBSERVATION_ENGINE_ARCHITECTURE.md`.*
 *Rollback: `rollback-int20-pre-observation-engine` → `fbc0a3e`.*

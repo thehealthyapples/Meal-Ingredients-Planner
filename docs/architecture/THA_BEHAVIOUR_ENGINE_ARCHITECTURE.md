@@ -3,8 +3,8 @@
 **Status:** GOVERNING ARCHITECTURE — Intelligence Governance (canonical). Established by workstream `INT21`, 2026-07-08.
 **Classification:** Intelligence Governance — the single owner of the Companion's voice: every transform between an already-true, already-selected fact and the words the user reads.
 **Governing documents:** `THA_INTELLIGENCE_PLATFORM_ARCHITECTURE.md` (TIP1), `THA_AI_CAPABILITY_REGISTRY_AND_INTENT_TAXONOMY.md` (TIP2), `THA_AI_EXPERIENCE_AND_CONVERSATION_ARCHITECTURE.md` (TIP3), `THA_COMPANION_PLATFORM_ARCHITECTURE.md` (CPA1), `THA_CONTEXT_COMPOSITION_ENGINE_ARCHITECTURE.md` (INT17), `THA_COMPANION_NOTICE_ENGINE_ARCHITECTURE.md` (INT20), `THA_OBSERVATION_ENGINE_ARCHITECTURE.md` (OBS1/OBS2), `PLATFORM_QUALITY_ARCHITECTURE.md`
-**Implementation records:** `docs/implementation/INT21_BEHAVIOUR_ENGINE_ARCHITECTURE.md`, `docs/implementation/BEH1_BEHAVIOUR_ENGINE_ACTIVATION.md`, `docs/implementation/CP2_COMPANION_PERSONALITIES_ACTIVATION.md`
-**Direct precedent:** `docs/investigations/EWO1_COMPANION_PLATFORM_FOUNDATION.md` (the invariant), `docs/implementation/EWO2_COMPANION_PERSONALITY_PLATFORM_IMPLEMENTATION.md` (the engine + registry as built), `docs/implementation/EWX1_LIVING_COMPANION_EXPERIENCE.md` (`phraseNotice`), CPA1 §4.1/§4.2/§5.1 (the engine's Companion-layer position)
+**Implementation records:** `docs/implementation/intelligence/INT21_BEHAVIOUR_ENGINE_ARCHITECTURE.md`, `docs/implementation/intelligence/BEH1_BEHAVIOUR_ENGINE_ACTIVATION.md`, `docs/implementation/ux/CP2_COMPANION_PERSONALITIES_ACTIVATION.md`
+**Direct precedent:** `docs/investigations/intelligence/EWO1_COMPANION_PLATFORM_FOUNDATION.md` (the invariant), `docs/implementation/intelligence/EWO2_COMPANION_PERSONALITY_PLATFORM_IMPLEMENTATION.md` (the engine + registry as built), `docs/implementation/ux/EWX1_LIVING_COMPANION_EXPERIENCE.md` (`phraseNotice`), CPA1 §4.1/§4.2/§5.1 (the engine's Companion-layer position)
 **Rollback:** `rollback-int21-pre-behaviour-engine` → `fbc0a3e`; BEH1: `rollback/before-beh1-behaviour-engine-20260709` → `22e5bc7`; CP2: `rollback/before-cp2-companion-personalities-20260709` → `c363df3`
 
 ---
@@ -263,9 +263,9 @@ Verified against the branch (`int1-intelligence-platform`) and the live database
 
 Each item is a separately gated workstream under `ENGINEERING_WORKFLOW.md`. **Nothing below is authorised by this document.**
 
-**BEH1 — Behaviour Engine Activation. ✅ DELIVERED (2026-07-09).** The decision layer (§2.4), its capture on every interaction, its Execution Timeline projection, and the Behaviour Admin Workbench. Record: `docs/implementation/BEH1_BEHAVIOUR_ENGINE_ACTIVATION.md`. It changed no voice content, no business logic, and no word the user reads.
+**BEH1 — Behaviour Engine Activation. ✅ DELIVERED (2026-07-09).** The decision layer (§2.4), its capture on every interaction, its Execution Timeline projection, and the Behaviour Admin Workbench. Record: `docs/implementation/intelligence/BEH1_BEHAVIOUR_ENGINE_ACTIVATION.md`. It changed no voice content, no business logic, and no word the user reads.
 
-**BEH-P1 — Wire the dormant experience text. ✅ DELIVERED by `CP2` (2026-07-09).** Delivered together with the activation of the personalities themselves, because the greeting was unreachable for the same reason the voices were: `companionPersonality` was never declared in `shared/schema.ts`. CP2 shipped the Settings picker, retired the hardcoded greeting and both gateway-owned strings, added the escalation/degradation templates per personality, and drove `not-voiced` decisions to zero. Record: `docs/implementation/CP2_COMPANION_PERSONALITIES_ACTIVATION.md`. Three client-side voiced strings remain outside the engine (§8.5) and are proposed as `CP3`.
+**BEH-P1 — Wire the dormant experience text. ✅ DELIVERED by `CP2` (2026-07-09).** Delivered together with the activation of the personalities themselves, because the greeting was unreachable for the same reason the voices were: `companionPersonality` was never declared in `shared/schema.ts`. CP2 shipped the Settings picker, retired the hardcoded greeting and both gateway-owned strings, added the escalation/degradation templates per personality, and drove `not-voiced` decisions to zero. Record: `docs/implementation/ux/CP2_COMPANION_PERSONALITIES_ACTIVATION.md`. Three client-side voiced strings remain outside the engine (§8.5) and are proposed as `CP3`.
 
 **CP3 — Retire the last three client-side voiced strings** (§8.5). The home-page time-of-day greeting and the workflow-outcome summary each need registry content and a route to reach it; the action-confirm error can reuse the experience payload CP2 already ships. *Exit: voice-surface ownership 12 of 12; every word the Companion says, anywhere, is registry content in the user's voice.*
 
@@ -320,5 +320,5 @@ Hard stops, in the spirit of `ENGINEERING_WORKFLOW.md` STEP 7, CPA1 §12, INT17 
 ---
 
 *Required reading before changing any Companion voice content, adding a personality, wiring any surface that speaks to the user, recording anything about a behaviour decision, or beginning any localisation work in THA.*
-*Implementation records: `docs/implementation/INT21_BEHAVIOUR_ENGINE_ARCHITECTURE.md`, `docs/implementation/BEH1_BEHAVIOUR_ENGINE_ACTIVATION.md`, `docs/implementation/CP2_COMPANION_PERSONALITIES_ACTIVATION.md`.*
+*Implementation records: `docs/implementation/intelligence/INT21_BEHAVIOUR_ENGINE_ARCHITECTURE.md`, `docs/implementation/intelligence/BEH1_BEHAVIOUR_ENGINE_ACTIVATION.md`, `docs/implementation/ux/CP2_COMPANION_PERSONALITIES_ACTIVATION.md`.*
 *Rollback: `rollback-int21-pre-behaviour-engine` → `fbc0a3e`; BEH1: `rollback/before-beh1-behaviour-engine-20260709` → `22e5bc7`; CP2: `rollback/before-cp2-companion-personalities-20260709` → `c363df3`.*

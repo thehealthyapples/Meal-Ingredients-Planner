@@ -3,7 +3,7 @@
 **Date:** 2026-07-10
 **Branch:** `int1-intelligence-platform`
 **Workstream:** `BENCHINT` (Benchmark ⇄ Platform Integration)
-**Input:** [`docs/investigations/BENCHINT1_BENCHMARK_PLATFORM_INTEGRATION_AUDIT.md`](../../investigations/BENCHINT1_BENCHMARK_PLATFORM_INTEGRATION_AUDIT.md) §11
+**Input:** [`docs/investigations/benchmarking/BENCHINT1_BENCHMARK_PLATFORM_INTEGRATION_AUDIT.md`](../../investigations/benchmarking/BENCHINT1_BENCHMARK_PLATFORM_INTEGRATION_AUDIT.md) §11
 **Risk:** 🟡 AMBER
 **Reason:** A route-local function was extracted to a service (behaviour must be byte-identical); a production evidence orchestrator gained one optional parameter; the benchmark's historical baselines are invalidated by design.
 
@@ -29,7 +29,7 @@
 - [x] `docs/architecture/README.md` (Architecture Bootstrap — mandatory entry point)
 - [x] `docs/architecture/ENGINEERING_WORKFLOW.md`
 - [x] `docs/architecture/REPOSITORY_CONVENTIONS.md`
-- [x] `docs/investigations/BENCHINT1_BENCHMARK_PLATFORM_INTEGRATION_AUDIT.md`
+- [x] `docs/investigations/benchmarking/BENCHINT1_BENCHMARK_PLATFORM_INTEGRATION_AUDIT.md`
 - [x] `docs/intelligence/benchmark/BENCHMARK_AUTOMATION.md`
 - [x] `docs/implementation/governance/ARCH_BENCHMARK_OWNERSHIP_RULE.md`
 

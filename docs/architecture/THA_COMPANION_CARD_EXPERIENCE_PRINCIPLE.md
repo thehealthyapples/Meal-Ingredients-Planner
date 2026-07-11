@@ -96,7 +96,7 @@ Companion Cards are a **single, domain-agnostic framework**. Meal discovery gets
 
 > **Planner, Shopping, Pantry, Nutrition, Diary, Household, Profile** must adopt the Companion Card framework rather than creating domain-specific conversation layouts.
 
-A new domain plugs into the existing Native Discovery Response ([INT36](../implementation/INT36_NATIVE_THA_DISCOVERY_RESPONSES.md)) contract and renders through the existing card view model — no per-domain conversation UI.
+A new domain plugs into the existing Native Discovery Response ([INT36](../implementation/intelligence/INT36_NATIVE_THA_DISCOVERY_RESPONSES.md)) contract and renders through the existing card view model — no per-domain conversation UI.
 
 ## DESIGN PRINCIPLES
 
@@ -124,7 +124,7 @@ Companion Cards are:
 
 ## ENFORCEMENT
 
-- **In code (today):** [INT37 — Companion Card Experience Implementation](../implementation/INT37_COMPANION_CARD_EXPERIENCE_IMPLEMENTATION.md) renders Native Discovery Responses as Companion Cards in the Conversation UI. The card view model (`client/src/components/conversation/companion-card.ts`) resolves every action to a canonical in-app THA path by construction (it can never emit an external URL) and sanitises summaries of all markdown and URLs. This principle is the governing statement that implementation satisfies.
+- **In code (today):** [INT37 — Companion Card Experience Implementation](../implementation/ux/INT37_COMPANION_CARD_EXPERIENCE_IMPLEMENTATION.md) renders Native Discovery Responses as Companion Cards in the Conversation UI. The card view model (`client/src/components/conversation/companion-card.ts`) resolves every action to a canonical in-app THA path by construction (it can never emit an external URL) and sanitises summaries of all markdown and URLs. This principle is the governing statement that implementation satisfies.
 - **In review:** Any Intelligence conversation-presentation change must confirm compliance under the **AI ARCHITECTURE COMPLIANCE** block of [`ENGINEERING_WORKFLOW.md`](./ENGINEERING_WORKFLOW.md). A change that lets a card render a full canonical page, edit an entity in place, surface an external URL / provenance link, display raw markdown, or introduce a domain-specific conversation layout **must STOP, explain why, and not continue until approved.**
 
 **Fail tests:**
