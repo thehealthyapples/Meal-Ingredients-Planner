@@ -14,7 +14,7 @@
 //   • food-graph.ts `seasonal_with` relations   → derived editorial pairings
 // When `peak_seasons` is added to canonical_food it must ABSORB this seed (this
 // becomes a derived curated view), never become a fourth representation.
-// See docs/investigations/WS0X_4_FOOD_INTELLIGENCE_CONSOLIDATION_GATE.md.
+// See docs/investigations/knowledge/WS0X_4_FOOD_INTELLIGENCE_CONSOLIDATION_GATE.md.
 
 import type { UKSeason } from "./types";
 

@@ -116,7 +116,7 @@ export const EDITORIAL_FOOD_SEED: InsertKnowledgeFood[] = [
   // editorial data always asserted these were one food. Its US-spelling aliases moved
   // onto `yoghurt` (below); its nutrient/benefit rows were already merged there by FI2
   // (2eda5d3), which left this entry behind with zero facts. See
-  // docs/implementation/KNOW1_FOOD_INTELLIGENCE_EXPANSION.md §W1.
+  // docs/implementation/knowledge/KNOW1_FOOD_INTELLIGENCE_EXPANSION.md §W1.
   { slug: "miso", name: "Miso", category: "Fermented foods",
     subcategory: "Fermented soya", aliases: ["miso paste"],
     description: "A savoury fermented soya bean paste used to add depth and live cultures.",

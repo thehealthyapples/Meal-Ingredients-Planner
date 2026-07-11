@@ -36,7 +36,7 @@ export const HISTORY_DIR = resolve(REPO_ROOT, "docs/intelligence/benchmark/histo
  *  establishes a new baseline instead of reporting a −34-point "regression" against a score
  *  that was never measuring what it claimed. Questions, households and the judge are unchanged.
  *
- *  See docs/implementation/BENCH2_INTELLIGENCE_BENCHMARK_HARDENING.md and README §4's version log.
+ *  See docs/implementation/benchmarking/BENCH2_INTELLIGENCE_BENCHMARK_HARDENING.md and README §4's version log.
  *
  *  BENCH2C bumps FRAMEWORK_VERSION to v2.1.0 — a **MINOR, comparison-safe** change. It adds the
  *  Capability Utilisation Dashboard (an observation panel and one report section) and changes no
@@ -44,7 +44,7 @@ export const HISTORY_DIR = resolve(REPO_ROOT, "docs/intelligence/benchmark/histo
  *  purely descriptive: no dimension band and no gate reads a capability invocation record. Runs are
  *  directly comparable across this boundary — a `v2.0.0` baseline simply carries no utilisation data.
  *
- *  See docs/implementation/BENCH2C_CAPABILITY_UTILISATION_DASHBOARD.md and README §4's version log. */
+ *  See docs/implementation/benchmarking/BENCH2C_CAPABILITY_UTILISATION_DASHBOARD.md and README §4's version log. */
 export const FRAMEWORK_VERSION = "v2.1.0";
 export const HOUSEHOLDS_VERSION = "v1.0.0";
 export const RUBRIC_VERSION = "v2.0.0";

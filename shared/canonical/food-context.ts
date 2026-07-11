@@ -10,7 +10,7 @@
 // value here falls outside the controlled vocabularies below or names a slug that
 // is not a real canonical food.
 //
-// Scope decisions (see docs/investigations/WS0X_5_FOOD_CONTEXT_FOUNDATION_IMPLEMENTATION.md):
+// Scope decisions (see docs/investigations/knowledge/WS0X_5_FOOD_CONTEXT_FOUNDATION_IMPLEMENTATION.md):
 //   • availability   — UK retail reach, ordinal, single value. NOT per-retailer.
 //   • peakSeasons    — UK peak seasons (in season ≠ on the shelf). ABSORBS SEASON_SEED.
 //   • originRegion   — the food's geographic/botanical/culinary home (where it COMES

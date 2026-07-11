@@ -17,7 +17,7 @@
 // a DIFFERENT domain — not a duplicate of this. A future `origin_region`
 // (geographic origin: where a food COMES FROM) is a DISTINCT concept and must
 // NOT be folded into cuisine, nor cuisine stored as a scalar food column.
-// See docs/investigations/WS0X_4_FOOD_INTELLIGENCE_CONSOLIDATION_GATE.md.
+// See docs/investigations/knowledge/WS0X_4_FOOD_INTELLIGENCE_CONSOLIDATION_GATE.md.
 
 export interface CuisineSeed {
   slug: string;

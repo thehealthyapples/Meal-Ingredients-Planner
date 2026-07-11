@@ -10,7 +10,7 @@
 // Seasonality) and render it with one consistent visual language, tone and set
 // of trust rules.
 //
-// See docs/investigations/WX2_5_INTELLIGENCE_EXPERIENCE_SYSTEM_IMPLEMENTATION.md
+// See docs/investigations/ux/WX2_5_INTELLIGENCE_EXPERIENCE_SYSTEM_IMPLEMENTATION.md
 
 // Visual tokens — the single source of truth for the system's look.
 export * from "./intelligence-tokens";

@@ -6,7 +6,7 @@
 //
 // They are NOT achievements, NOT scorecards, NOT yearly reviews, NOT
 // competitions, NOT nutrition reports. A Seasonal Story is a MEMORY, never a
-// report card. See docs/investigations/WS11_SEASONAL_STORIES_ENGINE.md.
+// report card. See docs/investigations/knowledge/WS11_SEASONAL_STORIES_ENGINE.md.
 //
 // IMPORTANT — nothing here is stored. A Seasonal Story is GENERATED at read
 // time from the household's history by orchestrating WS10 Stories (memory) and

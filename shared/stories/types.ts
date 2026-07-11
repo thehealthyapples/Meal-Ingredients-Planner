@@ -7,7 +7,7 @@
 // This is NOT Discovery (WS8) or Alternatives (WS9). Discovery asks "what else
 // might I enjoy?"; Alternatives ask "what else could work here?"; Stories ask
 // "what has our household enjoyed together?" The three lenses are deliberately
-// separate — see docs/investigations/WS10_HOUSEHOLD_STORIES_ENGINE.md.
+// separate — see docs/investigations/knowledge/WS10_HOUSEHOLD_STORIES_ENGINE.md.
 //
 // Stories are deliberately:
 //   • NO rankings, NO scores, NO streaks, NO achievements

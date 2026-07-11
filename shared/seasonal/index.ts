@@ -2,7 +2,7 @@
 //
 // The single entry point is `seasonalStories()`. It GENERATES a season's story
 // at read time by composing WS10 Stories and WS8 Discovery — nothing is stored.
-// See docs/investigations/WS11_SEASONAL_STORIES_ENGINE.md.
+// See docs/investigations/knowledge/WS11_SEASONAL_STORIES_ENGINE.md.
 
 export { seasonalStories, formatSeasonalStory } from "./engine";
 export {

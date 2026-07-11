@@ -1,7 +1,7 @@
 // WS10 — Household Stories Engine: public surface.
 //
 // The single entry point is `stories()`. Everything else is supporting type
-// or curated seed data. See docs/investigations/WS10_HOUSEHOLD_STORIES_ENGINE.md.
+// or curated seed data. See docs/investigations/knowledge/WS10_HOUSEHOLD_STORIES_ENGINE.md.
 
 export { stories, formatStories } from "./engine";
 export {

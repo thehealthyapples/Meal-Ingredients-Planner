@@ -1,7 +1,7 @@
 // WS8 — Food Discovery Engine: public surface.
 //
 // The single entry point is `discover()`. Everything else is supporting type or
-// curated seed data. See docs/investigations/WS8_DISCOVERY_ENGINE.md.
+// curated seed data. See docs/investigations/knowledge/WS8_DISCOVERY_ENGINE.md.
 
 export { discover, formatDiscovery } from "./engine";
 export {

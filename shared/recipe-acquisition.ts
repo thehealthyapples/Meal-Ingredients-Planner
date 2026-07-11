@@ -8,8 +8,8 @@
  * unfetchable and unpersistable by construction.
  *
  * Governing document: docs/architecture/THA_RECIPE_ACQUISITION_ARCHITECTURE.md
- * Evidence base: docs/investigations/FS1_THA_KNOWLEDGE_SOURCE_AND_LICENSING_AUDIT.md,
- *                docs/investigations/FS2_RECIPE_ACQUISITION_ARCHITECTURE_AND_LICENSING_REVIEW.md
+ * Evidence base: docs/investigations/knowledge/FS1_THA_KNOWLEDGE_SOURCE_AND_LICENSING_AUDIT.md,
+ *                docs/investigations/cookbook/FS2_RECIPE_ACQUISITION_ARCHITECTURE_AND_LICENSING_REVIEW.md
  *
  * This is reference/policy vocabulary (Architecture Principle 5), not
  * knowledge data — it duplicates no DB store. Runtime enablement state

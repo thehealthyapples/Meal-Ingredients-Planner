@@ -1,7 +1,7 @@
 // WS9 — Food Alternatives Engine: public surface.
 //
 // The single entry point is `alternatives()`. Everything else is supporting type
-// or curated seed data. See docs/investigations/WS9_ALTERNATIVES_ENGINE.md.
+// or curated seed data. See docs/investigations/knowledge/WS9_ALTERNATIVES_ENGINE.md.
 
 export { alternatives, formatAlternatives } from "./engine";
 export {

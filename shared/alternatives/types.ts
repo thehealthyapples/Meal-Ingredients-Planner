@@ -7,7 +7,7 @@
 //
 // This is NOT Discovery. Discovery (WS8) asks "what else might I ENJOY?".
 // Alternatives ask "what else could WORK HERE?". The two are deliberately kept
-// apart — see docs/investigations/WS9_ALTERNATIVES_ENGINE.md §"Discovery vs
+// apart — see docs/investigations/knowledge/WS9_ALTERNATIVES_ENGINE.md §"Discovery vs
 // Alternatives".
 //
 // Alternatives are POSSIBILITIES, never obligations. There are deliberately:

@@ -8,7 +8,7 @@
  * that today is only reachable via `POST /api/uplift/batch` — INT42 gives it
  * a second, read-only, single-meal entry point so it can be composed
  * alongside `meals` in a Companion turn (see
- * docs/implementation/INT42_CAPABILITY_COMPOSITION_FOUNDATION.md).
+ * docs/implementation/intelligence/INT42_CAPABILITY_COMPOSITION_FOUNDATION.md).
  *
  * HARD BOUNDARIES (the reason this binding is safe):
  *   • READ-ONLY, ONE VERB. Only `recommend` executes. Accepting or removing a

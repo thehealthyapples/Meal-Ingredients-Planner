@@ -11,7 +11,7 @@
  *   on a card; editing happens on the canonical page"). Companion Actions do not
  *   relax that rule — they are a DIFFERENT, additive structural type, rendered
  *   ALONGSIDE cards, never grafted onto them. companion-card.ts is untouched by
- *   this module. See docs/implementation/INT40_COMPANION_TASK_DELEGATION_AND_ASSISTED_ACTIONS.md.
+ *   this module. See docs/implementation/intelligence/INT40_COMPANION_TASK_DELEGATION_AND_ASSISTED_ACTIONS.md.
  *
  * SOURCING (a deliberate scope decision — see the INT40 implementation doc):
  *   Proposals are built ONLY from entities already surfaced this turn via
