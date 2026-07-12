@@ -43,6 +43,7 @@ import {
   type CompanionActionView,
   type ActionProposalStatus,
 } from "./companion-action";
+import { useCompanionSurfaceHints } from "./companion-context";
 
 // ── Surface detection ──────────────────────────────────────────────────────
 
@@ -1185,6 +1186,13 @@ export default function FloatingAssistant() {
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
 
+  // PHASE5D — the pointers the surface the household is actually looking at has
+  // published (the planner week on screen, the meal card open, the food being
+  // read). Before PHASE5D this was `{ currentPath }`, a field the route does not
+  // read — so the Context Frame's pointer slots arrived empty on every turn and
+  // "it" / "this" had nothing to resolve against (TIP3 §5.3).
+  const surfaceHints = useCompanionSurfaceHints();
+
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
   // Optimistic turns added before the server responds
@@ -1262,7 +1270,10 @@ export default function FloatingAssistant() {
       const res = await apiRequest("POST", "/api/intelligence/conversation/turn", {
         utterance,
         surface,
-        surfaceHints: { currentPath: window.location.pathname },
+        // Pointer IDs only — the server re-reads every one of them from its owning
+        // service before use. A hint says where the household is looking; it never
+        // says what is true (TIP3 §5.4 — the non-duplication guarantee).
+        surfaceHints,
       });
       return res.json() as Promise<TurnApiResponse>;
     },

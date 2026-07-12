@@ -1,5 +1,6 @@
 import { useRoute, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { usePublishCompanionContext } from "@/components/conversation/companion-context";
 import { api, buildUrl } from "@shared/routes";
 import { apiRequest } from "@/lib/queryClient";
 import { type Meal, type Nutrition, type MealAllergen, type Diet, type MealDiet, type MealCategory } from "@shared/schema";
@@ -92,6 +93,13 @@ export default function MealDetailPage() {
   const { density } = useAdaptiveDensity();
   const queryClient = useQueryClient();
   const mealId = params?.id ? Number(params.id) : null;
+
+  // PHASE5D — Conversational Cookbook. Tell the Companion which meal is open, so
+  // "is it good for the kids?" / "add it to Saturday" resolve to THIS meal instead
+  // of nothing. A pointer, not the meal — the platform re-reads the meal from its
+  // owner (TIP3 §5.2).
+  usePublishCompanionContext({ selectedMealId: mealId ?? undefined });
+
   const [reimportOpen, setReimportOpen] = useState(false);
   const [reimportUrl, setReimportUrl] = useState("");
   const [adaptResults, setAdaptResults] = useState<AdaptGoalResult[]>([]);

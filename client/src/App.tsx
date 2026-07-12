@@ -10,6 +10,7 @@ import { Loader2 } from "lucide-react";
 import { BottomNav, AppRealmContext } from "@/components/nav-bar";
 import { AdminBanner } from "@/components/admin-banner";
 import FloatingAssistant from "@/components/conversation/FloatingAssistant";
+import { CompanionContextProvider } from "@/components/conversation/companion-context";
 import { WorkspaceHeaderSlotContext } from "@/components/workspace-header";
 import OrchardBackdrop from "@/components/layout/orchard-backdrop";
 import OrchardShell from "@/components/layout/orchard-shell";
@@ -131,30 +132,35 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
   return (
     <AppRealmContext.Provider value={{ realm: activeRealm, setRealm: setActiveRealm }}>
       <WorkspaceHeaderSlotContext.Provider value={headerSlot}>
-        <div className="relative min-h-[100dvh]">
-          <OrchardBackdrop />
-          <div className="relative z-10 flex flex-col h-[100dvh]">
-            {user?.isDemo && <TrialBanner />}
-            <SiteBanner />
-            {/* Slot target: WorkspaceHeader portals here so the brand banner spans full width */}
-            <div ref={setHeaderSlot} className="shrink-0 w-full" data-testid="ws-header-slot" />
-            {/* UX1 — the canonical BottomNav is the sole primary navigation on all
-                screen sizes; the left DesktopSidebar is retired (dormant in nav-bar.tsx). */}
-            <div className="flex flex-1 overflow-hidden">
-              <main className="flex-1 overflow-y-auto overflow-x-hidden main-safe bg-background/25 flex flex-col">
-                {isLoading ? (
-                  <div className="flex h-full items-center justify-center">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary/50" />
-                  </div>
-                ) : (
-                  <Component />
-                )}
-              </main>
+        {/* PHASE5D — the Companion Context Channel wraps the routed page (which
+            publishes the pointers on screen) and the one FloatingAssistant (which
+            reads them). One channel, one assistant — never one per surface. */}
+        <CompanionContextProvider>
+          <div className="relative min-h-[100dvh]">
+            <OrchardBackdrop />
+            <div className="relative z-10 flex flex-col h-[100dvh]">
+              {user?.isDemo && <TrialBanner />}
+              <SiteBanner />
+              {/* Slot target: WorkspaceHeader portals here so the brand banner spans full width */}
+              <div ref={setHeaderSlot} className="shrink-0 w-full" data-testid="ws-header-slot" />
+              {/* UX1 — the canonical BottomNav is the sole primary navigation on all
+                  screen sizes; the left DesktopSidebar is retired (dormant in nav-bar.tsx). */}
+              <div className="flex flex-1 overflow-hidden">
+                <main className="flex-1 overflow-y-auto overflow-x-hidden main-safe bg-background/25 flex flex-col">
+                  {isLoading ? (
+                    <div className="flex h-full items-center justify-center">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary/50" />
+                    </div>
+                  ) : (
+                    <Component />
+                  )}
+                </main>
+              </div>
+              <BottomNav />
             </div>
-            <BottomNav />
           </div>
-        </div>
-        <FloatingAssistant />
+          <FloatingAssistant />
+        </CompanionContextProvider>
       </WorkspaceHeaderSlotContext.Provider>
     </AppRealmContext.Provider>
   );

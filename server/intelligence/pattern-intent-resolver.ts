@@ -50,11 +50,51 @@ const MAX_INTENTS = 4;
 // ---------------------------------------------------------------------------
 
 /**
+ * PHASE5D — a demonstrative is not an entity name.
+ *
+ * The matchers extract an entity term out of free text and slugify it. Given
+ * "what are the benefits of THIS FOOD?" — the nutrition persona's own shipped
+ * quick action — that produced the slug `this-food`, and the platform went looking
+ * for a food called "this food". There is none, so the household got an honest gap
+ * about a food that does not exist, while the food they were actually reading sat
+ * in `hints.currentFoodSlug`, untouched.
+ *
+ * That is a deixis failure, not a knowledge failure (TIP3 §5.3: "it" / "this"
+ * resolve from the surface, never from the words). So a term that is ONLY a
+ * demonstrative — with no entity inside it — is not slugified here. Every caller
+ * already guards `if (!slug) return null`, so the matcher declines and the utterance
+ * falls through to `buildSurfacePrimary`, which resolves the pointer the household's
+ * surface actually published. Off such a surface there is no pointer, and an honest
+ * gap is the correct answer — but it is now a gap about nothing, rather than a
+ * confident answer about a fabricated food.
+ */
+const DEICTIC_DETERMINER = /^(?:this|that|these|those|it|its|the|a|an|my|our|your)$/;
+const DEICTIC_NOUN =
+  /^(?:food|foods|meal|meals|dish|dishes|item|items|product|products|recipe|recipes|ingredient|ingredients|one|ones|thing|things)$/;
+
+function isDeicticTerm(raw: string): boolean {
+  const words = raw.trim().toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (words.length === 0) return true;
+  // Three or more words always carry something concrete ("this week's chicken").
+  if (words.length > 2) return false;
+  if (words.length === 1) return DEICTIC_DETERMINER.test(words[0]) || DEICTIC_NOUN.test(words[0]);
+  return DEICTIC_DETERMINER.test(words[0]) && DEICTIC_NOUN.test(words[1]);
+}
+
+/**
  * Normalise a free-text entity term to a slug candidate.
  * Lowercase, hyphenate spaces, strip non-alphanumeric. Best-effort — the
  * handler returns an honest gap when the resulting slug has no registry entry.
+ *
+ * Returns "" when the term names no entity at all (a bare demonstrative — see
+ * `isDeicticTerm`), so a pronoun can never become a food.
  */
 function toSlug(raw: string): string {
+  if (isDeicticTerm(raw)) return "";
   return raw.trim().toLowerCase()
     .replace(/\s+/g, "-")
     .replace(/[^a-z0-9-]/g, "")
@@ -2756,7 +2796,18 @@ function buildSurfacePrimary(
     case "partners":  params = { scope: "retailers" };      break;
     case "templates": params = { scope: "plan-templates" }; break;
     case "analyser":  params = { scope: "additives" };      break;
-    case "meals":     params = { scope: "list" };           break;
+    // PHASE5D — Conversational Cookbook. `meals.read` has always supported
+    // scope "detail" (meals-read-handler.ts:342), and this is the one surface
+    // that never used its pointer: planner reads its week and nutrition reads its
+    // food, but meals hard-coded the LIST. So on an open meal, "is it good for the
+    // kids?" was answered about the household's whole cookbook. Now it is answered
+    // about the meal on screen — when there is one, and about the list when there
+    // is not, which is what a Cookbook with nothing open honestly is.
+    case "meals":
+      params = hints.selectedMealId != null
+        ? { scope: "detail", mealId: hints.selectedMealId }
+        : { scope: "list" };
+      break;
   }
   return { capability: capId, verb: "read", parameters: params, confidence: 0.65 };
 }

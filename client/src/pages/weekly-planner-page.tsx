@@ -23,6 +23,7 @@ import { usePlannerScan } from "@/hooks/use-planner-scan";
 import { usePlannerOperations, type ShoppingHandoffData } from "@/hooks/use-planner-operations";
 import { PlannerAssistantPanel } from "@/components/PlannerAssistantPanel";
 import type { ResolveTarget, PlaceholderItem } from "@/components/PlannerAssistantPanel";
+import { usePublishCompanionContext } from "@/components/conversation/companion-context";
 import { SmartReviewPanelContent } from "@/components/SmartReviewPanelContent";
 import type { FullDay, FullWeek, SmartCandidate, MealExplanation, SmartSuggestEntry, SmartSuggestResult } from "@/lib/planner-types";
 import type { EntryTarget, PlannerProductResult } from "@/components/PlannerMealPickerPanel";
@@ -1648,6 +1649,29 @@ export default function WeeklyPlannerPage() {
     if (selectedDayId) return sortedDays.find(d => d.id === selectedDayId) ?? sortedDays[0] ?? null;
     return sortedDays[0] ?? null;
   }, [selectedDayId, sortedDays]);
+
+  // PHASE5D — Conversational Planner. Two pointers, and deliberately not a third.
+  //
+  //   activePlannerWeekId — the week ON SCREEN. Until now nothing published it, so
+  //     the assembler fell back to `getPlannerWeeks(userId)[0]` — ordered by
+  //     weekNumber, i.e. WEEK 1, FOREVER. The planner persona's own shipped quick
+  //     action ("What meals do I have this week?") answered about week 1 no matter
+  //     which week the household was reading. That is the bug this line closes.
+  //
+  //   selectedPlannerDayId — the day the household EXPLICITLY selected (the
+  //     PlannerContext selection, persisted). Never `selectedDay`, which falls back
+  //     to sortedDays[0] for the grid's benefit: that fallback is a fine thing to
+  //     RENDER and a dangerous thing to ACT on, and "add it to that day" must never
+  //     resolve to a day nobody chose (TIP3 Risk R6).
+  //
+  //   selectedMealSlot — NOT published, because the planner has no such state: slot
+  //     is chosen per-action, never "in view". Inventing one here is exactly the
+  //     guess companion-actions.ts:103 refuses to make, so the planner `add` action
+  //     stays an honest gap rather than a coin-flip about someone's dinner.
+  usePublishCompanionContext({
+    activePlannerWeekId: activeWeekData?.id,
+    selectedPlannerDayId: selectedDayId ?? undefined,
+  });
 
   const placeholderItems = useMemo((): PlaceholderItem[] => {
     const items: PlaceholderItem[] = [];

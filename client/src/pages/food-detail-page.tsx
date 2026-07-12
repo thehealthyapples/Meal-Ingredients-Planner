@@ -11,6 +11,7 @@
 
 import { Link, useRoute } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { usePublishCompanionContext } from "@/components/conversation/companion-context";
 import {
   ArrowLeft,
   Apple,
@@ -84,6 +85,12 @@ function householdHeadline(
 export default function FoodDetailPage() {
   const [, params] = useRoute("/foods/:slug");
   const slug = params?.slug ?? null;
+
+  // PHASE5D — the Nutrition persona's deixis. With the slug published, "is it good
+  // for sleep?" on this page resolves to THIS food; without it the question arrived
+  // with nothing to point at. The answer stays source-gated and EFSA-firewalled —
+  // the pointer changes what is being asked about, never what may be claimed.
+  usePublishCompanionContext({ currentFoodSlug: slug ?? undefined });
 
   const { data, isPending: isLoading, isError } = useQuery<FoodIntelligence>({
     queryKey: ["/api/foods", slug, "intelligence"],
