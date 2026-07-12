@@ -11682,6 +11682,227 @@ Generate a complete recipe using these as the foundation.`;
     });
   });
 
+  // ── PHASE5B — the Decision Engine's ACTION stage, and the loop's closing edge ──
+  //
+  // DEC1 §2 defines the canonical pipeline as EVIDENCE → ATTENTION → DECISION →
+  // ACTION, and names ACTION's terminal resolution as the edge that closes it:
+  // "terminal resolution emits Evidence (resolveOpportunity) → feeds the next
+  // cycle's EVIDENCE. The loop is closed, once, here."
+  //
+  // Before PHASE5B that edge did not exist in production. The `opportunity-delivery`
+  // capability has declared four executable verbs since OD1 (report/review/approve/
+  // delete), but only `report` had an HTTP route (via the notices route above). A
+  // household could be DELIVERED an opportunity and could never RESOLVE one — so no
+  // Evidence was ever emitted, no Pattern could ever reach MIN_EVIDENCE_COUNT, no
+  // Confirmed Understanding could ever exist, and LEARN1's re-weighting inside
+  // prioritiseAndGroup was structurally inert. The whole household-learning
+  // capability was dead code behind a missing route.
+  //
+  // These four routes are TRANSPORT ONLY. Every one goes through the ordinary,
+  // registered Intent Engine path (intelligencePlatform.handle) — never by importing
+  // the Decision Engine's framework or its store directly — so the delivery
+  // lifecycle, mutedOpportunityTypes, LEARN1's re-weighting and COACH1's
+  // seen-yields-to-unseen ordering each apply exactly once, where they live. No
+  // route here ranks, scores, suppresses or prioritises anything: absorbing
+  // Selection is precisely what DEC1 §8 forbids.
+
+  /** The client's action vocabulary → the platform's closed verb taxonomy. No new verb is invented. */
+  const OPPORTUNITY_ACTION_VERBS = {
+    acknowledge: "review",   // non-terminal — "seen" is not an opinion, and emits NO Evidence
+    accept: "approve",       // terminal → positive Evidence
+    dismiss: "delete",       // terminal → negative Evidence
+  } as const;
+
+  /** Pattern decision → the platform's closed verb taxonomy. Both are terminal. */
+  const SIGNAL_DECISION_VERBS = {
+    confirm: "approve",   // Pattern → Confirmed Understanding (what LEARN1 actually reads)
+    decline: "delete",
+  } as const;
+
+  // DECISION (read). The same bundle the notices route already consumes, exposed to
+  // the surfaces that resolve against it. `resolved` is OD1's own trust flag — true
+  // only when at least one producer was actually reached — so an honestly empty
+  // bundle is distinguishable from a degraded one.
+  app.get("/api/intelligence/food-opportunities", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const user = req.user as import("@shared/schema").User;
+
+    try {
+      const outcome = await intelligencePlatform.handle(
+        { capabilityId: "opportunity-delivery", verb: "report" },
+        intelligencePlatform.contextFor(user),
+      );
+
+      // An honest gap stays a gap — never a fabricated empty success (Principle 6).
+      if (outcome.status !== "ok") {
+        return res.json({ resolved: false, opportunities: [], grouped: {}, message: outcome.message });
+      }
+
+      const bundle = outcome.result as {
+        readonly opportunities?: readonly unknown[];
+        readonly grouped?: Readonly<Record<string, readonly unknown[]>>;
+        readonly trust?: { readonly resolved?: boolean };
+      } | null;
+
+      // The sealed DeliveryDecision on the bundle is operator telemetry, already
+      // recorded as an observation by the capability handler. It is deliberately
+      // NOT serialised here (DEC1 §5 — never on the wire, never read back).
+      res.json({
+        resolved: bundle?.trust?.resolved === true,
+        opportunities: bundle?.opportunities ?? [],
+        grouped: bundle?.grouped ?? {},
+      });
+    } catch (err) {
+      console.error("[PHASE5B] food-opportunities report failed:", err);
+      res.status(500).json({ resolved: false, opportunities: [], grouped: {}, message: "Opportunities are unavailable right now." });
+    }
+  });
+
+  // ACTION → EVIDENCE. **This is the edge that closes the loop.**
+  //
+  // A terminal resolution (accept/dismiss) causes resolveOpportunity to report one
+  // Evidence event through Rule EL2's one door — the platform's only writer of
+  // household evidence. `acknowledge` deliberately emits none: "seen" is not an
+  // opinion (framework.ts TERMINAL_OUTCOME).
+  //
+  // Confirmation (DEC1 A7): review/approve/delete each carry the `strong`
+  // ConfirmationTier. `confirmed: true` is the documented contract of
+  // RouteOptions.confirmed — "the caller asserts confirmation, the engine decides
+  // whether confirmation was required". An explicit, per-item POST naming one
+  // opportunity id IS that assent. The tier is unchanged and the engine still
+  // decides: surfacing never softened acting.
+  app.post("/api/intelligence/food-opportunities/:opportunityId/:action", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const user = req.user as import("@shared/schema").User;
+
+    const { opportunityId, action } = req.params;
+    const verb = OPPORTUNITY_ACTION_VERBS[action as keyof typeof OPPORTUNITY_ACTION_VERBS];
+    if (!verb) {
+      return res.status(400).json({
+        resolved: false,
+        message: `Unknown action "${action}". Expected one of: ${Object.keys(OPPORTUNITY_ACTION_VERBS).join(", ")}.`,
+      });
+    }
+
+    try {
+      const outcome = await intelligencePlatform.handle(
+        { capabilityId: "opportunity-delivery", verb, parameters: { opportunityId } },
+        intelligencePlatform.contextFor(user),
+        { confirmed: true },
+      );
+
+      // The handler's own honest gap ("no opportunity with that id has been delivered
+      // to you") is surfaced verbatim — never a fabricated acknowledgement.
+      if (outcome.status !== "ok") {
+        return res.status(outcome.status === "denied" ? 403 : 404).json({
+          resolved: false,
+          message: outcome.message,
+        });
+      }
+
+      const resolution = outcome.result as { readonly status?: string; readonly resolvedAt?: string | null } | null;
+      res.json({
+        resolved: true,
+        status: resolution?.status ?? null,
+        resolvedAt: resolution?.resolvedAt ?? null,
+      });
+    } catch (err) {
+      console.error("[PHASE5B] opportunity resolution failed:", err);
+      res.status(500).json({ resolved: false, message: "That could not be saved right now." });
+    }
+  });
+
+  // The Pattern read. EL1 detects a Pattern only from repeated, consistent evidence
+  // (MIN_EVIDENCE_COUNT / MIN_CONSISTENCY) — never from a single observation. A
+  // Pattern is NOT understanding until this household says so, which is what the
+  // decision route below is for. Only `pending_confirmation` Patterns are listed:
+  // an already-decided one has nothing left to ask.
+  app.get("/api/intelligence/learning-signals", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const user = req.user as import("@shared/schema").User;
+
+    try {
+      const outcome = await intelligencePlatform.handle(
+        { capabilityId: "evidence-learning", verb: "search", parameters: { status: "pending_confirmation" } },
+        intelligencePlatform.contextFor(user),
+      );
+
+      if (outcome.status !== "ok") {
+        return res.json({ resolved: false, signals: [], message: outcome.message });
+      }
+
+      const result = outcome.result as { readonly signals?: readonly Record<string, unknown>[] } | null;
+
+      // Permission-aware projection: the client contract's nine fields only. The
+      // internal explainability trail (householdId, supportingEventIds,
+      // confirmedByUserId, confirmationNotes) never leaves the server.
+      const signals = (result?.signals ?? []).map((s) => ({
+        id: s.id,
+        domain: s.domain,
+        subjectType: s.subjectType,
+        subjectKey: s.subjectKey,
+        direction: s.direction,
+        evidenceCount: s.evidenceCount,
+        confidence: s.confidence,
+        rationale: s.rationale,
+        status: s.status,
+      }));
+
+      res.json({ resolved: true, signals });
+    } catch (err) {
+      console.error("[PHASE5B] learning-signals search failed:", err);
+      res.status(500).json({ resolved: false, signals: [], message: "Learning signals are unavailable right now." });
+    }
+  });
+
+  // Pattern → Confirmed Understanding. This is the ONLY door through which a
+  // detected Pattern becomes something LEARN1 will actually read back and re-weight
+  // with (readConfirmedUnderstanding). Declining is equally terminal and equally
+  // recorded — a declined Pattern is a first-class answer, not an absence.
+  //
+  // Both verbs are `strong`-tier; see the confirmation note above.
+  app.post("/api/intelligence/learning-signals/:signalId/:decision", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const user = req.user as import("@shared/schema").User;
+
+    const { signalId, decision } = req.params;
+    const verb = SIGNAL_DECISION_VERBS[decision as keyof typeof SIGNAL_DECISION_VERBS];
+    if (!verb) {
+      return res.status(400).json({
+        resolved: false,
+        message: `Unknown decision "${decision}". Expected one of: ${Object.keys(SIGNAL_DECISION_VERBS).join(", ")}.`,
+      });
+    }
+
+    const id = Number(signalId);
+    if (!Number.isInteger(id)) {
+      return res.status(400).json({ resolved: false, message: "signalId must be an integer." });
+    }
+
+    try {
+      const outcome = await intelligencePlatform.handle(
+        { capabilityId: "evidence-learning", verb, parameters: { signalId: id } },
+        intelligencePlatform.contextFor(user),
+        { confirmed: true },
+      );
+
+      // The handler's honest gap ("no learning signal with that id belongs to your
+      // household") is the ownership boundary, surfaced verbatim.
+      if (outcome.status !== "ok") {
+        return res.status(outcome.status === "denied" ? 403 : 404).json({
+          resolved: false,
+          message: outcome.message,
+        });
+      }
+
+      const result = outcome.result as { readonly signal?: { readonly status?: string } } | null;
+      res.json({ resolved: true, status: result?.signal?.status ?? null });
+    } catch (err) {
+      console.error("[PHASE5B] learning-signal decision failed:", err);
+      res.status(500).json({ resolved: false, message: "That could not be saved right now." });
+    }
+  });
+
   // ── INT18 Phase 1 — Conversation Gateway routes ─────────────────────────────
   // Three read-only routes that drive the grounded AI assistant.
   // Grounding comes exclusively from intelligencePlatform.handle() — no direct
