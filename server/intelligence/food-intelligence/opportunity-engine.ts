@@ -123,6 +123,35 @@ export type FoodOpportunityDomain = "planner" | "pantry" | "shopping";
  */
 export type FoodOpportunityEvidence = EvidenceCitation;
 
+/** The canonical entity an opportunity is ABOUT. Closed set — one per generator below. */
+export type FoodOpportunitySubjectEntity = "planner-day" | "pantry-item" | "shopping-item";
+
+/**
+ * PHASE5E — the structured entity this opportunity concerns.
+ *
+ * Every generator below ALREADY holds this record: it is the row the opportunity's
+ * `id` is keyed on (`${type}:${record.id}`). Until now that identity was expressed
+ * only inside an opaque string and inside prose. Carrying it structurally introduces
+ * NO new reasoning, no new read, and no new fact — it exposes what the generator
+ * already knew.
+ *
+ * It exists because PHASE5D §9.1 named its absence as the blocker on explaining an
+ * opportunity conversationally: without it, a "Why this?" affordance would have to
+ * parse `explanation` prose to work out what the card was about — the presentation
+ * layer reverse-engineering intelligence it does not own. With it, the surface passes
+ * an id and the platform answers.
+ *
+ * `label` is the human name the generator ALREADY interpolated into its own
+ * `explanation`/`suggestedAction` strings — the same string, lifted out, never a
+ * second naming of the entity.
+ */
+export interface FoodOpportunitySubject {
+  readonly entity: FoodOpportunitySubjectEntity;
+  /** The owning domain's own primary key. Never a synthetic id. */
+  readonly id: number;
+  readonly label: string;
+}
+
 export interface FoodOpportunity {
   /** Deterministic, stable per underlying record — never regenerated differently for the same activity. */
   readonly id: string;
@@ -134,6 +163,8 @@ export interface FoodOpportunity {
   readonly evidence: readonly FoodOpportunityEvidence[];
   /** A suggestion for the human to act on — never executed automatically (no autonomous actions, FI4 scope). */
   readonly suggestedAction: string;
+  /** PHASE5E — the canonical entity this opportunity is about. See {@link FoodOpportunitySubject}. */
+  readonly subject: FoodOpportunitySubject;
 }
 
 export interface FoodOpportunityTrust {
@@ -200,6 +231,8 @@ export function identifyPlannerGapOpportunities(
         },
       ],
       suggestedAction: `Add a meal to ${dayName(day.dayOfWeek)} in "${week.weekName}".`,
+      // The row this opportunity is keyed on, and the name already used above.
+      subject: { entity: "planner-day" as const, id: day.id, label: dayName(day.dayOfWeek) },
     }));
 }
 
@@ -234,6 +267,7 @@ export function identifyPantryUnusedOpportunities(
         },
       ],
       suggestedAction: `Plan a meal that uses ${label} from your pantry.`,
+      subject: { entity: "pantry-item", id: item.id, label },
     });
   }
   return opportunities;
@@ -277,6 +311,7 @@ export function identifyShoppingRestrictionOpportunities(
         { source: "household-eaters", detail: `Your household has an active hard restriction: ${restrictionNames}.` },
       ],
       suggestedAction: `Review "${item.productName}" on your shopping list before buying it.`,
+      subject: { entity: "shopping-item", id: item.id, label: item.productName },
     });
   }
   return opportunities;

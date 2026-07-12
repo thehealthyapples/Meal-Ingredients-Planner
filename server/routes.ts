@@ -90,6 +90,8 @@ import {
   resolveBehaviour,
   sealBehaviourDecision,
   buildCompanionExperience,
+  // PHASE5E (NTC-P1) — the notice voice seam, dormant since EWX1 until this workstream.
+  phraseNotice,
 } from "./intelligence/conversation/behaviour-engine";
 import {
   buildExecutionTimeline,
@@ -105,10 +107,13 @@ import {
   noticeDiversity,
   noticeOpportunities,
   noticeSeasonal,
+  // PHASE5E (NTC-P4) — confirmed household learning as the eighth notice source.
+  noticeLearning,
   applySilenceRules,
   MAX_NOTICES_PER_MOMENT,
   type Notice,
   type OpportunityLike,
+  type ConfirmedLearningLike,
 } from "./intelligence/conversation/notice-engine";
 import { enrichRetailData, STORE_TAG_MAP, UK_RETAILER_STORE_TAGS } from "./lib/retailIntelligence";
 import { getCanonicalProduct, isCompatibleSwap } from "./lib/productCanonicaliser";
@@ -11563,15 +11568,65 @@ Generate a complete recipe using these as the foundation.`;
       console.error("[COACH1] seasonal stories unavailable:", err);
     }
 
+    // 6. PHASE5E (NTC-P4) — what the household has CONFIRMED about itself.
+    //
+    //    The Notice Engine Architecture §2.2 names this as the natural eighth source and
+    //    fixes its shape: "a registered capability (`evidence-learning`) read via the
+    //    platform, adapted verbatim — and only for signals with `status = confirmed`. A
+    //    `pending_confirmation` signal is a question for the household, not a notice."
+    //
+    //    So this asks EL1 for CONFIRMED signals only. A pending signal stays where it
+    //    belongs: on the Profile's learning panel, where the household can answer it.
+    //    THA does not tell a household what it has learned about them until they have
+    //    agreed it is true.
+    try {
+      const outcome = await intelligencePlatform.handle(
+        { capabilityId: "evidence-learning", verb: "search", parameters: { status: "confirmed" } },
+        intelligencePlatform.contextFor(user),
+      );
+      if (outcome.status === "ok") {
+        const signals =
+          (outcome.result as { signals?: readonly ConfirmedLearningLike[] } | null | undefined)?.signals ?? [];
+        gathered.push(...noticeLearning(signals));
+        sources.push("household-learning");
+      }
+    } catch (err) {
+      console.error("[PHASE5E] evidence-learning unavailable:", err);
+    }
+
     // The Silence Rules are the ONLY place order and volume are decided.
     const notices = applySilenceRules(gathered);
 
+    // PHASE5E (NTC-P1) — THE VOICE SEAM. Until now this route returned raw `Notice`
+    // objects: `{ kind: "growth", signal: {...} }` — a fact with no sentence. The
+    // Behaviour Engine's `phraseNotice` has been code-complete and dormant since EWX1,
+    // and `BEHAVIOUR_SURFACES` deliberately did not claim a notice surface because "a
+    // surface there is a promise that a transform ran" and none did. This is the line
+    // that makes the promise true.
+    //
+    // Voicing happens AFTER selection, never before: the Silence Rules have already
+    // decided which notices survive and in what order, and this loop changes neither.
+    // The Behaviour Engine may change how a notice SOUNDS; it may never change which
+    // one is shown, nor what it says is true (CPA1 §0).
+    //
+    // The `fact` is still returned alongside the voiced sentence, deliberately — the
+    // surface renders the sentence, but the fact remains inspectable, so a notice can
+    // never become a claim whose underlying data has been thrown away.
+    const personalityId = resolveBehaviour(
+      (await storage.getUserPreferences(userId))?.companionPersonality ?? null,
+    ).personalityId;
+
+    const voiced = notices.map((notice) => ({
+      ...notice,
+      text: phraseNotice(notice, personalityId),
+    }));
+
     res.json({
-      notices,
+      notices: voiced,
       // `gathered` is what the owners honestly offered; `notices` is what the attention
       // budget allowed through. Reporting both makes the silence auditable rather than
       // indistinguishable from having nothing to say.
-      trust: { sources, gatheredCount: gathered.length, cap: MAX_NOTICES_PER_MOMENT },
+      trust: { sources, gatheredCount: gathered.length, cap: MAX_NOTICES_PER_MOMENT, personalityId },
     });
   });
 
@@ -11835,6 +11890,11 @@ Generate a complete recipe using these as the foundation.`;
           // context-frame-assembler.ts SurfaceHints doc comment.
           selectedPlannerDayId: typeof surfaceHints.selectedPlannerDayId === "number" ? surfaceHints.selectedPlannerDayId : undefined,
           selectedMealSlot:     typeof surfaceHints.selectedMealSlot     === "string" ? surfaceHints.selectedMealSlot     : undefined,
+          // PHASE5E — the ambient opportunity card the household pressed "Why this?" on.
+          // A pointer, exactly like the others: the platform re-reads the opportunity from
+          // the Decision Engine before saying a word about it, and an id that is no longer
+          // being delivered yields an honest gap, never a fabricated justification.
+          selectedOpportunityId: typeof surfaceHints.selectedOpportunityId === "string" ? surfaceHints.selectedOpportunityId : undefined,
         },
         intelligencePlatform.contextFor(user),
       );

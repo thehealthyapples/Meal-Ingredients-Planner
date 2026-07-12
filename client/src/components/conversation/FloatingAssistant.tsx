@@ -43,7 +43,22 @@ import {
   type CompanionActionView,
   type ActionProposalStatus,
 } from "./companion-action";
-import { useCompanionSurfaceHints } from "./companion-context";
+import {
+  useCompanionSurfaceHints,
+  usePendingAsk,
+  type CompanionSurfaceHints,
+} from "./companion-context";
+
+/**
+ * PHASE5E — one turn's request. `askHints` are the pointers that belong to a single
+ * question asked BY a surface (today: the opportunity card a household pressed "Why
+ * this?" on), as distinct from the pointers a page publishes to describe what is on
+ * screen. They are merged over the published hints for that one turn and never persist.
+ */
+interface TurnRequest {
+  readonly utterance: string;
+  readonly askHints?: CompanionSurfaceHints;
+}
 
 // ── Surface detection ──────────────────────────────────────────────────────
 
@@ -1192,6 +1207,8 @@ export default function FloatingAssistant() {
   // read — so the Context Frame's pointer slots arrived empty on every turn and
   // "it" / "this" had nothing to resolve against (TIP3 §5.3).
   const surfaceHints = useCompanionSurfaceHints();
+  // PHASE5E — a question a surface is asking on the household's behalf, if any.
+  const { ask, clearAsk } = usePendingAsk();
 
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
@@ -1265,19 +1282,26 @@ export default function FloatingAssistant() {
   const [transportFailed, setTransportFailed] = useState(false);
 
   // Submit turn mutation
-  const { mutate: sendTurn, isPending } = useMutation<TurnApiResponse, Error, string>({
-    mutationFn: async (utterance: string) => {
+  //
+  // PHASE5E — the variable is now `{ utterance, askHints? }` rather than a bare string.
+  // `askHints` carries the pointers that belong to ONE question (today:
+  // `selectedOpportunityId`, set only when a household presses a specific card's "Why
+  // this?" button). They are merged over — never into — the surface's published pointers,
+  // so a question's pointer lives exactly as long as the question and cannot leak into
+  // the next turn.
+  const { mutate: sendTurn, isPending } = useMutation<TurnApiResponse, Error, TurnRequest>({
+    mutationFn: async ({ utterance, askHints }: TurnRequest) => {
       const res = await apiRequest("POST", "/api/intelligence/conversation/turn", {
         utterance,
         surface,
         // Pointer IDs only — the server re-reads every one of them from its owning
         // service before use. A hint says where the household is looking; it never
         // says what is true (TIP3 §5.4 — the non-duplication guarantee).
-        surfaceHints,
+        surfaceHints: { ...surfaceHints, ...askHints },
       });
       return res.json() as Promise<TurnApiResponse>;
     },
-    onMutate: (utterance: string) => {
+    onMutate: ({ utterance }: TurnRequest) => {
       setTransportFailed(false);
       // Optimistic user turn
       const id = nextOptimisticId.current--;
@@ -1362,16 +1386,34 @@ export default function FloatingAssistant() {
     const utterance = inputValue.trim();
     if (!utterance || isPending) return;
     setInputValue("");
-    sendTurn(utterance);
+    sendTurn({ utterance });
   }, [inputValue, isPending, sendTurn]);
 
   const handleQuickAction = useCallback(
     (utterance: string) => {
       if (isPending) return;
-      sendTurn(utterance);
+      sendTurn({ utterance });
     },
     [isPending, sendTurn],
   );
+
+  // PHASE5E — a surface asked the Companion a question ("Why this?" on an ambient
+  // opportunity card). Open, ask it, and clear it.
+  //
+  // The question enters the thread as an ordinary user turn, through the ordinary
+  // gateway, because that is what it is: the household asked, and a surface typed on
+  // their behalf. There is no second response path and no privileged answer — which is
+  // precisely why the answer can be trusted.
+  //
+  // `clearAsk()` runs immediately, so one press asks exactly once: an ask can never be
+  // replayed by a re-render, and a stale ask can never fire when the panel is next opened.
+  useEffect(() => {
+    if (!ask) return;
+    clearAsk();
+    if (isPending) return;
+    setIsOpen(true);
+    sendTurn({ utterance: ask.utterance, askHints: ask.hints });
+  }, [ask, clearAsk, isPending, sendTurn]);
 
   // Close on Escape
   useEffect(() => {

@@ -109,7 +109,17 @@ export type NoticeCategory =
   | "planner-gap"
   | "pantry-opportunity"
   | "shopping-opportunity"
-  | "seasonal-highlight";
+  | "seasonal-highlight"
+  // PHASE5E (NTC-P4) — the eighth category. Named as the natural next source by the
+  // Notice Engine Architecture §2.2 ("a CONFIRMED EL1 learning signal … enters through
+  // the same shape — a registered capability (`evidence-learning`) read via the
+  // platform, adapted verbatim — and only for signals with `status = confirmed`"), and
+  // gated by its §8 rollout as NTC-P4. This workstream is that gate.
+  //
+  // It has a registered owner (the `evidence-learning` capability), which is the §9
+  // condition on any new category: "any new notice category without a registered owner
+  // behind it — stop."
+  | "household-learning";
 
 
 /**
@@ -149,7 +159,29 @@ export interface Notice {
         /** COACH1 — the producer's own evidence, verbatim and in order. Never empty (see `noticeOpportunities`). */
         readonly evidence: readonly NoticeEvidence[];
       }
-    | { readonly kind: "seasonal"; readonly headline: string };
+    | { readonly kind: "seasonal"; readonly headline: string }
+    /**
+     * PHASE5E (NTC-P4) — something the household has CONFIRMED about itself.
+     *
+     * Every field is EL1's, verbatim. `rationale` is the sentence EL1 already wrote to
+     * explain itself (ET6 — "every understanding explains itself"); this engine does
+     * not compose it, shorten it, or soften it. `evidenceCount` and `confidence` are
+     * EL1's own, produced behind its ≥3-events / ≥0.7-consistency gates.
+     *
+     * The boundary that keeps this honest: **a notice never becomes a preference, and a
+     * preference is only ever noticed once the household confirmed it.** A
+     * `pending_confirmation` signal is a QUESTION for the household (it belongs on the
+     * Profile's learning panel, where it can be answered) — never a notice. THA does
+     * not tell a household what it has learned about them until they have agreed it is
+     * true.
+     */
+    | {
+        readonly kind: "learning";
+        readonly rationale: string;
+        readonly direction: "positive" | "negative";
+        readonly confidence: "low" | "medium" | "high";
+        readonly evidenceCount: number;
+      };
 }
 
 /**
@@ -163,6 +195,13 @@ export const NOTICE_SOURCE = {
   nutritionCentre: "nutrition-centre",
   opportunityDelivery: "opportunity-delivery",
   seasonalStories: "seasonal-stories",
+  /**
+   * PHASE5E (NTC-P4) — the `evidence-learning` capability (EL1). The SAME source string
+   * OD1's `withLearningEvidence` already cites when household learning moves an
+   * opportunity's rank, so "which owner said this?" answers identically whether the
+   * learning influenced a ranking or produced a notice of its own.
+   */
+  evidenceLearning: "household-learning",
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -299,6 +338,78 @@ export function noticeOpportunities(opportunities: readonly OpportunityLike[]): 
         explanation: o.explanation,
         suggestedAction: o.suggestedAction,
         evidence,
+      },
+    });
+  }
+  return result;
+}
+
+/**
+ * PHASE5E (NTC-P4) — one CONFIRMED household learning signal, as EL1 produced it.
+ *
+ * The shape this accepts is EL1's `HouseholdLearningSignal` narrowed to the fields a
+ * notice carries. It is declared structurally (rather than importing the row type) for
+ * the same reason `OpportunityLike` is: this module performs no I/O and must not depend
+ * on a store's module graph.
+ */
+export interface ConfirmedLearningLike {
+  readonly id: number;
+  readonly domain: string;
+  readonly subjectKey: string;
+  readonly direction: "positive" | "negative";
+  readonly confidence: "low" | "medium" | "high";
+  readonly evidenceCount: number;
+  readonly rationale: string;
+  /** EL1's lifecycle status. Anything other than "confirmed" is dropped — see below. */
+  readonly status: string;
+}
+
+/**
+ * PHASE5E (NTC-P4) — adapt confirmed household learning into notices.
+ *
+ * This producer concludes NOTHING. It applies exactly two filters, and both are the
+ * same honest no-op the other producers already make:
+ *
+ *   1. **Not confirmed → dropped.** The Notice Engine Architecture §2.2 is explicit:
+ *      "only for signals with `status = confirmed`. A `pending_confirmation` signal is
+ *      a question for the household, not a notice." The route asks EL1 for confirmed
+ *      signals only; this filter is the structural guarantee that a future caller
+ *      passing the wrong query cannot make THA announce a preference the household
+ *      never agreed to. Belt and braces, deliberately — this is the one notice category
+ *      that speaks about the household to the household, and getting it wrong is
+ *      uniquely corrosive ("THA thinks we hate fish"; we never said that).
+ *
+ *   2. **No rationale → dropped.** Rule E1, "no citation, no card", enforced exactly as
+ *      `noticeOpportunities` enforces it. EL1 always writes a rationale (ET6), so in
+ *      production this is unreachable; it exists so a future change cannot make the
+ *      platform assert something uncited merely by forgetting to cite it.
+ *
+ * No threshold is introduced here. EL1's gates (≥3 consistent events, ≥0.7 consistency,
+ * a 90-day window, and the household's own explicit confirmation) already decided that
+ * this is true. This module decides only that it is *sayable*.
+ *
+ * Priority is `low`, always. A confirmed preference is a calm, informational fact about
+ * the household — never a demand for attention, and never (A2) a `critical`.
+ */
+export function noticeLearning(signals: readonly ConfirmedLearningLike[]): Notice[] {
+  const result: Notice[] = [];
+  for (const s of signals) {
+    if (s.status !== "confirmed") continue;
+
+    const rationale = s.rationale?.trim() ?? "";
+    if (rationale.length === 0) continue; // Rule E1 — no citation, no card.
+
+    result.push({
+      id: `household-learning:${s.id}`,
+      category: "household-learning",
+      priority: "low",
+      source: NOTICE_SOURCE.evidenceLearning,
+      fact: {
+        kind: "learning",
+        rationale,
+        direction: s.direction,
+        confidence: s.confidence,
+        evidenceCount: s.evidenceCount,
       },
     });
   }

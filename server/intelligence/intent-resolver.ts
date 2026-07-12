@@ -90,6 +90,17 @@ export interface IntentResolutionHints {
   readonly activePlannerWeekId?: number;
   /** Meal card currently in focus, if any. */
   readonly selectedMealId?: number;
+  /**
+   * PHASE5E — the ambient opportunity card the household is asking about, if any
+   * (OD1's `DeliverableOpportunity.id`, e.g. `food-intelligence:planner-empty-day:42`).
+   *
+   * Set ONLY when a surface explicitly asks the Companion about one specific card
+   * ("Why this?"). It is a POINTER, exactly like `selectedMealId` — the platform
+   * re-reads the opportunity from the Decision Engine before saying a word about it,
+   * and an id that is no longer being delivered yields an honest gap, never a
+   * fabricated justification.
+   */
+  readonly selectedOpportunityId?: string;
 }
 
 /**

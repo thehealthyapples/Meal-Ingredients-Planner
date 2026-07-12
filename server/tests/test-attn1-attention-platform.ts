@@ -210,6 +210,9 @@ async function main(): Promise<void> {
     explanation: "x",
     evidence: [],
     suggestedAction: "x",
+    // PHASE5E — every opportunity names the entity it is about. Inert for this test
+    // (attention ordering never reads it), but required by the producer's type.
+    subject: { entity: "planner-day" as const, id: i, label: "x" },
   }));
   const withCriticalLast = [...manyHigh, { ...conflicts[0] }];
   const clamped = prioritizeOpportunities(withCriticalLast, 10);

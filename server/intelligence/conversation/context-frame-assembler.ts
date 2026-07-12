@@ -52,6 +52,17 @@ export interface SurfaceHints {
   selectedPlannerDayId?: number;
   /** INT40 — the meal slot in view alongside selectedPlannerDayId, if any ("breakfast" | "lunch" | "dinner" | "snacks"). */
   selectedMealSlot?: string;
+  /**
+   * PHASE5E — the ambient opportunity card the household explicitly asked about
+   * ("Why this?"), if any. OD1's `DeliverableOpportunity.id`.
+   *
+   * Client-supplied ONLY, and — unlike every other hint here — it is never inferred
+   * from a prior entity ref and never falls back to a stored record. There is no such
+   * thing as "the opportunity they probably meant": a card is asked about because its
+   * own button was pressed, or it is not asked about at all. Guessing one would
+   * produce a confident explanation of a suggestion the household never questioned.
+   */
+  selectedOpportunityId?: string;
 }
 
 /**
@@ -79,6 +90,8 @@ export interface ContextFrame {
   readonly temporalAnchor:        string;
   readonly selectedPlannerDayId?: number;
   readonly selectedMealSlot?:     string;
+  /** PHASE5E — pointer to the opportunity card explicitly asked about, if any (see SurfaceHints). */
+  readonly selectedOpportunityId?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -158,6 +171,9 @@ export async function assembleContextFrame(
     // INT40 — pass-through client hints only, never resolved/guessed here.
     selectedPlannerDayId: surfaceHints.selectedPlannerDayId,
     selectedMealSlot: surfaceHints.selectedMealSlot,
+    // PHASE5E — pass-through only, and deliberately WITHOUT the prior-entity-ref
+    // fallback the pointers above have. See SurfaceHints.
+    selectedOpportunityId: surfaceHints.selectedOpportunityId,
   };
 }
 
@@ -177,5 +193,6 @@ export function serializeFrameRef(
     temporalAnchor:      frame.temporalAnchor,
     selectedPlannerDayId: frame.selectedPlannerDayId ?? null,
     selectedMealSlot:     frame.selectedMealSlot     ?? null,
+    selectedOpportunityId: frame.selectedOpportunityId ?? null,
   };
 }

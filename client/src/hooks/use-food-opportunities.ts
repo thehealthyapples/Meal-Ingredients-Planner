@@ -21,6 +21,20 @@ export interface FoodOpportunityEvidence {
   readonly detail: string;
 }
 
+/**
+ * PHASE5E — the canonical entity this opportunity is about, verbatim from the producer
+ * that already knew it. The presentation layer does NOT parse it, key on it, or fetch it;
+ * it exists so a card can ask the Companion "explain THIS one" without reverse-engineering
+ * the producer's prose to work out what "this one" is. Optional, because a future producer
+ * may name none — and a card with no subject simply cannot be explained, which is an
+ * honest gap rather than a defect.
+ */
+export interface FoodOpportunitySubject {
+  readonly entity: string;
+  readonly id: number;
+  readonly label: string;
+}
+
 export interface FoodOpportunity {
   readonly id: string;
   readonly capabilityId: string;
@@ -31,6 +45,7 @@ export interface FoodOpportunity {
   readonly evidence: readonly FoodOpportunityEvidence[];
   readonly suggestedAction: string;
   readonly surface: string;
+  readonly subject?: FoodOpportunitySubject;
 }
 
 export interface FoodOpportunitiesData {

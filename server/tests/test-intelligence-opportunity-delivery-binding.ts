@@ -82,6 +82,10 @@ function makeOpportunity(overrides: Partial<DeliverableOpportunity> = {}): Deliv
     evidence: [],
     suggestedAction: "test",
     surface: "planner",
+    // PHASE5E — the canonical entity the opportunity is about, carried verbatim from the
+    // producer. Optional on OD1's envelope (a future producer may name none), required on
+    // the producer's own type.
+    subject: { entity: "planner-day", id: 1, label: "Wednesday" },
     ...overrides,
   };
 }
@@ -306,7 +310,7 @@ async function main(): Promise<void> {
     p.registerHandler(
       OPPORTUNITY_DELIVERY_CAPABILITY_ID,
       createOpportunityDeliveryHandler(async () => makeFakePort()),
-      ["report", "review", "approve", "delete"],
+      ["report", "explain", "review", "approve", "delete"],
     );
     return p;
   }
@@ -386,6 +390,87 @@ async function main(): Promise<void> {
     "each verb maps to its own distinct target status",
   );
 
+  // ---------------------------------------------------------------------------
+  // §3.5 — PHASE5E: `explain` — narrating ONE opportunity from evidence OD1 already holds
+  //
+  // This is the verb that redeems the affordance PHASE5D built and deleted. Its whole
+  // value is that it CANNOT invent a justification: it returns the producer's own
+  // explanation and the producer's own evidence, verbatim, or it honestly returns
+  // nothing. Both halves are asserted here, and the second half is the important one —
+  // "a confident wrong answer is the worst outcome" (TIP3 §12.2).
+  // ---------------------------------------------------------------------------
+
+  section("§3.5 explain — returns the producer's own evidence, verbatim, and invents nothing");
+
+  const explained = await platform.handle(
+    { verb: "explain", capabilityId: "opportunity-delivery", parameters: { opportunityId: "food-intelligence:planner-empty-day:1" } },
+    user1,
+  );
+  assert(explained.status === "ok", "explain resolves for an opportunity currently being delivered", explained.status);
+  {
+    const r = explained.result as any;
+    const source = makeOpportunity();
+    assert(r.opportunityId === source.id, "explain names the opportunity it explained");
+    assert(r.explanation === source.explanation, "the explanation is the PRODUCER'S, verbatim — never composed here");
+    assert(r.suggestedAction === source.suggestedAction, "the suggested action is the producer's, verbatim");
+    assert(
+      JSON.stringify(r.evidence) === JSON.stringify(source.evidence),
+      "the evidence is the producer's, verbatim and in order — the Decision Engine already produced it",
+    );
+    assert(
+      r.subject?.entity === "planner-day" && r.subject?.id === 1,
+      "the structured subject rides through, so no surface ever parses prose to know what the card is about",
+    );
+  }
+
+  // The trust half. An opportunity that is no longer being delivered — accepted,
+  // dismissed, or simply no longer TRUE — cannot be explained. THA declines to justify a
+  // recommendation it would not make today, rather than handing back a stale rationale.
+  const explainedUnknown = await platform.handle(
+    { verb: "explain", capabilityId: "opportunity-delivery", parameters: { opportunityId: "food-intelligence:planner-empty-day:999" } },
+    user1,
+  );
+  assert(
+    explainedUnknown.status === "gap",
+    "an opportunity that is no longer being delivered yields an HONEST GAP, never a fabricated justification",
+    explainedUnknown.status,
+  );
+
+  const explainedNoId = await platform.handle(
+    { verb: "explain", capabilityId: "opportunity-delivery", parameters: {} },
+    user1,
+  );
+  assert(
+    explainedNoId.status === "gap",
+    "explain without an opportunityId is a gap — this capability explains ONE card, never the domain in general",
+    explainedNoId.status,
+  );
+
+  // `explain` is a READ. It must never transition a delivery record: asking why something
+  // was suggested is not the same as agreeing with it, and must never be recorded as if
+  // it were. (The UI separately fires `review`/acknowledge, which is non-terminal and
+  // emits no Evidence — but that is the CALLER's choice, not a side effect of explaining.)
+  const callsDuringExplain = bindingCalls.filter((c) => c.startsWith("resolveOpportunity"));
+  const callsBefore = callsDuringExplain.length;
+  await platform.handle(
+    { verb: "explain", capabilityId: "opportunity-delivery", parameters: { opportunityId: "food-intelligence:planner-empty-day:1" } },
+    user1,
+  );
+  assert(
+    bindingCalls.filter((c) => c.startsWith("resolveOpportunity")).length === callsBefore,
+    "explain RESOLVES NOTHING — asking why is not accepting, and never writes a delivery status",
+  );
+
+  const explainAnon = await platform.handle(
+    { verb: "explain", capabilityId: "opportunity-delivery", parameters: { opportunityId: "food-intelligence:planner-empty-day:1" } },
+    anon,
+  );
+  assert(
+    explainAnon.status !== "ok",
+    "explain is ownership-scoped like every other verb — an anonymous caller explains nothing",
+    explainAnon.status,
+  );
+
   section("§3 Unsupported intent — verbs outside the allow-list are rejected");
   const searchIntent = await platform.handle({ verb: "search", capabilityId: "opportunity-delivery", parameters: {} }, user1);
   assert(searchIntent.status === "unsupported_intent", "search not in allow-list → unsupported_intent", searchIntent.status);
@@ -403,8 +488,10 @@ async function main(): Promise<void> {
   assert(live.length === 22, "exactly twenty-two live capabilities on the canonical singleton (EL1 adds evidence-learning)", String(live.length));
   const executable = intelligencePlatform.getCapability(OPPORTUNITY_DELIVERY_CAPABILITY_ID)!.executableIntents;
   assert(
-    [...executable].sort().join(",") === ["approve", "delete", "report", "review"].sort().join(","),
-    "executableIntents is exactly report/review/approve/delete — truthful registry (INT6A)",
+    [...executable].sort().join(",") === ["approve", "delete", "explain", "report", "review"].sort().join(","),
+    "executableIntents is exactly report/explain/review/approve/delete — truthful registry (INT6A). " +
+      "PHASE5E added `explain`: a READ verb (ConfirmationTier 'none') that narrates ONE already-delivered " +
+      "opportunity from the evidence OD1 already holds. It collects nothing and resolves nothing.",
     [...executable].sort().join(","),
   );
 

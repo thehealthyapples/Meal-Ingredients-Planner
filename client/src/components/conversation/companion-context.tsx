@@ -66,12 +66,41 @@ export interface CompanionSurfaceHints {
   selectedPlannerDayId?: number;
   /** The meal slot in view alongside `selectedPlannerDayId`. */
   selectedMealSlot?: string;
+  /**
+   * PHASE5E — the ambient opportunity card the household is asking about
+   * (OD1's `DeliverableOpportunity.id`).
+   *
+   * Unlike every other pointer here, this is NOT published by a page describing what is
+   * on screen. It is attached to ONE question, by `askCompanion`, at the moment a
+   * household presses a specific card's "Why this?" button — and it is gone as soon as
+   * that question has been asked. Merely *looking* at a card never sets it.
+   *
+   * That distinction is load-bearing. A pointer that lingered would let a later,
+   * unrelated "why?" ("why is this recipe so slow?") be answered about a card the
+   * household had stopped thinking about — confidently, and about the wrong thing.
+   */
+  selectedOpportunityId?: string;
+}
+
+/**
+ * PHASE5E — a question a surface is asking the Companion on the household's behalf.
+ *
+ * `utterance` is what the household will see in the thread, written by the surface that
+ * knows what its own button promised. `hints` are the pointers that make it answerable.
+ */
+export interface CompanionAsk {
+  readonly utterance: string;
+  readonly hints?: CompanionSurfaceHints;
 }
 
 interface CompanionContextValue {
   /** The pointers the mounted surface has published. Empty when it published none. */
   hints: CompanionSurfaceHints;
   publish: (hints: CompanionSurfaceHints) => void;
+  /** The pending question, if a surface has asked one. Consumed (and cleared) by the assistant. */
+  ask: CompanionAsk | null;
+  askCompanion: (ask: CompanionAsk) => void;
+  clearAsk: () => void;
 }
 
 const CompanionContext = createContext<CompanionContextValue | null>(null);
@@ -85,14 +114,26 @@ const CompanionContext = createContext<CompanionContextValue | null>(null);
  */
 export function CompanionContextProvider({ children }: { children: ReactNode }) {
   const [hints, setHints] = useState<CompanionSurfaceHints>({});
+  const [ask, setAsk] = useState<CompanionAsk | null>(null);
 
   const publish = useCallback((next: CompanionSurfaceHints) => {
     setHints(next);
   }, []);
 
+  // PHASE5E — a surface asks ONE question. The assistant consumes it and clears it, so a
+  // question can never be asked twice, and a stale question can never be re-sent when the
+  // panel is next opened.
+  const askCompanion = useCallback((next: CompanionAsk) => {
+    setAsk(next);
+  }, []);
+
+  const clearAsk = useCallback(() => {
+    setAsk(null);
+  }, []);
+
   const value = useMemo<CompanionContextValue>(
-    () => ({ hints, publish }),
-    [hints, publish],
+    () => ({ hints, publish, ask, askCompanion, clearAsk }),
+    [hints, publish, ask, askCompanion, clearAsk],
   );
 
   return (
@@ -148,27 +189,72 @@ export function useCompanionSurfaceHints(): CompanionSurfaceHints {
   return useCompanionContext()?.hints ?? {};
 }
 
-// ── Deliberately absent: an "ask the Companion about this card" channel ──────
+// ── Ask (surfaces) — "ask the Companion about this card" ────────────────────
 //
-// PHASE5D built one and removed it before shipping, because it had no honest
-// consumer. A "Why this?" button on an ambient opportunity card can do one of two
-// things today, and both are wrong:
+// PHASE5D BUILT THIS CHANNEL AND DELETED IT BEFORE SHIPPING. Its reasoning was right,
+// and it is worth keeping, because it is the reason this version is safe:
 //
-//   • Answer about the DOMAIN. "Why are you suggesting this?" on the planner routes
-//     to `planner.read` — a grounded answer about the week, presented under a button
-//     that promised to explain THAT CARD. The household would believe the Companion
-//     had justified the recommendation. It would not have. That is a trust defect,
-//     and a confident wrong answer is the worst thing this product can produce.
+//   A "Why this?" button on an ambient opportunity card could then do one of two things,
+//   and both were wrong.
 //
-//   • Answer about the OPPORTUNITY — which requires an `explain` intent on
-//     `opportunity-delivery` (it supports report/review/approve/delete only) and a
-//     structured subject on the payload (it carries prose: `explanation`,
-//     `evidence`, `suggestedAction`, and no entity). Composing a question from that
-//     prose means the presentation layer parsing intelligence it does not own; the
-//     capability declines a resolver matcher deliberately (pattern-intent-resolver
-//     .ts §"ONE DELIVERY PATH").
+//     • Answer about the DOMAIN. "Why are you suggesting this?" on the planner routed to
+//       `planner.read` — a grounded answer about the week, presented under a button that
+//       promised to explain THAT CARD. The household would believe the Companion had
+//       justified the recommendation. It would not have. That is a trust defect, and a
+//       confident wrong answer is the worst thing this product can produce.
 //
-// So the affordance is a PHASE5E item with a named blocker, not a thing to
-// improvise. The card already renders the Decision Engine's evidence verbatim under
-// "Why" — that explanation is real, and it is the one we have.
+//     • Answer about the OPPORTUNITY — which required an `explain` intent on
+//       `opportunity-delivery` (it supported report/review/approve/delete only) and a
+//       structured subject on its payload (it carried prose and no entity). Composing a
+//       question from that prose would have meant the presentation layer parsing
+//       intelligence it does not own.
+//
+//   So PHASE5D withdrew the affordance and named the blockers rather than improvise.
+//
+// PHASE5E REMOVED BOTH BLOCKERS, which is what makes the channel honest now:
+//
+//   • `opportunity-delivery` now supports `explain` — a READ verb, bound to a handler
+//     that narrates the evidence the Decision Engine ALREADY produced. It invents no
+//     justification; OD1 has held one all along, and it was simply not addressable.
+//   • Every opportunity now carries a structured `subject`, so nothing parses prose.
+//   • The resolver short-circuits to `opportunity-delivery:explain` when — and ONLY
+//     when — `selectedOpportunityId` is present AND the utterance is why-shaped. Nothing
+//     else can co-fire, so the card asked about is the card answered about.
+//   • An opportunity that is no longer being delivered (accepted, dismissed, or simply
+//     no longer true) yields an HONEST GAP, never a stale justification for a card THA
+//     would not raise today.
+//
+// This channel therefore carries a question, not an answer, and it never carries business
+// data — the same discipline as the pointer channel above.
+
+/**
+ * Ask the one Companion a question, from a surface, on the household's behalf.
+ *
+ * The surface supplies the utterance (it knows what its own button promised) and the
+ * pointers that make it answerable. The assistant opens, shows the question in the
+ * thread as though the household had typed it — because they effectively did — and
+ * answers it through the ordinary gateway. No second assistant, no bypass, no special
+ * response path: it is one more turn.
+ */
+export function useAskCompanion(): (ask: CompanionAsk) => void {
+  const ctx = useCompanionContext();
+  const askCompanion = ctx?.askCompanion;
+  return useCallback(
+    (ask: CompanionAsk) => {
+      askCompanion?.(ask);
+    },
+    [askCompanion],
+  );
+}
+
+// ── Ask (the one assistant) ─────────────────────────────────────────────────
+
+/** The pending question, if any. Read by the FloatingAssistant, by nothing else. */
+export function usePendingAsk(): { ask: CompanionAsk | null; clearAsk: () => void } {
+  const ctx = useCompanionContext();
+  return {
+    ask: ctx?.ask ?? null,
+    clearAsk: ctx?.clearAsk ?? (() => {}),
+  };
+}
 

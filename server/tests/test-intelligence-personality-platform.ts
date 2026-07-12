@@ -583,12 +583,20 @@ assert(resolveBehaviour("wizard").personalityId === DEFAULT_PERSONALITY_ID, "an 
 assert(resolveBehaviour("wizard").confidence === 0, "a defaulted voice reports confidence 0, never a middle value");
 assert(resolveBehaviour(null).overrideReason === "no-stored-preference", "a missing preference is named honestly");
 
-// Surfaces are closed to what is genuinely live: the dormant exports claim none.
+// Surfaces are closed to what is genuinely live. PHASE5E (NTC-P1) wired `phraseNotice`
+// at the notices route, so it now claims its surface — and `phraseGrowth` and
+// `buildCelebration` came live WITH it, because they are reachable only THROUGH
+// `phraseNotice` (growth → phraseGrowth; streak/diversity → buildCelebration). Three
+// phrasers, one seam, one surface: a second or third would promise a transform that no
+// route invokes independently.
 assert(
-  !BEHAVIOUR_SURFACES.includes("notice-voicing" as never) &&
-    !BEHAVIOUR_SURFACES.includes("growth-voicing" as never) &&
+  BEHAVIOUR_SURFACES.includes("notice-voicing"),
+  "PHASE5E (NTC-P1): phraseNotice is live at the notices route, so it claims its surface",
+);
+assert(
+  !BEHAVIOUR_SURFACES.includes("growth-voicing" as never) &&
     !BEHAVIOUR_SURFACES.includes("celebration-voicing" as never),
-  "dormant exports (phraseNotice / phraseGrowth / buildCelebration) still claim NO behaviour surface",
+  "phraseGrowth / buildCelebration claim NO surface of their own — they are branches of phraseNotice, not seams",
 );
 assert(
   BEHAVIOUR_SURFACES.includes("escalation-voicing") &&

@@ -171,11 +171,16 @@ async function main(): Promise<void> {
 
   section("§1 prioritizeOpportunities — stable priority ordering, limit clamping");
 
+  // PHASE5E — every opportunity names the canonical entity it is about. It is a
+  // REQUIRED field on the producer's own type (unlike OD1's envelope, where it is
+  // optional): a generator that cannot say what its opportunity concerns has not
+  // finished identifying one, and a card that cannot name its subject can never be
+  // explained.
   const mixed: FoodOpportunity[] = [
-    { id: "a", type: "pantry-item-unused-in-plan", owningDomain: "pantry", priority: "low", explanation: "a", evidence: [], suggestedAction: "a" },
-    { id: "b", type: "shopping-restriction-conflict", owningDomain: "shopping", priority: "high", explanation: "b", evidence: [], suggestedAction: "b" },
-    { id: "c", type: "planner-empty-day", owningDomain: "planner", priority: "medium", explanation: "c", evidence: [], suggestedAction: "c" },
-    { id: "d", type: "shopping-restriction-conflict", owningDomain: "shopping", priority: "high", explanation: "d", evidence: [], suggestedAction: "d" },
+    { id: "a", type: "pantry-item-unused-in-plan", owningDomain: "pantry", priority: "low", explanation: "a", evidence: [], suggestedAction: "a", subject: { entity: "pantry-item", id: 1, label: "a" } },
+    { id: "b", type: "shopping-restriction-conflict", owningDomain: "shopping", priority: "high", explanation: "b", evidence: [], suggestedAction: "b", subject: { entity: "shopping-item", id: 2, label: "b" } },
+    { id: "c", type: "planner-empty-day", owningDomain: "planner", priority: "medium", explanation: "c", evidence: [], suggestedAction: "c", subject: { entity: "planner-day", id: 3, label: "c" } },
+    { id: "d", type: "shopping-restriction-conflict", owningDomain: "shopping", priority: "high", explanation: "d", evidence: [], suggestedAction: "d", subject: { entity: "shopping-item", id: 4, label: "d" } },
   ];
   const prioritized = prioritizeOpportunities(mixed);
   assert(
@@ -218,6 +223,7 @@ async function main(): Promise<void> {
           explanation: "Wednesday has no meals planned yet.",
           evidence: [{ source: "planner-week", detail: "test" }],
           suggestedAction: "Add a meal to Wednesday.",
+          subject: { entity: "planner-day", id: 1, label: "Wednesday" },
         },
       ],
       trust: { householdAware: true },

@@ -30,12 +30,14 @@ export const OPPORTUNITY_DELIVERY_CAPABILITY_ID = "opportunity-delivery";
 
 /**
  * The verbs this binding actually executes: `report` (collect/dedupe/prioritise/
- * group/deliver), `review` (acknowledge), `approve` (accept), `delete` (dismiss).
- * Declared here so the registry can surface truthful executableIntents and
- * discovery cannot over-advertise (INT6A discipline).
+ * group/deliver), `explain` (PHASE5E — narrate one already-delivered opportunity from
+ * the evidence OD1 already holds), `review` (acknowledge), `approve` (accept),
+ * `delete` (dismiss). Declared here so the registry can surface truthful
+ * executableIntents and discovery cannot over-advertise (INT6A discipline).
  */
 export const OPPORTUNITY_DELIVERY_EXECUTABLE_INTENTS: readonly IntentVerb[] = [
   "report",
+  "explain",
   "review",
   "approve",
   "delete",

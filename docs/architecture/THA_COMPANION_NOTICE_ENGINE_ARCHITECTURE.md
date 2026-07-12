@@ -62,7 +62,9 @@ Seven categories (`NoticeCategory`), five fact kinds, each with exactly one prod
 
 The `opportunity` rows are the load-bearing ones: they arrive **only** through the `opportunity-delivery` capability's `report` verb — never by calling FI4's engine internals — so OD1's muting, duplicate-delivery prevention, and terminal-status suppression have already been applied before the Notice Engine ever sees them. A future Domain Intelligence producer becomes noticeable by registering in OD1's `OPPORTUNITY_SOURCES`, not by touching this engine.
 
-**Named future source (not authorised here):** a **confirmed** EL1 learning signal ("your household consistently swaps out fish meals — want the planner to reflect that?") is the natural eighth notice source. It enters through the same shape — a registered capability (`evidence-learning`) read via the platform, adapted verbatim — and only for signals with `status = confirmed`. A `pending_confirmation` signal is a question for the household, not a notice.
+**~~Named future source (not authorised here)~~ — BUILT (PHASE5E, NTC-P4, 2026-07-12):** a **confirmed** EL1 learning signal ("your household consistently swaps out fish meals — want the planner to reflect that?") is the natural eighth notice source. It enters through the same shape — a registered capability (`evidence-learning`) read via the platform, adapted verbatim — and only for signals with `status = confirmed`. A `pending_confirmation` signal is a question for the household, not a notice.
+
+> The eighth category is `household-learning`, and it shipped **exactly as specified above** — which is the strongest available evidence that this section named the shape correctly rather than merely gesturing at one. It required no new lifecycle, no new store, no new gate, and no amendment to this document: a row in the §2.2 table, a pure producer, and a `NOTICE_SOURCE` entry. The confirmed-only rule is enforced **structurally** in the producer (`noticeLearning` drops any non-`confirmed` status), not merely by the route's query — so a future caller passing the wrong filter cannot make THA announce a preference a household never agreed to.
 
 ### 2.3 What is never noticed
 
@@ -184,9 +186,18 @@ Raising the cap is the Notice Engine's equivalent of raising `CAPABILITY_CONTEXT
 
 ## 7. CURRENT STATE — THE HONEST BASELINE
 
+> **CURRENCY UPDATE (PHASE5E, 2026-07-12).** Item 1 below described the branch as of
+> 2026-07-08 and is **no longer true**: the canonical chain is now **live**. It is kept,
+> struck through in substance rather than deleted, because it is the record of what
+> NTC-P1 was for — and because the shape of the failure it describes is the one this
+> platform keeps repeating (a correct, tested component reached by nothing). **NTC-P1 and
+> NTC-P4 are complete; see §8.** Items 2–4 remain accurate and unchanged.
+>
+> Implementation record: `docs/implementation/intelligence/PHASE5E_PROACTIVE_INTELLIGENCE.md`.
+
 Verified against the branch (`int1-intelligence-platform`, 2026-07-08), not asserted from prior documents:
 
-1. **The engine is code-complete, pure, and tested** (`notice-engine.ts`; `test-intelligence-notice-engine.ts` covers producers, gates, verbatim copying, and the Silence Rules) — and **dormant**. `GET /api/intelligence/companion/notices` (renamed from `GET /api/intelligence/companion/observations` under OBS1 — the route remains unbuilt, so the rename is nominal until NTC-P1 wires it) does not exist in `server/routes.ts`; the client hook `use-companion-observations.ts` names the old path and no component calls the hook. CPA1 §4.3/§5.2 describe this seam as wired; on this branch it is designed but not connected. The same is true of `GET /api/intelligence/food-opportunities` (FI5's `FoodOpportunitiesPanel` has no page consumer) and `GET /api/intelligence/learning-signals` (`LearningSignalsPanel`, likewise).
+1. ~~**The engine is code-complete, pure, and tested** — and **dormant**.~~ **(Superseded by PHASE5E, 2026-07-12.)** The engine was code-complete, pure, and tested (`notice-engine.ts`) and **dormant**. The original finding recorded that `GET /api/intelligence/companion/notices` did not exist and that the client hook `use-companion-observations.ts` named the pre-OBS1 path. The route was subsequently built; **the hook never was**, so it fetched a URL that did not exist, caught the 404, and rendered an empty list — silently. The route additionally returned **raw `Notice` objects and never called `phraseNotice`**, so even a correctly-pointed client would have had a fact with no sentence to render. **PHASE5E fixed both** (retiring the hook for `use-companion-notices.ts`, and voicing every notice through the Behaviour Engine after the Silence Rules select), and wired the FI5 food-opportunities and learning-signals routes/panels. The chain is live end-to-end.
 2. **Live, ungoverned notice channels exist in parallel.** `/api/home/intelligence` and `/api/planner/weeks/:weekId/intelligence` assemble celebration/seasonal/opportunity/insight objects straight from `shared/discovery`, `shared/stories`, `shared/seasonal`; WX7's pantry-opportunities block builds ad-hoc opportunities in `routes.ts`. They share no types with OD1, bypass mute/de-dupe/lifecycle governance and the Silence Rules, and re-surface the same seasonal headline the Notice Engine would. They predate the framework and are **convergence debt, not defects** — and they are the reason "one Notice Engine" needs a governing document rather than a module comment.
 3. **Known duplication inside the canonical lineage**, accepted and named: a second, unrelated `applySilenceRules` in `knowledge-assembly.ts` (same name, different concern — enrichment items; a naming-collision risk), and a priority-rank sort implemented three times (FI4, OD1, Notice Engine) by deliberate layer-independence.
 4. **OD1 has exactly one registered producer** (`food-intelligence`); cross-producer behaviour is proven by synthetic fixtures only.
@@ -197,17 +208,38 @@ Verified against the branch (`int1-intelligence-platform`, 2026-07-08), not asse
 
 Each phase is a separately gated workstream under `ENGINEERING_WORKFLOW.md`. **Nothing below is authorised by this document.** Order is chosen so the canonical chain is proven live before any bypass is converged onto it.
 
-**NTC-P1 — Activate the canonical seam.** Wire `GET /api/intelligence/companion/notices` exactly as CPA1 §5.2 specifies (route performs all I/O — trends, streak, diversity, `opportunity-delivery:report` — each best-effort; engine selects; `phraseNotice` voices; panel renders once per fresh open). Wire the FI5 food-opportunities route/panel and the learning-signals route/panel the same way. *Exit: the dormant chain is live end-to-end; notices reach a real user with Silence Rules applied; resolutions round-trip through OD1's verbs.*
+| Phase | Status | Delivered by |
+|---|---|---|
+| **NTC-P1** — Activate the canonical seam | ✅ **COMPLETE** (2026-07-12) | PHASE5E |
+| **NTC-P2** — Converge the parallel notice channels | ⬜ Not started | — |
+| **NTC-P3** — Second real producer | ⬜ Not started | — |
+| **NTC-P4** — Learning-signal notices | ✅ **COMPLETE** (2026-07-12) | PHASE5E |
+| **NTC-P5** — Cross-session memory (only if evidence demands it) | ⬜ Not started — **now has its first evidence** (§8 note) | — |
+| **NTC-P6** — In-turn grounding via the CCE | 🟡 **Partial** (§8 note) | PHASE5E |
+
+> **NTC-P4 was taken out of order, deliberately.** The rollout's ordering constraint is that *"the canonical chain is proven live before any bypass is converged onto it"* — that constraint governs **NTC-P2** (convergence), which remains unstarted. NTC-P4 adds a **source** to the chain NTC-P1 had just made live, converges nothing, and touches no bypass. Both landed in one workstream because P4 is ~40 lines over a seam P1 had to build anyway, and shipping P1 without it would have activated a proactive channel that could not tell a household the one thing they had explicitly confirmed about themselves.
+
+**NTC-P1 — Activate the canonical seam.** ✅ **COMPLETE (PHASE5E, 2026-07-12).** Wire `GET /api/intelligence/companion/notices` exactly as CPA1 §5.2 specifies (route performs all I/O — trends, streak, diversity, `opportunity-delivery:report` — each best-effort; engine selects; `phraseNotice` voices; panel renders once per fresh open). Wire the FI5 food-opportunities route/panel and the learning-signals route/panel the same way. *Exit: the dormant chain is live end-to-end; notices reach a real user with Silence Rules applied; resolutions round-trip through OD1's verbs.*
+>
+> **Exit met.** The route gathers from six owners, `applySilenceRules` selects, and **`phraseNotice` voices every survivor** — the Behaviour Engine's notice seam, dormant since EWX1, now claims its `notice-voicing` surface (BEH1: *"a surface is a promise that a transform ran"*). The client hook was pointed at a route that did not exist and is **retired** (`use-companion-observations.ts` → `use-companion-notices.ts`); a latent client-side `.slice(0, 3)` — a second attention budget — was removed with it. The FI5 opportunities panel (PHASE5C) and the learning-signals panel resolve through OD1's verbs, and their terminal resolutions emit Evidence (PHASE5B).
 
 **NTC-P2 — Converge the parallel notice channels.** One surface at a time, re-point `/api/home/intelligence`, `/api/planner/.../intelligence`, and the WX7 pantry block at the canonical pipeline: opportunities via `opportunity-delivery:report` (registering `shared/discovery`-backed producers in `OPPORTUNITY_SOURCES` where they earn it), seasonal/celebration via the notice categories that already exist for them. Existing UI contracts may keep their response shapes as thin projections; what converges is the *source and governance*, not the pixels. *Exit: no notice reaches a user except through OD1 governance + Silence Rules; the bypass assemblies in `routes.ts` are consumers, not second engines.*
 
 **NTC-P3 — Second real producer.** Register a second Domain Intelligence producer in `OPPORTUNITY_SOURCES` (OD1's own named next milestone), proving cross-producer prioritise/group/de-dupe against real data and retiring the synthetic-fixture caveat. *Exit: two live producers, zero changes to collection logic.*
 
-**NTC-P4 — Learning-signal notices.** Adapt **confirmed** EL1 signals as a notice source, with household confirmation remaining EL1's gate and the engine adapting verbatim. *Exit: a confirmed signal can be noticed; a pending one never is.*
+**NTC-P4 — Learning-signal notices.** ✅ **COMPLETE (PHASE5E, 2026-07-12).** Adapt **confirmed** EL1 signals as a notice source, with household confirmation remaining EL1's gate and the engine adapting verbatim. *Exit: a confirmed signal can be noticed; a pending one never is.*
+>
+> **Exit met.** `household-learning` is the eighth category (§2.2's named future source), produced by `noticeLearning()` over `evidence-learning:search { status: "confirmed" }` — read through the registered capability on the ordinary platform path, never by importing EL1's store. The producer **drops any signal whose status is not `confirmed`**, structurally, so a future caller passing the wrong query cannot make THA announce a preference the household never agreed to. EL1's `rationale` crosses the voice seam **verbatim** — the Behaviour Engine may prefix it and may never reword it, because a paraphrase is where *"you tend to skip fish on weeknights"* quietly becomes *"you don't like fish"*, which is a different and unearned claim. Priority is always `low`: a confirmed preference is a calm fact, never a demand for attention.
 
 **NTC-P5 — Cross-session memory (only if evidence demands it).** If NTC-P1 telemetry shows repeat-notice fatigue is real, take `companion_observation_log` (CPA1 §11 G6) through its own Rule 8 review. *Exit: notices can be genuinely dated; still zero producer content persisted.*
+>
+> **PHASE5E note — the evidence this phase waits for now exists, and this phase is the reason it is not acted on.** The Notice Engine is stateless, so a notice can repeat every session (CPA1 §11 G6). Before PHASE5E that cost was theoretical, because no notice reached anyone. It is now real, and it is the single largest gap PHASE5E leaves. It is **deliberately not closed here**: closing it means persisting delivery of a notice, which is a new store, which is this phase's own Rule 8 review — not a thing to slip into an activation workstream. PHASE5E states the gap plainly rather than pre-empting the gate.
 
-**NTC-P6 — In-turn grounding via the CCE (optional, last).** If the Companion should reference its own notices mid-conversation, expose them as a capability Full Result with a Context View, composed by the Context Composition Engine like any other grounding. *Exit: the model can see notices; the Notice Engine still emits no prompt bytes.*
+**NTC-P6 — In-turn grounding via the CCE (optional, last).** 🟡 **PARTIAL (PHASE5E, 2026-07-12).** If the Companion should reference its own notices mid-conversation, expose them as a capability Full Result with a Context View, composed by the Context Composition Engine like any other grounding. *Exit: the model can see notices; the Notice Engine still emits no prompt bytes.*
+>
+> **What PHASE5E delivered, and what it did not.** An **opportunity** can now be explained mid-conversation: `opportunity-delivery` gained an `explain` verb (a READ; ConfirmationTier `none`) whose Full Result carries the opportunity's own explanation, evidence and structured subject, and which has a registered Context View (`opportunity-delivery:explain`) with **`evidence` PINNED** — so the model can never be handed a recommendation stripped of its justification and left to invent one. It is composed by the Context Composition Engine under INT17's budget, like any other grounding.
+>
+> **The §5.3 boundary is intact and was never approached.** That path exposes an **opportunity** — a registered capability's Full Result — not a **Notice**. The Notice Engine still emits **zero prompt bytes**, holds no reference to the CCE, and remains a pure, zero-I/O selector. A Notice is still request-scoped, unpersisted, and invisible to the model. What P6 additionally contemplates — the Companion saying *"I mentioned your empty Thursday earlier"* — requires the model to see the **notice**, and that remains unbuilt and ungated.
 
 ---
 

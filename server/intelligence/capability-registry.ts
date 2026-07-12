@@ -696,8 +696,8 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     // exists is a defect in the projection, not a stylistic quibble. PHASE5B added these
     // routes; the descriptor still said "no dedicated HTTP route". Both are transport
     // only — every one goes through intelligencePlatform.handle(), never around it.
-    apiSurface: "GET /api/intelligence/food-opportunities (report) · POST /api/intelligence/food-opportunities/:opportunityId/:action where action ∈ acknowledge→review | accept→approve | dismiss→delete (PHASE5B). Transport only: routed through the Intent Engine, never around it. Also consumed platform-internally by GET /api/intelligence/companion/notices.",
-    supportedIntents: ["report", "review", "approve", "delete"],
+    apiSurface: "GET /api/intelligence/food-opportunities (report) · POST /api/intelligence/food-opportunities/:opportunityId/:action where action ∈ acknowledge→review | accept→approve | dismiss→delete (PHASE5B). Transport only: routed through the Intent Engine, never around it. Also consumed platform-internally by GET /api/intelligence/companion/notices. PHASE5E — `explain` has NO dedicated HTTP route by design: it is reached only through the one Conversation Gateway (POST /api/intelligence/conversation/turn), because explaining a suggestion is a conversation, not a second delivery channel.",
+    supportedIntents: ["report", "explain", "review", "approve", "delete"],
     executableIntents: [],
     permissions: { minimumRole: "user", knowledgeClass: "public", ownershipScoped: true, audited: false },
     capabilityClass: "write",

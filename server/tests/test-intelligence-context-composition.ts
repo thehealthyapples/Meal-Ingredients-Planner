@@ -712,13 +712,22 @@ async function main(): Promise<void> {
   section("§13 NCV1: native Context Views for the platform's highest-value capabilities");
   {
     // (a) The registry is the ONE canonical owner, and it answers about itself.
-    //     Seven views over six capabilities: `meals` declares one per executable verb.
-    assert(NATIVE_CONTEXT_VIEW_KEYS.length === 7, `seven native Context Views are registered (${NATIVE_CONTEXT_VIEW_KEYS.length})`);
+    //     Eight views over seven capabilities: `meals` declares one per executable verb,
+    //     and PHASE5E added `opportunity-delivery:explain` — the view that grounds the
+    //     model on ONE opportunity's own evidence when a household asks "Why this?".
+    assert(NATIVE_CONTEXT_VIEW_KEYS.length === 8, `eight native Context Views are registered (${NATIVE_CONTEXT_VIEW_KEYS.length})`);
     assert(
-      new Set(NATIVE_CONTEXT_VIEW_KEYS.map(k => k.split(":")[0])).size === 6,
-      "…across the six capabilities NCV1 prioritised",
+      new Set(NATIVE_CONTEXT_VIEW_KEYS.map(k => k.split(":")[0])).size === 7,
+      "…across the six capabilities NCV1 prioritised, plus PHASE5E's opportunity-delivery",
     );
-    for (const key of ["profile:read", "food-intelligence:report", "meals:read", "meals:search", "planner:read", "shopping:read", "household:read"]) {
+    // PHASE5E — `evidence` is PINNED on the explain view, and that is the whole point:
+    // a pinned field is emitted even when EMPTY, so the model can never be handed a
+    // recommendation stripped of its justification and left to invent one.
+    assert(
+      CONTEXT_VIEW_SPECS["opportunity-delivery:explain"]?.pinned?.includes("evidence") === true,
+      "opportunity-delivery:explain PINS evidence — a recommendation never reaches the model uncited",
+    );
+    for (const key of ["profile:read", "food-intelligence:report", "meals:read", "meals:search", "planner:read", "shopping:read", "household:read", "opportunity-delivery:explain"]) {
       const [id, verb] = key.split(":");
       const registered = key in CONTEXT_VIEW_SPECS;
       if (registered) assert(hasNativeContextView(id, verb), `hasNativeContextView agrees for ${key}`);

@@ -10,6 +10,11 @@
  * VERB MAPPING (the closed, canonical 20-verb taxonomy — no new verb invented):
  *   report  — collect, dedupe, prioritise, group and deliver the caller's current
  *             opportunities across every registered producer.
+ *   explain — PHASE5E. Narrate ONE already-delivered opportunity from the evidence the
+ *             Decision Engine already produced. A READ verb (permissions.ts
+ *             READ_ONLY_VERBS → ConfirmationTier "none"): it collects nothing new,
+ *             resolves nothing, and writes nothing. Adds no reasoning — see
+ *             `handleExplain`.
  *   review  — acknowledge an opportunity (mark seen; non-terminal, still delivered
  *             on future reports until dismissed or accepted).
  *   approve — accept an opportunity (terminal; never redelivered).
@@ -42,6 +47,10 @@ import type {
   OpportunityResolution,
 } from "../opportunity-delivery/framework.js";
 import type { OpportunityDeliveryStatus } from "../opportunity-delivery/delivery-store.js";
+// DEC1 — the one canonical delivery budget. `explain` searches the FULL delivered set
+// rather than the caller's display limit, so a card is never unexplainable purely
+// because it sat below a surface's own cap. The constant is imported, never restated.
+import { DELIVERY_MAX_LIMIT } from "../../../shared/attention/decision.js";
 import { toInt, requireUserId, gap } from "./_read-kit.js";
 
 // ---------------------------------------------------------------------------
@@ -56,6 +65,35 @@ export interface OpportunityDeliveryReportResult {
 }
 
 export interface OpportunityResolutionResult extends OpportunityResolution {
+  readonly source: "opportunity-delivery-framework";
+}
+
+/**
+ * PHASE5E — the result of `explain`: ONE already-delivered opportunity, narrated
+ * from what the Decision Engine already holds.
+ *
+ * Every field is a VERBATIM projection of the opportunity the framework already
+ * produced. This handler computes nothing, re-ranks nothing, and adds not one
+ * sentence of its own — the "narration" IS the producer's `explanation`, the
+ * producer's `evidence`, and the producer's `suggestedAction`, returned as a
+ * structured Full Result so the Context Composition Engine (INT17) can ground the
+ * model on them under its own budget.
+ *
+ * That is the entire point: PHASE5D withdrew the "Why this?" affordance because the
+ * only reachable answer was about the DOMAIN, not the card. The evidence that
+ * justifies the card has existed all along — it was simply not addressable. This
+ * makes it addressable. It does not invent it.
+ */
+export interface OpportunityExplanationResult {
+  readonly opportunityId: string;
+  readonly capabilityId: string;
+  readonly domain: string;
+  readonly type: string;
+  readonly priority: DeliverableOpportunity["priority"];
+  readonly explanation: string;
+  readonly evidence: DeliverableOpportunity["evidence"];
+  readonly suggestedAction: string;
+  readonly subject?: DeliverableOpportunity["subject"];
   readonly source: "opportunity-delivery-framework";
 }
 
@@ -133,6 +171,78 @@ async function handleReport(
   };
 }
 
+/**
+ * PHASE5E — `explain`: narrate ONE opportunity from the Decision Engine's own output.
+ *
+ * WHY IT RE-COLLECTS. An opportunity's CONTENT is never persisted — OD1 stores only
+ * the delivery lifecycle (`opportunity_deliveries`: who saw what, and how it ended).
+ * The Notice Engine architecture §3 makes that a rule, not an accident: "The
+ * opportunity … recomputed fresh per request. **Never persisted.**" So the only
+ * honest way to explain one is to recompute the household's current opportunities and
+ * find it — through the SAME `collectOpportunities` path every other surface uses,
+ * never by reaching into FI4's engine internals or a producer's tables.
+ *
+ * Three consequences, all of them correct:
+ *
+ *   • An opportunity the household already ACCEPTED or DISMISSED is suppressed by the
+ *     framework's own lifecycle filter, so it is not found here — and the household is
+ *     told honestly that it is no longer active, rather than being handed an
+ *     explanation for a card that no longer exists.
+ *   • An opportunity that has become UNTRUE since it was rendered (they filled the
+ *     empty day in another tab) is likewise not found. THA declines to explain a
+ *     recommendation it would no longer make. A stale explanation is a confident wrong
+ *     answer, which TIP3 §12.2 names as the worst thing this product can produce.
+ *   • It asks for the FULL delivery budget, not the default, so an explanation is never
+ *     refused merely because the card sat below the caller's display limit.
+ *
+ * NO `delivery-decision` OBSERVATION IS RECORDED HERE. DEC1 §5 scopes that capture to
+ * "delivery moments only (the `report` choke point)". Explaining a card the household
+ * is already looking at is not a delivery moment, and recording one would corrupt the
+ * operator's count of what THA actually surfaced.
+ */
+async function handleExplain(
+  intent: Intent,
+  context: IntelligenceContext,
+  port: OpportunityDeliveryReadPort,
+): Promise<OpportunityExplanationResult> {
+  const params = intent.parameters ?? {};
+  const opportunityId = toOpportunityId(params.opportunityId);
+  const userId = requireUserId(context, "Opportunity Delivery");
+
+  if (!opportunityId) {
+    throw gap(
+      'Explaining an opportunity needs { opportunityId } — the id returned by a prior "report" call. ' +
+        "This capability explains one already-delivered suggestion; it never explains the domain in general.",
+    );
+  }
+
+  const bundle = await port.collectOpportunities({ userId, limit: DELIVERY_MAX_LIMIT });
+  const found = bundle.opportunities.find((o) => o.id === opportunityId);
+
+  if (!found) {
+    // Honest gap — never a fabricated justification, and never a fallback answer about
+    // the domain (the trust defect PHASE5D §9.1 refused to ship).
+    throw gap(
+      `Honest gap: no active opportunity with id ${JSON.stringify(opportunityId)} is currently being delivered to ` +
+        "you. It may have been accepted, dismissed, or it may simply no longer be true — in which case there is " +
+        "nothing left to explain.",
+    );
+  }
+
+  return {
+    opportunityId: found.id,
+    capabilityId: found.capabilityId,
+    domain: found.domain,
+    type: found.type,
+    priority: found.priority,
+    explanation: found.explanation,
+    evidence: found.evidence,
+    suggestedAction: found.suggestedAction,
+    subject: found.subject,
+    source: "opportunity-delivery-framework",
+  };
+}
+
 async function handleResolve(
   intent: Intent,
   context: IntelligenceContext,
@@ -175,6 +285,8 @@ export function createOpportunityDeliveryHandler(
     switch (intent.verb) {
       case "report":
         return handleReport(intent, context, await resolvePort());
+      case "explain":
+        return handleExplain(intent, context, await resolvePort());
       case "review":
         return handleResolve(intent, context, await resolvePort(), "acknowledged");
       case "approve":
@@ -184,9 +296,9 @@ export function createOpportunityDeliveryHandler(
       default:
         throw new CapabilityExecutionError(
           "gap",
-          `Opportunity Delivery is bound to the Intelligence Platform for "report"/"review"/"approve"/"delete" only: ` +
-            `"${intent.verb}" is not executable via the platform. This framework never writes to any producer's own ` +
-            "business domain — see the producer's own registered capability for that.",
+          `Opportunity Delivery is bound to the Intelligence Platform for "report"/"explain"/"review"/"approve"/` +
+            `"delete" only: "${intent.verb}" is not executable via the platform. This framework never writes to any ` +
+            "producer's own business domain — see the producer's own registered capability for that.",
           intent.verb,
         );
     }

@@ -271,6 +271,14 @@ export function phraseNotice(notice: Notice, personalityId: PersonalityId): stri
       // already use — no new per-personality template content is added for
       // seasonal phrasing (IA2).
       return voiceGuidanceLabel(fact.headline, personalityId);
+    case "learning":
+      // PHASE5E (NTC-P4) — the SAME generic prefix mechanism again. `rationale` is
+      // EL1's own sentence, written to explain itself (ET6), and it crosses this seam
+      // VERBATIM: the voice may prefix it, and may never reword it. THA must not
+      // paraphrase what it claims to have learned about a household — the paraphrase
+      // is where "you tend to skip fish on weeknights" quietly becomes "you don't like
+      // fish", which is a different and unearned claim.
+      return voiceGuidanceLabel(fact.rationale, personalityId);
   }
 }
 
@@ -290,11 +298,20 @@ export function phraseNotice(notice: Notice, personalityId: PersonalityId): stri
  * genuinely LIVE — a surface is listed here only once the engine actually
  * transforms output at it.
  *
- * CP2 adds the three surfaces it wired (`escalation-voicing`,
- * `degradation-voicing`, `greeting-voicing`) and no others. `phraseGrowth`,
- * `phraseNotice` and `buildCelebration` are still code-complete and dormant —
- * their route belongs to NTC-P1, not to this workstream — so they continue to
- * name NO surface. A surface here is a promise that a transform ran.
+ * CP2 added the three surfaces it wired (`escalation-voicing`,
+ * `degradation-voicing`, `greeting-voicing`) and no others, and recorded that
+ * `phraseGrowth`, `phraseNotice` and `buildCelebration` were still code-complete
+ * and dormant — "their route belongs to NTC-P1, not to this workstream" — so they
+ * named NO surface.
+ *
+ * PHASE5E IS NTC-P1. `notice-voicing` is added here because the transform now
+ * genuinely runs: `GET /api/intelligence/companion/notices` calls `phraseNotice`
+ * on every notice it returns, and Home renders the voiced sentence. Before this
+ * workstream that route returned raw `Notice` objects — a fact with no sentence —
+ * and the client hook fetched a URL that did not exist, so nothing was ever
+ * voiced and nothing was ever read.
+ *
+ * A surface here is a promise that a transform ran. This one now does.
  */
 export const BEHAVIOUR_SURFACES = [
   /** The additive tone paragraph appended AFTER the gateway's five hard rules. */
@@ -309,6 +326,13 @@ export const BEHAVIOUR_SURFACES = [
   "degradation-voicing",
   /** CP2 — the Companion panel's empty-state greeting + invitation (was hardcoded in the client). */
   "greeting-voicing",
+  /**
+   * PHASE5E (NTC-P1) — an ambient Notice, voiced by `phraseNotice`. The Silence Rules
+   * choose WHICH notices and HOW MANY (at most two); this seam chooses only how the
+   * chosen ones SOUND. Selection is never influenced by voice, and voice never
+   * introduces a fact: every notice's content crosses this seam verbatim.
+   */
+  "notice-voicing",
 ] as const;
 
 export type BehaviourSurface = (typeof BEHAVIOUR_SURFACES)[number];

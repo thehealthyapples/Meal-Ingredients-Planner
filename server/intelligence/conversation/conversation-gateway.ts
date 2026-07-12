@@ -546,6 +546,10 @@ async function buildGroundedResponse(
     currentFoodSlug:     frame.currentFoodSlug,
     activePlannerWeekId: frame.activePlannerWeekId,
     selectedMealId:      frame.selectedMealId,
+    // PHASE5E — the card the household pressed "Why this?" on, if any. The resolver
+    // short-circuits to `opportunity-delivery:explain` when this is present AND the
+    // utterance is why-shaped; otherwise it is inert.
+    selectedOpportunityId: frame.selectedOpportunityId,
   };
   const resolveStarted = Date.now();
   const resolvedIntents = await intentResolver.resolve(utterance, hints);

@@ -381,6 +381,22 @@ export const CONTEXT_VIEW_SPECS: Readonly<Record<string, ContextViewSpec>> = {
       },
     ],
   },
+  /**
+   * PHASE5E — `opportunity-delivery:explain`. ONE opportunity, narrated.
+   *
+   * `evidence` is PINNED. That is the entire point of this view: a pinned field is
+   * emitted even when EMPTY (absence ≠ emptiness), so the model can never be handed a
+   * recommendation stripped of its justification and left to invent one. If OD1 held no
+   * evidence, the model sees that it held none — and says so.
+   *
+   * The result is a single object, so `explanation`, `suggestedAction`, `priority`,
+   * `type` and `subject` flow to the engine as ordinary scalars and are ranked against
+   * the utterance like any other leaf. Only the two fields that MUST survive the budget
+   * intact are pinned.
+   */
+  "opportunity-delivery:explain": {
+    pinned: ["explanation", "evidence"],
+  },
   "meals:read": {
     collections: [
       {

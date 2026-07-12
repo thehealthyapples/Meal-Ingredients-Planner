@@ -9,7 +9,9 @@
 //   • Today's meals  → /api/planner/full + /api/meals (Planner state)
 //   • Shopping        → /api/shopping-list      (Shopping state)
 //   • Plant diversity → /api/home/intelligence  (weeklyProgress.plantCount)
-//   • Reminders       → useCompanionObservations (Notice Engine projection)
+//   • Reminders       → useCompanionNotices (the Notice Engine, voiced by the Behaviour
+//                       Engine). PHASE5E: this was pointed at a route that did not
+//                       exist, so the section has been silently empty since OBS1.
 // No new store, no duplicate state, no second assistant. Honest gaps: a section
 // that has no validated data renders as a calm empty state, never fabricated.
 
@@ -20,7 +22,7 @@ import type { Meal } from "@shared/schema";
 import type { FullWeek } from "@/lib/planner-types";
 import { api } from "@shared/routes";
 import { useUser } from "@/hooks/use-user";
-import { useCompanionObservations } from "@/hooks/use-companion-observations";
+import { useCompanionNotices } from "@/hooks/use-companion-notices";
 import { WorkspaceHeader } from "@/components/workspace-header";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -103,7 +105,7 @@ export default function HomeExperiencePage() {
     enabled: !!user,
     staleTime: 5 * 60 * 1000,
   });
-  const { data: observationsData } = useCompanionObservations(!!user);
+  const { data: noticesData } = useCompanionNotices(!!user);
 
   // Today's planned meals — active week, calendar day-of-week. The planner is
   // week-number based (no stored date), so "today" is derived, not queried.
@@ -132,9 +134,19 @@ export default function HomeExperiencePage() {
   const plantCount = homeIntel?.weeklyProgress?.plantCount ?? 0;
   const plantPct = Math.min(100, Math.round((plantCount / WEEKLY_PLANT_TARGET) * 100));
 
-  // Reminders — server already applied Silence Rules + ranking + voicing. We
-  // show a calm few and never fabricate: no notices → the section is absent.
-  const reminders = (observationsData?.observations ?? []).slice(0, 3);
+  // Reminders — the Notice Engine's Silence Rules already chose WHICH notices and HOW
+  // MANY (at most two per moment), and the Behaviour Engine already voiced each one in
+  // the household's chosen personality. Both happened server-side, once.
+  //
+  // PHASE5E removed a `.slice(0, 3)` that used to sit here. It never bit (the server's
+  // cap is two), but it was a SECOND attention budget on the client — and "callers must
+  // never re-sort or re-slice a gathered list themselves" is precisely what the Notice
+  // Engine owns and its §9 forbids. A latent second budget is still a second budget: the
+  // day someone raised MAX_NOTICES_PER_MOMENT, this line would have silently overruled
+  // them from the wrong layer.
+  //
+  // No notices → the section is absent. Silence is a first-class outcome, never padded.
+  const reminders = noticesData?.notices ?? [];
 
   const name = firstNameOf(user);
 
@@ -293,11 +305,12 @@ export default function HomeExperiencePage() {
                 <ul className="space-y-2.5" data-testid="list-home-reminders">
                   {reminders.map((o, i) => (
                     <li
-                      key={`${o.category}-${i}`}
+                      key={o.id}
                       className="flex items-start gap-2.5 text-sm text-foreground/80 leading-relaxed"
                       data-testid={`home-reminder-${i}`}
                     >
                       <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-primary/40 shrink-0" />
+                      {/* The Behaviour Engine's sentence, rendered verbatim. Never reworded here. */}
                       <span>{o.text}</span>
                     </li>
                   ))}

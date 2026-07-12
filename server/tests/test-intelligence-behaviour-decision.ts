@@ -561,20 +561,54 @@ async function main(): Promise<void> {
   }
 
   {
-    // CP2 wired three more seams (escalation, degradation, greeting) and named
-    // the three outcomes they produce. The vocabularies stay closed — they grew
-    // by exactly what shipped, and by nothing that is merely imaginable.
-    assert(BEHAVIOUR_SURFACES.length === 6, "the surface vocabulary is closed to the six live seams");
+    // CP2 wired three seams (escalation, degradation, greeting) and named the three
+    // outcomes they produce. PHASE5E — which IS the NTC-P1 this file's previous
+    // assertion was waiting for — wires the seventh: `notice-voicing`. The vocabularies
+    // stay closed: they grew by exactly what shipped, and by nothing merely imaginable.
+    assert(BEHAVIOUR_SURFACES.length === 7, "the surface vocabulary is closed to the seven live seams");
     assert(BEHAVIOUR_OUTCOMES.length === 7, "the outcome vocabulary is closed");
+
+    // The inverted assertion. It used to read: "dormant seams (phraseNotice /
+    // phraseGrowth / buildCelebration) claim no surface until NTC-P1 wires their
+    // route." NTC-P1 has now wired it, so the surface is claimed — and the discipline
+    // it was protecting ("a surface here is a promise that a transform ran") is
+    // preserved by asserting the transform, not by asserting the absence.
     assert(
-      !BEHAVIOUR_SURFACES.some(
-        (s) =>
-          (s as string).includes("notice") ||
-          (s as string).includes("growth") ||
-          (s as string).includes("celebration"),
-      ),
-      "dormant seams (phraseNotice / phraseGrowth / buildCelebration) claim no surface until NTC-P1 wires their route",
+      BEHAVIOUR_SURFACES.includes("notice-voicing"),
+      "PHASE5E (NTC-P1): the notice voice seam is live, so it claims its surface",
     );
+
+    // ONE surface covers all THREE phrasers, and that is not an oversight.
+    // `phraseGrowth` and `buildCelebration` are unreachable except THROUGH
+    // `phraseNotice` (growth → phraseGrowth; streak/diversity → buildCelebration), so
+    // they are not three seams — they are three branches of one. A second or third
+    // surface would promise transforms that no route invokes independently.
+    const here = dirname(fileURLToPath(import.meta.url));
+    const noticeEngine = readFileSync(resolve(here, "../intelligence/conversation/behaviour-engine.ts"), "utf8");
+    const phraseNoticeBody = noticeEngine.slice(noticeEngine.indexOf("export function phraseNotice"));
+    for (const phraser of ["phraseGrowth(", "buildCelebration("]) {
+      assert(
+        phraseNoticeBody.slice(0, phraseNoticeBody.indexOf("\n}\n")).includes(phraser),
+        `${phraser.slice(0, -1)} is reached THROUGH phraseNotice — which is why one surface covers all three`,
+      );
+    }
+
+    // The promise itself: the route the surface names must actually run the transform.
+    // Before PHASE5E this route returned raw Notice objects — a fact with no sentence.
+    const routes = readFileSync(resolve(here, "../routes.ts"), "utf8");
+    const noticesRoute = routes.slice(
+      routes.indexOf('app.get("/api/intelligence/companion/notices"'),
+      routes.indexOf('app.get("/api/intelligence/food-opportunities"'),
+    );
+    assert(
+      noticesRoute.includes("phraseNotice("),
+      "the notices route VOICES every notice it returns — a surface is a promise that a transform ran",
+    );
+    assert(
+      noticesRoute.indexOf("applySilenceRules(") < noticesRoute.indexOf("phraseNotice("),
+      "voicing happens AFTER selection: the Behaviour Engine may change how a notice sounds, never which one is shown",
+    );
+
     assert(
       BEHAVIOUR_OUTCOMES.includes("not-voiced"),
       "`not-voiced` is retained even though CP2 leaves no gateway path that emits it — " +

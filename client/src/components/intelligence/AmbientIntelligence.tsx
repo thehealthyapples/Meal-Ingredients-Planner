@@ -59,7 +59,11 @@ export default function AmbientIntelligence({
   className,
   ...rest
 }: AmbientIntelligenceProps) {
-  const { data, isPending, isResolving, accept, dismiss } = useFoodOpportunities();
+  // PHASE5E — `acknowledge` is passed through for the first time. It has been plumbed
+  // end-to-end since PHASE5B (route, verb, lifecycle, ordering) with no UI caller, so
+  // COACH1's "seen yields to unseen" ordering had no signal to order by. The card fires
+  // it when the household asks the Companion "Why this?".
+  const { data, isPending, isResolving, accept, dismiss, acknowledge } = useFoodOpportunities();
   const storageKey = `tha.ambient.${surfaceKey}`;
 
   const [expanded, setExpanded] = useState<boolean>(() => {
@@ -164,6 +168,7 @@ export default function AmbientIntelligence({
                     opportunity={o}
                     onAccept={accept}
                     onDismiss={dismiss}
+                    onAcknowledge={acknowledge}
                     busy={isResolving}
                   />
                 ))}

@@ -117,6 +117,27 @@ import type {
 /** DEC1 — an alias of the one canonical `EvidenceCitation` (shared/attention/decision.ts); the local re-declaration is retired. */
 export type OpportunityEvidence = EvidenceCitation;
 
+/**
+ * PHASE5E — the canonical entity an opportunity is about, carried VERBATIM from the
+ * producer that already knew it (FI4's `FoodOpportunitySubject`).
+ *
+ * The Decision Engine does not interpret this, key on it, rank by it, or dereference
+ * it. It carries it, exactly as it already carries `explanation` and `evidence` —
+ * because the surface that renders an opportunity must be able to ask "explain THIS
+ * one" without parsing the producer's prose to work out what "this one" is.
+ *
+ * `entity` is deliberately a plain `string` here and a closed union at the producer:
+ * the engine owns no producer's entity vocabulary (DEC1 §3 — the engine never absorbs
+ * Selection, and an entity taxonomy is the producer's, not the framework's).
+ * `optional` because a future producer may have no single subject; a card without one
+ * simply cannot be explained, which is an honest gap, not a defect.
+ */
+export interface OpportunitySubject {
+  readonly entity: string;
+  readonly id: number;
+  readonly label: string;
+}
+
 /** One opportunity ready for delivery — a generic envelope over any producer's own opportunity shape. */
 export interface DeliverableOpportunity {
   /** Globally unique across producers: `${capabilityId}:${producer's own opportunity id}`. */
@@ -129,6 +150,8 @@ export interface DeliverableOpportunity {
   readonly evidence: readonly OpportunityEvidence[];
   readonly suggestedAction: string;
   readonly surface: ConversationSurface;
+  /** PHASE5E — verbatim from the producer. Absent when the producer named none. */
+  readonly subject?: OpportunitySubject;
 }
 
 export interface OpportunityDeliveryTrust {
@@ -193,6 +216,21 @@ interface RawOpportunity {
   readonly explanation: string;
   readonly evidence: readonly OpportunityEvidence[];
   readonly suggestedAction: string;
+  readonly subject?: OpportunitySubject;
+}
+
+/**
+ * PHASE5E — validates a producer's subject without interpreting it. A malformed
+ * subject is DROPPED (the opportunity still delivers, and simply cannot be explained)
+ * rather than throwing: an opportunity is worth surfacing even if it cannot narrate
+ * itself, and a producer's shape error must not silence a `critical` safety card.
+ */
+function adaptSubject(value: unknown): OpportunitySubject | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const s = value as Record<string, unknown>;
+  if (typeof s.entity !== "string" || typeof s.label !== "string") return undefined;
+  if (typeof s.id !== "number" || !Number.isFinite(s.id)) return undefined;
+  return { entity: s.entity, id: s.id, label: s.label };
 }
 
 interface OpportunitySource {
@@ -233,6 +271,7 @@ function adaptFoodIntelligence(result: unknown): readonly RawOpportunity[] {
       explanation: rec.explanation,
       evidence,
       suggestedAction: rec.suggestedAction,
+      subject: adaptSubject(rec.subject),
     });
   }
   return raw;
@@ -753,6 +792,7 @@ async function collectFromProducers(
           evidence: raw.evidence,
           suggestedAction: raw.suggestedAction,
           surface: selectSurface(raw.domain),
+          subject: raw.subject,
         });
         offered += 1;
       }

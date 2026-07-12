@@ -26,10 +26,11 @@
 // `suggestedAction` is the plain-language "clear next action" a household
 // member can take themselves.
 
-import { Check, ShieldAlert, Sparkles, X } from "lucide-react";
+import { Check, HelpCircle, ShieldAlert, Sparkles, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IntelligenceCard } from "./IntelligenceCard";
 import { bodyText, presentationFor, subtleText } from "./intelligence-tokens";
+import { useAskCompanion } from "@/components/conversation/companion-context";
 import type { FoodOpportunity } from "@/hooks/use-food-opportunities";
 
 const DOMAIN_LABEL: Record<string, string> = {
@@ -42,6 +43,11 @@ interface FoodOpportunityCardProps {
   opportunity: FoodOpportunity;
   onAccept?: (opportunity: FoodOpportunity) => void;
   onDismiss?: (opportunity: FoodOpportunity) => void;
+  /**
+   * PHASE5E — "seen, but not resolved". Non-terminal: the card stays. Fired when the
+   * household asks the Companion about it (see `askWhy` below).
+   */
+  onAcknowledge?: (opportunity: FoodOpportunity) => void;
   busy?: boolean;
   className?: string;
   "data-testid"?: string;
@@ -51,16 +57,42 @@ export function FoodOpportunityCard({
   opportunity,
   onAccept,
   onDismiss,
+  onAcknowledge,
   busy,
   className,
   ...rest
 }: FoodOpportunityCardProps) {
+  const askCompanion = useAskCompanion();
+
   // Nothing to suggest → say nothing. Never invent an opportunity.
   if (!opportunity?.explanation) return null;
 
   const testId = rest["data-testid"] ?? "food-opportunity-card";
   const attention = presentationFor(opportunity.priority);
   const isCritical = attention.demandsAttention;
+
+  /**
+   * PHASE5E — "Why this?" — the affordance PHASE5D built, deleted, and left instructions
+   * for. It is honest now for the reasons recorded in `companion-context.tsx`: the
+   * question routes to `opportunity-delivery:explain`, which narrates the evidence the
+   * Decision Engine ALREADY produced for THIS card. It invents no justification, and it
+   * cannot silently answer about the domain instead.
+   *
+   * It also ACKNOWLEDGES the opportunity, and that is not a side effect — it is what
+   * `acknowledged` means. The household has demonstrably seen this card and engaged with
+   * it, without accepting or dismissing it. The verb has been plumbed end-to-end since
+   * PHASE5B with no caller, so COACH1's "seen yields to unseen" ordering has never had a
+   * signal to order by. Now it does. It is non-terminal (the card stays, because nothing
+   * has been decided) and it emits NO Evidence — being seen is not an opinion, and must
+   * never become one, or THA would learn from attention rather than from choice.
+   */
+  const askWhy = () => {
+    onAcknowledge?.(opportunity);
+    askCompanion({
+      utterance: "Why are you suggesting this?",
+      hints: { selectedOpportunityId: opportunity.id },
+    });
+  };
 
   return (
     <IntelligenceCard
@@ -95,7 +127,7 @@ export function FoodOpportunityCard({
       </p>
 
       {(onAccept || onDismiss) && (
-        <div className="flex items-center gap-3 pt-0.5">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pt-0.5">
           {onAccept && (
             <button
               type="button"
@@ -119,6 +151,20 @@ export function FoodOpportunityCard({
               <X className="h-3 w-3" /> Not now
             </button>
           )}
+          {/*
+            The third action is a QUESTION, not a resolution — so it is styled as the
+            quietest of the three and sits last. A household should never feel they must
+            justify a suggestion to themselves before dismissing it.
+          */}
+          <button
+            type="button"
+            onClick={askWhy}
+            disabled={busy}
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50 transition-colors"
+            data-testid={`${testId}-why`}
+          >
+            <HelpCircle className="h-3 w-3" /> Why this?
+          </button>
         </div>
       )}
     </IntelligenceCard>

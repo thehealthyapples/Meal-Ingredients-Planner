@@ -577,6 +577,68 @@ async function main(): Promise<void> {
     assert(n.termQuery === "gut health", "termQuery field is set");
   }
 
+  // ── PHASE5E — the opportunity-explain short-circuit ───────────────────────
+  //
+  // The riskiest change in PHASE5E, so it is tested from every side. It must fire
+  // when — and ONLY when — a household presses a specific card's "Why this?" button,
+  // and when it fires it must be the WHOLE resolution (INT42's "double delivery path").
+  section("PHASE5E — opportunity-delivery:explain (hint-gated short-circuit)");
+  {
+    const OPP = "food-intelligence:planner-empty-day:42";
+
+    // 1. It fires, and it is the ONLY intent.
+    const why = await resolve("Why are you suggesting this?", "planner", {
+      selectedOpportunityId: OPP,
+      activePlannerWeekId: 5,
+    });
+    assert(why.length === 1, "explain SHORT-CIRCUITS: exactly one intent, never a pool");
+    assert(why[0].capability === "opportunity-delivery", "…and it is opportunity-delivery");
+    assert(why[0].verb === "explain", "…with the explain verb (a READ — ConfirmationTier none)");
+    assert(
+      (why[0].parameters.opportunityId as string) === OPP,
+      "…carrying the card's own id, so no prose is ever parsed to find the subject",
+    );
+    // The INT42 constraint, asserted structurally rather than hoped for.
+    assert(
+      !hasCapability(why, "planner") && !hasCapability(why, "food-intelligence") && !hasCapability(why, "profile"),
+      "no other capability co-fires — the card asked about is the card answered about, and no " +
+        "second delivery path can exist (INT42 §2, the FOOD_INTELLIGENCE matchers' own warning)",
+    );
+
+    // 2. It cannot fire without the pointer. A household asking "why" with no card
+    //    selected gets the ordinary resolution — never an explanation of a card they
+    //    never questioned.
+    const whyNoPointer = await resolve("Why are you suggesting this?", "planner", { activePlannerWeekId: 5 });
+    assert(
+      !hasCapability(whyNoPointer, "opportunity-delivery"),
+      "no pointer → no explain. THA never guesses which suggestion someone meant",
+    );
+    assert(hasCapability(whyNoPointer, "planner"), "…and the turn resolves normally instead");
+
+    // 3. It cannot fire on a non-why utterance, even with a card pointer present.
+    const unrelated = await resolve("What meals do I have this week?", "planner", {
+      selectedOpportunityId: OPP,
+      activePlannerWeekId: 5,
+    });
+    assert(
+      !hasCapability(unrelated, "opportunity-delivery"),
+      "a pointer alone never routes to explain — the household must actually be ASKING why",
+    );
+    assert(
+      firstWith(unrelated, "planner")?.parameters.weekId === 5,
+      "…and the ordinary planner resolution is completely unaffected (PHASE5D's fix still holds)",
+    );
+
+    // 4. The other why-shapes a household would actually use.
+    for (const utterance of ["Why this?", "Why?", "How do you know?", "Explain this"]) {
+      const r = await resolve(utterance, "shopping", { selectedOpportunityId: OPP });
+      assert(
+        r.length === 1 && r[0].verb === "explain",
+        `"${utterance}" with a card pointer → explain`,
+      );
+    }
+  }
+
   // ── Summary ───────────────────────────────────────────────────────────────
   console.log("\n══════════════════════════════════════════════════════");
   console.log("INT24 — Canonical Intent Resolver (PatternIntentResolver) tests");

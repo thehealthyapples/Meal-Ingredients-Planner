@@ -2821,12 +2821,83 @@ function buildSurfacePrimary(
  * Exported as a singleton via `patternIntentResolver` for injection into the
  * Conversation Gateway and any future input adapter.
  */
+// ---------------------------------------------------------------------------
+// PHASE5E — THE OPPORTUNITY EXPLAIN PATH (a deliberate short-circuit)
+// ---------------------------------------------------------------------------
+//
+// This is the ONLY `opportunity-delivery` matcher on the platform, and it is
+// deliberately not a matcher in the ordinary sense: it SHORT-CIRCUITS `resolve()`
+// before any other matcher runs. Three reasons, and the first is the one that matters.
+//
+//  1. THE INT42 "DOUBLE DELIVERY PATH" WARNING IS HONOURED STRUCTURALLY, NOT BY CARE.
+//     The FOOD_INTELLIGENCE matchers above carry an explicit note: "If a future
+//     workstream ever adds OPPORTUNITY_DELIVERY_MATCHERS, these two matchers MUST be
+//     revisited so the two never co-fire on one turn." A short-circuit makes co-firing
+//     IMPOSSIBLE rather than merely unlikely — nothing else runs. The note's constraint
+//     is met by construction, so no future edit to those matchers can silently break it.
+//
+//     Note also that `explain` is not a delivery verb: it neither collects nor resolves.
+//     It reads ONE already-delivered card. So even if it did co-fire, it would not be a
+//     second delivery path — but "would not be" is a weaker guarantee than "cannot be",
+//     and this seam is load-bearing for trust.
+//
+//  2. IT IS THE WHOLE ANSWER. The household clicked "Why this?" on one specific card.
+//     There is exactly one honest response and it is grounded in that card's evidence.
+//     Letting `planner.read` or `profile.read` into the pool would spend the Context
+//     Composition Engine's budget (INT17) grounding the model on things the household
+//     did not ask about — and it is precisely that dilution ("answer about the DOMAIN
+//     under a button that promised to explain THAT CARD") that PHASE5D §9.1 named a
+//     trust defect and withdrew the affordance rather than ship.
+//
+//  3. IT CANNOT FIRE BY ACCIDENT. It requires BOTH a pointer the surface explicitly
+//     published (`selectedOpportunityId` — set only by the "Why this?" affordance, never
+//     by merely viewing a page) AND a why-shaped utterance. A household typing "what's
+//     for dinner?" with a card on screen is completely unaffected.
+//
+// The verb is `explain` — a READ verb (permissions.ts READ_ONLY_VERBS → ConfirmationTier
+// "none"). No write verb on this capability is resolver-reachable, so `detectWriteIntent`'s
+// advisory-frame escape hatch (ND-059) remains safe, exactly as the FOOD_INTELLIGENCE note
+// requires.
+// ---------------------------------------------------------------------------
+
+/**
+ * "Why this?", "why are you suggesting this", "explain this", "how do you know", "why?".
+ * Deliberately narrow: this only ever runs when a card pointer is already present, so it
+ * does not need to defend against poaching a neighbouring capability's questions.
+ */
+const OPPORTUNITY_EXPLAIN_PATTERN =
+  /\b(why|explain|reason|how do you know|what makes you|where.{0,12}from|says who|justify)\b/i;
+
+function resolveOpportunityExplain(
+  lower: string,
+  hints: IntentResolutionHints,
+): ResolvedIntent | null {
+  const opportunityId = hints.selectedOpportunityId?.trim();
+  if (!opportunityId) return null;
+  if (!OPPORTUNITY_EXPLAIN_PATTERN.test(lower)) return null;
+
+  return {
+    capability: "opportunity-delivery",
+    verb: "explain",
+    parameters: { opportunityId },
+    // High, but not certain: the pointer is unambiguous, so the only residual doubt is
+    // whether the household meant THIS card — and they clicked its own button.
+    confidence: 0.95,
+  };
+}
+
 export class PatternIntentResolver implements IIntentResolver {
   async resolve(
     utterance: string,
     hints: IntentResolutionHints,
   ): Promise<ResolvedIntent[]> {
     const lower = utterance.toLowerCase();
+
+    // PHASE5E — see the block comment above. This returns before every other matcher,
+    // by design: one card was asked about, one card is answered about.
+    const explainOpportunity = resolveOpportunityExplain(lower, hints);
+    if (explainOpportunity) return [explainOpportunity];
+
     const collected: ResolvedIntent[] = [];
 
     // INT35: true once any UTTERANCE-DERIVED signal fires (steps 0, 1, 3). The

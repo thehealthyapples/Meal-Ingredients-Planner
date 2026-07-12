@@ -298,6 +298,14 @@ async function main(): Promise<void> {
         explanation: "x",
         evidence: [{ source: "s", detail: "d" }],
         suggestedAction: "x",
+        // PHASE5E — inert for the golden-identity sweep (the Decision Engine's ordering
+        // never reads `subject`, which is exactly the property this section proves), but
+        // required by the producer's type.
+        subject: {
+          entity: priority === "critical" ? ("shopping-item" as const) : ("planner-day" as const),
+          id: i,
+          label: "x",
+        },
       };
     });
     for (const limit of LIMITS) {

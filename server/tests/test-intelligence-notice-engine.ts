@@ -22,10 +22,12 @@ import {
   noticeDiversity,
   noticeOpportunities,
   noticeSeasonal,
+  noticeLearning,
   applySilenceRules,
   MAX_NOTICES_PER_MOMENT,
   type Notice,
   type OpportunityLike,
+  type ConfirmedLearningLike,
 } from "../intelligence/conversation/notice-engine.js";
 import { phraseNotice } from "../intelligence/conversation/behaviour-engine.js";
 import { PERSONALITY_IDS } from "../intelligence/conversation/personality-registry.js";
@@ -236,6 +238,106 @@ console.log("\n── §5 phraseNotice — voices every fact kind for all 6 pers
     assert(seasonalText.includes("Looking ahead to autumn, you may enjoy pumpkin."), `${id}: seasonal notice preserves the verbatim headline`);
   }
   assert(texts.size > 1, "at least two personalities voice the same streak fact differently");
+}
+
+// -----------------------------------------------------------------------------
+// §7 PHASE5E (NTC-P4) — noticeLearning: the eighth notice source
+//
+// The Notice Engine Architecture §2.2 authorises exactly one shape for this: "only for
+// signals with `status = confirmed`. A `pending_confirmation` signal is a QUESTION for
+// the household, not a notice." That single rule is the difference between THA telling a
+// household something they agreed is true, and THA announcing a conclusion it drew about
+// them behind their back. It is asserted first, and hardest.
+// -----------------------------------------------------------------------------
+console.log("\n── §7 noticeLearning (NTC-P4) — confirmed only, verbatim, uncited never ───────");
+
+function learningSignal(overrides: Partial<ConfirmedLearningLike> = {}): ConfirmedLearningLike {
+  return {
+    id: 1,
+    domain: "planner",
+    subjectKey: "fish",
+    direction: "negative",
+    confidence: "high",
+    evidenceCount: 6,
+    rationale: "Your household has swapped out fish meals in 6 of the last 7 weeks.",
+    status: "confirmed",
+    ...overrides,
+  };
+}
+
+{
+  const confirmed = noticeLearning([learningSignal()]);
+  assert(confirmed.length === 1, "a CONFIRMED signal becomes a notice");
+  assert(confirmed[0].category === "household-learning", "…in the household-learning category");
+  assert(confirmed[0].priority === "low", "…at low attention — a confirmed preference is calm, never a demand");
+  assert(
+    confirmed[0].source === "household-learning",
+    "…citing the same owner OD1 cites when learning moves a ranking, so provenance answers identically",
+  );
+
+  const fact = confirmed[0].fact as { kind: string; rationale: string; evidenceCount: number };
+  assert(fact.kind === "learning", "the fact kind is `learning`");
+  assert(
+    fact.rationale === learningSignal().rationale,
+    "the rationale is EL1's OWN sentence, verbatim — never paraphrased, because a paraphrase is where " +
+      "'you tend to skip fish on weeknights' quietly becomes 'you don't like fish'",
+  );
+  assert(fact.evidenceCount === 6, "EL1's evidence count rides through unchanged");
+}
+
+// The rule the whole category turns on.
+for (const status of ["pending_confirmation", "declined"]) {
+  assert(
+    noticeLearning([learningSignal({ status })]).length === 0,
+    `a ${status} signal is NEVER noticed — THA does not tell a household what it has learned about them ` +
+      "until they have agreed it is true",
+  );
+}
+
+// Rule E1 — no citation, no card. Enforced exactly as noticeOpportunities enforces it.
+assert(
+  noticeLearning([learningSignal({ rationale: "" })]).length === 0,
+  "a signal with no rationale is dropped — no citation, no card (Rule E1)",
+);
+assert(
+  noticeLearning([learningSignal({ rationale: "   " })]).length === 0,
+  "…and a whitespace-only rationale is not a citation either",
+);
+
+// Honest absence, never padding.
+assert(noticeLearning([]).length === 0, "no confirmed signals → no notices (silence is a first-class outcome)");
+
+// The voice seam handles the new fact kind, in every personality, without rewording it.
+{
+  const notice = noticeLearning([learningSignal()])[0];
+  for (const pid of PERSONALITY_IDS) {
+    const text = phraseNotice(notice, pid);
+    assert(
+      text.includes(learningSignal().rationale),
+      `phraseNotice(${pid}) carries EL1's rationale VERBATIM — the voice may prefix it, never reword it`,
+    );
+  }
+}
+
+// It competes for the same attention budget as every other notice, and — being `low` —
+// it yields to anything that matters more. No new budget, no privileged channel.
+{
+  const learning = noticeLearning([learningSignal()]);
+  const critical = noticeOpportunities([
+    {
+      id: "shopping-restriction-conflict:1",
+      domain: "shopping",
+      priority: "critical",
+      explanation: "x",
+      suggestedAction: "y",
+      evidence: [{ source: "shopping-list", detail: "d" }],
+    },
+  ]);
+  const selected = applySilenceRules([...learning, ...critical]);
+  assert(
+    selected[0].category === "shopping-opportunity",
+    "a low-attention learning notice never outranks a critical — it passes through the ONE Silence Rules budget",
+  );
 }
 
 (async () => {
