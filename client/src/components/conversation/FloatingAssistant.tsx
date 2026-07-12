@@ -1432,7 +1432,11 @@ export default function FloatingAssistant() {
         onClick={() => setIsOpen((v) => !v)}
         aria-label={isOpen ? "Close Apple assistant" : "Open Apple assistant"}
         className={cn(
-          "fixed bottom-6 right-6 z-50",
+          // PX1-W1 (fnd-px-fab-covers-nav): the FAB sat at bottom-6 z-50 — the
+          // same z as the BottomNav, painted later, covering the last nav item
+          // (Analyser) and meal-detail's floating Save. It now clears the nav's
+          // reserved zone (.main-safe: safe-area + 80px) and yields z to it.
+          "fixed right-6 z-40 bottom-[calc(env(safe-area-inset-bottom,0px)+5rem)]",
           "w-12 h-12 rounded-full",
           "bg-primary text-primary-foreground shadow-lg shadow-primary/20",
           "flex items-center justify-center",

@@ -19,6 +19,9 @@ interface BadAppleWarningModalProps {
 }
 
 function SadAppleSVG() {
+  // PX1-W1 (fnd-px-no-reduced-motion): UIA §11 bans motion-for-attention on a
+  // warning — the appleShake is gone; only the gentle entrance remains, and the
+  // reduced-motion media block in index.css gates even that.
   return (
     <svg
       width="96"
@@ -26,8 +29,8 @@ function SadAppleSVG() {
       viewBox="0 0 32 32"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className="mx-auto apple-shake-entry"
-      style={{ animation: "appleShake 0.4s ease-in-out 0.2s 2, appleBounce 0.4s ease-out both" }}
+      className="mx-auto"
+      style={{ animation: "appleBounce 0.4s ease-out both" }}
     >
       <path
         d="M16 4 C16 4, 19 2, 21 3"

@@ -182,7 +182,10 @@ export function ProductPickerSheet({
           </div>
 
           {/* Retailer chips */}
-          <div className="flex gap-1.5 mt-2.5 overflow-x-auto pb-0.5 scrollbar-none" data-testid="row-retailer-filter">
+          {/* PX1-W1 (fnd-px-undefined-utilities): `scrollbar-none` was consumed but
+              defined nowhere — same defect as the 13 `no-scrollbar` sites. The owner
+              of hidden scrollbars is `.scrollbar-hide` (index.css). */}
+          <div className="flex gap-1.5 mt-2.5 overflow-x-auto pb-0.5 scrollbar-hide" data-testid="row-retailer-filter">
             {RETAILERS.map(r => (
               <button
                 key={r}

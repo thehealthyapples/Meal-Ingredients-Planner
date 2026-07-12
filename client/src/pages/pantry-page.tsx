@@ -1089,7 +1089,7 @@ export default function PantryPage() {
                 categories={FOOD_CATS}
                 active={activeFood}
                 onChange={setActiveFood}
-                className="flex items-center gap-1 rounded-lg bg-muted/40 p-1 overflow-x-auto no-scrollbar"
+                className="flex items-center gap-1 rounded-lg bg-muted/40 p-1 overflow-x-auto scrollbar-hide"
               />
             )}
           </div>

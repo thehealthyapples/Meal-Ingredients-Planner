@@ -69,6 +69,21 @@
 
   /* Adaptive workspace layout */
   --ws-col-label: 100px; /* planner row-label column width */
+
+  /* PX1-W1 (fnd-px-dead-elevation) — the border tokens ui/button.tsx and
+     ui/badge.tsx have consumed since the scaffold, previously never defined.
+     Filled buttons carry a border one step darker than their fill; outline
+     controls carry a foreground-tinted border that reads on any surface. */
+  --primary-border:       hsl(132 14% 37%);
+  --secondary-border:     hsl(42 74% 49%);
+  --destructive-border:   hsl(0 74% 52%);
+  --button-outline:       hsl(120 14% 14% / 0.16);
+  --badge-outline:        hsl(120 14% 14% / 0.16);
+
+  /* PX1-W1 (fnd-px-dead-elevation) — hover/press tint strength for the
+     elevation system below. Overlay-based, so it works on any background. */
+  --elevate-1:            rgba(0, 0, 0, 0.04);
+  --elevate-2:            rgba(0, 0, 0, 0.09);
 }
 
 @media (min-width: 768px) {
@@ -130,6 +145,16 @@
   /* Basket realm identity — slightly lighter in dark mode */
   --basket-realm:         26 17% 52%;
   --basket-realm-subtle:  26 17% 52%;
+
+  /* PX1-W1 (fnd-px-dead-elevation) — dark-mode counterparts */
+  --primary-border:       hsl(132 14% 44%);
+  --secondary-border:     hsl(42 89% 47%);
+  --destructive-border:   hsl(0 62% 24%);
+  --button-outline:       hsl(40 20% 93% / 0.20);
+  --badge-outline:        hsl(40 20% 93% / 0.20);
+
+  --elevate-1:            rgba(255, 255, 255, 0.05);
+  --elevate-2:            rgba(255, 255, 255, 0.10);
 }
 
 @layer base {
@@ -384,6 +409,52 @@
      reserves clearance for it at every breakpoint (previously mobile-only). */
   .main-safe {
     padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 80px);
+  }
+
+  /* PX1-W1 (fnd-px-dead-elevation) — the interaction-feedback classes every
+     Button, Badge and clickable Card consume (ui/button.tsx base, ui/badge.tsx
+     base). A tint overlay on ::after rather than a background change, so it
+     composes with any variant background and inherits the control's radius.
+     `.no-default-hover-elevate` (18 call sites) opts a control out. */
+  .hover-elevate:not(.no-default-hover-elevate),
+  .active-elevate-2:not(.no-default-active-elevate) {
+    position: relative;
+    z-index: 0;
+  }
+  .hover-elevate:not(.no-default-hover-elevate)::after,
+  .active-elevate-2:not(.no-default-active-elevate)::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 999;
+    border-radius: inherit;
+    pointer-events: none;
+  }
+  .hover-elevate:hover:not(.no-default-hover-elevate)::after {
+    background-color: var(--elevate-1);
+  }
+  .active-elevate-2:active:not(.no-default-active-elevate)::after {
+    background-color: var(--elevate-2);
+  }
+  /* Bordered controls: the tint covers the border too, so the whole control lifts */
+  .border.hover-elevate:not(.no-default-hover-elevate)::after,
+  .border.active-elevate-2:not(.no-default-active-elevate)::after {
+    inset: -1px;
+  }
+}
+
+/* PX1-W1 (fnd-px-no-reduced-motion) — UIA §11 calls reduced motion "a
+   guarantee, not an enhancement". One block gates every CSS animation and
+   transition (the keyframes below included); framer-motion is gated by
+   MotionConfig reducedMotion="user" in App.tsx. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 

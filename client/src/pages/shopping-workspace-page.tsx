@@ -2196,7 +2196,7 @@ export default function ShoppingWorkspacePage() {
   const workspaceControlBar = mode !== "add" && items.length > 0 && !isLoading ? (
     <div className="flex items-center gap-2 min-w-0">
       {/* Source filter pills — horizontally scrollable */}
-      <div className="flex items-center gap-1 min-w-0 flex-1 overflow-x-auto no-scrollbar">
+      <div className="flex items-center gap-1 min-w-0 flex-1 overflow-x-auto scrollbar-hide">
         {SOURCE_FILTERS.map(({ id, label }) => {
           const count = filterCounts[id];
           if (id !== "all" && count === 0) return null;
@@ -2252,7 +2252,7 @@ export default function ShoppingWorkspacePage() {
           realm="shopping"
           wide
           contextBar={
-            <div className="flex items-center gap-2 w-full overflow-x-auto no-scrollbar">
+            <div className="flex items-center gap-2 w-full overflow-x-auto scrollbar-hide">
               <ModeSwitcher mode={mode} onChange={(m) => { setMode(m); }} />
               {workspaceControlBar && (
                 <div className="flex-1 min-w-0">

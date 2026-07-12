@@ -14,7 +14,13 @@ const ToastViewport = React.forwardRef<
   <ToastPrimitives.Viewport
     ref={ref}
     className={cn(
-      "fixed bottom-6 left-0 right-0 z-[100] flex flex-col-reverse items-center gap-2 pointer-events-none",
+      // PX1-W1 (fnd-px-toast-over-nav): toasts rose from bottom-6 — inside the
+      // BottomNav's strip — and painted over it while visible. The viewport now
+      // clears the nav's reserved zone (.main-safe: safe-area + 80px), so a
+      // toast can never obscure navigation. z-[100] is kept deliberately: many
+      // failure toasts (PX1-W0) fire from inside dialogs, whose overlay is
+      // z-50 — dropping below it would hide the failure the toast exists to show.
+      "fixed left-0 right-0 z-[100] bottom-[calc(env(safe-area-inset-bottom,0px)+5.5rem)] flex flex-col-reverse items-center gap-2 pointer-events-none",
       className
     )}
     {...props}

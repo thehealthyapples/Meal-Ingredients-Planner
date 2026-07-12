@@ -3,6 +3,7 @@ import { type Meal, type MealDiet, type Diet, type MealAllergen } from "@shared/
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check } from "lucide-react";
 import { type AdaptiveDensity } from "@/hooks/use-adaptive-density";
+import { densityClasses } from "@/lib/density-tokens";
 
 interface MealTrustSummaryProps {
   meal: Meal;
@@ -69,18 +70,18 @@ export function MealTrustSummary({
   if (displayedReasons.length === 0) return null;
   const hiddenCount = reasons.length - displayedReasons.length;
 
-  const paddingClass = density === "compact" ? "p-3 sm:p-4" : density === "comfortable" ? "p-4 md:p-5" : "p-5 lg:p-6";
-  const gapClass = density === "compact" ? "gap-2" : density === "comfortable" ? "gap-3" : "gap-3 lg:gap-4";
-  const titleSizeClass = density === "compact" ? "text-base" : density === "comfortable" ? "text-lg" : "text-lg lg:text-xl";
-  const textSizeClass = density === "compact" ? "text-xs" : density === "comfortable" ? "text-sm" : "text-sm lg:text-base";
+  // PX1-W1 (fnd-px-meal-detail-dead-spacing): the density ladder lives in
+  // lib/density-tokens now; this file's copy interpolated `space-y-${gapClass}`
+  // into the dead class `space-y-gap-2`.
+  const { padding: paddingClass, stack: stackClass, title: titleSizeClass, text: textSizeClass } = densityClasses(density);
 
   return (
     <Card className="border-border/40">
       <CardHeader className={paddingClass}>
         <CardTitle className={titleSizeClass}>{getMealHeading(meal)}</CardTitle>
       </CardHeader>
-      <CardContent className={`${paddingClass} space-y-${gapClass} pt-0`}>
-        <div className={`space-y-${gapClass}`}>
+      <CardContent className={`${paddingClass} ${stackClass} pt-0`}>
+        <div className={stackClass}>
           {displayedReasons.map((reason, i) => (
             <div key={i} className="flex items-start gap-2">
               {reason.icon}

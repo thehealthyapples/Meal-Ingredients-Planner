@@ -39,7 +39,7 @@ export default function PlantDiversityPage() {
         wide
         titleTestId="text-nutrition-report-title"
         contextBar={
-          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
             <div className="flex items-center gap-0.5 rounded-lg bg-muted/50 p-1 border border-border/40" role="tablist">
               {NUTRITION_TABS.map(({ id, label, icon: Icon }) => (
                 <button

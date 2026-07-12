@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { getDialogPresentationClass } from "@/components/ui/dialog-foundation";
 import { Button } from "@/components/ui/button";
 import { Camera, Upload, RefreshCw, Loader2, AlertTriangle } from "lucide-react";
 
@@ -142,11 +143,12 @@ export function CameraModal({ open, onOpenChange, onCapture, onUploadInstead }: 
       {/*
         Mobile: cover the entire viewport so the camera preview fills the screen.
         Desktop (sm+): revert to the standard centred modal card.
-        - max-w-full overrides the base max-w-lg on mobile
-        - h-[100dvh] fills the dynamic viewport height (respects browser chrome hiding/showing)
-        - flex flex-col lets the camera div flex-grow between the fixed header and footer
+        PX1-W1 (fnd-px-dialog-foundation-is-noop): these classes were proven
+        here and are now owned by the dialog foundation's sheet presentation —
+        this modal consumes them rather than carrying its own copy.
+        p-0/overflow-hidden stay local: the camera manages its own edges.
       */}
-      <DialogContent className="p-0 overflow-hidden flex flex-col w-full max-w-full sm:max-w-lg h-[100dvh] sm:h-auto rounded-none sm:rounded-lg border-0 sm:border">
+      <DialogContent className={`p-0 overflow-hidden ${getDialogPresentationClass("sheet")}`}>
         <DialogHeader className="px-5 pt-5 pb-3 shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Camera className="h-5 w-5 text-primary" />

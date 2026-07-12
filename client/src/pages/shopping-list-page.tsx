@@ -2903,7 +2903,7 @@ export default function ShoppingListPage() {
         realm="basket"
         wide
         contextBar={
-          <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap overflow-x-auto no-scrollbar w-full">
+          <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap overflow-x-auto scrollbar-hide w-full">
 
             {/* ── Mode ── */}
             <DropdownMenu>

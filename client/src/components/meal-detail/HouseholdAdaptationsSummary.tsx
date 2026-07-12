@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
 import { type AdaptiveDensity } from "@/hooks/use-adaptive-density";
+import { densityClasses } from "@/lib/density-tokens";
 import { type Meal } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 
@@ -44,11 +45,9 @@ export function HouseholdAdaptationsSummary({
 
   const displayedAdaptations: EaterAdaptation[] = adaptations;
 
-  const paddingClass = density === "compact" ? "p-3 sm:p-4" : density === "comfortable" ? "p-4 md:p-5" : "p-5 lg:p-6";
-  const gapClass = density === "compact" ? "gap-2" : density === "comfortable" ? "gap-3" : "gap-3 lg:gap-4";
-  const titleSizeClass = density === "compact" ? "text-base" : density === "comfortable" ? "text-lg" : "text-lg lg:text-xl";
-  const textSizeClass = density === "compact" ? "text-xs" : density === "comfortable" ? "text-sm" : "text-sm lg:text-base";
-
+  // PX1-W1 (fnd-px-meal-detail-dead-spacing): shared ladder from
+  // lib/density-tokens; the grid rung is this file's own and stays local.
+  const { padding: paddingClass, stack: stackClass, title: titleSizeClass, text: textSizeClass } = densityClasses(density);
   const gridColsClass = density === "compact" ? "grid-cols-1" : density === "comfortable" ? "md:grid-cols-2" : "lg:grid-cols-2 xl:grid-cols-3";
 
   return (
@@ -56,7 +55,7 @@ export function HouseholdAdaptationsSummary({
       <CardHeader className={paddingClass}>
         <CardTitle className={titleSizeClass}>Household Adaptations</CardTitle>
       </CardHeader>
-      <CardContent className={`${paddingClass} space-y-${gapClass} pt-0`}>
+      <CardContent className={`${paddingClass} ${stackClass} pt-0`}>
         {displayedAdaptations.length === 0 ? (
           <p className={`${textSizeClass} text-muted-foreground italic`}>
             No household information available. Adaptations will appear here when connected.

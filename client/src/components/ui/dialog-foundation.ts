@@ -108,16 +108,21 @@ export function getDialogWidthPixels(size: DialogSize): number {
 }
 
 /**
- * Returns presentation-specific CSS classes or metadata.
- * Currently a placeholder for future presentation-specific styling.
+ * Returns presentation-specific CSS classes for a DialogContent.
  *
- * modal   → "" (standard dialog behavior, no special classes)
- * drawer  → "" (handled by Drawer component, not DialogSize)
- * sheet   → "" (handled by Sheet component, not DialogSize)
+ * modal   → "" (standard centred dialog; ui/dialog.tsx's base classes are it)
+ * drawer  → "" (handled by the Drawer component, not DialogSize)
+ * sheet   → full-viewport sheet on mobile, standard centred modal from sm: up.
  *
- * This helper is provided for consistency and future extensibility.
- * When presentation-specific styling is needed (e.g., transitions, z-index),
- * add it here rather than scattering presentation logic throughout the codebase.
+ * PX1-W1 (fnd-px-dialog-foundation-is-noop): the sheet presentation was fully
+ * specified in prose and returned "" — adopting the foundation changed nothing.
+ * The classes below are the ones camera-modal.tsx proved in production (it now
+ * consumes this function): w-full/max-w-full + h-[100dvh] fills the phone
+ * viewport (100dvh tracks browser chrome), rounded-none/border-0 removes the
+ * card chrome at full bleed, and everything reverts at sm:. The max-h pair
+ * overrides ui/dialog.tsx's base clamp on mobile and restores it on desktop.
+ * Width still belongs to getDialogWidthClass — compose it after this string
+ * and twMerge lets the size's sm:max-w-* win over the default sm:max-w-lg.
  */
 export function getDialogPresentationClass(
   presentation: DialogPresentation
@@ -128,7 +133,7 @@ export function getDialogPresentationClass(
     case "drawer":
       return "";
     case "sheet":
-      return "";
+      return "flex flex-col w-full max-w-full sm:max-w-lg h-[100dvh] max-h-[100dvh] sm:h-auto sm:max-h-[calc(100dvh-2rem)] rounded-none sm:rounded-lg border-0 sm:border";
   }
 }
 

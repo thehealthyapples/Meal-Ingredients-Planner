@@ -392,7 +392,7 @@ export default function PartnersPage() {
       title="Partners"
       wide
       contextBar={
-        <div className="flex items-center gap-2 w-full overflow-x-auto no-scrollbar">
+        <div className="flex items-center gap-2 w-full overflow-x-auto scrollbar-hide">
           {/* Search */}
           <div className="relative min-w-[130px] max-w-[190px] shrink-0">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />

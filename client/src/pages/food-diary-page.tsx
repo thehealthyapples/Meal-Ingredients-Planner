@@ -1488,7 +1488,7 @@ export default function FoodDiaryPage() {
         realm="diary"
         wide
         contextBar={
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar w-full">
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide w-full">
             <div className="flex items-center gap-1 rounded-lg bg-muted/50 p-1 border border-border/40 shrink-0" role="tablist">
               {([
                 { id: "diary", label: "Daily Log", Icon: BookOpen },

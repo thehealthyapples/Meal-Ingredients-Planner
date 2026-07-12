@@ -1766,7 +1766,7 @@ export default function WeeklyPlannerPage() {
         onSubmit: () => { navigate("/cookbook"); },
       }}
       contextBar={
-        <div className="flex items-center gap-1 flex-wrap overflow-x-auto no-scrollbar w-full">
+        <div className="flex items-center gap-1 flex-wrap overflow-x-auto scrollbar-hide w-full">
           {renameWeekId === activeWeekData?.id ? (
             <input
               value={renameValue}

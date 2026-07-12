@@ -1150,7 +1150,7 @@ export default function ProductsPage() {
         </div>
       }
       contextBar={
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
           <span className="text-xs font-medium text-muted-foreground shrink-0">Min rating:</span>
           <div className="flex items-center gap-1 shrink-0">
             {[1, 2, 3, 4, 5].map((r) => (

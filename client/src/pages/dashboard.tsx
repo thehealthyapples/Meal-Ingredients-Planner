@@ -237,7 +237,7 @@ export default function Dashboard() {
         </p>
       }
       contextBar={
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
           <Link href="/my-diary">
             <button
               type="button"

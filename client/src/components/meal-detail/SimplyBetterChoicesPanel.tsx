@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChevronDown, ChevronUp, Leaf } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { type AdaptiveDensity } from "@/hooks/use-adaptive-density";
+import { densityClasses } from "@/lib/density-tokens";
 import { type UpliftMatchResult } from "@/components/MealUpliftPanel";
 
 interface SimplyBetterChoicesPanelProps {
@@ -27,10 +28,8 @@ export function SimplyBetterChoicesPanel({
 
   const suggestionCount = upliftMatches.reduce((acc, m) => acc + m.suggestions.length, 0);
 
-  const paddingClass = density === "compact" ? "p-3 sm:p-4" : density === "comfortable" ? "p-4 md:p-5" : "p-5 lg:p-6";
-  const gapClass = density === "compact" ? "gap-2" : density === "comfortable" ? "gap-3" : "gap-3 lg:gap-4";
-  const titleSizeClass = density === "compact" ? "text-base" : density === "comfortable" ? "text-lg" : "text-lg lg:text-xl";
-  const textSizeClass = density === "compact" ? "text-xs" : density === "comfortable" ? "text-sm" : "text-sm lg:text-base";
+  // PX1-W1 (fnd-px-meal-detail-dead-spacing): shared ladder from lib/density-tokens.
+  const { padding: paddingClass, stack: stackClass, title: titleSizeClass, text: textSizeClass } = densityClasses(density);
 
   return (
     <Card className="border-border/40">
@@ -68,13 +67,13 @@ export function SimplyBetterChoicesPanel({
       )}
 
       {isOpen && (
-        <CardContent className={`${paddingClass} space-y-${gapClass} pt-0`}>
+        <CardContent className={`${paddingClass} ${stackClass} pt-0`}>
           {suggestionCount === 0 ? (
             <p className={`${textSizeClass} text-muted-foreground italic`}>
               No suggestions available yet.
             </p>
           ) : (
-            <div className={`space-y-${gapClass}`}>
+            <div className={stackClass}>
               {upliftMatches.map(match =>
                 match.suggestions.map((suggestion, i) => (
                   <div

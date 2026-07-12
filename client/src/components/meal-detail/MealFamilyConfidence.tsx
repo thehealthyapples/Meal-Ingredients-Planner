@@ -2,6 +2,7 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check, AlertCircle } from "lucide-react";
 import { type AdaptiveDensity } from "@/hooks/use-adaptive-density";
+import { densityClasses } from "@/lib/density-tokens";
 
 interface MealFamilyConfidenceProps {
   householdCompatibilityPercent?: number;
@@ -115,10 +116,9 @@ export function MealFamilyConfidence({
     weeklyReuseFourWeeks
   );
 
-  const paddingClass = density === "compact" ? "p-3 sm:p-4" : density === "comfortable" ? "p-4 md:p-5" : "p-5 lg:p-6";
-  const gapClass = density === "compact" ? "gap-2" : density === "comfortable" ? "gap-3" : "gap-3 lg:gap-4";
-  const titleSizeClass = density === "compact" ? "text-base" : density === "comfortable" ? "text-lg" : "text-lg lg:text-xl";
-  const textSizeClass = density === "compact" ? "text-xs" : density === "comfortable" ? "text-sm" : "text-sm lg:text-base";
+  // PX1-W1 (fnd-px-meal-detail-dead-spacing): shared ladder from
+  // lib/density-tokens; the label rung is this file's own and stays local.
+  const { padding: paddingClass, stack: stackClass, title: titleSizeClass, text: textSizeClass } = densityClasses(density);
   const labelSizeClass = density === "compact" ? "text-sm" : density === "comfortable" ? "text-base" : "text-base lg:text-lg";
 
   return (
@@ -126,12 +126,12 @@ export function MealFamilyConfidence({
       <CardHeader className={paddingClass}>
         <CardTitle className={titleSizeClass}>Family Confidence</CardTitle>
       </CardHeader>
-      <CardContent className={`${paddingClass} space-y-${gapClass} pt-0`}>
+      <CardContent className={`${paddingClass} ${stackClass} pt-0`}>
         <div className={`${labelSizeClass} font-semibold ${confidence.colorClass}`}>
           {confidence.label}
         </div>
 
-        <div className={`space-y-${gapClass}`}>
+        <div className={stackClass}>
           {householdCompatibilityPercent !== undefined && (
             <div className="flex items-start gap-2">
               <Check className={`h-4 w-4 ${confidence.colorClass} shrink-0 mt-0.5`} />

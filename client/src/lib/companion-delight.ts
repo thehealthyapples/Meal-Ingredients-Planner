@@ -43,6 +43,10 @@ export const quietFade: Variants = {
 
 /** Picks a variant by the moment's InteractionKind, so a caller never has to hand-pick "which animation for which feeling". */
 export function variantForInteraction(kind: InteractionKind): Variants {
+  // PX1-W1 (fnd-px-no-reduced-motion): this module always claimed to respect
+  // prefers-reduced-motion but left it to callers, and no caller did. Honour it
+  // here — a plain fade is the calmest variant this module owns.
+  if (prefersReducedMotion()) return quietFade;
   switch (kind) {
     case "celebration":
     case "milestone":

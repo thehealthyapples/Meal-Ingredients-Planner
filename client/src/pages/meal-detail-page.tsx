@@ -1211,7 +1211,10 @@ export default function MealDetailPage() {
       </div>
 
       {isEditedCopy && isEditing && hasChanges && (
-        <div className="fixed bottom-6 right-6 z-50">
+        // PX1-W1 (fnd-px-fab-covers-nav): this Save sat at the FAB's exact
+        // coordinates, occluded while editing, and under the BottomNav's strip.
+        // It now clears the nav zone and sits left of the FAB (right-6 + w-12).
+        <div className="fixed right-24 z-40 bottom-[calc(env(safe-area-inset-bottom,0px)+5rem)]">
           <Button
             onClick={() => saveMutation.mutate()}
             disabled={saveMutation.isPending}

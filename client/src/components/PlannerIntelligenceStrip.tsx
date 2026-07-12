@@ -183,7 +183,7 @@ export default function PlannerIntelligenceStrip({
 
         {/* Intelligence pills — horizontal scroll, no scrollbar */}
         {pills.length > 0 && (
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide flex-1 min-w-0">
             {pills.map((pill, i) => (
               <span key={i} className="flex items-center gap-1.5 shrink-0">
                 <span className="text-muted-foreground/25">·</span>
