@@ -2287,7 +2287,10 @@ export default function ShoppingWorkspacePage() {
           )}
         </div>
       )}
-      <div className={isFullscreen ? "flex-1 overflow-auto px-4 py-4 sm:px-6 sm:py-6" : ""}>
+      {/* PX1-W2 (fnd-px-shop-mode-row-under-nav) — fullscreen escapes `.main-safe`
+          via `fixed inset-0`, so the scroller adopts the class itself: the last
+          row clears the fixed BottomNav instead of sitting under it. */}
+      <div className={isFullscreen ? "flex-1 overflow-auto px-4 pt-4 sm:px-6 sm:pt-6 main-safe" : ""}>
 
       {/* PHASE5C — the shopping list's own ambient intelligence, and the reason
           this workstream exists. The `shopping` domain owns THA's only

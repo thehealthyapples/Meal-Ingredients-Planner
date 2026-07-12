@@ -3079,7 +3079,10 @@ export default function ShoppingListPage() {
         </div>
       )}
 
-      <div className={`flex flex-col ${isFullscreen ? 'flex-1 overflow-auto p-4 sm:p-6' : ''}`}>
+      {/* PX1-W2 (fnd-px-shop-mode-row-under-nav) — fullscreen escapes `.main-safe`
+          via `fixed inset-0`, so the scroller adopts the class itself: the last
+          row clears the fixed BottomNav instead of sitting under it. */}
+      <div className={`flex flex-col ${isFullscreen ? 'flex-1 overflow-auto px-4 pt-4 sm:px-6 sm:pt-6 main-safe' : ''}`}>
         {/* ── Basket view ──────────────────────────────────────────────────── */}
         <div className={viewMode === "shop" ? "hidden" : ""}>
         <Card className="flex-1 flex flex-col overflow-hidden"

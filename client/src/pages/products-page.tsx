@@ -1335,7 +1335,7 @@ export default function ProductsPage() {
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="h-7 w-7 invisible group-hover:visible flex-shrink-0"
+                        className="h-7 w-7 hover-reveal group-hover:opacity-100 transition-opacity flex-shrink-0"
                         onClick={(e) => {
                           e.stopPropagation();
                           deleteHistoryMutation.mutate(item.id);

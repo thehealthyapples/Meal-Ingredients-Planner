@@ -2325,7 +2325,7 @@ export default function WeeklyPlannerPage() {
                             </div>
                           </button>
                           <button
-                            className="absolute top-1 right-1 opacity-0 group-hover/day-hdr:opacity-50 hover:!opacity-100 rounded p-0.5 hover:bg-accent/60 transition-opacity"
+                            className="absolute top-1 right-1 hover-reveal group-hover/day-hdr:opacity-50 hover:!opacity-100 rounded p-0.5 hover:bg-accent/60 transition-opacity"
                             onClick={(e) => { e.stopPropagation(); setCopyDaySourceId(day.id); setCopyDayTargetId(""); setCopyDayOpen(true); }}
                             title="Copy this day"
                             data-testid={`button-copy-day-${day.dayOfWeek}`}
@@ -2491,7 +2491,7 @@ export default function WeeklyPlannerPage() {
                                         <DropdownMenu>
                                           <DropdownMenuTrigger asChild>
                                             <button
-                                              className="absolute top-0 right-0 h-4 w-4 flex items-center justify-center rounded opacity-0 group-hover/entry:opacity-60 hover:!opacity-100 hover:bg-accent/60 transition-opacity"
+                                              className="absolute top-0 right-0 h-4 w-4 flex items-center justify-center rounded hover-reveal group-hover/entry:opacity-60 hover:!opacity-100 hover:bg-accent/60 transition-opacity"
                                               onClick={(e) => e.stopPropagation()}
                                               data-testid={`button-entry-ops-${entry.id}`}
                                               title="Entry actions"
@@ -2727,7 +2727,7 @@ export default function WeeklyPlannerPage() {
                               <span className="text-xs text-muted-foreground/60 truncate max-w-[120px]">{item.note}</span>
                             )}
                             <button
-                              className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive shrink-0"
+                              className="hover-reveal group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive shrink-0"
                               onClick={() => deleteProvisioningMutation.mutate(item.id)}
                               aria-label="Remove provisioning item"
                               data-testid={`button-remove-prov-${item.id}`}

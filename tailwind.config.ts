@@ -102,6 +102,9 @@ export default {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
       },
+      // PX1-W2 (fnd-px-breakpoint-six-truths): the default sm/md/lg screens stand
+      // unchanged — `md` (768px) is the CSS face of MOBILE_BREAKPOINT, owned by
+      // client/src/hooks/use-adaptive-density.tsx. Change them together or not at all.
       screens: {
         "3xl": "1920px",
       },

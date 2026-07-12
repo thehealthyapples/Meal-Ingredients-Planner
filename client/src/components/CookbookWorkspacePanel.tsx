@@ -37,18 +37,10 @@ interface Props {
   onToggleGroup?: (group: string) => void;
 }
 
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(
-    () => typeof window !== "undefined" ? window.innerWidth < 1024 : false
-  );
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 1023px)");
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
-  return isMobile;
-}
+// PX1-W2 (fnd-px-breakpoint-six-truths): this file was the 1024px outlier — on a
+// 900px kitchen tablet the Cookbook thought it was mobile while the Planner thought
+// it was desktop, same device, same session. Retired for the one owner at 768.
+import { useIsMobile } from "@/hooks/use-adaptive-density";
 
 // ── Idle hub ──────────────────────────────────────────────────────────────────
 

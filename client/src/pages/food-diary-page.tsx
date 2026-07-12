@@ -956,7 +956,7 @@ function LookingForwardWidget() {
                 </p>
               </div>
               <button
-                className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive mt-0.5"
+                className="hover-reveal group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive mt-0.5"
                 onClick={() => removeItem(item.id)}
                 aria-label="Remove"
                 data-testid={`button-remove-countdown-${item.id}`}
@@ -1714,7 +1714,7 @@ export default function FoodDiaryPage() {
                                       {entry.sourceType === "copied_from_planner" && (
                                         <Badge variant="outline" className="text-[10px] py-0 px-1 text-muted-foreground border-muted-foreground/30 shrink-0">Planner</Badge>
                                       )}
-                                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 shrink-0">
+                                      <div className="hover-reveal group-hover:opacity-100 transition-opacity flex items-center gap-0.5 shrink-0">
                                         <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setEditingEntry({ id: entry.id, name: entry.name })} data-testid={`button-edit-entry-${entry.id}`}>
                                           <Pencil className="h-3 w-3" />
                                         </Button>

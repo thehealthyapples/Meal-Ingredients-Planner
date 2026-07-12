@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect } from "react";
 import { hasPendingScanSession } from "@/components/PlannerScanReview";
 import { useQueryClient } from "@tanstack/react-query";
+import { MOBILE_BREAKPOINT } from "@/hooks/use-adaptive-density";
 
 export type AssistantMode = "scan" | "smart" | "templates" | "manual" | "bulk" | "day" | "smart-review" | "scan-review" | "settings" | "resolve" | "placeholder-review" | "analyser" | "shopping-ready" | "build" | null;
 
@@ -88,7 +89,9 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
   // Desktop: all RESTORABLE_MODES + scan-review (if session data valid).
   // Mobile: scan-review only (other modes would auto-open the drawer unexpectedly).
   const [assistantMode, setAssistantMode] = useState<AssistantMode>(() => {
-    const isDesktop = typeof window !== "undefined" && window.innerWidth >= 768;
+    // PX1-W2 (fnd-px-breakpoint-six-truths): a genuinely one-time mount decision,
+    // so a one-time read is right — but the number comes from the one owner.
+    const isDesktop = typeof window !== "undefined" && window.innerWidth >= MOBILE_BREAKPOINT;
     return isDesktop ? loadWorkspaceMode() : loadWorkspaceModeForMobile();
   });
 

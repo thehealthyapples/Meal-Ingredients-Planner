@@ -441,6 +441,48 @@
   .border.active-elevate-2:not(.no-default-active-elevate)::after {
     inset: -1px;
   }
+
+  /* PX1-W2 (fnd-px-invisible-destructive-controls) — the owner of "a row
+     control revealed on hover". On a device that cannot hover, "revealed on
+     hover" means invisible forever — while opacity:0 never removed
+     hit-testing, so an invisible delete sat at the end of every pantry row
+     and fired on contact. The control is therefore hidden only where a hover
+     exists to reveal it; pair with `group-hover:opacity-100` (any named
+     group works) for the reveal itself — the hide is deliberately a single
+     class selector so every group-hover reveal outranks it. Keyboard focus
+     reveals on any device. */
+  @media (hover: hover) and (pointer: fine) {
+    .hover-reveal {
+      opacity: 0;
+    }
+  }
+  .hover-reveal:focus-visible,
+  .hover-reveal:focus-within {
+    opacity: 1;
+  }
+
+  /* PX1-W2 (fnd-px-touch-floor-absent) — the owner of the 44px touch floor.
+     238 controls render below 44px, `size="icon"` itself is 36px, and twMerge
+     lets call sites override size *downward* (a 16px stepper, a 16px dialog X).
+     Raising every visual size would be the redesign this workstream forbids —
+     so on coarse pointers the *hit target* is extended instead: a centred
+     pseudo-element at least 44×44, regardless of what the visual box shrank
+     to. Downward visual overrides can no longer shrink the touch target.
+     Requires the element to be positioned: `ui/button` carries `relative` in
+     its base (twMerge lets an explicit position class win), the dialog close
+     is already `absolute`, and checkbox/switch add `relative` alongside it.
+     Fine pointers are untouched — a mouse does not need the floor. */
+  @media (pointer: coarse) {
+    .touch-target::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: max(100%, 44px);
+      height: max(100%, 44px);
+      transform: translate(-50%, -50%);
+    }
+  }
 }
 
 /* PX1-W1 (fnd-px-no-reduced-motion) — UIA §11 calls reduced motion "a

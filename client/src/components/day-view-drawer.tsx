@@ -13,18 +13,9 @@ import {
 } from "lucide-react";
 import type { PlannerEntry, Meal } from "@shared/schema";
 
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(
-    () => typeof window !== "undefined" ? window.innerWidth < 768 : false
-  );
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 767px)");
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
-  return isMobile;
-}
+// PX1-W2 (fnd-px-breakpoint-six-truths): the local useIsMobile copy is retired;
+// breakpoint truth has one owner.
+import { useIsMobile } from "@/hooks/use-adaptive-density";
 
 interface FullDay {
   id: number;

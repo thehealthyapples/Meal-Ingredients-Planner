@@ -13,18 +13,9 @@ import { usePlannerMealSearch, type WebSearchRecipe } from "@/hooks/use-planner-
 import { MealPreviewBubble, MealPreviewInline, useMealPreview } from "@/components/MealPreviewBubble";
 import { DraggableSearchResultRow } from "@/components/PlannerDragDrop";
 
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(
-    () => typeof window !== "undefined" ? window.innerWidth < 768 : false,
-  );
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 767px)");
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
-  return isMobile;
-}
+// PX1-W2 (fnd-px-breakpoint-six-truths): the local useIsMobile copy is retired;
+// breakpoint truth has one owner.
+import { useIsMobile } from "@/hooks/use-adaptive-density";
 
 export interface EntryTarget {
   dayId: number;
@@ -687,7 +678,7 @@ export function PlannerMealPickerPanel({
                   </button>
                   <a
                     href={analyserUrl}
-                    className="shrink-0 p-1.5 rounded text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors opacity-0 group-hover:opacity-100"
+                    className="shrink-0 p-1.5 rounded text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors hover-reveal group-hover:opacity-100"
                     title="Analyse in Analyser"
                     data-testid={`link-analyse-product-${i}`}
                   >

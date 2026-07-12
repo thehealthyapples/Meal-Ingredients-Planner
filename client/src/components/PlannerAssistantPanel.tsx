@@ -113,18 +113,9 @@ interface PlannerAssistantPanelProps {
   onBuildCreated?: (mealId: number) => void;
 }
 
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(
-    () => typeof window !== "undefined" ? window.innerWidth < 768 : false
-  );
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 767px)");
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
-  return isMobile;
-}
+// PX1-W2 (fnd-px-breakpoint-six-truths): the local useIsMobile copy is retired;
+// breakpoint truth has one owner.
+import { useIsMobile } from "@/hooks/use-adaptive-density";
 
 interface ScanContentProps {
   onScanFile: (file: File) => void;
@@ -439,7 +430,9 @@ function ResolveSearchContent({ mealName, meals, onSelectRecipe, onBack, isResol
   const qc = useQueryClient();
   const [search, setSearch] = useState(mealName);
   const [importingWebId, setImportingWebId] = useState<string | null>(null);
-  const isMobileResolve = typeof window !== "undefined" ? window.innerWidth < 768 : false;
+  // PX1-W2 (fnd-px-breakpoint-six-truths): was a one-shot innerWidth read that
+  // never updated on rotation; now the canonical reactive hook.
+  const isMobileResolve = useIsMobile();
 
   const {
     previewItem: resolvePreviewItem,
@@ -1424,7 +1417,7 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
                             <button
                               onPointerDown={e => e.stopPropagation()}
                               onClick={e => { e.stopPropagation(); removeProposal(p.id); }}
-                              className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-accent/60 text-muted-foreground hover:text-foreground transition-opacity shrink-0"
+                              className="hover-reveal group-hover:opacity-100 p-0.5 rounded hover:bg-accent/60 text-muted-foreground hover:text-foreground transition-opacity shrink-0"
                               title="Remove"
                               data-testid={`button-proposal-remove-${p.id}`}
                             >

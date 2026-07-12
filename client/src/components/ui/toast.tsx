@@ -84,7 +84,9 @@ const ToastClose = React.forwardRef<
   <ToastPrimitives.Close
     ref={ref}
     className={cn(
-      "absolute right-1.5 top-1.5 rounded-md p-1 text-foreground/40 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-1 group-hover:opacity-100 group-[.destructive]:text-destructive/60 group-[.destructive]:hover:text-destructive group-[.destructive]:focus:ring-destructive",
+      // PX1-W2 (fnd-px-invisible-destructive-controls): `hover-reveal`, not `opacity-0` —
+      // on a device with no hover, the failure toast's only dismiss control was invisible.
+      "absolute right-1.5 top-1.5 rounded-md p-1 text-foreground/40 hover-reveal transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-1 group-hover:opacity-100 group-[.destructive]:text-destructive/60 group-[.destructive]:hover:text-destructive group-[.destructive]:focus:ring-destructive",
       className
     )}
     toast-close=""

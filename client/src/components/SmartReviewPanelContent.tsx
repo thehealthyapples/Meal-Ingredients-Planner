@@ -20,18 +20,9 @@ import type { Meal, Nutrition } from "@shared/schema";
 import type { SmartSuggestEntry, SmartSuggestResult } from "@/lib/planner-types";
 import { MealPreviewBubble, MealPreviewInline, useMealPreview, type PreviewItem } from "@/components/MealPreviewBubble";
 
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(
-    () => typeof window !== "undefined" ? window.innerWidth < 768 : false,
-  );
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 767px)");
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
-  return isMobile;
-}
+// PX1-W2 (fnd-px-breakpoint-six-truths): the local useIsMobile copy is retired;
+// breakpoint truth has one owner.
+import { useIsMobile } from "@/hooks/use-adaptive-density";
 
 // ── UPF helpers ───────────────────────────────────────────────────────────────
 

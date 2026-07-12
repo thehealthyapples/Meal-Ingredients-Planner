@@ -27,6 +27,10 @@ const MICRO_INSIGHTS = [
 ];
 import { WorkspaceHeader } from "@/components/workspace-header";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { PantryKnowledgeHub } from "@/components/PantryKnowledgeHub";
 import PantryIntelligencePanel from "@/components/PantryIntelligencePanel";
 import { AmbientIntelligence } from "@/components/intelligence";
@@ -248,6 +252,10 @@ function FoodPantrySection({
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [sending, setSending] = useState(false);
   const [sendQty, setSendQty] = useState(1);
+  // PX1-W2 (fnd-px-invisible-destructive-controls): deleting fired straight from
+  // the row's onClick — and it is the only delete path, so a pantry item could
+  // only ever be removed by accident. The canonical AlertDialog asks first.
+  const [confirmDelete, setConfirmDelete] = useState<{ id: number; name: string } | null>(null);
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
   const [serverKnowledge, setServerKnowledge] = useState<Map<string, "loading" | null | {
     supports: string[];
@@ -597,9 +605,10 @@ function FoodPantrySection({
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-9 w-9 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                              onClick={() => deleteMutation.mutate(item.id)}
+                              className="h-9 w-9 text-muted-foreground hover:text-destructive hover-reveal group-hover:opacity-100 transition-opacity shrink-0"
+                              onClick={() => setConfirmDelete({ id: item.id, name: item.displayName || item.ingredientKey })}
                               disabled={deleteMutation.isPending}
+                              aria-label={`Remove ${item.displayName || item.ingredientKey} from your pantry`}
                               data-testid={`button-food-pantry-delete-${item.id}`}
                             >
                               <Trash2 className="h-3.5 w-3.5" />
@@ -678,6 +687,26 @@ function FoodPantrySection({
           )}
         </div>
       )}
+
+      <AlertDialog open={confirmDelete !== null} onOpenChange={(open) => { if (!open) setConfirmDelete(null); }}>
+        <AlertDialogContent data-testid="dialog-food-pantry-delete">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove {confirmDelete?.name} from your pantry?</AlertDialogTitle>
+            <AlertDialogDescription>
+              It will no longer count as something you have in. You can add it back any time.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-food-pantry-delete-cancel">Keep it</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { if (confirmDelete) deleteMutation.mutate(confirmDelete.id); setConfirmDelete(null); }}
+              data-testid="button-food-pantry-delete-confirm"
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
@@ -705,6 +734,9 @@ function HomePantrySection({
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [sending, setSending] = useState(false);
   const [sendQty, setSendQty] = useState(1);
+  // PX1-W2 (fnd-px-invisible-destructive-controls): same unguarded delete as the
+  // food list above — the second copy of the pantry mutations gets the same ask.
+  const [confirmDelete, setConfirmDelete] = useState<{ id: number; name: string } | null>(null);
 
   const homeCatValues = HOME_CATS.map(c => c.value as string);
   const allHomeItems = items.filter(i => homeCatValues.includes(i.category));
@@ -992,9 +1024,10 @@ function HomePantrySection({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-9 w-9 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                          onClick={() => deleteMutation.mutate(item.id)}
+                          className="h-9 w-9 text-muted-foreground hover:text-destructive hover-reveal group-hover:opacity-100 transition-opacity shrink-0"
+                          onClick={() => setConfirmDelete({ id: item.id, name: item.displayName || item.ingredientKey })}
                           disabled={deleteMutation.isPending}
+                          aria-label={`Remove ${item.displayName || item.ingredientKey} from your list`}
                           data-testid={`button-household-delete-${item.id}`}
                         >
                           <Trash2 className="h-3.5 w-3.5" />

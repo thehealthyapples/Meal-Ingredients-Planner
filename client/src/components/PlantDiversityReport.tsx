@@ -633,7 +633,6 @@ function ReportRow({
 }) {
   const hasBenefitSummary = !!row.benefitSummary;
   const hasNutrients = row.keyNutrients.length > 0;
-  const mealCount = row.mealNames.length;
 
   return (
     <>
@@ -663,31 +662,24 @@ function ReportRow({
               {getCategoryEmoji(row.plantCategory ?? undefined)}
             </span>
             <div className="min-w-0">
+              {/* PX1-W2: the mobile stacked summary is retired — it compensated
+                  for the hidden Category/Meals columns, which now always render. */}
               <span className="block text-sm font-medium text-foreground/90 truncate">
                 {row.displayName}
-              </span>
-              {/* Mobile stacked summary */}
-              <span className="md:hidden block text-[11px] text-muted-foreground/55 mt-0.5 truncate">
-                {row.reportCategory}
-                {mealCount > 0 && (
-                  <span className="ml-2 text-muted-foreground/40">
-                    · {mealCount === 1 ? "1 meal" : `${mealCount} meals`}
-                  </span>
-                )}
               </span>
             </div>
           </div>
         </td>
 
-        {/* Category — desktop */}
-        <td className="hidden md:table-cell px-3 py-2.5 align-middle">
+        {/* Category */}
+        <td className="px-3 py-2.5 align-middle">
           <span className="text-[11px] text-foreground/65 whitespace-nowrap">
             {row.reportCategory}
           </span>
         </td>
 
-        {/* Supports / Benefits — desktop */}
-        <td className="hidden md:table-cell px-3 py-2.5 align-middle">
+        {/* Supports / Benefits */}
+        <td className="px-3 py-2.5 align-middle">
           {hasBenefitSummary ? (
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] bg-muted/50 text-foreground/70 border border-border/40 truncate max-w-[160px]">
               {row.benefitSummary}
@@ -697,8 +689,8 @@ function ReportRow({
           )}
         </td>
 
-        {/* Key Nutrients — desktop */}
-        <td className="hidden md:table-cell px-3 py-2.5 align-middle">
+        {/* Key Nutrients */}
+        <td className="px-3 py-2.5 align-middle">
           {hasNutrients ? (
             <span className="text-[11px] text-emerald-700/60 dark:text-emerald-400/60 font-medium whitespace-nowrap">
               {row.keyNutrients.slice(0, 2).join(" · ")}
@@ -708,13 +700,13 @@ function ReportRow({
           )}
         </td>
 
-        {/* Days — desktop */}
-        <td className="hidden md:table-cell px-3 py-2.5 align-middle">
+        {/* Days */}
+        <td className="px-3 py-2.5 align-middle">
           <DaysCell row={row} />
         </td>
 
-        {/* Meals — desktop */}
-        <td className="hidden md:table-cell px-4 py-2.5 align-middle text-right">
+        {/* Meals */}
+        <td className="px-4 py-2.5 align-middle text-right">
           <div className="flex items-center justify-end gap-1">
             <MealsCell row={row} />
             <ChevronRight
@@ -783,41 +775,48 @@ function ReportTable({
   if (rows.length === 0) return null;
 
   return (
-    <table className="w-full text-left border-collapse">
-      <thead>
-        <tr className="bg-muted/20 border-b border-border/50">
-          <th className="px-4 py-2 text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide">
-            Ingredient
-          </th>
-          <th className="hidden md:table-cell px-3 py-2 text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide">
-            Category
-          </th>
-          <th className="hidden md:table-cell px-3 py-2 text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide whitespace-nowrap">
-            Supports
-          </th>
-          <th className="hidden md:table-cell px-3 py-2 text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide whitespace-nowrap">
-            Key Nutrients
-          </th>
-          <th className="hidden md:table-cell px-3 py-2 text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide">
-            Days
-          </th>
-          <th className="hidden md:table-cell px-4 py-2 text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide text-right">
-            Meals
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row) => (
-          <ReportRow
-            key={row.displayKey}
-            row={row}
-            variety={varietyByRowKey.get(row.displayKey)}
-            expanded={expandedKeys.has(row.displayKey)}
-            onToggle={() => onToggle(row.displayKey)}
-          />
-        ))}
-      </tbody>
-    </table>
+    // PX1-W2 (fnd-px-plant-columns-unreachable): five of six columns were
+    // `hidden md:table-cell` inside an overflow-hidden card — display:none with
+    // no scroller to recover them, so on a phone the entire "why this plant
+    // matters" payload was invisible. The columns now always render and the
+    // table scrolls horizontally where it does not fit.
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[640px] text-left border-collapse">
+        <thead>
+          <tr className="bg-muted/20 border-b border-border/50">
+            <th className="px-4 py-2 text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide">
+              Ingredient
+            </th>
+            <th className="px-3 py-2 text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide">
+              Category
+            </th>
+            <th className="px-3 py-2 text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide whitespace-nowrap">
+              Supports
+            </th>
+            <th className="px-3 py-2 text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide whitespace-nowrap">
+              Key Nutrients
+            </th>
+            <th className="px-3 py-2 text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide">
+              Days
+            </th>
+            <th className="px-4 py-2 text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide text-right">
+              Meals
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <ReportRow
+              key={row.displayKey}
+              row={row}
+              variety={varietyByRowKey.get(row.displayKey)}
+              expanded={expandedKeys.has(row.displayKey)}
+              onToggle={() => onToggle(row.displayKey)}
+            />
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 

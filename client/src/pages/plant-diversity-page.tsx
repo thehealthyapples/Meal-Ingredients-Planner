@@ -63,7 +63,11 @@ export default function PlantDiversityPage() {
         }
       />
 
-      <div className="max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
+      {/* PX1-W2 (fnd-px-plant-columns-unreachable): `w-full min-w-0` — as a flex
+          item of <main>, this container's min-width:auto let the report table
+          grow it past the viewport, where overflow-x-hidden clipped the columns
+          instead of letting the table's own scroller work. */}
+      <div className="w-full min-w-0 max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
 
         {activeTab === "foods" && (
           <>

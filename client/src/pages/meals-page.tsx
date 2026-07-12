@@ -5,6 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -2525,6 +2529,10 @@ export default function MealsPage() {
   const [webSearchQuery, setWebSearchQuery] = useState("");
   const [cookbookMode, setCookbookMode] = useState<CookbookWorkspaceMode>(null);
   const [mobileCookbookOpen, setMobileCookbookOpen] = useState(false);
+  // PX1-W2 (fnd-px-invisible-destructive-controls): every recipe-delete path fired
+  // deleteMeal.mutate immediately — a whole recipe gone with no ask. The canonical
+  // AlertDialog asks first; all three delete paths route through it.
+  const [confirmDeleteMeal, setConfirmDeleteMeal] = useState<{ id: number; name: string } | null>(null);
   const [cookbookAddRecipeOpen, setCookbookAddRecipeOpen] = useState(false);
   const [scanLoading, setScanLoading] = useState(false);
   const [scanDialogOpen, setScanDialogOpen] = useState(false);
@@ -3961,7 +3969,7 @@ export default function MealsPage() {
                       <CardActionsMenu
                         meal={meal}
                         onFreezeClick={() => setAddToFreezerMealId(meal.id)}
-                        onDelete={() => deleteMeal.mutate(meal.id)}
+                        onDelete={() => setConfirmDeleteMeal({ id: meal.id, name: meal.name })}
                         onImageChange={handleMealImageChange}
                         onMobileClick={() => setActionSheetMeal(meal)}
                       />
@@ -4185,8 +4193,9 @@ export default function MealsPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="text-muted-foreground invisible group-hover:visible self-end"
-                              onClick={(e) => { e.stopPropagation(); deleteMeal.mutate(meal.id); }}
+                              className="text-muted-foreground hover-reveal group-hover:opacity-100 transition-opacity self-end"
+                              onClick={(e) => { e.stopPropagation(); setConfirmDeleteMeal({ id: meal.id, name: meal.name }); }}
+                              aria-label={`Delete ${meal.name}`}
                               data-testid={`button-delete-meal-${meal.id}`}
                             >
                               <Trash2 className="h-4 w-4" />
@@ -5408,9 +5417,29 @@ export default function MealsPage() {
       onAddToFreezer={(mealId) => setAddToFreezerMealId(mealId)}
       isSystemMeal={!!actionSheetMeal?.isSystemMeal}
       onImageChange={handleMealImageChange}
-      onDelete={actionSheetMeal && !actionSheetMeal.isSystemMeal ? () => { setActionSheetMeal(null); deleteMeal.mutate(actionSheetMeal.id); } : undefined}
+      onDelete={actionSheetMeal && !actionSheetMeal.isSystemMeal ? () => { const m = actionSheetMeal; setActionSheetMeal(null); setConfirmDeleteMeal({ id: m.id, name: m.name }); } : undefined}
       onAddToQuickList={handleAddToListFromCookbook}
     />
+
+    <AlertDialog open={confirmDeleteMeal !== null} onOpenChange={(open) => { if (!open) setConfirmDeleteMeal(null); }}>
+      <AlertDialogContent data-testid="dialog-delete-meal">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete {confirmDeleteMeal?.name}?</AlertDialogTitle>
+          <AlertDialogDescription>
+            The recipe and its ingredients will be removed from your cookbook. This can't be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel data-testid="button-delete-meal-cancel">Keep it</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => { if (confirmDeleteMeal) deleteMeal.mutate(confirmDeleteMeal.id); setConfirmDeleteMeal(null); }}
+            data-testid="button-delete-meal-confirm"
+          >
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     </div>
     </>
   );

@@ -1,5 +1,30 @@
 import * as React from "react"
 
+// PX1-W2 (fnd-px-breakpoint-six-truths) — this file is the one owner of
+// breakpoint truth. UIA §9: "two surfaces disagreeing about whether the same
+// screen is small is a governance failure" — there were six definitions (five
+// copy-pasted local hooks, one at 1024). MOBILE_BREAKPOINT matches Tailwind's
+// `md` (768px), so JS and the `md:` classes cannot disagree about the same
+// viewport. Do not re-derive this number anywhere else.
+export const MOBILE_BREAKPOINT = 768
+
+const MOBILE_QUERY = `(max-width: ${MOBILE_BREAKPOINT - 1}px)`
+
+function subscribeToMobile(onChange: () => void) {
+  const mq = window.matchMedia(MOBILE_QUERY)
+  mq.addEventListener("change", onChange)
+  return () => mq.removeEventListener("change", onChange)
+}
+
+/** The canonical "is this a mobile viewport?" — reactive, correct on first render. */
+export function useIsMobile(): boolean {
+  return React.useSyncExternalStore(
+    subscribeToMobile,
+    () => window.matchMedia(MOBILE_QUERY).matches,
+    () => false,
+  )
+}
+
 export type AdaptiveDensity = "compact" | "comfortable" | "expanded"
 
 export interface AdaptiveDensityResult {
