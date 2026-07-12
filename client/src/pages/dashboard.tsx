@@ -2,6 +2,7 @@ import { useMemo, useState, useCallback } from "react";
 import { useUser } from "@/hooks/use-user";
 import { WorkspaceHeader } from "@/components/workspace-header";
 import HomeIntelligenceCompanion from "@/components/HomeIntelligenceCompanion";
+import { AmbientIntelligence } from "@/components/intelligence";
 import { useMealsSummary } from "@/hooks/use-meals-summary";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -274,6 +275,16 @@ export default function Dashboard() {
           {/* ── Home Intelligence Companion ── */}
           <motion.div variants={item}>
             <HomeIntelligenceCompanion />
+          </motion.div>
+
+          {/* PHASE5C — the Decision Engine's own opportunities, aggregated across
+              every domain. The Dashboard is the ONE sanctioned aggregate view
+              (Home stays the calm landing and keeps the Notice Engine's silence-
+              ruled reminders — Home unharmed). Unlike the companion above, these
+              carry their evidence ("Why") and are resolvable, which is what feeds
+              Evidence back into Household Learning. */}
+          <motion.div variants={item}>
+            <AmbientIntelligence surfaceKey="dashboard" title="Things you could do" />
           </motion.div>
 
           {/* ── Recent Meals — conversational first, before numbers ── */}

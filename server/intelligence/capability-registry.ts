@@ -691,7 +691,12 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     description: "The canonical, cross-cutting framework governing how Domain Intelligence opportunities (today: FI4's ambient Food Opportunities) are prioritised, grouped, deduplicated and surfaced across the platform, and how a caller acknowledges (review), dismisses (delete) or accepts (approve) one. Owns zero business-domain data and zero producer reasoning — every opportunity's content is a verbatim projection of what a registered producer capability already returned (OD1).",
     owner: "server/intelligence/opportunity-delivery/framework.ts + delivery-store.ts (OD1 — the platform's own governance layer per THA_INTELLIGENCE_PLATFORM_ARCHITECTURE.md; delivery-store.ts is the sole owner of the new opportunity_deliveries table, SoT-registered under OD1)",
     owningService: "server/intelligence/opportunity-delivery/framework.ts, delivery-store.ts",
-    apiSurface: "(platform-internal only — no dedicated HTTP route; consumed via the registered capability, not a private route)",
+    // PHASE5C — currency correction. This registry is a DERIVED PROJECTION of the live
+    // route table (see this file's header), so an apiSurface that denies a route which
+    // exists is a defect in the projection, not a stylistic quibble. PHASE5B added these
+    // routes; the descriptor still said "no dedicated HTTP route". Both are transport
+    // only — every one goes through intelligencePlatform.handle(), never around it.
+    apiSurface: "GET /api/intelligence/food-opportunities (report) · POST /api/intelligence/food-opportunities/:opportunityId/:action where action ∈ acknowledge→review | accept→approve | dismiss→delete (PHASE5B). Transport only: routed through the Intent Engine, never around it. Also consumed platform-internally by GET /api/intelligence/companion/notices.",
     supportedIntents: ["report", "review", "approve", "delete"],
     executableIntents: [],
     permissions: { minimumRole: "user", knowledgeClass: "public", ownershipScoped: true, audited: false },
@@ -705,7 +710,8 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     description: "The canonical, cross-cutting platform that captures structured household outcomes (report), accumulates them into an append-only evidence log, and deterministically detects patterns over accumulated evidence — never from a single observation. A detected pattern is a pending, explainable signal (its supporting evidence and rationale are always shown) until a household explicitly confirms (approve) or declines (delete) it. Owns zero business-domain/preference data — confirming a signal only changes its own status; adapting an actual household preference on the strength of a confirmed signal remains a separate, human-triggered write through that preference store's own owning capability (EL1).",
     owner: "server/intelligence/evidence-learning/framework.ts + evidence-learning-store.ts (EL1 — a reusable platform capability per THA_FOOD_INTELLIGENCE_PLATFORM_ARCHITECTURE.md §4.2/§7.2's forward-named \"Personalisation Event Log\", generalised beyond Food Intelligence so any future Domain Intelligence layer can be a consumer; evidence-learning-store.ts is the sole owner of the new household_evidence_events and household_learning_signals tables, SoT-registered under EL1)",
     owningService: "server/intelligence/evidence-learning/framework.ts, evidence-learning-store.ts",
-    apiSurface: "(platform-internal only — no dedicated HTTP route; consumed via the registered capability, not a private route)",
+    // PHASE5C — currency correction; see the note on opportunity-delivery above.
+    apiSurface: "GET /api/intelligence/learning-signals (search, pending_confirmation only) · POST /api/intelligence/learning-signals/:signalId/:decision where decision ∈ confirm→approve | decline→delete (PHASE5B). Transport only: routed through the Intent Engine, never around it. `report` stays platform-internal — evidence is emitted by the Decision Engine's own terminal resolution (Rule EL2's one door), never by a client.",
     supportedIntents: ["report", "search", "approve", "delete"],
     executableIntents: [],
     permissions: { minimumRole: "user", knowledgeClass: "public", ownershipScoped: true, audited: false },

@@ -33,6 +33,7 @@ import { emitStageProposal } from "@/lib/planner-staging-bus";
 import { computeMealVariety, EMPTY_VARIETY_SCORE } from "@shared/canonical/plant-classifier";
 import { getMealNutrients } from "@/lib/nutrition-insights";
 import PlannerIntelligenceStrip from "@/components/PlannerIntelligenceStrip";
+import { AmbientIntelligence } from "@/components/intelligence";
 import { CookbookMealIntelligenceStrip } from "@/components/CookbookMealIntelligenceStrip";
 import { getMealBoosts } from "@/lib/nutrition-boosts";
 import { MealNutrientTags } from "@/components/nutrition-insights-panel";
@@ -1958,6 +1959,17 @@ export default function WeeklyPlannerPage() {
           weekId={activeWeekId}
           weekIngredients={weekIngredients}
           onNavigatePlantDiversity={() => navigate("/plant-diversity")}
+        />
+
+        {/* PHASE5C — the planner's own ambient intelligence, from the Decision
+            Engine's opportunity bundle. The `planner` domain's canonical page:
+            the empty day each opportunity names is on this very screen. Distinct
+            from the strip above, which is the week's nutrition/diversity picture. */}
+        <AmbientIntelligence
+          surfaceKey="planner"
+          domains={["planner"]}
+          title="Gaps in your week"
+          className="mt-3"
         />
 
         {fullPlanner.map((week) => (

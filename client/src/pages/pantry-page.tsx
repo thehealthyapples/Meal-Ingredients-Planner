@@ -28,6 +28,7 @@ import { WorkspaceHeader } from "@/components/workspace-header";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { PantryKnowledgeHub } from "@/components/PantryKnowledgeHub";
 import PantryIntelligencePanel from "@/components/PantryIntelligencePanel";
+import { AmbientIntelligence } from "@/components/intelligence";
 
 interface PantryItem {
   id: number;
@@ -1041,6 +1042,14 @@ export default function PantryPage() {
         <p className="text-xs text-muted-foreground/50 italic" data-testid="text-pantry-micro-insight">
           {microInsight}
         </p>
+
+        {/* PHASE5C — the pantry's own ambient intelligence. The `pantry` domain's
+            canonical page: the item each opportunity names lives right here. */}
+        <AmbientIntelligence
+          surfaceKey="pantry"
+          domains={["pantry"]}
+          title="Ways to use what you have"
+        />
 
         <FirstVisitHint
           areaKey="pantry"

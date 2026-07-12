@@ -96,3 +96,74 @@ export const chipKindStyles: Record<IntelligenceChipKind, string> = {
 /** Base chip shape, shared by every kind. */
 export const chipBase =
   "inline-block whitespace-nowrap text-[10px] rounded-full border px-2 py-0.5 leading-none";
+
+// ── Attention presentation (PHASE5C) ─────────────────────────────────────────
+//
+// The Decision Engine assigns every opportunity an AttentionLevel (ATTN1), ranks
+// by it, and exempts `critical` from the delivery budget entirely. Until PHASE5C
+// the cards received that level and rendered every opportunity identically — so
+// the platform's ONLY safety-relevant signal (an allergen/restriction conflict on
+// the shopping list, the sole member of the closed `critical` allowlist) looked
+// exactly like "you haven't cooked your lentils yet".
+//
+// These tokens map an already-assigned attention level to a look. They DERIVE
+// NOTHING: attention is producer-owned and is never re-computed here (DEC1 §3.3).
+//
+// Colour law: colour is never the only signal. Every level below pairs its tone
+// with an icon AND a text label at the card, so meaning survives without colour.
+
+export type AttentionPresentation = {
+  /** Surface treatment, replacing the calm default where the level warrants it. */
+  readonly surface: string;
+  /** Icon tone. */
+  readonly icon: string;
+  /** Eyebrow tone. */
+  readonly eyebrow: string;
+  /** The label a household reads. Never a bare colour. */
+  readonly label: string | null;
+  /** Whether an ambient surface must open itself rather than stay collapsed. */
+  readonly demandsAttention: boolean;
+};
+
+/**
+ * `critical` is the only level that changes the calm default. It is deliberately
+ * narrow: THA's closed allowlist has exactly one critical type, and it concerns a
+ * named household member's stored hard restriction. Everything else stays quiet
+ * (Experience: calm before capability).
+ */
+export const attentionPresentation: Record<string, AttentionPresentation> = {
+  critical: {
+    surface:
+      "border-destructive/30 bg-destructive/5 dark:border-destructive/40 dark:bg-destructive/10",
+    icon: "text-destructive",
+    eyebrow: "text-destructive font-semibold",
+    label: "Check before you buy",
+    demandsAttention: true,
+  },
+  high: {
+    surface: "border-border/50 bg-background/80",
+    icon: iconTone,
+    eyebrow: eyebrowText,
+    label: null,
+    demandsAttention: false,
+  },
+  medium: {
+    surface: "",
+    icon: iconTone,
+    eyebrow: eyebrowText,
+    label: null,
+    demandsAttention: false,
+  },
+  low: {
+    surface: "",
+    icon: iconTone,
+    eyebrow: eyebrowText,
+    label: null,
+    demandsAttention: false,
+  },
+};
+
+/** An unknown level is an honest fallback to calm — never a guessed alarm. */
+export function presentationFor(priority: string): AttentionPresentation {
+  return attentionPresentation[priority] ?? attentionPresentation.low;
+}

@@ -37,6 +37,7 @@ import {
   type PersonalityId,
 } from "@shared/companion-personality";
 import { WorkspaceHeader } from "@/components/workspace-header";
+import LearningSignalsPanel from "@/components/LearningSignalsPanel";
 import { apiRequest, queryClient as qc } from "@/lib/queryClient";
 import { DIET_PATTERNS, DIET_RESTRICTIONS, EATING_SCHEDULES, ONBOARDING_DIET_OPTIONS, ALLERGY_OPTIONS, DIET_PATTERN_OPTIONS, ALLERGY_INTOLERANCE_OPTIONS, formatDietLabel } from "@/lib/diets";
 import { GOAL_OPTIONS, STORE_OPTIONS, UPF_OPTIONS, BUDGET_OPTIONS, deriveGoalType } from "@/lib/shared-options";
@@ -378,6 +379,19 @@ export default function ProfilePage() {
           onSave={(prefs) => savePreferences(prefs)}
         />
         <HouseholdEatersSection />
+
+        {/* PHASE5C — Household Learning feedback, mounted at the placement
+            LearningSignalsPanel itself declares: the Household section of Profile.
+            Patterns are household-scoped facts (EL1's own householdId ownership),
+            so they belong beside the household's other facts.
+
+            EL1 only ever raises a Pattern from REPEATED, CONSISTENT evidence
+            (MIN_EVIDENCE_COUNT = 3, MIN_CONSISTENCY = 0.7) — never from a single
+            act. Confirming one is the ONLY door through which it becomes Confirmed
+            Understanding, the only thing LEARN1 reads back to re-weight what
+            surfaces. Declining is equally terminal and equally recorded. Nothing
+            here changes a preference or a restriction by itself. */}
+        <LearningSignalsPanel data-testid="panel-household-learning" />
 
         {/* Manage Household — secondary, collapsed by default */}
         <div>

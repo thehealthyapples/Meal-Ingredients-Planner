@@ -30,6 +30,7 @@ import type { ShoppingListItem, IngredientSource } from "@shared/schema";
 import type { HouseholdEater } from "@shared/household-eater";
 import { WorkspaceAnalyserSheet } from "@/components/WorkspaceAnalyserSheet";
 import { WorkspaceHeader } from "@/components/workspace-header";
+import { AmbientIntelligence } from "@/components/intelligence";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -2287,6 +2288,21 @@ export default function ShoppingWorkspacePage() {
         </div>
       )}
       <div className={isFullscreen ? "flex-1 overflow-auto px-4 py-4 sm:px-6 sm:py-6" : ""}>
+
+      {/* PHASE5C — the shopping list's own ambient intelligence, and the reason
+          this workstream exists. The `shopping` domain owns THA's only
+          safety-relevant signal: `shopping-restriction-conflict`, the sole member
+          of the closed `critical` allowlist, raised when a product on this list
+          conflicts with a named household member's stored hard restriction.
+          Before PHASE5C it could reach a household only as one of at most two
+          Notice Engine reminders on Home — never here, on the list holding the
+          product it is about. A critical card opens this surface itself. */}
+      <AmbientIntelligence
+        surfaceKey="shopping"
+        domains={["shopping"]}
+        title="Worth a look before you shop"
+        className="mb-4"
+      />
 
       {/* ── Add mode ──────────────────────────────────────────────────── */}
       {mode === "add" && (

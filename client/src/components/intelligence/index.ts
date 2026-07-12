@@ -34,3 +34,11 @@ export { SimplyBetterChoiceCard } from "./SimplyBetterChoiceCard";
 
 // WX5 — Connected Food Panel (Food Page relationship web).
 export { ConnectedFoodPanel } from "./ConnectedFoodPanel";
+
+// PHASE5C — the ONE ambient surface. Every page that surfaces the Decision
+// Engine's opportunity bundle mounts this and nothing else. It supersedes
+// FoodOpportunitiesPanel (deleted in the same change — UI Principle 5, retire on
+// introduction).
+export { default as AmbientIntelligence } from "./AmbientIntelligence";
+export { FoodOpportunityCard } from "./FoodOpportunityCard";
+export { LearningSignalCard } from "./LearningSignalCard";
