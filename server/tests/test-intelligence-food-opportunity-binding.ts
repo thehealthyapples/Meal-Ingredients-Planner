@@ -196,7 +196,7 @@ async function main(): Promise<void> {
     "canonical singleton: food-intelligence remains 'available'",
   );
   const live = intelligencePlatform.listCapabilities().filter((c) => c.availability === "available");
-  assert(live.length === 21, "exactly TWENTY-ONE live capabilities — FI4 extends food-intelligence (no new one); OD1 adds opportunity-delivery; EL1 separately adds evidence-learning", String(live.length));
+  assert(live.length === 22, "exactly TWENTY-TWO live capabilities — FI4 extends food-intelligence (no new one); OD1 adds opportunity-delivery; EL1 separately adds evidence-learning", String(live.length));
   assert(
     intelligencePlatform.getCapability("food-intelligence")!.executableIntents.includes("report"),
     "executableIntents now declares 'report' alongside recommend/explain (truthful registry — INT6A)",

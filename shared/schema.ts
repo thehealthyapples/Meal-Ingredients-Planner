@@ -1707,6 +1707,143 @@ export type InsertKnowledgeFoodBenefit = z.infer<typeof insertKnowledgeFoodBenef
 export type KnowledgeNutrientBenefit = typeof knowledgeNutrientBenefits.$inferSelect;
 export type InsertKnowledgeNutrientBenefit = z.infer<typeof insertKnowledgeNutrientBenefitSchema>;
 
+// ── Preparation Knowledge (PHASE5A — builds WS5A; PKCA §7 Phase 4) ───────────
+//
+// "The same food. A different thing done to it. Nutrition only changes if the
+// evidence says so." (WS5A). Preparation is a metadata layer ON a food — it
+// NEVER mints a canonical food (WS5A Risk R6) and NEVER changes plant counting.
+//
+// The layer has exactly two dimensions, and keeping them apart is the whole
+// design (WS5A §1.2):
+//
+//   EXISTENCE — that people eat this food this way. Cheap, editorial, always
+//               allowed. This is the MVF bar (PKCA Rule KC5).
+//   EFFECT    — that the preparation MEASURABLY CHANGES nutrition. Expensive,
+//               evidence-gated, rare. Allowed only with a Layer-1 trusted
+//               citation and a named human sign-off.
+//
+// Effects reuse the EXISTING Layer-2 claim-trust contract verbatim
+// (sourceRefs + reviewedAt + reviewedBy, gated by isEvidenceBackedClaim) —
+// the same columns and the same running validator as knowledge_food_benefits.
+// No new evidence vocabulary and no new lifecycle is invented (PKCA Rule KC1;
+// Risk R6). Candidate/gate/confirm for an effect lives where it already lives
+// for every other knowledge proposal: knowledge_review_queue (KQ1B), with
+// reviewType "preparation_effect".
+//
+// This is a DELIBERATE, documented divergence from WS5A §3.1, which proposed a
+// bespoke five-state `editorialStatus` column. That column predates PKC0/KNOW5,
+// which made the evidence chain itself the render gate. Adding it now would
+// create a SECOND lifecycle for one fact — exactly what Rule KC1 forbids.
+
+/** WS5A §1.6. `composite` is deliberately absent: a composite ADDS other foods
+ *  (granola, trail mix) and is NOT a preparation — it must never inherit a
+ *  single food's clean profile (WS5A Case D, Risk R9). */
+export const PREPARATION_TYPES = ["state", "preservation", "cooking", "processing"] as const;
+export type PreparationType = (typeof PREPARATION_TYPES)[number];
+
+/** What an evidenced effect acts on (WS5A §3.1). */
+export const PREPARATION_EFFECT_KINDS = ["nutrient", "attribute", "caution", "context"] as const;
+export type PreparationEffectKind = (typeof PREPARATION_EFFECT_KINDS)[number];
+
+/** WS5A §3.1. `no-meaningful-change` is a POSITIVE, evidenced finding ("we know
+ *  it doesn't matter") — it is NOT the absence of a row ("nobody knows yet").
+ *  Collapsing the two is the single biggest trust risk in this domain (Risk R3). */
+export const PREPARATION_EFFECT_DIRECTIONS = ["increases", "decreases", "changes", "no-meaningful-change"] as const;
+export type PreparationEffectDirection = (typeof PREPARATION_EFFECT_DIRECTIONS)[number];
+
+/** The preparation catalogue — a reference vocabulary beside the spine
+ *  (Principle 5), not an entity. One row per preparation, shared across foods. */
+export const knowledgePreparations = pgTable("knowledge_preparations", {
+  id: serial("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  /** One of PREPARATION_TYPES. Enforced by the seed validator, not by the DB. */
+  prepType: text("prep_type").notNull(),
+  description: text("description"),
+  /** Optional parent preparation slug — the shallow hierarchy of WS5A Case F
+   *  ("cooked" is a family; boiled/roasted/fried are its children). Split a
+   *  child out ONLY where an evidenced effect distinguishes it, never for
+   *  completeness. Self-referencing by slug convention, mirroring
+   *  knowledge_nutrients.family (NK6M) and canonical_food.family (NK6R). */
+  family: text("family"),
+  source: text("source").notNull().default("THA editorial"),
+  displayOrder: integer("display_order").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Food ↔ Preparation: EXISTENCE only. This edge asserts nothing about
+ *  nutrition — it says only "people eat this food this way", which is the
+ *  cheap, always-allowed half of WS5A §1.2. It therefore carries NO evidence
+ *  columns, deliberately: requiring a citation to state that boiled eggs exist
+ *  would be evidence theatre, and it would gate the MVF bar behind the
+ *  enrichment that Rule KC6 says may never gate it. */
+export const knowledgeFoodPreparations = pgTable("knowledge_food_preparations", {
+  id: serial("id").primaryKey(),
+  foodSlug: text("food_slug").notNull().references(() => knowledgeFoods.slug, { onDelete: "cascade" }),
+  preparationSlug: text("preparation_slug").notNull().references(() => knowledgePreparations.slug, { onDelete: "cascade" }),
+  /** Lower = more prominent. Orders "how people eat this" on the food surface. */
+  ranking: integer("ranking").notNull().default(0),
+  source: text("source").notNull().default("THA editorial"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  uniqueFoodPreparation: unique("uq_knowledge_food_preparation").on(t.foodSlug, t.preparationSlug),
+}));
+
+/** Food ↔ Preparation EFFECT: the evidence-gated claim that this preparation
+ *  measurably changes something about this food.
+ *
+ *  The render gate is `isEvidenceBackedClaim` (shared/knowledge/evidence.ts) —
+ *  the SAME function that gates every benefit chip. A row with no valid
+ *  SourceRef, or no human sign-off, does not render: it is an honest gap, and
+ *  the surface says so in the words of WS5A §4, never in the words of a guess.
+ *
+ *  A preparation NEVER authors a benefit directly (WS5A §2.2, Risk R8). The
+ *  only legitimate route is preparation → nutrient/attribute → benefit, which
+ *  the existing nutrient bridge already owns. `effectKind: "caution"` exists
+ *  precisely so that "smoking raises sodium" can be said WITHOUT it becoming a
+ *  benefit claim in either direction. */
+export const knowledgePreparationEffects = pgTable("knowledge_preparation_effects", {
+  id: serial("id").primaryKey(),
+  foodSlug: text("food_slug").notNull().references(() => knowledgeFoods.slug, { onDelete: "cascade" }),
+  preparationSlug: text("preparation_slug").notNull().references(() => knowledgePreparations.slug, { onDelete: "cascade" }),
+  /** One of PREPARATION_EFFECT_KINDS. */
+  effectKind: text("effect_kind").notNull(),
+  /** The nutrient/attribute slug affected. Null for `caution` and `context`. */
+  targetSlug: text("target_slug"),
+  /** One of PREPARATION_EFFECT_DIRECTIONS. */
+  direction: text("direction").notNull(),
+  /** The exact sentence a surface may show. Editorial, EFSA-wording-checked
+   *  where it is a claim. A surface renders THIS STRING — it never composes its
+   *  own sentence from the columns, which is how a hedged claim becomes a
+   *  confident one (WS5A §3.4). */
+  approvedWording: text("approved_wording").notNull(),
+  /** Shown whenever the evidence is weaker than established (WS5A §3.4). */
+  uncertaintyNote: text("uncertainty_note"),
+  source: text("source").notNull().default("THA editorial"),
+  sourceRefs: jsonb("source_refs").$type<KnowledgeSourceRef[]>().notNull().default(sql`'[]'::jsonb`),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  reviewedBy: text("reviewed_by"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  uniquePreparationEffect: unique("uq_knowledge_preparation_effect").on(t.foodSlug, t.preparationSlug, t.effectKind, t.targetSlug),
+}));
+
+export const insertKnowledgePreparationSchema = createInsertSchema(knowledgePreparations).omit({ id: true, createdAt: true });
+export const insertKnowledgeFoodPreparationSchema = createInsertSchema(knowledgeFoodPreparations).omit({ id: true, createdAt: true });
+export const insertKnowledgePreparationEffectSchema = createInsertSchema(knowledgePreparationEffects, {
+  sourceRefs: z.custom<KnowledgeSourceRef[]>().optional(),
+}).omit({ id: true, createdAt: true });
+
+export type KnowledgePreparation = typeof knowledgePreparations.$inferSelect;
+export type InsertKnowledgePreparation = z.infer<typeof insertKnowledgePreparationSchema>;
+export type KnowledgeFoodPreparation = typeof knowledgeFoodPreparations.$inferSelect;
+export type InsertKnowledgeFoodPreparation = z.infer<typeof insertKnowledgeFoodPreparationSchema>;
+export type KnowledgePreparationEffect = typeof knowledgePreparationEffects.$inferSelect;
+export type InsertKnowledgePreparationEffect = z.infer<typeof insertKnowledgePreparationEffectSchema>;
+
 // ── Knowledge Review Queue (KQ1B — Workbench Phase 0) ────────────────────────
 // A GENERAL, governed review queue for knowledge items that a governed process
 // could not resolve on its own and that need human review. It is a PROPOSAL /

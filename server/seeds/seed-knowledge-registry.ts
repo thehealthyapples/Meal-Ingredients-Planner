@@ -42,6 +42,11 @@ import {
   attachCompositionSources,
   validateKnowledgeSeed,
 } from "@shared/knowledge";
+import {
+  PREPARATION_SEED,
+  deriveFoodPreparations,
+  validatePreparationSeed,
+} from "@shared/knowledge/preparations";
 
 const { Pool } = pg;
 
@@ -63,7 +68,7 @@ const reconciling = !args.includes("--no-reconcile");
 async function run() {
   // Refuse to seed inconsistent editorial data (dangling slugs / duplicates /
   // a citation that invents a claim).
-  const problems = validateKnowledgeSeed();
+  const problems = [...validateKnowledgeSeed(), ...validatePreparationSeed()];
   if (problems.length > 0) {
     console.error("Knowledge seed validation failed — refusing to seed:");
     for (const p of problems) console.error("  • " + p);
@@ -135,6 +140,33 @@ async function run() {
     set: { evidenceStrength: sqlExcluded("evidence_strength"), ranking: sqlExcluded("ranking"), source: sqlExcluded("source"), sourceRefs: sqlExcluded("source_refs"), isActive: sqlExcluded("is_active") },
   });
 
+  // ── Preparation Knowledge (PHASE5A — WS5A; PKCA §7 Phase 4) ───────────────────
+  //
+  // EXISTENCE ONLY. The catalogue, and the food↔preparation edges projected from
+  // the `commonForms` an editor already authored. Not one nutrition claim is made
+  // here: an EFFECT (that a preparation measurably CHANGES something) lives in
+  // knowledge_preparation_effects, needs a Layer-1 citation and a named human
+  // sign-off, and is NEVER seeded — automation authors candidates, it does not
+  // publish them (Rule KC9). This seeder therefore does not write that table at
+  // all, and the platform renders an honest "no reviewed note" for every
+  // preparation until a human signs one off (npm run knowledge:signoff).
+  await db.insert(schema.knowledgePreparations).values(PREPARATION_SEED).onConflictDoUpdate({
+    target: schema.knowledgePreparations.slug,
+    set: {
+      name: sqlExcluded("name"), prepType: sqlExcluded("prep_type"), description: sqlExcluded("description"),
+      family: sqlExcluded("family"), source: sqlExcluded("source"), displayOrder: sqlExcluded("display_order"),
+      isActive: sqlExcluded("is_active"),
+    },
+  });
+
+  const foodPreparations = deriveFoodPreparations(FOOD_SEED);
+  if (foodPreparations.length > 0) {
+    await db.insert(schema.knowledgeFoodPreparations).values(foodPreparations).onConflictDoUpdate({
+      target: [schema.knowledgeFoodPreparations.foodSlug, schema.knowledgeFoodPreparations.preparationSlug],
+      set: { ranking: sqlExcluded("ranking"), source: sqlExcluded("source"), isActive: sqlExcluded("is_active") },
+    });
+  }
+
   // ── Reconcile: retire what the owner no longer authors ─────────────────────────
   if (reconciling) {
     console.log("\nReconciling (deactivating rows the seed no longer owns)…");
@@ -154,14 +186,20 @@ async function run() {
     activeCount(schema.knowledgeFoodNutrients),
     activeCount(schema.knowledgeFoodBenefits),
     activeCount(schema.knowledgeNutrientBenefits),
+    activeCount(schema.knowledgePreparations),
+    activeCount(schema.knowledgeFoodPreparations),
+    activeCount(schema.knowledgePreparationEffects),
   ]);
   console.log("\nDone. Active DB row totals:");
-  console.log(`  knowledge_foods             : ${counts[0]}`);
-  console.log(`  knowledge_nutrients         : ${counts[1]}`);
-  console.log(`  knowledge_health_benefits   : ${counts[2]}`);
-  console.log(`  knowledge_food_nutrients    : ${counts[3]}`);
-  console.log(`  knowledge_food_benefits     : ${counts[4]}`);
-  console.log(`  knowledge_nutrient_benefits : ${counts[5]}`);
+  console.log(`  knowledge_foods               : ${counts[0]}`);
+  console.log(`  knowledge_nutrients           : ${counts[1]}`);
+  console.log(`  knowledge_health_benefits     : ${counts[2]}`);
+  console.log(`  knowledge_food_nutrients      : ${counts[3]}`);
+  console.log(`  knowledge_food_benefits       : ${counts[4]}`);
+  console.log(`  knowledge_nutrient_benefits   : ${counts[5]}`);
+  console.log(`  knowledge_preparations        : ${counts[6]}`);
+  console.log(`  knowledge_food_preparations   : ${counts[7]}`);
+  console.log(`  knowledge_preparation_effects : ${counts[8]}  (seed writes none — evidence-gated, human sign-off only)`);
 
   await pool.end();
 }
@@ -187,7 +225,17 @@ export async function upsertFoodNutrients(dbLike: Db): Promise<void> {
   });
 }
 
-/** Identity keys the seed currently authors, per table. */
+/**
+ * Identity keys the seed currently authors, per table.
+ *
+ * NOTE what is deliberately absent: `knowledge_preparation_effects`. The seed
+ * does NOT author an effect and must never reconcile that table. An effect row
+ * is created by the review workflow and signed off by a named human; a
+ * reconciliation sweep here would deactivate every human sign-off on the next
+ * re-seed, because the seed has no record of authoring any of them. The rule is
+ * general and worth stating plainly: this sweep may only retire rows this seed
+ * is the author of. It is not a garbage collector for the whole schema.
+ */
 function ownedKeys() {
   return {
     knowledge_foods: new Set(FOOD_SEED.map((f) => f.slug)),
@@ -196,19 +244,25 @@ function ownedKeys() {
     knowledge_food_nutrients: new Set(FOOD_NUTRIENT_SEED.map((r) => `${r.foodSlug}→${r.nutrientSlug}`)),
     knowledge_food_benefits: new Set(FOOD_BENEFIT_SEED.map((r) => `${r.foodSlug}→${r.benefitSlug}`)),
     knowledge_nutrient_benefits: new Set(NUTRIENT_BENEFIT_SEED.map((r) => `${r.nutrientSlug}→${r.benefitSlug}`)),
+    knowledge_preparations: new Set(PREPARATION_SEED.map((p) => p.slug)),
+    knowledge_food_preparations: new Set(
+      deriveFoodPreparations(FOOD_SEED).map((r) => `${r.foodSlug}→${r.preparationSlug}`),
+    ),
   };
 }
 
 /** Active DB rows whose identity the seed no longer authors, per table. */
 async function orphanedRows(): Promise<Record<string, string[]>> {
   const owned = ownedKeys();
-  const [foods, nutrients, benefits, fn, fb, nb] = await Promise.all([
+  const [foods, nutrients, benefits, fn, fb, nb, preps, fp] = await Promise.all([
     db.select({ k: schema.knowledgeFoods.slug }).from(schema.knowledgeFoods).where(eq(schema.knowledgeFoods.isActive, true)),
     db.select({ k: schema.knowledgeNutrients.slug }).from(schema.knowledgeNutrients).where(eq(schema.knowledgeNutrients.isActive, true)),
     db.select({ k: schema.knowledgeHealthBenefits.slug }).from(schema.knowledgeHealthBenefits).where(eq(schema.knowledgeHealthBenefits.isActive, true)),
     db.select({ a: schema.knowledgeFoodNutrients.foodSlug, b: schema.knowledgeFoodNutrients.nutrientSlug }).from(schema.knowledgeFoodNutrients).where(eq(schema.knowledgeFoodNutrients.isActive, true)),
     db.select({ a: schema.knowledgeFoodBenefits.foodSlug, b: schema.knowledgeFoodBenefits.benefitSlug }).from(schema.knowledgeFoodBenefits).where(eq(schema.knowledgeFoodBenefits.isActive, true)),
     db.select({ a: schema.knowledgeNutrientBenefits.nutrientSlug, b: schema.knowledgeNutrientBenefits.benefitSlug }).from(schema.knowledgeNutrientBenefits).where(eq(schema.knowledgeNutrientBenefits.isActive, true)),
+    db.select({ k: schema.knowledgePreparations.slug }).from(schema.knowledgePreparations).where(eq(schema.knowledgePreparations.isActive, true)),
+    db.select({ a: schema.knowledgeFoodPreparations.foodSlug, b: schema.knowledgeFoodPreparations.preparationSlug }).from(schema.knowledgeFoodPreparations).where(eq(schema.knowledgeFoodPreparations.isActive, true)),
   ]);
   const pairKeys = (rows: { a: string; b: string }[]) => rows.map((r) => `${r.a}→${r.b}`);
   return {
@@ -218,6 +272,8 @@ async function orphanedRows(): Promise<Record<string, string[]>> {
     knowledge_food_nutrients: pairKeys(fn).filter((k) => !owned.knowledge_food_nutrients.has(k)),
     knowledge_food_benefits: pairKeys(fb).filter((k) => !owned.knowledge_food_benefits.has(k)),
     knowledge_nutrient_benefits: pairKeys(nb).filter((k) => !owned.knowledge_nutrient_benefits.has(k)),
+    knowledge_preparations: preps.map((r) => r.k).filter((k) => !owned.knowledge_preparations.has(k)),
+    knowledge_food_preparations: pairKeys(fp).filter((k) => !owned.knowledge_food_preparations.has(k)),
   };
 }
 
@@ -262,6 +318,11 @@ export async function deactivateAbsentRows(dbLike: Db): Promise<Record<string, n
       { id: t.knowledgeFoodBenefits.id, a: t.knowledgeFoodBenefits.foodSlug, b: t.knowledgeFoodBenefits.benefitSlug }),
     knowledge_nutrient_benefits: await deactivateOrphans(dbLike, t.knowledgeNutrientBenefits, owned.knowledge_nutrient_benefits,
       { id: t.knowledgeNutrientBenefits.id, a: t.knowledgeNutrientBenefits.nutrientSlug, b: t.knowledgeNutrientBenefits.benefitSlug }),
+    knowledge_preparations: await deactivateOrphans(dbLike, t.knowledgePreparations, owned.knowledge_preparations,
+      { id: t.knowledgePreparations.id, a: t.knowledgePreparations.slug }),
+    knowledge_food_preparations: await deactivateOrphans(dbLike, t.knowledgeFoodPreparations, owned.knowledge_food_preparations,
+      { id: t.knowledgeFoodPreparations.id, a: t.knowledgeFoodPreparations.foodSlug, b: t.knowledgeFoodPreparations.preparationSlug }),
+    // knowledge_preparation_effects is INTENTIONALLY not reconciled — see ownedKeys().
   };
 }
 

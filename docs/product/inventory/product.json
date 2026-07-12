@@ -1,0 +1,3092 @@
+{
+  "schema_version": 1,
+  "generated_from": "docs/product/inventory/product.yaml",
+  "generated_by": "scripts/build-product-inventory.ts",
+  "populated_by": "PDA1_PLATFORM_DISCOVERY_AND_EXPERIENCE_AUDIT",
+  "populated_on": "2026-07-11",
+  "entry_count": 154,
+  "entries": [
+    {
+      "id": "dom-home",
+      "name": "Home",
+      "section": "domains",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "The calm place a household lands on every visit, telling them how today looks and what is next.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/home-experience-page.tsx",
+        "client/src/App.tsx#L204"
+      ],
+      "related": [
+        "page-home",
+        "jrn-first-run",
+        "dom-planner"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "dom-planner",
+      "name": "Planner",
+      "section": "domains",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "Where a household decides what they are eating this week, day by day and meal by meal.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/weekly-planner-page.tsx",
+        "docs/architecture/capabilities/templates.md"
+      ],
+      "related": [
+        "page-planner",
+        "jrn-plan-week",
+        "jrn-shop",
+        "cap-planner"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "dom-cookbook",
+      "name": "Cookbook",
+      "section": "domains",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "The household's own collection of recipes — saved, imported, scanned or spoken — in one place.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/meals-page.tsx",
+        "docs/architecture/capabilities/meals.md"
+      ],
+      "related": [
+        "page-cookbook",
+        "page-meal-detail",
+        "jrn-add-recipe",
+        "cap-meals"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "dom-shopping",
+      "name": "Shopping",
+      "section": "domains",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "Turning the week's plan into a shopping trip — one list, real products, ready to hand to a supermarket.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/shopping-workspace-page.tsx",
+        "client/src/pages/shopping-list-page.tsx"
+      ],
+      "related": [
+        "page-shopping-workspace",
+        "page-basket",
+        "jrn-shop",
+        "cap-shopping"
+      ],
+      "known_defects": [
+        "fnd-shopping-duplicate"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "dom-pantry",
+      "name": "Pantry",
+      "section": "domains",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "What the household already has at home, so planning and shopping do not buy it twice.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/pantry-page.tsx"
+      ],
+      "related": [
+        "page-pantry",
+        "jrn-stock-pantry",
+        "cap-pantry"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "dom-nutrition",
+      "name": "Nutrition",
+      "section": "domains",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "An honest picture of how varied and how whole the household's food actually is, and what to try next.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/plant-diversity-page.tsx",
+        "docs/architecture/NK1_CANONICAL_NUTRITION_KNOWLEDGE_PLATFORM.md"
+      ],
+      "related": [
+        "page-nutrition",
+        "page-food-detail",
+        "jrn-understand-nutrition",
+        "cap-nutrition-knowledge"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "dom-diary",
+      "name": "Diary",
+      "section": "domains",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "A light, day-by-day record of what the household actually ate — without the burden of a tracking app.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/food-diary-page.tsx"
+      ],
+      "related": [
+        "page-diary",
+        "jrn-track-eaten",
+        "cap-diary"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "dom-analyser",
+      "name": "Analyser",
+      "section": "domains",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "Scan or search any packaged product to see what is really in it, and find a better choice before buying.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/products-page.tsx",
+        "docs/architecture/capabilities/analyser.md"
+      ],
+      "related": [
+        "page-analyser",
+        "jrn-analyse-product",
+        "cap-analyser"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "dom-companion",
+      "name": "Apple",
+      "section": "domains",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "THA's companion — ask it about your food, your plan or your pantry, and it answers from what THA actually knows.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/components/conversation/FloatingAssistant.tsx",
+        "docs/architecture/THA_COMPANION_PLATFORM_ARCHITECTURE.md"
+      ],
+      "related": [
+        "cap-companion",
+        "gls-apple"
+      ],
+      "known_defects": [
+        "fnd-pkr27-prompt-knowledge"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "dom-household",
+      "name": "Household & Profile",
+      "section": "domains",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "Who lives here, what each person eats and cannot eat, and how the household wants THA to behave.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/profile-page.tsx",
+        "docs/architecture/capabilities/household.md"
+      ],
+      "related": [
+        "page-profile",
+        "cap-household",
+        "cap-profile"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "dom-partners",
+      "name": "Partners",
+      "section": "domains",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "A reviewed directory of wellness partners and services that support a household beyond the basket.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/partners-page.tsx",
+        "client/src/data/partners.ts"
+      ],
+      "related": [
+        "page-partners",
+        "cap-partners"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "dom-admin",
+      "name": "Admin",
+      "section": "domains",
+      "status": "live",
+      "visibility": "admin",
+      "purpose": "The operator's view of THA — users, curation, knowledge review, and the intelligence workbenches.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/admin-page.tsx",
+        "client/src/components/admin-banner.tsx"
+      ],
+      "related": [
+        "adm-home",
+        "adm-users",
+        "cap-administration"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "page-landing",
+      "name": "Landing",
+      "section": "pages",
+      "status": "live",
+      "visibility": "public",
+      "route": "/",
+      "purpose": "Explains to a visitor what The Healthy Apples is, and invites them to sign up or try it for twenty minutes.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/home-page.tsx"
+      ],
+      "related": [
+        "mkt-hero",
+        "mkt-ethos",
+        "page-auth",
+        "jrn-first-run"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "page-home",
+      "name": "Home",
+      "section": "pages",
+      "status": "live",
+      "visibility": "household",
+      "route": "/home",
+      "purpose": "The calm today screen — today's meals, the shopping that follows from them, plant diversity, and anything gently worth attention.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/home-experience-page.tsx"
+      ],
+      "related": [
+        "dom-home",
+        "page-dashboard"
+      ],
+      "known_defects": [
+        "fnd-dead-reminders",
+        "fnd-derived-today"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "page-dashboard",
+      "name": "Dashboard",
+      "section": "pages",
+      "status": "live",
+      "visibility": "household",
+      "route": "/dashboard",
+      "purpose": "A fuller statistics view for a household that wants more numbers than Home shows.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/dashboard.tsx"
+      ],
+      "related": [
+        "page-home"
+      ],
+      "known_defects": [
+        "fnd-home-dashboard-rivalry"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "page-cookbook",
+      "name": "Cookbook",
+      "section": "pages",
+      "status": "live",
+      "visibility": "household",
+      "route": "/cookbook",
+      "aliases": [
+        "/meals"
+      ],
+      "purpose": "Where the household keeps its recipes, and adds new ones by link, photo, voice or hand.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/meals-page.tsx"
+      ],
+      "related": [
+        "dom-cookbook",
+        "jrn-add-recipe",
+        "page-meal-detail"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "page-meal-detail",
+      "name": "Meal",
+      "section": "pages",
+      "status": "live",
+      "visibility": "household",
+      "route": "/meals/:id",
+      "purpose": "The one canonical place a saved recipe lives — its ingredients, method, nutrition, and what to do with it.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/meal-detail-page.tsx"
+      ],
+      "related": [
+        "dom-cookbook",
+        "page-cookbook",
+        "jrn-cook-from-plan"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "page-food-detail",
+      "name": "Food",
+      "section": "pages",
+      "status": "live",
+      "visibility": "household",
+      "route": "/foods/:slug",
+      "purpose": "Everything THA can honestly say about one food — its benefits, its nutrients, its season, and where the household has met it before.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/food-detail-page.tsx"
+      ],
+      "related": [
+        "dom-nutrition"
+      ],
+      "known_defects": [
+        "fnd-food-detail-back",
+        "fnd-food-detail-chrome"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "page-import-recipe",
+      "name": "Import Recipe",
+      "section": "pages",
+      "status": "deprecated",
+      "visibility": "household",
+      "route": "/import-recipe",
+      "purpose": "A legacy address that now does nothing but redirect to the Cookbook; nothing in the product links to it.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/import-recipe-page.tsx"
+      ],
+      "related": [
+        "hid-import-recipe",
+        "page-cookbook"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "page-shopping-workspace",
+      "name": "Shopping",
+      "section": "pages",
+      "status": "live",
+      "visibility": "household",
+      "route": "/shopping-workspace",
+      "aliases": [
+        "/list",
+        "/shopping-list"
+      ],
+      "purpose": "The household's working shopping list — add items, match them to real products, check prices, and hand the basket to a supermarket.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/shopping-workspace-page.tsx"
+      ],
+      "related": [
+        "dom-shopping",
+        "page-basket",
+        "jrn-shop"
+      ],
+      "known_defects": [
+        "fnd-shopping-duplicate",
+        "fnd-broken-shopping-link"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "page-basket",
+      "name": "Basket",
+      "section": "pages",
+      "status": "live",
+      "visibility": "household",
+      "route": "/basket",
+      "aliases": [
+        "/analyse-basket"
+      ],
+      "purpose": "A second, older shopping surface reached from the Dashboard, doing the same job as Shopping in a different interface.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/shopping-list-page.tsx"
+      ],
+      "related": [
+        "dom-shopping",
+        "page-shopping-workspace"
+      ],
+      "known_defects": [
+        "fnd-shopping-duplicate"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "page-analyser",
+      "name": "Analyser",
+      "section": "pages",
+      "status": "live",
+      "visibility": "household",
+      "route": "/analyser",
+      "aliases": [
+        "/products"
+      ],
+      "purpose": "Scan a barcode or search a packaged product to see its additives, its processing, and a better swap.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/products-page.tsx"
+      ],
+      "related": [
+        "dom-analyser",
+        "jrn-analyse-product",
+        "cap-analyser"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "page-supermarkets",
+      "name": "Supermarkets",
+      "section": "pages",
+      "status": "hidden",
+      "visibility": "household",
+      "route": "/supermarkets",
+      "purpose": "Browse the supermarkets THA supports, by country — a complete page that nothing in the product links to.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/supermarkets-page.tsx"
+      ],
+      "related": [
+        "hid-supermarkets",
+        "dom-shopping"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "page-planner",
+      "name": "Planner",
+      "section": "pages",
+      "status": "live",
+      "visibility": "household",
+      "route": "/planner",
+      "aliases": [
+        "/weekly-planner"
+      ],
+      "purpose": "The week laid out day by day, where the household assigns meals, says who is eating, and sends the whole week to the basket.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/weekly-planner-page.tsx"
+      ],
+      "related": [
+        "dom-planner",
+        "jrn-plan-week",
+        "jrn-shop",
+        "jrn-share-plan"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "page-profile",
+      "name": "Profile",
+      "section": "pages",
+      "status": "live",
+      "visibility": "household",
+      "route": "/profile",
+      "purpose": "The household's own settings — who eats here, what they avoid, how THA should shop, plan and speak.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/profile-page.tsx"
+      ],
+      "related": [
+        "dom-household",
+        "set-diet-types",
+        "set-companion-personality"
+      ],
+      "known_defects": [
+        "fnd-no-upgrade-path"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "page-pantry",
+      "name": "Pantry",
+      "section": "pages",
+      "status": "live",
+      "visibility": "household",
+      "route": "/pantry",
+      "purpose": "What is in the fridge, freezer and cupboard — and what THA knows about each of those ingredients.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/pantry-page.tsx"
+      ],
+      "related": [
+        "dom-pantry",
+        "jrn-stock-pantry",
+        "cap-pantry"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "page-nutrition",
+      "name": "Nutrition",
+      "section": "pages",
+      "status": "live",
+      "visibility": "household",
+      "route": "/plant-diversity",
+      "purpose": "How many different plants the household has eaten, what that means, and which foods to try next.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/plant-diversity-page.tsx"
+      ],
+      "related": [
+        "dom-nutrition",
+        "gls-plant-diversity",
+        "jrn-understand-nutrition"
+      ],
+      "known_defects": [
+        "fnd-route-name-drift"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "page-diary",
+      "name": "My Diary",
+      "section": "pages",
+      "status": "live",
+      "visibility": "household",
+      "route": "/my-diary",
+      "aliases": [
+        "/diary"
+      ],
+      "purpose": "A simple daily log of what was eaten, which can be copied straight from the planner.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/food-diary-page.tsx"
+      ],
+      "related": [
+        "dom-diary",
+        "jrn-track-eaten"
+      ],
+      "known_defects": [
+        "fnd-cooked-never-reaches-diary"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "page-partners",
+      "name": "Partners",
+      "section": "pages",
+      "status": "live",
+      "visibility": "household",
+      "route": "/partners",
+      "purpose": "A reviewed directory of wellness partners, reachable from the profile menu.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/partners-page.tsx",
+        "client/src/data/partners.ts"
+      ],
+      "related": [
+        "dom-partners",
+        "mkt-partners-trust"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "page-quick-meal",
+      "name": "Build a Meal",
+      "section": "pages",
+      "status": "hidden",
+      "visibility": "household",
+      "route": "/quick-meal",
+      "purpose": "A fast way to assemble a simple meal without the full recipe editor — built, working, and linked from nowhere.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/quick-meal-page.tsx"
+      ],
+      "related": [
+        "hid-quick-meal",
+        "dom-cookbook"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "page-shared-plan",
+      "name": "Shared Plan",
+      "section": "pages",
+      "status": "live",
+      "visibility": "public",
+      "route": "/shared/:token",
+      "purpose": "A read-only view of a week another household shared, with the option to copy it into your own planner.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/shared-plan-page.tsx"
+      ],
+      "related": [
+        "jrn-share-plan"
+      ],
+      "known_defects": [
+        "fnd-shared-plan-intent-lost"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "page-onboarding",
+      "name": "Onboarding",
+      "section": "pages",
+      "status": "live",
+      "visibility": "household",
+      "route": "/onboarding",
+      "purpose": "The twelve-step first run that learns the household's diet, allergies, shape and starting point.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/onboarding-page.tsx"
+      ],
+      "related": [
+        "wiz-onboarding",
+        "jrn-first-run"
+      ],
+      "known_defects": [
+        "fnd-onboarding-not-resumable",
+        "fnd-unfulfilled-guidance-promise"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "page-auth",
+      "name": "Sign in",
+      "section": "pages",
+      "status": "live",
+      "visibility": "public",
+      "route": "/auth",
+      "purpose": "Where a household signs in, registers, verifies an email, or resets a password.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/auth-page.tsx",
+        "server/auth.ts"
+      ],
+      "related": [
+        "jrn-first-run",
+        "page-landing"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "page-not-found",
+      "name": "Not Found",
+      "section": "pages",
+      "status": "live",
+      "visibility": "public",
+      "route": "*",
+      "purpose": "The page a person reaches when an address does not exist — currently without navigation or a way back into the product.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/not-found.tsx"
+      ],
+      "related": [],
+      "known_defects": [
+        "fnd-broken-shopping-link",
+        "fnd-notfound-dead-end"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "page-admin-home",
+      "name": "Admin Hub",
+      "section": "pages",
+      "status": "live",
+      "visibility": "admin",
+      "route": "/admin",
+      "purpose": "The card grid from which every admin tool is reached.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/admin-page.tsx"
+      ],
+      "related": [
+        "dom-admin",
+        "adm-home"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "page-admin-users",
+      "name": "Admin — Users",
+      "section": "pages",
+      "status": "live",
+      "visibility": "admin",
+      "route": "/admin/users",
+      "purpose": "Manage households, subscription tiers and password resets.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/admin-users-page.tsx"
+      ],
+      "related": [
+        "dom-admin",
+        "adm-users"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "page-admin-ingredient-products",
+      "name": "Admin — THA Picks",
+      "section": "pages",
+      "status": "live",
+      "visibility": "admin",
+      "route": "/admin/ingredient-products",
+      "purpose": "Curate the preferred real products THA recommends to households.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/admin-ingredient-products-page.tsx"
+      ],
+      "related": [
+        "dom-admin",
+        "adm-ingredient-products",
+        "gls-tha-picks"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "page-admin-recipe-sources",
+      "name": "Admin — Recipe Sources",
+      "section": "pages",
+      "status": "live",
+      "visibility": "admin",
+      "route": "/admin/recipe-sources",
+      "purpose": "Configure where recipes may be imported from, and audit blocked imports.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/admin-recipe-sources-page.tsx",
+        "docs/architecture/THA_RECIPE_ACQUISITION_ARCHITECTURE.md"
+      ],
+      "related": [
+        "dom-admin",
+        "adm-recipe-sources"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "page-admin-companion-intelligence",
+      "name": "Admin — Companion Intelligence",
+      "section": "pages",
+      "status": "live",
+      "visibility": "admin",
+      "route": "/admin/companion-intelligence",
+      "purpose": "Inspect the Companion's health and gaps, and approve or reject its learning recommendations — a read-only dashboard, despite its name; it holds no personality control.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/admin-companion-intelligence-page.tsx"
+      ],
+      "related": [
+        "dom-admin",
+        "adm-companion-intelligence",
+        "dom-companion"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "page-admin-intelligence",
+      "name": "Admin — Intelligence",
+      "section": "pages",
+      "status": "live",
+      "visibility": "admin",
+      "route": "/admin/intelligence",
+      "purpose": "Monitor AI capability benchmark results.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/admin-intelligence-page.tsx"
+      ],
+      "related": [
+        "dom-admin",
+        "adm-intelligence"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "page-admin-benchmark-households",
+      "name": "Admin — Benchmark Households",
+      "section": "pages",
+      "status": "live",
+      "visibility": "admin",
+      "route": "/admin/benchmark-households",
+      "purpose": "Manage the synthetic households used to evaluate the Companion.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/admin-benchmark-households-page.tsx"
+      ],
+      "related": [
+        "dom-admin",
+        "adm-benchmark-households"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "page-admin-development-world",
+      "name": "Admin — Development World",
+      "section": "pages",
+      "status": "live",
+      "visibility": "admin",
+      "route": "/admin/development-world",
+      "purpose": "Browse the fifty synthetic development households — a development-environment tool that fails when opened in production.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/admin-development-world-page.tsx",
+        "server/development-world/world-reader.ts"
+      ],
+      "related": [
+        "dom-admin",
+        "adm-development-world",
+        "hid-devworld-prod",
+        "dev-development-world"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "page-admin-development-world-household",
+      "name": "Admin — Development World Household",
+      "section": "pages",
+      "status": "live",
+      "visibility": "admin",
+      "route": "/admin/development-world/:id",
+      "purpose": "Inspect one synthetic development household in detail.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/admin-development-world-household-page.tsx"
+      ],
+      "related": [
+        "dom-admin",
+        "page-admin-development-world"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "page-admin-observations",
+      "name": "Admin — Observation Workbench",
+      "section": "pages",
+      "status": "live",
+      "visibility": "admin",
+      "route": "/admin/observations",
+      "purpose": "Watch the Intelligence Platform's live telemetry — capability health, intent quality, outcomes.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/admin-observation-workbench-page.tsx"
+      ],
+      "related": [
+        "dom-admin",
+        "adm-observations"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "page-admin-behaviour",
+      "name": "Admin — Behaviour Workbench",
+      "section": "pages",
+      "status": "live",
+      "visibility": "admin",
+      "route": "/admin/behaviour",
+      "purpose": "Replay the full step-by-step execution of a single Companion conversation.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/admin-behaviour-workbench-page.tsx"
+      ],
+      "related": [
+        "dom-admin",
+        "adm-behaviour"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "page-admin-knowledge-review",
+      "name": "Admin — Knowledge Review",
+      "section": "pages",
+      "status": "live",
+      "visibility": "admin",
+      "route": "/admin/knowledge-review",
+      "purpose": "Review and approve unresolved food-knowledge terms before they reach households.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/admin-knowledge-review-page.tsx",
+        "client/src/App.tsx#L230"
+      ],
+      "related": [
+        "dom-admin",
+        "adm-knowledge-review"
+      ],
+      "known_defects": [
+        "fnd-admin-chrome-inconsistency"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "routes-map",
+      "name": "Route Map",
+      "section": "routes",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "Every address THA answers, and the page each one resolves to — including the five aliases and two redirects.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/App.tsx#L199-L244"
+      ],
+      "related": [
+        "page-cookbook",
+        "page-analyser",
+        "page-planner",
+        "page-diary",
+        "page-basket"
+      ],
+      "known_defects": [
+        "fnd-alias-sprawl"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "jrn-first-run",
+      "name": "First run",
+      "section": "journeys",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "A new household signs up, tells THA who they are across twelve steps, and lands somewhere useful.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/auth-page.tsx",
+        "client/src/pages/onboarding-page.tsx"
+      ],
+      "related": [
+        "page-auth",
+        "page-onboarding",
+        "wiz-onboarding"
+      ],
+      "known_defects": [
+        "fnd-onboarding-not-resumable"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "jrn-plan-week",
+      "name": "Plan the week",
+      "section": "journeys",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "A household decides what everyone is eating this week and who is eating each meal.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/weekly-planner-page.tsx"
+      ],
+      "related": [
+        "page-planner",
+        "dom-planner",
+        "jrn-shop"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "jrn-add-recipe",
+      "name": "Add a recipe",
+      "section": "journeys",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "A household captures a recipe — from a link, a photo, their voice or their head — and saves it to the Cookbook.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/meals-page.tsx",
+        "client/src/components/meal-completion-dialog.tsx"
+      ],
+      "related": [
+        "page-cookbook",
+        "wiz-meal-completion",
+        "hid-add-meal-gateway"
+      ],
+      "known_defects": [
+        "fnd-import-not-resumable"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "jrn-cook-from-plan",
+      "name": "Cook from the plan",
+      "section": "journeys",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "A household cooks a planned meal and marks it done — a journey that currently stops at a tick and never reaches the Diary.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/weekly-planner-page.tsx#L1573"
+      ],
+      "related": [
+        "page-planner",
+        "page-diary"
+      ],
+      "known_defects": [
+        "fnd-cooked-never-reaches-diary"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "jrn-shop",
+      "name": "Shop the plan",
+      "section": "journeys",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "A household turns the week's plan into a basket, matches it to real products, and hands it to a supermarket.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/weekly-planner-page.tsx",
+        "client/src/pages/shopping-workspace-page.tsx"
+      ],
+      "related": [
+        "page-planner",
+        "page-shopping-workspace"
+      ],
+      "known_defects": [
+        "fnd-shopping-duplicate",
+        "fnd-broken-shopping-link"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "jrn-analyse-product",
+      "name": "Analyse a product",
+      "section": "journeys",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "A household scans a product in a shop, sees what is in it, and finds a better swap without leaving the screen.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/products-page.tsx",
+        "client/src/components/analyser/AnalyserDetailV2.tsx"
+      ],
+      "related": [
+        "page-analyser",
+        "dom-analyser",
+        "dlg-bad-apple"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "jrn-track-eaten",
+      "name": "Track what we ate",
+      "section": "journeys",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "A household records the day's food, most easily by copying it straight from the planner.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/food-diary-page.tsx"
+      ],
+      "related": [
+        "page-diary",
+        "dom-diary"
+      ],
+      "known_defects": [
+        "fnd-cooked-never-reaches-diary"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "jrn-understand-nutrition",
+      "name": "Understand our nutrition",
+      "section": "journeys",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "A household sees how varied their eating has been, and follows a food into everything THA knows about it.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/plant-diversity-page.tsx",
+        "client/src/pages/food-detail-page.tsx"
+      ],
+      "related": [
+        "page-nutrition",
+        "page-food-detail"
+      ],
+      "known_defects": [
+        "fnd-food-detail-back"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "jrn-stock-pantry",
+      "name": "Stock the pantry",
+      "section": "journeys",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "A household records what it already has, so the planner and the shopping list stop buying it again.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/pantry-page.tsx",
+        "client/src/pages/weekly-planner-page.tsx#L664"
+      ],
+      "related": [
+        "page-pantry",
+        "dom-pantry",
+        "jrn-shop"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "jrn-share-plan",
+      "name": "Share a plan",
+      "section": "journeys",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "A household shares its week with someone else, who can open it and copy it into their own planner.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/components/share-plan-dialog.tsx",
+        "client/src/pages/shared-plan-page.tsx"
+      ],
+      "related": [
+        "page-planner",
+        "page-shared-plan"
+      ],
+      "known_defects": [
+        "fnd-shared-plan-intent-lost"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "adm-home",
+      "name": "Admin Hub",
+      "section": "admin-experiences",
+      "status": "live",
+      "visibility": "admin",
+      "purpose": "The entry point to every admin tool, gated client-side on the admin role.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/admin-page.tsx",
+        "client/src/components/admin-banner.tsx"
+      ],
+      "related": [
+        "page-admin-home",
+        "dom-admin"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "adm-users",
+      "name": "User Management",
+      "section": "admin-experiences",
+      "status": "live",
+      "visibility": "admin",
+      "purpose": "Change a household's subscription tier, reset a password, or re-run their onboarding.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/admin-users-page.tsx"
+      ],
+      "related": [
+        "page-admin-users",
+        "set-subscription-tier"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "adm-ingredient-products",
+      "name": "THA Picks Curation",
+      "section": "admin-experiences",
+      "status": "live",
+      "visibility": "admin",
+      "purpose": "Add, edit and deactivate the preferred products THA puts in front of households.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/admin-ingredient-products-page.tsx"
+      ],
+      "related": [
+        "page-admin-ingredient-products",
+        "gls-tha-picks"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "adm-recipe-sources",
+      "name": "Recipe Source Governance",
+      "section": "admin-experiences",
+      "status": "live",
+      "visibility": "admin",
+      "purpose": "Decide which recipe sources THA may import from, and see what was blocked.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/admin-recipe-sources-page.tsx"
+      ],
+      "related": [
+        "page-admin-recipe-sources"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "adm-companion-intelligence",
+      "name": "Companion Intelligence Workbench",
+      "section": "admin-experiences",
+      "status": "live",
+      "visibility": "admin",
+      "purpose": "Inspect how the Companion is performing and review its learning recommendations; it does not adjust the Companion's personality, despite the surface's name.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/admin-companion-intelligence-page.tsx"
+      ],
+      "related": [
+        "page-admin-companion-intelligence",
+        "dom-companion"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "adm-intelligence",
+      "name": "Intelligence Benchmarks",
+      "section": "admin-experiences",
+      "status": "live",
+      "visibility": "admin",
+      "purpose": "See how the Intelligence Platform scored against its benchmark suite.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/admin-intelligence-page.tsx"
+      ],
+      "related": [
+        "page-admin-intelligence"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "adm-benchmark-households",
+      "name": "Benchmark Households",
+      "section": "admin-experiences",
+      "status": "live",
+      "visibility": "admin",
+      "purpose": "Seed, reset and impersonate the synthetic households the Companion is measured against.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/admin-benchmark-households-page.tsx"
+      ],
+      "related": [
+        "page-admin-benchmark-households"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "adm-development-world",
+      "name": "Development World Browser",
+      "section": "admin-experiences",
+      "status": "live",
+      "visibility": "admin",
+      "purpose": "Read the fifty synthetic development households — available in development only, though the card is shown in production too.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/admin-development-world-page.tsx",
+        "server/development-world/world-reader.ts#L43"
+      ],
+      "related": [
+        "page-admin-development-world",
+        "hid-devworld-prod"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "adm-observations",
+      "name": "Observation Workbench",
+      "section": "admin-experiences",
+      "status": "live",
+      "visibility": "admin",
+      "purpose": "Watch what the Intelligence Platform actually did, in production, turn by turn.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/admin-observation-workbench-page.tsx"
+      ],
+      "related": [
+        "page-admin-observations"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "adm-behaviour",
+      "name": "Behaviour Workbench",
+      "section": "admin-experiences",
+      "status": "live",
+      "visibility": "admin",
+      "purpose": "Reconstruct one Companion interaction end to end, to see exactly why it answered as it did.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/admin-behaviour-workbench-page.tsx"
+      ],
+      "related": [
+        "page-admin-behaviour"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "adm-knowledge-review",
+      "name": "Knowledge Review Workbench",
+      "section": "admin-experiences",
+      "status": "live",
+      "visibility": "admin",
+      "purpose": "Approve or reject unresolved food-knowledge terms before a household can be told them.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/admin-knowledge-review-page.tsx"
+      ],
+      "related": [
+        "page-admin-knowledge-review"
+      ],
+      "known_defects": [
+        "fnd-admin-chrome-inconsistency"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "adm-site-banner",
+      "name": "Site Banner",
+      "section": "admin-experiences",
+      "status": "live",
+      "visibility": "admin",
+      "purpose": "A site-wide message an admin can switch on for every household at once.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/components/SiteBanner.tsx",
+        "server/routes.ts"
+      ],
+      "related": [
+        "ntf-site-banner"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "hid-quick-meal",
+      "name": "Build a Meal (unlinked)",
+      "section": "hidden-experiences",
+      "status": "hidden",
+      "visibility": "admin",
+      "route": "/quick-meal",
+      "purpose": "A complete, working quick meal-builder that no button, link or menu in the product points at.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/quick-meal-page.tsx",
+        "client/src/App.tsx#L237"
+      ],
+      "related": [
+        "page-quick-meal"
+      ],
+      "evidence": "Zero inbound links found across the whole client; reachable only by typing the URL.",
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "hid-supermarkets",
+      "name": "Supermarkets (unlinked)",
+      "section": "hidden-experiences",
+      "status": "hidden",
+      "visibility": "admin",
+      "route": "/supermarkets",
+      "purpose": "A finished supermarket directory with country filtering that nothing in the product links to.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/supermarkets-page.tsx",
+        "client/src/App.tsx#L217"
+      ],
+      "related": [
+        "page-supermarkets"
+      ],
+      "evidence": "Zero inbound links found across the whole client.",
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "hid-import-recipe",
+      "name": "Import Recipe (bounce stub)",
+      "section": "hidden-experiences",
+      "status": "hidden",
+      "visibility": "admin",
+      "route": "/import-recipe",
+      "purpose": "An eight-line stub that immediately redirects to the Cookbook — a legacy address with no inbound links.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/import-recipe-page.tsx"
+      ],
+      "related": [
+        "page-import-recipe"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "hid-analyse-basket",
+      "name": "/analyse-basket (unclickable alias)",
+      "section": "hidden-experiences",
+      "status": "hidden",
+      "visibility": "admin",
+      "route": "/analyse-basket",
+      "purpose": "A second address for the Basket page that no control in the product ever navigates to.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/App.tsx#L211"
+      ],
+      "related": [
+        "page-basket",
+        "routes-map"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "hid-list-page",
+      "name": "Quick List page (dead file)",
+      "section": "hidden-experiences",
+      "status": "hidden",
+      "visibility": "admin",
+      "purpose": "A full voice/camera/manual list-capture screen that is not routed at all — superseded by Shopping but never deleted.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/list-page.tsx"
+      ],
+      "related": [
+        "page-shopping-workspace"
+      ],
+      "evidence": "Not imported anywhere in App.tsx; /list redirects to /shopping-workspace instead.",
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "hid-add-meal-gateway",
+      "name": "Add a Recipe gateway dialog (never rendered)",
+      "section": "hidden-experiences",
+      "status": "hidden",
+      "visibility": "admin",
+      "purpose": "A five-way \"how would you like to add a recipe?\" chooser, fully built with test ids, that is never rendered.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/meals-page.tsx#L5527"
+      ],
+      "related": [
+        "jrn-add-recipe"
+      ],
+      "evidence": "Its only reference in the codebase is its own function declaration.",
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "hid-dormant-chrome",
+      "name": "Dormant navigation and header components",
+      "section": "hidden-experiences",
+      "status": "hidden",
+      "visibility": "admin",
+      "purpose": "Four fully built navigation and header components — DesktopSidebar, TopBar, BrandBanner and PageHeader — that no surface uses.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/components/nav-bar.tsx#L384-L590",
+        "client/src/components/PageHeader.tsx"
+      ],
+      "related": [],
+      "known_defects": [
+        "fnd-unretired-predecessors"
+      ],
+      "evidence": "nav-bar.tsx itself calls them \"retired-but-retained ... kept dormant for safe rollback\"; PageHeader has zero importers and is not even labelled retired.",
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "hid-scan-confirm-dialog",
+      "name": "Scan Confirm dialog (orphaned)",
+      "section": "hidden-experiences",
+      "status": "hidden",
+      "visibility": "admin",
+      "purpose": "A 416-line scan-review dialog with no importers, apparently the shared predecessor of the three scan reviewers that replaced it.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/components/scan-confirm-dialog.tsx"
+      ],
+      "related": [],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "hid-notice-engine",
+      "name": "Companion Notice Engine (built, unreachable)",
+      "section": "hidden-experiences",
+      "status": "hidden",
+      "visibility": "admin",
+      "purpose": "Seven kinds of proactive notice — the whole reason Home has a Reminders section — served by an endpoint the client never calls.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/intelligence/conversation/notice-engine.ts",
+        "server/routes.ts#L11540",
+        "client/src/hooks/use-companion-observations.ts#L27"
+      ],
+      "related": [
+        "ntf-nutrition-trend",
+        "ntf-streak-milestone",
+        "ntf-diversity-milestone",
+        "page-home"
+      ],
+      "known_defects": [
+        "fnd-dead-reminders"
+      ],
+      "evidence": "The client fetches /api/intelligence/companion/observations; the server only serves /api/intelligence/companion/notices. Every fetch 404s and Reminders silently renders empty.",
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "hid-devworld-prod",
+      "name": "Development World in production",
+      "section": "hidden-experiences",
+      "status": "hidden",
+      "visibility": "admin",
+      "purpose": "The Development World admin card is shown to admins in production, where the server refuses to serve it.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/admin-page.tsx#L63",
+        "server/development-world/world-reader.ts#L43"
+      ],
+      "related": [
+        "adm-development-world"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "hid-routing-telemetry",
+      "name": "Dormant intent-routing engine",
+      "section": "hidden-experiences",
+      "status": "hidden",
+      "visibility": "admin",
+      "purpose": "A landing-router that once chose where to send a household after login; superseded by Home. Its correction-tracking hook still ships but is inert — the signal it keys on is never set, so it records nothing.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/App.tsx#L56-L88",
+        "client/src/App.tsx#L103-L106"
+      ],
+      "related": [
+        "page-home"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "dev-development-world",
+      "name": "Development World dataset",
+      "section": "developer-experiences",
+      "status": "internal",
+      "visibility": "developer",
+      "purpose": "Fifty synthetic households used to exercise the platform without touching real people's data.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/development-world/",
+        "data/development_world/"
+      ],
+      "related": [
+        "adm-development-world",
+        "hid-devworld-prod"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "dev-benchmark-world",
+      "name": "Benchmark World",
+      "section": "developer-experiences",
+      "status": "internal",
+      "visibility": "developer",
+      "purpose": "The fixture households and harness the Companion is scored against before release.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/tests/benchmark/",
+        "client/src/pages/admin-benchmark-households-page.tsx"
+      ],
+      "related": [
+        "adm-benchmark-households"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "dev-capability-registry",
+      "name": "Runtime Capability Registry",
+      "section": "developer-experiences",
+      "status": "internal",
+      "visibility": "developer",
+      "purpose": "The single runtime list of what the Intelligence Platform may do, and with whose permission.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/intelligence/capability-registry.ts"
+      ],
+      "related": [
+        "cap-planner",
+        "cap-meals",
+        "cap-analyser",
+        "cap-product-knowledge"
+      ],
+      "evidence": "`fnd-no-product-knowledge-capability` is CLOSED by PHASE5A — the registry now declares `product-knowledge`, bound read-only, so the Companion can answer questions about THA from the Product Knowledge Registry instead of from nothing. 24 capabilities are registered; 22 are bound and executable.",
+      "last_verified": "2026-07-12",
+      "version": 2
+    },
+    {
+      "id": "ntf-nutrition-trend",
+      "name": "Nutrition trend notice",
+      "section": "notifications",
+      "status": "hidden",
+      "visibility": "household",
+      "purpose": "A quiet note when the household's eating has genuinely moved in a direction worth mentioning.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/intelligence/conversation/notice-engine.ts#L176"
+      ],
+      "related": [
+        "hid-notice-engine",
+        "page-home"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "ntf-streak-milestone",
+      "name": "Streak milestone notice",
+      "section": "notifications",
+      "status": "hidden",
+      "visibility": "household",
+      "purpose": "A quiet acknowledgement each seventh day of an unbroken streak.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/intelligence/conversation/notice-engine.ts#L198"
+      ],
+      "related": [
+        "hid-notice-engine"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "ntf-diversity-milestone",
+      "name": "Plant diversity milestone notice",
+      "section": "notifications",
+      "status": "hidden",
+      "visibility": "household",
+      "purpose": "A quiet acknowledgement each tenth different plant the household has eaten.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/intelligence/conversation/notice-engine.ts#L219"
+      ],
+      "related": [
+        "hid-notice-engine",
+        "gls-plant-diversity"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "ntf-planner-gap",
+      "name": "Planner gap notice",
+      "section": "notifications",
+      "status": "hidden",
+      "visibility": "household",
+      "purpose": "A note that part of the week has nothing planned, raised only when there is evidence to cite.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/intelligence/conversation/notice-engine.ts#L283"
+      ],
+      "related": [
+        "hid-notice-engine",
+        "dom-planner"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "ntf-pantry-opportunity",
+      "name": "Pantry opportunity notice",
+      "section": "notifications",
+      "status": "hidden",
+      "visibility": "household",
+      "purpose": "A note that something in the pantry could be used, raised only with cited evidence.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/intelligence/conversation/notice-engine.ts#L283"
+      ],
+      "related": [
+        "hid-notice-engine",
+        "dom-pantry"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "ntf-shopping-opportunity",
+      "name": "Shopping opportunity notice",
+      "section": "notifications",
+      "status": "hidden",
+      "visibility": "household",
+      "purpose": "A note about the shopping list — including the one critical case, an item that conflicts with a household member's hard restriction.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/intelligence/conversation/notice-engine.ts#L283",
+        "server/intelligence/food-intelligence/opportunity-engine.ts#L256"
+      ],
+      "related": [
+        "hid-notice-engine",
+        "dom-shopping"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "ntf-seasonal-highlight",
+      "name": "Seasonal highlight notice",
+      "section": "notifications",
+      "status": "hidden",
+      "visibility": "household",
+      "purpose": "A note about what is in season and worth trying now.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/intelligence/conversation/notice-engine.ts#L317"
+      ],
+      "related": [
+        "hid-notice-engine"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "ntf-email-verification",
+      "name": "Verification email",
+      "section": "notifications",
+      "status": "live",
+      "visibility": "public",
+      "purpose": "The email that confirms a new household's address.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/email.ts#L28"
+      ],
+      "related": [
+        "jrn-first-run",
+        "page-auth"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "ntf-email-password-reset",
+      "name": "Password reset email",
+      "section": "notifications",
+      "status": "live",
+      "visibility": "public",
+      "purpose": "The email that lets a household back into their account.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/email.ts#L90"
+      ],
+      "related": [
+        "page-auth"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "ntf-site-banner",
+      "name": "Site banner",
+      "section": "notifications",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "A message an admin can show every household at once, at the top of every page.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/components/SiteBanner.tsx"
+      ],
+      "related": [
+        "adm-site-banner"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "ntf-trial-banner",
+      "name": "Trial banner",
+      "section": "notifications",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "The countdown a twenty-minute demo household sees, and the discount offer it makes near the end.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/components/TrialBanner.tsx"
+      ],
+      "related": [
+        "mkt-trial-discount"
+      ],
+      "known_defects": [
+        "fnd-no-upgrade-path"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "dlg-bad-apple",
+      "name": "Highly Ultra-Processed warning",
+      "section": "dialogs",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "A warning shown when a household picks a product THA rates lowest — a one-apple rating, or NOVA-4 with more than five additives — currently as a modal that blocks the action.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/components/BadAppleWarningModal.tsx",
+        "client/src/pages/shopping-list-page.tsx#L837"
+      ],
+      "related": [
+        "jrn-analyse-product",
+        "gls-bad-apple"
+      ],
+      "known_defects": [
+        "fnd-observation-as-modal"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "dlg-inventory",
+      "name": "Dialog, drawer and sheet inventory",
+      "section": "dialogs",
+      "status": "live",
+      "visibility": "developer",
+      "purpose": "The eighty-nine modal surfaces THA ships across thirty-nine files, and which of them use the canonical dialog foundation — today, two.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/components/ui/dialog-foundation.ts"
+      ],
+      "related": [],
+      "known_defects": [
+        "fnd-dialog-foundation-unadopted",
+        "fnd-destructive-guard-inverted"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "wiz-onboarding",
+      "name": "Onboarding wizard",
+      "section": "wizards",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "Twelve steps that ask a household who they are, what they avoid, and where they would like to start.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/onboarding-page.tsx#L28"
+      ],
+      "related": [
+        "page-onboarding",
+        "jrn-first-run"
+      ],
+      "known_defects": [
+        "fnd-onboarding-not-resumable"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "wiz-meal-completion",
+      "name": "Meal completion wizard",
+      "section": "wizards",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "After a recipe is saved, the choice of what to do with it — plan it, shop for it, or nothing.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/components/meal-completion-dialog.tsx"
+      ],
+      "related": [
+        "jrn-add-recipe"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "int-openai",
+      "name": "OpenAI",
+      "section": "integrations",
+      "status": "live",
+      "visibility": "admin",
+      "purpose": "The language model behind the Companion, and the enrichment behind imported recipes and scanned products.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/intelligence/conversation/llm-provider.ts",
+        "server/lib/openai-enrichment.ts"
+      ],
+      "related": [
+        "dom-companion",
+        "cap-companion"
+      ],
+      "degrades_to": "A no-op provider that says it is not configured; enrichment falls back to heuristic parsing.",
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "int-openfoodfacts",
+      "name": "Open Food Facts",
+      "section": "integrations",
+      "status": "live",
+      "visibility": "admin",
+      "purpose": "Where THA reads packaged-product data when a barcode is scanned.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/lib/openfoodfacts-importer.ts"
+      ],
+      "related": [
+        "dom-analyser",
+        "cap-analyser"
+      ],
+      "degrades_to": "Barcode lookup has no source; the global meal catalogue cannot be imported.",
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "int-tesseract",
+      "name": "Tesseract OCR",
+      "section": "integrations",
+      "status": "live",
+      "visibility": "admin",
+      "purpose": "Reads text out of photographed recipes and receipts.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/services/ocr.ts"
+      ],
+      "related": [
+        "jrn-add-recipe"
+      ],
+      "degrades_to": "Scan-from-photo fails outright; there is no second OCR engine.",
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "int-whisk",
+      "name": "Whisk",
+      "section": "integrations",
+      "status": "live",
+      "visibility": "admin",
+      "purpose": "Hands a finished basket to a supermarket for checkout.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/lib/grocery-integration.ts"
+      ],
+      "related": [
+        "jrn-shop",
+        "dom-shopping"
+      ],
+      "degrades_to": "Deep links into each retailer's own search instead.",
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "int-usda",
+      "name": "USDA FoodData Central",
+      "section": "integrations",
+      "status": "live",
+      "visibility": "admin",
+      "purpose": "Whole-food nutrition data.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/lib/usda-whole-food-service.ts"
+      ],
+      "related": [
+        "dom-nutrition"
+      ],
+      "degrades_to": "Falls back to USDA's rate-limited public demo key.",
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "int-smtp",
+      "name": "SMTP email",
+      "section": "integrations",
+      "status": "live",
+      "visibility": "admin",
+      "purpose": "Delivers the only two emails THA sends — verification and password reset.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/email.ts"
+      ],
+      "related": [
+        "ntf-email-verification",
+        "ntf-email-password-reset"
+      ],
+      "degrades_to": "Registration still succeeds but the household never receives a verification link.",
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "int-recipe-sources",
+      "name": "External recipe and price sources",
+      "section": "integrations",
+      "status": "live",
+      "visibility": "admin",
+      "purpose": "Edamam, Spoonacular, BigOven, FatSecret and API Ninjas — optional sources for recipes, nutrition and prices.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/lib/external-meal-service.ts",
+        "server/lib/price-lookup.ts"
+      ],
+      "related": [
+        "dom-cookbook",
+        "dom-shopping"
+      ],
+      "degrades_to": "Each source disables itself independently when its key is absent.",
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "int-media-storage",
+      "name": "Local media storage",
+      "section": "integrations",
+      "status": "live",
+      "visibility": "developer",
+      "purpose": "Where uploaded meal photos are kept — today, the local disk, which the code itself flags as unsafe for production.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/lib/media-storage.ts"
+      ],
+      "related": [],
+      "known_defects": [
+        "fnd-ephemeral-media"
+      ],
+      "degrades_to": "Photos are lost whenever the filesystem is recycled.",
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "api-surface",
+      "name": "THA API surface",
+      "section": "apis",
+      "status": "live",
+      "visibility": "developer",
+      "purpose": "The 322 endpoints THA answers, grouped by domain, and which of them require a household, an admin, or nobody at all.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/routes.ts",
+        "server/auth.ts",
+        "server/lib/access.ts"
+      ],
+      "related": [
+        "dev-capability-registry"
+      ],
+      "known_defects": [
+        "fnd-unprotected-admin-endpoints",
+        "fnd-public-template-writes"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "set-inventory",
+      "name": "Household settings",
+      "section": "settings",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "Everything a household can change about how THA behaves — diet, allergies, budget, shopping, planner, nutrition targets and the Companion's voice.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/profile-page.tsx",
+        "shared/schema.ts"
+      ],
+      "related": [
+        "page-profile",
+        "set-diet-types",
+        "set-companion-personality",
+        "set-subscription-tier"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "set-diet-types",
+      "name": "Diet, allergies and exclusions",
+      "section": "settings",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "What the household will not eat — the setting that everything else in THA must respect.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/profile-page.tsx",
+        "shared/schema.ts"
+      ],
+      "related": [
+        "page-profile",
+        "dom-household",
+        "ntf-shopping-opportunity"
+      ],
+      "default": "none set",
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "set-companion-personality",
+      "name": "Companion voice",
+      "section": "settings",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "How Apple speaks to the household.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/profile-page.tsx",
+        "server/intelligence/conversation/personality-registry.ts"
+      ],
+      "related": [
+        "dom-companion",
+        "page-profile"
+      ],
+      "default": "companion",
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "set-subscription-tier",
+      "name": "Subscription tier",
+      "section": "settings",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "Whether a household is free, premium or friends-and-family — changeable today only by an admin, with no path from inside the product.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/lib/access.ts",
+        "client/src/pages/admin-users-page.tsx"
+      ],
+      "related": [
+        "adm-users"
+      ],
+      "known_defects": [
+        "fnd-no-upgrade-path",
+        "fnd-premium-unenforced"
+      ],
+      "default": "free",
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "set-notification-preferences",
+      "name": "Notification preferences",
+      "section": "settings",
+      "status": "hidden",
+      "visibility": "household",
+      "purpose": "The per-kind notification controls the Experience Architecture requires — which do not exist today, in any form.",
+      "owner": "Colin Clapson",
+      "sources": [],
+      "related": [
+        "hid-notice-engine"
+      ],
+      "evidence": "No notification preference table, endpoint or surface exists anywhere in the codebase.",
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "mkt-hero",
+      "name": "Eat better. Without overthinking it.",
+      "section": "marketing-messages",
+      "status": "live",
+      "visibility": "public",
+      "purpose": "The headline claim on the landing page.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/home-page.tsx#L89"
+      ],
+      "substantiated_by": [
+        "cap-analyser",
+        "dom-analyser"
+      ],
+      "related": [
+        "page-landing"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "mkt-scan-understand",
+      "name": "Scan & Understand",
+      "section": "marketing-messages",
+      "status": "live",
+      "visibility": "public",
+      "purpose": "Instantly see what's in your food - no confusion.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/home-page.tsx#L8-L24"
+      ],
+      "substantiated_by": [
+        "cap-analyser",
+        "int-openfoodfacts"
+      ],
+      "related": [
+        "page-landing",
+        "dom-analyser"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "mkt-better-choices",
+      "name": "Make Better Choices",
+      "section": "marketing-messages",
+      "status": "live",
+      "visibility": "public",
+      "purpose": "Clear guidance, so you can decide with confidence.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/home-page.tsx#L8-L24"
+      ],
+      "substantiated_by": [
+        "gls-simply-better-choices"
+      ],
+      "related": [
+        "page-landing"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "mkt-build-habits",
+      "name": "Build Better Habits",
+      "section": "marketing-messages",
+      "status": "live",
+      "visibility": "public",
+      "purpose": "Small changes that add up over time.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/home-page.tsx#L8-L24"
+      ],
+      "substantiated_by": [],
+      "related": [
+        "page-landing",
+        "hid-notice-engine"
+      ],
+      "known_defects": [
+        "fnd-unsubstantiated-habits-claim"
+      ],
+      "substantiation_gap": "The mechanism that would reinforce a habit over time — the Companion's proactive notices — is built but unreachable, so the claim outruns the product.",
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "mkt-ethos",
+      "name": "We don't believe in perfect diets",
+      "section": "marketing-messages",
+      "status": "live",
+      "visibility": "public",
+      "purpose": "We don't believe in perfect diets or constant tracking. Just better choices, made consistently.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/home-page.tsx#L190"
+      ],
+      "substantiated_by": [
+        "dom-diary",
+        "dom-analyser"
+      ],
+      "related": [
+        "page-landing"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "mkt-founding-story",
+      "name": "The founding story",
+      "section": "marketing-messages",
+      "status": "live",
+      "visibility": "public",
+      "purpose": "Born from our family's journey through health challenges and years of learning how food choices affect everyday life.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/home-page.tsx#L133",
+        "client/src/pages/home-page.tsx#L202"
+      ],
+      "substantiated_by": [],
+      "substantiation_gap": "A brand-narrative claim about the founders' motivation, not a product capability. It is unfalsifiable from the product and owned by the brand story, not by any feature — so it cites no substantiating entry by design. Recorded here rather than left as a silent §8s20 fabrication.",
+      "related": [
+        "page-landing"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "mkt-trial-discount",
+      "name": "25% off your first 6 months",
+      "section": "marketing-messages",
+      "status": "live",
+      "visibility": "public",
+      "purpose": "The discount offered to a demo household as their twenty minutes run out.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/components/TrialBanner.tsx#L89"
+      ],
+      "substantiated_by": [],
+      "related": [
+        "ntf-trial-banner"
+      ],
+      "known_defects": [
+        "fnd-no-upgrade-path"
+      ],
+      "substantiation_gap": "THA has no pricing page, no plan description and no in-product path from free to premium — so there is nothing for the discount to be applied to.",
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "mkt-partners-trust",
+      "name": "Every partner has been reviewed",
+      "section": "marketing-messages",
+      "status": "live",
+      "visibility": "public",
+      "purpose": "Every partner featured here has been reviewed by the THA team.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/partners-page.tsx#L561"
+      ],
+      "substantiated_by": [
+        "dom-partners"
+      ],
+      "related": [
+        "page-partners"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "mkt-guided-promise",
+      "name": "When you get there, we'll guide you",
+      "section": "marketing-messages",
+      "status": "live",
+      "visibility": "public",
+      "purpose": "The promise made in the last step of onboarding, that THA will guide the household through each area when they arrive.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/onboarding-page.tsx#L738"
+      ],
+      "substantiated_by": [],
+      "related": [
+        "page-onboarding",
+        "hlp-first-visit-hints"
+      ],
+      "known_defects": [
+        "fnd-unfulfilled-guidance-promise"
+      ],
+      "substantiation_gap": "No guided tour or coach-mark system exists. The only thing waiting is a single dismissible one-line hint on six of the surfaces.",
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "ben-know-whats-in-it",
+      "name": "You know what is actually in your food",
+      "section": "benefits",
+      "status": "live",
+      "visibility": "public",
+      "purpose": "A household can scan any packaged product and see its additives and processing before they buy it.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/products-page.tsx"
+      ],
+      "substantiated_by": [
+        "cap-analyser",
+        "int-openfoodfacts"
+      ],
+      "related": [
+        "dom-analyser",
+        "mkt-scan-understand"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "ben-week-decided",
+      "name": "The week is decided, once",
+      "section": "benefits",
+      "status": "live",
+      "visibility": "public",
+      "purpose": "A household plans the week in one place and turns it into a shopping list without re-deciding anything.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/weekly-planner-page.tsx"
+      ],
+      "substantiated_by": [
+        "cap-planner",
+        "cap-shopping"
+      ],
+      "related": [
+        "dom-planner",
+        "jrn-shop"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "ben-everyone-fed-safely",
+      "name": "Everyone in the house is accounted for",
+      "section": "benefits",
+      "status": "live",
+      "visibility": "public",
+      "purpose": "Each person's diet and allergies are held once and respected everywhere THA suggests food.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/profile-page.tsx",
+        "server/intelligence/bindings"
+      ],
+      "substantiated_by": [
+        "cap-household",
+        "set-diet-types"
+      ],
+      "related": [
+        "dom-household"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "ben-eat-more-plants",
+      "name": "You eat a wider range of plants",
+      "section": "benefits",
+      "status": "live",
+      "visibility": "public",
+      "purpose": "THA counts the different plants a household eats and suggests the next one to try.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/plant-diversity-page.tsx"
+      ],
+      "substantiated_by": [
+        "cap-nutrition-knowledge"
+      ],
+      "related": [
+        "dom-nutrition",
+        "gls-plant-diversity"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "adv-honest-gaps",
+      "name": "THA says \"I don't know\"",
+      "section": "competitive-advantages",
+      "status": "live",
+      "visibility": "admin",
+      "purpose": "Every score and claim traces to a stored, cited fact, and where there is none THA is silent rather than plausible.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "docs/architecture/THA_INTELLIGENCE_PLATFORM_ARCHITECTURE.md",
+        "server/intelligence/conversation/notice-engine.ts#L290"
+      ],
+      "substantiated_by": [
+        "cap-nutrition-knowledge",
+        "dev-capability-registry"
+      ],
+      "related": [
+        "dom-companion"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "adv-household-not-individual",
+      "name": "The unit is the household, not the dieter",
+      "section": "competitive-advantages",
+      "status": "live",
+      "visibility": "admin",
+      "purpose": "THA plans for everyone who eats at the table, including the people who did not install it.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "docs/architecture/capabilities/household.md"
+      ],
+      "substantiated_by": [
+        "cap-household"
+      ],
+      "related": [
+        "dom-household",
+        "ben-everyone-fed-safely"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "adv-upf-lens",
+      "name": "Processing, not calories",
+      "section": "competitive-advantages",
+      "status": "live",
+      "visibility": "admin",
+      "purpose": "THA judges food by what has been done to it rather than by counting it, which almost no consumer food app does.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/lib/upf-analysis-service.ts",
+        "client/src/components/upf-info-modal.tsx"
+      ],
+      "substantiated_by": [
+        "cap-analyser"
+      ],
+      "related": [
+        "dom-analyser",
+        "hlp-upf-modal"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "hlp-upf-modal",
+      "name": "What is UPF?",
+      "section": "help",
+      "status": "live",
+      "visibility": "public",
+      "purpose": "Explains ultra-processed food, the NOVA scale, and THA's four-point stance on it.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/components/upf-info-modal.tsx"
+      ],
+      "related": [
+        "dom-analyser",
+        "adv-upf-lens"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "hlp-food-knowledge-modal",
+      "name": "Food knowledge",
+      "section": "help",
+      "status": "live",
+      "visibility": "public",
+      "purpose": "What a food is, why THA highlights it, what to know, and simpler alternatives — with an honest blank when THA has nothing.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/components/food-knowledge-modal.tsx"
+      ],
+      "related": [
+        "dom-nutrition",
+        "page-food-detail"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "hlp-first-visit-hints",
+      "name": "First-visit hints",
+      "section": "help",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "One dismissible sentence, shown once, on six of THA's surfaces — the entirety of THA's in-product guidance.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/components/first-visit-hint.tsx"
+      ],
+      "related": [
+        "mkt-guided-promise"
+      ],
+      "known_defects": [
+        "fnd-unfulfilled-guidance-promise"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "hlp-gaps",
+      "name": "The questions THA cannot answer about itself",
+      "section": "help",
+      "status": "hidden",
+      "visibility": "admin",
+      "purpose": "The ten most likely household questions about THA that have no answer anywhere in the product today.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "docs/investigations/ux/PDA1_PLATFORM_DISCOVERY_AND_EXPERIENCE_AUDIT.md"
+      ],
+      "related": [
+        "dom-companion"
+      ],
+      "known_defects": [
+        "fnd-pkr27-prompt-knowledge"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "shot-manifest",
+      "name": "Screenshot baseline manifest",
+      "section": "screenshots",
+      "status": "hidden",
+      "visibility": "admin",
+      "purpose": "The canonical screenshot of every household- and public-facing surface, captured against a live demo household, plus the script and manifest that reproduce them. Admin and developer surfaces are not yet captured.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "docs/product/assets/screenshots/README.md",
+        "docs/product/assets/screenshots/manifest.json",
+        "scripts/capture-product-screenshots.ts"
+      ],
+      "related": [],
+      "known_defects": [
+        "fnd-no-screenshot-baseline"
+      ],
+      "evidence": "18 surfaces captured by PDA1 on 2026-07-11 (all public + household routes, incl. the hidden /supermarkets and /quick-meal). The inherited claim that no browser could run here was false — chromium runs once the Nix-store shared libraries are on LD_LIBRARY_PATH; see scripts/capture-product-screenshots.ts. Admin- and developer-tier surfaces remain uncaptured (they need an admin session) — that residual gap is what fnd-no-screenshot-baseline now records.",
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "gls-glossary",
+      "name": "Product Glossary",
+      "section": "glossary",
+      "status": "live",
+      "visibility": "public",
+      "purpose": "The one name THA uses for each concept — and the eleven places it currently uses more than one.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "docs/product/assets/glossary.md"
+      ],
+      "related": [
+        "gls-tha-score",
+        "gls-plant-diversity",
+        "gls-apple",
+        "gls-basket"
+      ],
+      "known_defects": [
+        "fnd-score-name-collision"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "gls-tha-score",
+      "name": "THA Score",
+      "section": "glossary",
+      "status": "live",
+      "visibility": "public",
+      "purpose": "The one-to-five apple rating THA gives a food — called five different things in the product today, one of which means something else entirely.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/components/AppleRating.tsx"
+      ],
+      "related": [
+        "gls-glossary"
+      ],
+      "known_defects": [
+        "fnd-score-name-collision",
+        "fnd-two-apples"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "gls-plant-diversity",
+      "name": "Plant Diversity",
+      "section": "glossary",
+      "status": "live",
+      "visibility": "public",
+      "purpose": "The count of different plants a household has eaten — shown to households as \"Plants enjoyed\", navigated to as \"Nutrition\", and addressed as /plant-diversity.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/components/HouseholdNutritionCentre.tsx#L286"
+      ],
+      "related": [
+        "gls-glossary",
+        "page-nutrition"
+      ],
+      "known_defects": [
+        "fnd-route-name-drift"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "gls-apple",
+      "name": "Apple (the Companion)",
+      "section": "glossary",
+      "status": "live",
+      "visibility": "public",
+      "purpose": "The name every household sees for THA's companion — used consistently, with \"Companion\" and \"Assistant\" correctly kept internal.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/components/conversation/FloatingAssistant.tsx#L87"
+      ],
+      "related": [
+        "dom-companion",
+        "gls-glossary"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "gls-basket",
+      "name": "Basket",
+      "section": "glossary",
+      "status": "live",
+      "visibility": "public",
+      "purpose": "What a household is buying — called Basket, Shopping, Shopping List and List across four surfaces and five routes.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/shopping-workspace-page.tsx#L2150",
+        "client/src/pages/shopping-list-page.tsx#L2860"
+      ],
+      "related": [
+        "gls-glossary",
+        "dom-shopping"
+      ],
+      "known_defects": [
+        "fnd-shopping-duplicate"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "gls-simply-better-choices",
+      "name": "Simply Better Choices",
+      "section": "glossary",
+      "status": "live",
+      "visibility": "public",
+      "purpose": "THA's name for the one easy upgrade it offers on a product or a meal — used consistently everywhere it appears.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/components/intelligence/SimplyBetterChoiceCard.tsx"
+      ],
+      "related": [
+        "gls-glossary",
+        "mkt-better-choices"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "gls-tha-picks",
+      "name": "THA Picks",
+      "section": "glossary",
+      "status": "internal",
+      "visibility": "admin",
+      "purpose": "The admin's name for a curated preferred product; never shown to a household.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/admin-ingredient-products-page.tsx#L194"
+      ],
+      "related": [
+        "gls-glossary",
+        "adm-ingredient-products"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "gls-bad-apple",
+      "name": "Bad Apple",
+      "section": "glossary",
+      "status": "internal",
+      "visibility": "admin",
+      "purpose": "The internal name for a product with multiple high-risk additives; households see the phrase \"Highly Ultra-Processed\" instead.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/components/BadAppleWarningModal.tsx#L100"
+      ],
+      "related": [
+        "gls-glossary",
+        "dlg-bad-apple"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "cap-product-knowledge",
+      "name": "Product Knowledge",
+      "section": "knowledge-capabilities",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "Ask what THA is or what it can do, and get an answer from this registry — permission-aware, and never a sentence invented by the Companion.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/services/product-knowledge-registry.ts",
+        "server/intelligence/bindings/product-knowledge.ts",
+        "server/intelligence/capability-registry.ts",
+        "docs/architecture/THA_PRODUCT_KNOWLEDGE_REGISTRY_ARCHITECTURE.md"
+      ],
+      "related": [
+        "cap-nutrition-knowledge"
+      ],
+      "known_defects": [
+        "fnd-pkr27-prompt-knowledge"
+      ],
+      "evidence": "PHASE5A registered `product-knowledge` in server/intelligence/capability-registry.ts and bound it (read/search/explain) — the capability PDA1 recorded as absent now exists, so `fnd-no-product-knowledge-capability` is CLOSED. Entries are filtered by visibility before prompt composition (Rule PKR26), and the filter fails closed to `developer` (Rule PKR22). Verified by server/tests/test-intelligence-product-knowledge-binding.ts (32 assertions). `fnd-pkr27-prompt-knowledge` REMAINS OPEN and is deliberately not claimed as fixed: this change gives the Companion a registry to query, but nobody has yet audited the existing system prompts, templates and fallback strings for sentences about THA that duplicate it. The second narrator is now avoidable; it has not been shown to be absent.",
+      "last_verified": "2026-07-12",
+      "version": 2
+    },
+    {
+      "id": "cap-nutrition-knowledge",
+      "name": "Nutrition & Food Knowledge",
+      "section": "knowledge-capabilities",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "Ask about any food, nutrient, benefit or way of preparing it, and get an answer traced to a reviewed fact — never an invented one.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/intelligence/capability-registry.ts",
+        "server/services/nutrition-knowledge-registry.ts",
+        "docs/architecture/NK1_CANONICAL_NUTRITION_KNOWLEDGE_PLATFORM.md",
+        "docs/investigations/knowledge/WS5A_PREPARATION_KNOWLEDGE_ARCHITECTURE.md"
+      ],
+      "related": [
+        "dom-nutrition",
+        "page-food-detail",
+        "cap-product-knowledge"
+      ],
+      "evidence": "PHASE5A extended this capability with PREPARATION KNOWLEDGE (WS5A) — how a food is cooked, preserved and prepared. The catalogue and the food↔preparation links are seeded (39 preparations, 420 links); NO preparation EFFECT is seeded, so THA currently states that a preparation exists and states nothing about what it changes. That is the honest position, not a shortfall: an effect is a health claim and passes the same Layer-2 gate as every benefit chip (cited source + named human sign-off, `npm run knowledge:signoff`).",
+      "last_verified": "2026-07-12",
+      "version": 2
+    },
+    {
+      "id": "cap-companion",
+      "name": "Apple",
+      "section": "companion-capabilities",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "Ask Apple about your food, your plan, your pantry or your list; it answers from what THA holds, proposes actions you must confirm, and says \"I don't know\" rather than guessing.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/components/conversation/FloatingAssistant.tsx",
+        "server/intelligence/conversation/conversation-gateway.ts"
+      ],
+      "related": [
+        "dom-companion",
+        "cap-product-knowledge"
+      ],
+      "known_defects": [
+        "fnd-pkr27-prompt-knowledge"
+      ],
+      "cannot": "Cannot place an order, cannot change anything without explicit confirmation, and cannot currently answer a single question about THA itself.",
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "cap-planner",
+      "name": "Planner capability",
+      "section": "intelligence-capabilities",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "Apple can read and explain the household's week; it cannot yet change it.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/intelligence/capability-registry.ts",
+        "docs/architecture/capabilities/templates.md"
+      ],
+      "related": [
+        "dom-planner"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "cap-meals",
+      "name": "Meals capability",
+      "section": "intelligence-capabilities",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "Apple can find and explain the household's own recipes.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "docs/architecture/capabilities/meals.md"
+      ],
+      "related": [
+        "dom-cookbook"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "cap-shopping",
+      "name": "Shopping capability",
+      "section": "intelligence-capabilities",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "Apple can read the shopping list and prepare a basket; it can never place an order.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/intelligence/capability-registry.ts"
+      ],
+      "related": [
+        "dom-shopping"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "cap-pantry",
+      "name": "Pantry capability",
+      "section": "intelligence-capabilities",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "Apple can read what is in the household's own pantry and explain those ingredients.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/intelligence/capability-registry.ts"
+      ],
+      "related": [
+        "dom-pantry"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "cap-diary",
+      "name": "Diary capability",
+      "section": "intelligence-capabilities",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "Apple can read back what the household recorded, exactly as recorded.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/intelligence/capability-registry.ts"
+      ],
+      "related": [
+        "dom-diary"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "cap-analyser",
+      "name": "Analyser capability",
+      "section": "intelligence-capabilities",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "Apple can look up any additive in THA's reference list; scoring a scanned product is a live calculation, not a fact it can read.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "docs/architecture/capabilities/analyser.md"
+      ],
+      "related": [
+        "dom-analyser"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "cap-household",
+      "name": "Household capability",
+      "section": "intelligence-capabilities",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "Apple can see who eats here and what each person avoids, so nothing it suggests puts them at risk.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "docs/architecture/capabilities/household.md"
+      ],
+      "related": [
+        "dom-household"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "cap-profile",
+      "name": "Profile capability",
+      "section": "intelligence-capabilities",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "Apple can read the household's own preferences back to them; passwords and tokens are never exposed to it.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "docs/architecture/capabilities/profile.md"
+      ],
+      "related": [
+        "dom-household",
+        "page-profile"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "cap-partners",
+      "name": "Partners capability",
+      "section": "intelligence-capabilities",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "Apple can name the retailers THA can hand a basket to; it will not claim one is cheaper than another, because it cannot prove it.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "docs/architecture/capabilities/partners.md"
+      ],
+      "related": [
+        "dom-partners",
+        "dom-shopping"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "cap-administration",
+      "name": "Administration capability",
+      "section": "intelligence-capabilities",
+      "status": "live",
+      "visibility": "admin",
+      "purpose": "The admin-only, audited capability covering user and content management.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/intelligence/capability-registry.ts"
+      ],
+      "related": [
+        "dom-admin"
+      ],
+      "last_verified": "2026-07-11",
+      "version": 1
+    }
+  ]
+}

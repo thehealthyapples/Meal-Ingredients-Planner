@@ -138,6 +138,7 @@ import { bindDiaryDiscoveryCapability } from "./bindings/diary-discovery.js";
 import { bindFoodIntelligenceReadCapability } from "./bindings/food-intelligence.js";
 import { bindOpportunityDeliveryCapability } from "./bindings/opportunity-delivery.js";
 import { bindEvidenceLearningCapability } from "./bindings/evidence-learning.js";
+import { bindProductKnowledgeReadCapability } from "./bindings/product-knowledge.js";
 import type {
   Capability,
   CapabilityHandler,
@@ -285,3 +286,4 @@ bindDiaryDiscoveryCapability(intelligencePlatform);
 bindFoodIntelligenceReadCapability(intelligencePlatform);
 bindOpportunityDeliveryCapability(intelligencePlatform);
 bindEvidenceLearningCapability(intelligencePlatform);
+bindProductKnowledgeReadCapability(intelligencePlatform);

@@ -48,7 +48,9 @@ if (!process.env.DATABASE_URL) {
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const db = drizzle(pool, { schema });
 
-type Edge = "composition" | "nutrient-benefit";
+type Edge = "composition" | "nutrient-benefit" | "preparation-effect";
+
+const EDGES: readonly Edge[] = ["composition", "nutrient-benefit", "preparation-effect"];
 
 interface PendingClaim {
   id: number;
@@ -85,6 +87,34 @@ async function pendingNutrientBenefit(): Promise<PendingClaim[]> {
   return rows.map((r) => ({ id: r.id, label: `${r.nutrientSlug} → ${r.benefitSlug}  (${r.evidenceStrength})`, sourceRefs: r.sourceRefs }));
 }
 
+/**
+ * PHASE5A — the preparation-effect edge (WS5A).
+ *
+ * A preparation EXISTS freely and needs no sign-off; an EFFECT ("cooking this
+ * changes its nutrition") is a claim, and passes through exactly this gate. The
+ * printed label shows the approved wording, because the wording IS the claim —
+ * a reviewer signing off "increases lycopene" without reading the sentence a
+ * household will actually be shown has reviewed a database row, not a claim.
+ */
+async function pendingPreparationEffect(): Promise<PendingClaim[]> {
+  const rows = await db
+    .select()
+    .from(schema.knowledgePreparationEffects)
+    .where(and(
+      isNull(schema.knowledgePreparationEffects.reviewedAt),
+      eq(schema.knowledgePreparationEffects.isActive, true),
+      sql`jsonb_array_length(${schema.knowledgePreparationEffects.sourceRefs}) > 0`,
+    ));
+  return rows.map((r) => ({
+    id: r.id,
+    label:
+      `${r.foodSlug} + ${r.preparationSlug} → ${r.direction} ${r.targetSlug ?? r.effectKind}\n` +
+      `         “${r.approvedWording}”` +
+      (r.uncertaintyNote ? `\n         hedge: ${r.uncertaintyNote}` : ""),
+    sourceRefs: r.sourceRefs,
+  }));
+}
+
 /** Print the claims, return the ids whose citations are structurally valid. */
 function review(edge: Edge, pending: PendingClaim[]): number[] {
   console.log(`\n── ${edge} — ${pending.length} sourced claim(s) awaiting sign-off ──\n`);
@@ -108,11 +138,11 @@ async function run() {
   const reviewer = flag(args, "--reviewer")?.trim();
   const edgeArg = flag(args, "--edge") as Edge | undefined;
 
-  if (edgeArg && edgeArg !== "composition" && edgeArg !== "nutrient-benefit") {
-    console.error(`Unknown --edge "${edgeArg}". Use "composition" or "nutrient-benefit".`);
+  if (edgeArg && !EDGES.includes(edgeArg)) {
+    console.error(`Unknown --edge "${edgeArg}". Use one of: ${EDGES.join(", ")}.`);
     process.exit(1);
   }
-  const edges: Edge[] = edgeArg ? [edgeArg] : ["composition", "nutrient-benefit"];
+  const edges: Edge[] = edgeArg ? [edgeArg] : [...EDGES];
 
   // Reviewer identity is required BEFORE anything is written, not after.
   if (confirming && !reviewer) {
@@ -128,6 +158,7 @@ async function run() {
   const pending: Record<Edge, PendingClaim[]> = {
     composition: edges.includes("composition") ? await pendingComposition() : [],
     "nutrient-benefit": edges.includes("nutrient-benefit") ? await pendingNutrientBenefit() : [],
+    "preparation-effect": edges.includes("preparation-effect") ? await pendingPreparationEffect() : [],
   };
 
   const total = edges.reduce((n, e) => n + pending[e].length, 0);
@@ -137,7 +168,7 @@ async function run() {
     return;
   }
 
-  const valid: Record<Edge, number[]> = { composition: [], "nutrient-benefit": [] };
+  const valid: Record<Edge, number[]> = { composition: [], "nutrient-benefit": [], "preparation-effect": [] };
   for (const edge of edges) valid[edge] = review(edge, pending[edge]);
 
   if (!confirming) {
@@ -172,8 +203,17 @@ async function run() {
       .where(inArray(schema.knowledgeNutrientBenefits.id, valid["nutrient-benefit"]));
     console.log(`Signed off ${valid["nutrient-benefit"].length} nutrient→benefit claim(s) as "${reviewer}".`);
   }
+  if (valid["preparation-effect"].length > 0) {
+    await db
+      .update(schema.knowledgePreparationEffects)
+      .set({ reviewedAt, reviewedBy: reviewer })
+      .where(inArray(schema.knowledgePreparationEffects.id, valid["preparation-effect"]));
+    console.log(`Signed off ${valid["preparation-effect"].length} preparation-effect claim(s) as "${reviewer}".`);
+  }
   console.log("\nA benefit chip renders only where BOTH its composition premise and its");
   console.log("nutrient→benefit claim are now signed off. Everything else stays an honest gap.");
+  console.log("A preparation note renders only where its own effect row is signed off; until");
+  console.log("then the preparation is shown as existing, with no claim attached to it.");
 
   await pool.end();
 }

@@ -1,0 +1,176 @@
+{
+  "captured_by": "PDA1",
+  "base_url": "http://localhost:5000",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "surface_count": 18,
+  "captured": 18,
+  "failed": 0,
+  "note": "Admin and developer surfaces are intentionally excluded — see README.md.",
+  "shots": [
+    {
+      "id": "landing",
+      "name": "Landing",
+      "route": "/",
+      "auth": "public",
+      "file": "landing.png",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "id": "auth",
+      "name": "Sign in",
+      "route": "/auth",
+      "auth": "public",
+      "file": "auth.png",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "id": "home",
+      "name": "Home",
+      "route": "/home",
+      "auth": "household",
+      "file": "home.png",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "id": "dashboard",
+      "name": "Dashboard",
+      "route": "/dashboard",
+      "auth": "household",
+      "file": "dashboard.png",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "id": "planner",
+      "name": "Planner",
+      "route": "/planner",
+      "auth": "household",
+      "file": "planner.png",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "id": "cookbook",
+      "name": "Cookbook",
+      "route": "/cookbook",
+      "auth": "household",
+      "file": "cookbook.png",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "id": "analyser",
+      "name": "Analyser",
+      "route": "/analyser",
+      "auth": "household",
+      "file": "analyser.png",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "id": "shopping-workspace",
+      "name": "Shopping",
+      "route": "/shopping-workspace",
+      "auth": "household",
+      "file": "shopping-workspace.png",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "id": "basket",
+      "name": "Basket",
+      "route": "/basket",
+      "auth": "household",
+      "file": "basket.png",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "id": "pantry",
+      "name": "Pantry",
+      "route": "/pantry",
+      "auth": "household",
+      "file": "pantry.png",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "id": "nutrition",
+      "name": "Nutrition (Plant Diversity)",
+      "route": "/plant-diversity",
+      "auth": "household",
+      "file": "nutrition.png",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "id": "diary",
+      "name": "My Diary",
+      "route": "/my-diary",
+      "auth": "household",
+      "file": "diary.png",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "id": "profile",
+      "name": "Profile",
+      "route": "/profile",
+      "auth": "household",
+      "file": "profile.png",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "id": "partners",
+      "name": "Partners",
+      "route": "/partners",
+      "auth": "household",
+      "file": "partners.png",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "id": "supermarkets",
+      "name": "Supermarkets (hidden)",
+      "route": "/supermarkets",
+      "auth": "household",
+      "file": "supermarkets.png",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "id": "quick-meal",
+      "name": "Build a Meal (hidden)",
+      "route": "/quick-meal",
+      "auth": "household",
+      "file": "quick-meal.png",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "id": "onboarding",
+      "name": "Onboarding",
+      "route": "/onboarding",
+      "auth": "household",
+      "file": "onboarding.png",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "id": "not-found",
+      "name": "Not Found",
+      "route": "/this-route-does-not-exist",
+      "auth": "public",
+      "file": "not-found.png",
+      "status": 200,
+      "ok": true
+    }
+  ]
+}

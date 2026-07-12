@@ -1694,6 +1694,96 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    // PHASE5A — Preparation Knowledge (builds WS5A; PKCA §7 Phase 4).
+    //
+    // "The same food. A different thing done to it. Nutrition only changes if the
+    //  evidence says so."
+    //
+    // Three tables, and the split between them is the whole design:
+    //
+    //   knowledge_preparations        the catalogue. A reference vocabulary beside
+    //                                 the spine (Principle 5) — raw, frozen, roasted,
+    //                                 smoked, ground. Shared across foods.
+    //
+    //   knowledge_food_preparations   EXISTENCE. "People eat this food this way."
+    //                                 Cheap, editorial, ALWAYS allowed, and carrying
+    //                                 NO evidence columns on purpose: requiring a
+    //                                 citation to state that boiled eggs exist would
+    //                                 be evidence theatre, and it would gate the MVF
+    //                                 bar behind enrichment that Rule KC6 says may
+    //                                 never gate it.
+    //
+    //   knowledge_preparation_effects EFFECT. "This preparation measurably CHANGES
+    //                                 something." Expensive, rare, and gated by the
+    //                                 SAME Layer-2 contract as every benefit chip:
+    //                                 source_refs + reviewed_at + reviewed_by,
+    //                                 checked at render by isEvidenceBackedClaim().
+    //                                 No new evidence vocabulary, no second lifecycle
+    //                                 (Rule KC1). This table starts EMPTY and the
+    //                                 seeder never writes it — an effect is authored
+    //                                 through the review workflow and signed off by a
+    //                                 named human (Rule KC9: automation authors
+    //                                 candidates, it never publishes them).
+    //
+    // Additive only. Nothing is dropped, no column is altered, and no existing read
+    // changes: a surface that ignores preparations behaves exactly as it did.
+    id: "2026-07-11_phase5a_preparation_knowledge",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS knowledge_preparations (
+         id            SERIAL PRIMARY KEY,
+         slug          TEXT NOT NULL UNIQUE,
+         name          TEXT NOT NULL,
+         prep_type     TEXT NOT NULL,
+         description   TEXT,
+         family        TEXT,
+         source        TEXT NOT NULL DEFAULT 'THA editorial',
+         display_order INTEGER NOT NULL DEFAULT 0,
+         is_active     BOOLEAN NOT NULL DEFAULT TRUE,
+         created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+       )`,
+
+      // Existence. No evidence columns, deliberately (see above).
+      `CREATE TABLE IF NOT EXISTS knowledge_food_preparations (
+         id               SERIAL PRIMARY KEY,
+         food_slug        TEXT NOT NULL REFERENCES knowledge_foods(slug) ON DELETE CASCADE,
+         preparation_slug TEXT NOT NULL REFERENCES knowledge_preparations(slug) ON DELETE CASCADE,
+         ranking          INTEGER NOT NULL DEFAULT 0,
+         source           TEXT NOT NULL DEFAULT 'THA editorial',
+         is_active        BOOLEAN NOT NULL DEFAULT TRUE,
+         created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+         CONSTRAINT uq_knowledge_food_preparation UNIQUE (food_slug, preparation_slug)
+       )`,
+      `CREATE INDEX IF NOT EXISTS knowledge_food_preparations_food_idx
+         ON knowledge_food_preparations (food_slug)`,
+
+      // Effect. Same Layer-2 shape as knowledge_food_benefits — source_refs
+      // (Layer-1 validated), reviewed_at (the human gate), reviewed_by (who is
+      // accountable). Both review columns are NULLABLE and start NULL, which is
+      // the truthful state: nothing has been signed off, so nothing speaks.
+      `CREATE TABLE IF NOT EXISTS knowledge_preparation_effects (
+         id               SERIAL PRIMARY KEY,
+         food_slug        TEXT NOT NULL REFERENCES knowledge_foods(slug) ON DELETE CASCADE,
+         preparation_slug TEXT NOT NULL REFERENCES knowledge_preparations(slug) ON DELETE CASCADE,
+         effect_kind      TEXT NOT NULL,
+         target_slug      TEXT,
+         direction        TEXT NOT NULL,
+         approved_wording TEXT NOT NULL,
+         uncertainty_note TEXT,
+         source           TEXT NOT NULL DEFAULT 'THA editorial',
+         source_refs      JSONB NOT NULL DEFAULT '[]'::jsonb,
+         reviewed_at      TIMESTAMPTZ,
+         reviewed_by      TEXT,
+         is_active        BOOLEAN NOT NULL DEFAULT TRUE,
+         created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+         CONSTRAINT uq_knowledge_preparation_effect
+           UNIQUE (food_slug, preparation_slug, effect_kind, target_slug)
+       )`,
+      `CREATE INDEX IF NOT EXISTS knowledge_preparation_effects_food_idx
+         ON knowledge_preparation_effects (food_slug)`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

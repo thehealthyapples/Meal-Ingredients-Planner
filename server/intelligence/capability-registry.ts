@@ -397,12 +397,58 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
   {
     id: "nutrition-knowledge",
     displayName: "Nutrition / Knowledge",
-    description: "Read-only nutrition and food knowledge (source-gated).",
+    description:
+      "Read-only nutrition and food knowledge (source-gated) — foods, nutrients, health benefits, " +
+      "and (PHASE5A) preparation knowledge: how a food is cooked, preserved and prepared, plus any " +
+      "evidence-gated effect that preparation has. A preparation's EXISTENCE is stated freely; a " +
+      "preparation's EFFECT is stated only where a cited, human-signed-off claim earns it, and is an " +
+      "honest gap otherwise (WS5A).",
     owner: "WS0 knowledge_* tables (SoT D1)",
     owningService: "server/services/nutrition-knowledge-registry.ts, nutrition-centre-assembler.ts",
     apiSurface: "/api/knowledge/*, /api/nutrition*, /api/food-knowledge/*",
     supportedIntents: ["read", "explain", "search", "analyse", "compare", "report"],
     executableIntents: [],
+    permissions: { minimumRole: "user", knowledgeClass: "public", ownershipScoped: false, audited: false },
+    capabilityClass: "read-only",
+    aiAccess: "R",
+    availability: "registered",
+  },
+  {
+    // PHASE5A — the knowledge of what THA ITSELF is. The platform's fifth
+    // knowledge domain (PKCA §9) and its first SELF-DESCRIBING one: the subject
+    // and the source are the same system.
+    //
+    // That inverts the evidence problem. For food, nutrition and recipes the
+    // enemy is FABRICATION — THA can be wrong about an external world. Here THA
+    // *is* the source: it cannot fabricate a Planner page it does not ship. The
+    // enemy is STALENESS — a product fact is wrong because it STOPPED being
+    // true, and a stale entry is indistinguishable from a fresh one by reading
+    // it (PKCA Rule KC14).
+    //
+    // Registered exactly like every other capability, and deliberately not
+    // privileged: it is a Knowledge Capability, not a special case.
+    id: "product-knowledge",
+    displayName: "Product Knowledge",
+    description:
+      "Read-only, permission-aware knowledge of what The Healthy Apples itself is — its domains, " +
+      "pages, journeys, capabilities, integrations, settings, claims and glossary. The single owner " +
+      "of every sentence THA says about itself: the Companion QUERIES this capability and may never " +
+      "duplicate product knowledge into a prompt, template or fallback string (Rule PKR27). Every " +
+      "entry carries a visibility tier, and content above the caller's tier is dropped BEFORE the " +
+      "prompt is composed — never placed in context with an instruction to withhold it (Rule PKR26).",
+    owner:
+      "The Product Knowledge Registry, docs/product/ — authored as inventory/product.yaml, generated " +
+      "to inventory/product.json, which is the ONLY artefact the Intelligence Platform ever reads " +
+      "(PKR1 §18, Rule PKR21). Canonical owner of the Product Knowledge domain (PKCA §9.2).",
+    owningService: "server/services/product-knowledge-registry.ts",
+    apiSurface: "(platform-internal only — no HTTP route; the registry is documentation, read through this capability)",
+    supportedIntents: ["read", "explain", "search", "report"],
+    executableIntents: [],
+    // knowledgeClass is "public" because the CAPABILITY is reachable by anyone —
+    // per-ENTRY visibility is what actually gates disclosure, and it is enforced
+    // inside the owner, before composition. The registry classifies; access.ts
+    // authorises (Rule PKR25). This class is not, and must never become, the
+    // permission boundary for a product fact.
     permissions: { minimumRole: "user", knowledgeClass: "public", ownershipScoped: false, audited: false },
     capabilityClass: "read-only",
     aiAccess: "R",
@@ -721,6 +767,7 @@ const SEED_CAPABILITIES: readonly Capability[] = SEED_CAPABILITIES_BASE.map((cap
 const SEED_GAPS: readonly CapabilityGap[] = [
   { capabilityId: "shopping", verb: "order", reason: "No checkout/retailer-order endpoint exists; basket build ≠ order placement. Prepare-basket + hand-off only (Rule 8)." },
   { capabilityId: "planner", verb: "delete", reason: "Deleting the whole week *record* is a GAP — only clearing week entries exists. Entry-level delete is supported; week-object delete is not." },
+  { capabilityId: "product-knowledge", verb: "report", reason: "A report ON THE PRODUCT would require the platform to select, order and summarise what matters about THA. That is an editorial judgement belonging to the registry's named human owners, not to the Intelligence Platform. Entries are read, searched and explained individually; they are not summarised into a narrative THA never wrote (PHASE5A)." },
 ];
 
 // ---------------------------------------------------------------------------

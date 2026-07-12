@@ -50,6 +50,35 @@ export interface KnowledgeBenefitView {
   readonly description: string | null;
 }
 
+/**
+ * PHASE5A — one preparation of one food, as the read binding surfaces it.
+ *
+ * The `state` field is the whole contract, and the handler passes it through
+ * untouched. It is the owner's answer to a question the platform must never
+ * answer for itself:
+ *
+ *   "effect"      an evidenced, signed-off claim exists → `note` is what to say
+ *   "no-change"   an evidenced FINDING that it changes nothing → `note` says so
+ *   "unreviewed"  THA has no reviewed note → `note` is null, and stays null
+ *
+ * The handler does not collapse these, does not default `unreviewed` to a
+ * reassuring sentence, and does not compose a sentence of its own from the
+ * other fields. An unreviewed preparation carries no note because there is no
+ * true note to carry (WS5A §4.3; Principle 6).
+ */
+export interface KnowledgePreparationView {
+  readonly slug: string;
+  readonly name: string;
+  readonly prepType: string;
+  readonly state: "effect" | "no-change" | "unreviewed";
+  /** The owner's approved wording. Null iff state is "unreviewed". */
+  readonly note: string | null;
+  /** The owner's hedge for a weaker-than-established claim. */
+  readonly uncertainty: string | null;
+  /** Citations that earned the note the right to be spoken. Empty when unreviewed. */
+  readonly sources: readonly { readonly body: string; readonly title: string; readonly url: string }[];
+}
+
 export interface NutritionFoodReadResult {
   readonly scope: "food";
   readonly slug: string;
@@ -59,7 +88,17 @@ export interface NutritionFoodReadResult {
   readonly description: string | null;
   readonly benefits: readonly { readonly slug: string; readonly name: string }[];
   readonly nutrients: readonly { readonly slug: string; readonly name: string; readonly amount: string | null }[];
+  readonly preparations: readonly KnowledgePreparationView[];
   readonly source: "nutrition-knowledge-registry";
+}
+
+export interface NutritionPreparationsReadResult {
+  readonly scope: "preparations";
+  readonly foodSlug: string;
+  readonly foodName: string;
+  readonly preparations: readonly KnowledgePreparationView[];
+  readonly source: "nutrition-knowledge-registry";
+  readonly note: string;
 }
 
 export interface NutritionNutrientReadResult {
@@ -130,11 +169,40 @@ const GROUNDED_NOTE =
   "Grounded in the source-gated Nutrition / Knowledge owner. No nutrition fact or health " +
   "benefit was authored here; nothing the owner does not record is shown.";
 
+const PREPARATION_NOTE =
+  "A preparation is shown because the owner records that people prepare this food that way. " +
+  'A preparation NOTE is shown only where the owner holds a cited, human-signed-off claim. Where ' +
+  'state is "unreviewed" there is no note, and none may be inferred: THA does not know whether that ' +
+  "preparation changes this food's nutrition, and says so rather than guessing.";
+
+/** Project the owner's preparation view. A pure re-shape — no interpretation,
+ *  no defaulting, no sentence-building. The owner's `state` and `approvedWording`
+ *  pass through exactly as stored. */
+function toPreparationView(p: {
+  slug: string;
+  name: string;
+  prepType: string;
+  state: "effect" | "no-change" | "unreviewed";
+  approvedWording: string | null;
+  uncertaintyNote: string | null;
+  sourceRefs: readonly { body: string; title: string; url: string }[];
+}): KnowledgePreparationView {
+  return {
+    slug: p.slug,
+    name: p.name,
+    prepType: p.prepType,
+    state: p.state,
+    note: p.approvedWording,
+    uncertainty: p.uncertaintyNote,
+    sources: p.sourceRefs.map((r) => ({ body: r.body, title: r.title, url: r.url })),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Read scopes (general food knowledge — delegated, source-gated)
 // ---------------------------------------------------------------------------
 
-type ReadScope = "food" | "nutrient" | "benefit" | "categories" | "foods";
+type ReadScope = "food" | "nutrient" | "benefit" | "categories" | "foods" | "preparations";
 
 async function readFood(
   intent: Intent,
@@ -159,7 +227,47 @@ async function readFood(
     description: detail.food.description,
     benefits: detail.benefits.map((b) => ({ slug: b.slug, name: b.name })),
     nutrients: detail.nutrients.map((n) => ({ slug: n.slug, name: n.name, amount: n.amount })),
+    preparations: detail.preparations.map(toPreparationView),
     source: "nutrition-knowledge-registry",
+  };
+}
+
+/**
+ * PHASE5A — "how do people cook/prepare this, and does it change anything?"
+ *
+ * An unknown food is a gap. A KNOWN food the owner records no preparations for
+ * is ALSO a gap — and that distinction matters: the platform must not answer
+ * "no preparations" with an empty list that a caller could read as "this food
+ * has no preparations", when the truth is "THA has not recorded any".
+ */
+async function readPreparations(
+  intent: Intent,
+  port: NutritionKnowledgeReadPort,
+): Promise<NutritionPreparationsReadResult> {
+  const slug = toSlug(intent.parameters?.slug) ?? toSlug(intent.parameters?.foodSlug);
+  if (!slug) throw gap("Reading preparations needs { slug } — the food's canonical key.");
+
+  const detail = await port.getFoodDetailView(slug);
+  if (!detail) {
+    throw gap(
+      `Honest gap: the Nutrition / Knowledge owner has no food recorded for slug ${JSON.stringify(slug)}. ` +
+        "The Intelligence Platform will not infer how an unknown food is prepared.",
+    );
+  }
+  if (detail.preparations.length === 0) {
+    throw gap(
+      `Honest gap: the Nutrition / Knowledge owner records no preparations for "${detail.food.name}". ` +
+        "That is a gap in what THA has recorded — it is NOT a statement that this food has no " +
+        "preparations, and the Intelligence Platform will not invent a set of them.",
+    );
+  }
+  return {
+    scope: "preparations",
+    foodSlug: detail.food.slug,
+    foodName: detail.food.name,
+    preparations: detail.preparations.map(toPreparationView),
+    source: "nutrition-knowledge-registry",
+    note: PREPARATION_NOTE,
   };
 }
 
@@ -247,11 +355,13 @@ async function handleRead(intent: Intent, port: NutritionKnowledgeReadPort): Pro
       return readCategories(port);
     case "foods":
       return readFoods(intent, port);
+    case "preparations":
+      return readPreparations(intent, port);
     default:
       throw gap(
         `Unsupported nutrition-knowledge read scope ${JSON.stringify(scope)}. Supported read scopes: ` +
-          '"food" / "nutrient" / "benefit" (each needs { slug }), "categories", and "foods" ' +
-          "(optional { category }).",
+          '"food" / "nutrient" / "benefit" / "preparations" (each needs { slug }), "categories", and ' +
+          '"foods" (optional { category }).',
       );
   }
 }

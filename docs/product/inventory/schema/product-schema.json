@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://thehealthyapples.com/schema/product-inventory/v1",
+  "title": "THA Product Knowledge Registry — Inventory Schema v1",
+  "description": "Validates the machine-readable inventory generated from docs/product/inventory/product.yaml. Governed by docs/architecture/THA_PRODUCT_KNOWLEDGE_REGISTRY_ARCHITECTURE.md §10.2. The `visibility` field is mandatory and fails closed (Rule PKR22): an entry with a missing or unrecognised visibility is treated as `developer` and served to no one — it never defaults to `public`.",
+  "type": "object",
+  "required": ["schema_version", "generated_from", "entries"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "generated_from": { "type": "string" },
+    "generated_by": { "type": "string" },
+    "populated_by": { "type": "string" },
+    "populated_on": { "type": "string", "format": "date" },
+    "entry_count": { "type": "integer", "minimum": 0 },
+    "entries": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/entry" }
+    }
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "description": "The entry spine fixed by PKR §7. Sections may add fields; none may remove these.",
+      "required": [
+        "id",
+        "name",
+        "section",
+        "status",
+        "visibility",
+        "purpose",
+        "owner",
+        "sources",
+        "related",
+        "last_verified",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Stable, unique, permanent. Never reused, never renumbered, never reissued after retirement (PKR §7, §17)."
+        },
+        "name": { "type": "string", "minLength": 1 },
+        "section": {
+          "type": "string",
+          "description": "One of the 28 canonical sections fixed by PKR §8. Exactly one.",
+          "enum": [
+            "domains",
+            "pages",
+            "routes",
+            "journeys",
+            "features",
+            "capabilities",
+            "intelligence-capabilities",
+            "companion-capabilities",
+            "knowledge-capabilities",
+            "admin-experiences",
+            "hidden-experiences",
+            "developer-experiences",
+            "notifications",
+            "dialogs",
+            "drawers",
+            "wizards",
+            "integrations",
+            "apis",
+            "settings",
+            "marketing-messages",
+            "benefits",
+            "competitive-advantages",
+            "help",
+            "screenshots",
+            "product-assets",
+            "glossary"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["live", "hidden", "internal", "deprecated", "retired"]
+        },
+        "visibility": {
+          "type": "string",
+          "description": "The LOWEST audience permitted to be told this. Monotonic: developer ⊇ admin ⊇ household ⊇ public (Rule PKR23). Mandatory; fails closed to `developer` (Rule PKR22).",
+          "enum": ["public", "household", "admin", "developer"]
+        },
+        "purpose": {
+          "type": "string",
+          "minLength": 1,
+          "description": "What it is for, in one sentence, in the household's terms — not the engineer's (PKR §7)."
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "description": "A named human. Not a team, not a workstream, not 'the platform' (Rule PKR12)."
+        },
+        "sources": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Pointers to code, route, table, Capability Card or SoT Register domain. Pointers only — never restatements (Rule PKR1)."
+        },
+        "related": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Other registry ids. The graph of the product."
+        },
+        "last_verified": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "The date a human last confirmed this is still true. Older than 90 days is PRESUMED STALE (PKR §15.3)."
+        },
+        "version": { "type": "integer", "minimum": 1 },
+
+        "route": { "type": "string" },
+        "aliases": { "type": "array", "items": { "type": "string" } },
+        "evidence": { "type": "string" },
+        "known_defects": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^fnd-[a-z0-9-]+$" },
+          "description": "Citations into the investigation that discovered the defect (PDA1). NOT registry ids — `related` is the graph of the product and holds registry ids only. An entry records that a surface exists and what it is for; the defect is history, and history lives in the investigation."
+        },
+        "substantiated_by": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Registry ids of the product truth substantiating a claim. A Marketing Message, Benefit or Competitive Advantage with an empty list and no stated substantiation_gap is a fabrication and must not enter the registry (PKR §8 s20)."
+        },
+        "substantiation_gap": {
+          "type": "string",
+          "description": "Stated honestly where a claim outruns the product. Its presence is what keeps an unsubstantiated claim admissible as a KNOWN gap rather than a lie."
+        },
+        "degrades_to": { "type": "string" },
+        "default": { "type": "string" },
+        "cannot": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

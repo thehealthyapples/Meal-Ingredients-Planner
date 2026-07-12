@@ -213,8 +213,8 @@ section("Canonical singleton — eighteen live capabilities (scope lock)");
 
 const live = intelligencePlatform.registry.listExecutable();
 assert(
-  live.length === 21,
-  "exactly TWENTY-ONE capabilities are live (planner + shopping + nutrition-knowledge + pantry + diary + profile + household + partners + meals + templates + analyser + meal-discovery + nutrition-discovery + planner-discovery + household-discovery + shopping-discovery + pantry-discovery + diary-discovery + food-intelligence + opportunity-delivery + evidence-learning) — scope lock (updated by EL1)",
+  live.length === 22,
+  "exactly TWENTY-TWO capabilities are live (planner + shopping + nutrition-knowledge + pantry + diary + profile + household + partners + meals + templates + analyser + meal-discovery + nutrition-discovery + planner-discovery + household-discovery + shopping-discovery + pantry-discovery + diary-discovery + food-intelligence + opportunity-delivery + evidence-learning + product-knowledge) — scope lock (updated by PHASE5A)",
   String(live.length),
 );
 assert(live.some((c) => c.id === "diary-discovery"), "diary-discovery is among the live capabilities");

@@ -77,6 +77,25 @@ function makePort(): NutritionKnowledgeReadPort {
         },
         benefits: [{ slug: "heart-health", name: "Heart health", icon: "heart" }],
         nutrients: [{ slug: "vitamin-c", name: "Vitamin C", amount: "high" }],
+        // PHASE5A — the owner now carries preparations. "steamed" exists for
+        // broccoli and has NO reviewed effect, which is the honest default and
+        // by far the common case. The read binding must surface the existence
+        // and must not invent a note to go with it.
+        preparations: [
+          {
+            slug: "steamed",
+            name: "Steamed",
+            prepType: "cooking",
+            family: "cooked",
+            description: "Cooked over steam, without submerging.",
+            ranking: 0,
+            state: "unreviewed" as const,
+            approvedWording: null,
+            uncertaintyNote: null,
+            sourceRefs: [],
+            confidence: null,
+          },
+        ],
       };
     },
     getNutrientDetailView: async (slug) => {
@@ -155,7 +174,7 @@ async function main(): Promise<void> {
     intelligencePlatform.getCapability("nutrition-knowledge")!.availability,
   );
   const live = intelligencePlatform.listCapabilities().filter((c) => c.availability === "available");
-  assert(live.length === 21, "exactly TWENTY-ONE capabilities are live (planner + shopping + nutrition-knowledge + pantry + diary + profile + household + partners + meals + templates + analyser + meal-discovery + nutrition-discovery + planner-discovery + household-discovery + shopping-discovery + pantry-discovery + diary-discovery + food-intelligence + opportunity-delivery + evidence-learning) — scope lock (updated by EL1)", String(live.length));
+  assert(live.length === 22, "exactly TWENTY-TWO capabilities are live (planner + shopping + nutrition-knowledge + pantry + diary + profile + household + partners + meals + templates + analyser + meal-discovery + nutrition-discovery + planner-discovery + household-discovery + shopping-discovery + pantry-discovery + diary-discovery + food-intelligence + opportunity-delivery + evidence-learning + product-knowledge) — scope lock (updated by PHASE5A)", String(live.length));
   assert(
     live.some((c) => c.id === "planner") && live.some((c) => c.id === "shopping") && live.some((c) => c.id === "nutrition-knowledge") && live.some((c) => c.id === "pantry") && live.some((c) => c.id === "diary") && live.some((c) => c.id === "profile") && live.some((c) => c.id === "household") && live.some((c) => c.id === "partners") && live.some((c) => c.id === "meals") && live.some((c) => c.id === "templates"),
     "the ten live capabilities are planner, shopping, nutrition-knowledge, pantry, diary, profile, household, partners, meals and templates",

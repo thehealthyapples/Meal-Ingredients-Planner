@@ -69,7 +69,9 @@ export {
 export {
   createNutritionKnowledgeReadHandler,
   type KnowledgeBenefitView,
+  type KnowledgePreparationView,
   type NutritionFoodReadResult,
+  type NutritionPreparationsReadResult,
   type NutritionNutrientReadResult,
   type NutritionBenefitReadResult,
   type NutritionCategoriesReadResult,
@@ -81,6 +83,25 @@ export {
   createRegistryNutritionKnowledgeReadPort,
   type NutritionKnowledgeReadPort,
 } from "./handlers/nutrition-knowledge-read-port.js";
+
+// PHASE5A — Product Knowledge: the permission-aware read path onto the registry
+// of what THA itself is (PKR2 §12, PKCA §9).
+export {
+  bindProductKnowledgeReadCapability,
+  PRODUCT_KNOWLEDGE_CAPABILITY_ID,
+  PRODUCT_KNOWLEDGE_EXECUTABLE_INTENTS,
+} from "./bindings/product-knowledge.js";
+export {
+  createProductKnowledgeReadHandler,
+  type ProductEntryResult,
+  type ProductKnowledgeReadResult,
+  type ProductKnowledgeSearchResult,
+  type ProductKnowledgeExplainResult,
+} from "./handlers/product-knowledge-read-handler.js";
+export {
+  createRegistryProductKnowledgeReadPort,
+  type ProductKnowledgeReadPort,
+} from "./handlers/product-knowledge-read-port.js";
 // INT8 — fourth live capability binding (read-only Pantry).
 export { bindPantryReadCapability, PANTRY_CAPABILITY_ID, PANTRY_EXECUTABLE_INTENTS } from "./bindings/pantry.js";
 export {

@@ -48,9 +48,13 @@ import {
   knowledgeFoodNutrients,
   knowledgeFoodBenefits,
   knowledgeNutrientBenefits,
+  knowledgePreparations,
+  knowledgeFoodPreparations,
+  knowledgePreparationEffects,
   type KnowledgeFood,
   type KnowledgeNutrient,
   type KnowledgeHealthBenefit,
+  type KnowledgePreparation,
 } from "@shared/schema";
 
 // ── Entities ─────────────────────────────────────────────────────────────────
@@ -515,12 +519,21 @@ export interface FoodDetailView {
   };
   benefits: BenefitChip[];
   nutrients: NutrientChip[];
+  /** PHASE5A — how people prepare this food, and (only where evidence earns it)
+   *  what that changes. Empty when the owner records no preparations: an honest
+   *  gap, never a default set. Additive — a surface that ignores it is unchanged
+   *  (Rule KC6: enrichment never gates what is already visible). */
+  preparations: PreparationView[];
 }
 
 export async function getFoodDetailView(slug: string): Promise<FoodDetailView | undefined> {
   const food = await getFoodBySlug(slug);
   if (!food || !food.isActive) return undefined;
-  const [benefits, nutrients] = await Promise.all([getFoodBenefitsForDisplay(slug), getNutrientsForFood(slug)]);
+  const [benefits, nutrients, preparations] = await Promise.all([
+    getFoodBenefitsForDisplay(slug),
+    getNutrientsForFood(slug),
+    getPreparationsForFood(slug),
+  ]);
   return {
     food: {
       slug: food.slug,
@@ -536,7 +549,167 @@ export async function getFoodDetailView(slug: string): Promise<FoodDetailView | 
     },
     benefits: benefits.map((b) => toBenefitChip(b.benefit)),
     nutrients: nutrients.map((n) => ({ slug: n.nutrient.slug, name: n.nutrient.name, amount: n.amount })),
+    preparations,
   };
+}
+
+// ── Preparation Knowledge (PHASE5A — WS5A) ───────────────────────────────────
+//
+// The ONE MOUTH for preparation knowledge (Rule KC4). Every surface that shows
+// a preparation reads it from here. No surface re-derives a preparation from an
+// ingredient string, and no surface composes its own sentence about what a
+// preparation does — it renders the approved wording this service returns, or
+// it renders the honest state this service returns. Those are the only options.
+//
+// ── The three honest states, and why they are a discriminated union ──────────
+//
+// WS5A §4.3 names the single biggest trust risk in this whole domain: a user
+// who cannot tell "we know it doesn't matter" from "nobody knows yet". The two
+// are completely different facts and they must never collapse into one vague
+// line.
+//
+// They are therefore modelled as three distinct, non-overlapping states, and a
+// caller CANNOT render them identically by accident — it has to switch on
+// `state`, and TypeScript will not let it forget one:
+//
+//   "effect"      an evidence-backed, human-signed-off claim exists. Show the
+//                 approved wording. INFORMATIVE.
+//   "no-change"   an evidence-backed claim exists whose finding is that this
+//                 preparation does NOT meaningfully change the food. This is a
+//                 POSITIVE FINDING, not an absence. REASSURING.
+//   "unreviewed"  no signed-off claim exists. THA does not know. This is the
+//                 default and it is by far the most common — which is correct,
+//                 and which WS5A §4 insists must read as a confident editorial
+//                 position, not as a missing feature. HONEST.
+//
+// The distinction is load-bearing: "no-change" may only ever be produced by a
+// row that cleared the same Layer-2 evidence gate as a benefit chip. It can
+// never be produced by the absence of a row. That is the whole point.
+
+export type PreparationEffectState = "effect" | "no-change" | "unreviewed";
+
+export interface PreparationView {
+  slug: string;
+  name: string;
+  /** state | preservation | cooking | processing (WS5A §1.6). */
+  prepType: string;
+  /** The parent preparation, if this one has a family (e.g. roasted → cooked). */
+  family: string | null;
+  description: string | null;
+  /** Order the editor listed this form in. */
+  ranking: number;
+  /** Which of the three honest states this (food, preparation) pair is in. */
+  state: PreparationEffectState;
+  /** The exact, approved sentence to show. NON-NULL for "effect" and
+   *  "no-change"; ALWAYS null for "unreviewed" — because there is nothing
+   *  truthful to say, and inventing something to say is the failure. */
+  approvedWording: string | null;
+  /** The hedge shown alongside a weaker-than-established claim. */
+  uncertaintyNote: string | null;
+  /** The citations that earned this claim the right to be spoken. Empty for
+   *  "unreviewed" — an unreviewed preparation cites nothing because it claims
+   *  nothing. */
+  sourceRefs: KnowledgeSourceRef[];
+  /** Derived from the evidence, never authored. Absent when "unreviewed". */
+  confidence: EvidenceConfidence | null;
+}
+
+/** The whole catalogue. A reference vocabulary read (Principle 5). */
+export async function listPreparations(): Promise<KnowledgePreparation[]> {
+  return db
+    .select()
+    .from(knowledgePreparations)
+    .where(eq(knowledgePreparations.isActive, true))
+    .orderBy(asc(knowledgePreparations.displayOrder));
+}
+
+/**
+ * How this food is prepared, and what (if anything) the evidence says that
+ * changes.
+ *
+ * EXISTENCE is unconditional: every preparation the owner links to this food is
+ * returned, always. An effect never gates the preparation's visibility (Rule
+ * KC6) — a preparation with no reviewed effect is still shown, in the
+ * "unreviewed" state.
+ *
+ * EFFECT is gated by exactly the same running validator that gates every
+ * benefit chip: `isEvidenceBackedClaim` — ≥1 structurally valid Layer-1
+ * SourceRef AND a named human sign-off. An effect row that fails the gate is
+ * not softened, not hedged and not partially shown. It is absent, and the pair
+ * reports "unreviewed" — which is the truth, because an unsigned claim is not a
+ * weak claim, it is an unmade one.
+ */
+export async function getPreparationsForFood(foodSlug: string): Promise<PreparationView[]> {
+  const links = await db
+    .select({ link: knowledgeFoodPreparations, prep: knowledgePreparations })
+    .from(knowledgeFoodPreparations)
+    .innerJoin(knowledgePreparations, eq(knowledgeFoodPreparations.preparationSlug, knowledgePreparations.slug))
+    .where(and(
+      eq(knowledgeFoodPreparations.foodSlug, foodSlug),
+      eq(knowledgeFoodPreparations.isActive, true),
+      eq(knowledgePreparations.isActive, true),
+    ))
+    .orderBy(asc(knowledgeFoodPreparations.ranking));
+
+  if (links.length === 0) return [];
+
+  const effects = await db
+    .select()
+    .from(knowledgePreparationEffects)
+    .where(and(
+      eq(knowledgePreparationEffects.foodSlug, foodSlug),
+      eq(knowledgePreparationEffects.isActive, true),
+    ));
+
+  // The gate. An effect that has not cleared it does not exist as far as any
+  // surface is concerned — it is not carried in a field a careless caller could
+  // read anyway.
+  const backed = new Map<string, typeof effects[number]>();
+  for (const effect of effects) {
+    if (!isEvidenceBackedClaim(effect)) continue;
+    const existing = backed.get(effect.preparationSlug);
+    // Where a pair has several signed-off effects, the best-evidenced one speaks.
+    if (!existing || strongerConfidence(deriveClaimConfidence(effect), deriveClaimConfidence(existing)) === deriveClaimConfidence(effect)) {
+      backed.set(effect.preparationSlug, effect);
+    }
+  }
+
+  return links.map(({ link, prep }): PreparationView => {
+    const base = {
+      slug: prep.slug,
+      name: prep.name,
+      prepType: prep.prepType,
+      family: prep.family,
+      description: prep.description,
+      ranking: link.ranking,
+    };
+
+    const effect = backed.get(prep.slug);
+    if (!effect) {
+      // The honest default, and the common case. THA has no reviewed note on
+      // this preparation of this food. It says so, and says nothing more.
+      return {
+        ...base,
+        state: "unreviewed",
+        approvedWording: null,
+        uncertaintyNote: null,
+        sourceRefs: [],
+        confidence: null,
+      };
+    }
+
+    return {
+      ...base,
+      // "no-change" is earned by an evidenced FINDING of no meaningful change —
+      // never by the absence of a finding. Both branches below are reached only
+      // from a row that already cleared the evidence gate above.
+      state: effect.direction === "no-meaningful-change" ? "no-change" : "effect",
+      approvedWording: effect.approvedWording,
+      uncertaintyNote: effect.uncertaintyNote,
+      sourceRefs: effect.sourceRefs,
+      confidence: deriveClaimConfidence(effect),
+    };
+  });
 }
 
 /** Nutrient detail: the nutrient, the foods that contribute it, the benefits it supports. */

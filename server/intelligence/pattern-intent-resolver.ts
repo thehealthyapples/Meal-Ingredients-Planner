@@ -2355,10 +2355,165 @@ const ALL_COMPOUND_MATCHERS: CompoundMatcher[] = [
 ];
 
 // ---------------------------------------------------------------------------
+// PRODUCT KNOWLEDGE (PHASE5A) — questions about THA ITSELF
+// ---------------------------------------------------------------------------
+//
+// These matchers route on the SHAPE of a product question, and NEVER on THA's
+// own vocabulary. There is deliberately no list of page names, feature names or
+// capability names anywhere below.
+//
+// That restraint is Rule PKR27, and it is not a stylistic choice. A list of
+// THA's nouns sitting in this file would be a SECOND OWNER of product knowledge
+// (Rule PKR13): it would drift the moment a page was renamed or retired, nothing
+// would point at it to keep it true, and the failure would surface as the
+// Companion confidently routing a household to a surface that no longer exists.
+//
+// So the matcher extracts the SUBJECT the person asked about and hands it to the
+// registry as a search query. The registry — the single owner — decides whether
+// THA has such a thing. If it does not, the household gets an honest gap rather
+// than an invented answer. The router asks; it never knows.
+//
+// Placed FIRST in the priority order below. They cannot poach a food question,
+// because every one of them requires an explicit product marker ("you", "this
+// app", "page", "feature", "setting") that a nutrition question never carries.
+// ---------------------------------------------------------------------------
+
+/** Read the map of what can be answered at this caller's tier. */
+function productSections(confidence = 0.88): ResolvedIntent {
+  return {
+    capability: "product-knowledge",
+    verb: "read",
+    parameters: {},
+    confidence,
+  };
+}
+
+/** Ask the registry whether THA has the thing the person named. */
+function productSearch(subject: string, confidence = 0.84): ResolvedIntent | null {
+  const q = subject.trim().replace(/[?.!]+$/, "").trim();
+  if (!q || q.length < 2) return null;
+  return {
+    capability: "product-knowledge",
+    verb: "search",
+    parameters: { query: q },
+    confidence,
+  };
+}
+
+const PRODUCT_KNOWLEDGE_MATCHERS: Matcher[] = [
+  // "what can you do?" / "what can you help me with?" / "what are you able to do?"
+  (u) => (/\bwhat\s+(?:can|could)\s+you\s+(?:do|help)\b/i.test(u) ? productSections(0.9) : null),
+
+  // "what features does THA have?" / "what can this app do?"
+  (u) =>
+    /\bwhat\s+(?:features|capabilities)\b/i.test(u) ||
+    /\bwhat\s+(?:can|does)\s+(?:this\s+app|the\s+app|tha|the\s+healthy\s+apples)\s+(?:do|offer)\b/i.test(u)
+      ? productSections(0.88)
+      : null,
+
+  // "what is THA?" / "what does the healthy apples do?"
+  (u) =>
+    /\bwhat\s+(?:is|are|does)\s+(?:tha|the\s+healthy\s+apples|this\s+app)\b/i.test(u)
+      ? productSections(0.86)
+      : null,
+
+  // "does THA have a shopping list?" / "does this app support barcode scanning?"
+  (u) => {
+    const m = u.match(
+      /\bdoes\s+(?:tha|the\s+healthy\s+apples|this\s+app|the\s+app)\s+(?:have|support|offer|do|include)\s+(.+?)[\?.!]?\s*$/i,
+    );
+    return m?.[1] ? productSearch(m[1], 0.86) : null;
+  },
+
+  // "what is the planner page?" / "what's the pantry feature for?"
+  (u) => {
+    const m = u.match(
+      /\bwhat(?:'s|\s+is|\s+are)\s+(?:the\s+)?(.+?)\s+(?:page|screen|tab|feature|section|setting|dialog|wizard)\b/i,
+    );
+    return m?.[1] ? productSearch(m[1], 0.84) : null;
+  },
+
+  // "how do I use the planner?" / "how can I get to my cookbook?"
+  (u) => {
+    const m = u.match(
+      /\bhow\s+(?:do|can)\s+i\s+(?:use|find|get\s+to|access|open|turn\s+on|turn\s+off)\s+(?:the\s+|my\s+)?(.+?)[\?.!]?\s*$/i,
+    );
+    return m?.[1] ? productSearch(m[1], 0.82) : null;
+  },
+];
+
+// ---------------------------------------------------------------------------
+// PREPARATION KNOWLEDGE (PHASE5A) — "does how I cook it change anything?"
+// ---------------------------------------------------------------------------
+//
+// Routes to the nutrition-knowledge owner's `preparations` read scope. The owner
+// answers with the three honest states, and the honest state is very often
+// "unreviewed" — THA does not know whether that preparation changes that food.
+//
+// These sit inside the nutrition group and therefore BEFORE meal-discovery, so
+// "how should I cook broccoli?" (a knowledge question about broccoli) is not
+// poached by "what can I cook?" (a meal-discovery question). The two are
+// different questions and only one of them is about a food.
+// ---------------------------------------------------------------------------
+
+function preparationRead(entity: string, confidence = 0.84): ResolvedIntent | null {
+  const slug = toSlug(entity);
+  if (!slug) return null;
+  return {
+    capability: "nutrition-knowledge",
+    verb: "read",
+    parameters: { scope: "preparations", slug },
+    confidence,
+  };
+}
+
+const PREPARATION_MATCHERS: Matcher[] = [
+  // "how should I cook broccoli?" / "how do I prepare kale?" / "best way to cook salmon"
+  (u) => {
+    const m = u.match(
+      /\b(?:how\s+(?:should|do|can)\s+i\s+(?:cook|prepare)|(?:the\s+)?best\s+way\s+to\s+(?:cook|prepare))\s+(.+?)[\?.!]?\s*$/i,
+    );
+    return m?.[1] ? preparationRead(m[1], 0.86) : null;
+  },
+
+  // "does cooking tomatoes change the nutrition?" / "does roasting broccoli affect its vitamins?"
+  (u) => {
+    const m = u.match(
+      /\bdoes\s+\w+ing\s+(.+?)\s+(?:change|affect|reduce|increase|destroy|lose)\b/i,
+    );
+    return m?.[1] ? preparationRead(m[1], 0.85) : null;
+  },
+
+  // "is frozen spinach as good as fresh?" / "is tinned salmon as healthy as fresh?"
+  (u) => {
+    const m = u.match(
+      /\bis\s+(?:frozen|tinned|canned|dried|smoked|raw|cooked)\s+(.+?)\s+as\s+(?:good|healthy|nutritious)\b/i,
+    );
+    return m?.[1] ? preparationRead(m[1], 0.85) : null;
+  },
+
+  // "what preparations of oats are there?" / "how is salmon usually prepared?"
+  (u) => {
+    const m =
+      u.match(/\bwhat\s+preparations?\s+(?:of|for)\s+(.+?)[\?.!]?\s*$/i) ??
+      u.match(/\bhow\s+is\s+(.+?)\s+(?:usually\s+)?(?:prepared|cooked)[\?.!]?\s*$/i);
+    return m?.[1] ? preparationRead(m[1], 0.84) : null;
+  },
+];
+
+// ---------------------------------------------------------------------------
 // All specific matchers in priority order
 // ---------------------------------------------------------------------------
 
 const ALL_SPECIFIC_MATCHERS: Matcher[] = [
+  // PHASE5A — Product Knowledge FIRST. Every matcher requires an explicit product
+  // marker ("you", "this app", "page", "feature", "setting"), which no food or
+  // planner question carries — so it can neither poach nor be poached.
+  ...PRODUCT_KNOWLEDGE_MATCHERS,
+  // PHASE5A — Preparation questions, before the generic food routes below (a
+  // preparation question names a food AND an act done to it; the food routes
+  // would otherwise claim it and answer the wrong question).
+  ...PREPARATION_MATCHERS,
   // Nutrition knowledge — most specific first (nutrient/benefit guards fire before foodExplain)
   ...NUTRITION_NUTRIENT_MATCHERS,          // INT26: nutrient-named queries (read/search)
   ...NUTRITION_BENEFIT_EXPLAIN_MATCHERS,   // INT26: benefit concept queries (explain {benefitSlug})
