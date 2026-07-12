@@ -8,6 +8,7 @@ import { useUser } from "@/hooks/use-user";
 import { Loader2 } from "lucide-react";
 
 import { BottomNav, AppRealmContext } from "@/components/nav-bar";
+import { ErrorBoundary } from "@/components/error-boundary";
 import { AdminBanner } from "@/components/admin-banner";
 import FloatingAssistant from "@/components/conversation/FloatingAssistant";
 import { CompanionContextProvider } from "@/components/conversation/companion-context";
@@ -112,6 +113,7 @@ function HomeRoute() {
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, isLoading } = useUser();
+  const [location] = useLocation();
   const [activeRealm, setActiveRealm] = useState("home");
   const [headerSlot, setHeaderSlot] = useState<HTMLDivElement | null>(null);
 
@@ -152,7 +154,15 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
                       <Loader2 className="h-8 w-8 animate-spin text-primary/50" />
                     </div>
                   ) : (
-                    <Component />
+                    // PX1-W0 (fnd-px-error-renders-as-empty). No ErrorBoundary existed
+                    // anywhere in the client, so a render-time throw on any household
+                    // page took the whole app to a white screen. It sits INSIDE the
+                    // shell — the header and the bottom nav survive, so a broken
+                    // surface is never a surface the household cannot leave. Keyed on
+                    // the location so walking away from a broken page unbreaks it.
+                    <ErrorBoundary resetKey={location}>
+                      <Component />
+                    </ErrorBoundary>
                   )}
                 </main>
               </div>

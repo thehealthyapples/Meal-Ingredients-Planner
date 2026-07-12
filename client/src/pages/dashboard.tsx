@@ -6,6 +6,8 @@ import { AmbientIntelligence } from "@/components/intelligence";
 import { useMealsSummary } from "@/hooks/use-meals-summary";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { LoadError } from "@/components/ui/load-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -74,19 +76,29 @@ const item = {
 
 export default function Dashboard() {
   const { user } = useUser();
-  const { meals } = useMealsSummary();
+  // PX1-W0 (fnd-px-false-empty-dashboard). This page destructured only `{ meals }`
+  // from a hook that has always exposed `isLoading`, and defaulted its other two
+  // queries to `= []`. Every visit therefore began by telling the household their
+  // cookbook was empty, their week was unplanned and their collection did not
+  // exist — the best-designed empty states in the codebase, firing falsely — and a
+  // failed request said exactly the same thing as a genuinely empty household.
+  // Waiting, broken and empty are three states and are now rendered as three.
+  const { meals, isLoading: mealsLoading, isError: mealsError, refetch: refetchMeals } = useMealsSummary();
   const { toast } = useToast();
   const qc = useQueryClient();
 
-  const { data: shoppingListItems = [] } = useQuery<any[]>({
+  const shoppingQuery = useQuery<any[]>({
     queryKey: [api.shoppingList.list.path],
     enabled: !!user,
   });
 
-  const { data: plannerFull = [] } = useQuery<any[]>({
+  const plannerQuery = useQuery<any[]>({
     queryKey: ["/api/planner/full"],
     enabled: !!user,
   });
+
+  const shoppingListItems = shoppingQuery.data ?? [];
+  const plannerFull = plannerQuery.data ?? [];
 
   const [weightOpen, setWeightOpen] = useState(false);
   const [weightInput, setWeightInput] = useState("");
@@ -303,7 +315,19 @@ export default function Dashboard() {
               )}
             </div>
 
-            {userMeals.length === 0 ? (
+            {mealsLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="loading-recent-meals">
+                {[0, 1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="w-full aspect-[4/3] rounded-xl" />
+                ))}
+              </div>
+            ) : mealsError ? (
+              <LoadError
+                what="your recent meals"
+                onRetry={() => refetchMeals()}
+                data-testid="error-recent-meals"
+              />
+            ) : userMeals.length === 0 ? (
               <Card className="border-dashed" data-testid="card-empty-meals">
                 <CardContent className="py-6 text-center">
                   <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-2" style={{ background: GREEN_PALE }}>
@@ -368,9 +392,16 @@ export default function Dashboard() {
                         <Utensils className="h-4 w-4" style={{ color: GREEN_DEEP }} />
                       </div>
                     </div>
-                    <div className="text-numeric" style={{ color: GREEN_DEEP }} data-testid="text-meal-count">{userMeals.length}</div>
+                    {/* A count is a claim. While it is unknown, THA says nothing rather than "0". */}
+                    {mealsLoading ? (
+                      <Skeleton className="h-9 w-14" data-testid="loading-meal-count" />
+                    ) : (
+                      <div className="text-numeric" style={{ color: GREEN_DEEP }} data-testid="text-meal-count">
+                        {mealsError ? "—" : userMeals.length}
+                      </div>
+                    )}
                     <p className="text-xs mt-1" style={{ color: GREEN_MID }}>
-                      {userMeals.length === 1 ? "recipe saved" : "recipes saved"}
+                      {mealsError ? "count unavailable" : userMeals.length === 1 ? "recipe saved" : "recipes saved"}
                     </p>
                   </CardContent>
                 </Card>
@@ -387,9 +418,17 @@ export default function Dashboard() {
                         <ShoppingBasket className="h-4 w-4" style={{ color: BASKET_FG }} />
                       </div>
                     </div>
-                    <div className="text-numeric" style={{ color: BASKET_FG }} data-testid="text-basket-count">{shoppingListItems.length}</div>
+                    {shoppingQuery.isLoading ? (
+                      <Skeleton className="h-9 w-14" data-testid="loading-basket-count" />
+                    ) : (
+                      <div className="text-numeric" style={{ color: BASKET_FG }} data-testid="text-basket-count">
+                        {shoppingQuery.isError ? "—" : shoppingListItems.length}
+                      </div>
+                    )}
                     <p className="text-xs mt-1" style={{ color: BASKET_FG, opacity: 0.75 }}>
-                      {shoppingListItems.length === 1 ? "item to buy" : "items to buy"}
+                      {shoppingQuery.isError
+                        ? "count unavailable"
+                        : shoppingListItems.length === 1 ? "item to buy" : "items to buy"}
                     </p>
                   </CardContent>
                 </Card>
@@ -475,9 +514,18 @@ export default function Dashboard() {
                 </Button>
               </Link>
             </div>
+            {plannerQuery.isError ? (
+              <LoadError
+                what="this week's plan"
+                onRetry={() => plannerQuery.refetch()}
+                data-testid="error-week-plan"
+              />
+            ) : (
             <Card style={{ borderColor: "hsl(132,14%,87%)" }}>
               <CardContent className="p-5 pt-4">
-                {mealsPlannedThisWeek === 0 ? (
+                {plannerQuery.isLoading ? (
+                  <Skeleton className="h-36 w-full" data-testid="loading-week-plan" />
+                ) : mealsPlannedThisWeek === 0 ? (
                   <div className="flex flex-col items-center py-4 gap-2.5">
                     <CalendarDays className="h-8 w-8 text-muted-foreground/25" />
                     <p className="text-sm text-muted-foreground text-center max-w-xs">
@@ -526,6 +574,7 @@ export default function Dashboard() {
                 )}
               </CardContent>
             </Card>
+            )}
           </motion.div>
 
           {/* ── Collection overview + Quick actions ── */}
@@ -535,9 +584,18 @@ export default function Dashboard() {
               {/* Meal mix */}
               <div>
                 <h2 className="title-section mb-3">Your Collection</h2>
+                {mealsError ? (
+                  <LoadError
+                    what="your collection"
+                    onRetry={() => refetchMeals()}
+                    data-testid="error-collection"
+                  />
+                ) : (
                 <Card style={{ borderColor: "hsl(132,14%,87%)" }}>
                   <CardContent className="p-5">
-                    {!meals?.length ? (
+                    {mealsLoading ? (
+                      <Skeleton className="h-[110px] w-full" data-testid="loading-collection" />
+                    ) : !meals?.length ? (
                       <p className="text-sm text-muted-foreground py-4 text-center">No meals in your collection yet.</p>
                     ) : (
                       <div className="flex items-center gap-6">
@@ -581,6 +639,7 @@ export default function Dashboard() {
                     )}
                   </CardContent>
                 </Card>
+                )}
               </div>
 
               {/* Quick actions — 3 primary actions */}

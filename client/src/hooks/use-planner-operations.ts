@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useTrackedMutation } from "@/hooks/use-tracked-mutation";
 import { apiRequest } from "@/lib/queryClient";
 import { api } from "@shared/routes";
 import type { FullWeek, FullDay } from "@/lib/planner-types";
@@ -220,7 +221,11 @@ export function usePlannerOperations({
     },
   });
 
-  const duplicateEntryMutation = useMutation({
+  // PX1-W0 (fnd-px-technical-errors-to-household): this toast forwarded err.message,
+  // which queryClient.ts throws as `${status}: ${rawBody}` — the household read
+  // "500: Internal Server Error". Feedback now belongs to the mutation (declared copy
+  // only), and the technical detail goes to the console for us.
+  const duplicateEntryMutation = useTrackedMutation({
     mutationFn: async (params: { entryId: number; targetDayId?: number }) => {
       const body: Record<string, number> = {};
       if (params.targetDayId !== undefined) body.targetDayId = params.targetDayId;
@@ -231,12 +236,16 @@ export function usePlannerOperations({
       }
       return res.json();
     },
-    onSuccess: (_data, params) => {
-      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
-      toast({ title: params.targetDayId ? "Meal copied" : "Duplicated" });
+    feedback: {
+      success: (_data, params) => (params.targetDayId ? "Meal copied" : "Duplicated"),
+      failure: "Couldn't copy that meal",
+      failureDescription: "Your planner hasn't changed — the meal is still only where it was. Please try again.",
     },
-    onError: (err: Error) => {
-      toast({ title: "Failed to duplicate", description: err.message, variant: "destructive" });
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
+    },
+    onError: (err) => {
+      console.error("[planner:duplicate-entry]", err);
     },
   });
 
@@ -328,7 +337,9 @@ export function usePlannerOperations({
     },
   });
 
-  const addToFreezerMutation = useMutation({
+  // PX1-W0 (fnd-px-technical-errors-to-household): was printing the raw response body
+  // ("500: Internal Server Error") into the freezer toast. Declared copy only now.
+  const addToFreezerMutation = useTrackedMutation({
     mutationFn: async (mealId: number) => {
       const today = new Date().toISOString().split("T")[0];
       const res = await apiRequest("POST", "/api/freezer", { mealId, totalPortions: 1, remainingPortions: 1, frozenDate: today });
@@ -338,12 +349,16 @@ export function usePlannerOperations({
       }
       return res.json();
     },
+    feedback: {
+      success: "Added to freezer",
+      failure: "Couldn't add that to the freezer",
+      failureDescription: "Nothing has been added — your freezer is as it was. Please try again.",
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/api/freezer"] });
-      toast({ title: "Added to freezer" });
     },
-    onError: (err: Error) => {
-      toast({ title: "Could not add to freezer", description: err.message, variant: "destructive" });
+    onError: (err) => {
+      console.error("[planner:add-to-freezer]", err);
     },
   });
 
@@ -399,8 +414,12 @@ export function usePlannerOperations({
       qc.invalidateQueries({ queryKey: ["/api/meals"] });
       toast({ title: `"${trimmedName}" added`, description: "Appears as unresolved — link a recipe when ready." });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : undefined;
-      toast({ title: "Failed to add meal idea", description: msg ?? "Please try again.", variant: "destructive" });
+      // PX1-W0 (fnd-px-technical-errors-to-household): err.message here is whatever the
+      // server returned verbatim (apiRequest throws `${status}: ${body}`). The meal is
+      // rolled back above when the planner write fails, so the household can be told
+      // plainly that nothing was added. Detail stays in the console, for us.
+      console.error("[planner:create-planner-intent]", err);
+      toast({ title: "Couldn't add that meal idea", description: "Nothing has been added to your planner. Please try again.", variant: "destructive" });
     }
   };
 

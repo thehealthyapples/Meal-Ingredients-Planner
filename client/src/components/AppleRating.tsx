@@ -39,6 +39,29 @@ const RATING_COLORS = [
 const sizeMap: Record<string, number> = { small: 35, medium: 50, large: 70 };
 const OVERLAP = 0.38;
 
+/**
+ * The THA score in words. PX1-W0 (fnd-px-apple-score-inaudible).
+ *
+ * This sentence already existed — at the tooltip below — and was the ONLY text
+ * equivalent of the apple score anywhere in the product. It was delivered through a
+ * hover tooltip on a non-focusable `<div>`, so it was unreachable by keyboard and
+ * invisible to a screen reader, while the score itself was encoded purely as the
+ * NUMBER of apple `<img>`s, every one of them `alt=""`.
+ *
+ * A blind or low-vision household member therefore could not learn whether any food
+ * was good — the one question THA exists to answer.
+ *
+ * It is exported so that the rating mark's other entry point (`ui/apple-rating.tsx`,
+ * which `ScoreBadge` and 15+ call sites go through) names the score with THESE words
+ * rather than inventing a second vocabulary. One score, one sentence.
+ */
+export function appleScoreLabel(rating: number): string {
+  const clamped = Math.max(1, Math.min(5, rating || 1));
+  const rounded = Math.round(clamped);
+  const label = RATING_LABELS[Math.min(4, Math.max(0, rounded - 1))];
+  return `THA Score: ${rounded} out of 5 — ${label}`;
+}
+
 export default function AppleRating({
   rating: rawRating,
   size = "medium",
@@ -50,15 +73,21 @@ export default function AppleRating({
   const clamped = Math.max(1, Math.min(5, rawRating || 1));
   const fullCount = Math.floor(clamped);
   const hasHalf = clamped % 1 >= 0.5;
-  const labelIndex = Math.min(4, Math.max(0, Math.round(clamped) - 1));
-  const label = RATING_LABELS[labelIndex];
   const px = sizePxProp ?? sizeMap[size] ?? 20;
   const overlap = Math.round(px * OVERLAP);
 
+  const scoreLabel = appleScoreLabel(clamped);
+
   const content = (
+    // `role="img"` + `aria-label` make the apples ONE named mark rather than a run of
+    // decorative images whose count carried the meaning. The individual `<img alt="">`
+    // are correct: they are the parts, and the parts are decorative once the whole is
+    // named (UIA §10, §15 — "meaningful marks are named"; EXP §16).
     <div
       className="inline-flex items-center"
       style={animate ? { animation: "appleBounce 0.4s ease-out both" } : undefined}
+      role="img"
+      aria-label={scoreLabel}
       data-testid={`apple-rating-${Math.round(clamped)}`}
     >
       {Array.from({ length: fullCount }).map((_, i) => (
@@ -82,7 +111,9 @@ export default function AppleRating({
 
   if (!showTooltip) return content;
 
-  const tooltipLines: string[] = [`THA Score: ${Math.round(clamped)}/5 - ${label}`];
+  // The tooltip and the accessible name are now the SAME sentence, from the same
+  // function. They were never allowed to be two.
+  const tooltipLines: string[] = [scoreLabel];
 
   if (additiveContext) {
     const { total, regulatory, topType } = additiveContext;

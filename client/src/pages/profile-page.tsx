@@ -3,6 +3,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useUser } from "@/hooks/use-user";
 import { useToast } from "@/hooks/use-toast";
+import { useTrackedMutation } from "@/hooks/use-tracked-mutation";
+import {
+  UnsavedChangesProvider, useUnsavedChangesGuard, useUnsavedSection,
+} from "@/hooks/use-unsaved-changes";
+import { LoadError } from "@/components/ui/load-error";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -193,16 +202,41 @@ function ProfileSummary({ profile }: { profile: ProfileData }) {
   );
 }
 
+// PX1-W0 (fnd-px-persistence-model-split). Profile is the ONLY surface in THA with a
+// dirty→Save model, and it carries four independent dirty flags behind four separate
+// Save buttons. Everywhere else in the product commits on interaction. So a household
+// that has learned — correctly, everywhere else — that THA saves as you go edits two
+// sections, presses one Save, leaves, and silently loses the other. There was no
+// `beforeunload` and no route guard anywhere in the client.
+//
+// The save model is NOT redesigned here (that is a UI decision, and W0 does not make
+// UI decisions). The four sections keep their Saves; they now declare their unsaved
+// state to one registry, and this page will not let the household leave without being
+// asked. The provider must sit above the sections, hence the split.
 export default function ProfilePage() {
+  return (
+    <UnsavedChangesProvider>
+      <ProfilePageContent />
+    </UnsavedChangesProvider>
+  );
+}
+
+function ProfilePageContent() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showHouseholdManagement, setShowHouseholdManagement] = useState(false);
+  const unsaved = useUnsavedChangesGuard();
 
-  const { data: profile, isPending } = useQuery<ProfileData>({
+  const { data: profile, isPending, isError, refetch } = useQuery<ProfileData>({
     queryKey: ["/api/profile"],
   });
 
-  const updateMutation = useMutation({
+  // PX1-W0 (fnd-px-technical-errors-to-household). This used to toast `err.message`
+  // verbatim — and `err.message` is `${status}: ${body}`. A household saving their
+  // profile was shown "Couldn't save changes / 500: Internal Server Error". The
+  // status code goes to the console, where it is useful; the household gets plain
+  // words, what it means for their data, and one way forward (EXP §14).
+  const updateMutation = useTrackedMutation({
     mutationFn: async (data: any) => {
       const res = await fetch("/api/profile", {
         method: "PUT",
@@ -218,10 +252,14 @@ export default function ProfilePage() {
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["/api/profile"], data);
-      toast({ title: "Profile saved" });
     },
     onError: (err: Error) => {
-      toast({ title: "Couldn't save changes", description: err.message, variant: "destructive" });
+      console.error("[profile] save failed", err);
+    },
+    feedback: {
+      success: "Profile saved",
+      failure: "Couldn't save your changes",
+      failureDescription: "Your edits are still on screen — nothing has been lost. Please try again.",
     },
   });
 
@@ -237,15 +275,43 @@ export default function ProfilePage() {
     updateMutation.mutate({ preferences: prefs });
   };
 
+  // Back runs through the guard: with unsaved work in any section it asks first,
+  // otherwise it behaves exactly as it always has. (The full-page reload this does is
+  // a separate defect — fnd-px-back-three-mechanisms, PX1-W4.5 — and is left alone.)
   const handleBack = () => {
-    const prev = sessionStorage.getItem("profileReturnPath");
-    if (prev) {
-      sessionStorage.removeItem("profileReturnPath");
-      window.location.href = prev;
-    } else {
-      window.history.back();
-    }
+    unsaved.guard(() => {
+      const prev = sessionStorage.getItem("profileReturnPath");
+      if (prev) {
+        sessionStorage.removeItem("profileReturnPath");
+        window.location.href = prev;
+      } else {
+        window.history.back();
+      }
+    });
   };
+
+  const unsavedDialog = (
+    <AlertDialog open={unsaved.isPrompting} onOpenChange={(open) => { if (!open) unsaved.stay(); }}>
+      <AlertDialogContent data-testid="dialog-unsaved-changes">
+        <AlertDialogHeader>
+          <AlertDialogTitle>You have changes you haven't saved</AlertDialogTitle>
+          <AlertDialogDescription>
+            Some of what you've edited hasn't been saved yet. If you leave now, those changes
+            will be lost. Each section on this page saves separately — look for the Save button
+            in the section you changed.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={unsaved.stay} data-testid="button-unsaved-stay">
+            Stay and save
+          </AlertDialogCancel>
+          <AlertDialogAction onClick={unsaved.leave} data-testid="button-unsaved-leave">
+            Leave without saving
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
 
   if (isPending) {
     return (
@@ -271,7 +337,7 @@ export default function ProfilePage() {
     );
   }
 
-  if (!profile) {
+  if (isError || !profile) {
     return (
       <>
       <WorkspaceHeader
@@ -284,8 +350,10 @@ export default function ProfilePage() {
           </Button>
         }
       />
-      <div className="flex items-center justify-center h-64">
-        <p className="text-muted-foreground">Unable to load profile.</p>
+      {/* PX1-W0: "Unable to load profile." said nothing about what it meant or what to
+          do next. The canonical LoadError does both, and offers the way forward. */}
+      <div className="mx-auto w-full max-w-2xl px-4 py-10">
+        <LoadError what="your profile" onRetry={() => refetch()} data-testid="error-profile" />
       </div>
       </>
     );
@@ -295,6 +363,7 @@ export default function ProfilePage() {
 
   return (
     <>
+    {unsavedDialog}
     <WorkspaceHeader
       realm="diary"
       title="Profile"
@@ -577,6 +646,10 @@ function HouseholdSettings({ household, onSave }: { household: ProfileData["hous
   const [maxCookTime, setMaxCookTime] = useState<string>(household.maxTotalCookTime != null ? String(household.maxTotalCookTime) : "");
   const [preferLessProcessed, setPreferLessProcessed] = useState(household.preferLessProcessed ?? false);
   const [dirty, setDirty] = useState(false);
+  // PX1-W0 (fnd-px-persistence-model-split): this section keeps its own dirty flag
+  // and its own Save button. It now DECLARES that state, so the page can ask before
+  // the household walks away from work THIS section is still holding.
+  useUnsavedSection("household", dirty);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
@@ -1207,6 +1280,10 @@ export function CalorieSettings({ profile, onSave }: { profile: ProfileData; onS
   const [height, setHeight] = useState(profile.health.heightCm || "");
   const [weight, setWeight] = useState(profile.health.weightKg || "");
   const [dirty, setDirty] = useState(false);
+  // PX1-W0 (fnd-px-persistence-model-split): this section keeps its own dirty flag
+  // and its own Save button. It now DECLARES that state, so the page can ask before
+  // the household walks away from work THIS section is still holding.
+  useUnsavedSection("calories", dirty);
 
   useEffect(() => {
     setMode(prefs.calorieMode || "auto");
@@ -1328,6 +1405,10 @@ export function GoalsPreferences({ profile, onSave, showDiet = true }: { profile
   const [eatingSchedule, setEatingSchedule] = useState<string | null>(profile.eatingSchedule ?? null);
   const [healthGoals, setHealthGoals] = useState<string[]>(prefs.healthGoals || []);
   const [dirty, setDirty] = useState(false);
+  // PX1-W0 (fnd-px-persistence-model-split): this section keeps its own dirty flag
+  // and its own Save button. It now DECLARES that state, so the page can ask before
+  // the household walks away from work THIS section is still holding.
+  useUnsavedSection("goals", dirty);
 
   useEffect(() => {
     setActivity(prefs.activityLevel || profile.health.activityLevel || "moderate");
@@ -1503,6 +1584,10 @@ function ShoppingPreferences({ prefs, onSave }: { prefs: any; onSave: (prefs: an
   const [stores, setStores] = useState<string[]>(prefs.preferredStores || []);
   const [upf, setUpf] = useState<string>(prefs.upfSensitivity || "moderate");
   const [dirty, setDirty] = useState(false);
+  // PX1-W0 (fnd-px-persistence-model-split): this section keeps its own dirty flag
+  // and its own Save button. It now DECLARES that state, so the page can ask before
+  // the household walks away from work THIS section is still holding.
+  useUnsavedSection("shopping", dirty);
 
   useEffect(() => {
     setBudget(prefs.budgetLevel || "standard");
@@ -1664,7 +1749,9 @@ function MealPlanSection() {
         description: `${data.createdCount + data.updatedCount} meals added to your planner.`,
       });
     } catch (err: any) {
-      toast({ title: "Failed to load plan", description: err.message, variant: "destructive" });
+      // PX1-W0 (fnd-px-technical-errors-to-household): forwarded the raw response body.
+      console.error("[profile:load-plan]", err);
+      toast({ title: "Couldn't load that plan", description: "Your planner is unchanged. Please try again.", variant: "destructive" });
     } finally {
       setLoading(false);
     }

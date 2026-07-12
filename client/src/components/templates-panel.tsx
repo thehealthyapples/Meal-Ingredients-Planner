@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useTrackedMutation } from "@/hooks/use-tracked-mutation";
 import {
   Sparkles, Loader2, Trash2, Pencil, RefreshCw, Check, X,
   Plus, ChevronDown, ChevronRight, LayoutGrid, Camera,
@@ -249,7 +250,10 @@ export function TemplatesPanel({ open, onClose, user, inline }: TemplatePanelPro
   const privateCount = myTemplates.length;
   const atFreeLimit = !hasPremium && privateCount >= maxFree;
 
-  const importMutation = useMutation({
+  // PX1-W0 (fnd-px-technical-errors-to-household): the failure toast forwarded
+  // err.message, so a failed import told the household "500: Internal Server Error".
+  // Declared copy only now; the error itself is logged for us.
+  const importMutation = useTrackedMutation({
     mutationFn: async ({ templateId, scope }: { templateId: string; scope: { type: "all" | "week" | "day" | "meal"; weekNumber?: number; dayOfWeek?: number; mealSlot?: string } }) => {
       const res = await apiRequest("POST", `/api/plan-templates/${templateId}/import`, {
         scope: scope.type,
@@ -264,16 +268,19 @@ export function TemplatesPanel({ open, onClose, user, inline }: TemplatePanelPro
       }
       return res.json();
     },
-    onSuccess: (data) => {
+    feedback: {
+      success: "Plan imported",
+      successDescription: (data) =>
+        `Added ${data.createdCount} meals, updated ${data.updatedCount}, skipped ${data.skippedCount}.`,
+      failure: "Couldn't import this plan",
+      failureDescription: "The plan hasn't been added. Have a look at your week, then please try again.",
+    },
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
-      toast({
-        title: "Plan imported",
-        description: `Added ${data.createdCount} meals, updated ${data.updatedCount}, skipped ${data.skippedCount}.`,
-      });
       setImportingId(null);
     },
-    onError: (err: Error) => {
-      toast({ title: "Import failed", description: err.message, variant: "destructive" });
+    onError: (err) => {
+      console.error("[templates:import-plan]", err);
       setImportingId(null);
     },
   });
@@ -283,7 +290,9 @@ export function TemplatesPanel({ open, onClose, user, inline }: TemplatePanelPro
     importMutation.mutate({ templateId, scope });
   };
 
-  const saveTemplateMutation = useMutation({
+  // PX1-W0 (fnd-px-technical-errors-to-household): the failure toast forwarded
+  // err.message (the raw response body). Declared copy only now.
+  const saveTemplateMutation = useTrackedMutation({
     mutationFn: async () => {
       const res = await fetch("/api/plan-templates/mine", {
         method: "POST",
@@ -297,15 +306,20 @@ export function TemplatesPanel({ open, onClose, user, inline }: TemplatePanelPro
       }
       return res.json();
     },
-    onSuccess: (data) => {
+    feedback: {
+      success: "Template saved",
+      successDescription: (data) => data.name,
+      failure: "Couldn't save this template",
+      failureDescription: "Your plan is still in the planner, so nothing is lost. Please try again.",
+    },
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/api/plan-templates/library"] });
-      toast({ title: "Template saved", description: data.name });
       setSaveDialogOpen(false);
       setSaveName("");
       setSaveDescription("");
     },
-    onError: (err: Error) => {
-      toast({ title: "Couldn't save template", description: err.message, variant: "destructive" });
+    onError: (err) => {
+      console.error("[templates:save-template]", err);
     },
   });
 

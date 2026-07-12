@@ -22,10 +22,16 @@ import {
   Award, Zap, History, Trash2,
   ChefHat, Check, Sparkles, Store, Clock, Microscope,
 } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+import { useTrackedMutation } from "@/hooks/use-tracked-mutation";
 import { api } from "@shared/routes";
 import { appendPendingIngredient } from "@/lib/quick-list";
 import ScoreBadge from "@/components/ui/score-badge";
@@ -411,6 +417,7 @@ export default function ProductsPage() {
   const [wholeFoodAnalysis, setWholeFoodAnalysis] = useState<{ isWholeFood: true; query: string; thaRating: number } | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [clearHistoryOpen, setClearHistoryOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ProductResult | null>(null);
   const [addToWeekProduct, setAddToWeekProduct] = useState<ProductResult | null>(null);
   const [compareProducts, setCompareProducts] = useState<ProductResult[]>([]);
@@ -494,7 +501,11 @@ export default function ProductsPage() {
   const soundEnabled = intelligenceSettings?.soundEnabled !== false;
   const { playSound } = useSoundEffects({ enabled: soundEnabled });
 
-  const updateSettingsMutation = useMutation({
+  // PX1-W0 (fnd-px-silent-optimistic-rollback). The rollback below was correct and
+  // silent: the household flipped a switch, watched it move, and watched it snap
+  // back with no explanation — which reads as a broken control, not as a failure.
+  // The rollback now SAYS it rolled back.
+  const updateSettingsMutation = useTrackedMutation({
     mutationFn: async (settings: Partial<{ soundEnabled: boolean; eliteTrackingEnabled: boolean; healthTrendEnabled: boolean; barcodeScannerEnabled: boolean; includeRegulatoryAdditivesInScoring: boolean }>) => {
       const res = await fetch("/api/user/intelligence-settings", {
         method: "PATCH",
@@ -518,6 +529,12 @@ export default function ProductsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user/intelligence-settings"] });
+    },
+    feedback: {
+      // The switch moving back IS the success confirmation; a toast per toggle
+      // would be noise (EXP §14 — alarm is reserved, and so is applause).
+      failure: "Couldn't save that setting",
+      failureDescription: "We've put it back the way it was. Please try again.",
     },
   });
 
@@ -576,21 +593,38 @@ export default function ProductsPage() {
     },
   });
 
-  const deleteHistoryMutation = useMutation({
+  const deleteHistoryMutation = useTrackedMutation({
     mutationFn: async (id: number) => {
       return apiRequest("DELETE", `/api/user/product-history/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user/product-history"] });
     },
+    feedback: {
+      // The row leaving the list is the confirmation. Its failure was not.
+      failure: "Couldn't remove that analysis",
+      failureDescription: "It's still in your history. Please try again.",
+    },
   });
 
-  const clearHistoryMutation = useMutation({
+  // PX1-W0 (fnd-px-clear-history-unguarded). This wiped every product analysis the
+  // household had ever run, straight from an `onClick`: no confirmation, no undo, no
+  // word that it had happened, and no word if it failed. EXP §12 — nothing
+  // irreversible happens as a side effect. It is now guarded by the canonical
+  // AlertDialog and it says what it did.
+  const clearHistoryMutation = useTrackedMutation({
     mutationFn: async () => {
       return apiRequest("DELETE", "/api/user/product-history");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user/product-history"] });
+      setClearHistoryOpen(false);
+    },
+    onError: () => setClearHistoryOpen(false),
+    feedback: {
+      success: "Analysis history cleared",
+      failure: "Couldn't clear your history",
+      failureDescription: "Your analyses are still here. Please try again.",
     },
   });
 
@@ -1202,17 +1236,43 @@ export default function ProductsPage() {
                 <History className="h-4 w-4" />
                 Recently Analysed
               </CardTitle>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-muted-foreground"
-                onClick={() => clearHistoryMutation.mutate()}
-                disabled={clearHistoryMutation.isPending}
-                data-testid="button-clear-history"
-              >
-                <Trash2 className="h-3.5 w-3.5 mr-1" />
-                Clear All
-              </Button>
+              <AlertDialog open={clearHistoryOpen} onOpenChange={setClearHistoryOpen}>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-muted-foreground"
+                    disabled={clearHistoryMutation.isPending}
+                    data-testid="button-clear-history"
+                  >
+                    <Trash2 className="h-3.5 w-3.5 mr-1" />
+                    Clear All
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent data-testid="dialog-clear-history">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Clear your analysis history?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This removes all {productHistoryData.length}{" "}
+                      {productHistoryData.length === 1 ? "product" : "products"} you've analysed.
+                      It can't be undone — you'd need to scan or search for them again.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel data-testid="button-clear-history-cancel">Keep them</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={(e) => {
+                        e.preventDefault();
+                        clearHistoryMutation.mutate();
+                      }}
+                      disabled={clearHistoryMutation.isPending}
+                      data-testid="button-clear-history-confirm"
+                    >
+                      {clearHistoryMutation.isPending ? "Clearing…" : "Clear all"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">

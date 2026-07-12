@@ -3,6 +3,7 @@ import { ImportDiaryModal } from "@/components/import-diary-modal";
 import { UPFInfoModal } from "@/components/upf-info-modal";
 import { FirstVisitHint } from "@/components/first-visit-hint";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTrackedMutation } from "@/hooks/use-tracked-mutation";
 import { useUser } from "@/hooks/use-user";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1388,10 +1389,17 @@ export default function FoodDiaryPage() {
     onError: () => toast({ title: "Failed to update entry", variant: "destructive" }),
   });
 
-  const deleteEntryMut = useMutation({
+  // PX1-W0 (fnd-px-silent-mutations): deleting a diary entry failed behind "Failed to
+  // delete entry" — the entry stayed on screen and the household was never told whether
+  // it was still in their diary, nor what to do about it (EXP §14 asks for both).
+  const deleteEntryMut = useTrackedMutation({
     mutationFn: (id: number) => apiRequest("DELETE", `/api/food-diary/entries/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: diaryKey }),
-    onError: () => toast({ title: "Failed to delete entry", variant: "destructive" }),
+    feedback: {
+      // No success title: the entry leaves the diary — the day's list is its own confirmation.
+      failure: "Couldn't remove that from your diary",
+      failureDescription: "It's still in your food diary. Please try again.",
+    },
   });
 
   const prevDay = () => {

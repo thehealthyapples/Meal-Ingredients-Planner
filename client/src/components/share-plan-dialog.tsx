@@ -66,7 +66,11 @@ export function SharePlanDialog({ open, onOpenChange }: SharePlanDialogProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/plan-templates/library"] });
       toast({ title: "Plan saved" });
     },
-    onError: (err: Error) => toast({ title: "Couldn't save plan", description: err.message, variant: "destructive" }),
+    // PX1-W0 (fnd-px-technical-errors-to-household): forwarded the raw response body.
+    onError: (err: Error) => {
+      console.error("[share-plan:save]", err);
+      toast({ title: "Couldn't save this plan", description: "It hasn't been added to your library. Please try again.", variant: "destructive" });
+    },
   });
 
   const shareMutation = useMutation({

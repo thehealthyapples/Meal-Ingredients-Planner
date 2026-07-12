@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTrackedMutation } from "@/hooks/use-tracked-mutation";
 import { useLocation, useSearch } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -270,7 +271,17 @@ function FoodPantrySection({
     return m;
   }, [searchIndexData]);
 
-  const addMutation = useMutation({
+  // PX1-W0 (fnd-px-silent-mutations): a failed add told the household "Failed to add
+  // item" and nothing else — not whether the food had been saved, not what to do next
+  // (EXP §14 asks for all three). The words now belong to the mutation.
+  //
+  // "already_exists" is a DIFFERENT truth from a failed write, so it keeps its own
+  // words. It travels on a ref because the toast is raised by the hook, just after
+  // this onError has run — and TOAST_LIMIT is 1, so a toast raised here would be
+  // replaced by the hook's and the household would be told the wrong thing.
+  const addFailureKind = useRef<"already_exists" | "failed">("failed");
+
+  const addMutation = useTrackedMutation({
     mutationFn: (data: { ingredient: string; displayName: string; category: string }) =>
       apiRequest("POST", "/api/pantry", data),
     onSuccess: () => {
@@ -279,28 +290,49 @@ function FoodPantrySection({
     },
     onError: (err: any) => {
       const body = err?.body ?? err;
-      if (body?.error === "already_exists") {
-        toast({ title: "Already in pantry", description: "This ingredient is already listed.", variant: "destructive" });
-      } else {
-        toast({ title: "Failed to add item", variant: "destructive" });
-      }
+      addFailureKind.current = body?.error === "already_exists" ? "already_exists" : "failed";
+    },
+    feedback: {
+      // No success title: the food appears in the pantry — the list is its own confirmation.
+      failure: () =>
+        addFailureKind.current === "already_exists"
+          ? "Already in pantry"
+          : "Couldn't add that to your pantry",
+      failureDescription: () =>
+        addFailureKind.current === "already_exists"
+          ? "This ingredient is already listed."
+          : "It hasn't been saved. Please try again.",
     },
   });
 
-  const deleteMutation = useMutation({
+  // PX1-W0 (fnd-px-silent-mutations): a failed removal said "Failed to remove item".
+  // The row stayed on screen and the household was left to guess whether the food was
+  // still in their pantry — so the description now says plainly that it is.
+  const deleteMutation = useTrackedMutation({
     mutationFn: (id: number) => apiRequest("DELETE", `/api/pantry/${id}`),
     onSuccess: (_, id) => {
       setSelected(prev => { const next = new Set(prev); next.delete(id); return next; });
       qclient.invalidateQueries({ queryKey: ["/api/pantry"] });
     },
-    onError: () => toast({ title: "Failed to remove item", variant: "destructive" }),
+    feedback: {
+      // No success title: the row leaves the pantry — the list is its own confirmation.
+      failure: "Couldn't remove that from your pantry",
+      failureDescription: "It's still in your pantry. Please try again.",
+    },
   });
 
-  const patchQuantityMutation = useMutation({
+  // PX1-W0 (fnd-px-silent-mutations): a failed quantity change said "Failed to update
+  // need quantity" — product language, and silent about the fact that the amount on
+  // screen was no longer the amount that had been saved.
+  const patchQuantityMutation = useTrackedMutation({
     mutationFn: ({ id, needQuantityValue, needUnit }: { id: number; needQuantityValue: number | null; needUnit: string | null }) =>
       apiRequest("PATCH", `/api/pantry/${id}`, { needQuantityValue, needUnit }),
     onSuccess: () => qclient.invalidateQueries({ queryKey: ["/api/pantry"] }),
-    onError: () => toast({ title: "Failed to update need quantity", variant: "destructive" }),
+    feedback: {
+      // No success title: the amount on the row updates — the row is its own confirmation.
+      failure: "Couldn't update how much you need",
+      failureDescription: "Your pantry still shows the amount it had before. Please try again.",
+    },
   });
 
   const handlePatchQuantity = (id: number, qty: number | null, unit: string | null) => {
@@ -686,7 +718,17 @@ function HomePantrySection({
     );
   }, [activeItems, query]);
 
-  const addMutation = useMutation({
+  // PX1-W0 (fnd-px-silent-mutations): this is the SECOND copy of the pantry mutations
+  // (the household-items list). It failed exactly as silently as the food list above —
+  // "Failed to add item", with no word on the household's data and no way forward. The
+  // duplication itself is a later workstream; both copies get an honest failure path now.
+  //
+  // "already_exists" is a different truth from a failed write, so it keeps its own words,
+  // carried on a ref: the hook raises the toast just after this onError, and TOAST_LIMIT
+  // is 1, so a toast raised here would be replaced by the hook's.
+  const addFailureKind = useRef<"already_exists" | "failed">("failed");
+
+  const addMutation = useTrackedMutation({
     mutationFn: ({ name, cat }: { name: string; cat: string }) =>
       apiRequest("POST", "/api/pantry", { ingredient: name, displayName: name, category: cat }),
     onSuccess: () => {
@@ -695,28 +737,48 @@ function HomePantrySection({
     },
     onError: (err: any) => {
       const body = err?.body ?? err;
-      if (body?.error === "already_exists") {
-        toast({ title: "Already in list", description: "This item is already there.", variant: "destructive" });
-      } else {
-        toast({ title: "Failed to add item", variant: "destructive" });
-      }
+      addFailureKind.current = body?.error === "already_exists" ? "already_exists" : "failed";
+    },
+    feedback: {
+      // No success title: the item appears in the list — the list is its own confirmation.
+      failure: () =>
+        addFailureKind.current === "already_exists"
+          ? "Already in list"
+          : "Couldn't add that to your list",
+      failureDescription: () =>
+        addFailureKind.current === "already_exists"
+          ? "This item is already there."
+          : "It hasn't been saved. Please try again.",
     },
   });
 
-  const deleteMutation = useMutation({
+  // PX1-W0 (fnd-px-silent-mutations): a failed removal said "Failed to remove item" and
+  // left the row on screen, saying nothing about whether the item was still on the list.
+  const deleteMutation = useTrackedMutation({
     mutationFn: (id: number) => apiRequest("DELETE", `/api/pantry/${id}`),
     onSuccess: (_, id) => {
       setSelected(prev => { const next = new Set(prev); next.delete(id); return next; });
       qclient.invalidateQueries({ queryKey: ["/api/pantry"] });
     },
-    onError: () => toast({ title: "Failed to remove item", variant: "destructive" }),
+    feedback: {
+      // No success title: the row leaves the list — the list is its own confirmation.
+      failure: "Couldn't remove that from your list",
+      failureDescription: "It's still on your list. Please try again.",
+    },
   });
 
-  const patchQuantityMutation = useMutation({
+  // PX1-W0 (fnd-px-silent-mutations): a failed quantity change said "Failed to update
+  // need quantity" — product language, and silent about the amount on screen no longer
+  // being the amount that had been saved.
+  const patchQuantityMutation = useTrackedMutation({
     mutationFn: ({ id, needQuantityValue, needUnit }: { id: number; needQuantityValue: number | null; needUnit: string | null }) =>
       apiRequest("PATCH", `/api/pantry/${id}`, { needQuantityValue, needUnit }),
     onSuccess: () => qclient.invalidateQueries({ queryKey: ["/api/pantry"] }),
-    onError: () => toast({ title: "Failed to update need quantity", variant: "destructive" }),
+    feedback: {
+      // No success title: the amount on the row updates — the row is its own confirmation.
+      failure: "Couldn't update how much you need",
+      failureDescription: "Your list still shows the amount it had before. Please try again.",
+    },
   });
 
   const handlePatchQuantity = (id: number, qty: number | null, unit: string | null) => {

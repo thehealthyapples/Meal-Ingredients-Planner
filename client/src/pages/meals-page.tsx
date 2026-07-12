@@ -414,7 +414,7 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
   const [qty, setQty] = useState(1);
-  const { isMealInBasket, addToBasket } = useBasket();
+  const { isMealInBasket, addToBasketAsync } = useBasket();
   const inBasket = isMealInBasket(mealId);
 
   const addToListMutation = useMutation({
@@ -651,14 +651,21 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
         mealName={mealName}
         open={listContextOpen}
         onOpenChange={setListContextOpen}
-        onAdd={(ctx) => {
+        onAdd={async (ctx) => {
           setListContextOpen(false);
           if (listDialogMode === 'quicklist') {
             onAddToQuickList!(ingredients);
-          } else {
-            addToBasket({ mealId, quantity: qty });
-            addToListMutation.mutate(ctx);
+            return;
           }
+          // PX1-W0: the basket write is awaited, and the shopping-list write only
+          // follows if it landed. Previously this fired the basket write into the
+          // void and let the LIST call's success toast say "Added to basket".
+          try {
+            await addToBasketAsync({ mealId, quantity: qty });
+          } catch {
+            return; // useBasket has already said what went wrong.
+          }
+          addToListMutation.mutate(ctx);
         }}
       />
 
@@ -703,7 +710,7 @@ function CardActionsMenu({
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { addToBasket } = useBasket();
+  const { addToBasketAsync } = useBasket();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [plannerOpen, setPlannerOpen] = useState(false);
@@ -922,9 +929,13 @@ function CardActionsMenu({
         mealName={meal.name}
         open={basketOpen}
         onOpenChange={setBasketOpen}
-        onAdd={(ctx) => {
+        onAdd={async (ctx) => {
           setBasketOpen(false);
-          addToBasket({ mealId: meal.id, quantity: 1 });
+          try {
+            await addToBasketAsync({ mealId: meal.id, quantity: 1 });
+          } catch {
+            return; // useBasket has already said what went wrong.
+          }
           addToListMutation.mutate(ctx);
         }}
       />
@@ -962,7 +973,7 @@ function MobileMealActionSheet({
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { addToBasket } = useBasket();
+  const { addToBasketAsync } = useBasket();
   const [qty, setQty] = useState(1);
   const [plannerOpen, setPlannerOpen] = useState(false);
   const [basketOpen, setBasketOpen] = useState(false);
@@ -1315,9 +1326,13 @@ function MobileMealActionSheet({
         mealName={meal.name}
         open={basketOpen}
         onOpenChange={setBasketOpen}
-        onAdd={(ctx) => {
+        onAdd={async (ctx) => {
           setBasketOpen(false);
-          addToBasket({ mealId: meal.id, quantity: qty });
+          try {
+            await addToBasketAsync({ mealId: meal.id, quantity: qty });
+          } catch {
+            return; // useBasket has already said what went wrong.
+          }
           addToListMutation.mutate(ctx);
         }}
       />
@@ -2195,7 +2210,7 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
   const [listDialogMode, setListDialogMode] = useState<'basket' | 'quicklist'>('basket');
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [analysisOpen, setAnalysisOpen] = useState(false);
-  const { isMealInBasket, addToBasket } = useBasket();
+  const { isMealInBasket, addToBasketAsync } = useBasket();
 
   useEffect(() => {
     if (importedMealId) setLocalMealId(importedMealId);
@@ -2262,8 +2277,16 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
     setPendingAction("basket");
     const mealId = await ensureImported();
     if (!mealId) { setPendingAction(null); return; }
+    // PX1-W0: the basket write is awaited FIRST. It used to be fired unawaited, and
+    // the shopping-list POST below was the one whose success was toasted as
+    // "Added to basket" — so a basket that never took the meal said it had.
     try {
-      addToBasket({ mealId, quantity: 1 });
+      await addToBasketAsync({ mealId, quantity: 1 });
+    } catch {
+      setPendingAction(null);
+      return; // useBasket has already said what went wrong.
+    }
+    try {
       const res = await apiRequest('POST', api.shoppingList.generateFromMeals.path, {
         mealSelections: [{
           mealId,
@@ -2279,7 +2302,13 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.totalCost.path] });
       toast({ title: "Added to basket", description: recipe.name });
     } catch {
-      toast({ title: "Failed to add to basket", variant: "destructive" });
+      // The basket DID take the meal — only its ingredients did not reach the list.
+      // Saying "failed to add to basket" here would be the same lie in reverse.
+      toast({
+        title: "Couldn't add the ingredients to your shopping list",
+        description: `${recipe.name} is in your basket. Please try adding it to the list again.`,
+        variant: "destructive",
+      });
     }
     setPendingAction(null);
   };

@@ -12,8 +12,9 @@
 // projection of what GET /api/intelligence/food-opportunities already
 // returned (which is itself a verbatim projection of OD1's own bundle).
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useTrackedMutation } from "@/hooks/use-tracked-mutation";
 import type { AttentionLevel } from "@shared/attention/index";
 
 export interface FoodOpportunityEvidence {
@@ -106,7 +107,11 @@ export function useFoodOpportunities(enabled = true) {
     staleTime: 5 * 60 * 1000,
   });
 
-  const resolve = useMutation({
+  // PX1-W0 (fnd-px-silent-mutations): this had no failure path. Accepting or dismissing
+  // an opportunity is the household answering the Decision Engine — and when the write
+  // failed, the card stayed exactly where it was with nothing said, so the household's
+  // answer was silently discarded and the same suggestion came back tomorrow.
+  const resolve = useTrackedMutation({
     mutationFn: async ({
       opportunity,
       action,
@@ -129,6 +134,14 @@ export function useFoodOpportunities(enabled = true) {
           withoutOpportunity(prev, opportunity.id),
         );
       }
+    },
+    feedback: {
+      // No success title: accept and dismiss visibly remove the card. "Acknowledge" is
+      // non-terminal by design and changes nothing on screen — so it is the one action
+      // here whose FAILURE is the only thing worth saying about it.
+      failure: ({ action }) =>
+        action === "dismiss" ? "Couldn't dismiss that suggestion" : "Couldn't save that",
+      failureDescription: "We haven't recorded your answer. Please try again.",
     },
   });
 

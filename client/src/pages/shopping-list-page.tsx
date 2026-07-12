@@ -57,6 +57,7 @@ import { Label } from "@/components/ui/label";
 import { motion, AnimatePresence } from "framer-motion";
 import { SpellSuggestions } from "@/components/SpellSuggestions";
 import { useToast } from "@/hooks/use-toast";
+import { useTrackedMutation } from "@/hooks/use-tracked-mutation";
 import { api, buildUrl } from "@shared/routes";
 import { apiRequest } from "@/lib/queryClient";
 import { normalizeIngredientKey } from "@shared/normalize";
@@ -1668,7 +1669,11 @@ export default function ShoppingListPage() {
 
   const EXTRAS_KEY = ['/api/shopping-list/extras'] as const;
   type ExtrasItem = { id: number; name: string; category: string; alwaysAdd: boolean; inBasket: boolean };
-  const updateExtraMutation = useMutation({
+  // PX1-W0 (fnd-px-silent-optimistic-rollback): the optimistic write below moved the
+  // control instantly and the onError rollback then snapped it back WITHOUT a word —
+  // which the household reads as a broken control, not as a failure. The rollback is
+  // unchanged; `failureDescription` now discloses that it happened.
+  const updateExtraMutation = useTrackedMutation({
     mutationFn: ({ id, alwaysAdd, inBasket }: { id: number; alwaysAdd?: boolean; inBasket?: boolean }) =>
       apiRequest("PATCH", `/api/shopping-list/extras/${id}`, { alwaysAdd, inBasket }),
     onMutate: async ({ id, alwaysAdd, inBasket }) => {
@@ -1689,6 +1694,14 @@ export default function ShoppingListPage() {
       }
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: EXTRAS_KEY }),
+    feedback: {
+      // No success toast: the pill and the basket row are their own confirmation.
+      failure: ({ alwaysAdd }) =>
+        alwaysAdd !== undefined
+          ? "We couldn't change your always-in-basket setting"
+          : "We couldn't update that extra",
+      failureDescription: "We've put it back the way it was. Please try again.",
+    },
   });
 
   // ── Shopping list scan state ──────────────────────────────────────────────
@@ -1958,7 +1971,9 @@ export default function ShoppingListPage() {
   }, [allPriceMatches, savedItems, getItemTier]);
 
 
-  const togglePreference = useMutation({
+  // PX1-W0 (fnd-px-silent-mutations): the household switched their units and was told
+  // nothing when the switch failed — the list simply carried on in the old units.
+  const togglePreference = useTrackedMutation({
     mutationFn: async () => {
       const newPref = measurementPref === 'metric' ? 'imperial' : 'metric';
       const res = await fetch('/api/user/preferences', {
@@ -1973,9 +1988,16 @@ export default function ShoppingListPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
     },
+    feedback: {
+      // No success toast: the whole list visibly re-reads in the new units.
+      failure: "We couldn't change your measurements",
+      failureDescription: "Your list is still showing the units you had before. Please try again.",
+    },
   });
 
-  const changeTier = useMutation({
+  // PX1-W0 (fnd-px-silent-mutations): a price range that quietly failed to change left
+  // the household reading last week's prices as if they were this week's choice.
+  const changeTier = useTrackedMutation({
     mutationFn: async (tier: PriceTier) => {
       const res = await fetch(api.priceTier.update.path, {
         method: 'PATCH',
@@ -1990,9 +2012,16 @@ export default function ShoppingListPage() {
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.totalCost.path] });
     },
+    feedback: {
+      // No success toast: the prices and the total visibly change.
+      failure: "We couldn't change your price range",
+      failureDescription: "Your list is still using the range you had before. Please try again.",
+    },
   });
 
-  const changeItemTier = useMutation({
+  // PX1-W0 (fnd-px-silent-mutations): the household picked a different option for ONE
+  // item; when the write failed the choice quietly reverted on the next refetch.
+  const changeItemTier = useTrackedMutation({
     mutationFn: async ({ id, tier }: { id: number; tier: string | null }) => {
       const url = buildUrl(api.shoppingList.update.path, { id });
       const res = await fetch(url, {
@@ -2007,6 +2036,11 @@ export default function ShoppingListPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.totalCost.path] });
+    },
+    feedback: {
+      // No success toast: the row and the total visibly update.
+      failure: "We couldn't change that item's price range",
+      failureDescription: "It's still set to the option you had before. Please try again.",
     },
   });
 
@@ -2076,7 +2110,10 @@ export default function ShoppingListPage() {
     },
   });
 
-  const updateWholeFoodIntent = useMutation({
+  // PX1-W0 (fnd-px-silent-mutations): this is how the household tells us what they
+  // actually want to buy. Losing that preference in silence teaches us the wrong thing
+  // about them, and they never know it happened.
+  const updateWholeFoodIntent = useTrackedMutation({
     mutationFn: async ({ id, fields }: { id: number; fields: Record<string, any> }) => {
       const url = buildUrl(api.shoppingList.update.path, { id });
       const res = await fetch(url, {
@@ -2090,6 +2127,11 @@ export default function ShoppingListPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
+    },
+    feedback: {
+      // No success toast: the chosen option is shown on the item itself.
+      failure: "We couldn't save your choice for that item",
+      failureDescription: "It's still set the way it was before. Please try again.",
     },
   });
 

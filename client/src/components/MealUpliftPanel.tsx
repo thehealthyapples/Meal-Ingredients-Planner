@@ -16,6 +16,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, ChevronUp, Check, X, Loader2, Leaf } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/queryClient";
+import { useTrackedMutation } from "@/hooks/use-tracked-mutation";
 import type { MealUpliftApplication, Meal } from "@shared/schema";
 import { normaliseForReuse, getReuseLabel } from "@/lib/ingredient-reuse";
 
@@ -188,8 +189,16 @@ export function MealUpliftPanel({
     });
   }, [activeApplications.length, effectiveMealId, open]);
 
-  // Accept a single suggestion
-  const acceptMutation = useMutation({
+  // Accept a single suggestion.
+  //
+  // PX1-W0 (fnd-px-silent-mutations): this had no `onError` at all. A boost that
+  // failed to apply left the household looking at an unchanged recipe with no word
+  // that anything had gone wrong — and the ONLY record of the failure was the
+  // `[BOOST-PROOF]` console logging below, which is observability for us, not an
+  // answer for them. (Retiring those logs is PX1-W4b.6 and is deliberately not done
+  // here: the user-facing failure surface they were standing in for is, and that is
+  // the part the household can feel.)
+  const acceptMutation = useTrackedMutation({
     mutationFn: async (suggestion: FlatSuggestion) => {
       // PROOF STEP 1 — request payload
       console.log("[BOOST-PROOF] STEP1 request:", {
@@ -325,10 +334,18 @@ export function MealUpliftPanel({
       }
       onUpliftAccepted?.(data.mealId);
     },
+    feedback: {
+      // No success title: the ingredient appears in the recipe and the boost moves to
+      // "applied" — the panel is its own confirmation.
+      failure: "Couldn't apply that boost",
+      failureDescription: "Your recipe is unchanged. Please try again.",
+    },
   });
 
-  // Remove an accepted application
-  const removeMutation = useMutation({
+  // Remove an accepted application.
+  // PX1-W0 (fnd-px-silent-mutations): likewise had no failure path — the boost simply
+  // stayed on the recipe, and THA said nothing about why.
+  const removeMutation = useTrackedMutation({
     mutationFn: async (applicationId: number) => {
       const res = await apiRequest(
         "DELETE",
@@ -347,6 +364,11 @@ export function MealUpliftPanel({
         qc.invalidateQueries({ queryKey: key });
       }
       onUpliftRemoved?.(effectiveMealId);
+    },
+    feedback: {
+      // No success title: the boost visibly leaves the recipe.
+      failure: "Couldn't remove that boost",
+      failureDescription: "It's still applied to your recipe. Please try again.",
     },
   });
 

@@ -14,6 +14,15 @@
 //                       exist, so the section has been silently empty since OBS1.
 // No new store, no duplicate state, no second assistant. Honest gaps: a section
 // that has no validated data renders as a calm empty state, never fabricated.
+//
+// PX1-W0 (fnd-px-false-empty-home). That promise was defeated by the loading path.
+// Every query below destructured `= []`, and NOT ONE of them read isLoading or
+// isError — so on first paint a household with a full week planned and a full
+// basket was told "Nothing planned for today yet" and "Your list is clear", and a
+// server outage was told to them in exactly the same words. Three states were
+// rendered as one. Each section below now separates them: WAITING (skeleton),
+// BROKEN (the canonical `LoadError`), and genuinely EMPTY. An absence is only ever
+// claimed once it is known to be true.
 
 import { useMemo } from "react";
 import { Link } from "wouter";
@@ -25,6 +34,8 @@ import { useUser } from "@/hooks/use-user";
 import { useCompanionNotices } from "@/hooks/use-companion-notices";
 import { WorkspaceHeader } from "@/components/workspace-header";
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { LoadError } from "@/components/ui/load-error";
 import {
   CalendarDays, ShoppingCart, Leaf, ArrowRight, Bell, ChevronRight,
 } from "lucide-react";
@@ -88,23 +99,34 @@ export default function HomeExperiencePage() {
   const { user } = useUser();
   const activeWeek = loadActiveWeek();
 
-  const { data: fullPlanner = [] } = useQuery<FullWeek[]>({
+  const plannerQuery = useQuery<FullWeek[]>({
     queryKey: ["/api/planner/full"],
     enabled: !!user,
   });
-  const { data: mealsList = [] } = useQuery<Meal[]>({
+  const mealsQuery = useQuery<Meal[]>({
     queryKey: ["/api/meals"],
     enabled: !!user,
   });
-  const { data: shoppingItems = [] } = useQuery<any[]>({
+  const shoppingQuery = useQuery<any[]>({
     queryKey: [api.shoppingList.list.path],
     enabled: !!user,
   });
-  const { data: homeIntel } = useQuery<HomeIntelligenceData>({
+  const homeIntelQuery = useQuery<HomeIntelligenceData>({
     queryKey: ["/api/home/intelligence"],
     enabled: !!user,
     staleTime: 5 * 60 * 1000,
   });
+
+  const fullPlanner = plannerQuery.data ?? [];
+  const mealsList = mealsQuery.data ?? [];
+  const shoppingItems = shoppingQuery.data ?? [];
+  const homeIntel = homeIntelQuery.data;
+
+  // "Today's meals" is only true once BOTH the week and the cookbook have landed —
+  // a resolved planner against an unresolved cookbook resolves zero meal names.
+  const mealsWaiting = plannerQuery.isLoading || mealsQuery.isLoading;
+  const mealsBroken = plannerQuery.isError || mealsQuery.isError;
+  const retryTodaysMeals = () => { plannerQuery.refetch(); mealsQuery.refetch(); };
   const { data: noticesData } = useCompanionNotices(!!user);
 
   // Today's planned meals — active week, calendar day-of-week. The planner is
@@ -180,6 +202,13 @@ export default function HomeExperiencePage() {
         {/* ── Today's focus ── */}
         <section className="space-y-4" aria-label="Today">
           {/* Today's Meals */}
+          {mealsBroken ? (
+            <LoadError
+              what="today's meals"
+              onRetry={retryTodaysMeals}
+              data-testid="error-home-todays-meals"
+            />
+          ) : (
           <Link href="/planner" aria-label="Go to the planner">
             <Card
               className="group cursor-pointer hover-elevate transition-all duration-200 border-border/40"
@@ -197,7 +226,12 @@ export default function HomeExperiencePage() {
                   <ChevronRight className="h-4 w-4 text-muted-foreground/40 ml-auto shrink-0 group-hover:text-muted-foreground transition-colors" />
                 </div>
 
-                {todaysMeals.length === 0 ? (
+                {mealsWaiting ? (
+                  <div className="flex flex-col gap-2" data-testid="loading-home-todays-meals">
+                    <Skeleton className="h-5 w-2/3" />
+                    <Skeleton className="h-5 w-1/2" />
+                  </div>
+                ) : todaysMeals.length === 0 ? (
                   <p className="text-sm text-muted-foreground" data-testid="text-home-meals-empty">
                     Nothing planned for today yet — tap to map out your day.
                   </p>
@@ -228,10 +262,19 @@ export default function HomeExperiencePage() {
               </CardContent>
             </Card>
           </Link>
+          )}
 
           {/* Shopping + Plant diversity — paired row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Shopping */}
+            {shoppingQuery.isError ? (
+              <LoadError
+                what="your shopping list"
+                onRetry={() => shoppingQuery.refetch()}
+                className="h-full"
+                data-testid="error-home-shopping"
+              />
+            ) : (
             <Link href="/shopping-workspace" aria-label="Go to shopping">
               <Card
                 className="h-full group cursor-pointer hover-elevate transition-all duration-200 border-border/40"
@@ -248,21 +291,34 @@ export default function HomeExperiencePage() {
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted-foreground/40 ml-auto shrink-0 group-hover:text-muted-foreground transition-colors" />
                   </div>
-                  <p className="text-sm text-foreground/85" data-testid="text-home-shopping-summary">
-                    {openShoppingCount === 0 ? (
-                      "Your list is clear."
-                    ) : (
-                      <>
-                        <span className="font-semibold text-foreground">{openShoppingCount}</span>{" "}
-                        {openShoppingCount === 1 ? "item" : "items"} to buy
-                      </>
-                    )}
-                  </p>
+                  {shoppingQuery.isLoading ? (
+                    <Skeleton className="h-5 w-24" data-testid="loading-home-shopping" />
+                  ) : (
+                    <p className="text-sm text-foreground/85" data-testid="text-home-shopping-summary">
+                      {openShoppingCount === 0 ? (
+                        "Your list is clear."
+                      ) : (
+                        <>
+                          <span className="font-semibold text-foreground">{openShoppingCount}</span>{" "}
+                          {openShoppingCount === 1 ? "item" : "items"} to buy
+                        </>
+                      )}
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             </Link>
+            )}
 
             {/* Plant diversity */}
+            {homeIntelQuery.isError ? (
+              <LoadError
+                what="your plant diversity"
+                onRetry={() => homeIntelQuery.refetch()}
+                className="h-full"
+                data-testid="error-home-plant-diversity"
+              />
+            ) : (
             <Link href="/plant-diversity" aria-label="Go to plant diversity">
               <Card
                 className="h-full group cursor-pointer hover-elevate transition-all duration-200 border-border/40"
@@ -279,19 +335,29 @@ export default function HomeExperiencePage() {
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted-foreground/40 ml-auto shrink-0 group-hover:text-muted-foreground transition-colors" />
                   </div>
-                  <p className="text-sm text-foreground/85 mb-2" data-testid="text-home-plant-summary">
-                    <span className="font-semibold text-foreground">{plantCount}</span> of {WEEKLY_PLANT_TARGET} plants
-                  </p>
-                  <div className="h-1.5 w-full rounded-full bg-[hsl(145,16%,90%)] dark:bg-[hsl(145,10%,20%)] overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-[hsl(145,34%,52%)] transition-all"
-                      style={{ width: `${plantPct}%` }}
-                      data-testid="bar-home-plant-progress"
-                    />
-                  </div>
+                  {homeIntelQuery.isLoading ? (
+                    <div className="flex flex-col gap-2" data-testid="loading-home-plant-diversity">
+                      <Skeleton className="h-5 w-28" />
+                      <Skeleton className="h-1.5 w-full" />
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-sm text-foreground/85 mb-2" data-testid="text-home-plant-summary">
+                        <span className="font-semibold text-foreground">{plantCount}</span> of {WEEKLY_PLANT_TARGET} plants
+                      </p>
+                      <div className="h-1.5 w-full rounded-full bg-[hsl(145,16%,90%)] dark:bg-[hsl(145,10%,20%)] overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-[hsl(145,34%,52%)] transition-all"
+                          style={{ width: `${plantPct}%` }}
+                          data-testid="bar-home-plant-progress"
+                        />
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </Link>
+            )}
           </div>
 
           {/* Reminders — only when the Notice Engine has something to say */}

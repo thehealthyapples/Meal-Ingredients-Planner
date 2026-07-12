@@ -39,7 +39,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { AlertCircle, ArrowLeft, Download, ShieldQuestion } from "lucide-react";
+import { ArrowLeft, Download, ShieldQuestion } from "lucide-react";
+import { LoadError } from "@/components/ui/load-error";
 
 // Status palette — mirrors the Observation Workbench. Colour is always paired
 // with a label, never the sole carrier of meaning.
@@ -267,21 +268,14 @@ function PageSkeleton() {
   );
 }
 
-function LoadError({ what }: { what: string }) {
-  return (
-    <Card data-testid="card-timeline-error">
-      <CardContent className="flex items-start gap-3 py-5">
-        <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
-        <div>
-          <p className="font-medium text-sm">Could not load {what}</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            The timeline endpoint did not respond. It may not be deployed yet, or your admin session may have expired.
-          </p>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
+// PX1-W0 — the private `LoadError` that used to live here has been RETIRED. It was
+// the only correct error presentation in the client, and it was invisible to the 14
+// household pages that needed it. It is now `components/ui/load-error.tsx`, seeded
+// from this one, and this page imports it like everyone else (UIA §17:
+// retire-on-introduction — name the predecessor, migrate every consumer, delete it
+// in the same change). The admin-specific sentence survives as a `description`.
+const ADMIN_LOAD_ERROR_DETAIL =
+  "The endpoint did not respond. It may not be deployed yet, or your admin session may have expired.";
 
 function EmptyNote({ children }: { children: React.ReactNode }) {
   return <p className="text-sm text-muted-foreground py-2">{children}</p>;
@@ -594,7 +588,7 @@ function SessionTimeline({ sessionId, onBack }: { sessionId: string; onBack: () 
   };
 
   if (isPending) return <PageSkeleton />;
-  if (isError) return <LoadError what="the execution timeline" />;
+  if (isError) return <LoadError what="the execution timeline" description={ADMIN_LOAD_ERROR_DETAIL} />;
   const t = data ?? {};
   const turns = t.turns ?? [];
   const unassigned = t.unassigned ?? [];
@@ -675,7 +669,7 @@ function BehaviourView({ days }: { days: number }) {
   });
 
   if (isPending) return <PageSkeleton />;
-  if (isError) return <LoadError what="the behaviour view" />;
+  if (isError) return <LoadError what="the behaviour view" description={ADMIN_LOAD_ERROR_DETAIL} />;
 
   const t = data?.telemetry ?? {};
   const registry = data?.registry ?? [];
@@ -1071,7 +1065,7 @@ function SessionPicker({ days, onSelect }: { days: number; onSelect: (sessionId:
       {isPending ? (
         <PageSkeleton />
       ) : isError ? (
-        <LoadError what="timeline sessions" />
+        <LoadError what="timeline sessions" description={ADMIN_LOAD_ERROR_DETAIL} />
       ) : (
         <Card data-testid="card-timeline-sessions">
           <CardHeader className="pb-2">

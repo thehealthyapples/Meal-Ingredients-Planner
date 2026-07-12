@@ -249,7 +249,9 @@ export function AdaptationReviewSheet({
       onOpenChange(false);
     },
     onError: (err: Error) => {
-      toast({ title: "Could not save variant", description: err.message, variant: "destructive" });
+      // PX1-W0 (fnd-px-technical-errors-to-household): forwarded the raw response body.
+      console.error("[adaptation:save-variant]", err);
+      toast({ title: "Couldn't save this version", description: "Your original recipe is untouched. Please try again.", variant: "destructive" });
     },
   });
 

@@ -45,6 +45,7 @@ import { MealUpliftPanel, UpliftCardIndicator, SHOPPING_LIST_KEYS, selectVisible
 import type { UpliftMatchResult } from "@/components/MealUpliftPanel";
 import { buildWeeklyReuseMap, normaliseForReuse } from "@/lib/ingredient-reuse";
 import { useToast } from "@/hooks/use-toast";
+import { useTrackedMutation } from "@/hooks/use-tracked-mutation";
 import { ToastAction } from "@/components/ui/toast";
 import { api } from "@shared/routes";
 import type { PlannerWeek, PlannerDay, PlannerEntry, Meal, FreezerMeal, Nutrition, MealCategory, WeekEaterOverride, MealUpliftApplication } from "@shared/schema";
@@ -511,7 +512,10 @@ export default function WeeklyPlannerPage() {
     updateSettingsMutation.mutate({ [key]: value });
   };
 
-  const loadTemplateMutation = useMutation({
+  // PX1-W0 (fnd-px-technical-errors-to-household): the failure toast forwarded
+  // err.message, which is the raw response body from queryClient.ts. Declared copy only
+  // now; the underlying error is logged for us.
+  const loadTemplateMutation = useTrackedMutation({
     mutationFn: async () => {
       const defaultRes = await fetch("/api/plan-templates/default");
       if (!defaultRes.ok) throw new Error("No default template found");
@@ -520,15 +524,17 @@ export default function WeeklyPlannerPage() {
       if (!applyRes.ok) throw new Error("Failed to apply template");
       return applyRes.json();
     },
-    onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
-      toast({
-        title: "Plan loaded!",
-        description: `${data.createdCount + data.updatedCount} meals added to your planner.`,
-      });
+    feedback: {
+      success: "Plan loaded!",
+      successDescription: (data) => `${data.createdCount + data.updatedCount} meals added to your planner.`,
+      failure: "Couldn't load this plan",
+      failureDescription: "The plan hasn't been added. Have a look at your planner, then please try again.",
     },
-    onError: (err: Error) => {
-      toast({ title: "Failed to load plan", description: err.message, variant: "destructive" });
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
+    },
+    onError: (err) => {
+      console.error("[planner:load-default-template]", err);
     },
   });
 
@@ -891,7 +897,9 @@ export default function WeeklyPlannerPage() {
   const [variantAccepted, setVariantAccepted] = useState(false);
   const [reviewSheetOpen, setReviewSheetOpen] = useState(false);
 
-  const adaptMutation = useMutation({
+  // PX1-W0 (fnd-px-technical-errors-to-household): "Adaptation failed / 500: Internal
+  // Server Error" was the household's whole explanation. Declared copy only now.
+  const adaptMutation = useTrackedMutation({
     mutationFn: async (entryId: number): Promise<AdaptationResult> => {
       const res = await apiRequest("POST", `/api/planner/entries/${entryId}/adapt`);
       if (!res.ok) {
@@ -900,6 +908,10 @@ export default function WeeklyPlannerPage() {
       }
       return res.json();
     },
+    feedback: {
+      failure: "Couldn't adapt this meal",
+      failureDescription: "The meal is unchanged in your planner. Please try again.",
+    },
     onSuccess: () => {
       // Refresh the planner so the stored result is reflected
       qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
@@ -907,8 +919,8 @@ export default function WeeklyPlannerPage() {
       setHouseholdSafeChoice(null);
       setVariantAccepted(false);
     },
-    onError: (err: Error) => {
-      toast({ title: "Adaptation failed", description: err.message, variant: "destructive" });
+    onError: (err) => {
+      console.error("[planner:adapt-entry]", err);
     },
   });
 
@@ -982,7 +994,11 @@ export default function WeeklyPlannerPage() {
       setSaveWeekOpen(false);
       setSaveWeekName("");
     },
-    onError: (err: Error) => toast({ title: "Couldn't save week", description: err.message, variant: "destructive" }),
+    // PX1-W0 (fnd-px-technical-errors-to-household): forwarded the raw response body.
+    onError: (err: Error) => {
+      console.error("[planner:save-week]", err);
+      toast({ title: "Couldn't save your week", description: "Your planner is unchanged — nothing has been lost. Please try again.", variant: "destructive" });
+    },
   });
 
   const loadWeekMutation = useMutation({
@@ -998,7 +1014,11 @@ export default function WeeklyPlannerPage() {
       toast({ title: "Week loaded", description: `${data.createdCount + data.updatedCount} meals added` });
       setLoadWeekOpen(false);
     },
-    onError: (err: Error) => toast({ title: "Couldn't load week", description: err.message, variant: "destructive" }),
+    // PX1-W0 (fnd-px-technical-errors-to-household): forwarded the raw response body.
+    onError: (err: Error) => {
+      console.error("[planner:load-week]", err);
+      toast({ title: "Couldn't load that week", description: "Your planner is unchanged. Please try again.", variant: "destructive" });
+    },
   });
 
   const renameMutation = useMutation({
@@ -1067,7 +1087,9 @@ export default function WeeklyPlannerPage() {
       toast({ title: `Day copied`, description: `${data.created} meal${data.created !== 1 ? "s" : ""} added` });
     },
     onError: (err: Error) => {
-      toast({ title: "Failed to copy day", description: err.message, variant: "destructive" });
+      // PX1-W0 (fnd-px-technical-errors-to-household): forwarded the raw response body.
+      console.error("[planner:copy-day]", err);
+      toast({ title: "Couldn't copy that day", description: "Nothing has been added to the day you were copying into. Please try again.", variant: "destructive" });
     },
   });
 

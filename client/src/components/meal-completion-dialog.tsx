@@ -84,7 +84,7 @@ export function MealCompletionDialog({ open, onClose, meal }: MealCompletionDial
 
   const { toast }       = useToast();
   const queryClient     = useQueryClient();
-  const { addToBasket } = useBasket();
+  const { addToBasketAsync } = useBasket();
 
   // Reset internal state whenever the dialog closes
   useEffect(() => {
@@ -196,8 +196,16 @@ export function MealCompletionDialog({ open, onClose, meal }: MealCompletionDial
 
   const handleAddToBasket = async () => {
     setBasketPending(true);
+    // PX1-W0: the basket write is awaited, and its outcome is what decides whether
+    // THA claims the meal reached the basket. This handler used to fire the basket
+    // write unawaited and toast the SHOPPING-LIST call's success as proof of it.
     try {
-      addToBasket({ mealId: meal.id, quantity: 1 });
+      await addToBasketAsync({ mealId: meal.id, quantity: 1 });
+    } catch {
+      setBasketPending(false);
+      return; // useBasket has already said what went wrong.
+    }
+    try {
       await apiRequest("POST", api.shoppingList.generateFromMeals.path, {
         mealSelections: [{ mealId: meal.id, count: 1 }],
       });
@@ -211,7 +219,11 @@ export function MealCompletionDialog({ open, onClose, meal }: MealCompletionDial
       });
       onClose();
     } catch {
-      toast({ title: "Failed to add to basket", variant: "destructive" });
+      toast({
+        title: "Couldn't add the ingredients to your shopping list",
+        description: `${meal.name} is in your basket. Please try adding it to the list again.`,
+        variant: "destructive",
+      });
     } finally {
       setBasketPending(false);
     }

@@ -13,8 +13,9 @@
 // observation (EL1's own ET1/ET2 rules) — and never treated as understood
 // until this household explicitly confirms or declines it.
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useTrackedMutation } from "@/hooks/use-tracked-mutation";
 
 export interface LearningSignal {
   readonly id: number;
@@ -74,7 +75,13 @@ export function useLearningSignals(enabled = true) {
     staleTime: 5 * 60 * 1000,
   });
 
-  const decide = useMutation({
+  // PX1-W0 (fnd-px-silent-mutations): this had no failure path. Confirming or
+  // declining a Pattern is a deliberate household act — they are teaching THA
+  // something about themselves — and when the write failed the Pattern simply stayed
+  // where it was, as if the answer had never been given. Nothing on screen said
+  // otherwise. The household is now told, and told that their answer was not lost
+  // through any fault of theirs.
+  const decide = useTrackedMutation({
     mutationFn: async ({
       signal,
       decision,
@@ -97,6 +104,12 @@ export function useLearningSignals(enabled = true) {
           withoutSignal(prev, signal.id),
         );
       }
+    },
+    feedback: {
+      // No success title: the Pattern leaves the list — that IS the acknowledgement.
+      failure: ({ decision }) =>
+        decision === "confirm" ? "Couldn't save that as confirmed" : "Couldn't dismiss that",
+      failureDescription: "We haven't recorded your answer. Please try again.",
     },
   });
 
