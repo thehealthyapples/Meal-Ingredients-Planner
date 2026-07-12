@@ -1,6 +1,6 @@
 # PHASE5B — Intelligence Platform Activation
 
-**Status:** Implementation record
+**Status:** Implementation record — complete
 **Date:** 2026-07-12
 **Workstream:** PHASE5B
 **Predecessor:** PHASE5A — Knowledge Platform Activation (`236660e6`)
@@ -12,11 +12,17 @@
 
 | Item | Value |
 |---|---|
-| **Rollback tag** | **`rollback/pre-PHASE5B`** |
-| Tag points to | `236660e6` (PHASE5A — Knowledge Platform Activation) |
-| Action on rollback | `git reset --hard rollback/pre-PHASE5B` |
+| **Rollback tag (whole phase)** | **`rollback/pre-PHASE5B`** → `236660e6` (PHASE5A) |
+| **Checkpoint tag (mid-phase)** | `phase5b-1-loop-closed` → `3f47acbf` (loop-closing routes only) |
+| Undo the whole phase | `git reset --hard rollback/pre-PHASE5B` |
+| Undo only the continuation | `git reset --hard phase5b-1-loop-closed` |
 | Schema modified | **None** |
 | New engines created | **None** |
+
+This record was written across two sessions; the first was interrupted after the
+loop-closing routes were written but before they were verified or committed. That
+work was **recovered, verified and committed unchanged** as `3f47acbf` before any
+further change was made — nothing was discarded, overwritten or restarted.
 
 ---
 
@@ -40,58 +46,48 @@ EVIDENCE → ATTENTION → DECISION → ACTION ──┐
 
 | Briefed edge | Governing rule it breaks | Verdict |
 |---|---|---|
-| Observation **feeds** Behaviour | OBS1 §7: *"Any behaviour that reads an observation — routing, permissions, confirmation tiers, phrasing, notices, learning — **stop**. Telemetry is operator evidence only; `OBS_DISABLE_CAPTURE=1` must always be a no-op functionally."* | ❌ Forbidden |
-| Behaviour **feeds** Decision | BEH1: the Behaviour Engine is the owner of **voice** — *"the last transform before rendering"*, which *"may never change what is true, what is permitted, or what is **selected**"*. It is downstream of Decision, not upstream. | ❌ Inverted |
-| Every recommendation **flows through** Decision | DEC1 §8 (*explicitly rejected — do not build*): *"A central `DecisionEngine.decide()` that domain engines call to rank their own candidates — **absorbs Selection**."* DEC1 §2: *"Selection is deliberately not a pipeline stage."* | ❌ Forbidden |
-| **Insight Engine** / **Recommendation Engine** as new engines | No such governing document and no such module exists. "Insight" is an `EnrichmentKind` in the Capability Enrichment Registry; "recommendation" is domain-owned Selection. Building them would also violate the brief's own *"do not create new engines"*. | ❌ Would create new engines |
+| Observation **feeds** Behaviour | OBS1 §7: *"Any behaviour that reads an observation — routing, permissions, confirmation tiers, phrasing, notices, learning — **stop**. Telemetry is operator evidence only."* | ❌ Forbidden |
+| Behaviour **feeds** Decision | BEH1: Behaviour owns **voice** — *"the last transform before rendering"*, which *"may never change what is true, what is permitted, or what is **selected**"*. It is downstream of Decision, not upstream. | ❌ Inverted |
+| Every recommendation **flows through** Decision | DEC1 §8 (*explicitly rejected — do not build*): *"A central `DecisionEngine.decide()` that domain engines call to rank their own candidates — **absorbs Selection**."* | ❌ Forbidden |
+| **Insight Engine** / **Recommendation Engine** as new engines | No such governing document, no such module. "Insight" is an `EnrichmentKind`; "recommendation" is domain-owned Selection. | ❌ Would create new engines |
 
-**Resolution (approved):** implement the **canonical loop** instead. PHASE5B therefore activates `Evidence → Attention → Decision → Action → Evidence`, leaves Observation as pure telemetry, and leaves Behaviour as the voice seam. **No new engine was created. No governing document was amended.**
+**Resolution (approved — Option 1):** activate the **canonical loop** instead. PHASE5B activates `Evidence → Attention → Decision → Action → Evidence`, leaves Observation as pure telemetry, and leaves Behaviour as the voice seam. **No new engine. No governing document amended.**
 
 ---
 
-## 2. WHAT WAS ACTUALLY BROKEN
+## 2. WHAT WAS ACTUALLY BROKEN — AND WHAT ONLY LOOKED BROKEN
 
-An audit of the full Intelligence Platform (22 bound capabilities) found the engines almost entirely present and wired — and **the loop open at exactly one point**.
+An audit of the Intelligence Platform found the engines almost entirely present and wired, and **the loop open at exactly one point**.
 
 | Engine | State before PHASE5B |
 |---|---|
-| Observation Engine (`observation/`) | ✅ Wired — capture + 12 admin read routes |
+| Observation Engine (`observation/`) | ✅ Wired — capture + admin read routes |
 | Behaviour Engine (`conversation/behaviour-engine.ts`) | ✅ Wired — sealed `BehaviourDecision`, live at the voice seam |
 | Decision Engine (`opportunity-delivery/framework.ts`, DEC1) | ⚠️ **`report` reachable; `review`/`approve`/`delete` had NO HTTP route** |
 | Context Composition Engine (`context/`, INT17) | ✅ Wired |
 | Household Learning (`evidence-learning/`, EL1/LEARN1) | ⚠️ **Read path live; write path unreachable** |
-| Benchmark (`server/tests/benchmark/`) | ✅ Wired — 5 admin routes + CLI |
 
 ### The open edge
 
-DEC1 §2 defines the loop's closing edge:
+DEC1 §2 names ACTION's terminal resolution as the edge that closes the loop:
 
-> **ACTION** — *"terminal resolution emits Evidence (`resolveOpportunity`) → feeds the next cycle's EVIDENCE. The loop is closed, once, here."*
+> *"terminal resolution emits Evidence (`resolveOpportunity`) → feeds the next cycle's EVIDENCE. The loop is closed, once, here."*
 
-`resolveOpportunity` was **fully implemented, fully bound, and completely unreachable**. The `opportunity-delivery` capability declares four executable verbs (`report`, `review`, `approve`, `delete`); only `report` had an HTTP route (via `GET /api/intelligence/companion/notices`). The consequence was precise and total:
+`resolveOpportunity` was **fully implemented, fully bound, and completely unreachable.** The `opportunity-delivery` capability declares four executable verbs; only `report` had an HTTP route. The consequence was total:
 
-- Opportunities were **delivered** to Home, and a household could **never resolve one**.
-- Because only a terminal resolution emits Evidence, **zero Evidence events could ever be recorded**.
-- Because Patterns require `MIN_EVIDENCE_COUNT` accumulated events, **no Pattern could ever be detected**.
-- Because Confirmed Understanding requires a confirmed Pattern, **`readConfirmedUnderstanding` always returned empty**.
-- Therefore LEARN1's re-weighting in `prioritiseAndGroup` was **structurally inert**, and COACH1's `withLearningEvidence` could never attach an evidence entry.
+- Opportunities were **delivered**, and a household could **never resolve one**.
+- Only a terminal resolution emits Evidence → **zero Evidence events could ever be recorded**.
+- Patterns require `MIN_EVIDENCE_COUNT` accumulated events → **no Pattern could ever be detected**.
+- Confirmed Understanding requires a confirmed Pattern → **`readConfirmedUnderstanding` always returned empty**.
+- Therefore LEARN1's re-weighting in `prioritiseAndGroup` was **structurally inert**.
 
-**The platform's entire household-learning capability was dead code behind a missing route.** Everything downstream of it was correct and waiting.
-
-### Two dead client islands
-
-Both were complete — panel → hook → *a route that had never been written*:
-
-| Surface | Hook | Called route | Existed? |
-|---|---|---|---|
-| `FoodOpportunitiesPanel.tsx` | `use-food-opportunities.ts` | `GET /api/intelligence/food-opportunities`, `POST .../:id/:action` | ❌ No |
-| `LearningSignalsPanel.tsx` | `use-learning-signals.ts` | `GET /api/intelligence/learning-signals`, `POST .../:id/:decision` | ❌ No |
+**The platform's entire household-learning capability was dead code behind a missing route.** Everything downstream was correct and waiting.
 
 ---
 
 ## 3. WHAT PHASE5B CHANGED
 
-**Four HTTP routes. Zero new engines, zero new reasoning, zero schema change.**
+### 3.1 Four HTTP routes — the closing edge (commit `3f47acbf`)
 
 Every route is a thin, ownership-scoped projection over `intelligencePlatform.handle()` — the ordinary registered Intent Engine path. No route imports the Decision Engine's framework or its store directly, so the delivery lifecycle, `mutedOpportunityTypes`, LEARN1's re-weighting and COACH1's ordering all continue to apply exactly once, where they live.
 
@@ -102,32 +98,85 @@ Every route is a thin, ownership-scoped projection over `intelligencePlatform.ha
 | `GET /api/intelligence/learning-signals` | `evidence-learning` × `search` | Pattern read |
 | `POST /api/intelligence/learning-signals/:signalId/:decision` | `evidence-learning` × `approve` \| `delete` | Pattern → **Confirmed Understanding** |
 
-### Confirmation (DEC1 A7)
+**Confirmation (DEC1 A7).** `review`/`approve`/`delete` carry the `strong` ConfirmationTier. The routes pass `{ confirmed: true }` — exactly the documented contract of `RouteOptions.confirmed`: *"the caller asserts confirmation, the engine decides whether confirmation was required."* An explicit, per-item `POST` naming one opportunity **is** that assent. The tier is unchanged; the engine still decides. Surfacing never softened acting.
 
-`review`, `approve` and `delete` all carry the `strong` ConfirmationTier (`permissions.ts:127-134`). The routes pass `{ confirmed: true }` to `handle()` — which is exactly the documented contract of `RouteOptions.confirmed`: *"the caller asserts confirmation, the engine decides whether confirmation was required."* An explicit, per-item `POST` from a deliberate household action **is** that assent. Surfacing never softened acting: the tier is unchanged, and the engine still decides.
+**Permission-aware projection.** The learning-signals route projects `HouseholdLearningSignal` down to the nine fields the client contract declares. `householdId`, `supportingEventIds`, `confirmedByUserId` and `confirmationNotes` are **never** sent to the client — the internal explainability trail stays server-side.
 
-### Permission-aware projection
+**Honest gaps preserved.** Every non-`ok` outcome is surfaced as the platform's own honest message with `resolved: false`. No route fabricates a success.
 
-The learning-signals route projects the raw `HouseholdLearningSignal` row down to the nine fields the client contract declares. `householdId`, `supportingEventIds`, `confirmedByUserId` and `confirmationNotes` are **never** sent to the client — the internal explainability trail stays server-side.
+### 3.2 Dormant capabilities — retired (Principle 8)
 
-### Honest gaps preserved
+Two dead subsystems were **retired, not revived.** Both had zero importers, zero live references, and zero coverage in the aggregate test suite.
 
-Every non-`ok` outcome is surfaced as the platform's own honest message with `resolved: false`. No route fabricates a success, and none invents an acknowledgement, dismissal or acceptance (TIP1 Principle 6 / Risk R2).
+| Retired | Why retire rather than wire |
+|---|---|
+| **The `uplift` capability binding** — `bindings/uplift.ts`, `handlers/uplift-read-handler.ts`, `handlers/uplift-read-port.ts`, `tests/test-intelligence-uplift-binding.ts` | `"uplift"` is **not in the Capability Registry seed at all**, so `bindUpliftReadCapability` would have **thrown at module load** (`capability-registry.ts:813` — *"Cannot bind handler: unknown capability"*). It was never 90% wired; it was 0% wired. Its own test asserted `getCapability("uplift").availability === "available"` — an assertion that **could never pass** — and was in no npm script. Wiring it would have required a `MEAL_HEALTHIER_COMPOUND` resolver matcher **that does not exist**, reversing the *deliberate* `uplift → food-intelligence` alias (`pattern-intent-resolver.ts:1211`), and would have added a **third** read path to `server/lib/uplift-engine.ts` alongside the batch route and the four assemblers — converging nothing. |
+| **The Business Service Composition island** — `conversation/service-composition.ts`, `capabilities/planner-composition.ts`, `conversation/business-service-composition-registry.ts` | A closed 3-node island with zero importers. It **had never typechecked** — all three import `IIntelligencePlatform`, a type that does not exist — which is proof it was never on a live import path. Its function is fully served by the live INT17 Context Composition Engine + `companion-enrichment.ts`. `INTA1` §3.18 / Tier 4 already ordered this deletion. No governing document mandates it. |
+
+Retiring these **shrank the typecheck debt baseline from 175 to 168** — the built-in confirmation that the removal was clean.
+
+`server/lib/uplift-engine.ts` itself is **untouched and still live** — it is domain Selection (deterministic nutrition rules), reached by `routes.ts` and four assemblers, and DEC1 §3 D5 protects it.
+
+### 3.3 Duplicate reasoning — one real duplicate, collapsed
+
+`/api/home/intelligence` and `/api/planner/weeks/:weekId/intelligence` each carried a **byte-identical copy** of the same derivation (~60 lines): the same three engine calls, the same section preferences, the same seasonal fallback, down to the comment text. The two routes differ in exactly one thing — *which* planner week they report progress for — and that difference is not in the duplicated part.
+
+Collapsed into one pure owner: **`server/lib/household-companion-fields.ts`** → `deriveHouseholdCompanionFields(history)`.
+
+It **reasons about nothing**. The ranking is done entirely by three canonical engines that already own it (`stories()`, `seasonalStories()`, `discover()`); the helper only reads the first card of an already-ordered section. It scores nothing, sorts nothing, re-weights nothing. It is pure (no I/O), so an empty history is a correct, complete answer of four nulls — and both routes' prior empty-history behaviour is preserved exactly.
+
+**It is not a second Decision Engine.** Its `opportunity` field is a food-*discovery* suggestion ("aubergine is at its best right now"), not a DEC1 `DeliverableOpportunity`: it carries no `AttentionLevel`, cites no evidence, and is never delivered, muted, suppressed, re-weighted or resolved. Converging the two would be a *product* change, not an activation — recorded under SUGGESTIONS.
+
+Also removed: `filterMealsByPreferences`, imported by `routes.ts` and **never called**.
 
 ---
 
-## 4. ARCHITECTURE COMPLIANCE
+## 4. THREE CLAIMS FROM THE INTERRUPTED SESSION THAT WERE WRONG
+
+The interrupted session's own gap list was re-audited against the code. Three of its findings do not survive, and the record is corrected here rather than quietly inherited.
+
+### ❌ "The Decision Engine has exactly one producer, and Planner/Pantry/Shopping are mapped and waiting with no producer behind them."
+
+**Wrong on the second half, and the first half is not a defect.**
+
+`food-intelligence` is a **cross-domain producer, not a food-only one.** Its three generators emit `owningDomain: "planner"` (`opportunity-engine.ts:193`), `"pantry"` (`:227`) and `"shopping"` (`:272`). `selectSurface()` is called with exactly that domain — so all three `DOMAIN_SURFACE` entries are **live and correctly fed today**. There are no orphaned entries and no empty doors.
+
+And no producer *can* be enrolled honestly today. `planner`, `pantry` and `shopping` have **no `report` verb** in `supportedIntents` (`capability-registry.ts:376`/`535`/`390`) or `executableIntents`, and their handlers return raw domain rows with **no priority field and no evidence field anywhere**. Enrolling them would mean **inventing an attention level and inventing evidence citations** — precisely the fabrication Rules E1 and A1 forbid. Worse, it would fail **silently**: a non-`ok` producer outcome hits the `continue` at `framework.ts:742` and contributes zero opportunities, so the map would *look* extended while delivering nothing.
+
+The correct extension seam is a **new generator inside `opportunity-engine.ts`** (whose `FoodOpportunityType` union documents itself as exactly that seam) or a genuinely new *Domain Intelligence* capability with its own reasoning — **not** a producer entry pointed at a data-owning capability, which would put opportunity reasoning in the wrong layer (Rule FI1: business domains own data, not reasoning). Recorded under SUGGESTIONS.
+
+### ❌ "`routes.ts:11495` duplicates what the Decision Engine and Notice Engine do 40 lines later at `routes.ts:11587`."
+
+**Wrong — those are two different HTTP routes**, not two blocks of one handler. `11445–11562` is `GET /api/planner/weeks/:weekId/intelligence`; `11587` begins `GET /api/intelligence/companion/notices` (COACH1), which **already** goes through `intelligencePlatform.handle({ capabilityId: "opportunity-delivery", verb: "report" })`. Different consumers, different payloads, no duplication. The real duplicate was elsewhere — §3.3 above.
+
+### ❌ "Three independent meal scorers are duplicate reasoning."
+
+**Wrong — they answer three different questions, and collapsing them is forbidden.**
+
+| Scorer | The question it answers |
+|---|---|
+| `evaluateMeal` (`recommendation-service.ts:32`) | "Does this saved meal violate the user's diet/goals?" |
+| `scoreMeal` (`meal-scoring-service.ts:94`) | "How well does this candidate fill **this planner slot, given what I already planned**?" (variety/overlap are properties of the plan-so-far, not of the meal) |
+| `scoreMealCompatibility` (`household-meal-matcher.ts:423`) | "Can the **whole household** eat this one meal, and what swaps does each member need?" |
+
+`smart-suggest-service.ts` does not stack them redundantly: it composes two, folding household fit into the ranking **exactly once** (`:910-913`). DEC1 §3 D5 explicitly protects domain Selection, and **`test-dec1-decision-engine.ts:441` asserts the Decision Engine must not import `meal-scoring` / `household-meal-matcher`** — so "consolidating the scorers into the Decision Engine" fails a governing test **by construction**. Left alone, correctly.
+
+Likewise the **four assemblers importing `uplift-engine` directly are not a platform bypass**: `uplift-read-port.ts:9-12` explicitly documents itself as *"mirroring the EXACT pattern already used by `meal-intelligence-assembler.ts` and `food-intelligence-assembler.ts` for the same engine."* `uplift-engine` is a pure, zero-I/O rules library, not a platform-gated capability. `intelligencePlatform.handle()` is the *conversational* seam, not a mandatory gate on every pure function call.
+
+---
+
+## 5. ARCHITECTURE COMPLIANCE
 
 | Principle | Compliance |
 |---|---|
-| 1 — One canonical identity per entity | No new entity. Routes are a transport over existing capabilities. |
-| 2 — One owner per fact | No fact re-owned. `opportunity_deliveries` stays sole-owned by `delivery-store.ts`; `household_learning_signals` by the EL1 store. |
+| 1 — One canonical identity per entity | No new entity. |
+| 2 — One owner per fact | No fact re-owned. `opportunity_deliveries` stays sole-owned by `delivery-store.ts`; `household_learning_signals` by the EL1 store. The four companion fields gain **one** owner where there were two copies. |
 | 3 — Progressive enrichment | Each producer/read degrades independently; an honest empty bundle is a correct answer. |
-| 4 — Runtime consumes one assembled model | Every route calls `intelligencePlatform.handle()`. None re-resolves identity or reads a store directly. |
+| 4 — Runtime consumes one assembled model | Every new route calls `intelligencePlatform.handle()`. None re-resolves identity or reads a store directly. |
 | 5 — Reference vocabularies beside the spine | Unchanged. |
-| 6 — No fabricated knowledge | Every non-`ok` outcome surfaces the platform's honest message. No fabricated success. |
+| 6 — No fabricated knowledge | Every non-`ok` outcome surfaces the platform's honest message. **No producer was enrolled by inventing attention or evidence.** |
 | 7 — No permanent synchronisation bridge | No new store, no projection, no cache. |
-| 8 — Evolution over replacement | **Four routes over code that already existed.** No engine created, none replaced. |
+| 8 — Evolution over replacement | Four routes over code that already existed; two dead subsystems retired; one duplicate collapsed. No engine created, none replaced. |
 
 ### AI Architecture Compliance
 
@@ -138,15 +187,15 @@ Every non-`ok` outcome is surfaced as the platform's own honest message with `re
 | Uses the Intent Engine | ✅ Full LOCATE → VALIDATE → PERMISSION → CONFIRM → INVOKE → RESPOND |
 | Reuses existing business services | ✅ Decision Engine framework + EL1 framework, unchanged |
 | Creates no second assistant | ✅ No conversational surface added |
-| Duplicates no conversation state | ✅ No conversation state touched |
+| Duplicates no conversation state | ✅ |
 | Registered capabilities only, permission-aware | ✅ Ownership-scoped; `context.userId` only, never client-supplied |
-| Honest gaps, not fabricated knowledge | ✅ |
+| Honest gaps, not fabricated knowledge | ✅ Verified against a live database (§6) |
 
 ### DEC1 hard-boundary check (§3 D5)
 
 | Boundary | Respected? |
 |---|---|
-| Never absorbs **Selection** | ✅ No route ranks a meal, compares a product or picks a swap. Domain scorers untouched. |
+| Never absorbs **Selection** | ✅ No route ranks a meal, compares a product or picks a swap. The three domain scorers were **deliberately left alone**. |
 | Never gates or launders **Evidence** | ✅ |
 | Never re-derives **Attention** | ✅ Producer-assigned priority passes through verbatim. |
 | Never changes what may be **Acted** on | ✅ ConfirmationTier unchanged; the engine still decides. |
@@ -159,111 +208,105 @@ Observation remains **write-only telemetry**. No route added by PHASE5B reads an
 
 ---
 
-## 5. ENGINE INTEGRATION SUMMARY
+## 6. VERIFICATION
 
-The canonical loop, now closed end to end:
+| Check | Result |
+|---|---|
+| **Typecheck gate** (`npm run typecheck:ci`) | ✅ **PASS** — no new type errors. Debt **shrank 175 → 168** (the 7 removed were all in the retired files). |
+| **Full test suite** (`npm test`, ~70 suites) | ✅ **PASS** — exit 0. Includes DEC1, LEARN1, ATTN1, OD1, EL1, Notice Engine, COACH1, PLAN1, INT50, Observation, Behaviour, and all benchmark guards. |
+| **Build** (`npm run build`) | ✅ **PASS** |
+| **Manual behaviour — the closed loop, on a live database** | ✅ **PASS** (below) |
+
+The loop was driven end to end through the real platform path:
 
 ```
-EVIDENCE      household_evidence_events (EL1)
-              ▲                                    │
-              │                                    ▼
-              │                              ATTENTION
-              │                   producer-assigned, never re-derived (A1)
-              │                                    │
-              │                                    ▼
-              │                              DECISION  ← THE DECISION ENGINE (OD1/DEC1)
-              │                   eligibility · muting · lifecycle suppression ·
-              │                   learning re-weight · rank · budget · surface ·
-              │                   sealed DeliveryDecision
-              │                                    │
-              │                                    ▼
-              │                               ACTION
-              └──── resolveOpportunity ◄──── review / approve / delete
-                    (terminal → Evidence)    ** PHASE5B closed this edge **
+DECISION  report  → 11 opportunities delivered, trust.resolved=true
+          picked: shopping-restriction-conflict, domain=shopping, priority=critical
+          evidence cited: ["shopping-list", "household-eaters"]     ← Rules E1 + A1 satisfied
+EVIDENCE  before resolution: 0 events
+ACTION    approve → ok, status="accepted"
+EVIDENCE  after resolution:  1 event      → delta +1
 
-  side-channel ─► OBSERVATION (telemetry — written, read back by NOTHING)
-  render seam  ─► BEHAVIOUR   (voice — the last transform before the user reads)
+          *** LOOP CLOSED — the terminal resolution emitted Evidence ***
+
+PATTERN   search  → ok, 0 pending signals
+          (a Pattern needs MIN_EVIDENCE_COUNT consistent events — 0 is correct, not a defect)
+HONESTY   approve("does-not-exist") → status="gap", honest message, no fabricated success
 ```
 
-- **Observation Engine** — unchanged. Telemetry only. Each `report` still seals and records one `delivery-decision` observation at the capability handler choke point.
-- **Decision Engine** — `report` was already live; **`review`/`approve`/`delete` are now reachable**, so the Decision→Evidence feedback edge exists in production for the first time.
-- **Household Learning** — the write path (`resolveOpportunity` → `recordHouseholdObservation`) and the confirmation path (Pattern → Confirmed Understanding) are both now reachable. LEARN1's re-weighting can, for the first time, receive an input.
-- **Behaviour Engine** — unchanged, still the voice seam.
-- **Context Composition Engine** — unchanged.
-- **Benchmark** — unchanged.
+Before PHASE5B that Evidence event **could not have been written by any code path in the product.**
+
+> **Verification hygiene.** The run above wrote one real resolution to a real household. Because a household never actually made that decision, and because LEARN1 re-weights on exactly this evidence, **both writes were reverted** — the Evidence event was deleted and the delivery row restored to `delivered`/`resolved_at: null`. Confirmed back to the pre-verification state (household evidence 0; total 384; zero learning signals created).
 
 ---
 
-## 6. FILES CHANGED
+## 7. FILES CHANGED
 
 | File | Change |
 |---|---|
-| `server/routes.ts` | **+4 routes** — the Decision Engine's ACTION stage and the Household Learning confirmation door |
-| `docs/implementation/intelligence/PHASE5B_INTELLIGENCE_PLATFORM_ACTIVATION.md` | This record (new) |
+| `server/routes.ts` | **+4 routes** (the ACTION stage + the Household Learning confirmation door); **−60 lines** of duplicated derivation; **−1** dead import |
+| `server/lib/household-companion-fields.ts` | **New** — one pure owner for the four companion fields |
+| `server/intelligence/bindings/uplift.ts` | **Retired** |
+| `server/intelligence/handlers/uplift-read-handler.ts` | **Retired** |
+| `server/intelligence/handlers/uplift-read-port.ts` | **Retired** |
+| `server/tests/test-intelligence-uplift-binding.ts` | **Retired** (asserted a condition that could never pass) |
+| `server/intelligence/conversation/service-composition.ts` | **Retired** |
+| `server/intelligence/conversation/business-service-composition-registry.ts` | **Retired** |
+| `server/intelligence/capabilities/planner-composition.ts` | **Retired** (directory now empty and removed) |
+| `scripts/ci/typecheck-baseline.json` | Re-recorded: 175 → 168 |
+| `docs/implementation/intelligence/PHASE5B_INTELLIGENCE_PLATFORM_ACTIVATION.md` | This record |
 
-No schema change. No engine created. No file deleted.
+**No schema change. No engine created. No governing document amended.**
 
 ---
 
-## 7. REMAINING GAPS BEFORE PHASE 5C
+## 8. REMAINING GAPS BEFORE THE NEXT PHASE
 
-Ordered by consequence. Items 1 and 2 are the ones that keep PHASE5B from being *observable* to a household.
+Ordered by consequence.
 
 ### 1. No client affordance can resolve an opportunity (deliberate — scope lock)
 
-The loop is closed **at the platform layer**: the routes exist, execute, and emit Evidence. But no mounted client surface calls them. `FoodOpportunitiesPanel` and `LearningSignalsPanel` are complete and now functional, and **neither is mounted on any page**.
+The loop is closed **at the platform layer**: the routes exist, execute, and emit Evidence (proven in §6). But no mounted client surface calls them. `FoodOpportunitiesPanel` and `LearningSignalsPanel` are complete, their hooks match the routes exactly (`acknowledge`/`accept`/`dismiss`, `confirm`/`decline`), and **neither is mounted on any page**.
 
-They were left unmounted deliberately. Mounting them is a **user-facing Experience change** that would require the UX Governance Checklist (`THA_EXPERIENCE_ARCHITECTURE.md` §18), the UI Governance Checklist (`THA_UI_ARCHITECTURE.md` §18) and a Product Registry update — and an ambient opportunity panel brushes PHASE5B's scope lock (*no proactive guidance*). **This is the first thing Phase 5C should do**; the panels' own headers already name their intended homes (`LearningSignalsPanel` → the Household section of Profile).
+They were left unmounted deliberately. Mounting them is a **user-facing Experience change** requiring the UX Governance Checklist (`THA_EXPERIENCE_ARCHITECTURE.md` §18), the UI Governance Checklist (`THA_UI_ARCHITECTURE.md` §18) and a Product Registry update — and an ambient opportunity panel brushes PHASE5B's scope lock (*no proactive guidance*). **This is the first thing the next phase should do.**
 
-Until then, Household Learning remains inert **in practice**, though no longer **by construction**.
+Until then Household Learning is inert **in practice**, though no longer **by construction** — which is the whole difference PHASE5B made.
 
-### 2. The Decision Engine has exactly one producer
+### 2. The closed loop has no regression guard
 
-`OPPORTUNITY_SOURCES` (`framework.ts:246-248`) contains only `food-intelligence`. DEC1 §7 names this map as *"the door for every future ambient surface"* — and nothing else has walked through it. Planner, Pantry and Shopping all have `DOMAIN_SURFACE` entries mapped and waiting, with no producer behind them.
+No benchmark or test case exercises `resolve → Evidence → Pattern → Confirmed Understanding → re-weight`. The loop was verified manually (§6) but nothing will catch its regression. **This is the highest-value test addition available**, and it should land before the panels are mounted.
 
-Enrolment is a one-line addition per producer, but each needs a `report` verb returning **attention-assigned, evidence-cited** opportunities (Rule E1 + A1). No candidate was enrolled in PHASE5B because inventing attention levels or evidence citations for a producer that does not yet compute them would be fabrication.
+### 3. The INT42 uplift-composition seam is now provably unreachable
 
-### 3. `uplift` — a capability binding that never landed (surfaced, not deleted)
+`conversation-gateway.ts:595` gates a whole composition stage on `queryable.some(ri => ri.capability === "uplift")` — which is **permanently `false`**: no resolver emits `"uplift"` (`pattern-intent-resolver.ts:1211` deliberately aliases it to `food-intelligence`), and the `MEAL_HEALTHIER_COMPOUND` matcher its own comment names **does not exist anywhere in the repo**.
 
-`server/intelligence/bindings/uplift.ts`, `handlers/uplift-read-handler.ts` and `handlers/uplift-read-port.ts` are complete, and **`bindUpliftReadCapability` is never called**. `"uplift"` is not in the Capability Registry seed at all.
+PHASE5B retired the uplift *capability binding* (§3.2) but **deliberately did not touch this seam**, because removing it means editing `test-int50-food-intelligence-composition.ts` — a **currently-passing test in the aggregate suite** that asserts the seam's pure function. Weakening a passing governing test is a decision an *activation* phase should not make unilaterally. The next phase must either build the matcher or retire the seam (`capability-composition.ts`, the gateway branch, the `"uplift"` member at `food-intelligence-composition.ts:95`, and the orphan `test-intelligence-capability-composition.ts`). See SUGGESTIONS.
 
-Its own test, `server/tests/test-intelligence-uplift-binding.ts:145`, asserts `intelligencePlatform.getCapability("uplift")!.availability === "available"` — which **cannot currently pass**, because `getCapability("uplift")` returns `undefined`. This test is broken today and PHASE5B did not touch it.
+### 4. `COMP4A4` documents code that never ran
 
-Meanwhile `server/lib/uplift-engine.ts` is reached three other ways: statically by `routes.ts:131`, by four `lib/*-assembler.ts` files, and by this dormant port. **Decision required in 5C: bind it (add the registry seed entry and make it the canonical path) or retire it (Principle 8).** It was not deleted here because it is intentional, unfinished work that PHASE5B did not author.
-
-### 4. A zero-importer composition island (surfaced, not deleted)
-
-Three modules with **zero importers anywhere**, including tests:
-- `server/intelligence/conversation/service-composition.ts`
-- `server/intelligence/capabilities/planner-composition.ts`
-- `server/intelligence/conversation/business-service-composition-registry.ts` (imported only by the two above)
-
-The whole "Business Service Composition" subsystem is dead. Retire or revive in 5C — not deleted here for the same reason as item 3.
-
-### 5. Duplicate reasoning — mapped, and mostly *protected* by DEC1
-
-The audit found eight independent scorers. **This is not automatically a defect.** DEC1 §3 D5 boundary 1 explicitly *protects* domain Selection: *"the engine consumes producer output; it never ranks meals, compares products, or picks swaps."* Consolidating them into the Decision Engine is exactly what DEC1 §8 forbids.
-
-What *is* genuinely duplicated, and legitimately convergeable within the domain layer:
-
-| Duplication | Evidence |
-|---|---|
-| **Three independent meal scorers** | `recommendation-service.ts:32` (`evaluateMeal`), `meal-scoring-service.ts:94` (`scoreMeal`), `household-meal-matcher.ts:423` (`scoreMealCompatibility`) — three different answers to "how good is this meal for this household". `smart-suggest-service.ts` stacks all three into a private pipeline that never touches the platform. |
-| **A route-local selection path** | `routes.ts:11495-11545` independently picks a celebration, a seasonal highlight, an opportunity and a household insight — a fifth prioritisation path duplicating what the Decision Engine and the Notice Engine already do 40 lines later at `routes.ts:11587`. |
-| **Four assemblers bypassing the platform** | `food-intelligence-assembler.ts`, `meal-intelligence-assembler.ts`, `connected-food-intelligence-assembler.ts`, `nutrition-centre-assembler.ts` each import `uplift-engine` directly and do their own sorting. |
-
-These are **domain Selection convergence**, not Decision Engine work, and each is a reviewed change with its own regression surface. None was attempted in PHASE5B: collapsing three live meal scorers is not an activation, and doing it under an activation banner would have risked planner behaviour with no benchmark to catch it.
-
-### 6. Benchmark does not yet cover the closed loop
-
-The benchmark harness (`server/tests/benchmark/`) is live, but no case exercises resolve → Evidence → Pattern → Confirmed Understanding → re-weight. **Until one does, the loop PHASE5B closed has no regression guard.** This is the highest-value benchmark addition available.
+`docs/investigations/intelligence/COMP4A4_COMPANION_RESPONSE_EXECUTION_TRACE.md:553/714/777` asserts *"planner-composition.ts working / Traces show composition stage runs"* and *"do not modify planner-composition.ts"*. **These claims are false** — that file had zero importers and never typechecked, and PHASE5B has now deleted it. The document should be corrected so a future reader is not misled by it.
 
 ---
 
-## 8. SCOPE LOCK — HONOURED
+## 9. SUGGESTIONS — proposed architecture evolution (recorded only, NOT implemented)
+
+Per the workstream's own rule, nothing below was built. Each requires its own approval.
+
+1. **A second opportunity producer, done honestly.** The only compliant routes are (a) a new generator inside `opportunity-engine.ts` — its `FoodOpportunityType` union is the documented seam — or (b) a new *Domain Intelligence* capability that computes its own attention and evidence. What is **not** compliant is enrolling `planner`/`pantry`/`shopping` directly: they are data owners, and giving them a `report` verb would put opportunity reasoning in the wrong layer (Rule FI1) and require fabricating attention and citations (Rules A1/E1).
+
+2. **Resolve INT42.** Either build the `MEAL_HEALTHIER_COMPOUND` matcher and register an `uplift` capability properly, or retire the seam entirely (gap 3 above). It cannot stay permanently dead *and* test-guarded.
+
+3. **One diet vocabulary.** `recommendation-service.ts:12-18` and `meal-scoring-service.ts:55-71` carry **overlapping but divergent** diet-keyword tables. The *vocabulary* is the duplicate, not the scorers. `recommendation-service.ts` has **zero test coverage** and backs `GET /api/meals/recommended`, so tests must land before any convergence.
+
+4. **Ambient surfacing convergence — a product question, not a cleanup.** The `opportunity` field in `deriveHouseholdCompanionFields` is a food-*discovery* suggestion outside the Decision Engine's lifecycle (no attention, no evidence, no muting, no resolution). Routing it through the Decision Engine would change what households see and needs Experience/UI governance. DEC1 §7's rule — *"a workstream adding surfacing logic anywhere else must STOP"* — makes this worth a deliberate decision rather than drift.
+
+---
+
+## 10. SCOPE LOCK — HONOURED
 
 | Forbidden by the brief | Status |
 |---|---|
 | Companion coaching | ❌ Not implemented |
 | Proactive guidance | ❌ Not implemented — and the reason the two panels were left unmounted (gap 1) |
 | Conversational experiences | ❌ Not implemented |
+| New Insight / Recommendation engines | ❌ Not created — the gate in §1 |

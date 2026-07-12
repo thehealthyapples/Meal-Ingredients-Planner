@@ -13,7 +13,7 @@ import { consolidateAndNormalize, normalizeIngredient, convertToGrams } from "./
 import { matchProductsForIngredient } from "./lib/product-matching-service";
 import { analyzeProduct } from "./lib/product-analysis";
 import { sendBasketToSupermarket, getSupportedSupermarkets } from "./lib/grocery-integration";
-import { filterMealsByPreferences, rankMealsByPreferences } from "./lib/recommendation-service";
+import { rankMealsByPreferences } from "./lib/recommendation-service";
 import { analyzeProductUPF, buildTHAExplanation } from "./lib/upf-analysis-service";
 import { isWholeFoodIngredient } from "./lib/smp-rating-service";
 import {
@@ -61,6 +61,7 @@ import { discover } from "../shared/discovery/engine";
 import { alternatives } from "../shared/alternatives/engine";
 import { stories } from "../shared/stories/engine";
 import { seasonalStories } from "../shared/seasonal/engine";
+import { deriveHouseholdCompanionFields } from "./lib/household-companion-fields";
 import type { HouseholdHistory, MealEntry } from "../shared/stories/types";
 import type { AlternativeContext, Diet as AlternativeDiet } from "../shared/alternatives/types";
 import { lookupFoodConstruct, isLikelyFoodConstruct, logUnrecognisedConstruct, logConstructMappingFailure } from "@shared/food-constructs";
@@ -11357,70 +11358,13 @@ Generate a complete recipe using these as the foundation.`;
         };
       }
 
-      // ── 2. Stories — celebration and household insight ──────────────────────
-      let celebration: { headline: string } | null = null;
-      let householdInsight: { headline: string } | null = null;
-
+      // ── 2. The four companion fields — one shared, pure derivation ──────────
+      // Celebration, seasonal highlight, gentle opportunity and household
+      // insight are derived identically here and by WX3's planner-week route
+      // below; PHASE5B collapsed the two copies into one owner.
       const history = await buildHouseholdHistory(userId);
-      if (history.entries.length > 0) {
-        const storiesResult = stories({ household: history, limitPerType: 2 });
-
-        const celebSection =
-          storiesResult.sections.find((s) => s.type === "discovery") ??
-          storiesResult.sections.find((s) => s.type === "favourite_foods");
-        if (celebSection?.cards[0]) {
-          celebration = { headline: celebSection.cards[0].headline };
-        }
-
-        const insightSection =
-          storiesResult.sections.find(
-            (s) =>
-              s.type === "family_traditions" ||
-              s.type === "seasonal_habits"
-          ) ??
-          storiesResult.sections.find((s) => s !== celebSection);
-        if (insightSection?.cards[0]) {
-          householdInsight = { headline: insightSection.cards[0].headline };
-        }
-      }
-
-      // ── 3. Seasonal highlight ───────────────────────────────────────────────
-      let seasonalHighlight: { headline: string } | null = null;
-
-      const enjoys = Array.from(new Set(history.entries.map((e) => e.food)));
-      const seasonal = seasonalStories({ household: history, enjoys, limitPerBlock: 3 });
-      const lookingAheadBlock = seasonal.blocks.find((b) => b.type === "looking_ahead");
-      const discoveriesBlock = seasonal.blocks.find((b) => b.type === "discoveries");
-
-      if (lookingAheadBlock?.cards[0]) {
-        seasonalHighlight = { headline: lookingAheadBlock.cards[0].headline };
-      } else if (discoveriesBlock?.cards[0]) {
-        seasonalHighlight = { headline: discoveriesBlock.cards[0].headline };
-      }
-
-      // ── 4. Gentle opportunity ───────────────────────────────────────────────
-      let opportunity: { text: string } | null = null;
-
-      const disc = discover({
-        household: { enjoys },
-        types: ["broaden_horizons", "seasonal"],
-        limitPerType: 1,
-      });
-      const oppSection =
-        disc.sections.find((s) => s.type === "seasonal") ??
-        disc.sections.find((s) => s.type === "broaden_horizons");
-      if (oppSection?.suggestions[0]) {
-        opportunity = { text: oppSection.suggestions[0].reason };
-      }
-
-      // Seasonal highlight fallback: use discover if WS11 yielded nothing
-      if (!seasonalHighlight) {
-        const seasonalSection = disc.sections.find((s) => s.type === "seasonal");
-        if (seasonalSection?.suggestions[0]) {
-          const sug = seasonalSection.suggestions[0];
-          seasonalHighlight = { headline: `${sug.name} is at its best right now.` };
-        }
-      }
+      const { celebration, seasonalHighlight, opportunity, householdInsight } =
+        deriveHouseholdCompanionFields(history);
 
       res.json({
         weeklyProgress,
@@ -11488,65 +11432,14 @@ Generate a complete recipe using these as the foundation.`;
             }
           : null;
 
-      // ── 2. Household-wide stories — celebration & household insight ──────────
-      let celebration: { headline: string } | null = null;
-      let householdInsight: { headline: string } | null = null;
-
+      // ── 2. The four companion fields — one shared, pure derivation ──────────
+      // The same four fields the Home Intelligence Companion shows, derived by
+      // the same owner. This route differs from `/api/home/intelligence` in
+      // exactly one thing — it reports progress for the REQUESTED week rather
+      // than the latest — and that difference lives in step 1 above, not here.
       const history = await buildHouseholdHistory(userId);
-      if (history.entries.length > 0) {
-        const storiesResult = stories({ household: history, limitPerType: 2 });
-
-        const celebSection =
-          storiesResult.sections.find((s) => s.type === "discovery") ??
-          storiesResult.sections.find((s) => s.type === "favourite_foods");
-        if (celebSection?.cards[0]) {
-          celebration = { headline: celebSection.cards[0].headline };
-        }
-
-        const insightSection =
-          storiesResult.sections.find(
-            (s) =>
-              s.type === "family_traditions" || s.type === "seasonal_habits"
-          ) ?? storiesResult.sections.find((s) => s !== celebSection);
-        if (insightSection?.cards[0]) {
-          householdInsight = { headline: insightSection.cards[0].headline };
-        }
-      }
-
-      // ── 3. Seasonal highlight ───────────────────────────────────────────────
-      let seasonalHighlight: { headline: string } | null = null;
-      const enjoys = Array.from(new Set(history.entries.map((e) => e.food)));
-      const seasonal = seasonalStories({ household: history, enjoys, limitPerBlock: 3 });
-      const lookingAheadBlock = seasonal.blocks.find((b) => b.type === "looking_ahead");
-      const discoveriesBlock = seasonal.blocks.find((b) => b.type === "discoveries");
-      if (lookingAheadBlock?.cards[0]) {
-        seasonalHighlight = { headline: lookingAheadBlock.cards[0].headline };
-      } else if (discoveriesBlock?.cards[0]) {
-        seasonalHighlight = { headline: discoveriesBlock.cards[0].headline };
-      }
-
-      // ── 4. Gentle opportunity ───────────────────────────────────────────────
-      let opportunity: { text: string } | null = null;
-      const disc = discover({
-        household: { enjoys },
-        types: ["broaden_horizons", "seasonal"],
-        limitPerType: 1,
-      });
-      const oppSection =
-        disc.sections.find((s) => s.type === "seasonal") ??
-        disc.sections.find((s) => s.type === "broaden_horizons");
-      if (oppSection?.suggestions[0]) {
-        opportunity = { text: oppSection.suggestions[0].reason };
-      }
-
-      // Seasonal highlight fallback: use discover if WS11 yielded nothing.
-      if (!seasonalHighlight) {
-        const seasonalSection = disc.sections.find((s) => s.type === "seasonal");
-        if (seasonalSection?.suggestions[0]) {
-          const sug = seasonalSection.suggestions[0];
-          seasonalHighlight = { headline: `${sug.name} is at its best right now.` };
-        }
-      }
+      const { celebration, seasonalHighlight, opportunity, householdInsight } =
+        deriveHouseholdCompanionFields(history);
 
       res.json({
         weeklyProgress,
