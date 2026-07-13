@@ -28,6 +28,7 @@ import RestrictionSafetyPanel from "@/components/analyser/RestrictionSafetyPanel
 import { WholeFoodAnalysisCard } from "@/components/analyser/WholeFoodAnalysisCard";
 import { computeRestrictionSafety, parseIngredientText } from "@shared/restrictions/restriction-safety";
 import type { EaterProfile } from "@shared/restrictions/restriction-safety";
+import { semanticText } from "@/components/intelligence/intelligence-tokens";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -53,14 +54,14 @@ function getCurrentProductInsight(item: ShoppingListItem): { headline: string; d
   if (rating === null || rating === undefined) {
     return {
       headline: "Not yet scored",
-      detail: "This item hasn't been matched to a product yet. The options below may help you find a cleaner alternative.",
+      detail: "This item hasn't been matched to a product yet. The options below may help you find a less processed alternative.",
     };
   }
   if (rating >= 5) return { headline: "Top of its class", detail: "Minimal processing and a clean ingredient profile." };
   if (rating >= 4) return { headline: "A good packaged option", detail: "Limited processing with a relatively short and recognisable ingredient list." };
   if (rating >= 3) return { headline: "Average quality", detail: "Moderate processing. Worth checking the ingredient list for emulsifiers, stabilisers, or modified starches." };
-  if (rating >= 2) return { headline: "Below average", detail: "This product likely contains several additives and significant processing. A cleaner option would be an improvement." };
-  return { headline: "Highly processed", detail: "This product scores poorly due to heavy processing. A cleaner shop option or whole-food route is worth considering." };
+  if (rating >= 2) return { headline: "Below average", detail: "This product likely contains several additives and significant processing. There are less processed options below if you want them." };
+  return { headline: "Highly processed", detail: "This product is heavily processed. If you'd like, there are less processed options and whole-food routes below." };
 }
 
 function ratingColor(r: number | null) {
@@ -234,7 +235,7 @@ function sourceBadgeLabel(source: FulfilmentSource): string {
   if (source === "scanned") return "Previously scanned";
   if (source === "manual_search") return "Previously chosen via search";
   if (source === "previous_fulfilment") return "Previously used again";
-  return "Previously selected cleaner option";
+  return "Previously chosen option";
 }
 
 // ── Scan types ────────────────────────────────────────────────────────────────
@@ -678,13 +679,13 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
             </div>
           )}
 
-          {/* ── Cleaner shop option (packaged items only) ──────────────── */}
+          {/* ── Less processed option (packaged items only) ────────────── */}
           {!isWF && (
           <div data-testid="analyser-cleaner-options">
             <div className="flex items-center justify-between mb-2">
               <p className={`${SECTION_LABEL} flex items-center gap-1.5`}>
                 <ShoppingCart className="h-3 w-3 text-blue-500 dark:text-blue-400" />
-                <span className="text-blue-500 dark:text-blue-400">Cleaner shop option</span>
+                <span className={semanticText.info}>Less processed option</span>
               </p>
               {preferredStore && (
                 <span className="text-[10px] text-muted-foreground flex items-center gap-1">
@@ -1091,7 +1092,7 @@ function ScannedProductCard({
               data-testid="analyser-select-scanned"
             >
               <Check className="h-3 w-3 mr-1 inline-block" />
-              {isBetter ? "Choose this (cleaner option)" : "Choose as fulfilment"}
+              {isBetter ? "Choose this (less processed)" : "Choose as fulfilment"}
             </button>
           )}
           <button
@@ -1131,7 +1132,7 @@ function buildManualBadges(
   }
 
   const additiveCount: number = product.upfAnalysis?.additiveMatches?.length ?? 0;
-  if (additiveCount === 0 && r !== null) badges.push({ label: "Cleaner option", positive: true });
+  if (additiveCount === 0 && r !== null) badges.push({ label: "Less processed", positive: true });
 
   return badges.slice(0, 3);
 }

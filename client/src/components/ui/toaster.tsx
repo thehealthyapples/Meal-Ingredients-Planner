@@ -34,7 +34,12 @@ export function Toaster() {
               </div>
             </div>
             {action}
-            {isError && <ToastClose />}
+            {/* PX1-W4b (fnd-px-toast-limit-one): the close button was gated on
+                `isError`, so a success could only be waited out. With TOAST_LIMIT
+                raised, toasts now stack rather than destroy one another — and a
+                stack the household cannot dismiss is the noise a limit of 1 was
+                avoiding. Every toast closes. */}
+            <ToastClose />
           </Toast>
         )
       })}

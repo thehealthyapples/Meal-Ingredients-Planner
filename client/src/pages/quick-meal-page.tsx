@@ -383,7 +383,7 @@ export default function QuickMealPage() {
       wide
       back={{ href: "/cookbook", label: "Cookbook" }}
     />
-    <div className={`${pageContainerClass(true)} main-safe`}>
+    <div className={pageContainerClass(true)}>
 
       {isLoadingMeal ? (
         <div className="flex items-center justify-center py-12">

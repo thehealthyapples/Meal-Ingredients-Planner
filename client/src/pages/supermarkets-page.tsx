@@ -94,7 +94,7 @@ export default function SupermarketsPage() {
         </Select>
       }
     />
-    <div className={`${pageContainerClass(true)} main-safe`}>
+    <div className={pageContainerClass(true)}>
 
       {shoppingItems.length > 0 && (
         <Card className="mb-8">

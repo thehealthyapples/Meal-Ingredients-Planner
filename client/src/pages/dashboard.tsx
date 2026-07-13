@@ -504,7 +504,7 @@ export default function Dashboard() {
                 data-testid="error-week-plan"
               />
             ) : (
-            <Card style={{ borderColor: "hsl(132,14%,87%)" }}>
+            <Card>
               <CardContent className="p-5 pt-4">
                 {plannerQuery.isLoading ? (
                   <Skeleton className="h-36 w-full" data-testid="loading-week-plan" />
@@ -530,29 +530,31 @@ export default function Dashboard() {
                           dataKey="day"
                           axisLine={false}
                           tickLine={false}
-                          tick={{ fontSize: 11, fill: "hsl(120, 5%, 50%)" }}
+                          tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
                         />
                         <YAxis
                           allowDecimals={false}
                           axisLine={false}
                           tickLine={false}
-                          tick={{ fontSize: 10, fill: "hsl(120, 5%, 60%)" }}
+                          tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
                           width={28}
                         />
                         <Tooltip
-                          cursor={{ fill: "hsl(132,14%,96%)", radius: 6 }}
+                          cursor={{ fill: "hsl(var(--muted))", radius: 6 }}
                           contentStyle={{
-                            border: "1px solid hsl(132,14%,87%)",
+                            background: "hsl(var(--popover))",
+                            color: "hsl(var(--popover-foreground))",
+                            border: "1px solid hsl(var(--border))",
                             borderRadius: 8,
                             fontSize: 12,
                             boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
                           }}
                           formatter={(v: number) => [`${v} meal${v !== 1 ? "s" : ""}`, ""]}
-                          labelStyle={{ color: GREEN_DEEP, fontWeight: 600 }}
+                          labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 600 }}
                         />
                         <Bar dataKey="count" radius={[5, 5, 0, 0]}>
                           {weekData.map((d, i) => (
-                            <Cell key={i} fill={d.count > 0 ? GREEN_MID : "hsl(132,14%,88%)"} />
+                            <Cell key={i} fill={d.count > 0 ? "hsl(var(--primary))" : "hsl(var(--muted))"} />
                           ))}
                         </Bar>
                       </BarChart>
@@ -578,7 +580,7 @@ export default function Dashboard() {
                     data-testid="error-collection"
                   />
                 ) : (
-                <Card style={{ borderColor: "hsl(132,14%,87%)" }}>
+                <Card>
                   <CardContent className="p-5">
                     {mealsLoading ? (
                       <Skeleton className="h-[110px] w-full" data-testid="loading-collection" />

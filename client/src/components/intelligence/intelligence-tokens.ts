@@ -98,6 +98,57 @@ export const chipKindStyles: Record<IntelligenceChipKind, string> = {
 export const chipBase =
   "inline-block whitespace-nowrap text-[10px] rounded-full border px-2 py-0.5 leading-none";
 
+// ── Semantic surfaces (PX1-W4b, fnd-px-ad-hoc-semantic-tints) ────────────────
+//
+// The chip palette above was already the governed, dark-mode-verified answer to
+// "what colour is this kind of intelligence". The same question was being answered
+// again, independently, every time a SURFACE needed a tint: the Pantry hub reached
+// for raw `amber-50/amber-200`, the shopping list for raw `blue-50/blue-200`, and
+// the Dashboard for a hard-coded `hsl(132,14%,87%)` literal that did not exist in
+// dark mode at all. Same meanings, different colours, per page.
+//
+// These are the same hues the chips already ship, promoted to surfaces so that a
+// tint has ONE owner. They are keyed by MEANING, never by colour — a caller asks
+// for `notice`, not for "amber", which is what stops the next page from deciding
+// amber means something else.
+//
+// Colour law (UIA §10) is unchanged: colour is never the only signal. Every
+// surface below pairs its tone with an icon and a text label at the call site.
+//
+// NOT a severity scale, and deliberately not an alarm: `destructive` is not a tone
+// here. Alarm is reserved for genuine data loss or safety (EXP §14), which in THA
+// means exactly one thing — the restriction conflict that `attentionPresentation`
+// below owns. A food's processing score is information, not a safety event.
+
+export type SemanticTone = "notice" | "info" | "positive";
+
+/** Tinted surface (background + border) for each tone. */
+export const semanticSurface: Record<SemanticTone, string> = {
+  // Something worth reading before you decide. Warm amber — never red.
+  notice:
+    "bg-amber-50/60 border-amber-200/60 dark:bg-amber-950/20 dark:border-amber-800/40",
+  // Neutral, factual context: a comparison, an explanation, an alternative.
+  info:
+    "bg-blue-50/50 border-blue-200/60 dark:bg-blue-950/20 dark:border-blue-800/40",
+  // A good thing that has happened, or a food that scores well.
+  positive:
+    "bg-green-50/60 border-green-200/60 dark:bg-green-950/20 dark:border-green-800/40",
+};
+
+/** Foreground for a value or label sitting on the matching surface. */
+export const semanticText: Record<SemanticTone, string> = {
+  notice: "text-amber-700 dark:text-amber-400",
+  info: "text-blue-700 dark:text-blue-400",
+  positive: "text-green-800 dark:text-green-300",
+};
+
+/** Pill/chip built from a tone, for the pill groups that used raw palette classes. */
+export const semanticPill: Record<SemanticTone, string> = {
+  notice: `${chipBase} ${semanticSurface.notice} ${semanticText.notice}`,
+  info: `${chipBase} ${semanticSurface.info} ${semanticText.info}`,
+  positive: `${chipBase} ${semanticSurface.positive} ${semanticText.positive}`,
+};
+
 // ── Attention presentation (PHASE5C) ─────────────────────────────────────────
 //
 // The Decision Engine assigns every opportunity an AttentionLevel (ATTN1), ranks

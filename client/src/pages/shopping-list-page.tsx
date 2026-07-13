@@ -65,7 +65,7 @@ import { estimateFallbackPrice } from "@shared/price-estimates";
 import { formatItemDisplay, cleanProductName, getLiquidDisplayMl, formatQty } from "@/lib/unit-display";
 import { deriveQuantityConfidence, getQuantityConfidenceLabel } from "@/lib/quantity-confidence";
 import AppleRating from "@/components/AppleRating";
-import BadAppleWarningModal from "@/components/BadAppleWarningModal";
+import UltraProcessedNoticeModal from "@/components/UltraProcessedNoticeModal";
 import type { ShoppingListItem, ProductMatch, IngredientSource, SupermarketLink, FreezerMeal, IngredientProduct } from "@shared/schema";
 import { getIngredientDef } from "@/lib/ingredient-catalogue";
 import { isWholeFood, canShowScoreForItem } from "@/lib/basket-item-classifier";
@@ -83,6 +83,7 @@ import { matchesSourceFilter, sourceLabel, sourcePriority, type SourceFilter } f
 import { CameraModal } from "@/components/camera-modal";
 import { ShoppingListScanReview, type ShoppingListScanData } from "@/components/ShoppingListScanReview";
 import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
+import { semanticSurface, semanticText } from "@/components/intelligence/intelligence-tokens";
 
 type ShoppingListItemExtended = ShoppingListItem & {
   addedByDisplayName?: string | null;
@@ -498,10 +499,10 @@ function getVerdict(product: any): string {
     return "Average product with moderate processing. Acceptable for occasional use.";
   }
   if (smp >= 2) {
-    if (highRisk > 0) return `Below average. Contains ${highRisk} high-risk additive${highRisk > 1 ? 's' : ''}. Consider a cleaner alternative.`;
+    if (highRisk > 0) return `Below average. Contains ${highRisk} high-risk additive${highRisk > 1 ? 's' : ''}. Less processed options are available.`;
     return `Below average quality. Contains ${additives} additive${additives > 1 ? 's' : ''}. Better options exist.`;
   }
-  if (isUltra) return "Highly ultra-processed with multiple concerning additives. Strongly consider switching to a cleaner alternative.";
+  if (isUltra) return "Highly ultra-processed, with multiple additives. Less processed options are available if you want them.";
   return "Poor quality product with significant processing. Look for a healthier option.";
 }
 
@@ -964,10 +965,10 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
             </Card>
           </div>
 
-          {/* ── 4. Cleaner shop option ──────────────────────────────────── */}
+          {/* ── 4. Less processed option ────────────────────────────────── */}
           <div data-testid="section-cleaner-shop">
             <div className="flex items-center justify-between mb-2">
-              <SectionHeader icon={ShoppingCart} label="Cleaner shop option" color="text-blue-500 dark:text-blue-400" />
+              <SectionHeader icon={ShoppingCart} label="Less processed option" color={semanticText.info} />
               {preferredStore && (
                 <span className="text-[10px] text-muted-foreground flex items-center gap-1">
                   <Store className="h-2.5 w-2.5" />{preferredStore} first
@@ -992,7 +993,7 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                 {rankedChoices.map((choice, idx) => {
                   const whyBetter = buildWhyBetter(choice, item.thaRating ?? null);
                   return (
-                    <Card key={choice.barcode || idx} className="border-blue-200 dark:border-blue-800 bg-blue-50/40 dark:bg-blue-950/20" data-testid={`card-cleaner-shop-${idx}`}>
+                    <Card key={choice.barcode || idx} className={semanticSurface.info} data-testid={`card-cleaner-shop-${idx}`}>
                       <CardContent className="p-3">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 flex-1">
@@ -1001,7 +1002,7 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                             {whyBetter.length > 0 && (
                               <div className="mt-1.5 flex flex-wrap gap-1">
                                 {whyBetter.map((reason, i) => (
-                                  <Badge key={i} className="text-[10px] bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700 no-default-hover-elevate">
+                                  <Badge key={i} className={`text-[10px] no-default-hover-elevate ${semanticSurface.info} ${semanticText.info}`}>
                                     <Sparkles className="h-2.5 w-2.5 mr-1" />
                                     {reason}
                                   </Badge>
@@ -1149,10 +1150,10 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                     )}
                   </div>
                 </div>
-                {/* Cleaner shop option */}
+                {/* Less processed option */}
                 {rankedChoices.length > 0 && (
-                  <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/30 dark:bg-blue-950/20 p-3 space-y-2" data-testid="compare-card-shop">
-                    <p className="text-[10px] uppercase tracking-[0.12em] text-blue-500 dark:text-blue-400">Cleaner shop option</p>
+                  <div className={`rounded-lg border p-3 space-y-2 ${semanticSurface.info}`} data-testid="compare-card-shop">
+                    <p className={`text-[10px] uppercase tracking-[0.12em] ${semanticText.info}`}>Less processed option</p>
                     <div className="flex items-center gap-2">
                       <AppleRating rating={rankedChoices[0].upfAnalysis?.thaRating ?? 0} sizePx={22} showTooltip={false} animate={false} />
                       <span className="text-xs font-medium truncate">{rankedChoices[0].product_name}</span>
@@ -1374,7 +1375,7 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
       </DialogContent>
     </Dialog>
     {badAppleProduct && (
-      <BadAppleWarningModal
+      <UltraProcessedNoticeModal
         open={!!badAppleProduct}
         onOpenChange={(v) => { if (!v) setBadAppleProduct(null); }}
         productName={badAppleProduct.product_name}

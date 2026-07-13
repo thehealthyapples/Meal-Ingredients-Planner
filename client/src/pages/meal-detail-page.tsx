@@ -614,7 +614,7 @@ export default function MealDetailPage() {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`${pageContainerClass(true)} main-safe`}
+      className={pageContainerClass(true)}
     >
       {isEditedCopy && isEditing && (
         <div className="mb-4 flex items-center gap-2">

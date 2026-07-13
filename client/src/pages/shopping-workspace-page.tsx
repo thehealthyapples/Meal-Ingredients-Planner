@@ -2273,7 +2273,7 @@ export default function ShoppingWorkspacePage() {
       )}
       <div className={isFullscreen
         ? "fixed inset-0 z-50 bg-background overflow-auto flex flex-col"
-        : `${pageContainerClass(true)} pb-20`}
+        : pageContainerClass(true)}
       >
       {isFullscreen && (
         <div className="border-b border-border/50 bg-background shrink-0">

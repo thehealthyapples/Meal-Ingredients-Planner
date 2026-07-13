@@ -455,12 +455,6 @@ export default function WeeklyPlannerPage() {
     // Fork case: if the system meal was forked, update mealDetail so the dialog
     // resolves the live meal by the new fork ID rather than the original meal ID.
     setMealDetail(prev => {
-      // PROOF STEP 4 — handleUpliftAccepted logic
-      console.log("[BOOST-PROOF] STEP4 handleUpliftAccepted:", {
-        incomingMealId: mealId,
-        currentMealDetailMealId: prev?.meal.id,
-        willUpdate: !(!prev || prev.meal.id === mealId),
-      });
       if (!prev || prev.meal.id === mealId) return prev;
       return { ...prev, meal: { ...prev.meal, id: mealId } };
     });
@@ -3090,15 +3084,6 @@ export default function WeeklyPlannerPage() {
             // Resolve meal from the live query so ingredient list reflects accepted boosts
             // without requiring the dialog to be closed and reopened.
             const meal = meals.find(m => m.id === mealSnapshot.id) ?? mealSnapshot;
-            // PROOF STEP 5 — meal resolution in dialog
-            console.log("[BOOST-PROOF] STEP5 dialog meal resolution:", {
-              mealSnapshotId: mealSnapshot.id,
-              resolvedFromCache: meals.some(m => m.id === mealSnapshot.id),
-              resolvedMealId: meal.id,
-              ingredientsCount: meal.ingredients?.length ?? 0,
-              ingredients: meal.ingredients ?? [],
-              plannerEntryMealId: entry.mealId,
-            });
             const calories = nutritionMap.get(meal.id);
             const isFrozen = freezerMeals.some(f => f.mealId === meal.id && f.remainingPortions > 0);
             const instructions = meal.instructions || [];

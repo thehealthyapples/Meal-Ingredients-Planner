@@ -290,7 +290,7 @@ function generateTHAReview(product: InputProduct): string {
             .map((a) => a.name)
             .join(", ")} - ${nonReg.length === 1 ? "is" : "are"} commonly found in packaged foods and not a major concern. `
         : "";
-    return `${name} has a relatively clean profile for a packaged product. ${addStr}Worth keeping in regular rotation if it fits your routine - a practical, accessible option with a simpler ingredient profile than most alternatives in this category.`;
+    return `${name} has a simpler ingredient profile than most packaged products. ${addStr}A practical, accessible option, with fewer additives than most alternatives in this category.`;
   }
 
   if (rating >= 3) {
@@ -309,11 +309,11 @@ function generateTHAReview(product: InputProduct): string {
       indicators.length > 0
         ? ` Processing indicators such as ${indicators.slice(0, 2).join(" and ")} are present.`
         : "";
-    return `${name} contains a number of additives more typical of heavily manufactured products.${indStr} There are likely cleaner alternatives available - it is worth taking a moment to compare before making this a regular weekly purchase.`;
+    return `${name} contains a number of additives more typical of heavily manufactured products.${indStr} Less processed alternatives are likely available, if you'd like to compare.`;
   }
 
   const novaStr = novaGroup === 4 ? " It falls into the ultra-processed (NOVA 4) category." : "";
-  return `${name} has a complex ingredient profile with multiple additives detected.${novaStr} This product is more processed than the simplest alternatives available. We would suggest treating it as an occasional rather than regular choice, and exploring cleaner options where possible.`;
+  return `${name} has a complex ingredient profile with multiple additives detected.${novaStr} It is more processed than the simplest alternatives available, and those options are there if you want them.`;
 }
 
 // ─── Main adapter ─────────────────────────────────────────────────────────────

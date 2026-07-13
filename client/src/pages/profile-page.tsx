@@ -372,7 +372,7 @@ function ProfilePageContent() {
         </div>
       }
     />
-    <div className={`${pageContainerClass(true)} main-safe space-y-4 sm:space-y-6`} data-testid="page-profile">
+    <div className={`${pageContainerClass(true)} space-y-4 sm:space-y-6`} data-testid="page-profile">
 
       <ProfileHeader
         profile={profile}

@@ -5,7 +5,19 @@ import type {
   ToastProps,
 } from "@/components/ui/toast"
 
-const TOAST_LIMIT = 1
+// PX1-W4b (fnd-px-toast-limit-one). This was 1, and `ADD_TOAST` slices to it — so a
+// new toast did not queue behind the previous one, it DESTROYED it. In any batched
+// action (adding several foods, a bulk planner drop) a failure could be silently
+// overwritten by a success that followed it, and the household would be told the
+// last thing that happened rather than the most important one. The failure THA most
+// needed to speak was the one most likely to be erased.
+//
+// Three, not one: enough that a failure survives the successes around it, few enough
+// that the stack never becomes the wall of noise a limit of 1 was over-correcting
+// for. The toasts stack (`ui/toast.tsx`'s viewport is a flex column), the newest is
+// first, and each is independently dismissable — which is why `Toaster` now gives
+// EVERY toast a close button and not only the errors.
+const TOAST_LIMIT = 3
 const TOAST_REMOVE_DELAY = 350
 
 type ToasterToast = ToastProps & {

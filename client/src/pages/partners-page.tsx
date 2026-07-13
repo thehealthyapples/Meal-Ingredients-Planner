@@ -475,7 +475,7 @@ export default function PartnersPage() {
         </div>
       }
     />
-    <div className={`${pageContainerClass(true)} main-safe space-y-10`}>
+    <div className={`${pageContainerClass(true)} space-y-10`}>
 
       {/* Hero */}
       <section className="rounded-3xl bg-gradient-to-br from-primary/8 via-background to-primary/4 border border-border px-6 sm:px-12 py-7 sm:py-10 text-center space-y-3" data-testid="partners-hero">

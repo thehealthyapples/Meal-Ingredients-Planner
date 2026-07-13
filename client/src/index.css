@@ -406,7 +406,18 @@
   }
 
   /* UX1 — the canonical BottomNav is fixed on all screen sizes, so main content
-     reserves clearance for it at every breakpoint (previously mobile-only). */
+     reserves clearance for it at every breakpoint (previously mobile-only).
+
+     PX1-W4b (fnd-px-double-bottom-padding) — ONE owner, applied ONCE, on `<main>`
+     (App.tsx). Five pages re-applied it on their own root INSIDE that `<main>`, and
+     the Shopping Workspace added a `pb-20` on top of it, so the bottom of some
+     scrolls carried 160px of dead space and others none. Every routed page gets this
+     clearance for free and must not ask for it again.
+
+     The ONE legitimate re-application is a surface that ESCAPES `<main>` — Shop mode
+     is `fixed inset-0` — which is why the two shopping pages apply it to their
+     fullscreen scroller and only while fullscreen (PX1-W2). Both are conditional; a
+     page that reaches for `.main-safe` unconditionally is the defect returning. */
   .main-safe {
     padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 80px);
   }

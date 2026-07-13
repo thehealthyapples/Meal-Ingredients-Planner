@@ -26,7 +26,7 @@ import {
 } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
-export interface MutationFeedback<TData = unknown, TVariables = unknown> {
+export interface MutationFeedback<TData = unknown, TVariables = unknown, TError = unknown> {
   /**
    * Shown when the write lands. Omit ONLY when the surface is its own
    * confirmation (an optimistic row that visibly appears, a switch that moves).
@@ -44,6 +44,24 @@ export interface MutationFeedback<TData = unknown, TVariables = unknown> {
    * silently snaps back reads as a broken control, not as a failure.
    */
   failureDescription?: string | ((variables: TVariables) => string);
+  /**
+   * PX1-W4b (fnd-px-success-silent-error-loud).
+   *
+   * Recognises an outcome the SERVER calls an error but the HOUSEHOLD would not:
+   * what they asked for is already true. Adding an ingredient that is already in
+   * the pantry is not a failure — it is the pantry agreeing with them — and it
+   * used to be raised in red, with a destructive icon, in the same voice THA uses
+   * to say a write was lost. EXP §14: "Alarm is reserved for genuine data loss or
+   * safety."
+   *
+   * Return the plain words to say and the toast stays CALM. Return nothing and the
+   * error is a real failure and alarms, as it should. There is no way to express
+   * "satisfied" as a destructive toast, which is the point.
+   */
+  satisfied?: (
+    error: TError,
+    variables: TVariables,
+  ) => { title: string; description?: string } | null | undefined | false;
 }
 
 function resolve<TArgs extends unknown[]>(
@@ -67,7 +85,7 @@ function resolve<TArgs extends unknown[]>(
  */
 export function useTrackedMutation<TData = unknown, TError = Error, TVariables = void, TContext = unknown>(
   options: UseMutationOptions<TData, TError, TVariables, TContext> & {
-    feedback: MutationFeedback<TData, TVariables>;
+    feedback: MutationFeedback<TData, TVariables, TError>;
   },
 ): UseMutationResult<TData, TError, TVariables, TContext> {
   const { feedback, onSuccess, onError, ...rest } = options;
@@ -89,6 +107,14 @@ export function useTrackedMutation<TData = unknown, TError = Error, TVariables =
       // The caller's rollback runs FIRST, so the household never sees the toast
       // describing a rollback that has not happened yet.
       const result = onError?.(error, variables, context);
+
+      // A satisfied state is not a failure and is never raised as one.
+      const satisfied = feedback.satisfied?.(error, variables);
+      if (satisfied) {
+        toast({ title: satisfied.title, description: satisfied.description });
+        return result;
+      }
+
       toast({
         title: resolve(feedback.failure, variables) ?? "Something didn't save",
         description: resolve(feedback.failureDescription, variables),

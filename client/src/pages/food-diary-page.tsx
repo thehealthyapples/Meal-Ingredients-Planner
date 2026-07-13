@@ -641,21 +641,26 @@ function DailySignalsPanel({
     setDirty(true);
   };
 
-  const saveMut = useMutation({
+  // PX1-W4b (fnd-px-success-silent-error-loud): "Failed to save" told the household
+  // nothing about what had become of the numbers they had just typed.
+  const saveMut = useTrackedMutation({
     mutationFn: (data: object) => apiRequest("PATCH", `/api/food-diary/${date}/metrics`, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/api/food-diary", date] });
       qc.invalidateQueries({ queryKey: ["/api/food-diary/metrics/trends"] });
       setDirty(false);
       onSaved();
-      toast({ title: "Saved" });
       // Sync weight to profile so HealthSnapshot updates instantly
       if (pendingWeightRef.current !== null) {
         onWeightSaved?.(pendingWeightRef.current);
         pendingWeightRef.current = null;
       }
     },
-    onError: () => toast({ title: "Failed to save", variant: "destructive" }),
+    feedback: {
+      success: "Saved",
+      failure: "Couldn't save today's entry",
+      failureDescription: "Your diary still shows what it had before. Please try again.",
+    },
   });
 
   const submit = () => {
@@ -1349,22 +1354,31 @@ export default function FoodDiaryPage() {
     enabled: activeTab === "diary",
   });
 
-  const copyFromPlannerMut = useMutation({
-    mutationFn: (slots: string[]) =>
-      apiRequest("POST", `/api/food-diary/${date}/copy-from-planner`, slots.length > 0 ? { slots } : {}),
-    onSuccess: async (res) => {
-      const data = await res.json();
+  // PX1-W4b (fnd-px-success-silent-error-loud). The five mutations below spoke to the
+  // household in two different voices: a hand-rolled success toast, and a hand-rolled
+  // failure toast that said "Failed to copy from planner" / "Failed to log item" —
+  // product language, no word on what it meant for their diary, and no way forward
+  // (EXP §14 asks for all three). They now speak through the canonical notification
+  // policy (`useTrackedMutation`), like every other household mutation since W0.
+  const copyFromPlannerMut = useTrackedMutation({
+    mutationFn: async (slots: string[]) => {
+      const res = await apiRequest("POST", `/api/food-diary/${date}/copy-from-planner`, slots.length > 0 ? { slots } : {});
+      return res.json() as Promise<{ copied: number; skipped: number }>;
+    },
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: diaryKey });
       setCopyModalOpen(false);
-      toast({
-        title: "Copied from Planner",
-        description: `${data.copied} meal${data.copied !== 1 ? "s" : ""} added${data.skipped > 0 ? `, ${data.skipped} already present` : ""}.`,
-      });
     },
-    onError: () => toast({ title: "Failed to copy from planner", variant: "destructive" }),
+    feedback: {
+      success: "Copied from Planner",
+      successDescription: (data) =>
+        `${data.copied} meal${data.copied !== 1 ? "s" : ""} added${data.skipped > 0 ? `, ${data.skipped} already present` : ""}.`,
+      failure: "Couldn't copy from your planner",
+      failureDescription: "Your diary is unchanged. Please try again.",
+    },
   });
 
-  const logEntryMut = useMutation({
+  const logEntryMut = useTrackedMutation({
     mutationFn: (data: { name: string; mealSlot: MealSlot }) =>
       apiRequest("POST", `/api/food-diary/${date}/entries`, data),
     onSuccess: () => {
@@ -1372,12 +1386,16 @@ export default function FoodDiaryPage() {
       qc.invalidateQueries({ queryKey: ["/api/user-items/recent"] });
       qc.invalidateQueries({ queryKey: ["/api/user-items/frequent"] });
       qc.invalidateQueries({ queryKey: ["/api/savings/aggregates"] });
-      toast({ title: "Logged", description: "Nice - that likely saved about £10 vs takeaway.", duration: 3000 });
     },
-    onError: () => toast({ title: "Failed to log item", variant: "destructive" }),
+    feedback: {
+      success: "Logged",
+      successDescription: "Nice - that likely saved about £10 vs takeaway.",
+      failure: "Couldn't log that",
+      failureDescription: "It hasn't been added to your diary. Please try again.",
+    },
   });
 
-  const logMealMut = useMutation({
+  const logMealMut = useTrackedMutation({
     mutationFn: async ({ meal, slot }: { meal: SavedMeal; slot: MealSlot }) => {
       const res = await apiRequest("POST", `/api/food-diary/${date}/log-meal`, {
         mealId: meal.id,
@@ -1385,25 +1403,30 @@ export default function FoodDiaryPage() {
       });
       return res.json() as Promise<{ logged: string[] }>;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: diaryKey });
       qc.invalidateQueries({ queryKey: ["/api/user-items/recent"] });
       qc.invalidateQueries({ queryKey: ["/api/user-items/frequent"] });
       qc.invalidateQueries({ queryKey: ["/api/savings/aggregates"] });
-      toast({
-        title: "Meal logged",
-        description: `${data.logged.length} item${data.logged.length !== 1 ? "s" : ""} added - likely saved about £10 vs takeaway.`,
-        duration: 3000,
-      });
     },
-    onError: () => toast({ title: "Failed to log meal", variant: "destructive" }),
+    feedback: {
+      success: "Meal logged",
+      successDescription: (data) =>
+        `${data.logged.length} item${data.logged.length !== 1 ? "s" : ""} added - likely saved about £10 vs takeaway.`,
+      failure: "Couldn't log that meal",
+      failureDescription: "It hasn't been added to your diary. Please try again.",
+    },
   });
 
-  const updateEntryMut = useMutation({
+  const updateEntryMut = useTrackedMutation({
     mutationFn: ({ id, name }: { id: number; name: string }) =>
       apiRequest("PATCH", `/api/food-diary/entries/${id}`, { name }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: diaryKey }); setEditingEntry(null); },
-    onError: () => toast({ title: "Failed to update entry", variant: "destructive" }),
+    feedback: {
+      // No success title: the renamed entry is on screen — the row is its own confirmation.
+      failure: "Couldn't rename that entry",
+      failureDescription: "Your diary still shows the name it had before. Please try again.",
+    },
   });
 
   // PX1-W0 (fnd-px-silent-mutations): deleting a diary entry failed behind "Failed to

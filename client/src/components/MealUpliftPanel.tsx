@@ -179,34 +179,17 @@ export function MealUpliftPanel({
   // Active (non-removed) applications
   const activeApplications = applications.filter((a) => a.status !== "removed");
 
-  // PROOF STEP 7 — log activeApplications whenever they change
-  React.useEffect(() => {
-    console.log("[BOOST-PROOF] STEP7 activeApplications changed:", {
-      effectiveMealId,
-      open,
-      applicationsCount: applications.length,
-      activeCount: activeApplications.length,
-      activeIngredients: activeApplications.map(a => a.ingredient),
-    });
-  }, [activeApplications.length, effectiveMealId, open]);
-
   // Accept a single suggestion.
   //
   // PX1-W0 (fnd-px-silent-mutations): this had no `onError` at all. A boost that
   // failed to apply left the household looking at an unchanged recipe with no word
-  // that anything had gone wrong — and the ONLY record of the failure was the
-  // `[BOOST-PROOF]` console logging below, which is observability for us, not an
-  // answer for them. (Retiring those logs is PX1-W4b.6 and is deliberately not done
-  // here: the user-facing failure surface they were standing in for is, and that is
-  // the part the household can feel.)
+  // that anything had gone wrong — and the ONLY record of the failure was a
+  // `[BOOST-PROOF]` console trace, which is observability for us, not an answer for
+  // them. W0 gave the flow the failure surface those logs were standing in for;
+  // PX1-W4b (fnd-px-debug-logs-shipped) now retires the eleven logs themselves, which
+  // shipped to production and traced a household's recipe to their browser console.
   const acceptMutation = useTrackedMutation({
     mutationFn: async (suggestion: FlatSuggestion) => {
-      // PROOF STEP 1 — request payload
-      console.log("[BOOST-PROOF] STEP1 request:", {
-        mealId: effectiveMealId,
-        plannerEntryId,
-        ingredient: suggestion.ingredient,
-      });
       const res = await apiRequest("POST", "/api/uplift/accept", {
         mealId: effectiveMealId,
         plannerEntryId,
@@ -233,13 +216,6 @@ export function MealUpliftPanel({
       }>;
     },
     onSuccess: (data, suggestion) => {
-      // PROOF STEP 2 — server response
-      console.log("[BOOST-PROOF] STEP2 response:", {
-        mealId: data.mealId,
-        forkedFromMealId: data.forkedFromMealId,
-        added: data.added,
-        effectiveMealIdBeforeUpdate: effectiveMealId,
-      });
 
       // Handle system meal fork — update effective mealId
       if (data.forkedFromMealId && data.mealId !== effectiveMealId) {
@@ -258,12 +234,10 @@ export function MealUpliftPanel({
       if (data.forkedFromMealId) {
         qc.setQueryData<Meal[]>(["/api/meals"], (prev) => {
           if (!prev) {
-            console.log("[BOOST-PROOF] STEP3 setQueryData: prev is null/undefined — fork NOT added");
             return prev;
           }
           const forkExists = prev.some((m) => m.id === data.mealId);
           if (forkExists) {
-            console.log("[BOOST-PROOF] STEP3 setQueryData: fork already exists, updating ingredients");
             return prev.map((m) => {
               if (m.id !== data.mealId) return m;
               const existing = m.ingredients ?? [];
@@ -278,10 +252,8 @@ export function MealUpliftPanel({
           }
           const original = prev.find((m) => m.id === data.forkedFromMealId!);
           if (!original) {
-            console.log("[BOOST-PROOF] STEP3 setQueryData: original meal NOT found in meals cache — fork NOT added. forkedFromMealId:", data.forkedFromMealId, "meals count:", prev.length, "meal ids:", prev.slice(0, 10).map(m => m.id));
             return prev;
           }
-          console.log("[BOOST-PROOF] STEP3 setQueryData: adding fork to meals cache. forkId:", data.mealId, "originalId:", data.forkedFromMealId, "added:", data.added);
           return [
             ...prev,
             {
@@ -292,18 +264,7 @@ export function MealUpliftPanel({
             },
           ];
         });
-      } else {
-        console.log("[BOOST-PROOF] STEP3 setQueryData: skipped (no fork — user meal update, async refetch will carry ingredient)");
       }
-
-      // PROOF STEP 3 — meals cache after setQueryData
-      const mealsAfter = qc.getQueryData<Meal[]>(["/api/meals"]);
-      const forkInCache = mealsAfter?.find(m => m.id === data.mealId);
-      console.log("[BOOST-PROOF] STEP3 meals cache AFTER setQueryData:", {
-        forkId: data.mealId,
-        forkFoundInCache: !!forkInCache,
-        forkIngredients: forkInCache?.ingredients ?? "NOT IN CACHE",
-      });
 
       // Immediately seed the applications cache from the POST response so
       // provenance renders without waiting for the GET round-trip. Only

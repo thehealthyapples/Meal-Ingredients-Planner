@@ -9,6 +9,7 @@ import { getCategoryEmoji } from "@/lib/ingredient-imagery";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HEALTH_DISCLAIMER } from "@/lib/health-benefits-model";
+import { semanticSurface, semanticText } from "@/components/intelligence/intelligence-tokens";
 
 /**
  * WS2 — Pantry Explore V2.
@@ -85,11 +86,22 @@ type View =
   | { type: "topic"; id: string };
 
 // ── Style constants ────────────────────────────────────────────────────────────────
+//
+// PX1-W4b (fnd-px-ad-hoc-semantic-tints): the tints below were raw palette classes —
+// this file's own private answer to "what colour is a notice", decided again here
+// after `intelligence-tokens` had already decided it. The SHAPE stays local (these
+// pills are bigger than a chip); only the TONE is now borrowed from the one owner,
+// keyed by meaning rather than by hue. Three of the surfaces below had drifted apart
+// even within this file — two of them forgot their dark border entirely.
 const PILL = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] border transition-colors";
-const PILL_EMERALD = `${PILL} bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-200/60 dark:border-emerald-800/40`;
+const PILL_POSITIVE = `${PILL} ${semanticSurface.positive} ${semanticText.positive}`;
 const PILL_MUTED = `${PILL} bg-muted/40 text-foreground/70 border-border/40 hover:text-foreground hover:border-border`;
-const PILL_AMBER = `${PILL} bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border-amber-200/60 dark:border-amber-800/40`;
-const PILL_BLUE = `${PILL} bg-blue-50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400 border-blue-200/60 dark:border-blue-800/40`;
+const PILL_NOTICE = `${PILL} ${semanticSurface.notice} ${semanticText.notice}`;
+const PILL_INFO = `${PILL} ${semanticSurface.info} ${semanticText.info}`;
+
+/** A tinted panel: one rounded surface, one tone, one owner. */
+const NOTICE_PANEL = `rounded-xl border p-4 ${semanticSurface.notice}`;
+const POSITIVE_PANEL = `rounded-xl border p-4 space-y-2 ${semanticSurface.positive}`;
 
 // ── Explore Topics editorial manifest ─────────────────────────────────────────────
 // Contents are always derived — only title / icon / query are editorial.
@@ -267,7 +279,7 @@ function HomeView({ onOpenFood, onPush }: { onOpenFood: (slug: string) => void; 
           {/* 3. This Season */}
           {hasSeasonalContent && (
             <HomeSection title={`This season · ${seasonalData!.label}`} icon="🌿">
-              <div className="rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/40 dark:border-emerald-800/30 p-4 space-y-2">
+              <div className={POSITIVE_PANEL}>
                 {seasonalHabitsBlock && seasonalHabitsBlock.cards.slice(0, 2).map((card, i) => (
                   <p key={i} className="text-sm text-foreground/80 leading-relaxed">{card.headline}</p>
                 ))}
@@ -304,7 +316,7 @@ function HomeView({ onOpenFood, onPush }: { onOpenFood: (slug: string) => void; 
           {/* 5. Your Household */}
           {homeStoryCard && (
             <HomeSection title="Your household">
-              <div className="rounded-xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/40 dark:border-amber-800/30 p-4">
+              <div className={NOTICE_PANEL}>
                 <p className="text-sm text-foreground/80 leading-relaxed">{homeStoryCard.headline}</p>
               </div>
             </HomeSection>
@@ -460,10 +472,10 @@ function BrowseView({
         <>
           <div className="px-5 py-3 border-b border-border/50">
             <div className="flex flex-wrap gap-1.5">
-              <button onClick={() => setActiveCategory(null)} className={activeCategory === null ? PILL_EMERALD : PILL_MUTED} data-testid="button-category-all">All foods</button>
+              <button onClick={() => setActiveCategory(null)} className={activeCategory === null ? PILL_POSITIVE : PILL_MUTED} data-testid="button-category-all">All foods</button>
               {categories.map(c => (
                 <button key={c.category} onClick={() => setActiveCategory(c.category)}
-                  className={activeCategory === c.category ? PILL_EMERALD : PILL_MUTED}
+                  className={activeCategory === c.category ? PILL_POSITIVE : PILL_MUTED}
                   data-testid={`button-category-${c.category}`}>
                   <span aria-hidden="true">{getCategoryEmoji(c.category)}</span>
                   {c.category}
@@ -577,7 +589,7 @@ function TopicView({ id, onOpenFood, onBack }: { id: string; onOpenFood: (slug: 
         favouriteSection && favouriteSection.cards.length > 0 ? (
           <div className="px-5 py-4 space-y-3">
             {favouriteSection.cards.map((card, i) => (
-              <div key={i} className="rounded-xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/40 p-4">
+              <div key={i} className={NOTICE_PANEL}>
                 <p className="text-sm text-foreground/80 leading-relaxed">{card.headline}</p>
               </div>
             ))}
@@ -665,7 +677,7 @@ function FoodDetailView({
       {/* 1. Hero chips (seasonal / positive-only) */}
       {seasonLabel && (
         <div className="flex flex-wrap gap-1.5 mb-3">
-          <span className={PILL_BLUE}>🌿 {seasonLabel}</span>
+          <span className={PILL_INFO}>🌿 {seasonLabel}</span>
         </div>
       )}
 
@@ -677,7 +689,7 @@ function FoodDetailView({
         <FoodSection title="Benefits">
           <div className="flex flex-wrap gap-1.5">
             {benefits.map(b => (
-              <button key={b.slug} className={PILL_EMERALD} onClick={() => onPush({ type: "benefit", slug: b.slug })} data-testid={`food-benefit-${b.slug}`}>
+              <button key={b.slug} className={PILL_POSITIVE} onClick={() => onPush({ type: "benefit", slug: b.slug })} data-testid={`food-benefit-${b.slug}`}>
                 <BenefitIcon icon={b.icon} className="h-3 w-3" />
                 {b.name}
               </button>
@@ -740,7 +752,7 @@ function FoodDetailView({
               <button
                 key={opt.id}
                 onClick={() => setOpenDiet(openDiet === opt.id ? null : opt.id)}
-                className={openDiet === opt.id ? PILL_AMBER : PILL_MUTED}
+                className={openDiet === opt.id ? PILL_NOTICE : PILL_MUTED}
                 data-testid={`button-alternatives-${opt.id}`}
               >
                 {opt.label}
@@ -779,7 +791,7 @@ function FoodDetailView({
         <FoodSection title="Your household">
           {storiesData.sections.slice(0, 2).map(section =>
             section.cards.slice(0, 3).map((card, i) => (
-              <div key={`${section.type}-${i}`} className="rounded-xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/40 p-4 mb-2">
+              <div key={`${section.type}-${i}`} className={`${NOTICE_PANEL} mb-2`}>
                 <p className="text-sm text-foreground/80 leading-relaxed">{card.headline}</p>
                 {card.facts.length > 0 && (
                   <ul className="mt-2 space-y-0.5">
@@ -800,7 +812,7 @@ function FoodDetailView({
       {/* 8. Seasonal (WS11) */}
       {seasonalData && seasonalData.blocks.length > 0 && (seasonalHabitsBlock || lookingAheadBlock) && (
         <FoodSection title={`${seasonalData.label}`}>
-          <div className="rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/40 p-4 space-y-2">
+          <div className={POSITIVE_PANEL}>
             {seasonalHabitsBlock && seasonalHabitsBlock.cards.slice(0, 1).map((card, i) => (
               <p key={i} className="text-sm text-foreground/80 leading-relaxed">{card.headline}</p>
             ))}
@@ -828,7 +840,7 @@ function NutrientDetailView({ slug, onBack, onHome, onPush }: DetailProps) {
         <FoodSection title="Linked health benefits">
           <div className="flex flex-wrap gap-1.5">
             {benefits.map(b => (
-              <button key={b.slug} className={PILL_EMERALD} onClick={() => onPush({ type: "benefit", slug: b.slug })} data-testid={`nutrient-benefit-${b.slug}`}>
+              <button key={b.slug} className={PILL_POSITIVE} onClick={() => onPush({ type: "benefit", slug: b.slug })} data-testid={`nutrient-benefit-${b.slug}`}>
                 <BenefitIcon icon={b.icon} className="h-3 w-3" />
                 {b.name}
               </button>

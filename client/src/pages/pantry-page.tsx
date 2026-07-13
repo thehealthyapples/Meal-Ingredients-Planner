@@ -36,6 +36,19 @@ import { PantryKnowledgeHub } from "@/components/PantryKnowledgeHub";
 import PantryIntelligencePanel from "@/components/PantryIntelligencePanel";
 import { AmbientIntelligence } from "@/components/intelligence";
 
+/**
+ * PX1-W4b (fnd-px-success-silent-error-loud).
+ *
+ * The server answers a duplicate add with `409 {"error":"already_exists"}`, and
+ * `queryClient.ts` turns that into `new Error("409: {\"error\":\"already_exists\"}")`
+ * — the whole body, in the MESSAGE, and nothing else on the object. Reading it here
+ * is the honest way to recognise the one outcome the household would not call a
+ * failure.
+ */
+function isAlreadyExists(err: unknown): boolean {
+  return /already_exists/.test(String((err as Error)?.message ?? ""));
+}
+
 interface PantryItem {
   id: number;
   userId: number;
@@ -287,12 +300,20 @@ function FoodPantrySection({
   // item" and nothing else — not whether the food had been saved, not what to do next
   // (EXP §14 asks for all three). The words now belong to the mutation.
   //
-  // "already_exists" is a DIFFERENT truth from a failed write, so it keeps its own
-  // words. It travels on a ref because the toast is raised by the hook, just after
-  // this onError has run — and TOAST_LIMIT is 1, so a toast raised here would be
-  // replaced by the hook's and the household would be told the wrong thing.
-  const addFailureKind = useRef<"already_exists" | "failed">("failed");
-
+  // PX1-W4b (fnd-px-success-silent-error-loud): "already in the pantry" is not a
+  // failure — it is the pantry agreeing with them — and it was being raised in red,
+  // as a destructive alarm, in the voice THA uses for lost data. It is now a
+  // `satisfied` outcome and speaks calmly. The ref this used to travel on is gone
+  // with it: it existed only because TOAST_LIMIT was 1, so a toast raised here would
+  // have been destroyed by the hook's (fnd-px-toast-limit-one, fixed in this change).
+  //
+  // The recogniser reads the error's MESSAGE, because that is the error contract THA
+  // actually has: `queryClient.ts` throws `new Error(`${status}: ${rawBody}`)` and
+  // attaches nothing else. The predecessor here tested `err.body?.error`, a property
+  // that has never existed on it — so the branch never fired, and a household adding
+  // a food they already had was told "It hasn't been saved" about a food that WAS
+  // saved. The alarm was the reported defect; the lie underneath it was found by
+  // driving the flow in a browser, which is the only reason it is fixed here.
   const addMutation = useTrackedMutation({
     mutationFn: (data: { ingredient: string; displayName: string; category: string }) =>
       apiRequest("POST", "/api/pantry", data),
@@ -300,20 +321,15 @@ function FoodPantrySection({
       qclient.invalidateQueries({ queryKey: ["/api/pantry"] });
       setQuery("");
     },
-    onError: (err: any) => {
-      const body = err?.body ?? err;
-      addFailureKind.current = body?.error === "already_exists" ? "already_exists" : "failed";
-    },
     feedback: {
       // No success title: the food appears in the pantry — the list is its own confirmation.
-      failure: () =>
-        addFailureKind.current === "already_exists"
-          ? "Already in pantry"
-          : "Couldn't add that to your pantry",
-      failureDescription: () =>
-        addFailureKind.current === "already_exists"
-          ? "This ingredient is already listed."
-          : "It hasn't been saved. Please try again.",
+      satisfied: (err) =>
+        isAlreadyExists(err) && {
+          title: "Already in pantry",
+          description: "This ingredient is already listed.",
+        },
+      failure: "Couldn't add that to your pantry",
+      failureDescription: "It hasn't been saved. Please try again.",
     },
   });
 
@@ -762,11 +778,8 @@ function HomePantrySection({
   // "Failed to add item", with no word on the household's data and no way forward. The
   // duplication itself is a later workstream; both copies get an honest failure path now.
   //
-  // "already_exists" is a different truth from a failed write, so it keeps its own words,
-  // carried on a ref: the hook raises the toast just after this onError, and TOAST_LIMIT
-  // is 1, so a toast raised here would be replaced by the hook's.
-  const addFailureKind = useRef<"already_exists" | "failed">("failed");
-
+  // PX1-W4b (fnd-px-success-silent-error-loud): as above — "already in the list" is a
+  // satisfied state, not a red alarm, and the TOAST_LIMIT ref it travelled on is gone.
   const addMutation = useTrackedMutation({
     mutationFn: ({ name, cat }: { name: string; cat: string }) =>
       apiRequest("POST", "/api/pantry", { ingredient: name, displayName: name, category: cat }),
@@ -774,20 +787,15 @@ function HomePantrySection({
       qclient.invalidateQueries({ queryKey: ["/api/pantry"] });
       setQuery("");
     },
-    onError: (err: any) => {
-      const body = err?.body ?? err;
-      addFailureKind.current = body?.error === "already_exists" ? "already_exists" : "failed";
-    },
     feedback: {
       // No success title: the item appears in the list — the list is its own confirmation.
-      failure: () =>
-        addFailureKind.current === "already_exists"
-          ? "Already in list"
-          : "Couldn't add that to your list",
-      failureDescription: () =>
-        addFailureKind.current === "already_exists"
-          ? "This item is already there."
-          : "It hasn't been saved. Please try again.",
+      satisfied: (err) =>
+        isAlreadyExists(err) && {
+          title: "Already in list",
+          description: "This item is already there.",
+        },
+      failure: "Couldn't add that to your list",
+      failureDescription: "It hasn't been saved. Please try again.",
     },
   });
 

@@ -50,23 +50,20 @@ export function useSoundEffects(options: UseSoundEffectsOptions = {}) {
     [enabled, initAudioContext]
   );
 
-  const playSound = useCallback(
-    (rating: number) => {
-      if (!enabled) return;
-
-      if (rating === 5) {
-        playTone(523.25, 150, "sine");
-        setTimeout(() => {
-          playTone(659.25, 150, "sine");
-        }, 160);
-      } else if (rating <= 2) {
-        playTone(220, 300, "triangle");
-      } else if (rating >= 3 && rating <= 4) {
-        playTone(800, 50, "square");
-      }
-    },
-    [enabled, playTone]
-  );
+  // PX1-W4b (fnd-px-sound-moralises-food). The scan used to be graded aloud: a
+  // rating of 5 played a rising major third, a rating of 3–4 a short blip, and a
+  // rating of 2 or below a 300ms 220Hz buzz — the sound of disapproval, played at
+  // the household over food they had just chosen. EXP §13: "Encouraging, never
+  // judgmental — no 'good/bad food'."
+  //
+  // The sound now confirms that the SCAN LANDED. It does not grade the food, so it
+  // takes no rating: the score is shown, calmly, and the household reads it. There
+  // is deliberately no parameter to pass a rating to, because a tone that varies by
+  // score is the defect, not a feature of it.
+  const playScanComplete = useCallback(() => {
+    if (!enabled) return;
+    playTone(523.25, 120, "sine");
+  }, [enabled, playTone]);
 
   useEffect(() => {
     return () => {
@@ -77,5 +74,5 @@ export function useSoundEffects(options: UseSoundEffectsOptions = {}) {
     };
   }, []);
 
-  return { playSound };
+  return { playScanComplete };
 }

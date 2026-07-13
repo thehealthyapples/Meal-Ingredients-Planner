@@ -498,7 +498,7 @@ export default function ProductsPage() {
   });
 
   const soundEnabled = intelligenceSettings?.soundEnabled !== false;
-  const { playSound } = useSoundEffects({ enabled: soundEnabled });
+  const { playScanComplete } = useSoundEffects({ enabled: soundEnabled });
 
   // PX1-W0 (fnd-px-silent-optimistic-rollback). The rollback below was correct and
   // silent: the household flipped a switch, watched it move, and watched it snap
@@ -740,8 +740,11 @@ export default function ProductsPage() {
 
         saveToHistoryMutation.mutate({ product: data.product, source: "barcode" });
 
+        // PX1-W4b (fnd-px-sound-moralises-food): the tone confirms the scan landed.
+        // It no longer varies with the score, so it is no longer conditional on one.
+        playScanComplete();
+
         if (data.product.upfAnalysis?.thaRating) {
-          playSound(data.product.upfAnalysis.thaRating);
           if (intelligenceSettings?.eliteTrackingEnabled !== false) {
             recordStreakMutation.mutate(data.product.upfAnalysis.thaRating);
           }
@@ -760,15 +763,13 @@ export default function ProductsPage() {
     } finally {
       setBarcodeLoading(false);
     }
-  }, [playSound, intelligenceSettings, toast]);
+  }, [playScanComplete, intelligenceSettings, toast]);
 
   const handleProductSelect = (product: ProductResult) => {
     setSelectedProduct(product);
     setShowDetailWFRecipe(false);
     saveToHistoryMutation.mutate({ product, source: "search" });
-    if (product.upfAnalysis?.thaRating && soundEnabled) {
-      playSound(product.upfAnalysis.thaRating);
-    }
+    playScanComplete();
     if (product.upfAnalysis?.thaRating && intelligenceSettings?.eliteTrackingEnabled !== false) {
       recordStreakMutation.mutate(product.upfAnalysis.thaRating);
     }
@@ -1189,7 +1190,7 @@ export default function ProductsPage() {
       <div className="space-y-6">
         <FirstVisitHint
           areaKey="analyser"
-          message="Search any packaged food to see its ingredients, additives, and health rating. Spot ultra-processed products and find cleaner alternatives before you buy."
+          message="Search any packaged food to see its ingredients, additives, and health rating. Spot ultra-processed products and find less processed alternatives before you buy."
         />
 
         {hasSearched && retailerFilter && filteredResults.length === 0 && searchResults.length > 0 && !isSearching && (
