@@ -84,6 +84,14 @@ const ADMIN_SECTIONS = [
     status: "active",
   },
   {
+    id: "canonical-publication-integrity",
+    title: "Canonical Publication Integrity",
+    description: "Platform-wide verification of canonical domains against their declared owners and publication paths",
+    icon: ShieldCheck,
+    href: "/admin/canonical-publication-integrity",
+    status: "active",
+  },
+  {
     id: "observations",
     title: "Observation Workbench",
     description: "Runtime telemetry across the Intelligence Platform — capability health, intent quality, context composition, companion outcomes and diagnostics.",

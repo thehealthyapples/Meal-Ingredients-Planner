@@ -47,6 +47,7 @@ const AdminDevelopmentWorldHouseholdPage = lazy(() => import("@/pages/admin-deve
 const AdminObservationWorkbenchPage = lazy(() => import("@/pages/admin-observation-workbench-page"));
 const AdminBehaviourWorkbenchPage = lazy(() => import("@/pages/admin-behaviour-workbench-page"));
 const AdminKnowledgeReviewPage = lazy(() => import("@/pages/admin-knowledge-review-page"));
+const AdminCanonicalPublicationIntegrityPage = lazy(() => import("@/pages/admin-canonical-publication-integrity-page"));
 const SharedPlanPage = lazy(() => import("@/pages/shared-plan-page"));
 const PantryPage = lazy(() => import("@/pages/pantry-page"));
 const PlantDiversityPage = lazy(() => import("@/pages/plant-diversity-page"));
@@ -229,6 +230,7 @@ const AdminDevelopmentWorldChrome = withAdminBanner(AdminDevelopmentWorldPage);
 const AdminDevelopmentWorldHouseholdChrome = withAdminBanner(AdminDevelopmentWorldHouseholdPage);
 const AdminObservationsChrome = withAdminBanner(AdminObservationWorkbenchPage);
 const AdminBehaviourChrome = withAdminBanner(AdminBehaviourWorkbenchPage);
+const AdminCanonicalPublicationIntegrityChrome = withAdminBanner(AdminCanonicalPublicationIntegrityPage);
 
 function Router() {
   useRoutingCorrectionTracker();
@@ -276,6 +278,7 @@ function Router() {
       <Route path="/admin/observations" component={() => <ProtectedRoute component={AdminObservationsChrome} />} />
       <Route path="/admin/behaviour" component={() => <ProtectedRoute component={AdminBehaviourChrome} />} />
       <Route path="/admin/knowledge-review" component={() => <ProtectedRoute component={AdminKnowledgeReviewPage} />} />
+      <Route path="/admin/canonical-publication-integrity" component={() => <ProtectedRoute component={AdminCanonicalPublicationIntegrityChrome} />} />
       <Route path="/pantry" component={() => <ProtectedRoute component={PantryPage} />} />
       <Route path="/plant-diversity" component={() => <ProtectedRoute component={PlantDiversityPage} />} />
       <Route path="/diary" component={() => <ProtectedRoute component={FoodDiaryPage} />} />

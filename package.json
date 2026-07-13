@@ -76,6 +76,7 @@
     "verify:branch-protection": "tsx scripts/ci/verify-branch-protection.ts",
     "db:push": "tsx scripts/db/schema-push-guard.ts",
     "verify:schema-coverage": "tsx scripts/ci/verify-schema-migration-coverage.ts",
+    "verify:publication": "tsx scripts/ci/verify-canonical-publication.ts",
     "seed:additives": "tsx server/seeds/run-additives-seed.ts",
     "seed:knowledge": "tsx server/seeds/seed-knowledge-registry.ts",
     "knowledge:signoff": "tsx server/seeds/signoff-knowledge-claims.ts",

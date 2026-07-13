@@ -8385,6 +8385,22 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     }
   });
 
+  // ── Canonical Publication Integrity (CPV1) — Platform verification ──────────
+  // Runs the continuous verification of the platform's canonical publication
+  // declarations against reality. The Admin → Publication Integrity page renders
+  // the report; the CLI script (npm run verify:publication) runs in CI/CD.
+
+  app.get("/api/admin/canonical-publication-integrity", assertAdmin, async (_req, res) => {
+    try {
+      const { runPublicationVerification } = await import("./verification/publication-verifier.js");
+      const report = await runPublicationVerification();
+      res.json(report);
+    } catch (err: any) {
+      console.error("[CanonicalPublicationIntegrity] verification error:", err);
+      res.status(500).json({ message: "Failed to run publication verification" });
+    }
+  });
+
   // ── Benchmark Household World (INTQ6) — DEV-only admin operator API ───────────
   // Wires the existing server/benchmark/ module (fixtures + deterministic seeder)
   // to the Admin → Benchmark Households page. These routes own no benchmark logic:
