@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Switch, Route, Redirect, useLocation } from "wouter";
 import { MotionConfig } from "framer-motion";
 import { queryClient } from "./lib/queryClient";
@@ -18,41 +18,57 @@ import OrchardBackdrop from "@/components/layout/orchard-backdrop";
 import OrchardShell from "@/components/layout/orchard-shell";
 import TrialBanner from "@/components/TrialBanner";
 import SiteBanner from "@/components/SiteBanner";
-import NotFound from "@/pages/not-found";
-import AuthPage from "@/pages/auth-page";
-import OnboardingPage from "@/pages/onboarding-page";
-import MealsPage from "@/pages/meals-page";
-import ShoppingListPage from "@/pages/shopping-list-page";
-import ImportRecipePage from "@/pages/import-recipe-page";
-import ProductsPage from "@/pages/products-page";
-import SupermarketsPage from "@/pages/supermarkets-page";
-import MealDetailPage from "@/pages/meal-detail-page";
-import WeeklyPlannerPage from "@/pages/weekly-planner-page";
 import { PlannerProvider } from "@/contexts/PlannerContext";
-import ProfilePage from "@/pages/profile-page";
-import AdminPage from "@/pages/admin-page";
-import AdminUsersPage from "@/pages/admin-users-page";
-import AdminIngredientProductsPage from "@/pages/admin-ingredient-products-page";
-import AdminRecipeSourcesPage from "@/pages/admin-recipe-sources-page";
-import AdminCompanionIntelligencePage from "@/pages/admin-companion-intelligence-page";
-import AdminIntelligencePage from "@/pages/admin-intelligence-page";
-import AdminBenchmarkHouseholdsPage from "@/pages/admin-benchmark-households-page";
-import AdminDevelopmentWorldPage from "@/pages/admin-development-world-page";
-import AdminDevelopmentWorldHouseholdPage from "@/pages/admin-development-world-household-page";
-import AdminObservationWorkbenchPage from "@/pages/admin-observation-workbench-page";
-import AdminBehaviourWorkbenchPage from "@/pages/admin-behaviour-workbench-page";
-import AdminKnowledgeReviewPage from "@/pages/admin-knowledge-review-page";
-import SharedPlanPage from "@/pages/shared-plan-page";
-import PantryPage from "@/pages/pantry-page";
-import PlantDiversityPage from "@/pages/plant-diversity-page";
-import FoodDiaryPage from "@/pages/food-diary-page";
-import PartnersPage from "@/pages/partners-page";
-import QuickMealPage from "@/pages/quick-meal-page";
-import HomePage from "@/pages/home-page";
-import HomeExperiencePage from "@/pages/home-experience-page";
-import DashboardPage from "@/pages/dashboard";
-import FoodDetailPage from "@/pages/food-detail-page";
-import ShoppingWorkspacePage from "@/pages/shopping-workspace-page";
+
+// PX1-W3 (fnd-px-no-route-splitting): every page is a lazy chunk. Before this,
+// 34 eager imports produced a single ~3.8 MB JS file — every household downloaded
+// the entire admin world (recharts, @zxing, the workbenches) to see tonight's
+// dinner. Each route now loads on first visit; the shell stays eager.
+const NotFound = lazy(() => import("@/pages/not-found"));
+const AuthPage = lazy(() => import("@/pages/auth-page"));
+const OnboardingPage = lazy(() => import("@/pages/onboarding-page"));
+const MealsPage = lazy(() => import("@/pages/meals-page"));
+const ShoppingListPage = lazy(() => import("@/pages/shopping-list-page"));
+const ImportRecipePage = lazy(() => import("@/pages/import-recipe-page"));
+const ProductsPage = lazy(() => import("@/pages/products-page"));
+const SupermarketsPage = lazy(() => import("@/pages/supermarkets-page"));
+const MealDetailPage = lazy(() => import("@/pages/meal-detail-page"));
+const WeeklyPlannerPage = lazy(() => import("@/pages/weekly-planner-page"));
+const ProfilePage = lazy(() => import("@/pages/profile-page"));
+const AdminPage = lazy(() => import("@/pages/admin-page"));
+const AdminUsersPage = lazy(() => import("@/pages/admin-users-page"));
+const AdminIngredientProductsPage = lazy(() => import("@/pages/admin-ingredient-products-page"));
+const AdminRecipeSourcesPage = lazy(() => import("@/pages/admin-recipe-sources-page"));
+const AdminCompanionIntelligencePage = lazy(() => import("@/pages/admin-companion-intelligence-page"));
+const AdminIntelligencePage = lazy(() => import("@/pages/admin-intelligence-page"));
+const AdminBenchmarkHouseholdsPage = lazy(() => import("@/pages/admin-benchmark-households-page"));
+const AdminDevelopmentWorldPage = lazy(() => import("@/pages/admin-development-world-page"));
+const AdminDevelopmentWorldHouseholdPage = lazy(() => import("@/pages/admin-development-world-household-page"));
+const AdminObservationWorkbenchPage = lazy(() => import("@/pages/admin-observation-workbench-page"));
+const AdminBehaviourWorkbenchPage = lazy(() => import("@/pages/admin-behaviour-workbench-page"));
+const AdminKnowledgeReviewPage = lazy(() => import("@/pages/admin-knowledge-review-page"));
+const SharedPlanPage = lazy(() => import("@/pages/shared-plan-page"));
+const PantryPage = lazy(() => import("@/pages/pantry-page"));
+const PlantDiversityPage = lazy(() => import("@/pages/plant-diversity-page"));
+const FoodDiaryPage = lazy(() => import("@/pages/food-diary-page"));
+const PartnersPage = lazy(() => import("@/pages/partners-page"));
+const QuickMealPage = lazy(() => import("@/pages/quick-meal-page"));
+const HomePage = lazy(() => import("@/pages/home-page"));
+const HomeExperiencePage = lazy(() => import("@/pages/home-experience-page"));
+const DashboardPage = lazy(() => import("@/pages/dashboard"));
+const FoodDetailPage = lazy(() => import("@/pages/food-detail-page"));
+const ShoppingWorkspacePage = lazy(() => import("@/pages/shopping-workspace-page"));
+
+// The chunk-loading fallback reuses the exact spinner treatment the shell already
+// shows while the user session loads — no new loading vocabulary (that
+// convergence is W4.8's).
+function RouteFallback() {
+  return (
+    <div className="flex h-full min-h-[50vh] items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-primary/50" />
+    </div>
+  );
+}
 
 let _contentRenderMeasured = false;
 
@@ -162,7 +178,12 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
                     // surface is never a surface the household cannot leave. Keyed on
                     // the location so walking away from a broken page unbreaks it.
                     <ErrorBoundary resetKey={location}>
-                      <Component />
+                      {/* PX1-W3: catches the routed page's lazy chunk inside the
+                          shell, so the header and nav stay painted while a page
+                          loads — navigation never blanks the whole app. */}
+                      <Suspense fallback={<RouteFallback />}>
+                        <Component />
+                      </Suspense>
                     </ErrorBoundary>
                   )}
                 </main>
@@ -213,6 +234,16 @@ function Router() {
   useRoutingCorrectionTracker();
 
   return (
+    // PX1-W3: the outer boundary serves the routes that render outside the
+    // ProtectedRoute shell (auth, onboarding, shared plans, logged-out home).
+    // Same spinner the app has always shown while the session loads.
+    <Suspense
+      fallback={
+        <div className="flex h-screen items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary/50" />
+        </div>
+      }
+    >
     <Switch>
       <Route path="/auth" component={() => <OrchardShell><AuthPage /></OrchardShell>} />
       <Route path="/onboarding" component={() => <OrchardShell><OnboardingPage /></OrchardShell>} />
@@ -258,6 +289,7 @@ function Router() {
 
       <Route component={NotFound} />
     </Switch>
+    </Suspense>
   );
 }
 

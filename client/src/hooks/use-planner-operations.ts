@@ -6,6 +6,7 @@ import { api } from "@shared/routes";
 import type { FullWeek, FullDay } from "@/lib/planner-types";
 import type { PlannerEntry } from "@shared/schema";
 import type { EntryTarget } from "@/components/PlannerMealPickerPanel";
+import { invalidateMealLibrary } from "@/hooks/use-meals";
 
 export interface FreezerDeduction {
   mealId: number;
@@ -411,7 +412,7 @@ export function usePlannerOperations({
       }
 
       qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
-      qc.invalidateQueries({ queryKey: ["/api/meals"] });
+      invalidateMealLibrary(qc);
       toast({ title: `"${trimmedName}" added`, description: "Appears as unresolved — link a recipe when ready." });
     } catch (err: unknown) {
       // PX1-W0 (fnd-px-technical-errors-to-household): err.message here is whatever the

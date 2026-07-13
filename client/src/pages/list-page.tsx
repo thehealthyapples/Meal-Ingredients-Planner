@@ -414,7 +414,7 @@ export default function ListPage() {
       <div
         className="w-full flex flex-col relative overflow-hidden flex-1 sm:flex-none min-h-0"
         style={{
-          backgroundImage: "url('/orchard-bg.png')",
+          backgroundImage: "url('/orchard-bg.webp')",
           backgroundSize: "cover",
           backgroundPosition: "center",
           borderRadius: 20,

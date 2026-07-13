@@ -7,6 +7,7 @@ import type { InputProduct } from "@/lib/analyser-view-model";
 import { buildAnalyserViewModel } from "@/lib/analyser-view-model";
 import { DraggableSearchResultRow } from "@/components/PlannerDragDrop";
 import { useToast } from "@/hooks/use-toast";
+import { invalidateMealLibrary } from "@/hooks/use-meals";
 
 // ── Inline product analysis card ──────────────────────────────────────────────
 
@@ -130,7 +131,7 @@ export function PlannerAnalyserContent() {
       });
       if (!res.ok) throw new Error("Save failed");
       const meal = await res.json();
-      qc.invalidateQueries({ queryKey: ["/api/meals"] });
+      invalidateMealLibrary(qc);
       setSavedProducts(prev => new Map(prev).set(key, meal.id));
       toast({ title: "Saved to My Cookbook", description: product.product_name });
     } catch {

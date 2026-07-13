@@ -6,7 +6,8 @@
 //
 // This page owns NO data. Every value is read from an existing canonical owner
 // through the shared react-query caches:
-//   • Today's meals  → /api/planner/full + /api/meals (Planner state)
+//   • Today's meals  → /api/planner/full + /api/meals/summary (Planner state;
+//                       PX1-W3 — names and thumbnails only, never the full rows)
 //   • Shopping        → /api/shopping-list      (Shopping state)
 //   • Plant diversity → /api/home/intelligence  (weeklyProgress.plantCount)
 //   • Reminders       → useCompanionNotices (the Notice Engine, voiced by the Behaviour
@@ -27,10 +28,10 @@
 import { useMemo } from "react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import type { Meal } from "@shared/schema";
 import type { FullWeek } from "@/lib/planner-types";
 import { api } from "@shared/routes";
 import { useUser } from "@/hooks/use-user";
+import { useMealsSummary } from "@/hooks/use-meals-summary";
 import { useCompanionNotices } from "@/hooks/use-companion-notices";
 import { WorkspaceHeader } from "@/components/workspace-header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -103,10 +104,12 @@ export default function HomeExperiencePage() {
     queryKey: ["/api/planner/full"],
     enabled: !!user,
   });
-  const mealsQuery = useQuery<Meal[]>({
-    queryKey: ["/api/meals"],
-    enabled: !!user,
-  });
+  // PX1-W3 (fnd-px-home-fetches-whole-cookbook): Home used to fetch the full
+  // /api/meals rows — ingredients and instructions included, ~1 MB for a real
+  // household — to read three meal names and thumbnails. The canonical summary
+  // hook shares the Dashboard's cache entry, so this is the SAME data the
+  // Dashboard renders, fetched once between them.
+  const mealsQuery = useMealsSummary();
   const shoppingQuery = useQuery<any[]>({
     queryKey: [api.shoppingList.list.path],
     enabled: !!user,
@@ -118,7 +121,7 @@ export default function HomeExperiencePage() {
   });
 
   const fullPlanner = plannerQuery.data ?? [];
-  const mealsList = mealsQuery.data ?? [];
+  const mealsList = mealsQuery.meals ?? [];
   const shoppingItems = shoppingQuery.data ?? [];
   const homeIntel = homeIntelQuery.data;
 

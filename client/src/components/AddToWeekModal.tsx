@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { invalidateMealLibrary } from "@/hooks/use-meals";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -136,7 +137,7 @@ export function AddToWeekModal({ open, onClose, product }: Props) {
       });
       const meal = await mealRes.json();
       const mealId: number = meal.id;
-      qc.invalidateQueries({ queryKey: ["/api/meals"] });
+      invalidateMealLibrary(qc);
 
       if (pathway === "daily") {
         // Step 2a: add to planner day slots

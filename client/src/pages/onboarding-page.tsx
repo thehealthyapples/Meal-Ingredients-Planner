@@ -428,7 +428,7 @@ export default function OnboardingPage() {
           <Card
             className="shadow-none border-border/60 overflow-hidden"
             style={{
-              backgroundImage: "url('/orchard-bg.png')",
+              backgroundImage: "url('/orchard-bg.webp')",
               backgroundSize: "cover",
               backgroundPosition: "center",
               backgroundAttachment: "fixed",

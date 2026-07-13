@@ -12,6 +12,7 @@ import { IngredientRow, parseIngredientString, buildIngredientString } from "@/c
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient as qc } from "@/lib/queryClient";
 import { api } from "@shared/routes";
+import { invalidateMealLibrary } from "@/hooks/use-meals";
 
 type ScanResult =
   | { type: "recipe"; title: string; servings: number; ingredients: string[]; steps: string[]; confidence: "high" | "low" }
@@ -67,7 +68,7 @@ function RecipeForm({ parsed, rawText, onClose }: {
     },
     onSuccess: () => {
       toast({ title: "Recipe saved", description: title });
-      qc.invalidateQueries({ queryKey: [api.meals.list.path] });
+      invalidateMealLibrary(qc);
       onClose();
     },
     onError: (err: any) => {
@@ -287,7 +288,7 @@ function MealPlanForm({ parsed, onClose }: {
       }
 
       qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
-      qc.invalidateQueries({ queryKey: [api.meals.list.path] });
+      invalidateMealLibrary(qc);
       toast({ title: `Planner updated for ${WEEK_LABELS[weekIdx]}`, description: `${imported} meal${imported !== 1 ? "s" : ""} added.` });
       onClose();
     } catch (err) {

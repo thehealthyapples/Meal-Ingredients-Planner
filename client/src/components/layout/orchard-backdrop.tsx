@@ -6,7 +6,7 @@ export default function OrchardBackdrop() {
       style={{ zIndex: 0 }}
     >
       <img
-        src="/orchard-bg.png"
+        src="/orchard-bg.webp"
         alt=""
         style={{
           position: "absolute",

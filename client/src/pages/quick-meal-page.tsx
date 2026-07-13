@@ -14,6 +14,7 @@ import { api } from "@shared/routes";
 import type { Meal } from "@shared/schema";
 import { MealCompletionDialog, type CompletionMeal } from "@/components/meal-completion-dialog";
 import { ProductPickerSheet, type PickerProduct } from "@/components/product-picker-sheet";
+import { invalidateMealLibrary } from "@/hooks/use-meals";
 
 interface WebSearchRecipe {
   id: string;
@@ -180,7 +181,7 @@ export default function QuickMealPage() {
         dietTypes: [],
       });
       const saved: Meal = await res.json();
-      queryClient.invalidateQueries({ queryKey: [api.meals.list.path] });
+      invalidateMealLibrary(queryClient);
       updatePartSource(partId, {
         type: "web",
         mealId: saved.id,
@@ -346,7 +347,7 @@ export default function QuickMealPage() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.meals.list.path] });
+      invalidateMealLibrary(queryClient);
       toast({ title: "Added to basket", description: `${parts.length} item${parts.length === 1 ? "" : "s"}` });
       navigate("/shopping-workspace");
     },
@@ -358,7 +359,7 @@ export default function QuickMealPage() {
   const saveToMealsMutation = useMutation({
     mutationFn: async () => saveMealMutation.mutateAsync(),
     onSuccess: (meal: Meal) => {
-      queryClient.invalidateQueries({ queryKey: [api.meals.list.path] });
+      invalidateMealLibrary(queryClient);
       toast({ title: editId ? "Meal updated" : "Meal saved", description: meal.name });
       setCompletionMeal({
         id:       meal.id,

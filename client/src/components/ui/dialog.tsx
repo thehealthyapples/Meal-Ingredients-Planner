@@ -45,7 +45,7 @@ const DialogContent = React.forwardRef<
         className
       )}
       style={{
-        backgroundImage: "url('/orchard-bg.png')",
+        backgroundImage: "url('/orchard-bg.webp')",
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundAttachment: "fixed",

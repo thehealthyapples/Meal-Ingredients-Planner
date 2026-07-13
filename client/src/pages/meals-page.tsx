@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo, useRef, useCallback, Fragment } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, useDeferredValue, Fragment } from "react";
 import thaAppleLogo from "@/assets/icons/tha-apple.png";
-import { useMeals } from "@/hooks/use-meals";
+import { useMeals, invalidateMealLibrary } from "@/hooks/use-meals";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -2264,7 +2264,7 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
     try {
       const res = await apiRequest('POST', buildUrl(api.meals.copy.path, { id: mealId }));
       const newMeal = await res.json() as { id: number; name: string };
-      queryClient.invalidateQueries({ queryKey: [api.meals.list.path] });
+      invalidateMealLibrary(queryClient);
       navigate(`/meals/${newMeal.id}`);
     } catch {
       toast({ title: "Failed to create editable copy", variant: "destructive" });
@@ -2505,6 +2505,12 @@ export default function MealsPage() {
     const params = new URLSearchParams(searchStr);
     return params.get("q") || "";
   });
+  // PX1-W3 (fnd-px-cookbook-search-jank / -refetch): the input renders from
+  // searchTerm immediately; the expensive work — filtering and fuzzy-scoring
+  // 884+ meals, and the visible-set nutrition fetch keyed off the result — runs
+  // against this deferred value, so typing never waits for it and intermediate
+  // keystrokes never reach the network.
+  const deferredSearchTerm = useDeferredValue(searchTerm);
   const [searchSource, setSearchSource] = useState<"all" | "recipes" | "products">("all");
   const [viewMode, setViewMode] = useViewPreference();
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -2589,7 +2595,7 @@ export default function MealsPage() {
       return res.json() as Promise<Meal>;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.meals.list.path] });
+      invalidateMealLibrary(queryClient);
     },
     onError: () => {
       toast({ title: "Could not update cookbook visibility", variant: "destructive" });
@@ -2688,7 +2694,9 @@ export default function MealsPage() {
 
   useEffect(() => {
     setVisibleCount(48);
-  }, [searchTerm, categoryFilter, activeGroups, activeAudiences, mealsDietPattern, mealsDietRestrictions, mealsUpfFilter]);
+    // PX1-W3: keyed on the deferred term so the pagination reset lands with the
+    // filtered results it belongs to, not ahead of them.
+  }, [deferredSearchTerm, categoryFilter, activeGroups, activeAudiences, mealsDietPattern, mealsDietRestrictions, mealsUpfFilter]);
 
   // Called when a recipe is created while in planner import context
   const handlePlannerImportMealCreated = useCallback(async (meal: Meal, hasSourceUrl: boolean) => {
@@ -2739,7 +2747,7 @@ export default function MealsPage() {
           drinkType: null,
         });
         queryClient.invalidateQueries({ queryKey: ["/api/planner/full"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/meals"] });
+        invalidateMealLibrary(queryClient);
       }
       toast({
         title: "Linked to planner",
@@ -2819,7 +2827,7 @@ export default function MealsPage() {
       return res.json();
     },
     onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: [api.meals.list.path] });
+      invalidateMealLibrary(queryClient);
       const total = data.results?.reduce((sum: number, r: any) => sum + r.imported, 0) || 0;
       toast({ title: "Import complete", description: `Imported ${total} meals from OpenFoodFacts.` });
     },
@@ -3227,9 +3235,21 @@ export default function MealsPage() {
     [meals],
   );
 
+  // PX1-W3 (fnd-px-cookbook-search-jank): the lowercased "name + ingredients"
+  // string used by the diet filter was rebuilt for every meal on every
+  // keystroke — a multi-hundred-char allocation × 884 meals. Built once per
+  // library load instead (the scoreCache below is the same pattern).
+  const mealSearchText = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const meal of meals ?? []) {
+      map.set(meal.id, [meal.name, ...(meal.ingredients ?? [])].join(' ').toLowerCase());
+    }
+    return map;
+  }, [meals]);
+
   const filteredMeals = useMemo(() => {
-    const activeSearch = searchTerm.trim().length >= 2;
-    const q = searchTerm.trim();
+    const activeSearch = deferredSearchTerm.trim().length >= 2;
+    const q = deferredSearchTerm.trim();
 
     const filtered = meals?.filter(meal => {
       // Hide planner-import placeholders from cookbook view
@@ -3267,7 +3287,7 @@ export default function MealsPage() {
       }
       const effectivePattern = mealsDietPattern.trim() || null;
       const ctx = { dietPattern: effectivePattern, dietRestrictions: mealsDietRestrictions };
-      const mealText = [meal.name, ...(meal.ingredients ?? [])].join(' ').toLowerCase();
+      const mealText = mealSearchText.get(meal.id) ?? "";
       const matchesDiet = !shouldExcludeRecipe(mealText, ctx);
       const matchesUpf = !mealsUpfFilter || meal.isReadyMeal !== true;
       return matchesSearch && matchesCategory && matchesGroup && matchesAudience && matchesDiet && matchesUpf;
@@ -3310,7 +3330,7 @@ export default function MealsPage() {
       }
       return a.name.localeCompare(b.name);
     });
-  }, [meals, searchTerm, categoryFilter, allCategories, activeGroups, activeAudiences, mealsDietPattern, mealsDietRestrictions, mealsUpfFilter, searchSource, user]);
+  }, [meals, mealSearchText, deferredSearchTerm, categoryFilter, allCategories, activeGroups, activeAudiences, mealsDietPattern, mealsDietRestrictions, mealsUpfFilter, searchSource, user]);
 
   const visibleMeals = useMemo(() => filteredMeals?.slice(0, visibleCount), [filteredMeals, visibleCount]);
 
@@ -3331,6 +3351,11 @@ export default function MealsPage() {
 
   const allMealIds = useMemo(() => (visibleMeals || []).map(m => m.id), [visibleMeals]);
   const { data: bulkNutritionData = [] } = useQuery<Nutrition[]>({
+    // PX1-W3 (fnd-px-cookbook-search-refetch): this key derives from the search
+    // term, so it used to mint a new cache entry and POST per keystroke. The
+    // pipeline above now runs on the deferred term (intermediate keystrokes
+    // never reach here), and placeholderData holds the previous nutrition on
+    // screen while the new visible set loads instead of blanking every badge.
     queryKey: ["/api/nutrition/bulk", allMealIds],
     queryFn: async () => {
       if (allMealIds.length === 0) return [];
@@ -3339,6 +3364,7 @@ export default function MealsPage() {
     },
     enabled: allMealIds.length > 0,
     staleTime: 5 * 60 * 1000,
+    placeholderData: (prev) => prev,
   });
   const nutritionMap = useMemo(() => {
     const map = new Map<number, Nutrition>();

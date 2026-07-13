@@ -16,6 +16,7 @@ import { DraggableSearchResultRow } from "@/components/PlannerDragDrop";
 // PX1-W2 (fnd-px-breakpoint-six-truths): the local useIsMobile copy is retired;
 // breakpoint truth has one owner.
 import { useIsMobile } from "@/hooks/use-adaptive-density";
+import { invalidateMealLibrary } from "@/hooks/use-meals";
 
 export interface EntryTarget {
   dayId: number;
@@ -250,7 +251,7 @@ export function PlannerMealPickerPanel({
       });
       if (!res.ok) throw new Error("Failed to save recipe");
       const meal = await res.json();
-      qc.invalidateQueries({ queryKey: ["/api/meals"] });
+      invalidateMealLibrary(qc);
       // Phase 4: track ownership transition — row becomes draggable after this
       setImportedWebRecipes(prev => new Map(prev).set(recipe.id, meal.id));
       toast({ title: "Saved to My Cookbook", description: recipe.name });

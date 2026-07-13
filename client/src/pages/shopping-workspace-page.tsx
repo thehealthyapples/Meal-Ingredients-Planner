@@ -2318,7 +2318,7 @@ export default function ShoppingWorkspacePage() {
             <div
               className="w-full flex flex-col relative overflow-hidden"
               style={{
-                backgroundImage: "url('/orchard-bg.png')",
+                backgroundImage: "url('/orchard-bg.webp')",
                 backgroundSize: "cover",
                 backgroundPosition: "center",
                 borderRadius: 20,

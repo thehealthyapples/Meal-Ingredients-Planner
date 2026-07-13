@@ -116,6 +116,7 @@ interface PlannerAssistantPanelProps {
 // PX1-W2 (fnd-px-breakpoint-six-truths): the local useIsMobile copy is retired;
 // breakpoint truth has one owner.
 import { useIsMobile } from "@/hooks/use-adaptive-density";
+import { invalidateMealLibrary } from "@/hooks/use-meals";
 
 interface ScanContentProps {
   onScanFile: (file: File) => void;
@@ -484,7 +485,7 @@ function ResolveSearchContent({ mealName, meals, onSelectRecipe, onBack, isResol
       });
       if (!res.ok) throw new Error("Failed to save recipe");
       const meal = await res.json();
-      qc.invalidateQueries({ queryKey: ["/api/meals"] });
+      invalidateMealLibrary(qc);
       onSelectRecipe(meal.id);
     } catch {
       toast({ title: "Could not import web recipe", variant: "destructive" });

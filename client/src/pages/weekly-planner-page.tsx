@@ -76,6 +76,7 @@ import { sortableKeyboardCoordinates, SortableContext, verticalListSortingStrate
 import { DroppablePlannerCell, SortablePlannerEntry, MobileSortableMealEntry, MobileDayDropTarget, DroppableProvisioning, type DragItemData, type DropZoneData } from "@/components/PlannerDragDrop";
 import { PlannerMealCardContent } from "@/components/PlannerMealCard";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
+import { invalidateMealLibrary } from "@/hooks/use-meals";
 
 interface MatrixRow {
   id: string;
@@ -804,7 +805,7 @@ export default function WeeklyPlannerPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/api/meals", mealDetail?.meal.id, "uplift-applications"] });
-      qc.invalidateQueries({ queryKey: ["/api/meals"] });
+      invalidateMealLibrary(qc);
       qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
       for (const key of SHOPPING_LIST_KEYS) {
         qc.invalidateQueries({ queryKey: key });
@@ -1548,7 +1549,7 @@ export default function WeeklyPlannerPage() {
         barcode: product.barcode ?? undefined,
       });
       const meal = await mealRes.json();
-      qc.invalidateQueries({ queryKey: ["/api/meals"] });
+      invalidateMealLibrary(qc);
       selectMeal(meal.id);
     } catch {
       toast({ title: "Could not add product to planner", variant: "destructive" });
@@ -2841,7 +2842,7 @@ export default function WeeklyPlannerPage() {
         basketMealsCount={basketMealIds.length}
         buildInitialTitle={resolveSession?.mealName ?? undefined}
         onBuildCreated={(mealId) => {
-          qc.invalidateQueries({ queryKey: ["/api/meals"] });
+          invalidateMealLibrary(qc);
           if (resolveSession) {
             const ctx = resolveSession;
             setResolveSession(null);
@@ -3708,7 +3709,7 @@ export default function WeeklyPlannerPage() {
                             }));
                           });
                           qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
-                          qc.invalidateQueries({ queryKey: ["/api/meals"] });
+                          invalidateMealLibrary(qc);
                         }}
                         onUpliftAccepted={handleUpliftAccepted}
                         onUpliftRemoved={handleUpliftRemoved}
@@ -4172,7 +4173,7 @@ export default function WeeklyPlannerPage() {
         scanError={plannerRecipeScanError}
         onSaved={() => setPlannerRecipeScanData(null)}
         onMealCreated={(mealId, mealName) => {
-          qc.invalidateQueries({ queryKey: ["/api/meals"] });
+          invalidateMealLibrary(qc);
           const ctx = resolveSession;
           if (ctx) {
             replacePlaceholderMealMutation.mutate({ entryId: ctx.entryId, mealId }, {

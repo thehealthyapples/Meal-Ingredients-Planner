@@ -12,6 +12,7 @@ import { X, Plus, Loader2, Search, ExternalLink, AlertTriangle } from "lucide-re
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Meal } from "@shared/schema";
+import { invalidateMealLibrary } from "@/hooks/use-meals";
 
 interface ProductHistoryItem {
   id: number;
@@ -119,7 +120,7 @@ export function CreateMealContent({ initialTitle, prefill, onSaved, onCancel }: 
       qc.setQueryData<Meal[]>(["/api/meals"], (prev) =>
         prev ? [...prev, meal] : [meal]
       );
-      qc.refetchQueries({ queryKey: ["/api/meals"] });
+      invalidateMealLibrary(qc);
       toast({ title: "Meal created", description: meal.name });
       onSaved(meal.id);
     } catch {

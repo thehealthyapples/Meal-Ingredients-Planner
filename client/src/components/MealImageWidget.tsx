@@ -329,9 +329,16 @@ export function MealImageWidget({
 
       {imageUrl ? (
         <>
+          {/* PX1-W3 (fnd-px-images-not-lazy): 48 cards render at once and every
+              photo loaded eagerly at full resolution. The container sizes the
+              image (w-full h-full), so lazy/async cannot shift layout. srcset
+              needs server-side resizing that does not exist yet — recorded in
+              the W3 doc, not silently skipped. */}
           <img
             src={imageUrl}
             alt={mealName}
+            loading="lazy"
+            decoding="async"
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
             data-testid={`img-meal-${mealId}`}
             onError={(e) => {

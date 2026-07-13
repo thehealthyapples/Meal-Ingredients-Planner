@@ -1,8 +1,27 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { MEALS_SUMMARY_KEY } from "@/hooks/use-meals-summary";
 import type { InsertMeal, Meal } from "@shared/schema";
+
+/**
+ * PX1-W3 (fnd-px-meals-invalidation-storm) — the ONE way to say "the meal
+ * library changed".
+ *
+ * The library lives in two caches: the full rows (`/api/meals` — ingredients
+ * and instructions included, needed by the Cookbook's search and the Planner)
+ * and the slim summary (`/api/meals/summary` — what Home and the Dashboard
+ * render). Before this owner existed, 30+ call sites invalidated the full key
+ * only, so the summary caches were never told the library had changed — and
+ * every surface reading them showed stale meal names until a hard reload.
+ *
+ * Call sites must not invalidate either key directly; they call this.
+ */
+export function invalidateMealLibrary(qc: QueryClient) {
+  qc.invalidateQueries({ queryKey: [api.meals.list.path] });
+  qc.invalidateQueries({ queryKey: [MEALS_SUMMARY_KEY] });
+}
 
 export function useMeals() {
   const { toast } = useToast();
@@ -24,7 +43,7 @@ export function useMeals() {
         prev ? [...prev, newMeal] : [newMeal]
       );
       // Force an immediate server refetch to ensure the list is fully up-to-date.
-      queryClient.refetchQueries({ queryKey: [api.meals.list.path] });
+      invalidateMealLibrary(queryClient);
       toast({ title: "Recipe added" });
     },
     onError: () => {
@@ -38,7 +57,7 @@ export function useMeals() {
       await apiRequest("DELETE", url);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.meals.list.path] });
+      invalidateMealLibrary(queryClient);
       toast({ title: "Recipe removed" });
     },
     onError: () => {

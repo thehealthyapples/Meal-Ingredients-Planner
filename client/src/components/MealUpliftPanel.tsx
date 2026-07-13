@@ -19,6 +19,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useTrackedMutation } from "@/hooks/use-tracked-mutation";
 import type { MealUpliftApplication, Meal } from "@shared/schema";
 import { normaliseForReuse, getReuseLabel } from "@/lib/ingredient-reuse";
+import { invalidateMealLibrary } from "@/hooks/use-meals";
 
 // ─── WS0 knowledge type (mirrors server IngredientKnowledgeSummary) ──────────
 
@@ -324,7 +325,7 @@ export function MealUpliftPanel({
       }
 
       // Refresh meals + provenance
-      qc.invalidateQueries({ queryKey: ["/api/meals"] });
+      invalidateMealLibrary(qc);
       qc.invalidateQueries({
         queryKey: ["/api/meals", data.mealId, "uplift-applications"],
       });
@@ -358,7 +359,7 @@ export function MealUpliftPanel({
       qc.invalidateQueries({
         queryKey: ["/api/meals", effectiveMealId, "uplift-applications"],
       });
-      qc.invalidateQueries({ queryKey: ["/api/meals"] });
+      invalidateMealLibrary(qc);
       // Immediately reflect ingredient removal in shopping list
       for (const key of SHOPPING_LIST_KEYS) {
         qc.invalidateQueries({ queryKey: key });

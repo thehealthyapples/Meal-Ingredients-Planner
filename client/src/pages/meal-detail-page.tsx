@@ -25,6 +25,7 @@ import { MealFamilyConfidence } from "@/components/meal-detail/MealFamilyConfide
 import { HouseholdAdaptationsSummary } from "@/components/meal-detail/HouseholdAdaptationsSummary";
 import { SimplyBetterChoicesPanel } from "@/components/meal-detail/SimplyBetterChoicesPanel";
 import { useMealFoodIntelligence, MealDiscoveryRow } from "@/components/meal-detail/MealFoodIntelligenceSection";
+import { invalidateMealLibrary } from "@/hooks/use-meals";
 
 type SwapGoal = "vegetarian" | "keto" | "lower-cost" | "less-processed" | "under-time" | "household";
 
@@ -236,7 +237,7 @@ export default function MealDetailPage() {
       if (!componentMeal) continue;
       if (componentMeal.instructions && componentMeal.instructions.length > 0) continue;
       apiRequest('PATCH', buildUrl(api.meals.reimportInstructions.path, { id: src.mealId }), { url: src.url })
-        .then(() => { queryClient.invalidateQueries({ queryKey: [api.meals.list.path] }); })
+        .then(() => { invalidateMealLibrary(queryClient); })
         .catch(() => {});
     }
   }, [meal, allMeals]);
@@ -265,7 +266,7 @@ export default function MealDetailPage() {
       return res.json() as Promise<Meal>;
     },
     onSuccess: (newMeal) => {
-      queryClient.invalidateQueries({ queryKey: [api.meals.list.path] });
+      invalidateMealLibrary(queryClient);
       toast({ title: "Editable copy created", description: newMeal.name });
       navigate(`/meals/${newMeal.id}?edit=1`);
     },
@@ -286,7 +287,7 @@ export default function MealDetailPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.meals.list.path, mealId] });
-      queryClient.invalidateQueries({ queryKey: [api.meals.list.path] });
+      invalidateMealLibrary(queryClient);
       queryClient.invalidateQueries({ queryKey: [api.nutrition.get.path, mealId] });
       setHasChanges(false);
       setIsEditing(false);
@@ -308,7 +309,7 @@ export default function MealDetailPage() {
       return res.json() as Promise<Meal>;
     },
     onSuccess: (newMeal) => {
-      queryClient.invalidateQueries({ queryKey: [api.meals.list.path] });
+      invalidateMealLibrary(queryClient);
       toast({ title: "Saved as new recipe", description: newMeal.name });
       navigate(`/meals/${newMeal.id}`);
     },
@@ -322,7 +323,7 @@ export default function MealDetailPage() {
       await apiRequest('DELETE', buildUrl(api.meals.delete.path, { id: mealId! }));
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.meals.list.path] });
+      invalidateMealLibrary(queryClient);
       toast({ title: "Meal deleted" });
       navigate("/cookbook");
     },
@@ -374,7 +375,7 @@ export default function MealDetailPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.meals.list.path, mealId] });
-      queryClient.invalidateQueries({ queryKey: [api.meals.list.path] });
+      invalidateMealLibrary(queryClient);
       toast({ title: "Instructions imported" });
       setReimportOpen(false);
       setReimportUrl("");

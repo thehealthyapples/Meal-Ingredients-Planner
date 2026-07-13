@@ -11,6 +11,7 @@ import { IngredientRow, parseIngredientString, buildIngredientString } from "@/c
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { api } from "@shared/routes";
+import { invalidateMealLibrary } from "@/hooks/use-meals";
 
 // TODO (future phase - multi-page recipe capture):
 //   Some recipes span multiple pages (cookbook page 1 + page 2, or ingredients page + steps page).
@@ -206,7 +207,7 @@ export function RecipeScanReview({ open, onOpenChange, scanData, scanning = fals
       });
       const savedMeal = await mealRes.json();
 
-      queryClient.invalidateQueries({ queryKey: [api.meals.list.path] });
+      invalidateMealLibrary(queryClient);
       toast({ title: "Recipe saved", description: title.trim() || "Scanned Recipe" });
       onMealCreated?.(savedMeal.id, savedMeal.name || title.trim() || "Scanned Recipe");
       onSaved?.();

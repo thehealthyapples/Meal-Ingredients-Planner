@@ -10,6 +10,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { ArrowRight, Check, ChevronDown, ChevronUp, Loader2, AlertTriangle, Pencil, ShieldCheck } from "lucide-react";
 import type { Meal } from "@shared/schema";
 import type { HouseholdSafePreview } from "@shared/meal-adaptation";
+import { invalidateMealLibrary } from "@/hooks/use-meals";
 
 // ─── Variant name generation ───────────────────────────────────────────────────
 
@@ -244,7 +245,7 @@ export function AdaptationReviewSheet({
     },
     onSuccess: data => {
       qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
-      qc.invalidateQueries({ queryKey: ["/api/meals"] });
+      invalidateMealLibrary(qc);
       onAccepted(data.variantMeal);
       onOpenChange(false);
     },

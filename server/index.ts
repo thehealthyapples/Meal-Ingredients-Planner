@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import compression from "compression";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
@@ -13,6 +14,11 @@ import { auditStartupEnvironment } from "./lib/platform-status";
 
 const app = express();
 const httpServer = createServer(app);
+
+// PX1-W3 (fnd-px-no-compression): gzip every compressible response — the built JS
+// alone is ~3.8 MB uncompressed and ~1 MB gzipped. Mounted before every other
+// handler so static assets and API JSON both benefit.
+app.use(compression());
 
 declare module "http" {
   interface IncomingMessage {
