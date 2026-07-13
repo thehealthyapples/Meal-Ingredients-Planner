@@ -11,6 +11,7 @@
 import { useId, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Card } from "@/components/ui/card";
 import {
   bodyText,
   cardPadding,
@@ -19,7 +20,6 @@ import {
   focusRing,
   iconSize,
   iconTone,
-  intelligenceSurface,
   titleText,
 } from "./intelligence-tokens";
 
@@ -76,9 +76,14 @@ export function IntelligenceCard({
     title || eyebrow || body || chips || action || details || children;
   if (!hasContent) return null;
 
+  // PX1-W4.4 (fnd-px-nine-card-surfaces): this used to declare its own surface
+  // (`intelligenceSurface`) beside `ui/card`'s — the ninth rival. It now COMPOSES
+  // the canonical Card: one card surface, everywhere. `role="region"` keeps the
+  // landmark the old <section> provided.
   return (
-    <section
-      className={cn(intelligenceSurface, cardPadding, cardStack, className)}
+    <Card
+      role="region"
+      className={cn(cardPadding, cardStack, className)}
       aria-label={title ?? eyebrow}
       data-testid={rest["data-testid"]}
     >
@@ -160,6 +165,6 @@ export function IntelligenceCard({
           )}
         </div>
       )}
-    </section>
+    </Card>
   );
 }

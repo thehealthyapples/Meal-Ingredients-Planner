@@ -207,7 +207,7 @@ export default function AdminIngredientProductsPage() {
           />
         </div>
         <Button onClick={handleSearch} variant="outline" data-testid="button-search-picks">Search</Button>
-        <Button onClick={openCreate} className="ml-auto gap-2" data-testid="button-add-pick">
+        <Button variant="default" onClick={openCreate} className="ml-auto gap-2" data-testid="button-add-pick">
           <Plus className="h-4 w-4" />
           Add THA Pick
         </Button>
@@ -316,7 +316,7 @@ export default function AdminIngredientProductsPage() {
           <PickFormFields form={form} onChange={handleFormChange} normalizedPreview={normalizedPreview} />
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-            <Button
+            <Button variant="default"
               onClick={handleCreateSubmit}
               disabled={createMutation.isPending || !form.ingredientKey.trim() || !form.productName.trim() || !form.retailer.trim()}
               data-testid="button-submit-create"
@@ -336,7 +336,7 @@ export default function AdminIngredientProductsPage() {
           <PickFormFields form={form} onChange={handleFormChange} normalizedPreview={normalizedPreview} />
           <DialogFooter>
             <Button variant="outline" onClick={() => { setEditItem(null); setForm(emptyForm); }}>Cancel</Button>
-            <Button
+            <Button variant="default"
               onClick={handleEditSubmit}
               disabled={updateMutation.isPending || !form.ingredientKey.trim() || !form.productName.trim() || !form.retailer.trim()}
               data-testid="button-submit-edit"

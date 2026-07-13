@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -157,7 +158,7 @@ export default function AdminRecipeSourcesPage() {
       {isLoading ? (
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-12 bg-muted animate-pulse rounded-lg" />
+            <Skeleton key={i} className="h-12 rounded-lg" />
           ))}
         </div>
       ) : isError ? (
@@ -176,7 +177,7 @@ export default function AdminRecipeSourcesPage() {
         <>
           <Card data-testid="card-official-apis">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2">
                 Official / Licensed APIs
                 <Badge variant="secondary" className="text-xs">{officialSources.length}</Badge>
               </CardTitle>
@@ -204,7 +205,7 @@ export default function AdminRecipeSourcesPage() {
 
           <Card data-testid="card-scraped-sources">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2">
                 Scraped Sources
                 <Badge variant="secondary" className="text-xs">{scrapedSources.length}</Badge>
               </CardTitle>
@@ -231,7 +232,7 @@ export default function AdminRecipeSourcesPage() {
       <Card data-testid="card-audit-log">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base">Blocked Request Audit Log</CardTitle>
+            <CardTitle>Blocked Request Audit Log</CardTitle>
             <Button
               variant="ghost"
               size="sm"
@@ -253,7 +254,7 @@ export default function AdminRecipeSourcesPage() {
             {auditLoading ? (
               <div className="space-y-2">
                 {[...Array(3)].map((_, i) => (
-                  <div key={i} className="h-8 bg-muted animate-pulse rounded" />
+                  <Skeleton key={i} className="h-8 rounded" />
                 ))}
               </div>
             ) : !auditData || auditData.logs.length === 0 ? (

@@ -159,7 +159,7 @@ export default function AdminDevelopmentWorldHouseholdPage() {
           {/* ── Overview stats (authored vs live) ── */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Overview</CardTitle>
+              <CardTitle>Overview</CardTitle>
               <CardDescription>Canonical authored figures.</CardDescription>
             </CardHeader>
             <CardContent>
@@ -178,7 +178,7 @@ export default function AdminDevelopmentWorldHouseholdPage() {
 
           {/* ── Members ── */}
           <Card>
-            <CardHeader className="pb-3"><CardTitle className="text-base">Members</CardTitle></CardHeader>
+            <CardHeader className="pb-3"><CardTitle>Members</CardTitle></CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
@@ -205,7 +205,7 @@ export default function AdminDevelopmentWorldHouseholdPage() {
           {/* ── Eaters ── */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Eaters</CardTitle>
+              <CardTitle>Eaters</CardTitle>
               <CardDescription>Household eaters with their diets and hard restrictions.</CardDescription>
             </CardHeader>
             <CardContent>
@@ -237,7 +237,7 @@ export default function AdminDevelopmentWorldHouseholdPage() {
           {/* ── Planner + Pantry + Diary + Evidence overview ── */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Planner, Pantry, Diary & Evidence</CardTitle>
+              <CardTitle>Planner, Pantry, Diary & Evidence</CardTitle>
               <CardDescription>Authored canonical figures vs the live DEV database snapshot.</CardDescription>
             </CardHeader>
             <CardContent>
@@ -273,7 +273,7 @@ export default function AdminDevelopmentWorldHouseholdPage() {
           {/* ── Pantry summary ── */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Pantry summary <span className="text-muted-foreground font-normal">({detail.fixture.pantry.length})</span></CardTitle>
+              <CardTitle>Pantry summary <span className="text-muted-foreground font-normal">({detail.fixture.pantry.length})</span></CardTitle>
             </CardHeader>
             <CardContent>
               {detail.fixture.pantry.length === 0 ? (
@@ -294,7 +294,7 @@ export default function AdminDevelopmentWorldHouseholdPage() {
           {/* ── Cookbook references ── */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Cookbook references</CardTitle>
+              <CardTitle>Cookbook references</CardTitle>
               <CardDescription>
                 Meals this household references (validated against the system cookbook; segmentation is not persisted — DEVWORLD2 gap G-COOKBOOK).
               </CardDescription>
@@ -317,7 +317,7 @@ export default function AdminDevelopmentWorldHouseholdPage() {
 
           {/* ── Validation status ── */}
           <Card>
-            <CardHeader className="pb-3"><CardTitle className="text-base">Validation status</CardTitle></CardHeader>
+            <CardHeader className="pb-3"><CardTitle>Validation status</CardTitle></CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div className="flex items-center gap-2">
                 {detail.validation.worldValid

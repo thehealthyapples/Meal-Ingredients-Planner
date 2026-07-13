@@ -9,7 +9,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import ScoreBadge from "@/components/ui/score-badge";
+import AppleRating from "@/components/AppleRating";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -171,7 +171,7 @@ export function ProductPickerSheet({
                 </button>
               )}
             </div>
-            <Button
+            <Button variant="default"
               size="sm"
               onClick={() => runSearch(query)}
               disabled={!query.trim() || isSearching}
@@ -316,7 +316,7 @@ export function ProductPickerSheet({
                 {/* Score + Add */}
                 <div className="flex flex-col items-center gap-2 shrink-0">
                   {product.upfAnalysis && (
-                    <ScoreBadge score={product.upfAnalysis.thaRating} size={32} />
+                    <AppleRating rating={product.upfAnalysis.thaRating} sizePx={32} showTooltip={false} animate={false} />
                   )}
                   <Button
                     size="sm"

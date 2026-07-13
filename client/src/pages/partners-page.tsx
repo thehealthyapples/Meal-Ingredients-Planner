@@ -21,7 +21,7 @@ import {
   X,
   ChevronRight,
 } from "lucide-react";
-import { WorkspaceHeader } from "@/components/workspace-header";
+import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
 import { useEffect } from "react";
 import { getActivePartners, getFeaturedPartners } from "@/data/partners";
 import { PARTNER_CATEGORIES } from "@/types/partner";
@@ -334,7 +334,7 @@ function ApplicationModal({
               />
             </div>
             <div className="flex gap-2 pt-1">
-              <Button type="submit" className="flex-1" data-testid="button-submit-application">
+              <Button variant="default" type="submit" className="flex-1" data-testid="button-submit-application">
                 Send Application
               </Button>
               <Button type="button" variant="outline" onClick={onClose}>
@@ -475,7 +475,7 @@ export default function PartnersPage() {
         </div>
       }
     />
-    <div className="max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 main-safe space-y-10">
+    <div className={`${pageContainerClass(true)} main-safe space-y-10`}>
 
       {/* Hero */}
       <section className="rounded-3xl bg-gradient-to-br from-primary/8 via-background to-primary/4 border border-border px-6 sm:px-12 py-7 sm:py-10 text-center space-y-3" data-testid="partners-hero">
@@ -581,7 +581,7 @@ export default function PartnersPage() {
         <p className="text-muted-foreground max-w-xl mx-auto text-base leading-relaxed">
           Are you a wellness professional, healthy living brand, or service that supports whole-person health? We'd love to hear from you. We're always open to partnerships that genuinely benefit our community.
         </p>
-        <Button
+        <Button variant="default"
           size="lg"
           className="gap-2 mt-2"
           onClick={() => setApplyModalOpen(true)}

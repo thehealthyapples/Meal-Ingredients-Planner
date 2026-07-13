@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Leaf } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import ScoreBadge from "@/components/ui/score-badge";
+import AppleRating from "@/components/AppleRating";
 import RestrictionSafetyPanel from "@/components/analyser/RestrictionSafetyPanel";
 import { computeRestrictionSafety } from "@shared/restrictions/restriction-safety";
 import type { EaterProfile } from "@shared/restrictions/restriction-safety";
@@ -85,7 +85,7 @@ export function WholeFoodAnalysisCard({
             </Badge>
           </div>
           <div className="shrink-0 pt-0.5" data-testid="whole-food-score-badge">
-            <ScoreBadge score={thaRating} size={48} />
+            <AppleRating rating={thaRating} sizePx={48} showTooltip={false} animate={false} />
           </div>
         </div>
 

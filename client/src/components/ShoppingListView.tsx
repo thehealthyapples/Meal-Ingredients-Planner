@@ -1,3 +1,4 @@
+import { Card } from "@/components/ui/card";
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { normalizeIngredientKey, singularizeIngredientKey } from "@shared/normalize";
 import { estimateFallbackPrice } from "@shared/price-estimates";
@@ -1841,6 +1842,7 @@ export default function ShoppingListView({
                   }}
                   className="flex-1 h-6 text-[11px] rounded-md border border-primary/40 bg-background px-2 focus:outline-none focus:ring-1 focus:ring-primary/40"
                   placeholder="Refine item name…"
+                  aria-label="Refine item name"
                 />
                 <button
                   onClick={() => {
@@ -1849,12 +1851,14 @@ export default function ShoppingListView({
                     setEditingItemId(null);
                   }}
                   className="h-6 w-6 flex items-center justify-center rounded bg-primary text-primary-foreground"
+                  aria-label="Save edit"
                 >
                   <Check className="h-3 w-3" />
                 </button>
                 <button
                   onClick={() => setEditingItemId(null)}
                   className="h-6 w-6 flex items-center justify-center rounded border border-border text-muted-foreground"
+                  aria-label="Cancel edit"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -1903,6 +1907,7 @@ export default function ShoppingListView({
                       onClick={(e) => { e.stopPropagation(); setEditValue(item.productName ?? ""); setEditingItemId(item.id); }}
                       className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground/40 hover:text-foreground transition-colors"
                       title="Refine item name"
+                      aria-label="Refine item name"
                     >
                       <Pencil className="h-2.5 w-2.5" />
                     </button>
@@ -1912,6 +1917,7 @@ export default function ShoppingListView({
                       onClick={(e) => { e.stopPropagation(); onAnalyse(item); }}
                       className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground/40 hover:text-foreground transition-colors"
                       title="Analyse product"
+                      aria-label="Analyse product"
                     >
                       <Microscope className="h-2.5 w-2.5" />
                     </button>
@@ -2008,6 +2014,7 @@ export default function ShoppingListView({
                       onClick={(e) => { e.stopPropagation(); setEditValue(item.productName ?? ""); setEditingItemId(item.id); }}
                       className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground/40 hover:text-foreground transition-colors"
                       title="Refine item name"
+                      aria-label="Refine item name"
                     >
                       <Pencil className="h-2.5 w-2.5" />
                     </button>
@@ -2121,10 +2128,13 @@ export default function ShoppingListView({
   // Render
   // ─────────────────────────────────────────────────────────────────────────
 
+  // PX1-W4.4 (fnd-px-nine-card-surfaces): this carried a VERBATIM copy of
+  // Card's own class string on a bare div — the copy that drifts the day Card
+  // changes. It now composes the owner.
   const content = (
-    <div
+    <Card
       id="tha-shopping-print-area"
-      className="relative flex flex-col overflow-hidden rounded-xl border border-border bg-card/82 backdrop-blur-md"
+      className="relative flex flex-col overflow-hidden"
       style={{ height: "calc(100vh - 9rem)" }}
     >
 
@@ -2184,7 +2194,7 @@ export default function ShoppingListView({
           <div className="flex items-center gap-1.5 flex-shrink-0">
             {phase === "shopping" && (
               <Select value={selectedSupermarket} onValueChange={handleStoreChange}>
-                <SelectTrigger className="h-8 text-xs bg-background/70 gap-1 pr-2" style={{ minWidth: 0, width: "auto" }}>
+                <SelectTrigger className="h-8 text-xs bg-background/70 gap-1 pr-2" style={{ minWidth: 0, width: "auto" }} aria-label="Choose supermarket">
                   <Store className="h-3.5 w-3.5 shrink-0" />
                   <SelectValue />
                 </SelectTrigger>
@@ -2196,7 +2206,7 @@ export default function ShoppingListView({
               </Select>
             )}
             {inBasketCount > 0 && !shopSession && (
-              <Button
+              <Button variant="default"
                 size="sm"
                 onClick={handleFinishShop}
                 className="gap-1.5 h-8 px-2.5 text-xs"
@@ -2425,9 +2435,7 @@ export default function ShoppingListView({
       {/* ── 4a. Cupboard check ───────────────────────────────────────────────── */}
       {phase === "cupboard_check" && !shopSession && (
         <div className="tha-print-hide relative z-10 flex-1 overflow-hidden flex flex-col px-3 sm:px-5 pt-3 pb-3 w-full max-w-3xl mx-auto">
-          <div
-            className="flex flex-col flex-1 min-h-0 rounded-xl overflow-hidden border border-border bg-card/82 backdrop-blur-md"
-          >
+          <Card className="flex flex-col flex-1 min-h-0 overflow-hidden">
             {/* Panel header */}
             <div
               className="flex-shrink-0 flex items-center justify-between gap-3 px-4 py-3 border-b"
@@ -2487,6 +2495,7 @@ export default function ShoppingListView({
                                 }}
                                 className="flex-1 h-7 text-[13px] px-2 rounded-md border border-border bg-background/80 focus:outline-none focus:ring-1 focus:ring-primary/30"
                                 placeholder="e.g. Broccoli"
+                                aria-label="Item name"
                               />
                               <button
                                 onClick={() => {
@@ -2627,6 +2636,7 @@ export default function ShoppingListView({
                                           defaultValue=""
                                           onChange={e => { const v = e.target.value; if (v) addPick(v); }}
                                           className="text-[11px] h-7 pl-2 pr-6 rounded-lg border border-primary/40 bg-background/80 text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 cursor-pointer self-start"
+                                          aria-label="Select type"
                                         >
                                           <option value="" disabled>
                                             {selected.size === 0 ? 'Select type…' : '+ Add another type'}
@@ -2732,6 +2742,7 @@ export default function ShoppingListView({
                                 <input
                                   type="number"
                                   min={1}
+                                  aria-label="Quantity"
                                   value={cycQtyDraft.get(item.id) ?? String(item.quantityValue ?? 1)}
                                   onChange={e => {
                                     const raw = e.target.value;
@@ -2812,6 +2823,7 @@ export default function ShoppingListView({
                         }}
                         className="flex-1 h-8 text-[13px] px-2.5 rounded-lg border border-border bg-background/80 focus:outline-none focus:ring-1 focus:ring-primary/30"
                         placeholder="Add an item…"
+                        aria-label="Add an item"
                       />
                       <input
                         type="number"
@@ -2874,7 +2886,7 @@ export default function ShoppingListView({
                 );
               })()}
             </div>
-          </div>
+          </Card>
         </div>
       )}
 
@@ -2974,7 +2986,7 @@ export default function ShoppingListView({
           {/* Share + navigation actions */}
           <div className="flex flex-col gap-2.5">
             {shopSession.remainingCount > 0 && (
-              <Button
+              <Button variant="default"
                 size="default"
                 className="w-full gap-2 h-11"
                 onClick={handleShareRemaining}
@@ -3170,6 +3182,7 @@ export default function ShoppingListView({
                                 defaultValue=""
                                 onChange={e => { const v = e.target.value; if (v) addPick(v); }}
                                 className="text-[11px] h-7 pl-2 pr-6 rounded-lg border border-primary/40 bg-background/80 text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 cursor-pointer"
+                                aria-label="Select type"
                               >
                                 <option value="" disabled>
                                   {selected.size === 0 ? "Select type…" : "+ Add another type"}
@@ -3246,6 +3259,7 @@ export default function ShoppingListView({
                           }}
                           className="flex-1 h-7 text-[12px] px-2 rounded-md border border-primary/40 bg-background/80 focus:outline-none focus:ring-1 focus:ring-primary/30"
                           placeholder="e.g. Broccoli"
+                          aria-label="Item name"
                         />
                         <button
                           onClick={() => {
@@ -3510,7 +3524,7 @@ export default function ShoppingListView({
         <p style={{ fontSize: 9, color: "#9ca3af", margin: 0 }}>Happy shopping! - The Healthy Apples</p>
       </div>
 
-    </div>
+    </Card>
   );
 
   return content;

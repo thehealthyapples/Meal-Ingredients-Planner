@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   Trash2, Plus, Loader2, Home, Refrigerator, Archive, Layers,
   ShoppingBasket, ChevronDown, PawPrint, Apple, Search, X,
@@ -25,7 +26,7 @@ const MICRO_INSIGHTS = [
   "Oily fish a couple of times a week is one of the most widely supported dietary habits.",
   "Seeds like chia and flaxseed are small but surprisingly rich in plant-based omega-3.",
 ];
-import { WorkspaceHeader } from "@/components/workspace-header";
+import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -93,12 +94,14 @@ function NeedQuantityControl({
           value={val}
           onChange={e => setVal(e.target.value)}
           onKeyDown={e => { if (e.key === "Enter") save(); if (e.key === "Escape") setEditing(false); }}
+          aria-label="Quantity needed"
           className="w-12 h-6 text-xs px-1.5 rounded border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary/30 tabular-nums text-center"
           data-testid={`input-need-qty-${item.id}`}
         />
         <input
           type="text"
           placeholder="unit"
+          aria-label="Unit"
           value={unit}
           onChange={e => setUnit(e.target.value)}
           onKeyDown={e => { if (e.key === "Enter") save(); if (e.key === "Escape") setEditing(false); }}
@@ -123,6 +126,7 @@ function NeedQuantityControl({
           onClick={() => onPatch(item.id, null, null)}
           className="p-1 text-muted-foreground/30 hover:text-destructive transition-colors"
           title="Clear need quantity"
+          aria-label="Clear need quantity"
           data-testid={`button-need-qty-clear-${item.id}`}
         >
           <X className="h-3 w-3" />
@@ -473,7 +477,7 @@ function FoodPantrySection({
               aria-label="Quantity to send"
               data-testid="input-food-send-qty"
             />
-            <Button
+            <Button variant="default"
               size="sm"
               className="realm-banner-btn"
               onClick={sendToBasket}
@@ -496,6 +500,7 @@ function FoodPantrySection({
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={e => e.key === "Enter" && handleAdd()}
+            aria-label={`Add to ${catLabel}`}
             className="w-full pl-3 pr-8 py-2 text-sm rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-ring"
             data-testid="input-food-pantry-ingredient"
           />
@@ -510,7 +515,7 @@ function FoodPantrySection({
             </button>
           )}
         </div>
-        <Button
+        <Button variant="default"
           size="sm"
           className="realm-banner-btn"
           onClick={handleAdd}
@@ -529,9 +534,7 @@ function FoodPantrySection({
           <Skeleton className="h-6 w-3/4" />
         </div>
       ) : activeFilter && displayedItems.length === 0 ? (
-        <p className="text-sm text-muted-foreground italic text-center py-6">
-          No items matched "{activeFilter}"
-        </p>
+        <EmptyState variant="filtered" title={`No items matched "${activeFilter}"`} data-testid="empty-pantry-filter" />
       ) : (
         <div
           className="rounded-lg border border-border/40 overflow-hidden"
@@ -543,8 +546,9 @@ function FoodPantrySection({
             </p>
           ) : (
             <div className="px-3 pt-1 pb-2">
-              <label className="flex items-center gap-3 pb-2 mb-1 border-b border-border/40 cursor-pointer select-none min-h-[2.75rem]">
+              <label htmlFor={`checkbox-select-all-${activeCategory}`} className="flex items-center gap-3 pb-2 mb-1 border-b border-border/40 cursor-pointer select-none min-h-[2.75rem]">
                 <Checkbox
+                  id={`checkbox-select-all-${activeCategory}`}
                   checked={allActiveSelected}
                   onCheckedChange={toggleAll}
                   data-testid={`checkbox-select-all-${activeCategory}`}
@@ -582,10 +586,12 @@ function FoodPantrySection({
                         <div key={item.id} className="group" data-testid={`row-food-pantry-item-${item.id}`}>
                           <div className="flex items-center gap-1">
                             <label
+                              htmlFor={`checkbox-food-${item.id}`}
                               className="flex items-center gap-3 flex-1 min-w-0 py-2.5 cursor-pointer select-none min-h-[2.75rem]"
                               data-testid={`label-food-${item.id}`}
                             >
                               <Checkbox
+                                id={`checkbox-food-${item.id}`}
                                 checked={selected.has(item.id)}
                                 onCheckedChange={() => toggleItem(item.id)}
                                 data-testid={`checkbox-food-${item.id}`}
@@ -598,6 +604,7 @@ function FoodPantrySection({
                               onClick={() => toggleExpanded(item.id, item.ingredientKey)}
                               className="p-2 text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors shrink-0"
                               title={isExpanded ? "Hide details" : "Learn about this ingredient"}
+                              aria-label={isExpanded ? "Hide details" : "Learn about this ingredient"}
                               data-testid={`button-food-pantry-expand-${item.id}`}
                             >
                               <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-150 ${isExpanded ? "rotate-180" : ""}`} />
@@ -907,7 +914,7 @@ function HomePantrySection({
               aria-label="Quantity to send"
               data-testid="input-household-send-qty"
             />
-            <Button
+            <Button variant="default"
               size="sm"
               className="realm-banner-btn"
               onClick={sendToBasket}
@@ -931,6 +938,7 @@ function HomePantrySection({
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={e => e.key === "Enter" && handleAdd()}
+            aria-label={`Search ${catLabel} or add item`}
             className="w-full pl-8 pr-8 py-2 text-sm rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-ring"
             data-testid="input-household-item"
           />
@@ -945,7 +953,7 @@ function HomePantrySection({
             </button>
           )}
         </div>
-        <Button
+        <Button variant="default"
           size="sm"
           className="realm-banner-btn"
           onClick={handleAdd}
@@ -965,9 +973,7 @@ function HomePantrySection({
           ))}
         </div>
       ) : query.trim() && displayedItems.length === 0 ? (
-        <p className="text-sm text-muted-foreground italic text-center py-6">
-          No items matched "{query}"
-        </p>
+        <EmptyState variant="filtered" title={`No items matched "${query}"`} data-testid="empty-home-filter" />
       ) : (
         <div
           className="rounded-lg border border-border/40 overflow-hidden"
@@ -979,8 +985,9 @@ function HomePantrySection({
             </p>
           ) : (
             <div className="px-3 pt-1 pb-2">
-              <label className="flex items-center gap-3 pb-2 border-b border-border/40 mb-1 cursor-pointer select-none min-h-[2.75rem]">
+              <label htmlFor="checkbox-select-all-household" className="flex items-center gap-3 pb-2 border-b border-border/40 mb-1 cursor-pointer select-none min-h-[2.75rem]">
                 <Checkbox
+                  id="checkbox-select-all-household"
                   checked={allActiveSelected}
                   onCheckedChange={toggleAll}
                   data-testid="checkbox-select-all-household"
@@ -1010,10 +1017,12 @@ function HomePantrySection({
                     {groupItems.map(item => (
                       <div key={item.id} className="flex items-center gap-1 group" data-testid={`row-household-item-${item.id}`}>
                         <label
+                          htmlFor={`checkbox-household-${item.id}`}
                           className="flex items-center gap-3 flex-1 min-w-0 py-2.5 cursor-pointer select-none min-h-[2.75rem]"
                           data-testid={`label-household-${item.id}`}
                         >
                           <Checkbox
+                            id={`checkbox-household-${item.id}`}
                             checked={selected.has(item.id)}
                             onCheckedChange={() => toggleSelect(item.id)}
                             data-testid={`checkbox-household-${item.id}`}
@@ -1132,7 +1141,7 @@ export default function PantryPage() {
       {/* data-realm propagates CSS custom properties so tabs use var(--realm-bg/text) */}
       <div
         data-realm="pantry"
-        className="max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 pt-3 sm:pt-4 space-y-3"
+        className={`${pageContainerClass(true)} space-y-3`}
       >
         <p className="text-xs text-muted-foreground/50 italic" data-testid="text-pantry-micro-insight">
           {microInsight}

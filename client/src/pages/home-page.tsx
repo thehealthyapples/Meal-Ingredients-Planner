@@ -58,7 +58,7 @@ export default function HomePage() {
             >
               Sign in
             </Button>
-            <Button
+            <Button variant="default"
               size="sm"
               onClick={() => setLocation("/auth?register=1")}
               data-testid="button-nav-create-account"
@@ -98,7 +98,7 @@ export default function HomePage() {
 
                 <div className="flex flex-col items-stretch sm:items-start gap-3 mb-6 w-full sm:w-auto">
                   {/* Primary CTA */}
-                  <Button
+                  <Button variant="default"
                     size="lg"
                     className="w-full sm:min-w-[280px]"
                     onClick={() => setLocation("/auth?register=1")}
@@ -217,7 +217,7 @@ export default function HomePage() {
             Join families making calmer, more confident food choices every day.
           </p>
           <div className="flex flex-wrap justify-center gap-3 mb-5">
-            <Button
+            <Button variant="default"
               size="lg"
               onClick={() => setLocation("/auth?register=1")}
               data-testid="button-final-create-account"

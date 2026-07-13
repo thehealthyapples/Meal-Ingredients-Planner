@@ -18,6 +18,14 @@ interface AppleRatingProps {
   animate?: boolean;
   /** When provided, the tooltip includes an additive breakdown line. */
   additiveContext?: AdditiveContext;
+  className?: string;
+  /**
+   * The mark as illustration, not information: rendered `aria-hidden`, never named,
+   * never tooltipped. For the one place the apples appear inside a decorative
+   * illustration (KitchenToBasketVisual) rather than as a food's actual score —
+   * announcing a score there would fabricate one (EXP §12).
+   */
+  decorative?: boolean;
 }
 
 const RATING_LABELS = [
@@ -51,9 +59,8 @@ const OVERLAP = 0.38;
  * A blind or low-vision household member therefore could not learn whether any food
  * was good — the one question THA exists to answer.
  *
- * It is exported so that the rating mark's other entry point (`ui/apple-rating.tsx`,
- * which `ScoreBadge` and 15+ call sites go through) names the score with THESE words
- * rather than inventing a second vocabulary. One score, one sentence.
+ * PX1-W4.12 collapsed the mark's rival entry points (`ui/apple-rating.tsx` and the
+ * `ui/score-badge.tsx` alias) into this component: one apple, one name, one sentence.
  */
 export function appleScoreLabel(rating: number): string {
   const clamped = Math.max(1, Math.min(5, rating || 1));
@@ -69,7 +76,15 @@ export default function AppleRating({
   showTooltip = true,
   animate = true,
   additiveContext,
+  className,
+  decorative = false,
 }: AppleRatingProps) {
+  // No score is SILENCE, not a fabricated one (EXP §12). The retired
+  // `ui/apple-rating.tsx` rendered zero apples for a 0 rating while still
+  // announcing "THA Score: 1 out of 5" to a screen reader — an unscored item
+  // read aloud as Ultra-Processed. One owner, one truth: unscored renders nothing.
+  if (!decorative && (!rawRating || rawRating < 0.5)) return null;
+
   const clamped = Math.max(1, Math.min(5, rawRating || 1));
   const fullCount = Math.floor(clamped);
   const hasHalf = clamped % 1 >= 0.5;
@@ -84,10 +99,11 @@ export default function AppleRating({
     // are correct: they are the parts, and the parts are decorative once the whole is
     // named (UIA §10, §15 — "meaningful marks are named"; EXP §16).
     <div
-      className="inline-flex items-center"
+      className={className ? `inline-flex items-center ${className}` : "inline-flex items-center"}
       style={animate ? { animation: "appleBounce 0.4s ease-out both" } : undefined}
-      role="img"
-      aria-label={scoreLabel}
+      {...(decorative
+        ? { "aria-hidden": true as const }
+        : { role: "img", "aria-label": scoreLabel })}
       data-testid={`apple-rating-${Math.round(clamped)}`}
     >
       {Array.from({ length: fullCount }).map((_, i) => (
@@ -109,7 +125,7 @@ export default function AppleRating({
     </div>
   );
 
-  if (!showTooltip) return content;
+  if (!showTooltip || decorative) return content;
 
   // The tooltip and the accessible name are now the SAME sentence, from the same
   // function. They were never allowed to be two.

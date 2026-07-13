@@ -462,7 +462,7 @@ function RunControls({ onRun, running }: { onRun: (mode: string) => void; runnin
   return (
     <Card data-testid="card-run-controls">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base flex items-center gap-2"><PlayCircle className="w-4 h-4" /> Execute Benchmark</CardTitle>
+        <CardTitle className="flex items-center gap-2"><PlayCircle className="w-4 h-4" /> Execute Benchmark</CardTitle>
         <CardDescription className="text-xs">
           Runs through the one Companion seam (<code>processUserTurn</code>) against your live household. No conversation
           logic is duplicated; no second Companion is created.
@@ -470,7 +470,7 @@ function RunControls({ onRun, running }: { onRun: (mode: string) => void; runnin
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-wrap gap-2">
-          <Button onClick={() => onRun("quick")} disabled={running !== null} data-testid="button-run-quick">
+          <Button variant="default" onClick={() => onRun("quick")} disabled={running !== null} data-testid="button-run-quick">
             <Gauge className="w-4 h-4 mr-1.5" />{running === "quick" ? "Running Quick…" : "Quick (10)"}
           </Button>
           <Button onClick={() => onRun("full")} disabled={running !== null} variant="secondary" data-testid="button-run-full">
@@ -609,7 +609,7 @@ function RunDashboard({ run }: { run: BenchmarkResult }) {
     return (
       <Card data-testid="card-framework-only">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2"><Award className="w-4 h-4" /> Certification — Framework Only</CardTitle>
+          <CardTitle className="flex items-center gap-2"><Award className="w-4 h-4" /> Certification — Framework Only</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           <p className="text-sm text-muted-foreground">{run.abortReason}</p>
@@ -643,7 +643,7 @@ function RunDashboard({ run }: { run: BenchmarkResult }) {
       {/* Release readiness — a plain verdict, its blockers, and the next action */}
       <Card data-testid="card-release-readiness">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2">
             Release Readiness <VerdictBadge verdict={run.releaseReadiness.verdict} />
           </CardTitle>
           <CardDescription className="text-xs">
@@ -843,7 +843,7 @@ function TrendAndHistory({ history, onSelect, selectedRunId }: { history: Histor
     <div className="space-y-4">
       <Card data-testid="card-trend">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2"><TrendingUp className="w-4 h-4" /> Benchmark Trend</CardTitle>
+          <CardTitle className="flex items-center gap-2"><TrendingUp className="w-4 h-4" /> Benchmark Trend</CardTitle>
           <CardDescription className="text-xs">Overall Intelligence Score across scored runs.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -874,7 +874,7 @@ function TrendAndHistory({ history, onSelect, selectedRunId }: { history: Histor
 
       <Card data-testid="card-history">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2"><History className="w-4 h-4" /> Run History</CardTitle>
+          <CardTitle className="flex items-center gap-2"><History className="w-4 h-4" /> Run History</CardTitle>
           <CardDescription className="text-xs">Every run is linked to its bundle, commit, and execution date. Select one to view it.</CardDescription>
         </CardHeader>
         <CardContent>

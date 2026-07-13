@@ -184,7 +184,7 @@ export default function SharedPlanPage() {
               <p className="text-xs text-muted-foreground">
                 Import it into your planner with one click. It will only fill empty slots and won't overwrite your existing meals.
               </p>
-              <Button
+              <Button variant="default"
                 onClick={() => importMutation.mutate()}
                 disabled={importMutation.isPending}
                 className="w-full sm:w-auto"
@@ -204,7 +204,7 @@ export default function SharedPlanPage() {
                 Create a free account to import this 6-week meal plan into your own planner.
               </p>
               <Link href="/auth" data-testid="link-create-account">
-                <Button className="w-full sm:w-auto">
+                <Button variant="default" className="w-full sm:w-auto">
                   <UserPlus className="h-4 w-4 mr-2" />
                   Create a Free Account to Import
                 </Button>

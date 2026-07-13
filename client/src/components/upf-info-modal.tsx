@@ -14,11 +14,11 @@ export function UPFInfoModal({ trigger }: Props) {
 
   return (
     <>
-      <span onClick={() => setOpen(true)} className="cursor-pointer inline-flex">
+      <button type="button" onClick={() => setOpen(true)} className="cursor-pointer inline-flex">
         {trigger ?? (
           <span className="text-xs underline underline-offset-2 text-primary cursor-pointer">What is UPF?</span>
         )}
-      </span>
+      </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className={getDialogWidthClass("comfortable")}>

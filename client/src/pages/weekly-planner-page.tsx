@@ -1,3 +1,4 @@
+import { Skeleton } from "@/components/ui/skeleton";
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -54,7 +55,7 @@ import type { AdaptationResult, HouseholdSafePreview } from "@shared/meal-adapta
 import { computeRestrictionSafety, type EaterProfile } from "@shared/restrictions/restriction-safety";
 import { shouldExcludeRecipe } from "@shared/dietRules";
 import { ONBOARDING_DIET_OPTIONS, DIET_PATTERN_OPTIONS, ALLERGY_INTOLERANCE_OPTIONS } from "@/lib/diets";
-import { WorkspaceHeader } from "@/components/workspace-header";
+import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
 import { AdaptationReviewSheet } from "@/components/AdaptationReviewSheet";
 import {
   DndContext,
@@ -1746,10 +1747,23 @@ export default function WeeklyPlannerPage() {
   ]);
 
   if (isLoading) {
+    // PX1-W4.8 (fnd-px-loading-vocabulary): the loading branch used to replace the
+    // ENTIRE page — header and week tabs included — with a lone spinner in an
+    // h-[60vh] void: maximal layout shift on the heaviest surface. The header now
+    // stays painted and the wait is content-shaped (Skeleton, the canonical owner).
     return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
+      <>
+        <WorkspaceHeader title="Planner" realm="planner" wide titleTestId="text-weekly-planner-title" />
+        <div className={`${pageContainerClass(true)} pb-4 space-y-3`} data-testid="loading-planner">
+          <Skeleton className="h-9 w-64" />
+          <div className="hidden sm:grid grid-cols-7 gap-2">
+            {Array.from({ length: 7 }).map((_, i) => (
+              <Skeleton key={i} className="h-64" />
+            ))}
+          </div>
+          <Skeleton className="h-64 sm:hidden" />
+        </div>
+      </>
     );
   }
 
@@ -1759,6 +1773,7 @@ export default function WeeklyPlannerPage() {
     <WorkspaceHeader
       title="Planner"
       realm="planner"
+      wide
       titleTestId="text-weekly-planner-title"
       search={{
         placeholder: "Search meals...",
@@ -1771,6 +1786,7 @@ export default function WeeklyPlannerPage() {
           {renameWeekId === activeWeekData?.id ? (
             <input
               value={renameValue}
+              aria-label="Week name"
               onChange={(e) => setRenameValue(e.target.value)}
               className="h-7 text-sm border border-border rounded-md px-2.5 w-32 bg-background outline-none focus:ring-1 focus:ring-primary"
               autoFocus
@@ -1791,7 +1807,7 @@ export default function WeeklyPlannerPage() {
             />
           ) : (
             <Select value={activeWeek} onValueChange={setActiveWeek}>
-              <SelectTrigger className="w-24 sm:w-28 h-7 text-xs" data-testid="tabs-weeks">
+              <SelectTrigger className="w-24 sm:w-28 h-7 text-xs" aria-label="Select week" data-testid="tabs-weeks">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -1811,6 +1827,7 @@ export default function WeeklyPlannerPage() {
               className="hidden sm:inline-flex p-1 rounded-md text-muted-foreground/40 hover:text-muted-foreground hover:bg-accent/40 transition-colors"
               onClick={() => { setRenameWeekId(activeWeekData.id); setRenameValue(activeWeekData.weekName); }}
               title="Rename week"
+              aria-label="Rename week"
               data-testid={`button-rename-week-${activeWeek}`}
             >
               <Pencil className="h-3 w-3" />
@@ -1842,6 +1859,7 @@ export default function WeeklyPlannerPage() {
               className="flex items-center gap-1 h-7 px-2 text-xs rounded-md border border-amber-400/40 text-amber-600 dark:text-amber-400/80 hover:bg-amber-50/60 dark:hover:bg-amber-950/20 transition-colors shrink-0"
               data-testid="button-placeholder-review"
               title="Review unlinked meals"
+              aria-label="Review unlinked meals"
             >
               <BookOpen className="h-3 w-3" />
               <span className="font-medium">{placeholderItems.length}</span>
@@ -1899,7 +1917,7 @@ export default function WeeklyPlannerPage() {
         </DropdownMenu>
       }
     />
-    <div className="max-w-screen-xl 2xl:max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 pt-3 sm:pt-4" data-realm="planner">
+    <div className={pageContainerClass(true)} data-realm="planner">
       <DndContext
         sensors={dndSensors}
         collisionDetection={mobileFriendlyCollision}
@@ -2046,7 +2064,7 @@ export default function WeeklyPlannerPage() {
                     <div className="flex-shrink-0 pl-1">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <button className="p-1.5 rounded-md text-muted-foreground/40 hover:text-muted-foreground hover:bg-accent/40" title="Day actions" data-testid="button-mobile-day-actions">
+                          <button className="p-1.5 rounded-md text-muted-foreground/40 hover:text-muted-foreground hover:bg-accent/40" title="Day actions" aria-label="Day actions" data-testid="button-mobile-day-actions">
                             <MoreHorizontal className="h-4 w-4" />
                           </button>
                         </DropdownMenuTrigger>
@@ -2251,6 +2269,7 @@ export default function WeeklyPlannerPage() {
                                   value={mobileQuickAddName}
                                   onChange={(e) => setMobileQuickAddName(e.target.value)}
                                   placeholder="e.g. Fish cakes"
+                                  aria-label="Meal name"
                                   className="h-7 text-xs flex-1 min-w-0"
                                   data-testid={`input-mobile-name-meal-${row.id}`}
                                 />
@@ -2258,6 +2277,7 @@ export default function WeeklyPlannerPage() {
                                   type="submit"
                                   disabled={!mobileQuickAddName.trim()}
                                   className="h-7 w-7 flex items-center justify-center bg-primary text-primary-foreground rounded-md disabled:opacity-40 flex-shrink-0"
+                                  aria-label="Add named meal"
                                   data-testid={`button-mobile-name-meal-submit-${row.id}`}
                                 >
                                   <Check className="h-3 w-3" />
@@ -2266,6 +2286,7 @@ export default function WeeklyPlannerPage() {
                                   type="button"
                                   onClick={() => { setMobileQuickAdd(null); setMobileQuickAddName(""); }}
                                   className="h-7 w-7 flex items-center justify-center text-muted-foreground hover:text-foreground rounded-md flex-shrink-0"
+                                  aria-label="Cancel naming meal"
                                   data-testid={`button-mobile-name-meal-cancel-${row.id}`}
                                 >
                                   <X className="h-3 w-3" />
@@ -2329,6 +2350,7 @@ export default function WeeklyPlannerPage() {
                             className="absolute top-1 right-1 hover-reveal group-hover/day-hdr:opacity-50 hover:!opacity-100 rounded p-0.5 hover:bg-accent/60 transition-opacity"
                             onClick={(e) => { e.stopPropagation(); setCopyDaySourceId(day.id); setCopyDayTargetId(""); setCopyDayOpen(true); }}
                             title="Copy this day"
+                            aria-label="Copy this day"
                             data-testid={`button-copy-day-${day.dayOfWeek}`}
                           >
                             <Copy className="h-2.5 w-2.5" />
@@ -2360,6 +2382,7 @@ export default function WeeklyPlannerPage() {
                                     className="mt-1 rounded transition-colors text-muted-foreground hover:text-foreground self-center"
                                     onClick={() => addSlotToBasket(row.mealType!, sortedDays)}
                                     disabled={addToBasketMutation.isPending}
+                                    aria-label={`Add ${row.label}s to basket`}
                                     data-testid={`button-add-slot-${row.mealType}-basket`}
                                   >
                                     <ShoppingBasket className="h-4 w-4" />
@@ -2496,6 +2519,7 @@ export default function WeeklyPlannerPage() {
                                               onClick={(e) => e.stopPropagation()}
                                               data-testid={`button-entry-ops-${entry.id}`}
                                               title="Entry actions"
+                                              aria-label="Entry actions"
                                             >
                                               <MoreHorizontal className="h-2.5 w-2.5" />
                                             </button>
@@ -2626,6 +2650,7 @@ export default function WeeklyPlannerPage() {
                                   disabled={isUpdating}
                                   data-testid={`button-add-${row.id}-${day.dayOfWeek}`}
                                   title={`Add ${row.label}`}
+                                  aria-label={`Add ${row.label}`}
                                 >
                                   <Plus className="h-3 w-3" />
                                 </button>
@@ -3042,7 +3067,7 @@ export default function WeeklyPlannerPage() {
             })}>
               Cancel
             </Button>
-            <Button
+            <Button variant="default"
               onClick={confirmRecipeLink}
               disabled={replacePlaceholderMealMutation.isPending}
             >
@@ -3175,9 +3200,11 @@ export default function WeeklyPlannerPage() {
                               return (
                                 <label
                                   key={eater.id}
+                                  htmlFor={`entry-eater-${entry.id}-${eater.id}`}
                                   className="flex items-center gap-2 text-sm cursor-pointer select-none"
                                 >
                                   <Checkbox
+                                    id={`entry-eater-${entry.id}-${eater.id}`}
                                     checked={checked}
                                     onCheckedChange={(next) => {
                                       const currentIds = entryEaters.map(e => Number(e.id));
@@ -3216,6 +3243,7 @@ export default function WeeklyPlannerPage() {
                               <div className="border border-border rounded-md p-2.5 space-y-2 mb-2 bg-muted/20" data-testid="form-add-guest">
                                 <Input
                                   placeholder="Guest name"
+                                  aria-label="Guest name"
                                   value={guestName}
                                   onChange={e => setGuestName(e.target.value)}
                                   className="h-7 text-xs"
@@ -3267,7 +3295,7 @@ export default function WeeklyPlannerPage() {
                                   <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setAddGuestOpen(false); setGuestName(""); setGuestDietTypes([]); setGuestRestrictions([]); }}>
                                     Cancel
                                   </Button>
-                                  <Button
+                                  <Button variant="default"
                                     size="sm"
                                     className="h-7 text-xs"
                                     disabled={!guestName.trim() || addGuestMutation.isPending}
@@ -3375,6 +3403,7 @@ export default function WeeklyPlannerPage() {
                               size="sm"
                               className="h-7 px-2"
                               onClick={() => setAdaptationOpen(o => !o)}
+                              aria-label={adaptationOpen ? "Hide adaptation details" : "Show adaptation details"}
                             >
                               {adaptationOpen
                                 ? <ChevronUp className="h-3.5 w-3.5" />
@@ -3953,7 +3982,7 @@ export default function WeeklyPlannerPage() {
                         Edit Recipe
                       </Button>
                     )}
-                    <Button
+                    <Button variant="default"
                       size="sm"
                       className="realm-banner-btn"
                       onClick={() => setMealDetail(null)}
@@ -4005,6 +4034,7 @@ export default function WeeklyPlannerPage() {
           </DialogHeader>
           <Input
             placeholder="e.g. Family Favourites"
+            aria-label="Saved week name"
             value={saveWeekName}
             onChange={(e) => setSaveWeekName(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && saveWeekName.trim() && activeWeekData) saveWeekMutation.mutate({ weekId: activeWeekData.id, name: saveWeekName.trim() }); }}
@@ -4013,7 +4043,7 @@ export default function WeeklyPlannerPage() {
           />
           <DialogFooter>
             <Button variant="outline" onClick={() => setSaveWeekOpen(false)}>Cancel</Button>
-            <Button
+            <Button variant="default"
               onClick={() => activeWeekData && saveWeekMutation.mutate({ weekId: activeWeekData.id, name: saveWeekName.trim() })}
               disabled={!saveWeekName.trim() || saveWeekMutation.isPending}
               data-testid="button-confirm-save-week"
@@ -4066,7 +4096,7 @@ export default function WeeklyPlannerPage() {
           </DialogHeader>
           <div className="py-2">
             <Select value={copyDayTargetId} onValueChange={setCopyDayTargetId}>
-              <SelectTrigger data-testid="select-copy-day-target">
+              <SelectTrigger aria-label="Target day" data-testid="select-copy-day-target">
                 <SelectValue placeholder="Select target day" />
               </SelectTrigger>
               <SelectContent>
@@ -4084,7 +4114,7 @@ export default function WeeklyPlannerPage() {
             <Button variant="outline" size="sm" onClick={() => { setCopyDayOpen(false); setCopyDaySourceId(null); setCopyDayTargetId(""); }}>
               Cancel
             </Button>
-            <Button
+            <Button variant="default"
               size="sm"
               disabled={!copyDayTargetId || copyDayMutation.isPending}
               onClick={() => {

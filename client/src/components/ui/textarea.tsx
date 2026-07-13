@@ -1,11 +1,13 @@
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
+import { warnIfUnlabelled } from "@/lib/a11y-dev-warnings"
 
 const Textarea = React.forwardRef<
   HTMLTextAreaElement,
   React.ComponentProps<"textarea">
 >(({ className, ...props }, ref) => {
+  warnIfUnlabelled("Textarea", props);
   return (
     <textarea
       className={cn(

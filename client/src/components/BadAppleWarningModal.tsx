@@ -154,7 +154,7 @@ export default function BadAppleWarningModal({
         </div>
 
         <DialogFooter className="flex flex-col gap-2 sm:flex-col">
-          <Button
+          <Button variant="default"
             onClick={onFindBetter}
             className="w-full"
             data-testid="button-find-better"

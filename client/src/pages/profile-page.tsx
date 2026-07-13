@@ -29,7 +29,7 @@ import {
   User, Heart, Home, Flame, Target, Settings, Shield,
   Plus, Minus, Save, Activity, Scale, Ruler,
   Baby, PersonStanding, Users, Apple,
-  Volume2, Scan, Loader2, ArrowLeft, Check, Store,
+  Volume2, Scan, Loader2, Check, Store,
   Sparkles, Mail, Trash2,
   Copy, LogOut, UserMinus, Pencil, X, RefreshCw,
   ChevronDown, MessageSquare,
@@ -45,7 +45,7 @@ import {
   normalizePersonalityId,
   type PersonalityId,
 } from "@shared/companion-personality";
-import { WorkspaceHeader } from "@/components/workspace-header";
+import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
 import LearningSignalsPanel from "@/components/LearningSignalsPanel";
 import { apiRequest, queryClient as qc } from "@/lib/queryClient";
 import { DIET_PATTERNS, DIET_RESTRICTIONS, EATING_SCHEDULES, ONBOARDING_DIET_OPTIONS, ALLERGY_OPTIONS, DIET_PATTERN_OPTIONS, ALLERGY_INTOLERANCE_OPTIONS, formatDietLabel } from "@/lib/diets";
@@ -275,19 +275,15 @@ function ProfilePageContent() {
     updateMutation.mutate({ preferences: prefs });
   };
 
-  // Back runs through the guard: with unsaved work in any section it asks first,
-  // otherwise it behaves exactly as it always has. (The full-page reload this does is
-  // a separate defect — fnd-px-back-three-mechanisms, PX1-W4.5 — and is left alone.)
-  const handleBack = () => {
-    unsaved.guard(() => {
-      const prev = sessionStorage.getItem("profileReturnPath");
-      if (prev) {
-        sessionStorage.removeItem("profileReturnPath");
-        window.location.href = prev;
-      } else {
-        window.history.back();
-      }
-    });
+  // PX1-W4.5 (fnd-px-back-three-mechanisms): Back is the canonical header slot,
+  // resolving the hierarchy parent (EXP §8 — hierarchy over history). The old
+  // implementation did `window.location.href` — a full page reload that discarded
+  // the TanStack cache — falling back to `window.history.back()`; its
+  // `profileReturnPath` sessionStorage read had no writer anywhere in the client.
+  // The unsaved-changes guard (PX1-W0) still runs before every leave.
+  const back = {
+    href: "/home",
+    beforeNavigate: (proceed: () => void) => unsaved.guard(proceed),
   };
 
   const unsavedDialog = (
@@ -316,18 +312,8 @@ function ProfilePageContent() {
   if (isPending) {
     return (
       <>
-      <WorkspaceHeader
-        realm="diary"
-        title="Profile"
-        wide
-        actions={
-          <Button variant="ghost" size="sm" onClick={handleBack} data-testid="button-back-profile">
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back
-          </Button>
-        }
-      />
-      <div className="max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 space-y-4">
+      <WorkspaceHeader realm="diary" title="Profile" wide back={back} />
+      <div className={`${pageContainerClass(true)} space-y-4`}>
         <Skeleton className="h-36 w-full rounded-xl" />
         <Skeleton className="h-32 w-full rounded-xl" />
         <Skeleton className="h-32 w-full rounded-xl" />
@@ -340,16 +326,7 @@ function ProfilePageContent() {
   if (isError || !profile) {
     return (
       <>
-      <WorkspaceHeader
-        realm="diary"
-        title="Profile"
-        actions={
-          <Button variant="ghost" size="sm" onClick={handleBack} data-testid="button-back-profile">
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back
-          </Button>
-        }
-      />
+      <WorkspaceHeader realm="diary" title="Profile" wide back={back} />
       {/* PX1-W0: "Unable to load profile." said nothing about what it meant or what to
           do next. The canonical LoadError does both, and offers the way forward. */}
       <div className="mx-auto w-full max-w-2xl px-4 py-10">
@@ -368,12 +345,7 @@ function ProfilePageContent() {
       realm="diary"
       title="Profile"
       wide
-      actions={
-        <Button variant="ghost" size="sm" onClick={handleBack} data-testid="button-back-profile">
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          Back
-        </Button>
-      }
+      back={back}
       contextBar={
         <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
           <div className="flex items-center gap-0.5 rounded-lg bg-muted/50 p-1 border border-border/40">
@@ -400,7 +372,7 @@ function ProfilePageContent() {
         </div>
       }
     />
-    <div className="max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 pt-3 sm:pt-6 main-safe space-y-4 sm:space-y-6" data-testid="page-profile">
+    <div className={`${pageContainerClass(true)} main-safe space-y-4 sm:space-y-6`} data-testid="page-profile">
 
       <ProfileHeader
         profile={profile}
@@ -540,6 +512,7 @@ function ProfileHeader({ profile, onSave }: { profile: ProfileData; onSave: (fie
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Your first name"
+                aria-label="First name"
                 className="h-8 text-sm max-w-[180px] min-w-0"
                 autoFocus
                 data-testid="input-first-name"
@@ -548,10 +521,10 @@ function ProfileHeader({ profile, onSave }: { profile: ProfileData; onSave: (fie
                   if (e.key === "Escape") cancelEdit();
                 }}
               />
-              <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={commitEdit} data-testid="button-save-name">
+              <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={commitEdit} aria-label="Save name" data-testid="button-save-name">
                 <Check className="h-3.5 w-3.5" />
               </Button>
-              <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={cancelEdit} data-testid="button-cancel-name">
+              <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={cancelEdit} aria-label="Cancel editing name" data-testid="button-cancel-name">
                 <X className="h-3.5 w-3.5" />
               </Button>
             </div>
@@ -707,7 +680,7 @@ function HouseholdSettings({ household, onSave }: { household: ProfileData["hous
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {dirty && (
-            <Button size="sm" onClick={e => { e.stopPropagation(); save(); }} data-testid="button-save-household" className="h-7 px-2 text-xs">
+            <Button variant="default" size="sm" onClick={e => { e.stopPropagation(); save(); }} data-testid="button-save-household" className="h-7 px-2 text-xs">
               <Save className="h-3 w-3 mr-1" /> Save
             </Button>
           )}
@@ -747,8 +720,9 @@ function HouseholdSettings({ household, onSave }: { household: ProfileData["hous
 
           <div className="flex gap-3">
             <div className="flex-1">
-              <Label className="text-xs text-muted-foreground">Max extra prep (min)</Label>
+              <Label htmlFor="input-max-extra-prep" className="text-xs text-muted-foreground">Max extra prep (min)</Label>
               <Input
+                id="input-max-extra-prep"
                 type="number"
                 min={0}
                 placeholder="-"
@@ -759,8 +733,9 @@ function HouseholdSettings({ household, onSave }: { household: ProfileData["hous
               />
             </div>
             <div className="flex-1">
-              <Label className="text-xs text-muted-foreground">Max cook time (min)</Label>
+              <Label htmlFor="input-max-cook-time" className="text-xs text-muted-foreground">Max cook time (min)</Label>
               <Input
+                id="input-max-cook-time"
                 type="number"
                 min={0}
                 placeholder="-"
@@ -798,11 +773,11 @@ function CounterRow({ icon, label, value, onMinus, onPlus, testId }: {
         <span className="text-sm font-medium">{label}</span>
       </div>
       <div className="flex items-center gap-2">
-        <Button variant="outline" size="icon" onClick={onMinus} data-testid={`button-${testId}-minus`}>
+        <Button variant="outline" size="icon" onClick={onMinus} aria-label={`Decrease ${label.toLowerCase()}`} data-testid={`button-${testId}-minus`}>
           <Minus className="h-3.5 w-3.5" />
         </Button>
         <span className="w-8 text-center text-sm font-semibold" data-testid={`text-${testId}-value`}>{value}</span>
-        <Button variant="outline" size="icon" onClick={onPlus} data-testid={`button-${testId}-plus`}>
+        <Button variant="outline" size="icon" onClick={onPlus} aria-label={`Increase ${label.toLowerCase()}`} data-testid={`button-${testId}-plus`}>
           <Plus className="h-3.5 w-3.5" />
         </Button>
       </div>
@@ -896,13 +871,14 @@ function HouseholdManagementSection({ currentUserId }: { currentUserId: number }
               onChange={e => setNewName(e.target.value)}
               className="h-8 text-sm"
               placeholder="Household name"
+              aria-label="Household name"
               data-testid="input-household-name"
               onKeyDown={e => { if (e.key === "Enter") renameMutation.mutate(newName.trim()); if (e.key === "Escape") setEditingName(false); }}
             />
-            <Button size="sm" onClick={() => renameMutation.mutate(newName.trim())} disabled={renameMutation.isPending || !newName.trim()} data-testid="button-rename-confirm">
+            <Button variant="default" size="sm" onClick={() => renameMutation.mutate(newName.trim())} disabled={renameMutation.isPending || !newName.trim()} aria-label="Save household name" data-testid="button-rename-confirm">
               {renameMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => setEditingName(false)} data-testid="button-rename-cancel"><X className="h-3.5 w-3.5" /></Button>
+            <Button size="sm" variant="ghost" onClick={() => setEditingName(false)} aria-label="Cancel renaming household" data-testid="button-rename-cancel"><X className="h-3.5 w-3.5" /></Button>
           </div>
         ) : (
           <div className="flex items-center gap-2">
@@ -911,6 +887,7 @@ function HouseholdManagementSection({ currentUserId }: { currentUserId: number }
               <button
                 className="text-muted-foreground hover:text-foreground transition-colors"
                 onClick={() => { setNewName(household.name); setEditingName(true); }}
+                aria-label="Edit household name"
                 data-testid="button-rename-household"
               >
                 <Pencil className="h-3.5 w-3.5" />
@@ -952,6 +929,7 @@ function HouseholdManagementSection({ currentUserId }: { currentUserId: number }
                 className="h-7 w-7 text-destructive hover:text-destructive shrink-0"
                 onClick={() => removeMemberMutation.mutate(member.userId)}
                 disabled={removeMemberMutation.isPending}
+                aria-label={`Remove ${member.displayName} from household`}
                 data-testid={`button-remove-member-${member.userId}`}
               >
                 <UserMinus className="h-3.5 w-3.5" />
@@ -997,14 +975,15 @@ function HouseholdManagementSection({ currentUserId }: { currentUserId: number }
               value={joinCode}
               onChange={e => setJoinCode(e.target.value.toUpperCase())}
               placeholder="INVITE CODE"
+              aria-label="Invite code"
               className="h-8 text-sm font-mono tracking-wider uppercase"
               data-testid="input-join-code"
               onKeyDown={e => { if (e.key === "Enter") joinMutation.mutate(joinCode.trim()); if (e.key === "Escape") setShowJoin(false); }}
             />
-            <Button size="sm" onClick={() => joinMutation.mutate(joinCode.trim())} disabled={joinMutation.isPending || !joinCode.trim()} data-testid="button-join-household">
+            <Button variant="default" size="sm" onClick={() => joinMutation.mutate(joinCode.trim())} disabled={joinMutation.isPending || !joinCode.trim()} data-testid="button-join-household">
               {joinMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Join"}
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => setShowJoin(false)} data-testid="button-cancel-join"><X className="h-3.5 w-3.5" /></Button>
+            <Button size="sm" variant="ghost" onClick={() => setShowJoin(false)} aria-label="Cancel joining household" data-testid="button-cancel-join"><X className="h-3.5 w-3.5" /></Button>
           </div>
         </div>
       )}
@@ -1230,7 +1209,7 @@ function HouseholdEatersSection() {
           />
           <DialogFooter>
             <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button
+            <Button variant="default"
               size="sm"
               disabled={!displayName.trim() || addMutation.isPending}
               onClick={() => addMutation.mutate({ displayName: displayName.trim(), defaultDietTypes: selectedDiets, hardRestrictions: selectedRestrictions })}
@@ -1257,7 +1236,7 @@ function HouseholdEatersSection() {
           />
           <DialogFooter>
             <Button variant="ghost" size="sm" onClick={() => setEditingEater(null)}>Cancel</Button>
-            <Button
+            <Button variant="default"
               size="sm"
               disabled={!editName.trim() || editMutation.isPending}
               onClick={() => editingEater && editMutation.mutate({ id: editingEater.id, body: { displayName: editName.trim(), defaultDietTypes: editDiets, hardRestrictions: editRestrictions } })}
@@ -1312,7 +1291,7 @@ export function CalorieSettings({ profile, onSave }: { profile: ProfileData; onS
           <h3 className="text-sm font-medium">Nutrition Targets</h3>
         </div>
         {dirty && (
-          <Button size="sm" onClick={save} data-testid="button-save-calories">
+          <Button variant="default" size="sm" onClick={save} data-testid="button-save-calories">
             <Save className="h-3.5 w-3.5 mr-1" /> Save
           </Button>
         )}
@@ -1321,10 +1300,11 @@ export function CalorieSettings({ profile, onSave }: { profile: ProfileData; onS
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label className="text-xs text-muted-foreground mb-1 block">
+            <Label htmlFor="input-height" className="text-xs text-muted-foreground mb-1 block">
               <Ruler className="h-3 w-3 inline mr-1" />Height (cm)
             </Label>
             <Input
+              id="input-height"
               type="number"
               value={height}
               onChange={(e) => { setHeight(e.target.value); setDirty(true); }}
@@ -1333,10 +1313,11 @@ export function CalorieSettings({ profile, onSave }: { profile: ProfileData; onS
             />
           </div>
           <div>
-            <Label className="text-xs text-muted-foreground mb-1 block">
+            <Label htmlFor="input-weight" className="text-xs text-muted-foreground mb-1 block">
               <Scale className="h-3 w-3 inline mr-1" />Weight (kg)
             </Label>
             <Input
+              id="input-weight"
               type="number"
               value={weight}
               onChange={(e) => { setWeight(e.target.value); setDirty(true); }}
@@ -1379,6 +1360,7 @@ export function CalorieSettings({ profile, onSave }: { profile: ProfileData; onS
                 type="number"
                 value={manualCal}
                 onChange={(e) => { setManualCal(Number(e.target.value)); setDirty(true); }}
+                aria-label="Daily calorie target"
                 className="max-w-[140px]"
                 data-testid="input-manual-calories"
               />
@@ -1464,7 +1446,7 @@ export function GoalsPreferences({ profile, onSave, showDiet = true }: { profile
           <h3 className="text-sm font-medium">{showDiet ? "Dietary Pattern" : "Goals"}</h3>
         </div>
         {dirty && (
-          <Button size="sm" onClick={save} data-testid="button-save-goals">
+          <Button variant="default" size="sm" onClick={save} data-testid="button-save-goals">
             <Save className="h-3.5 w-3.5 mr-1" /> Save
           </Button>
         )}
@@ -1477,8 +1459,16 @@ export function GoalsPreferences({ profile, onSave, showDiet = true }: { profile
               <div className="flex flex-wrap gap-2 pt-1">
                 <Badge
                   variant={!dietPattern ? "default" : "outline"}
+                  role="button"
+                  tabIndex={0}
                   className="cursor-pointer"
                   onClick={() => { setDietPattern(null); setDirty(true); }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      if (e.key === " ") e.preventDefault();
+                      setDietPattern(null); setDirty(true);
+                    }
+                  }}
                   data-testid="badge-diet-pattern-none"
                 >
                   {!dietPattern && <Check className="h-3 w-3 mr-1" />}
@@ -1488,8 +1478,16 @@ export function GoalsPreferences({ profile, onSave, showDiet = true }: { profile
                   <Badge
                     key={d.value}
                     variant={dietPattern === d.value ? "default" : "outline"}
+                    role="button"
+                    tabIndex={0}
                     className="cursor-pointer"
                     onClick={() => { setDietPattern(dietPattern === d.value ? null : d.value); setDirty(true); }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        if (e.key === " ") e.preventDefault();
+                        setDietPattern(dietPattern === d.value ? null : d.value); setDirty(true);
+                      }
+                    }}
                     data-testid={`badge-diet-pattern-${d.value}`}
                   >
                     {dietPattern === d.value && <Check className="h-3 w-3 mr-1" />}
@@ -1505,8 +1503,16 @@ export function GoalsPreferences({ profile, onSave, showDiet = true }: { profile
                   <Badge
                     key={r.value}
                     variant={dietRestrictions.includes(r.value) ? "default" : "outline"}
+                    role="button"
+                    tabIndex={0}
                     className="cursor-pointer"
                     onClick={() => toggleRestriction(r.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        if (e.key === " ") e.preventDefault();
+                        toggleRestriction(r.value);
+                      }
+                    }}
                     data-testid={`badge-restriction-${r.value}`}
                   >
                     {dietRestrictions.includes(r.value) && <Check className="h-3 w-3 mr-1" />}
@@ -1522,8 +1528,16 @@ export function GoalsPreferences({ profile, onSave, showDiet = true }: { profile
                   <Badge
                     key={s.value}
                     variant={(eatingSchedule ?? "None") === s.value ? "default" : "outline"}
+                    role="button"
+                    tabIndex={0}
                     className="cursor-pointer"
                     onClick={() => { setEatingSchedule(s.value === "None" ? null : s.value); setDirty(true); }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        if (e.key === " ") e.preventDefault();
+                        setEatingSchedule(s.value === "None" ? null : s.value); setDirty(true);
+                      }
+                    }}
                     data-testid={`badge-schedule-${s.value}`}
                   >
                     {(eatingSchedule ?? "None") === s.value && <Check className="h-3 w-3 mr-1" />}
@@ -1562,8 +1576,16 @@ export function GoalsPreferences({ profile, onSave, showDiet = true }: { profile
                 <Badge
                   key={g.id}
                   variant={selected ? "default" : "outline"}
+                  role="button"
+                  tabIndex={0}
                   className="cursor-pointer flex items-center gap-1"
                   onClick={() => toggleGoal(g.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      if (e.key === " ") e.preventDefault();
+                      toggleGoal(g.id);
+                    }
+                  }}
                   data-testid={`badge-goal-${g.id}`}
                 >
                   <Icon className="h-3 w-3" />
@@ -1620,7 +1642,7 @@ function ShoppingPreferences({ prefs, onSave }: { prefs: any; onSave: (prefs: an
           <h3 className="text-sm font-medium">Shopping & UPF</h3>
         </div>
         {dirty && (
-          <Button size="sm" onClick={save} data-testid="button-save-shopping">
+          <Button variant="default" size="sm" onClick={save} data-testid="button-save-shopping">
             <Save className="h-3.5 w-3.5 mr-1" /> Save
           </Button>
         )}
@@ -1654,8 +1676,16 @@ function ShoppingPreferences({ prefs, onSave }: { prefs: any; onSave: (prefs: an
               <Badge
                 key={s.id}
                 variant={stores.includes(s.id) ? "default" : "outline"}
+                role="button"
+                tabIndex={0}
                 className="cursor-pointer"
                 onClick={() => toggleStore(s.id)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    if (e.key === " ") e.preventDefault();
+                    toggleStore(s.id);
+                  }
+                }}
                 data-testid={`badge-store-${s.id}`}
               >
                 {stores.includes(s.id) && <Check className="h-3 w-3 mr-1" />}
@@ -1767,7 +1797,7 @@ function MealPlanSection() {
         <p className="text-sm text-muted-foreground">
           Load a ready-made 6-week family dinner plan covering all six weeks of your planner. This replaces any dinners currently in your planner.
         </p>
-        <Button
+        <Button variant="default"
           onClick={handleLoad}
           disabled={loading}
           className="w-full whitespace-normal h-auto py-3"
@@ -1805,9 +1835,10 @@ function FeatureToggles({ prefs, onToggle }: { prefs: any; onToggle: (field: str
             <div key={t.key} className="flex items-center justify-between gap-3" data-testid={`toggle-${t.key}`}>
               <div className="flex items-center gap-2.5 min-w-0 flex-1">
                 <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
-                <span className="text-sm leading-snug">{t.label}</span>
+                <label htmlFor={`feature-toggle-${t.key}`} className="text-sm leading-snug">{t.label}</label>
               </div>
               <Switch
+                id={`feature-toggle-${t.key}`}
                 checked={isOn}
                 onCheckedChange={(v) => onToggle(t.key, v)}
                 data-testid={`switch-${t.key}`}
@@ -2040,7 +2071,7 @@ function AccountSettings({ profile }: { profile: ProfileData }) {
               />
             </div>
             <div className="flex gap-2">
-              <Button
+              <Button variant="default"
                 type="submit"
                 size="sm"
                 className="flex-1"
@@ -2106,7 +2137,7 @@ function AccountSettings({ profile }: { profile: ProfileData }) {
             >
               Cancel
             </Button>
-            <Button
+            <Button variant="default"
               onClick={() => {
                 setShowPrefsConfirm(false);
                 setLocation("/onboarding");

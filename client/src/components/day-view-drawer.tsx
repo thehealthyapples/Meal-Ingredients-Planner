@@ -219,6 +219,7 @@ function SlotSection({
                     className="h-5 w-5 rounded hover:bg-muted flex items-center justify-center disabled:opacity-30"
                     data-testid={`button-move-up-${entry.id}`}
                     title="Move up"
+                    aria-label="Move up"
                   >
                     <ChevronUp className="h-3 w-3" />
                   </button>
@@ -228,6 +229,7 @@ function SlotSection({
                     className="h-5 w-5 rounded hover:bg-muted flex items-center justify-center disabled:opacity-30"
                     data-testid={`button-move-down-${entry.id}`}
                     title="Move down"
+                    aria-label="Move down"
                   >
                     <ChevronDown className="h-3 w-3" />
                   </button>
@@ -237,6 +239,7 @@ function SlotSection({
                     className="h-5 w-5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive flex items-center justify-center"
                     data-testid={`button-remove-entry-${entry.id}`}
                     title="Remove"
+                    aria-label="Remove meal"
                   >
                     {removeMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <X className="h-3 w-3" />}
                   </button>
@@ -257,6 +260,7 @@ function SlotSection({
             <button
               className="h-4 w-4 rounded text-muted-foreground hover:text-foreground flex items-center justify-center"
               onClick={() => setPairingsDismissed(true)}
+              aria-label="Dismiss pairing suggestions"
               data-testid={`button-dismiss-pairings-${slot.key}`}
             >
               <X className="h-3 w-3" />
@@ -318,6 +322,7 @@ function SlotSection({
               <Input
                 autoFocus
                 placeholder={slot.isDrink ? "Search drinks…" : "Search recipes…"}
+                aria-label={slot.isDrink ? "Search drinks" : "Search recipes"}
                 value={search.query}
                 onChange={e => {
                   setSearch(s => ({ ...s, query: e.target.value }));

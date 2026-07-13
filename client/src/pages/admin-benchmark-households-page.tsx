@@ -193,7 +193,7 @@ export default function AdminBenchmarkHouseholdsPage() {
           <Button variant="outline" asChild>
             <Link href="/admin/intelligence"><BarChart3 className="h-4 w-4 mr-1" /> Benchmark dashboard</Link>
           </Button>
-          <Button onClick={() => setConfirmSeedAll(true)} disabled={seedAllMutation.isPending} data-testid="seed-world-button">
+          <Button variant="default" onClick={() => setConfirmSeedAll(true)} disabled={seedAllMutation.isPending} data-testid="seed-world-button">
             {seedAllMutation.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sprout className="h-4 w-4 mr-1" />}
             {anySeeded ? "Reset entire world" : "Seed world"}
           </Button>
@@ -302,7 +302,7 @@ export default function AdminBenchmarkHouseholdsPage() {
             <div className="text-sm text-muted-foreground">
               Target: {runHouseholds === "all" ? `all ${households.length} households` : `${(runHouseholds as string[]).length} selected (${(runHouseholds as string[]).join(", ")})`}
             </div>
-            <Button
+            <Button variant="default"
               onClick={() => runMutation.mutate({ mode: runMode, households: runHouseholds })}
               disabled={runMutation.isPending || households.length === 0}
               data-testid="run-benchmark-button"

@@ -380,7 +380,7 @@ export function AddToWeekModal({ open, onClose, product }: Props) {
             Cancel
           </Button>
           {(pathway === "daily" || pathway === "provisioning") && (
-            <Button
+            <Button variant="default"
               size="sm"
               onClick={handleConfirm}
               disabled={saving || (pathway === "daily" ? !canConfirmDaily : false)}

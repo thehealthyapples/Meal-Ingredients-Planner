@@ -9,11 +9,12 @@
 
 // ── Surface & layout ──────────────────────────────────────────────────────────
 //
-// Calm, warm, optimistic — never clinical. A soft translucent surface with a
-// faint border, generous-but-compact padding, and a rounded silhouette.
-
-export const intelligenceSurface =
-  "rounded-xl border border-border/30 bg-background/60 backdrop-blur-sm";
+// Calm, warm, optimistic — never clinical.
+//
+// PX1-W4.4: `intelligenceSurface` — a private border/background rivalling
+// `ui/card`'s — is RETIRED (fnd-px-nine-card-surfaces). The card surface has
+// exactly one owner, `components/ui/card.tsx`; `IntelligenceCard` composes it.
+// This module keeps owning intelligence spacing, typography and tone.
 
 /** Compact padding used by every intelligence card. */
 export const cardPadding = "px-4 py-3";

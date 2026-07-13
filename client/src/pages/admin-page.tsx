@@ -120,7 +120,7 @@ function AdminCard({
                   <Icon className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <CardTitle className="text-base">{section.title}</CardTitle>
+                  <CardTitle>{section.title}</CardTitle>
                 </div>
               </div>
               <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />

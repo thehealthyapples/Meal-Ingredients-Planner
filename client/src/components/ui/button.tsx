@@ -44,8 +44,16 @@ const buttonVariants = cva(
 
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
+    Omit<VariantProps<typeof buttonVariants>, "variant"> {
   asChild?: boolean
+  /**
+   * Required (PX1-W4.6, fnd-px-primary-action-unenforceable). EXP §7 demands
+   * exactly one obvious next thing to do on a surface — unenforceable while
+   * "primary" happened by omission (PX1 counted 4 explicit `default`s against
+   * 124 implicit ones). A surface must now DECLARE what its primary action is:
+   * `variant="default"` is a statement, not an accident.
+   */
+  variant: NonNullable<VariantProps<typeof buttonVariants>["variant"]>
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(

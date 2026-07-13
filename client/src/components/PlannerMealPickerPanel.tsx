@@ -305,6 +305,7 @@ export function PlannerMealPickerPanel({
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Search meals..."
+          aria-label="Search meals"
           value={mealSearch}
           onChange={e => setMealSearch(e.target.value)}
           className="pl-9 h-8 text-sm"
@@ -590,6 +591,7 @@ export function PlannerMealPickerPanel({
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="e.g. oven chips, granola…"
+                aria-label="Search shop-bought products"
                 value={productQuery}
                 onChange={e => setProductQuery(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && searchProducts()}
@@ -601,6 +603,7 @@ export function PlannerMealPickerPanel({
               className="h-8 w-8 shrink-0 flex items-center justify-center rounded-md bg-primary text-primary-foreground disabled:opacity-50"
               onClick={searchProducts}
               disabled={productSearching || !productQuery.trim()}
+              aria-label="Search products"
               data-testid="button-product-search"
             >
               {productSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}

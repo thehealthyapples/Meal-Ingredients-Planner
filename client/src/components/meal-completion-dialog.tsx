@@ -268,7 +268,7 @@ export function MealCompletionDialog({ open, onClose, meal }: MealCompletionDial
             </DialogHeader>
 
             <div className="space-y-2 pt-1">
-              <Button
+              <Button variant="default"
                 className="w-full justify-start gap-3"
                 onClick={() => setStep("planner")}
                 data-testid="button-completion-planner"
@@ -478,7 +478,7 @@ export function MealCompletionDialog({ open, onClose, meal }: MealCompletionDial
               <Button variant="outline" onClick={() => setStep("choice")} data-testid="button-completion-back">
                 Back
               </Button>
-              <Button
+              <Button variant="default"
                 disabled={assignments.length === 0 || plannerMutation.isPending}
                 onClick={() => plannerMutation.mutate()}
                 data-testid="button-completion-confirm-planner"

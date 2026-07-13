@@ -3,9 +3,10 @@ import { Loader2, Leaf, Lightbulb, BarChart3, Salad, X } from "lucide-react";
 import { useWeekMealEntries } from "@/hooks/use-week-meal-entries";
 import { PlantDiversityReport } from "@/components/PlantDiversityReport";
 import { HouseholdNutritionCentre } from "@/components/HouseholdNutritionCentre";
-import { WorkspaceHeader } from "@/components/workspace-header";
+import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
 import { Link } from "wouter";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
+import { Card } from "@/components/ui/card";
 
 type NutritionTab = "foods" | "nutrients" | "benefits" | "suggestions";
 
@@ -67,7 +68,7 @@ export default function PlantDiversityPage() {
           item of <main>, this container's min-width:auto let the report table
           grow it past the viewport, where overflow-x-hidden clipped the columns
           instead of letting the table's own scroller work. */}
-      <div className="w-full min-w-0 max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
+      <div className={`min-w-0 ${pageContainerClass(true)} pb-4 sm:pb-5`}>
 
         {activeTab === "foods" && (
           <>
@@ -100,7 +101,7 @@ export default function PlantDiversityPage() {
               Learn how the foods you eat support your health — from gut health and immunity
               to energy, sleep, and longevity.
             </p>
-            <div className="rounded-2xl border border-border bg-card/60 p-6 sm:p-8 max-w-2xl space-y-4">
+            <Card className="p-6 sm:p-8 max-w-2xl space-y-4">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-[hsl(145,22%,88%)] dark:bg-[hsl(145,14%,17%)] flex items-center justify-center shrink-0">
                   <Leaf className="h-5 w-5 text-[hsl(145,36%,28%)] dark:text-[hsl(145,26%,70%)]" />
@@ -131,7 +132,7 @@ export default function PlantDiversityPage() {
                   </button>
                 </Link>
               </div>
-            </div>
+            </Card>
           </div>
         )}
 
@@ -140,7 +141,7 @@ export default function PlantDiversityPage() {
             <p className="text-sm text-muted-foreground/60 leading-relaxed max-w-2xl">
               Personalised ideas for what to eat more of based on your household's plant diversity and nutrient patterns.
             </p>
-            <div className="rounded-2xl border border-border bg-card/60 p-6 sm:p-8 max-w-2xl space-y-4">
+            <Card className="p-6 sm:p-8 max-w-2xl space-y-4">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-[hsl(145,22%,88%)] dark:bg-[hsl(145,14%,17%)] flex items-center justify-center shrink-0">
                   <Lightbulb className="h-5 w-5 text-[hsl(145,36%,28%)] dark:text-[hsl(145,26%,70%)]" />
@@ -177,7 +178,7 @@ export default function PlantDiversityPage() {
                   </button>
                 </Link>
               </div>
-            </div>
+            </Card>
           </div>
         )}
 

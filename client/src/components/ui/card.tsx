@@ -29,19 +29,27 @@ const CardHeader = React.forwardRef<
 ));
 CardHeader.displayName = "CardHeader"
 
-const CardTitle = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      "text-2xl font-semibold leading-none tracking-tight",
-      className
-    )}
-    {...props}
-  />
-))
+// PX1-W4.11 (fnd-px-cardtitle-not-heading, fnd-px-cardtitle-default-dead).
+// CardTitle used to render a <div> at text-2xl — a default so wrong that 85 of its
+// 86 usages overrode it, and a mark so meaningless that screen-reader heading
+// navigation found ONE entry on the densest household pages. It is now a real
+// heading (h3 by default: page h1 → section h2 → card h3) whose default is the
+// THA type scale's `.title-card` rung (16px/22px, 500, display face — index.css),
+// expressed as Tailwind utilities so a call site can still override via twMerge.
+type CardTitleProps = React.HTMLAttributes<HTMLHeadingElement> & {
+  /** Heading level. Keep it in document order; never pick by size — size is CSS. */
+  as?: "h2" | "h3" | "h4";
+};
+
+const CardTitle = React.forwardRef<HTMLHeadingElement, CardTitleProps>(
+  ({ className, as: Comp = "h3", ...props }, ref) => (
+    <Comp
+      ref={ref}
+      className={cn("font-display text-base leading-snug font-medium", className)}
+      {...props}
+    />
+  )
+)
 CardTitle.displayName = "CardTitle"
 
 const CardDescription = React.forwardRef<

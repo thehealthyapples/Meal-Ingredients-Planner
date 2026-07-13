@@ -1,9 +1,11 @@
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
+import { warnIfUnlabelled } from "@/lib/a11y-dev-warnings"
 
 const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
   ({ className, type, ...props }, ref) => {
+    warnIfUnlabelled("Input", props);
     // h-9 to match icon buttons and default buttons.
     return (
       <input

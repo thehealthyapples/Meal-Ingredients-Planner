@@ -13,6 +13,7 @@
  */
 
 import { Fragment, useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -228,10 +229,10 @@ function TabSkeleton() {
   return (
     <div className="space-y-4" data-testid="tab-skeleton">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {[...Array(4)].map((_, i) => <div key={i} className="h-24 bg-muted animate-pulse rounded-lg" />)}
+        {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24 rounded-lg" />)}
       </div>
-      <div className="h-56 bg-muted animate-pulse rounded-lg" />
-      <div className="h-40 bg-muted animate-pulse rounded-lg" />
+      <Skeleton className="h-56 rounded-lg" />
+      <Skeleton className="h-40 rounded-lg" />
     </div>
   );
 }
@@ -1021,7 +1022,7 @@ function DiagnosticsTab({ days }: { days: number }) {
                 data-testid="input-diagnostics-session"
               />
             </div>
-            <Button onClick={applyFilters} data-testid="button-diagnostics-apply">Apply</Button>
+            <Button variant="default" onClick={applyFilters} data-testid="button-diagnostics-apply">Apply</Button>
             <Button
               variant="ghost"
               onClick={() => { setDraft(EMPTY_FILTERS); setApplied(EMPTY_FILTERS); setExpandedId(null); }}

@@ -62,9 +62,8 @@ import { api, buildUrl } from "@shared/routes";
 import { apiRequest } from "@/lib/queryClient";
 import { normalizeIngredientKey } from "@shared/normalize";
 import { estimateFallbackPrice } from "@shared/price-estimates";
-import { formatItemDisplay, cleanProductName, getLiquidDisplayMl } from "@/lib/unit-display";
+import { formatItemDisplay, cleanProductName, getLiquidDisplayMl, formatQty } from "@/lib/unit-display";
 import { deriveQuantityConfidence, getQuantityConfidenceLabel } from "@/lib/quantity-confidence";
-import ScoreBadge from "@/components/ui/score-badge";
 import AppleRating from "@/components/AppleRating";
 import BadAppleWarningModal from "@/components/BadAppleWarningModal";
 import type { ShoppingListItem, ProductMatch, IngredientSource, SupermarketLink, FreezerMeal, IngredientProduct } from "@shared/schema";
@@ -83,7 +82,7 @@ import ShoppingListView, { resolvePickKey } from "@/components/ShoppingListView"
 import { matchesSourceFilter, sourceLabel, sourcePriority, type SourceFilter } from "@/lib/source-helpers";
 import { CameraModal } from "@/components/camera-modal";
 import { ShoppingListScanReview, type ShoppingListScanData } from "@/components/ShoppingListScanReview";
-import { WorkspaceHeader } from "@/components/workspace-header";
+import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
 
 type ShoppingListItemExtended = ShoppingListItem & {
   addedByDisplayName?: string | null;
@@ -111,70 +110,6 @@ function capitalizeWords(str: string): string {
   return str.replace(/\b\w/g, c => c.toUpperCase());
 }
 
-function formatQty(val: number | null, unit: string | null, pref: 'metric' | 'imperial', gramsVal?: number | null, productName?: string): { qty: string; unitLabel: string } {
-  // Humanize: known shopping liquids stored as normalized grams → display ml/L.
-  if (unit === 'g' && productName) {
-    const g = (gramsVal != null && gramsVal > 0) ? gramsVal : (val != null && val > 0 ? val : 0);
-    if (g > 0) {
-      const displayMl = getLiquidDisplayMl(g, productName);
-      if (displayMl !== null) {
-        if (pref === 'metric') {
-          if (displayMl >= 1000) return { qty: (displayMl / 1000).toFixed(1).replace(/\.?0+$/, ''), unitLabel: 'L' };
-          return { qty: Math.round(displayMl).toString(), unitLabel: 'ml' };
-        } else {
-          if (displayMl >= 240) return { qty: (displayMl / 240).toFixed(1).replace(/\.?0+$/, ''), unitLabel: 'cups' };
-          if (displayMl >= 15) return { qty: (displayMl / 15).toFixed(1).replace(/\.?0+$/, ''), unitLabel: 'tbsp' };
-          return { qty: (displayMl / 5).toFixed(1).replace(/\.?0+$/, ''), unitLabel: 'tsp' };
-        }
-      }
-    }
-  }
-
-  if (gramsVal !== null && gramsVal !== undefined && gramsVal > 0 && unit !== 'unit') {
-    const isLiquid = unit === 'ml' || unit === 'L' || unit === 'cups' || unit === 'tbsp' || unit === 'tsp' || unit === 'fl oz';
-    if (pref === 'metric') {
-      if (isLiquid) {
-        if (gramsVal >= 1000) return { qty: (gramsVal / 1000).toFixed(2).replace(/\.?0+$/, ''), unitLabel: 'L' };
-        return { qty: Math.round(gramsVal).toString(), unitLabel: 'ml' };
-      }
-      if (gramsVal >= 1000) return { qty: (gramsVal / 1000).toFixed(2).replace(/\.?0+$/, ''), unitLabel: 'kg' };
-      return { qty: Math.round(gramsVal).toString(), unitLabel: 'g' };
-    } else {
-      if (isLiquid) {
-        if (gramsVal >= 240) return { qty: (gramsVal / 240).toFixed(1).replace(/\.?0+$/, ''), unitLabel: 'cups' };
-        if (gramsVal >= 15) return { qty: (gramsVal / 15).toFixed(1).replace(/\.?0+$/, ''), unitLabel: 'tbsp' };
-        return { qty: (gramsVal / 5).toFixed(1).replace(/\.?0+$/, ''), unitLabel: 'tsp' };
-      }
-      if (gramsVal >= 453.592) return { qty: (gramsVal / 453.592).toFixed(2).replace(/\.?0+$/, ''), unitLabel: 'lb' };
-      return { qty: (gramsVal / 28.3495).toFixed(1).replace(/\.?0+$/, ''), unitLabel: 'oz' };
-    }
-  }
-  if (val === null || val === undefined) return { qty: '-', unitLabel: '-' };
-  if (!unit) return { qty: val % 1 === 0 ? val.toString() : val.toFixed(1), unitLabel: '' };
-  if (unit === 'unit' && val === 1) return { qty: '1', unitLabel: '' };
-  if (pref === 'metric') {
-    if (unit === 'g') {
-      if (val >= 1000) return { qty: (val / 1000).toFixed(2).replace(/\.?0+$/, ''), unitLabel: 'kg' };
-      return { qty: Math.round(val).toString(), unitLabel: 'g' };
-    }
-    if (unit === 'ml') {
-      if (val >= 1000) return { qty: (val / 1000).toFixed(2).replace(/\.?0+$/, ''), unitLabel: 'L' };
-      return { qty: Math.round(val).toString(), unitLabel: 'ml' };
-    }
-  } else {
-    if (unit === 'g') {
-      if (val >= 453.592) return { qty: (val / 453.592).toFixed(2).replace(/\.?0+$/, ''), unitLabel: 'lb' };
-      return { qty: (val / 28.3495).toFixed(1).replace(/\.?0+$/, ''), unitLabel: 'oz' };
-    }
-    if (unit === 'ml') {
-      if (val >= 240) return { qty: (val / 240).toFixed(1).replace(/\.?0+$/, ''), unitLabel: 'cups' };
-      if (val >= 15) return { qty: (val / 15).toFixed(1).replace(/\.?0+$/, ''), unitLabel: 'tbsp' };
-      return { qty: (val / 5).toFixed(1).replace(/\.?0+$/, ''), unitLabel: 'tsp' };
-    }
-  }
-  if (unit === 'unit') return { qty: val % 1 === 0 ? val.toString() : val.toFixed(1), unitLabel: '' };
-  return { qty: val % 1 === 0 ? val.toString() : val.toFixed(1), unitLabel: unit };
-}
 
 const CATEGORY_COLORS: Record<string, string> = {
   meat: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
@@ -697,13 +632,13 @@ function EditItemModal({ item, sources, onClose }: {
                   {sources.map(s => s.mealName).join(', ')}
                 </p>
               </div>
-              <Switch checked={updateRecipe} onCheckedChange={setUpdateRecipe} data-testid="switch-edit-update-recipe" />
+              <Switch checked={updateRecipe} onCheckedChange={setUpdateRecipe} aria-label="Update recipe too" data-testid="switch-edit-update-recipe" />
             </div>
           )}
         </div>
         <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="outline" onClick={onClose} data-testid="button-edit-item-cancel">Cancel</Button>
-          <Button onClick={() => correction.mutate()} disabled={correction.isPending || !name.trim()} data-testid="button-edit-item-save">
+          <Button variant="default" onClick={() => correction.mutate()} disabled={correction.isPending || !name.trim()} data-testid="button-edit-item-save">
             {correction.isPending ? 'Saving…' : 'Save'}
           </Button>
         </DialogFooter>
@@ -948,7 +883,7 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                 {insight.headline}
               </p>
             </div>
-            {canShowScoreForItem(item) && <ScoreBadge score={item.thaRating ?? 0} size={32} />}
+            {canShowScoreForItem(item) && <AppleRating rating={item.thaRating ?? 0} sizePx={32} showTooltip={false} animate={false} />}
           </div>
         </DialogHeader>
 
@@ -989,10 +924,11 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                     </p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    {canShowScoreForItem(item) && <ScoreBadge score={item.thaRating ?? 0} size={28} />}
+                    {canShowScoreForItem(item) && <AppleRating rating={item.thaRating ?? 0} sizePx={28} showTooltip={false} animate={false} />}
                     <button
                       className="text-muted-foreground hover:text-foreground transition-colors"
                       onClick={() => setShowCurrentDetail(v => !v)}
+                      aria-label="Toggle product details"
                       data-testid="button-toggle-current-detail"
                     >
                       {showCurrentDetail ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -1082,8 +1018,8 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                             )}
                           </div>
                           <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                            <ScoreBadge score={choice.upfAnalysis?.thaRating ?? 0} size={26} />
-                            <Button size="sm" className="h-7 text-xs" onClick={() => handleSelectProduct(choice)} data-testid={`button-select-cleaner-shop-${idx}`}>
+                            <AppleRating rating={choice.upfAnalysis?.thaRating ?? 0} sizePx={26} showTooltip={false} animate={false} />
+                            <Button variant="default" size="sm" className="h-7 text-xs" onClick={() => handleSelectProduct(choice)} data-testid={`button-select-cleaner-shop-${idx}`}>
                               <Check className="h-3 w-3 mr-1" />
                               Select
                             </Button>
@@ -1200,7 +1136,7 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                   <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">Current</p>
                   <div className="flex items-center gap-2">
                     {canShowScoreForItem(item)
-                      ? <ScoreBadge score={item.thaRating ?? 0} size={22} />
+                      ? <AppleRating rating={item.thaRating ?? 0} sizePx={22} showTooltip={false} animate={false} />
                       : <span className="text-[10px] text-muted-foreground/70 font-medium">Analysis Required</span>
                     }
                     <span className="text-xs font-medium truncate">{capitalizeWords(item.productName)}</span>
@@ -1218,7 +1154,7 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                   <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/30 dark:bg-blue-950/20 p-3 space-y-2" data-testid="compare-card-shop">
                     <p className="text-[10px] uppercase tracking-[0.12em] text-blue-500 dark:text-blue-400">Cleaner shop option</p>
                     <div className="flex items-center gap-2">
-                      <ScoreBadge score={rankedChoices[0].upfAnalysis?.thaRating ?? 0} size={22} />
+                      <AppleRating rating={rankedChoices[0].upfAnalysis?.thaRating ?? 0} sizePx={22} showTooltip={false} animate={false} />
                       <span className="text-xs font-medium truncate">{rankedChoices[0].product_name}</span>
                     </div>
                     <div className="space-y-1 text-xs text-muted-foreground">
@@ -1233,7 +1169,7 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                   <div className="rounded-lg border border-green-200 dark:border-green-800 bg-green-50/30 dark:bg-green-950/20 p-3 space-y-2" data-testid="compare-card-wholefood">
                     <p className="text-[10px] uppercase tracking-[0.12em] text-green-600 dark:text-green-400">Whole-food option</p>
                     <div className="flex items-center gap-2">
-                      <ScoreBadge score={5} size={22} />
+                      <AppleRating rating={5} sizePx={22} showTooltip={false} animate={false} />
                       <span className="text-xs font-medium truncate">{wholeFoodAlt.title}</span>
                     </div>
                     <div className="space-y-1 text-xs text-muted-foreground">
@@ -1274,10 +1210,11 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                         onChange={(e) => setSearchQuery(e.target.value)}
                         onKeyDown={(e) => { if (e.key === 'Enter') doSearch(searchQuery); }}
                         placeholder="Search products…"
+                        aria-label="Search products"
                         className="flex-1 h-8 text-sm"
                         data-testid="input-analyse-search"
                       />
-                      <Button size="sm" onClick={() => doSearch(searchQuery)} disabled={isSearching} className="h-8" data-testid="button-analyse-search">
+                      <Button variant="default" size="sm" onClick={() => doSearch(searchQuery)} disabled={isSearching} className="h-8" aria-label="Search products" data-testid="button-analyse-search">
                         {isSearching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
                       </Button>
                       <Button
@@ -1285,6 +1222,7 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                         size="icon"
                         onClick={() => setShowFilters(!showFilters)}
                         className="h-8 w-8 relative flex-shrink-0"
+                        aria-label="Toggle filters"
                         data-testid="button-analyse-toggle-filters"
                       >
                         <SlidersHorizontal className="h-3.5 w-3.5" />
@@ -1369,12 +1307,12 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                                     {product.brand && <p className="text-[10px] text-muted-foreground">{product.brand}</p>}
                                   </div>
                                   <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                                    <ScoreBadge score={thaRating} size={22} />
+                                    <AppleRating rating={thaRating} sizePx={22} showTooltip={false} animate={false} />
                                     <div className="flex items-center gap-1">
-                                      <Button size="sm" variant="outline" className="h-6 text-xs px-2" onClick={() => { appendPendingIngredient(product.product_name + (product.brand ? ` (${product.brand})` : "")); toast({ title: "Added to quick list" }); }} data-testid={`button-quicklist-product-${idx}`}>
+                                      <Button size="sm" variant="outline" className="h-6 text-xs px-2" onClick={() => { appendPendingIngredient(product.product_name + (product.brand ? ` (${product.brand})` : "")); toast({ title: "Added to quick list" }); }} aria-label="Add to quick list" data-testid={`button-quicklist-product-${idx}`}>
                                         <ListPlus className="h-3 w-3" />
                                       </Button>
-                                      <Button size="sm" className="h-6 text-xs px-2" onClick={() => handleSelectProduct(product)} data-testid={`button-select-product-${idx}`}>
+                                      <Button variant="default" size="sm" className="h-6 text-xs px-2" onClick={() => handleSelectProduct(product)} data-testid={`button-select-product-${idx}`}>
                                         <Check className="h-3 w-3 mr-1" />Select
                                       </Button>
                                     </div>
@@ -2366,7 +2304,7 @@ export default function ShoppingListPage() {
   const copyToClipboard = () => {
     const items = displayItems.length > 0
       ? displayItems.map(i => {
-          const display = formatItemDisplay(i.productName, i.quantityValue, i.unit, measurementPref);
+          const display = formatItemDisplay(i.productName, i.quantityValue, i.unit, measurementPref, i.quantityInGrams);
           return `- ${display}${i.quantity > 1 ? ` (x${i.quantity})` : ''}`;
         })
       : [];
@@ -2882,6 +2820,9 @@ export default function ShoppingListPage() {
     <th
       className={`p-3 font-medium text-muted-foreground cursor-pointer select-none whitespace-nowrap ${className}`}
       onClick={() => handleSort(column)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { if (e.key === ' ') e.preventDefault(); handleSort(column); } }}
       data-testid={`sort-${column}`}
     >
       <span className="inline-flex items-center">
@@ -2985,7 +2926,7 @@ export default function ShoppingListPage() {
           /* ── Actions menu ── */
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center justify-center h-8 w-8 rounded-md transition-colors hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground hover:text-foreground" data-testid="button-more-actions">
+              <button className="flex items-center justify-center h-8 w-8 rounded-md transition-colors hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground hover:text-foreground" aria-label="More actions" data-testid="button-more-actions">
                 <MoreHorizontal className="h-4 w-4" />
               </button>
             </DropdownMenuTrigger>
@@ -3067,7 +3008,7 @@ export default function ShoppingListPage() {
       />
     )}
     <div
-      className={`${isFullscreen ? 'fixed inset-0 z-50 overflow-auto flex flex-col' : 'max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 pt-3 sm:pt-4'}`}
+      className={`${isFullscreen ? 'fixed inset-0 z-50 overflow-auto flex flex-col' : pageContainerClass(true)}`}
       style={isFullscreen ? { backgroundImage: "url('/orchard-bg.webp')", backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
     >
 
@@ -3141,6 +3082,7 @@ export default function ShoppingListPage() {
                             className="h-6 text-xs border border-border rounded px-1.5 bg-background cursor-pointer"
                             value={catDefault.supermarket}
                             onChange={e => setCategoryDefault(cat, 'supermarket', e.target.value)}
+                            aria-label={`Supermarket for ${cat}`}
                             data-testid={`select-cat-supermarket-${cat}`}
                           >
                             <option value="">Auto</option>
@@ -3152,6 +3094,7 @@ export default function ShoppingListPage() {
                               className="h-6 text-xs border border-border rounded px-1.5 bg-background cursor-pointer"
                               value={catDefault.tier}
                               onChange={e => setCategoryDefault(cat, 'tier', e.target.value)}
+                              aria-label={`Quality tier for ${cat}`}
                               data-testid={`select-cat-tier-${cat}`}
                             >
                               {(CATEGORY_TIER_OPTIONS[cat] || CATEGORY_TIER_OPTIONS.other).map(key => (
@@ -3254,9 +3197,9 @@ export default function ShoppingListPage() {
                                   {isEditing && editState?.field === 'productName' ? (
                                     <div className="flex flex-col gap-1">
                                       <div className="flex items-center gap-1">
-                                        <Input value={editState.value} onChange={(e) => setEditState({ ...editState, value: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }} className="h-6 text-xs" autoFocus data-testid={`input-edit-name-${item.id}`} />
-                                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={saveEdit} data-testid={`button-save-edit-${item.id}`}><Check className="h-3 w-3" /></Button>
-                                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={cancelEdit}><X className="h-3 w-3" /></Button>
+                                        <Input value={editState.value} onChange={(e) => setEditState({ ...editState, value: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }} className="h-6 text-xs" autoFocus aria-label="Edit item name" data-testid={`input-edit-name-${item.id}`} />
+                                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={saveEdit} aria-label="Save edit" data-testid={`button-save-edit-${item.id}`}><Check className="h-3 w-3" /></Button>
+                                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={cancelEdit} aria-label="Cancel edit"><X className="h-3 w-3" /></Button>
                                       </div>
                                       <SpellSuggestions term={editState.value} onPick={(word) => setEditState({ ...editState, value: word })} testIdPrefix={`edit-item-${item.id}`} />
                                     </div>
@@ -3265,7 +3208,7 @@ export default function ShoppingListPage() {
                                       <div className="flex-1 min-w-0">
                                         {/* Name + status badges */}
                                         <div className="flex items-center gap-1.5 flex-wrap mb-1.5">
-                                          <span className="text-sm font-medium text-foreground cursor-pointer" onClick={() => startEdit(item.id, 'productName', item.productName)} data-testid={`text-item-name-${item.id}`}>{capitalizeWords(cleanProductName(item.productName, item.quantityValue))}</span>
+                                          <button type="button" className="text-sm font-medium text-foreground cursor-pointer text-left" onClick={() => startEdit(item.id, 'productName', item.productName)} data-testid={`text-item-name-${item.id}`}>{capitalizeWords(cleanProductName(item.productName, item.quantityValue))}</button>
                                           {item.needsReview && (
                                             <Tooltip>
                                               <TooltipTrigger asChild>
@@ -3328,14 +3271,14 @@ export default function ShoppingListPage() {
                                           <div className="flex items-center gap-0.5">
                                             {isEditing && editState?.field === 'quantityValue' ? (
                                               <div className="flex items-center gap-1">
-                                                <Input type="number" value={editState.value} onChange={(e) => setEditState({ ...editState, value: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }} className="h-7 text-xs w-16 text-right" autoFocus data-testid={`input-edit-qty-${item.id}`} />
-                                                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={saveEdit}><Check className="h-3 w-3" /></Button>
-                                                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={cancelEdit}><X className="h-3 w-3" /></Button>
+                                                <Input type="number" value={editState.value} onChange={(e) => setEditState({ ...editState, value: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }} className="h-7 text-xs w-16 text-right" autoFocus aria-label="Edit quantity" data-testid={`input-edit-qty-${item.id}`} />
+                                                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={saveEdit} aria-label="Save edit"><Check className="h-3 w-3" /></Button>
+                                                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={cancelEdit} aria-label="Cancel edit"><X className="h-3 w-3" /></Button>
                                               </div>
                                             ) : (
                                               <>
                                                 {showStepper && allIds.length <= 1 && (
-                                                  <button onClick={() => updateItem.mutate({ id: item.id, fields: { quantityValue: Math.max(0, (item.quantityValue ?? 0) - 1) } })} className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors" data-testid={`button-qty-minus-${item.id}`}><Minus className="h-3 w-3" /></button>
+                                                  <button onClick={() => updateItem.mutate({ id: item.id, fields: { quantityValue: Math.max(0, (item.quantityValue ?? 0) - 1) } })} className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors" aria-label="Decrease quantity" data-testid={`button-qty-minus-${item.id}`}><Minus className="h-3 w-3" /></button>
                                                 )}
                                                 {allIds.length > 1 ? (
                                                   <Tooltip>
@@ -3345,10 +3288,10 @@ export default function ShoppingListPage() {
                                                     <TooltipContent><p className="text-xs">Combined from {allIds.length} sources — use Planned or Quick list tab to edit.</p></TooltipContent>
                                                   </Tooltip>
                                                 ) : (
-                                                  <span className="cursor-pointer tabular-nums whitespace-nowrap text-sm font-medium px-0.5" onClick={() => startEdit(item.id, 'quantityValue', String(item.quantityValue ?? 0))} data-testid={`text-item-qty-${item.id}`}>{qty} {unitLabel}</span>
+                                                  <button type="button" className="cursor-pointer tabular-nums whitespace-nowrap text-sm font-medium px-0.5" onClick={() => startEdit(item.id, 'quantityValue', String(item.quantityValue ?? 0))} aria-label="Edit quantity" data-testid={`text-item-qty-${item.id}`}>{qty} {unitLabel}</button>
                                                 )}
                                                 {showStepper && allIds.length <= 1 && (
-                                                  <button onClick={() => updateItem.mutate({ id: item.id, fields: { quantityValue: (item.quantityValue ?? 0) + 1 } })} className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors" data-testid={`button-qty-plus-${item.id}`}><Plus className="h-3 w-3" /></button>
+                                                  <button onClick={() => updateItem.mutate({ id: item.id, fields: { quantityValue: (item.quantityValue ?? 0) + 1 } })} className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors" aria-label="Increase quantity" data-testid={`button-qty-plus-${item.id}`}><Plus className="h-3 w-3" /></button>
                                                 )}
                                               </>
                                             )}
@@ -3364,16 +3307,16 @@ export default function ShoppingListPage() {
                                             {hasPrices ? (
                                               <div className="flex items-center gap-1">
                                                 {selectedPrice !== null && selectedPrice !== undefined ? (
-                                                  <span className={`tabular-nums text-sm cursor-pointer ${isBestPrice ? 'text-primary font-semibold' : 'text-foreground'}`} onClick={() => setComparisonItem(item)}>£{selectedPrice.toFixed(2)}</span>
+                                                  <button type="button" className={`tabular-nums text-sm cursor-pointer ${isBestPrice ? 'text-primary font-semibold' : 'text-foreground'}`} onClick={() => setComparisonItem(item)} aria-label={`Compare prices, £${selectedPrice.toFixed(2)}`}>£{selectedPrice.toFixed(2)}</button>
                                                 ) : (
-                                                  <span className="text-sm text-muted-foreground cursor-pointer" onClick={() => setComparisonItem(item)}>-</span>
+                                                  <button type="button" className="text-sm text-muted-foreground cursor-pointer" onClick={() => setComparisonItem(item)} aria-label="Compare prices">-</button>
                                                 )}
                                                 {isBestPrice && <span className="text-[10px] bg-secondary text-secondary-foreground px-1 py-0.5 rounded font-semibold">Best</span>}
                                               </div>
                                             ) : <span className="text-sm text-muted-foreground">-</span>}
                                           </div>
                                           {/* Checkbox */}
-                                          <Checkbox checked={item.checked || false} onCheckedChange={(checked) => toggleChecked.mutate({ id: item.id, checked: !!checked })} className="border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground" data-testid={`checkbox-item-${item.id}`} />
+                                          <Checkbox checked={item.checked || false} onCheckedChange={(checked) => toggleChecked.mutate({ id: item.id, checked: !!checked })} className="border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground" aria-label={`Mark ${item.productName} as done`} data-testid={`checkbox-item-${item.id}`} />
                                           {/* Delete */}
                                           <button onClick={() => {
                                             const plannedIds = allIds.filter((_, i) => !allBasketLabels[i]?.startsWith("quick_list_"));
@@ -3383,7 +3326,7 @@ export default function ShoppingListPage() {
                                             } else {
                                               allIds.forEach(id => removeItem.mutate(id));
                                             }
-                                          }} className="h-7 w-7 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors" data-testid={`button-remove-${item.id}`}><Trash2 className="h-3.5 w-3.5" /></button>
+                                          }} className="h-7 w-7 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors" aria-label="Delete item" data-testid={`button-remove-${item.id}`}><Trash2 className="h-3.5 w-3.5" /></button>
                                         </div>
                                         {/* Quantity confidence hint — only for approximate/assumed, non-checked items */}
                                         {!item.checked && (() => {
@@ -3493,7 +3436,7 @@ export default function ShoppingListPage() {
                                       )}
                                       <div className="flex items-center gap-2 flex-wrap">
                                         <Select value={itemTier} onValueChange={(val) => { const newTier = val === catDef.tier ? null : val; changeItemTier.mutate({ id: item.id, tier: newTier }); }}>
-                                          <SelectTrigger className={`h-7 text-xs w-auto min-w-[120px] ${isOverridden ? 'border-amber-400' : ''}`} data-testid={`select-item-tier-${item.id}`}>
+                                          <SelectTrigger className={`h-7 text-xs w-auto min-w-[120px] ${isOverridden ? 'border-amber-400' : ''}`} aria-label="Quality tier" data-testid={`select-item-tier-${item.id}`}>
                                             <SelectValue />
                                           </SelectTrigger>
                                           <SelectContent>
@@ -3503,7 +3446,7 @@ export default function ShoppingListPage() {
                                         {hasPrices && (
                                           <div className="flex items-center gap-1" data-testid={`select-shop-${item.id}`}>
                                             <Select value={item.selectedStore || 'auto'} onValueChange={(val) => { updateItem.mutate({ id: item.id, fields: { selectedStore: val === 'auto' ? null : val } }); setGlobalStore('auto'); }}>
-                                              <SelectTrigger className={`h-7 text-xs w-auto min-w-[100px] ${item.selectedStore ? 'border-amber-400' : ''}`} data-testid={`select-store-${item.id}`}>
+                                              <SelectTrigger className={`h-7 text-xs w-auto min-w-[100px] ${item.selectedStore ? 'border-amber-400' : ''}`} aria-label="Choose shop" data-testid={`select-store-${item.id}`}>
                                                 <SelectValue />
                                               </SelectTrigger>
                                               <SelectContent>
@@ -3526,7 +3469,7 @@ export default function ShoppingListPage() {
                                               const storeMatch = itemPrices?.get(item.selectedStore);
                                               return storeMatch?.productUrl ? (
                                                 <a href={storeMatch.productUrl} target="_blank" rel="noopener noreferrer">
-                                                  <Button variant="ghost" size="icon" className="h-7 w-7" data-testid={`button-store-link-${item.id}`}><ExternalLink className="h-3 w-3" /></Button>
+                                                  <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Open product page" data-testid={`button-store-link-${item.id}`}><ExternalLink className="h-3 w-3" /></Button>
                                                 </a>
                                               ) : null;
                                             })()}
@@ -3606,8 +3549,8 @@ export default function ShoppingListPage() {
                                         })()}
                                       </div>
                                       <div className="flex-1" />
-                                      <Button variant="ghost" size="icon" onClick={() => setAnalyseItem(item)} className="text-muted-foreground h-7 w-7" data-testid={`button-analyse-${item.id}`}><Microscope className="h-3 w-3" /></Button>
-                                      <Button variant="ghost" size="icon" onClick={() => setCorrectItem(item)} className="text-muted-foreground h-7 w-7" data-testid={`button-edit-${item.id}`}><Pencil className="h-3 w-3" /></Button>
+                                      <Button variant="ghost" size="icon" onClick={() => setAnalyseItem(item)} className="text-muted-foreground h-7 w-7" aria-label="Analyse item" data-testid={`button-analyse-${item.id}`}><Microscope className="h-3 w-3" /></Button>
+                                      <Button variant="ghost" size="icon" onClick={() => setCorrectItem(item)} className="text-muted-foreground h-7 w-7" aria-label="Edit item" data-testid={`button-edit-${item.id}`}><Pencil className="h-3 w-3" /></Button>
                                     </div>
                                   </div>
                                 )}
@@ -3623,8 +3566,8 @@ export default function ShoppingListPage() {
                               <span className="text-sm font-medium text-foreground/80" data-testid={`text-extra-name-${extra.id}`}>{capitalizeWords(extra.name)}</span>
                               <button className={`inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full border transition-colors ${extra.alwaysAdd ? 'border-primary/60 text-primary bg-primary/10 hover:bg-primary/20' : 'border-border text-muted-foreground/60 bg-transparent hover:border-primary/40 hover:text-primary/60'}`} onClick={() => extra.alwaysAdd ? setAlwaysAddModal({ extraId: extra.id, extraName: extra.name }) : updateExtraMutation.mutate({ id: extra.id, alwaysAdd: true })} data-testid={`pill-always-${extra.id}`}>Always in Basket</button>
                             </div>
-                            <Checkbox checked={false} onCheckedChange={() => {}} className="border-muted" data-testid={`checkbox-extra-${extra.id}`} />
-                            <Button variant="ghost" size="icon" onClick={() => deleteExtraMutation.mutate(extra.id)} className="text-muted-foreground h-7 w-7" data-testid={`button-delete-extra-${extra.id}`}><Trash2 className="h-3 w-3" /></Button>
+                            <Checkbox checked={false} onCheckedChange={() => {}} className="border-muted" aria-label={`Mark ${extra.name} as done`} data-testid={`checkbox-extra-${extra.id}`} />
+                            <Button variant="ghost" size="icon" onClick={() => deleteExtraMutation.mutate(extra.id)} className="text-muted-foreground h-7 w-7" aria-label="Delete item" data-testid={`button-delete-extra-${extra.id}`}><Trash2 className="h-3 w-3" /></Button>
                           </div>
                         ))}
 
@@ -3669,11 +3612,12 @@ export default function ShoppingListPage() {
                               onChange={e => setAddItemInput(e.target.value)}
                               onKeyDown={e => { if (e.key === 'Enter') handleAddItem(addItemInput, cat); if (e.key === 'Escape') { setAddingToCategory(null); setAddItemInput(''); } }}
                               placeholder={`Add ${cat} item…`}
+                              aria-label={`Add ${cat} item`}
                               className="h-6 text-xs flex-1"
                               autoFocus
                               data-testid={`input-add-${cat}`}
                             />
-                            <Button size="sm" className="h-6 text-xs px-2" onClick={() => handleAddItem(addItemInput, cat)} data-testid={`button-confirm-add-${cat}`}>Add</Button>
+                            <Button variant="default" size="sm" className="h-6 text-xs px-2" onClick={() => handleAddItem(addItemInput, cat)} data-testid={`button-confirm-add-${cat}`}>Add</Button>
                             <Button size="sm" variant="ghost" className="h-6 text-xs px-2" onClick={() => { setAddingToCategory(null); setAddItemInput(''); }}>Cancel</Button>
                           </div>
                         </div>
@@ -3724,8 +3668,8 @@ export default function ShoppingListPage() {
                                     {item.quantity > 1 && <Badge variant="secondary" className="text-[10px]">x{item.quantity}</Badge>}
                                     {(qty && unitLabel) && <span className="text-xs text-muted-foreground tabular-nums">{qty} {unitLabel}</span>}
                                   </div>
-                                  <Checkbox checked={item.checked || false} onCheckedChange={(checked) => toggleChecked.mutate({ id: item.id, checked: !!checked })} className="border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground" data-testid={`checkbox-household-${item.id}`} />
-                                  <Button variant="ghost" size="icon" onClick={() => removeItem.mutate(item.id)} className="text-muted-foreground h-7 w-7" data-testid={`button-remove-household-${item.id}`}><Trash2 className="h-3 w-3" /></Button>
+                                  <Checkbox checked={item.checked || false} onCheckedChange={(checked) => toggleChecked.mutate({ id: item.id, checked: !!checked })} className="border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground" aria-label={`Mark ${item.productName} as done`} data-testid={`checkbox-household-${item.id}`} />
+                                  <Button variant="ghost" size="icon" onClick={() => removeItem.mutate(item.id)} className="text-muted-foreground h-7 w-7" aria-label="Delete item" data-testid={`button-remove-household-${item.id}`}><Trash2 className="h-3 w-3" /></Button>
                                 </div>
                               );
                             })}
@@ -3735,7 +3679,7 @@ export default function ShoppingListPage() {
                                   <span className="text-sm font-medium text-foreground/80">{capitalizeWords(extra.name)}</span>
                                   <button className={`inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full border transition-colors ${extra.alwaysAdd ? 'border-primary/60 text-primary bg-primary/10 hover:bg-primary/20' : 'border-border text-muted-foreground/60 bg-transparent hover:border-primary/40 hover:text-primary/60'}`} onClick={() => extra.alwaysAdd ? setAlwaysAddModal({ extraId: extra.id, extraName: extra.name }) : updateExtraMutation.mutate({ id: extra.id, alwaysAdd: true })} data-testid={`pill-always-hh-${extra.id}`}>Always in Basket</button>
                                 </div>
-                                <Button variant="ghost" size="icon" onClick={() => deleteExtraMutation.mutate(extra.id)} className="text-muted-foreground h-7 w-7" data-testid={`button-delete-hh-extra-${extra.id}`}><Trash2 className="h-3 w-3" /></Button>
+                                <Button variant="ghost" size="icon" onClick={() => deleteExtraMutation.mutate(extra.id)} className="text-muted-foreground h-7 w-7" aria-label="Delete item" data-testid={`button-delete-hh-extra-${extra.id}`}><Trash2 className="h-3 w-3" /></Button>
                               </div>
                             ))}
                           </div>
@@ -3750,8 +3694,8 @@ export default function ShoppingListPage() {
                             ))}
                           </div>
                           <div className="flex gap-1.5">
-                            <Input value={addItemInput} onChange={e => setAddItemInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') handleAddItem(addItemInput, 'household'); if (e.key === 'Escape') { setAddingToCategory(null); setAddItemInput(''); } }} placeholder="Add household item…" className="h-6 text-xs flex-1" autoFocus data-testid="input-add-household" />
-                            <Button size="sm" className="h-6 text-xs px-2" onClick={() => handleAddItem(addItemInput, 'household')} data-testid="button-confirm-add-household">Add</Button>
+                            <Input value={addItemInput} onChange={e => setAddItemInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') handleAddItem(addItemInput, 'household'); if (e.key === 'Escape') { setAddingToCategory(null); setAddItemInput(''); } }} placeholder="Add household item…" className="h-6 text-xs flex-1" autoFocus aria-label="Add household item" data-testid="input-add-household" />
+                            <Button variant="default" size="sm" className="h-6 text-xs px-2" onClick={() => handleAddItem(addItemInput, 'household')} data-testid="button-confirm-add-household">Add</Button>
                             <Button size="sm" variant="ghost" className="h-6 text-xs px-2" onClick={() => { setAddingToCategory(null); setAddItemInput(''); }}>Cancel</Button>
                           </div>
                         </div>
@@ -3982,7 +3926,7 @@ export default function ShoppingListPage() {
           </p>
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setAlwaysAddModal(null)} data-testid="button-always-no">No, keep it</Button>
-            <Button
+            <Button variant="default"
               onClick={() => {
                 if (!alwaysAddModal) return;
                 updateExtraMutation.mutate({ id: alwaysAddModal.extraId, alwaysAdd: false });
@@ -4217,9 +4161,9 @@ export default function ShoppingListPage() {
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Choose Supermarket</label>
+              <label className="text-sm font-medium" htmlFor="select-export-supermarket">Choose Supermarket</label>
               <Select value={exportSupermarket} onValueChange={setExportSupermarket}>
-                <SelectTrigger data-testid="select-export-supermarket">
+                <SelectTrigger id="select-export-supermarket" data-testid="select-export-supermarket">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -4242,7 +4186,7 @@ export default function ShoppingListPage() {
               <Download className="h-4 w-4" />
               Download List
             </Button>
-            <Button onClick={() => handleExport('links')} className="gap-1" data-testid="button-export-links">
+            <Button variant="default" onClick={() => handleExport('links')} className="gap-1" data-testid="button-export-links">
               <ExternalLink className="h-4 w-4" />
               Open Search Pages
             </Button>

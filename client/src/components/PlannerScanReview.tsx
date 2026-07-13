@@ -714,7 +714,7 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
 
               <Separator />
               <div className="flex justify-end">
-                <Button onClick={handleClose}>Done</Button>
+                <Button variant="default" onClick={handleClose}>Done</Button>
               </div>
             </div>
           )}
@@ -875,7 +875,7 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
                                 <p className="text-xs text-muted-foreground">From scan: <em>"{p.rawText}"</em></p>
                               )}
                               <div className="flex gap-1.5">
-                                <Button size="sm" className="h-6 text-xs gap-1 px-2" onClick={saveEdit}
+                                <Button variant="default" size="sm" className="h-6 text-xs gap-1 px-2" onClick={saveEdit}
                                   disabled={!editName.trim() && !p.interpretedName}>
                                   <Check className="h-2.5 w-2.5" />Save
                                 </Button>
@@ -1019,7 +1019,7 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
                                 <p className="text-xs text-muted-foreground">From scan: <em>"{p.rawText}"</em></p>
                               )}
                               <div className="flex gap-1.5">
-                                <Button size="sm" className="h-6 text-xs gap-1 px-2" onClick={saveEdit}
+                                <Button variant="default" size="sm" className="h-6 text-xs gap-1 px-2" onClick={saveEdit}
                                   disabled={!editName.trim() && !p.interpretedName}>
                                   <Check className="h-2.5 w-2.5" />Save
                                 </Button>
@@ -1186,7 +1186,7 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
             <div className="flex gap-2 justify-end flex-wrap">
               <Button variant="outline" onClick={handleClose} disabled={saving}>Done</Button>
               {!isFailedParse && selectedShoppingItems.length > 0 && (
-                <Button onClick={handleConfirm} disabled={saving}>
+                <Button variant="default" onClick={handleConfirm} disabled={saving}>
                   {saving
                     ? <><Loader2 className="h-4 w-4 animate-spin mr-1.5" />Saving…</>
                     : `Save ${selectedShoppingItems.length} shopping item${selectedShoppingItems.length !== 1 ? "s" : ""}`}

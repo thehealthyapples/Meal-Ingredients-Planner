@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Store, ExternalLink, ShoppingCart, Globe, Loader2 } from "lucide-react";
-import { WorkspaceHeader } from "@/components/workspace-header";
+import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@shared/routes";
@@ -94,7 +94,7 @@ export default function SupermarketsPage() {
         </Select>
       }
     />
-    <div className="max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 main-safe">
+    <div className={`${pageContainerClass(true)} main-safe`}>
 
       {shoppingItems.length > 0 && (
         <Card className="mb-8">

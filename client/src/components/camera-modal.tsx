@@ -216,7 +216,7 @@ export function CameraModal({ open, onOpenChange, onCapture, onUploadInstead }: 
         <div className="px-5 pb-5 pt-3 flex items-center gap-3 shrink-0">
           {status === "live" && (
             <>
-              <Button
+              <Button variant="default"
                 onClick={takePhoto}
                 className="flex-1"
                 data-testid="button-camera-capture"
@@ -237,7 +237,7 @@ export function CameraModal({ open, onOpenChange, onCapture, onUploadInstead }: 
 
           {status === "captured" && (
             <>
-              <Button onClick={confirm} className="flex-1" data-testid="button-camera-use-photo">
+              <Button variant="default" onClick={confirm} className="flex-1" data-testid="button-camera-use-photo">
                 Use this photo
               </Button>
               <Button variant="outline" onClick={retake} data-testid="button-camera-retake">

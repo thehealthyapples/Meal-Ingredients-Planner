@@ -130,7 +130,7 @@ export function SharePlanDialog({ open, onOpenChange }: SharePlanDialogProps) {
                 You haven't saved your planner yet. Save it as a template first, then you can share it.
               </p>
             </div>
-            <Button
+            <Button variant="default"
               className="w-full"
               onClick={() => saveMutation.mutate()}
               disabled={saveMutation.isPending}
@@ -260,7 +260,7 @@ export function SharePlanDialog({ open, onOpenChange }: SharePlanDialogProps) {
                     </Button>
                   </div>
                 ) : (
-                  <Button
+                  <Button variant="default"
                     className="w-full"
                     onClick={() => shareMutation.mutate(activeTemplate.id)}
                     disabled={shareMutation.isPending}

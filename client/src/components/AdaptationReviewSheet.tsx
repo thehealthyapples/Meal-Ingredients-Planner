@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Overlay } from "@/components/ui/overlay";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -259,20 +259,26 @@ export function AdaptationReviewSheet({
   // Reset editable name when preview/originalMealName changes
   // (using useMemo above for initial, then allow user to edit)
 
+  // PX1-W4.10 (fnd-px-overlay-container-arbitrary): "review a change before
+  // committing" was a Dialog in PlannerScanReview, a SHEET here, and a Drawer in
+  // WorkspaceAnalyserSheet — three arrival directions for one interaction. This
+  // now composes the canonical Overlay: bottom sheet on a phone, centred dialog
+  // on a desktop, decided by the one breakpoint truth.
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[92dvh] flex flex-col p-0 rounded-t-2xl overflow-hidden">
-        <SheetHeader className="px-4 pt-4 pb-3 border-b border-border/50 shrink-0">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-teal-600 dark:text-teal-400" />
-            <SheetTitle className="text-base">Adaptation Review</SheetTitle>
-          </div>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Review all changes before saving your household-safe version.
-          </p>
-        </SheetHeader>
-
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
+    <Overlay
+      open={open}
+      onOpenChange={onOpenChange}
+      title={
+        <span className="flex items-center gap-2">
+          <ShieldCheck className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+          Adaptation Review
+        </span>
+      }
+      description="Review all changes before saving your household-safe version."
+      desktopClassName="sm:max-w-2xl"
+      data-testid="adaptation-review-overlay"
+    >
+        <div className="space-y-5">
 
           {/* ── Summary banner ───────────────────────────────────────────── */}
           <div className="flex flex-wrap gap-1.5 items-center p-3 bg-teal-50 dark:bg-teal-950/30 rounded-lg border border-teal-200/60 dark:border-teal-800/40">
@@ -529,7 +535,7 @@ export function AdaptationReviewSheet({
 
         {/* ── Sticky approve footer ─────────────────────────────────────── */}
         <div className="shrink-0 px-4 py-3 border-t border-border/50 bg-background/95 backdrop-blur-sm">
-          <Button
+          <Button variant="default"
             className="w-full h-11 text-sm font-medium"
             disabled={acceptMutation.isPending || !!preview.validationFailed}
             onClick={() => acceptMutation.mutate()}
@@ -546,7 +552,6 @@ export function AdaptationReviewSheet({
             </p>
           )}
         </div>
-      </SheetContent>
-    </Sheet>
+    </Overlay>
   );
 }

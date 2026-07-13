@@ -256,7 +256,7 @@ export default function AdminUsersPage() {
             data-testid="input-banner-text"
           />
           <div>
-            <Button
+            <Button variant="default"
               size="sm"
               onClick={() => saveBannerMutation.mutate()}
               disabled={saveBannerMutation.isPending}
@@ -278,7 +278,7 @@ export default function AdminUsersPage() {
           className="max-w-sm"
           data-testid="input-user-search"
         />
-        <Button onClick={handleSearch} data-testid="button-user-search">
+        <Button variant="default" onClick={handleSearch} data-testid="button-user-search">
           <Search className="h-4 w-4 mr-2" />
           Search
         </Button>
@@ -356,7 +356,7 @@ export default function AdminUsersPage() {
                       </Select>
                     </TableCell>
                     <TableCell>
-                      <Button
+                      <Button variant="default"
                         size="sm"
                         disabled={!isDirty || tierMutation.isPending}
                         onClick={() => handleSaveTier(u)}
@@ -553,7 +553,7 @@ export default function AdminUsersPage() {
             <Button variant="outline" onClick={closeResetDialog} data-testid="button-cancel-reset">
               Cancel
             </Button>
-            <Button
+            <Button variant="default"
               disabled={!canSubmitReset || resetPasswordMutation.isPending}
               onClick={() => resetDialog && resetPasswordMutation.mutate({ userId: resetDialog.userId, password: newPassword })}
               data-testid="button-confirm-reset-password"

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback, useDeferredValue, Fragment } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 import thaAppleLogo from "@/assets/icons/tha-apple.png";
 import { useMeals, invalidateMealLibrary } from "@/hooks/use-meals";
 import { Button } from "@/components/ui/button";
@@ -40,13 +41,13 @@ import { useToast } from "@/hooks/use-toast";
 import { useBasket } from "@/hooks/use-basket";
 import { useLocation, useSearch } from "wouter";
 import { MealWatermark, getWatermarkType } from "@/components/meal-watermark";
-import ScoreBadge from "@/components/ui/score-badge";
+import AppleRating from "@/components/AppleRating";
 import { Switch } from "@/components/ui/switch";
 import { shouldExcludeRecipe } from "@shared/dietRules";
 import { useUser } from "@/hooks/use-user";
 import { scoreMealSearch } from "@shared/food-synonyms";
 import { writePendingIngredients, appendPendingIngredient } from "@/lib/quick-list";
-import { WorkspaceHeader } from "@/components/workspace-header";
+import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
 import { CookbookWorkspacePanel, type CookbookWorkspaceMode } from "@/components/CookbookWorkspacePanel";
 import { CookbookMealIntelligenceStrip } from "@/components/CookbookMealIntelligenceStrip";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
@@ -546,6 +547,7 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
                       setListContextOpen(true);
                     }
                   }}
+                  aria-label="Add to quick list"
                   data-testid={`button-add-to-list-${mealId}`}
                 >
                   <ListPlus className="h-3.5 w-3.5" />
@@ -565,6 +567,7 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
                   variant="ghost"
                   className="h-7 w-7 text-blue-400 realm-banner-btn"
                   onClick={(e) => { e.stopPropagation(); onFreezeClick(); }}
+                  aria-label="Add to freezer"
                   data-testid={`button-freeze-${mealId}`}
                 >
                   <Snowflake className="h-3.5 w-3.5" />
@@ -583,6 +586,7 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
                 variant="ghost"
                 className="h-7 w-7 realm-banner-btn"
                 onClick={(e) => { e.stopPropagation(); setPlannerOpen(true); }}
+                aria-label="Add to planner"
                 data-testid={`button-add-planner-${mealId}`}
               >
                 <CalendarDays className="h-3.5 w-3.5" />
@@ -602,6 +606,7 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
                   className="h-7 w-7 realm-banner-btn"
                   onClick={(e) => { e.stopPropagation(); analyzeMutation.mutate(); }}
                   disabled={analyzeMutation.isPending}
+                  aria-label="Analyse meal"
                   data-testid={`button-analyze-meal-${mealId}`}
                 >
                   {analyzeMutation.isPending ? (
@@ -634,6 +639,7 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
                     }
                   }}
                   disabled={isReadyMeal ? addProductToBasketMutation.isPending : addToListMutation.isPending}
+                  aria-label="Add to basket"
                   data-testid={`button-add-basket-${mealId}`}
                 >
                   {(isReadyMeal ? addProductToBasketMutation.isPending : addToListMutation.isPending) ? (
@@ -1747,6 +1753,7 @@ function AddToPlannerDialog({ mealId, mealName, isDrink, audience: mealAudience,
                     <input
                       className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring"
                       placeholder="Guest name"
+                      aria-label="Guest name"
                       value={newGuestName}
                       onChange={e => setNewGuestName(e.target.value)}
                       onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addPendingGuest(); } }}
@@ -1791,7 +1798,7 @@ function AddToPlannerDialog({ mealId, mealName, isDrink, audience: mealAudience,
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <Button size="sm" className="h-7 text-xs" onClick={addPendingGuest} disabled={!newGuestName.trim()}>Add</Button>
+                      <Button variant="default" size="sm" className="h-7 text-xs" onClick={addPendingGuest} disabled={!newGuestName.trim()}>Add</Button>
                       <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setGuestFormOpen(false); setNewGuestName(""); setNewGuestDietTypes(new Set()); setNewGuestAllergyTypes(new Set()); }}>Cancel</Button>
                     </div>
                   </div>
@@ -1810,7 +1817,7 @@ function AddToPlannerDialog({ mealId, mealName, isDrink, audience: mealAudience,
                             <span className="text-xs text-destructive/70 truncate">⚠ {g.hardRestrictions.join(", ")}</span>
                           )}
                         </div>
-                        <button onClick={() => setPendingGuests(prev => prev.filter(x => x.id !== g.id))} className="text-muted-foreground hover:text-foreground shrink-0">
+                        <button onClick={() => setPendingGuests(prev => prev.filter(x => x.id !== g.id))} aria-label="Remove guest" className="text-muted-foreground hover:text-foreground shrink-0">
                           <X className="h-3.5 w-3.5" />
                         </button>
                       </div>
@@ -1829,7 +1836,7 @@ function AddToPlannerDialog({ mealId, mealName, isDrink, audience: mealAudience,
             {step === 1 && (
               <>
                 <Button variant="outline" onClick={resetState}>Cancel</Button>
-                <Button
+                <Button variant="default"
                   disabled={assignments.length === 0 || addMutation.isPending}
                   onClick={() => {
                     setSelectedEaterIds(new Set(householdEaters.map(e => Number(e.id))));
@@ -1852,7 +1859,7 @@ function AddToPlannerDialog({ mealId, mealName, isDrink, audience: mealAudience,
                 >
                   Skip
                 </Button>
-                <Button
+                <Button variant="default"
                   disabled={addMutation.isPending}
                   onClick={() => addMutation.mutate(true)}
                   data-testid="button-assign-with-context"
@@ -1982,6 +1989,7 @@ function AddToShoppingListDialog({ mealName, open, onOpenChange, onAdd }: {
                 <input
                   className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring"
                   placeholder="Guest name"
+                  aria-label="Guest name"
                   value={newGuestName}
                   onChange={e => setNewGuestName(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addPendingGuest(); } }}
@@ -2026,7 +2034,7 @@ function AddToShoppingListDialog({ mealName, open, onOpenChange, onAdd }: {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" className="h-7 text-xs" onClick={addPendingGuest} disabled={!newGuestName.trim()}>Add</Button>
+                  <Button variant="default" size="sm" className="h-7 text-xs" onClick={addPendingGuest} disabled={!newGuestName.trim()}>Add</Button>
                   <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setGuestFormOpen(false); setNewGuestName(""); setNewGuestDietTypes(new Set()); setNewGuestAllergyTypes(new Set()); }}>Cancel</Button>
                 </div>
               </div>
@@ -2045,7 +2053,7 @@ function AddToShoppingListDialog({ mealName, open, onOpenChange, onAdd }: {
                         <span className="text-xs text-destructive/70 truncate">⚠ {g.hardRestrictions.join(", ")}</span>
                       )}
                     </div>
-                    <button onClick={() => setPendingGuests(prev => prev.filter(x => x.id !== g.id))} className="text-muted-foreground hover:text-foreground shrink-0">
+                    <button onClick={() => setPendingGuests(prev => prev.filter(x => x.id !== g.id))} aria-label="Remove guest" className="text-muted-foreground hover:text-foreground shrink-0">
                       <X className="h-3.5 w-3.5" />
                     </button>
                   </div>
@@ -2067,7 +2075,7 @@ function AddToShoppingListDialog({ mealName, open, onOpenChange, onAdd }: {
           >
             Skip
           </Button>
-          <Button
+          <Button variant="default"
             onClick={() => {
               const ctx = {
                 eaterIds: selectedEaterIds.size > 0 ? Array.from(selectedEaterIds) : undefined,
@@ -2368,6 +2376,7 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
               className="realm-banner-btn"
               onClick={handleEdit}
               disabled={isDisabled}
+              aria-label="Edit recipe"
               data-testid={`button-web-edit-${recipe.id}`}
             >
               {pendingAction === "edit" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
@@ -2383,6 +2392,7 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
               className="realm-banner-btn"
               onClick={handleBasket}
               disabled={isDisabled}
+              aria-label="Add to basket"
               data-testid={`button-web-basket-${recipe.id}`}
             >
               {pendingAction === "basket" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingBasket className="h-4 w-4" />}
@@ -2398,6 +2408,7 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
               className="realm-banner-btn"
               onClick={handleAnalyse}
               disabled={isDisabled}
+              aria-label="Analyse recipe"
               data-testid={`button-web-analyse-${recipe.id}`}
             >
               {pendingAction === "analyse" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Microscope className="h-4 w-4" />}
@@ -2413,6 +2424,7 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
               className="realm-banner-btn"
               onClick={handlePlanner}
               disabled={isDisabled}
+              aria-label="Add to planner"
               data-testid={`button-web-planner-${recipe.id}`}
             >
               {pendingAction === "planner" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarDays className="h-4 w-4" />}
@@ -2429,6 +2441,7 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
                 className="text-primary realm-banner-btn"
                 onClick={handleAddToList}
                 disabled={isDisabled}
+                aria-label="Add to quick list"
                 data-testid={`button-web-add-to-list-${recipe.id}`}
               >
                 {pendingAction === "list" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ListPlus className="h-4 w-4" />}
@@ -3484,7 +3497,7 @@ export default function MealsPage() {
         </div>
       }
     />
-    <div className="max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 overflow-x-clip" data-realm="cookbook">
+    <div className={`${pageContainerClass(true)} overflow-x-clip`} data-realm="cookbook">
       {/* Planner import context banner */}
       {plannerImportCtx && (
         <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5 mb-4">
@@ -3593,7 +3606,7 @@ export default function MealsPage() {
                 value={webDietPattern || "none"}
                 onValueChange={v => { setMatchMyProfile(false); setWebDietPattern(v === "none" ? "" : v); }}
               >
-                <SelectTrigger className="h-7 text-xs w-[140px]" data-testid="select-web-diet-pattern">
+                <SelectTrigger className="h-7 text-xs w-[140px]" aria-label="Diet pattern" data-testid="select-web-diet-pattern">
                   <SelectValue placeholder="Any pattern" />
                 </SelectTrigger>
                 <SelectContent>
@@ -3656,7 +3669,7 @@ export default function MealsPage() {
                         exit={{ opacity: 0, scale: 0.95 }}
                         layout
                       >
-                        <Card className="overflow-hidden h-full flex flex-col cursor-pointer" onClick={() => {
+                        <Card className="overflow-hidden h-full flex flex-col cursor-pointer" role="button" tabIndex={0} onKeyDown={(e) => { if (e.target !== e.currentTarget) return; if (e.key === "Enter" || e.key === " ") { if (e.key === " ") e.preventDefault(); e.currentTarget.click(); } }} onClick={() => {
                           const webId = `web-${recipe.id}`;
                           if (expandedMealId === webId) {
                             setExpandedMealId(null);
@@ -3814,7 +3827,7 @@ export default function MealsPage() {
                                   value={String(webImportCategoryMap[recipe.id] ?? guessWebCategory(recipe) ?? "")}
                                   onValueChange={(val) => setWebImportCategoryMap(prev => ({ ...prev, [recipe.id]: Number(val) }))}
                                 >
-                                  <SelectTrigger className="flex-1" data-testid={`select-web-import-category-${recipe.id}`}>
+                                  <SelectTrigger className="flex-1" aria-label="Recipe category" data-testid={`select-web-import-category-${recipe.id}`}>
                                     <SelectValue placeholder="Category" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -3894,7 +3907,7 @@ export default function MealsPage() {
       {isLoading ? (
         <div className={viewMode === 'grid' ? "grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-2" : "flex flex-col gap-2"}>
           {[1, 2, 3, 4].map(i => (
-            <div key={i} className={`bg-muted animate-pulse rounded-md ${viewMode === 'grid' ? 'h-28' : 'h-16'}`} />
+            <Skeleton key={i} className={viewMode === 'grid' ? 'h-28' : 'h-16'} />
           ))}
         </div>
       ) : (
@@ -3927,6 +3940,9 @@ export default function MealsPage() {
                     >
                   <Card
                     className="h-full flex flex-col group cursor-pointer overflow-hidden hover-elevate transition-all duration-200"
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.target !== e.currentTarget) return; if (e.key === "Enter" || e.key === " ") { if (e.key === " ") e.preventDefault(); navigate(`/meals/${meal.id}`); } }}
                     onClick={(e) => {
                       e.stopPropagation();
                       navigate(`/meals/${meal.id}`);
@@ -4131,6 +4147,9 @@ export default function MealsPage() {
                     >
                   <Card
                     className="group cursor-pointer"
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.target !== e.currentTarget) return; if (e.key === "Enter" || e.key === " ") { if (e.key === " ") e.preventDefault(); navigate(`/meals/${meal.id}`); } }}
                     onClick={() => navigate(`/meals/${meal.id}`)}
                     data-testid={`card-meal-${meal.id}`}
                   >
@@ -4232,6 +4251,7 @@ export default function MealsPage() {
                         <button
                           className="sm:hidden absolute top-2 right-2 z-10 h-7 w-7 bg-muted/80 rounded-md flex items-center justify-center text-muted-foreground"
                           onClick={(e) => { e.stopPropagation(); setActionSheetMeal(meal); }}
+                          aria-label="Recipe actions"
                           data-testid={`button-card-actions-${meal.id}`}
                         >
                           <MoreVertical className="h-3.5 w-3.5" />
@@ -4493,6 +4513,7 @@ export default function MealsPage() {
                               variant="ghost"
                               className="text-destructive shrink-0"
                               onClick={() => deleteFreezerMutation.mutate(frozen.id)}
+                              aria-label="Remove from freezer"
                               data-testid={`button-delete-freezer-${frozen.id}`}
                             >
                               <Trash2 className="h-4 w-4" />
@@ -4506,6 +4527,7 @@ export default function MealsPage() {
                               variant="ghost"
                               className="text-destructive"
                               onClick={() => deleteFreezerMutation.mutate(frozen.id)}
+                              aria-label="Remove from freezer"
                               data-testid={`button-delete-freezer-${frozen.id}`}
                             >
                               <Trash2 className="h-4 w-4" />
@@ -4625,7 +4647,7 @@ export default function MealsPage() {
                               </div>
                               {thaRating != null && (
                                 <div className="mt-2" data-testid={`rating-product-${productKey}`}>
-                                  <ScoreBadge score={thaRating} size={20} />
+                                  <AppleRating rating={thaRating} sizePx={20} showTooltip={false} animate={false} />
                                 </div>
                               )}
                               {product.nutriments?.calories && (
@@ -4643,7 +4665,7 @@ export default function MealsPage() {
                                   value={String(productCategoryMap[productKey] ?? "")}
                                   onValueChange={(val) => setProductCategoryMap(prev => ({ ...prev, [productKey]: Number(val) }))}
                                 >
-                                  <SelectTrigger className="flex-1" data-testid={`select-product-category-${productKey}`}>
+                                  <SelectTrigger className="flex-1" aria-label="Product category" data-testid={`select-product-category-${productKey}`}>
                                     <SelectValue placeholder="Category" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -4762,7 +4784,7 @@ export default function MealsPage() {
                 value={webDietPattern || "none"}
                 onValueChange={v => { setMatchMyProfile(false); setWebDietPattern(v === "none" ? "" : v); }}
               >
-                <SelectTrigger className="h-7 text-xs w-[140px]" data-testid="select-web-diet-pattern">
+                <SelectTrigger className="h-7 text-xs w-[140px]" aria-label="Diet pattern" data-testid="select-web-diet-pattern">
                   <SelectValue placeholder="Any pattern" />
                 </SelectTrigger>
                 <SelectContent>
@@ -4825,7 +4847,7 @@ export default function MealsPage() {
                         exit={{ opacity: 0, scale: 0.95 }}
                         layout
                       >
-                        <Card className="overflow-hidden h-full flex flex-col cursor-pointer" onClick={() => {
+                        <Card className="overflow-hidden h-full flex flex-col cursor-pointer" role="button" tabIndex={0} onKeyDown={(e) => { if (e.target !== e.currentTarget) return; if (e.key === "Enter" || e.key === " ") { if (e.key === " ") e.preventDefault(); e.currentTarget.click(); } }} onClick={() => {
                           const webId = `web-${recipe.id}`;
                           if (expandedMealId === webId) {
                             setExpandedMealId(null);
@@ -4983,7 +5005,7 @@ export default function MealsPage() {
                                   value={String(webImportCategoryMap[recipe.id] ?? guessWebCategory(recipe) ?? "")}
                                   onValueChange={(val) => setWebImportCategoryMap(prev => ({ ...prev, [recipe.id]: Number(val) }))}
                                 >
-                                  <SelectTrigger className="flex-1" data-testid={`select-web-import-category-${recipe.id}`}>
+                                  <SelectTrigger className="flex-1" aria-label="Recipe category" data-testid={`select-web-import-category-${recipe.id}`}>
                                     <SelectValue placeholder="Category" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -5077,18 +5099,19 @@ export default function MealsPage() {
             <div className="space-y-2">
               <label className="text-sm font-medium">Number of Portions</label>
               <div className="flex items-center gap-3">
-                <Button size="icon" variant="outline" onClick={() => setFreezerPortions(Math.max(1, freezerPortions - 1))} data-testid="button-portions-minus">
+                <Button size="icon" variant="outline" aria-label="Decrease portions" onClick={() => setFreezerPortions(Math.max(1, freezerPortions - 1))} data-testid="button-portions-minus">
                   <Minus className="h-4 w-4" />
                 </Button>
                 <span className="text-2xl font-semibold w-12 text-center" data-testid="text-portions-count">{freezerPortions}</span>
-                <Button size="icon" variant="outline" onClick={() => setFreezerPortions(freezerPortions + 1)} data-testid="button-portions-plus">
+                <Button size="icon" variant="outline" aria-label="Increase portions" onClick={() => setFreezerPortions(freezerPortions + 1)} data-testid="button-portions-plus">
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Batch Label (optional)</label>
+              <label htmlFor="freezer-batch-label" className="text-sm font-medium">Batch Label (optional)</label>
               <Input
+                id="freezer-batch-label"
                 placeholder="e.g. Sunday batch cook"
                 value={freezerLabel}
                 onChange={(e) => setFreezerLabel(e.target.value)}
@@ -5096,8 +5119,9 @@ export default function MealsPage() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Notes (optional)</label>
+              <label htmlFor="freezer-notes" className="text-sm font-medium">Notes (optional)</label>
               <Input
+                id="freezer-notes"
                 placeholder="e.g. Extra spicy version"
                 value={freezerNotes}
                 onChange={(e) => setFreezerNotes(e.target.value)}
@@ -5107,7 +5131,7 @@ export default function MealsPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddToFreezerMealId(null)} data-testid="button-cancel-freeze">Cancel</Button>
-            <Button
+            <Button variant="default"
               className="bg-primary text-primary-foreground"
               disabled={addToFreezerMutation.isPending}
               onClick={() => {
@@ -5162,7 +5186,7 @@ export default function MealsPage() {
               <div>
                 <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider">Category</span>
                 <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger className="h-8 text-xs w-full mt-1.5" data-testid="select-category-filter">
+                  <SelectTrigger className="h-8 text-xs w-full mt-1.5" aria-label="Filter by category" data-testid="select-category-filter">
                     <SelectValue placeholder="All Categories" />
                   </SelectTrigger>
                   <SelectContent>
@@ -5217,6 +5241,7 @@ export default function MealsPage() {
                     <Switch
                       checked={matchMyProfile}
                       onCheckedChange={setMatchMyProfile}
+                      aria-label="Match my profile"
                       data-testid="toggle-match-profile"
                     />
                     <span className="text-xs font-medium">Match my profile</span>
@@ -5225,7 +5250,7 @@ export default function MealsPage() {
                     value={mealsDietPattern || "none"}
                     onValueChange={v => { setMatchMyProfile(false); const p = v === "none" ? "" : v; setMealsDietPattern(p); setWebDietPattern(p); }}
                   >
-                    <SelectTrigger className="h-7 text-xs w-full" data-testid="select-meals-diet-pattern">
+                    <SelectTrigger className="h-7 text-xs w-full" aria-label="Diet pattern" data-testid="select-meals-diet-pattern">
                       <SelectValue placeholder="Any diet pattern" />
                     </SelectTrigger>
                     <SelectContent>
@@ -5351,7 +5376,7 @@ export default function MealsPage() {
                 >
                   Skip
                 </Button>
-                <Button onClick={handlePlannerLink}>
+                <Button variant="default" onClick={handlePlannerLink}>
                   <CalendarDays className="h-4 w-4 mr-1.5" />
                   {plannerImportCtx.plannerResolve ? "Use this recipe" : "Add to planner"}
                 </Button>
@@ -5405,7 +5430,7 @@ export default function MealsPage() {
                   <Badge variant="outline" className="text-xs">NOVA {barcodeProduct.nova_group}</Badge>
                 )}
                 {barcodeProduct.upfAnalysis?.thaRating && (
-                  <ScoreBadge score={barcodeProduct.upfAnalysis.thaRating} size={20} />
+                  <AppleRating rating={barcodeProduct.upfAnalysis.thaRating} sizePx={20} showTooltip={false} animate={false} />
                 )}
               </div>
               {barcodeProduct.nutriments?.calories && (
@@ -5420,7 +5445,7 @@ export default function MealsPage() {
             <Button variant="outline" onClick={() => { setBarcodeProductOpen(false); setBarcodeProduct(null); }} data-testid="button-barcode-cancel">
               Cancel
             </Button>
-            <Button
+            <Button variant="default"
               onClick={handleSaveBarcodeProduct}
               disabled={barcodeSaving}
               data-testid="button-barcode-save"
@@ -5564,6 +5589,7 @@ function VoiceMealDialog({ open, onOpenChange, onTranscript }: {
             </p>
             <Input
               placeholder="e.g. Spaghetti Bolognese"
+              aria-label="Meal name"
               value={transcript}
               onChange={(e) => setTranscript(e.target.value)}
               autoFocus
@@ -5581,6 +5607,7 @@ function VoiceMealDialog({ open, onOpenChange, onTranscript }: {
                     ? "bg-destructive hover:bg-destructive/90 animate-pulse"
                     : "bg-primary hover:bg-primary/90"
                 }`}
+                aria-label={listening ? "Stop listening" : "Start speaking"}
                 data-testid="button-voice-mic"
               >
                 <Mic className="h-7 w-7 text-white" />
@@ -5599,7 +5626,7 @@ function VoiceMealDialog({ open, onOpenChange, onTranscript }: {
         )}
         <DialogFooter>
           <Button variant="outline" onClick={() => handleClose(false)}>Cancel</Button>
-          <Button onClick={handleConfirm} disabled={!transcript.trim()} data-testid="button-voice-confirm">
+          <Button variant="default" onClick={handleConfirm} disabled={!transcript.trim()} data-testid="button-voice-confirm">
             Use this
           </Button>
         </DialogFooter>
@@ -5634,7 +5661,7 @@ function AddMealGatewayDialog({ onScan }: { onScan: () => void }) {
     <>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button title="Add Recipe" className="px-2 sm:px-4 realm-banner-btn" data-testid="button-add-meal">
+          <Button variant="default" title="Add Recipe" className="px-2 sm:px-4 realm-banner-btn" data-testid="button-add-meal">
             <Plus className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Add Recipe</span>
           </Button>
@@ -5873,6 +5900,7 @@ function ImportRecipeDialog({ externalOpen, onExternalOpenChange }: { externalOp
                 <Input
                   data-testid="input-import-recipe-url"
                   type="url"
+                  aria-label="Recipe link"
                   placeholder="https://..."
                   value={url}
                   onChange={(e) => { setUrl(e.target.value); setFailureMsg(null); }}
@@ -5880,7 +5908,7 @@ function ImportRecipeDialog({ externalOpen, onExternalOpenChange }: { externalOp
                   disabled={isImporting}
                   className="flex-1"
                 />
-                <Button
+                <Button variant="default"
                   data-testid="button-import-fetch"
                   onClick={handleImportUrl}
                   disabled={isImporting || !url.trim()}
@@ -5899,13 +5927,14 @@ function ImportRecipeDialog({ externalOpen, onExternalOpenChange }: { externalOp
             <TabsContent value="text" className="space-y-3 mt-3">
               <Textarea
                 data-testid="input-import-recipe-text"
+                aria-label="Recipe text"
                 placeholder={"Paste recipe text here - from a TikTok caption, blog, or anywhere else.\n\nE.g.:\nEasy Pasta\nIngredients: 200g pasta, 2 cloves garlic...\nMethod: Boil pasta, fry garlic..."}
                 value={pastedText}
                 onChange={(e) => { setPastedText(e.target.value); setFailureMsg(null); }}
                 disabled={isImporting}
                 className="min-h-[140px] text-sm resize-none"
               />
-              <Button
+              <Button variant="default"
                 data-testid="button-import-text"
                 onClick={handleImportText}
                 disabled={isImporting || !pastedText.trim()}
@@ -6430,7 +6459,7 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       {externalOpen === undefined && (
         <DialogTrigger asChild>
-          <Button title="Add Recipe" className="px-2 sm:px-4 realm-banner-btn" data-testid="button-add-meal">
+          <Button variant="default" title="Add Recipe" className="px-2 sm:px-4 realm-banner-btn" data-testid="button-add-meal">
             <Plus className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Add Recipe</span>
           </Button>
@@ -6454,6 +6483,7 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
                 <div className="relative flex-1">
                   <Input
                     placeholder={listening ? "Listening… speak your recipe" : "Paste a URL or recipe text to import…"}
+                    aria-label="Recipe URL or text"
                     value={unifiedInput}
                     onChange={e => { setUnifiedInput(e.target.value); setImportFailureMsg(null); }}
                     onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleUnifiedSubmit(); } }}
@@ -6469,6 +6499,7 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
                       className={`h-7 w-7 ${listening ? 'text-destructive animate-pulse' : 'text-muted-foreground hover:text-foreground'}`}
                       onClick={listening ? stopListening : startListening}
                       title={listening ? "Stop recording" : "Speak recipe"}
+                      aria-label={listening ? "Stop recording" : "Speak recipe"}
                       data-testid="button-mic-input"
                     >
                       <Mic className="h-3.5 w-3.5" />
@@ -6481,6 +6512,7 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
                         className="h-7 w-7 text-muted-foreground hover:text-foreground"
                         onClick={() => { handleDialogOpenChange(false); onScan(); }}
                         title="Scan image"
+                        aria-label="Scan image"
                         data-testid="button-camera-input"
                       >
                         <Camera className="h-3.5 w-3.5" />
@@ -6494,6 +6526,7 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
                       onClick={handleUnifiedSubmit}
                       disabled={isImporting || !unifiedInput.trim()}
                       title="Import recipe"
+                      aria-label="Import recipe"
                       data-testid="button-unified-import"
                     >
                       {isImporting
@@ -6550,6 +6583,7 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
                 </p>
                 <Textarea
                   placeholder={"Paste the full recipe text here - e.g. from the post caption, comments, or the recipe website."}
+                  aria-label="Recipe text"
                   value={pasteHelperText}
                   onChange={e => { setPasteHelperText(e.target.value); setPasteHelperMsg(null); }}
                   className="min-h-[100px] text-sm resize-none"
@@ -6724,7 +6758,7 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
                             value={selectedCategory ? String(selectedCategory) : ""}
                             onValueChange={(val) => setSelectedCategory(val ? Number(val) : undefined)}
                           >
-                            <SelectTrigger data-testid="select-meal-category">
+                            <SelectTrigger aria-label="Category" data-testid="select-meal-category">
                               <SelectValue placeholder="Select category..." />
                             </SelectTrigger>
                             <SelectContent>
@@ -6750,7 +6784,7 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
                               <FormItem>
                                 <FormLabel>Type</FormLabel>
                                 <Select value={field.value ?? "meal"} onValueChange={field.onChange}>
-                                  <SelectTrigger data-testid="select-meal-kind">
+                                  <SelectTrigger aria-label="Type" data-testid="select-meal-kind">
                                     <SelectValue placeholder="Select type..." />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -6847,6 +6881,7 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
                       <div className="p-3 border-t border-border space-y-1.5">
                         <Textarea
                           placeholder={"Enter the steps, one per line.\n\nE.g.:\nHeat oil in a pan over medium heat.\nAdd onion and cook for 5 minutes.\nStir in remaining ingredients and simmer."}
+                          aria-label="Method / Instructions"
                           value={instructionsText}
                           onChange={e => setInstructionsText(e.target.value)}
                           className="min-h-[120px] text-sm resize-none"
@@ -6931,7 +6966,7 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
             </div>
             <DialogFooter className="pt-3 shrink-0 border-t border-border">
               <Button type="button" variant="outline" onClick={() => handleDialogOpenChange(false)}>Cancel</Button>
-              <Button type="submit" disabled={createMeal.isPending} data-testid="button-submit-meal">
+              <Button variant="default" type="submit" disabled={createMeal.isPending} data-testid="button-submit-meal">
                 {createMeal.isPending ? "Creating..." : "Create Recipe"}
               </Button>
             </DialogFooter>

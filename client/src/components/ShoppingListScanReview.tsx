@@ -300,7 +300,7 @@ export function ShoppingListScanReview({ open, onOpenChange, scanData }: Props) 
               Cancel
             </Button>
             {!isFailedParse && (
-              <Button
+              <Button variant="default"
                 onClick={handleConfirm}
                 disabled={saving || items.length === 0 || hasUnresolvedItems}
                 title={hasUnresolvedItems ? "Resolve all uncertain items before saving" : undefined}

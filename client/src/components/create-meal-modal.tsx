@@ -212,8 +212,9 @@ export function CreateMealContent({ initialTitle, prefill, onSaved, onCancel }: 
 
             {/* Title */}
             <div className="space-y-1">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Title</p>
+              <label htmlFor="create-meal-title" className="block text-xs font-medium text-muted-foreground uppercase tracking-wide">Title</label>
               <Input
+                id="create-meal-title"
                 placeholder="Recipe name"
                 value={mealName}
                 onChange={(e) => setMealName(e.target.value)}
@@ -233,7 +234,7 @@ export function CreateMealContent({ initialTitle, prefill, onSaved, onCancel }: 
                     <div key={idx} className="flex items-center gap-2 rounded-md border px-2 py-1 text-sm">
                       <span className="flex-1 truncate">{item.name}</span>
                       {item.quantity && <span className="text-xs text-muted-foreground">{item.quantity}</span>}
-                      <Button size="icon" variant="ghost" className="h-6 w-6 shrink-0" onClick={() => removeItem(idx)}>
+                      <Button size="icon" variant="ghost" className="h-6 w-6 shrink-0" aria-label="Remove ingredient" onClick={() => removeItem(idx)}>
                         <X className="h-3 w-3" />
                       </Button>
                     </div>
@@ -243,6 +244,7 @@ export function CreateMealContent({ initialTitle, prefill, onSaved, onCancel }: 
               <div className="flex gap-2 pt-0.5">
                 <Input
                   placeholder="Add ingredient…"
+                  aria-label="Add ingredient"
                   value={manualName}
                   onChange={(e) => setManualName(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && addManual()}
@@ -250,11 +252,12 @@ export function CreateMealContent({ initialTitle, prefill, onSaved, onCancel }: 
                 />
                 <Input
                   placeholder="Qty"
+                  aria-label="Quantity"
                   value={manualQty}
                   onChange={(e) => setManualQty(e.target.value)}
                   className="w-16 h-8 text-sm"
                 />
-                <Button size="icon" variant="outline" className="h-8 w-8" onClick={addManual} disabled={!manualName.trim()}>
+                <Button size="icon" variant="outline" className="h-8 w-8" aria-label="Add ingredient" onClick={addManual} disabled={!manualName.trim()}>
                   <Plus className="h-3.5 w-3.5" />
                 </Button>
               </div>
@@ -262,11 +265,12 @@ export function CreateMealContent({ initialTitle, prefill, onSaved, onCancel }: 
 
             {/* Method / Instructions */}
             <div className="space-y-1.5">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              <label htmlFor="create-meal-method" className="block text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 Method / Instructions
                 {isPartialImport && <span className="ml-1.5 text-amber-600 dark:text-amber-400 normal-case">(missing)</span>}
-              </p>
+              </label>
               <Textarea
+                id="create-meal-method"
                 placeholder={"Enter the method steps, one per line.\n\nE.g.:\nHeat oil in a pan over medium heat.\nAdd onion and cook for 5 minutes.\nStir in remaining ingredients and simmer."}
                 value={instructions}
                 onChange={(e) => setInstructions(e.target.value)}
@@ -285,6 +289,7 @@ export function CreateMealContent({ initialTitle, prefill, onSaved, onCancel }: 
           <>
             <Input
               placeholder="Meal name"
+              aria-label="Meal name"
               value={mealName}
               onChange={(e) => setMealName(e.target.value)}
               autoFocus
@@ -298,7 +303,7 @@ export function CreateMealContent({ initialTitle, prefill, onSaved, onCancel }: 
                     <Badge variant="outline" className="shrink-0 text-[10px] capitalize">{item.type}</Badge>
                     <span className="flex-1 truncate">{item.name}</span>
                     {item.quantity && <span className="text-xs text-muted-foreground">{item.quantity}</span>}
-                    <Button size="icon" variant="ghost" className="h-6 w-6 shrink-0" onClick={() => removeItem(idx)}>
+                    <Button size="icon" variant="ghost" className="h-6 w-6 shrink-0" aria-label="Remove item" onClick={() => removeItem(idx)}>
                       <X className="h-3 w-3" />
                     </Button>
                   </div>
@@ -317,6 +322,7 @@ export function CreateMealContent({ initialTitle, prefill, onSaved, onCancel }: 
                 <div className="flex gap-2">
                   <Input
                     placeholder="Item name"
+                    aria-label="Item name"
                     value={manualName}
                     onChange={(e) => setManualName(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && addManual()}
@@ -324,11 +330,12 @@ export function CreateMealContent({ initialTitle, prefill, onSaved, onCancel }: 
                   />
                   <Input
                     placeholder="Qty"
+                    aria-label="Quantity"
                     value={manualQty}
                     onChange={(e) => setManualQty(e.target.value)}
                     className="w-20"
                   />
-                  <Button size="icon" variant="outline" onClick={addManual} disabled={!manualName.trim()}>
+                  <Button size="icon" variant="outline" aria-label="Add item" onClick={addManual} disabled={!manualName.trim()}>
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
@@ -339,6 +346,7 @@ export function CreateMealContent({ initialTitle, prefill, onSaved, onCancel }: 
                   <Search className="absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search your recipes…"
+                    aria-label="Search your recipes"
                     value={recipeSearch}
                     onChange={(e) => setRecipeSearch(e.target.value)}
                     className="pl-8"
@@ -348,14 +356,15 @@ export function CreateMealContent({ initialTitle, prefill, onSaved, onCancel }: 
                   {filteredMeals.slice(0, 30).map((m) => {
                     const added = items.some((i) => i.type === "recipe" && i.referenceId === m.id);
                     return (
-                      <div
+                      <button
                         key={m.id}
-                        className={`flex items-center justify-between rounded px-2 py-1 text-sm cursor-pointer hover:bg-muted ${added ? "opacity-50" : ""}`}
+                        type="button"
+                        className={`w-full text-left flex items-center justify-between rounded px-2 py-1 text-sm cursor-pointer hover:bg-muted ${added ? "opacity-50" : ""}`}
                         onClick={() => !added && addRecipe(m)}
                       >
                         <span className="truncate">{m.name}</span>
                         {added ? <Badge variant="secondary" className="text-[10px]">Added</Badge> : <Plus className="h-3 w-3 text-muted-foreground" />}
-                      </div>
+                      </button>
                     );
                   })}
                   {filteredMeals.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">No recipes found.</p>}
@@ -367,6 +376,7 @@ export function CreateMealContent({ initialTitle, prefill, onSaved, onCancel }: 
                   <Search className="absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search scanned products…"
+                    aria-label="Search scanned products"
                     value={productSearch}
                     onChange={(e) => setProductSearch(e.target.value)}
                     className="pl-8"
@@ -376,9 +386,10 @@ export function CreateMealContent({ initialTitle, prefill, onSaved, onCancel }: 
                   {filteredProducts.slice(0, 30).map((p) => {
                     const added = items.some((i) => i.type === "product" && i.referenceId === p.id);
                     return (
-                      <div
+                      <button
                         key={p.id}
-                        className={`flex items-center justify-between rounded px-2 py-1 text-sm cursor-pointer hover:bg-muted ${added ? "opacity-50" : ""}`}
+                        type="button"
+                        className={`w-full text-left flex items-center justify-between rounded px-2 py-1 text-sm cursor-pointer hover:bg-muted ${added ? "opacity-50" : ""}`}
                         onClick={() => !added && addProduct(p)}
                       >
                         <div className="min-w-0">
@@ -386,7 +397,7 @@ export function CreateMealContent({ initialTitle, prefill, onSaved, onCancel }: 
                           {p.brand && <span className="text-xs text-muted-foreground">{p.brand}</span>}
                         </div>
                         {added ? <Badge variant="secondary" className="text-[10px] shrink-0">Added</Badge> : <Plus className="h-3 w-3 text-muted-foreground shrink-0" />}
-                      </div>
+                      </button>
                     );
                   })}
                   {filteredProducts.length === 0 && (
@@ -404,7 +415,7 @@ export function CreateMealContent({ initialTitle, prefill, onSaved, onCancel }: 
       {/* Footer actions */}
       <div className="flex justify-end gap-2 mt-2 pt-2 border-t border-border shrink-0">
         <Button variant="outline" onClick={onCancel}>Cancel</Button>
-        <Button
+        <Button variant="default"
           onClick={handleSave}
           disabled={isSaving || (isImport ? !canSaveImport : !mealName.trim())}
         >

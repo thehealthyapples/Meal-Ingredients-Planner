@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback } from "react";
 import { useUser } from "@/hooks/use-user";
-import { WorkspaceHeader } from "@/components/workspace-header";
+import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
 import HomeIntelligenceCompanion from "@/components/HomeIntelligenceCompanion";
 import { AmbientIntelligence } from "@/components/intelligence";
 import { useMealsSummary } from "@/hooks/use-meals-summary";
@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LoadError } from "@/components/ui/load-error";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,7 +25,8 @@ import { motion } from "framer-motion";
 import { api } from "@shared/routes";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import AppleRating from "@/components/ui/apple-rating";
+import AppleRating from "@/components/AppleRating";
+import { MealCard } from "@/components/MealCard";
 import { canShowScoreForItem } from "@/lib/basket-item-classifier";
 import ThaAppleIcon from "@/components/icons/ThaAppleIcon";
 import {
@@ -281,7 +283,7 @@ export default function Dashboard() {
     />
     <div>
 
-      <div className="max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-3 space-y-4">
+      <div className={`${pageContainerClass(true)} pb-3 space-y-4`}>
         <motion.div variants={container} initial="hidden" animate="show" className="space-y-4">
 
           {/* ── Home Intelligence Companion ── */}
@@ -328,50 +330,31 @@ export default function Dashboard() {
                 data-testid="error-recent-meals"
               />
             ) : userMeals.length === 0 ? (
-              <Card className="border-dashed" data-testid="card-empty-meals">
-                <CardContent className="py-6 text-center">
-                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-2" style={{ background: GREEN_PALE }}>
-                    <Utensils className="h-6 w-6" style={{ color: GREEN_DEEP }} />
-                  </div>
-                  <h3 className="font-semibold text-base">No meals yet</h3>
-                  <p className="text-sm text-muted-foreground mt-1 max-w-xs mx-auto">
-                    Start by adding your favourite recipes to build your personal collection.
-                  </p>
+              <EmptyState
+                variant="empty"
+                icon={Utensils}
+                title="No meals yet"
+                description="Start by adding your favourite recipes to build your personal collection."
+                action={
                   <Link href="/cookbook">
-                    <Button className="mt-5" data-testid="button-add-first-meal">
+                    <Button variant="default" data-testid="button-add-first-meal">
                       <Plus className="h-4 w-4 mr-2" />
                       Add Your First Meal
                     </Button>
                   </Link>
-                </CardContent>
-              </Card>
+                }
+                data-testid="card-empty-meals"
+              />
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {userMeals.slice(0, 4).map((meal) => (
-                  <Link key={meal.id} href={`/meals/${meal.id}`}>
-                    <Card className="group cursor-pointer overflow-hidden hover-elevate transition-all duration-200" data-testid={`card-recent-meal-${meal.id}`}>
-                      {meal.imageUrl ? (
-                        <div className="w-full aspect-[4/3] overflow-hidden bg-muted">
-                          <img
-                            src={meal.imageUrl}
-                            alt={meal.name}
-                            className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
-                            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                          />
-                        </div>
-                      ) : (
-                        <div className="w-full aspect-[4/3] flex items-center justify-center" style={{ background: GREEN_PALE }}>
-                          <Utensils className="h-8 w-8" style={{ color: GREEN_MID, opacity: 0.4 }} />
-                        </div>
-                      )}
-                      <CardContent className="p-4">
-                        <h3 className="title-card truncate">{meal.name}</h3>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {meal.ingredientCount} ingredient{meal.ingredientCount !== 1 ? "s" : ""}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  </Link>
+                  <MealCard
+                    key={meal.id}
+                    meal={meal}
+                    variant="tile"
+                    meta={`${meal.ingredientCount} ingredient${meal.ingredientCount !== 1 ? "s" : ""}`}
+                    data-testid={`card-recent-meal-${meal.id}`}
+                  />
                 ))}
               </div>
             )}
@@ -476,7 +459,7 @@ export default function Dashboard() {
                     {avgThaScore !== null ? (
                       <>
                         <div className="mt-1 mb-1">
-                          <AppleRating rating={avgThaScore} size={22} />
+                          <AppleRating rating={avgThaScore} sizePx={22} showTooltip={false} animate={false} />
                         </div>
                         <p className="text-xs mt-1" style={{ color: APPLE_FG, opacity: 0.8 }}>
                           {avgThaScore >= 4.5
@@ -526,15 +509,19 @@ export default function Dashboard() {
                 {plannerQuery.isLoading ? (
                   <Skeleton className="h-36 w-full" data-testid="loading-week-plan" />
                 ) : mealsPlannedThisWeek === 0 ? (
-                  <div className="flex flex-col items-center py-4 gap-2.5">
-                    <CalendarDays className="h-8 w-8 text-muted-foreground/25" />
-                    <p className="text-sm text-muted-foreground text-center max-w-xs">
-                      No meals planned yet - head to the planner to map out your week.
-                    </p>
-                    <Link href="/planner">
-                      <Button variant="outline" size="sm" data-testid="button-start-planning">Start planning</Button>
-                    </Link>
-                  </div>
+                  <EmptyState
+                    variant="empty"
+                    size="compact"
+                    icon={CalendarDays}
+                    title="No meals planned yet"
+                    description="Head to the planner to map out your week."
+                    action={
+                      <Link href="/planner">
+                        <Button variant="outline" size="sm" data-testid="button-start-planning">Start planning</Button>
+                      </Link>
+                    }
+                    data-testid="empty-week-plan"
+                  />
                 ) : (
                   <div className="h-36">
                     <ResponsiveContainer width="100%" height="100%">
@@ -596,7 +583,12 @@ export default function Dashboard() {
                     {mealsLoading ? (
                       <Skeleton className="h-[110px] w-full" data-testid="loading-collection" />
                     ) : !meals?.length ? (
-                      <p className="text-sm text-muted-foreground py-4 text-center">No meals in your collection yet.</p>
+                      <EmptyState
+                        variant="empty"
+                        size="compact"
+                        title="No meals in your collection yet."
+                        data-testid="empty-collection"
+                      />
                     ) : (
                       <div className="flex items-center gap-6">
                         <div className="shrink-0" style={{ width: 110, height: 110 }}>
@@ -727,8 +719,9 @@ export default function Dashboard() {
           <div className="space-y-4 py-1">
             {/* Weight */}
             <div>
-              <Label className="text-xs text-muted-foreground mb-1 block">Weight (kg)</Label>
+              <Label htmlFor="signals-weight" className="text-xs text-muted-foreground mb-1 block">Weight (kg)</Label>
               <Input
+                id="signals-weight"
                 type="number" step="0.1"
                 placeholder="e.g. 72.5"
                 value={signalsForm.weightKg}
@@ -748,6 +741,7 @@ export default function Dashboard() {
                       key={n}
                       type="button"
                       onClick={() => setSignal("moodApples", n)}
+                      aria-label={`Set mood to ${n} of 5`}
                       className={`transition-all ${signalsForm.moodApples !== null && n <= signalsForm.moodApples ? "opacity-100 scale-100" : "opacity-20 hover:opacity-50 hover:scale-105"}`}
                     >
                       <ThaAppleIcon size={20} />
@@ -763,6 +757,7 @@ export default function Dashboard() {
                       key={n}
                       type="button"
                       onClick={() => setSignal("energyApples", n)}
+                      aria-label={`Set energy to ${n} of 5`}
                       className={`transition-all ${signalsForm.energyApples !== null && n <= signalsForm.energyApples ? "opacity-100 scale-100" : "opacity-20 hover:opacity-50 hover:scale-105"}`}
                     >
                       <ThaAppleIcon size={20} />
@@ -774,10 +769,11 @@ export default function Dashboard() {
 
             {/* Sleep */}
             <div>
-              <Label className="text-xs text-muted-foreground mb-1 flex items-center gap-1.5 block">
+              <Label htmlFor="signals-sleep" className="text-xs text-muted-foreground mb-1 flex items-center gap-1.5 block">
                 <Moon className="h-3.5 w-3.5" /> Sleep (hours)
               </Label>
               <Input
+                id="signals-sleep"
                 type="number" step="0.5"
                 placeholder="e.g. 7.5"
                 value={signalsForm.sleepHours}
@@ -802,10 +798,11 @@ export default function Dashboard() {
 
             {/* Blood pressure */}
             <div>
-              <Label className="text-xs text-muted-foreground mb-1 flex items-center gap-1.5 block">
+              <Label htmlFor="signals-bp" className="text-xs text-muted-foreground mb-1 flex items-center gap-1.5 block">
                 <Activity className="h-3.5 w-3.5" /> Blood pressure (mmHg)
               </Label>
               <Input
+                id="signals-bp"
                 type="text"
                 placeholder="e.g. 120/80"
                 value={signalsForm.bloodPressure}
@@ -817,10 +814,11 @@ export default function Dashboard() {
 
             {/* Blood sugar */}
             <div>
-              <Label className="text-xs text-muted-foreground mb-1 flex items-center gap-1.5 block">
+              <Label htmlFor="signals-sugar" className="text-xs text-muted-foreground mb-1 flex items-center gap-1.5 block">
                 <Droplet className="h-3.5 w-3.5" /> Blood sugar (mmol/L)
               </Label>
               <Input
+                id="signals-sugar"
                 type="number" step="0.1"
                 placeholder="e.g. 5.4"
                 value={signalsForm.bloodSugar}
@@ -832,10 +830,11 @@ export default function Dashboard() {
 
             {/* Heart rate */}
             <div>
-              <Label className="text-xs text-muted-foreground mb-1 flex items-center gap-1.5 block">
+              <Label htmlFor="signals-bpm" className="text-xs text-muted-foreground mb-1 flex items-center gap-1.5 block">
                 <Heart className="h-3.5 w-3.5" /> Heart rate (BPM)
               </Label>
               <Input
+                id="signals-bpm"
                 type="number" step="1"
                 placeholder="e.g. 68"
                 value={signalsForm.bpm}
@@ -847,10 +846,11 @@ export default function Dashboard() {
 
             {/* Notes */}
             <div>
-              <Label className="text-xs text-muted-foreground mb-1 flex items-center gap-1.5 block">
+              <Label htmlFor="signals-notes" className="text-xs text-muted-foreground mb-1 flex items-center gap-1.5 block">
                 <Zap className="h-3.5 w-3.5" /> Notes
               </Label>
               <Textarea
+                id="signals-notes"
                 placeholder="How did today go?"
                 value={signalsForm.notes}
                 onChange={(e) => setSignal("notes", e.target.value)}
@@ -861,7 +861,7 @@ export default function Dashboard() {
           </div>
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => { setSignalsOpen(false); resetSignalsForm(); }}>Cancel</Button>
-            <Button
+            <Button variant="default"
               size="sm"
               onClick={submitSignals}
               disabled={saveSignalsMutation.isPending}
@@ -887,6 +887,7 @@ export default function Dashboard() {
               <Input
                 type="number"
                 placeholder="e.g. 74.5"
+                aria-label="Weight in kilograms"
                 value={weightInput}
                 onChange={(e) => setWeightInput(e.target.value)}
                 className="flex-1"
@@ -903,7 +904,7 @@ export default function Dashboard() {
           </div>
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => { setWeightOpen(false); setWeightInput(""); }}>Cancel</Button>
-            <Button
+            <Button variant="default"
               size="sm"
               onClick={() => saveWeightMutation.mutate(Number(weightInput))}
               disabled={!weightInput || Number(weightInput) <= 0 || saveWeightMutation.isPending}

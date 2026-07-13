@@ -25,6 +25,7 @@
  */
 
 import { Fragment, useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -261,9 +262,9 @@ function SeverityBadge({ severity }: { severity: string }) {
 function PageSkeleton() {
   return (
     <div className="space-y-4" data-testid="timeline-skeleton">
-      <div className="h-24 bg-muted animate-pulse rounded-lg" />
-      <div className="h-56 bg-muted animate-pulse rounded-lg" />
-      <div className="h-40 bg-muted animate-pulse rounded-lg" />
+      <Skeleton className="h-24 rounded-lg" />
+      <Skeleton className="h-56 rounded-lg" />
+      <Skeleton className="h-40 rounded-lg" />
     </div>
   );
 }
@@ -1050,7 +1051,7 @@ function SessionPicker({ days, onSelect }: { days: number; onSelect: (sessionId:
             {filterInput("capability", "Capability", "e.g. planner")}
             {filterInput("intent", "Intent", "e.g. planner:read")}
             {filterInput("sessionId", "Session ID", "Thread id…")}
-            <Button onClick={applyFilters} data-testid="button-timeline-apply">Apply</Button>
+            <Button variant="default" onClick={applyFilters} data-testid="button-timeline-apply">Apply</Button>
             <Button
               variant="ghost"
               onClick={() => { setDraft(EMPTY_FILTERS); setApplied(EMPTY_FILTERS); }}

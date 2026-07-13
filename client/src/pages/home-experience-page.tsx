@@ -34,6 +34,7 @@ import { useUser } from "@/hooks/use-user";
 import { useMealsSummary } from "@/hooks/use-meals-summary";
 import { useCompanionNotices } from "@/hooks/use-companion-notices";
 import { WorkspaceHeader } from "@/components/workspace-header";
+import { MealCard } from "@/components/MealCard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LoadError } from "@/components/ui/load-error";
@@ -177,7 +178,7 @@ export default function HomeExperiencePage() {
 
   return (
     <>
-      <WorkspaceHeader realm="home" title="Home" titleTestId="text-home-title" />
+      <WorkspaceHeader realm="home" title="Home" wide titleTestId="text-home-title" />
 
       <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         {/* ── Greeting ── */}
@@ -241,23 +242,14 @@ export default function HomeExperiencePage() {
                 ) : (
                   <ul className="flex flex-col gap-1.5" data-testid="list-home-todays-meals">
                     {todaysMeals.map((m) => (
-                      <li key={m.id} className="flex items-center gap-2 text-sm text-foreground/85">
-                        {m.imageUrl ? (
-                          <img
-                            src={m.imageUrl}
-                            alt=""
-                            className="w-7 h-7 rounded-md object-cover shrink-0"
-                            onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }}
-                          />
-                        ) : (
-                          <span className="w-1.5 h-1.5 rounded-full bg-[hsl(172,30%,55%)] shrink-0 ml-2.5 mr-2.5" />
-                        )}
-                        <span className="truncate">{m.name}</span>
-                        {m.mealType && (
-                          <span className="text-[11px] text-muted-foreground/70 capitalize shrink-0 ml-auto">
-                            {m.mealType}
-                          </span>
-                        )}
+                      <li key={m.id} className="text-foreground/85">
+                        <MealCard
+                          meal={m}
+                          variant="row"
+                          thumbnailSize="xs"
+                          href={null}
+                          meta={m.mealType ? <span className="capitalize">{m.mealType}</span> : undefined}
+                        />
                       </li>
                     ))}
                   </ul>

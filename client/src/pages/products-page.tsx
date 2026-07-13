@@ -34,8 +34,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useTrackedMutation } from "@/hooks/use-tracked-mutation";
 import { api } from "@shared/routes";
 import { appendPendingIngredient } from "@/lib/quick-list";
-import ScoreBadge from "@/components/ui/score-badge";
-import AppleRatingWithTooltip from "@/components/AppleRating";
+import AppleRating from "@/components/AppleRating";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import BarcodeScanner from "@/components/BarcodeScanner";
 import { getWholeFoodAlternative, effortLabel, effortColor, formatTime } from "@/lib/whole-food-alternatives";
@@ -46,7 +45,7 @@ import AnalyserDetailV2 from "@/components/analyser/AnalyserDetailV2";
 import { WholeFoodAnalysisCard } from "@/components/analyser/WholeFoodAnalysisCard";
 import { AddToWeekModal } from "@/components/AddToWeekModal";
 import type { HouseholdEater } from "@shared/household-eater";
-import { WorkspaceHeader } from "@/components/workspace-header";
+import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 
 interface ParsedIngredient {
@@ -1026,6 +1025,7 @@ export default function ProductsPage() {
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
             onFocus={() => setSearchInputFocused(true)}
             onBlur={() => setSearchInputFocused(false)}
+            aria-label="Search packaged foods"
             data-testid="input-product-search"
             className="h-8"
           />
@@ -1042,7 +1042,7 @@ export default function ProductsPage() {
               {barcodeLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ScanLine className="h-4 w-4" />}
             </Button>
           )}
-          <Button
+          <Button variant="default"
             size="sm"
             className="h-8 shrink-0 gap-1.5 realm-banner-btn"
             onClick={handleSearch}
@@ -1058,7 +1058,7 @@ export default function ProductsPage() {
       actions={
         <div className="flex items-center gap-2">
           {compareProducts.length >= 2 && (
-            <Button
+            <Button variant="default"
               onClick={() => setShowCompare(true)}
               className="gap-2"
               data-testid="button-open-compare"
@@ -1185,7 +1185,7 @@ export default function ProductsPage() {
         </div>
       }
     />
-    <div className="max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6" data-realm="analyser">
+    <div className={pageContainerClass(true)} data-realm="analyser">
       <div className="space-y-6">
         <FirstVisitHint
           areaKey="analyser"
@@ -1232,7 +1232,7 @@ export default function ProductsPage() {
         {!hasSearched && productHistoryData && productHistoryData.length > 0 && (
           <Card data-testid="card-product-history">
             <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
+              <CardTitle className="flex items-center gap-2">
                 <History className="h-4 w-4" />
                 Recently Analysed
               </CardTitle>
@@ -1278,23 +1278,32 @@ export default function ProductsPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {productHistoryData.map((item) => {
                   const novaConfig = item.novaGroup ? NOVA_CONFIG[item.novaGroup] : null;
+                  const openHistoryItem = () => {
+                    setSearchQuery(item.productName);
+                    setHasSearched(true);
+                    setIsSearching(true);
+                    fetch(`/api/search-products?q=${encodeURIComponent(item.productName)}`, { credentials: 'include' })
+                      .then(r => r.json())
+                      .then(data => {
+                        setSearchResults(data.products || []);
+                        setWholeFoodAnalysis(data.wholeFoodAnalysis ?? null);
+                        const match = (data.products || []).find((p: ProductResult) => p.barcode === item.barcode);
+                        if (match) setSelectedProduct(match);
+                      })
+                      .finally(() => setIsSearching(false));
+                  };
                   return (
                     <div
                       key={item.id}
+                      role="button"
+                      tabIndex={0}
                       className="flex items-center gap-3 p-3 rounded-md border border-border hover-elevate cursor-pointer group relative"
-                      onClick={() => {
-                        setSearchQuery(item.productName);
-                        setHasSearched(true);
-                        setIsSearching(true);
-                        fetch(`/api/search-products?q=${encodeURIComponent(item.productName)}`, { credentials: 'include' })
-                          .then(r => r.json())
-                          .then(data => {
-                            setSearchResults(data.products || []);
-                            setWholeFoodAnalysis(data.wholeFoodAnalysis ?? null);
-                            const match = (data.products || []).find((p: ProductResult) => p.barcode === item.barcode);
-                            if (match) setSelectedProduct(match);
-                          })
-                          .finally(() => setIsSearching(false));
+                      onClick={openHistoryItem}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          if (e.key === " ") e.preventDefault();
+                          openHistoryItem();
+                        }
                       }}
                       data-testid={`history-item-${item.id}`}
                     >
@@ -1314,7 +1323,7 @@ export default function ProductsPage() {
                             <span className="text-xs text-muted-foreground truncate">{item.brand}</span>
                           )}
                           {item.thaRating !== null && (
-                            <ScoreBadge score={item.thaRating} size={20} />
+                            <AppleRating rating={item.thaRating} sizePx={20} showTooltip={false} animate={false} />
                           )}
                           {novaConfig && (
                             <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 ${novaConfig.bg} ${novaConfig.color}`}>
@@ -1340,6 +1349,7 @@ export default function ProductsPage() {
                           e.stopPropagation();
                           deleteHistoryMutation.mutate(item.id);
                         }}
+                        aria-label="Delete from history"
                         data-testid={`button-delete-history-${item.id}`}
                       >
                         <X className="h-3.5 w-3.5" />
@@ -1407,10 +1417,19 @@ export default function ProductsPage() {
                             layout
                           >
                             <Card
+                              role="button"
+                              tabIndex={0}
+                              aria-label={`View ${displayName}`}
                               className={`overflow-visible h-full flex flex-col cursor-pointer transition-colors ${
                                 isSelected ? 'ring-2 ring-primary' : ''
                               }`}
                               onClick={() => handleProductSelect(product)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                  if (e.key === " ") e.preventDefault();
+                                  handleProductSelect(product);
+                                }
+                              }}
                               data-testid={`card-product-${product.barcode || index}`}
                             >
                               <div className="flex gap-4 p-4">
@@ -1450,7 +1469,7 @@ export default function ProductsPage() {
                                         <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1"><Store className="h-3 w-3 flex-shrink-0" />{group.mergedStores.slice(0, 2).join(' · ')}</p>
                                       )}
                                     </div>
-                                    {product.upfAnalysis && (<div className="flex-shrink-0"><ScoreBadge score={product.upfAnalysis.thaRating} size={34}  /></div>)}
+                                    {product.upfAnalysis && (<div className="flex-shrink-0"><AppleRating rating={product.upfAnalysis.thaRating} sizePx={34} showTooltip={false} animate={false} /></div>)}
                                   </div>
                                 </div>
                               </div>
@@ -1471,10 +1490,10 @@ export default function ProductsPage() {
                                 )}
                               </div>
                               <div className="px-4 pb-4 mt-auto flex gap-2">
-                                <Button size="sm" className="flex-1 gap-1 realm-banner-btn" onClick={(e) => { e.stopPropagation(); addToList.mutate(product); }} disabled={addToList.isPending} data-testid={`button-add-product-${product.barcode || index}`}>
+                                <Button variant="default" size="sm" className="flex-1 gap-1 realm-banner-btn" onClick={(e) => { e.stopPropagation(); addToList.mutate(product); }} disabled={addToList.isPending} data-testid={`button-add-product-${product.barcode || index}`}>
                                   <ShoppingBasket className="h-3.5 w-3.5" />Add to basket
                                 </Button>
-                                <Button size="sm" variant="outline" className="gap-1 realm-banner-btn" onClick={(e) => { e.stopPropagation(); handleAddToQuickList(product); }} data-testid={`button-quick-list-product-grouped-${product.barcode || index}`}>
+                                <Button size="sm" variant="outline" className="gap-1 realm-banner-btn" onClick={(e) => { e.stopPropagation(); handleAddToQuickList(product); }} aria-label="Add to quick list" data-testid={`button-quick-list-product-grouped-${product.barcode || index}`}>
                                   <ListPlus className="h-3.5 w-3.5" />
                                 </Button>
                                 <Button size="sm" variant={isInCompare(product) ? 'default' : 'outline'} onClick={(e) => { e.stopPropagation(); toggleCompare(product); }} className="gap-1 realm-banner-btn" data-testid={`button-compare-${product.barcode || index}`}>
@@ -1506,10 +1525,19 @@ export default function ProductsPage() {
                         layout
                       >
                         <Card
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`View ${displayName}`}
                           className={`overflow-visible h-full flex flex-col cursor-pointer transition-colors ${
                             isSelected ? 'ring-2 ring-primary' : ''
                           }`}
                           onClick={() => handleProductSelect(product)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              if (e.key === " ") e.preventDefault();
+                              handleProductSelect(product);
+                            }
+                          }}
                           data-testid={`card-product-${product.barcode || index}`}
                         >
                           <div className="flex gap-4 p-4">
@@ -1566,7 +1594,7 @@ export default function ProductsPage() {
                                 </div>
                                 {product.upfAnalysis && (
                                   <div className="flex-shrink-0">
-                                    <ScoreBadge score={product.upfAnalysis.thaRating} size={34}  />
+                                    <AppleRating rating={product.upfAnalysis.thaRating} sizePx={34} showTooltip={false} animate={false} />
                                   </div>
                                 )}
                               </div>
@@ -1631,7 +1659,7 @@ export default function ProductsPage() {
                           </div>
 
                           <div className="px-4 pb-4 mt-auto flex gap-2">
-                            <Button
+                            <Button variant="default"
                               size="sm"
                               className="flex-1 gap-1 realm-banner-btn"
                               onClick={(e) => { e.stopPropagation(); addToList.mutate(product); }}
@@ -1646,6 +1674,7 @@ export default function ProductsPage() {
                               variant="outline"
                               className="gap-1 realm-banner-btn"
                               onClick={(e) => { e.stopPropagation(); handleAddToQuickList(product); }}
+                              aria-label="Add to quick list"
                               data-testid={`button-quick-list-product-${product.barcode || index}`}
                             >
                               <ListPlus className="h-3.5 w-3.5" />
@@ -1756,7 +1785,7 @@ export default function ProductsPage() {
                 <tbody>
                   <CompareRow label="THA Score" products={compareProducts} render={(p) => {
                     if (!p.upfAnalysis) return <span className="text-muted-foreground">N/A</span>;
-                    return <ScoreBadge score={p.upfAnalysis.thaRating} size={20} />;
+                    return <AppleRating rating={p.upfAnalysis.thaRating} sizePx={20} showTooltip={false} animate={false} />;
                   }} highlightBest={(products) => {
                     const ratings = products.map(p => p.upfAnalysis?.thaRating ?? -1);
                     return ratings.indexOf(Math.max(...ratings));
@@ -1885,6 +1914,7 @@ export default function ProductsPage() {
                   if (e.key === "Enter") { handleSearch(); setMobileFiltersOpen(false); }
                 }}
                 className="pl-9 h-10"
+                aria-label="Search packaged foods"
                 data-testid="input-drawer-product-search"
                 autoFocus
               />
@@ -1902,10 +1932,11 @@ export default function ProductsPage() {
                 {barcodeLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ScanLine className="h-4 w-4" />}
               </Button>
             )}
-            <Button
+            <Button variant="default"
               className="h-10 shrink-0 realm-banner-btn"
               onClick={() => { handleSearch(); setMobileFiltersOpen(false); }}
               disabled={isSearching || !searchQuery.trim()}
+              aria-label="Search products"
               data-testid="button-drawer-search-products"
             >
               {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}

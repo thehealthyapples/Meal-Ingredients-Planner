@@ -16,7 +16,7 @@ import {
   X, ScanLine, Sparkles, Camera, AlertCircle, RefreshCw,
   Search, History,
 } from "lucide-react";
-import ScoreBadge from "@/components/ui/score-badge";
+import AppleRating from "@/components/AppleRating";
 import { rankChoices, buildWhyBetter } from "@/lib/analyser-choice";
 import { getWholeFoodAlternative, effortLabel, effortColor, formatTime } from "@/lib/whole-food-alternatives";
 import { api, buildUrl } from "@shared/routes";
@@ -547,9 +547,9 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
               {/* Whole foods always score 5 by classification — show the badge
                   even when thaRating has not been persisted by auto-SMP. */}
               {isWF ? (
-                <ScoreBadge score={5} size={36} />
+                <AppleRating rating={5} sizePx={36} showTooltip={false} animate={false} />
               ) : canShowScoreForItem(item) && item.thaRating != null ? (
-                <ScoreBadge score={item.thaRating} size={36} />
+                <AppleRating rating={item.thaRating} sizePx={36} showTooltip={false} animate={false} />
               ) : null}
               <DrawerClose asChild>
                 <button
@@ -599,9 +599,9 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     {isWF ? (
-                      <ScoreBadge score={5} size={28} />
+                      <AppleRating rating={5} sizePx={28} showTooltip={false} animate={false} />
                     ) : canShowScoreForItem(item) && item.thaRating != null ? (
-                      <ScoreBadge score={item.thaRating} size={28} />
+                      <AppleRating rating={item.thaRating} sizePx={28} showTooltip={false} animate={false} />
                     ) : null}
                     <button
                       className="text-muted-foreground hover:text-foreground transition-colors"
@@ -739,7 +739,7 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
                             )}
                           </div>
                           <div className="flex flex-col items-end gap-1.5 shrink-0">
-                            <ScoreBadge score={choice.upfAnalysis?.thaRating ?? 0} size={26} />
+                            <AppleRating rating={choice.upfAnalysis?.thaRating ?? 0} sizePx={26} showTooltip={false} animate={false} />
                             {isSelected ? (
                               <span className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                                 <Check className="h-3 w-3" />Noted
@@ -1048,7 +1048,7 @@ function ScannedProductCard({
           </div>
           <div className="shrink-0">
             {scannedProduct.thaRating !== null && (
-              <ScoreBadge score={scannedProduct.thaRating} size={28} />
+              <AppleRating rating={scannedProduct.thaRating} sizePx={28} showTooltip={false} animate={false} />
             )}
           </div>
         </div>
@@ -1192,7 +1192,7 @@ function ManualSearchResultCard({
             )}
           </div>
           <div className="flex flex-col items-end gap-1.5 shrink-0">
-            {rating !== null && <ScoreBadge score={rating} size={26} />}
+            {rating !== null && <AppleRating rating={rating} sizePx={26} showTooltip={false} animate={false} />}
             {isSelected ? (
               <span className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                 <Check className="h-3 w-3" />Chosen
@@ -1259,7 +1259,7 @@ function PreviousFulfilmentCard({
             )}
           </div>
           <div className="flex flex-col items-end gap-1.5 shrink-0">
-            {entry.thaRating !== null && <ScoreBadge score={entry.thaRating} size={26} />}
+            {entry.thaRating !== null && <AppleRating rating={entry.thaRating} sizePx={26} showTooltip={false} animate={false} />}
             {isSelected ? (
               <span className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                 <Check className="h-3 w-3" />Chosen

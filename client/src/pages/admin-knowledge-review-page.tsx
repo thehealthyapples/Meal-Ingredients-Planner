@@ -735,7 +735,7 @@ function ReleasesPanel({ onPublished }: { onPublished: () => void }) {
             <Label className="text-xs">Release notes (optional)</Label>
             <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="What this release covers…" data-testid="input-release-notes" />
           </div>
-          <Button
+          <Button variant="default"
             onClick={() => publishMutation.mutate()}
             disabled={publishMutation.isPending || approvedCount === 0}
             data-testid="button-publish"
@@ -1288,7 +1288,7 @@ export default function AdminKnowledgeReviewPage() {
               data-testid="input-bulk-origin"
             />
           </div>
-          <Button onClick={applyBulk} disabled={bulkMutation.isPending} data-testid="button-apply-bulk">
+          <Button variant="default" onClick={applyBulk} disabled={bulkMutation.isPending} data-testid="button-apply-bulk">
             Apply to {selected.size}
           </Button>
           <Button variant="ghost" onClick={() => setSelected(new Set())} data-testid="button-clear-selection">Clear</Button>
@@ -1451,7 +1451,7 @@ export default function AdminKnowledgeReviewPage() {
                             </div>
                           </div>
                           <div className="flex items-center gap-2 pb-1">
-                            <Button size="sm" onClick={() => saveEdit(item)} disabled={updateMutation.isPending} data-testid={`button-save-${item.id}`}>
+                            <Button variant="default" size="sm" onClick={() => saveEdit(item)} disabled={updateMutation.isPending} data-testid={`button-save-${item.id}`}>
                               <Check className="h-4 w-4 mr-1" /> Save
                             </Button>
                             <Button size="sm" variant="ghost" onClick={() => { setEditingId(null); setDraft(null); }} data-testid={`button-cancel-${item.id}`}>

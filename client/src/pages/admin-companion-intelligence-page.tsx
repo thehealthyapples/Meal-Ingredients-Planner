@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -373,7 +374,7 @@ function RecommendationQueue() {
   return (
     <Card data-testid="card-recommendation-queue">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Learning Recommendation Queue</CardTitle>
+        <CardTitle>Learning Recommendation Queue</CardTitle>
         <CardDescription className="text-xs">
           Advisory only — approving a recommendation never changes production routing.
           Acting on it remains a separate, human, code-reviewed implementation.
@@ -390,7 +391,7 @@ function RecommendationQueue() {
           <TabsContent value={status} className="mt-3 space-y-3">
             {isPending ? (
               <div className="space-y-2">
-                {[...Array(2)].map((_, i) => <div key={i} className="h-16 bg-muted animate-pulse rounded-lg" />)}
+                {[...Array(2)].map((_, i) => <Skeleton key={i} className="h-16 rounded-lg" />)}
               </div>
             ) : !data || data.recommendations.length === 0 ? (
               <p className="text-sm text-muted-foreground py-4">No {status} recommendations.</p>
@@ -480,7 +481,7 @@ export default function AdminCompanionIntelligencePage() {
   if (isPending) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
-        {[...Array(4)].map((_, i) => <div key={i} className="h-24 bg-muted animate-pulse rounded-lg" />)}
+        {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24 rounded-lg" />)}
       </div>
     );
   }
@@ -529,7 +530,7 @@ export default function AdminCompanionIntelligencePage() {
             no user or household identity is ever shown.
           </p>
         </div>
-        <Button
+        <Button variant="default"
           onClick={() => snapshotMutation.mutate()}
           disabled={snapshotMutation.isPending}
           data-testid="button-generate-recommendations"
@@ -564,7 +565,7 @@ export default function AdminCompanionIntelligencePage() {
       {/* Fallback state distribution */}
       <Card data-testid="card-fallback-distribution">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Fallback State Distribution</CardTitle>
+          <CardTitle>Fallback State Distribution</CardTitle>
           <CardDescription className="text-xs">How the {data.summary.totalEvents} retained misses break down.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -586,7 +587,7 @@ export default function AdminCompanionIntelligencePage() {
       {/* Improvement history */}
       <Card data-testid="card-improvement-history">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2">
             <TrendingUp className="w-4 h-4" /> Improvement History
           </CardTitle>
           <CardDescription className="text-xs">Understanding rate across recorded snapshots.</CardDescription>
@@ -615,7 +616,7 @@ export default function AdminCompanionIntelligencePage() {
       {/* INT38 — Feedback trend + top negative reasons */}
       <Card data-testid="card-feedback-trend">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2">
             <ThumbsUp className="w-4 h-4" /> Response Feedback Trend
           </CardTitle>
           <CardDescription className="text-xs">
@@ -629,7 +630,7 @@ export default function AdminCompanionIntelligencePage() {
 
       <Card data-testid="card-negative-reasons">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2">
             <ThumbsDown className="w-4 h-4" /> Most Common Reasons For Negative Feedback
           </CardTitle>
         </CardHeader>
@@ -649,7 +650,7 @@ export default function AdminCompanionIntelligencePage() {
       {/* INT38 — Guidance journeys, poor-feedback recommendations, abandonment */}
       <Card data-testid="card-successful-journeys">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2">
             <Route className="w-4 h-4" /> Most Successful Companion Journeys
           </CardTitle>
           <CardDescription className="text-xs">
@@ -682,7 +683,7 @@ export default function AdminCompanionIntelligencePage() {
 
       <Card data-testid="card-poor-feedback-recommendations">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2">
             <ThumbsDown className="w-4 h-4" /> Recommendations With Consistently Poor Feedback
           </CardTitle>
           <CardDescription className="text-xs">
@@ -715,7 +716,7 @@ export default function AdminCompanionIntelligencePage() {
 
       <Card data-testid="card-abandonment-opportunities">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2">
             <LogOut className="w-4 h-4" /> Abandonment Opportunities
           </CardTitle>
           <CardDescription className="text-xs">
@@ -765,7 +766,7 @@ export default function AdminCompanionIntelligencePage() {
 
       <Card data-testid="card-goal-funnel">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2">
             <Target className="w-4 h-4" /> Goal Completion Funnel
           </CardTitle>
           <CardDescription className="text-xs">
@@ -794,7 +795,7 @@ export default function AdminCompanionIntelligencePage() {
 
       <Card data-testid="card-highest-converting-actions">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2">
             <TrendingUp className="w-4 h-4" /> Highest Converting Guidance Actions
           </CardTitle>
           <CardDescription className="text-xs">
@@ -821,7 +822,7 @@ export default function AdminCompanionIntelligencePage() {
 
       <Card data-testid="card-ignored-actions">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2">
             <Redo2 className="w-4 h-4" /> Guidance Actions Frequently Ignored
           </CardTitle>
           <CardDescription className="text-xs">
@@ -882,7 +883,7 @@ export default function AdminCompanionIntelligencePage() {
 
       <Card data-testid="card-most-delegated-actions">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2">
             <Wand2 className="w-4 h-4" /> Most Frequently Delegated Actions
           </CardTitle>
           <CardDescription className="text-xs">
@@ -906,7 +907,7 @@ export default function AdminCompanionIntelligencePage() {
 
       <Card data-testid="card-most-successful-workflows">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2">
             <TrendingUp className="w-4 h-4" /> Most Successful Delegated Workflows
           </CardTitle>
           <CardDescription className="text-xs">
@@ -930,7 +931,7 @@ export default function AdminCompanionIntelligencePage() {
 
       <Card data-testid="card-most-abandoned-workflows">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2">
             <XOctagon className="w-4 h-4" /> Most Abandoned Delegated Workflows
           </CardTitle>
           <CardDescription className="text-xs">
@@ -956,7 +957,7 @@ export default function AdminCompanionIntelligencePage() {
       {/* Top unmatched requests */}
       <Card data-testid="card-top-unmatched">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2"><HelpCircle className="w-4 h-4" /> Top Unmatched Requests</CardTitle>
+          <CardTitle className="flex items-center gap-2"><HelpCircle className="w-4 h-4" /> Top Unmatched Requests</CardTitle>
           <CardDescription className="text-xs">Questions the resolver did not understand — the matcher backlog.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -985,7 +986,7 @@ export default function AdminCompanionIntelligencePage() {
       {/* Fastest-growing intent gaps */}
       <Card data-testid="card-fastest-growing">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2"><TrendingUp className="w-4 h-4" /> Fastest-Growing Intent Gaps</CardTitle>
+          <CardTitle className="flex items-center gap-2"><TrendingUp className="w-4 h-4" /> Fastest-Growing Intent Gaps</CardTitle>
           <CardDescription className="text-xs">{data.trend.note}</CardDescription>
         </CardHeader>
         <CardContent>
@@ -1006,7 +1007,7 @@ export default function AdminCompanionIntelligencePage() {
       {/* Capability / Knowledge / Platform-failure analysis */}
       <Card data-testid="card-capability-gaps">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2"><Wrench className="w-4 h-4" /> Capability Gap Analysis</CardTitle>
+          <CardTitle className="flex items-center gap-2"><Wrench className="w-4 h-4" /> Capability Gap Analysis</CardTitle>
           <CardDescription className="text-xs">Understood and routed, but the feature doesn't exist yet.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -1035,7 +1036,7 @@ export default function AdminCompanionIntelligencePage() {
 
       <Card data-testid="card-knowledge-gaps">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2"><BookOpen className="w-4 h-4" /> Knowledge Gap Analysis</CardTitle>
+          <CardTitle className="flex items-center gap-2"><BookOpen className="w-4 h-4" /> Knowledge Gap Analysis</CardTitle>
           <CardDescription className="text-xs">Feature exists, but no trusted stored knowledge answered the ask.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -1054,7 +1055,7 @@ export default function AdminCompanionIntelligencePage() {
 
       <Card data-testid="card-platform-failures">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2"><ServerCrash className="w-4 h-4" /> Routing Failure Analysis (Platform Faults)</CardTitle>
+          <CardTitle className="flex items-center gap-2"><ServerCrash className="w-4 h-4" /> Routing Failure Analysis (Platform Faults)</CardTitle>
           <CardDescription className="text-xs">Genuine faults — not honest gaps.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -1074,7 +1075,7 @@ export default function AdminCompanionIntelligencePage() {
       {/* Most requested new capabilities */}
       <Card data-testid="card-most-requested">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2"><Layers className="w-4 h-4" /> Most Requested New Capabilities</CardTitle>
+          <CardTitle className="flex items-center gap-2"><Layers className="w-4 h-4" /> Most Requested New Capabilities</CardTitle>
         </CardHeader>
         <CardContent>
           <GapTable
@@ -1092,7 +1093,7 @@ export default function AdminCompanionIntelligencePage() {
       {/* Impact-ranked improvement opportunities */}
       <Card data-testid="card-impact-ranked">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2"><MessageCircleQuestion className="w-4 h-4" /> Improvement Opportunities Ranked by Impact</CardTitle>
+          <CardTitle className="flex items-center gap-2"><MessageCircleQuestion className="w-4 h-4" /> Improvement Opportunities Ranked by Impact</CardTitle>
           <CardDescription className="text-xs">Impact = observed frequency across all gap categories, ranked descending.</CardDescription>
         </CardHeader>
         <CardContent>

@@ -6,6 +6,8 @@ import {
   Smile, Flame, Sprout, ChevronDown, type LucideIcon,
 } from "lucide-react";
 import { getCategoryEmoji } from "@/lib/ingredient-imagery";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import { HEALTH_DISCLAIMER } from "@/lib/health-benefits-model";
 
 /**
@@ -344,10 +346,10 @@ function HomeSearchResults({
   results?: SearchResult; loading: boolean;
   onOpenFood: (slug: string) => void; onPush: (v: View) => void;
 }) {
-  if (loading) return <EmptyState message="Searching…" />;
+  if (loading) return <HubLoading />;
   if (!results) return null;
   const total = results.foods.length + results.nutrients.length + results.benefits.length;
-  if (total === 0) return <EmptyState message="Nothing matched — try another word." />;
+  if (total === 0) return <EmptyState variant="filtered" size="compact" icon={Sparkles} title="Nothing matched — try another word." />;
 
   return (
     <div className="divide-y divide-border/30">
@@ -470,7 +472,7 @@ function BrowseView({
               ))}
             </div>
           </div>
-          {foodsLoading ? <EmptyState message="Loading foods…" /> : foods.length === 0 ? <EmptyState message="No foods here yet." /> : (
+          {foodsLoading ? <HubLoading /> : foods.length === 0 ? <EmptyState variant="empty" size="compact" icon={Sparkles} title="No foods here yet." /> : (
             <ul className="divide-y divide-border/30">
               {foods.map(f => <FoodRow key={f.slug} food={f} onOpen={() => onOpenFood(f.slug)} />)}
             </ul>
@@ -485,8 +487,8 @@ function BrowseSearchResults({
   results, loading, onOpenFood, onPush,
 }: { results?: SearchResult; loading: boolean; onOpenFood: (slug: string) => void; onPush: (v: View) => void; }) {
   const total = results ? results.foods.length + results.nutrients.length + results.benefits.length : 0;
-  if (loading) return <EmptyState message="Searching…" />;
-  if (!results || total === 0) return <EmptyState message="Nothing matched. Try another word." />;
+  if (loading) return <HubLoading />;
+  if (!results || total === 0) return <EmptyState variant="filtered" size="compact" icon={Sparkles} title="Nothing matched. Try another word." />;
 
   return (
     <div className="divide-y divide-border/30">
@@ -580,7 +582,7 @@ function TopicView({ id, onOpenFood, onBack }: { id: string; onOpenFood: (slug: 
               </div>
             ))}
           </div>
-        ) : <EmptyState message="" />
+        ) : <EmptyState variant="unavailable" size="compact" icon={Sparkles} title="Nothing to show here yet." />
       )}
 
       {kind === "seasonal" && (
@@ -596,7 +598,7 @@ function TopicView({ id, onOpenFood, onBack }: { id: string; onOpenFood: (slug: 
               </button>
             ))}
           </div>
-        ) : <EmptyState message="" />
+        ) : <EmptyState variant="unavailable" size="compact" icon={Sparkles} title="Nothing to show here yet." />
       )}
 
       {!kind && (
@@ -604,7 +606,7 @@ function TopicView({ id, onOpenFood, onBack }: { id: string; onOpenFood: (slug: 
           <ul className="divide-y divide-border/30">
             {foods.map(f => <FoodRow key={f.slug} food={f} onOpen={() => onOpenFood(f.slug)} />)}
           </ul>
-        ) : <EmptyState message="" />
+        ) : <EmptyState variant="unavailable" size="compact" icon={Sparkles} title="Nothing to show here yet." />
       )}
     </div>
   );
@@ -640,8 +642,8 @@ function FoodDetailView({
     staleTime: 5 * 60 * 1000,
   });
 
-  if (isLoading) return <DetailShell onBack={onBack} onHome={onHome} title="Loading…"><EmptyState message="" /></DetailShell>;
-  if (!data) return <DetailShell onBack={onBack} onHome={onHome} title="Not found"><EmptyState message="This food isn't in the library." /></DetailShell>;
+  if (isLoading) return <DetailShell onBack={onBack} onHome={onHome} title="Loading…"><HubLoading /></DetailShell>;
+  if (!data) return <DetailShell onBack={onBack} onHome={onHome} title="Not found"><EmptyState variant="unavailable" size="compact" icon={Sparkles} title="This food isn't in the library." /></DetailShell>;
 
   const { food, benefits, nutrients } = data;
 
@@ -815,8 +817,8 @@ function FoodDetailView({
 // ── Nutrient detail ────────────────────────────────────────────────────────────────
 function NutrientDetailView({ slug, onBack, onHome, onPush }: DetailProps) {
   const { data, isPending: isLoading } = useQuery<NutrientDetail>({ queryKey: ["/api/knowledge/nutrients", slug] });
-  if (isLoading) return <DetailShell onBack={onBack} onHome={onHome} title="Loading…"><EmptyState message="" /></DetailShell>;
-  if (!data) return <DetailShell onBack={onBack} onHome={onHome} title="Not found"><EmptyState message="This nutrient isn't in the library." /></DetailShell>;
+  if (isLoading) return <DetailShell onBack={onBack} onHome={onHome} title="Loading…"><HubLoading /></DetailShell>;
+  if (!data) return <DetailShell onBack={onBack} onHome={onHome} title="Not found"><EmptyState variant="unavailable" size="compact" icon={Sparkles} title="This nutrient isn't in the library." /></DetailShell>;
 
   const { nutrient, foods, benefits } = data;
   return (
@@ -848,8 +850,8 @@ function NutrientDetailView({ slug, onBack, onHome, onPush }: DetailProps) {
 // ── Benefit detail ─────────────────────────────────────────────────────────────────
 function BenefitDetailView({ slug, onBack, onHome, onPush }: DetailProps) {
   const { data, isPending: isLoading } = useQuery<BenefitDetail>({ queryKey: ["/api/knowledge/benefits", slug] });
-  if (isLoading) return <DetailShell onBack={onBack} onHome={onHome} title="Loading…"><EmptyState message="" /></DetailShell>;
-  if (!data) return <DetailShell onBack={onBack} onHome={onHome} title="Not found"><EmptyState message="This benefit isn't in the library." /></DetailShell>;
+  if (isLoading) return <DetailShell onBack={onBack} onHome={onHome} title="Loading…"><HubLoading /></DetailShell>;
+  if (!data) return <DetailShell onBack={onBack} onHome={onHome} title="Not found"><EmptyState variant="unavailable" size="compact" icon={Sparkles} title="This benefit isn't in the library." /></DetailShell>;
 
   const { benefit, foods } = data;
   return (
@@ -862,7 +864,7 @@ function BenefitDetailView({ slug, onBack, onHome, onPush }: DetailProps) {
           </ul>
         </FoodSection>
       ) : (
-        <EmptyState message="No foods linked yet." />
+        <EmptyState variant="empty" size="compact" icon={Sparkles} title="No foods linked yet." />
       )}
     </DetailShell>
   );
@@ -955,11 +957,14 @@ function SectionBlock({ title, icon: Icon, children }: { title: string; icon: Lu
   );
 }
 
-function EmptyState({ message }: { message: string }) {
+// PX1-W4.8: the private `EmptyState` that lived here — and doubled as the hub's
+// LOADING state, so waiting and having-nothing rendered identically — is retired.
+// Absence is the canonical `ui/empty-state` owner's; waiting is `Skeleton`'s.
+function HubLoading() {
   return (
-    <div className="px-5 py-10 text-center">
-      <Sparkles className="h-5 w-5 mx-auto text-muted-foreground/30 mb-2" />
-      {message && <p className="text-sm text-muted-foreground/50">{message}</p>}
+    <div className="px-5 py-6 space-y-2" aria-hidden="true">
+      <Skeleton className="h-5 w-full" />
+      <Skeleton className="h-5 w-3/4" />
     </div>
   );
 }

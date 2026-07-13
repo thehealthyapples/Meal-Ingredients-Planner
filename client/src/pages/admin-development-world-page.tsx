@@ -191,7 +191,7 @@ export default function AdminDevelopmentWorldPage() {
       {/* ── Filters ── */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Households</CardTitle>
+          <CardTitle>Households</CardTitle>
           <CardDescription>
             Read-only. Select a household to open its detail page. Statistics are the canonical authored figures; seeded status and last import/reset are live.
           </CardDescription>

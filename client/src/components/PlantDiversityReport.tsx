@@ -12,6 +12,7 @@ import {
   type CanonicalVarietyDisplay,
 } from "@shared/canonical/variety";
 import { FoodReport } from "@/components/FoodReport";
+import { Card } from "@/components/ui/card";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -479,7 +480,7 @@ function BroadenYourWeek({
   if (missingCategories.length === 0) return null;
 
   return (
-    <div className="rounded-2xl border border-border/50 bg-background overflow-hidden">
+    <Card className="overflow-hidden">
       <div className="px-5 py-4 border-b border-border/50">
         <div className="flex items-center gap-2">
           <span className="text-base" aria-hidden="true">🌿</span>
@@ -528,7 +529,7 @@ function BroadenYourWeek({
           );
         })}
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -840,7 +841,7 @@ function SectionBlock({
   if (sortedRows.length === 0 && !children) return null;
 
   return (
-    <div className="rounded-2xl border border-border/50 bg-background overflow-hidden">
+    <Card className="overflow-hidden">
       <div className="px-5 py-4 border-b border-border/50">
         <div className="flex items-center gap-2">
           <span className="text-lg" aria-hidden="true">
@@ -870,7 +871,7 @@ function SectionBlock({
           No {getSectionLabel(section).toLowerCase()} ingredients this week.
         </div>
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -956,7 +957,7 @@ function ReportSummary({
   const pct = Math.min((plantCount / WEEKLY_PLANT_TARGET) * 100, 100);
 
   return (
-    <div className="rounded-2xl border border-border/50 bg-background overflow-hidden">
+    <Card className="overflow-hidden">
       <div className="px-5 py-4 grid grid-cols-3 divide-x divide-border/40">
         <div className="pr-4">
           <p className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide mb-1">
@@ -1001,7 +1002,7 @@ function ReportSummary({
           <p className="text-[11px] text-muted-foreground/45 mt-1">covered</p>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -1093,13 +1094,13 @@ export function PlantDiversityReport({ weekMeals }: PlantDiversityReportProps) {
 
   if (!hasAnyIngredients) {
     return (
-      <div className="rounded-2xl border border-border/50 bg-background overflow-hidden">
+      <Card className="overflow-hidden">
         <div className="px-5 py-16 text-center">
           <p className="text-sm text-muted-foreground/50">
             Your Nutrition Report will appear here once meals are added to your week.
           </p>
         </div>
-      </div>
+      </Card>
     );
   }
 
@@ -1187,7 +1188,7 @@ export function PlantDiversityReport({ weekMeals }: PlantDiversityReportProps) {
       <BroadenYourWeek categoriesFound={categoriesFound} knowledgeMap={ingredientKnowledge} />
 
       {/* Cross-link to Pantry */}
-      <div className="rounded-2xl border border-border/50 bg-background px-5 py-4">
+      <Card className="px-5 py-4">
         <Link
           href="/pantry?mode=explore"
           className="inline-flex items-center gap-2 text-xs font-medium text-emerald-700 dark:text-emerald-400 hover:underline"
@@ -1196,7 +1197,7 @@ export function PlantDiversityReport({ weekMeals }: PlantDiversityReportProps) {
           <Compass className="h-3.5 w-3.5" />
           Explore health benefits, nutrients and foods in your Pantry
         </Link>
-      </div>
+      </Card>
 
       {/* Disclaimer */}
       <div className="px-1 space-y-1">

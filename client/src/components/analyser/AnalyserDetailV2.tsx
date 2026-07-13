@@ -6,7 +6,7 @@ import {
   ShoppingBasket, ListPlus, Layers, Loader2, ChevronDown, ChevronUp,
   Clock, ArrowRight, Info, CalendarDays,
 } from "lucide-react";
-import AppleRatingWithTooltip from "@/components/AppleRating";
+import AppleRating from "@/components/AppleRating";
 import { buildAnalyserViewModel } from "@/lib/analyser-view-model";
 import type { InputProduct, PackagedSwap, WholeFoodSwap } from "@/lib/analyser-view-model";
 import { effortLabel, effortColor, formatTime } from "@/lib/whole-food-alternatives";
@@ -284,7 +284,7 @@ export default function AnalyserDetailV2({
           {/* Action buttons */}
           <div className="flex flex-col gap-2.5">
             <div className="flex gap-2">
-            <Button
+            <Button variant="default"
               className="flex-1 gap-2"
               onClick={onAddToBasket}
               disabled={addToBasketPending}
@@ -351,7 +351,7 @@ export default function AnalyserDetailV2({
                   <p className="text-xs text-muted-foreground mt-0.5">{bestOption.brand}</p>
                 )}
                 <div className="flex items-center gap-2.5 mt-1.5">
-                  <AppleRatingWithTooltip
+                  <AppleRating
                     rating={bestOption.upfAnalysis?.thaRating ?? 0}
                     sizePx={18}
                     additiveContext={undefined}
@@ -400,7 +400,7 @@ export default function AnalyserDetailV2({
                           <p className="text-xs text-muted-foreground mt-0.5">{opt.brand}</p>
                         )}
                         <div className="flex items-center gap-2.5 mt-1.5">
-                          <AppleRatingWithTooltip
+                          <AppleRating
                             rating={opt.upfAnalysis?.thaRating ?? 0}
                             sizePx={16}
                             additiveContext={undefined}
@@ -632,7 +632,7 @@ export default function AnalyserDetailV2({
                         <p className="text-xs text-muted-foreground mt-0.5">{swap.brand}</p>
                       )}
                       <div className="flex items-center gap-2.5 mt-1.5">
-                        <AppleRatingWithTooltip
+                        <AppleRating
                           rating={swap.rating}
                           sizePx={18}
                           additiveContext={undefined}

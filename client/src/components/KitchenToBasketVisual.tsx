@@ -1,31 +1,4 @@
-import thaAppleUrl from "@/assets/icons/tha-apple.png";
-
-const OVERLAP = 0.38;
-
-function MiniAppleRating({ rating, size = 11 }: { rating: number; size?: number }) {
-  const full = Math.floor(Math.max(0, Math.min(5, rating)));
-  const overlap = Math.round(size * OVERLAP);
-  return (
-    <div className="inline-flex items-center">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <img
-          key={i}
-          src={thaAppleUrl}
-          width={size}
-          height={size}
-          alt=""
-          draggable={false}
-          style={{
-            display: "block",
-            flexShrink: 0,
-            marginLeft: i === 0 ? 0 : -overlap,
-            opacity: i < full ? 1 : 0.18,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
+import AppleRating from "@/components/AppleRating";
 
 const CX = 110;
 const CY = 110;
@@ -84,7 +57,7 @@ const NODES = [
     content: (
       <div className="mt-0.5">
         <p className="text-[8px] text-primary/60 truncate">Free Range Eggs</p>
-        <MiniAppleRating rating={5} size={10} />
+        <AppleRating rating={5} sizePx={10} decorative />
       </div>
     ),
   },

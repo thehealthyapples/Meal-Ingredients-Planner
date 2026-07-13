@@ -24,12 +24,12 @@ import { parseIngredient } from "@shared/parse-ingredient";
 import { useToast } from "@/hooks/use-toast";
 import { formatItemDisplay, formatQuantityMetric, formatQuantityImperial, getLiquidDisplayMl } from "@/lib/unit-display";
 import { deriveQuantityConfidence } from "@/lib/quantity-confidence";
-import ScoreBadge from "@/components/ui/score-badge";
+import AppleRating from "@/components/AppleRating";
 import { canShowScoreForItem } from "@/lib/basket-item-classifier";
 import type { ShoppingListItem, IngredientSource } from "@shared/schema";
 import type { HouseholdEater } from "@shared/household-eater";
 import { WorkspaceAnalyserSheet } from "@/components/WorkspaceAnalyserSheet";
-import { WorkspaceHeader } from "@/components/workspace-header";
+import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
 import { AmbientIntelligence } from "@/components/intelligence";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import {
@@ -39,6 +39,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import RetailerLogo from "@/components/RetailerLogo";
 import { CameraModal } from "@/components/camera-modal";
 import { ShoppingListScanReview, type ShoppingListScanData } from "@/components/ShoppingListScanReview";
@@ -467,6 +468,7 @@ function PrepActionPanel({
               type="number"
               min="0"
               step="any"
+              aria-label="Quantity to buy"
               value={prepState.editValue ?? (item.quantityValue?.toString() ?? "")}
               onChange={(e) => onPrepAction({ type: "editValue", value: e.target.value })}
               className="w-24 text-sm px-2.5 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
@@ -568,6 +570,7 @@ function PrepActionPanel({
               type="number"
               min="0"
               step="any"
+              aria-label="Quantity"
               value={prepState.editValue ?? (item.quantityValue?.toString() ?? "")}
               onChange={(e) => onPrepAction({ type: "editValue", value: e.target.value })}
               className="w-24 text-sm px-2.5 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
@@ -748,7 +751,7 @@ function WorkspaceRow({
   const qtyLabel = (() => {
     // Primary path: structured quantity + unit → canonical formatter
     if (item.quantityValue != null && item.unit && item.unit !== "descriptive") {
-      const display = formatItemDisplay(item.productName, item.quantityValue, item.unit, measurementPref);
+      const display = formatItemDisplay(item.productName, item.quantityValue, item.unit, measurementPref, item.quantityInGrams);
       // split on em-dash separator; rejoin in case name contains em-dash
       const parts = display.split("—");
       return parts.length > 1 ? parts.slice(1).join("—").trim() : "";
@@ -817,6 +820,7 @@ function WorkspaceRow({
               checked={item.checked || false}
               onCheckedChange={(v) => onToggleChecked(!!v)}
               className="border-primary/50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+              aria-label={`Mark ${item.productName} as done`}
               data-testid={`ws-checkbox-${item.id}`}
             />
           )}
@@ -848,11 +852,13 @@ function WorkspaceRow({
                   className="w-16 h-8 text-xs px-2 rounded-md border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary/30 tabular-nums shrink-0"
                   autoFocus
                   placeholder="qty"
+                  aria-label="Quantity"
                 />
                 <select
                   value={qtyEditUnit}
                   onChange={(e) => setQtyEditUnit(e.target.value)}
                   className="h-8 text-xs pl-2 pr-6 rounded-md border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary/30 cursor-pointer shrink-0"
+                  aria-label="Unit"
                 >
                   {SHOPPING_UNITS.map((u) => (
                     <option key={u.value} value={u.value}>{u.label}</option>
@@ -904,7 +910,7 @@ function WorkspaceRow({
          (hint && !item.checked && !shopMode) ? (
           <div className="col-start-2 flex items-center gap-2 min-w-0 sm:hidden">
             {canShowScoreForItem(item) && item.thaRating != null && (shopMode || !item.checked) && (
-              <ScoreBadge score={item.thaRating} size={20} />
+              <AppleRating rating={item.thaRating} sizePx={20} showTooltip={false} animate={false} />
             )}
             {hint && !item.checked && !shopMode && (
               <div className="flex items-center gap-1 min-w-0 overflow-hidden">
@@ -1000,7 +1006,7 @@ function WorkspaceRow({
         {/* ── Desktop only: Score pinned right (hidden on mobile) ── */}
         <div className="hidden sm:flex sm:items-center sm:justify-center sm:shrink-0 sm:w-[78px]">
           {canShowScoreForItem(item) && item.thaRating != null && (shopMode || !item.checked) && (
-            <ScoreBadge score={item.thaRating} size={22} />
+            <AppleRating rating={item.thaRating} sizePx={22} showTooltip={false} animate={false} />
           )}
         </div>
 
@@ -1055,6 +1061,7 @@ function WorkspaceRow({
             className="flex-1 text-xs h-8 px-2.5 rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30"
             autoFocus
             placeholder="Correct item name…"
+            aria-label="Correct item name"
           />
           <button
             onClick={() => { if (editVal.trim()) { onCorrectItem?.(editVal.trim()); setEditMode(false); } }}
@@ -1792,7 +1799,7 @@ export default function ShoppingWorkspacePage() {
     lines.push(`Supermarket: ${exportSupermarket}`);
     lines.push("");
     for (const item of items) {
-      const display = formatItemDisplay(item.productName, item.quantityValue, item.unit, measurementPref);
+      const display = formatItemDisplay(item.productName, item.quantityValue, item.unit, measurementPref, item.quantityInGrams);
       const parts = display.split(" — ");
       const qty = parts[1] ?? "";
       lines.push(`${capitalizeWords(item.productName)}${qty ? ` | ${qty}` : ""}`);
@@ -2229,7 +2236,7 @@ export default function ShoppingWorkspacePage() {
       {/* Sort dropdown */}
       <div className="shrink-0 border-l border-border/30 pl-2">
         <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as SortOrder)}>
-          <SelectTrigger className="h-6 text-[11px] w-[120px] border-border/50 bg-transparent px-2">
+          <SelectTrigger className="h-6 text-[11px] w-[120px] border-border/50 bg-transparent px-2" aria-label="Sort order">
             <SelectValue />
           </SelectTrigger>
           <SelectContent align="end">
@@ -2266,7 +2273,7 @@ export default function ShoppingWorkspacePage() {
       )}
       <div className={isFullscreen
         ? "fixed inset-0 z-50 bg-background overflow-auto flex flex-col"
-        : "max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-20"}
+        : `${pageContainerClass(true)} pb-20`}
       >
       {isFullscreen && (
         <div className="border-b border-border/50 bg-background shrink-0">
@@ -2339,6 +2346,7 @@ export default function ShoppingWorkspacePage() {
                     rows={6}
                     className="w-full resize-none bg-transparent text-[15px] leading-loose placeholder:text-foreground/25 placeholder:italic focus:outline-none text-foreground font-medium"
                     style={{ minHeight: 140 }}
+                    aria-label="Add items"
                     data-testid="textarea-add-items"
                   />
                   {addRawText.length > 0 && (
@@ -2451,7 +2459,7 @@ export default function ShoppingWorkspacePage() {
                   <Clock className="h-3 w-3 text-muted-foreground/40" />
                   <span className="text-[10px] tracking-widest uppercase font-medium text-muted-foreground/40 select-none">Recent lists</span>
                 </div>
-                <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(253,251,246,0.88)", backdropFilter: "blur(6px)", boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}>
+                <Card className="rounded-2xl overflow-hidden">
                   {addHistory.map((basket, idx) => (
                     <button
                       key={basket.id}
@@ -2470,7 +2478,7 @@ export default function ShoppingWorkspacePage() {
                       <RotateCcw className="h-3.5 w-3.5 shrink-0 text-muted-foreground/30 mt-0.5" />
                     </button>
                   ))}
-                </div>
+                </Card>
               </div>
             )}
 
@@ -2788,9 +2796,9 @@ export default function ShoppingWorkspacePage() {
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Choose Supermarket</label>
+              <label className="text-sm font-medium" htmlFor="ws-select-export-supermarket">Choose Supermarket</label>
               <Select value={exportSupermarket} onValueChange={setExportSupermarket}>
-                <SelectTrigger data-testid="select-export-supermarket">
+                <SelectTrigger id="ws-select-export-supermarket" data-testid="select-export-supermarket">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -2813,7 +2821,7 @@ export default function ShoppingWorkspacePage() {
               <Download className="h-4 w-4" />
               Download
             </Button>
-            <Button onClick={() => handleExport("links")} className="gap-1" data-testid="button-export-links">
+            <Button variant="default" onClick={() => handleExport("links")} className="gap-1" data-testid="button-export-links">
               <ExternalLink className="h-4 w-4" />
               Search Pages
             </Button>

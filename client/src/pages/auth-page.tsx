@@ -375,7 +375,7 @@ export default function AuthPage() {
                       data-testid="input-forgot-email"
                     />
                   </div>
-                  <Button type="submit" className="w-full h-12 text-base font-semibold" disabled={forgotState === "loading"} data-testid="button-send-reset">
+                  <Button variant="default" type="submit" className="w-full h-12 text-base font-semibold" disabled={forgotState === "loading"} data-testid="button-send-reset">
                     {forgotState === "loading" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Mail className="h-4 w-4 mr-2" />}
                     Send Reset Link
                   </Button>
@@ -423,7 +423,7 @@ export default function AuthPage() {
                       data-testid="input-resend-email"
                     />
                   </div>
-                  <Button type="submit" className="w-full h-12 text-base font-semibold" disabled={standaloneResendState === "loading"} data-testid="button-send-verification-link">
+                  <Button variant="default" type="submit" className="w-full h-12 text-base font-semibold" disabled={standaloneResendState === "loading"} data-testid="button-send-verification-link">
                     {standaloneResendState === "loading" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Mail className="h-4 w-4 mr-2" />}
                     Send verification link
                   </Button>
@@ -466,7 +466,7 @@ export default function AuthPage() {
                     <label className="text-sm font-medium" htmlFor="reset-confirm-password">Confirm new password</label>
                     <Input id="reset-confirm-password" type="password" placeholder="Repeat your new password" className="h-12" value={resetConfirmPassword} onChange={e => setResetConfirmPassword(e.target.value)} required data-testid="input-confirm-password" />
                   </div>
-                  <Button type="submit" className="w-full h-12 text-base font-semibold" disabled={resetState === "loading"} data-testid="button-reset-password">
+                  <Button variant="default" type="submit" className="w-full h-12 text-base font-semibold" disabled={resetState === "loading"} data-testid="button-reset-password">
                     {resetState === "loading" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
                     Update Password
                   </Button>
@@ -711,7 +711,7 @@ function AuthForm({ onSubmit, submitLabel, isSubmitting, testIdPrefix, isRegiste
                 </FormItem>
               )}
             />
-            <Button
+            <Button variant="default"
               type="submit"
               className="w-full h-12 text-base font-semibold shadow-sm shadow-primary/15 mt-1"
               disabled={isSubmitting}

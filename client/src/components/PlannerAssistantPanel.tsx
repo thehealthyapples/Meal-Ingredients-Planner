@@ -150,7 +150,7 @@ function ScanContent({ onScanFile, scanLoading, onUploadClick }: ScanContentProp
       />
 
       <div className="space-y-2">
-        <Button
+        <Button variant="default"
           className="w-full realm-banner-btn"
           onClick={() => cameraInputRef.current?.click()}
           disabled={scanLoading}
@@ -337,7 +337,7 @@ function SmartContent() {
         </div>
       </div>
 
-      <Button
+      <Button variant="default"
         className="w-full realm-banner-btn"
         onClick={onRunSmartSuggest}
         disabled={smartLoading}

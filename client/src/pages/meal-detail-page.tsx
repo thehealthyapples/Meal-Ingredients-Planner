@@ -11,8 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Loader2, ArrowLeft, ChefHat, Pencil, Trash2, ShoppingBasket, AlertTriangle, RefreshCw, Plus, X, Save, Minus, Flame, Beef, Wheat, Droplets, Cookie, Droplet, Users, Leaf, Zap, TrendingDown, Sprout, Clock, AlarmClock, ListPlus, Wand2, Check, ChevronDown } from "lucide-react";
-import { WorkspaceHeader } from "@/components/workspace-header";
+import { Loader2, ChefHat, Pencil, Trash2, ShoppingBasket, AlertTriangle, RefreshCw, Plus, X, Save, Minus, Flame, Beef, Wheat, Droplets, Cookie, Droplet, Users, Leaf, Zap, TrendingDown, Sprout, Clock, AlarmClock, ListPlus, Wand2, Check, ChevronDown } from "lucide-react";
+import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
 import { appendPendingIngredient } from "@/lib/quick-list";
 import { getCategoryIcon, getCategoryColor } from "@/lib/category-utils";
 import { useToast } from "@/hooks/use-toast";
@@ -462,7 +462,7 @@ export default function MealDetailPage() {
 
   if (!meal) {
     return (
-      <div className="max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-8" data-testid="meal-not-found">
+      <div className={`${pageContainerClass(true)} pb-8`} data-testid="meal-not-found">
         <p className="text-muted-foreground text-center">Meal not found.</p>
         <Button variant="outline" className="mx-auto mt-4 block" onClick={() => navigate("/cookbook")} data-testid="button-back-to-meals">
           Back to Meals
@@ -489,13 +489,9 @@ export default function MealDetailPage() {
       realm="cookbook"
       wide
       title={isEditedCopy && isEditing ? editName : meal.name}
+      back={{ href: "/cookbook", label: "Cookbook" }}
       actions={
         <div className="flex items-center gap-2 flex-wrap">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/cookbook")} data-testid="button-back">
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Cookbook
-          </Button>
-          <div className="h-4 w-px bg-[var(--realm-border)]" />
           <div className="flex items-center gap-1 rounded-md border border-[var(--realm-border)] px-1 py-0.5">
             {/* Save split button: shown only when editing a copy */}
             {isEditedCopy && isEditing && (
@@ -506,7 +502,7 @@ export default function MealDetailPage() {
                 </Button>
                 <Popover open={saveMenuOpen} onOpenChange={(open) => { if (open) saveMenuTimeRef.current = Date.now(); setSaveMenuOpen(open); }}>
                   <PopoverTrigger asChild>
-                    <Button size="sm" variant="outline" className="border-0 px-1.5 text-xs realm-banner-btn rounded-l-none" disabled={saveMutation.isPending || saveAsMutation.isPending} data-testid="button-save-menu-trigger">
+                    <Button size="sm" variant="outline" className="border-0 px-1.5 text-xs realm-banner-btn rounded-l-none" aria-label="More save options" disabled={saveMutation.isPending || saveAsMutation.isPending} data-testid="button-save-menu-trigger">
                       <ChevronDown className="h-3 w-3 opacity-60" />
                     </Button>
                   </PopoverTrigger>
@@ -599,7 +595,7 @@ export default function MealDetailPage() {
                   })}
                 </div>
                 <div className="mt-2 pt-2 border-t border-border/50">
-                  <Button size="sm" className="w-full text-xs" disabled={selectedGoals.size === 0} onClick={applyAdaptations} data-testid="button-adapt-apply">
+                  <Button variant="default" size="sm" className="w-full text-xs" disabled={selectedGoals.size === 0} onClick={applyAdaptations} data-testid="button-adapt-apply">
                     <Wand2 className="h-3.5 w-3.5 mr-1" />
                     Apply{selectedGoals.size > 1 ? ` (${selectedGoals.size})` : ""}
                   </Button>
@@ -618,7 +614,7 @@ export default function MealDetailPage() {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 pt-3 sm:pt-4 main-safe"
+      className={`${pageContainerClass(true)} main-safe`}
     >
       {isEditedCopy && isEditing && (
         <div className="mb-4 flex items-center gap-2">
@@ -626,6 +622,7 @@ export default function MealDetailPage() {
             value={editName}
             onChange={(e) => { setEditName(e.target.value); markChanged(); }}
             className="text-2xl font-semibold tracking-tight flex-1 border-dashed"
+            aria-label="Recipe name"
             data-testid="input-edit-name"
           />
           <Badge variant="secondary" className="text-xs shrink-0" data-testid="badge-edited-copy">
@@ -647,7 +644,7 @@ export default function MealDetailPage() {
                       <span className="text-muted-foreground shrink-0">{action?.icon}</span>
                       <p className="text-sm font-medium">{result.explanation}</p>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 -mt-0.5" onClick={() => setAdaptResults(r => r.filter(x => x.goal !== goal))}>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 -mt-0.5" aria-label="Dismiss adaptation" onClick={() => setAdaptResults(r => r.filter(x => x.goal !== goal))}>
                       <X className="h-3.5 w-3.5" />
                     </Button>
                   </div>
@@ -712,6 +709,7 @@ export default function MealDetailPage() {
                     variant="ghost"
                     className="h-4 w-4"
                     onClick={() => { setEditServings(Math.max(1, editServings - 1)); markChanged(); }}
+                    aria-label="Decrease servings"
                     data-testid="button-servings-minus"
                   >
                     <Minus className="h-3 w-3" />
@@ -722,6 +720,7 @@ export default function MealDetailPage() {
                     variant="ghost"
                     className="h-4 w-4"
                     onClick={() => { setEditServings(editServings + 1); markChanged(); }}
+                    aria-label="Increase servings"
                     data-testid="button-servings-plus"
                   >
                     <Plus className="h-3 w-3" />
@@ -736,6 +735,7 @@ export default function MealDetailPage() {
                     variant="ghost"
                     className="h-5 w-5"
                     onClick={() => { const n = Math.max(1, viewServings - 1); setViewServings(n); setViewServingsRaw(String(n)); }}
+                    aria-label="Decrease servings"
                     data-testid="button-view-servings-minus"
                   >
                     <Minus className="h-3 w-3" />
@@ -752,6 +752,7 @@ export default function MealDetailPage() {
                       setViewServingsRaw(String(safe));
                     }}
                     className="w-7 text-center bg-transparent border-none outline-none text-xs font-medium"
+                    aria-label="Servings"
                     data-testid="input-view-servings"
                   />
                   <span className="text-muted-foreground pr-1">serving{viewServings !== 1 ? 's' : ''}</span>
@@ -760,6 +761,7 @@ export default function MealDetailPage() {
                     variant="ghost"
                     className="h-5 w-5"
                     onClick={() => { const n = Math.min(100, viewServings + 1); setViewServings(n); setViewServingsRaw(String(n)); }}
+                    aria-label="Increase servings"
                     data-testid="button-view-servings-plus"
                   >
                     <Plus className="h-3 w-3" />
@@ -847,12 +849,14 @@ export default function MealDetailPage() {
                         value={ing}
                         onChange={(e) => updateIngredient(idx, e.target.value)}
                         className="flex-1 text-sm border-dashed"
+                        aria-label={`Ingredient ${idx + 1}`}
                         data-testid={`input-ingredient-${idx}`}
                       />
                       <Button
                         size="icon"
                         variant="ghost"
                         className="shrink-0 text-muted-foreground"
+                        aria-label="Remove ingredient"
                         onClick={() => removeIngredient(idx)}
                         data-testid={`button-remove-ingredient-${idx}`}
                       >
@@ -973,12 +977,14 @@ export default function MealDetailPage() {
                           value={step}
                           onChange={(e) => updateInstruction(idx, e.target.value)}
                           className="flex-1 text-sm border-dashed min-h-[60px] resize-none"
+                          aria-label={`Step ${idx + 1}`}
                           data-testid={`input-instruction-${idx}`}
                         />
                         <Button
                           size="icon"
                           variant="ghost"
                           className="shrink-0 text-muted-foreground mt-2"
+                          aria-label="Remove step"
                           onClick={() => removeInstruction(idx)}
                           data-testid={`button-remove-instruction-${idx}`}
                         >
@@ -1100,8 +1106,9 @@ export default function MealDetailPage() {
                         {methodView === "timing" && (
                           <div className="space-y-5">
                             <div className="flex items-center gap-3">
-                              <label className="text-sm font-medium shrink-0">Serve time</label>
+                              <label htmlFor="meal-serve-time" className="text-sm font-medium shrink-0">Serve time</label>
                               <input
+                                id="meal-serve-time"
                                 type="time"
                                 value={serveTime}
                                 onChange={e => setServeTime(e.target.value)}
@@ -1127,6 +1134,7 @@ export default function MealDetailPage() {
                                       value={componentDurations[label] ?? 30}
                                       onChange={e => setComponentDurations(prev => ({ ...prev, [label]: Math.max(1, parseInt(e.target.value) || 30) }))}
                                       className="w-16 border border-border rounded-md px-2 py-1 text-sm bg-background text-right"
+                                      aria-label={`Cooking time for ${label}`}
                                       data-testid={`input-duration-${label}`}
                                     />
                                     <span className="text-xs text-muted-foreground">min</span>
@@ -1216,7 +1224,7 @@ export default function MealDetailPage() {
         // coordinates, occluded while editing, and under the BottomNav's strip.
         // It now clears the nav zone and sits left of the FAB (right-6 + w-12).
         <div className="fixed right-24 z-40 bottom-[calc(env(safe-area-inset-bottom,0px)+5rem)]">
-          <Button
+          <Button variant="default"
             onClick={() => saveMutation.mutate()}
             disabled={saveMutation.isPending}
             className="shadow-lg"
@@ -1243,6 +1251,7 @@ export default function MealDetailPage() {
           <div className="space-y-4 pt-2">
             <Input
               placeholder="https://www.bbcgoodfood.com/recipes/..."
+              aria-label="Recipe URL"
               value={reimportUrl}
               onChange={(e) => setReimportUrl(e.target.value)}
               data-testid="input-reimport-url"
@@ -1251,7 +1260,7 @@ export default function MealDetailPage() {
               <Button variant="outline" onClick={() => setReimportOpen(false)} data-testid="button-reimport-cancel">
                 Cancel
               </Button>
-              <Button
+              <Button variant="default"
                 onClick={() => reimportMutation.mutate(reimportUrl)}
                 disabled={!reimportUrl.trim() || reimportMutation.isPending}
                 data-testid="button-reimport-submit"

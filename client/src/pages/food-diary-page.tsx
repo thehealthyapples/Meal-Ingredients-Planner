@@ -37,7 +37,7 @@ import { apiRequest } from "@/lib/queryClient";
 import ThaAppleIcon from "@/components/icons/ThaAppleIcon";
 import AppleRating from "@/components/AppleRating";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
-import { WorkspaceHeader } from "@/components/workspace-header";
+import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -164,6 +164,7 @@ function ThaAppleScorePicker({
           type="button"
           onClick={() => onChange(n)}
           title={`${n} / ${max}`}
+          aria-label={`${n} of ${max}`}
           className={`transition-all ${value !== null && n <= value ? "opacity-100 scale-100" : "opacity-20 hover:opacity-50 hover:scale-105"}`}
           data-testid={`${testId}-${n}`}
         >
@@ -257,7 +258,7 @@ function CopyFromPlannerModal({
         </div>
         <DialogFooter className="gap-2">
           <Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
-          <Button
+          <Button variant="default"
             size="sm"
             onClick={() => onConfirm(selected === "all" ? [] : [selected])}
             disabled={isPending}
@@ -335,6 +336,7 @@ function AddEntryModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={`Add ${slotLabel.toLowerCase()}…`}
+              aria-label={`Add to ${slotLabel}`}
               className="h-8 text-sm"
               autoFocus
               onKeyDown={(e) => {
@@ -343,10 +345,11 @@ function AddEntryModal({
               }}
               data-testid="input-add-modal"
             />
-            <Button
+            <Button variant="default"
               size="sm"
               onClick={handleAdd}
               disabled={!name.trim() || isPending}
+              aria-label="Add entry"
               data-testid="button-confirm-add-modal"
             >
               {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
@@ -389,6 +392,7 @@ function AddEntryModal({
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search meals…"
+                  aria-label="Search meals"
                   value={mealSearch}
                   onChange={(e) => setMealSearch(e.target.value)}
                   className="pl-9 h-8 text-sm"
@@ -535,6 +539,7 @@ function AddMetricModal({
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="Metric name"
+                aria-label="Metric name"
                 className="h-8 text-sm flex-1"
                 onKeyDown={(e) => { if (e.key === "Enter") addCustom(); }}
                 data-testid="input-custom-metric-name"
@@ -543,11 +548,12 @@ function AddMetricModal({
                 value={newUnit}
                 onChange={(e) => setNewUnit(e.target.value)}
                 placeholder="Unit"
+                aria-label="Unit"
                 className="h-8 text-sm w-20"
                 onKeyDown={(e) => { if (e.key === "Enter") addCustom(); }}
                 data-testid="input-custom-metric-unit"
               />
-              <Button size="sm" onClick={addCustom} disabled={!newName.trim()} data-testid="button-add-custom-metric">
+              <Button variant="default" size="sm" onClick={addCustom} disabled={!newName.trim()} aria-label="Add custom metric" data-testid="button-add-custom-metric">
                 <Plus className="h-3.5 w-3.5" />
               </Button>
             </div>
@@ -683,7 +689,7 @@ function DailySignalsPanel({
           </CardTitle>
           <div className="flex items-center gap-1.5">
             {dirty && <span className="text-[10px] text-muted-foreground">Unsaved</span>}
-            <Button
+            <Button variant="default"
               size="sm"
               className="h-6 text-[10px] px-2.5 realm-banner-btn"
               onClick={submit}
@@ -719,13 +725,14 @@ function DailySignalsPanel({
 
           {/* Weight */}
           <div>
-            <Label className="text-xs text-muted-foreground mb-1 block">
+            <Label htmlFor="diary-input-weight" className="text-xs text-muted-foreground mb-1 block">
               Weight (kg)
               {metrics?.bmi != null && (
                 <span className="ml-2 text-muted-foreground/60">BMI: {metrics.bmi}</span>
               )}
             </Label>
             <Input
+              id="diary-input-weight"
               type="number" step="0.1" value={form.weightKg}
               onChange={(e) => set("weightKg", e.target.value)}
               className="h-8 text-sm"
@@ -759,8 +766,9 @@ function DailySignalsPanel({
           {/* Optional built-in extras */}
           {extraEnabled.includes("sleep") && (
             <div>
-              <Label className="text-xs text-muted-foreground mb-1 block">Sleep (hours)</Label>
+              <Label htmlFor="diary-input-sleep" className="text-xs text-muted-foreground mb-1 block">Sleep (hours)</Label>
               <Input
+                id="diary-input-sleep"
                 type="number" step="0.5" value={form.sleepHours}
                 onChange={(e) => set("sleepHours", e.target.value)}
                 className="h-8 text-sm"
@@ -784,8 +792,9 @@ function DailySignalsPanel({
 
           {extraEnabled.includes("notes") && (
             <div>
-              <Label className="text-xs text-muted-foreground mb-1 block">Notes</Label>
+              <Label htmlFor="diary-textarea-notes" className="text-xs text-muted-foreground mb-1 block">Notes</Label>
               <Textarea
+                id="diary-textarea-notes"
                 value={form.notes}
                 onChange={(e) => set("notes", e.target.value)}
                 placeholder="How did today go?"
@@ -797,8 +806,9 @@ function DailySignalsPanel({
 
           {extraEnabled.includes("bloodPressure") && (
             <div>
-              <Label className="text-xs text-muted-foreground mb-1 block">Blood pressure (mmHg)</Label>
+              <Label htmlFor="diary-input-blood-pressure" className="text-xs text-muted-foreground mb-1 block">Blood pressure (mmHg)</Label>
               <Input
+                id="diary-input-blood-pressure"
                 type="text"
                 value={customValues["bloodPressure"] ?? ""}
                 onChange={(e) => setCustomValue("bloodPressure", e.target.value)}
@@ -811,8 +821,9 @@ function DailySignalsPanel({
 
           {extraEnabled.includes("bloodSugar") && (
             <div>
-              <Label className="text-xs text-muted-foreground mb-1 block">Blood sugar (mmol/L)</Label>
+              <Label htmlFor="diary-input-blood-sugar" className="text-xs text-muted-foreground mb-1 block">Blood sugar (mmol/L)</Label>
               <Input
+                id="diary-input-blood-sugar"
                 type="number" step="0.1"
                 value={customValues["bloodSugar"] ?? ""}
                 onChange={(e) => setCustomValue("bloodSugar", e.target.value)}
@@ -825,8 +836,9 @@ function DailySignalsPanel({
 
           {extraEnabled.includes("bpm") && (
             <div>
-              <Label className="text-xs text-muted-foreground mb-1 block">Heart rate (BPM)</Label>
+              <Label htmlFor="diary-input-bpm" className="text-xs text-muted-foreground mb-1 block">Heart rate (BPM)</Label>
               <Input
+                id="diary-input-bpm"
                 type="number" step="1"
                 value={customValues["bpm"] ?? ""}
                 onChange={(e) => setCustomValue("bpm", e.target.value)}
@@ -840,10 +852,11 @@ function DailySignalsPanel({
           {/* Custom metrics */}
           {enabledCustomDefs.map((def) => (
             <div key={def.id}>
-              <Label className="text-xs text-muted-foreground mb-1 block">
+              <Label htmlFor={`diary-input-custom-${def.id}`} className="text-xs text-muted-foreground mb-1 block">
                 {def.name}{def.unit ? ` (${def.unit})` : ""}
               </Label>
               <Input
+                id={`diary-input-custom-${def.id}`}
                 type="text"
                 value={customValues[def.id] ?? ""}
                 onChange={(e) => setCustomValue(def.id, e.target.value)}
@@ -926,6 +939,7 @@ function LookingForwardWidget() {
         <Button
           variant="ghost" size="sm" className="h-6 w-6 p-0"
           onClick={() => setAdding(!adding)}
+          aria-label="Add countdown"
           data-testid="button-add-countdown"
         >
           <Plus className="h-3.5 w-3.5" />
@@ -973,6 +987,7 @@ function LookingForwardWidget() {
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder="e.g. Holiday, Birthday…"
+              aria-label="Event name"
               className="h-8 text-sm"
               autoFocus
               onKeyDown={(e) => { if (e.key === "Escape") { setAdding(false); setNewName(""); setNewDate(""); } }}
@@ -982,11 +997,12 @@ function LookingForwardWidget() {
               type="date"
               value={newDate}
               onChange={(e) => setNewDate(e.target.value)}
+              aria-label="Event date"
               className="h-8 text-sm"
               data-testid="input-countdown-date"
             />
             <div className="flex gap-2">
-              <Button
+              <Button variant="default"
                 size="sm"
                 onClick={addItem}
                 disabled={!newName.trim() || !newDate}
@@ -1044,9 +1060,10 @@ function DiarySettingsPanel({
             <div className="flex items-center justify-between py-1">
               <div className="flex items-center gap-2">
                 <Heart className="h-4 w-4 text-muted-foreground" />
-                <Label className="text-sm cursor-pointer">Health Snapshot</Label>
+                <Label htmlFor="switch-show-health-snapshot" className="text-sm cursor-pointer">Health Snapshot</Label>
               </div>
               <Switch
+                id="switch-show-health-snapshot"
                 checked={showHealthSnapshot}
                 onCheckedChange={onToggleHealthSnapshot}
                 data-testid="switch-show-health-snapshot"
@@ -1517,6 +1534,7 @@ export default function FoodDiaryPage() {
                   type="button"
                   className="flex items-center justify-center h-7 w-7 rounded-md border border-input bg-background hover:bg-accent text-sm"
                   onClick={prevDay}
+                  aria-label="Previous day"
                   data-testid="button-prev-day"
                 >
                   <ChevronLeft className="h-3.5 w-3.5" />
@@ -1528,6 +1546,7 @@ export default function FoodDiaryPage() {
                   type="button"
                   className="flex items-center justify-center h-7 w-7 rounded-md border border-input bg-background hover:bg-accent text-sm"
                   onClick={nextDay}
+                  aria-label="Next day"
                   data-testid="button-next-day"
                 >
                   <ChevronRight className="h-3.5 w-3.5" />
@@ -1586,7 +1605,7 @@ export default function FoodDiaryPage() {
           </DropdownMenu>
         }
       />
-      <div className="max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6" data-realm="diary">
+      <div className={pageContainerClass(true)} data-realm="diary">
 
         {/* UPF awareness banner */}
         {!upfDismissed && (
@@ -1693,6 +1712,7 @@ export default function FoodDiaryPage() {
                                       <Input
                                         value={editingEntry.name}
                                         onChange={(e) => setEditingEntry({ ...editingEntry, name: e.target.value })}
+                                        aria-label="Entry name"
                                         className="h-7 text-sm flex-1"
                                         autoFocus
                                         onKeyDown={(e) => {
@@ -1701,10 +1721,10 @@ export default function FoodDiaryPage() {
                                         }}
                                         data-testid={`input-edit-entry-${entry.id}`}
                                       />
-                                      <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => updateEntryMut.mutate({ id: entry.id, name: editingEntry.name })} data-testid={`button-save-entry-${entry.id}`}>
+                                      <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => updateEntryMut.mutate({ id: entry.id, name: editingEntry.name })} aria-label="Save entry" data-testid={`button-save-entry-${entry.id}`}>
                                         <Check className="h-3 w-3 text-primary" />
                                       </Button>
-                                      <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setEditingEntry(null)}>
+                                      <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setEditingEntry(null)} aria-label="Cancel editing entry">
                                         <X className="h-3 w-3" />
                                       </Button>
                                     </>
@@ -1715,10 +1735,10 @@ export default function FoodDiaryPage() {
                                         <Badge variant="outline" className="text-[10px] py-0 px-1 text-muted-foreground border-muted-foreground/30 shrink-0">Planner</Badge>
                                       )}
                                       <div className="hover-reveal group-hover:opacity-100 transition-opacity flex items-center gap-0.5 shrink-0">
-                                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setEditingEntry({ id: entry.id, name: entry.name })} data-testid={`button-edit-entry-${entry.id}`}>
+                                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setEditingEntry({ id: entry.id, name: entry.name })} aria-label="Edit entry" data-testid={`button-edit-entry-${entry.id}`}>
                                           <Pencil className="h-3 w-3" />
                                         </Button>
-                                        <Button size="icon" variant="ghost" className="h-6 w-6 hover:text-destructive" onClick={() => deleteEntryMut.mutate(entry.id)} data-testid={`button-delete-entry-${entry.id}`}>
+                                        <Button size="icon" variant="ghost" className="h-6 w-6 hover:text-destructive" onClick={() => deleteEntryMut.mutate(entry.id)} aria-label="Delete entry" data-testid={`button-delete-entry-${entry.id}`}>
                                           <Trash2 className="h-3 w-3" />
                                         </Button>
                                       </div>

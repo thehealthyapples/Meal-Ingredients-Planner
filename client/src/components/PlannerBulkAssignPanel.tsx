@@ -307,7 +307,7 @@ export function PlannerBulkAssignPanel({
             <Button variant="outline" size="sm" className="flex-1" onClick={onClose}>
               Cancel
             </Button>
-            <Button
+            <Button variant="default"
               size="sm"
               className="flex-1"
               disabled={bulkAssignments.length === 0 || bulkAssignMutation.isPending}

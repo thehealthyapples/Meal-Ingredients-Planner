@@ -15,6 +15,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -23,6 +24,7 @@ import {
   Sparkles, ThumbsUp, ThumbsDown, CheckCircle2, XCircle, Wand2, Lightbulb,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Card } from "@/components/ui/card";
 import { apiRequest } from "@/lib/queryClient";
 import {
   buildCompanionCardView,
@@ -297,17 +299,20 @@ interface CompanionCardProps {
   onNavigate: (href: string) => void;
 }
 
-/** A single, compact, touch-friendly Companion Card. */
+/**
+ * A single, compact, touch-friendly Companion Card.
+ *
+ * PX1-W4.13 (fnd-px-companion-card-drift): this used to declare its own surface —
+ * a private border/background and a `shadow-sm` that `ui/card` deliberately sets
+ * to `shadow-none` — so a meal in the assistant looked like a different kind of
+ * thing from the same meal in the Cookbook. It now composes the canonical `Card`,
+ * per the Companion Card Principle's "one card system across every domain". The
+ * firewall (`companion-card.ts`) was always compliant; only the render drifted.
+ */
 function CompanionCard({ card, onNavigate }: CompanionCardProps) {
   const isMeal = card.kind === "meal";
   return (
-    <div
-      className={cn(
-        "rounded-xl border border-border/40 bg-background/80 overflow-hidden",
-        "shadow-sm",
-      )}
-      data-testid="companion-card"
-    >
+    <Card className="overflow-hidden" data-testid="companion-card">
       <div className="flex gap-3 p-2.5">
         {/* Canonical THA image (meal cards only) or a domain glyph */}
         <div className="flex-shrink-0">
@@ -381,7 +386,7 @@ function CompanionCard({ card, onNavigate }: CompanionCardProps) {
           ))}
         </div>
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -1060,6 +1065,10 @@ function ConversationThread({
   return (
     <div
       className="flex-1 overflow-y-auto px-4 py-4 space-y-3"
+      // PX1-W4.2: the conversation is a live region — Apple's replies are
+      // announced as they arrive instead of landing silently.
+      role="log"
+      aria-live="polite"
       data-testid="conversation-thread"
     >
       {turns.map((turn) => (
@@ -1155,6 +1164,7 @@ function AssistantInput({ value, onChange, onSubmit, isPending }: AssistantInput
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Ask Apple anything…"
+          aria-label="Ask Apple anything"
           rows={1}
           disabled={isPending}
           className={cn(
@@ -1170,6 +1180,7 @@ function AssistantInput({ value, onChange, onSubmit, isPending }: AssistantInput
         <button
           onClick={onSubmit}
           disabled={!value.trim() || isPending}
+          aria-label="Send message"
           className={cn(
             "flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center",
             "bg-primary text-primary-foreground",
@@ -1211,6 +1222,15 @@ export default function FloatingAssistant() {
   const { ask, clearAsk } = usePendingAsk();
 
   const [isOpen, setIsOpen] = useState(false);
+  // PX1-W4.2: focus returns to the trigger on close. Radix would do this itself,
+  // but the exit animation (AnimatePresence + forceMount) unmounts the dialog
+  // content outside Radix's own close sequence, so the restore is made explicit.
+  const fabRef = useRef<HTMLButtonElement>(null);
+  const wasOpenRef = useRef(false);
+  useEffect(() => {
+    if (wasOpenRef.current && !isOpen) fabRef.current?.focus();
+    wasOpenRef.current = isOpen;
+  }, [isOpen]);
   const [inputValue, setInputValue] = useState("");
   // Optimistic turns added before the server responds
   const [optimisticTurns, setOptimisticTurns] = useState<TurnRecord[]>([]);
@@ -1415,20 +1435,14 @@ export default function FloatingAssistant() {
     sendTurn({ utterance: ask.utterance, askHints: ask.hints });
   }, [ask, clearAsk, isPending, sendTurn]);
 
-  // Close on Escape
-  useEffect(() => {
-    if (!isOpen) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setIsOpen(false);
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [isOpen]);
+  // Escape, focus trap, focus return and scroll-lock are Radix Dialog's now
+  // (PX1-W4.2, fnd-px-companion-not-a-dialog) — no hand-rolled key handling.
 
   return (
     <>
       {/* ── Trigger button ───────────────────────────────────────────── */}
       <button
+        ref={fabRef}
         onClick={() => setIsOpen((v) => !v)}
         aria-label={isOpen ? "Close Apple assistant" : "Open Apple assistant"}
         className={cn(
@@ -1472,39 +1486,48 @@ export default function FloatingAssistant() {
         </AnimatePresence>
       </button>
 
-      {/* ── Drawer panel ─────────────────────────────────────────────── */}
-      <AnimatePresence>
-        {isOpen && (
-          <>
-            {/* Backdrop — mobile only */}
-            <motion.div
-              key="backdrop"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-40 bg-black/20 sm:hidden"
-              onClick={() => setIsOpen(false)}
-              data-testid="assistant-backdrop"
-            />
+      {/* ── Drawer panel ─────────────────────────────────────────────────
+          PX1-W4.2 (fnd-px-companion-not-a-dialog): this was a hand-rolled fixed
+          panel — no role="dialog", no aria-modal, no focus trap, no focus return,
+          no scroll lock; focus fell through to the page behind and Apple's answers
+          were never announced. It is now a real Radix Dialog: everything above
+          arrives free, the visuals and motion are unchanged. */}
+      <DialogPrimitive.Root open={isOpen} onOpenChange={setIsOpen}>
+        <AnimatePresence>
+          {isOpen && (
+            <DialogPrimitive.Portal forceMount>
+              {/* Backdrop — visible on mobile only; still mounted on desktop so
+                  outside-click dismissal keeps working there */}
+              <DialogPrimitive.Overlay asChild forceMount>
+                <motion.div
+                  key="backdrop"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="fixed inset-0 z-40 bg-black/20 sm:bg-transparent"
+                  data-testid="assistant-backdrop"
+                />
+              </DialogPrimitive.Overlay>
 
-            {/* Panel */}
-            <motion.div
-              key="panel"
-              initial={{ x: "100%", opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: "100%", opacity: 0 }}
-              transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              className={cn(
-                "fixed right-0 top-0 bottom-0 z-50",
-                "w-full sm:w-[380px]",
-                "flex flex-col",
-                "bg-background/97 backdrop-blur-md",
-                "border-l border-border/30",
-                "shadow-2xl",
-              )}
-              data-testid="assistant-panel"
-            >
+              {/* Panel */}
+              <DialogPrimitive.Content asChild forceMount aria-describedby={undefined}>
+                <motion.div
+                  key="panel"
+                  initial={{ x: "100%", opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  exit={{ x: "100%", opacity: 0 }}
+                  transition={{ type: "spring", damping: 30, stiffness: 300 }}
+                  className={cn(
+                    "fixed right-0 top-0 bottom-0 z-50",
+                    "w-full sm:w-[380px]",
+                    "flex flex-col",
+                    "bg-background/97 backdrop-blur-md",
+                    "border-l border-border/30",
+                    "shadow-2xl",
+                  )}
+                  data-testid="assistant-panel"
+                >
               {/* Header */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-border/20 shrink-0">
                 <div className="flex items-center gap-2.5">
@@ -1512,27 +1535,31 @@ export default function FloatingAssistant() {
                     <Leaf className="h-3.5 w-3.5 text-primary" />
                   </div>
                   <div>
-                    <p
-                      className="text-sm font-semibold text-foreground"
-                      style={{ fontFamily: "var(--font-display)" }}
-                    >
-                      Apple
-                    </p>
+                    <DialogPrimitive.Title asChild>
+                      <p
+                        className="text-sm font-semibold text-foreground"
+                        style={{ fontFamily: "var(--font-display)" }}
+                      >
+                        Apple
+                      </p>
+                    </DialogPrimitive.Title>
                     <PersonaLabel surface={surface} />
                   </div>
                 </div>
-                <button
-                  onClick={() => setIsOpen(false)}
-                  className={cn(
-                    "w-7 h-7 rounded-lg flex items-center justify-center",
-                    "text-muted-foreground hover:text-foreground hover:bg-accent",
-                    "transition-colors duration-150",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  )}
-                  data-testid="button-close-assistant"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+                <DialogPrimitive.Close asChild>
+                  <button
+                    aria-label="Close assistant"
+                    className={cn(
+                      "w-7 h-7 rounded-lg flex items-center justify-center",
+                      "text-muted-foreground hover:text-foreground hover:bg-accent",
+                      "transition-colors duration-150",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    )}
+                    data-testid="button-close-assistant"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </DialogPrimitive.Close>
               </div>
 
               {/* Thread or quick actions */}
@@ -1604,10 +1631,12 @@ export default function FloatingAssistant() {
                 onSubmit={handleSubmit}
                 isPending={isPending}
               />
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+                </motion.div>
+              </DialogPrimitive.Content>
+            </DialogPrimitive.Portal>
+          )}
+        </AnimatePresence>
+      </DialogPrimitive.Root>
     </>
   );
 }

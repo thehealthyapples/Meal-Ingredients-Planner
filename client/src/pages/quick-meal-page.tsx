@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, X, ShoppingBasket, Loader2, ChefHat, Leaf, Save, Globe, UtensilsCrossed, Snowflake, Check, ChevronDown, ChevronUp, Utensils, ImageOff, Camera, Store } from "lucide-react";
-import { WorkspaceHeader } from "@/components/workspace-header";
+import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { getWholeFoodAlternative } from "@/lib/whole-food-alternatives";
@@ -381,8 +381,9 @@ export default function QuickMealPage() {
       realm="cookbook"
       title={editId ? "Edit Meal" : "Build a Meal"}
       wide
+      back={{ href: "/cookbook", label: "Cookbook" }}
     />
-    <div className="max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 main-safe">
+    <div className={`${pageContainerClass(true)} main-safe`}>
 
       {isLoadingMeal ? (
         <div className="flex items-center justify-center py-12">
@@ -402,12 +403,13 @@ export default function QuickMealPage() {
                 <Input
                   ref={inputRef}
                   placeholder="e.g. chicken, roast potatoes, gravy…"
+                  aria-label="Component name"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addItem(); } }}
                   data-testid="input-quick-meal-item"
                 />
-                <Button size="sm" onClick={addItem} disabled={!inputValue.trim()} data-testid="button-add-quick-meal-item">
+                <Button variant="default" size="sm" aria-label="Add component" onClick={addItem} disabled={!inputValue.trim()} data-testid="button-add-quick-meal-item">
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
@@ -489,6 +491,7 @@ export default function QuickMealPage() {
                           <button
                             onClick={() => toggleExpanded(part.id)}
                             className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                            aria-label="Choose source"
                             data-testid={`button-source-picker-${idx}`}
                           >
                             {isOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
@@ -497,6 +500,7 @@ export default function QuickMealPage() {
                           <button
                             onClick={() => removePart(part.id)}
                             className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                            aria-label="Remove component"
                             data-testid={`button-remove-quick-meal-item-${idx}`}
                           >
                             <X className="h-3.5 w-3.5" />
@@ -681,6 +685,7 @@ export default function QuickMealPage() {
               <CardContent>
                 <Input
                   placeholder="e.g. Sunday roast dinner"
+                  aria-label="Meal name"
                   value={mealName}
                   onChange={(e) => setMealName(e.target.value)}
                   data-testid="input-quick-meal-name"
@@ -689,7 +694,7 @@ export default function QuickMealPage() {
             </Card>
 
             <div className="flex flex-col gap-2 mb-4">
-              <Button
+              <Button variant="default"
                 className="w-full"
                 disabled={parts.length === 0 || isWorking}
                 onClick={() => createBasketMutation.mutate()}

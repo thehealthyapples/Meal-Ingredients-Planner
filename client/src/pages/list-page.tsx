@@ -13,7 +13,7 @@ import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { FirstVisitHint } from "@/components/first-visit-hint";
 import thaAppleUrl from "@/assets/icons/tha-apple.png";
 import RetailerLogo from "@/components/RetailerLogo";
-import { WorkspaceHeader } from "@/components/workspace-header";
+import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -402,7 +402,7 @@ export default function ListPage() {
         wide
         titleTestId="text-list-title"
       />
-      <div className="max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 pt-1 sm:pt-6 sm:space-y-5 flex flex-col flex-1 min-h-0 sm:flex-none">
+      <div className={`${pageContainerClass(true)} sm:space-y-5 flex flex-col flex-1 min-h-0 sm:flex-none`}>
 
       {/* ── First-visit hint ─────────────────────────────────────────────── */}
       <FirstVisitHint
@@ -453,6 +453,7 @@ export default function ListPage() {
                 rows={8}
                 className="w-full resize-none bg-transparent text-[15px] leading-loose placeholder:text-foreground/25 placeholder:italic focus:outline-none text-foreground font-medium"
                 style={{ minHeight: 180 }}
+                aria-label="Quick list"
                 data-testid="textarea-quick-list"
               />
               {rawText.length > 0 && (

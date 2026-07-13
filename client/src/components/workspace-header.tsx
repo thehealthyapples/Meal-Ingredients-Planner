@@ -1,4 +1,4 @@
-import { type ReactNode, createContext, useContext, useLayoutEffect, useState } from "react";
+import { type ReactNode, type HTMLAttributes, createContext, useContext, useLayoutEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -9,9 +9,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  ShoppingCart, Search, Heart, User, ShieldCheck, LogOut,
+  ShoppingCart, Search, Heart, User, ShieldCheck, LogOut, ArrowLeft,
 } from "lucide-react";
 import { api } from "@shared/routes";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import { useAppRealm } from "@/components/nav-bar";
 
@@ -41,6 +43,27 @@ interface WorkspaceSearchConfig {
   onSubmit: () => void;
 }
 
+/**
+ * The canonical Back slot (PX1-W4.5, fnd-px-back-three-mechanisms).
+ *
+ * Back in THA is HIERARCHY, not history (EXP §8): it always leads to the page's
+ * one parent, never to wherever the browser happens to have been. Before this
+ * slot existed, "back" had three incompatible implementations — a `navigate()`,
+ * a `<Link>`, and a `window.location.href` full page reload that discarded the
+ * TanStack cache — and four subpages had none at all.
+ */
+interface WorkspaceBackConfig {
+  /** The hierarchy parent — where Back always leads. */
+  href: string;
+  /** Visible label; defaults to "Back". Name the parent where it helps: "Cookbook". */
+  label?: string;
+  /**
+   * Intercept before leaving (e.g. an unsaved-changes guard). Call `proceed`
+   * to complete the navigation; don't call it to stay.
+   */
+  beforeNavigate?: (proceed: () => void) => void;
+}
+
 interface WorkspaceHeaderProps {
   title: string;
   realm: PageRealm;
@@ -57,6 +80,8 @@ interface WorkspaceHeaderProps {
   contextBar?: ReactNode;
   /** Prevent mobile search collapse while a popover is open. */
   collapseDisabled?: boolean;
+  /** Back to the hierarchy parent. Only subpages carry this; realms in the nav do not. */
+  back?: WorkspaceBackConfig;
   wide?: boolean;
   titleTestId?: string;
   className?: string;
@@ -127,12 +152,13 @@ export function WorkspaceHeader({
   centerContent,
   actions,
   contextBar,
+  back,
   wide = false,
   titleTestId,
   className,
 }: WorkspaceHeaderProps) {
   const { user, logout } = useUser();
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const { setRealm } = useAppRealm();
   useLayoutEffect(() => { setRealm(realm); }, [realm, setRealm]);
@@ -143,7 +169,7 @@ export function WorkspaceHeader({
   });
   const itemCount = shoppingListItems.length;
   const isAdmin = (user as any)?.role === "admin";
-  const maxW = wide ? "max-w-screen-2xl 3xl:max-w-[1920px]" : "max-w-screen-xl 2xl:max-w-screen-2xl 3xl:max-w-[1920px]";
+  const maxW = wide ? WIDE_MAXW : NARROW_MAXW;
 
   const isBasketActive = location === "/shopping-workspace" || location === "/basket" || location === "/analyse-basket";
 
@@ -193,6 +219,24 @@ export function WorkspaceHeader({
     </Tooltip>
   );
 
+  /* ── Back to the hierarchy parent (shared across all three layouts) ── */
+  const backButton = back ? (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="shrink-0"
+      onClick={() => {
+        const go = () => navigate(back.href);
+        if (back.beforeNavigate) back.beforeNavigate(go);
+        else go();
+      }}
+      data-testid="button-workspace-back"
+    >
+      <ArrowLeft className="h-4 w-4 mr-1" aria-hidden="true" />
+      {back.label ?? "Back"}
+    </Button>
+  ) : null;
+
   const headerContent = (
     <div
       className={`page-sticky-header${className ? ` ${className}` : ""}`}
@@ -238,9 +282,10 @@ export function WorkspaceHeader({
 
               {/* Row 1, Col 2: Page title */}
               <div
-                className="flex items-center min-w-0 shrink-0"
+                className="flex items-center gap-1 min-w-0 shrink-0"
                 style={{ gridRow: "1", gridColumn: "2" }}
               >
+                {backButton}
                 <h1
                   className="realm-title text-[17px] font-semibold tracking-tight leading-none truncate"
                   data-testid={titleTestId}
@@ -298,7 +343,8 @@ export function WorkspaceHeader({
               </div>
 
               {/* Col 2: Page title */}
-              <div className="flex items-center min-w-0 shrink-0">
+              <div className="flex items-center gap-1 min-w-0 shrink-0">
+                {backButton}
                 <h1
                   className="realm-title text-[17px] font-semibold tracking-tight leading-none truncate"
                   data-testid={titleTestId}
@@ -330,6 +376,7 @@ export function WorkspaceHeader({
             {/* Row 1: title | basket + search toggle + profile */}
             <div className="flex items-center justify-between h-14">
               <div className="flex items-center gap-2 min-w-0">
+                {backButton}
                 <Link href="/home" aria-label="Home" className="flex-shrink-0">
                   <img
                     src="/logo-long.png"
@@ -434,4 +481,34 @@ export function WorkspaceHeader({
   );
 
   return headerSlot ? createPortal(headerContent, headerSlot) : headerContent;
+}
+
+/* ── PageContainer ───────────────────────────────────────────────────────────── */
+
+/**
+ * The canonical page content column (PX1-W4.5, fnd-px-page-shell-hand-rolled).
+ *
+ * Before this existed, the container string was copy-pasted 17 times and the top
+ * padding diverged seven ways (48px on Home → none at all on the Cookbook), so the
+ * gap between the banner and the first card changed on every page. One owner, one
+ * rhythm: it reads the SAME `wide` flag as `WorkspaceHeader`, so a page's content
+ * column can no longer disagree with its own banner about how wide the page is.
+ *
+ * `pageContainerClass` is exported for the two surfaces whose container is chosen
+ * conditionally (Shop mode's fullscreen escape) and cannot mount a component —
+ * the string still has exactly one owner.
+ */
+const WIDE_MAXW = "max-w-screen-2xl 3xl:max-w-[1920px]";
+const NARROW_MAXW = "max-w-screen-xl 2xl:max-w-screen-2xl 3xl:max-w-[1920px]";
+
+export function pageContainerClass(wide = false): string {
+  return `${wide ? WIDE_MAXW : NARROW_MAXW} mx-auto w-full px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6`;
+}
+
+interface PageContainerProps extends HTMLAttributes<HTMLDivElement> {
+  wide?: boolean;
+}
+
+export function PageContainer({ wide = false, className, ...rest }: PageContainerProps) {
+  return <div className={cn(pageContainerClass(wide), className)} {...rest} />;
 }

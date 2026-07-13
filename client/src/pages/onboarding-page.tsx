@@ -560,6 +560,7 @@ export default function OnboardingPage() {
                             value={otherAllergyText}
                             onChange={(e) => setOtherAllergyText(e.target.value)}
                             placeholder="e.g. sesame, mustard…"
+                            aria-label="Other allergies or intolerances"
                             className="mt-1 h-8 text-sm max-w-xs"
                             autoFocus
                           />
@@ -792,7 +793,7 @@ export default function OnboardingPage() {
                     </Button>
                   )}
 
-                  <Button
+                  <Button variant="default"
                     onClick={goNext}
                     disabled={completeMutation.isPending}
                     size="sm"

@@ -105,7 +105,7 @@ function TemplatePreview({ templateId, importMode, onImport, isImporting, canImp
       <div className="flex items-center justify-between mb-3">
         <span className="text-sm text-muted-foreground">{template?.items.length || 0} meals across 6 weeks</span>
         {canImport && (
-          <Button
+          <Button variant="default"
             size="sm"
             onClick={() => onImport({ type: "all" })}
             disabled={isImporting}
@@ -424,7 +424,20 @@ export function TemplatesPanel({ open, onClose, user, inline }: TemplatePanelPro
 
     return (
       <div key={t.id} className={`border rounded-lg overflow-hidden transition-colors ${isSelected ? "border-primary" : "border-border"}`} data-testid={`card-template-${t.id}`}>
-        <div className="p-3 cursor-pointer" onClick={() => setSelectedGlobalId(isSelected ? null : t.id)}>
+        <div
+          className="p-3 cursor-pointer"
+          role="button"
+          tabIndex={0}
+          aria-expanded={isSelected}
+          aria-label={`Select plan ${t.name}`}
+          onClick={() => setSelectedGlobalId(isSelected ? null : t.id)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setSelectedGlobalId(isSelected ? null : t.id);
+            }
+          }}
+        >
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap">
@@ -532,13 +545,27 @@ export function TemplatesPanel({ open, onClose, user, inline }: TemplatePanelPro
       <div key={t.id} className={`border rounded-lg overflow-hidden transition-colors ${isSelected ? "border-primary" : "border-border"}`} data-testid={`card-template-${t.id}`}>
         <div className="p-3">
           <div className="flex items-start justify-between gap-2">
-            <div className="flex-1 min-w-0 cursor-pointer" onClick={() => !isEditing && setSelectedPrivateId(isSelected ? null : t.id)}>
+            <div
+              className="flex-1 min-w-0 cursor-pointer"
+              role="button"
+              tabIndex={0}
+              aria-expanded={isSelected}
+              aria-label={`Select plan ${t.name}`}
+              onClick={() => !isEditing && setSelectedPrivateId(isSelected ? null : t.id)}
+              onKeyDown={(e) => {
+                if (isEditing) return;
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setSelectedPrivateId(isSelected ? null : t.id);
+                }
+              }}
+            >
               {isEditing ? (
                 <div className="space-y-1.5" onClick={e => e.stopPropagation()}>
                   <Input className="h-7 text-sm" value={editName} onChange={e => setEditName(e.target.value)} placeholder="Template name" />
                   <Input className="h-7 text-sm" value={editDescription} onChange={e => setEditDescription(e.target.value)} placeholder="Description (optional)" />
                   <div className="flex gap-1">
-                    <Button size="sm" className="h-6 text-xs" onClick={() => updateMutation.mutate({ id: t.id, name: editName, description: editDescription })} disabled={updateMutation.isPending}>Save</Button>
+                    <Button variant="default" size="sm" className="h-6 text-xs" onClick={() => updateMutation.mutate({ id: t.id, name: editName, description: editDescription })} disabled={updateMutation.isPending}>Save</Button>
                     <Button size="sm" variant="outline" className="h-6 text-xs" onClick={() => setEditingId(null)}>Cancel</Button>
                   </div>
                 </div>
@@ -739,7 +766,7 @@ export function TemplatesPanel({ open, onClose, user, inline }: TemplatePanelPro
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSaveDialogOpen(false)}>Cancel</Button>
-            <Button
+            <Button variant="default"
               onClick={() => saveTemplateMutation.mutate()}
               disabled={!saveName.trim() || saveTemplateMutation.isPending}
               data-testid="button-confirm-save-template"
@@ -792,7 +819,7 @@ export function TemplatesPanel({ open, onClose, user, inline }: TemplatePanelPro
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAdminCreateOpen(false)}>Cancel</Button>
-            <Button
+            <Button variant="default"
               onClick={() => adminCreateMutation.mutate()}
               disabled={!adminNewName.trim() || adminCreateMutation.isPending}
               data-testid="button-create-global-template"

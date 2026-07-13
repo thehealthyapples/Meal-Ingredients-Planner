@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -222,7 +223,7 @@ function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, 
           {nutritionLoading && !nutritionItems.length ? (
             <div className="grid grid-cols-3 gap-1">
               {[...Array(6)].map((_, i) => (
-                <div key={i} className="h-5 rounded-md bg-muted animate-pulse" />
+                <Skeleton key={i} className="h-5" />
               ))}
             </div>
           ) : nutritionItems.length > 0 ? (
@@ -522,7 +523,7 @@ export function SmartReviewPanelContent({
           {smartLoading ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1" />}
           Regenerate
         </Button>
-        <Button
+        <Button variant="default"
           size="sm"
           className="w-full"
           onClick={applySmartSuggestion}

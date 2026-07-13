@@ -463,7 +463,7 @@ export function ImportDiaryModal({
         {/* Footer navigation */}
         <DialogFooter className="flex-shrink-0 pt-2 border-t border-border">
           {step === "instructions" && (
-            <Button onClick={() => setStep("upload")} data-testid="button-next-instructions">
+            <Button variant="default" onClick={() => setStep("upload")} data-testid="button-next-instructions">
               Continue
             </Button>
           )}
@@ -479,7 +479,7 @@ export function ImportDiaryModal({
               <Button variant="outline" onClick={() => setStep("upload")} data-testid="button-back-preview">
                 Back
               </Button>
-              <Button onClick={() => setStep("strategy")} data-testid="button-next-preview">
+              <Button variant="default" onClick={() => setStep("strategy")} data-testid="button-next-preview">
                 Next: Import Strategy
               </Button>
             </>
@@ -490,7 +490,7 @@ export function ImportDiaryModal({
               <Button variant="outline" onClick={() => setStep("preview")} data-testid="button-back-strategy">
                 Back
               </Button>
-              <Button
+              <Button variant="default"
                 onClick={handleValidate}
                 disabled={previewMutation.isPending}
                 data-testid="button-validate"
@@ -506,7 +506,7 @@ export function ImportDiaryModal({
               <Button variant="outline" onClick={() => setStep("strategy")} data-testid="button-back-validation">
                 Back
               </Button>
-              <Button
+              <Button variant="default"
                 onClick={handleImport}
                 disabled={confirmMutation.isPending || validationResult.validRows.length === 0}
                 data-testid="button-confirm-import"
@@ -518,7 +518,7 @@ export function ImportDiaryModal({
           )}
 
           {step === "result" && (
-            <Button onClick={() => handleClose(false)} data-testid="button-close-result">
+            <Button variant="default" onClick={() => handleClose(false)} data-testid="button-close-result">
               Done
             </Button>
           )}

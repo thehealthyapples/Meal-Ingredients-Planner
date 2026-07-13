@@ -512,7 +512,7 @@ export function RecipeScanReview({ open, onOpenChange, scanData, scanning = fals
               Cancel
             </Button>
             {!isFailedParse && (
-              <Button
+              <Button variant="default"
                 onClick={handleConfirm}
                 disabled={saving || !canConfirm}
                 title={!canConfirm ? "Resolve all issues above before saving" : undefined}

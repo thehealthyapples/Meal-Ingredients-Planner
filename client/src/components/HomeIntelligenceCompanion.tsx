@@ -12,6 +12,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useUser } from "@/hooks/use-user";
 import { Leaf, Sparkles, Sun, Compass, Heart } from "lucide-react";
+import { Card } from "@/components/ui/card";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -103,9 +104,11 @@ export default function HomeIntelligenceCompanion() {
 
   if (!isLoading && !hasAnyModule) return null;
 
+  // PX1-W4.4 (fnd-px-nine-card-surfaces): composes the canonical Card instead of
+  // declaring a rival surface.
   return (
-    <div
-      className="rounded-xl border border-border/25 bg-background/60 backdrop-blur-sm px-5 py-4 space-y-3"
+    <Card
+      className="px-5 py-4 space-y-3"
       data-testid="home-intelligence-companion"
     >
       {/* Greeting */}
@@ -168,6 +171,6 @@ export default function HomeIntelligenceCompanion() {
           )}
         </div>
       )}
-    </div>
+    </Card>
   );
 }
