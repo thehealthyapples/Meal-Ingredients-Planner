@@ -114,7 +114,7 @@ or `docs/investigations/`) or to the repository root — the only file permitted
 either root is that tree's index `README.md`. This is enforced by
 `.engineering/scripts/repo-structure-verify.sh`; run it after filing.
 
-Every workstream implementation document must contain all seven sections:
+Every workstream implementation document must contain all eight sections:
 
 ### Architecture Compliance
 *(See checklist below — copy and complete it.)*
@@ -139,6 +139,23 @@ The test is one question: **would a person's answer to "what is THA?" be differe
 - Product knowledge written into a prompt, template, or fallback string: **must be NO** (Rule PKR27)
 
 *(See the Product Registry Compliance block below — copy and complete it.)*
+
+### Adoption Register Impact
+*(Added under `PX1-W5`, 2026-07-13. Mandatory for every implementation that adds, changes, or retires a **client-side building block** — a component, hook, token, utility class, or shared pattern. Governed by [`THA_UI_ARCHITECTURE.md`](./THA_UI_ARCHITECTURE.md) § 17, whose adoption register this maintains: [`docs/implementation/ux/ADOPTION_REGISTER.md`](../implementation/ux/ADOPTION_REGISTER.md).)*
+
+The test is one question: **does this change introduce, adopt, or retire a building block?** If yes, the register is stale until updated — and updating it is part of *this* change, not a follow-up.
+
+**Why this is a Definition of Done item and not a documentation chore (UIA § 17):** THA's user-facing defects were never defects of knowledge. `PX1` audited ten dimensions and found that nearly every canonical owner it looked for *already existed and was already correct* — and that the platform had authored those foundations, never adopted them, and never retired what they replaced. `PageHeader.tsx` was a complete, well-built successor to `WorkspaceHeader` with **zero importers**, sitting live-looking in the tree for the next workstream to adopt *instead of* the real owner. An unadopted foundation plus an unretired predecessor is the exact failure state the register exists to end, and the only moment it is cheap to record is now, while the person who introduced the block still remembers why.
+
+- Register affected: YES / NO *(if unsure, it is YES)*
+- Owners **created**: [concern — owner — its first consumers, or NONE] *(an owner with no consumers fails the gate, by design: authoring a foundation and adopting it "later" is the failure mode)*
+- Owners **adopted**: [which surfaces moved onto which owner, or NONE]
+- Predecessors **retired**: [name — migrated consumers — deleted in this change, or NONE]
+- Rival ceilings **raised**: [which, and the reason, or NONE] *(raising a ceiling is how a competing implementation is admitted; it must be deliberate and reasoned, never silent)*
+- Exemptions **added**: [surface — why, or NONE]
+- `npm run adoption:check` passes: **must be YES**
+
+*(See the Adoption Register Compliance block below — copy and complete it.)*
 
 ### Data Impact
 - Reads existing data: YES / NO
@@ -503,6 +520,47 @@ For every user-facing implementation confirm:
 
 ---
 
+## ADOPTION REGISTER COMPLIANCE
+
+**Adopted under `PX1-W5` (2026-07-13).** This section applies to **every implementation that adds, changes, or retires a client-side building block** — a component, hook, token, utility class, or shared pattern — in addition to the general Architecture Compliance Checklist above. It enforces [`THA_UI_ARCHITECTURE.md`](./THA_UI_ARCHITECTURE.md) § 17 (*one canonical owner per visual concern · retire on introduction · the adoption register · admission of the new · exemptions are explicit*).
+
+The register is [`docs/implementation/ux/ADOPTION_REGISTER.md`](../implementation/ux/ADOPTION_REGISTER.md), generated from `adoption-register.json`, and it is **operational, not architectural** — it creates no law, and every rule it enforces belongs to UIA § 17. It is the instrument that makes that law checkable.
+
+**This block is unusual in one respect, and deliberately so: most of it is enforced by a machine.** `npm run adoption:check` fails the build when a canonical owner loses its last consumer, when a rival count rises, when a retired predecessor returns, or when a new module appears with no importers. A governing rule that only fires when its author happens to remember it is not enforced; it is hoped for (`PLATFORM_KNOWLEDGE_COMPLETION_ARCHITECTURE.md` Rule KC8) — and UIA § 17's rules were hoped for from the day they were written until this gate existed. Where a rule *cannot* honestly be machine-checked (no grep can detect "a hand-rolled panel shell"), the register marks the row `review` rather than pretending otherwise.
+
+```
+----------------------------------------
+ADOPTION REGISTER COMPLIANCE
+----------------------------------------
+
+For every implementation that touches a building block confirm:
+
+✓ `npm run adoption:check` PASSES
+✓ Any NEW building block has a register entry naming the concern it owns —
+    and ships with its first real consumers. An owner with zero importers
+    fails the gate: authoring a foundation and adopting it "later" is the
+    precise failure this register exists to end
+✓ Any predecessor it replaces is NAMED, its consumers MIGRATED, and it is
+    DELETED in this same change (UI Principle 5). "Dormant" predecessors are
+    prohibited
+✓ Any surface exempt from a canonical owner is exempt IN THE REGISTER, WITH
+    A REASON — never silently
+✓ Any rival ceiling raised is raised DELIBERATELY, with the reason recorded.
+    This is the only door through which a competing implementation may enter
+    THA, and it is deliberately a visible, reviewable edit
+✓ The implementation report names every owner created, adopted or retired
+```
+
+**If any check fails: STOP. Explain why. Do not continue.**
+
+> **Not applicable to work that touches no building block.** A server change, a
+> migration, a copy edit, or a query optimisation introduces no component, hook,
+> token or shared pattern and owes the register nothing. The question is not "did I
+> touch the client?" — it is *"did I author, adopt, or retire something another
+> surface could reuse?"*
+
+---
+
 ## IMPLEMENTATION TEMPLATE
 
 **Relocated under `EOM1` (2026-07-10).** The canonical, copyable template now
@@ -680,9 +738,10 @@ The file must:
 1. The project document has been created.
 2. The project document has been saved in its canonical location (see File Requirements above).
 3. **For user-facing implementations: every affected Product Knowledge Registry entry has been created, updated, or retired — in this change — and named in the project document.** *(Added under `PKR2`, 2026-07-11. A user-facing task with a stale registry is not complete, however finished the code is; see [`THA_PRODUCT_KNOWLEDGE_REGISTRY_ARCHITECTURE.md`](./THA_PRODUCT_KNOWLEDGE_REGISTRY_ARCHITECTURE.md) § 16, and — for why this is a knowledge-domain obligation rather than a documentation chore — [`PLATFORM_KNOWLEDGE_COMPLETION_ARCHITECTURE.md`](./PLATFORM_KNOWLEDGE_COMPLETION_ARCHITECTURE.md) § 9.7, Rule KC15.)*
-4. The project document has been staged with git (`git add <canonical path>`).
-5. The project document has been committed locally with an appropriate commit message.
-6. Claude has reported:
+4. **For implementations that touch a client-side building block: the Adoption Register is updated in this change, and `npm run adoption:check` passes.** *(Added under `PX1-W5`, 2026-07-13. A new component with no register entry, or a successor whose predecessor still exists, is not complete however finished the code is — it is the authored-but-unadopted failure state [`THA_UI_ARCHITECTURE.md`](./THA_UI_ARCHITECTURE.md) § 17 exists to end, and the gate will fail the build.)*
+5. The project document has been staged with git (`git add <canonical path>`).
+6. The project document has been committed locally with an appropriate commit message.
+7. Claude has reported:
 
 ```
 Project File Created:     <canonical path>

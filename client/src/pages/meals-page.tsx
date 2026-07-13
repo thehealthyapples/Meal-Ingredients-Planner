@@ -2830,7 +2830,7 @@ export default function MealsPage() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/meals'] });
+      invalidateMealLibrary(queryClient);
     },
   });
 
@@ -3083,7 +3083,7 @@ export default function MealsPage() {
       const savedMeal = await res.json();
       setProductSavedIds(prev => new Set(prev).add(productKey));
       setProductSavedMealMap(prev => new Map(prev).set(productKey, savedMeal.id));
-      queryClient.invalidateQueries({ queryKey: ['/api/meals'] });
+      invalidateMealLibrary(queryClient);
       toast({ title: "Product saved", description: `${product.product_name} added to your meals.` });
     } catch {
       toast({ title: "Save failed", description: "Could not save product. Please try again.", variant: "destructive" });
@@ -3169,7 +3169,7 @@ export default function MealsPage() {
         quantity: barcodeProduct.quantity,
         categoryId: null,
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/meals'] });
+      invalidateMealLibrary(queryClient);
       setActiveGroups(prev => { const n = new Set(prev); n.add("packaged"); return n; });
       toast({ title: "Product saved", description: `${barcodeProduct.product_name} added to your Cookbook.` });
       setBarcodeProductOpen(false);

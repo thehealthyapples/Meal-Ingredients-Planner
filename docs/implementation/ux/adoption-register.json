@@ -1,0 +1,768 @@
+{
+  "$schema_note": "The Platform Experience Adoption Register (PX1-W5.1). THE single source of truth. ADOPTION_REGISTER.md is GENERATED from this file — never edit the .md by hand. Verified by scripts/ci/adoption-register-gate.ts, which fails CI when an owner loses its last consumer, a rival count rises, a retired predecessor returns, or a new orphan appears. Mandated by THA_UI_ARCHITECTURE.md §17; operational, not architectural — it creates no law.",
+  "version": "1.0.0",
+  "updated": "2026-07-13",
+  "owner": "Colin Clapson",
+  "governedBy": [
+    "[THA_UI_ARCHITECTURE.md §17](../../architecture/THA_UI_ARCHITECTURE.md) (the mandate)",
+    "[THA_EXPERIENCE_ARCHITECTURE.md](../../architecture/THA_EXPERIENCE_ARCHITECTURE.md) (EXP1/EXP2)",
+    "[ENGINEERING_WORKFLOW.md](../../architecture/ENGINEERING_WORKFLOW.md) (Adoption Register Compliance)",
+    "[PX1](./PX1_PLATFORM_EXPERIENCE_DISCOVERY_AND_ARCHITECTURE.md) §6 (the specification)"
+  ],
+  "concerns": [
+    {
+      "id": "header",
+      "concern": "Header",
+      "owner": "components/workspace-header.tsx",
+      "ownerPath": "client/src/components/workspace-header.tsx",
+      "ownerKind": "module",
+      "owns": "Realm typing, the page banner, the slot context, and the bottom nav it mounts internally",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 15,
+      "retired": [
+        {
+          "name": "components/PageHeader.tsx (a full unadopted successor, 0 importers, duplicate PageRealm type)",
+          "pattern": "@/components/PageHeader",
+          "retiredBy": "PX1-W4.7"
+        }
+      ]
+    },
+    {
+      "id": "navigation",
+      "concern": "Navigation",
+      "owner": "components/nav-bar.tsx (NAV_ITEMS)",
+      "ownerPath": "client/src/components/nav-bar.tsx",
+      "ownerKind": "module",
+      "owns": "The one ordered destination list feeding every navigation surface. The only surface meeting the 44px touch floor by construction.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 1,
+      "exemptions": [
+        {
+          "surface": "All pages",
+          "why": "No page imports the nav directly — `WorkspaceHeader` mounts it. Two importers is the correct number, not a low one."
+        }
+      ]
+    },
+    {
+      "id": "card",
+      "concern": "Card",
+      "owner": "components/ui/card.tsx",
+      "ownerPath": "client/src/components/ui/card.tsx",
+      "ownerKind": "module",
+      "owns": "The one card surface: radius, border weight, translucency, shadow-none. `CardTitle` is a real heading on the THA type scale.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 35,
+      "retired": [
+        {
+          "name": "intelligenceSurface (a private card surface rivalling ui/card, inside intelligence-tokens)",
+          "pattern": "\\bintelligenceSurface\\b",
+          "retiredBy": "PX1-W4.4"
+        }
+      ]
+    },
+    {
+      "id": "dialog",
+      "concern": "Dialog",
+      "owner": "components/ui/dialog.tsx + ui/dialog-foundation.ts",
+      "ownerPath": "client/src/components/ui/dialog.tsx",
+      "ownerKind": "module",
+      "owns": "The modal container: Radix focus trap, focus return, Escape, `max-h` + `overflow-y-auto`, a 44px close target, and a sheet presentation that is real rather than a no-op.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 20,
+      "rivals": [
+        {
+          "what": "`<DrawerContent>` — a second overlay container chosen per-file",
+          "pattern": "<DrawerContent[\\s>]",
+          "ceiling": 12,
+          "note": "Capped. New overlays use `Overlay`, which decides sheet-vs-dialog by viewport."
+        },
+        {
+          "what": "`<SheetContent>` — a third",
+          "pattern": "<SheetContent[\\s>]",
+          "ceiling": 3,
+          "note": "Capped. `Sheet` is retired as a *choice*; it survives only as Overlay's mobile implementation."
+        }
+      ]
+    },
+    {
+      "id": "overlay",
+      "concern": "Overlay container",
+      "owner": "components/ui/overlay.tsx",
+      "ownerPath": "client/src/components/ui/overlay.tsx",
+      "ownerKind": "module",
+      "owns": "The overlay *decision*: bottom sheet on a phone, centred dialog on a desktop — by the canonical breakpoint, never by the calling file's taste.",
+      "status": "half-adopted",
+      "enforcement": "machine",
+      "adoptionFloor": 1,
+      "openMigration": {
+        "finding": "fnd-px-overlay-container-arbitrary",
+        "remaining": "The existing Dialog / Drawer / Sheet call sites migrate as touched. The ceilings in § 2 stop the population growing meanwhile.",
+        "owner": "Colin Clapson — as each overlay surface is next touched",
+        "why": "Migrating every overlay at once is a behaviour change on 80+ surfaces with no household-visible defect driving it. The ratchet makes deferral safe: the count can only fall."
+      }
+    },
+    {
+      "id": "form-field",
+      "concern": "Form field",
+      "owner": "components/ui/form.tsx",
+      "ownerPath": "client/src/components/ui/form.tsx",
+      "ownerKind": "module",
+      "owns": "The wired field: `htmlFor`, `aria-describedby`, `aria-invalid`.",
+      "status": "half-adopted",
+      "enforcement": "machine",
+      "adoptionFloor": 2,
+      "exemptions": [
+        {
+          "surface": "~20 hand-rolled `useState` forms",
+          "why": "They now carry real labels and accessible names (PX1-W4.1), so the household-visible defect is closed. `ui/form.tsx`'s RHF context is not worth forcing onto a two-field dialog; what mattered was the accessible name, and `warnIfUnlabelled` now enforces that at the primitive — see `accessible-name`."
+        }
+      ]
+    },
+    {
+      "id": "accessible-name",
+      "concern": "Accessible name enforcement",
+      "owner": "lib/a11y-dev-warnings.ts (warnIfUnlabelled)",
+      "ownerPath": "client/src/lib/a11y-dev-warnings.ts",
+      "ownerKind": "module",
+      "owns": "Making an unlabelled control loud at introduction rather than at audit. Dev-only; stripped in production.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 2,
+      "exemptions": [
+        {
+          "surface": "`ui/input.tsx`, `ui/textarea.tsx` only",
+          "why": "Two importers is the whole design: the warning belongs at the two primitives every field passes through, not at 300 call sites."
+        }
+      ]
+    },
+    {
+      "id": "empty-state",
+      "concern": "Empty state",
+      "owner": "components/ui/empty-state.tsx",
+      "ownerPath": "client/src/components/ui/empty-state.tsx",
+      "ownerKind": "module",
+      "owns": "Absence, in its three truths: `empty` | `filtered` | `unavailable`. There is deliberately **no error variant** — that sentence belongs to `LoadError`, which is how it became structurally impossible to say \"you have nothing\" when the truth is \"we could not load this\".",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 3
+    },
+    {
+      "id": "loading-state",
+      "concern": "Loading state",
+      "owner": "components/ui/skeleton.tsx",
+      "ownerPath": "client/src/components/ui/skeleton.tsx",
+      "ownerKind": "module",
+      "owns": "**Content arriving.** Waiting, as a content-shaped skeleton rather than a void. This register settles the vocabulary question the finding raised, by naming which mark owns which situation: *`Skeleton` owns content arriving; `Loader2` owns indeterminate work inside a control.* A vocabulary is not \"only one mark\" — it is one rule for which mark, and this is that rule.",
+      "status": "half-adopted",
+      "enforcement": "machine",
+      "adoptionFloor": 12,
+      "exemptions": [
+        {
+          "surface": "`Loader2` as an **inline pending mark** — the spinner inside a control that is working (140 of its 180 usages), and the route-transition fallback in `App.tsx`",
+          "why": "A skeleton answers *\"what is about to appear here\"*. A button that is saving has nothing to shape a skeleton around, and a route fallback must not paint a skeleton of a page it cannot yet know. For *work inside a control*, Loader2 is the right mark and Skeleton would be the wrong one."
+        }
+      ],
+      "rivals": [
+        {
+          "what": "Hand-rolled `animate-pulse` loading surfaces",
+          "pattern": "animate-pulse",
+          "ceiling": 9,
+          "excludePaths": [
+            "client/src/components/ui/skeleton.tsx"
+          ],
+          "note": "The owner carries the class internally; these are the copies outside it. PX1-W4.8 retired the 12 verbatim Skeleton clones."
+        },
+        {
+          "what": "`<Loader2>` usages",
+          "pattern": "<Loader2[\\s>]",
+          "ceiling": 180,
+          "note": "Capped, not banned: 140 are the exempt inline pending mark above. The population may fall, never rise."
+        }
+      ],
+      "openMigration": {
+        "finding": "fnd-px-loading-vocabulary",
+        "remaining": "**~40 standalone `Loader2` usages are *content arriving*, not work-in-a-control** — page and section-level spinners on meal-detail, food-detail, quick-meal, shared-plan, the cookbook's three search panels, and the two scan-review surfaces. By the rule above, each is a `Skeleton`. They migrate as touched.",
+        "owner": "Colin Clapson — as each surface is next touched",
+        "why": "**This row is a correction.** PX1-W4 and W4b both recorded this finding as effectively closed — *\"`Loader2` remains legitimate as an inline button-pending mark\"* — and the register's first measurement does not support that: 40 of the 180 usages are page- and section-level content placeholders, which the rule above makes drift. The verbatim Skeleton clones and the worst full-page spinner *were* converged (W4.8); the remainder was characterised more generously than the code justified. Recorded as open rather than inherited on trust, which is the whole reason the numbers in this register are measured rather than typed."
+      }
+    },
+    {
+      "id": "error-presentation",
+      "concern": "Error presentation",
+      "owner": "components/ui/load-error.tsx",
+      "ownerPath": "client/src/components/ui/load-error.tsx",
+      "ownerKind": "module",
+      "owns": "What could not be loaded, what it means for their data (*nothing is lost*), and one way forward (*Try again*). It never shows a status code.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 4
+    },
+    {
+      "id": "error-boundary",
+      "concern": "Error boundary",
+      "owner": "components/error-boundary.tsx",
+      "ownerPath": "client/src/components/error-boundary.tsx",
+      "ownerKind": "module",
+      "owns": "Render-time failure. Mounted *inside* the shell, so the header and nav survive: a broken surface is never one the household cannot leave.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 1,
+      "exemptions": [
+        {
+          "surface": "Mounted once, in `App.tsx`",
+          "why": "One importer is the correct number: a boundary is mounted at the shell, not per page."
+        }
+      ]
+    },
+    {
+      "id": "mutation-feedback",
+      "concern": "Mutation feedback",
+      "owner": "hooks/use-tracked-mutation.ts",
+      "ownerPath": "client/src/hooks/use-tracked-mutation.ts",
+      "ownerKind": "module",
+      "owns": "Feedback belongs to the mutation, never the call site. `failure` copy is **required by the type**, and `err.message` is never forwarded — the owner never receives it.",
+      "status": "half-adopted",
+      "enforcement": "machine",
+      "adoptionFloor": 10,
+      "rivals": [
+        {
+          "what": "Raw `useMutation` — feedback owned by the call site",
+          "pattern": "\\buseMutation\\s*[(<]",
+          "ceiling": 138,
+          "excludePaths": [
+            "client/src/hooks/use-tracked-mutation.ts"
+          ],
+          "note": "Not all are defects: a mutation with no household-visible outcome owes no toast. Capped so the population cannot grow."
+        }
+      ]
+    },
+    {
+      "id": "unsaved-changes",
+      "concern": "Unsaved-work guard",
+      "owner": "hooks/use-unsaved-changes.tsx",
+      "ownerPath": "client/src/hooks/use-unsaved-changes.tsx",
+      "ownerKind": "module",
+      "owns": "Sections declare dirty state; the page asks before letting the household leave.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 1,
+      "exemptions": [
+        {
+          "surface": "Profile only",
+          "why": "Profile is the only dirty→Save surface in THA; everywhere else commits on interaction. One consumer is the correct number, not a low one."
+        }
+      ]
+    },
+    {
+      "id": "panel-shell",
+      "concern": "Status presentation (panel shell)",
+      "owner": "components/intelligence/IntelligenceCard.tsx",
+      "ownerPath": "client/src/components/intelligence/IntelligenceCard.tsx",
+      "ownerKind": "module",
+      "owns": "The intelligence panel shell: header, loading, empty, progressive disclosure. It composes `ui/card` rather than rivalling it (PX1-W4.4).",
+      "status": "half-adopted",
+      "enforcement": "review",
+      "adoptionFloor": 8,
+      "openMigration": {
+        "finding": "fnd-px-panel-shell-half-adopted",
+        "remaining": "6 panels still hand-roll a shell: `PlannerAssistantPanel` (1,946 LOC) · `templates-panel` (835) · `MealUpliftPanel` (580) · `SmartReviewPanelContent` (558) · `CookbookMealIntelligenceStrip` (204) · `meal-detail/SimplyBetterChoicesPanel` (125)",
+        "owner": "Colin Clapson — with the next substantive change to each panel",
+        "why": "Since `IntelligenceCard` now composes `Card`, adopting it is strictly a simplification for each — but a 1,946-line panel is not refactored safely as a side-effect of a governance workstream. Enforcement is `review`, not `machine`, because no grep can honestly detect \"a hand-rolled shell\"; claiming otherwise would be the declared-vs-enforced gap this register exists to close (PKCA Rule KC8)."
+      }
+    },
+    {
+      "id": "rating-mark",
+      "concern": "Rating mark (the apple)",
+      "owner": "components/AppleRating.tsx",
+      "ownerPath": "client/src/components/AppleRating.tsx",
+      "ownerKind": "module",
+      "owns": "One apple, one name, one sentence. `appleScoreLabel()` is the single mouth for the score's accessible name; an unscored item renders nothing rather than announcing a fabricated \"1 out of 5\".",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 10,
+      "retired": [
+        {
+          "name": "ui/apple-rating.tsx",
+          "pattern": "@/components/ui/apple-rating",
+          "retiredBy": "PX1-W4.12"
+        },
+        {
+          "name": "ui/score-badge.tsx (an 11-line pass-through alias — the third entry point that guaranteed the next divergence)",
+          "pattern": "<ScoreBadge[\\s>]|@/components/ui/score-badge",
+          "retiredBy": "PX1-W4.12"
+        },
+        {
+          "name": "MiniAppleRating (private, KitchenToBasketVisual)",
+          "pattern": "\\bMiniAppleRating\\b",
+          "retiredBy": "PX1-W4.12"
+        }
+      ]
+    },
+    {
+      "id": "meal-presentation",
+      "concern": "Meal presentation (the core noun)",
+      "owner": "components/MealCard.tsx",
+      "ownerPath": "client/src/components/MealCard.tsx",
+      "ownerKind": "module",
+      "owns": "The meal's thumbnail-bearing faces: one radius, one fallback icon, one size scale, lazy loading; `tile` and `row` arrangements.",
+      "status": "half-adopted",
+      "enforcement": "review",
+      "adoptionFloor": 2,
+      "exemptions": [
+        {
+          "surface": "`PlannerMealCard.tsx`",
+          "why": "It owns the thumbnail-*less* planner-cell face, which is a different object with a different job. It was `MealCard`'s seed, not its rival."
+        }
+      ],
+      "openMigration": {
+        "finding": "fnd-px-no-meal-card-owner",
+        "remaining": "The cookbook grid and list, the planner picker, preview bubbles and the completion dialog still render a meal their own way (PX1 measured 16 render sites at 7 thumbnail sizes).",
+        "owner": "Colin Clapson — as each render site is next touched",
+        "why": "The owner ships adopted (Dashboard tiles, Home rows) rather than authored-and-empty, which is the failure this register exists to prevent. The remaining sites are a redesign of the cookbook grid if done at once — out of scope for governance, and PX1 forbids redesign."
+      }
+    },
+    {
+      "id": "quantity-string",
+      "concern": "Food quantity string",
+      "owner": "lib/unit-display.ts (formatQty)",
+      "ownerPath": "client/src/lib/unit-display.ts",
+      "ownerKind": "module",
+      "owns": "The one quantity string. Grams-aware and liquid-aware. `formatItemDisplay` delegates to it.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 2,
+      "openMigration": null
+    },
+    {
+      "id": "food-item-row",
+      "concern": "Food item row (layout)",
+      "owner": null,
+      "ownerKind": "none",
+      "owns": "— nothing yet owns the *row* a food item is rendered in.",
+      "status": "no-owner",
+      "enforcement": "review",
+      "openMigration": {
+        "finding": "fnd-px-food-row-no-owner",
+        "remaining": "A `FoodItemRow` component over the ≥9 row implementations (two of them rivals inside `pantry-page.tsx` alone).",
+        "owner": "Colin Clapson — deferred, with the next substantive shopping/pantry change",
+        "why": "**The household-visible half is closed**: the same basket item used to show a *different quantity string* in the Shopping List and the Shopping Workspace, and `formatQty` (above) ended that. What remains is layout duplication — real, but invisible to a household, and a component that unifies 9 dense row layouts is a redesign. Recorded here rather than claimed as done."
+      }
+    },
+    {
+      "id": "breakpoint-truth",
+      "concern": "Breakpoint truth",
+      "owner": "hooks/use-adaptive-density.tsx (MOBILE_BREAKPOINT, useIsMobile)",
+      "ownerPath": "client/src/hooks/use-adaptive-density.tsx",
+      "ownerKind": "module",
+      "owns": "One number (768), two named faces — JS here, CSS as Tailwind's `md`, paired at both definition sites so they cannot drift.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 10,
+      "retired": [
+        {
+          "name": "hooks/use-mobile.tsx (whose only consumer was the dead ui/sidebar)",
+          "pattern": "@/hooks/use-mobile",
+          "retiredBy": "PX1-W2.4"
+        },
+        {
+          "name": "Five copy-pasted local useIsMobile hooks (incl. the 1024px Cookbook outlier)",
+          "pattern": "(?:function|const)\\s+useIsMobile\\b",
+          "excludePaths": [
+            "client/src/hooks/use-adaptive-density.tsx"
+          ],
+          "retiredBy": "PX1-W2.4"
+        }
+      ]
+    },
+    {
+      "id": "page-shell",
+      "concern": "Page shell",
+      "owner": "components/workspace-header.tsx (PageContainer / pageContainerClass)",
+      "ownerPath": "client/src/components/workspace-header.tsx",
+      "ownerKind": "module",
+      "owns": "The page content column and its rhythm, keyed to the same `wide` flag as the header — so a page's content can no longer disagree with its own banner.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 15,
+      "retired": [
+        {
+          "name": "The 17 copy-pasted `max-w-screen-2xl 3xl:max-w-[1920px]` container strings",
+          "pattern": "max-w-screen-2xl",
+          "excludePaths": [
+            "client/src/components/workspace-header.tsx"
+          ],
+          "retiredBy": "PX1-W4.5"
+        }
+      ]
+    },
+    {
+      "id": "back-affordance",
+      "concern": "Back",
+      "owner": "components/workspace-header.tsx (back slot)",
+      "ownerPath": "client/src/components/workspace-header.tsx",
+      "ownerKind": "module",
+      "owns": "Back = the **hierarchy parent** (EXP §8), with a `beforeNavigate` interception point so an unsaved-changes guard can still ask first.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 15,
+      "retired": [
+        {
+          "name": "Profile's `window.location.href` Back — a full page reload that discarded the TanStack cache",
+          "pattern": "window\\.location\\.href\\s*=\\s*(?:prev|profileReturn)",
+          "retiredBy": "PX1-W4.5"
+        }
+      ],
+      "exemptions": [
+        {
+          "surface": "Pantry, Diary, Nutrition",
+          "why": "They are bottom-nav destinations, not subpages. A back affordance on a root destination is a lie about the hierarchy."
+        }
+      ]
+    },
+    {
+      "id": "density-ladder",
+      "concern": "Density ladder",
+      "owner": "lib/density-tokens.ts (densityClasses)",
+      "ownerPath": "client/src/lib/density-tokens.ts",
+      "ownerKind": "module",
+      "owns": "The adaptive-density class ladder for meal-detail surfaces. Class strings are complete literals — the file forbids interpolating fragments, which is the exact mechanism that produced `space-y-gap-2` seven times.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 4,
+      "retired": [
+        {
+          "name": "The four copy-pasted density ladders and their seven dead `space-y-${gapClass}` interpolations",
+          "pattern": "space-y-\\$\\{",
+          "retiredBy": "PX1-W1.6"
+        }
+      ]
+    },
+    {
+      "id": "meal-library-invalidation",
+      "concern": "\"The meal library changed\"",
+      "owner": "hooks/use-meals.ts (invalidateMealLibrary)",
+      "ownerPath": "client/src/hooks/use-meals.ts",
+      "ownerKind": "module",
+      "owns": "The ONE way to say the meal library changed. Invalidates the full-rows cache **and** the summary cache together, so a surface reading either can never be told stale meal names.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 10,
+      "retired": [
+        {
+          "name": "Direct invalidation of the meal-library keys outside the owner — a call that refreshes the full-rows cache while leaving the summary cache (Home, Dashboard) stale",
+          "pattern": "(?:invalidateQueries|refetchQueries)\\s*\\(\\s*\\{\\s*queryKey:\\s*\\[\\s*[\"']/api/meals(?:/summary)?[\"']\\s*\\]",
+          "excludePaths": [
+            "client/src/hooks/use-meals.ts"
+          ],
+          "retiredBy": "PX1-W3.3, completed by PX1-W5"
+        }
+      ],
+      "exemptions": [
+        {
+          "surface": "Per-meal keys — `['/api/meals', mealId, 'nutrition']` and similar",
+          "why": "These address one meal, not the library. They are correct, and the pattern above deliberately does not match them: it anchors on the closing bracket, so only the *bare library keys* are forbidden. PX1-W3's own grep looked for the double-quoted form only, which is how four single-quoted `['/api/meals']` invalidations survived a workstream that reported zero."
+        }
+      ]
+    },
+    {
+      "id": "interaction-feedback",
+      "concern": "Interaction feedback",
+      "owner": "index.css (.hover-elevate / .active-elevate-2 + the five border tokens)",
+      "ownerKind": "css",
+      "definedIn": "client/src/index.css",
+      "definedSymbols": [
+        ".hover-elevate",
+        ".active-elevate-2",
+        "--primary-border",
+        "--secondary-border",
+        "--destructive-border",
+        "--button-outline",
+        "--elevate-1"
+      ],
+      "owns": "Hover and press, for every control wearing the canonical classes. Consumed everywhere since the scaffold; **defined nowhere** until PX1-W1.1.",
+      "status": "governed",
+      "enforcement": "machine"
+    },
+    {
+      "id": "button-primitive",
+      "concern": "Button / primary action",
+      "owner": "components/ui/button.tsx",
+      "ownerPath": "client/src/components/ui/button.tsx",
+      "ownerKind": "module",
+      "owns": "Press feedback, the 44px touch floor, and — since PX1-W4.6 — a **required `variant`**, so a surface must *declare* its one primary action (EXP §7) rather than acquire it by omission.",
+      "status": "half-adopted",
+      "enforcement": "machine",
+      "adoptionFloor": 45,
+      "rivals": [
+        {
+          "what": "Raw `<button>` elements outside the design system",
+          "pattern": "<button[\\s>]",
+          "ceiling": 538,
+          "note": "Each reinvents press feedback and misses the touch floor. Capped: the population may fall, never rise."
+        }
+      ],
+      "openMigration": {
+        "finding": "fnd-px-button-primitive-minority",
+        "remaining": "The raw `<button>` population migrates to `ui/button` as each surface is touched.",
+        "owner": "Colin Clapson — as each surface is next touched",
+        "why": "The *enforceability* half is done: `variant` is required, so EXP §7 is now reviewable by grep. Converting ~535 raw buttons at once would touch every dense layout in the product — a redesign in all but name."
+      }
+    },
+    {
+      "id": "touch-floor",
+      "concern": "Touch floor",
+      "owner": "index.css (.touch-target)",
+      "ownerKind": "css",
+      "definedIn": "client/src/index.css",
+      "definedSymbols": [
+        ".touch-target"
+      ],
+      "owns": "44px hit targets on coarse pointers, via a pseudo-element that extends the hit area whatever the visual box — so a downward `className` override can no longer shrink the target. Carried by `ui/button`, `ui/checkbox`, `ui/switch` and the dialog/sheet close buttons.",
+      "status": "governed",
+      "enforcement": "machine"
+    },
+    {
+      "id": "hover-reveal",
+      "concern": "Hover-revealed row controls",
+      "owner": "index.css (.hover-reveal)",
+      "ownerKind": "css",
+      "definedIn": "client/src/index.css",
+      "definedSymbols": [
+        ".hover-reveal"
+      ],
+      "owns": "A control hidden **only where a hover exists to reveal it**. On a phone it is simply visible; keyboard focus reveals it anywhere.",
+      "status": "governed",
+      "enforcement": "machine",
+      "retired": [
+        {
+          "name": "The `opacity-0 group-hover:opacity-100` idiom — invisible but still hit-testable, so an unconfirmed delete fired on contact",
+          "pattern": "opacity-0\\s+group-hover:opacity-100",
+          "retiredBy": "PX1-W2.2"
+        }
+      ]
+    },
+    {
+      "id": "nav-clearance",
+      "concern": "Bottom-nav clearance",
+      "owner": "index.css (.main-safe)",
+      "ownerKind": "css",
+      "definedIn": "client/src/index.css",
+      "definedSymbols": [
+        ".main-safe"
+      ],
+      "owns": "One class, one owner, applied once on `<main>` — every routed page gets nav clearance for free.",
+      "status": "governed",
+      "enforcement": "machine",
+      "exemptions": [
+        {
+          "surface": "Shop mode's two fullscreen scrollers",
+          "why": "`fixed inset-0` genuinely *escapes* `<main>`, so the owner is applied at the point of escape. This is the one legitimate re-application; the six decorative duplicates were removed in PX1-W4b.5."
+        }
+      ]
+    },
+    {
+      "id": "motion",
+      "concern": "Motion vocabulary",
+      "owner": "index.css keyframes + framer-motion MotionConfig (App.tsx)",
+      "ownerKind": "css",
+      "definedIn": "client/src/index.css",
+      "definedSymbols": [
+        "prefers-reduced-motion"
+      ],
+      "owns": "Motion, and the reduced-motion **guarantee** — gated at both layers: one `@media (prefers-reduced-motion: reduce)` block for CSS, one `MotionConfig reducedMotion=\"user\"` for all framer-motion.",
+      "status": "governed",
+      "enforcement": "machine"
+    },
+    {
+      "id": "semantic-tint",
+      "concern": "Semantic surface tint",
+      "owner": "components/intelligence/intelligence-tokens.ts (semanticSurface / semanticText)",
+      "ownerPath": "client/src/components/intelligence/intelligence-tokens.ts",
+      "ownerKind": "module",
+      "owns": "What colour a *meaning* is: `notice` · `info` · `positive` — keyed by meaning, never by hue. **`destructive` is deliberately absent**: alarm is reserved for a safety event, and there is no way to reach for it through this owner.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 8,
+      "retired": [
+        {
+          "name": "The Dashboard's hard-coded light-mode-only border literal",
+          "pattern": "hsl\\(132,\\s*14%,\\s*87%\\)",
+          "retiredBy": "PX1-W4b.4"
+        }
+      ]
+    },
+    {
+      "id": "tone",
+      "concern": "Tone (THA's voice about food)",
+      "owner": "components/UltraProcessedNoticeModal.tsx + use-sound-effects.ts (playScanComplete)",
+      "ownerPath": "client/src/components/UltraProcessedNoticeModal.tsx",
+      "ownerKind": "module",
+      "owns": "How THA reports a processing score: the facts, without a verdict. One neutral scan tone that takes no rating parameter — there is nothing left to vary the tone by.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 1,
+      "retired": [
+        {
+          "name": "BadAppleWarningModal (a frowning apple, a destructive-red warning triangle, and an \"Add Anyway\" button)",
+          "pattern": "\\bBadAppleWarningModal\\b",
+          "retiredBy": "PX1-W4b.1"
+        },
+        {
+          "name": "playSound(rating) — the tone ladder that buzzed at a low-scoring food",
+          "pattern": "\\bplaySound\\s*\\(",
+          "retiredBy": "PX1-W4b.1"
+        },
+        {
+          "name": "The \"clean / cleaner\" vocabulary that called a household's basket dirty",
+          "pattern": "cleaner alternative|Cleaner shop option|cleaner option",
+          "retiredBy": "PX1-W4b.1"
+        },
+        {
+          "name": "\"Add Anyway\" — a label that framed the household's own choice as defiance",
+          "pattern": "Add Anyway",
+          "retiredBy": "PX1-W4b.1"
+        },
+        {
+          "name": "The shipped [BOOST-PROOF] console traces",
+          "pattern": "BOOST-PROOF",
+          "retiredBy": "PX1-W4b.6"
+        }
+      ]
+    },
+    {
+      "id": "undefined-utilities",
+      "concern": "Utility class definitions",
+      "owner": "index.css (.scrollbar-hide)",
+      "ownerKind": "css",
+      "definedIn": "client/src/index.css",
+      "definedSymbols": [
+        ".scrollbar-hide"
+      ],
+      "owns": "The scrollbar-hiding utility that was actually defined, while 14 call sites consumed two names that were not.",
+      "status": "governed",
+      "enforcement": "machine",
+      "retired": [
+        {
+          "name": "no-scrollbar (consumed 13×, defined nowhere)",
+          "pattern": "\\bno-scrollbar\\b",
+          "retiredBy": "PX1-W1.7"
+        },
+        {
+          "name": "scrollbar-none (the same defect under a second name)",
+          "pattern": "\\bscrollbar-none\\b",
+          "retiredBy": "PX1-W1.7"
+        }
+      ]
+    },
+    {
+      "id": "theme-colour-mode",
+      "concern": "Theme / colour mode",
+      "owner": null,
+      "ownerKind": "none",
+      "owns": "— nothing. THA ships a complete dark theme that **no household can reach**.",
+      "status": "no-owner",
+      "enforcement": "review",
+      "evidence": [
+        {
+          "what": "`dark:` utilities authored across the client",
+          "pattern": "\\bdark:",
+          "asAt": 842,
+          "asAtDate": "2026-07-13"
+        }
+      ],
+      "openMigration": {
+        "finding": "Carried forward from PX1-W4b §5 — discovered by that workstream, not a PX1 finding",
+        "remaining": "A theme owner: a provider, a `prefers-color-scheme` read, and a toggle. Nothing anywhere sets the `dark` class — there is no provider, no toggle, no media read — so a full `.dark` token set, `darkMode: [\"class\"]`, and every `dark:` utility above are authored, paid for in every component, and unreachable.",
+        "owner": "Colin Clapson — deferred, requires a product decision (does THA offer a theme choice, or follow the OS?)",
+        "why": "**This is the register's own thesis, in the one place PX1 never looked**: a foundation authored, paid for, and never adopted. It is recorded here rather than fixed, because shipping a theme toggle is a *product* decision and a new UX surface — which this workstream is explicitly barred from introducing. It is now impossible to hide, which is the register's job; choosing to build it is not."
+      }
+    },
+    {
+      "id": "undo",
+      "concern": "Undo",
+      "owner": null,
+      "ownerKind": "none",
+      "owns": "— nothing. THA has no undo; every destructive action is guarded by a confirmation instead.",
+      "status": "no-owner",
+      "enforcement": "review",
+      "evidence": [
+        {
+          "what": "`<ToastAction>` usages (the mechanism exists)",
+          "pattern": "<ToastAction[\\s>]",
+          "asAt": 1,
+          "asAtDate": "2026-07-13"
+        }
+      ],
+      "openMigration": {
+        "finding": "Carried forward from PX1-W4b §5",
+        "remaining": "PX1 §9's rule is that a destructive action requires *a confirm **or** an undo*. THA chose the confirm, at every destructive site (products \"Clear All\" and the profile guard in W0; pantry and recipe deletes in W2), so **the guarantee holds**. The toast-action mechanism is wired and has exactly one consumer — the planner's \"Link to planner\" follow-up — which is a next step, not an undo.",
+        "owner": "Colin Clapson — deferred, and possibly permanently",
+        "why": "Stacking an undo toast on top of a confirmation dialog would be a *second* recovery mechanism for the same action, and a new UX pattern. Recorded as a deliberate architectural choice rather than an outstanding defect: THA's answer to \"nothing irreversible as a side effect\" is the confirm."
+      }
+    },
+    {
+      "id": "brand-mark",
+      "concern": "Brand mark",
+      "owner": "FiveApplesLogo / tha-apple.png",
+      "ownerKind": "external",
+      "owns": "The THA apple, as brand rather than as rating. Compressed 65× in PX1-W3.4 (1.45 MB → 22 KB for a 48px render).",
+      "status": "governed",
+      "enforcement": "review"
+    },
+    {
+      "id": "icon-set",
+      "concern": "Icon set",
+      "owner": "lucide-react",
+      "ownerKind": "external",
+      "owns": "Every interface icon. No emoji as interface icons; no second icon library.",
+      "status": "governed",
+      "enforcement": "review"
+    }
+  ],
+  "orphans": {
+    "note": "A module under these roots with **zero importers** is authored-but-unadopted — the failure state UIA §17 exists to end, and the mechanism behind PX1's `PageHeader.tsx` (a full unadopted successor to `WorkspaceHeader`, sitting live-looking in the tree for a future workstream to adopt *instead of* the real owner). PX1-W4.7 deleted 26 such files. These are what the gate found **after** that sweep — none of them known to any PX1 workstream, all of them found by the register on the day it was built. They are recorded as **defects, not exemptions**: an exemption says \"this is fine\", and these are not fine. They are simply no longer hidden. The gate fails on a *new* one. This is the same shape as `typecheck:ci`'s recorded baseline of 168 known errors: a number that may fall and may never rise.",
+    "scanRoots": [
+      "client/src/components/",
+      "client/src/hooks/",
+      "client/src/lib/",
+      "client/src/contexts/",
+      "client/src/pages/"
+    ],
+    "known": [
+      {
+        "path": "client/src/lib/companion-delight.ts",
+        "loc": 71,
+        "disposition": "Dead module — all five exports unconsumed. PX1 §5 recorded that `prefersReducedMotion()` had 0 consumers; PX1-W1.4 answered by making `variantForInteraction()` (in the same file) call it — but **nothing imports the module at all**, so W1 connected one dead function to another. Recorded here as the correction. The reduced-motion *guarantee* is unaffected and live: it is delivered by the `@media (prefers-reduced-motion: reduce)` block and framer-motion's `MotionConfig` (see the `motion` concern), neither of which touches this file.",
+        "owner": "Colin Clapson — delete, or adopt in the Companion's motion surfaces"
+      },
+      {
+        "path": "client/src/pages/list-page.tsx",
+        "loc": 774,
+        "disposition": "An entire page with no route. `App.tsx` routes `/basket` and `/analyse-basket` to `shopping-list-page`; nothing routes here. 774 LOC of live-looking shopping UI that a future workstream could adopt instead of the real owner — `PageHeader.tsx`'s exact failure mode, still in the tree.",
+        "owner": "Colin Clapson — confirm unreachable, then delete"
+      },
+      {
+        "path": "client/src/components/illustrations/orchard-hero.tsx",
+        "loc": 62,
+        "disposition": "Dead illustration component, 0 importers. Survived PX1-W4.7's sweep.",
+        "owner": "Colin Clapson — delete"
+      },
+      {
+        "path": "client/src/components/ui/toggle.tsx",
+        "loc": 44,
+        "disposition": "Dead `ui/` primitive, 0 importers. Survived PX1-W4.7's sweep of 20 dead primitives (its `toggle-group` sibling was deleted; this was not).",
+        "owner": "Colin Clapson — delete"
+      },
+      {
+        "path": "client/src/lib/whole-food-fallback.ts",
+        "loc": 34,
+        "disposition": "Dead module, 0 importers.",
+        "owner": "Colin Clapson — delete"
+      }
+    ]
+  }
+}

@@ -103,6 +103,10 @@ Every **user-facing** implementation must additionally pass two blocks in `ENGIN
 - **EXPERIENCE & UI GOVERNANCE COMPLIANCE** — which requires the **UX Governance Checklist** (`THA_EXPERIENCE_ARCHITECTURE.md` § 18, including its Premium Standard block) and the **UI Governance Checklist** (`THA_UI_ARCHITECTURE.md` § 18) to be completed in full, with any conflict between them resolved in the Experience Architecture's favour.
 - **PRODUCT REGISTRY COMPLIANCE** — which requires every affected Product Knowledge Registry entry to be created, updated, or retired **in the same change** (`PLATFORM_KNOWLEDGE_COMPLETION_ARCHITECTURE.md` Rule KC15).
 
+Every implementation that adds, changes, or retires a **client-side building block** (a component, hook, token, utility class, or shared pattern) must additionally pass:
+
+- **ADOPTION REGISTER COMPLIANCE** — which requires every owner created, adopted, or retired to be recorded in the **Platform Experience Adoption Register** (`docs/implementation/ux/ADOPTION_REGISTER.md`) **in the same change**, and `npm run adoption:check` to pass (`THA_UI_ARCHITECTURE.md` § 17). *Added under `PX1-W5` (2026-07-13).* UIA § 17 has always mandated this register — *"authored-but-unadopted must be impossible to hide"* — and for as long as it did not exist, that sentence was the only rule in the governing architecture with **no owner and no way to check it**. `PX1` found the consequence: `hover-elevate` consumed by every control and defined nowhere; `prefersReducedMotion()` with zero consumers; `PageHeader.tsx`, a complete unadopted successor to `WorkspaceHeader`, sitting live-looking in the tree. The register is operational, not architectural: it adds no law, and makes the existing law checkable.
+
 **If any check fails: STOP, explain why, do not continue.**
 
 ---

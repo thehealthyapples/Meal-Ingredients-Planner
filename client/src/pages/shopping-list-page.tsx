@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearch, Link } from "wouter";
 import { useUser } from "@/hooks/use-user";
+import { invalidateMealLibrary } from "@/hooks/use-meals";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -557,7 +558,7 @@ function EditItemModal({ item, sources, onClose }: {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/shopping-list'] });
       if (data.recipesUpdated > 0) {
-        queryClient.invalidateQueries({ queryKey: ['/api/meals'] });
+        invalidateMealLibrary(queryClient);
         toast({ title: "Saved", description: `Basket updated. ${data.recipesUpdated} recipe${data.recipesUpdated > 1 ? 's' : ''} also corrected.` });
       } else {
         toast({ title: "Basket saved" });
