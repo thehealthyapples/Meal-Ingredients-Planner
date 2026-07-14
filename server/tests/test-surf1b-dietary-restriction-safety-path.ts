@@ -303,19 +303,30 @@ async function run(): Promise<void> {
     'their "dairy" restriction rejects butter through the canonical library, with no pattern at all',
   );
 
-  // KNOWN GAP, pinned so it cannot be forgotten: "meat", "fish" and "honey" have no
-  // canonical restriction definition. Declared ALONE, without a diet pattern, they
-  // are enforced only by the conservative substring fallback — which catches
-  // "fish sauce" but not "beef". Documented in SURF1B; not closed by it, because
-  // closing it means authoring new dietary knowledge, which this workstream may not do.
+  // GAP CLOSED BY SURF1B2 (2026-07-14).
+  //
+  // SURF1B pinned this as a KNOWN GAP: "meat", "fish" and "honey" had no canonical
+  // restriction definition, so declared alone — without a diet pattern — they were
+  // enforced only by the conservative substring fallback, which caught "meatball"
+  // and not "beef". SURF1B could not close it: closing it meant authoring new
+  // dietary knowledge, which that workstream was forbidden to do.
+  //
+  // The pin worked exactly as a pin should. It failed the day the gap closed, and it
+  // is inverted here rather than deleted — the assertion now records that the
+  // definitions exist, so nobody can remove them without this suite saying so.
+  // Full coverage lives in test-surf1b2-dietary-restriction-knowledge.ts.
   const bareMeatOnly = household({ hardRestrictions: ['meat'] });
   assert(
-    resolveActiveRestrictions(['meat']).length === 0,
-    'KNOWN GAP: "meat" resolves to NO canonical restriction definition',
+    resolveActiveRestrictions(['meat']).length > 0,
+    'GAP CLOSED (SURF1B2): "meat" NOW resolves to a canonical restriction definition',
   );
   assert(
     isMealSafeForHousehold(meal('Meatball Sub', ['meatballs', 'bread']), bareMeatOnly).safe === false,
-    'the substring fallback still catches a literal "meatball" for a bare "meat" restriction',
+    'a literal "meatball" is still caught for a bare "meat" restriction',
+  );
+  assert(
+    isMealSafeForHousehold(meal('Beef Stew', ['beef shin', 'carrots']), bareMeatOnly).safe === false,
+    'and BEEF is now caught too — the substring fallback never could (SURF1B2)',
   );
 
   // ═══════════════════════════════════════════════════════════════════════════

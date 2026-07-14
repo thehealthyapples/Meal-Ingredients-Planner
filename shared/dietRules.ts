@@ -67,14 +67,36 @@ const DAIRY_KEYWORDS = [
   "double cream", "single cream", "clotted cream", "ice cream", "custard",
 ];
 
-const MEAT_KEYWORDS = [
+/**
+ * The meat vocabulary of the Vegan and Vegetarian PATTERNS.
+ *
+ * ── Exported for one reason, and it is not reuse ─────────────────────────────
+ * THA has two owners of the fact "what is meat": this list, which serves the diet
+ * patterns, and the `meat` definition in `shared/restrictions/restriction-library.ts`,
+ * which serves declared restrictions (added by SURF1B2). Two owners of one fact is
+ * a Principle 2 violation and, left unwatched, exactly the divergence that let
+ * SURF1B's defects survive — one engine knowing something the other did not.
+ *
+ * These are exported so `test-surf1b2-dietary-restriction-knowledge.ts` can assert
+ * the canonical library remains a strict SUPERSET of them. That test is the only
+ * intended consumer. Do NOT import these to match food: use the canonical library.
+ *
+ * They are pinned rather than merged because merging changes the Vegan/Vegetarian
+ * gate for every household, which is beyond SURF1B2's mandate. See the workstream
+ * document for the full argument and the follow-up.
+ */
+export const MEAT_KEYWORDS = [
   "chicken", "beef", "pork", "lamb", "turkey", "duck", "veal", "venison",
   "bacon", "ham", "salami", "chorizo", "pepperoni", "sausage", "sausages",
   "mince", "meatball", "meatballs", "steak", "brisket", "rib", "ribs",
   "lard", "suet", "rabbit", "pheasant", "partridge", "goose", "quail",
 ];
 
-const FISH_SEAFOOD_KEYWORDS = [
+/** See MEAT_KEYWORDS. Exported solely for the SURF1B2 divergence gate.
+ *  Note this list mixes fish AND shellfish; the canonical library keeps them as
+ *  the two separate allergens they are in law, so the superset check is against
+ *  the UNION of the `fish` and `shellfish` definitions. */
+export const FISH_SEAFOOD_KEYWORDS = [
   "fish", "seafood",
   "salmon", "tuna", "cod", "haddock", "halibut", "sea bass", "trout",
   "mackerel", "sardine", "sardines", "anchovy", "anchovies", "prawn", "prawns",

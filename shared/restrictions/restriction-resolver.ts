@@ -376,3 +376,45 @@ export function resolveActiveRestrictions(
 ): RestrictionDefinition[] {
   return getRestrictionMatches(hardRestrictions).map(m => m.restriction);
 }
+
+// ─── Enforceability (SURF1B2) ─────────────────────────────────────────────────
+
+/**
+ * True when a declared restriction string resolves to at least one canonical
+ * definition — i.e. when THA can actually ENFORCE it.
+ *
+ * This is the question every write door must ask before it stores a restriction.
+ * Until SURF1B2 nothing asked it, and the answer was silently "no" for `meat`,
+ * `fish` and `honey`: values THA accepted on the profile, showed back to the
+ * household, and could not act on. A restriction the platform cannot enforce is
+ * worse than one it never accepted, because the household believes it is protected.
+ *
+ * @example
+ * isEnforceableRestriction('Gluten-Free')  // → true
+ * isEnforceableRestriction('coeliac')      // → true  (alias)
+ * isEnforceableRestriction('Nuts')         // → true  (legacy → peanut + tree_nut)
+ * isEnforceableRestriction('meat')         // → true  (Phase 4)
+ * isEnforceableRestriction('kiwi')         // → false (no canonical definition)
+ */
+export function isEnforceableRestriction(value: string): boolean {
+  if (!value || typeof value !== 'string') return false;
+  return getRestrictionMatches([value]).length > 0;
+}
+
+/**
+ * The subset of `values` that resolve to NO canonical definition — the ones THA
+ * would accept and be unable to enforce. Empty means every value is enforceable.
+ *
+ * Order and casing are preserved so the caller can name the offending value back
+ * to the household exactly as they typed it.
+ */
+export function unenforceableRestrictions(values: string[]): string[] {
+  if (!Array.isArray(values)) return [];
+  return values.filter(v => typeof v === 'string' && v.trim().length > 0)
+               .filter(v => !isEnforceableRestriction(v));
+}
+
+/** Every canonical restriction id in the library. The list THA can enforce. */
+export function listRestrictionIds(): string[] {
+  return RESTRICTION_DEFINITIONS.map(d => d.id);
+}

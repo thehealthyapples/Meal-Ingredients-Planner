@@ -5,6 +5,8 @@
  *
  * Phase 3 scope: peanut, tree_nut (split from Phase 2 nut_free), sesame, soy,
  * mustard, shellfish, eggs, coconut — plus preserved gluten and dairy.
+ * Phase 4 scope (SURF1B2): meat, fish, honey — the three values THA accepted and
+ * stored as hard restrictions while this library defined nothing for them.
  *
  * nut_free is no longer a canonical definition. Backward compatibility is
  * handled in the resolver via LEGACY_ALIAS_EXPANSIONS.
@@ -19,12 +21,39 @@
  *   Include cross-restriction caveats inline (e.g. "tahini (check sesame restriction)").
  * - prohibitedPhrases: for future post-generation content validation only.
  *
- * Phase 4 candidates: fish, celery, lupin, molluscs, sulphites.
+ * ── WHICH FIELD A TERM BELONGS IN (read before adding one) ───────────────────
+ * The resolver matches each field differently, and putting a term in the wrong
+ * field is how a false positive gets shipped. See restriction-resolver.ts.
+ *
+ *   aliases            → WHOLE-WORD match (`wordBoundaryIncludes`).
+ *                        Safe for short words that are substrings of unrelated
+ *                        foods: "ham" here cannot match "chamomile", and "lamb"
+ *                        cannot match "lambrusco".
+ *                        Aliases ALSO resolve a declared restriction string to
+ *                        this definition (`findRestrictionByAlias`), so every
+ *                        term here is a name a household could reasonably declare.
+ *
+ *   derivedIngredients → FORWARD SUBSTRING match.
+ *   hiddenIngredients    Handles plurals and compounds for free ("sausage"
+ *                        catches "sausages"), but a short entry is dangerous:
+ *                        "ham" here WOULD match "chamomile". Use for distinctive
+ *                        words (≥5–6 chars) and multi-word phrases only.
+ *
+ *   excludedCompounds  → SUBSTRING, and an UNCONDITIONAL EARLY EXIT for the whole
+ *                        definition. Add a compound here ONLY when a match would
+ *                        otherwise wrongly occur ("kidney beans" would match the
+ *                        `meat` alias "kidney"; "honeydew" would not match "honey"
+ *                        at all, so it does not belong here). Every unnecessary
+ *                        entry is a fail-OPEN path: an ingredient string containing
+ *                        both an excluded compound and a genuine allergen exits
+ *                        before the allergen is seen.
+ *
+ * Phase 5 candidates: celery, lupin, sulphites, alcohol, pork-only (Halal/Kosher).
  */
 
 import type { RestrictionDefinition } from './restriction-types.js';
 
-export const RESTRICTION_LIBRARY_VERSION = '3.0.0';
+export const RESTRICTION_LIBRARY_VERSION = '4.0.0';
 
 export const RESTRICTION_DEFINITIONS: RestrictionDefinition[] = [
 
@@ -587,6 +616,469 @@ export const RESTRICTION_DEFINITIONS: RestrictionDefinition[] = [
     ],
     prohibitedPhrases: [
       'coconut',
+    ],
+  },
+
+  // ── FISH ────────────────────────────────────────────────────────────────────
+  //
+  // UK/EU statutory major allergen (finned fish). Added in Phase 4 (SURF1B2):
+  // `fish` was an accepted, stored hard restriction with no definition here, so it
+  // was enforced only by a conservative substring fallback that caught "fish pie"
+  // and not "salmon".
+  //
+  // BOUNDARY — fish is NOT shellfish. They are separate allergens in law and in
+  // medicine: a fish-allergic person is not necessarily shellfish-allergic, and
+  // vice versa. `shellfish` above is the canonical owner of crustaceans and
+  // molluscs, and this definition must never claim them. The word-boundary alias
+  // match already keeps "fish" from matching "shellfish"; note that "shellfish"
+  // is deliberately NOT an excludedCompound here, because an excludedCompound is
+  // an unconditional early exit and would make "shellfish and cod chowder" miss
+  // the cod.
+  //
+  // The most valuable knowledge in this entry is `hiddenIngredients`. Anchovy is
+  // the reason Worcestershire sauce, Caesar dressing and puttanesca are unsafe,
+  // and none of them says "fish" anywhere in the name.
+  {
+    id: 'fish',
+    displayName: 'Fish',
+    tier: 'major_allergen',
+    aliases: [
+      'fish',
+      'fish free',
+      'fish-free',
+      'fish allergy',
+      'finfish',
+      'white fish',
+      'oily fish',
+      // Short fish names — whole-word only. As derivedIngredients these would be
+      // substring-matched and "cod" would match nothing safely.
+      'cod',
+      'hake',
+      'sole',
+      'bass',
+      'carp',
+      'eel',
+      'roe',
+    ],
+    derivedIngredients: [
+      'salmon',
+      'smoked salmon',
+      'tuna',
+      'haddock',
+      'smoked haddock',
+      'halibut',
+      'trout',
+      'mackerel',
+      'sardine',
+      'sardines',
+      'anchovy',
+      'anchovies',
+      'pilchard',
+      'herring',
+      'kipper',
+      'whitebait',
+      'tilapia',
+      'snapper',
+      'monkfish',
+      'swordfish',
+      'pollock',
+      'pollack',
+      'plaice',
+      'seabream',
+      'sea bream',
+      'sea bass',
+      'turbot',
+      'coley',
+      'catfish',
+      'barramundi',
+      'lemon sole',
+      'dover sole',
+      // Products
+      'fish sauce',
+      'fish stock',
+      'fish finger',
+      'fish fingers',
+      'fishcake',
+      'fishcakes',
+      'fish cake',
+      'fish cakes',
+      'fish pie',
+      'seafood',
+      'caviar',
+      'bottarga',
+      'gravlax',
+      'surimi',
+    ],
+    hiddenIngredients: [
+      // Anchovy is the hidden fish in every one of these.
+      'worcestershire sauce',
+      'caesar dressing',
+      'caesar salad',
+      'puttanesca',
+      'gentlemans relish',
+      "gentleman's relish",
+      'nam pla',
+      'nuoc mam',
+      'kedgeree',
+      'bouillabaisse',
+      'taramasalata',
+    ],
+    substitutions: [
+      'chicken (check meat restriction)',
+      'tofu (check soy restriction)',
+      'jackfruit',
+      'hearts of palm',
+      'tamari or coconut aminos in place of fish sauce',
+    ],
+    prohibitedPhrases: [
+      'fish',
+      'salmon',
+      'tuna',
+      'cod',
+      'anchovy',
+      'anchovies',
+      'fish sauce',
+      'worcestershire sauce',
+    ],
+    excludedCompounds: [
+      // Plant-based analogues and explicitly fish-free products. Without these,
+      // "vegan fish fingers" would be excluded from a fish-allergic household.
+      'fish free',
+      'fish-free',
+      'vegan fish',
+      'vegetarian fish',
+      'plant based fish',
+      'plant-based fish',
+      'fishless',
+      'tofish',
+      'mock fish',
+      'vegan tuna',
+      'vegan salmon',
+      'vegan caviar',
+    ],
+  },
+
+  // ── MEAT ────────────────────────────────────────────────────────────────────
+  //
+  // Not an allergen — an ethical, religious or dietary restriction. Added in
+  // Phase 4 (SURF1B2): live households declare `meat` as a hard restriction and it
+  // resolved to nothing, so the substring fallback caught "meatball" and not "beef".
+  //
+  // BOUNDARY — `meat` is the flesh of LAND animals, and deliberately does NOT
+  // include fish or shellfish. THA's own data declares them separately (households
+  // 181–184 carry `{meat, fish, dairy, eggs, honey}`), and folding fish into meat
+  // would silently break pescatarians, a diet THA offers. A household that eats
+  // neither declares both — and both now resolve.
+  //
+  // Tier is `additional_restriction`, not `major_allergen`: this is a choice, not
+  // an anaphylaxis risk. It is enforced exactly as hard as an allergen — the tier
+  // describes what the restriction IS, not how strictly it binds.
+  //
+  // NOTE — `shared/dietRules.ts` holds MEAT_KEYWORDS, which serves the Vegan and
+  // Vegetarian *patterns*. This definition must remain a SUPERSET of that list, and
+  // a test enforces it (test-surf1b2). See the workstream doc for why the two are
+  // pinned rather than merged.
+  {
+    id: 'meat',
+    displayName: 'Meat',
+    tier: 'additional_restriction',
+    aliases: [
+      'meat',
+      'meat free',
+      'meat-free',
+      'no meat',
+      'red meat',
+      'white meat',
+      // Short animal names — whole-word only. "ham" as a derivedIngredient would
+      // substring-match "chamomile"; "lamb" would match "lambrusco".
+      'beef',
+      'pork',
+      'lamb',
+      'ham',
+      'veal',
+      'duck',
+      'goat',
+      'goose',
+      'quail',
+      'hare',
+      'boar',
+      'mutton',
+      'gammon',
+      'offal',
+      'tripe',
+      'mince',
+      'rib',
+      'ribs',
+      'steak',
+      'liver',
+      'kidney',
+      'lard',
+      'suet',
+      'aspic',
+      'rennet',
+      'pate',
+      'poultry',
+    ],
+    derivedIngredients: [
+      // Distinctive words — substring matching is safe and handles plurals.
+      'chicken',
+      'turkey',
+      'venison',
+      'rabbit',
+      'pheasant',
+      'partridge',
+      'bacon',
+      'lardon',
+      'sausage',
+      'salami',
+      'chorizo',
+      'pepperoni',
+      'prosciutto',
+      'pancetta',
+      'bresaola',
+      'guanciale',
+      'pastrami',
+      'corned beef',
+      'meatball',
+      'meatloaf',
+      'brisket',
+      'sirloin',
+      'ribeye',
+      'rib eye',
+      'tenderloin',
+      'drumstick',
+      'oxtail',
+      'hamburger',
+      'pulled pork',
+      'liverwurst',
+      'haggis',
+      'black pudding',
+      'white pudding',
+      'foie gras',
+      'pâté',
+      'jerky',
+      'biltong',
+      'gelatin',
+      'gelatine',
+      'dripping',
+      'schmaltz',
+      'bone broth',
+      'beef stock',
+      'chicken stock',
+      'beef broth',
+      'chicken broth',
+      'meat stock',
+      'chicken fat',
+      'duck fat',
+      'goose fat',
+    ],
+    hiddenIngredients: [
+      // Animal-derived and not obvious from the name.
+      'worcestershire sauce',
+      'caesar dressing',
+      'parmesan',
+      'pepsin',
+      'carmine',
+      'cochineal',
+    ],
+    substitutions: [
+      'tofu (check soy restriction)',
+      'tempeh (check soy restriction)',
+      'jackfruit',
+      'lentils',
+      'chickpeas',
+      'mushrooms',
+      'vegetable stock in place of meat stock',
+      'agar in place of gelatine',
+    ],
+    prohibitedPhrases: [
+      'meat',
+      'beef',
+      'pork',
+      'chicken',
+      'lamb',
+      'bacon',
+      'sausage',
+      'gelatine',
+    ],
+    excludedCompounds: [
+      // ── Non-meat foods that share a word with a meat term. Without these the
+      //    definition excludes staples that contain no animal at all.
+      'kidney bean',      // "kidney" — a vegan staple
+      'kidney beans',
+      'beef tomato',      // "beef" — a tomato variety
+      'beef tomatoes',
+      'lambs lettuce',    // "lamb" — a salad leaf
+      "lamb's lettuce",
+      'lamb lettuce',
+      'goat cheese',      // "goat" — dairy, not meat
+      'goats cheese',
+      "goat's cheese",
+      'goat milk',
+      'goats milk',
+      "goat's milk",
+      'goat yoghurt',
+      'goat yogurt',
+      'goats curd',
+      'duck egg',         // "duck" — an egg, not meat
+      'duck eggs',
+      'quail egg',        // "quail" — an egg, not meat
+      'quail eggs',
+      'mince pie',        // "mince" — fruit mincemeat, not meat
+      'mince pies',
+      'mincemeat',
+      'chicken of the woods',  // a mushroom
+      'coconut meat',     // "meat" — the flesh of a coconut
+      'nut meat',
+      'hamburger bun',    // "hamburger" — the bun is bread; it carries no meat
+      'burger bun',
+      'vegetable suet',   // "suet" — vegetarian suet is real and common
+      'vegetarian suet',
+      'vegan suet',
+      'vegetarian rennet',  // "rennet" — microbial rennet is not animal-derived
+      'microbial rennet',
+      'vegetable rennet',
+      'vegan rennet',
+      'cauliflower steak',  // "steak" — a vegetable
+      'mushroom steak',
+      'aubergine steak',
+      'tofu steak',
+      'vegetarian parmesan',
+      'vegan parmesan',
+
+      // ── Plant-based analogues. A meat-free product must never be excluded from
+      //    a household that is avoiding meat — that is the whole point of it.
+      'meat free',
+      'meat-free',
+      'meatless',
+      'meat substitute',
+      'meat alternative',
+      'quorn',
+      'jackfruit',
+      'beyond meat',
+      'beyond burger',
+      'impossible burger',
+      'vegan sausage',
+      'vegetarian sausage',
+      'veggie sausage',
+      'plant based sausage',
+      'plant-based sausage',
+      'vegan bacon',
+      'vegetarian bacon',
+      'tempeh bacon',
+      'coconut bacon',
+      'mushroom bacon',
+      'facon',
+      'vegan chicken',
+      'vegetarian chicken',
+      'plant based chicken',
+      'plant-based chicken',
+      'mock chicken',
+      'vegan beef',
+      'plant based beef',
+      'plant-based beef',
+      'vegan duck',
+      'mock duck',
+      'vegan mince',
+      'vegetarian mince',
+      'veggie mince',
+      'plant based mince',
+      'plant-based mince',
+      'soy mince',
+      'soya mince',
+      'vegan meatball',
+      'vegetarian meatball',
+      'plant based meatball',
+      'plant-based meatball',
+      'vegan chorizo',
+      'vegan pepperoni',
+      'vegan salami',
+      'vegan ham',
+      'vegetarian ham',
+      'vegan steak',
+      'plant based steak',
+      'plant-based steak',
+      'vegan pate',
+      'vegetarian pate',
+      'mushroom pate',
+      'lentil pate',
+      'vegan haggis',
+      'vegetarian haggis',
+      'vegan gelatin',
+      'vegetarian gelatine',
+      'vegan pastrami',
+    ],
+  },
+
+  // ── HONEY ───────────────────────────────────────────────────────────────────
+  //
+  // Not an allergen — an ethical restriction (honey is an animal product and is
+  // excluded by veganism) and, separately, an infant safety rule: honey must not be
+  // given to children under 12 months because of the botulism risk. Added in Phase 4
+  // (SURF1B2): live households declare it and it resolved to nothing.
+  //
+  // Note the excludedCompounds are SHORT. "honeydew" and "honeysuckle" are NOT
+  // listed, because the whole-word alias match already cannot match them — and an
+  // unnecessary excludedCompound is a fail-open path, not a free safety net.
+  {
+    id: 'honey',
+    displayName: 'Honey',
+    tier: 'additional_restriction',
+    aliases: [
+      'honey',
+      'honey free',
+      'honey-free',
+      'no honey',
+      'bee product',
+      'bee products',
+      // Whole-word: as a derivedIngredient, "mead" would substring-match "meadow".
+      'mead',
+    ],
+    derivedIngredients: [
+      'runny honey',
+      'clear honey',
+      'set honey',
+      'raw honey',
+      'creamed honey',
+      'manuka honey',
+      'acacia honey',
+      'heather honey',
+      'wildflower honey',
+      'hot honey',
+      'honey syrup',
+      'honey glaze',
+      'honey mustard',
+      'honeycomb',
+      'royal jelly',
+      'bee pollen',
+      'propolis',
+      'beeswax',
+    ],
+    hiddenIngredients: [
+      // Traditionally honey-sweetened and rarely labelled as such.
+      'baklava',
+      'nougat',
+      'halva',
+      'flapjack',
+    ],
+    substitutions: [
+      'maple syrup',
+      'agave nectar',
+      'date syrup',
+      'golden syrup',
+      'brown rice syrup',
+    ],
+    prohibitedPhrases: [
+      'honey',
+      'royal jelly',
+      'beeswax',
+    ],
+    excludedCompounds: [
+      'honey free',
+      'honey-free',
+      'vegan honey',
+      'honey substitute',
+      'bee free',
     ],
   },
 

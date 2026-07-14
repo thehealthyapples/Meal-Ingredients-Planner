@@ -138,7 +138,12 @@ import { buildRuleIndex, batchMatchUplift } from "./lib/uplift-engine.js";
 import UPLIFT_RULES from "./lib/uplift-rules.js";
 import type { BatchUpliftInput } from "./lib/uplift-types.js";
 import { mergeUpliftIngredients, removeUpliftIngredient, buildForkName, type AcceptedSuggestion } from "./lib/uplift-persistence.js";
-import { resolveActiveRestrictions, resolveIngredientRestrictions } from "../shared/restrictions/restriction-resolver.js";
+import {
+  resolveActiveRestrictions,
+  resolveIngredientRestrictions,
+  unenforceableRestrictions,
+  listRestrictionIds,
+} from "../shared/restrictions/restriction-resolver.js";
 import { plantDiversityGroup } from "../shared/canonical/plant-classifier.js";
 import {
   resolveHouseholdSafetyContext,
@@ -149,6 +154,37 @@ import {
 
 // Singleton index built once at startup — all rules are stateless
 const UPLIFT_INDEX = buildRuleIndex(UPLIFT_RULES);
+
+// ─── Hard restriction write doors (SURF1B2) ───────────────────────────────────
+//
+// THA MAY NOT STORE A HARD RESTRICTION IT CANNOT ENFORCE.
+//
+// Before SURF1B2 exactly one of the six doors that write a hard restriction
+// validated its input (`PUT /api/profile`, against a hand-written literal array).
+// The other five took `z.array(z.string())` — free text — so a household could
+// declare a restriction, see it saved, see it rendered back to them, and have it
+// reach no gate in the platform. That is precisely how `meat`, `fish` and `honey`
+// came to live in the database with no canonical definition behind them.
+//
+// The rule is now structural rather than remembered: a restriction is accepted if
+// and only if the canonical library can resolve it. "Accepted" and "enforceable"
+// are the same set by construction, and cannot drift apart again.
+//
+// This delegates every judgement to the canonical library. It defines no food and
+// no allergen of its own.
+const hardRestrictionsSchema = z.array(z.string()).superRefine((values, ctx) => {
+  const unenforceable = unenforceableRestrictions(values);
+  if (unenforceable.length === 0) return;
+  ctx.addIssue({
+    code: z.ZodIssueCode.custom,
+    message:
+      `Cannot enforce ${unenforceable.map(v => `"${v}"`).join(", ")}. ` +
+      `A dietary restriction THA cannot enforce must not be stored, because the ` +
+      `household would believe they were protected by it. ` +
+      `Enforceable restrictions: ${listRestrictionIds().join(", ")} ` +
+      `(aliases such as "coeliac", "Nuts" and "Dairy-Free" also resolve).`,
+  });
+});
 
 // ─── Household hard restriction helpers ───────────────────────────────────────
 
@@ -5063,7 +5099,9 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         const onboardingSchema = preferencesSchema.extend({
           firstName: z.string().nullable().optional(),
           dietPattern: z.string().nullable().optional(),
-          dietRestrictions: z.array(z.string()).optional(),
+          // SURF1B2: was `z.array(z.string())` — the free-text hole on the profile's
+          // authoritative restriction column.
+          dietRestrictions: hardRestrictionsSchema.optional(),
           eatingSchedule: z.string().nullable().optional(),
         });
         const parsed = onboardingSchema.parse(req.body);
@@ -6023,7 +6061,7 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         id: z.string().min(1),
         displayName: z.string().min(1),
         dietTypes: z.array(z.string()).default([]),
-        hardRestrictions: z.array(z.string()).default([]),
+        hardRestrictions: hardRestrictionsSchema.default([]),   // SURF1B2
       });
       const bodySchema = z.object({
         mealSlot: z.enum(["breakfast", "lunch", "dinner", "snacks"]),
@@ -8976,7 +9014,8 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       const parsed = z.object({
         displayName: z.string().min(1).max(100),
         defaultDietTypes: z.array(z.string()).optional(),
-        hardRestrictions: z.array(z.string()).optional(),
+        // SURF1B2 — a child's eater row is the canonical owner of their allergens.
+        hardRestrictions: hardRestrictionsSchema.optional(),
       }).parse(req.body);
       const row = await storage.createHouseholdEater(householdId, parsed);
       const { dbEaterToHouseholdEater } = await import("@shared/household-eater.js");
@@ -9002,7 +9041,7 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       const parsed = z.object({
         displayName: z.string().min(1).max(100).optional(),
         defaultDietTypes: z.array(z.string()).optional(),
-        hardRestrictions: z.array(z.string()).optional(),
+        hardRestrictions: hardRestrictionsSchema.optional(),   // SURF1B2
       }).parse(req.body);
 
       const row = await storage.updateHouseholdEater(eaterId, parsed);
@@ -9130,7 +9169,7 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         id: z.string().min(1).max(100),
         displayName: z.string().min(1).max(100),
         dietTypes: z.array(z.string()).default([]),
-        hardRestrictions: z.array(z.string()).default([]),
+        hardRestrictions: hardRestrictionsSchema.default([]),   // SURF1B2
       }).parse(req.body);
       console.log("[GUEST_DIAG] 6. payload validation passed — parsed =", JSON.stringify(parsed));
 
