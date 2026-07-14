@@ -15,6 +15,7 @@ Find the active session, open its run file, and continue from **Next action**.
 |---|---|---|---|---|
 | `DCA1_User_Visible_Data_Coverage_Audit` | Waiting for User | `rollback/DCA1-user-visible-data-coverage-audit-20260714` → `f9c23c97` | `SURF1A` (W1) delivered. Await direction on the remaining `SURF1` phases — W0 (household safety) is the highest. | [`runs/DCA1_User_Visible_Data_Coverage_Audit.md`](./runs/DCA1_User_Visible_Data_Coverage_Audit.md) |
 | `SURF1A_Existing_Data_Surfacing` | Complete | `rollback/SURF1A-existing-data-surfacing-20260714` → `f9c23c97` | None — complete. Recommends DCA1 gap #1 (`dietRestrictions` never reach the Companion) next. | [`runs/SURF1A_Existing_Data_Surfacing.md`](./runs/SURF1A_Existing_Data_Surfacing.md) |
+| `SURF1B3_Onboarding_Allergy_Safety_Routing` | Complete | `rollback/SURF1B3-onboarding-allergy-safety-routing-20260714` → `194f7af2` | None — complete. Recommends SURF1B2 limitation #1 next: the Vegan/Vegetarian **pattern** path still has meat-keyword holes the restriction path no longer has. | [`runs/SURF1B3_Onboarding_Allergy_Safety_Routing.md`](./runs/SURF1B3_Onboarding_Allergy_Safety_Routing.md) |
 
 > Multiple rows may be active at once — simultaneous Claude Code sessions are
 > supported. Each session owns exactly one run file named by its Session ID, so
@@ -25,4 +26,4 @@ When a session reaches **Complete**, move its row out of this table and add a
 line to [INDEX.md](./INDEX.md) — `.engineering/scripts/session-complete.sh` does
 both. If no active sessions remain, set the top marker to `ESR:IDLE`.
 
-_Last automatic heartbeat (Stop hook): 2026-07-14T18:07:07Z UTC_
+_Last automatic heartbeat (Stop hook): 2026-07-14T20:09:55Z UTC_

@@ -21,6 +21,10 @@ import {
   ALLERGY_OPTIONS,
   EATING_STYLE_OPTIONS,
 } from "@/lib/diets";
+import {
+  routeOnboardingDietarySelections,
+  ONBOARDING_OTHER_VALUE,
+} from "@shared/onboarding-restrictions";
 import appleIcon from "@/assets/icons/tha-apple.png";
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -269,30 +273,45 @@ export default function OnboardingPage() {
   // Screen 7 - Start area
   const [startArea, setStartArea] = useState<StartAreaKey | null>(null);
 
-  // ── Prefill from saved preferences (re-onboarding / existing user) ──────────
-  const { data: savedPrefs } = useQuery<any>({
-    queryKey: ["/api/user/preferences"],
+  // ── Prefill from saved profile + preferences (re-onboarding / existing user) ─
+  //
+  // SURF1B3: allergies are read back from `profile.dietRestrictions` — the hard
+  // restriction owner — not from `preferences.excludedIngredients`. Hydrating the
+  // allergy chips from the soft preference list was the read-side face of the same
+  // defect: it taught the form that an allergy lives in the preferences table, and a
+  // household re-running onboarding would have seen its declared allergies missing.
+  const { data: savedProfile } = useQuery<any>({
+    queryKey: ["/api/profile"],
     queryFn: async () => {
-      const res = await fetch("/api/user/preferences", { credentials: "include" });
+      const res = await fetch("/api/profile", { credentials: "include" });
       if (!res.ok) return null;
       return res.json();
     },
   });
 
   const prefsInitialised = useRef(false);
-  const KNOWN_ALLERGY_VALUES = ALLERGY_OPTIONS.map((o) => o.value).filter((v) => v !== "other");
+  const CHIP_VALUES = ALLERGY_OPTIONS.map((o) => o.value).filter((v) => v !== ONBOARDING_OTHER_VALUE);
 
   useEffect(() => {
-    if (!savedPrefs || prefsInitialised.current) return;
+    if (!savedProfile || prefsInitialised.current) return;
     prefsInitialised.current = true;
 
-    // Excluded ingredients → allergy chip state
-    if (savedPrefs.excludedIngredients?.length) {
-      const known = savedPrefs.excludedIngredients.filter((i: string) => KNOWN_ALLERGY_VALUES.includes(i));
-      const custom = savedPrefs.excludedIngredients.filter((i: string) => !KNOWN_ALLERGY_VALUES.includes(i));
-      setAllergies(custom.length > 0 ? [...known, "other"] : known);
-      if (custom.length > 0) setOtherAllergyText(custom.join(", "));
-    }
+    const savedPrefs = savedProfile.preferences ?? {};
+
+    // HARD restrictions → allergy chips. Anything the household declared that THA
+    // offers no chip for (e.g. "mustard", "meat" — enforceable, but chip-less) is
+    // shown back to them in the free-text box rather than silently dropped.
+    const declared: string[] = savedProfile.dietRestrictions ?? [];
+    const chipped = declared.filter((r) => CHIP_VALUES.includes(r));
+    const freeText = declared.filter((r) => !CHIP_VALUES.includes(r));
+
+    // SOFT exclusions → the free-text box too. They are dislikes, and they stay soft:
+    // the router below only promotes what the canonical library can enforce.
+    const softOnly: string[] = savedPrefs.excludedIngredients ?? [];
+    const other = [...freeText, ...softOnly];
+
+    setAllergies(other.length > 0 ? [...chipped, ONBOARDING_OTHER_VALUE] : chipped);
+    if (other.length > 0) setOtherAllergyText(other.join(", "));
 
     // dietTypes → dietary prefs + eating styles
     if (savedPrefs.dietTypes?.length) {
@@ -308,19 +327,18 @@ export default function OnboardingPage() {
     if (savedPrefs.calorieMode !== undefined) setTrackCalories(savedPrefs.calorieMode === "manual");
     if (savedPrefs.eliteTrackingEnabled !== undefined) setTrackMacros(savedPrefs.eliteTrackingEnabled);
     if (savedPrefs.healthTrendEnabled !== undefined) setTrackWeight(savedPrefs.healthTrendEnabled);
-  }, [savedPrefs]);
+  }, [savedProfile]);
+
+  // SURF1B3 — the routing decision, made once and used by both the submission and the
+  // advisory note under the free-text box, so what the household is TOLD and what THA
+  // STORES can never disagree.
+  const routed = routeOnboardingDietarySelections({
+    allergies,
+    otherText: allergies.includes(ONBOARDING_OTHER_VALUE) ? otherAllergyText : "",
+  });
 
   const completeMutation = useMutation({
     mutationFn: async () => {
-      // Build excludedIngredients from allergy selections
-      const excludedIngredients: string[] = allergies
-        .filter((a) => a !== "other")
-        .concat(
-          allergies.includes("other") && otherAllergyText.trim()
-            ? [otherAllergyText.trim().toLowerCase()]
-            : []
-        );
-
       // Build dietTypes: dietary preferences + eating styles (prefixed)
       const dietTypes: string[] = [
         ...dietaryPrefs,
@@ -328,7 +346,12 @@ export default function OnboardingPage() {
       ];
 
       const res = await apiRequest("POST", "/api/user/complete-onboarding", {
-        excludedIngredients,
+        // HARD — safety facts. `users.diet_restrictions`, the canonical owner that the
+        // household safety resolver, the meal safety gate and the AI context all read.
+        dietRestrictions: routed.hardRestrictions,
+        // SOFT — preferences. `user_preferences.excluded_ingredients`. Only what the
+        // canonical restriction library cannot enforce reaches this field now.
+        excludedIngredients: routed.softExclusions,
         dietTypes,
         healthGoals: [],
         budgetLevel: "standard",
@@ -555,15 +578,36 @@ export default function OnboardingPage() {
                             />
                           ))}
                         </div>
-                        {allergies.includes("other") && (
-                          <Input
-                            value={otherAllergyText}
-                            onChange={(e) => setOtherAllergyText(e.target.value)}
-                            placeholder="e.g. sesame, mustard…"
-                            aria-label="Other allergies or intolerances"
-                            className="mt-1 h-8 text-sm max-w-xs"
-                            autoFocus
-                          />
+                        {allergies.includes(ONBOARDING_OTHER_VALUE) && (
+                          <div className="space-y-2">
+                            <Input
+                              value={otherAllergyText}
+                              onChange={(e) => setOtherAllergyText(e.target.value)}
+                              placeholder="e.g. mustard, fish…"
+                              aria-label="Other allergies or intolerances"
+                              className="mt-1 h-8 text-sm max-w-xs"
+                              autoFocus
+                            />
+                            {/* SURF1B3 — honesty, not validation. Anything THA can enforce
+                                becomes a hard restriction and is never served. Anything it
+                                cannot is still recorded and still avoided where possible —
+                                but the household is told which it is, because a restriction
+                                presented as a guarantee it is not is worse than none. */}
+                            {routed.unenforceable.length > 0 && (
+                              <p
+                                className="text-xs text-muted-foreground leading-relaxed max-w-xs"
+                                data-testid="text-onboarding-unenforceable-allergy"
+                              >
+                                We can't check every meal for{" "}
+                                <span className="text-foreground font-medium">
+                                  {routed.unenforceable.join(", ")}
+                                </span>
+                                {" "}yet, so we'll avoid it where we can rather than promise you
+                                more than we can keep. Everything else here we'll treat as a
+                                strict no.
+                              </p>
+                            )}
+                          </div>
                         )}
                       </div>
                     )}

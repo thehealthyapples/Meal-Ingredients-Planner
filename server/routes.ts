@@ -144,6 +144,7 @@ import {
   unenforceableRestrictions,
   listRestrictionIds,
 } from "../shared/restrictions/restriction-resolver.js";
+import { promoteSoftAllergies } from "../shared/onboarding-restrictions.js";
 import { plantDiversityGroup } from "../shared/canonical/plant-classifier.js";
 import {
   resolveHouseholdSafetyContext,
@@ -627,15 +628,29 @@ export async function registerRoutes(
   });
 
   const ALLOWED_DIET_PATTERNS = ["Mediterranean", "DASH", "MIND", "Flexitarian", "Vegetarian", "Vegan", "Keto", "Low-Carb", "Paleo", "Carnivore"] as const;
-  const ALLOWED_DIET_RESTRICTIONS = ["Gluten-Free", "Dairy-Free", "Nuts", "Eggs", "Shellfish", "Soy", "Sesame"] as const;
   const ALLOWED_EATING_SCHEDULES = ["None", "Intermittent Fasting"] as const;
 
+  // SURF1B3 — the profile's hand-written seven-literal enum (`ALLOWED_DIET_RESTRICTIONS`)
+  // is retired. It was the last write door still answering "can we enforce this?" from a
+  // list rather than from the canonical library, and it had already drifted out of step
+  // with the platform in a way that was costing real households:
+  //
+  //   4 live users hold `meat` / `fish` / `honey` — restrictions SURF1B2 made fully
+  //   enforceable — and the enum rejected every one of them. Those users could not save
+  //   their own profile: any edit, to any field, 400'd on a value THA itself had stored.
+  //
+  // It would also have made onboarding's fix unshippable. An allergy routed to the
+  // canonical owner in the library's vocabulary must survive the household's next visit
+  // to the Profile page, and under the enum it did not.
+  //
+  // The door now asks the library, exactly as the other five doors have since SURF1B2:
+  // accepted and enforceable are the same set, and they cannot drift apart again.
   const profileUpdateSchema = z.object({
     firstName: z.string().nullable().optional(),
     displayName: z.string().optional(),
     profilePhotoUrl: z.string().nullable().optional(),
     dietPattern: z.enum(ALLOWED_DIET_PATTERNS).nullable().optional(),
-    dietRestrictions: z.array(z.enum(ALLOWED_DIET_RESTRICTIONS)).optional(),
+    dietRestrictions: hardRestrictionsSchema.optional(),
     eatingSchedule: z.enum(ALLOWED_EATING_SCHEDULES).nullable().optional(),
     customMetricDefs: z.array(z.object({ id: z.string(), name: z.string(), unit: z.string() })).optional(),
     diaryExtraMetrics: z.array(z.string()).optional(),
@@ -5107,6 +5122,41 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         const parsed = onboardingSchema.parse(req.body);
         const { firstName, dietPattern, dietRestrictions, eatingSchedule, ...prefFields } = parsed;
 
+        // ── SURF1B3 — allergies are routed to their canonical owner, at the door ──
+        //
+        // Onboarding's `excludedIngredients` has exactly one upstream: the "Allergies
+        // or intolerances" screen. There is no dislikes input anywhere in the flow. So
+        // an enforceable restriction arriving in that field at THIS door is a declared
+        // allergy filed under the wrong heading — and the door corrects it rather than
+        // storing a safety fact as a preference.
+        //
+        // The check is here, and not only in the client, because the client is not the
+        // enforcement point: a browser still running the pre-SURF1B3 bundle sends its
+        // allergy chips as soft exclusions, and would otherwise keep doing so for as
+        // long as that tab stays open. The same function performs the live-data repair
+        // (`scripts/repair-onboarding-allergy-routing.ts`), so the migration and the
+        // runtime cannot disagree about what an allergy is.
+        //
+        // It applies to THIS door only. `PUT /api/user/preferences` collects genuine
+        // dislikes, and a dislike is never promoted however enforceable it happens to
+        // be: "I don't like eggs" is not "eggs will hurt me".
+        const declaredHard = dietRestrictions ?? [];
+        const routing = promoteSoftAllergies({
+          softExclusions: prefFields.excludedIngredients ?? [],
+          hardRestrictions: declaredHard,
+        });
+        if (routing.promote.length > 0) {
+          console.warn(
+            `[SURF1B3] user ${req.user!.id} submitted ${routing.promote.length} allergy value(s) ` +
+              `as soft exclusions (pre-SURF1B3 client). Routed to users.diet_restrictions: ` +
+              `${routing.promote.join(", ")}`,
+          );
+        }
+        // `promote` is already canonically disjoint from `declaredHard`, so an exact
+        // dedupe is enough to keep the stored array clean.
+        const hardRestrictions = Array.from(new Set([...declaredHard, ...routing.promote]));
+        prefFields.excludedIngredients = routing.remainingSoft;
+
         const goalsForGoalType: string[] = Array.isArray(prefFields.healthGoals) ? prefFields.healthGoals : [];
         const derivedGoalType = goalsForGoalType.includes("lose-weight") ? "lose"
           : (goalsForGoalType.includes("build-muscle") || goalsForGoalType.includes("put-on-weight")) ? "build"
@@ -5121,7 +5171,12 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         const profileUpdate: any = {};
         if (firstName !== undefined && firstName !== null && firstName.trim()) profileUpdate.firstName = firstName.trim();
         if (dietPattern !== undefined) profileUpdate.dietPattern = dietPattern ?? null;
-        if (dietRestrictions !== undefined) profileUpdate.dietRestrictions = dietRestrictions ?? [];
+        // Write when the submission carried restrictions, OR when the door routed some
+        // out of the soft list — a legacy client sends no `dietRestrictions` at all, and
+        // its allergies must still reach the owner.
+        if (dietRestrictions !== undefined || routing.promote.length > 0) {
+          profileUpdate.dietRestrictions = hardRestrictions;
+        }
         if (eatingSchedule !== undefined) profileUpdate.eatingSchedule = eatingSchedule ?? null;
         if (Object.keys(profileUpdate).length > 0) {
           await storage.updateUserProfile(req.user!.id, profileUpdate);

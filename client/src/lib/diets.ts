@@ -1,3 +1,5 @@
+import { DECLARABLE_HARD_RESTRICTIONS, ONBOARDING_OTHER_VALUE } from "@shared/onboarding-restrictions";
+
 export const DIET_PATTERNS = [
   { value: "Mediterranean", label: "Mediterranean", desc: "Olive oil, fish & veg" },
   { value: "DASH",          label: "DASH",          desc: "Heart-healthy, low sodium" },
@@ -36,16 +38,13 @@ export const DIET_PATTERN_OPTIONS = [
   { value: "Carnivore",     label: "Carnivore" },
 ] as const;
 
-/** Allergy & intolerance chips - hard constraints, used everywhere. */
-export const ALLERGY_INTOLERANCE_OPTIONS = [
-  { value: "Gluten-Free", label: "Gluten-Free" },
-  { value: "Dairy-Free",  label: "Dairy-Free" },
-  { value: "Nuts",        label: "Nuts" },
-  { value: "Eggs",        label: "Eggs" },
-  { value: "Shellfish",   label: "Shellfish" },
-  { value: "Soy",         label: "Soy" },
-  { value: "Sesame",      label: "Sesame" },
-] as const;
+/** Allergy & intolerance chips - hard constraints, used everywhere.
+ *  SURF1B3: derived from the single owner (`@shared/onboarding-restrictions`), so the
+ *  profile, planner, meals and onboarding surfaces can no longer drift into different
+ *  vocabularies for the same seven safety facts. The stored values are unchanged. */
+export const ALLERGY_INTOLERANCE_OPTIONS = DECLARABLE_HARD_RESTRICTIONS.map(
+  (r) => ({ value: r.value, label: r.label }),
+);
 
 export const EATING_SCHEDULES = [
   { value: "None",                 label: "No preference",        desc: "Eat at any time" },
@@ -88,15 +87,22 @@ export interface AllergyOption {
   label: string;
 }
 
+/**
+ * SURF1B3 — the onboarding allergy chips.
+ *
+ * The labels the household reads are unchanged ("Nuts", "Dairy", "Gluten", …). The
+ * **values** are now the canonical vocabulary the profile owns ("Nuts", "Dairy-Free",
+ * "Gluten-Free", …), because an onboarding allergy is now written to
+ * `users.diet_restrictions` — the hard-restriction owner — and not to
+ * `user_preferences.excluded_ingredients`, where it was filed as a preference.
+ *
+ * Before this, the two surfaces used two vocabularies for the same seven facts. A
+ * lower-cased "nuts" stored on the profile would render no chip as selected and, on
+ * the next profile save, be rejected by the door that had accepted it.
+ */
 export const ALLERGY_OPTIONS: AllergyOption[] = [
-  { value: "nuts",      label: "Nuts" },
-  { value: "dairy",     label: "Dairy" },
-  { value: "gluten",    label: "Gluten" },
-  { value: "eggs",      label: "Eggs" },
-  { value: "shellfish", label: "Shellfish" },
-  { value: "soy",       label: "Soy" },
-  { value: "sesame",    label: "Sesame" },
-  { value: "other",     label: "Other" },
+  ...DECLARABLE_HARD_RESTRICTIONS.map((r) => ({ value: r.value, label: r.onboardingLabel })),
+  { value: ONBOARDING_OTHER_VALUE, label: "Other" },
 ];
 
 // ─── Onboarding: eating style options ───────────────────────────────────────
