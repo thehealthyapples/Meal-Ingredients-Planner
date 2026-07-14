@@ -20,6 +20,8 @@ import {
   Utensils,
   Compass,
   Loader2,
+  ChefHat,
+  Archive,
 } from "lucide-react";
 import {
   IntelligenceCard,
@@ -28,13 +30,25 @@ import {
   HouseholdInsightCard,
   SimplyBetterChoiceCard,
   ConnectedFoodPanel,
+  FoodPreparationList,
+  type FoodPreparation,
 } from "@/components/intelligence";
 
 // ── Types (mirror the server FoodIntelligence model) ──────────────────────────
 
 interface FoodIntelligence {
   slug: string;
-  food: { name: string; category: string; description: string } | null;
+  food: {
+    name: string;
+    category: string;
+    description: string;
+    // SURF1A — the practical knowledge. Published and owned since PUB1; dropped
+    // by the assembler before it ever reached this page, so no type here could
+    // have carried it. The assembler now composes it from the knowledge owner.
+    aliases: string[];
+    commonForms: string[];
+    storageGuidance: string | null;
+  } | null;
   healthBenefits: string[];
   keyNutrients: string[];
   nutritionContext: string[];
@@ -64,6 +78,8 @@ interface FoodIntelligence {
       suggestions: Array<{ ingredient: string; action: string; why: string }>;
     }>;
   } | null;
+  /** SURF1A — rendered through the one preparation owner, never re-worded here. */
+  preparations: FoodPreparation[];
 }
 
 // ── Section: household history (careful language) ──────────────────────────────
@@ -176,6 +192,17 @@ function FoodIntelligenceView({ data }: { data: FoodIntelligence }) {
             {food.description}
           </p>
         )}
+        {/* SURF1A — alternative names. Prose, not chips: these are names for the
+            same food, and a household reads them, rather than taps them. */}
+        {food.aliases.length > 0 && (
+          <p
+            className="text-xs text-muted-foreground/60 leading-relaxed pl-8 max-w-2xl"
+            data-testid="food-aliases"
+          >
+            <span className="text-muted-foreground/45">Also known as </span>
+            {food.aliases.join(", ")}
+          </p>
+        )}
       </header>
 
       {/* ── Why it matters ── */}
@@ -222,6 +249,48 @@ function FoodIntelligenceView({ data }: { data: FoodIntelligence }) {
             />
           }
           data-testid="food-nutrients"
+        />
+      )}
+
+      {/* ── Varieties (SURF1A) ── */}
+      {food.commonForms.length > 0 && (
+        <IntelligenceCard
+          icon={<Sparkles className="h-4 w-4" />}
+          eyebrow="Varieties"
+          chips={
+            <IntelligenceChipGroup
+              items={food.commonForms}
+              kind="nutrient"
+              aria-label="Varieties"
+            />
+          }
+          data-testid="food-varieties"
+        />
+      )}
+
+      {/* ── How it's prepared (SURF1A) ──
+          The domain is 100% published and, until now, rendered by no React
+          component anywhere in the platform. The list owner below holds down the
+          rule that an unreviewed preparation says nothing about nutrition — the
+          section is complete without a claim, and never invents one to look so. */}
+      {data.preparations.length > 0 && (
+        <IntelligenceCard
+          icon={<ChefHat className="h-4 w-4" />}
+          eyebrow="How it's prepared"
+          title={`Ways to prepare ${food.name.toLowerCase()}`}
+          data-testid="food-preparations-card"
+        >
+          <FoodPreparationList preparations={data.preparations} />
+        </IntelligenceCard>
+      )}
+
+      {/* ── Storing it (SURF1A) ── */}
+      {food.storageGuidance && (
+        <IntelligenceCard
+          icon={<Archive className="h-4 w-4" />}
+          eyebrow="Storing it"
+          body={food.storageGuidance}
+          data-testid="food-storage-guidance"
         />
       )}
 

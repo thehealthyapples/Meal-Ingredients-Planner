@@ -39,6 +39,14 @@ import type { UKSeason } from "@shared/discovery/types";
 import { buildRuleIndex, matchUpliftRules } from "./uplift-engine";
 import { UPLIFT_RULES } from "./uplift-rules";
 import type { UpliftMatchResult } from "./uplift-types";
+// SURF1A — the knowledge food record and its preparations, read from the domain's
+// one mouth (Rule KC4). Reached over the WS2A identity bridge below.
+import { CANONICAL_SEED } from "@shared/canonical/foods";
+import {
+  getFoodBySlug,
+  getPreparationsForFood,
+  type PreparationView,
+} from "../services/nutrition-knowledge-registry";
 
 // ── Lazy rule index (built once per process) ──────────────────────────────────
 
@@ -60,6 +68,19 @@ export interface FoodOverview {
   category: string;
   /** Empty string when no description has been authored. */
   description: string;
+  /**
+   * SURF1A — the practical knowledge the household actually asks for. All three
+   * are read from the WS0 knowledge food record through its one mouth
+   * (`nutrition-knowledge-registry`), reached over the WS2A identity bridge
+   * (`knowledgeFoodSlug`) — the only seam between canonical identity and
+   * knowledge. This assembler re-derives none of them and owns none of them.
+   *
+   * Empty / null when the food has no knowledge binding, or the owner records
+   * nothing: an honest gap, never a fabricated default (Principle 3).
+   */
+  aliases: string[];
+  commonForms: string[];
+  storageGuidance: string | null;
 }
 
 /** Whether this food is at its UK seasonal best right now. Null when not seasonal. */
@@ -166,6 +187,17 @@ export interface FoodIntelligence {
   discovery: FoodDiscovery | null;
   /** Simply Better Choices involving this food. Null when no rule matches. */
   nutritionEnhancement: FoodNutritionEnhancement | null;
+  /**
+   * SURF1A — how people prepare this food, and (only where the Layer-2 evidence
+   * gate signed it off) what that changes. Read verbatim from the preparation
+   * domain's one mouth, `getPreparationsForFood` — this assembler never composes
+   * a sentence about a preparation and never softens the three-state contract.
+   *
+   * Empty when the food has no knowledge binding or the owner links no
+   * preparation. Existence is unconditional (Rule KC6): a preparation with no
+   * reviewed effect is still returned, in the "unreviewed" state.
+   */
+  preparations: PreparationView[];
   trust: FoodIntelligenceTrust;
   metadata: FoodIntelligenceMetadata;
 }
@@ -387,12 +419,24 @@ export async function getFoodIntelligence(
       household: null,
       discovery: null,
       nutritionEnhancement: null,
+      preparations: [],
       trust: { isCanonical: false, populatedSections: 0 },
       metadata: { assembledAt: now.toISOString(), sources },
     };
   }
 
   sources.push("canonical_food");
+
+  // SURF1A — the WS2A identity bridge (`knowledgeFoodSlug`) is the only seam
+  // between canonical identity and WS0 knowledge. A canonical food with no
+  // knowledge binding simply has no knowledge record: empty, not fabricated.
+  const knowledgeSlug =
+    CANONICAL_SEED.find((e) => e.food.slug === foodSlug)?.food.knowledgeFoodSlug ?? null;
+
+  const [knowledgeFood, preparations] = await Promise.all([
+    knowledgeSlug ? getFoodBySlug(knowledgeSlug) : Promise.resolve(undefined),
+    knowledgeSlug ? getPreparationsForFood(knowledgeSlug) : Promise.resolve([]),
+  ]);
 
   // Household planner foods (drives both household history + discovery enjoys).
   let household: FoodHouseholdContext | null = null;
@@ -442,6 +486,10 @@ export async function getFoodIntelligence(
   if (household) sources.push("household");
   if (discovery) sources.push("discovery");
   if (nutritionEnhancement) sources.push("nutrition_enhancement");
+  if (knowledgeFood) sources.push("knowledge_foods");
+  if (preparations.length > 0) sources.push("knowledge_preparations");
+
+  const storageGuidance = knowledgeFood?.storageGuidance ?? null;
 
   const populatedSections =
     (report.healthBenefits.length > 0 ? 1 : 0) +
@@ -451,7 +499,9 @@ export async function getFoodIntelligence(
     (mealRefs.length > 0 ? 1 : 0) +
     (household ? 1 : 0) +
     (discovery ? 1 : 0) +
-    (nutritionEnhancement ? 1 : 0);
+    (nutritionEnhancement ? 1 : 0) +
+    (preparations.length > 0 ? 1 : 0) +
+    (storageGuidance ? 1 : 0);
 
   return {
     slug: foodSlug,
@@ -459,6 +509,9 @@ export async function getFoodIntelligence(
       name: report.overview.name,
       category: report.overview.category,
       description: report.overview.description,
+      aliases: knowledgeFood?.aliases ?? [],
+      commonForms: knowledgeFood?.commonForms ?? [],
+      storageGuidance,
     },
     healthBenefits: report.healthBenefits,
     keyNutrients: report.keyNutrients,
@@ -468,6 +521,7 @@ export async function getFoodIntelligence(
     household,
     discovery,
     nutritionEnhancement,
+    preparations,
     trust: { isCanonical: true, populatedSections },
     metadata: { assembledAt: now.toISOString(), sources },
   };

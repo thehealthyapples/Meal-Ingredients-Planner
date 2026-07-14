@@ -70,7 +70,8 @@ export type IntelligenceChipKind =
   | "seasonal"
   | "discovery"
   | "household"
-  | "planner";
+  | "planner"
+  | "preparation";
 
 /** Tailwind classes for each chip kind. */
 export const chipKindStyles: Record<IntelligenceChipKind, string> = {
@@ -92,6 +93,11 @@ export const chipKindStyles: Record<IntelligenceChipKind, string> = {
   // Planner — calm teal.
   planner:
     "bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950/40 dark:text-teal-400 dark:border-teal-800/60",
+  // Preparation (SURF1A) — quiet stone. Deliberately the calmest tint in the
+  // palette: how a food is prepared is a practical fact, not a health claim, and
+  // it must never borrow the visual authority of the benefit or nutrient chips.
+  preparation:
+    "bg-stone-50 text-stone-700 border-stone-200 dark:bg-stone-900/50 dark:text-stone-300 dark:border-stone-700/60",
 };
 
 /** Base chip shape, shared by every kind. */

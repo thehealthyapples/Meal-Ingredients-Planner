@@ -35,6 +35,16 @@ export { SimplyBetterChoiceCard } from "./SimplyBetterChoiceCard";
 // WX5 — Connected Food Panel (Food Page relationship web).
 export { ConnectedFoodPanel } from "./ConnectedFoodPanel";
 
+// SURF1A — the ONE client owner of preparation knowledge's presentation. Every
+// surface that shows a preparation renders it through this, so WS5A's three-state
+// trust rule ("we know it doesn't matter" ≠ "nobody knows yet") is turned into
+// pixels in exactly one place.
+export {
+  FoodPreparationList,
+  type FoodPreparation,
+  type PreparationSourceRef,
+} from "./FoodPreparationList";
+
 // PHASE5C — the ONE ambient surface. Every page that surfaces the Decision
 // Engine's opportunity bundle mounts this and nothing else. It supersedes
 // FoodOpportunitiesPanel (deleted in the same change — UI Principle 5, retire on

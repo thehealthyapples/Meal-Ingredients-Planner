@@ -156,7 +156,7 @@ self-describing record, currency *is* the evidence standard, and it needs a name
 
 | Concern | Fact | Count | As at |
 |---|---|---|---|
-| Theme / colour mode | `dark:` utilities authored across the client | 842 | 2026-07-13 |
+| Theme / colour mode | `dark:` utilities authored across the client | 848 | 2026-07-14 |
 | Undo | `<ToastAction>` usages (the mechanism exists) | 1 | 2026-07-13 |
 
 ## 5. Outstanding migrations — deferred, owned, not hidden

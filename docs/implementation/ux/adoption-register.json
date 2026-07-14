@@ -670,8 +670,8 @@
         {
           "what": "`dark:` utilities authored across the client",
           "pattern": "\\bdark:",
-          "asAt": 842,
-          "asAtDate": "2026-07-13"
+          "asAt": 848,
+          "asAtDate": "2026-07-14"
         }
       ],
       "openMigration": {

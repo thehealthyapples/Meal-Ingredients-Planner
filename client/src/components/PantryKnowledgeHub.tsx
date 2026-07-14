@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HEALTH_DISCLAIMER } from "@/lib/health-benefits-model";
 import { semanticSurface, semanticText } from "@/components/intelligence/intelligence-tokens";
+import { FoodPreparationList, type FoodPreparation } from "@/components/intelligence";
 
 /**
  * WS2 — Pantry Explore V2.
@@ -19,7 +20,8 @@ import { semanticSurface, semanticText } from "@/components/intelligence/intelli
  *
  * Structure:
  *   Home → Search / Recent / This Season / Discover / Your Household / Explore Topics
- *   Food Page → Hero / Benefits / Nutrients / Varieties / Discover / Alternatives / Stories / Seasonal
+ *   Food Page → Hero / Also known as / Benefits / Nutrients / Varieties /
+ *               How it's prepared / Storing it / Discover / Alternatives / Stories / Seasonal
  *
  * Trust rules (enforced, not aspirational):
  *   • No scores, rankings, grades, percentages anywhere.
@@ -44,6 +46,11 @@ interface FoodDetail {
   };
   benefits: BenefitChip[];
   nutrients: NutrientChip[];
+  // SURF1A: the server has always sent this (`FoodDetailView.preparations`). This
+  // type omitted it, so react-query parsed the field away and every one of the 420
+  // published food→preparation links was discarded before a component could see it.
+  // The gap was never the data; it was this line not existing.
+  preparations: FoodPreparation[];
 }
 interface NutrientDetail { nutrient: { slug: string; name: string; description: string | null; category: string | null }; foods: FoodCard[]; benefits: BenefitChip[]; }
 interface BenefitDetail { benefit: { slug: string; name: string; description: string | null; icon: string | null }; foods: FoodCard[]; }
@@ -657,7 +664,7 @@ function FoodDetailView({
   if (isLoading) return <DetailShell onBack={onBack} onHome={onHome} title="Loading…"><HubLoading /></DetailShell>;
   if (!data) return <DetailShell onBack={onBack} onHome={onHome} title="Not found"><EmptyState variant="unavailable" size="compact" icon={Sparkles} title="This food isn't in the library." /></DetailShell>;
 
-  const { food, benefits, nutrients } = data;
+  const { food, benefits, nutrients, preparations } = data;
 
   // Seasonal chip: is this food in season right now?
   const seasonalHabitsBlock = seasonalData?.blocks.find(b => b.type === "seasonal_habits");
@@ -683,6 +690,16 @@ function FoodDetailView({
 
       {/* Description */}
       {food.description && <p className="text-sm text-foreground/75 leading-relaxed mb-4">{food.description}</p>}
+
+      {/* 1b. Also known as (SURF1A) — 801 published aliases, previously served and
+          never rendered. Prose, not chips: these are names for the same thing, and
+          a household reads them as a sentence, not as a set of things to tap. */}
+      {food.aliases.length > 0 && (
+        <p className="text-xs text-muted-foreground/65 leading-relaxed mb-4" data-testid="food-aliases">
+          <span className="text-muted-foreground/50">Also known as </span>
+          {food.aliases.join(", ")}
+        </p>
+      )}
 
       {/* 2. Benefits */}
       {benefits.length > 0 && (
@@ -720,6 +737,25 @@ function FoodDetailView({
               <span key={v} className={PILL_MUTED}>{v}</span>
             ))}
           </div>
+        </FoodSection>
+      )}
+
+      {/* 4b. How it's prepared (SURF1A) — the field this component's own type used
+          to drop. Rendered through the one preparation owner, which holds down the
+          rule that "no-change" and "unreviewed" never look alike. */}
+      {preparations.length > 0 && (
+        <FoodSection title="How it's prepared">
+          <FoodPreparationList preparations={preparations} />
+        </FoodSection>
+      )}
+
+      {/* 4c. Storing it (SURF1A) — served on the wire and present in this file's own
+          type since PUB1; simply never referenced in JSX until now. */}
+      {food.storageGuidance && (
+        <FoodSection title="Storing it">
+          <p className="text-sm text-foreground/75 leading-relaxed" data-testid="food-storage-guidance">
+            {food.storageGuidance}
+          </p>
         </FoodSection>
       )}
 
