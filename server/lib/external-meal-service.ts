@@ -2,6 +2,7 @@ import * as cheerio from "cheerio";
 import { scrapeRecipeFromUrl } from "./recipe-scraper";
 import { getPolicyForSourceLabel, mayFetchSourceContent } from "@shared/recipe-acquisition";
 import { isSourceCallable } from "./recipe-source-gate";
+import { shouldExcludeRecipe } from "@shared/dietRules";
 
 export interface ExternalMealCandidate {
   externalId: string;
@@ -38,9 +39,27 @@ const DIET_INDICATORS: Record<string, string[]> = {
   paleo: ["paleo", "primal"],
 };
 
-const MEAT_KEYWORDS = ["chicken", "beef", "pork", "lamb", "turkey", "duck", "bacon", "steak", "ham", "mince", "sausage", "veal", "venison"];
-const FISH_KEYWORDS = ["fish", "salmon", "tuna", "cod", "prawn", "shrimp", "crab", "lobster", "mussel", "squid", "haddock", "mackerel", "trout", "sardine"];
-const DAIRY_KEYWORDS = ["milk", "cheese", "cream", "butter", "yogurt", "yoghurt", "cheddar", "mozzarella", "parmesan"];
+// ── Where "is this meat?" is answered (SURF1B5) ──────────────────────────────
+// Not here. Until SURF1B5 this file held MEAT_KEYWORDS, FISH_KEYWORDS and
+// DAIRY_KEYWORDS of its own, and `detectDietTypes()` used them to decide whether an
+// imported recipe was vegan or vegetarian. They were the last of the rival animal-food
+// lists SURF1B4 retired from `dietRules` — it named them a survivor and let them live
+// because "a label is a claim, not a gate".
+//
+// That was true only for as long as nothing treated a label as a gate. Starter meals
+// did (SURF1B5). And the lists were as incomplete as the ones SURF1B4 deleted: they
+// knew `chicken` but not `prosciutto`, `pancetta`, `gammon`, `mutton`, `gelatine`,
+// `bone broth` or `foie gras`, and nothing about eggs or honey. An imported prosciutto
+// pizza would have been labelled BOTH vegetarian and vegan.
+//
+// So the labeller now asks the canonical restriction library the same question the meal
+// gate asks it, through the same door (`dietRules.shouldExcludeRecipe`). A label THA
+// prints and a meal THA serves cannot disagree about what meat is, because there is
+// only one answer to disagree with.
+//
+// This does NOT make the label a safety gate. It makes it an honest claim. Every gate
+// still runs `isMealSafeForHousehold()` over the meal itself, and none of them asks
+// this label anything.
 
 const UPF_INDICATOR_KEYWORDS = ["processed", "instant", "packet", "mix", "ready-made", "pre-made", "artificial", "hydrogenated", "modified starch", "high-fructose"];
 
@@ -69,24 +88,44 @@ function detectPrimaryProtein(ingredients: string[]): string | null {
   return null;
 }
 
-function detectDietTypes(name: string, ingredients: string[]): string[] {
-  const diets: string[] = [];
+/**
+ * The diet labels an imported recipe carries into THA.
+ *
+ * Exported so SURF1B5 can pin the one property that matters: a label THA prints can
+ * never contradict the gate THA serves through.
+ */
+export function detectDietTypes(name: string, ingredients: string[]): string[] {
   const allText = [name, ...ingredients].join(" ").toLowerCase();
 
+  // What the source CLAIMS — "vegan", "meat-free", "gluten-free" in its own words.
+  const claimed: string[] = [];
   for (const [diet, indicators] of Object.entries(DIET_INDICATORS)) {
     if (indicators.some(ind => allText.includes(ind))) {
-      diets.push(diet);
+      claimed.push(diet);
     }
   }
 
-  const hasMeat = MEAT_KEYWORDS.some(kw => allText.includes(kw));
-  const hasFish = FISH_KEYWORDS.some(kw => allText.includes(kw));
-  const hasDairy = DAIRY_KEYWORDS.some(kw => allText.includes(kw));
+  // What the canonical library SAYS. Fields, never a joined blob: `excludedCompounds`
+  // ("vegan sausage", "oat milk", "quorn") are whole-item markers, and flattening the
+  // recipe first would let a jar of quorn vouch for the beef stock beside it.
+  const fields = { name, ingredients };
+  const veganClean = !shouldExcludeRecipe(fields, { dietPattern: "Vegan", dietRestrictions: [] });
+  const vegetarianClean = !shouldExcludeRecipe(fields, { dietPattern: "Vegetarian", dietRestrictions: [] });
 
-  if (!hasMeat && !hasFish && !diets.includes("vegetarian")) {
-    if (!hasDairy) {
-      diets.push("vegan");
-    }
+  // 1. A claim must survive the canonical answer. A recipe titled "vegan carbonara"
+  //    that lists pancetta is not vegan, whatever its author called it — and an import
+  //    is exactly where a wrong claim enters THA.
+  const diets = claimed.filter(diet => {
+    if (diet === "vegan") return veganClean;
+    if (diet === "vegetarian") return vegetarianClean;
+    return true;
+  });
+
+  // 2. Where the source claims nothing, the library decides — on the same evidence the
+  //    meal gate would use. Shape preserved from the pre-SURF1B5 rule: an already-claimed
+  //    vegetarian is not silently promoted to vegan.
+  if (!diets.includes("vegetarian") && vegetarianClean) {
+    if (veganClean) diets.push("vegan");
     diets.push("vegetarian");
   }
 
