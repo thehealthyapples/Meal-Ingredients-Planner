@@ -40,7 +40,7 @@
  *   3  PLANT SUBSTITUTES — vegan sausages, oat milk, quorn, flax egg all survive
  *   4  ONE OWNER — no second classifier, no keyword list, no label authored by a seed
  *   5  THE GATE IS UNCHANGED — labels moved; safety behaviour did not
- *  5b  KNOWN GATE DEFECT — "aspARAGUs" contains "ragu"; found here, deliberately NOT fixed here
+ *  5b  GATE DEFECT — "aspARAGUs" contains "ragu": found by SURF1C1, fixed by SURF1C2 (guards the fix)
  *   6  LIVE DATA — the real cookbook: every label proven, every slot filled
  *
  * Run with: npm run test:surf1c1-starter-cookbook-diet-classification
@@ -379,53 +379,38 @@ function sec5_labelPathAndGate(): void {
   note('SURF1C1 adds no gate, removes no gate, and changes no gate. It changes what THA can HONESTLY SAY about a meal.');
 }
 
-// ─── 5b. A defect SURF1C1 FOUND and must not fix ──────────────────────────────
+// ─── 5b. A defect SURF1C1 FOUND, and SURF1C2 FIXED ────────────────────────────
 
-function sec5b_knownGateDefect(): void {
-  section('5b  KNOWN GATE DEFECT — "aspARAGUs" contains "ragu", and the library calls it meat');
+function sec5b_gateDefectNowFixed(): void {
+  section('5b  GATE DEFECT — "aspARAGUs" contains "ragu": found by SURF1C1, fixed by SURF1C2');
 
-  // Found by this workstream, and NOT fixed by it. `ragu` is a hidden meat ingredient, and
-  // the canonical resolver matches hidden/derived terms by FORWARD SUBSTRING (deliberately —
-  // it is what makes "sardine" match "sardines" and "yoghurt" match "natural yoghurt").
-  // So "ragu" matches inside "asparagus", and the canonical library answers: this is meat.
+  // SURF1C1 found this and deliberately did NOT fix it: `ragu` is a hidden meat term, and
+  // the resolver matched hidden/derived terms by raw forward substring, so "ragu" matched
+  // inside "asparagus" and the canonical library called asparagus meat. It refused every
+  // asparagus meal to every vegetarian, vegan and meat-restricted household — a fail-CLOSED
+  // defect, and it cost 52 founding recipes the labels their ingredients earn.
   //
-  // Consequences, both live and both PRE-EXISTING:
-  //   · the GATE refuses every asparagus meal to every vegetarian, vegan and meat-restricted
-  //     household — a fail-CLOSED defect, which is why four prior safety workstreams hunting
-  //     fail-OPENs never saw it. It costs households food; it does not endanger them.
-  //   · 52 of the 500 founding recipes are therefore classified as NOT vegetarian, and stay
-  //     UNLABELLED — under-labelled, never mislabelled.
-  //
-  // SURF1C1 does not fix it, and the reason is not timidity. The obvious fix — word-boundary
-  // matching for derived/hidden terms — would BREAK "sardines", "prawns", "eggs" and every
-  // other plural, opening real fail-opens in a major-allergen path. That is a safety-gate
-  // change with its own regression budget, and this mandate explicitly excludes it.
-  //
-  // What SURF1C1 does instead is DEFER to the canonical owner even where it suspects it is
-  // wrong — because a classifier that second-guesses the library is a second owner of the
-  // fact, and that is the defect this whole SURF1 line exists to remove.
-  //
-  // This test PINS the defect. It fails the day someone fixes it — and that is the point:
-  // whoever fixes it is told, by name, that 52 founding recipes are now eligible for labels
-  // they never had, and must re-run `npm run seed:cookbook` to publish them.
-  const asparagus = shouldExcludeRecipe(
+  // SURF1C1 PINNED it here with an assertion designed to fail the day it was fixed. SURF1C2
+  // fixed it — the resolver now matches derived/hidden terms only at a WORD BOUNDARY, so
+  // "sardine" still matches "sardines" and "cheese" still matches "cheesecake", but "ragu"
+  // no longer matches inside "asparagus". These assertions now guard that the fix STAYS.
+  const asparagusExcluded = shouldExcludeRecipe(
     { name: 'x', ingredients: ['asparagus'] },
     { dietPattern: 'Vegetarian', dietRestrictions: [] },
   );
   assert(
-    asparagus === true,
-    'DEFECT PINNED: the canonical library still refuses asparagus to a vegetarian ("ragu" ⊂ "asparagus"). ' +
-      'If this now FAILS, the gate has been fixed — re-run `npm run seed:cookbook` to label the 52 recipes it frees.',
+    asparagusExcluded === false,
+    'asparagus is no longer refused to a vegetarian — the SURF1C2 boundary fix holds ("ragu" ⊄ "asparagus")',
   );
 
-  // The direction of the resulting error is the one that is safe to be wrong in.
+  // And an all-plant asparagus recipe is now labelled, where SURF1C1 left it silent.
   const hash = classifyDietLabels({ name: 'Asparagus hash', ingredients: ['asparagus', 'potato', 'olive oil'] });
   assert(
-    hash.labels.length === 0,
-    'an asparagus recipe is left UNLABELLED, never mislabelled — the error runs toward silence, not toward a false claim',
+    hash.labels.includes('vegan') && hash.labels.includes('vegetarian'),
+    'an all-plant asparagus recipe is now labelled vegan AND vegetarian — the 52 recipes SURF1C2 freed',
     `got [${hash.labels.join(', ')}]`,
   );
-  note('SURF1C1 found this. SURF1C1 does not fix it. It is the top remaining gap in the report.');
+  note('SURF1C1 found this and pinned it; SURF1C2 fixed the matcher and republished. This section now guards the fix.');
 }
 
 // ─── 6. Live data ─────────────────────────────────────────────────────────────
@@ -562,7 +547,7 @@ async function main(): Promise<void> {
   sec3_plantSubstitutes();
   sec4_oneOwner();
   sec5_labelPathAndGate();
-  sec5b_knownGateDefect();
+  sec5b_gateDefectNowFixed();
   await sec6_liveData();
 
   console.log(`\n${'═'.repeat(70)}`);

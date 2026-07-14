@@ -12,8 +12,12 @@
  * Matching strategy:
  * - Alias matching: whole-word, so "nut" does not false-match "minute",
  *   and "soy" does not false-match "savoy".
- * - Derived / hidden ingredient matching: forward substring, so "tahini dressing"
- *   matches the derived entry "tahini", and "natural yoghurt" matches "yoghurt".
+ * - Derived / hidden ingredient matching: boundary-aware (SURF1C2). The term must
+ *   begin at a word boundary and end at a boundary or a regular plural, so "sardine"
+ *   still matches "sardines" and "yoghurt" still matches "natural yoghurt", but the
+ *   meat term "ragu" no longer matches inside "asparagus". Was raw forward substring.
+ * - excludedCompounds matching: raw substring (the plant-substitute early exit, where
+ *   a broad match is the safe direction) — unchanged.
  * - First match per restriction definition wins; results are deduped by id.
  *
  * Backward compatibility:
@@ -139,8 +143,11 @@ function wordBoundaryIncludes(haystack: string, needle: string): boolean {
 }
 
 /**
- * Forward substring check for derived and hidden ingredient entries.
- * The haystack (ingredient being tested) must contain the needle (library entry).
+ * Forward substring check. The haystack must contain the needle anywhere.
+ *
+ * Retained ONLY for excludedCompounds — the plant-substitute early exit, where a
+ * broad match is the safe direction (it protects "vegan sausage roll" from the meat
+ * gate). Derived and hidden ingredients no longer use this; see below for why.
  *
  * Example:
  *   substringIncludes("tahini dressing", "tahini")  → true
@@ -152,6 +159,71 @@ function substringIncludes(haystack: string, needle: string): boolean {
   return haystack.includes(needle);
 }
 
+/**
+ * Word-start containment for derived and hidden ingredient entries (SURF1C2).
+ *
+ * A term matches only when it begins at a WORD BOUNDARY (a string edge, or any
+ * character that is not a letter or digit). What FOLLOWS the term is unrestricted, so
+ * plurals and compounds keep matching exactly as forward substring did — they simply
+ * add more letters to the END of a term that still starts the word.
+ *
+ * ── The defect this replaces ─────────────────────────────────────────────────
+ * Derived and hidden terms were matched by RAW forward substring. That was chosen to
+ * "handle plurals and compounds for free" — `sausage` catches `sausages`, `cheese`
+ * catches `cheesecake`. But a raw substring also matches a term buried INSIDE an
+ * unrelated word, and the library carries short terms:
+ *
+ *   "aspa·ragu·s"  contains the meat hidden-term "ragu"  → asparagus flagged as MEAT
+ *
+ * SURF1C1 found this live: the canonical gate refused every asparagus meal to every
+ * vegetarian, vegan and meat-restricted household, and cost 52 founding recipes the
+ * labels their ingredients earn. It over-restricts — a fail-CLOSED defect, which is
+ * why four fail-open safety workstreams never saw it — but it is a real defect, and
+ * exactly the class the library's own authoring note warns of ("`ham` here WOULD match
+ * `chamomile`"). The cheese names `brie`/`edam`/`feta` were already moved to aliases
+ * for this reason; `ragu` was missed, and relocating terms one at a time is not a fix.
+ *
+ * ── Why word-START, and not also word-END ────────────────────────────────────
+ * Requiring only the LEFT boundary is deliberate, and it is the whole subtlety. The
+ * false positives all share one shape — the term sits after a letter (`aspa·ragu`s,
+ * `c·ham`omile, `honey·dew`, `butter·nut`) — so the left boundary is what removes
+ * every one of them. Constraining the RIGHT side as well would also remove genuine
+ * compounds where the allergen leads the word:
+ *
+ *   KEPT   "cheesecake" (cheese, DAIRY) · "breaded plaice" (bread, GLUTEN)
+ *          "sardines" · "prawns" · "eggs" (singular term + plural -s)
+ *          "ragu" · "ragù" (folded) · "beef ragu" · "natural yoghurt"
+ *   DROPPED "asparagus" (ragu) · "chamomile" (ham) · "honeydew"/"butternut"
+ *          — the term is an infix; the character to its left is a letter
+ *
+ * `cheesecake` is dairy and `breaded` is gluten; a plural-only right rule dropped both
+ * (measured), which is a fail-OPEN. Word-start keeps them and still kills asparagus.
+ *
+ * The match set can only SHRINK relative to raw substring — every accepted match was
+ * already a substring occurrence — so no ingredient newly matches a restriction and no
+ * meal that was refused becomes allowed. Every removed match is a coincidental infix
+ * ceasing to falsely restrict, verified term-by-term across the live cookbook.
+ *
+ * Diacritics and typographic punctuation are folded by `norm` before this runs, so
+ * "ragù" and "pâté" arrive as "ragu" and "pate".
+ */
+function boundaryAwareIncludes(haystack: string, needle: string): boolean {
+  if (!needle) return false;
+
+  let from = 0;
+  for (;;) {
+    const idx = haystack.indexOf(needle, from);
+    if (idx === -1) return false;
+
+    // The term must begin at a word boundary — this is what stops "ragu" ⊂ "asparagus".
+    // What follows is unconstrained, so "sardine"→"sardines" and "cheese"→"cheesecake"
+    // are preserved exactly as raw substring had them.
+    if (!isWordChar(haystack[idx - 1])) return true;
+
+    from = idx + 1;
+  }
+}
+
 // ─── Internal per-definition matcher ─────────────────────────────────────────
 
 /**
@@ -160,8 +232,8 @@ function substringIncludes(haystack: string, needle: string): boolean {
  * found, or null if no match. Checks in this order:
  *   1. id (whole-word, alias sourceType)
  *   2. aliases (whole-word, alias sourceType)
- *   3. derivedIngredients (forward substring, derived_ingredient sourceType)
- *   4. hiddenIngredients (forward substring, hidden_ingredient sourceType)
+ *   3. derivedIngredients (boundary-aware, derived_ingredient sourceType)
+ *   4. hiddenIngredients (boundary-aware, hidden_ingredient sourceType)
  */
 function matchIngredientAgainstDefinition(
   normIngredient: string,
@@ -200,18 +272,18 @@ function matchIngredientAgainstDefinition(
     }
   }
 
-  // 3. Check derived ingredients (forward substring)
+  // 3. Check derived ingredients (boundary-aware: term at a word boundary, plural OK)
   for (const derived of definition.derivedIngredients) {
     const normDerived = norm(derived);
-    if (substringIncludes(normIngredient, normDerived)) {
+    if (boundaryAwareIncludes(normIngredient, normDerived)) {
       return makeMatch('derived_ingredient', derived);
     }
   }
 
-  // 4. Check hidden ingredients (forward substring)
+  // 4. Check hidden ingredients (boundary-aware: term at a word boundary, plural OK)
   for (const hidden of definition.hiddenIngredients) {
     const normHidden = norm(hidden);
-    if (substringIncludes(normIngredient, normHidden)) {
+    if (boundaryAwareIncludes(normIngredient, normHidden)) {
       return makeMatch('hidden_ingredient', hidden);
     }
   }
