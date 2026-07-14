@@ -37,9 +37,28 @@ import type {
  * Normalise a restriction or ingredient term for case-insensitive comparison.
  * Replaces hyphens and underscores with spaces so "gluten-free", "gluten_free",
  * and "gluten free" all resolve to the same normalised form.
+ *
+ * Diacritics are folded (SURF1B4), so "pâté" matches the `pate` alias, "ragù"
+ * matches `ragu`, and "crème fraîche" matches the `creme fraiche` derived entry.
+ * Both sides of every comparison pass through here, so no accent-stripped
+ * duplicate needs to exist in the library. This is the same normalisation
+ * `dietRules` has always applied to its own text; the canonical library did not,
+ * and every accented ingredient string was silently missed.
  */
 function norm(s: string): string {
-  return s.toLowerCase().trim().replace(/[-_]/g, ' ').replace(/\s+/g, ' ');
+  return s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    // Typographic punctuation → its ASCII form. A recipe title written in a word
+    // processor says "Goat’s Cheese" with U+2019, and the library says "goat's
+    // cheese" with U+0027. Without this the excludedCompound does not match, the
+    // `goat` alias does, and a household avoiding meat is refused a cheese salad.
+    .replace(/[‘’‚‛′]/g, "'")
+    .replace(/[“”„‟″]/g, '"')
+    .trim()
+    .replace(/[-_]/g, ' ')
+    .replace(/\s+/g, ' ');
 }
 
 // ─── Legacy expansion map ─────────────────────────────────────────────────────
@@ -75,23 +94,48 @@ function isLegacyExpansion(normTerm: string): boolean {
  * Whole-word check: returns true only when `needle` appears at a word boundary
  * within `haystack`. Prevents "nut" matching "minute", and "soy" matching "savoy".
  *
- * Word boundaries are space characters and string edges.
+ * A word boundary is a string edge or any character that is not a letter or a
+ * digit — punctuation included (SURF1B4). Before SURF1B4 only a literal space
+ * counted, which meant the most common ingredient string in any recipe on earth
+ * was invisible to the alias matcher:
+ *
+ *   "2 eggs, beaten"   → "eggs" is followed by a comma → NOT a match  (fail-OPEN)
+ *   "beef, diced"      → "beef" is followed by a comma → NOT a match  (fail-OPEN)
+ *
+ * Every alias in the library is short by design (`beef`, `ham`, `lamb`, `cod`,
+ * `egg`, `milk`) precisely because whole-word matching is supposed to make short
+ * words safe. Punctuation-blindness quietly took that guarantee away. The
+ * boundary is now the same one `dietRules`' `\b` regex has always used, which is
+ * why the pattern path can delegate here without losing a single match.
+ *
+ * Only aliases are matched this way. Derived, hidden and excluded-compound terms
+ * are forward substrings and are unaffected.
+ *
  * Example:
  *   wordBoundaryIncludes("peanut butter", "peanut")  → true
+ *   wordBoundaryIncludes("2 eggs, beaten", "eggs")   → true   (was false)
  *   wordBoundaryIncludes("minute rice",   "nut")     → false
  *   wordBoundaryIncludes("savoy cabbage", "soy")     → false
- *   wordBoundaryIncludes("nut butter",    "nut")     → true
+ *   wordBoundaryIncludes("chamomile tea", "ham")     → false
  */
+function isWordChar(ch: string | undefined): boolean {
+  return ch !== undefined && /[a-z0-9]/.test(ch);
+}
+
 function wordBoundaryIncludes(haystack: string, needle: string): boolean {
   if (!needle) return false;
-  const idx = haystack.indexOf(needle);
-  if (idx === -1) return false;
 
-  const beforeOk = idx === 0 || haystack[idx - 1] === ' ';
-  const afterIdx = idx + needle.length;
-  const afterOk = afterIdx === haystack.length || haystack[afterIdx] === ' ';
+  let from = 0;
+  for (;;) {
+    const idx = haystack.indexOf(needle, from);
+    if (idx === -1) return false;
 
-  return beforeOk && afterOk;
+    const beforeOk = !isWordChar(haystack[idx - 1]);
+    const afterOk = !isWordChar(haystack[idx + needle.length]);
+    if (beforeOk && afterOk) return true;
+
+    from = idx + 1;
+  }
 }
 
 /**

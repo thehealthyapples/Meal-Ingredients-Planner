@@ -153,11 +153,23 @@ assert(
 
 assert(
   !candidateDietExcluded(
-    candidate('Mushroom Risotto', ['arborio rice', 'mushrooms', 'parmesan', 'white wine', 'butter']),
+    candidate('Mushroom Risotto', ['arborio rice', 'mushrooms', 'white wine', 'butter']),
     'Vegetarian',
     [],
   ),
   'Vegetarian: Mushroom Risotto with no meat passes dietRules',
+);
+
+// SURF1B4 — parmesan is made with animal rennet. The canonical `meat` definition has
+// said so since SURF1B2, and the Vegetarian pattern now resolves through it rather
+// than through a private meat list that had never heard of rennet.
+assert(
+  candidateDietExcluded(
+    candidate('Mushroom Risotto', ['arborio rice', 'mushrooms', 'parmesan', 'butter']),
+    'Vegetarian',
+    [],
+  ),
+  'Vegetarian: parmesan (animal rennet) IS excluded — pattern and restriction now agree',
 );
 
 // ─── Test 4: Candidate with ingredients violating Dairy-Free is excluded ──────

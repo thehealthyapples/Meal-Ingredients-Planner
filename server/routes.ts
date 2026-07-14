@@ -2334,17 +2334,19 @@ export async function registerRoutes(
         const ctx = { dietPattern: effectiveDietPattern, dietRestrictions: effectiveDietRestrictions };
 
         const scored = interleaved.map(recipe => {
-          const text = [
-            recipe.name,
-            recipe.category || '',
-            recipe.cuisine || '',
-            ...(recipe.ingredients || []),
-          ].join(' ').toLowerCase();
+          // Fields, not a joined blob (SURF1B4) — the canonical library's plant-based
+          // markers must stay scoped to the item that carries them.
+          const fields = {
+            name: recipe.name,
+            category: recipe.category,
+            cuisine: recipe.cuisine,
+            ingredients: recipe.ingredients,
+          };
 
           return {
             recipe,
-            excluded: shouldExcludeRecipe(text, ctx),
-            score: scoreRecipeForDiet(text, effectiveDietPattern),
+            excluded: shouldExcludeRecipe(fields, ctx),
+            score: scoreRecipeForDiet(fields, effectiveDietPattern),
           };
         });
 

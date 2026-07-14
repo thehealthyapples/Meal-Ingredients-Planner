@@ -7,6 +7,13 @@
  * mustard, shellfish, eggs, coconut — plus preserved gluten and dairy.
  * Phase 4 scope (SURF1B2): meat, fish, honey — the three values THA accepted and
  * stored as hard restrictions while this library defined nothing for them.
+ * Phase 5 scope (SURF1B4): no new definition. The Vegan and Vegetarian diet
+ * PATTERNS now resolve their hard exclusions here instead of from the private
+ * keyword lists `dietRules` used to hold, so this library became the single owner
+ * of "what is meat", "what is fish" and "what is dairy" for every gate in THA.
+ * Everything those retired lists knew and this one did not was folded in — the
+ * named cheeses (`dairy`) and the meat dish names (`meat`) — and everything they
+ * got wrong was left behind. A test asserts the superset in both directions.
  *
  * nut_free is no longer a canonical definition. Backward compatibility is
  * handled in the resolver via LEGACY_ALIAS_EXPANSIONS.
@@ -53,7 +60,7 @@
 
 import type { RestrictionDefinition } from './restriction-types.js';
 
-export const RESTRICTION_LIBRARY_VERSION = '4.0.0';
+export const RESTRICTION_LIBRARY_VERSION = '5.0.0';
 
 export const RESTRICTION_DEFINITIONS: RestrictionDefinition[] = [
 
@@ -130,6 +137,14 @@ export const RESTRICTION_DEFINITIONS: RestrictionDefinition[] = [
   // ── DAIRY ───────────────────────────────────────────────────────────────────
   //
   // Covers cow's milk protein allergy and lactose intolerance.
+  //
+  // Phase 5 (SURF1B4): the named cheeses were added. Until then this definition
+  // held `cheese` and nothing else, while `dietRules.DAIRY_KEYWORDS` — the second
+  // owner the Vegan pattern used — knew cheddar, mozzarella, feta, halloumi and
+  // paneer. A Dairy-Free household could be served a halloumi salad by the
+  // canonical path, because the canonical path had never been told what halloumi is.
+  // The pattern path now delegates here, so this definition must know every dairy
+  // food THA knows. A test asserts the superset.
   {
     id: 'dairy',
     displayName: 'Dairy',
@@ -145,6 +160,12 @@ export const RESTRICTION_DEFINITIONS: RestrictionDefinition[] = [
       'lactose free',
       'lactose-free',
       'lactose intolerant',
+      // Short cheese names — whole-word only. As derivedIngredients these would be
+      // substring-matched and "brie" would match "brief", "edam" would match
+      // "edamame", and "feta" would match nothing safely.
+      'brie',
+      'feta',
+      'edam',
     ],
     derivedIngredients: [
       'butter',
@@ -165,6 +186,30 @@ export const RESTRICTION_DEFINITIONS: RestrictionDefinition[] = [
       'condensed milk',
       'evaporated milk',
       'buttermilk',
+      // Named cheeses — distinctive words, safe as substrings, plurals free.
+      'cheddar',
+      'mozzarella',
+      'parmesan',
+      'parmigiano',
+      'pecorino',
+      'gorgonzola',
+      'camembert',
+      'ricotta',
+      'mascarpone',
+      'halloumi',
+      'paneer',
+      'stilton',
+      'gruyere',
+      'gouda',
+      'burrata',
+      'emmental',
+      'manchego',
+      'provolone',
+      'wensleydale',
+      // Other dairy products
+      'kefir',
+      'quark',
+      'skyr',
     ],
     hiddenIngredients: [
       'milk chocolate',
@@ -212,6 +257,64 @@ export const RESTRICTION_DEFINITIONS: RestrictionDefinition[] = [
       'almond cream',
       'cashew cream',
       'rice cream',
+
+      // ── Foods that merely SHARE A WORD with a dairy term (SURF1B4). Each of
+      //    these was a live FALSE exclusion: the substring "butter" is inside
+      //    "butternut squash", and a dairy-free household was refused a squash soup.
+      'butternut',        // butternut squash — a vegetable
+      'butter bean',      // a legume
+      'butter beans',
+      'butterbean',
+      'butterbeans',
+      'butterhead',       // a lettuce
+      'butterfly',        // "butterflied" chicken — a cut, not a dairy product
+      'peanut butter',    // nut and seed butters — no dairy in any of them
+      'almond butter',
+      'cashew butter',
+      'hazelnut butter',
+      'nut butter',
+      'seed butter',
+      'sunflower seed butter',
+      'pumpkin seed butter',
+      'coconut butter',
+      'cocoa butter',
+      'shea butter',
+      'apple butter',
+      'cream of tartar',  // a plant-derived acid salt
+
+      // ── Plant-based analogues. A dairy-free product must never be excluded from
+      //    a household avoiding dairy — that is the entire purpose of it.
+      'dairy free',
+      'dairy-free',
+      'non dairy',
+      'non-dairy',
+      'vegan cheese',
+      'vegan cheddar',
+      'vegan mozzarella',
+      'vegan parmesan',
+      'vegetarian parmesan',
+      'vegan feta',
+      'vegan brie',
+      'plant based cheese',
+      'plant-based cheese',
+      'cashew cheese',
+      'nut cheese',
+      'vegan butter',
+      'plant butter',
+      'vegan cream',
+      'vegan yoghurt',
+      'vegan yogurt',
+      'coconut yoghurt',
+      'coconut yogurt',
+      'soy yoghurt',
+      'soy yogurt',
+      'soya yoghurt',
+      'oat yoghurt',
+      'oat yogurt',
+      'almond yoghurt',
+      'almond yogurt',
+      'vegan ice cream',
+      'vegan custard',
     ],
   },
 
@@ -576,6 +679,28 @@ export const RESTRICTION_DEFINITIONS: RestrictionDefinition[] = [
       'egg wash',
       'meringue',
     ],
+    excludedCompounds: [
+      // Egg-free products and vegan binders (SURF1B4). Note "eggplant" is NOT here:
+      // the alias match is whole-word and cannot reach it, and an unnecessary
+      // excludedCompound is a fail-open path, not a free safety net.
+      'egg free',
+      'egg-free',
+      'eggless',
+      'vegan egg',
+      'egg substitute',
+      'egg replacer',
+      'egg replacement',
+      'flax egg',
+      'chia egg',
+      'vegan mayonnaise',
+      'vegan mayo',
+      'egg free mayonnaise',
+      'vegan meringue',
+      'vegan omelette',
+      'vegan frittata',
+      'vegan quiche',
+      'vegan aioli',
+    ],
   },
 
   // ── COCONUT ─────────────────────────────────────────────────────────────────
@@ -774,10 +899,13 @@ export const RESTRICTION_DEFINITIONS: RestrictionDefinition[] = [
   // an anaphylaxis risk. It is enforced exactly as hard as an allergen — the tier
   // describes what the restriction IS, not how strictly it binds.
   //
-  // NOTE — `shared/dietRules.ts` holds MEAT_KEYWORDS, which serves the Vegan and
-  // Vegetarian *patterns*. This definition must remain a SUPERSET of that list, and
-  // a test enforces it (test-surf1b2). See the workstream doc for why the two are
-  // pinned rather than merged.
+  // OWNERSHIP — this is now the ONLY definition of "what is meat" in THA. Until
+  // SURF1B4, `shared/dietRules.ts` held a rival MEAT_KEYWORDS list serving the Vegan
+  // and Vegetarian *patterns*, and it did not know `prosciutto`, `pancetta`,
+  // `gammon`, `mutton`, `gelatine`, `bone broth` or `foie gras` — so a vegan
+  // household could be recommended a prosciutto dish while a household declaring the
+  // `meat` restriction could not. That list is **deleted**, both patterns resolve
+  // here, and a test fails if a meat keyword ever reappears in `dietRules`.
   {
     id: 'meat',
     displayName: 'Meat',
@@ -880,6 +1008,18 @@ export const RESTRICTION_DEFINITIONS: RestrictionDefinition[] = [
       'pepsin',
       'carmine',
       'cochineal',
+      // Dish names that imply meat even when no ingredient list exists at all —
+      // the case of a title-only external candidate. Moved here from
+      // `dietRules.DISH_NAME_MEAT_OR_SEAFOOD` (SURF1B4), which was the second owner
+      // of this fact and reachable only from the Vegan and Vegetarian patterns.
+      // A household declaring the `meat` RESTRICTION was offered a carbonara.
+      // "ragu" catches "ragù" via the resolver's diacritic folding.
+      'carbonara',   // pancetta or bacon (and eggs, and parmesan)
+      'bolognese',   // beef and pork mince
+      'ragu',        // an Italian meat sauce
+      'birria',      // braised beef or goat
+      'ossobuco',    // braised veal shank
+      'osso buco',
     ],
     substitutions: [
       'tofu (check soy restriction)',
@@ -1007,6 +1147,19 @@ export const RESTRICTION_DEFINITIONS: RestrictionDefinition[] = [
       'vegan gelatin',
       'vegetarian gelatine',
       'vegan pastrami',
+
+      // Meat-free versions of the dish names above (SURF1B4). A lentil bolognese
+      // and a mushroom ragu are staples of the households this definition protects.
+      'vegan bolognese',
+      'vegetarian bolognese',
+      'lentil bolognese',
+      'mushroom bolognese',
+      'vegan ragu',
+      'vegetarian ragu',
+      'lentil ragu',
+      'mushroom ragu',
+      'vegan carbonara',
+      'vegetarian carbonara',
     ],
   },
 

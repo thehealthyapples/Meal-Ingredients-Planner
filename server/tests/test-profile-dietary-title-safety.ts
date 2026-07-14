@@ -204,13 +204,22 @@ assert(
 
 section('6 — Vegan: plant-based meals allowed');
 
-// "Vegan Bolognese" is conservatively excluded because the dish-name filter
-// cannot distinguish it from plain "Bolognese" by title alone. This is an
-// intentional conservative trade-off. The user can add it via My Meals with
-// full ingredient data to avoid the exclusion.
+// SURF1B4 — this assertion is INVERTED, and the inversion is the fix.
+//
+// "Vegan Bolognese" used to be excluded from vegans. The dish-name list this file
+// documents lived in `dietRules`, knew the word "bolognese", and had no way to say
+// "…unless it says vegan on the tin". The canonical restriction library does: the
+// dish names now live in the `meat` definition's hiddenIngredients, and
+// "vegan bolognese" is one of its excludedCompounds. A plain "Bolognese" is still
+// excluded by title alone — the conservative trade-off this file was written to
+// defend is preserved exactly where it is still needed.
 assert(
-  VEGAN(titleOnly('Vegan Bolognese')),
-  '"Vegan Bolognese" is conservatively excluded by title-only filter (dish-name implies meat; cannot distinguish from plain Bolognese without ingredients)',
+  !VEGAN(titleOnly('Vegan Bolognese')),
+  '"Vegan Bolognese" is served to a vegan — the title-only filter can now read the word "vegan"',
+);
+assert(
+  VEGAN(titleOnly('Bolognese')),
+  '"Bolognese" (no qualifier) is still excluded by title alone — the conservative trade-off, preserved',
 );
 
 assert(

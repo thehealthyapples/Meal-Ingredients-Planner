@@ -335,24 +335,27 @@ export function isMealSafeForHousehold(
     };
   }
 
-  // 2. The requester's diet pattern — the shared dietRules engine.
+  // 2. The requester's diet pattern — the shared dietRules engine, which since
+  //    SURF1B4 resolves Vegan and Vegetarian through the same canonical library as
+  //    step 1. The two steps now agree about what meat is; before, the restriction
+  //    knew prosciutto and the pattern did not.
   //    `dietRestrictions` is passed too so Gluten-Free / Dairy-Free keep their
   //    existing dietRules treatment in addition to the canonical library's.
-  const text = [
-    name,
-    meal.category ?? "",
-    meal.cuisine ?? "",
-    meal.description ?? "",
-    ...ingredients,
-  ]
-    .join(" ")
-    .toLowerCase();
-
+  //    Fields, not a joined blob — see `dietRules`' header.
   if (
-    shouldExcludeRecipe(text, {
-      dietPattern: ctx.requesterDietPattern,
-      dietRestrictions: ctx.hardRestrictions,
-    })
+    shouldExcludeRecipe(
+      {
+        name,
+        category: meal.category,
+        cuisine: meal.cuisine,
+        description: meal.description,
+        ingredients,
+      },
+      {
+        dietPattern: ctx.requesterDietPattern,
+        dietRestrictions: ctx.hardRestrictions,
+      },
+    )
   ) {
     return {
       safe: false,

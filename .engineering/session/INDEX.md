@@ -7,6 +7,7 @@ and abandoned).
 
 | Date (UTC) | Session ID | Final stage | Rollback ID | Run file |
 |---|---|---|---|---|
+| 2026-07-14 | `SURF1B4_Canonical_Diet_Pattern_Safety_Convergence` | Complete | `rollback/SURF1B4-canonical-diet-pattern-safety-convergence-20260714` | [runs/SURF1B4_Canonical_Diet_Pattern_Safety_Convergence.md](./runs/SURF1B4_Canonical_Diet_Pattern_Safety_Convergence.md) |
 | 2026-07-10 | `UIA1_UI_Architecture_Discovery` | Complete | `rollback/UIA1-ui-architecture-discovery-20260710` | [runs/UIA1_UI_Architecture_Discovery.md](./runs/UIA1_UI_Architecture_Discovery.md) |
 | 2026-07-10 | `EOM1_Engineering_Operating_Manual` | Complete | `rollback/EOM1-engineering-operating-manual-20260710` | [runs/EOM1_Engineering_Operating_Manual.md](./runs/EOM1_Engineering_Operating_Manual.md) |
 | 2026-07-10 | `ESR2_Engineering_Session_Recovery` | Complete | `rollback/ESR2-engineering-session-recovery-20260710` | [runs/ESR2_Engineering_Session_Recovery.md](./runs/ESR2_Engineering_Session_Recovery.md) |

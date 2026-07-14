@@ -47,8 +47,10 @@ import {
   findRestrictionById,
   listRestrictionIds,
 } from '../../shared/restrictions/restriction-resolver.js';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { RESTRICTION_LIBRARY_VERSION } from '../../shared/restrictions/restriction-library.js';
-import { MEAT_KEYWORDS, FISH_SEAFOOD_KEYWORDS } from '../../shared/dietRules.js';
+import { shouldExcludeRecipe } from '../../shared/dietRules.js';
 import {
   isMealSafeForHousehold,
   isSafetyGateActive,
@@ -357,39 +359,58 @@ async function run(): Promise<void> {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  section('5. ONE OWNER — the library must not diverge from dietRules');
-  // THA has two owners of "what is meat": dietRules' MEAT_KEYWORDS (which serves the
-  // Vegan/Vegetarian PATTERNS) and the canonical library's `meat` definition (which
-  // serves declared RESTRICTIONS). They are pinned rather than merged — see the doc.
-  // This gate makes the divergence impossible to introduce silently: every keyword
-  // the pattern engine knows, the restriction library must also know.
+  section('5. ONE OWNER — the second owner of "what is meat" is RETIRED');
+  // ── This section is INVERTED, and the inversion is the point of a pin. ──────
+  //
+  // SURF1B2 could not merge the two owners of "what is meat" — dietRules' private
+  // MEAT_KEYWORDS (serving the Vegan/Vegetarian PATTERNS) and the canonical `meat`
+  // definition (serving declared RESTRICTIONS) — because merging changes the gate for
+  // every vegan household and needed its own regression budget. So it PINNED them:
+  // the library had to remain a strict superset, and the divergence was recorded as
+  // the first thing to do next.
+  //
+  // SURF1B4 did it. The lists are DELETED and the patterns resolve here. These
+  // assertions now guard the merged state: they fail the day a meat keyword reappears
+  // in dietRules, which is the only way this defect could come back.
 
-  const meatMisses = MEAT_KEYWORDS.filter(kw => !conflicts(kw, ['meat']));
+  // Comments stripped before scanning. A check that cannot tell prose from a keyword
+  // list is not a check — the retired lists are NAMED in this file's own header, and a
+  // scan that trips on the sentence recording their retirement would be worthless.
+  const dietRulesSource = readFileSync(
+    join(process.cwd(), 'shared/dietRules.ts'),
+    'utf8',
+  )
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/.*$/gm, '');
+
   assert(
-    meatMisses.length === 0,
-    `the canonical "meat" definition is a SUPERSET of dietRules MEAT_KEYWORDS (${MEAT_KEYWORDS.length} terms)`,
-    meatMisses.length ? `library does not know: ${meatMisses.join(', ')}` : undefined,
+    !/MEAT_KEYWORDS|FISH_SEAFOOD_KEYWORDS|DISH_NAME_MEAT_OR_SEAFOOD/.test(dietRulesSource),
+    'dietRules holds NO meat or fish keyword list — the duplicate owner is deleted, not deprecated',
   );
 
-  // dietRules mixes fish and shellfish in one list; the library keeps them as the two
-  // separate allergens they are. The superset check is therefore against the UNION.
-  const fishMisses = FISH_SEAFOOD_KEYWORDS.filter(kw => !conflicts(kw, ['fish', 'shellfish']));
   assert(
-    fishMisses.length === 0,
-    `"fish" ∪ "shellfish" is a SUPERSET of dietRules FISH_SEAFOOD_KEYWORDS (${FISH_SEAFOOD_KEYWORDS.length} terms)`,
-    fishMisses.length ? `library does not know: ${fishMisses.join(', ')}` : undefined,
+    /VEGAN_RESTRICTION_IDS|VEGETARIAN_RESTRICTION_IDS/.test(dietRulesSource) &&
+      dietRulesSource.includes('restriction-resolver'),
+    'the Vegan and Vegetarian patterns resolve through the canonical restriction library',
   );
 
-  // The library is strictly RICHER — the pattern engine has holes the restriction path
-  // does not. Recorded here because it is the argument for eventually merging them.
-  const KNOWN_TO_LIBRARY_ONLY = ['prosciutto', 'pancetta', 'gammon', 'mutton', 'gelatine', 'bone broth', 'foie gras'];
-  const patternHoles = KNOWN_TO_LIBRARY_ONLY.filter(
-    kw => conflicts(kw, ['meat']) && !MEAT_KEYWORDS.some(m => kw.includes(m)),
-  );
-  assert(
-    patternHoles.length > 0,
-    `the canonical library knows meats dietRules does not (${patternHoles.join(', ')}) — the case for merging, recorded not acted on`,
-  );
+  // The seven meats the library knew and the pattern did not. Every one of them was
+  // servable to a vegan household at 194f7af2. Each is now refused by BOTH paths.
+  const ONCE_KNOWN_TO_THE_LIBRARY_ONLY = [
+    'prosciutto', 'pancetta', 'gammon', 'mutton', 'gelatine', 'bone broth', 'foie gras',
+  ];
+  for (const term of ONCE_KNOWN_TO_THE_LIBRARY_ONLY) {
+    const viaRestriction = conflicts(term, ['meat']);
+    const viaPattern = shouldExcludeRecipe(
+      { name: 'Dish', ingredients: [term] },
+      { dietPattern: 'Vegan', dietRestrictions: [] },
+    );
+    assert(
+      viaRestriction && viaPattern,
+      `"${term}" is refused by BOTH the meat restriction AND the Vegan pattern — the SURF1B2 divergence, closed`,
+      `restriction=${viaRestriction} pattern=${viaPattern}`,
+    );
+  }
 
   // ═══════════════════════════════════════════════════════════════════════════
   section('6. WRITE DOORS — THA may not store a restriction it cannot enforce');

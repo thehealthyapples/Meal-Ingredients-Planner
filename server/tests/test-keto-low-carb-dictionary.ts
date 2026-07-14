@@ -451,12 +451,18 @@ assert(
 
 section('J — Vegan and Vegetarian: existing behaviour unchanged');
 
+// SURF1B4: the Vegan and Vegetarian gates resolve through the canonical restriction
+// library, whose plant-based markers ("burger bun", "quorn", "vegan sausage") vouch
+// for the ITEM that carries them. They are passed the recipe's fields, exactly as
+// every production caller now does — flattening a recipe into one blob first would
+// let a burger bun vouch for the beef mince beside it. Keto and Low-Carb are
+// keyword-scanned over joined text as they always were, so `blob()` still serves them.
 function veganExcludes(name: string, ingredients: string[]): boolean {
-  return shouldExcludeRecipe(blob(name, ingredients), { dietPattern: 'Vegan', dietRestrictions: [] });
+  return shouldExcludeRecipe({ name, ingredients }, { dietPattern: 'Vegan', dietRestrictions: [] });
 }
 
 function vegExcludes(name: string, ingredients: string[]): boolean {
-  return shouldExcludeRecipe(blob(name, ingredients), { dietPattern: 'Vegetarian', dietRestrictions: [] });
+  return shouldExcludeRecipe({ name, ingredients }, { dietPattern: 'Vegetarian', dietRestrictions: [] });
 }
 
 // Vegan exclusions still fire
@@ -504,8 +510,22 @@ assert(
 );
 
 assert(
-  !vegExcludes('Mushroom Risotto', ['arborio rice', 'mushrooms', 'parmesan', 'white wine', 'butter']),
+  !vegExcludes('Mushroom Risotto', ['arborio rice', 'mushrooms', 'white wine', 'butter']),
   'Vegetarian: Mushroom risotto is still allowed',
+);
+
+// SURF1B4 — parmesan is made with animal rennet, and the canonical `meat` definition
+// has said so since SURF1B2. The Vegetarian pattern used to disagree with the `meat`
+// restriction about this, because it had its own meat list. It no longer has one, so
+// it no longer disagrees. A vegetarian parmesan is named as such and is permitted.
+assert(
+  vegExcludes('Mushroom Risotto', ['arborio rice', 'mushrooms', 'parmesan', 'butter']),
+  'Vegetarian: parmesan (animal rennet) IS excluded — the canonical position, now applied to the pattern',
+);
+
+assert(
+  !vegExcludes('Mushroom Risotto', ['arborio rice', 'mushrooms', 'vegetarian parmesan', 'butter']),
+  'Vegetarian: vegetarian parmesan is allowed — the escape hatch is on the packet',
 );
 
 // ─── Summary ──────────────────────────────────────────────────────────────────

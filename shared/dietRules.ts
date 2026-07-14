@@ -4,15 +4,74 @@
  * Reusable, side-effect-free helpers for diet-based recipe filtering and scoring.
  * Used by meal suggestion and recipe search routes (wired separately).
  *
- * All matching is case-insensitive and operates on a single pre-lowercased text
- * blob (recipe name + ingredients + description concatenated by the caller).
+ * ── Where the animal-food knowledge lives (SURF1B4) ──────────────────────────
+ * NOT here. The Vegan and Vegetarian hard exclusions are resolved by the canonical
+ * restriction library (`shared/restrictions/`), the governed owner of what meat,
+ * fish, shellfish, dairy, eggs and honey ARE.
+ *
+ * Until SURF1B4 this file held its own MEAT_KEYWORDS and FISH_SEAFOOD_KEYWORDS,
+ * written before the library existed. Two owners of one fact, and they had drifted:
+ * the library knew `prosciutto`, `pancetta`, `gammon`, `mutton`, `gelatine`,
+ * `bone broth` and `foie gras`; these lists did not. So a household whose diet
+ * PATTERN was Vegan could be recommended a prosciutto dish, while a household who
+ * declared the `meat` RESTRICTION could not — the same food, the same platform, two
+ * answers. Those lists are **deleted**, not deprecated (Principle 8), and a test
+ * scans this file and fails if a meat or fish keyword ever returns to it.
+ *
+ * What this file still owns, because the library does not and should not:
+ *   · the diet PATTERN vocabulary (Vegan, Keto, Paleo, …) and its canonical spelling
+ *   · the carbohydrate/grain/legume dictionaries of Keto, Low-Carb, Paleo, Carnivore
+ *   · preference SCORING (boosts and penalties) — never a gate
+ *   · the Gluten-Free and Dairy-Free restriction filters it has always applied
+ *
+ * ── Text versus items ────────────────────────────────────────────────────────
+ * `shouldExcludeRecipe` accepts either a recipe's FIELDS or a single string.
+ *
+ * Prefer the fields. The canonical library's `excludedCompounds` ("vegan sausage",
+ * "quorn", "meat-free") are whole-ITEM markers: they say *this thing is not meat*,
+ * and they must be evaluated against one item at a time. Flatten a recipe into one
+ * blob first and a jar of quorn in the cupboard vouches for the beef stock beside
+ * it. Passing fields keeps every item's marker scoped to that item.
+ *
+ * A plain string is treated as ONE item. That is exactly right for a dish name or a
+ * single food, and it is what the legacy callers pass.
  */
+
+import {
+  findRestrictionById,
+  resolveIngredientRestrictions,
+} from "./restrictions/restriction-resolver.js";
+import type { RestrictionDefinition } from "./restrictions/restriction-types.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface DietContext {
   dietPattern: string | null;
   dietRestrictions: string[];
+}
+
+/** A recipe's fields, each evaluated as its own item. Preferred over a blob. */
+export interface RecipeFields {
+  name?: string | null;
+  ingredients?: string[] | null;
+  category?: string | null;
+  cuisine?: string | null;
+  description?: string | null;
+}
+
+/** Either a recipe's fields, or a single string treated as one item. */
+export type DietCheckable = string | RecipeFields;
+
+/** The items a diet check runs over. A bare string is one item; fields are many. */
+function toItems(input: DietCheckable): string[] {
+  if (typeof input === "string") return input.trim() ? [input] : [];
+  return [
+    input.name ?? "",
+    input.category ?? "",
+    input.cuisine ?? "",
+    input.description ?? "",
+    ...(input.ingredients ?? []),
+  ].filter((s): s is string => typeof s === "string" && s.trim().length > 0);
 }
 
 // ─── Canonical diet-pattern vocabulary ───────────────────────────────────────
@@ -67,57 +126,68 @@ const DAIRY_KEYWORDS = [
   "double cream", "single cream", "clotted cream", "ice cream", "custard",
 ];
 
+// ─── Vegan / Vegetarian — the canonical delegation (SURF1B4) ─────────────────
+//
+// The patterns are declared as the canonical restrictions they mean. Not as food.
+// Every question of "is this meat?" is put to the library that owns the answer.
+//
+// Vegetarian excludes the flesh of animals. `meat` is the flesh of land animals and
+// their by-products (gelatine, lard, suet, rennet, bone broth, stocks); `fish` and
+// `shellfish` are, in law and in medicine, two separate things, and the library
+// keeps them separate — which is what lets a Pescatarian exist at all.
+const VEGETARIAN_RESTRICTION_IDS = ["meat", "fish", "shellfish"] as const;
+
+// Vegan additionally excludes every other animal-derived food THA already governs.
+// No new food knowledge is introduced here: each id names a definition that the
+// canonical library already published and every declared restriction already uses.
+const VEGAN_RESTRICTION_IDS = [
+  ...VEGETARIAN_RESTRICTION_IDS,
+  "dairy",
+  "eggs",
+  "honey",
+] as const;
+
 /**
- * The meat vocabulary of the Vegan and Vegetarian PATTERNS.
+ * Resolve pattern ids to canonical definitions, once, at module load.
  *
- * ── Exported for one reason, and it is not reuse ─────────────────────────────
- * THA has two owners of the fact "what is meat": this list, which serves the diet
- * patterns, and the `meat` definition in `shared/restrictions/restriction-library.ts`,
- * which serves declared restrictions (added by SURF1B2). Two owners of one fact is
- * a Principle 2 violation and, left unwatched, exactly the divergence that let
- * SURF1B's defects survive — one engine knowing something the other did not.
- *
- * These are exported so `test-surf1b2-dietary-restriction-knowledge.ts` can assert
- * the canonical library remains a strict SUPERSET of them. That test is the only
- * intended consumer. Do NOT import these to match food: use the canonical library.
- *
- * They are pinned rather than merged because merging changes the Vegan/Vegetarian
- * gate for every household, which is beyond SURF1B2's mandate. See the workstream
- * document for the full argument and the follow-up.
+ * Throws if an id has no definition. That is deliberate and it is fail-closed: a
+ * Vegan gate that silently drops `meat` because someone renamed a definition would
+ * serve beef to a vegan household and report success. The platform must not boot.
  */
-export const MEAT_KEYWORDS = [
-  "chicken", "beef", "pork", "lamb", "turkey", "duck", "veal", "venison",
-  "bacon", "ham", "salami", "chorizo", "pepperoni", "sausage", "sausages",
-  "mince", "meatball", "meatballs", "steak", "brisket", "rib", "ribs",
-  "lard", "suet", "rabbit", "pheasant", "partridge", "goose", "quail",
-];
+function definitionsFor(ids: readonly string[]): RestrictionDefinition[] {
+  return ids.map((id) => {
+    const definition = findRestrictionById(id);
+    if (!definition) {
+      throw new Error(
+        `[dietRules] The canonical restriction "${id}" has no definition. The Vegan ` +
+          `and Vegetarian hard exclusions resolve through the restriction library and ` +
+          `cannot be enforced without it. Refusing to start rather than fail open.`,
+      );
+    }
+    return definition;
+  });
+}
 
-/** See MEAT_KEYWORDS. Exported solely for the SURF1B2 divergence gate.
- *  Note this list mixes fish AND shellfish; the canonical library keeps them as
- *  the two separate allergens they are in law, so the superset check is against
- *  the UNION of the `fish` and `shellfish` definitions. */
-export const FISH_SEAFOOD_KEYWORDS = [
-  "fish", "seafood",
-  "salmon", "tuna", "cod", "haddock", "halibut", "sea bass", "trout",
-  "mackerel", "sardine", "sardines", "anchovy", "anchovies", "prawn", "prawns",
-  "shrimp", "lobster", "crab", "oyster", "oysters", "mussel", "mussels",
-  "clam", "clams", "scallop", "scallops", "squid", "octopus", "crayfish",
-  "langoustine", "langoustines", "monkfish", "tilapia", "pollock", "plaice",
-  "seabream", "sea bream", "smoked salmon", "caviar",
-];
+const VEGETARIAN_DEFINITIONS = definitionsFor(VEGETARIAN_RESTRICTION_IDS);
+const VEGAN_DEFINITIONS = definitionsFor(VEGAN_RESTRICTION_IDS);
 
-// Dish names that imply non-vegan or non-vegetarian content even when no
-// ingredient list is available (title-only external candidates). Applied as an
-// extra check under Vegan and Vegetarian so obvious non-compliant recipe names
-// are blocked before scoring rather than slipping through as ingredient-less
-// unknowns. "ragu" also catches "ragù" via diacritic normalisation.
-const DISH_NAME_MEAT_OR_SEAFOOD = [
-  "carbonara",  // implies bacon/pancetta + eggs + parmesan
-  "ragu",       // Italian meat sauce (normalisation catches ragù)
-  "bolognese",  // implies ground beef/pork
-  "birria",     // implies braised beef or goat
-  "ossobuco",   // implies braised veal shank
-];
+/**
+ * True when any item conflicts with any of the given canonical restrictions.
+ *
+ * Per ITEM, never over a joined blob — see the header. This function contains no
+ * food term, and it is the only path by which a diet pattern excludes an animal
+ * food. Aliases match whole-word, derived and hidden ingredients match as
+ * substrings, and a plant-based analogue ("vegan sausage", "oat milk", "quorn")
+ * exits its definition through `excludedCompounds` before any of that runs.
+ */
+function conflictsWithCanonical(
+  items: string[],
+  definitions: RestrictionDefinition[],
+): boolean {
+  return items.some(
+    (item) => resolveIngredientRestrictions(item, definitions).length > 0,
+  );
+}
 
 // ─── Keto / Low-Carb Exclusion Dictionary ────────────────────────────────────
 // Organised by food category. Both KETO_EXCLUDE and LOW_CARB_EXCLUDE are built
@@ -276,8 +346,10 @@ const FLEXITARIAN_PENALTY = [
 // via the word-boundary regex. These compound phrases are stripped from the text
 // before dairy keyword scanning so the residual "milk" does not false-positive.
 //
-// Scope: applied only when checking dairy compliance (Vegan case, Dairy-Free
-// restriction). Not applied to Paleo, where all milks (including coconut) are
+// Scope: the Dairy-Free restriction filter only. The Vegan pattern no longer needs
+// it — since SURF1B4 that path resolves through the canonical restriction library,
+// whose `dairy` definition carries the same plant milks as `excludedCompounds` and
+// far more besides. Not applied to Paleo, where all milks (including coconut) are
 // excluded by that diet's own rules.
 const PLANT_MILK_PHRASES = [
   "almond milk", "oat milk", "soy milk", "soya milk", "coconut milk",
@@ -333,19 +405,31 @@ function countMatches(text: string, keywords: string[]): number {
 
 /**
  * Returns `true` when a recipe should be excluded for the given diet context.
- * The `text` argument should be a lowercased concatenation of the recipe's
- * name, ingredient list, and any description.
+ *
+ * Pass the recipe's FIELDS (`{ name, ingredients, category, cuisine, description }`).
+ * A string is accepted and treated as a single item — correct for a dish name or one
+ * food, and what the legacy callers pass. See the header for why the distinction
+ * matters to the Vegan and Vegetarian gates.
+ *
+ * Hard exclusion only. Preference scoring lives in `scoreRecipeForDiet` and the two
+ * never mix: nothing here nudges a rank, and nothing there refuses a meal.
  */
 export function shouldExcludeRecipe(
-  text: string,
+  input: DietCheckable,
   { dietPattern: rawDietPattern, dietRestrictions }: DietContext
 ): boolean {
-  const lower = text.toLowerCase();
+  const items = toItems(input);
+  const lower = items.join(" ").toLowerCase();
   // Case-normalise before the switch — a lower-cased "vegan" row must not fall
   // through to `default: return false` and hand a vegan household a beef stew.
   const dietPattern = canonicaliseDietPattern(rawDietPattern);
 
   // ── Restriction-based hard filters (stack independently) ──────────────────
+  // These are the two restrictions dietRules has always implemented. They are NOT
+  // the platform's restriction enforcement — the canonical library is, via
+  // `candidateHardExcluded()`, and it implements all thirteen. These remain because
+  // removing a filter is a permissive change, and every filter here must move in the
+  // restrictive direction or not at all.
   if (dietRestrictions.includes("Gluten-Free") && containsAny(lower, GLUTEN_KEYWORDS)) {
     return true;
   }
@@ -360,27 +444,15 @@ export function shouldExcludeRecipe(
   if (!dietPattern) return false;
 
   switch (dietPattern) {
-    case "Vegan": {
-      // Strip plant-based milk phrases before dairy scan — almond/oat/soy/coconut
-      // milk are vegan by definition. The word "milk" they contain must not match
-      // DAIRY_KEYWORDS. All other exclusion checks run on the unmodified text.
-      const dairyCheckText = removePlantMilkPhrases(lower);
-      return (
-        containsAny(lower, MEAT_KEYWORDS) ||
-        containsAny(lower, FISH_SEAFOOD_KEYWORDS) ||
-        containsAny(dairyCheckText, DAIRY_KEYWORDS) ||
-        containsAny(lower, ["egg", "eggs", "honey", "gelatin", "gelatine"]) ||
-        containsAny(lower, DISH_NAME_MEAT_OR_SEAFOOD)
-      );
-    }
+    // Vegan and Vegetarian own no food vocabulary of their own. They name the
+    // canonical restrictions they mean, and the library that owns those restrictions
+    // answers. Plant milks, vegan sausages, meat-free products and kidney beans are
+    // admitted by the library's excludedCompounds — not by a whitelist kept here.
+    case "Vegan":
+      return conflictsWithCanonical(items, VEGAN_DEFINITIONS);
 
     case "Vegetarian":
-      return (
-        containsAny(lower, MEAT_KEYWORDS) ||
-        containsAny(lower, FISH_SEAFOOD_KEYWORDS) ||
-        containsAny(lower, ["gelatin", "gelatine", "lard", "suet", "rennet"]) ||
-        containsAny(lower, DISH_NAME_MEAT_OR_SEAFOOD)
-      );
+      return conflictsWithCanonical(items, VEGETARIAN_DEFINITIONS);
 
     case "Keto":
       return containsAny(lower, KETO_EXCLUDE);
@@ -405,12 +477,20 @@ export function shouldExcludeRecipe(
  * recipe based on how well it matches the diet pattern.
  * Caller adds this to the recipe's base score before ranking.
  * Returns 0 when dietPattern is null or has no scoring rules.
+ *
+ * PREFERENCE ONLY. A score never excludes a meal and an exclusion never adjusts a
+ * score; `shouldExcludeRecipe` has already run and has already refused anything that
+ * must be refused. The word lists below are ranking signals, not dietary knowledge,
+ * which is why they are still allowed to say "beef" in a file forbidden to define it.
  */
-export function scoreRecipeForDiet(text: string, rawDietPattern: string | null): number {
+export function scoreRecipeForDiet(
+  input: DietCheckable,
+  rawDietPattern: string | null,
+): number {
   const dietPattern = canonicaliseDietPattern(rawDietPattern);
   if (!dietPattern) return 0;
 
-  const lower = text.toLowerCase();
+  const lower = toItems(input).join(" ").toLowerCase();
 
   switch (dietPattern) {
     case "Mediterranean": {

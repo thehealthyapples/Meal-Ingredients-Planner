@@ -242,13 +242,18 @@ export function candidateDietExcluded(
   dietRestrictions: string[],
 ): boolean {
   if (!dietPattern && dietRestrictions.length === 0) return false;
-  const text = [
-    candidate.name,
-    candidate.category || "",
-    candidate.cuisine || "",
-    ...candidate.ingredients,
-  ].join(" ").toLowerCase();
-  return shouldExcludeRecipe(text, { dietPattern, dietRestrictions });
+  // Fields, not a joined blob (SURF1B4). The canonical library's plant-based markers
+  // ("quorn", "meat-free") vouch for the ITEM that carries them; flattened into one
+  // string they would vouch for the whole recipe.
+  return shouldExcludeRecipe(
+    {
+      name: candidate.name,
+      category: candidate.category,
+      cuisine: candidate.cuisine,
+      ingredients: candidate.ingredients,
+    },
+    { dietPattern, dietRestrictions },
+  );
 }
 
 // P0: "drink" removed from breakfast — generic drinks must not appear as breakfast meals.

@@ -43,7 +43,7 @@ import { useLocation, useSearch } from "wouter";
 import { MealWatermark, getWatermarkType } from "@/components/meal-watermark";
 import AppleRating from "@/components/AppleRating";
 import { Switch } from "@/components/ui/switch";
-import { shouldExcludeRecipe } from "@shared/dietRules";
+import { shouldExcludeRecipe, type RecipeFields } from "@shared/dietRules";
 import { useUser } from "@/hooks/use-user";
 import { scoreMealSearch } from "@shared/food-synonyms";
 import { writePendingIngredients, appendPendingIngredient } from "@/lib/quick-list";
@@ -3253,9 +3253,9 @@ export default function MealsPage() {
   // keystroke — a multi-hundred-char allocation × 884 meals. Built once per
   // library load instead (the scoreCache below is the same pattern).
   const mealSearchText = useMemo(() => {
-    const map = new Map<number, string>();
+    const map = new Map<number, RecipeFields>();
     for (const meal of meals ?? []) {
-      map.set(meal.id, [meal.name, ...(meal.ingredients ?? [])].join(' ').toLowerCase());
+      map.set(meal.id, { name: meal.name, ingredients: meal.ingredients ?? [] });
     }
     return map;
   }, [meals]);
@@ -3300,7 +3300,7 @@ export default function MealsPage() {
       }
       const effectivePattern = mealsDietPattern.trim() || null;
       const ctx = { dietPattern: effectivePattern, dietRestrictions: mealsDietRestrictions };
-      const mealText = mealSearchText.get(meal.id) ?? "";
+      const mealText = mealSearchText.get(meal.id) ?? { name: meal.name };
       const matchesDiet = !shouldExcludeRecipe(mealText, ctx);
       const matchesUpf = !mealsUpfFilter || meal.isReadyMeal !== true;
       return matchesSearch && matchesCategory && matchesGroup && matchesAudience && matchesDiet && matchesUpf;
