@@ -472,6 +472,116 @@ export function shouldExcludeRecipe(
   }
 }
 
+// ─── Diet LABEL classification (SURF1C1) ─────────────────────────────────────
+//
+// The single owner of the question "which diet labels does this meal's own evidence
+// support?" — the derivation behind every `meals.diet_types` value THA writes.
+//
+// It is deliberately the immediate neighbour of `shouldExcludeRecipe`, because it is
+// that function's derived view and the two must never be able to drift. It owns NO
+// food vocabulary: every question about what meat, dairy, eggs or honey ARE is put to
+// the canonical restriction library through the gate above, so a label THA prints and
+// a meal THA serves cannot disagree.
+//
+// ── Why an evidence gate (the defect SURF1C1 exists to fix) ──────────────────
+// The pre-SURF1C1 labeller classified on the ABSENCE of evidence: it asked the gate
+// "is anything here meat?", and a meal with no ingredients at all answered "no" — so
+// it was labelled vegan AND vegetarian. That is not a finding of plants. It is a
+// finding of nothing, recorded as a finding of plants.
+//
+// It is why all 309 of THA's ready-meal rows — whose `ingredients` is a placeholder
+// echo of the meal's own name — could hold a confident vegan label, while the 500
+// authored recipes with real ingredient lists held none. Absence of evidence is not
+// evidence of absence, and a label asserted from it is a guess wearing a fact's clothes.
+//
+// So classification now REQUIRES evidence and returns `insufficient` when it has none.
+// An unclassified meal is an honest statement that THA cannot prove what is in it.
+
+/**
+ * One ingredient line is not a list.
+ *
+ * The work is done by the title-echo rule below — it is what catches all 309 ready-meal
+ * rows. This floor is defence in depth against the NEAR-echo the exact-match rule would
+ * miss ("Chocolate Mousse" → `["Chocolate mousse dessert"]`): a lone line, whatever it
+ * says, cannot be distinguished from the title restated, and THA's own data proves that
+ * shape exists. Two independent lines is the least that makes it a list.
+ *
+ * Deliberately NOT set higher. A genuine recipe may be simple — porridge is oats and oat
+ * milk — and refusing to classify it would be the same error in the other direction:
+ * discarding evidence THA actually has. The Founding Cookbook's thinnest recipe carries
+ * 7 lines, so this floor binds on no real recipe THA holds.
+ */
+export const MIN_INGREDIENT_EVIDENCE = 2;
+
+export type DietEvidence = "sufficient" | "insufficient";
+
+export interface DietClassification {
+  /** Subset of ["vegetarian", "vegan"]. Empty whenever evidence is insufficient. */
+  labels: string[];
+  evidence: DietEvidence;
+  /** Ingredient lines that said something the title did not. */
+  evidenceLines: number;
+}
+
+/** Normalised for comparison only — never for keyword matching. */
+function normaliseLine(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+/**
+ * The ingredient lines that constitute evidence about a meal.
+ *
+ * A line that merely restates the meal's own name is not evidence — it is the title
+ * a second time. THA's 309 ready-meal rows are exactly this shape (`"Chocolate Mousse"`
+ * → `ingredients: ["Chocolate Mousse"]`), and reading them as an ingredient list is
+ * what let a product name vouch for a product's contents.
+ */
+export function dietEvidenceLines(meal: { name?: string | null; ingredients?: string[] | null }): string[] {
+  const title = normaliseLine(meal.name ?? "");
+  return (meal.ingredients ?? []).filter((line) => {
+    const norm = normaliseLine(line ?? "");
+    return norm.length > 0 && norm !== title;
+  });
+}
+
+/**
+ * The diet labels a meal's own ingredients PROVE — never the labels it claims.
+ *
+ * Returns `insufficient` (and no labels) for a title-only or evidence-thin meal. This
+ * is not a failure: it is THA declining to assert what it cannot show. The meal remains
+ * unclassified, and every gate that serves it re-reads the food anyway.
+ *
+ * A label is still NOT a safety gate and SURF1C1 does not make it one. It is what makes
+ * a proven-vegan meal findable and orderable ahead of an unlabelled one.
+ */
+export function classifyDietLabels(
+  meal: { name?: string | null; ingredients?: string[] | null },
+): DietClassification {
+  const evidence = dietEvidenceLines(meal);
+
+  if (evidence.length < MIN_INGREDIENT_EVIDENCE) {
+    return { labels: [], evidence: "insufficient", evidenceLines: evidence.length };
+  }
+
+  // Fields, never a joined blob. The canonical library's `excludedCompounds`
+  // ("vegan sausage", "oat milk", "quorn") are whole-ITEM markers, and flattening the
+  // recipe first would let a jar of quorn vouch for the beef stock beside it.
+  const fields: RecipeFields = { name: meal.name, ingredients: evidence };
+  const context = { dietRestrictions: [] as string[] };
+
+  const vegetarian = !shouldExcludeRecipe(fields, { ...context, dietPattern: "Vegetarian" });
+  const vegan = !shouldExcludeRecipe(fields, { ...context, dietPattern: "Vegan" });
+
+  const labels: string[] = [];
+  if (vegetarian) labels.push("vegetarian");
+  // Vegan is a strict subset of Vegetarian: everything Vegetarian refuses, Vegan refuses
+  // too. A meal that is vegan but not vegetarian is not a meal — it is a bug in the
+  // definitions, and it must never reach a household as a label.
+  if (vegan && vegetarian) labels.push("vegan");
+
+  return { labels, evidence: "sufficient", evidenceLines: evidence.length };
+}
+
 /**
  * Returns a numeric score delta (positive = boost, negative = penalty) for a
  * recipe based on how well it matches the diet pattern.

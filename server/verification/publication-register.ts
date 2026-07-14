@@ -358,6 +358,47 @@ export const CANONICAL_PUBLICATION_REGISTER: DomainDeclaration[] = [
           return { violated: false, detail: `${checks.length}/${checks.length} CBK1 publication checks pass.` };
         },
       }),
+      customCheck({
+        id: "cb-diet-labels-derived",
+        law: "no-publication-drift",
+        title: "Every published diet label is what the recipe's own ingredients prove (SURF1C1)",
+        severity: "fail",
+        run: async (ctx) => {
+          const { classifyDietLabels } = await import("@shared/dietRules");
+          const rows = await ctx.query(
+            `SELECT name, ingredients, diet_types FROM meals
+             WHERE is_system_meal = true AND acquisition_source_key LIKE 'tha_original:%'`,
+          );
+
+          const drifted: string[] = [];
+          for (const row of rows as Array<Record<string, any>>) {
+            const published = ((row.diet_types ?? []) as string[])
+              .filter((l) => l === "vegan" || l === "vegetarian")
+              .sort();
+            const derived = classifyDietLabels({
+              name: row.name,
+              ingredients: (row.ingredients ?? []) as string[],
+            }).labels.slice().sort();
+
+            if (published.join(",") !== derived.join(",")) {
+              drifted.push(`${row.name}: published [${published}] ≠ derived [${derived}]`);
+            }
+          }
+
+          if (drifted.length > 0) {
+            return {
+              violated: true,
+              detail:
+                `${drifted.length} of ${rows.length} founding recipes carry a diet label their own ingredients do not ` +
+                `prove. The label is a projection of the ingredients, not a second fact: ${drifted.slice(0, 3).join("; ")}.`,
+            };
+          }
+          return {
+            violated: false,
+            detail: `All ${rows.length} founding recipes' diet labels equal what the canonical classifier derives from their ingredients.`,
+          };
+        },
+      }),
       sourceCheck({
         id: "cb-starter-copies",
         law: "no-duplicate-runtime-identity",

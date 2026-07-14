@@ -410,9 +410,27 @@ function sec8_oneOwner(): void {
   for (const list of ['MEAT_KEYWORDS', 'FISH_KEYWORDS', 'DAIRY_KEYWORDS']) {
     assert(!code.includes(list), `${list} is GONE from the labeller — deleted, not deprecated (Principle 8)`);
   }
+
+  // SURF1C1 moved the labeller one door further in. It no longer calls `shouldExcludeRecipe`
+  // itself — it calls `classifyDietLabels`, the evidence-gated derivation of it, which lives
+  // beside it in `dietRules.ts` and is the single owner of "which labels does this meal's own
+  // evidence support?". The property SURF1B5 pinned here is unchanged and now pinned WHOLE:
+  // the labeller holds no food vocabulary, and the chain from it to the canonical library is
+  // asserted link by link rather than at one end.
   assert(
-    code.includes('shouldExcludeRecipe'),
-    'the labeller delegates to the canonical library through the same door the meal gate uses',
+    code.includes('classifyDietLabels'),
+    'the labeller delegates to the canonical classifier — it decides no diet label of its own',
+  );
+  const dietRulesCode = readFileSync(join(process.cwd(), 'shared/dietRules.ts'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/.*$/gm, '');
+  assert(
+    /export function classifyDietLabels/.test(dietRulesCode),
+    'the canonical classifier lives in dietRules.ts — beside the gate, where it cannot drift from it',
+  );
+  assert(
+    dietRulesCode.includes('shouldExcludeRecipe'),
+    'and the classifier itself reaches the canonical library through the same door the meal gate uses',
   );
 
   // The meal service must not have grown a food vocabulary of its own either.
@@ -504,13 +522,26 @@ async function sec10_liveData(): Promise<void> {
     note(
       `vegan breakfast: ${breakfasts.length} in the cookbook · ${labelled.length} LABELLED vegan · ${safe.length} actually vegan-SAFE`,
     );
+    // SURF1B5 asserted `labelled.length < WANTED` here and called it "the backfill still
+    // fires today" — 2 labelled vegan breakfasts against 21 slots. That was its own
+    // limitation #1, written down as a passing test because it was true.
+    //
+    // SURF1C1 closed it. The cookbook was never short of vegan food, only of vegan LABELS
+    // — and the 500 authored recipes, the only meals with real ingredient lists, carried
+    // none at all. Now they carry the ones their ingredients prove, and the slot fills with
+    // label-matched food instead of topping up from unlabelled.
+    //
+    // The assertion is INVERTED rather than deleted, because the number it guards is the
+    // whole point of both workstreams: if the labelled pool ever falls back below 21, the
+    // label has stopped doing the one job it is allowed to do.
     assert(
-      labelled.length < WANTED,
-      'the vegan-labelled breakfast pool is still too small to fill 21 slots — the backfill still fires today',
+      labelled.length >= WANTED,
+      `the vegan-labelled breakfast pool now fills all ${WANTED} slots on its own (SURF1C1) — it was 2 before`,
+      `only ${labelled.length} labelled`,
     );
     assert(
       safe.length >= WANTED,
-      'but the SAFE pool is large enough to fill them — the cookbook was never short of vegan food, only of vegan LABELS',
+      'and the SAFE pool still covers them — the gate, not the label, is what admits a meal',
       `${safe.length} safe`,
     );
 

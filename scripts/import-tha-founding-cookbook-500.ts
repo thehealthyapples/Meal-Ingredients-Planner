@@ -52,6 +52,21 @@
  *   - Reconciling updates use a scoped db.update restricted to system rows (is_system_meal=true).
  *     User meals are never matched, read, or written.
  *
+ * Diet labels (SURF1C1)
+ *   - `diet_types` is DERIVED here at publication time from the recipe's own ingredients, by the
+ *     one canonical classifier (`dietRules.classifyDietLabels`), which puts every question about
+ *     food to the canonical restriction library that the meal safety gate asks.
+ *   - It is NOT a stored field in the source JSON, and must never become one. The ingredients are
+ *     the owner; the label is their projection. A `diet_types` column in the JSON would be a second
+ *     copy of a derived fact, free to contradict the ingredient list sitting beside it in the same
+ *     file — which is exactly the class of defect SURF1C1 was raised to remove (Principle 2).
+ *   - So it is reproducible by construction: re-running this seed always recomputes the same label
+ *     from the same ingredients, and `verify:publication` fails if any published label disagrees
+ *     with what the classifier says today.
+ *   - A recipe whose evidence cannot support a label is published UNLABELLED. A label is a
+ *     discovery and ordering signal, never a safety gate — every meal THA serves is put to
+ *     `isMealSafeForHousehold()` on the way out, which re-reads the food itself.
+ *
  * Content ownership (Cookbook owns recipe content only)
  *   - Stored on the row: name, category, ingredients, method, servings, and acquisition provenance.
  *     difficulty / prep_minutes / cook_minutes / cuisine_inspiration / why_this_works_for_tha /
@@ -90,6 +105,7 @@ import { storage } from "../server/storage";
 import { db, pool } from "../server/db";
 import { meals, mealCategories } from "@shared/schema";
 import { and, eq, like } from "drizzle-orm";
+import { classifyDietLabels } from "@shared/dietRules";
 import { classifyDatabaseTarget, isProductionTarget } from "./db/database-target";
 
 const SYSTEM_USER_ID = 0;
@@ -287,22 +303,36 @@ async function runSeed(opts: { dryRun: boolean; allowProduction: boolean }) {
       id: meals.id,
       name: meals.name,
       sourceKey: meals.acquisitionSourceKey,
+      dietTypes: meals.dietTypes,
     })
     .from(meals)
     .where(eq(meals.isSystemMeal, true));
 
   const bySourceKey = new Map<string, number>();
   const byName = new Map<string, number>();
+  const liveLabels = new Map<number, string[]>(); // SURF1C1 — what is published today
   for (const row of sys) {
     if (row.sourceKey) bySourceKey.set(row.sourceKey, row.id);
     byName.set(row.name, row.id);
+    liveLabels.set(row.id, row.dietTypes ?? []);
   }
 
   let inserted = 0;
   let reconciled = 0; // existing system row updated in place
   const reconciledLegacy: string[] = []; // batch-001 renames
 
+  // SURF1C1 — the labels this run publishes, and what changed vs. what is live.
+  const labelStats = { vegan: 0, vegetarian: 0, unclassified: 0, added: 0, retained: 0, removed: 0 };
+
   for (const r of recipes) {
+    // Derived from the recipe's ingredients — the owner — by the one canonical classifier.
+    // The seed authors no label of its own and holds no food vocabulary.
+    const classification = classifyDietLabels({ name: r.recipe_name, ingredients: r.ingredients });
+
+    if (classification.evidence === "insufficient") labelStats.unclassified++;
+    if (classification.labels.includes("vegan")) labelStats.vegan++;
+    if (classification.labels.includes("vegetarian")) labelStats.vegetarian++;
+
     const payload = {
       name: r.recipe_name,
       ingredients: r.ingredients,
@@ -313,6 +343,7 @@ async function runSeed(opts: { dryRun: boolean; allowProduction: boolean }) {
       mealFormat: "recipe",
       kind: "meal",
       mealSourceType: "starter",
+      dietTypes: classification.labels,
       acquisitionLane: "tha_library",
       acquisitionType: "authored",
       acquisitionSourceKey: r.import_key,
@@ -328,6 +359,17 @@ async function runSeed(opts: { dryRun: boolean; allowProduction: boolean }) {
     }
 
     if (existingId !== undefined) {
+      // SURF1C1 — account for the label change against what is live, before writing it.
+      // A dry run reports exactly this and writes nothing.
+      const before = liveLabels.get(existingId) ?? [];
+      for (const label of ["vegan", "vegetarian"]) {
+        const had = before.includes(label);
+        const has = classification.labels.includes(label);
+        if (!had && has) labelStats.added++;
+        else if (had && has) labelStats.retained++;
+        else if (had && !has) labelStats.removed++;
+      }
+
       if (!opts.dryRun) {
         await db
           .update(meals)
@@ -338,6 +380,7 @@ async function runSeed(opts: { dryRun: boolean; allowProduction: boolean }) {
       if (matchedViaLegacy) reconciledLegacy.push(`${r.legacy_recipe_name} → ${r.recipe_name}`);
       bySourceKey.set(r.import_key, existingId);
     } else {
+      labelStats.added += classification.labels.length;
       if (!opts.dryRun) {
         const created = await storage.createMeal(SYSTEM_USER_ID, payload);
         bySourceKey.set(r.import_key, created.id);
@@ -351,6 +394,19 @@ async function runSeed(opts: { dryRun: boolean; allowProduction: boolean }) {
   const verb2 = opts.dryRun ? "Would reconcile" : "Reconciled     ";
   console.log(`${verb} (new)    : ${inserted}`);
   console.log(`${verb2} (update) : ${reconciled}`);
+
+  // SURF1C1 — the diet classification this run publishes, derived from the recipes' own
+  // ingredients. Printed BEFORE the dry-run exit, so `--dry-run` shows the exact label
+  // change it would make and writes nothing.
+  const labelVerb = opts.dryRun ? "would be" : "were";
+  console.log(`\n── Diet classification (SURF1C1) ──`);
+  console.log(`  Vegan          : ${labelStats.vegan}`);
+  console.log(`  Vegetarian     : ${labelStats.vegetarian}`);
+  console.log(`  Unclassified   : ${labelStats.unclassified}  (insufficient ingredient evidence)`);
+  console.log(`  Labels that ${labelVerb} ADDED    : ${labelStats.added}`);
+  console.log(`  Labels that ${labelVerb} RETAINED : ${labelStats.retained}`);
+  console.log(`  Labels that ${labelVerb} REMOVED  : ${labelStats.removed}`);
+
   if (reconciledLegacy.length > 0) {
     console.log(`  of which Batch-001 renames via legacy_recipe_name : ${reconciledLegacy.length}`);
     reconciledLegacy.forEach(s => console.log(`    - ${s}`));
