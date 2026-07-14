@@ -119,8 +119,8 @@ const MEMBERS_10 = [
 
 const DIETARY_CONTEXT_10: HouseholdDietaryContext = {
   members: [
-    { userId: 1, displayName: "Colin", dietTypes: ["Mediterranean"], dietRestrictions: [], excludedIngredients: ["peanuts"] },
-    { userId: 2, displayName: "Sam", dietTypes: [], dietRestrictions: [], excludedIngredients: [] },
+    { userId: 1, displayName: "Colin", dietPattern: "Mediterranean", dietTypes: ["Mediterranean"], dietRestrictions: [], excludedIngredients: ["peanuts"] },
+    { userId: 2, displayName: "Sam", dietPattern: null, dietTypes: [], dietRestrictions: [], excludedIngredients: [] },
   ],
   aggregated: {
     unionDietTypes: ["Mediterranean"],

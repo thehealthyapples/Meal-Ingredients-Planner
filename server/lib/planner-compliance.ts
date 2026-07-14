@@ -8,9 +8,9 @@
  * and household hard restrictions.
  *
  * This module is a thin orchestration layer. It does NOT define a second dietary
- * rules engine and does NOT carry its own keyword lists. It delegates entirely to
- * the existing single source of truth already used by recipe search and Smart
- * Planner generation:
+ * rules engine, does NOT carry its own keyword lists, and (since SURF1B) does NOT
+ * resolve diet itself. It delegates entirely:
+ *   - resolveHouseholdSafetyContext() → canonical household safety resolver (who)
  *   - candidateDietExcluded()  → dietRules.shouldExcludeRecipe()  (Profile diet)
  *   - candidateHardExcluded()  → canonical restriction resolver    (household hard)
  *
@@ -20,14 +20,30 @@
  */
 import type { Meal, User, UserPreferences } from "@shared/schema";
 import { candidateDietExcluded, candidateHardExcluded } from "./smart-suggest-service";
-import { getHouseholdForUser } from "./household";
+import { resolveHouseholdSafetyContext } from "./household-dietary-safety";
 
 /** Resolved, reusable compliance context for one user. Build once, reuse per item. */
 export interface PlannerComplianceContext {
+  /** HARD for the requesting user — their own diet pattern. Not unioned household-wide. */
   dietPattern: string | null;
+  /**
+   * HARD, household-wide (SURF1B). Every active member's `users.diet_restrictions`
+   * plus every eater's `hard_restrictions` — including children, who have no account
+   * and whose eater row is their canonical owner.
+   *
+   * Before SURF1B this carried only the REQUESTING user's restrictions, so a meal
+   * containing another member's declared allergen was compliant for the person
+   * planning it.
+   */
   dietRestrictions: string[];
-  /** Union of user prefs excludedIngredients + household eaters' hardRestrictions. */
+  /** Household hard restrictions + user prefs excludedIngredients (conservative). */
   hardExcludedIngredients: string[];
+  /**
+   * True when the household's safety context could not be resolved. The gate then
+   * rejects every meal: a system path must not place food into a plan for a
+   * household whose allergens it could not read.
+   */
+  safetyUnavailable: boolean;
   /** categoryId → category name, for resolving meal category text. */
   categoryNameById: Map<number, string>;
 }
@@ -42,9 +58,7 @@ export interface ComplianceResult {
  *  (storage.ts imports this module for seedDemoData). Both the real `storage`
  *  singleton and the storage class instance (`this`) satisfy it structurally. */
 export interface ComplianceStorageDeps {
-  getUser(id: number): Promise<Pick<User, "dietPattern" | "dietRestrictions"> | undefined>;
   getUserPreferences(userId: number): Promise<Pick<UserPreferences, "excludedIngredients"> | undefined>;
-  getHouseholdEaters(householdId: number): Promise<Array<{ hardRestrictions: string[] | null }>>;
   getAllCategories(): Promise<Array<{ id: number; name: string }>>;
 }
 
@@ -61,33 +75,34 @@ export type CompliableMeal = Pick<Meal, "name" | "ingredients"> & {
 /**
  * Resolve the per-user compliance context once.
  *
- * Mirrors the same assembly the Smart Planner generation route already performs:
- * Profile diet from the users row, and hard restrictions from user prefs unioned
- * with household eaters' hardRestrictions. Household lookup failure is non-fatal —
- * we fall back to user prefs only, exactly as generation does.
+ * Diet resolution is delegated wholly to the canonical household safety resolver
+ * (`household-dietary-safety.ts`, SURF1B). This module reads no diet table.
+ *
+ * Before SURF1B it assembled diet itself: the REQUESTING user's profile, plus the
+ * raw `household_eaters.hard_restrictions` mirror. Adult eater rows store `[]` by
+ * design, so another member's declared allergen reached this gate only when the
+ * mirror happened to be populated — which for 10 of the 21 restricted households it
+ * was not. A household whose child cannot eat nuts could have a nut meal placed into
+ * its plan by the parent's Smart Planner.
+ *
+ * Failure is no longer non-fatal. If the household's safety context cannot be read,
+ * `safetyUnavailable` is set and the gate rejects every meal (fail closed).
  */
 export async function resolvePlannerComplianceContext(
   storage: ComplianceStorageDeps,
   userId: number,
 ): Promise<PlannerComplianceContext> {
-  const user = await storage.getUser(userId);
+  const safety = await resolveHouseholdSafetyContext(userId);
   const prefs = await storage.getUserPreferences(userId);
 
-  const hardSet = new Set<string>(
-    (prefs?.excludedIngredients ?? []).map(e => e.toLowerCase()),
-  );
-
-  try {
-    const householdId = await getHouseholdForUser(userId);
-    const eaters = await storage.getHouseholdEaters(householdId);
-    for (const eater of eaters) {
-      for (const restriction of eater.hardRestrictions ?? []) {
-        hardSet.add(restriction.toLowerCase());
-      }
-    }
-  } catch {
-    // Non-fatal: if household lookup fails, use user prefs only.
-  }
+  // Household hard restrictions bind every meal. User prefs' excludedIngredients are
+  // a soft preference, but the planner has always treated them as hard here — a
+  // conservative direction, preserved deliberately: loosening it would be a safety
+  // regression, and SURF1B changes no filter in the permissive direction.
+  const hardSet = new Set<string>([
+    ...safety.hardRestrictions.map(r => r.toLowerCase()),
+    ...(prefs?.excludedIngredients ?? []).map(e => e.toLowerCase()),
+  ]);
 
   const categories = await storage.getAllCategories();
   const categoryNameById = new Map<number, string>(
@@ -95,9 +110,10 @@ export async function resolvePlannerComplianceContext(
   );
 
   return {
-    dietPattern: user?.dietPattern ?? null,
-    dietRestrictions: (user?.dietRestrictions ?? []).filter(Boolean),
+    dietPattern: safety.requesterDietPattern,
+    dietRestrictions: safety.hardRestrictions,
     hardExcludedIngredients: Array.from(hardSet),
+    safetyUnavailable: safety.status === "unavailable",
     categoryNameById,
   };
 }
@@ -108,6 +124,10 @@ export async function resolvePlannerComplianceContext(
  * users (the majority) see no behaviour change and pay no per-meal lookup cost.
  */
 export function isComplianceActive(ctx: PlannerComplianceContext): boolean {
+  // An unresolved safety context is NOT an unrestricted household. The gate must
+  // run — and refuse — rather than short-circuit into "everything is compliant".
+  if (ctx.safetyUnavailable) return true;
+
   return (
     !!ctx.dietPattern ||
     ctx.dietRestrictions.length > 0 ||
@@ -127,6 +147,11 @@ export function isMealCompliantForUser(
   meal: CompliableMeal,
   ctx: PlannerComplianceContext,
 ): ComplianceResult {
+  // Fail closed: we could not read this household's allergens, so we place nothing.
+  if (ctx.safetyUnavailable) {
+    return { compliant: false, reason: "safety-context-unavailable" };
+  }
+
   const categoryName =
     meal.categoryName ??
     (meal.categoryId != null ? ctx.categoryNameById.get(meal.categoryId) ?? null : null);

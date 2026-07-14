@@ -5,6 +5,7 @@ import { db } from "./db";
 import { eq, and, ilike, or, sql, inArray, isNull, isNotNull, desc } from "drizzle-orm";
 import { getHouseholdForUser } from "./lib/household";
 import { resolvePlannerComplianceContext, isComplianceActive, isMealCompliantForUser } from "./lib/planner-compliance";
+import { resolveHouseholdSafetyContext, HouseholdSafetyUnavailableError } from "./lib/household-dietary-safety";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -360,10 +361,27 @@ export type SavingsAggregates = {
   thisWeekCountsByType: { takeaway_avoided: number; pantry_used: number; smart_swap: number };
 };
 
+/**
+ * The AI-facing household dietary context.
+ *
+ * `dietRestrictions` and `aggregated.unionRestrictions` are HARD safety facts —
+ * allergens and restrictions that bind every meal the household is offered. INT17
+ * pins them (`context-view.ts` → `household:read`) so a token budget can never
+ * outbid them. `dietTypes` and `excludedIngredients` are soft preferences.
+ *
+ * Resolved by the canonical owner — `lib/household-dietary-safety.ts` (SURF1B).
+ * Before SURF1B the restriction field here was hardcoded to an empty array, and the
+ * pins were faithfully delivering it.
+ *
+ * `userId` is null for a child eater who has no account; their restrictions are
+ * owned by their `household_eaters` row and are unioned in like anyone else's.
+ */
 export type HouseholdDietaryContext = {
   members: Array<{
-    userId: number;
+    userId: number | null;
     displayName: string;
+    /** HARD for this member — their declared diet pattern (Vegan, Keto, …). */
+    dietPattern: string | null;
     dietTypes: string[];
     dietRestrictions: string[];
     excludedIngredients: string[];
@@ -2733,32 +2751,42 @@ export class DatabaseStorage implements IStorage {
     return Array.from(new Set(sources.map(s => s.mealId)));
   }
 
+  /**
+   * The AI-facing household dietary context.
+   *
+   * Delegates wholly to the canonical household safety resolver (SURF1B). This
+   * method reads no diet table itself and re-derives nothing.
+   *
+   * Before SURF1B it assembled the context from `user_preferences` alone — a table
+   * with no restrictions column — and so hardcoded the restriction field to an empty
+   * array. Every allergen in the platform was dropped here, one call before the
+   * Companion read it.
+   *
+   * Fail-safe: an unresolved safety context THROWS rather than returning an empty
+   * context. A caller that cannot see the household's allergens must not be handed
+   * something indistinguishable from a household that has none.
+   */
   async getHouseholdDietaryContext(userId: number): Promise<HouseholdDietaryContext> {
-    const householdId = await getHouseholdForUser(userId);
-    const members = await db.select({ member: householdMembers, user: { id: users.id, displayName: users.displayName, username: users.username } })
-      .from(householdMembers)
-      .innerJoin(users, eq(householdMembers.userId, users.id))
-      .where(and(eq(householdMembers.householdId, householdId), eq(householdMembers.status, 'active')));
-
-    const memberProfiles: HouseholdDietaryContext['members'] = [];
-    for (const { member, user } of members) {
-      const prefs = await db.select().from(userPreferences).where(eq(userPreferences.userId, member.userId));
-      const p = prefs[0];
-      memberProfiles.push({
-        userId: member.userId,
-        displayName: user.displayName || user.username,
-        dietTypes: p?.dietTypes ?? [],
-        dietRestrictions: [],
-        excludedIngredients: p?.excludedIngredients ?? [],
-      });
+    const safety = await resolveHouseholdSafetyContext(userId);
+    if (safety.status === "unavailable") {
+      throw new HouseholdSafetyUnavailableError(userId);
     }
 
+    const members: HouseholdDietaryContext['members'] = safety.members.map(m => ({
+      userId: m.userId,
+      displayName: m.displayName,
+      dietPattern: m.dietPattern,
+      dietTypes: m.dietTypes,
+      dietRestrictions: m.hardRestrictions,
+      excludedIngredients: m.excludedIngredients,
+    }));
+
     return {
-      members: memberProfiles,
+      members,
       aggregated: {
-        unionDietTypes: Array.from(new Set(memberProfiles.flatMap(m => m.dietTypes))),
-        unionRestrictions: Array.from(new Set(memberProfiles.flatMap(m => m.dietRestrictions))),
-        unionExclusions: Array.from(new Set(memberProfiles.flatMap(m => m.excludedIngredients))),
+        unionDietTypes: safety.preferences.dietTypes,
+        unionRestrictions: safety.hardRestrictions,
+        unionExclusions: safety.preferences.excludedIngredients,
       },
     };
   }

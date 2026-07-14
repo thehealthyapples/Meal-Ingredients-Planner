@@ -465,7 +465,7 @@ export const CONTEXT_VIEW_SPECS: Readonly<Record<string, ContextViewSpec>> = {
         name: "members",
         keep: [
           "userId", "displayName", "role", "status",
-          "dietTypes", "dietRestrictions", "excludedIngredients",
+          "dietPattern", "dietTypes", "dietRestrictions", "excludedIngredients",
         ],
       },
       { name: "eaters", keep: ["id", "displayName", "kind", "userId", "defaultDietTypes", "hardRestrictions"] },

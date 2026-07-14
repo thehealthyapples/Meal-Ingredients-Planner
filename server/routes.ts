@@ -139,7 +139,13 @@ import UPLIFT_RULES from "./lib/uplift-rules.js";
 import type { BatchUpliftInput } from "./lib/uplift-types.js";
 import { mergeUpliftIngredients, removeUpliftIngredient, buildForkName, type AcceptedSuggestion } from "./lib/uplift-persistence.js";
 import { resolveActiveRestrictions, resolveIngredientRestrictions } from "../shared/restrictions/restriction-resolver.js";
-import { isPlantIngredient } from "../shared/canonical/plant-classifier.js";
+import { plantDiversityGroup } from "../shared/canonical/plant-classifier.js";
+import {
+  resolveHouseholdSafetyContext,
+  requireHardRestrictions,
+  isMealSafeForHousehold,
+  HouseholdSafetyUnavailableError,
+} from "./lib/household-dietary-safety.js";
 
 // Singleton index built once at startup — all rules are stateless
 const UPLIFT_INDEX = buildRuleIndex(UPLIFT_RULES);
@@ -147,13 +153,25 @@ const UPLIFT_INDEX = buildRuleIndex(UPLIFT_RULES);
 // ─── Household hard restriction helpers ───────────────────────────────────────
 
 /**
- * Collects the union of hardRestrictions across all household eaters for a user.
- * Returns an empty array (safe default) on any error — callers must log and handle.
+ * Collects the household's hard restrictions — every allergen and restriction that
+ * binds every meal this household may be offered.
+ *
+ * Delegates to the canonical household safety resolver (SURF1B). It reads no diet
+ * table itself.
+ *
+ * Before SURF1B this read `household_eaters.hard_restrictions` alone. Adult eater
+ * rows store `[]` by design — the profile (`users.diet_restrictions`) is their
+ * authoritative source — so for 10 of the 21 households carrying a live restriction
+ * this returned an empty array, and the "HOUSEHOLD HARD RESTRICTIONS — these must
+ * never be violated" block was silently omitted from the AI prompt that followed.
+ *
+ * Fail-safe: THROWS `HouseholdSafetyUnavailableError` when the context cannot be
+ * resolved. Callers must fail closed. An empty array now means "this household has
+ * declared no restrictions", and nothing else.
  */
 async function collectHouseholdHardRestrictions(userId: number): Promise<string[]> {
-  const householdId = await getHouseholdForUser(userId);
-  const eaters = await storage.getHouseholdEaters(householdId);
-  return Array.from(new Set(eaters.flatMap(e => e.hardRestrictions ?? []).filter(Boolean)));
+  const safety = await resolveHouseholdSafetyContext(userId);
+  return requireHardRestrictions(safety);
 }
 
 /**
@@ -4614,14 +4632,39 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         );
       });
 
+      // Household hard restrictions — the canonical resolver (SURF1B) is the source.
+      // It reads every active member's `users.diet_restrictions` as well as every
+      // eater's `hard_restrictions`, so a member's declared allergen now binds this
+      // pool even when their eater-row mirror is empty (which, for 10 of the 21
+      // restricted households, it is). Before SURF1B this loop saw only the mirror.
+      //
+      // FAIL CLOSED: an unresolved safety context refuses to generate a plan rather
+      // than generating one filtered by an empty restriction set.
+      const householdSafety = await resolveHouseholdSafetyContext(req.user!.id);
+      if (householdSafety.status === "unavailable") {
+        console.error('[SmartSuggest] Household safety context unresolved — refusing to generate a plan');
+        return res.status(503).json({
+          message: "We can't check meal suggestions against your household's dietary needs right now, so we're not going to guess. Please try again in a moment.",
+          code: "HOUSEHOLD_SAFETY_UNAVAILABLE",
+        });
+      }
+
       // Load household eaters and merge their hard restrictions into the candidate pool filter.
       // Hard restrictions (severe allergies / intolerances) are always applied regardless of diet.
       // Eater diet types influence scoring via the merged prefs object.
-      const hardRestrictedSet = new Set<string>(
-        (prefs?.excludedIngredients ?? []).map(e => e.toLowerCase())
-      );
-      let mergedExcludedIngredients: string[] = prefs?.excludedIngredients ?? [];
+      const hardRestrictedSet = new Set<string>([
+        ...(prefs?.excludedIngredients ?? []).map(e => e.toLowerCase()),
+        ...householdSafety.hardRestrictions.map(r => r.toLowerCase()),
+      ]);
+      // Seeded from the household-wide set, not from user prefs alone — a household
+      // with no eater rows at all must still carry its members' profile restrictions.
+      let mergedExcludedIngredients: string[] = Array.from(hardRestrictedSet);
       let mergedDietTypes: string[] = prefs?.dietTypes ?? [];
+
+      // The Profile diet filter also runs household-wide on restrictions: another
+      // member's Gluten-Free binds the shared plan exactly as the requester's does.
+      // The requester's diet PATTERN stays their own (see household-dietary-safety.ts).
+      settings.dietRestrictions = householdSafety.hardRestrictions;
       // Collects Vegetarian/Vegan strict diets from household eaters for hard enforcement.
       // Populated inside the eater loop; deduplicated against the request-user's dietPattern after.
       const householdEaterStrictDiets = new Set<string>();
@@ -4680,8 +4723,11 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
             console.debug(`[SmartSuggest] Hard restrictions: [${mergedExcludedIngredients.join(', ')}]`);
           }
         }
-      } catch {
-        // Non-fatal: if household lookup fails, use user prefs only
+      } catch (err) {
+        // Non-fatal for DIET TYPES (scoring influence only). The hard restrictions
+        // that gate the pool were already resolved above by the canonical resolver,
+        // which fails closed — so a failure here can soften scoring, never safety.
+        console.warn('[SmartSuggest] Eater diet-type enrichment failed — scoring only, hard restrictions unaffected', err);
       }
 
       // Build merged prefs: user prefs enriched with household eater constraints.
@@ -10515,7 +10561,10 @@ Keep each string short and concrete. Return [] for any array with no entries.`;
     const { ingredients } = z.object({ ingredients: z.string().min(1).max(2000) }).parse(req.body);
     if (!process.env.OPENAI_API_KEY) return res.status(503).json({ message: "AI not configured" });
 
-    // Load household safety context — must be resolved before AI prompt is built
+    // Load household safety context — must be resolved before the AI prompt is built.
+    // FAIL CLOSED (SURF1B): if we cannot resolve the household's allergens we refuse
+    // to suggest food. Previously this caught and continued with no safety context,
+    // producing suggestions for a household whose restrictions we could not see.
     let hardRestrictions: string[] = [];
     let excludedIngredients: string[] = [];
     try {
@@ -10526,7 +10575,11 @@ Keep each string short and concrete. Return [] for any array with no entries.`;
       hardRestrictions = restrictions;
       excludedIngredients = prefs?.excludedIngredients ?? [];
     } catch (err) {
-      console.warn('[suggest-from-ingredients] Could not load household restrictions — AI prompt will have no safety context', err);
+      console.error('[suggest-from-ingredients] Household safety context unresolved — refusing to suggest meals', err);
+      return res.status(503).json({
+        message: "We can't check this against your household's dietary needs right now, so we're not going to guess. Please try again in a moment.",
+        code: "HOUSEHOLD_SAFETY_UNAVAILABLE",
+      });
     }
 
     // Build restriction block — only included when there are actual restrictions
@@ -10589,7 +10642,10 @@ Rules:
     }).parse(req.body);
     if (!process.env.OPENAI_API_KEY) return res.status(503).json({ message: "AI not configured" });
 
-    // Load household safety context — must be resolved before recipe generation
+    // Load household safety context — must be resolved before recipe generation.
+    // FAIL CLOSED (SURF1B): a recipe generated without the household's allergens in
+    // the prompt is not a degraded recipe, it is an unsafe one. Previously this
+    // caught and continued.
     let hardRestrictions: string[] = [];
     let excludedIngredients: string[] = [];
     try {
@@ -10600,7 +10656,11 @@ Rules:
       hardRestrictions = restrictions;
       excludedIngredients = prefs?.excludedIngredients ?? [];
     } catch (err) {
-      console.warn('[generate-recipe-from-suggestion] Could not load household restrictions — recipe will be generated without safety context', err);
+      console.error('[generate-recipe-from-suggestion] Household safety context unresolved — refusing to generate a recipe', err);
+      return res.status(503).json({
+        message: "We can't check this against your household's dietary needs right now, so we're not going to guess. Please try again in a moment.",
+        code: "HOUSEHOLD_SAFETY_UNAVAILABLE",
+      });
     }
 
     const restrictionBlock = hardRestrictions.length > 0
@@ -10872,13 +10932,21 @@ Generate a complete recipe using these as the foundation.`;
         return res.status(400).json({ message: 'meals array exceeds limit of 200' });
       }
 
-      // Load household hard restrictions when authenticated — server-authoritative safety filtering
+      // Load household hard restrictions when authenticated — server-authoritative safety filtering.
+      // FAIL CLOSED (SURF1B): uplift suggestions add ingredients to a household's meals.
+      // An unfiltered suggestion can add the very allergen the household avoids, so an
+      // unresolved safety context suppresses the suggestions rather than shipping them
+      // unfiltered. Previously this caught and continued.
       let hardRestrictions: string[] = [];
       if (req.isAuthenticated()) {
         try {
           hardRestrictions = await collectHouseholdHardRestrictions(req.user!.id);
         } catch (err) {
-          console.warn('[uplift/batch] Could not load household restrictions — uplift suggestions will not be restriction-filtered', err);
+          console.error('[uplift/batch] Household safety context unresolved — suppressing uplift suggestions', err);
+          return res.status(503).json({
+            message: "We can't check ingredient suggestions against your household's dietary needs right now.",
+            code: "HOUSEHOLD_SAFETY_UNAVAILABLE",
+          });
         }
       }
 
@@ -11351,7 +11419,9 @@ Generate a complete recipe using these as the foundation.`;
           b.weekNumber > a.weekNumber ? b : a
         );
         const days = await storage.getPlannerDays(currentWeek.id);
-        const plantSlugs = new Set<string>();
+        // Deduped by DIVERSITY GROUP, not ingredient slug: kale and cavolo nero are
+        // one plant, as the canonical owner says (CPI1 S1-2).
+        const plantGroups = new Set<string>();
         let mealsPlanned = 0;
         let daysWithMeals = 0;
 
@@ -11367,13 +11437,14 @@ Generate a complete recipe using these as the foundation.`;
             for (const rawIng of meal.ingredients) {
               const parsed = parseIngredientShared(rawIng);
               const slug = singularizeIngredientKey(parsed.normalizedName);
-              if (isPlantIngredient(slug)) plantSlugs.add(slug);
+              const group = plantDiversityGroup(slug);
+              if (group) plantGroups.add(group);
             }
           }
         }
 
         weeklyProgress = {
-          plantCount: plantSlugs.size,
+          plantCount: plantGroups.size,
           mealsPlanned,
           daysWithMeals,
         };
@@ -11423,7 +11494,9 @@ Generate a complete recipe using these as the foundation.`;
 
       // ── 1. Weekly progress — scoped to THIS week ────────────────────────────
       const days = await storage.getPlannerDays(weekId);
-      const plantSlugs = new Set<string>();
+      // Same counter, same key as /api/home/intelligence above: one diversity group,
+      // one plant (CPI1 S1-2).
+      const plantGroups = new Set<string>();
       let mealsPlanned = 0;
       let daysWithMeals = 0;
 
@@ -11439,7 +11512,8 @@ Generate a complete recipe using these as the foundation.`;
           for (const rawIng of meal.ingredients) {
             const parsed = parseIngredientShared(rawIng);
             const slug = singularizeIngredientKey(parsed.normalizedName);
-            if (isPlantIngredient(slug)) plantSlugs.add(slug);
+            const group = plantDiversityGroup(slug);
+            if (group) plantGroups.add(group);
           }
         }
       }
@@ -11447,7 +11521,7 @@ Generate a complete recipe using these as the foundation.`;
       const weeklyProgress =
         mealsPlanned > 0
           ? {
-              plantCount: plantSlugs.size,
+              plantCount: plantGroups.size,
               mealsPlanned,
               daysWithMeals,
             }

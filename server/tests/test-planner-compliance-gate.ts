@@ -48,6 +48,7 @@ function ctx(
     dietPattern,
     dietRestrictions,
     hardExcludedIngredients,
+    safetyUnavailable: false,
     categoryNameById: new Map(),
   };
 }

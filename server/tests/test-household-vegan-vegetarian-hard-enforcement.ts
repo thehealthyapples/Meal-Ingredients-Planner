@@ -109,6 +109,34 @@ const baseSettings: SmartSuggestSettings = {
   plannerEnableDrinks: false,
 };
 
+// ─── Animal-product detection for the served-entries assertions ───────────────
+//
+// SURF1B: these assertions previously ran a bare /milk|cream|butter/ over the served
+// text. Those three words have plant forms — "coconut milk", "oat cream", "peanut
+// butter" — and the suite was failing on a vegan Thai pumpkin soup whose only crime
+// was containing coconut milk. The pool filter was correct; the assertion was not.
+//
+// A false alarm in a safety suite is worse than no alarm: it teaches the reader to
+// discount a red line in the one test they most need to trust. Plant forms are
+// stripped first — the same distinction `dietRules.PLANT_MILK_PHRASES` draws — and
+// the animal check then runs on what remains.
+const PLANT_FORMS = [
+  "coconut milk", "almond milk", "oat milk", "soy milk", "soya milk", "rice milk",
+  "cashew milk", "hazelnut milk", "hemp milk", "pea milk", "plant milk", "oat mylk",
+  "coconut cream", "oat cream", "soya cream", "soy cream", "almond cream", "cashew cream",
+  "peanut butter", "almond butter", "cashew butter", "nut butter", "shea butter",
+  "cocoa butter", "coconut butter",
+];
+
+const ANIMAL_PRODUCT =
+  /(chicken|beef|pork|lamb|veal|bacon|ham|salmon|tuna|prawn|shrimp|fish|egg|cheese|cheddar|mozzarella|parmesan|feta|yogh|yogurt|honey|ghee|lard|gelatin|milk|cream|butter)/;
+
+function containsAnimalProduct(text: string): boolean {
+  let stripped = text.toLowerCase();
+  for (const phrase of PLANT_FORMS) stripped = stripped.split(phrase).join(" ");
+  return ANIMAL_PRODUCT.test(stripped);
+}
+
 // ─── Helpers to call generateSmartSuggestion for a single pool pass ───────────
 
 // Returns all entry candidate names across the 7-day plan.
@@ -208,7 +236,7 @@ section('Test 3 — Child Vegan: meat, dairy, egg, honey all blocked');
     'Child Vegan: honey blocked');
   const vegan3Texts = await generateSmartSuggestion(meals, noPrefs, settings, new Map(), categoryMap)
     .then(r => r.entries.map(e => [e.candidate.name, ...e.candidate.ingredients].join(' ').toLowerCase()));
-  const hasAnimal3 = vegan3Texts.some(t => /(chicken|beef|pork|lamb|salmon|fish|egg|cheddar|mozzarella|yogh|honey|butter|cream|milk)/.test(t));
+  const hasAnimal3 = vegan3Texts.some(containsAnimalProduct);
   assert(!hasAnimal3, 'Child Vegan: no animal products in any served entry (incl. external candidates)');
 }
 
@@ -241,7 +269,7 @@ section('Test 4 — Adult non-request-user Vegan: full vegan enforcement');
     'Adult Vegan member: dairy blocked');
   const vegan4Texts = await generateSmartSuggestion(meals, noPrefs, settings, new Map(), categoryMap)
     .then(r => r.entries.map(e => [e.candidate.name, ...e.candidate.ingredients].join(' ').toLowerCase()));
-  const hasAnimal4 = vegan4Texts.some(t => /(lamb|prawn|milk|cream|egg|cheese|chicken|fish|salmon|beef|pork|butter|honey)/.test(t));
+  const hasAnimal4 = vegan4Texts.some(containsAnimalProduct);
   assert(!hasAnimal4, 'Adult Vegan member: no animal products in any served entry (incl. external candidates)');
 }
 

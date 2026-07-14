@@ -15,6 +15,41 @@ export interface DietContext {
   dietRestrictions: string[];
 }
 
+// ─── Canonical diet-pattern vocabulary ───────────────────────────────────────
+
+/**
+ * The canonical spelling of every diet pattern this engine implements. This is the
+ * vocabulary the switch statements below are written against — it is not new
+ * knowledge, it is the existing knowledge, named.
+ */
+export const DIET_PATTERNS = [
+  "Vegan", "Vegetarian", "Keto", "Low-Carb", "Paleo", "Carnivore",
+  "Mediterranean", "DASH", "MIND", "Flexitarian",
+] as const;
+
+const DIET_PATTERN_BY_LOWER = new Map<string, string>(
+  DIET_PATTERNS.map(p => [p.toLowerCase(), p]),
+);
+
+/**
+ * Map a stored diet pattern onto its canonical spelling, case-insensitively.
+ *
+ * `shouldExcludeRecipe` switches on exact strings ("Vegan"), and the database holds
+ * six rows written in lower case ("vegan", "vegetarian", "mediterranean") by an
+ * older write path. Those rows fell through to `default: return false` — so four
+ * households who declared themselves vegan or vegetarian received NO hard exclusion
+ * whatsoever, and could be recommended beef (SURF1B).
+ *
+ * Normalising here, at the engine's own door, fixes every caller at once — recipe
+ * search, Smart Suggest, the planner gate, the Companion, and the client — rather
+ * than asking each of them to remember. An unrecognised pattern is returned
+ * unchanged, so the `default` branch still governs genuinely unknown values.
+ */
+export function canonicaliseDietPattern(pattern: string | null | undefined): string | null {
+  if (!pattern) return null;
+  return DIET_PATTERN_BY_LOWER.get(pattern.trim().toLowerCase()) ?? pattern;
+}
+
 // ─── Keyword Sets ────────────────────────────────────────────────────────────
 
 const GLUTEN_KEYWORDS = [
@@ -281,9 +316,12 @@ function countMatches(text: string, keywords: string[]): number {
  */
 export function shouldExcludeRecipe(
   text: string,
-  { dietPattern, dietRestrictions }: DietContext
+  { dietPattern: rawDietPattern, dietRestrictions }: DietContext
 ): boolean {
   const lower = text.toLowerCase();
+  // Case-normalise before the switch — a lower-cased "vegan" row must not fall
+  // through to `default: return false` and hand a vegan household a beef stew.
+  const dietPattern = canonicaliseDietPattern(rawDietPattern);
 
   // ── Restriction-based hard filters (stack independently) ──────────────────
   if (dietRestrictions.includes("Gluten-Free") && containsAny(lower, GLUTEN_KEYWORDS)) {
@@ -346,7 +384,8 @@ export function shouldExcludeRecipe(
  * Caller adds this to the recipe's base score before ranking.
  * Returns 0 when dietPattern is null or has no scoring rules.
  */
-export function scoreRecipeForDiet(text: string, dietPattern: string | null): number {
+export function scoreRecipeForDiet(text: string, rawDietPattern: string | null): number {
+  const dietPattern = canonicaliseDietPattern(rawDietPattern);
   if (!dietPattern) return 0;
 
   const lower = text.toLowerCase();
