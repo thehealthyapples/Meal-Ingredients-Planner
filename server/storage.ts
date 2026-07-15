@@ -41,6 +41,7 @@ export interface IStorage {
   getSystemMealsSummary(): Promise<MealSummary[]>;
   getMeal(id: number): Promise<Meal | undefined>;
   createMeal(userId: number, insertMeal: InsertMeal): Promise<Meal>;
+  resolveOrCreateProductMeal(userId: number, insertMeal: InsertMeal): Promise<{ meal: Meal; created: boolean }>;
   deleteMeal(id: number): Promise<void>;
   updateMeal(id: number, data: Partial<{ name: string; ingredients: string[]; instructions: string[]; servings: number; kind: string }>): Promise<Meal | undefined>;
   updateMealInstructions(id: number, instructions: string[], ingredients?: string[]): Promise<Meal | undefined>;
@@ -476,6 +477,33 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return meal;
+  }
+
+  // RM2A — Analyser → Planner journey. Resolve the canonical `meals` identity for
+  // an analysed product by barcode, reusing the household member's own existing row
+  // where one is present so the same product never multiplies into duplicate
+  // cookbook identities (RM1 §7.1; ARCHITECTURE_PRINCIPLES Principle 1 — one owner,
+  // one identity per real-world thing). Falls back to createMeal when the product
+  // carries no barcode or the user has no prior identity for it. Returns the
+  // resolved meal plus whether it was newly created, so callers can skip duplicate
+  // nutrition writes and re-analysis on reuse (idempotency).
+  async resolveOrCreateProductMeal(userId: number, insertMeal: InsertMeal): Promise<{ meal: Meal; created: boolean }> {
+    const barcode = insertMeal.barcode;
+    if (barcode) {
+      const [existing] = await db
+        .select()
+        .from(meals)
+        .where(and(
+          eq(meals.userId, userId),
+          eq(meals.barcode, barcode),
+          eq(meals.mealSourceType, "openfoodfacts"),
+        ))
+        .orderBy(meals.id)
+        .limit(1);
+      if (existing) return { meal: existing, created: false };
+    }
+    const meal = await this.createMeal(userId, insertMeal);
+    return { meal, created: true };
   }
 
   async updateMeal(id: number, data: Partial<{ name: string; ingredients: string[]; instructions: string[]; servings: number; kind: string }>): Promise<Meal | undefined> {

@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Search, Loader2, ArrowLeft, BookmarkCheck } from "lucide-react";
+import { Search, Loader2, ArrowLeft, BookmarkCheck, CalendarPlus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import AppleRating from "@/components/AppleRating";
 import type { InputProduct } from "@/lib/analyser-view-model";
 import { buildAnalyserViewModel } from "@/lib/analyser-view-model";
 import { DraggableSearchResultRow } from "@/components/PlannerDragDrop";
+import { AddToWeekModal } from "@/components/AddToWeekModal";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { invalidateMealLibrary } from "@/hooks/use-meals";
 
@@ -16,12 +18,14 @@ function ProductCard({
   allProducts,
   savedMealId,
   onSave,
+  onAddToPlanner,
   saving,
 }: {
   product: InputProduct;
   allProducts: InputProduct[];
   savedMealId?: number;
   onSave: () => void;
+  onAddToPlanner: () => void;
   saving?: boolean;
 }) {
   const vm = buildAnalyserViewModel(product, allProducts);
@@ -58,9 +62,19 @@ function ProductCard({
         )}
       </div>
 
+      <Button
+        variant="default"
+        onClick={onAddToPlanner}
+        className="w-full gap-1.5"
+        data-testid="button-analyser-add-to-planner"
+      >
+        <CalendarPlus className="h-4 w-4" />
+        Add to Planner
+      </Button>
+
       {savedMealId !== undefined ? (
         <p className="text-[11px] text-muted-foreground/60 text-center py-0.5">
-          Saved — drag the handle to add to a day slot or provisioning
+          Saved to cookbook — drag the handle to add to a day slot or provisioning
         </p>
       ) : (
         <button
@@ -87,6 +101,7 @@ export function PlannerAnalyserContent() {
   const [selectedProduct, setSelectedProduct] = useState<InputProduct | null>(null);
   const [savedProducts, setSavedProducts] = useState<Map<string, number>>(new Map());
   const [savingKey, setSavingKey] = useState<string | null>(null);
+  const [planProduct, setPlanProduct] = useState<InputProduct | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQuery(query), 400);
@@ -152,12 +167,25 @@ export function PlannerAnalyserContent() {
         allProducts={products}
         savedMealId={savedMealId}
         onSave={() => handleSaveProduct(selectedProduct)}
+        onAddToPlanner={() => setPlanProduct(selectedProduct)}
         saving={isSaving}
       />
     );
 
     return (
       <div className="space-y-3" data-testid="analyser-product-detail">
+        {planProduct && (
+          <AddToWeekModal
+            open={!!planProduct}
+            onClose={() => setPlanProduct(null)}
+            product={{
+              product_name: planProduct.product_name,
+              brand: planProduct.brand,
+              barcode: planProduct.barcode ?? null,
+              image_url: planProduct.image_url,
+            }}
+          />
+        )}
         <button
           onClick={() => setSelectedProduct(null)}
           className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"

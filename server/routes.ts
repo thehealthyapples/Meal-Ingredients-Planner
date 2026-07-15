@@ -954,37 +954,56 @@ export async function registerRoutes(
       if ((mealData as any).kind === 'component' && req.user!.role !== 'admin') {
         (mealData as any).kind = 'meal';
       }
-      const meal = await storage.createMeal(req.user!.id, mealData);
-      
-      if (nutritionData && Object.values(nutritionData).some(v => v)) {
+
+      // RM2A — a barcode-bearing OpenFoodFacts product resolves to one canonical
+      // meal identity per household member. Re-saving the same product (e.g. adding
+      // it to the Planner again) reuses that identity instead of multiplying
+      // cookbook rows. All other meal creates keep their existing insert behaviour.
+      const _isProductSave = (mealData as any).mealSourceType === 'openfoodfacts' && !!(mealData as any).barcode;
+      let meal;
+      let created = true;
+      if (_isProductSave) {
+        const resolved = await storage.resolveOrCreateProductMeal(req.user!.id, mealData);
+        meal = resolved.meal;
+        created = resolved.created;
+      } else {
+        meal = await storage.createMeal(req.user!.id, mealData);
+      }
+
+      if (created && nutritionData && Object.values(nutritionData).some(v => v)) {
         await storage.createNutrition({
           mealId: meal.id,
           ...nutritionData,
           source: 'recipe_source',
         });
       }
-      
-      res.status(201).json(meal);
 
-      const _userId = req.user!.id;
-      const _mealId = meal.id;
-      const _sourceType: string = (mealData as any).mealSourceType ?? "scratch";
-      const _sourceUrl: string | undefined = (mealData as any).sourceUrl;
-      const _isImport = _sourceType !== "scratch" && _sourceType !== "openfoodfacts";
-      getHouseholdForUser(_userId).then(hid =>
-        logProductEvent({
-          eventType: _isImport ? EventTypes.MEAL_IMPORTED : EventTypes.MEAL_SAVED,
-          userId: _userId,
-          householdId: hid,
-          mealId: _mealId,
-          metadata: _isImport && _sourceUrl
-            ? { inputType: "url", domain: extractDomain(_sourceUrl) ?? undefined }
-            : undefined,
-        })
-      ).catch(() => {});
+      res.status(created ? 201 : 200).json(meal);
 
-      if (!nutritionData || !Object.values(nutritionData).some(v => v)) {
-        autoAnalyzeMeal(meal.id).catch(() => {});
+      // On reuse there is nothing new to record or analyse — the identity and its
+      // nutrition/score already exist. Only fire telemetry and auto-analysis when a
+      // new identity was actually created.
+      if (created) {
+        const _userId = req.user!.id;
+        const _mealId = meal.id;
+        const _sourceType: string = (mealData as any).mealSourceType ?? "scratch";
+        const _sourceUrl: string | undefined = (mealData as any).sourceUrl;
+        const _isImport = _sourceType !== "scratch" && _sourceType !== "openfoodfacts";
+        getHouseholdForUser(_userId).then(hid =>
+          logProductEvent({
+            eventType: _isImport ? EventTypes.MEAL_IMPORTED : EventTypes.MEAL_SAVED,
+            userId: _userId,
+            householdId: hid,
+            mealId: _mealId,
+            metadata: _isImport && _sourceUrl
+              ? { inputType: "url", domain: extractDomain(_sourceUrl) ?? undefined }
+              : undefined,
+          })
+        ).catch(() => {});
+
+        if (!nutritionData || !Object.values(nutritionData).some(v => v)) {
+          autoAnalyzeMeal(meal.id).catch(() => {});
+        }
       }
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -1004,7 +1023,10 @@ export async function registerRoutes(
       const input = api.meals.saveProduct.input.parse(req.body);
 
       const audience = input.isBabyFood ? 'baby' : 'adult';
-      const meal = await storage.createMeal(req.user!.id, {
+      // RM2A — resolve the product to one canonical meal identity per household
+      // member by barcode; re-saving the same product reuses it rather than
+      // creating a duplicate cookbook row.
+      const { meal, created } = await storage.resolveOrCreateProductMeal(req.user!.id, {
         name: input.name,
         ingredients: [],
         instructions: input.quantity ? [`Product: ${input.quantity}`] : [],
@@ -1020,7 +1042,7 @@ export async function registerRoutes(
         isFreezerEligible: false,
       });
 
-      if (input.nutrition && Object.values(input.nutrition).some(v => v)) {
+      if (created && input.nutrition && Object.values(input.nutrition).some(v => v)) {
         await storage.createNutrition({
           mealId: meal.id,
           ...input.nutrition,
@@ -1028,13 +1050,15 @@ export async function registerRoutes(
         });
       }
 
-      res.status(201).json(meal);
+      res.status(created ? 201 : 200).json(meal);
 
-      const _spUserId = req.user!.id;
-      const _spMealId = meal.id;
-      getHouseholdForUser(_spUserId).then(hid =>
-        logProductEvent({ eventType: EventTypes.MEAL_SAVED, userId: _spUserId, householdId: hid, mealId: _spMealId })
-      ).catch(() => {});
+      if (created) {
+        const _spUserId = req.user!.id;
+        const _spMealId = meal.id;
+        getHouseholdForUser(_spUserId).then(hid =>
+          logProductEvent({ eventType: EventTypes.MEAL_SAVED, userId: _spUserId, householdId: hid, mealId: _spMealId })
+        ).catch(() => {});
+      }
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({
