@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  ShoppingBasket, ListPlus, Layers, Loader2, ChevronDown, ChevronUp,
+  ShoppingBasket, ListPlus, Loader2, ChevronDown, ChevronUp,
   Clock, ArrowRight, Info, CalendarDays,
 } from "lucide-react";
 import AppleRating from "@/components/AppleRating";
@@ -26,11 +26,9 @@ interface Props {
   otherProducts: InputProduct[];
   onAddToBasket: () => void;
   onAddToQuickList?: () => void;
-  onLinkToTemplate: () => void;
   onAddToWeek?: () => void;
   onViewProduct: (product: InputProduct) => void;
   addToBasketPending?: boolean;
-  linkToTemplatePending?: boolean;
   dietProfile?: DietProfile | null;
   /**
    * Household eater profiles with hard restrictions.
@@ -114,11 +112,9 @@ export default function AnalyserDetailV2({
   otherProducts,
   onAddToBasket,
   onAddToQuickList,
-  onLinkToTemplate,
   onAddToWeek,
   onViewProduct,
   addToBasketPending,
-  linkToTemplatePending,
   dietProfile = null,
   householdEaterProfiles,
 }: Props) {
@@ -318,18 +314,9 @@ export default function AnalyserDetailV2({
                 Add to Week
               </Button>
             )}
-            <Button
-              variant="ghost"
-              className="w-full gap-2 text-muted-foreground hover:text-foreground"
-              onClick={onLinkToTemplate}
-              disabled={linkToTemplatePending}
-              data-testid="button-v2-link-template"
-            >
-              {linkToTemplatePending
-                ? <Loader2 className="h-4 w-4 animate-spin" />
-                : <Layers className="h-4 w-4" />}
-              Create Meal Template
-            </Button>
+            {/* RM3: "Create Meal Template" (link-to-template) retired — it wrote the
+                duplicate meal_template_products representation with no live consumer.
+                Adding a product to the plan flows through "Add to Week" (RM2A). */}
           </div>
 
         </CardContent>

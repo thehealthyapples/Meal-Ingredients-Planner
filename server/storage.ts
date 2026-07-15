@@ -1,4 +1,4 @@
-import { User, InsertUser, Meal, MealSummary, InsertMeal, Nutrition, InsertNutrition, ShoppingListItem, InsertShoppingListItem, MealAllergen, IngredientSwap, MealPlan, InsertMealPlan, MealPlanEntry, InsertMealPlanEntry, Diet, MealDiet, MealCategory, SupermarketLink, ProductMatch, InsertProductMatch, IngredientSource, InsertIngredientSource, NormalizedIngredient, InsertNormalizedIngredient, GroceryProduct, InsertGroceryProduct, UserPreferences, InsertUserPreferences, Additive, InsertAdditive, ProductAdditive, InsertProductAdditive, BasketItem, InsertBasketItem, MealTemplate, InsertMealTemplate, MealTemplateProduct, InsertMealTemplateProduct, PlannerWeek, PlannerDay, PlannerEntry, InsertPlannerEntry, UserStreak, UserHealthTrend, ProductHistory, InsertProductHistory, FreezerMeal, InsertFreezerMeal, MealPlanTemplate, InsertMealPlanTemplate, MealPlanTemplateItem, InsertMealPlanTemplateItem, AdminAuditLog, UserPantryItem, ShoppingListExtra, MealPairing, InsertMealPairing, IngredientProduct, InsertIngredientProduct, Household, HouseholdMember, HouseholdEaterRow, WeekEaterOverride, FoodDiaryDay, FoodDiaryEntry, FoodDiaryMetrics, InsertFoodDiaryEntry, InsertFoodDiaryMetrics, users, meals, nutrition, shoppingList, mealAllergens, ingredientSwaps, mealPlans, mealPlanEntries, diets, mealDiets, mealCategories, supermarketLinks, productMatches, ingredientSources, normalizedIngredients, groceryProducts, userPreferences, additives, productAdditives, basketItems, mealTemplates, mealTemplateProducts, plannerWeeks, plannerDays, plannerEntries, userStreaks, userHealthTrends, productHistory, freezerMeals, mealPlanTemplates, mealPlanTemplateItems, adminAuditLog, userPantryItems, shoppingListExtras, mealPairings, ingredientProducts, households, householdMembers, householdEaters, plannerEntryEaters, plannerWeekEaterOverrides, foodDiaryDays, foodDiaryEntries, foodDiaryMetrics, foodKnowledge, FoodKnowledge, siteSettings, mealItems, MealItem, InsertMealItem, userItemUsage, savingsEvents, SavingsEvent, InsertSavingsEvent, pantryIngredientKnowledge, PantryIngredientKnowledge, mealUpliftApplications, MealUpliftApplication, InsertMealUpliftApplication, weekProvisioningItems, WeekProvisioningItem } from "@shared/schema";
+import { User, InsertUser, Meal, MealSummary, InsertMeal, Nutrition, InsertNutrition, ShoppingListItem, InsertShoppingListItem, MealAllergen, IngredientSwap, MealPlan, InsertMealPlan, MealPlanEntry, InsertMealPlanEntry, Diet, MealDiet, MealCategory, SupermarketLink, ProductMatch, InsertProductMatch, IngredientSource, InsertIngredientSource, NormalizedIngredient, InsertNormalizedIngredient, GroceryProduct, InsertGroceryProduct, UserPreferences, InsertUserPreferences, Additive, InsertAdditive, ProductAdditive, InsertProductAdditive, BasketItem, InsertBasketItem, MealTemplate, InsertMealTemplate, PlannerWeek, PlannerDay, PlannerEntry, InsertPlannerEntry, UserStreak, UserHealthTrend, ProductHistory, InsertProductHistory, FreezerMeal, InsertFreezerMeal, MealPlanTemplate, InsertMealPlanTemplate, MealPlanTemplateItem, InsertMealPlanTemplateItem, AdminAuditLog, UserPantryItem, ShoppingListExtra, MealPairing, InsertMealPairing, IngredientProduct, InsertIngredientProduct, Household, HouseholdMember, HouseholdEaterRow, WeekEaterOverride, FoodDiaryDay, FoodDiaryEntry, FoodDiaryMetrics, InsertFoodDiaryEntry, InsertFoodDiaryMetrics, users, meals, nutrition, shoppingList, mealAllergens, ingredientSwaps, mealPlans, mealPlanEntries, diets, mealDiets, mealCategories, supermarketLinks, productMatches, ingredientSources, normalizedIngredients, groceryProducts, userPreferences, additives, productAdditives, basketItems, mealTemplates, plannerWeeks, plannerDays, plannerEntries, userStreaks, userHealthTrends, productHistory, freezerMeals, mealPlanTemplates, mealPlanTemplateItems, adminAuditLog, userPantryItems, shoppingListExtras, mealPairings, ingredientProducts, households, householdMembers, householdEaters, plannerEntryEaters, plannerWeekEaterOverrides, foodDiaryDays, foodDiaryEntries, foodDiaryMetrics, foodKnowledge, FoodKnowledge, siteSettings, mealItems, MealItem, InsertMealItem, userItemUsage, savingsEvents, SavingsEvent, InsertSavingsEvent, pantryIngredientKnowledge, PantryIngredientKnowledge, mealUpliftApplications, MealUpliftApplication, InsertMealUpliftApplication, weekProvisioningItems, WeekProvisioningItem } from "@shared/schema";
 import { normalizeIngredientKey } from "@shared/normalize";
 import { deriveAcquisitionFromLegacy } from "@shared/recipe-acquisition";
 import { db } from "./db";
@@ -122,9 +122,6 @@ export interface IStorage {
   createMealTemplate(data: InsertMealTemplate): Promise<MealTemplate>;
   updateMealTemplate(id: number, data: Partial<InsertMealTemplate>): Promise<MealTemplate | undefined>;
   deleteMealTemplate(id: number): Promise<void>;
-  getMealTemplateProducts(mealTemplateId: number): Promise<MealTemplateProduct[]>;
-  addMealTemplateProduct(data: InsertMealTemplateProduct): Promise<MealTemplateProduct>;
-  removeMealTemplateProduct(id: number): Promise<void>;
   getMealsForTemplate(mealTemplateId: number): Promise<Meal[]>;
   updateMealTemplateId(mealId: number, mealTemplateId: number): Promise<Meal | undefined>;
   applyTemplateMetadataToMeal(mealId: number, template: MealTemplate): Promise<Meal | undefined>;
@@ -1025,21 +1022,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteMealTemplate(id: number): Promise<void> {
-    await db.delete(mealTemplateProducts).where(eq(mealTemplateProducts.mealTemplateId, id));
+    // RM3: the meal_template_products cascade was removed with that retired table.
     await db.delete(mealTemplates).where(eq(mealTemplates.id, id));
-  }
-
-  async getMealTemplateProducts(mealTemplateId: number): Promise<MealTemplateProduct[]> {
-    return db.select().from(mealTemplateProducts).where(eq(mealTemplateProducts.mealTemplateId, mealTemplateId));
-  }
-
-  async addMealTemplateProduct(data: InsertMealTemplateProduct): Promise<MealTemplateProduct> {
-    const [result] = await db.insert(mealTemplateProducts).values(data).returning();
-    return result;
-  }
-
-  async removeMealTemplateProduct(id: number): Promise<void> {
-    await db.delete(mealTemplateProducts).where(eq(mealTemplateProducts.id, id));
   }
 
   async getMealsForTemplate(mealTemplateId: number): Promise<Meal[]> {

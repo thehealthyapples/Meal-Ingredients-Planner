@@ -922,32 +922,11 @@ export default function ProductsPage() {
     toast({ title: "Added to quick list" });
   };
 
-  const linkToTemplate = useMutation({
-    mutationFn: async (product: ProductResult) => {
-      const templateName = product.product_name.replace(/\s*\d+g$/i, '').trim();
-      const createRes = await apiRequest('POST', '/api/meal-templates', { name: templateName, category: 'dinner' });
-      const template = await createRes.json();
-
-      await apiRequest('POST', `/api/meal-templates/${template.id}/products`, {
-        productName: product.product_name,
-        brand: product.brand || null,
-        store: null,
-        qualityTier: 'standard',
-        estimatedPrice: null,
-        upfScore: product.upfAnalysis?.upfScore || null,
-        imageUrl: product.image_url || null,
-        barcode: product.barcode || null,
-      });
-      return template;
-    },
-    onSuccess: (template) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/meal-templates'] });
-      toast({ title: "Template created", description: template.name });
-    },
-    onError: () => {
-      toast({ title: "Couldn't create template", description: "Something went wrong - try again", variant: "destructive" });
-    },
-  });
+  // RM3 (2026-07-15): the "Link to template" flow was retired. It wrote the duplicate
+  // meal_template_products representation (a throwaway meal_templates shell + a
+  // denormalized product row) that no live feature consumed (RM1 §3.3, §8). Adding an
+  // analysed product to the plan now goes through the canonical Analyser→Planner
+  // journey (RM2A): "Add to Week" resolve-or-creates a `meals` identity by barcode.
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
@@ -1715,14 +1694,12 @@ export default function ProductsPage() {
                 otherProducts={searchResults}
                 onAddToBasket={() => addToList.mutate(snap)}
                 onAddToQuickList={() => handleAddToQuickList(snap)}
-                onLinkToTemplate={() => linkToTemplate.mutate(snap)}
                 onAddToWeek={() => {
                   setSelectedProduct(null);
                   setAddToWeekProduct(snap);
                 }}
                 onViewProduct={(p) => handleProductSelect(p as ProductResult)}
                 addToBasketPending={addToList.isPending}
-                linkToTemplatePending={linkToTemplate.isPending}
                 dietProfile={userProfile ?? null}
                 householdEaterProfiles={householdEaterProfiles.length > 0 ? householdEaterProfiles : undefined}
               />

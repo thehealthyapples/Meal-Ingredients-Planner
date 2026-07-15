@@ -79,19 +79,11 @@ export const mealTemplates = pgTable("meal_templates", {
   nutritionOpportunities: text("nutrition_opportunities").array().notNull().default([]),
 });
 
-export const mealTemplateProducts = pgTable("meal_template_products", {
-  id: serial("id").primaryKey(),
-  mealTemplateId: integer("meal_template_id").notNull(),
-  productName: text("product_name").notNull(),
-  brand: text("brand"),
-  store: text("store"),
-  qualityTier: text("quality_tier").notNull().default("standard"),
-  estimatedPrice: real("estimated_price"),
-  upfScore: integer("upf_score"),
-  thaRating: integer("smp_rating"),
-  imageUrl: text("image_url"),
-  barcode: text("barcode"),
-});
+// RM3 (2026-07-15): `meal_template_products` — a duplicate, denormalized ready-meal
+// product representation with no live consumer — was retired under Principle 8. Ready
+// meals converge onto the canonical `meals` identity (RM1 §8). Its table is dropped by
+// migration `2026-07-15_rm3_retire_meal_template_products`. Do not reintroduce it: a
+// packaged product is a `meals` row you buy instead of cook (RM1 §2).
 
 export const meals = pgTable("meals", {
   id: serial("id").primaryKey(),
@@ -875,22 +867,9 @@ export const insertMealTemplateSchema = createInsertSchema(mealTemplates).pick({
   nutritionOpportunities: true,
 });
 
-export const insertMealTemplateProductSchema = createInsertSchema(mealTemplateProducts).pick({
-  mealTemplateId: true,
-  productName: true,
-  brand: true,
-  store: true,
-  qualityTier: true,
-  estimatedPrice: true,
-  upfScore: true,
-  imageUrl: true,
-  barcode: true,
-});
-
 export type MealTemplate = typeof mealTemplates.$inferSelect;
 export type InsertMealTemplate = z.infer<typeof insertMealTemplateSchema>;
-export type MealTemplateProduct = typeof mealTemplateProducts.$inferSelect;
-export type InsertMealTemplateProduct = z.infer<typeof insertMealTemplateProductSchema>;
+// RM3: MealTemplateProduct / InsertMealTemplateProduct removed with the retired table above.
 
 // ─── Meal Plan Templates ───────────────────────────────────────────────────────
 

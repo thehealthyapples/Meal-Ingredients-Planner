@@ -230,9 +230,17 @@ The following domains have been identified by reading all TypeScript files under
 
 | Attribute | Value |
 |-----------|-------|
-| Authoritative Source | **DB: `meal_templates` + `meal_template_products`** |
+| Authoritative Source | **DB: `meal_templates`** |
 | Seed | `server/seeds/seed-meal-shell-templates.ts`, `server/lib/seed-ready-meals.ts` |
 | Status | **Authoritative — declared** |
+
+> **RM3 (2026-07-15):** the `meal_template_products` half of this domain was **retired**
+> under Principle 8. It was a duplicate, denormalized ready-meal product representation
+> with no live consumer — its only reader was `meal-resolution-service.ts` (also deleted)
+> behind an unused `/resolve` route, and its only writer was the orphaned Analyser
+> "Link to template" flow. A ready meal is a `meals` row you buy instead of cook (Domain 12);
+> the Analyser is a read lens over that identity, not a second owner (RM1 §2, §8). The
+> table is dropped by migration `2026-07-15_rm3_retire_meal_template_products`.
 
 ---
 

@@ -65,7 +65,7 @@ import { deriveHouseholdCompanionFields } from "./lib/household-companion-fields
 import type { HouseholdHistory, MealEntry } from "../shared/stories/types";
 import type { AlternativeContext, Diet as AlternativeDiet } from "../shared/alternatives/types";
 import { lookupFoodConstruct, isLikelyFoodConstruct, logUnrecognisedConstruct, logConstructMappingFailure } from "@shared/food-constructs";
-import { insertMealTemplateSchema, insertMealTemplateProductSchema, insertFreezerMealSchema, updateMealSchema, householdMembers, users } from "@shared/schema";
+import { insertMealTemplateSchema, insertFreezerMealSchema, updateMealSchema, householdMembers, users } from "@shared/schema";
 import { importGlobalMeals, getImportStatus } from "./lib/openfoodfacts-importer";
 import { sanitizeUser } from "./lib/sanitizeUser";
 import { classifyAndEnrich, lookupClassification, updateClassification, applyClassificationToItems } from "./lib/classification-store";
@@ -5257,17 +5257,20 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       const template = await storage.getMealTemplate(parseInt(req.params.id));
       if (!template) return res.status(404).json({ message: "Template not found" });
       const implementations = await storage.getMealsForTemplate(template.id);
-      const products = await storage.getMealTemplateProducts(template.id);
-      res.json({ ...template, implementations, products });
+      // RM3: `products` (meal_template_products) retired — the canonical meal identity
+      // is the `meals` row itself, resolved via implementations above.
+      res.json({ ...template, implementations });
     } catch (err) {
       console.error("Error fetching meal template:", err);
       res.status(500).json({ message: "Failed to fetch meal template" });
     }
   });
 
-  // TRUST1-S3: authenticated, not admin. The Analyser's "Link to template"
-  // (client/src/pages/products-page.tsx) creates a template as a signed-in
-  // household on a ProtectedRoute page, so assertAdmin here would break it.
+  // TRUST1-S3: authenticated, not admin — generic meal-template (shell) creation on
+  // the live `meal_templates` catalogue. Its original household caller, the Analyser's
+  // "Link to template" flow, was retired under RM3 (it wrote the duplicate
+  // `meal_template_products` representation); the route stays authenticated so any
+  // future household-facing template authoring keeps working without an admin gate.
   app.post("/api/meal-templates", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
@@ -5314,66 +5317,15 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     }
   });
 
-  app.get("/api/meal-templates/:id/products", async (req, res) => {
-    try {
-      const products = await storage.getMealTemplateProducts(parseInt(req.params.id));
-      res.json(products);
-    } catch (err) {
-      console.error("Error fetching template products:", err);
-      res.status(500).json({ message: "Failed to fetch template products" });
-    }
-  });
-
-  // TRUST1-S3: authenticated, not admin — same Analyser call path as the create above.
-  app.post("/api/meal-templates/:id/products", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    try {
-      const data = insertMealTemplateProductSchema.parse({ ...req.body, mealTemplateId: parseInt(req.params.id) });
-      const product = await storage.addMealTemplateProduct(data);
-      res.status(201).json(product);
-    } catch (err) {
-      if (err instanceof z.ZodError) return res.status(400).json({ message: "Invalid data", errors: err.errors });
-      console.error("Error adding template product:", err);
-      res.status(500).json({ message: "Failed to add template product" });
-    }
-  });
-
-  app.delete("/api/meal-template-products/:id", assertAdmin, async (req, res) => {
-    try {
-      await storage.removeMealTemplateProduct(parseInt(String(req.params.id), 10));
-      res.sendStatus(204);
-    } catch (err) {
-      console.error("Error removing template product:", err);
-      res.status(500).json({ message: "Failed to remove template product" });
-    }
-  });
-
-  // TRUST1-S3 (recorded decision B): a read wearing a POST — resolveTemplate
-  // writes nothing. It is guarded anyway because it returns a full Meal row
-  // selected on mealTemplateId alone (storage.ts getMealsForTemplate applies no
-  // userId filter), so anonymously it disclosed another household's meal.
-  // Auth closes the ANONYMOUS disclosure only. The cross-household leak survives
-  // for any signed-in caller; its root cause is the missing userId filter, shared
-  // with GET /api/meal-templates/:id, and it is NOT fixed here — see
-  // TRUST1_S3_SECURE_MEAL_TEMPLATE_ENDPOINTS.md § Route Audit Results.
-  app.post("/api/meal-templates/:id/resolve", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    try {
-      const resolveSchema = z.object({
-        sourceType: z.enum(['scratch', 'ready_meal', 'hybrid']).optional(),
-      });
-      const body = resolveSchema.parse(req.body);
-      const { resolveTemplate } = await import("./meal-resolution-service");
-      const userId = req.user!.id;
-      const resolved = await resolveTemplate(parseInt(req.params.id), userId, body.sourceType);
-      if (!resolved) return res.status(404).json({ message: "Template not found" });
-      res.json(resolved);
-    } catch (err) {
-      if (err instanceof z.ZodError) return res.status(400).json({ message: "Invalid data", errors: err.errors });
-      console.error("Error resolving template:", err);
-      res.status(500).json({ message: "Failed to resolve template" });
-    }
-  });
+  // RM3 (2026-07-15): the meal_template_products routes —
+  //   GET    /api/meal-templates/:id/products
+  //   POST   /api/meal-templates/:id/products
+  //   DELETE /api/meal-template-products/:id
+  //   POST   /api/meal-templates/:id/resolve   (meal-resolution-service, now deleted)
+  // were retired here. They were the read/write/scoring surface of the duplicate
+  // ready-meal product representation, which had no live consumer (RM1 §3.3, §8).
+  // Ready meals converge onto the canonical `meals` identity; the Analyser→Planner
+  // journey (RM2A) uses resolve-or-create by barcode over `meals`, not these routes.
 
   // TRUST1-S3A: `meals` is user-owned (shared/schema.ts:98, userId NOT NULL), and this route
   // took a meal by sequential integer id with no session and no ownership check — so any

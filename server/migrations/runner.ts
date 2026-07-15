@@ -1784,6 +1784,25 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    // RM3 — retire the duplicate ready-meal product representation.
+    //
+    // `meal_template_products` was a second, denormalized product representation
+    // (product_name/store/price/upf/barcode per template) with NO live consumer: its
+    // only reader was `meal-resolution-service.ts` behind POST /api/meal-templates/:id/resolve,
+    // which the client never called, and its only writer was the orphaned Analyser
+    // "Link to template" flow. RM1 (§3.3, §8) identified it as the store to converge
+    // away under Principle 8; a ready meal is a `meals` row you buy instead of cook.
+    //
+    // Safe: the table has no inbound foreign keys and no live reader/writer remains in
+    // the code after RM3. DROP IF EXISTS is idempotent. No generic ready meals are
+    // migrated — none were ever stored here as canonical identities.
+    id: "2026-07-15_rm3_retire_meal_template_products",
+    statements: [
+      `DROP TABLE IF EXISTS meal_template_products`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

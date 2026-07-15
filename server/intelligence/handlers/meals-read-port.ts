@@ -11,8 +11,9 @@
  * OWNER CORRECTION (per the canonical Capability Card, docs/architecture/capabilities/
  * meals.md): the capability registry's `owningService` string names
  * `server/lib/meal-service.ts` (starter-meals onboarding only — no general list/get/
- * search), `recipe-swap-engine.ts` (write/generation logic, no read surface), and
- * `server/meal-resolution-service.ts` (meal-plan slot resolution, a different concern).
+ * search) and `recipe-swap-engine.ts` (write/generation logic, no read surface).
+ * (RM3 retired the former `meal-resolution-service.ts` — the meal_template_products
+ * scoring engine — so it no longer appears in the owningService string.)
  * None of those are the actual owner. The real owner is `server/storage.ts`.
  *
  * NO OWNERSHIP FILTER AT THE STORAGE LAYER FOR getMeal/getMealItems: per the Card's

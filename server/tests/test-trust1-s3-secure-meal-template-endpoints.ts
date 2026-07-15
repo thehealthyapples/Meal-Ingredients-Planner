@@ -17,24 +17,33 @@
  * `meal_templates` is global platform content with no `userId` column (shared/schema.ts:49), so the
  * tidy one-word answer is `assertAdmin` on all five. It would have broken a live feature.
  *
- * The Analyser's "Link to template" button (client/src/pages/products-page.tsx:894,897) calls
- * POST /api/meal-templates and POST /api/meal-templates/:id/products as a SIGNED-IN HOUSEHOLD, from
- * /products and /analyser — both `ProtectedRoute`, neither admin. `assertAdmin` there is a 403 and a
- * "Couldn't create template" toast for every non-admin household on the platform. There is no admin
- * template-management UI anywhere in the client to compensate: the household surface is the ONLY
- * write caller these routes have.
+ * The Analyser's "Link to template" button called POST /api/meal-templates and
+ * POST /api/meal-templates/:id/products as a SIGNED-IN HOUSEHOLD, neither admin. `assertAdmin`
+ * on the create route would have been a 403 and a "Couldn't create template" toast for every
+ * non-admin household on the platform.
  *
- * So the guard is split, and the split is the design:
+ * ── RM3 (2026-07-15): THE PRODUCT ROUTES WERE RETIRED ─────────────────────────────────────────────
  *
- *     POST   /api/meal-templates              → authenticated  (the Analyser creates)
+ * The "Link to template" flow wrote the duplicate `meal_template_products` representation, which had
+ * no live consumer (RM1 §3.3, §8). RM3 retired the flow and its routes:
+ *     POST   /api/meal-templates/:id/products   (retired)
+ *     GET    /api/meal-templates/:id/products    (retired)
+ *     DELETE /api/meal-template-products/:id     (retired)
+ *     POST   /api/meal-templates/:id/resolve     (retired — meal-resolution-service.ts deleted)
+ * so the assertions about them below were removed with them. The `POST /api/meal-templates` create
+ * route survives as generic template creation and is still verified here (anonymous refused, a
+ * non-admin household still succeeds), because it is the one route whose guard split remains
+ * load-bearing.
+ *
+ * The guard split that remains, and is the design:
+ *
+ *     POST   /api/meal-templates              → authenticated  (household template creation)
  *     PATCH  /api/meal-templates/:id          → assertAdmin    (mutating shared content)
  *     DELETE /api/meal-templates/:id          → assertAdmin    (destroying shared content)
- *     POST   /api/meal-templates/:id/products → authenticated  (the Analyser links)
- *     DELETE /api/meal-template-products/:id  → assertAdmin    (destroying shared content)
  *
  * Every one of them is closed to ANONYMOUS callers, which is the whole of R4. The assertions below
  * therefore prove BOTH directions, and the second is the one a plausible implementation of this task
- * gets wrong: anonymous is refused, AND a non-admin household can still create and link.
+ * gets wrong: anonymous is refused, AND a non-admin household can still create.
  *
  * ── THE STRUCTURAL TEST ───────────────────────────────────────────────────────────────────────────
  *
@@ -298,13 +307,12 @@ function staticAudit(): void {
   // ── The five in-scope routes, each with its SPECIFIC expected guard. A test that only asserted
   //    "guarded" would pass if every route were assertAdmin — which is the regression that breaks
   //    the Analyser. The guard TYPE is load-bearing, so it is asserted.
+  // RM3: the product/resolve routes were retired; only the three meal_templates
+  // write routes remain, and their guard split is still load-bearing.
   const expected: Array<[string, Guard, string]> = [
-    ["post /api/meal-templates", "AUTHENTICATED", "the Analyser creates as a household"],
+    ["post /api/meal-templates", "AUTHENTICATED", "household template creation"],
     ["patch /api/meal-templates/:id", "ADMIN", "mutates shared platform content"],
     ["delete /api/meal-templates/:id", "ADMIN", "destroys shared platform content"],
-    ["post /api/meal-templates/:id/products", "AUTHENTICATED", "the Analyser links as a household"],
-    ["delete /api/meal-template-products/:id", "ADMIN", "destroys shared platform content"],
-    ["post /api/meal-templates/:id/resolve", "AUTHENTICATED", "recorded decision B"],
   ];
 
   for (const [key, want, why] of expected) {
@@ -618,7 +626,8 @@ async function endToEnd(): Promise<void> {
 
     if (!up) throw new Error(`the server never listened.\n      tail: ${output.slice(-800)}`);
 
-    // ── ANONYMOUS — every one of the five, plus /resolve. This is R4. ─────────────────────────────
+    // ── ANONYMOUS — the three surviving write routes. This is R4. (RM3 retired the
+    //    product/resolve routes; their anonymous-refusal assertions went with them.) ─────────────
     console.log("\n  Anonymous caller (no session):");
 
     const anonCreate = await req(base, "POST", "/api/meal-templates", null, { name: "hostile", category: "dinner" });
@@ -630,22 +639,13 @@ async function endToEnd(): Promise<void> {
     const anonDelete = await req(base, "DELETE", `/api/meal-templates/${victim.id}`, null);
     check("anonymous DELETE  DELETE /api/meal-templates/:id → rejected", anonDelete.status === 403, `got ${anonDelete.status}`);
 
-    const anonLink = await req(base, "POST", `/api/meal-templates/${victim.id}/products`, null, { productName: "hostile" });
-    check("anonymous LINK    POST   /api/meal-templates/:id/products → rejected", anonLink.status === 401, `got ${anonLink.status}`);
-
-    const anonUnlink = await req(base, "DELETE", "/api/meal-template-products/1", null);
-    check("anonymous UNLINK  DELETE /api/meal-template-products/:id → rejected", anonUnlink.status === 403, `got ${anonUnlink.status}`);
-
-    const anonResolve = await req(base, "POST", `/api/meal-templates/${victim.id}/resolve`, null, {});
-    check("anonymous RESOLVE POST   /api/meal-templates/:id/resolve → rejected (decision B)", anonResolve.status === 401, `got ${anonResolve.status}`);
-
     // THE assertion. Before S3 this returned 204 and the row was gone.
     const [stillThere] = await db.select().from(mealTemplates).where(eq(mealTemplates.id, victim.id));
     check("…and the template SURVIVED the anonymous DELETE", stillThere !== undefined, "the row was destroyed anonymously");
     check("…and it was not defaced by the anonymous PATCH", stillThere?.name === `TRUST1-S3 canary ${stamp}`, `name is now "${stillThere?.name}"`);
 
-    // ── AUTHENTICATED NON-ADMIN — the live Analyser feature must still work. ──────────────────────
-    console.log("\n  Signed-in household, non-admin (the Analyser's 'Link to template'):");
+    // ── AUTHENTICATED NON-ADMIN — household template creation must still work. ────────────────────
+    console.log("\n  Signed-in household, non-admin (generic template creation):");
 
     const userCookie = await login(base, userName, password);
     check("a non-admin household can log in", userCookie !== null, "login failed; the assertions below are meaningless");
@@ -656,17 +656,10 @@ async function endToEnd(): Promise<void> {
     });
     check("household CREATE → still succeeds (201)", userCreate.status === 201, `got ${userCreate.status}`);
 
-    let householdTemplateId: number | undefined;
     if (userCreate.status === 201) {
-      householdTemplateId = (await userCreate.json()).id;
+      const householdTemplateId = (await userCreate.json()).id;
       if (householdTemplateId) createdTemplateIds.push(householdTemplateId);
     }
-
-    const userLink = await req(base, "POST", `/api/meal-templates/${householdTemplateId ?? victim.id}/products`, userCookie, {
-      productName: "Test product",
-      qualityTier: "standard",
-    });
-    check("household LINK PRODUCT → still succeeds (201)", userLink.status === 201, `got ${userLink.status}`);
 
     // …but a household still may not destroy shared platform content.
     const userDelete = await req(base, "DELETE", `/api/meal-templates/${victim.id}`, userCookie);
@@ -685,9 +678,6 @@ async function endToEnd(): Promise<void> {
     check("admin CREATE → succeeds (201)", adminCreate.status === 201, `got ${adminCreate.status}`);
     if (adminCreate.status === 201) createdTemplateIds.push((await adminCreate.json()).id);
 
-    const adminResolve = await req(base, "POST", `/api/meal-templates/${victim.id}/resolve`, adminCookie, {});
-    check("admin RESOLVE → succeeds (200)", adminResolve.status === 200, `got ${adminResolve.status}`);
-
     const adminDelete = await req(base, "DELETE", `/api/meal-templates/${victim.id}`, adminCookie);
     check("admin DELETE → succeeds (204)", adminDelete.status === 204, `got ${adminDelete.status}`);
 
@@ -699,9 +689,9 @@ async function endToEnd(): Promise<void> {
 
     const anonList = await req(base, "GET", "/api/meal-templates", null);
     check("anonymous GET /api/meal-templates → still 200 (public reference data, unchanged)", anonList.status === 200, `got ${anonList.status}`);
-
-    const anonProducts = await req(base, "GET", "/api/meal-templates/1/products", null);
-    check("anonymous GET /api/meal-templates/:id/products → still reachable (not 401/403)", ![401, 403].includes(anonProducts.status), `got ${anonProducts.status}`);
+    // RM3: the GET /api/meal-templates/:id/products read was retired with the rest of the
+    // meal_template_products surface, so its "still reachable" assertion was dropped here —
+    // asserting a retired route is reachable would be a false comfort, not a regression guard.
   } catch (err) {
     // If the server died, its stderr is the diagnosis and the socket error is just the symptom.
     // Without this, an OOM-killed or crashed child reads as `TypeError: fetch failed`, which looks
