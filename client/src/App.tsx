@@ -56,6 +56,17 @@ const PartnersPage = lazy(() => import("@/pages/partners-page"));
 const QuickMealPage = lazy(() => import("@/pages/quick-meal-page"));
 const HomePage = lazy(() => import("@/pages/home-page"));
 const HomeExperiencePage = lazy(() => import("@/pages/home-experience-page"));
+// ARRIVAL1 — development-only Arrival Experience prototype. Live Home (`/home`) is untouched.
+//
+// The ternary is load-bearing and must not be "tidied" into a bare `lazy()` with the
+// guard left on the <Route> alone. `import.meta.env.DEV` is a compile-time constant:
+// written this way it folds to `false ? … : null`, the `import()` lands in a dead
+// branch, and Rollup drops the chunk. Guarding only the <Route> leaves the `import()`
+// live at module scope, and the prototype is still emitted into `dist/` — unreachable,
+// but shipped. That was the first version of this line, and the build proved it wrong.
+const ArrivalExperiencePage = import.meta.env.DEV
+  ? lazy(() => import("@/pages/dev/arrival-experience"))
+  : null;
 const DashboardPage = lazy(() => import("@/pages/dashboard"));
 const FoodDetailPage = lazy(() => import("@/pages/food-detail-page"));
 const ShoppingWorkspacePage = lazy(() => import("@/pages/shopping-workspace-page"));
@@ -252,6 +263,16 @@ function Router() {
 
       <Route path="/" component={HomeRoute} />
       <Route path="/home" component={() => <ProtectedRoute component={HomeExperiencePage} />} />
+      {/* ARRIVAL1 — development only. Wrapped in ProtectedRoute so the prototype
+          inherits the ONE shell: the same orchard backdrop, header slot, bottom
+          nav, error boundary and FloatingAssistant every authenticated page gets.
+          It composes the shell; it does not copy it. */}
+      {ArrivalExperiencePage && (
+        <Route
+          path="/dev/arrival"
+          component={() => <ProtectedRoute component={ArrivalExperiencePage} />}
+        />
+      )}
       <Route path="/dashboard" component={() => <ProtectedRoute component={DashboardPage} />} />
       <Route path="/meals/:id" component={() => <ProtectedRoute component={MealDetailPage} />} />
       <Route path="/foods/:slug" component={() => <ProtectedRoute component={FoodDetailPage} />} />

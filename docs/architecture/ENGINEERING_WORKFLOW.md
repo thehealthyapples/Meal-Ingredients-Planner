@@ -58,6 +58,7 @@ The documents referenced by that README are the **governing architecture** for T
 **For any user-facing implementation, it additionally always includes:**
 
 - `docs/architecture/THA_EXPERIENCE_ARCHITECTURE.md` (how THA behaves and feels — **prevails over UI in any conflict**)
+- `docs/architecture/THA_EXPERIENCE_LANGUAGE.md` (how THA must **feel** — the emotional target behaviour and presentation exist to produce; subordinate to the Experience Architecture)
 - `docs/architecture/THA_UI_ARCHITECTURE.md` (how THA looks)
 - `docs/architecture/THA_PRODUCT_KNOWLEDGE_REGISTRY_ARCHITECTURE.md` (what THA *is* — and the registry this change must keep true)
 
@@ -437,11 +438,12 @@ For every AI-related implementation confirm:
 
 **Adopted under `ARCH-VERIFY1` (2026-07-11), closing a governance gap.** This section applies to **every user-facing implementation** — anything a person sees, reads, hears, or does — in addition to the general Architecture Compliance Checklist above.
 
-Two governing documents own the user-facing layer, and each holds its own full checklist. **This workflow does not restate them** (that would create a second owner of the same law, which drifts); it makes them mandatory and names the precedence between them:
+Three governing documents own the user-facing layer, and each holds its own full checklist. **This workflow does not restate them** (that would create a second owner of the same law, which drifts); it makes them mandatory and names the precedence between them:
 
 | Document | Owns | Its checklist |
 |---|---|---|
 | [`THA_EXPERIENCE_ARCHITECTURE.md`](./THA_EXPERIENCE_ARCHITECTURE.md) (EXP1, + EXP2 Premium Experience Principles) | How THA **behaves and feels** — Home, progressive disclosure, calm before capability, one primary action, journeys, companion conduct, trust, language, errors, notifications, accessibility, and the premium standard of craft | **UX Governance Checklist** — its § 18, *including the Premium Standard block* |
+| [`THA_EXPERIENCE_LANGUAGE.md`](./THA_EXPERIENCE_LANGUAGE.md) (EXPLANG1) | How THA must **feel** — the emotional target the other two produce: calm, welcoming, effortless, intelligent, reassuring, premium, quietly memorable; the thirteen Principles of Feeling, the six-beat Experience Rhythm, and the Anti-Patterns THA must never adopt | **Experience Review Questions** — its § 6 |
 | [`THA_UI_ARCHITECTURE.md`](./THA_UI_ARCHITECTURE.md) (UIA2) | How THA **looks** — the Calm Orchard visual language, visual hierarchy, layout, colour, typography, spacing, motion, brand identity, state presentation, Visual Trust, design tokens, and one-owner-per-visual-concern | **UI Governance Checklist** — its § 18 |
 
 ```
@@ -455,9 +457,15 @@ For every user-facing implementation confirm:
     completed IN FULL — including the Premium Standard block (§ 17)
 ✓ The UI Governance Checklist (THA_UI_ARCHITECTURE.md § 18) has been
     completed IN FULL
+✓ The Experience Review Questions (THA_EXPERIENCE_LANGUAGE.md § 6) have been
+    answered — the change produces the required FEELING (calm, welcoming,
+    effortless, intelligent, reassuring, premium, quietly memorable) and adopts
+    none of the Experience Anti-Patterns (§ 7)
 ✓ Any conflict between them was resolved in the EXPERIENCE Architecture's
-    favour — Experience governs behaviour, UI governs presentation, and
-    Experience prevails (EXPERIENCE § 2.1, UI § 2)
+    favour — Experience governs behaviour, the Experience Language governs the
+    feeling that behaviour and presentation produce, UI governs presentation,
+    and the Experience Architecture prevails (EXPERIENCE § 2.1, EXPLANG § 2.1,
+    UI § 2)
 ✓ Nothing in this change owns a fact, an entity, or a decision at the
     presentation layer — every value shown is read from its single owner, and
     gaps render as honest absence, never invented content (Core Principle 6)

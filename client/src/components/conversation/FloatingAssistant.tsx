@@ -48,6 +48,7 @@ import {
 import {
   useCompanionSurfaceHints,
   usePendingAsk,
+  useCompanionWithheld,
   type CompanionSurfaceHints,
 } from "./companion-context";
 
@@ -1218,6 +1219,10 @@ export default function FloatingAssistant() {
   // read — so the Context Frame's pointer slots arrived empty on every turn and
   // "it" / "this" had nothing to resolve against (TIP3 §5.3).
   const surfaceHints = useCompanionSurfaceHints();
+  // UXHOME1 — an arriving surface may ask the Companion to hold its entrance, so it
+  // does not appear over content that is still settling. `false` everywhere else in
+  // the product, which is every surface's behaviour today.
+  const withheld = useCompanionWithheld();
   // PHASE5E — a question a surface is asking on the household's behalf, if any.
   const { ask, clearAsk } = usePendingAsk();
 
@@ -1445,6 +1450,12 @@ export default function FloatingAssistant() {
         ref={fabRef}
         onClick={() => setIsOpen((v) => !v)}
         aria-label={isOpen ? "Close Apple assistant" : "Open Apple assistant"}
+        // While withheld, the Companion is not yet present — so it is absent from the
+        // tab order and the accessibility tree too, rather than being an invisible
+        // control a keyboard or screen-reader user could reach and a sighted one
+        // could not. Its entrance is quiet, not partial.
+        aria-hidden={withheld || undefined}
+        tabIndex={withheld ? -1 : undefined}
         className={cn(
           // PX1-W1 (fnd-px-fab-covers-nav): the FAB sat at bottom-6 z-50 — the
           // same z as the BottomNav, painted later, covering the last nav item
@@ -1458,6 +1469,12 @@ export default function FloatingAssistant() {
           "transition-all duration-200",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
           isOpen && "rotate-0",
+          // UXHOME1 — the withheld entrance. It rides the `transition-all duration-200`
+          // already on this button, so the Companion arrives on the same easing it has
+          // always used: it simply arrives later. Reduced motion is honoured by the
+          // global prefers-reduced-motion block, which collapses the transition to 0 —
+          // and by the arriving surface, which does not withhold it at all in that mode.
+          withheld && "opacity-0 translate-y-1 pointer-events-none",
         )}
         data-testid="button-open-assistant"
       >

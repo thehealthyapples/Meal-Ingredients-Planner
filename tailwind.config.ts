@@ -87,6 +87,12 @@ export default {
         display: ["var(--font-display)"],
         serif: ["var(--font-serif)"],
         mono: ["var(--font-mono)"],
+        // UIA §8 — the signature voice. Deliberately NOT exposed as a Tailwind
+        // utility: `font-signature` would be a one-token door into the third
+        // typeface from any surface in the product, which is the exact spread
+        // §8 forbids. The one sanctioned entry point is the `.text-signature`
+        // role in index.css. This comment exists so the next person to notice
+        // the gap knows it is a decision, not an omission.
       },
       keyframes: {
         "accordion-down": {

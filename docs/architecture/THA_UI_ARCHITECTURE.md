@@ -152,7 +152,22 @@ Laws:
 
 ## 8. TYPOGRAPHY
 
-- **Two voices only:** one display family for identity moments (titles, brand), one text family for everything else. No third typeface, ever, for any campaign or feature.
+THA's typography system admits **three families, and no more** — two that carry the product, and one that is reserved, rationed, and almost never seen.
+
+| Voice | Role | Where it may appear |
+|---|---|---|
+| **Primary UI typeface** | The text family. Carries the working product. | Everything not claimed by the two voices below |
+| **Display typeface** | Identity moments — titles, headings, the brand's structural voice | Page, section and card titles; brand positions |
+| **Signature typeface** *(optional)* | **Emotionally significant branded moments only.** THA in its own hand. | Only where the product is *greeting* or *acknowledging* a household — never where it is *working* for them |
+
+**The signature typeface is a brand asset, not a type role.** It is admitted under one condition and constrained by two prohibitions:
+
+- **It is reserved for emotionally significant branded moments.** A moment qualifies only where something is true of the *relationship* — an arrival, a welcome, an honest milestone the household would themselves recognise. It never qualifies because a surface looked plain. (Experience Architecture § 17.9 owns which moments are meaningful; this section owns only how they may look, and adds no moment to that list.)
+- **It may never be used for functional UI.** Not in buttons, forms, navigation, tables, cards, modals, or the planner, cookbook, shopping and pantry realms — nor in any label, control, status, or value a household reads in order to *act*. Legibility is not the argument here and neither is taste: a signature that appears in the working product stops being a signature.
+- **Its use stays rare and deliberate, by governance rather than by intention.** Each surface permitted to use it is named in the adoption register, one at a time, and the rule that admits it is this one. **A second surface does not follow from the first.** The signature strengthens THA's identity only for as long as it is scarce; the failure state is not ugliness but *familiarity* — the moment it becomes an ordinary UI font, the identity it was admitted to carry is gone and cannot be recovered by using it more.
+
+> **Why three and not two.** The previous rule — *"two voices only; no third typeface, ever"* — was written to prevent the failure this document exists to prevent: a product that accretes typefaces per campaign until it has no voice. That danger is real and the rule was right about it. But it defended against the danger by forbidding the *category*, and in doing so it also forbade THA from ever speaking in its own hand at the one moment a kitchen-table product most needs to — the moment it says hello. The amendment keeps the defence and moves it to where the danger actually lives: **not in the third family's existence, but in its spread.** A typeface admitted for one named moment, forbidden in all functional UI, and extended only by a further governed decision cannot become the fourth competing voice, because nothing about admitting it makes admitting the next one easier. This remains **one canonical typography system with one definition source** (§ 16) — the signature is a governed member of it, not an exception to it, and it obeys every other rule in this section.
+
 - **A named scale, not free sizes.** Type sizes come from a small named scale with fixed roles — page title, section title, card title, body, caption. Surfaces use roles, never arbitrary sizes.
 - **Legibility is a floor, not a preference.** Body text is sized for every member of a household, including older eyes and small hands holding phones; a minimum body size is part of the scale's definition, and metadata smaller than the caption role is prohibited. Small-for-density is a decision the density system makes (§ 9), never a per-surface economy.
 - **Weight is hierarchy's quietest tool.** A restrained weight range carries structure; heavy weight is reserved for the few numerals and scores that deserve it. Shouting in bold is spending the emphasis budget on the shout.
@@ -304,6 +319,13 @@ Every implementation that changes anything a person sees must pass this checklis
 □ Typography and spacing
   Only named type roles and spacing steps? Body floor respected? Density
   modulation only through the one density system, one breakpoint truth?
+
+□ Signature typeface discipline (§ 8)
+  If the signature voice is used at all: is this an emotionally significant
+  branded moment rather than a plain-looking surface? Is it absent from every
+  functional control, label, status and value? Is the surface named in the
+  adoption register — and is it the ONLY surface, unless a further governed
+  decision added one?
 
 □ Brand identity
   Do logos, the apple, icons, illustration, photography, companion imagery,

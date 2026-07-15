@@ -40,6 +40,20 @@
   --font-sans:    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-display: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
+  /* UIA §8 — the SIGNATURE voice. THA in its own hand, for emotionally
+     significant branded moments only: never a button, a label, a status, or a
+     value a household reads in order to act. Its rarity is the whole point.
+     Permitted surfaces are named one at a time in the adoption register; today
+     there is exactly one, and it is a development-only prototype.
+
+     The webfont is NOT loaded here on purpose. Until a household-facing surface
+     adopts this voice, loading it would cost every household a font download for
+     a page only a developer can reach. The prototype loads it itself. On
+     adoption, add Caveat to the @import at the top of this file and delete the
+     loader in the adopting page — the TOKEN's home is here either way (§16: one
+     definition source), so nothing else moves. */
+  --font-signature: 'Caveat', 'Segoe Script', 'Bradley Hand', cursive;
+
   --sidebar:             0 0% 100%;
   --sidebar-foreground:  120 14% 14%;
   --sidebar-border:      33 22% 87%;
@@ -391,6 +405,19 @@
     font-weight: 600;
   }
 
+  /* UIA §8 — the signature type role. The ONLY sanctioned way to reach the
+     signature voice; no surface sets --font-signature itself. Sized generously
+     because a hand is smaller on the line than a typeface at the same px, and
+     leaned on by nothing else: it carries no weight scale, no colour, and no
+     size variants, so it cannot quietly grow into a second display role. */
+  .text-signature {
+    font-family: var(--font-signature);
+    font-weight: 600;
+    letter-spacing: 0.005em;
+    /* A hand sits high on its box; this pulls the baseline back onto the grid. */
+    line-height: 1.15;
+  }
+
   .calm-table tbody tr:nth-child(even) {
     background: hsl(var(--row-alt));
   }
@@ -515,6 +542,47 @@
   0% { transform: translateY(6px); opacity: 0; }
   60% { transform: translateY(-3px); opacity: 1; }
   100% { transform: translateY(0); }
+}
+
+/* ── The writing reveal (UXHOME1) ──────────────────────────────────────────
+   The signature voice, appearing as if it is being written: a soft-edged mask
+   sweeps left to right, so the ink arrives at the speed of a hand rather than
+   fading in as a block. It is a MASK, not a stroke animation — the glyphs are
+   real text throughout, which is why the sentence is selectable, translatable
+   and readable by a screen reader from the first frame. Motion here reveals
+   something that is already there; it never withholds it.
+
+   Reduced motion never reaches this class: the page does not apply it (see
+   dev/arrival-experience.tsx), so the sentence renders as plain, complete text
+   with no mask at all. The global prefers-reduced-motion block below is a
+   second net, not the guarantee — a mask stalled mid-sweep by a 0.01ms
+   duration would half-hide the words, and "loses no information" (UIA §11)
+   has to mean the words. */
+.signature-ink {
+  /* The mask is 300% of the element wide; the animation slides a soft-edged
+     window across it. The stops are chosen so the ENDPOINTS are clean: at rest
+     (position 0) the visible third is 0–33%, entirely inside the solid band, so
+     the finished words are fully opaque with no faded edge; at the start
+     (position 100%) the visible third is 66–100%, entirely inside the
+     transparent band, so nothing shows. The 38–62% fade is the pen's soft edge,
+     and it is all that sweeps. */
+  -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 38%, transparent 62%, transparent 100%);
+          mask-image: linear-gradient(90deg, #000 0%, #000 38%, transparent 62%, transparent 100%);
+  -webkit-mask-size: 300% 100%;
+          mask-size: 300% 100%;
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+  /* Start with the window over the transparent tail — nothing inked yet. */
+  -webkit-mask-position: 100% 0;
+          mask-position: 100% 0;
+  animation: signature-write 1450ms cubic-bezier(0.33, 0.02, 0.2, 1) forwards;
+}
+
+@keyframes signature-write {
+  to {
+    -webkit-mask-position: 0 0;
+            mask-position: 0 0;
+  }
 }
 
 /* Cards and panels inside modals sit on top of the orchard background,

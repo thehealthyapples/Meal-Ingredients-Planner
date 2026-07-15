@@ -101,6 +101,19 @@ interface CompanionContextValue {
   ask: CompanionAsk | null;
   askCompanion: (ask: CompanionAsk) => void;
   clearAsk: () => void;
+  /**
+   * UXHOME1 — whether the Companion should hold its entrance.
+   *
+   * A surface that is still ARRIVING can ask the one Companion to wait, so it enters
+   * after the page has settled rather than appearing over content that is still moving.
+   * This is a channel, not a store: it carries no conversation state, opens no second
+   * assistant, and the Companion remains the sole owner of its own visibility.
+   *
+   * `false` is the default and the whole product's behaviour today — a surface that says
+   * nothing gets the Companion immediately, exactly as before.
+   */
+  withheld: boolean;
+  setWithheld: (withheld: boolean) => void;
 }
 
 const CompanionContext = createContext<CompanionContextValue | null>(null);
@@ -115,6 +128,7 @@ const CompanionContext = createContext<CompanionContextValue | null>(null);
 export function CompanionContextProvider({ children }: { children: ReactNode }) {
   const [hints, setHints] = useState<CompanionSurfaceHints>({});
   const [ask, setAsk] = useState<CompanionAsk | null>(null);
+  const [withheld, setWithheld] = useState(false);
 
   const publish = useCallback((next: CompanionSurfaceHints) => {
     setHints(next);
@@ -132,8 +146,8 @@ export function CompanionContextProvider({ children }: { children: ReactNode }) 
   }, []);
 
   const value = useMemo<CompanionContextValue>(
-    () => ({ hints, publish, ask, askCompanion, clearAsk }),
-    [hints, publish, ask, askCompanion, clearAsk],
+    () => ({ hints, publish, ask, askCompanion, clearAsk, withheld, setWithheld }),
+    [hints, publish, ask, askCompanion, clearAsk, withheld],
   );
 
   return (
@@ -256,5 +270,36 @@ export function usePendingAsk(): { ask: CompanionAsk | null; clearAsk: () => voi
     ask: ctx?.ask ?? null,
     clearAsk: ctx?.clearAsk ?? (() => {}),
   };
+}
+
+// ── Entrance (UXHOME1) ──────────────────────────────────────────────────────
+//
+// The Companion is invited, not intrusive (EXP §11). A surface that is still
+// arriving may ask it to wait — and MUST hand the invitation back, which is why
+// this is a hook with an unmount cleanup rather than a setter a caller could
+// forget to reverse. A page that withholds the Companion and then navigates away
+// cannot leave the household without one.
+
+/**
+ * Withhold the Companion's entrance while `withheld` is true.
+ *
+ * The Companion still mounts, still holds its thread, and is still the one
+ * assistant — only its ARRIVAL is deferred, so it does not appear over content
+ * that is still settling. Released automatically on unmount.
+ */
+export function useWithholdCompanion(withheld: boolean): void {
+  const ctx = useCompanionContext();
+  const setWithheld = ctx?.setWithheld;
+
+  useEffect(() => {
+    if (!setWithheld) return;
+    setWithheld(withheld);
+    return () => setWithheld(false);
+  }, [setWithheld, withheld]);
+}
+
+/** Whether the Companion is holding its entrance. Read by the FloatingAssistant, by nothing else. */
+export function useCompanionWithheld(): boolean {
+  return useCompanionContext()?.withheld ?? false;
 }
 
