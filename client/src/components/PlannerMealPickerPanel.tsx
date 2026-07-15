@@ -1,10 +1,12 @@
 import { useState, useMemo, useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import AppleRating from "@/components/AppleRating";
 import {
   Search, Loader2, ChefHat, UtensilsCrossed,
-  Baby, PersonStanding, Wine, Package, Store, Microscope, Globe, Snowflake,
+  Baby, PersonStanding, Wine, Package, Store, Microscope, Globe, Snowflake, History,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Meal, FreezerMeal } from "@shared/schema";
@@ -38,6 +40,21 @@ export interface PlannerProductResult {
 }
 
 export type PlannerSourceKey = "web" | "cookbook" | "freezer" | "packaged";
+
+/** RM4 — one previously added ready meal (an existing `meals` identity) served by
+ *  GET /api/planner/ready-meal-library, with read-time planning stats. */
+export interface ReadyMealLibraryItem {
+  id: number;
+  name: string;
+  brand: string | null;
+  imageUrl: string | null;
+  barcode: string | null;
+  isDrink: boolean;
+  audience: string;
+  appleScore: number | null;
+  timesPlanned: number;
+  lastPlannedEntryId: number | null;
+}
 
 const MEAL_SLOT_LABELS: Record<string, string> = {
   breakfast: "Breakfast",
@@ -138,6 +155,28 @@ export function PlannerMealPickerPanel({
     () => new Set(freezerMeals.filter(f => f.remainingPortions > 0).map(f => f.mealId)),
     [freezerMeals],
   );
+
+  // RM4 — the member's previously added ready meals, ordered most-recently-planned
+  // then most-frequently-used by the server. Fetched only while Packaged is active.
+  const { data: readyMealLibrary = [] } = useQuery<ReadyMealLibraryItem[]>({
+    queryKey: ["/api/planner/ready-meal-library"],
+    enabled: activeSources.has("packaged"),
+  });
+
+  const libraryItems = useMemo(() => {
+    let items = readyMealLibrary;
+    if (target) {
+      if (target.isDrink) {
+        items = items.filter(i => i.isDrink);
+      } else {
+        items = items.filter(i => !i.isDrink);
+        if (target.audience === "baby") items = items.filter(i => i.audience === "baby");
+        else if (target.audience === "child") items = items.filter(i => i.audience === "child");
+        else items = items.filter(i => i.audience !== "baby" && i.audience !== "child");
+      }
+    }
+    return items.slice(0, 8);
+  }, [readyMealLibrary, target]);
 
   const filteredMeals = useMemo(() => {
     const hasCookbook = activeSources.has("cookbook");
@@ -578,6 +617,60 @@ export function PlannerMealPickerPanel({
           </p>
         )}
       </div>
+
+      {/* RM4 — Previously Added Ready Meals: one-tap reuse of the member's existing
+          canonical meal identities. Shown while the Packaged chip is active and no
+          search is narrowing the list (search already surfaces these meals above). */}
+      {activeSources.has("packaged") && !mealSearch.trim() && libraryItems.length > 0 && (
+        <div className="border-t border-border/40 pt-2 space-y-1" data-testid="section-ready-meal-library">
+          <p className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
+            <History className="h-3 w-3" />
+            Previously Added Ready Meals
+          </p>
+          {libraryItems.map(item => (
+            <DraggableSearchResultRow key={item.id} mealId={item.id} mealName={item.name} sourceOrigin="packaged">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  if (!target) {
+                    toast({ title: "Select a meal slot", description: "Click a slot in the planner to add this ready meal." });
+                    return;
+                  }
+                  onSelect(item.id);
+                }}
+                disabled={addingEntry}
+                className="w-full h-auto justify-start gap-3 p-2"
+                data-testid={`button-ready-meal-library-${item.id}`}
+              >
+                {item.imageUrl ? (
+                  <img src={item.imageUrl} alt={item.name} className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
+                ) : (
+                  <div className="h-9 w-9 rounded-md bg-green-500/10 flex items-center justify-center flex-shrink-0">
+                    <UtensilsCrossed className="h-4 w-4 text-green-500/40" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-sm font-medium truncate">{item.name}</p>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {item.brand && !item.name.includes(item.brand) && (
+                      <span className="text-[10px] text-muted-foreground/70 truncate">{item.brand}</span>
+                    )}
+                    <Badge variant="outline" className="text-[10px] px-1">Ready Meal</Badge>
+                    {item.timesPlanned > 0 && (
+                      <span className="text-[10px] text-muted-foreground/60">
+                        Planned {item.timesPlanned} time{item.timesPlanned !== 1 ? "s" : ""}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {item.appleScore !== null && (
+                  <AppleRating rating={item.appleScore} sizePx={22} showTooltip={false} animate={false} />
+                )}
+              </Button>
+            </DraggableSearchResultRow>
+          ))}
+        </div>
+      )}
 
       {/* Shop-bought product search — only when Packaged chip is active */}
       {activeSources.has("packaged") && (

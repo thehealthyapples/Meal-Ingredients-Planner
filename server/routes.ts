@@ -6455,6 +6455,19 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     }
   });
 
+  // RM4 — Planner Ready Meal Library: the member's previously added ready meals
+  // (their existing `meals` identities), ordered most-recently-planned then
+  // most-frequently-used, for one-tap reuse in the Planner. Read-only.
+  app.get("/api/planner/ready-meal-library", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      res.json(await storage.getReadyMealLibrary(req.user!.id));
+    } catch (err) {
+      console.error("Error fetching ready meal library:", err);
+      res.status(500).json({ message: "Failed to fetch ready meal library" });
+    }
+  });
+
   app.get("/api/products/barcode/:barcode", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 

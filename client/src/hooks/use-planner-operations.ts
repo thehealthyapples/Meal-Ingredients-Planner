@@ -114,6 +114,8 @@ export function usePlannerOperations({
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
+      // RM4: recency/frequency ordering of the ready-meal library follows planning
+      qc.invalidateQueries({ queryKey: ["/api/planner/ready-meal-library"] });
     },
   });
 

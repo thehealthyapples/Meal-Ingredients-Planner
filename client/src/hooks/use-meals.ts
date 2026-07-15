@@ -21,6 +21,8 @@ import type { InsertMeal, Meal } from "@shared/schema";
 export function invalidateMealLibrary(qc: QueryClient) {
   qc.invalidateQueries({ queryKey: [api.meals.list.path] });
   qc.invalidateQueries({ queryKey: [MEALS_SUMMARY_KEY] });
+  // RM4: newly saved products appear in the Planner's ready-meal library
+  qc.invalidateQueries({ queryKey: ["/api/planner/ready-meal-library"] });
 }
 
 export function useMeals() {

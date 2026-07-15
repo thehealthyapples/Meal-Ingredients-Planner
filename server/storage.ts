@@ -31,6 +31,22 @@ export type SafeUser = {
   lastLoginAt?: Date | null;
 };
 
+/** RM4 — one row of the Planner Ready Meal Library: an existing `meals` identity
+ *  the member previously added, plus read-time planning stats and (where the member
+ *  has analysed the product) the Apple Score from their `product_history`. */
+export type ReadyMealLibraryItem = {
+  id: number;
+  name: string;
+  brand: string | null;
+  imageUrl: string | null;
+  barcode: string | null;
+  isDrink: boolean;
+  audience: string;
+  appleScore: number | null;
+  timesPlanned: number;
+  lastPlannedEntryId: number | null;
+};
+
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
@@ -42,6 +58,7 @@ export interface IStorage {
   getMeal(id: number): Promise<Meal | undefined>;
   createMeal(userId: number, insertMeal: InsertMeal): Promise<Meal>;
   resolveOrCreateProductMeal(userId: number, insertMeal: InsertMeal): Promise<{ meal: Meal; created: boolean }>;
+  getReadyMealLibrary(userId: number): Promise<ReadyMealLibraryItem[]>;
   deleteMeal(id: number): Promise<void>;
   updateMeal(id: number, data: Partial<{ name: string; ingredients: string[]; instructions: string[]; servings: number; kind: string }>): Promise<Meal | undefined>;
   updateMealInstructions(id: number, instructions: string[], ingredients?: string[]): Promise<Meal | undefined>;
@@ -501,6 +518,72 @@ export class DatabaseStorage implements IStorage {
     }
     const meal = await this.createMeal(userId, insertMeal);
     return { meal, created: true };
+  }
+
+  // RM4 — Planner Ready Meal Library. Read-only view over the member's own
+  // previously added ready meals (their `meals` rows — the one canonical identity,
+  // RM1 §2; no new entity, no duplicated product data). Planning stats come from
+  // the household's planner entries (`planner_entries.id` is the recency proxy —
+  // the table carries no timestamp); the Apple Score, where the member has analysed
+  // the product, is read from their own `product_history` row by barcode. Ordered
+  // most-recently-planned first, then most-frequently-used, then newest identity.
+  async getReadyMealLibrary(userId: number): Promise<ReadyMealLibraryItem[]> {
+    const ownMeals = await db
+      .select({
+        id: meals.id,
+        name: meals.name,
+        brand: meals.brand,
+        imageUrl: meals.imageUrl,
+        barcode: meals.barcode,
+        isDrink: meals.isDrink,
+        audience: meals.audience,
+      })
+      .from(meals)
+      .where(and(eq(meals.userId, userId), eq(meals.isReadyMeal, true)));
+    if (ownMeals.length === 0) return [];
+
+    const mealIds = ownMeals.map(m => m.id);
+    const householdId = await getHouseholdForUser(userId);
+    const stats = await db
+      .select({
+        mealId: plannerEntries.mealId,
+        timesPlanned: sql<number>`count(${plannerEntries.id})`.mapWith(Number),
+        lastPlannedEntryId: sql<number>`max(${plannerEntries.id})`.mapWith(Number),
+      })
+      .from(plannerEntries)
+      .innerJoin(plannerDays, eq(plannerDays.id, plannerEntries.dayId))
+      .innerJoin(plannerWeeks, eq(plannerWeeks.id, plannerDays.weekId))
+      .where(and(eq(plannerWeeks.householdId, householdId), inArray(plannerEntries.mealId, mealIds)))
+      .groupBy(plannerEntries.mealId);
+    const statsByMealId = new Map(stats.map(s => [s.mealId, s]));
+
+    const barcodes = ownMeals.map(m => m.barcode).filter((b): b is string => !!b);
+    const ratingByBarcode = new Map<string, number>();
+    if (barcodes.length > 0) {
+      const history = await db
+        .select({ barcode: productHistory.barcode, thaRating: productHistory.thaRating })
+        .from(productHistory)
+        .where(and(eq(productHistory.userId, userId), inArray(productHistory.barcode, barcodes)));
+      for (const h of history) {
+        if (h.barcode && h.thaRating != null) ratingByBarcode.set(h.barcode, h.thaRating);
+      }
+    }
+
+    return ownMeals
+      .map(m => {
+        const s = statsByMealId.get(m.id);
+        return {
+          ...m,
+          appleScore: m.barcode ? ratingByBarcode.get(m.barcode) ?? null : null,
+          timesPlanned: s?.timesPlanned ?? 0,
+          lastPlannedEntryId: s?.lastPlannedEntryId ?? null,
+        };
+      })
+      .sort((a, b) =>
+        (b.lastPlannedEntryId ?? 0) - (a.lastPlannedEntryId ?? 0) ||
+        b.timesPlanned - a.timesPlanned ||
+        b.id - a.id,
+      );
   }
 
   async updateMeal(id: number, data: Partial<{ name: string; ingredients: string[]; instructions: string[]; servings: number; kind: string }>): Promise<Meal | undefined> {
