@@ -1,13 +1,13 @@
 /**
  * test-restriction-resolver.ts
  * ============================
- * Tests for the Phase 3 canonical restriction library and resolver.
+ * Tests for the canonical restriction library and resolver (Phase 5).
  *
  * Run with:  npm run test:restriction-resolver
  *
  * Tests cover:
  * - Library integrity (all definitions have required fields)
- * - Exact alias matching for all Phase 3 restrictions
+ * - Exact alias matching for all canonical restrictions
  * - Case-insensitive matching
  * - Hyphen / underscore normalisation
  * - Derived ingredient matching
@@ -88,7 +88,7 @@ const coconutDef   = RESTRICTION_DEFINITIONS.find(d => d.id === 'coconut')!;
 section('1. Library integrity');
 
 assert(typeof RESTRICTION_LIBRARY_VERSION === 'string', 'Library version is a string');
-assert(RESTRICTION_LIBRARY_VERSION.startsWith('3.'), 'Library version is Phase 3');
+assert(RESTRICTION_LIBRARY_VERSION.startsWith('5.'), 'Library version is Phase 5');
 assert(RESTRICTION_DEFINITIONS.length >= 10, `Library contains at least 10 definitions (found ${RESTRICTION_DEFINITIONS.length})`);
 
 assert(!!glutenDef,    'gluten definition exists');
@@ -137,7 +137,7 @@ assert(findRestrictionById('eggs')?.id      === 'eggs',      'findRestrictionByI
 assert(findRestrictionById('coconut')?.id   === 'coconut',   'findRestrictionById("coconut")');
 
 assert(findRestrictionById('nut_free') === undefined, 'findRestrictionById("nut_free") → undefined (legacy)');
-assert(findRestrictionById('fish')     === undefined, 'findRestrictionById("fish") → undefined (Phase 4)');
+assert(findRestrictionById('fish')?.id  === 'fish',   'findRestrictionById("fish") → fish (Phase 5 restriction)');
 assert(findRestrictionById('')         === undefined, 'findRestrictionById("") → undefined');
 assert(findRestrictionById(null as any) === undefined, 'findRestrictionById(null) → undefined');
 
@@ -470,7 +470,9 @@ const mixedIds = mixed.map(m => m.restriction.id).sort();
 assertEqual(mixedIds, ['dairy', 'gluten', 'peanut'], 'mixed result IDs are gluten, dairy, peanut');
 
 // Unknown restrictions silently skipped
-const withUnknown = getRestrictionMatches(['gluten', 'fish', 'unknown-allergen']);
+// (both placeholder ids are genuinely absent from the library — 'fish' was retired
+//  from this list when it became a real Phase-5 restriction)
+const withUnknown = getRestrictionMatches(['gluten', 'not-a-real-restriction', 'unknown-allergen']);
 assertEqual(withUnknown.length, 1, 'unknown restrictions silently skipped');
 assert(withUnknown[0]?.restriction.id === 'gluten', 'only gluten returned');
 

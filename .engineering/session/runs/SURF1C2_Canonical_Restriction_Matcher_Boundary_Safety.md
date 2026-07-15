@@ -36,7 +36,19 @@ SURF1C2 suite: 65/0. SURF1C1 §5b flipped to a fix-holds guard: 81/0. Full SURF1
 regression + resolver/safety/ingredient suites green. Publication gate unchanged (60 checks,
 `cb-diet-labels-derived` still passes). Typecheck clean.
 
+## Verification closeout (2026-07-15)
+
+Verification formally closed — see [`docs/implementation/platform/SURF1C2_VERIFICATION_CLOSEOUT.md`](../../../docs/implementation/platform/SURF1C2_VERIFICATION_CLOSEOUT.md).
+Rollback: `rollback/SURF1C2-verification-closeout-20260715` → `3176c62d`.
+
+The three pre-existing `restriction-resolver` failures were each investigated and proven to be
+**stale Phase-3 assertions, not defects** (library version pin `3.`; `findRestrictionById('fish')`
+expecting `undefined`; and a skip-behaviour test using `fish` as an unknown placeholder — all made
+obsolete when the library grew to Phase 5). Retired to the current library shape; no runtime code
+changed. Suite now **335 passed, 0 failed**. SURF1C2 report restated: "No unsafe meal became allowed."
+
 ## Next action
 
-None — complete. Possible follow-up (report gap #1): a linter that flags short (<5 char)
-derived/hidden library terms, making the authoring rule mechanical rather than disciplinary.
+None — SURF1C2 formally closed. Possible follow-up (report gap #1): a linter that flags short
+(<5 char) derived/hidden library terms, making the authoring rule mechanical rather than
+disciplinary.

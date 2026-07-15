@@ -33,8 +33,9 @@ ingredient lines × 13 restrictions:
 0 matches ADDED   ·   8 matches REMOVED   ·   every removal a coincidental infix
 ```
 
-**No meal that was refused becomes allowed.** The new match set is a strict subset of the old
-one, so the change can only stop *false* refusals, never permit a real ingredient. All three
+**No unsafe meal became allowed.** The new match set is a strict subset of the old
+one, so the change can only stop *false* refusals, never permit a real ingredient — no meal that
+was refused becomes allowed. All three
 classes of removed match are fail-CLOSED corrections — the library was over-restricting:
 
 | Removed false match | Truth |
@@ -250,7 +251,7 @@ REMOVED 0`.
 
 | Suite | Result | | Suite | Result |
 |---|---|---|---|---|
-| `restriction-resolver` | 332 (3 pre-existing¹) | | `surf1b4-canonical-diet-pattern-safety` | 315 |
+| `restriction-resolver` | 335 (fully green¹) | | `surf1b4-canonical-diet-pattern-safety` | 315 |
 | `restriction-safety` | 75 | | `surf1b5-starter-meal-safety` | 84 |
 | `ingredient-verification` | 22 | | `surf1c1-starter-cookbook-diet-classification` | **81** |
 | `smart-suggest-restrictions` | 30 | | `cbk1-cookbook-seed` | 37 |
@@ -258,9 +259,13 @@ REMOVED 0`.
 | `surf1b2-dietary-restriction-knowledge` | 173 | | `scoring` | 12 |
 | `surf1b3-onboarding-allergy-routing` | 64 | | `intelligence-meals-binding` | 72 |
 
-¹ The 3 `restriction-resolver` failures pre-date SURF1C2 (stale Phase-3 assertions in a Phase-5
-library: library version string, `findRestrictionById('fish')`, and an "unknown restriction"
-message). Verified identical at `HEAD` before this change; SURF1C2 adds zero new failures.
+¹ The 3 `restriction-resolver` failures that pre-dated SURF1C2 (stale Phase-3 assertions in a
+Phase-5 library) were retired in the SURF1C2 verification closeout — see
+[`SURF1C2_VERIFICATION_CLOSEOUT.md`](./SURF1C2_VERIFICATION_CLOSEOUT.md). All three were
+confirmed as obsolete assertions, not runtime defects: the library version pin (`3.` → `5.0.0`),
+`findRestrictionById('fish')` (fish is now a real Phase-5 restriction), and an "unknown
+restriction" test that used `fish` as its unknown placeholder. The suite is now 335 passed,
+0 failed.
 
 **SURF1C1 §5b was updated, not broken.** SURF1C1 pinned this defect with two assertions
 *designed to fail the day it was fixed* (the comment reads *"If this now FAILS, the gate has been
