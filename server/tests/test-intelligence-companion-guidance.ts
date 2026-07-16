@@ -23,10 +23,11 @@
 import {
   buildGuidanceSuggestions,
   buildRecoverySuggestions,
-  CAPABILITY_DOMAIN,
   type CanExecuteFn,
+  type GetCompanionDomainFn,
   type GetGuidanceFn,
 } from "../intelligence/conversation/companion-guidance.js";
+import { CapabilityRegistry } from "../intelligence/capability-registry.js";
 import type { CapabilityGuidance } from "../intelligence/types.js";
 import {
   InMemoryCompanionFeedbackStore,
@@ -225,8 +226,53 @@ async function main(): Promise<void> {
     assert(householdGapped.some((s) => s.domain === "nutrition"), "other targets from the same source are unaffected by one gap");
     assert(householdGapped.some((s) => s.domain === "shopping"), "the follow-up target is still offered even though the related target was gapped");
 
-    assert(CAPABILITY_DOMAIN["planner-discovery"] === "planner", "discovery capability ids map to the same domain as their base capability");
-    assert(CAPABILITY_DOMAIN["meals"] === "meal", "base capability ids map to their Companion Card domain");
+    // CONV1 BEH-8 — the domain is read from the Capability Registry that owns it.
+    // There is no CAPABILITY_DOMAIN table here any more to test against.
+    const registry = new CapabilityRegistry();
+    assert(registry.getCompanionDomain("planner-discovery") === "planner", "discovery capability ids map to the same domain as their base capability");
+    assert(registry.getCompanionDomain("meals") === "meal", "base capability ids map to their Companion Card domain");
+
+    // BEH-8 regression — the defect the parallel table caused. Every capability an
+    // ordinary household can reach declares a Companion domain, so none can be
+    // silently unreachable again. This assertion is the gate: register a
+    // user-facing capability without a companionDomain and it fails here.
+    const userReachable = registry.list().filter(
+      (c) => c.availability !== "never" && c.permissions.minimumRole === "user" && c.permissions.knowledgeClass === "public",
+    );
+    const undeclared = userReachable.filter((c) => !c.companionDomain).map((c) => c.id);
+    assert(undeclared.length === 0, `every user-reachable capability declares a Companion domain (undeclared: ${undeclared.join(", ") || "none"})`);
+
+    // BEH-8 — and the exclusions are DECLARED, not forgotten. The admin and
+    // developer planes must never be reachable from an ordinary Companion turn
+    // (TIP1 §7). Giving either a companionDomain would be a privilege escalation.
+    assert(registry.getCompanionDomain("administration") === undefined, "the admin plane declares no Companion domain — never reachable from an ordinary turn");
+    assert(registry.getCompanionDomain("developer") === undefined, "the developer plane declares no Companion domain — physically isolated (TIP1 §7)");
+
+    // BEH-8 — a cross-cutting platform capability may be attributed but never routed to.
+    assert(registry.getCompanionDomain("food-intelligence") === "platform", "a capability owning zero business-domain data declares itself platform, not a room");
+    assert(registry.isCompanionDestination("food-intelligence") === false, "a platform capability is never a Next Step destination — it has no landing page");
+    assert(registry.isCompanionDestination("planner") === true, "a room is a destination");
+    assert(registry.isCompanionDestination("administration") === false, "an unreachable capability is not a destination");
+
+    // BEH-8 — the live defect, end to end: food-intelligence declares a guidance
+    // block, and before BEH-8 the table's silence killed it outright.
+    const fiDomain: GetCompanionDomainFn = (id) => new CapabilityRegistry().getCompanionDomain(id);
+    const fiGuidance: GetGuidanceFn = (id) =>
+      id === "food-intelligence"
+        ? { primaryAction: { capabilityId: "planner", verb: "read", label: "Plan This Week" } }
+        : undefined;
+    const fiSuggestions = buildGuidanceSuggestions(["food-intelligence"], allowAll, fiGuidance, fiDomain);
+    assert(fiSuggestions.length === 1, "a platform capability is a valid guidance SOURCE — its registered guidance block resolves");
+    assert(fiSuggestions[0].domain === "planner", "a platform source routes to a real room");
+    assert(fiSuggestions[0].sourceDomain === "platform", "and attributes itself honestly as platform, not as a room it does not own");
+
+    // BEH-8 — the converse: a platform capability offered as a TARGET is refused.
+    const platformTarget: GetGuidanceFn = (id) =>
+      id === "planner"
+        ? { primaryAction: { capabilityId: "evidence-learning", verb: "read", label: "See Patterns" } }
+        : undefined;
+    const noPlatformTarget = buildGuidanceSuggestions(["planner"], allowAll, platformTarget, fiDomain);
+    assert(noPlatformTarget.length === 0, "a Next Step never routes to a platform capability — there is no page to land on");
 
     const noSelfLoop = buildGuidanceSuggestions(["planner", "shopping"], allowAll, fakeGetGuidance);
     assert(!noSelfLoop.some((s) => s.domain === "planner" || s.domain === "shopping"), "never re-suggests a domain already answered this turn");

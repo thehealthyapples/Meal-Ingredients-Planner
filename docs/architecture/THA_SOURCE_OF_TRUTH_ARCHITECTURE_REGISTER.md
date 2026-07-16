@@ -77,6 +77,20 @@ The following domains have been identified by reading all TypeScript files under
 | 26 | Membership / Subscription | User tier: free / premium / friends_family |
 | 27 | User Preferences | Non-dietary preferences: display, saved settings |
 
+> **Domains 28–33 were added after this inventory was taken (2026-06-23).** 28 and 29 were declared
+> at their creation, by the workstreams that built them. **30–33 were not**: they are live domains
+> this inventory never listed, declared retrospectively by `OWN-5` (2026-07-16) under CONV1 phase P1.
+> The distinction matters and is not cosmetic — see Domain 30's note.
+
+| # | Domain | Description |
+|---|--------|-------------|
+| 28 | Preparation Knowledge | What is done to a food between the shop and the plate *(added `PHASE5A`, 2026-07-12)* |
+| 29 | Product Knowledge | What The Healthy Apples itself is *(added `PKR1`/`PKR3`, 2026-07-11)* |
+| 30 | Pantry State | What a household has in the house *(declared `OWN-5`, 2026-07-16)* |
+| 31 | Evidence & Learning (EL1) | What THA has observed about a household, and what it has confirmed *(declared `OWN-5`)* |
+| 32 | Platform Observations (OBS1) | What the platform did — operator telemetry *(declared `OWN-5`)* |
+| 33 | Benchmark World | The ten authored Benchmark Households and their scored runs *(declared `OWN-5`)* |
+
 ---
 
 ## PHASE 2 — SOURCE OF TRUTH DECLARATION
@@ -161,8 +175,22 @@ The following domains have been identified by reading all TypeScript files under
 
 | Attribute | Value |
 |-----------|-------|
-| Authoritative Source | **server/lib/dietRules.ts** |
+| Authoritative Source | **`shared/dietRules.ts`** |
 | Status | **Contested — see Phase 3** |
+| Corrected | **2026-07-16 (`DOC-5`)** — this row previously read **`server/lib/dietRules.ts`**, a path that has not existed for some time. **The owner is unchanged** — the same module, owning the same fact, at the location Rule 4 and [`ARCHITECTURE_PRINCIPLES.md`](./ARCHITECTURE_PRINCIPLES.md) § M3 both prescribed for it. Only the path was wrong. Found by **`COH-1`** (`npm run verify:coherence`), not by a reader |
+
+> **⚠️ The Status row above is stale, and `DOC-5` deliberately did not change it.** Phase 3's contest
+> for this domain was `server/lib/dietRules.ts` **vs an identical `client/src/lib/dietRules.ts`** — the
+> copy Rule 4 names explicitly, and the only rival this domain ever had. **Neither file exists today.**
+> Both were replaced by the single `shared/dietRules.ts` that Rule 4 (*"it must be moved to `shared/`
+> and imported from there"*) and `ARCHITECTURE_PRINCIPLES.md` § M3 (*"Move to `shared/dietRules.ts`;
+> delete both existing files; update all imports"*) prescribe, and both planes now import it: the
+> client at `client/src/pages/meals-page.tsx`, the server at `server/routes.ts`,
+> `server/lib/smart-suggest-service.ts`, `server/lib/planner-compliance.ts` and others. **M3 was done
+> and nobody came back to say so** — which is why the row still describes a contest that ended in the
+> architecture's favour. **Recording that verdict is an ownership act, and `DOC-5` is a path
+> correction**; it is reported here rather than taken quietly, and recommended as the next `DOC`-class
+> item.
 
 ---
 
@@ -172,8 +200,14 @@ The following domains have been identified by reading all TypeScript files under
 
 | Attribute | Value |
 |-----------|-------|
-| Authoritative Source | **Contested** (`users.dietPattern` + `users.dietRestrictions` columns vs `user_preferences` table) |
-| Status | **Contested — see Phase 3** |
+| Authoritative Source | **`household_eaters`** (Domain 16) — declared by [`ARCHITECTURE_PRINCIPLES.md`](./ARCHITECTURE_PRINCIPLES.md) Principle 2 since 2026-06-25 |
+| Live location today | **`household_eaters`** — the owner IS the live location. The pattern is stored in `default_diet_types` as its canonical diet type; restrictions in `hard_restrictions` |
+| Status | **✅ CONVERGED — 2026-07-16 (`CONV1 P4` / `OWN-1`).** `users.dietPattern` / `users.dietRestrictions` are **dropped** (migration `2026-07-16_conv1_p4_retire_users_diet_columns`, gated on zero data loss); the write door is `storage.updatePersonDiet` (`WRITE-2`, the eater PATCH 403 lifted); the three read-time enrichments are deleted (`READ-1`); the self-declared Bridge is deleted (`WRITE-1`). The publication gate's Household Dietary Preference domain now ratchets against the shadow returning |
+| Corrected | **2026-07-16 (`DOC-1`)** — this row previously read *"Contested (`users.dietPattern` + `users.dietRestrictions` columns **vs `user_preferences` table**)"*. **That named the wrong rival.** See the note below. **Converged the same day (`CONV1 P4`)** |
+
+> **⚠️ `user_preferences` is not, and never was, the rival for this fact.** This row named it as such from June until 2026-07-16, while `ARCHITECTURE_PRINCIPLES.md` Principle 2 named the real rival — `household_eaters` — throughout. **The two documents were not disagreeing about the answer; they were describing different questions**, which is why the contest survived: an engineer instructed to "resolve Domain 7" would read this row, promote `user_preferences`, retire the `users` columns into it, mark the domain converged — **and never touch `household_eaters`**, leaving Principle 2's actual violation entirely intact.
+>
+> The `users.diet*` ↔ `user_preferences.dietTypes` overlap **was real and live-divergent**, but it was a **Principle 7 bridge to delete**, not an ownership contest to resolve (Domain 27; `ARCHITECTURE_PRINCIPLES.md` § 4). **Deleting a bridge and choosing an owner are different acts**, and conflating them is what produced this row. *The bridge was deleted 2026-07-16 (`CONV1 P4` / `WRITE-1`); `user_preferences.dietTypes` remains Domain 27's own soft-preference fact, written only by its own doors.*
 
 ---
 
@@ -258,6 +292,8 @@ The following domains have been identified by reading all TypeScript files under
 |-----------|-------|
 | Authoritative Source | **DB: `planner_weeks`, `planner_days`, `planner_entries`** |
 | Supporting tables | `planner_entry_eaters`, `planner_week_eater_overrides`, `meal_plan_entries`, `meal_plans` |
+| Calendar anchor | **`planner_weeks.weekStartDate`** — the planner week's calendar identity. Governed by [`THA_HOUSEHOLD_TIME_ARCHITECTURE.md`](./THA_HOUSEHOLD_TIME_ARCHITECTURE.md) (TIME3, 2026-07-16). Written **only at week creation, by this domain's existing write funnel, and never back-filled** (Rule HT7) — the only moment THA can honestly know which calendar week a slot means. Existing rows stay `NULL`. **Not yet implemented** — Household Time Phase 4 |
+| Day-of-week key space | `planner_days.dayOfWeek` is **`0 = Sunday … 6 = Saturday`** — *declared*, never renumbered (Rule HT8). The Planner stores the integer; `shared/time/household-time.ts` declares what it means. **Known gap:** the convention is undocumented at the point of definition and is read backwards by a minority of live code — see `TIME2` § 8.1 |
 | Status | **Authoritative — declared** |
 
 ---
@@ -278,6 +314,7 @@ The following domains have been identified by reading all TypeScript files under
 |-----------|-------|
 | Authoritative Source | **DB: `households`, `household_members`, `household_eaters`** |
 | Types | `shared/household-eater.ts` |
+| Time zone | **`households.timeZone`** — the household's IANA zone; **the only stored fact from which household-local time is derived**. Governed by [`THA_HOUSEHOLD_TIME_ARCHITECTURE.md`](./THA_HOUSEHOLD_TIME_ARCHITECTURE.md) (TIME3, 2026-07-16). **Household-scoped, never per-member and never per-session** (Rule HT4) — a clock is a property of the home, not of the device; per-member zones would be a split-brain over one shared plan. Detected at signup, user-correctable, `Europe/London` default with declared provenance. **Not yet implemented** — Household Time Phase 2 |
 | Status | **Authoritative — declared** |
 
 ---
@@ -299,8 +336,24 @@ The following domains have been identified by reading all TypeScript files under
 
 | Attribute | Value |
 |-----------|-------|
-| Authoritative Source | **Contested** (`nutrition-benefit-library.ts` vs WS0 Knowledge Registry) |
+| Authoritative Source | **Contested** — **WS0 Knowledge Registry** (`shared/knowledge/` → DB `knowledge_*` tables, read via `server/services/nutrition-knowledge-registry.ts`) **vs a client-side benefit library that no longer exists in the tree** (see the note below) |
 | Status | **Contested — see Phase 3** |
+| Corrected | **2026-07-16 (`DOC-5`)** — this row previously read *"Contested (`nutrition-benefit-library.ts` vs WS0 Knowledge Registry)"*, naming as a live party to a contest a file that is **absent from the tree**. The surviving party is now named as **Rule 1 requires** — *"a file path or DB table name, never a vague description"* — in the exact form Rule 1 gives as its own example of an acceptable declaration. **No ownership was decided here** |
+
+> **⚠️ The rival named in this row does not exist, and `DOC-5` did not resolve the contest.**
+> Verified 2026-07-16: `nutrition-benefit-library.ts` is **absent from the working tree and from
+> `HEAD`**, and **nothing imports it** — `getNutritionBenefit` and `BENEFIT_MAP` have **zero consumers**
+> across `client/`, `server/` and `shared/`. **This document already recorded the verdict**: Phase 4's
+> Retirement Register lists that library as **Retire** — *"Superseded by WS0 Knowledge Registry. Covers
+> only 25 foods vs 188"* — and Rule 6 (*"static client files are not knowledge stores"*) is the rule it
+> was retired under. **So the Register has been recording a live contest against a file its own
+> retirement register had already condemned and the tree had already removed.**
+>
+> **What `DOC-5` did not do:** declare WS0 the authoritative owner and mark this domain converged.
+> That is an ownership act — it requires confirming that WS0 actually serves this display fact today,
+> which is a question about **live consumers**, not about a missing file, and Phase 3 owns it. The
+> Status row is therefore **left exactly as it was**. **Recommended as the next `DOC`-class item**,
+> alongside Domain 6's identical shape.
 
 ---
 
@@ -403,9 +456,10 @@ The following domains have been identified by reading all TypeScript files under
 
 | Attribute | Value |
 |-----------|-------|
-| Authoritative Source | **DB: `user_preferences` table** |
-| Contested columns | `users.dietPattern`, `users.dietRestrictions` (overlapping dietary data) |
-| Status | **Contested — see Phase 3** |
+| Authoritative Source | **DB: `user_preferences` table** — for preferences proper (display and similar). **Authoritative for its own fact** |
+| Not authoritative for | **Diet.** `user_preferences.dietTypes` is a **mirror** of `users.dietPattern`, written by a one-way bridge on the profile write path. **The owner of a person's diet is `household_eaters`** (Domain 7; Domain 16; Principle 2) |
+| Status | **Authoritative — declared** (for preferences). **The diet mirror is a Principle 7 bridge, scheduled for deletion with `OWN-1`** — not a contest, and **not a promotion candidate** |
+| Corrected | **2026-07-16 (`DOC-1`)** — previously *"Contested columns: `users.dietPattern`, `users.dietRestrictions` (overlapping dietary data) / Status: Contested — see Phase 3"*. This domain is not contested. It was recorded as a party to an ownership contest it is not a party to |
 
 ---
 
@@ -447,6 +501,122 @@ The following domains have been identified by reading all TypeScript files under
 | Permission model | Per-entry `visibility`: `public` ⊂ `household` ⊂ `admin` ⊂ `developer`. Monotonic (PKR23); **fails closed to `developer`** (PKR22); keys on **role, never subscription tier** (PKR24); filtered **before** prompt composition (PKR26) |
 | The safety property | **The registry classifies; `server/lib/access.ts` authorises** (PKR25). No registry value decides who anyone is — so a Markdown edit can never become a privilege escalation |
 | Status | **Authoritative — declared.** Currency (`last_verified` inside a bar) and `sources`-resolution are **declared and NOT yet enforced** — the gap PKCA §4.3 named at the domain's birth. The bijection and visibility checks ARE enforced |
+
+---
+
+### Domain 30: Pantry State
+
+*(Declared `OWN-5`, 2026-07-16 — CONV1 § Tier 1 / phase P1. **The domain existed for the whole life of this Register and was never in it.**)*
+
+> What a household **has in the house**. Per-household, household-authored, transactional state — not knowledge, not a projection of any seed, and owned by nobody else.
+
+| Attribute | Value |
+|-----------|-------|
+| Authoritative Source | **DB `user_pantry_items`** (`shared/schema.ts:1010`) |
+| Owning module | `server/storage.ts` — the **only** module that inserts, updates or soft-deletes pantry rows (`:2138` add, `:2159` update, `:2169` delete, `:2187` + `:2224` seed defaults) |
+| Read layer | `storage.getPantryItems(userId)` (`server/storage.ts:2129`). The Intelligence side reads through the INT8 narrow port `server/intelligence/handlers/pantry-read-port.ts:48` — **no write methods by construction** |
+| API surface | `/api/pantry` (`server/routes.ts:7788` GET · `:7808` POST · `:7844` PATCH · `:7864` DELETE); intelligence reads at `:5641`, `:5870`, `:11418`, `:11438`, `:11464`, `:11490` |
+| Scope | **Per-household, keyed on `household_id`** — the canonical read filters on it alone (`storage.ts:2134`), and uniqueness is household-scoped (`server/migrations/runner.ts:834-836`). `user_id` records **the authoring member, never the access scope**. The original per-user `UNIQUE(user_id, ingredient_key)` was dropped (`runner.ts:823`) |
+| Publication variant | **Transactional** (`CANONICAL_PUBLICATION_ARCHITECTURE.md`) — household-authored, no owner-to-projection contract. Already declared at `server/verification/publication-register.ts:738-748`; the drift check `pn-activity-drift` (`:751`) compares `activity_summary.current_pantry_items` against the table |
+| Consumers | `pantry-page.tsx`; `shopping-workspace-page.tsx:1456`; `shopping-list-page.tsx:1588`; `PantryKnowledgeHub.tsx`; `PantryIntelligencePanel.tsx` (*"It OWNS NOTHING"* — `:8`); capabilities `pantry` (`capability-registry.ts:529`) and `pantry-discovery` (`:615`); `pantry-intelligence-assembler.ts:140`; `opportunity-engine.ts:400`; `planner-explanation-context.ts:227` |
+| **The domain owns no time** | **There is no expiry, no purchase date, no best-before, no shelf life.** The only temporal column is `created_at` (`schema.ts:1024`) — a row-insert timestamp, not a food-ageing fact. `expiry_date` at `schema.ts:813` belongs to **`freezer_meals`** (Domain 12's neighbour), not here. **The domain most semantically entitled to food ageing owns none of it** — recorded as an honest gap (Principle 6), not a defect, and **not closed here**: adding a fact is a governed act under Rule 8, and `OWN-5` is a declaration |
+| Status | **Authoritative — declared, with two Rule 5 consumer defects recorded below** |
+
+**Rule 5 defects, recorded at declaration rather than discovered later:**
+
+| Site | Defect |
+|---|---|
+| `server/lib/product-event-logger.ts:112-115` | Reads `user_pantry_items` **directly**, bypassing the owning module — and counts by **`user_id`** where the canonical scope is `household_id`. A member's count, not the household's |
+| `server/benchmark/world-seeder.ts:212`, `scripts/import-development-world.ts:406` | Direct `db.delete` by `user_id`. **Non-production fixture teardown**, and both write back through the owner (`:351`, `:555`) — but the store exposes no reset method, so they have no in-contract path |
+
+> `publication-register.ts:743` declares `authorisedWriters: ["server/storage.ts"]` and `:745` `runtimeReadPath: "server/storage.ts (one path)"`. **Neither declaration covers the three sites above.** Recorded here; **not fixed by `OWN-5`, which changes no code.**
+
+---
+
+### Domain 31: Evidence & Learning (EL1)
+
+*(Declared `OWN-5`, 2026-07-16. Built by `EL1` on **2026-07-03** — ten days after this Register was written, and never added to it. **Shipped code has asserted this row's existence since the day the tables were created.**)*
+
+> What THA has **observed** about a household, and what the household has **confirmed**. Two tables, two scopes: an append-only evidence log, and a derived, re-evaluated-in-place signal over it.
+
+| Attribute | Value |
+|-----------|-------|
+| Authoritative Source | **DB `household_evidence_events`** (`shared/schema.ts:2563`) — append-only, never edited after insert; **DB `household_learning_signals`** (`:2612`) — derived, re-evaluated in place, `UNIQUE(household_id, domain, subject_type, subject_key, direction)` (`:2635`) |
+| Owning module | `server/intelligence/evidence-learning/evidence-learning-store.ts` — `DatabaseEvidenceLearningStore` (`:133`), singleton `evidenceLearningStore` (`:251`) |
+| Detection | `server/intelligence/evidence-learning/framework.ts` — **pure and deterministic**: `MIN_EVIDENCE_COUNT = 3` (`:53`), `MIN_CONSISTENCY = 0.7` (`:56`), `EVIDENCE_WINDOW_DAYS = 90` (`:199`). *"NO machine learning, NO statistical model, NO LLM judgement"* (`:8`) |
+| The one door | **Rule EL2** — evidence enters through `server/intelligence/evidence-learning/household-observation.ts` only, routed via `intelligencePlatform.handle()`. Governance: `docs/investigations/intelligence/EL2_EVIDENCE_AND_LEARNING_ARCHITECTURE_REFINEMENT.md` § 4 |
+| Lifecycle vocabulary | `SignalStatus = "pending_confirmation" \| "confirmed" \| "declined"` (`evidence-learning-store.ts:45`). `DECIDED_STATUSES = {confirmed, declined}` (`:48`) |
+| The rule the store owns | **A decided signal is never relitigated.** `upsertSignal` refreshes evidence strength but **`status` is absent from the SET clause by construction** (`:180-187`, `:205-211`) — not guarded by a conditional, but unable to be written. `confirmSignal` is idempotent on decided signals (`:234`) |
+| Capability | `evidence-learning` (`server/intelligence/capability-registry.ts:708`) — `report · search · approve · delete`, `executableIntents: []` |
+| Retention | **None. The 90-day window is a *detection* window, not a retention rule** (`framework.ts:221-223`) — an event older than 90 days is *recorded and retained*, then correctly ignored by detection. The only deletion is FK `ON DELETE CASCADE` from `households` (`schema.ts:2565`, `:2614`) |
+| Governance | `docs/implementation/knowledge/EL1_EVIDENCE_AND_LEARNING_PLATFORM.md` (built it); `EL2` (refined it). EL1 owns **zero** business-domain or preference data — mirrors Rule FI1 (`schema.ts:2556-2562`) |
+| Status | **Authoritative — declared. The sole-ownership claim its own code makes is NOT true today (below)** |
+
+> **This row makes an assertion in shipped code true for the first time.** `evidence-learning-store.ts:5-6` cites this Register, and `capability-registry.ts:711` states the tables are *"SoT-registered under EL1"*. **Both were false from the moment they were written** — this Register held no row for EL1, and its Preamble predates EL1 by ten days. Until 2026-07-16 the only place EL1's SoT registration existed was in the code claiming it.
+
+**Rule 5 defects — the sole-ownership claim does not hold.** `evidence-learning-store.ts:4-7` states *"No other module reads or writes these tables directly."* **Seven sites contradict it:**
+
+| Site | Access |
+|---|---|
+| `server/verification/publication-register.ts:1298` | Raw `SELECT … FROM household_learning_signals` — **the verifier itself bypasses the owner it verifies** |
+| `server/benchmark/world-seeder.ts:269-270` | Direct `db.delete` on both tables |
+| `server/benchmark/world-seeder.ts:598-599` | Direct `db.select` count on both tables |
+| `server/development-world/world-reader.ts:385-386` | Direct `db.select` count on both tables |
+| `scripts/import-development-world.ts:459-460` | Direct `db.delete` on both tables |
+| `scripts/benchint2-verify-world-derivation.ts:78-81` | Direct `db.select` on both tables |
+
+> **Root cause, recorded so the fix is not guessed:** `IEvidenceLearningStore` (`:106-127`) exposes **no delete or reset method**, so every fixture-reset path is forced out of contract. The repo's tests assert only the narrower EL2 one-door rule (`test-learn1-household-learning.ts:511-524`) — **no test asserts sole ownership, which is why this drifted unobserved.** Not fixed by `OWN-5`; filed as a follow-on.
+
+---
+
+### Domain 32: Platform Observations (OBS1)
+
+*(Declared `OWN-5`, 2026-07-16. Built by `OBS1`, 2026-07-08. Governance: [`THA_OBSERVATION_ENGINE_ARCHITECTURE.md`](./THA_OBSERVATION_ENGINE_ARCHITECTURE.md).)*
+
+> What the **platform** did — routing, capability invocation, context composition, recovery, escalation. **Operator-scoped telemetry, never household knowledge.** The one domain in this Register whose entire value depends on nothing ever reading it back into behaviour.
+
+| Attribute | Value |
+|-----------|-------|
+| Authoritative Source | **DB `platform_observations`** (`shared/schema.ts:2668`) |
+| Owning module | `server/intelligence/observation/observation-store.ts` — **sole owner, and the claim is TRUE**: verified by repo-wide sweep, zero readers or writers of the table outside this module. The only other textual occurrences are the declaration (`schema.ts:2668`), the DDL (`server/migrations/runner.ts:1603-1627`) and one comment |
+| Vocabulary owner | `server/intelligence/observation/observation-engine.ts:47-64` — `OBSERVATION_KINDS`, a **closed** `as const` union. Extensibility rule: closed-but-growable `kind` + JSONB `metadata`, **never schema redesign** (`schema.ts:2655-2667`) |
+| Capture seam | `recordObservation()` (`observation-engine.ts:133`) — returns **`void`**, not a promise. *"Never throws, never blocks, never alters the observed operation"* (`:130-132`). `OBS_DISABLE_CAPTURE=1` is a functional no-op (`:107-109`, `:134`), **tested** (`test-intelligence-observation-telemetry.ts:142-149`) |
+| Contract | `observation-contract.ts` — `IObservationStore` (`:27`), `InMemoryObservationStore` (`:39`). *"No database import may ever be added to this file"* (`:7`). **The store throws; the engine swallows** (`:28`) — isolation lives at the seam, not the store |
+| Retention | **Bounded operational window, not an archive.** `RETENTION_DAYS = 30`, `MAX_ROWS = 50_000`, pruned opportunistically every 100th write (`observation-store.ts:37-56`, `:116-127`). **No cron** — pruning only occurs under write traffic |
+| Readers | Admin-only, all `assertAdmin`, all read-only: `server/routes.ts:12465-12629` (overview, capabilities, intents, context, companion, knowledge, planner, benchmarks, recent, export, behaviour, timelines). Operations: `server/lib/platform-status.ts:190-200`. Client: `admin-observation-workbench-page.tsx`, `admin-behaviour-workbench-page.tsx` |
+| Projections | `execution-timeline.ts` (OBS2) reconstructs per-interaction execution paths **from observation rows only — there is no timeline table** (`:1-25`) |
+| **The prohibition that defines the domain** | **Nothing may read an observation back into behaviour.** `THA_OBSERVATION_ENGINE_ARCHITECTURE.md:182`: *"Any behaviour that reads an observation — routing, permissions, confirmation tiers, phrasing, notices, learning — **stop**."* Cited by `HT16` (`THA_HOUSEHOLD_TIME_ARCHITECTURE.md:278`) and by its § 8.1 (`:240`), which forbids the Observation Engine from consuming Household Time — **a permanent verdict, not a migration backlog**. Observation day buckets are **operator-scoped**: declare the frame, never convert it (`:244`) |
+| Status | **Authoritative — declared and enforced.** Sole ownership verified; `OBS_DISABLE_CAPTURE` no-op tested |
+
+> **One drift recorded, not corrected here.** The code declares **fourteen** kinds (`observation-engine.ts:47-62`); the governing document says **thirteen** (`THA_OBSERVATION_ENGINE_ARCHITECTURE.md:45`, `:197`). The fourteenth — `delivery-decision` — was added by `DEC1` and is documented in `THA_DECISION_ENGINE_ARCHITECTURE.md:21`, **not** in the Observation Engine's own taxonomy. **The code is ahead of its document.** Correcting the Observation Engine architecture is a different document with a different owner — filed as a follow-on, on the line `DOC-2` drew for `NK2` and `DOC-4` for `PKCA`.
+
+---
+
+### Domain 33: Benchmark World
+
+*(Declared `OWN-5`, 2026-07-16. **This entry corrects the finding that produced it** — see the note below.)*
+
+> The ten permanent, authored **Benchmark Households** and the scored runs executed against them. DEV-only, admin-gated. It is a domain that **owns no database table** — and that is the fact worth declaring.
+
+| Attribute | Value |
+|-----------|-------|
+| Authoritative Source | **`server/benchmark/world-fixtures.ts`** — *"the single authored source of truth for the TEN permanent Benchmark Households"* (`:3-6`). Pure data + types; **no database imports** (`:32-35`) |
+| Scored-run artefacts | **The filesystem, not a table** — `docs/intelligence/benchmark/history/` (`server/tests/benchmark/bundle.ts:22`), written by `saveRun()` (`history.ts:64-79`), **append-only** (*"scored artefacts are appended, never edited"*, `:4-7`). 294 run files tracked in git |
+| Seeder | `server/benchmark/world-seeder.ts` — the only writer, and **it owns no table**: it writes exclusively **through other domains' existing owners** (`storage.createUser`, `createHouseholdForUser`, `joinHousehold`, `addPantryItem`) |
+| Golden fixture | `server/tests/benchmark/fixtures/companion-benchmark-100.v1.json`, pinned at `bundle.ts:21`. Governance: `docs/intelligence/benchmark/questions/THA_COMPANION_BENCHMARK_100_V1.md` |
+| Expectations | `server/tests/benchmark/expectations.ts` — **derived**, never authored: *"never invents a household fact, only classifies the SHAPE of the correct answer"* (`:10-12`); resolves capability tokens against the live registry — *"zero duplicated truth"* (`:26-27`) |
+| Scoring | `scorer.ts`, `aggregate.ts`; `RUBRIC_VERSION` / `FRAMEWORK_VERSION` v2.0.0 (`bundle.ts:24-38`). A rubric MAJOR change **re-baselines** rather than reporting a false regression (`history.ts:96-124`) |
+| DB footprint | **Exactly one row-kind in another domain's table** — `benchmark-run` observations (`server/tests/benchmark/runner.ts:224`), written fire-and-forget so *"a missing or unreachable observation store never affects a benchmark run"* (`:219-220`). The table is **Domain 32's**, sole-owned by `observation-store.ts`. Benchmarks owns the *kind's semantics*; the Observation Engine owns the *table, the vocabulary and the read view* (`summarizeBenchmarks`, `observation-engine.ts:917`) |
+| Runtime reach | **Live but DEV-only.** 14 admin routes (`server/routes.ts:8549-8792`, `:12488`), **lazily imported** (`:8552`) so the module never enters the boot graph. Every entry point re-asserts `assertBenchmarkWorldAllowed()` — *"Benchmark Household World is DEV-only. Refusing to touch a production environment"* (`world-seeder.ts:81-87`). Routes disclaim ownership: *"These routes own no benchmark logic"* (`:8544`) |
+| Determinism contract | Content frozen per `BENCHMARK_WORLD_VERSION`; **DB row ids are explicitly not part of the contract**; permanent identity is `BW01`–`BW10` (`world-fixtures.ts:19-30`). Known gaps are *"as canonical as present facts"* — honest-gap traps by design |
+| **The enforced invariant** | **The platform contains no benchmark-aware behaviour** — `server/tests/test-benchmark-no-production-branch.ts` text-scans `server/intelligence/**` and `server/services/**` and fails on any executable reference (`:58`), allow-listing exactly five Observation-Engine artefact tokens (`:71-77`). *"Nothing here is reachable from `processUserTurn`"* (`:36`). **Any future Register row granting Benchmarks ownership inside the Intelligence trees would contradict an enforced test** |
+| Status | **Authoritative — declared. Owns no table, and must not acquire one** |
+
+> **This row corrects the audit finding that created it, rather than propagating it.** `CPI1:173` — quoted verbatim by `CONV1` item `OWN-5` — records *"three live, **table-owning**, runtime-read domains have no row at all: Benchmarks, Learning (EL1), and Observations (OBS1)."*
+>
+> **Benchmarks is not table-owning.** Verified by enumerating all 88 `pgTable` declarations in `shared/schema.ts` (none benchmark) and sweeping `server/benchmark/` and `server/tests/benchmark/` for `pgTable` and `drizzle-orm/pg-core` imports (**zero of each**). The "no row at all" half of the finding was true; the "table-owning" half was not.
+>
+> **The correction is not pedantry — it changes what the row must say.** Declared as *table-owning*, this domain's SoT would have been recorded as a table that does not exist, and a reader looking for the ten households would search the database and find nothing. Its actual source of truth is **an authored TypeScript fixture and an append-only directory of JSON**, which Rule 1 permits explicitly: *"a file path or DB table name."* **CPI1 and CONV1 are history and are not edited** (`REPOSITORY_CONVENTIONS.md` § 3); the correction of record is this row and `docs/implementation/governance/OWN5_SOURCE_OF_TRUTH_REGISTER_DOMAINS.md` § 4.1.
 
 ---
 
@@ -530,24 +700,71 @@ uses structured canonical records.
 
 ---
 
-### DUPLICATION 4: Dietary Preferences (User) — LOW-MODERATE
+### DUPLICATION 4: Dietary Preferences (User) — ✅ RESOLVED *(was: ownership inverted)*
 
-**Multiple sources? YES — 2 locations**
+> **✅ Converged 2026-07-16 (`CONV1 P4`).** The analysis below is preserved as the record of the duplication as it stood. Its resolution: `users.dietPattern` / `users.dietRestrictions` **dropped** (`OWN-1`, behind a zero-data-loss migration gate); the write door moved to `household_eaters` first (`WRITE-2`); the three read-time enrichments deleted (`READ-1`); the mapping collapsed to `shared/dietRules.ts` (`READ-2`); the Bridge deleted (`WRITE-1`); eater rows created at membership events under a unique index (`WRITE-3`).
+>
+> **⚠️ Corrected 2026-07-16 (`DOC-1`). This audit compared the wrong pair.** As originally written it examined `users.diet*` against `user_preferences` — a genuinely low-risk overlap — graded it *"Conflict Risk: LOW / Launch Risk: GREEN"*, and **never compared `users.diet*` against `household_eaters`**, which is the duplication [`ARCHITECTURE_PRINCIPLES.md`](./ARCHITECTURE_PRINCIPLES.md) Principle 2 has named since 2026-06-25. **Every downstream ruling in Phases 4, 5 and 7, and in Appendix A, inherited that comparison** — which is how a safety-relevant duplication came to be carried as GREEN. The original text is preserved below the corrected analysis, struck, so the error is legible rather than erased.
 
-| System | Location | What is stored |
-|--------|----------|---------------|
-| `users` table columns | `users.dietPattern`, `users.dietRestrictions` | Diet pattern + restriction array directly on users row |
-| `user_preferences` table | `user_preferences` (separate table) | Richer preference set (display prefs, etc.) |
+**Multiple sources? YES — 3 locations, in two distinct relationships**
 
-**Overlap:** Both store dietary information. `user_preferences` was created to
-extend preferences beyond what fit on the users row, but dietary data now
-exists in both places.
+| System | Location | What is stored | Relationship |
+|--------|----------|---------------|--------------|
+| **`household_eaters`** | DB `household_eaters` | Per-person diet types + hard restrictions | ✅ **THE OWNER** (Domain 16; Principle 2) |
+| `users` table columns | `users.dietPattern`, `users.dietRestrictions` | Diet pattern + restriction array on the users row | 🔴 **Redundant shadow of the owner** — same scope, must always agree → redundant. **Retire** (`OWN-1`) |
+| `user_preferences` table | `user_preferences.dietTypes` | Richer preference set (display prefs, etc.) + a mirrored diet pattern | 🟡 **Not a rival owner.** Joined to `users.dietPattern` by a one-way bridge → **delete the bridge** (Principle 7) |
 
-**Conflict Risk:** LOW — routes currently read from `users` columns for dietary
-data, not `user_preferences`. But if a future PR writes to `user_preferences`
-for dietary settings, a split-brain will emerge.
+**The contest (ownership):** `users.diet*` vs `household_eaters`. Same fact, same
+scope, two stores — resolved in the owner's favour by Principle 2, and unactioned
+since 2026-06-25. A person's diet is owned by their eater row; today an adult's is
+owned by their account and a child's by their eater row, **discriminated by whether
+they have a login**.
 
-**Launch Risk:** GREEN — low immediate risk, medium future risk.
+**The bridge (not a contest):** `users.dietPattern` → `user_preferences.dietTypes`.
+**This is not an ownership question and must not be resolved as one.** It is the
+shape Principle 7 forbids, and it dies with the retirement.
+
+**Conflict Risk:** **HIGH** *(was LOW, against the wrong pair)* — **and one half is
+live.** The original text predicted
+*"if a future PR writes to `user_preferences` for dietary settings, a split-brain
+will emerge."* **That PR landed.** The profile write path now carries a self-named
+one-way, failure-swallowing *"Bridge"* which fires only when `dietPattern` is
+written, while `PUT /api/user/preferences` writes `dietTypes` without touching
+`dietPattern` — so the two disagree for the same person. The divergence is on the
+*pattern* (a soft preference), **not** on `dietRestrictions` (the hard safety fact).
+Against `household_eaters` no divergent value is held today only because adult eater
+rows are written empty and the eater write door 403s — **the correct owner is kept
+empty, not kept in step**.
+
+**Launch Risk:** **YELLOW** *(was GREEN)* — see `ARCHITECTURE_PRINCIPLES.md` § 4.
+The live divergence is on the diet *pattern* (a soft preference), not on
+`dietRestrictions` (the hard safety fact), and the worst symptom — dietary
+restrictions being dropped from the Companion's household context — **was closed
+separately and is not live**. It is not GREEN, because the ownership is inverted and
+**the retirement itself moves live allergens**: it is the one migration in this
+register where a mistake reaches a plate.
+
+<details>
+<summary><strong>Original text (June — superseded 2026-07-16 by `DOC-1`; preserved, not deleted)</strong></summary>
+
+> **Multiple sources? YES — 2 locations**
+>
+> | System | Location | What is stored |
+> |--------|----------|---------------|
+> | `users` table columns | `users.dietPattern`, `users.dietRestrictions` | Diet pattern + restriction array directly on users row |
+> | `user_preferences` table | `user_preferences` (separate table) | Richer preference set (display prefs, etc.) |
+>
+> **Overlap:** Both store dietary information. `user_preferences` was created to
+> extend preferences beyond what fit on the users row, but dietary data now
+> exists in both places.
+>
+> **Conflict Risk:** LOW — routes currently read from `users` columns for dietary
+> data, not `user_preferences`. But if a future PR writes to `user_preferences`
+> for dietary settings, a split-brain will emerge.
+>
+> **Launch Risk:** GREEN — low immediate risk, medium future risk.
+
+</details>
 
 ---
 
@@ -561,7 +778,7 @@ for dietary settings, a split-brain will emerge.
 | `foodKnowledge` table | Food Additive Knowledge | **Retain** | Different domain (additives/concepts, not ingredient-level nutrition). Not a duplicate. |
 | `client/src/lib/dietRules.ts` | Dietary Rules | **Retire** | Move to `shared/` as a single module imported by both server and client. Eliminates the copy-paste maintenance risk. |
 | `nutrition-variety.ts` | Plant Diversity | **Migrate → Retire** | Plant classification should derive from WS2A canonical + diversity_group. nutrition-variety.ts keyword lists are a prototype-era workaround that pre-dates the canonical model. |
-| `users.dietPattern` / `users.dietRestrictions` | Dietary Preferences | **Retain** | These columns are the current live path — do not change without a migration strategy. Mark them as the SoT until user_preferences is promoted. |
+| `users.dietPattern` / `users.dietRestrictions` | Dietary Preferences | **✅ RETIRED — 2026-07-16 (`CONV1 P4` / `OWN-1`)** *(corrected 2026-07-16, `DOC-1`)* | **The owner is `household_eaters`** ([`ARCHITECTURE_PRINCIPLES.md`](./ARCHITECTURE_PRINCIPLES.md) Principle 2, since 2026-06-25; Domain 16). The retirement followed the ordered sequence exactly: write door first (`WRITE-2`), columns dropped behind a zero-data-loss migration gate (`OWN-1`), scaffolding last (`READ-1` + `READ-2` + `WRITE-1`). **⚠️ This row previously read *"Retain … Mark them as the SoT until user_preferences is promoted"* — a ruling that contradicted Principle 2 outright and named a promotion target that is not the owner.** *"Still the live path"* and *"the SoT"* are not the same claim, and collapsing them is what kept this shadow alive for three weeks past its retirement order. |
 
 ---
 
@@ -607,12 +824,26 @@ For each consumer, verify: does it read from the declared authoritative source?
 
 ### Dietary Preferences Consumers
 
+> **⚠️ Corrected 2026-07-16 (`DOC-1`).** This table previously declared the SoT as
+> `users.dietRestrictions` / `users.dietPattern` and marked every consumer **YES**.
+> **It was measuring compliance against the shadow.** The declared owner is
+> `household_eaters` (Domain 7; Domain 16; Principle 2), so the verdicts invert.
+>
+> **A `NO` here is not a defect to fix today.** These consumers read the shadow
+> *because the shadow is still the live path*, and that is correct until `OWN-1`
+> moves the write door onto the owner. **Repointing a read before the write moves
+> would silently discard a household's declaration** — the read-time scaffolding is
+> load-bearing until then and comes down last. The `NO`s record the distance to the
+> declared owner; they are not a work queue, and they must not be closed in this
+> order.
+
 | Consumer | SoT (declared) | Actual source | Compliant? |
 |----------|---------------|---------------|-----------|
-| Planner compliance gate | `users.dietRestrictions` | reads users table | **YES** |
-| Smart suggest service | `users.dietPattern` / `users.dietRestrictions` | reads users table | **YES** |
-| Profile page save | users table | writes users table | **YES** |
-| `user_preferences` table | Secondary | limited usage | Not in conflict currently |
+| Planner compliance gate | **`household_eaters`** | reads the canonical resolver over `household_eaters` | **YES** — *converged 2026-07-16 (`CONV1 P4` / `OWN-1`)* |
+| Smart suggest service | **`household_eaters`** | reads `household_eaters` (requester via `getPersonDiet`; eaters via stored rows) | **YES** — *converged 2026-07-16 (`CONV1 P4`)* |
+| Profile page save | **`household_eaters`** | **writes** `household_eaters` via `storage.updatePersonDiet` | **YES** — *the write door moved first (`WRITE-2`), 2026-07-16* |
+| Eater write door (adult rows) | **`household_eaters`** | PATCH edits any eater row | **YES** — *the 403 is lifted (`WRITE-2`), 2026-07-16* |
+| `user_preferences` diet mirror | **`household_eaters`** | *(bridge deleted)* | **YES** — *the Principle 7 bridge was deleted 2026-07-16 (`CONV1 P4` / `WRITE-1`); `dietTypes` remains Domain 27's own soft-preference fact* |
 
 ---
 
@@ -821,7 +1052,7 @@ who reads all three will notice. A user who trusts THA will wonder which is "rig
 | 1 | Food Knowledge (Nutrition) | nutrition-benefit-library.ts + pantry-knowledge.ts + WS0 Registry (+ pantryIngredientKnowledge DB) | 🔴 LAUNCH RISK |
 | 2 | Plant Diversity Counting | nutrition-variety.ts (keyword) vs diversity_group DB (canonical) | 🟡 IMPORTANT |
 | 3 | Dietary Rules | server/lib/dietRules.ts + client/src/lib/dietRules.ts (identical copy) | 🟡 IMPORTANT |
-| 4 | Dietary Preferences (User) | users.dietPattern/dietRestrictions + user_preferences table | 🟢 SAFE (for now) |
+| 4 | Dietary Preferences (User) | ~~`users.dietPattern`/`dietRestrictions` shadowing `household_eaters`~~ — **✅ CONVERGED 2026-07-16 (`CONV1 P4`)**: columns dropped, bridge deleted, `household_eaters` is the one owner | ✅ **RESOLVED** — *corrected 2026-07-16 (`DOC-1`); was "🟢 SAFE (for now)", assessed against the wrong pair (Phase 3, Duplication 4); converged the same day* |
 
 ---
 
@@ -849,8 +1080,8 @@ who reads all three will notice. A user who trusts THA will wonder which is "rig
 | Food Relationships | `shared/relationships/food-graph.ts` |
 | Plant Diversity | `shared/canonical/diversity-groups.ts` → DB `diversity_group`; one group = one plant, via `plantDiversityGroup()` |
 | Dietary Restrictions | `shared/restrictions/restriction-library.ts` |
-| Dietary Rules (pattern) | `server/lib/dietRules.ts` ← **duplicated in client** |
-| Dietary Preferences (user) | DB `users.dietPattern` + `users.dietRestrictions` |
+| Dietary Rules (pattern) | **`shared/dietRules.ts`** — one module, imported by both server and client. **⚠️ Domain 6's Status still reads "Contested"**: that contest was `server/lib/dietRules.ts` vs an identical `client/src/lib/dietRules.ts`, and **neither file exists today** — Migration M3 (Phase 8) is complete. Resolving the Status is an ownership act; see Domain 6. *Corrected 2026-07-16 (`DOC-5`); this row previously read* `server/lib/dietRules.ts` ← **duplicated in client** — *a path and a duplicate that are both gone* |
+| Dietary Preferences (user) | **DB `household_eaters`** (Domain 7 → Domain 16; Principle 2). **✅ Converged 2026-07-16 (`CONV1 P4`)** — the shadow columns are dropped; the owner is the live location. *Corrected 2026-07-16 (`DOC-1`); this row previously declared the shadow, unqualified* |
 | Discovery | `shared/discovery/engine.ts` |
 | Alternatives | `shared/alternatives/engine.ts` |
 | Stories | `shared/stories/engine.ts` |
@@ -871,9 +1102,14 @@ who reads all three will notice. A user who trusts THA will wonder which is "rig
 | Ingredient Normalization | `server/lib/ingredient-normalization-service.ts` |
 | Membership | DB `users.subscriptionTier` column |
 | User Preferences | DB `user_preferences` table |
+| Pantry State (what the household has in the house) | **DB `user_pantry_items`**, owned by `server/storage.ts` — the only writer; read via `storage.getPantryItems()`, and via the INT8 narrow port `pantry-read-port.ts` from the Intelligence side (Domain 30, declared `OWN-5` 2026-07-16). **Scoped per-household on `household_id`**; `user_id` is the authoring member, never the access scope. **Owns no food ageing** — no expiry, no purchase date, no shelf life; the only temporal column is the row's `created_at`. ⚠️ **Two Rule 5 defects recorded at declaration** — `product-event-logger.ts:112` reads the table directly *and by the wrong scope*; the fixture seeders delete directly because the store exposes no reset method (Domain 30) |
+| Evidence & Learning (household outcomes, and confirmed patterns over them) | **DB `household_evidence_events`** (append-only) + **`household_learning_signals`** (derived, re-evaluated in place), owned by `server/intelligence/evidence-learning/evidence-learning-store.ts`; detection is pure and deterministic in `framework.ts` — no ML, no LLM (EL1, 2026-07-03 — Domain 31, declared `OWN-5` 2026-07-16). Evidence enters through **one door** (Rule EL2, `household-observation.ts`). A decided signal is never relitigated — `status` is unwritable by `upsertSignal`, by construction. **The 90-day constant is a detection window, not a retention rule.** ⚠️ **The store's own "no other module reads or writes these tables directly" claim is false — seven direct-access sites, including the verifier `publication-register.ts:1298`** (Domain 31) |
+| Platform Observations (operator telemetry: what the platform did) | **DB `platform_observations`**, **sole-owned by** `server/intelligence/observation/observation-store.ts` — verified, zero access outside it. Closed 14-kind vocabulary in `observation-engine.ts`; bounded window (30 days / 50,000 rows, opportunistically pruned), **never an archive** (OBS1, 2026-07-08 — Domain 32, declared `OWN-5` 2026-07-16; governance: [`THA_OBSERVATION_ENGINE_ARCHITECTURE.md`](./THA_OBSERVATION_ENGINE_ARCHITECTURE.md)). **Nothing may read an observation back into behaviour** (§ 7 there) — the prohibition `HT16` and Household Time § 8.1 both rest on, and the reason `OBS_DISABLE_CAPTURE=1` must remain a functional no-op. ⚠️ The doc says thirteen kinds; the code declares fourteen — `delivery-decision` (DEC1) is documented in the Decision Engine architecture instead (Domain 32) |
+| Benchmark World (the ten authored Benchmark Households; scored runs) | **`server/benchmark/world-fixtures.ts`** (the authored households) + **`docs/intelligence/benchmark/history/`** (append-only scored-run artefacts **on the filesystem**) — Domain 33, declared `OWN-5` 2026-07-16. **No DB owner: this domain owns no table**, which corrects `CPI1:173`'s "three live, table-owning domains" as it applies to Benchmarks (Domain 33). Its only DB footprint is the `benchmark-run` kind inside Domain 32's table. The seeder writes exclusively through other domains' existing owners. **DEV-only and admin-gated**, and `test-benchmark-no-production-branch.ts` enforces that **the platform contains no benchmark-aware behaviour** |
 | Attention Vocabulary (levels, rank, labels, `critical` allowlist) | `shared/attention/index.ts` (ATTN1, 2026-07-09 — reference vocabulary per Principle 5; replaced the three module-local priority unions/rank maps in FI4, OD1 and the Notice Engine; no DB owner — `opportunity_deliveries.priority` remains a non-authoritative snapshot) |
 | Decision mechanics (attention ordering, delivery budget clamp, id dedupe, `EvidenceCitation`) | `shared/attention/decision.ts` (DEC1, 2026-07-09 — reference mechanics per Principle 5; replaced the three module-local sort/clamp/dedupe/evidence copies in FI4, OD1 and the Notice Engine, golden-identity tested byte-identical) |
 | Decision Engine (ambient surfacing: eligibility, muting, lifecycle suppression, learning re-weight, rank, budget, surface routing, sealed `DeliveryDecision`) | `server/intelligence/opportunity-delivery/framework.ts` (OD1 framework, designated canonical by DEC1 2026-07-09 — governance: `THA_DECISION_ENGINE_ARCHITECTURE.md`; the decision record is a `delivery-decision` observation, never a table, and nothing reads it back) |
+| Household Time (time zone, today, phase of day, calendar week, planner-week resolution) | `shared/time/household-time.ts` (TIME3, 2026-07-16 — reference vocabulary and mechanics per Principle 5, the class ATTN1 and DEC1 occupy; governance: [`THA_HOUSEHOLD_TIME_ARCHITECTURE.md`](./THA_HOUSEHOLD_TIME_ARCHITECTURE.md); **no DB owner** — it owns the *rules* of household time and **none of its data**. The two facts live with their existing owners: `households.timeZone` (Domain 16) and `planner_weeks.weekStartDate` (Domain 14); no new domain, no new store, no new write funnel. Retires five rival "current week" implementations, nineteen week-shape declarations across sixteen files, four `getGreeting()` copies, three season implementations and two fabricated-date builders — the full list is the architecture's § 14. **⚠️ DECLARED, NOT BUILT: the module does not exist.** This row declares the owner ahead of implementation, which is the order `CANONICAL_PUBLICATION_ARCHITECTURE.md` § Transition Rules requires — *"every new domain must be declared before implementation"* — so that consumers have one owner to converge onto and the duplication stops growing while it is written. Verification lands with the module, Phase 1) |
 
 ---
 

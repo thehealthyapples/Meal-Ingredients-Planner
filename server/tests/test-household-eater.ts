@@ -36,16 +36,16 @@ function assert(label: string, actual: unknown, expected: unknown): void {
 const adultUser: HouseholdEater = {
   id: "eater-1",
   displayName: "Alice",
-  kind: "user",
+  kind: "account",
   userId: 42,
   defaultDietTypes: ["Vegan"],
   hardRestrictions: ["nuts"],
 };
 
-const childMember: HouseholdEater = {
+const accountlessMember: HouseholdEater = {
   id: "eater-2",
   displayName: "Toby",
-  kind: "child",
+  kind: "no-account",
   defaultDietTypes: ["Vegetarian"],
   hardRestrictions: ["Gluten-Free", "dairy"],
 };
@@ -53,7 +53,7 @@ const childMember: HouseholdEater = {
 const noPreferences: HouseholdEater = {
   id: "eater-3",
   displayName: "Sam",
-  kind: "user",
+  kind: "account",
   userId: 99,
   defaultDietTypes: [],
   hardRestrictions: [],
@@ -74,7 +74,7 @@ assert(
 
 assert(
   "child member: dietTypes = defaultDietTypes",
-  getEffectiveDietProfile(childMember),
+  getEffectiveDietProfile(accountlessMember),
   { dietTypes: ["Vegetarian"], hardRestrictions: ["Gluten-Free", "dairy"] } satisfies EffectiveDietProfile,
 );
 
@@ -101,7 +101,7 @@ assert(
 
 assert(
   "override with multiple values",
-  getEffectiveDietProfile(childMember, { dietTypes: ["Vegan", "Gluten-free"] }),
+  getEffectiveDietProfile(accountlessMember, { dietTypes: ["Vegan", "Gluten-free"] }),
   { dietTypes: ["Vegan", "Gluten-free"], hardRestrictions: ["Gluten-Free", "dairy"] } satisfies EffectiveDietProfile,
 );
 
@@ -110,13 +110,13 @@ console.log("\n3. Hard restrictions preserved");
 
 assert(
   "hardRestrictions unchanged when override is present",
-  getEffectiveDietProfile(childMember, { dietTypes: ["Mediterranean"] }),
+  getEffectiveDietProfile(accountlessMember, { dietTypes: ["Mediterranean"] }),
   { dietTypes: ["Mediterranean"], hardRestrictions: ["Gluten-Free", "dairy"] } satisfies EffectiveDietProfile,
 );
 
 assert(
   "hardRestrictions present even with empty override dietTypes",
-  getEffectiveDietProfile(childMember, { dietTypes: [] }),
+  getEffectiveDietProfile(accountlessMember, { dietTypes: [] }),
   { dietTypes: [], hardRestrictions: ["Gluten-Free", "dairy"] } satisfies EffectiveDietProfile,
 );
 
@@ -147,7 +147,7 @@ console.log("\n5. Phase 4 — hard restriction preserved despite weekly override
 
 assert(
   "hard restriction preserved when weekly override is set",
-  getEffectiveDietProfile(childMember, { dietTypes: ["Keto"] }),
+  getEffectiveDietProfile(accountlessMember, { dietTypes: ["Keto"] }),
   { dietTypes: ["Keto"], hardRestrictions: ["Gluten-Free", "dairy"] } satisfies EffectiveDietProfile,
 );
 

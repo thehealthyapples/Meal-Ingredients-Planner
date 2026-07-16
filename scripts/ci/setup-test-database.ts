@@ -62,22 +62,27 @@ try {
   die("runMigrations() failed. A migration that CI cannot apply is one production cannot apply either.");
 }
 
-// ── 3. Boot-time seeds — the ones server/index.ts runs on every start ────────
-// Imported from the same modules server/index.ts imports, not reimplemented. If the server
-// needs them to function, a test database needs them to be a fair test of the server.
-console.log("[ci:db] 3/4  boot-time seeds (template migration, ready meals, food + pantry knowledge)");
+// ── 3. Platform seeds — the ones `npm run seed:all` publishes ────────────────
+// Imported from the same modules the declared seed runner imports, not reimplemented. If the
+// server needs them to function, a test database needs them to be a fair test of the server.
+//
+// CONV1 WRITE-4: these used to be "the ones server/index.ts runs on every start". They are no
+// longer run at boot by anything — that was an undeclared second publication mechanism — so this
+// step is now what makes a test database resemble a provisioned one. The template backfill is
+// gone from the list because it is retired outright: it authored a template per unlinked meal at
+// boot, which is exactly the meals → meal_templates bridge Principle 7 forbids. Its rows were
+// never fixtures the suite asserts on.
+console.log("[ci:db] 3/4  platform seeds (ready meals, food + pantry knowledge)");
 try {
-  const { runTemplateMigration } = await import("../../server/template-migration.js");
   const { seedReadyMeals } = await import("../../server/lib/seed-ready-meals.js");
   const { seedFoodKnowledge } = await import("../../server/lib/seed-food-knowledge.js");
   const { seedPantryKnowledge } = await import("../../server/seeds/seed-pantry-knowledge.js");
-  await runTemplateMigration();
   await seedReadyMeals();
   await seedFoodKnowledge();
   await seedPantryKnowledge();
 } catch (err) {
   console.error(err);
-  die("a boot-time seed failed.");
+  die("a platform seed failed.");
 }
 
 // ── 4. Reference-data seeds the TEST SUITE depends on ────────────────────────

@@ -16,12 +16,10 @@ async function main() {
     }));
   }
 
-  // 2. Users with diet patterns
-  console.log("\n=== USERS WITH DIET PATTERNS ===");
+  // 2. Users (diet lives on household_eaters since CONV1 P4 / OWN-1 — see section 1)
+  console.log("\n=== USERS ===");
   const users = await db.select({
     id: schema.users.id, username: schema.users.username,
-    dietPattern: schema.users.dietPattern,
-    dietRestrictions: schema.users.dietRestrictions
   }).from(schema.users);
   for (const u of users) {
     console.log(JSON.stringify(u));

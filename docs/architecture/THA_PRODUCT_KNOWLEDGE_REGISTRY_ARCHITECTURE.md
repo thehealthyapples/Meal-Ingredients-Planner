@@ -26,6 +26,8 @@ No equivalent exists for knowledge *about The Healthy Apples*. Today, the answer
 
 More consequentially: **the Companion cannot answer a single question about THA.** It can explain a nutrient and plan a week, but asked "how do I add a family member?" or "what does Plant Diversity actually count?" it has nothing to read, because the product has never written itself down. The knowledge it would need does not exist in any form it can consume.
 
+> **⚠️ The two paragraphs above describe the problem as it stood on 2026-07-11, and are preserved as written** *(dated 2026-07-16, `DOC-4`)*. **Both have since been answered, and neither is true today:** `PDA1` (2026-07-11) wrote the product down — 151 files, 154 entries — and `PHASE5A` (2026-07-12) built the read path, so the Companion **can** now be asked what THA is. They are left standing because a mandate records why a document was written, and rewriting it would erase the argument that justified the registry. **The live status is § 23**; nothing between here and there is a statement of current fact.
+
 This document establishes the **Product Knowledge Registry** as the single canonical owner of that knowledge, fixes the rules that keep it true, and defines how the Intelligence Platform reads it — permission-aware, so that what a person is told about THA depends on who they are.
 
 It is deliberately **not**:
@@ -889,12 +891,18 @@ Every implementation that changes what THA is must pass this checklist. It stand
 - No existing ownership. The SoT Register, the Runtime Capability Registry, the Context Composition Engine, `server/lib/access.ts`, the Experience Architecture, and the UI Architecture keep every boundary they had.
 - No authorisation path changes. `access.ts` is neither modified nor bypassed nor duplicated.
 
-**Manual verification:**
+**Manual verification** *(performed at authoring, 2026-07-11 — the last two checks are historical; see the currency correction below):*
 - `docs/architecture/THA_PRODUCT_KNOWLEDGE_REGISTRY_ARCHITECTURE.md` exists and is indexed in `docs/architecture/README.md`.
 - `ENGINEERING_WORKFLOW.md` contains the Product Registry Compliance block and lists Product Registry Impact as a mandatory section.
 - `.engineering/templates/IMPLEMENTATION_TEMPLATE.md` contains a Product Registry Impact section.
 - `docs/product/` **does not exist** — this document defines it and does not create it.
 - No registry entry has been populated, no capability registered, no query path built.
+
+> **⚠️ Corrected 2026-07-16 (`DOC-4`).** The last two checks above **were true on the day they were written and are false today.** They are preserved verbatim, and scoped to authoring rather than deleted, because they are this section's record that **`PKR1`/`PKR2` correctly refused to create what they defined** — a scope discipline `§ 24` still relies on, and which erasing them would destroy.
+>
+> **What has happened since:** **`PDA1` (2026-07-11)** created and populated `docs/product/` — **151 Markdown files and 154 inventory entries**. **`PHASE5A` (2026-07-12)** registered the Product Knowledge capability (`server/intelligence/capability-registry.ts:430`) and built the first runtime read path onto the registry.
+>
+> **This is not a rule changing. It is this document falling out of date about its own domain** — the `KC14` currency failure `PKCA` names, and the inversion of this document's own **Rule PKR15** (*a registry entry is corrected, never superseded — staleness in it is a defect, not drift*). The live status is `§ 23`.
 
 ---
 
@@ -913,10 +921,10 @@ Every implementation that changes what THA is must pass this checklist. It stand
 
 ## 22. TRUST CHECK
 
-- **Could this mislead the user?** Not yet — nothing is populated and no query path exists. But `PKR2` creates the *conditions* under which it could, and this document is explicit about that rather than quiet: §12.5 states plainly that a stale entry now reaches households in the Companion's voice, and that **the Companion will be more convincing than the registry is accurate.**
+- **Could this mislead the user?** **Yes — as of 2026-07-12, this is live** *(corrected 2026-07-16, `DOC-4`; previously read "**Not yet** — nothing is populated and no query path exists")*. Content exists (`PDA1`, 154 entries) and the query path is built (`PHASE5A`), so the *conditions* `PKR2` described are now met rather than anticipated. §12.5 stated it plainly in advance and stands unchanged: a stale entry now reaches households in the Companion's voice, and **the Companion will be more convincing than the registry is accurate.** The controls PKR2 specified are no longer precautionary — they are the only thing between a stale entry and a household.
 - **Could this fabricate certainty?** The registry's one dangerous failure mode is being *trusted while stale*, and `PKR2` sharpens it from a documentation risk into a user-facing one. Rules PKR15 (corrected, never defended), PKR18 (the changer updates it), §15.3 (90-day presumed-stale, now a trust metric), and §16 (Definition of Done, now enforced in the workflow) exist for exactly this. §12.3 requires the Companion to cite the entry it answered from and to say "I don't know" where the registry is silent — which, today, is everywhere.
 - **Could this disclose something it should not?** This is the new risk `PKR2` introduces, and it is answered structurally rather than by care: visibility fails closed to `developer` (Rule PKR22); filtering happens in deterministic code before composition, never by asking the model to keep a secret (Rule PKR26); the registry classifies but never authorises, so a Markdown edit can never become a privilege escalation (Rule PKR25); loosening visibility requires the owner while tightening requires no one (§11.5); and the Companion never explains an absence, because acknowledging withheld content discloses the fact it was withholding (Rule PKR29).
-- **Is anything guessed but shown as real?** No. This document defines the registry, the permission model, and the Companion path — and populates, registers, and builds none of them (§20). §23 states convergence honestly as 0%.
+- **Is anything guessed but shown as real?** No. This document defines the registry, the permission model, and the Companion path — and **itself** populates, registers, and builds none of them (§20). *(Corrected 2026-07-16, `DOC-4`: this sentence previously closed "**§23 states convergence honestly as 0%**". That was true at authoring; `PDA1` and `PHASE5A` have since populated and built. §23 now states the coverage honestly instead.)*
 - **What happens if the system is wrong?** Nothing at runtime today — nothing reads the registry, because nothing exists to read. Once it does: a wrong entry misinforms; a mislabelled entry discloses. Rule PKR19 guarantees the first can always be fixed without breaking the product, because no code may branch on the registry. The second is guarded by the five structural controls above, not by diligence.
 - **Honest gap:** THA has **no `developer` role** today — `users.role` is `user` or `admin` (`docs/roles-and-subscriptions.md`). The `developer` tier is therefore defined here with no runtime role behind it. It fails closed: until such a role exists, `developer`-visibility content is served to **no runtime consumer at all**, and is reachable only by reading `docs/product/` directly. This is stated rather than papered over, and creating that role is not authorised by this document.
 - **No architectural duplication introduced:** **YES** — the registry cites Data, Intelligence, Experience, UI, and authorisation ownership and restates none of it. It enters Intelligence as a registered capability through INT17, not through a bespoke path (Rule PKR20).
@@ -926,22 +934,96 @@ Every implementation that changes what THA is must pass this checklist. It stand
 
 ## 23. ARCHITECTURE CONVERGENCE STATUS
 
+**Status current as of 2026-07-16** (`DOC-4`). Every claim below was verified against the repository on that date; the original block, written 2026-07-11, is preserved beneath.
+
 ```
 Domain                        Product Knowledge (knowledge about THA itself)
-Current Canonical Owner       Product Knowledge Registry (defined by this document, PKR1/PKR2)
-Current Runtime Consumer(s)   None. PKR2 DEFINES the Intelligence read path (§12.2) and
-                              AUTHORISES none of it. No capability is registered, no query
-                              path is built, no byte reaches a prompt.
+Current Canonical Owner       Product Knowledge Registry (defined by this document, PKR1/PKR2;
+                              created and populated by PDA1, 2026-07-11). Named canonical owner
+                              of the Product Knowledge domain under PKCA §9 by PKR3.
+Current Runtime Consumer(s)   The Product Knowledge capability — REGISTERED AND LIVE since
+                              2026-07-12 (PHASE5A). capability-registry.ts:430 (id
+                              "product-knowledge", owningService
+                              server/services/product-knowledge-registry.ts); bindings and the
+                              read handler/port exported from server/intelligence/index.ts.
+                              It reads inventory/product.json ONLY, never the prose (Rule PKR21).
+                              PKR1/PKR2 authorised none of this — PHASE5A did, separately.
 Duplicate Owners Remaining    Every existing description of the product: 380+ investigations,
                               174+ implementation reports, docs/SMP-Features.md, docs/ui-audit/,
                               README fragments, and code comments. None is authoritative;
                               collectively they are the condition this registry ends.
                               Plus: any product knowledge currently embedded in Companion
-                              prompts or capability code — unaudited, and forbidden under
-                              Rule PKR27 once the registry exists.
-Current Convergence           0%  — the registry is defined; no section is populated
+                              prompts or capability code — STILL UNAUDITED, and now forbidden
+                              under Rule PKR27, which binds from the moment the registry exists.
+Current Convergence           POPULATED, NOT COMPLETE — 151 files, 154 entries.
+                              22 of the 28 canonical sections (§8) hold entries. Every one of
+                              the 154 carries a named owner, a visibility tier, and
+                              last_verified (151 dated 2026-07-11, 3 dated 2026-07-12) — inside
+                              §15.3's 90-day window.
+                              FOUR entry sections hold NO entries: Features (§8.5),
+                              Capabilities (§8.6), Drawers (§8.15), Product Assets (§8.25).
+                              Sections 27-28 (the JSON/YAML inventories) exist and are generated.
+                              This states COVERAGE, not correctness. No percentage is claimed:
+                              Target Convergence below requires entries to be "correctly
+                              classified for visibility", which nothing mechanically checks
+                              (the declared-vs-enforced gap this document's own domain admits
+                              under Rule KC8). Counting populated sections as convergence would
+                              assert a completeness THA cannot verify.
 Target Convergence            100% — every one of the 28 sections owned, current, verified
                               within 90 days, and correctly classified for visibility
+Next Planned Milestone        Populate the four empty sections above.
+                              DELIVERED, and no longer "next": the coverage-first population
+                              workstream (Domains, Pages, Routes, Journeys, §15.1) — done by
+                              PDA1; and the Companion read path (§12.2) — done by PHASE5A.
+                              This block's ordering requirement WAS HONOURED: content existed
+                              (2026-07-11) before the path was built (2026-07-12), so THA did
+                              not ship an assistant pointed at an empty knowledge source.
+Remaining Architectural Risks 1. RETIRED 2026-07-16. "Population is never started, and this
+                                 document becomes an architecture for a registry that does not
+                                 exist." Population was started and finished for 22 sections
+                                 (PDA1). The registry exists.
+                              2. NOW THE PRINCIPAL RISK. Population is started and never
+                                 maintained — §16's Definition of Done obligation is the sole
+                                 defence. PKR2 wires it into ENGINEERING_WORKFLOW.md and the
+                                 implementation template so it binds by default rather than by
+                                 memory, but it is still only as strong as its enforcement in
+                                 review. Risk 1's retirement is precisely what activates this
+                                 one: 154 entries now exist to go stale, and DOC-4 is itself
+                                 evidence that a governing document can rot for five days
+                                 without anyone noticing.
+                              3. RETIRED 2026-07-16 as a sequencing risk. "The Companion path is
+                                 built before the registry has content." It was not: content
+                                 preceded the path by a day. The architecture's ordering held.
+                              4. NOW LIVE. A visibility label is set wrong and something
+                                 admin-tier reaches a household. Guarded by fail-closed defaults
+                                 (PKR22), pre-composition filtering (PKR26), owner-gated
+                                 loosening (§11.5), and VISIBILITY.md as a single reviewable
+                                 surface — but it remains the highest-severity failure mode
+                                 PKR2 creates, and as of PHASE5A it is no longer hypothetical:
+                                 51 admin-tier and 6 developer-tier entries sit behind those
+                                 controls, on a live read path.
+                              5. NOW LIVE. Product knowledge leaks back into prompts because
+                                 adding one sentence to a system prompt is faster than adding a
+                                 registry entry (Rule PKR27). This is the likeliest rule to be
+                                 broken and the hardest to detect after the fact — and the
+                                 "unaudited" note above means THA does not know today whether
+                                 it is already broken.
+```
+
+> **⚠️ Corrected 2026-07-16 (`DOC-4`).** The original block below was **wrong in three ways at once**, all in the same direction: it said `docs/product/` did not exist (**it holds 151 files**), that no capability was registered (**one has been live since 2026-07-12**), and that convergence was **0%** (**154 entries across 22 of 28 sections**).
+>
+> **The failure is exactly the one this document named, in the domain this document owns.** `PKR3` established that Product Knowledge is THA's first *self-describing* knowledge domain, where **staleness is the whole risk** and *currency* is the evidence standard (**Rule KC14**) — *"a food fact is wrong because it was never true; a product fact is wrong because it **stopped** being true"*. This block stopped being true on 2026-07-11 and stayed that way. **Rule PKR15** requires an entry to be *corrected, never superseded*, and **Rule PKR18** puts that duty on *the person who changed the thing*. Neither happened: `PDA1` populated the registry and `PHASE5A` built the read path, and **neither returned to correct the architecture that governs them** — while the Source of Truth Register, which does not own this domain, was right about it the whole time.
+>
+> **This is a currency correction, not an amendment.** Not one rule, tier, section definition, or boundary changes. `§ 24`'s Scope Lock and the closing footer are **deliberately untouched**: they record what `PKR1`/`PKR2` themselves did, which was to define this registry and build none of it — **and that remains exactly true.** `PDA1` and `PHASE5A` did the building, later, under their own authority.
+
+<details>
+<summary><strong>Original block (2026-07-11 — superseded 2026-07-16 by `DOC-4`; preserved, not deleted)</strong></summary>
+
+```
+Current Runtime Consumer(s)   None. PKR2 DEFINES the Intelligence read path (§12.2) and
+                              AUTHORISES none of it. No capability is registered, no query
+                              path is built, no byte reaches a prompt.
+Current Convergence           0%  — the registry is defined; no section is populated
 Next Planned Milestone        A coverage-first population workstream: Domains, Pages, Routes,
                               Journeys (§15.1). Not authorised by this document.
                               The Companion read path (§12.2) comes AFTER content exists —
@@ -949,23 +1031,11 @@ Next Planned Milestone        A coverage-first population workstream: Domains, P
                               worse than an ungrounded one.
 Remaining Architectural Risks 1. Population is never started, and this document becomes an
                                  architecture for a registry that does not exist.
-                              2. Population is started and never maintained — §16's Definition
-                                 of Done obligation is the sole defence. PKR2 wires it into
-                                 ENGINEERING_WORKFLOW.md and the implementation template so it
-                                 binds by default rather than by memory, but it is still only
-                                 as strong as its enforcement in review.
                               3. The Companion path is built before the registry has content,
                                  and THA ships an assistant confidently grounded in nothing.
-                              4. A visibility label is set wrong and something admin-tier
-                                 reaches a household. Guarded by fail-closed defaults (PKR22),
-                                 pre-composition filtering (PKR26), owner-gated loosening
-                                 (§11.5), and VISIBILITY.md as a single reviewable surface —
-                                 but it remains the highest-severity failure mode PKR2 creates.
-                              5. Product knowledge leaks back into prompts because adding one
-                                 sentence to a system prompt is faster than adding a registry
-                                 entry (Rule PKR27). This is the likeliest rule to be broken
-                                 and the hardest to detect after the fact.
 ```
+
+</details>
 
 ---
 

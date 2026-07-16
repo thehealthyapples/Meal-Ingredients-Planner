@@ -213,9 +213,12 @@ export interface PersonalityDefinition {
    * changes which capability/verb is offered (companion-guidance.ts owns
    * that); it only changes DISPLAY ORDER of already-eligible suggestions and
    * which of a capability's own guidance domains reads as "first" to this
-   * personality. Domain vocabulary matches CAPABILITY_DOMAIN in
-   * companion-guidance.ts (meal, planner, shopping, pantry, diary, nutrition,
-   * household) plus abstract priorities used only for guidance-label tone.
+   * personality. Domain vocabulary is the Companion room set each capability
+   * declares as its `companionDomain` in the Capability Registry (meal, planner,
+   * shopping, pantry, diary, nutrition, household — see COMPANION_ROOMS in
+   * intelligence/types.ts), plus abstract priorities used only for
+   * guidance-label tone. A personality orders rooms; it never names `platform`,
+   * because a cross-cutting capability is not a place to be sent (CONV1 BEH-8).
    */
   readonly priorities: readonly string[];
   /**

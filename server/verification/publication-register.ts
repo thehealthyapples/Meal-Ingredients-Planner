@@ -606,8 +606,14 @@ export const CANONICAL_PUBLICATION_REGISTER: DomainDeclaration[] = [
         evaluate: (rows) => {
           const plans = Number(rows[0]?.plans ?? 0);
           const entries = Number(rows[0]?.entries ?? 0);
+          // CONV1 WRITE-4 corrected this detail: it used to end "— and
+          // template-migration still writes it at boot", which stopped being true
+          // the moment that backfill was retired. Nothing writes this store now;
+          // the rows below are residue, not intake. A gate's prose goes stale
+          // exactly like a document's, and a check that reports a fixed cause is
+          // how a real finding gets dismissed as noise.
           return plans + entries > 0
-            ? { violated: true, detail: `Dead store still populated: meal_plans=${plans}, meal_plan_entries=${entries} — and template-migration still writes it at boot.` }
+            ? { violated: true, detail: `Dead store still populated: meal_plans=${plans}, meal_plan_entries=${entries} — residue only; no writer remains.` }
             : { violated: false, detail: "meal_plans / meal_plan_entries are empty." };
         },
       }),
@@ -615,15 +621,26 @@ export const CANONICAL_PUBLICATION_REGISTER: DomainDeclaration[] = [
   },
 
   // ── 9. Household Dietary Preference ────────────────────────────────────────
+  //
+  // CONVERGED 2026-07-16 (CONV1 P4). The owner CPI1 found contested is settled the
+  // way the governing architecture always declared it (ARCHITECTURE_PRINCIPLES.md
+  // Principle 2, 2026-06-25; Register Domain 16, corrected by DOC-1):
+  // `household_eaters` owns every member's diet — pattern (as its canonical diet
+  // type in default_diet_types) and hard restrictions. users.diet_pattern /
+  // users.diet_restrictions are DROPPED (OWN-1); the read-time enrichments are
+  // deleted (READ-1); the self-declared Bridge is deleted (WRITE-1).
+  // user_preferences.diet_types is NOT a rival owner — it is Domain 27's own soft
+  // preference list (Register Domain 7 note, DOC-1). The checks below are now
+  // RATCHETS: each detects the retired shape returning.
   {
     id: "household",
     name: "Household Dietary Preference",
     variant: "transactional",
-    canonicalOwner: "CONTESTED — users.diet* vs user_preferences vs household_eaters",
-    authorisedWriters: ["server/storage.ts", "server/routes.ts (profile endpoints)"],
-    publicationPath: "household-authored at runtime",
-    runtimeReadPath: "three competing strategies (routes profile / storage household context / eaters)",
-    sotRegisterRef: "D7 / D27",
+    canonicalOwner: "DB household_eaters (Register Domain 16)",
+    authorisedWriters: ["server/storage.ts (updatePersonDiet / updateHouseholdEater / createHouseholdEater)"],
+    publicationPath: "household-authored at runtime via storage",
+    runtimeReadPath: "server/lib/household-dietary-safety.ts (canonical resolver) + storage.getPersonDiet",
+    sotRegisterRef: "D7 / D16",
     knownGaps: [],
     checks: [
       customCheck({
@@ -635,22 +652,12 @@ export const CANONICAL_PUBLICATION_REGISTER: DomainDeclaration[] = [
         run: async (ctx) => {
           const storage = ctx.sources.get("server/storage.ts") ?? "";
           const hardcoded = /dietRestrictions:\s*\[\]/.test(storage);
-          if (!hardcoded) {
-            return { violated: false, detail: "Household context no longer hardcodes dietRestrictions to []." };
-          }
-          let liveDetail = "";
-          try {
-            const rows = await ctx.query(
-              `SELECT count(*)::int AS n FROM users WHERE diet_restrictions IS NOT NULL AND cardinality(diet_restrictions) > 0`,
-            );
-            liveDetail = ` ${Number(rows[0]?.n ?? 0)} user(s) carry live restrictions the Companion never sees.`;
-          } catch {
-            liveDetail = " (live restriction count unavailable — database unreachable).";
-          }
-          return {
-            violated: true,
-            detail: `storage.ts hardcodes dietRestrictions: [] in the household dietary context — every allergen and restriction is dropped before the AI reads it.${liveDetail}`,
-          };
+          return hardcoded
+            ? {
+                violated: true,
+                detail: "storage.ts hardcodes dietRestrictions: [] in the household dietary context — every allergen and restriction is dropped before the AI reads it.",
+              }
+            : { violated: false, detail: "Household context no longer hardcodes dietRestrictions to []." };
         },
       }),
       sourceCheck({
@@ -663,8 +670,8 @@ export const CANONICAL_PUBLICATION_REGISTER: DomainDeclaration[] = [
         pattern: /Bridge: sync users\.diet_pattern/,
         expect: "absent",
         violationDetail:
-          "routes.ts carries a self-declared, one-way, best-effort 'Bridge' syncing users.diet_pattern → user_preferences.diet_types — the platform's only self-confessed permanent synchronisation bridge.",
-        passDetail: "The diet-preference bridge is gone.",
+          "routes.ts carries a self-declared, one-way, best-effort 'Bridge' syncing users.diet_pattern → user_preferences.diet_types — the platform's only self-confessed permanent synchronisation bridge. Deleted by CONV1 P4 (WRITE-1); its return is a regression.",
+        passDetail: "The diet-preference bridge is gone (CONV1 P4 / WRITE-1).",
       }),
       customCheck({
         id: "hh-contested-owner",
@@ -673,37 +680,49 @@ export const CANONICAL_PUBLICATION_REGISTER: DomainDeclaration[] = [
         severity: "fail",
         cpi1: "S2-4",
         run: async (ctx) => {
+          // Ratchet: the retired users.diet* shadow (CONV1 P4 / OWN-1) must not
+          // return to the schema, and the owner must still be declared.
+          // user_preferences.diet_types is Domain 27's own soft-preference fact,
+          // not a rival owner of the person diet fact (Register Domain 7, DOC-1) —
+          // CPI1's original check counted it as one, which DOC-1 corrected.
           const schema = ctx.sources.get("shared/schema.ts") ?? "";
-          const owners: string[] = [];
-          if (/dietPattern: text\("diet_pattern"\)/.test(schema)) owners.push("users.diet_pattern/diet_restrictions");
-          if (/dietTypes/.test(schema) && /userPreferences = pgTable/.test(schema)) owners.push("user_preferences.diet_types");
-          if (/defaultDietTypes/.test(schema)) owners.push("household_eaters.default_diet_types");
-          return owners.length > 1
-            ? { violated: true, detail: `${owners.length} stores own the same diet fact at the same scope: ${owners.join(", ")}.` }
-            : { violated: false, detail: `Single owner: ${owners[0] ?? "none declared"}.` };
+          const shadowReturned = /dietPattern: text\("diet_pattern"\)|dietRestrictions: text\("diet_restrictions"\)/.test(schema);
+          const ownerDeclared = /defaultDietTypes/.test(schema) && /hardRestrictions/.test(schema);
+          if (shadowReturned) {
+            return {
+              violated: true,
+              detail: "users.diet_pattern / users.diet_restrictions have RETURNED to shared/schema.ts — the shadow CONV1 P4 (OWN-1) retired is live again, and the diet fact has two owners.",
+            };
+          }
+          if (!ownerDeclared) {
+            return {
+              violated: true,
+              detail: "household_eaters no longer declares default_diet_types / hard_restrictions — the canonical owner of the person diet fact has lost its columns.",
+            };
+          }
+          return { violated: false, detail: "Single owner: household_eaters.default_diet_types / hard_restrictions (Register Domain 16)." };
         },
       }),
       sqlCheck({
         id: "hh-unprojected",
         law: "no-stale-projections",
-        title: "Every user's diet pattern is projected to the eater model",
+        title: "Every active member has an eater row (the owner of their diet)",
         severity: "warn",
         cpi1: "S2-4",
-        sql: `SELECT count(*)::int AS unprojected,
-                     (SELECT count(*)::int FROM users WHERE diet_pattern IS NOT NULL) AS total
-              FROM users u
-              WHERE u.diet_pattern IS NOT NULL
+        sql: `SELECT count(*)::int AS missing,
+                     (SELECT count(*)::int FROM household_members WHERE status = 'active') AS total
+              FROM household_members hm
+              WHERE hm.status = 'active'
                 AND NOT EXISTS (
-                  SELECT 1 FROM household_members hm
-                  JOIN household_eaters he ON he.household_id = hm.household_id
-                  WHERE hm.user_id = u.id
+                  SELECT 1 FROM household_eaters he
+                  WHERE he.household_id = hm.household_id AND he.user_id = hm.user_id
                 )`,
         evaluate: (rows) => {
-          const unprojected = Number(rows[0]?.unprojected ?? 0);
+          const missing = Number(rows[0]?.missing ?? 0);
           const total = Number(rows[0]?.total ?? 0);
-          return unprojected > 0
-            ? { violated: true, detail: `${unprojected} of ${total} users with a diet pattern have no eater projection of it.` }
-            : { violated: false, detail: `All ${total} diet patterns are projected.` };
+          return missing > 0
+            ? { violated: true, detail: `${missing} of ${total} active memberships have no eater row — those members' diets have no owner row (WRITE-3 creates one at every membership event).` }
+            : { violated: false, detail: `All ${total} active memberships have an eater row.` };
         },
       }),
     ],

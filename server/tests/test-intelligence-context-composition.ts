@@ -939,7 +939,7 @@ async function main(): Promise<void> {
         cap("meals", "read", mealsSummary(), 0.9),
         cap("planner", "read", plannerWeek(), 0.8),
         cap("shopping", "read", shoppingBasket(), 0.7),
-        cap("household", "read", { scope: "eaters", eaters: [{ id: "u1", displayName: "Col", kind: "user", userId: 1, defaultDietTypes: ["keto"], hardRestrictions: ["Gluten"] }, { id: "c1", displayName: "Kid", kind: "child", userId: undefined, defaultDietTypes: [], hardRestrictions: ["Peanut"] }] }, 0.6),
+        cap("household", "read", { scope: "eaters", eaters: [{ id: "u1", displayName: "Col", kind: "account", userId: 1, defaultDietTypes: ["keto"], hardRestrictions: ["Gluten"] }, { id: "c1", displayName: "Kid", kind: "no-account", userId: undefined, defaultDietTypes: [], hardRestrictions: ["Peanut"] }] }, 0.6),
         cap("food-intelligence", "report", fi, 0.85),
       ];
       const snapshot = JSON.stringify(all.map(c => c.result));

@@ -42,8 +42,8 @@ export const SAFE_USER_FIELDS = [
   "starterMealsLoaded",
   "isBetaUser",
   "emailVerified",
-  "dietPattern",
-  "dietRestrictions",
+  // dietPattern / dietRestrictions retired (CONV1 P4 / OWN-1) — a person's diet is
+  // owned by their household_eaters row and served by the profile/household reads.
   "eatingSchedule",
   "role",
   "subscriptionTier",

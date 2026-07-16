@@ -1,8 +1,15 @@
 import { db } from "../db";
 import { meals, mealCategories } from "@shared/schema";
-import { eq, and, isNotNull } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { READY_MEALS } from "./ready-meals-seed";
-import { log } from "../index";
+
+// CONV1 WRITE-4 — this module used to import `log` from ../index. That is the
+// server's entry point, and its boot IIFE is unguarded, so importing this seed
+// from a CLI runner booted the entire server: an Express listener, the route
+// table and the media mount, all to insert some rows. A seed is a script; it
+// must be runnable without the thing it seeds for. The import is gone and the
+// cycle with it, which is what makes `npm run seed:ready-meals` possible at all.
+const log = (message: string, source = "seed") => console.log(`[${source}] ${message}`);
 
 const SYSTEM_USER_ID = 0;
 
@@ -23,13 +30,13 @@ export async function seedReadyMeals() {
 
   const existing = await db.select().from(meals).where(eq(meals.isSystemMeal, true));
 
-  const withImages = existing.filter(m => m.imageUrl);
-  if (withImages.length > 0) {
-    await db.update(meals)
-      .set({ imageUrl: null })
-      .where(and(eq(meals.isSystemMeal, true), isNotNull(meals.imageUrl)));
-    log(`Cleared images from ${withImages.length} system meals`, "seed");
-  }
+  // CONV1 WRITE-4 — REMOVED: an unconditional wipe of image_url on EVERY system
+  // meal, which ran on every boot. This seed owns the ~N ready meals it declares
+  // in READY_MEALS; `is_system_meal` is a far wider set that also covers the 500
+  // Founding Cookbook rows, which it does not own and must not touch. It was
+  // harmless only because the cookbook has no images yet — the day it gained
+  // them, boot would have wiped them, on every restart, silently. A publisher
+  // may correct what it authored and nothing else.
 
   if (existing.length >= READY_MEALS.length) {
     log(`Ready meals already seeded (${existing.length} found)`, "seed");

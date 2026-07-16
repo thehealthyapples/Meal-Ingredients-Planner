@@ -31,7 +31,7 @@
 
 import { intelligencePlatform } from "../intelligence-platform.js";
 import type { CapabilityEnrichment, CapabilityEnrichmentItem, EnrichmentKind, IntentVerb } from "../types.js";
-import { CAPABILITY_DOMAIN } from "./companion-guidance.js";
+import type { GetCompanionDomainFn } from "./companion-guidance.js";
 
 // ---------------------------------------------------------------------------
 // Public contract
@@ -68,6 +68,16 @@ export type GetEnrichmentFn = (capabilityId: string) => CapabilityEnrichment | u
 const defaultGetEnrichment: GetEnrichmentFn = (capabilityId) =>
   intelligencePlatform.getEnrichment(capabilityId);
 
+/**
+ * CONV1 BEH-8 — the same registry lookup companion-guidance.ts uses. Both modules
+ * read the one owner; neither keeps a domain table of its own. (Before BEH-8 this
+ * module imported companion-guidance.ts's CAPABILITY_DOMAIN, which was the closest
+ * thing to a correct arrangement available at the time: one copy, two readers. The
+ * copy was still a copy, and it had already fallen four capabilities behind.)
+ */
+const defaultGetCompanionDomain: GetCompanionDomainFn = (capabilityId) =>
+  intelligencePlatform.getCompanionDomain(capabilityId);
+
 function itemAppliesToVerb(item: CapabilityEnrichmentItem, verb: IntentVerb): boolean {
   return !item.appliesToVerbs || item.appliesToVerbs.includes(verb);
 }
@@ -88,12 +98,20 @@ function itemAppliesToVerb(item: CapabilityEnrichmentItem, verb: IntentVerb): bo
 export function buildEnrichment(
   sources: readonly EnrichmentSource[],
   getEnrichment: GetEnrichmentFn = defaultGetEnrichment,
+  getCompanionDomain: GetCompanionDomainFn = defaultGetCompanionDomain,
 ): CompanionEnrichmentItem[] {
   const seenCapabilities = new Set<string>();
   const items: CompanionEnrichmentItem[] = [];
 
   for (const source of sources) {
-    if (seenCapabilities.has(source.capabilityId) || !CAPABILITY_DOMAIN[source.capabilityId]) continue;
+    // CONV1 BEH-8 — the domain is ATTRIBUTION here ("where this came from"), not
+    // routing: an enrichment item is an explanation, never a door. So a
+    // cross-cutting `platform` capability attributes honestly as itself and is
+    // not excluded — which is what makes Food Intelligence's, Opportunity
+    // Delivery's and Evidence Learning's own explanations of how they reason
+    // reachable at all. An undeclared domain still means not reachable.
+    const sourceDomain = getCompanionDomain(source.capabilityId);
+    if (seenCapabilities.has(source.capabilityId) || !sourceDomain) continue;
     seenCapabilities.add(source.capabilityId);
 
     const enrichment = getEnrichment(source.capabilityId);
@@ -102,7 +120,7 @@ export function buildEnrichment(
     for (const item of enrichment.items) {
       if (!itemAppliesToVerb(item, source.verb)) continue;
       items.push({
-        sourceDomain: CAPABILITY_DOMAIN[source.capabilityId],
+        sourceDomain,
         sourceCapabilityId: source.capabilityId,
         kind: item.kind,
         title: item.title,

@@ -337,7 +337,27 @@ Fails if any runtime asset is untracked, any asset directory has uncommitted fil
 server runtime path resolves to a file the repository does not contain. **A FAIL here means the
 deploy would ship code that reads files that will not be there.**
 
-Both gates run, in this order, ahead of typecheck/test/build in `npm run release:check`.
+### Step 0c — Governing-document coherence gate
+
+```bash
+npm run verify:coherence   # must PASS — proves the governing architecture still describes this tree
+```
+
+Fails if a Source of Truth Register domain names a source of truth that does not exist (`COH-1`),
+or if a `file:line` citation anywhere in `docs/architecture/` resolves to nowhere (`COH-2`). **A
+FAIL here means a governing document disagrees with the code it governs** — and the document is not
+automatically the wrong one, but one of them is.
+
+Read what it *cannot* see: a citation that resolves to the **wrong place** still passes — only one
+that resolves to **nowhere** fails. A line number is a claim with a short half-life; cite the owner
+and the behaviour. It also reads only each domain's *declared* owner, and only inside `### Domain N:`
+blocks — Appendix A's second copy of every path is not yet checked.
+
+Added by `COH-3` (2026-07-16). It is deliberately the **cheapest** gate here — pure filesystem
+reads, no database, no network — so documentation rot fails before typecheck/test/build spend
+anything.
+
+All three gates run, in this order, ahead of typecheck/test/build in `npm run release:check`.
 
 ### Step 1 — Git clean
 

@@ -748,6 +748,28 @@
         "why": "A signature typeface is a brand decision, not an engineering one, and it is the kind of decision that is made by looking rather than by reading. The prototype exists to be looked at. It is recorded here on the day it was built rather than after it is forgotten, because a prototype nobody decided about is how a third typeface enters a product by accident — the exact failure the original §8 rule was written to prevent, and the one the amendment is only safe if this row is honoured.",
         "remaining": "The decision itself. `/dev/arrival` (ARRIVAL1, which replaced UXHOME1's `/dev/home-arrival`) is a proposal with a binary disposition and no third option: **ADOPT** — fold the Arrival Experience into `home-experience-page.tsx`, move the Caveat `@import` into index.css, and DELETE the prototype; or **REJECT** — DELETE the prototype, and delete `.text-signature`, `.signature-ink` and `--font-signature` with it, reverting §8 to two voices. What may not happen is the third outcome: the prototype surviving its own decision, which is precisely the authored-but-unadopted successor sitting live-looking in the tree that this register exists to make impossible to hide (PX1's `PageHeader.tsx`). **EXP2 (2026-07-15) adds five exploration prototypes** (`/dev/arrival-{a..e}-*`), of which only Prototype A speaks the signature voice; they share the same binary disposition — ideas graduate into the ONE adopted arrival, and every EXP2 prototype file is then DELETED. The exploration widens the evidence for the decision; it does not add a third option. **EXP3 (2026-07-15) adds two synthesis candidates** (`/dev/arrival-s1-quiet`, `/dev/arrival-s2-walking-home`), of which only S1 speaks the signature voice — the strongest EXP2 ideas combined into candidate arrivals, expected to be the FINAL exploration before one canonical arrival is selected. Same binary disposition: the selected ideas graduate; every exploration prototype (ARRIVAL1's successor decision permitting), the EXP3 pair included, is then DELETED."
       }
+    },
+    {
+      "id": "orchard-exposure",
+      "concern": "Orchard exposure",
+      "owner": "components/layout/orchard-backdrop.tsx",
+      "ownerPath": "client/src/components/layout/orchard-backdrop.tsx",
+      "ownerKind": "module",
+      "owns": "The orchard image itself. It is an ARRIVAL surface and nothing else: /auth and /onboarding (through orchard-shell.tsx) and the unauthenticated marketing landing (home-page.tsx). THA_EXPERIENCE_BLUEPRINT.md § 6.2 rule 3 expressly permits arrival to stand at E3. A ROOM may never mount it: rooms receive the orchard as governed E0–E3 exposure values (§ 6.2), never as this component.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 1,
+      "retired": [
+        {
+          "name": "the global orchard wallpaper — <OrchardBackdrop> mounted anywhere but the two arrival surfaces (it stood in App.tsx behind every room, fixed inset-0, objectFit cover, opacity 0.90)",
+          "pattern": "<OrchardBackdrop",
+          "excludePaths": [
+            "client/src/components/layout/orchard-shell.tsx",
+            "client/src/pages/home-page.tsx"
+          ],
+          "retiredBy": "CONV1-P3 (BEH-7)"
+        }
+      ]
     }
   ],
   "orphans": {

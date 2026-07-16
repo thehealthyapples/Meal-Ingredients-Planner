@@ -34,7 +34,7 @@ Every line of code that reaches a household travels this path, and no other.
 |---|---|---|---|
 | **1** | **Developer** | Work on a branch — *never* on `main`. Before pushing: `npm run release:check` (typecheck regression gate → 65 test suites → build) | The same three commands CI will run. Failing here costs a minute; failing in CI costs twenty |
 | **2** | **GitHub** | Push the branch. Open a pull request against `main`. **A direct push to `main` is rejected by the server** — protection requires a pull request | `git push origin main` fails. So does `./deploy.sh`, at its push step (see §6) |
-| **3** | **CI** | `typecheck · test · build` runs on the pull request: `npm ci` → `ci:setup-db` (Postgres service container, schema, migrations, seeds) → `typecheck:ci` → `npm test` (65 suites, **including all six TRUST1 security suites**) → `npm run build` | Any failing step fails the job. The check goes red. **The merge button is disabled** |
+| **3** | **CI** | `typecheck · test · build` runs on the pull request: `npm ci` → `verify:coherence` (`COH-4`) → `ci:setup-db` (Postgres service container, schema, migrations, seeds) → `typecheck:ci` → `npm test` (65 suites, **including all six TRUST1 security suites**) → `npm run build` | Any failing step fails the job. The check goes red. **The merge button is disabled** |
 | **4** | **Approved merge** | A named human merges, having read [`../checklists/PRODUCTION_RELEASE.md`](../checklists/PRODUCTION_RELEASE.md). The branch must be up to date with `main` (`strict: true`), so the green check was produced against what will actually land | A red or missing check blocks the merge — **for administrators too** (`enforce_admins: true`). Green CI is *necessary*, never *sufficient*: the human authorisation is still required |
 | **5** | **Deployment** | Render auto-deploys from `main`. **The merge in stage 4 *is* the deployment** | `main` can only advance through stage 4. Therefore production can only be reached by a commit whose required check was green |
 
@@ -52,6 +52,7 @@ clean runner, against an empty database, with no production secret:
 | Inside the check | Fails when |
 |---|---|
 | `npm ci` | The lockfile is inconsistent |
+| `npm run verify:coherence` | A Source of Truth Register domain names an owner that does not exist (`COH-1`), or a `file:line` citation in `docs/architecture/` resolves to nowhere (`COH-2`) — *a governing document has stopped describing the code it governs*. Added by `COH-4`; runs first, because it is the only gate needing no database, no secret and no build |
 | `npm run ci:setup-db` | A migration cannot be applied to an empty database — *which means production could not apply it either* |
 | `npm run typecheck:ci` | A **new** type error appears against the frozen baseline (`scripts/ci/typecheck-baseline.json`) |
 | `npm test` | Any of 65 suites fails — **including `trust1-s1`, `trust1-s2`, `trust1-s3`, `trust1-s3a`, `trust1-s5`, `trust1-s8-p8`** |

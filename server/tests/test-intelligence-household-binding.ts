@@ -15,10 +15,11 @@
  * Covered: capability lookup (seven live capabilities), permission validation
  * (anonymous → denied; no household membership → honest gap, never denied or a
  * fabricated empty household), handler invocation + delegation for all three read scopes
- * (household / dietary-context / eaters), adult-eater enrichment from the caller's own
- * profile (mirrors server/routes.ts:8526–8541), child eaters left unchanged, missing/
- * unsupported scope, unsupported-intent handling, read-only enforcement (explain/add/
- * delete never execute), and trust rules (inviteCode never surfaced).
+ * (household / dietary-context / eaters), eater rows served AS STORED for every eater —
+ * the eater row is the canonical owner of each person's diet (CONV1 P4 / OWN-1) and the
+ * old read-time profile enrichment is deleted (READ-1) — missing/unsupported scope,
+ * unsupported-intent handling, read-only enforcement (explain/add/delete never execute),
+ * and trust rules (inviteCode never surfaced).
  *
  * Run with: npx tsx server/tests/test-intelligence-household-binding.ts
  */
@@ -72,8 +73,6 @@ function makeUser(overrides: Partial<User>): User {
     emailVerified: true,
     emailVerificationToken: null,
     emailVerificationExpires: null,
-    dietPattern: null,
-    dietRestrictions: [],
     eatingSchedule: "None",
     passwordResetToken: null,
     passwordResetExpires: null,
@@ -94,8 +93,8 @@ function makeUser(overrides: Partial<User>): User {
   };
 }
 
-const USER_1 = makeUser({ id: 1, username: "colin", displayName: "Colin", dietPattern: "Mediterranean", dietRestrictions: ["Gluten-Free"] });
-const USER_2 = makeUser({ id: 2, username: "sam", displayName: "Sam", dietPattern: null, dietRestrictions: ["dairy"] });
+const USER_1 = makeUser({ id: 1, username: "colin", displayName: "Colin" });
+const USER_2 = makeUser({ id: 2, username: "sam", displayName: "Sam" });
 
 const HOUSEHOLD_10: Household = {
   id: 10,
@@ -129,9 +128,11 @@ const DIETARY_CONTEXT_10: HouseholdDietaryContext = {
   },
 };
 
+// CONV1 P4 / OWN-1: the in-memory owner stores each adult's diet ON the eater row —
+// the canonical owner (Register Domain 16) — exactly as the real storage layer now does.
 const EATERS_10: HouseholdEaterRow[] = [
-  { id: 100, householdId: 10, displayName: "Colin", userId: 1, defaultDietTypes: [], hardRestrictions: [] },
-  { id: 101, householdId: 10, displayName: "Sam", userId: 2, defaultDietTypes: [], hardRestrictions: [] },
+  { id: 100, householdId: 10, displayName: "Colin", userId: 1, defaultDietTypes: ["mediterranean"], hardRestrictions: ["Gluten-Free"] },
+  { id: 101, householdId: 10, displayName: "Sam", userId: 2, defaultDietTypes: [], hardRestrictions: ["dairy"] },
   { id: 102, householdId: 10, displayName: "Toby", userId: null, defaultDietTypes: ["vegetarian"], hardRestrictions: ["nuts"] },
 ];
 
@@ -305,7 +306,7 @@ async function main(): Promise<void> {
   assert(calls.includes("getHouseholdDietaryContext(1)"), "delegated to the household owner — getHouseholdDietaryContext called");
 
   // -------------------------------------------------------------------------
-  section("Read scope: eaters — adult enrichment from profile, children unchanged");
+  section("Read scope: eaters — stored eater rows served as-is (CONV1 P4 / READ-1)");
   calls.length = 0;
   const eatersRead = await platform.handle(
     { verb: "read", capabilityId: "household", parameters: { scope: "eaters" } },
@@ -317,42 +318,38 @@ async function main(): Promise<void> {
   assert(Array.isArray(er?.eaters) && er.eaters.length === 3, "all three stored eater rows are surfaced");
 
   const colinEater = er.eaters.find((e: any) => e.displayName === "Colin");
-  assert(colinEater?.kind === "user", "adult eater kind === 'user'");
+  assert(colinEater?.kind === "account", "account-backed eater kind === 'account'");
   assert(
     JSON.stringify(colinEater?.defaultDietTypes) === JSON.stringify(["mediterranean"]),
-    "adult eater (user 1) enriched from users.dietPattern via the diet-pattern map (mirrors server/routes.ts:8526-8541)",
+    "adult eater (user 1) diet types come from the STORED eater row — the canonical owner (CONV1 P4 / OWN-1)",
     JSON.stringify(colinEater?.defaultDietTypes),
   );
   assert(
     JSON.stringify(colinEater?.hardRestrictions) === JSON.stringify(["Gluten-Free"]),
-    "adult eater (user 1) enriched from users.dietRestrictions",
+    "adult eater (user 1) hard restrictions come from the STORED eater row",
   );
 
   const samEater = er.eaters.find((e: any) => e.displayName === "Sam");
   assert(
     JSON.stringify(samEater?.defaultDietTypes) === JSON.stringify([]),
-    "adult eater with no stored dietPattern → empty defaultDietTypes, never fabricated",
+    "adult eater with no stored diet types → empty defaultDietTypes, never fabricated",
   );
   assert(
     JSON.stringify(samEater?.hardRestrictions) === JSON.stringify(["dairy"]),
-    "adult eater (user 2) hardRestrictions enriched from users.dietRestrictions",
+    "adult eater (user 2) hardRestrictions come from the STORED eater row",
   );
 
   const tobyEater = er.eaters.find((e: any) => e.displayName === "Toby");
-  assert(tobyEater?.kind === "child", "child eater (no userId) kind === 'child'");
-  assert(tobyEater?.userId === undefined, "child eater has no userId");
+  assert(tobyEater?.kind === "no-account", "eater with no userId kind === 'no-account'");
+  assert(tobyEater?.userId === undefined, "account-less eater has no userId");
   assert(
     JSON.stringify(tobyEater?.defaultDietTypes) === JSON.stringify(["vegetarian"]) &&
       JSON.stringify(tobyEater?.hardRestrictions) === JSON.stringify(["nuts"]),
-    "child eater's stored values are surfaced unchanged (no profile enrichment attempted)",
+    "child eater's stored values are surfaced unchanged",
   );
   assert(
-    calls.includes("getUser(1)") && calls.includes("getUser(2)"),
-    "delegated to the profile owner for each adult eater — getUser called",
-  );
-  assert(
-    !calls.some((c) => c.startsWith("getUser(undefined") || c.startsWith("getUser(null")),
-    "no getUser call attempted for the child eater (no userId)",
+    !calls.some((c) => c.startsWith("getUser(")),
+    "NO getUser call for any eater — read-time profile enrichment is deleted (CONV1 P4 / READ-1); stored rows are served",
   );
 
   // -------------------------------------------------------------------------

@@ -70,7 +70,8 @@ export interface ProfileData {
     bmi: number | null;
     bmiCategory: string;
     dailyCalories: number | null;
-    calculatedCalories: number | null;
+    /** LIFE2 — THA cannot estimate a calorie target: it holds no age and no sex. */
+    calorieEstimate: { available: false; reason: "age-and-sex-unknown" };
     heightCm: number | null;
     weightKg: number | null;
     activityLevel: string;
@@ -1140,10 +1141,12 @@ function HouseholdEatersSection() {
           <div className="space-y-2">
             {eaters.map(eater => (
               <div key={eater.id} className="flex items-start gap-3" data-testid={`row-eater-${eater.id}`}>
+                {/* CONV1 BEH-1 — this was a Baby icon for kind === "child". `kind` is
+                    about account backing, never age (THA holds no age for anyone), so a
+                    live-in grandparent with no account was drawn as a baby. One icon for
+                    every eater: THA does not claim to know who is a child. */}
                 <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5">
-                  {eater.kind === "child"
-                    ? <Baby className="h-3.5 w-3.5 text-muted-foreground" />
-                    : <PersonStanding className="h-3.5 w-3.5 text-muted-foreground" />}
+                  <PersonStanding className="h-3.5 w-3.5 text-muted-foreground" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium" data-testid={`text-eater-name-${eater.id}`}>{eater.displayName}</p>
@@ -1163,21 +1166,28 @@ function HouseholdEatersSection() {
                   )}
                 </div>
                 <div className="flex items-center gap-1 shrink-0 mt-0.5">
-                  <Badge variant={eater.kind === "child" ? "secondary" : "outline"} className="text-xs capitalize">
-                    {eater.kind}
-                  </Badge>
-                  {eater.kind === "child" && (
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-7 w-7"
-                      onClick={() => openEdit(eater)}
-                      data-testid={`button-edit-eater-${eater.id}`}
-                      aria-label={`Edit ${eater.displayName}`}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
+                  {/* CONV1 BEH-1 — this rendered the raw `kind` value ("Child" / "User").
+                      The badge states only what is known, and only when it explains
+                      something: this eater has no account of their own. */}
+                  {eater.kind === "no-account" && (
+                    <Badge variant="secondary" className="text-xs">
+                      No account
+                    </Badge>
                   )}
+                  {/* CONV1 P4 (WRITE-2) — every eater is editable here now. The eater
+                      row is the canonical owner of each member's diets and
+                      restrictions; the old "adults are synced from their profile"
+                      read-time enrichment (and the 403 that enforced it) is retired. */}
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7"
+                    onClick={() => openEdit(eater)}
+                    data-testid={`button-edit-eater-${eater.id}`}
+                    aria-label={`Edit ${eater.displayName}`}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
                 </div>
               </div>
             ))}
@@ -1340,7 +1350,7 @@ export function CalorieSettings({ profile, onSave }: { profile: ProfileData; onS
                 onChange={() => { setMode("auto"); setDirty(true); }}
                 className="accent-primary"
               />
-              <span className="text-sm">Auto calculate (recommended)</span>
+              <span className="text-sm">No daily target</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer" data-testid="radio-calorie-manual">
               <input
@@ -1350,7 +1360,7 @@ export function CalorieSettings({ profile, onSave }: { profile: ProfileData; onS
                 onChange={() => { setMode("manual"); setDirty(true); }}
                 className="accent-primary"
               />
-              <span className="text-sm">Set manually</span>
+              <span className="text-sm">Set my own target</span>
             </label>
           </div>
 
@@ -1368,9 +1378,9 @@ export function CalorieSettings({ profile, onSave }: { profile: ProfileData; onS
             </div>
           )}
 
-          {mode === "auto" && profile.health.calculatedCalories && (
-            <p className="text-xs text-muted-foreground mt-2">
-              Calculated: <span className="font-semibold text-foreground">{profile.health.calculatedCalories.toLocaleString()} kcal</span> based on your weight, height, activity level and goal.
+          {mode === "auto" && (
+            <p className="text-xs text-muted-foreground mt-2" data-testid="text-calorie-estimate-unavailable">
+              THA won't work a target out for you. Doing that honestly needs your age and sex, and THA doesn't hold either. Choose <span className="font-medium text-foreground">Set my own target</span> if you'd like one.
             </p>
           )}
         </div>

@@ -69,8 +69,6 @@ const USER_1: User = {
   emailVerified: true,
   emailVerificationToken: "verify-token-should-never-leak",
   emailVerificationExpires: null,
-  dietPattern: "Mediterranean",
-  dietRestrictions: ["Gluten-Free"],
   eatingSchedule: "None",
   passwordResetToken: "reset-token-should-never-leak",
   passwordResetExpires: null,
@@ -127,6 +125,10 @@ const PREFS_1: UserPreferences = {
   companionPersonality: "companion",
 };
 
+// CONV1 P4 / OWN-1: a person's diet lives on their eater row, not the user row —
+// the in-memory owner serves it through getPersonDiet, exactly as storage now does.
+const DIET_1 = { dietPattern: "Mediterranean", dietTypes: ["mediterranean"], hardRestrictions: ["Gluten-Free"] };
+
 const calls: string[] = [];
 
 function makePort(): ProfileReadPort {
@@ -141,6 +143,11 @@ function makePort(): ProfileReadPort {
       calls.push(`getUserPreferences(${userId})`);
       if (userId === 1) return PREFS_1;
       return undefined;
+    },
+    getPersonDiet: async (userId) => {
+      calls.push(`getPersonDiet(${userId})`);
+      if (userId === 1) return DIET_1;
+      return { dietPattern: null, dietTypes: [], hardRestrictions: [] };
     },
   };
 }
@@ -218,10 +225,10 @@ async function main(): Promise<void> {
   assert(r?.profile?.id === 1, "profile.id matches the caller", String(r?.profile?.id));
   assert(r?.profile?.username === "colin", "profile.username surfaced from owner", String(r?.profile?.username));
   assert(r?.profile?.displayName === "Colin", "profile.displayName surfaced from owner");
-  assert(r?.profile?.dietPattern === "Mediterranean", "profile.dietPattern surfaced from owner");
+  assert(r?.profile?.dietPattern === "Mediterranean", "profile.dietPattern surfaced from the canonical diet owner via getPersonDiet (CONV1 P4 / OWN-1)");
   assert(
     JSON.stringify(r?.profile?.dietRestrictions) === JSON.stringify(["Gluten-Free"]),
-    "profile.dietRestrictions surfaced from owner",
+    "profile.dietRestrictions surfaced from the canonical diet owner via getPersonDiet",
   );
   assert(r?.profile?.role === "user", "profile.role surfaced from owner");
   assert(r?.profile?.subscriptionTier === "free", "profile.subscriptionTier surfaced from owner");

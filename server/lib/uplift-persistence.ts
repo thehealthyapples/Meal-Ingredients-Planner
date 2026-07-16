@@ -18,6 +18,8 @@
  * already stored in each application row.
  */
 
+import type { UpliftRule, UpliftSuggestion } from './uplift-types.js';
+
 // ─── Normalisation ────────────────────────────────────────────────────────────
 
 const STRIP_WORDS = new Set([
@@ -154,6 +156,75 @@ export interface AcceptedSuggestion {
   action: 'add' | 'swap' | 'boost';
   quantity?: string;
   explanation: string;
+}
+
+// ─── Accepted suggestion resolution (SEC4) ────────────────────────────────────
+//
+// An AcceptedSuggestion arrives from the caller and is NOT evidence of anything:
+// every field is whatever was posted. Resolution answers one question — does the
+// canonical owner (UPLIFT_RULES, SoT Domain 17) actually author this? — and returns
+// the OWNER's copy, so the caller's name, quantity and explanation are discarded
+// rather than persisted.
+//
+// This exists because /api/uplift/accept previously wrote the caller's fields
+// verbatim under `added_by: 'tha_uplift'`, which made a suggestion invented in a
+// browser indistinguishable in the database from reviewed guidance.
+//
+// It cannot reject a legitimate accept: uplift-engine.ts returns `rule.suggestions`
+// verbatim, so a client echoing back a match it was given always resolves.
+
+export interface ResolvedSuggestion {
+  rule: UpliftRule;
+  suggestion: UpliftSuggestion;
+}
+
+export type ResolveAcceptedResult =
+  | { ok: true; resolved: ResolvedSuggestion[] }
+  | { ok: false; reason: string };
+
+function normaliseIngredientForMatch(value: string): string {
+  return (value ?? '').trim().toLowerCase();
+}
+
+/**
+ * Resolves each claimed suggestion against the rules the owner authored.
+ * `rules` is a required parameter, never an ambient import — this module stays
+ * pure and the caller supplies the registry.
+ */
+export function resolveAcceptedSuggestions(
+  claimed: AcceptedSuggestion[],
+  rules: UpliftRule[],
+): ResolveAcceptedResult {
+  const resolved: ResolvedSuggestion[] = [];
+
+  for (const claim of claimed) {
+    const rule = rules.find(r => r.id === claim?.ruleId);
+    if (!rule) {
+      return { ok: false, reason: `Unknown uplift rule: ${claim?.ruleId ?? '(none)'}` };
+    }
+
+    // The same approval gate uplift-engine.ts applies when matching. A rule that
+    // cannot be matched must not be acceptable either.
+    if (!rule.reviewedAt) {
+      return { ok: false, reason: `Uplift rule is not approved for use: ${rule.id}` };
+    }
+
+    const authored = rule.suggestions.find(
+      s =>
+        normaliseIngredientForMatch(s.ingredient) === normaliseIngredientForMatch(claim?.ingredient) &&
+        s.action === claim?.action,
+    );
+    if (!authored) {
+      return {
+        ok: false,
+        reason: `Rule ${rule.id} does not author suggestion: ${claim?.action ?? '(none)'} ${claim?.ingredient ?? '(none)'}`,
+      };
+    }
+
+    resolved.push({ rule, suggestion: authored });
+  }
+
+  return { ok: true, resolved };
 }
 
 // ─── Persistence strategy recommendation ──────────────────────────────────────

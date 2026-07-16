@@ -40,7 +40,7 @@ export async function buildHouseholdHistory(userId: number): Promise<HouseholdHi
 
     for (const day of days) {
       const dayEntries = await storage.getPlannerEntriesForDay(day.id);
-      // dayOfWeek: 0 = Monday in plannerDays convention; shift so recent days are closer to now
+      // dayOfWeek: 0 = Sunday in plannerDays convention (Rule HT8); shift so recent days are closer to now
       const approxDate = new Date(
         now.getTime() - (weeksAgo * 7 + Math.max(0, 6 - day.dayOfWeek)) * MS_PER_DAY,
       );

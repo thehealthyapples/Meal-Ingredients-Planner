@@ -97,6 +97,24 @@ jobs:
       - name: Install dependencies from the lockfile
         run: npm ci
 
+      # COH-4 — the cheapest gate in this job: pure filesystem reads. No database, no secret, no
+      # build. It runs FIRST for exactly that reason — a governing document that no longer
+      # describes this tree should fail in seconds, not after a Postgres container, 65 test suites
+      # and a bundle have been paid for.
+      #
+      # This does NOT rename the job, and that is deliberate. The required status check is matched
+      # on the `name:` above — "typecheck · test · build" is an API identifier, not an inventory of
+      # steps (this job has always run `npm ci` and `ci:setup-db` without naming them either). So
+      # scripts/ci/branch-protection.json needs no edit and `verify:branch-protection` still passes.
+      # Renaming the job to list this gate would strand every open pull request on a context that
+      # no longer reports.
+      #
+      # CONV1 §8.4's fourth row read "Governing-document coherence: UNMEASURED — no gate exists".
+      # P2 built the gate, DOC-5 corrected the two defects it found, COH-3 wired it into
+      # release:check — which nothing automates. This step is where it finally runs by itself.
+      - name: Governing-document coherence (COH-1 · COH-2)
+        run: npm run verify:coherence
+
       # Fails the pipeline on a migration failure, which is the point: a migration CI cannot
       # apply to an empty database is a migration production cannot apply either.
       - name: Set up the test database (schema + ordered migrations)

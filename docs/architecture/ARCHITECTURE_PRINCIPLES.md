@@ -35,7 +35,7 @@ Two stores that may legitimately differ (e.g. eater hard-restriction vs weekly s
 
 **Rationale:** Prevents both duplication (the 4-store dietary preference problem) and over-collapse (the eater→week layering is a legitimate distinction that must survive consolidation).
 
-**Current violations:** `users.dietPattern`/`users.dietRestrictions` shadowing `household_eaters` (same scope, must always agree → redundant). `client/src/lib/dietRules.ts` copy of server file (same scope → redundant).
+**Current violations:** *(none known for diet ownership)* — `users.dietPattern`/`users.dietRestrictions` shadowing `household_eaters` was **retired 2026-07-16 (`CONV1 P4` / `OWN-1`)**: the columns are dropped and `household_eaters` is the one owner. The `client/src/lib/dietRules.ts` copy was collapsed into `shared/dietRules.ts` (Migration M3).
 
 ---
 
@@ -121,7 +121,7 @@ Every new store that supersedes an existing store must:
 | Plant Diversity | DB `diversity_group` (via WS2A canonical) | **Contested** — `nutrition-variety.ts` shadows |
 | Dietary Restrictions | `shared/restrictions/restriction-library.ts` | Authoritative |
 | Dietary Rules (pattern) | `server/lib/dietRules.ts` | **Contested** — identical copy in `client/src/lib/` |
-| Dietary Preferences (user) | DB `users.dietPattern` + `users.dietRestrictions` | **Contested** — shadows `household_eaters` |
+| Dietary Preferences (user) | DB `household_eaters` (`default_diet_types` + `hard_restrictions`) | Authoritative — *converged 2026-07-16 (`CONV1 P4`); the `users.diet*` shadow is dropped* |
 | Discovery | `shared/discovery/engine.ts` | Authoritative |
 | Alternatives | `shared/alternatives/engine.ts` | Authoritative |
 | Stories | `shared/stories/engine.ts` | Authoritative |
@@ -142,6 +142,7 @@ Every new store that supersedes an existing store must:
 | Ingredient Normalization | `server/lib/ingredient-normalization-service.ts` | Authoritative |
 | Membership | DB `users.subscriptionTier` | Authoritative |
 | User Preferences | DB `user_preferences` | Authoritative |
+| Household Time (zone, today, phase, week, planner-week) | `shared/time/household-time.ts` — rules only, **no data**; facts at `households.timeZone` + `planner_weeks.weekStartDate`. Governance: `THA_HOUSEHOLD_TIME_ARCHITECTURE.md` | **Declared — not yet built** (TIME3) |
 
 ---
 
@@ -186,13 +187,26 @@ Four domains are currently contested. All must be migrated. None are migrated by
 
 ---
 
-### 4. Dietary Preferences — 🟢 SAFE (lowest priority)
+### 4. Dietary Preferences — ✅ CONVERGED *(2026-07-16, `CONV1 P4`; regraded 2026-07-16, `DOC-1`; was 🟢 SAFE (lowest priority))*
 
-**Problem:** `users.dietPattern`/`users.dietRestrictions` shadow `household_eaters` diet facts. Currently no live split-brain, but risk is structural.
+**Resolution (2026-07-16, `CONV1 P4`):** the target below is DONE. The write door moved to `household_eaters` first (`WRITE-2`, the eater PATCH 403 lifted), the `users.diet*` columns were dropped behind a zero-data-loss migration gate (`OWN-1`), the three read-time enrichments and the Bridge were deleted last (`READ-1`/`WRITE-1`), the pattern↔type mapping collapsed to one `shared/dietRules.ts` owner (`READ-2`), and eater rows are created at membership events under a unique `(household_id, user_id)` index (`WRITE-3`). The status analysis below is preserved as the record of the violation as it stood.
+
+**Problem *(resolved)*:** `users.dietPattern`/`users.dietRestrictions` shadow `household_eaters` diet facts.
 
 **Target:** Eater entity owns hard restrictions; week-override owns soft-diet. Retire the `users.diet*` overlap.
 
 **Note:** Eater hard-restrictions and week soft-diet are legitimately different facts (scope test passes). Only the `users` column overlap with `household_eaters` is the contested duplication.
+
+**Status — corrected 2026-07-16 (`DOC-1`).** The previous status read *"Currently no live split-brain, but risk is structural."* That sentence was true of the pair it named and silent on the pair that matters:
+
+- **Against `household_eaters`: no *divergent* value is held today — and that is not evidence of safety.** Adult `household_eaters` rows are written empty by design and the eater write door rejects adult rows with a 403, so the declared owner is kept *empty* rather than kept *in step*. The absence of divergence is produced by locking the correct owner's write door, not by the two stores agreeing.
+- **Against `user_preferences.dietTypes`: a split-brain is live.** The self-named one-way, failure-swallowing *"Bridge"* on the profile write path fires only when `dietPattern` is written, while `PUT /api/user/preferences` writes `dietTypes` without touching `dietPattern`. The two then disagree for the same person. **Principle 7 forbids exactly this shape.** This divergence is on the *pattern* (a soft preference), not on `dietRestrictions` (the hard safety fact).
+- **`user_preferences` is not a rival owner of this fact.** Its overlap is a bridge to **delete** alongside the retirement — never an ownership contest to resolve, and never a promotion target. A reader who "resolves" this domain by promoting `user_preferences` has converged onto the wrong owner and left this violation intact.
+- **Retirement moves live allergens.** It is the one retirement in this list where a mistake reaches a plate: the write door must move before the read door, and the read-time scaffolding comes down last.
+
+**Owner, restated to remove all doubt:** **`household_eaters`** — Household Profiles, *Authoritative*, in this document's own table above. The `users.diet*` columns are the **current live location** of adult diet data. That is a statement of fact, never of ownership: a shadow is not promoted by being the only lit room.
+
+*(The four sections here are introduced as "ordered by launch risk". That ordering predates this regrade and is now stale. `DOC-1` is a documentation correction and does not reorder or renumber the sections — the ordering is recorded as stale rather than silently rewritten.)*
 
 ---
 

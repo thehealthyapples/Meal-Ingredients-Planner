@@ -81,10 +81,12 @@ const BOB = {
   hardRestrictions: ["dairy", "nuts"],
 };
 
-const CHARLIE_GUEST = {
+// An eater with no account — NOT a guest. THA's "guest" is GuestEater: a visitor at a
+// single planner entry who is not in the household (CONV1 BEH-1).
+const CHARLIE_NO_ACCOUNT = {
   id: 3,
   userId: null,
-  displayName: "Charlie (guest)",
+  displayName: "Charlie (no account)",
   defaultDietTypes: [],
   hardRestrictions: [],
 };
@@ -94,7 +96,7 @@ const members = [
   { userId: 10, role: "owner" },
   { userId: 11, role: "member" },
 ];
-const eaters = [ALICE, BOB, CHARLIE_GUEST];
+const eaters = [ALICE, BOB, CHARLIE_NO_ACCOUNT];
 
 function makeStorage() {
   return {
@@ -149,10 +151,11 @@ assert(nutsResult.items.length === 1, "query 'nuts' matches Bob only");
 const noMatchResult = await engine.discover("paleo", 10);
 assert(noMatchResult.items.length === 0, "query 'paleo' → empty results (not an error)");
 
-// Guest member has correct role
-const guestResult = await engine.discover("charlie", 10);
-assert(guestResult.items.length === 1, "guest Charlie found by name");
-assert(guestResult.items[0].role === "guest", "guest Charlie's role is 'guest'");
+// An account-less member is reported as having no account — never as a "guest" (CONV1 BEH-1)
+const noAccountResult = await engine.discover("charlie", 10);
+assert(noAccountResult.items.length === 1, "account-less Charlie found by name");
+assert(noAccountResult.items[0].role === "no-account", "account-less Charlie's role is 'no-account'");
+assert(noAccountResult.items[0].role !== "guest", "the retired 'guest' role never reaches the model");
 
 // Case-insensitive
 const upperResult = await engine.discover("BOB", 10);

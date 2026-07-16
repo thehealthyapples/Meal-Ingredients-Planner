@@ -33,8 +33,16 @@ export function guestEaterToProfile(guest: GuestEater): EffectiveDietProfile {
  *
  * Represents a person in a household who meals can be planned for.
  * Supports two kinds of eater:
- *   - "user"  — an adult with an account (linked by userId)
- *   - "child" — a non-account member (e.g. a child), identified only by name
+ *   - "account"    — backed by a THA account (linked by userId)
+ *   - "no-account" — a household member with no account, identified only by name
+ *
+ * `kind` is about ACCOUNT BACKING, never about age, and never about hospitality.
+ * It was previously "user" / "child" (CONV1 BEH-1): "child" was correct only by
+ * accident — a live-in grandparent with no account is not a child, and the word
+ * reached the language model. THA states no per-child signals (NK1:418) and holds
+ * no age for anyone, so no derivation here can be about age. See GuestEater above
+ * for the unrelated, genuine "guest": a visitor at a single planner entry, who is
+ * not a member of the household at all.
  *
  * Diet preferences come in two tiers:
  *   - defaultDietTypes    — soft preferences (can be overridden per meal plan)
@@ -62,9 +70,9 @@ export interface HouseholdEater {
    * DIET_RESTRICTIONS values (e.g. "Gluten-Free", "nuts", "Halal").
    */
   hardRestrictions: string[];
-  /** "user" when backed by an account; "child" for non-account members. */
-  kind: "user" | "child";
-  /** Present only when kind === "user". */
+  /** "account" when backed by a THA account; "no-account" otherwise. Never about age. */
+  kind: "account" | "no-account";
+  /** Present only when kind === "account". */
   userId?: number;
 }
 
@@ -104,7 +112,7 @@ export function dbEaterToHouseholdEater(row: {
   return {
     id: String(row.id),
     displayName: row.displayName,
-    kind: row.userId != null ? "user" : "child",
+    kind: row.userId != null ? "account" : "no-account",
     userId: row.userId ?? undefined,
     defaultDietTypes: row.defaultDietTypes ?? [],
     hardRestrictions: row.hardRestrictions ?? [],

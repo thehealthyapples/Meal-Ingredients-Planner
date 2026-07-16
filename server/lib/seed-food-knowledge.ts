@@ -1,6 +1,9 @@
 import { db } from "../db";
 import { foodKnowledge } from "@shared/schema";
-import { log } from "../index";
+
+// CONV1 WRITE-4 — see seed-ready-meals.ts: importing `log` from ../index pulled
+// the server's unguarded boot IIFE into any CLI runner of this seed.
+const log = (message: string, source = "seed") => console.log(`[${source}] ${message}`);
 
 const ENTRIES = [
   {

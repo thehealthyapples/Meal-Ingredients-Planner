@@ -215,6 +215,58 @@ export interface CapabilityPermissions {
   readonly audited: boolean;
 }
 
+// ---------------------------------------------------------------------------
+// Companion presentation vocabulary (CONV1 BEH-8)
+// ---------------------------------------------------------------------------
+
+/**
+ * The seven Companion Card rooms — THA's canonical *user destinations*.
+ *
+ * This is native-discovery.ts's DISCOVERY_DOMAINS vocabulary, which is the owner
+ * of the term set; it is named here (not re-derived) so a capability descriptor
+ * can declare which room it belongs to.
+ *
+ * A room is a destination because the Card's Next Steps route to it:
+ * THA_COMPANION_CARD_EXPERIENCE_PRINCIPLE.md — "Next Steps — result-level actions
+ * over the whole set (e.g. View All), routing to the domain's canonical landing page."
+ */
+export const COMPANION_ROOMS = [
+  "meal",
+  "planner",
+  "shopping",
+  "pantry",
+  "diary",
+  "nutrition",
+  "household",
+] as const;
+
+export type CompanionRoom = (typeof COMPANION_ROOMS)[number];
+
+/**
+ * The attribution term for a cross-cutting capability that is NOT a room.
+ *
+ * Food Intelligence, Opportunity Delivery and Evidence Learning each own zero
+ * business-domain data (Rule FI1; OD1; EL1 — each says so in its own descriptor
+ * below). A capability that owns no business-domain data has no canonical landing
+ * page, because it has no data of its own to land on. It can still explain itself
+ * — every enrichment item it declares is an explanation of how the platform
+ * reasons, not a fact about a room.
+ *
+ * So it may be an enrichment/guidance SOURCE (attribution) but is NEVER a guidance
+ * TARGET (routing). Aiming a Next Step at it would route a household to a page that
+ * does not exist; aiming it at a borrowed room would assert a provenance the room
+ * does not own (INT17 §4.5).
+ */
+export const COMPANION_PLATFORM = "platform" as const;
+
+/**
+ * Where a capability appears in the Companion.
+ *  - a room  → a user destination; may be routed to.
+ *  - platform → a cross-cutting capability; attribution only, never routed to.
+ *  - absent (see `companionDomain?`) → not Companion-reachable at all.
+ */
+export type CompanionDomain = CompanionRoom | typeof COMPANION_PLATFORM;
+
 /**
  * A registered capability — a coherent domain of action THA already exposes through
  * an existing service + API. The registry record is a *descriptor of an existing
@@ -255,6 +307,23 @@ export interface Capability {
   readonly aiAccess: AiAccessPosture;
   /** Availability to the platform. */
   readonly availability: CapabilityAvailability;
+  /**
+   * CONV1 BEH-8 — where this capability appears in the Companion, declared by the
+   * registry that owns it rather than by a parallel list that shadows it.
+   *
+   * A room name marks a user destination; `platform` marks a cross-cutting
+   * capability that may be attributed but never routed to (see CompanionDomain).
+   *
+   * ABSENT MEANS NOT COMPANION-REACHABLE, and it is a deliberate declaration, not
+   * an omission: `administration` (admin plane) and `developer` (physically
+   * isolated, TIP1 §7) are unreachable from an ordinary Companion turn by design.
+   * Before BEH-8 this fact lived in a hand-maintained CAPABILITY_DOMAIN table in
+   * companion-guidance.ts, which had already silently fallen four capabilities
+   * behind this registry — Principle 7's synchronisation bridge, in its
+   * already-broken state. Adding a capability here is now the only way to make it
+   * Companion-reachable, so the two can no longer drift.
+   */
+  readonly companionDomain?: CompanionDomain;
   /** INT39 — structured, capability-owned "where to next" guidance. Optional. */
   readonly guidance?: CapabilityGuidance;
   /** INT41 — structured, capability-owned contextual enrichment. Optional. */

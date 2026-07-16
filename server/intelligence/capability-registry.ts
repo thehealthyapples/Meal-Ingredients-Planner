@@ -21,9 +21,11 @@ import type {
   CapabilityEnrichment,
   CapabilityGuidance,
   CapabilityHandler,
+  CompanionDomain,
   CompletionCriterion,
   IntentVerb,
 } from "./types.js";
+import { COMPANION_PLATFORM } from "./types.js";
 
 // ---------------------------------------------------------------------------
 // Capability Guidance seed (INT39) — extends the capability seed below with
@@ -379,6 +381,7 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     capabilityClass: "destructive",
     aiAccess: "W!",
     availability: "registered",
+    companionDomain: "planner",
   },
   {
     id: "shopping",
@@ -393,6 +396,7 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     capabilityClass: "write",
     aiAccess: "W",
     availability: "registered",
+    companionDomain: "shopping",
   },
   {
     id: "nutrition-knowledge",
@@ -412,6 +416,7 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     capabilityClass: "read-only",
     aiAccess: "R",
     availability: "registered",
+    companionDomain: "nutrition",
   },
   {
     // PHASE5A — the knowledge of what THA ITSELF is. The platform's fifth
@@ -453,6 +458,7 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     capabilityClass: "read-only",
     aiAccess: "R",
     availability: "registered",
+    companionDomain: "platform",
   },
   {
     id: "meals",
@@ -467,6 +473,7 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     capabilityClass: "destructive",
     aiAccess: "W!",
     availability: "registered",
+    companionDomain: "meal",
   },
   {
     id: "meal-discovery",
@@ -482,6 +489,7 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     aiAccess: "R",
     discoveryOf: "meals",
     availability: "registered",
+    companionDomain: "meal",
   },
   {
     id: "diary",
@@ -496,6 +504,7 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     capabilityClass: "write",
     aiAccess: "W",
     availability: "registered",
+    companionDomain: "diary",
   },
   {
     id: "profile",
@@ -510,6 +519,7 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     capabilityClass: "write",
     aiAccess: "W",
     availability: "registered",
+    companionDomain: "household",
   },
   {
     id: "partners",
@@ -524,6 +534,7 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     capabilityClass: "ai-assisted",
     aiAccess: "R+A",
     availability: "registered",
+    companionDomain: "shopping",
   },
   {
     id: "pantry",
@@ -538,6 +549,7 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     capabilityClass: "write",
     aiAccess: "W",
     availability: "registered",
+    companionDomain: "pantry",
   },
   {
     id: "analyser",
@@ -552,6 +564,7 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     capabilityClass: "ai-assisted",
     aiAccess: "R+A",
     availability: "registered",
+    companionDomain: "nutrition",
   },
   {
     id: "household",
@@ -566,6 +579,7 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     capabilityClass: "destructive",
     aiAccess: "W!",
     availability: "registered",
+    companionDomain: "household",
   },
   {
     id: "templates",
@@ -580,6 +594,7 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     capabilityClass: "write",
     aiAccess: "W",
     availability: "registered",
+    companionDomain: "meal",
   },
   {
     id: "nutrition-discovery",
@@ -595,6 +610,7 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     aiAccess: "R",
     discoveryOf: "nutrition-knowledge",
     availability: "registered",
+    companionDomain: "nutrition",
   },
   {
     id: "planner-discovery",
@@ -610,6 +626,7 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     aiAccess: "R",
     discoveryOf: "planner",
     availability: "registered",
+    companionDomain: "planner",
   },
   {
     id: "pantry-discovery",
@@ -625,6 +642,7 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     aiAccess: "R",
     discoveryOf: "pantry",
     availability: "registered",
+    companionDomain: "pantry",
   },
   {
     id: "diary-discovery",
@@ -640,6 +658,7 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     aiAccess: "R",
     discoveryOf: "diary",
     availability: "registered",
+    companionDomain: "diary",
   },
   {
     id: "shopping-discovery",
@@ -655,6 +674,7 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     aiAccess: "R",
     discoveryOf: "shopping",
     availability: "registered",
+    companionDomain: "shopping",
   },
   {
     id: "household-discovery",
@@ -670,6 +690,7 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     aiAccess: "R",
     discoveryOf: "household",
     availability: "registered",
+    companionDomain: "household",
   },
   {
     id: "food-intelligence",
@@ -684,6 +705,7 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     capabilityClass: "read-only",
     aiAccess: "R",
     availability: "registered",
+    companionDomain: "platform",
   },
   {
     id: "opportunity-delivery",
@@ -703,6 +725,7 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     capabilityClass: "write",
     aiAccess: "W",
     availability: "registered",
+    companionDomain: "platform",
   },
   {
     id: "evidence-learning",
@@ -718,6 +741,7 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     capabilityClass: "write",
     aiAccess: "W",
     availability: "registered",
+    companionDomain: "platform",
   },
   {
     id: "administration",
@@ -873,6 +897,32 @@ export class CapabilityRegistry {
   /** Whether a capability supports a verb (closed allow-list). */
   supports(capabilityId: string, verb: IntentVerb): boolean {
     return this.capabilities.get(capabilityId)?.supportedIntents.includes(verb) ?? false;
+  }
+
+  // ---------------------------------------------------------------------------
+  // CONV1 BEH-8 — Companion presentation (extension, not a second registry)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * The Companion domain a capability declares for itself, or undefined when it
+   * declares none — which means NOT Companion-reachable, honestly and by design
+   * (`administration`, `developer`). Callers must treat undefined as "no", never
+   * as "unknown, so default it": defaulting is exactly how the retired
+   * CAPABILITY_DOMAIN table turned an unmaintained omission into a silent gate.
+   */
+  getCompanionDomain(capabilityId: string): CompanionDomain | undefined {
+    return this.capabilities.get(capabilityId)?.companionDomain;
+  }
+
+  /**
+   * Whether a capability may be the TARGET of a guidance suggestion — i.e. whether
+   * a Next Step may route to it. Only a room qualifies: routing is to "the domain's
+   * canonical landing page" (THA_COMPANION_CARD_EXPERIENCE_PRINCIPLE.md), and a
+   * cross-cutting `platform` capability has none.
+   */
+  isCompanionDestination(capabilityId: string): boolean {
+    const domain = this.getCompanionDomain(capabilityId);
+    return domain !== undefined && domain !== COMPANION_PLATFORM;
   }
 
   // ---------------------------------------------------------------------------

@@ -11,10 +11,19 @@
 //   • Shopping        → /api/shopping-list      (Shopping state)
 //   • Plant diversity → /api/home/intelligence  (weeklyProgress.plantCount)
 //   • Reminders       → useCompanionNotices (the Notice Engine, voiced by the Behaviour
-//                       Engine). PHASE5E: this was pointed at a route that did not
-//                       exist, so the section has been silently empty since OBS1.
+//                       Engine). Live since PHASE5E repointed it at the real route;
+//                       silence remains a first-class outcome, never padded.
 // No new store, no duplicate state, no second assistant. Honest gaps: a section
 // that has no validated data renders as a calm empty state, never fabricated.
+//
+// ODL1 (2026-07-16) — Orchard Design Language refinement. Visual only: the named
+// type roles (.title-page/.title-section/.title-card) replace raw sizes, the
+// greeting becomes the display-voice identity moment, the plant card renders an
+// honest absence instead of "0 of 30" when the server has no weekly picture, and
+// the Companion holds its entrance (useWithholdCompanion) until the room settles.
+// The orchard backdrop, signature hand, and depth vocabulary of the North Star
+// concepts remain governance-gated (UIA §4 amendment / adoption register) and are
+// deliberately NOT shipped here.
 //
 // PX1-W0 (fnd-px-false-empty-home). That promise was defeated by the loading path.
 // Every query below destructured `= []`, and NOT ONE of them read isLoading or
@@ -33,6 +42,7 @@ import { api } from "@shared/routes";
 import { useUser } from "@/hooks/use-user";
 import { useMealsSummary } from "@/hooks/use-meals-summary";
 import { useCompanionNotices } from "@/hooks/use-companion-notices";
+import { useWithholdCompanion } from "@/components/conversation/companion-context";
 import { WorkspaceHeader } from "@/components/workspace-header";
 import { MealCard } from "@/components/MealCard";
 import { Card, CardContent } from "@/components/ui/card";
@@ -157,8 +167,22 @@ export default function HomeExperiencePage() {
   }, [fullPlanner, mealsList, activeWeek]);
 
   const openShoppingCount = shoppingItems.filter((i: any) => !i.checked).length;
-  const plantCount = homeIntel?.weeklyProgress?.plantCount ?? 0;
-  const plantPct = Math.min(100, Math.round((plantCount / WEEKLY_PLANT_TARGET) * 100));
+  // EXPCOMP2 FAIL 2 — the server returns weeklyProgress: null when it has NO
+  // weekly picture. That is an absence, not a zero; rendering "0 of 30" where
+  // nothing is known is fabrication. Absence gets its own calm state below.
+  const weeklyProgress = homeIntel?.weeklyProgress ?? null;
+  const plantCount = weeklyProgress?.plantCount ?? null;
+  const plantPct =
+    plantCount === null
+      ? 0
+      : Math.min(100, Math.round((plantCount / WEEKLY_PLANT_TARGET) * 100));
+
+  // EXPCOMP2 FAIL 4 — the Companion is invited, not intrusive: it arrives a beat
+  // after the household, once the room has settled. The mechanism (and its
+  // unmount release) is owned by companion-context; this is only the invitation.
+  const settling =
+    mealsWaiting || shoppingQuery.isLoading || homeIntelQuery.isLoading;
+  useWithholdCompanion(settling);
 
   // Reminders — the Notice Engine's Silence Rules already chose WHICH notices and HOW
   // MANY (at most two per moment), and the Behaviour Engine already voiced each one in
@@ -180,31 +204,50 @@ export default function HomeExperiencePage() {
     <>
       <WorkspaceHeader realm="home" title="Home" wide titleTestId="text-home-title" />
 
-      <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-        {/* ── Greeting ── */}
-        <header className="mb-8 sm:mb-10">
+      {/* Home keeps its compact-counter column (max-w-3xl) — the adoption of the
+          canonical pageContainerClass is a named open item (EXPCOMP2 conflict);
+          widening here would silently change the room's posture. Air, not width. */}
+      <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+        {/* ── Greeting — the arrival, an identity moment in the display voice.
+               Two lines as one heading: the welcome is quiet, the household's
+               name carries the room. (EXPCOMP2 FAIL 5: the date line's /70 was
+               3.40:1 at 11px; raw sizes move onto the named type roles.) ── */}
+        <header className="mb-10 sm:mb-12">
           <p
-            className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/70 mb-2"
+            className="text-xs uppercase tracking-widest text-muted-foreground mb-3"
             data-testid="text-home-date"
           >
             {todayLabel()}
           </p>
-          <h1
-            className="text-[1.9rem] sm:text-4xl font-semibold tracking-tight text-foreground leading-tight"
-            data-testid="text-home-greeting"
-          >
-            Welcome Home{name ? `, ${name}` : ""}.
+          <h1 data-testid="text-home-greeting" className="text-foreground">
+            {name ? (
+              <>
+                <span className="block title-section text-muted-foreground">
+                  Welcome home,
+                </span>
+                <span className="block title-page mt-0.5">{name}</span>
+              </>
+            ) : (
+              <span className="block title-page">Welcome home.</span>
+            )}
           </h1>
           <p
-            className="mt-2 text-base sm:text-lg text-muted-foreground"
+            className="mt-3 text-base sm:text-lg text-muted-foreground"
             data-testid="text-home-subtitle"
           >
             How can I help your family today?
           </p>
         </header>
 
-        {/* ── Today's focus ── */}
-        <section className="space-y-4" aria-label="Today">
+        {/* ── Today at a glance ── */}
+        <section className="space-y-4" aria-labelledby="home-today-heading">
+          <h2
+            id="home-today-heading"
+            className="title-card text-muted-foreground pt-1"
+            data-testid="text-home-today-heading"
+          >
+            Today at a glance
+          </h2>
           {/* Today's Meals */}
           {mealsBroken ? (
             <LoadError
@@ -220,11 +263,11 @@ export default function HomeExperiencePage() {
             >
               <CardContent className="p-5">
                 <div className="flex items-center gap-3 mb-3">
-                  <span className="w-9 h-9 rounded-xl flex items-center justify-center bg-[hsl(172,20%,92%)] text-[hsl(172,38%,26%)] dark:bg-[hsl(172,14%,18%)] dark:text-[hsl(172,26%,68%)] shrink-0">
-                    <CalendarDays className="h-4.5 w-4.5" style={{ width: 18, height: 18 }} />
+                  <span className="w-9 h-9 rounded-xl flex items-center justify-center bg-[hsl(172,20%,92%)] text-[hsl(172,38%,26%)] shrink-0">
+                    <CalendarDays style={{ width: 18, height: 18 }} />
                   </span>
                   <div className="min-w-0">
-                    <h2 className="text-sm font-semibold text-foreground">Today's Meals</h2>
+                    <h3 className="title-card text-foreground">Today's Meals</h3>
                     <p className="text-xs text-muted-foreground">What's planned for today</p>
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground/40 ml-auto shrink-0 group-hover:text-muted-foreground transition-colors" />
@@ -277,11 +320,11 @@ export default function HomeExperiencePage() {
               >
                 <CardContent className="p-5">
                   <div className="flex items-center gap-3 mb-3">
-                    <span className="w-9 h-9 rounded-xl flex items-center justify-center bg-[hsl(190,24%,92%)] text-[hsl(190,42%,26%)] dark:bg-[hsl(190,16%,18%)] dark:text-[hsl(190,30%,68%)] shrink-0">
-                      <ShoppingCart className="h-4.5 w-4.5" style={{ width: 18, height: 18 }} />
+                    <span className="w-9 h-9 rounded-xl flex items-center justify-center bg-[hsl(190,24%,92%)] text-[hsl(190,42%,26%)] shrink-0">
+                      <ShoppingCart style={{ width: 18, height: 18 }} />
                     </span>
                     <div className="min-w-0">
-                      <h2 className="text-sm font-semibold text-foreground">Shopping</h2>
+                      <h3 className="title-card text-foreground">Shopping</h3>
                       <p className="text-xs text-muted-foreground">Your list</p>
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted-foreground/40 ml-auto shrink-0 group-hover:text-muted-foreground transition-colors" />
@@ -321,11 +364,11 @@ export default function HomeExperiencePage() {
               >
                 <CardContent className="p-5">
                   <div className="flex items-center gap-3 mb-3">
-                    <span className="w-9 h-9 rounded-xl flex items-center justify-center bg-[hsl(145,20%,91%)] text-[hsl(145,36%,26%)] dark:bg-[hsl(145,14%,18%)] dark:text-[hsl(145,26%,66%)] shrink-0">
-                      <Leaf className="h-4.5 w-4.5" style={{ width: 18, height: 18 }} />
+                    <span className="w-9 h-9 rounded-xl flex items-center justify-center bg-[hsl(145,20%,91%)] text-[hsl(145,36%,26%)] shrink-0">
+                      <Leaf style={{ width: 18, height: 18 }} />
                     </span>
                     <div className="min-w-0">
-                      <h2 className="text-sm font-semibold text-foreground">Plant Diversity</h2>
+                      <h3 className="title-card text-foreground">Plant Diversity</h3>
                       <p className="text-xs text-muted-foreground">This week</p>
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted-foreground/40 ml-auto shrink-0 group-hover:text-muted-foreground transition-colors" />
@@ -335,12 +378,18 @@ export default function HomeExperiencePage() {
                       <Skeleton className="h-5 w-28" />
                       <Skeleton className="h-1.5 w-full" />
                     </div>
+                  ) : plantCount === null ? (
+                    // Absence, honestly: the server has no weekly picture yet.
+                    // A calm invitation, never a fabricated zero.
+                    <p className="text-sm text-muted-foreground" data-testid="text-home-plant-empty">
+                      Your week's variety will appear here as meals are planned.
+                    </p>
                   ) : (
                     <>
                       <p className="text-sm text-foreground/85 mb-2" data-testid="text-home-plant-summary">
                         <span className="font-semibold text-foreground">{plantCount}</span> of {WEEKLY_PLANT_TARGET} plants
                       </p>
-                      <div className="h-1.5 w-full rounded-full bg-[hsl(145,16%,90%)] dark:bg-[hsl(145,10%,20%)] overflow-hidden">
+                      <div className="h-1.5 w-full rounded-full bg-[hsl(145,16%,90%)] overflow-hidden">
                         <div
                           className="h-full rounded-full bg-[hsl(145,34%,52%)] transition-all"
                           style={{ width: `${plantPct}%` }}
@@ -357,11 +406,14 @@ export default function HomeExperiencePage() {
 
           {/* Reminders — only when the Notice Engine has something to say */}
           {reminders.length > 0 && (
-            <Card className="border-border/40" data-testid="card-home-reminders">
+            <Card
+              className="border-border/40 animate-in fade-in duration-500 motion-reduce:animate-none"
+              data-testid="card-home-reminders"
+            >
               <CardContent className="p-5">
                 <div className="flex items-center gap-2 mb-3">
                   <Bell className="h-4 w-4 text-primary/60" />
-                  <h2 className="text-sm font-semibold text-foreground">A gentle reminder</h2>
+                  <h3 className="title-card text-foreground">A gentle reminder</h3>
                 </div>
                 <ul className="space-y-2.5" data-testid="list-home-reminders">
                   {reminders.map((o, i) => (

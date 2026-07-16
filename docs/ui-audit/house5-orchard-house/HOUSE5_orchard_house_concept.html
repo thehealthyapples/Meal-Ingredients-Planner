@@ -1,0 +1,1143 @@
+<title>HOUSE5 — The Orchard House: Concept Drawing Set</title>
+
+<style>
+  :root {
+    --paper:      #F1F2EE;
+    --paper-2:    #E7E9E3;
+    --graphite:   #23261F;
+    --pencil:     #6A7065;
+    --feint:      #C6CBC0;
+    --orchard:    #4A8B3F;
+    --orchard-w:  #4A8B3F1F;
+    --redline:    #C0391A;
+    --redline-w:  #C0391A14;
+    --rule:       #23261F26;
+
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: "Helvetica Neue", Helvetica, "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+    --serif: ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
+
+    --sheet-max: 1180px;
+    --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px;
+    --s5: 24px; --s6: 32px; --s7: 48px; --s8: 72px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper:     #131611;
+      --paper-2:   #1B1F19;
+      --graphite:  #E4E7DD;
+      --pencil:    #949B8E;
+      --feint:     #3A4036;
+      --orchard:   #7FBF6E;
+      --orchard-w: #7FBF6E1C;
+      --redline:   #E86A4A;
+      --redline-w: #E86A4A18;
+      --rule:      #E4E7DD24;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:     #131611;
+    --paper-2:   #1B1F19;
+    --graphite:  #E4E7DD;
+    --pencil:    #949B8E;
+    --feint:     #3A4036;
+    --orchard:   #7FBF6E;
+    --orchard-w: #7FBF6E1C;
+    --redline:   #E86A4A;
+    --redline-w: #E86A4A18;
+    --rule:      #E4E7DD24;
+  }
+  :root[data-theme="light"] {
+    --paper:     #F1F2EE;
+    --paper-2:   #E7E9E3;
+    --graphite:  #23261F;
+    --pencil:    #6A7065;
+    --feint:     #C6CBC0;
+    --orchard:   #4A8B3F;
+    --orchard-w: #4A8B3F1F;
+    --redline:   #C0391A;
+    --redline-w: #C0391A14;
+    --rule:      #23261F26;
+  }
+
+  body {
+    background: var(--paper);
+    color: var(--graphite);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .board { max-width: var(--sheet-max); margin: 0 auto; padding: var(--s5) var(--s4) var(--s8); }
+
+  /* ── drafting primitives ─────────────────────────────────────── */
+  .anno {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--pencil);
+    font-variant-numeric: tabular-nums;
+  }
+  .quote {
+    font-family: var(--serif);
+    font-size: 1.02rem;
+    line-height: 1.55;
+    font-style: italic;
+    color: var(--graphite);
+  }
+  .cite {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--pencil);
+    font-style: normal;
+  }
+
+  /* ── sheet ───────────────────────────────────────────────────── */
+  .sheet {
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    margin-bottom: var(--s6);
+    display: flex;
+    flex-direction: column;
+  }
+  .sheet-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--s3) var(--s5);
+    padding: var(--s3) var(--s4);
+    border-bottom: 1px solid var(--rule);
+    background: var(--paper-2);
+  }
+  .sheet-no {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    color: var(--graphite);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .sheet-title {
+    font-family: var(--sans);
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-right: auto;
+  }
+  .sheet-body { padding: var(--s5) var(--s4); display: flex; flex-direction: column; gap: var(--s5); }
+  .sheet-foot {
+    border-top: 1px solid var(--rule);
+    padding: var(--s2) var(--s4);
+    display: flex; flex-wrap: wrap; gap: var(--s2) var(--s5);
+    background: var(--paper-2);
+  }
+
+  .fig { overflow-x: auto; }
+  .fig svg { display: block; min-width: 640px; width: 100%; height: auto; }
+
+  .prose { max-width: 68ch; display: flex; flex-direction: column; gap: var(--s3); }
+  .prose p { margin: 0; }
+  h1, h2, h3 { text-wrap: balance; margin: 0; }
+
+  .lede { font-size: 1.05rem; line-height: 1.55; }
+  strong { font-weight: 600; }
+
+  /* ── title sheet ─────────────────────────────────────────────── */
+  .titleblock { padding: var(--s7) var(--s4) var(--s6); border-bottom: 1px solid var(--rule); }
+  .titleblock h1 {
+    font-size: clamp(2rem, 6vw, 3.4rem);
+    line-height: 1.02;
+    letter-spacing: -0.025em;
+    font-weight: 600;
+    margin: var(--s4) 0 var(--s3);
+  }
+  .titleblock .sub {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: clamp(1.05rem, 2.4vw, 1.4rem);
+    color: var(--pencil);
+    max-width: 46ch;
+  }
+  .meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--s4);
+    border-top: 1px solid var(--rule);
+    margin-top: var(--s6);
+    padding-top: var(--s4);
+  }
+  .meta-grid div { display: flex; flex-direction: column; gap: 3px; }
+  .meta-grid b { font-family: var(--mono); font-size: 11.5px; font-weight: 500; letter-spacing: 0.04em; color: var(--graphite); text-transform: none; }
+
+  /* ── callouts ────────────────────────────────────────────────── */
+  .note {
+    border-left: 2px solid var(--graphite);
+    padding: var(--s2) 0 var(--s2) var(--s4);
+    max-width: 72ch;
+    display: flex; flex-direction: column; gap: var(--s2);
+  }
+  .note.red { border-left-color: var(--redline); background: var(--redline-w); padding-right: var(--s3); }
+  .note.green { border-left-color: var(--orchard); background: var(--orchard-w); padding-right: var(--s3); }
+
+  /* ── schedule table ──────────────────────────────────────────── */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--rule); }
+  table { border-collapse: collapse; width: 100%; min-width: 900px; font-size: 12.5px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  thead th {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--pencil); font-weight: 500; background: var(--paper-2); position: sticky; top: 0;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td.room { font-weight: 600; white-space: nowrap; }
+  td.exp { font-family: var(--mono); font-variant-numeric: tabular-nums; letter-spacing: 0.06em; white-space: nowrap; }
+  .tone { font-family: var(--serif); font-style: italic; }
+
+  .pill {
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase;
+    border: 1px solid currentColor; padding: 1px 5px; white-space: nowrap; display: inline-block;
+  }
+  .pill.red { color: var(--redline); }
+  .pill.green { color: var(--orchard); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s5); align-items: center; }
+  .key { display: flex; align-items: center; gap: 7px; }
+  .swatch { width: 22px; height: 9px; border: 1px solid var(--graphite); flex: none; }
+
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: var(--s5); }
+  .col { display: flex; flex-direction: column; gap: var(--s2); }
+  .col h4 { font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--pencil); font-weight: 500; }
+  .col p { margin: 0; font-size: 14px; line-height: 1.5; }
+
+  ol.notes { margin: 0; padding-left: 1.4em; display: flex; flex-direction: column; gap: var(--s3); max-width: 72ch; }
+  ol.notes li { padding-left: 4px; }
+  ol.notes li::marker { font-family: var(--mono); font-size: 11px; color: var(--pencil); }
+
+  a { color: inherit; }
+  a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--orchard); outline-offset: 3px; }
+
+  @media (max-width: 640px) {
+    .sheet-body { padding: var(--s4) var(--s3); }
+    .board { padding: var(--s3) var(--s2) var(--s7); }
+  }
+</style>
+
+<div class="board">
+
+  <!-- ══════════════ A-000 ══════════════ -->
+  <section class="sheet">
+    <div class="titleblock">
+      <div class="anno">HOUSE5 · Concept drawing set · The Healthy Apples</div>
+      <h1>The Orchard House</h1>
+      <p class="sub">A modern home in an ancient orchard, drawn as a set of architect's plans — because the one thing this house must never be given is a photograph of itself.</p>
+
+      <div class="meta-grid">
+        <div><span class="anno">Drawing set</span><b>A-000 → A-900 · 10 sheets</b></div>
+        <div><span class="anno">Status</span><b>Concept · not implementation</b></div>
+        <div><span class="anno">Sources</span><b>Experience Architecture + HOUSE4</b></div>
+        <div><span class="anno">Verified at</span><b>7d1dd2ce · 2026-07-16</b></div>
+        <div><span class="anno">Authority</span><b>None — creates no rule</b></div>
+      </div>
+    </div>
+
+    <div class="sheet-body">
+      <div class="prose">
+        <p class="lede">This set draws the Orchard House as an architect would present it at concept stage: a site plan, a floor plan, an adjacency diagram, a section, a room schedule, and general notes. It is a drawing <em>about</em> a house, in drafting language. It is not a picture of a kitchen, and that distinction is the whole design.</p>
+      </div>
+
+      <div class="note red">
+        <div class="anno" style="color:var(--redline)">Sheet note 001 · Why this set is not a render</div>
+        <p class="quote">"The image is the most valuable artefact the visual programme has produced, and <strong>it must never be built</strong> … it earns its warmth by exactly the means the canon forbids — a drawn kitchen, painted props, an aphorism on the wall. Its power and its danger are the same property: <strong>it is so persuasive that a team will copy the picture instead of extracting the principle</strong>, and copying it produces <em>the theme park</em> — the single most-forbidden thing in the entire document set."</p>
+        <div class="cite">NORTH1_THE_VISUAL_NORTH_STAR.md:16 — about its own render</div>
+        <p style="font-size:14px;margin:0">THA already has a photorealistic North Star. Its own author condemned it, and <span class="anno" style="letter-spacing:.06em;text-transform:none;font-size:13px">PLAN1 § 0</span> later recorded the predicted failure arriving in a brief one day later. <strong>A plan cannot fail that way.</strong> Nobody ships a floor plan; nobody copies a hatch pattern into a component. A drawing set is the one visual form that forces the reader to extract the principle, because the picture is unusable on purpose.</p>
+      </div>
+
+      <div class="cols">
+        <div class="col">
+          <h4>This set shows</h4>
+          <p>The orchard surrounding the home · the rooms · how they relate · where the Companion belongs · each room's emotional character · light, materials and atmosphere · the household's journey.</p>
+        </div>
+        <div class="col">
+          <h4>This set is not</h4>
+          <p>Implementation. Production UI. Governing architecture. A visual style guide. It sets no colour, token, size, or value, and every attribute drawn is cited to the document that owns it.</p>
+        </div>
+        <div class="col">
+          <h4>Drawn in red</h4>
+          <p>Conditions <strong>no document owns</strong>. Architects redline unresolved scope; this house has some, and honest drawings show it. Red is never decoration here.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="sheet-foot">
+      <span class="anno">A-000</span><span class="anno">Title &amp; status</span><span class="anno">Scale — NTS</span>
+    </div>
+  </section>
+
+  <!-- ══════════════ A-001 SITE ══════════════ -->
+  <section class="sheet">
+    <div class="sheet-head">
+      <span class="sheet-no">A-001</span>
+      <span class="sheet-title">Site plan — the orchard surrounding the home</span>
+      <span class="anno">Scale — NTS</span>
+    </div>
+    <div class="sheet-body">
+
+      <div class="fig">
+        <svg viewBox="0 0 900 470" role="img" aria-label="Site plan: the house sitting within an ancient orchard, with exposure levels E3 to E0 shown as decreasing window sizes from the front of the house to its interior.">
+          <defs>
+            <pattern id="orchardHatch" width="16" height="16" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <line x1="0" y1="0" x2="0" y2="16" stroke="var(--orchard)" stroke-width="1" opacity="0.35"/>
+            </pattern>
+            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--pencil)"/>
+            </marker>
+          </defs>
+
+          <!-- orchard ground -->
+          <rect x="30" y="30" width="840" height="410" fill="url(#orchardHatch)" stroke="var(--orchard)" stroke-width="1"/>
+          <text x="44" y="52" class="anno" fill="var(--orchard)" font-family="var(--mono)" font-size="10.5" letter-spacing="1.4">THE ANCIENT ORCHARD — ONE ORCHARD · ONE SEASON · ONE OWNER</text>
+
+          <!-- orchard trees: simple plan circles, not illustration -->
+          <g stroke="var(--orchard)" fill="none" opacity="0.75">
+            <circle cx="80" cy="120" r="17"/><circle cx="80" cy="200" r="17"/><circle cx="80" cy="280" r="17"/><circle cx="80" cy="360" r="17"/>
+            <circle cx="140" cy="160" r="17"/><circle cx="140" cy="240" r="17"/><circle cx="140" cy="320" r="17"/>
+            <circle cx="820" cy="120" r="17"/><circle cx="820" cy="200" r="17"/><circle cx="820" cy="280" r="17"/><circle cx="820" cy="360" r="17"/>
+            <circle cx="760" cy="160" r="17"/><circle cx="760" cy="240" r="17"/><circle cx="760" cy="320" r="17"/>
+            <circle cx="300" cy="410" r="17"/><circle cx="380" cy="410" r="17"/><circle cx="460" cy="410" r="17"/><circle cx="540" cy="410" r="17"/><circle cx="620" cy="410" r="17"/>
+            <circle cx="340" cy="90" r="17"/><circle cx="460" cy="90" r="17"/><circle cx="580" cy="90" r="17"/>
+          </g>
+
+          <!-- house footprint -->
+          <rect x="200" y="130" width="500" height="240" fill="var(--paper)" stroke="var(--graphite)" stroke-width="2"/>
+
+          <!-- exposure bands inside house -->
+          <rect x="200" y="130" width="500" height="52" fill="var(--orchard)" opacity="0.30"/>
+          <rect x="200" y="182" width="500" height="58" fill="var(--orchard)" opacity="0.17"/>
+          <rect x="200" y="240" width="500" height="70" fill="var(--orchard)" opacity="0.07"/>
+          <rect x="200" y="310" width="500" height="60" fill="var(--pencil)" opacity="0.10"/>
+          <line x1="200" y1="182" x2="700" y2="182" stroke="var(--feint)" stroke-dasharray="3 3"/>
+          <line x1="200" y1="240" x2="700" y2="240" stroke="var(--feint)" stroke-dasharray="3 3"/>
+          <line x1="200" y1="310" x2="700" y2="310" stroke="var(--feint)" stroke-dasharray="3 3"/>
+
+          <g font-family="var(--mono)" font-size="10.5" letter-spacing="1.2" fill="var(--graphite)">
+            <text x="216" y="160">E3 · THE OPEN VIEW — HOME ONLY</text>
+            <text x="216" y="214">E2 · THE WINDOW — COOKBOOK · PANTRY · NUTRITION · DIARY</text>
+            <text x="216" y="278">E1 · LIGHT ONLY — PLANNER · SHOPPING · ANALYSER · HOUSEHOLD</text>
+            <text x="216" y="346" fill="var(--redline)">E0 · "LIT FROM THE HALL" — ADMIN</text>
+          </g>
+
+          <!-- depth arrow -->
+          <line x1="730" y1="140" x2="730" y2="360" stroke="var(--pencil)" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+          <text x="742" y="200" font-family="var(--mono)" font-size="9.5" fill="var(--pencil)" letter-spacing="1">FUNCTIONAL</text>
+          <text x="742" y="214" font-family="var(--mono)" font-size="9.5" fill="var(--pencil)" letter-spacing="1">DENSITY</text>
+          <text x="742" y="300" font-family="var(--mono)" font-size="9.5" fill="var(--pencil)" letter-spacing="1">EXPOSURE</text>
+
+          <!-- north arrow = the one sun -->
+          <g transform="translate(660,410)">
+            <circle cx="0" cy="0" r="22" fill="none" stroke="var(--pencil)"/>
+            <path d="M 0 -16 L 5 4 L 0 0 L -5 4 Z" fill="var(--graphite)"/>
+            <text x="0" y="34" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="var(--pencil)" letter-spacing="1">ONE SUN</text>
+          </g>
+
+          <text x="450" y="122" text-anchor="middle" font-family="var(--mono)" font-size="10" fill="var(--pencil)" letter-spacing="1.2">ORCHARD SEEN THROUGH WINDOWS — NEVER WALKED INTO</text>
+        </svg>
+      </div>
+
+      <div class="legend">
+        <span class="anno">Key</span>
+        <span class="key"><span class="swatch" style="background:var(--orchard);opacity:.30;border-color:var(--orchard)"></span><span class="anno">E3 open view</span></span>
+        <span class="key"><span class="swatch" style="background:var(--orchard);opacity:.17;border-color:var(--orchard)"></span><span class="anno">E2 window</span></span>
+        <span class="key"><span class="swatch" style="background:var(--orchard);opacity:.07;border-color:var(--orchard)"></span><span class="anno">E1 light only</span></span>
+        <span class="key"><span class="swatch" style="background:var(--pencil);opacity:.10"></span><span class="anno">E0 borrowed light</span></span>
+      </div>
+
+      <div class="prose">
+        <p>The site plan is the exposure scale drawn as what it actually is: <strong>a section through the house's relationship to its own garden.</strong> Exposure is not a style setting — it is how deep into the house a room sits, and therefore how much window it has earned.</p>
+      </div>
+
+      <div class="note green">
+        <p class="quote">"Orchard exposure is inversely proportional to functional density. The more a surface asks the eye to work, the further the orchard recedes — first into a glimpse, then into light alone."</p>
+        <div class="cite">THA_EXPERIENCE_BLUEPRINT.md:216 · § 6.2</div>
+      </div>
+
+      <div class="note">
+        <div class="anno">Sheet note 002 · The orchard is life, and it is never the subject</div>
+        <p class="quote">"The orchard represents life. Not silence. Not stillness. Not decoration. Bright, growing, healthy, optimistic, welcoming … Never gloomy, misty, or melancholy."</p>
+        <div class="cite">BLUEPRINT:191 · owner: EXPERIENCE LANGUAGE § 3A.3</div>
+        <p style="font-size:14px;margin:0">Drawn here as plan-circles, deliberately. The orchard is <strong>mature, long-established, tended for generations</strong> (§ 6.0) — <em>"it was there before this visit and will be there after, which is exactly why the household never has to tend it."</em> Its five laws bind every sheet in this set: one orchard, never wallpaper, never carries text, never animates, and it is <strong>experienced through windows and subtle connections, never walked into.</strong></p>
+      </div>
+
+      <div class="note red">
+        <div class="anno" style="color:var(--redline)">Sheet note 003 · E0 is drawn in red, and this sheet is where you first see why</div>
+        <p style="font-size:14px;margin:0">The floor of the governed scale is named <strong>"lit from the hall"</strong>. There is no hall. <span class="anno" style="letter-spacing:.06em;text-transform:none;font-size:13px">HOUSE4 § 5.1</span> verified the whole chain: the word <em>hall</em> appears in the Experience Language <strong>zero times</strong>, and § 5.1's only "hall" is the four words being cited. <strong>A governed level of a governed scale borrows its light from a room the canon has never admitted exists.</strong> See A-101.</p>
+      </div>
+    </div>
+    <div class="sheet-foot">
+      <span class="anno">A-001</span><span class="anno">Site plan</span><span class="anno">Source — BLUEPRINT § 6, § 6.0–6.2</span><span class="anno">Status — composition, cited</span>
+    </div>
+  </section>
+
+  <!-- ══════════════ A-100 PLAN ══════════════ -->
+  <section class="sheet">
+    <div class="sheet-head">
+      <span class="sheet-no">A-100</span>
+      <span class="sheet-title">Floor plan — the rooms of the house</span>
+      <span class="anno">Scale — NTS</span>
+    </div>
+    <div class="sheet-body">
+
+      <div class="fig">
+        <svg viewBox="0 0 900 560" role="img" aria-label="Floor plan of the Orchard House showing ten rooms arranged around an undefined central circulation void, with window sizes varying by exposure level and the Companion's fixed position marked in every room.">
+          <defs>
+            <pattern id="voidHatch" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <line x1="0" y1="0" x2="0" y2="10" stroke="var(--redline)" stroke-width="1" opacity="0.5"/>
+            </pattern>
+            <g id="chair">
+              <circle cx="0" cy="0" r="4.5" fill="none" stroke="var(--graphite)" stroke-width="1.2"/>
+              <circle cx="0" cy="0" r="1.6" fill="var(--graphite)"/>
+            </g>
+          </defs>
+
+          <!-- orchard edge -->
+          <rect x="8" y="8" width="884" height="544" fill="var(--orchard-w)" stroke="var(--orchard)" stroke-dasharray="2 4"/>
+          <text x="18" y="24" font-family="var(--mono)" font-size="9" fill="var(--orchard)" letter-spacing="1.1">ORCHARD (BEYOND EVERY EXTERNAL WALL)</text>
+
+          <!-- house envelope -->
+          <rect x="60" y="52" width="780" height="452" fill="var(--paper)" stroke="var(--graphite)" stroke-width="2.5"/>
+
+          <!-- ── HOME: front centre, E3 ── -->
+          <rect x="300" y="52" width="300" height="112" fill="var(--orchard)" opacity="0.20"/>
+          <rect x="300" y="52" width="300" height="112" fill="none" stroke="var(--graphite)" stroke-width="1.2"/>
+          <text x="450" y="88" text-anchor="middle" font-family="var(--sans)" font-size="15" font-weight="600" fill="var(--graphite)">HOME</text>
+          <text x="450" y="106" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="var(--pencil)" letter-spacing="1">THE THRESHOLD AND THE HEART</text>
+          <text x="450" y="122" text-anchor="middle" font-family="var(--mono)" font-size="9.5" fill="var(--orchard)" letter-spacing="1.2">E3 · THE OPEN VIEW</text>
+          <use href="#chair" x="580" y="150"/>
+          <!-- E3 window: the widest opening -->
+          <line x1="320" y1="52" x2="580" y2="52" stroke="var(--orchard)" stroke-width="6"/>
+
+          <!-- ── COOKBOOK: E2, left front ── -->
+          <rect x="60" y="52" width="240" height="112" fill="var(--orchard)" opacity="0.11"/>
+          <rect x="60" y="52" width="240" height="112" fill="none" stroke="var(--graphite)" stroke-width="1.2"/>
+          <text x="180" y="92" text-anchor="middle" font-family="var(--sans)" font-size="13" font-weight="600">COOKBOOK</text>
+          <text x="180" y="108" text-anchor="middle" font-family="var(--mono)" font-size="8.5" fill="var(--pencil)" letter-spacing=".8">RECIPE BOOK BY THE WINDOW</text>
+          <text x="180" y="124" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="var(--orchard)" letter-spacing="1.1">E2</text>
+          <use href="#chair" x="282" y="150"/>
+          <line x1="130" y1="52" x2="230" y2="52" stroke="var(--orchard)" stroke-width="4"/>
+
+          <!-- ── PANTRY: E2 smallest window, right front ── -->
+          <rect x="600" y="52" width="240" height="112" fill="var(--orchard)" opacity="0.11"/>
+          <rect x="600" y="52" width="240" height="112" fill="none" stroke="var(--graphite)" stroke-width="1.2"/>
+          <text x="720" y="92" text-anchor="middle" font-family="var(--sans)" font-size="13" font-weight="600">PANTRY</text>
+          <text x="720" y="108" text-anchor="middle" font-family="var(--mono)" font-size="8.5" fill="var(--pencil)" letter-spacing=".8">THE PANTRY, ORCHARD BEYOND</text>
+          <text x="720" y="124" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="var(--orchard)" letter-spacing="1.1">E2 — SMALLEST WINDOW</text>
+          <use href="#chair" x="822" y="150"/>
+          <line x1="700" y1="52" x2="740" y2="52" stroke="var(--orchard)" stroke-width="4"/>
+
+          <!-- ── PLANNER: E1, left middle ── -->
+          <rect x="60" y="164" width="240" height="150" fill="var(--orchard)" opacity="0.05"/>
+          <rect x="60" y="164" width="240" height="150" fill="none" stroke="var(--graphite)" stroke-width="1.2"/>
+          <text x="180" y="222" text-anchor="middle" font-family="var(--sans)" font-size="13" font-weight="600">PLANNER</text>
+          <text x="180" y="238" text-anchor="middle" font-family="var(--mono)" font-size="8.5" fill="var(--pencil)" letter-spacing=".8">THE FAMILY TABLE</text>
+          <text x="180" y="254" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="var(--pencil)" letter-spacing="1.1">E1</text>
+          <use href="#chair" x="282" y="300"/>
+          <line x1="60" y1="210" x2="60" y2="250" stroke="var(--orchard)" stroke-width="3"/>
+
+          <!-- ── NUTRITION: E2, right middle ── -->
+          <rect x="600" y="164" width="240" height="150" fill="var(--orchard)" opacity="0.11"/>
+          <rect x="600" y="164" width="240" height="150" fill="none" stroke="var(--graphite)" stroke-width="1.2"/>
+          <text x="720" y="222" text-anchor="middle" font-family="var(--sans)" font-size="13" font-weight="600">NUTRITION</text>
+          <text x="720" y="238" text-anchor="middle" font-family="var(--mono)" font-size="8.5" fill="var(--pencil)" letter-spacing=".8">NOTICEBOARD BY THE GARDEN VIEW</text>
+          <text x="720" y="254" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="var(--orchard)" letter-spacing="1.1">E2</text>
+          <use href="#chair" x="822" y="300"/>
+          <line x1="840" y1="205" x2="840" y2="275" stroke="var(--orchard)" stroke-width="4"/>
+
+          <!-- ── DIARY: E2 softly, left rear ── -->
+          <rect x="60" y="314" width="240" height="105" fill="var(--orchard)" opacity="0.09"/>
+          <rect x="60" y="314" width="240" height="105" fill="none" stroke="var(--graphite)" stroke-width="1.2"/>
+          <text x="180" y="356" text-anchor="middle" font-family="var(--sans)" font-size="13" font-weight="600">DIARY</text>
+          <text x="180" y="372" text-anchor="middle" font-family="var(--mono)" font-size="8.5" fill="var(--pencil)" letter-spacing=".8">THE WINDOW SEAT</text>
+          <text x="180" y="388" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="var(--orchard)" letter-spacing="1.1">E2, SOFTLY</text>
+          <use href="#chair" x="282" y="405"/>
+          <line x1="60" y1="345" x2="60" y2="390" stroke="var(--orchard)" stroke-width="4"/>
+
+          <!-- ── ANALYSER: E1, right rear ── -->
+          <rect x="600" y="314" width="240" height="105" fill="var(--orchard)" opacity="0.05"/>
+          <rect x="600" y="314" width="240" height="105" fill="none" stroke="var(--graphite)" stroke-width="1.2"/>
+          <text x="720" y="356" text-anchor="middle" font-family="var(--sans)" font-size="13" font-weight="600">ANALYSER</text>
+          <text x="720" y="372" text-anchor="middle" font-family="var(--mono)" font-size="8.5" fill="var(--pencil)" letter-spacing=".8">THE WORK BENCH</text>
+          <text x="720" y="388" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="var(--pencil)" letter-spacing="1.1">E1</text>
+          <use href="#chair" x="822" y="405"/>
+          <line x1="840" y1="350" x2="840" y2="385" stroke="var(--orchard)" stroke-width="3"/>
+
+          <!-- ── SHOPPING: E1, rear centre-left — at the door ── -->
+          <rect x="300" y="419" width="180" height="85" fill="var(--orchard)" opacity="0.05"/>
+          <rect x="300" y="419" width="180" height="85" fill="none" stroke="var(--graphite)" stroke-width="1.2"/>
+          <text x="390" y="452" text-anchor="middle" font-family="var(--sans)" font-size="12.5" font-weight="600">SHOPPING</text>
+          <text x="390" y="468" text-anchor="middle" font-family="var(--mono)" font-size="8.5" fill="var(--pencil)" letter-spacing=".8">THE LIST BY THE DOOR</text>
+          <text x="390" y="484" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="var(--pencil)" letter-spacing="1.1">E1 (E2 WHEN CLEAR)</text>
+          <use href="#chair" x="462" y="432"/>
+          <!-- the actual door -->
+          <path d="M 340 504 A 34 34 0 0 1 374 470" fill="none" stroke="var(--graphite)" stroke-width="1"/>
+          <line x1="340" y1="504" x2="340" y2="470" stroke="var(--graphite)" stroke-width="2.5"/>
+          <text x="322" y="524" font-family="var(--mono)" font-size="8.5" fill="var(--graphite)" letter-spacing="1">THE SHOP DOOR</text>
+
+          <!-- ── HOUSEHOLD: E1, rear centre-right ── -->
+          <rect x="480" y="419" width="120" height="85" fill="var(--orchard)" opacity="0.05"/>
+          <rect x="480" y="419" width="120" height="85" fill="none" stroke="var(--graphite)" stroke-width="1.2"/>
+          <text x="540" y="452" text-anchor="middle" font-family="var(--sans)" font-size="12" font-weight="600">HOUSEHOLD</text>
+          <text x="540" y="468" text-anchor="middle" font-family="var(--mono)" font-size="8" fill="var(--pencil)" letter-spacing=".8">THE FAMILY RECORD</text>
+          <text x="540" y="484" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="var(--pencil)" letter-spacing="1.1">E1</text>
+          <use href="#chair" x="582" y="432"/>
+
+          <!-- ── ADMIN: E0, interior, no external wall ── -->
+          <rect x="600" y="419" width="240" height="85" fill="var(--pencil)" opacity="0.10"/>
+          <rect x="600" y="419" width="240" height="85" fill="none" stroke="var(--graphite)" stroke-width="1.2" stroke-dasharray="6 3"/>
+          <text x="720" y="452" text-anchor="middle" font-family="var(--sans)" font-size="12.5" font-weight="600">ADMIN</text>
+          <text x="720" y="468" text-anchor="middle" font-family="var(--mono)" font-size="8.5" fill="var(--redline)" letter-spacing=".8">"THE STUDY OFF THE HALL"</text>
+          <text x="720" y="484" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="var(--redline)" letter-spacing="1.1">E0 · NO WINDOW</text>
+
+          <!-- ── THE VOID ── -->
+          <rect x="300" y="164" width="300" height="255" fill="url(#voidHatch)" stroke="var(--redline)" stroke-width="2" stroke-dasharray="8 4"/>
+          <text x="450" y="270" text-anchor="middle" font-family="var(--mono)" font-size="13" fill="var(--redline)" letter-spacing="2" font-weight="700">N I C</text>
+          <text x="450" y="292" text-anchor="middle" font-family="var(--mono)" font-size="10" fill="var(--redline)" letter-spacing="1.2">NOT IN CONTRACT</text>
+          <text x="450" y="316" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="var(--redline)" letter-spacing="1">NO DOCUMENT OWNS THIS SPACE</text>
+          <text x="450" y="334" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="var(--redline)" letter-spacing="1">EVERY NAME FOR IT IS SPENT</text>
+          <text x="450" y="364" text-anchor="middle" font-family="var(--mono)" font-size="8.5" fill="var(--redline)" letter-spacing=".9">HALL · DOORWAY · CORRIDOR · THRESHOLD</text>
+          <text x="450" y="380" text-anchor="middle" font-family="var(--mono)" font-size="8.5" fill="var(--redline)" letter-spacing=".9">— ALL FOUR MEAN SOMETHING ELSE —</text>
+
+          <!-- admin borrows light from the void -->
+          <line x1="700" y1="419" x2="640" y2="400" stroke="var(--redline)" stroke-width="1" stroke-dasharray="3 3"/>
+          <text x="646" y="414" font-family="var(--mono)" font-size="8" fill="var(--redline)" letter-spacing=".8">LIT FROM ▲</text>
+        </svg>
+      </div>
+
+      <div class="legend">
+        <span class="anno">Key</span>
+        <span class="key"><svg width="14" height="14" aria-hidden="true"><use href="#chair" x="7" y="7"/></svg><span class="anno">Companion — one fixed position, every room</span></span>
+        <span class="key"><span class="swatch" style="background:var(--orchard);height:5px;border:none"></span><span class="anno">Window (width = exposure)</span></span>
+        <span class="key"><span class="swatch" style="background:var(--redline-w);border-color:var(--redline)"></span><span class="anno">Unowned</span></span>
+      </div>
+
+      <div class="prose">
+        <p>Ten rooms and one presence. <strong>Every room's position, window size and depth on this plan is dictated by the canon's own map</strong> — nothing here is an aesthetic choice. Home sits front-centre with the widest opening because it alone is E3. The Pantry has the narrowest window in the house because § 5.1 says so. Shopping sits at the door because it is <em>"preparing to leave the house."</em></p>
+        <p><strong>Admin is drawn without an external wall</strong>, and that is not a drafting convenience — it is what E0 means. A room lit from the hall has no window of its own. Drawing the plan honestly forces the question the canon has never answered: <em>lit from where?</em></p>
+      </div>
+    </div>
+    <div class="sheet-foot">
+      <span class="anno">A-100</span><span class="anno">Floor plan</span><span class="anno">Source — BLUEPRINT § 5.1 (verbatim)</span><span class="anno">Status — composition, cited</span>
+    </div>
+  </section>
+
+  <!-- ══════════════ A-101 ADJACENCY ══════════════ -->
+  <section class="sheet">
+    <div class="sheet-head">
+      <span class="sheet-no">A-101</span>
+      <span class="sheet-title">Adjacency diagram — how the rooms relate</span>
+      <span class="anno">The central plate</span>
+    </div>
+    <div class="sheet-body">
+
+      <div class="note red">
+        <div class="anno" style="color:var(--redline)">Sheet note 004 · This is the one deliverable the canon does not own</div>
+        <p class="quote">"The Orchard House is completely specified room by room and completely unspecified between the rooms — and the house has no word left to describe the difference."</p>
+        <div class="cite">HOUSE4 § 1 — headline</div>
+        <p style="font-size:14px;margin:0">This sheet therefore draws <strong>only what is built and verified</strong>, from HOUSE4 § 5.5. It proposes no adjacency, names no circulation, and invents no route. Where the canon is silent, the drawing is silent — <strong>in red.</strong></p>
+      </div>
+
+      <div class="fig">
+        <svg viewBox="0 0 900 500" role="img" aria-label="Adjacency diagram showing which rooms connect in the built product: the Cookbook to Planner to Shopping spine, the Pantry's one-way feed, and the refused or broken connections drawn as dashed red lines.">
+          <defs>
+            <marker id="arrowG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--graphite)"/>
+            </marker>
+            <marker id="arrowR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--redline)"/>
+            </marker>
+          </defs>
+
+          <!-- the void, central -->
+          <ellipse cx="450" cy="250" rx="132" ry="92" fill="url(#voidHatch)" stroke="var(--redline)" stroke-width="2" stroke-dasharray="8 4"/>
+          <text x="450" y="238" text-anchor="middle" font-family="var(--mono)" font-size="11" fill="var(--redline)" letter-spacing="1.6" font-weight="700">THE UNNAMED</text>
+          <text x="450" y="256" text-anchor="middle" font-family="var(--mono)" font-size="11" fill="var(--redline)" letter-spacing="1.6" font-weight="700">CIRCULATION</text>
+          <text x="450" y="278" text-anchor="middle" font-family="var(--mono)" font-size="8.5" fill="var(--redline)" letter-spacing=".9">NIC — NOT IN CONTRACT</text>
+
+          <!-- HOME hub -->
+          <circle cx="450" cy="70" r="46" fill="var(--orchard)" opacity="0.18"/>
+          <circle cx="450" cy="70" r="46" fill="none" stroke="var(--graphite)" stroke-width="2"/>
+          <text x="450" y="68" text-anchor="middle" font-family="var(--sans)" font-size="13" font-weight="600">HOME</text>
+          <text x="450" y="84" text-anchor="middle" font-family="var(--mono)" font-size="8" fill="var(--pencil)" letter-spacing=".8">THE HUB</text>
+
+          <!-- rooms -->
+          <g font-family="var(--sans)" font-size="12" font-weight="600" text-anchor="middle">
+            <circle cx="130" cy="180" r="42" fill="var(--paper-2)" stroke="var(--graphite)"/><text x="130" y="184">COOKBOOK</text>
+            <circle cx="130" cy="360" r="42" fill="var(--paper-2)" stroke="var(--graphite)"/><text x="130" y="364">PLANNER</text>
+            <circle cx="450" cy="440" r="42" fill="var(--paper-2)" stroke="var(--graphite)"/><text x="450" y="444">SHOPPING</text>
+            <circle cx="770" cy="360" r="42" fill="var(--paper-2)" stroke="var(--graphite)"/><text x="770" y="364">PANTRY</text>
+            <circle cx="770" cy="180" r="42" fill="var(--paper-2)" stroke="var(--graphite)"/><text x="770" y="184">DIARY</text>
+          </g>
+
+          <!-- hub spokes: implied by three rules, owned by none -->
+          <g stroke="var(--feint)" stroke-width="1" stroke-dasharray="2 4">
+            <line x1="450" y1="116" x2="450" y2="158"/>
+            <line x1="415" y1="100" x2="168" y2="168"/>
+            <line x1="485" y1="100" x2="732" y2="168"/>
+          </g>
+          <text x="450" y="140" text-anchor="middle" font-family="var(--mono)" font-size="8" fill="var(--pencil)" letter-spacing=".8">HUB-AND-SPOKE: IMPLIED BY THREE RULES, OWNED BY NONE</text>
+
+          <!-- THE SPINE: cookbook -> planner -> shopping -->
+          <line x1="130" y1="222" x2="130" y2="318" stroke="var(--orchard)" stroke-width="3" marker-end="url(#arrowG)"/>
+          <line x1="168" y1="382" x2="410" y2="432" stroke="var(--orchard)" stroke-width="3" marker-end="url(#arrowG)"/>
+          <path d="M 152 144 Q 300 60 404 62" fill="none" stroke="var(--feint)" stroke-width="1" stroke-dasharray="2 4"/>
+
+          <!-- cookbook -> shopping via planner's wire -->
+          <path d="M 108 220 Q 60 440 406 452" fill="none" stroke="var(--orchard)" stroke-width="1.6" stroke-dasharray="7 4" marker-end="url(#arrowG)"/>
+          <text x="150" y="470" font-family="var(--mono)" font-size="8.5" fill="var(--orchard)" letter-spacing=".8">COOKBOOK → SHOPPING USES THE PLANNER'S WIRE</text>
+          <text x="150" y="484" font-family="var(--mono)" font-size="8.5" fill="var(--orchard)" letter-spacing=".8">ONE OWNER, ONE FUNNEL — THE HOUSE'S BEST JOIN</text>
+
+          <!-- pantry -> shopping one way -->
+          <line x1="732" y1="382" x2="494" y2="432" stroke="var(--graphite)" stroke-width="2" marker-end="url(#arrowG)"/>
+          <!-- shopping -> pantry REFUSED -->
+          <path d="M 500 420 Q 640 380 736 366" fill="none" stroke="var(--redline)" stroke-width="1.6" stroke-dasharray="5 5"/>
+          <line x1="612" y1="386" x2="632" y2="404" stroke="var(--redline)" stroke-width="2"/>
+          <line x1="632" y1="386" x2="612" y2="404" stroke="var(--redline)" stroke-width="2"/>
+          <text x="560" y="366" font-family="var(--mono)" font-size="8" fill="var(--redline)" letter-spacing=".8">REFUSED — DELIBERATELY</text>
+
+          <!-- planner -> diary broken -->
+          <path d="M 168 340 Q 450 200 730 190" fill="none" stroke="var(--redline)" stroke-width="1.4" stroke-dasharray="4 5"/>
+          <line x1="440" y1="196" x2="460" y2="214" stroke="var(--redline)" stroke-width="2"/>
+          <line x1="460" y1="196" x2="440" y2="214" stroke="var(--redline)" stroke-width="2"/>
+          <text x="352" y="188" font-family="var(--mono)" font-size="8" fill="var(--redline)" letter-spacing=".8">PLANNER → DIARY: NULLED</text>
+
+          <!-- legend -->
+          <g transform="translate(30,30)">
+            <line x1="0" y1="0" x2="26" y2="0" stroke="var(--orchard)" stroke-width="3"/>
+            <text x="34" y="4" font-family="var(--mono)" font-size="8.5" fill="var(--pencil)" letter-spacing=".8">BUILT &amp; STRONG</text>
+            <line x1="0" y1="16" x2="26" y2="16" stroke="var(--graphite)" stroke-width="2"/>
+            <text x="34" y="20" font-family="var(--mono)" font-size="8.5" fill="var(--pencil)" letter-spacing=".8">BUILT, ONE-WAY</text>
+            <line x1="0" y1="32" x2="26" y2="32" stroke="var(--redline)" stroke-width="1.6" stroke-dasharray="5 5"/>
+            <text x="34" y="36" font-family="var(--mono)" font-size="8.5" fill="var(--pencil)" letter-spacing=".8">ABSENT / REFUSED</text>
+            <line x1="0" y1="48" x2="26" y2="48" stroke="var(--feint)" stroke-width="1" stroke-dasharray="2 4"/>
+            <text x="34" y="52" font-family="var(--mono)" font-size="8.5" fill="var(--pencil)" letter-spacing=".8">IMPLIED, UNOWNED</text>
+          </g>
+        </svg>
+      </div>
+
+      <div class="prose">
+        <p class="lede">Every solid line on this sheet is a connection that exists in code. Every dashed red line is one that does not. <strong>None of them is governed by any document</strong> — and the strongest of them is the household's most-walked route.</p>
+      </div>
+
+      <div class="cols">
+        <div class="col">
+          <h4>The spine — built, excellent, unnamed</h4>
+          <p><strong>Cookbook → Planner → Shopping</strong> is the journey's spine <em>"and it is excellent"</em> — three rooms, two joins, <strong>zero governing rules about either join.</strong></p>
+          <div class="cite">HOUSE4 § 6.4 · ORCH1 § 7.1</div>
+        </div>
+        <div class="col">
+          <h4>The best join in the house</h4>
+          <p>The Cookbook has no shopping wire — <strong>it calls the Planner's.</strong> One owner, one funnel: Principle 2 holding at a join, found by a room audit that had no vocabulary to call it one.</p>
+          <div class="cite">SHOP2 § 7.2 · HOUSE4 § 5.5</div>
+        </div>
+        <div class="col">
+          <h4>The void at the centre</h4>
+          <p>Four words could name this space. <strong>All four are spent:</strong> <em>doorway</em> means the one primary action; <em>corridor</em> is only ever an insult; <em>threshold</em> never leaves its room; <em>hall</em> is E0's address and a document about Home.</p>
+          <div class="cite">HOUSE4 § 5.2</div>
+        </div>
+      </div>
+
+      <div class="note red">
+        <div class="anno" style="color:var(--redline)">Sheet note 005 · A rule in force that this drawing cannot check</div>
+        <p class="quote">"The shortest honest path wins."</p>
+        <div class="cite">THA_EXPERIENCE_ARCHITECTURE.md:178 — governing, in force</div>
+        <p style="font-size:14px;margin:0"><strong>"Shortest" is a claim about a graph. No document defines the graph.</strong> An architect asked to draw the circulation of this house would return this sheet and a question, and the question is the deliverable: <em>which rooms are meant to touch?</em> Until that is answered, the rule's headline clause is unverifiable and every review that passed it did so on the two sentences underneath. <span class="anno" style="letter-spacing:.06em;text-transform:none;font-size:13px">HOUSE4 § 6.2</span></p>
+      </div>
+    </div>
+    <div class="sheet-foot">
+      <span class="anno">A-101</span><span class="anno">Adjacency</span><span class="anno">Source — HOUSE4 § 5.5 (verified at 7d1dd2ce)</span><span class="anno" style="color:var(--redline)">Status — observation only</span>
+    </div>
+  </section>
+
+  <!-- ══════════════ A-200 SECTION ══════════════ -->
+  <section class="sheet">
+    <div class="sheet-head">
+      <span class="sheet-no">A-200</span>
+      <span class="sheet-title">Section A–A — light and atmosphere</span>
+      <span class="anno">Scale — NTS</span>
+    </div>
+    <div class="sheet-body">
+
+      <div class="fig">
+        <svg viewBox="0 0 900 380" role="img" aria-label="Section through the house showing one sun at a fixed morning angle, its light entering rooms through windows of differing size according to exposure level.">
+          <!-- sky/ground -->
+          <line x1="20" y1="330" x2="880" y2="330" stroke="var(--graphite)" stroke-width="2"/>
+          <g stroke="var(--feint)" stroke-width="1">
+            <line x1="20" y1="336" x2="880" y2="336"/>
+          </g>
+
+          <!-- the one sun -->
+          <circle cx="105" cy="58" r="20" fill="var(--orchard)" opacity="0.28"/>
+          <circle cx="105" cy="58" r="20" fill="none" stroke="var(--orchard)" stroke-width="1.5"/>
+          <text x="105" y="26" text-anchor="middle" font-family="var(--mono)" font-size="9.5" fill="var(--orchard)" letter-spacing="1.2">ONE SUN · UPPER-LEFT · FOREVER</text>
+          <text x="105" y="98" text-anchor="middle" font-family="var(--mono)" font-size="8.5" fill="var(--pencil)" letter-spacing=".9">ALWAYS MORNING</text>
+
+          <!-- rays -->
+          <g stroke="var(--orchard)" stroke-width="1" opacity="0.55">
+            <line x1="122" y1="74" x2="300" y2="252"/>
+            <line x1="122" y1="74" x2="420" y2="252"/>
+            <line x1="122" y1="74" x2="560" y2="252"/>
+            <line x1="122" y1="74" x2="700" y2="252"/>
+          </g>
+
+          <!-- house section -->
+          <rect x="240" y="150" width="620" height="180" fill="var(--paper-2)" stroke="var(--graphite)" stroke-width="2"/>
+          <line x1="240" y1="150" x2="550" y2="96" stroke="var(--graphite)" stroke-width="2"/>
+          <line x1="550" y1="96" x2="860" y2="150" stroke="var(--graphite)" stroke-width="2"/>
+
+          <!-- room bays with descending window heights -->
+          <g stroke="var(--graphite)" stroke-width="1">
+            <line x1="400" y1="150" x2="400" y2="330"/>
+            <line x1="560" y1="150" x2="560" y2="330"/>
+            <line x1="720" y1="150" x2="720" y2="330"/>
+          </g>
+
+          <!-- window openings, size = exposure -->
+          <rect x="252" y="190" width="10" height="120" fill="var(--orchard)" opacity="0.55"/>
+          <rect x="412" y="210" width="10" height="80" fill="var(--orchard)" opacity="0.40"/>
+          <rect x="572" y="230" width="10" height="45" fill="var(--orchard)" opacity="0.28"/>
+          <rect x="732" y="248" width="10" height="14" fill="var(--pencil)" opacity="0.35"/>
+
+          <!-- light pools on floor -->
+          <g opacity="0.5">
+            <path d="M 262 330 L 340 330 L 300 252 Z" fill="var(--orchard)" opacity="0.30"/>
+            <path d="M 422 330 L 478 330 L 448 262 Z" fill="var(--orchard)" opacity="0.20"/>
+            <path d="M 582 330 L 620 330 L 600 276 Z" fill="var(--orchard)" opacity="0.12"/>
+          </g>
+
+          <g font-family="var(--mono)" font-size="9" fill="var(--graphite)" letter-spacing="1" text-anchor="middle">
+            <text x="320" y="352">E3 · HOME</text>
+            <text x="480" y="352">E2 · COOKBOOK</text>
+            <text x="640" y="352">E1 · PLANNER</text>
+            <text x="790" y="352" fill="var(--redline)">E0 · ADMIN</text>
+          </g>
+          <g font-family="var(--mono)" font-size="8" fill="var(--pencil)" letter-spacing=".8" text-anchor="middle">
+            <text x="320" y="366">THE OPEN VIEW</text>
+            <text x="480" y="366">THE WINDOW</text>
+            <text x="640" y="366">LIGHT ONLY</text>
+            <text x="790" y="366" fill="var(--redline)">BORROWED</text>
+          </g>
+
+          <text x="550" y="132" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="var(--pencil)" letter-spacing="1.1">ROOMS DIFFER BY EXPOSURE — NEVER BY HOUR</text>
+        </svg>
+      </div>
+
+      <div class="note green">
+        <p class="quote">"One sun, one direction, one hour. The morning sun sits upper-left, forever, in every room; every shadow on every surface in every domain agrees. It is always the same bright morning — no room is ever at dusk, in shade-as-mood, or under artificial light. <strong>Every room in this house is a morning room.</strong>"</p>
+        <div class="cite">THA_EXPERIENCE_BLUEPRINT.md · § 7</div>
+      </div>
+
+      <div class="prose">
+        <p><strong>A section is the honest way to draw this rule</strong>, because it shows what a render cannot: the sun does not move, the rooms do. Light carries five meanings and no others — <em>welcome · warmth · calm · clarity · optimism</em> — and it is <em>"hierarchy's quietest instrument"</em>: the primary stands in the light, support waits in the penumbra, quiet content sits in the shade. <strong>Rooms have lighting, not light shows.</strong></p>
+        <p>The atmosphere follows from this and from one refusal: <em>"Calm must never become lifeless."</em> The house must never feel cold, clinical, empty, sterile, or emotionally distant; it must feel calm, warm, energised, thoughtful, comforting, decisive, curious. Stated once, as the house itself: <strong>a warm, lived-in home where someone has already thought about dinner.</strong></p>
+      </div>
+    </div>
+    <div class="sheet-foot">
+      <span class="anno">A-200</span><span class="anno">Section</span><span class="anno">Source — BLUEPRINT § 7 · EXPLANG § 3A</span><span class="anno">Status — composition, cited</span>
+    </div>
+  </section>
+
+  <!-- ══════════════ A-300 MATERIALS ══════════════ -->
+  <section class="sheet">
+    <div class="sheet-head">
+      <span class="sheet-no">A-300</span>
+      <span class="sheet-title">Materials — the three grounds</span>
+      <span class="anno">Typical detail</span>
+    </div>
+    <div class="sheet-body">
+
+      <div class="fig">
+        <svg viewBox="0 0 900 300" role="img" aria-label="Exploded detail showing the three material layers: the constant world behind, the ground plane that varies per room, and the constant foreground.">
+          <!-- layer 3: world -->
+          <rect x="120" y="30" width="560" height="54" fill="var(--orchard)" opacity="0.14" stroke="var(--orchard)"/>
+          <text x="140" y="62" font-family="var(--sans)" font-size="13" font-weight="600" fill="var(--graphite)">THE WORLD BEHIND</text>
+          <text x="700" y="54" font-family="var(--mono)" font-size="9" fill="var(--pencil)" letter-spacing="1">CONSTANT</text>
+          <text x="700" y="68" font-family="var(--mono)" font-size="9" fill="var(--pencil)" letter-spacing="1">PRODUCT-WIDE</text>
+          <text x="140" y="78" font-family="var(--mono)" font-size="8.5" fill="var(--pencil)" letter-spacing=".9">THE ORCHARD AND ITS LIGHT</text>
+
+          <!-- layer 2: ground plane -->
+          <rect x="120" y="110" width="560" height="80" fill="var(--paper-2)" stroke="var(--graphite)" stroke-width="2.5"/>
+          <text x="140" y="144" font-family="var(--sans)" font-size="13" font-weight="600">THE GROUND PLANE</text>
+          <text x="140" y="162" font-family="var(--mono)" font-size="8.5" fill="var(--pencil)" letter-spacing=".9">COUNTER · TABLE · SHELF · NOTE · BENCH · RECORD</text>
+          <text x="140" y="178" font-family="var(--mono)" font-size="8.5" fill="var(--orchard)" letter-spacing=".9">THE ONLY LAYER THAT VARIES BY ROOM</text>
+          <text x="700" y="140" font-family="var(--mono)" font-size="9" fill="var(--graphite)" letter-spacing="1" font-weight="700">VARIES</text>
+          <text x="700" y="154" font-family="var(--mono)" font-size="9" fill="var(--pencil)" letter-spacing="1">PER ROOM</text>
+          <text x="700" y="170" font-family="var(--mono)" font-size="9" fill="var(--pencil)" letter-spacing="1">ONE PER ROOM</text>
+          <text x="700" y="184" font-family="var(--mono)" font-size="9" fill="var(--pencil)" letter-spacing="1">NEVER NESTED</text>
+
+          <!-- layer 1: foreground -->
+          <rect x="120" y="216" width="560" height="54" fill="var(--paper)" stroke="var(--pencil)" stroke-dasharray="4 3"/>
+          <text x="140" y="248" font-family="var(--sans)" font-size="13" font-weight="600">THE FOREGROUND</text>
+          <text x="700" y="240" font-family="var(--mono)" font-size="9" fill="var(--pencil)" letter-spacing="1">CONSTANT</text>
+          <text x="700" y="254" font-family="var(--mono)" font-size="9" fill="var(--pencil)" letter-spacing="1">PRODUCT-WIDE</text>
+          <text x="140" y="264" font-family="var(--mono)" font-size="8.5" fill="var(--pencil)" letter-spacing=".9">OVERLAYS · THE COMPANION</text>
+
+          <!-- exploded leaders -->
+          <g stroke="var(--feint)" stroke-dasharray="2 3">
+            <line x1="90" y1="57" x2="120" y2="57"/><line x1="90" y1="150" x2="120" y2="150"/><line x1="90" y1="243" x2="120" y2="243"/>
+            <line x1="90" y1="40" x2="90" y2="260"/>
+          </g>
+          <text x="76" y="155" text-anchor="end" font-family="var(--mono)" font-size="9" fill="var(--pencil)" letter-spacing="1">DEPTH</text>
+        </svg>
+      </div>
+
+      <div class="prose">
+        <p><strong>Three grounds, and only the middle one moves.</strong> A domain expresses its character entirely within its ground plane and the light that falls on it, and touches nothing above or below — <em>"this is what makes rooms possible without forking the product."</em></p>
+        <p>Four material laws bind every room: <strong>the ground plane is the room's identity</strong>, one warm plane per workspace, never nested. <strong>Solidity follows importance</strong> — support is anchored, never naked ink on the environment; dense data never sits on landscape. <strong>Air is a material</strong> — generous breathing space is the resting state of every room. <strong>The hand answers physically, identically everywhere</strong> — hover lifts into the light, press seats; rooms never invent their own physics.</p>
+      </div>
+
+      <div class="note">
+        <div class="anno">Sheet note 006 · Why this sheet sets no value</div>
+        <p style="font-size:14px;margin:0">This board draws <em>direction</em>, not law. Every material here ships only through the governed path already fixed: the UI Architecture amendment, tokens by admission, one Living Detail at a time. <strong>No surface may ship this sheet ahead of that path</strong>, and this drawing does not shorten it.</p>
+        <div class="cite">BLUEPRINT § 8.2 closing rider · § 2.4</div>
+      </div>
+    </div>
+    <div class="sheet-foot">
+      <span class="anno">A-300</span><span class="anno">Materials</span><span class="anno">Source — BLUEPRINT § 8, § 8.1–8.2</span><span class="anno">Status — composition, cited</span>
+    </div>
+  </section>
+
+  <!-- ══════════════ A-400 COMPANION ══════════════ -->
+  <section class="sheet">
+    <div class="sheet-head">
+      <span class="sheet-no">A-400</span>
+      <span class="sheet-title">The Companion — a fixture, not a room</span>
+      <span class="anno">Fixture schedule</span>
+    </div>
+    <div class="sheet-body">
+
+      <div class="prose">
+        <p class="lede">On an architect's plan, the Companion is not a space. <strong>It is a fixture symbol</strong> — the same mark, in the same position, in every room on sheet A-100. That is not a drafting shortcut; it is the canon's definition, drawn.</p>
+      </div>
+
+      <div class="note green">
+        <p class="quote">"The Companion is not a room. It is <strong>the person in the house</strong> — the knowledgeable friend at the kitchen counter: always in the same place, comfortable in every room, <strong>never following the household around the house talking</strong>. One presence, one fixed chair … It is <em>in</em> the rooms, never a room; its panel is foreground and carries the house's warmth, <strong>not a view of its own</strong>. In every room, the Companion joins <em>after</em> the person has arrived — manners rendered as motion. No pulsing, no typing theatrics, no simulated mood, no face."</p>
+        <div class="cite">THA_EXPERIENCE_BLUEPRINT.md § 13:323–335</div>
+      </div>
+
+      <div class="cols">
+        <div class="col">
+          <h4>Its place on the plan</h4>
+          <p>Foreground layer (A-300). Never given a room, never given a window, never given an exposure level. <strong>It has no address because it is already everywhere.</strong></p>
+        </div>
+        <div class="col">
+          <h4>The house-level observation</h4>
+          <p>The Companion is the <strong>one inhabitant of the space sheet A-101 says has no name</strong> — the only entity whose place is described by its relationship to all the rooms at once, and described entirely without the vocabulary the house lacks.</p>
+          <div class="cite">HOUSE4 § 8.1</div>
+        </div>
+        <div class="col">
+          <h4>Silence is a fixture too</h4>
+          <p><em>"Silence is a first-class outcome."</em> Nothing to say → say nothing. The chair is empty far more often than it is occupied, and that is the design working.</p>
+          <div class="cite">NOTICE_ENGINE § 6:138</div>
+        </div>
+      </div>
+
+      <div class="note red">
+        <div class="anno" style="color:var(--redline)">Sheet note 007 · One fixed chair, four different pieces of furniture in it</div>
+        <p style="font-size:14px;margin:0">Drawn as a single symbol on A-100 because that is the law. <strong>The as-built condition differs per room</strong>, and no room can see it: <strong>Shopping</strong> is in the right chair (<em>"Worth a look before you shop"</em> — the only title in the house with a deadline built into its grammar). <strong>Planner</strong> has two ungoverned channels stacked. <strong>Cookbook</strong> has no chair at all — <em>and that is the compliant state</em>, the one room that can adopt the pattern correctly the first time. <strong>Pantry</strong> has a micro-insight chosen by the day of the month, owned by no intelligence system.</p>
+        <p style="font-size:14px;margin:0"><strong>That is a sequencing decision across four rooms, and no room can make it.</strong></p>
+        <div class="cite">HOUSE4 § 8.1 · SHOP2 § 8.1 · PLAN1 § 7.1 · COOK1 § 9.1 · PANTRY1 § 4.1</div>
+      </div>
+    </div>
+    <div class="sheet-foot">
+      <span class="anno">A-400</span><span class="anno">Companion</span><span class="anno">Source — BLUEPRINT § 13</span><span class="anno">Status — composition + HOUSE4 observation</span>
+    </div>
+  </section>
+
+  <!-- ══════════════ A-500 SCHEDULE ══════════════ -->
+  <section class="sheet">
+    <div class="sheet-head">
+      <span class="sheet-no">A-500</span>
+      <span class="sheet-title">Room character schedule — emotional character, light, ground, sign of life</span>
+      <span class="anno">10 rooms + 1 presence</span>
+    </div>
+    <div class="sheet-body">
+
+      <div class="prose">
+        <p>A room schedule is the instrument an architect uses to fix every room's character in one table. <strong>Every cell below is verbatim or near-verbatim from a governing document.</strong> This sheet invents nothing; it collects.</p>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Room</th>
+              <th scope="col">Place identity</th>
+              <th scope="col">Exp.</th>
+              <th scope="col">Light</th>
+              <th scope="col">Ground</th>
+              <th scope="col">Sign of life</th>
+              <th scope="col">Emotional character</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="room">Home</td><td>The threshold and the heart</td><td class="exp">E3</td>
+              <td>Full morning; the brightest room</td><td>Compact counter — the view keeps its share</td><td>The greeting in THA's hand</td>
+              <td class="tone">Welcomed, expected, calm — arrival before information</td>
+            </tr>
+            <tr>
+              <td class="room">Planner</td><td>The family table</td><td class="exp">E1</td>
+              <td>Even working light; the sun on today</td><td>One solid table holding the week</td><td>The sun on today</td>
+              <td class="tone">In control, unhurried, decisive — a table the family gathers around, not a form they fill in</td>
+            </tr>
+            <tr>
+              <td class="room">Cookbook</td><td>The recipe book by the window</td><td class="exp">E2</td>
+              <td>Warm side-light across the page</td><td>Shelf; recipe cards as objects you pick up</td><td>The well-thumbed page</td>
+              <td class="tone">Warm, familiar, unhurried browsing — a well-loved book, not a store</td>
+            </tr>
+            <tr>
+              <td class="room">Pantry</td><td>The pantry, orchard beyond</td><td class="exp">E2 — smallest</td>
+              <td>Practical, morning-warm</td><td>Shelf strata</td><td>Freshness, honestly told</td>
+              <td class="tone">Practical, honest, reassuring — helpful, never guilt-inducing</td>
+            </tr>
+            <tr>
+              <td class="room">Shopping</td><td>The list by the door</td><td class="exp">E1 (E2 clear)</td>
+              <td>Plain bright; passed through, not lingered in</td><td>One note sized to its list</td><td>The crossing-off</td>
+              <td class="tone">Brisk, satisfying, momentary — a room passed through, not lingered in</td>
+            </tr>
+            <tr>
+              <td class="room">Nutrition</td><td>The noticeboard by the garden view</td><td class="exp">E2</td>
+              <td>Garden-bright, optimistic</td><td>Noticeboard tier over a solid data tier</td><td>The garden filling in</td>
+              <td class="tone">Informed, unjudged, encouraged</td>
+            </tr>
+            <tr>
+              <td class="room">Diary</td><td>The window seat</td><td class="exp">E2, softly</td>
+              <td>A gathered pool of the same morning</td><td>Lap desk; the most air in the house</td><td>Yesterday's trace</td>
+              <td class="tone">Quiet, reflective, gently remembered — never dim, never funeral-parlour still</td>
+            </tr>
+            <tr>
+              <td class="room">Analyser</td><td>The work bench</td><td class="exp">E1 (E2 first)</td>
+              <td>The clearest task light in the house</td><td>The bench; the examined product as the object on it</td><td>Where you left off</td>
+              <td class="tone">Focused, plain, trustworthy — task light, still unmistakably in the house</td>
+            </tr>
+            <tr>
+              <td class="room">Household</td><td>The family record</td><td class="exp">E1</td>
+              <td>Even, honest, unshadowed</td><td>The record; anchored strata</td><td>The family, first-class</td>
+              <td class="tone">Personal, first-class, respected — a record of people, not a settings screen</td>
+            </tr>
+            <tr>
+              <td class="room">Admin</td>
+              <td>The study off the hall <span class="pill red">unowned address</span></td>
+              <td class="exp" style="color:var(--redline)">E0</td>
+              <td>Task light; the warmth floor still applies</td><td>Solid working ground</td>
+              <td><em>None — deliberately</em></td>
+              <td class="tone">The operational study: the work of running the house, kept off the main hall</td>
+            </tr>
+            <tr style="background:var(--orchard-w)">
+              <td class="room">Companion</td>
+              <td>The friend at the counter — <strong>a presence, not a room</strong></td>
+              <td class="exp">— foreground</td>
+              <td>The room it opens in</td><td>Floating, as today</td><td>Arrives a beat after you</td>
+              <td class="tone">Present, never pushy; quiet competence on the household's side</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="legend">
+        <span class="anno">Sources — BLUEPRINT § 5.1 (place · exposure · light · ground · sign of life) · OHDB § 13 (emotional tone) · EXPLANG § 5 (rhythm)</span>
+      </div>
+
+      <div class="note">
+        <div class="anno">Sheet note 008 · Two signs of life have no data behind them</div>
+        <p style="font-size:14px;margin:0">The schedule is the canon's, complete. But two of its ten "sign of life" entries are sourced from facts the platform does not hold: the Cookbook's <strong>well-thumbed page</strong> comes from <em>"cook/plan counts"</em> — and there is no cook count in ninety tables. The Pantry's <strong>freshness, honestly told</strong> comes from <em>"item freshness data"</em> — and no expiry, purchase or opened date exists anywhere in the pantry. <strong>Both were found by separate investigations asking the same question of different rooms, neither looking for it.</strong> A schedule that specifies a finish nobody can supply is the drawing's problem, not the builder's.</p>
+        <div class="cite">COOK1 § 13.2 · PANTRY1 § 12.2</div>
+      </div>
+    </div>
+    <div class="sheet-foot">
+      <span class="anno">A-500</span><span class="anno">Room schedule</span><span class="anno">Source — BLUEPRINT § 5.1 · OHDB § 13</span><span class="anno">Status — composition, verbatim</span>
+    </div>
+  </section>
+
+  <!-- ══════════════ A-600 CIRCULATION ══════════════ -->
+  <section class="sheet">
+    <div class="sheet-head">
+      <span class="sheet-no">A-600</span>
+      <span class="sheet-title">Circulation — the household journey through the home</span>
+      <span class="anno">Movement study</span>
+    </div>
+    <div class="sheet-body">
+
+      <div class="fig">
+        <svg viewBox="0 0 900 250" role="img" aria-label="The six-beat experience rhythm drawn as a sequence, showing that it defines arrival and completion but has no beat for the movement between rooms.">
+          <!-- rhythm beats -->
+          <g font-family="var(--mono)" font-size="9" letter-spacing="1" text-anchor="middle">
+            <g fill="var(--graphite)">
+              <rect x="30" y="60" width="118" height="52" fill="var(--orchard)" opacity="0.16"/>
+              <rect x="30" y="60" width="118" height="52" fill="none" stroke="var(--graphite)"/>
+              <text x="89" y="90">ARRIVAL</text>
+              <rect x="168" y="60" width="118" height="52" fill="none" stroke="var(--graphite)"/>
+              <text x="227" y="90">ORIENTATION</text>
+              <rect x="306" y="60" width="118" height="52" fill="none" stroke="var(--graphite)"/>
+              <text x="365" y="90">CONFIDENCE</text>
+              <rect x="444" y="60" width="118" height="52" fill="none" stroke="var(--graphite)"/>
+              <text x="503" y="90">ACTION</text>
+              <rect x="582" y="60" width="118" height="52" fill="none" stroke="var(--graphite)"/>
+              <text x="641" y="90">UNDERSTANDING</text>
+              <rect x="720" y="60" width="118" height="52" fill="var(--orchard)" opacity="0.16"/>
+              <rect x="720" y="60" width="118" height="52" fill="none" stroke="var(--graphite)"/>
+              <text x="779" y="90">COMPLETION</text>
+            </g>
+          </g>
+          <text x="434" y="38" text-anchor="middle" font-family="var(--mono)" font-size="9.5" fill="var(--pencil)" letter-spacing="1.2">THE SIX-BEAT RHYTHM — FRACTAL: THE SESSION RUNS IT ONCE, EVERY SURFACE RUNS IT AGAIN</text>
+
+          <!-- the missing transit -->
+          <path d="M 779 118 Q 779 175 450 175 Q 89 175 89 118" fill="none" stroke="var(--redline)" stroke-width="1.6" stroke-dasharray="6 5"/>
+          <text x="450" y="196" text-anchor="middle" font-family="var(--mono)" font-size="9.5" fill="var(--redline)" letter-spacing="1.1">LEAVING ONE ROOM AND ENTERING THE NEXT — NO BEAT EXISTS HERE</text>
+          <text x="450" y="214" text-anchor="middle" font-family="var(--mono)" font-size="8.5" fill="var(--redline)" letter-spacing=".9">COOKBOOK → PLANNER → SHOPPING RUNS THREE ARRIVALS, THREE COMPLETIONS, AND NO GOVERNED TRANSIT</text>
+          <text x="450" y="236" text-anchor="middle" font-family="var(--mono)" font-size="8" fill="var(--pencil)" letter-spacing=".9">A SEVENTH BEAT IS NOT THE ANSWER, AND THIS BOARD DOES NOT PROPOSE ONE</text>
+        </svg>
+      </div>
+
+      <div class="cols">
+        <div class="col">
+          <h4>What is owned — and it is a lot</h4>
+          <p><em>"Journeys, not screens, are the unit of experience design."</em> Every journey starts from Home and ends somewhere restful. <strong>Home is always reachable</strong> — <em>"nobody is ever more than one step from the centre."</em> The mental model is fixed: <strong>Home → realm → thing</strong>, not a browser trail.</p>
+          <div class="cite">EXP ARCH § 10 · :111 · :152</div>
+        </div>
+        <div class="col">
+          <h4>What is not</h4>
+          <p>Those three rules <strong>mandate Home→realm and realm→Home</strong>. <em>Realm→realm is never addressed by any rule in any governing document</em> — while the platform's strongest seams are exactly realm→realm.</p>
+          <div class="cite">HOUSE4 § 6.1</div>
+        </div>
+        <div class="col">
+          <h4>The house is a hub and no document says so</h4>
+          <p>Drawn on A-101 as feint dashed lines: <strong>implied by three rules, owned by none.</strong> Whether the house is hub-and-spoke <em>by law or merely by habit</em> is an open question this board records and does not settle.</p>
+          <div class="cite">HOUSE4 § 6.1, § 15.4(b)</div>
+        </div>
+      </div>
+
+      <div class="note red">
+        <div class="anno" style="color:var(--redline)">Sheet note 009 · The journey ends at a door with no return path</div>
+        <p class="quote">"It ends at the door. There is no return path."</p>
+        <div class="cite">ORCH1:437 — on the household's journey</div>
+        <p style="font-size:14px;margin:0">THA witnesses <strong>intention</strong> at high fidelity — every plan, every list, every scan — and <strong>outcome</strong> not at all. The household leaves for the shop, cooks, eats, and returns; <em>the product learns none of it.</em> That is drawn here as a boundary, not a defect — see A-700.</p>
+      </div>
+    </div>
+    <div class="sheet-foot">
+      <span class="anno">A-600</span><span class="anno">Circulation</span><span class="anno">Source — EXP ARCH § 10 · EXPLANG § 5 · HOUSE4 § 6</span><span class="anno">Status — composition + observation</span>
+    </div>
+  </section>
+
+  <!-- ══════════════ A-700 PERIMETER ══════════════ -->
+  <section class="sheet">
+    <div class="sheet-head">
+      <span class="sheet-no">A-700</span>
+      <span class="sheet-title">Perimeter — the three doors</span>
+      <span class="anno">Boundary study</span>
+    </div>
+    <div class="sheet-body">
+
+      <div class="prose">
+        <p class="lede">Every house has a perimeter, and this one has three doors. <strong>Each is a place where THA's world stops. Each stops for a different and good reason.</strong> Three investigations reached these boundaries independently; none of them is owned, and nowhere is the perimeter stated as one thing.</p>
+      </div>
+
+      <div class="cols">
+        <div class="col">
+          <h4>The front door — acquisition</h4>
+          <p><em>"THA's world begins at the door.</em> The Orchard House has <strong>no marketing forecourt</strong>, and inventing an acquisition domain to fill this stage would be building a room the house does not have."</p>
+          <p style="font-size:13px;color:var(--pencil)">Correct silence: <em>"there is no honest intelligence about a household THA has never met."</em></p>
+          <div class="cite">ORCH1:181, :601</div>
+        </div>
+        <div class="col">
+          <h4>The kitchen door — the meal</h4>
+          <p><em>"THA accompanies the household to the kitchen door. <strong>It does not follow them in.</strong> That is not a gap to close with surveillance; it is the boundary that makes THA trustworthy in a family's home."</em></p>
+          <p style="font-size:13px;color:var(--pencil)">Correct silence: <em>"the alternative to a horizon is surveillance of a family's table."</em></p>
+          <div class="cite">ORCH1 § 1.3, § 3</div>
+        </div>
+        <div class="col">
+          <h4>The shop door — commerce <span class="pill red">asymmetry</span></h4>
+          <p><em>"Shopping is not the market. It is the threshold before it."</em> The canon mentions money <strong>four times and every one is a prohibition.</strong></p>
+          <p style="font-size:13px;color:var(--redline)">Not a chosen silence: <strong>the code walked through this door while the canon wasn't looking.</strong></p>
+          <div class="cite">SHOP2 § 0.3, § 5.1</div>
+        </div>
+      </div>
+
+      <div class="note red">
+        <div class="anno" style="color:var(--redline)">Sheet note 010 · The one asymmetry — and it is drawn on A-100</div>
+        <p style="font-size:14px;margin:0">Two of the three doors are boundaries <strong>the canon chose</strong>. The third is one <strong>the code walked through.</strong> The house's metaphor says <em>"Shopping is preparing to leave the house"</em> — the shop is off-stage, and there is <strong>no chapter in the Living Book in which the household is at the market.</strong> Meanwhile the platform runs nine retailers, real prices, and a live checkout inside that room.</p>
+        <p class="quote">"A Capability Card governs what the <strong>Companion</strong> may say about retailers. <strong>No document governs what it should feel like to be a household spending money inside a house whose entire emotional constitution was written about calm, care, and having nothing sold to you.</strong>"</p>
+        <div class="cite">SHOP2 § 5.2 · restated by HOUSE4 § 12.2</div>
+        <p style="font-size:14px;margin:0"><strong>It is not a defect in any document. It is a question no one has been asked</strong> — and it sits exactly where the house's metaphor runs out. This board draws the door and does not open it.</p>
+      </div>
+    </div>
+    <div class="sheet-foot">
+      <span class="anno">A-700</span><span class="anno">Perimeter</span><span class="anno">Source — HOUSE4 § 12 · ORCH1 · SHOP2</span><span class="anno" style="color:var(--redline)">Status — observation only</span>
+    </div>
+  </section>
+
+  <!-- ══════════════ A-900 NOTES ══════════════ -->
+  <section class="sheet">
+    <div class="sheet-head">
+      <span class="sheet-no">A-900</span>
+      <span class="sheet-title">General notes — what must never be drawn</span>
+      <span class="anno">Binding on every sheet</span>
+    </div>
+    <div class="sheet-body">
+
+      <ol class="notes">
+        <li><strong>The analogies are feelings to design toward, never pictures to draw.</strong> The "family table" is produced by material, light, and composition — <em>the moment it becomes a picture of a table, the place has become a costume.</em> Every sheet in this set is a diagram for this reason.</li>
+        <li><strong>The theme park.</strong> Illustrated kitchens, drawn furniture, wood-grain, page-turns, fridge magnets, jar clip-art, photo-corner frames. <em>The single most-forbidden thing in the entire document set</em> — and the failure mode of the render this board replaces.</li>
+        <li><strong>The costume.</strong> A realm growing its own palette, component styling, decorative border, or motif to "feel like itself." A room is a <em>use</em> of the canonical owners, never a fork of them.</li>
+        <li><strong>Wallpaper.</strong> No room <em>contains</em> the orchard; every room is <em>oriented toward</em> it. A backdrop applied uniformly behind everything is <em>everywhere at once is nowhere in particular.</em></li>
+        <li><strong>All view, no room.</strong> A working surface that is mostly environment — <em>a search box floating on a landscape.</em> It reads as <em>nobody home.</em></li>
+        <li><strong>The second sun.</strong> Any lighting that breaks the one morning. Quieter never means darker; <strong>every room in this house is a morning room.</strong></li>
+        <li><strong>Metaphor taxing function.</strong> Any place-character that costs a click, a legibility point, or a frame of scroll performance. <em>If the concept ever fights the Planner, the concept loses.</em> — This note binds this board too.</li>
+        <li><strong>Calm must never become lifeless.</strong> The quiet counterfeit: stillness, hush and desaturation posing as serenity. This set is drafted, not drained.</li>
+      </ol>
+
+      <div class="note green">
+        <div class="anno" style="color:var(--orchard)">The star this set is steered by</div>
+        <p class="quote">"The Healthy Apples is a modern home in an ancient orchard, where technology quietly supports timeless family life."</p>
+        <div class="cite">THA_EXPERIENCE_BLUEPRINT.md § 17 — THE DESIGN NORTH STAR (governing)</div>
+        <p style="font-size:14px;margin:0"><strong>That sentence is the North Star, and this board is not.</strong> The mission asked for "the definitive visual North Star"; the star already exists, it is governing, and <strong>it is a sentence rather than a picture</strong> — which is precisely why it has survived. A drawing that claimed to supersede it would be an investigation overruling a governing document, which is not a thing an investigation may do. <strong>This set is a drawing of the house that sentence describes.</strong></p>
+      </div>
+
+      <div class="note">
+        <div class="anno">The test any visit must pass</div>
+        <p class="quote">"A household should end every visit having thought about food a little less, trusted it a little more, and noticed the product not at all. … When two designs both pass every gate, choose the one the household would <em>feel</em> and could not <em>name</em>. When restraint and expression tie, choose restraint. <strong>When the product and the household tie, there is no tie.</strong>"</p>
+        <div class="cite">BLUEPRINT § 17</div>
+      </div>
+    </div>
+    <div class="sheet-foot">
+      <span class="anno">A-900</span><span class="anno">General notes</span><span class="anno">Source — BLUEPRINT § 16, § 17 · EXPLANG § 7</span><span class="anno">Status — composition, cited</span>
+    </div>
+  </section>
+
+  <!-- ══════════════ COLOPHON ══════════════ -->
+  <section class="sheet">
+    <div class="sheet-body">
+      <div class="prose">
+        <h2 style="font-size:1.3rem;letter-spacing:-0.01em">The one thing to remember</h2>
+        <p class="lede" style="font-family:var(--serif);font-style:italic">The Orchard House is a modern home in an ancient orchard, on one bright morning that never moves. Ten rooms, one presence, one sun. Every room's window is sized by how hard it makes the eye work, every room's character is already written down, and the orchard outside every window is life — never decoration, never walked into, never asked to be tended.</p>
+        <p class="lede" style="font-family:var(--serif);font-style:italic">And at the centre of the plan there is a room-shaped hole that no document owns, that four different words could name and none of them may, that the exposure scale borrows its floor from, that the Admin study takes its only light from, and that the household walks through every single time they move between the three rooms they use most.</p>
+        <p class="lede" style="font-family:var(--serif);font-style:italic;color:var(--redline)"><strong>The house is completely specified. The space between its rooms is not drawn here either — because it is not this board's to invent. An honest drawing shows the void and stamps it.</strong></p>
+      </div>
+
+      <div class="meta-grid">
+        <div><span class="anno">Workstream</span><b>HOUSE5_Orchard_House_Concept</b></div>
+        <div><span class="anno">Rollback</span><b>rollback/HOUSE5-orchard-house-concept-20260716 → 7d1dd2ce</b></div>
+        <div><span class="anno">Creates</span><b>No rule · no owner · no value</b></div>
+        <div><span class="anno">Companion doc</span><b>docs/investigations/ux/HOUSE5_ORCHARD_HOUSE_CONCEPT.md</b></div>
+      </div>
+    </div>
+    <div class="sheet-foot">
+      <span class="anno">Concept drawing set · 10 sheets · HOUSE5 · 2026-07-16</span>
+      <span class="anno">Not implementation · not production UI · not governing architecture</span>
+    </div>
+  </section>
+
+</div>

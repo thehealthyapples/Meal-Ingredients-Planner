@@ -13,12 +13,6 @@ import {
 import { convertMealToCandidate, convertExternalToCandidate } from "../lib/meal-scoring-service.js";
 import { fetchExternalCandidates, enrichExternalCandidates } from "../lib/external-meal-service.js";
 
-const DIET_PATTERN_TO_DIET_TYPE: Record<string, string> = {
-  Vegan: "vegan", Vegetarian: "vegetarian", Flexitarian: "flexitarian", Keto: "keto",
-  "Low-Carb": "low-carb", Paleo: "paleo", Carnivore: "carnivore", Mediterranean: "mediterranean",
-  DASH: "dash", MIND: "mind",
-};
-
 const SLOT_CATEGORY_MAPPING: Record<string, string[]> = {
   breakfast: ["breakfast", "smoothie"],
   lunch: ["lunch", "snack", "salad"],
@@ -41,8 +35,9 @@ async function main() {
   console.log(`\n##### SIMULATION for user ${TARGET_USER}, mealsPerDay=${MEALS_PER_DAY}, slots=[${slots.join(", ")}] #####`);
 
   const reqUser = await storage.getUser(TARGET_USER);
+  const reqDiet = await storage.getPersonDiet(TARGET_USER);
   console.log(`\n=== REQUEST USER ===`);
-  console.log(`id=${reqUser?.id} username=${reqUser?.username} dietPattern=${JSON.stringify(reqUser?.dietPattern)} dietRestrictions=${JSON.stringify(reqUser?.dietRestrictions)}`);
+  console.log(`id=${reqUser?.id} username=${reqUser?.username} dietPattern=${JSON.stringify(reqDiet.dietPattern)} hardRestrictions=${JSON.stringify(reqDiet.hardRestrictions)}`);
 
   const prefs = await storage.getUserPreferences(TARGET_USER);
   console.log(`prefs.dietTypes=${JSON.stringify(prefs?.dietTypes)} prefs.excludedIngredients=${JSON.stringify(prefs?.excludedIngredients)} plannerEnableDrinks=${prefs?.plannerEnableDrinks}`);
@@ -58,18 +53,10 @@ async function main() {
     const eaters = await storage.getHouseholdEaters(householdId);
     console.log(`householdId=${householdId} eaters=${eaters.length}`);
     for (const eater of eaters) {
-      let eaterDietTypes: string[] = eater.defaultDietTypes ?? [];
-      let derivedFrom = "defaultDietTypes";
-      if (eater.userId != null) {
-        const [mp, mu] = await Promise.all([storage.getUserPreferences(eater.userId), storage.getUser(eater.userId)]);
-        const pdt = mp?.dietTypes ?? [];
-        if (pdt.length > 0) { eaterDietTypes = pdt; derivedFrom = "prefs.dietTypes"; }
-        else if (mu?.dietPattern) {
-          const mapped = DIET_PATTERN_TO_DIET_TYPE[mu.dietPattern];
-          eaterDietTypes = mapped ? [mapped] : [mu.dietPattern];
-          derivedFrom = `users.dietPattern(${mu.dietPattern})`;
-        }
-      }
+      // CONV1 P4 (READ-1/READ-2): the eater row is the canonical owner — stored
+      // values are used directly, mirroring the route.
+      const eaterDietTypes: string[] = eater.defaultDietTypes ?? [];
+      const derivedFrom = "defaultDietTypes";
       for (const r of eater.hardRestrictions ?? []) hardRestrictedSet.add(r.toLowerCase());
       for (const d of eaterDietTypes) if (!mergedDietTypes.includes(d)) mergedDietTypes = [...mergedDietTypes, d];
       for (const d of eaterDietTypes) {
@@ -83,8 +70,8 @@ async function main() {
     console.log(`household lookup failed: ${(e as Error).message}`);
   }
 
-  const dietPattern = reqUser?.dietPattern ?? null;
-  const dietRestrictions = (reqUser?.dietRestrictions ?? []).filter(Boolean);
+  const dietPattern = reqDiet.dietPattern;
+  const dietRestrictions = reqDiet.hardRestrictions.filter(Boolean);
   const mergedExcludedIngredients = Array.from(hardRestrictedSet);
   const userDietNorm = (dietPattern ?? "").toLowerCase();
   if (userDietNorm === "vegan") { householdEaterStrictDiets.delete("Vegan"); householdEaterStrictDiets.delete("Vegetarian"); }

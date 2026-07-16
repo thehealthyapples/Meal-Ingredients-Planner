@@ -4,7 +4,6 @@ import {
   householdEaters,
   plannerWeekEaterOverrides,
   userPreferences,
-  users,
   mealTemplates,
   ingredientSwaps,
 } from "@shared/schema";
@@ -12,19 +11,6 @@ import type { MealTemplate, Meal } from "@shared/schema";
 import { getHouseholdForUser } from "./household";
 import { dbEaterToHouseholdEater, getEffectiveDietProfile } from "@shared/household-eater.js";
 import { resolveActiveRestrictions, resolveIngredientRestrictions } from "@shared/restrictions/restriction-resolver.js";
-
-const DIET_PATTERN_TO_DIET_TYPE: Record<string, string> = {
-  Vegan: "vegan",
-  Vegetarian: "vegetarian",
-  Flexitarian: "flexitarian",
-  Keto: "keto",
-  "Low-Carb": "low-carb",
-  Paleo: "paleo",
-  Carnivore: "carnivore",
-  Mediterranean: "mediterranean",
-  DASH: "dash",
-  MIND: "mind",
-};
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -231,39 +217,17 @@ export async function buildHouseholdContext(
     const eater = dbEaterToHouseholdEater(row);
     const profile = getEffectiveDietProfile(eater, overrideMap.get(Number(eater.id)));
 
+    // CONV1 P4 (READ-1): the adult read-time enrichment is deleted. Every eater —
+    // account-backed or not — is read from the stored row via
+    // getEffectiveDietProfile, which is the canonical owner's own projection
+    // (weekly overrides still replace the soft diet types, never the restrictions).
     let prefs: typeof userPreferences.$inferSelect | undefined;
-    let userRow: typeof users.$inferSelect | undefined;
     if (eater.userId != null) {
-      [[prefs], [userRow]] = await Promise.all([
-        db.select().from(userPreferences).where(eq(userPreferences.userId, eater.userId)),
-        db.select().from(users).where(eq(users.id, eater.userId)),
-      ]);
+      [prefs] = await db.select().from(userPreferences).where(eq(userPreferences.userId, eater.userId));
     }
 
-    let dietTypes: string[];
-    let excludedIngredients: string[];
-    if (eater.userId != null) {
-      // Adult: derive dietary data from profile, respecting week diet overrides
-      const override = overrideMap.get(Number(eater.id));
-      if (override) {
-        dietTypes = override.dietTypes;
-      } else {
-        const prefDietTypes = prefs?.dietTypes ?? [];
-        if (prefDietTypes.length > 0) {
-          dietTypes = prefDietTypes;
-        } else if (userRow?.dietPattern) {
-          const mapped = DIET_PATTERN_TO_DIET_TYPE[userRow.dietPattern];
-          dietTypes = mapped ? [mapped] : [userRow.dietPattern];
-        } else {
-          dietTypes = [];
-        }
-      }
-      excludedIngredients = (userRow?.dietRestrictions ?? []).map(r => r.toLowerCase());
-    } else {
-      // Child: use stored household_eaters values via getEffectiveDietProfile
-      dietTypes = profile.dietTypes;
-      excludedIngredients = profile.hardRestrictions.map(r => r.toLowerCase());
-    }
+    const dietTypes: string[] = profile.dietTypes;
+    const excludedIngredients: string[] = profile.hardRestrictions.map(r => r.toLowerCase());
 
     members.push({
       userId: eater.userId ?? null,

@@ -78,7 +78,7 @@ export interface HouseholdDietaryContextView {
 export interface HouseholdEaterView {
   readonly id: string;
   readonly displayName: string;
-  readonly kind: "user" | "child";
+  readonly kind: "account" | "no-account";
   readonly userId: number | undefined;
   readonly defaultDietTypes: readonly string[];
   readonly hardRestrictions: readonly string[];
@@ -90,25 +90,6 @@ export interface HouseholdEatersView {
 }
 
 export type HouseholdReadResult = HouseholdView | HouseholdDietaryContextView | HouseholdEatersView;
-
-// ---------------------------------------------------------------------------
-// Diet-pattern enrichment (mirrors server/routes.ts:8526–8541 exactly — same mapping
-// table the route, server/lib/household-meal-matcher.ts, and the Profile binding's owner
-// already use; not new business logic, a direct mirror of an existing read-time projection).
-// ---------------------------------------------------------------------------
-
-const DIET_PATTERN_TO_DIET_TYPE: Record<string, string> = {
-  Vegan: "vegan",
-  Vegetarian: "vegetarian",
-  Flexitarian: "flexitarian",
-  Keto: "keto",
-  "Low-Carb": "low-carb",
-  Paleo: "paleo",
-  Carnivore: "carnivore",
-  Mediterranean: "mediterranean",
-  DASH: "dash",
-  MIND: "mind",
-};
 
 // ---------------------------------------------------------------------------
 // Read projections (stored fields only — no fabrication)
@@ -124,44 +105,21 @@ function toMemberView(row: { member: { userId: number; role: string; status: str
 }
 
 /**
- * Enrich one eater row for the "eaters" scope. Adult rows (userId != null) store empty
- * arrays by design — the authoritative source is the user's own profile, read at this
- * point in time, never written back. Child rows (userId == null) are returned unchanged.
- * This is a direct mirror of server/routes.ts:8526–8541, not new business logic.
+ * Project one eater row for the "eaters" scope — stored fields only. CONV1 P4
+ * (READ-1): the read-time profile enrichment this function used to perform is
+ * deleted. The eater row is the canonical owner of every member's diet (OWN-1),
+ * so the stored values ARE the facts; nothing is looked up, merged, or derived.
+ * (The old name `enrichEater` described the retired behaviour.)
  */
-export async function enrichEater(row: HouseholdEaterRow, port: HouseholdReadPort): Promise<HouseholdEaterView> {
+export function toEaterView(row: HouseholdEaterRow): HouseholdEaterView {
   const base = dbEaterToHouseholdEater(row);
-  const eaterUserId = base.userId;
-
-  if (eaterUserId == null) {
-    return {
-      id: base.id,
-      displayName: base.displayName,
-      kind: base.kind,
-      userId: undefined,
-      defaultDietTypes: base.defaultDietTypes,
-      hardRestrictions: base.hardRestrictions,
-    };
-  }
-
-  const userRow = await port.getUser(eaterUserId);
-
-  let defaultDietTypes: string[];
-  if (userRow?.dietPattern) {
-    const mapped = DIET_PATTERN_TO_DIET_TYPE[userRow.dietPattern];
-    defaultDietTypes = mapped ? [mapped] : [userRow.dietPattern];
-  } else {
-    defaultDietTypes = [];
-  }
-  const hardRestrictions: string[] = userRow?.dietRestrictions ?? [];
-
   return {
     id: base.id,
     displayName: base.displayName,
     kind: base.kind,
-    userId: eaterUserId,
-    defaultDietTypes,
-    hardRestrictions,
+    userId: base.userId,
+    defaultDietTypes: base.defaultDietTypes,
+    hardRestrictions: base.hardRestrictions,
   };
 }
 
@@ -219,8 +177,7 @@ async function handleRead(intent: Intent, userId: number, port: HouseholdReadPor
     }
     case "eaters": {
       const rows = await port.getHouseholdEaters(householdId);
-      const eaters = await Promise.all(rows.map((row) => enrichEater(row, port)));
-      return { scope: "eaters", eaters };
+      return { scope: "eaters", eaters: rows.map(toEaterView) };
     }
   }
 }

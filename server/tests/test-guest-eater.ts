@@ -63,7 +63,7 @@ const noRestrictionGuest: GuestEater = {
 const householdEater: HouseholdEater = {
   id: "eater-1",
   displayName: "Alice",
-  kind: "user",
+  kind: "account",
   userId: 1,
   defaultDietTypes: ["Vegetarian"],
   hardRestrictions: [],

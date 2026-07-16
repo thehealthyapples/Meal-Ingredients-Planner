@@ -3,9 +3,13 @@ import { normalizeIngredientKey } from "@shared/normalize";
 import { deriveAcquisitionFromLegacy } from "@shared/recipe-acquisition";
 import { db } from "./db";
 import { eq, and, ilike, or, sql, inArray, isNull, isNotNull, desc } from "drizzle-orm";
+
+/** `db` or an open transaction — the two executors a storage helper may run on. */
+type DbExecutor = typeof db | Parameters<Parameters<(typeof db)["transaction"]>[0]>[0];
 import { getHouseholdForUser } from "./lib/household";
 import { resolvePlannerComplianceContext, isComplianceActive, isMealCompliantForUser } from "./lib/planner-compliance";
 import { resolveHouseholdSafetyContext, HouseholdSafetyUnavailableError } from "./lib/household-dietary-safety";
+import { DIET_PATTERN_TO_DIET_TYPE, CANONICAL_DIET_TYPE_VALUES, dietPatternFromDietTypes } from "@shared/dietRules";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -120,7 +124,7 @@ export interface IStorage {
   batchUpdateShoppingListStore(userId: number, store: string | null): Promise<void>;
   getUserPreferences(userId: number): Promise<UserPreferences | undefined>;
   upsertUserPreferences(userId: number, prefs: InsertUserPreferences): Promise<UserPreferences>;
-  updateUserProfile(id: number, fields: Partial<Pick<User, 'firstName' | 'displayName' | 'profilePhotoUrl' | 'dietPattern' | 'dietRestrictions' | 'eatingSchedule' | 'customMetricDefs' | 'diaryExtraMetrics'>>): Promise<User | undefined>;
+  updateUserProfile(id: number, fields: Partial<Pick<User, 'firstName' | 'displayName' | 'profilePhotoUrl' | 'eatingSchedule' | 'customMetricDefs' | 'diaryExtraMetrics'>>): Promise<User | undefined>;
   completeOnboarding(userId: number): Promise<User | undefined>;
   resetOnboarding(userId: number): Promise<void>;
   getAllAdditives(): Promise<Additive[]>;
@@ -263,8 +267,10 @@ export interface IStorage {
   leaveHousehold(userId: number): Promise<Household>;
   renameHousehold(userId: number, householdId: number, name: string): Promise<Household>;
   removeHouseholdMember(actorUserId: number, targetUserId: number): Promise<{ member: HouseholdMember; user: { id: number; displayName: string | null; username: string } }[]>;
-  // Household eaters (Phase 2 + bridge)
-  syncMembersAsEaters(householdId: number): Promise<void>;
+  // Household eaters — the canonical owner of a person's diet (CONV1 P4 / OWN-1)
+  ensureEaterForMember(householdId: number, userId: number): Promise<void>;
+  getPersonDiet(userId: number): Promise<{ dietPattern: string | null; dietTypes: string[]; hardRestrictions: string[] }>;
+  updatePersonDiet(userId: number, data: { dietPattern?: string | null; hardRestrictions?: string[] }): Promise<void>;
   getHouseholdEaters(householdId: number): Promise<HouseholdEaterRow[]>;
   createHouseholdEater(householdId: number, data: { displayName: string; userId?: number; defaultDietTypes?: string[]; hardRestrictions?: string[] }): Promise<HouseholdEaterRow>;
   updateHouseholdEater(eaterId: number, data: { displayName?: string; defaultDietTypes?: string[]; hardRestrictions?: string[] }): Promise<HouseholdEaterRow | undefined>;
@@ -456,6 +462,10 @@ export class DatabaseStorage implements IStorage {
         status: "active",
         joinedAt: new Date(),
       });
+
+      // CONV1 P4 (WRITE-3): the eater row is created with the membership, not by the
+      // first page load that happens to list eaters.
+      await this.ensureEaterForMemberTx(tx, household.id, user.id, user.displayName || user.username);
 
       return user;
     });
@@ -1009,7 +1019,7 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async updateUserProfile(id: number, fields: Partial<Pick<User, 'firstName' | 'displayName' | 'profilePhotoUrl' | 'dietPattern' | 'dietRestrictions' | 'eatingSchedule' | 'customMetricDefs' | 'diaryExtraMetrics'>>): Promise<User | undefined> {
+  async updateUserProfile(id: number, fields: Partial<Pick<User, 'firstName' | 'displayName' | 'profilePhotoUrl' | 'eatingSchedule' | 'customMetricDefs' | 'diaryExtraMetrics'>>): Promise<User | undefined> {
     const [result] = await db.update(users).set(fields).where(eq(users.id, id)).returning();
     return result;
   }
@@ -2568,6 +2578,7 @@ export class DatabaseStorage implements IStorage {
         status: "active",
         joinedAt: new Date(),
       });
+      await this.ensureEaterForMemberTx(tx, hh.id, userId);
     });
     return createdHousehold!;
   }
@@ -2658,6 +2669,12 @@ export class DatabaseStorage implements IStorage {
         });
       }
 
+      // CONV1 P4 (WRITE-3): membership event creates the eater row. A rejoining
+      // member keeps their original row (the insert is a no-op on conflict); a
+      // first-time joiner's declared diets travel with them from their previous
+      // household's row.
+      await this.ensureEaterForMemberTx(tx, target.id, userId, undefined, currentActive?.householdId);
+
       result = { household: target, role: "member" };
     });
 
@@ -2721,6 +2738,10 @@ export class DatabaseStorage implements IStorage {
           joinedAt: new Date(),
         });
       }
+
+      // CONV1 P4 (WRITE-3): the leaver's new household gets their eater row now —
+      // their diet declarations travel with them, on the row the household owns.
+      await this.ensureEaterForMemberTx(tx, hh.id, userId, undefined, currentMembership.householdId);
     });
 
     return newHousehold!;
@@ -2790,6 +2811,10 @@ export class DatabaseStorage implements IStorage {
         status: "active",
         joinedAt: new Date(),
       });
+
+      // CONV1 P4 (WRITE-3): membership event creates the eater row; the removed
+      // member's declared diets travel with them to their new household.
+      await this.ensureEaterForMemberTx(tx, newHh.id, targetUserId, undefined, actorMembership.householdId);
 
       householdId = actorMembership.householdId;
     });
@@ -2886,39 +2911,187 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  // ── Household eaters (Phase 2 + bridge) ─────────────────────────────────────
+  // ── Household eaters ─────────────────────────────────────────────────────────
 
-  /** Ensure every active household_member has a corresponding householdEaters row. */
-  async syncMembersAsEaters(householdId: number): Promise<void> {
-    const members = await db
-      .select({ userId: householdMembers.userId, displayName: users.displayName, username: users.username })
-      .from(householdMembers)
-      .innerJoin(users, eq(householdMembers.userId, users.id))
-      .where(and(eq(householdMembers.householdId, householdId), eq(householdMembers.status, "active")));
+  /**
+   * Ensure a member has an eater row in this household. CONV1 P4 (WRITE-3): eater
+   * creation is a MEMBERSHIP event — called from createUser / joinHousehold /
+   * leaveHousehold / removeHouseholdMember, never from a read path. This replaces
+   * `syncMembersAsEaters`, which was a non-atomic read-then-insert running inside
+   * GET /api/household/eaters; the partial unique index on (household_id, user_id)
+   * makes the insert race-safe, so a concurrent creation is a no-op rather than a
+   * duplicated person. A rejoining member keeps their original row, id, diets, and
+   * planner history.
+   */
+  async ensureEaterForMember(householdId: number, userId: number): Promise<void> {
+    await this.ensureEaterForMemberTx(db, householdId, userId);
+  }
 
-    const existing = await db
-      .select({ userId: householdEaters.userId })
-      .from(householdEaters)
-      .where(eq(householdEaters.householdId, householdId));
+  private async ensureEaterForMemberTx(
+    executor: DbExecutor,
+    householdId: number,
+    userId: number,
+    displayName?: string,
+    /**
+     * Household whose eater row seeds the new row's diets. A person's declared diet
+     * and allergens travel WITH them when they move household (CONV1 P4 / WRITE-2:
+     * the eater row owns those facts now, so a bare new row would silently discard
+     * a live allergen — the exact loss PEOPLE1 § 9.2 forbids). On a REJOIN the
+     * original row survives and nothing is copied.
+     */
+    seedFromHouseholdId?: number,
+  ): Promise<void> {
+    let name = displayName;
+    if (!name) {
+      const [u] = await executor
+        .select({ displayName: users.displayName, username: users.username })
+        .from(users)
+        .where(eq(users.id, userId));
+      if (!u) return;
+      name = u.displayName || u.username;
+    }
 
-    const existingUserIds = new Set(existing.map(e => e.userId).filter(Boolean) as number[]);
-
-    for (const m of members) {
-      if (!existingUserIds.has(m.userId)) {
-        await db.insert(householdEaters).values({
-          householdId,
-          displayName: m.displayName || m.username,
-          userId: m.userId,
-          defaultDietTypes: [],
-          hardRestrictions: [],
-        });
+    let defaultDietTypes: string[] = [];
+    let hardRestrictions: string[] = [];
+    if (seedFromHouseholdId != null && seedFromHouseholdId !== householdId) {
+      const [previous] = await executor
+        .select({
+          defaultDietTypes: householdEaters.defaultDietTypes,
+          hardRestrictions: householdEaters.hardRestrictions,
+        })
+        .from(householdEaters)
+        .where(and(
+          eq(householdEaters.householdId, seedFromHouseholdId),
+          eq(householdEaters.userId, userId),
+        ));
+      if (previous) {
+        defaultDietTypes = previous.defaultDietTypes ?? [];
+        hardRestrictions = previous.hardRestrictions ?? [];
       }
+    }
+
+    await executor
+      .insert(householdEaters)
+      .values({
+        householdId,
+        displayName: name,
+        userId,
+        defaultDietTypes,
+        hardRestrictions,
+      })
+      .onConflictDoNothing();
+  }
+
+  /**
+   * A person's diet, read from its canonical owner: their eater row in their active
+   * household (CONV1 P4 / OWN-1; Register Domain 16; Principle 2). The diet pattern
+   * is DERIVED — the first canonical diet type on the row, spelled canonically —
+   * never stored as its own column.
+   */
+  async getPersonDiet(userId: number): Promise<{ dietPattern: string | null; dietTypes: string[]; hardRestrictions: string[] }> {
+    try {
+      const householdId = await getHouseholdForUser(userId);
+      const [row] = await db
+        .select({
+          defaultDietTypes: householdEaters.defaultDietTypes,
+          hardRestrictions: householdEaters.hardRestrictions,
+        })
+        .from(householdEaters)
+        .where(and(
+          eq(householdEaters.householdId, householdId),
+          eq(householdEaters.userId, userId),
+        ));
+      const dietTypes = row?.defaultDietTypes ?? [];
+      return {
+        dietPattern: dietPatternFromDietTypes(dietTypes),
+        dietTypes,
+        hardRestrictions: row?.hardRestrictions ?? [],
+      };
+    } catch {
+      // No active household — no eater row to read. An honest empty, not a guess.
+      return { dietPattern: null, dietTypes: [], hardRestrictions: [] };
     }
   }
 
+  /**
+   * The ONE write door for a person's own diet (CONV1 P4 / WRITE-2). The profile and
+   * onboarding routes call this instead of writing the retired `users.diet*` shadow
+   * columns. A diet pattern is stored as its canonical diet type at the HEAD of
+   * `defaultDietTypes` (so derivation returns exactly what was declared); the row's
+   * non-canonical soft preferences ("halal", "pescatarian") are preserved.
+   */
+  async updatePersonDiet(userId: number, data: { dietPattern?: string | null; hardRestrictions?: string[] }): Promise<void> {
+    const householdId = await getHouseholdForUser(userId);
+    await this.ensureEaterForMemberTx(db, householdId, userId);
+
+    const [row] = await db
+      .select()
+      .from(householdEaters)
+      .where(and(
+        eq(householdEaters.householdId, householdId),
+        eq(householdEaters.userId, userId),
+      ));
+    if (!row) return; // unreachable after ensure; refuse to invent a row shape
+
+    const set: { defaultDietTypes?: string[]; hardRestrictions?: string[] } = {};
+
+    if (data.dietPattern !== undefined) {
+      const preserved = (row.defaultDietTypes ?? []).filter(
+        t => !CANONICAL_DIET_TYPE_VALUES.has(t.toLowerCase()),
+      );
+      if (data.dietPattern) {
+        const head = DIET_PATTERN_TO_DIET_TYPE[data.dietPattern] ?? data.dietPattern;
+        set.defaultDietTypes = [head, ...preserved.filter(t => t !== head)];
+      } else {
+        set.defaultDietTypes = preserved;
+      }
+    }
+
+    if (data.hardRestrictions !== undefined) {
+      set.hardRestrictions = data.hardRestrictions;
+    }
+
+    if (Object.keys(set).length > 0) {
+      await db.update(householdEaters).set(set).where(eq(householdEaters.id, row.id));
+    }
+  }
+
+  /**
+   * Eaters the household may currently plan for: children (userId = null) plus
+   * adults who are still active members. This mirrors `syncMembersAsEaters` above,
+   * which only ever creates a row for an ACTIVE member — so the read and the write
+   * now agree on who is at the table.
+   *
+   * Membership is filtered here rather than at the departure, and the reason is not
+   * tidiness. An eater row outlives its membership (`leaveHousehold` and
+   * `removeHouseholdMember` do not touch this table), and for an adult the row is an
+   * identity with no facts — `routes.ts` re-reads the linked account at read time. So
+   * a stale row is not a stale record; it is a live feed of a former member's current
+   * profile, including their allergens. Filtering closes that without:
+   *   - nulling `userId`, which would flip the row to a child by `household-eater.ts`'s
+   *     rule and promote it to canonical owner of allergens it stores as `[]`,
+   *     silently emptying that person's restrictions while they stay plannable;
+   *   - deleting the row, which `planner_entry_eaters` references and which is a
+   *     data-retention decision this layer is not entitled to take.
+   * A rejoining member keeps their original row, id, and planner history.
+   */
   async getHouseholdEaters(householdId: number): Promise<HouseholdEaterRow[]> {
+    const activeMemberUserIds = db
+      .select({ userId: householdMembers.userId })
+      .from(householdMembers)
+      .where(and(
+        eq(householdMembers.householdId, householdId),
+        eq(householdMembers.status, "active"),
+      ));
+
     return db.select().from(householdEaters)
-      .where(eq(householdEaters.householdId, householdId))
+      .where(and(
+        eq(householdEaters.householdId, householdId),
+        or(
+          isNull(householdEaters.userId),
+          inArray(householdEaters.userId, activeMemberUserIds),
+        ),
+      ))
       .orderBy(householdEaters.id);
   }
 
@@ -3266,6 +3439,9 @@ export class DatabaseStorage implements IStorage {
         joinedAt: new Date(),
       });
 
+      // CONV1 P4 (WRITE-3): membership event creates the eater row.
+      await this.ensureEaterForMemberTx(tx, household.id, user.id, user.displayName || user.username);
+
       return user;
     });
   }
@@ -3342,10 +3518,16 @@ export class DatabaseStorage implements IStorage {
     if (!week1) return;
 
     const days = await this.getPlannerDays(week1.id);
-    const monday    = days.find(d => d.dayOfWeek === 0);
-    const tuesday   = days.find(d => d.dayOfWeek === 1);
-    const wednesday = days.find(d => d.dayOfWeek === 2);
-    const thursday  = days.find(d => d.dayOfWeek === 3);
+    // dayOfWeek is 0 = Sunday (HT8, THA_HOUSEHOLD_TIME_ARCHITECTURE.md § 264) — declared, never
+    // renumbered. The key space is not visible from an integer, so it is named here: these four
+    // readers previously used 0..3 and seeded Sunday–Wednesday while naming themselves Monday–
+    // Thursday (CONV1 BEH-4). The planner displays Monday-first over the same stored numbering
+    // (weekly-planner-page.tsx MONDAY_FIRST_ORDER), which is why the stray Sunday showed up at
+    // the far end of the week.
+    const monday    = days.find(d => d.dayOfWeek === 1);
+    const tuesday   = days.find(d => d.dayOfWeek === 2);
+    const wednesday = days.find(d => d.dayOfWeek === 3);
+    const thursday  = days.find(d => d.dayOfWeek === 4);
 
     const entries: Array<[number, string, number]> = [
       [monday?.id ?? 0,    "breakfast", oats.id],

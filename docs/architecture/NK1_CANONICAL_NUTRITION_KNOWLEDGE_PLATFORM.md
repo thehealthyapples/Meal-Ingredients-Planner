@@ -70,12 +70,14 @@ Promoted from Food Intelligence Platform architecture (§2–4), restated here f
 
 | Category | Scope | Current Owner | Enrichment |
 |----------|-------|---|---|
-| **Eater Composition** | Who eats, age, stage | DB `household_eaters` + `household_members` | Identity ← Profile data ← Contextual enrichment from diary/planner patterns |
+| **Eater Composition** | Who eats | DB `household_eaters` + `household_members` | Identity ← Profile data ← Contextual enrichment from diary/planner patterns |
 | **Hard Restrictions** | Allergies, intolerances, religions, ethical | DB `household_eaters` (via `restriction_id` FK) | Defined ← Resolver picks from `restriction-library.ts` ← User-entered ← Validated via safety gate (Rule T0) |
 | **Dietary Preferences** | Vegan, vegetarian, keto, dairy-free patterns | DB `users.dietPattern` (contested, see Phase 1 migration note) | User-selected pattern ← Expanded to keywords via `dietRules.ts` ← Applied at meal-discovery and planner-compliance time |
 | **Goals** | Health/wellness targets (future) | DB `goals` (proposed; see Food Intelligence Phases) | Goal aliases resolved to canonical nutrients ← User input ← Validated via Rule GO1 (goals are aliases, never authorities) |
 | **Personalisation Events** | Household food choices, rejections, confirmations | DB `household_evidence_events` (EL1, 2026-07-03) | Append-only event log ← Deterministically detected patterns ← Confirmation-gated before informing weights |
 | **Learning Signals** | Derived weights over personalisation | DB `household_learning_signals` (EL1) | Derive from event log ← Re-weight only ← Never author facts (Rule P1) |
+
+> **⚠️ Corrected 2026-07-16 (`DOC-2`).** The **Eater Composition** scope previously read *"Who eats, **age, stage**"*. **Neither fact exists, on either owner this row names.** `household_eaters` (`shared/schema.ts:1158-1168`) is `id`, `householdId`, `displayName`, `userId`, `defaultDietTypes`, `hardRestrictions`. `household_members` (`shared/schema.ts:1141-1152`) is the membership record — `role`, `status`, `joinedAt`, `invitedByUserId`, `leftAt`. **There is no age column, no date of birth, and no life-stage column on either, and there never has been** (the original `CREATE TABLE`, `server/migrations/runner.ts:767`, declares the same six columns). **THA does not know how old anyone is.** The scope now states only what the owners hold.
 
 **Plane 2 Ownership Rule:** Each eater owns their personal facts (restrictions, goals, diary metrics); the household owns the action-level state (planner, shopping, meals, learning weights).
 
@@ -136,12 +138,18 @@ Promoted from Food Intelligence Platform architecture (§2–4), restated here f
 
 | Knowledge Layer | Current Owner | Coverage | Maturity | Gap |
 |---|---|---|---|---|
-| **Eater Composition** | DB `household_eaters` | Name, age, dietary restrictions | Authoritative | Profile enrichment (preferences, taste profile, goals) — designed (EL1), not yet built |
+| **Eater Composition** | DB `household_eaters` | Name, per-eater diet defaults, hard restrictions | **Authoritative for the facts it stores** | **No age, date of birth or life stage is stored — see the correction below**; profile enrichment (preferences, taste profile, goals) — designed (EL1), not yet built |
 | **Hard Restrictions** | DB `household_eaters` + `restriction-library.ts` | Allergies, intolerances, ethical/religious | Authoritative, safety-critical | Nested/hierarchical restrictions (tree-nut species, seed types) — Phase 1 expansion candidate |
 | **Dietary Patterns** | DB `users.dietPattern` (contested) | Vegan, vegetarian, keto, dairy-free | Authoritative but scope-contested (M5 deferred) | Cuisine preference, religious diet (Halal, Kosher), medical-diet patterns (low-FODMAP, low-sodium) — Phase 2+ |
 | **Goals** | Not yet built (proposed in Food Intelligence) | None live | Design-stage | Health, wellness, performance goals; user-entered, alias-resolved to canonical nutrients; confirmation-gated (Rule GO1) — Phase 1 build |
 | **Personalisation Events** | DB `household_evidence_events` (EL1) | Household choices, rejections, confirmations (append-only log) | Built (EWO-EL1); not yet linked to Food Intelligence ranking | Learning signals (derived, confirmation-gated) — Phase 1 integration |
 | **Learning Weights** | DB `household_learning_signals` (EL1) | Derived re-rankings of signals; never new facts (Rule P1) | Built; opt-out and reset controls shipped | Temporal decay, seasonality awareness — Phase 2 refinement |
+
+> **⚠️ Corrected 2026-07-16 (`DOC-2`). This row asserted coverage of a fact THA has never held, and graded it *Authoritative*.** It previously read *"Coverage: Name, **age**, dietary restrictions | Maturity: **Authoritative**"*. **The age column does not exist** (`shared/schema.ts:1158-1168`) — in a table whose entire purpose is to state what coverage exists today.
+>
+> **This is a false inventory, and it is not the failure this canon is used to.** The last several investigations converged on *"the law was right; the platform was behind it"* — a law ahead of its platform costs nothing but patience. **This is the inverse: a governing document factually wrong about the system it governs**, and wrong in the most dangerous direction available, because it does not under-claim — it **over-claims *authority* over a safety-relevant field**. An engineer who reads it and writes a per-eater age *rule* discovers the gap at implementation. An engineer who reads it and writes a per-eater *safety* rule that **assumes** the column may not discover it until it is live — because **the honest failure mode of a missing field is `undefined`, and `undefined` fails open.**
+>
+> The row now states only what `household_eaters` actually holds, and the absent facts are named in the Gap column where they belong. **This is a correction, not an amendment:** no rule changed, because the rules were never wrong — the inventory was.
 
 **Summary:** Plane 2 has the *seams* correct (eater profile, event log, signal storage) but is 30% functional. Hard restrictions work; soft personalisation (goals, learned preferences) is designed and partially built. The gap is *integration* — wiring the Food Intelligence Engine (Phase 1) to read these and compose ranked, explained recommendations.
 
@@ -415,7 +423,13 @@ The path from current (Plane 1 40% content-complete) to mature (all four planes 
 
 ### Phase 4 — The Full Companion (2029)
 
-**Gate:** Stage 4 trust record; regulated-partner contracts; every §6.3 prohibition (no diagnosis, no dosing, no inferral, no per-child signals) covered by structural tests.
+**Gate:** Stage 4 trust record; regulated-partner contracts; every prohibition of [`THA_FOOD_INTELLIGENCE_PLATFORM_ARCHITECTURE.md`](./THA_FOOD_INTELLIGENCE_PLATFORM_ARCHITECTURE.md) **§ 6.3** (*What signals may never do* — no diagnosis, no dosing, no inferral, no per-child signals) covered by structural tests.
+
+> **⚠️ Citation corrected 2026-07-16 (`DOC-2`).** This gate previously cited a bare *"§6.3"*. **NK1 has no numbered sections** — it is organised by named headings throughout — so the reference resolved to nothing inside this document, and the four words it carries (*no inferral, no per-child signals*) are the canon's only statement on per-child intelligence.
+>
+> **The section is real, and the prohibition was never orphaned: the document name had been dropped.** It is **§ 6.3 — *What signals may never do*** in [`THA_FOOD_INTELLIGENCE_PLATFORM_ARCHITECTURE.md`](./THA_FOOD_INTELLIGENCE_PLATFORM_ARCHITECTURE.md) (`:225-231`), which prohibits diagnosis-shaped output, supplement/dosing/calorie-target recommendations, inferral, and — structurally — any signal concerning a child. That document's own Phase 4 row (`:298`) carries the sentence this gate was copied from, **which is how the reference lost its document name**; this document already cites the same architecture's § 6 in the same style elsewhere (see the Plane 3 wearable/biomarker row). The reasoning the prohibition rests on is at **§ 6.4** there (regulatory posture).
+>
+> **Resolved, not invented.** This line now cites the owner and restates none of it — restating a rule creates a second owner of it. **No prohibition was written here**, and no §6.3 was created in this document: doing either would have been filling a silence, and would have made this correction the author of a rule it has no standing to write.
 
 | Component | What it builds | Why | Impact |
 |---|---|---|---|
@@ -532,9 +546,13 @@ How to measure whether NK1 is complete:
 - [ ] **Vocabulary stability:** Nutrient list and benefit list locked (changes require re-bridging all foods) and documented
 
 ### Plane 2 Integration (Personalisation Seams)
-- [ ] **Eater profile complete:** Name, age, hard restrictions, dietary pattern, goals (future) stored per eater
+- [ ] **Eater profile complete:** Name, hard restrictions, dietary pattern, goals (future) stored per eater
 - [ ] **Event log live:** Household choices, rejections, confirmations append to `household_evidence_events` from planner/shopping/diary
 - [ ] **Learning signals ready:** `household_learning_signals` table built; opt-out and reset controls shipped (Phase 1 activation gate)
+
+> **⚠️ Corrected 2026-07-16 (`DOC-2`).** *"Eater profile complete"* previously read *"Name, **age**, hard restrictions, dietary pattern, goals (future) stored per eater"*, presenting a per-eater age as a settled part of the launch profile. **THA holds no age, date of birth, or life-stage fact anywhere** (`shared/schema.ts:1158-1168`), so this criterion could never have been ticked as written.
+>
+> **This is a correction, not a decision.** Removing the word records the platform as it is; it does not rule that THA must never hold an age. **Whether THA should ever store one — and if so under what consent, retention, and parental-authority model — is not decided here, and is not decided anywhere in the canon today.** This document records the gap; it does not close it, and nothing in this correction should be read as authorising or forbidding the field.
 
 ### Plane 3 Sourcing (External Integration)
 - [ ] **Citation discipline:** 100% of published claims traceable to EFSA/NHS/BNF/NIH-ODS via `SourceRef`

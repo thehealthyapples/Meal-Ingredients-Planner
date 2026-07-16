@@ -140,7 +140,10 @@ export interface ProfileReadResult {
 // Read projections (stored fields only — no fabrication)
 // ---------------------------------------------------------------------------
 
-function toProfileView(user: User): ProfileView {
+function toProfileView(
+  user: User,
+  personDiet: { dietPattern: string | null; hardRestrictions: string[] },
+): ProfileView {
   return {
     id: user.id,
     username: user.username,
@@ -152,8 +155,10 @@ function toProfileView(user: User): ProfileView {
     onboardingCompleted: user.onboardingCompleted,
     isBetaUser: user.isBetaUser,
     emailVerified: user.emailVerified,
-    dietPattern: user.dietPattern ?? null,
-    dietRestrictions: user.dietRestrictions ?? null,
+    // CONV1 P4 (OWN-1): the caller's diet comes from its canonical owner — their
+    // eater row — via the port. Same view shape, corrected source.
+    dietPattern: personDiet.dietPattern,
+    dietRestrictions: personDiet.hardRestrictions,
     eatingSchedule: user.eatingSchedule ?? null,
     role: user.role,
     subscriptionTier: user.subscriptionTier,
@@ -243,10 +248,11 @@ async function handleRead(intent: Intent, userId: number, port: ProfileReadPort)
   }
 
   const prefs = await port.getUserPreferences(userId);
+  const personDiet = await port.getPersonDiet(userId);
 
   return {
     scope: "profile",
-    profile: toProfileView(user),
+    profile: toProfileView(user, personDiet),
     preferences: prefs ? toPreferencesView(prefs) : null,
   };
 }

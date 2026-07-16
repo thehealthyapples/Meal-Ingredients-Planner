@@ -137,7 +137,7 @@ import { getUserRouting } from "./lib/routing";
 import { buildRuleIndex, batchMatchUplift } from "./lib/uplift-engine.js";
 import UPLIFT_RULES from "./lib/uplift-rules.js";
 import type { BatchUpliftInput } from "./lib/uplift-types.js";
-import { mergeUpliftIngredients, removeUpliftIngredient, buildForkName, type AcceptedSuggestion } from "./lib/uplift-persistence.js";
+import { mergeUpliftIngredients, removeUpliftIngredient, buildForkName, resolveAcceptedSuggestions, type AcceptedSuggestion } from "./lib/uplift-persistence.js";
 import {
   resolveActiveRestrictions,
   resolveIngredientRestrictions,
@@ -522,21 +522,6 @@ function extractJsonLdImage(recipe: JsonLdRecipe): string | null {
 
 import { APP_VERSION } from "./app-version";
 
-const DIET_PATTERN_TO_DIET_TYPE: Record<string, string> = {
-  Vegan: "vegan",
-  Vegetarian: "vegetarian",
-  Flexitarian: "flexitarian",
-  Keto: "keto",
-  "Low-Carb": "low-carb",
-  Paleo: "paleo",
-  Carnivore: "carnivore",
-  Mediterranean: "mediterranean",
-  DASH: "dash",
-  MIND: "mind",
-};
-
-const CANONICAL_DIET_VALUES = new Set(Object.values(DIET_PATTERN_TO_DIET_TYPE));
-
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -550,7 +535,10 @@ export async function registerRoutes(
   // Seed default recipe source settings (idempotent)
   seedSourceSettings().catch(e => console.warn("[recipe-source-gate] Seed failed:", e));
 
-  function buildProfileResponse(user: any, prefs: any) {
+  // CONV1 P4 (OWN-1): the API shape keeps `dietPattern` / `dietRestrictions`, but they
+  // are read from the canonical owner — the caller's eater row — not from the retired
+  // users.diet* shadow columns. Callers pass `storage.getPersonDiet(userId)`.
+  function buildProfileResponse(user: any, prefs: any, personDiet: { dietPattern: string | null; hardRestrictions: string[] }) {
     const heightCm = prefs?.heightCm || null;
     const weightKg = prefs?.weightKg || null;
     let bmi: number | null = null;
@@ -563,22 +551,30 @@ export async function registerRoutes(
       else bmiCategory = "Obese";
     }
 
-    let calculatedCalories: number | null = null;
-    if (weightKg && heightCm) {
-      const bmr = 10 * weightKg + 6.25 * heightCm - 5 * 30 - 78;
-      const activityMultipliers: Record<string, number> = {
-        low: 1.2, moderate: 1.55, high: 1.725,
-      };
-      const multiplier = activityMultipliers[prefs?.activityLevel || "moderate"] || 1.55;
-      calculatedCalories = Math.round(bmr * multiplier);
-      const goal = prefs?.goalType || "maintain";
-      if (goal === "lose") calculatedCalories = Math.round(calculatedCalories * 0.85);
-      else if (goal === "build") calculatedCalories = Math.round(calculatedCalories * 1.15);
-    }
+    // LIFE2 — THA does not estimate calorie targets, and now says so.
+    //
+    // This block ran Mifflin–St Jeor with two fabricated inputs: an age hardcoded to 30
+    // (`- 5 * 30`) and `- 78`, the midpoint of the male (+5) and female (-161) sex
+    // constants — a sex nobody is. Every household was handed a number computed for a
+    // 30-year-old of no particular sex, presented as personalised (LIFE1 § 1).
+    //
+    // Mifflin–St Jeor needs weight, height, age and sex. THA stores the first two and
+    // holds neither of the last two — LIFE1 § 12.4 defers both, because a new fact is a
+    // governed act. So this is not a degraded estimate: it is impossible, for every
+    // household, always. `calorieEstimate` says that explicitly rather than leaving a bare
+    // null, which is indistinguishable from "not computed yet" (Core Principle 6).
+    const calorieEstimate = {
+      available: false as const,
+      reason: "age-and-sex-unknown" as const,
+    };
 
+    // Only a target the household declared themselves may be reported. `auto` has no honest
+    // answer now that nothing is computed, and the seeded `calorieTarget` must not leak
+    // through it (storage.ts:3405 seeds 2000 alongside mode `auto`) — that would replace one
+    // fabrication with another.
     const dailyCalories = prefs?.calorieMode === "manual"
-      ? (prefs?.calorieTarget || calculatedCalories)
-      : calculatedCalories;
+      ? (prefs?.calorieTarget || null)
+      : null;
 
     return {
       id: user.id,
@@ -591,8 +587,8 @@ export async function registerRoutes(
       role: user.role ?? "user",
       subscriptionTier: user.subscriptionTier ?? "free",
       hasPremiumAccess: hasPremiumAccess(user),
-      dietPattern: user.dietPattern ?? null,
-      dietRestrictions: user.dietRestrictions ?? [],
+      dietPattern: personDiet.dietPattern,
+      dietRestrictions: personDiet.hardRestrictions,
       eatingSchedule: user.eatingSchedule ?? null,
       customMetricDefs: (user.customMetricDefs as Array<{ id: string; name: string; unit: string }> | null) ?? [],
       diaryExtraMetrics: (user.diaryExtraMetrics as string[] | null) ?? [],
@@ -601,7 +597,7 @@ export async function registerRoutes(
         bmi,
         bmiCategory,
         dailyCalories,
-        calculatedCalories,
+        calorieEstimate,
         heightCm,
         weightKg,
         activityLevel: prefs?.activityLevel || "moderate",
@@ -624,7 +620,8 @@ export async function registerRoutes(
     const user = await storage.getUser(req.user!.id);
     if (!user) return res.status(404).json({ message: "User not found" });
     const prefs = await storage.getUserPreferences(req.user!.id);
-    res.json(buildProfileResponse(user, prefs));
+    const personDiet = await storage.getPersonDiet(req.user!.id);
+    res.json(buildProfileResponse(user, prefs, personDiet));
   });
 
   const ALLOWED_DIET_PATTERNS = ["Mediterranean", "DASH", "MIND", "Flexitarian", "Vegetarian", "Vegan", "Keto", "Low-Carb", "Paleo", "Carnivore"] as const;
@@ -696,13 +693,21 @@ export async function registerRoutes(
       if (parsed.firstName !== undefined) profileFields.firstName = parsed.firstName;
       if (parsed.displayName !== undefined) profileFields.displayName = parsed.displayName;
       if (parsed.profilePhotoUrl !== undefined) profileFields.profilePhotoUrl = parsed.profilePhotoUrl;
-      if (parsed.dietPattern !== undefined) profileFields.dietPattern = parsed.dietPattern;
-      if (parsed.dietRestrictions !== undefined) profileFields.dietRestrictions = parsed.dietRestrictions;
       if (parsed.eatingSchedule !== undefined) profileFields.eatingSchedule = parsed.eatingSchedule;
       if (parsed.customMetricDefs !== undefined) profileFields.customMetricDefs = parsed.customMetricDefs;
       if (parsed.diaryExtraMetrics !== undefined) profileFields.diaryExtraMetrics = parsed.diaryExtraMetrics;
       if (Object.keys(profileFields).length > 0) {
         await storage.updateUserProfile(req.user!.id, profileFields);
+      }
+
+      // CONV1 P4 (WRITE-2) — the diet write door. A person's diet pattern and hard
+      // restrictions are written to their eater row, the canonical owner (Register
+      // Domain 16; Principle 2) — never to the retired users.diet* shadow columns.
+      if (parsed.dietPattern !== undefined || parsed.dietRestrictions !== undefined) {
+        await storage.updatePersonDiet(req.user!.id, {
+          ...(parsed.dietPattern !== undefined ? { dietPattern: parsed.dietPattern } : {}),
+          ...(parsed.dietRestrictions !== undefined ? { hardRestrictions: parsed.dietRestrictions } : {}),
+        });
       }
 
       // CP2 — the Companion voice the user is replacing, read BEFORE the write
@@ -745,32 +750,18 @@ export async function registerRoutes(
         });
       }
 
-      // Bridge: sync users.diet_pattern → user_preferences.diet_types.
-      // Runs after any explicit preference update so the canonical mapping is authoritative.
-      // Preserves non-canonical values (halal, kosher, pescatarian, style:* etc).
-      if (parsed.dietPattern !== undefined) {
-        try {
-          const currentPrefs = await storage.getUserPreferences(req.user!.id);
-          const currentDietTypes = currentPrefs?.dietTypes ?? [];
-          // Remove all canonical values; preserve everything else (halal, kosher, style:*, etc.)
-          const preserved = currentDietTypes.filter(
-            dt => !CANONICAL_DIET_VALUES.has(dt.toLowerCase()),
-          );
-          const newDietType = parsed.dietPattern
-            ? DIET_PATTERN_TO_DIET_TYPE[parsed.dietPattern] ?? null
-            : null;
-          const newDietTypes = newDietType ? [...preserved, newDietType] : preserved;
-          await storage.upsertUserPreferences(req.user!.id, { dietTypes: newDietTypes } as any);
-        } catch (bridgeErr) {
-          // Non-fatal: profile save succeeds even if the bridge write fails
-          console.warn("[profile/bridge] Failed to sync diet_pattern → diet_types:", bridgeErr);
-        }
-      }
+      // CONV1 P4 (WRITE-1): the self-declared "Bridge" that synced
+      // users.diet_pattern → user_preferences.diet_types is DELETED — the platform's
+      // only self-confessed permanent synchronisation bridge (Principle 7). The diet
+      // pattern now has exactly one owner (the eater row, written above) and needs
+      // no mirror; user_preferences.diet_types remains Domain 27's own soft
+      // preference list, written only by its own doors.
 
       const user = await storage.getUser(req.user!.id);
       const prefs = await storage.getUserPreferences(req.user!.id);
+      const personDiet = await storage.getPersonDiet(req.user!.id);
 
-      const profileResponse = buildProfileResponse(user!, prefs);
+      const profileResponse = buildProfileResponse(user!, prefs, personDiet);
       res.json(profileResponse);
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -2202,17 +2193,23 @@ export async function registerRoutes(
       const queryDietPattern = req.query.dietPattern as string | undefined;
       const queryDietRestrictions = req.query.dietRestrictions as string | undefined;
 
+      // CONV1 P4 (OWN-1): the profile fallback reads the caller's eater row — the
+      // canonical owner of a person's diet — not the retired users.diet* columns.
+      const personDiet = (queryDietPattern === undefined || queryDietRestrictions === undefined)
+        ? await storage.getPersonDiet(req.user!.id)
+        : null;
+
       const effectiveDietPattern: string | null =
         queryDietPattern !== undefined
           ? queryDietPattern.trim() || null          // explicit param (empty string → null)
-          : (req.user?.dietPattern ?? null);         // fall back to profile
+          : (personDiet?.dietPattern ?? null);       // fall back to declared diet
 
       const effectiveDietRestrictions: string[] =
         queryDietRestrictions !== undefined
           ? queryDietRestrictions.trim()             // explicit param provided
             ? queryDietRestrictions.split(',').map(s => s.trim()).filter(Boolean)
             : []
-          : (req.user?.dietRestrictions?.filter(Boolean) ?? []);  // fall back to profile
+          : (personDiet?.hardRestrictions.filter(Boolean) ?? []);  // fall back to declared diet
 
       console.log("[search-recipes] Effective dietPattern:", effectiveDietPattern);
       console.log("[search-recipes] Effective dietRestrictions:", effectiveDietRestrictions);
@@ -4620,6 +4617,10 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         }));
       }
 
+      // CONV1 P4 (OWN-1): the requester's declared diet, from the eater row — the
+      // canonical owner — not the retired users.diet* columns.
+      const requesterDiet = await storage.getPersonDiet(req.user!.id);
+
       const settings: SmartSuggestSettings = {
         mealsPerDay: body.mealsPerDay ? Number(body.mealsPerDay) : 3,
         includeLeftovers: body.includeLeftovers === true,
@@ -4633,10 +4634,10 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         calorieTarget: body.calorieTarget ? Number(body.calorieTarget) : undefined,
         peopleCount: body.peopleCount ? Number(body.peopleCount) : 1,
         lockedEntries: parsedLocked,
-        // Profile dietary requirements — enforced as a hard filter by the shared
+        // The requester's declared diet — enforced as a hard filter by the shared
         // dietRules engine inside the planner (same source of truth as recipe search).
-        dietPattern: req.user?.dietPattern ?? null,
-        dietRestrictions: req.user?.dietRestrictions?.filter(Boolean) ?? [],
+        dietPattern: requesterDiet.dietPattern,
+        dietRestrictions: requesterDiet.hardRestrictions.filter(Boolean),
         // Tier-4 meal shell recovery — the matcher needs the generating user to
         // resolve the household; weekId (when supplied) applies weekly eater
         // diet overrides.
@@ -4756,26 +4757,9 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
               hardRestrictedSet.add(restriction.toLowerCase());
             }
 
-            // Determine diet types for this eater.
-            // Child eaters: use stored defaultDietTypes directly.
-            // Adult eaters (userId != null): defaultDietTypes is always [] in the DB
-            // by design — the authoritative source is the user's profile. Derive using
-            // the same approach as household-meal-matcher.ts: user_preferences.dietTypes
-            // first, fall back to users.dietPattern via DIET_PATTERN_TO_DIET_TYPE.
-            let eaterDietTypes: string[] = eater.defaultDietTypes ?? [];
-            if (eater.userId != null) {
-              const [memberPrefs, memberUser] = await Promise.all([
-                storage.getUserPreferences(eater.userId),
-                storage.getUser(eater.userId),
-              ]);
-              const prefDietTypes = memberPrefs?.dietTypes ?? [];
-              if (prefDietTypes.length > 0) {
-                eaterDietTypes = prefDietTypes;
-              } else if (memberUser?.dietPattern) {
-                const mapped = DIET_PATTERN_TO_DIET_TYPE[memberUser.dietPattern];
-                eaterDietTypes = mapped ? [mapped] : [memberUser.dietPattern];
-              }
-            }
+            // CONV1 P4 (READ-1): the adult profile-derivation is deleted. The eater
+            // row stores every member's diet types — it is the canonical owner.
+            const eaterDietTypes: string[] = eater.defaultDietTypes ?? [];
 
             // Union eater diet types into the merged set for scoring influence
             for (const diet of eaterDietTypes) {
@@ -5196,16 +5180,21 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
 
         const profileUpdate: any = {};
         if (firstName !== undefined && firstName !== null && firstName.trim()) profileUpdate.firstName = firstName.trim();
-        if (dietPattern !== undefined) profileUpdate.dietPattern = dietPattern ?? null;
-        // Write when the submission carried restrictions, OR when the door routed some
-        // out of the soft list — a legacy client sends no `dietRestrictions` at all, and
-        // its allergies must still reach the owner.
-        if (dietRestrictions !== undefined || routing.promote.length > 0) {
-          profileUpdate.dietRestrictions = hardRestrictions;
-        }
         if (eatingSchedule !== undefined) profileUpdate.eatingSchedule = eatingSchedule ?? null;
         if (Object.keys(profileUpdate).length > 0) {
           await storage.updateUserProfile(req.user!.id, profileUpdate);
+        }
+
+        // CONV1 P4 (WRITE-2) — diet declarations land on the eater row, the canonical
+        // owner. Restrictions are written when the submission carried them OR when the
+        // door routed some out of the soft list — a legacy client sends no
+        // `dietRestrictions` at all, and its allergies must still reach the owner.
+        const writeRestrictions = dietRestrictions !== undefined || routing.promote.length > 0;
+        if (dietPattern !== undefined || writeRestrictions) {
+          await storage.updatePersonDiet(req.user!.id, {
+            ...(dietPattern !== undefined ? { dietPattern: dietPattern ?? null } : {}),
+            ...(writeRestrictions ? { hardRestrictions } : {}),
+          });
         }
       }
       const user = await storage.completeOnboarding(req.user!.id);
@@ -9012,40 +9001,18 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
   // ── Household Eaters (Phase 2) ────────────────────────────────────────────────
 
   // List all eaters in the current user's household.
-  // Lazily syncs adult household members into household_eaters on every read.
+  // CONV1 P4 (WRITE-3): this is a pure read. Eater rows are created at the membership
+  // events (signup, join, leave, removal) — no longer lazily inside this GET.
   app.get("/api/household/eaters", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
       const householdId = await getHouseholdForUser(req.user!.id);
-      await storage.syncMembersAsEaters(householdId);
       const rows = await storage.getHouseholdEaters(householdId);
       const { dbEaterToHouseholdEater } = await import("@shared/household-eater.js");
-      const eaters = rows.map(dbEaterToHouseholdEater);
-
-      // Enrich adult rows with profile-derived dietary data at read time.
-      // Adult rows in household_eaters store empty arrays by design; the authoritative
-      // source is the user's profile (users table only). Nothing is written.
-      // defaultDietTypes ← users.diet_pattern only (no user_preferences lookup)
-      // hardRestrictions ← users.diet_restrictions only
-      const enriched = await Promise.all(eaters.map(async (eater) => {
-        if (eater.userId == null) return eater; // child — use stored values unchanged
-
-        const userRow = await storage.getUser(eater.userId);
-
-        let defaultDietTypes: string[];
-        if (userRow?.dietPattern) {
-          const mapped = DIET_PATTERN_TO_DIET_TYPE[userRow.dietPattern];
-          defaultDietTypes = mapped ? [mapped] : [userRow.dietPattern];
-        } else {
-          defaultDietTypes = [];
-        }
-
-        const hardRestrictions: string[] = userRow?.dietRestrictions ?? [];
-
-        return { ...eater, defaultDietTypes, hardRestrictions };
-      }));
-
-      res.json(enriched);
+      // CONV1 P4 (READ-1): the read-time profile enrichment is deleted. Every eater
+      // row — account-backed or not — stores its own diets and restrictions; it IS
+      // the canonical owner (OWN-1), so the stored values are served unchanged.
+      res.json(rows.map(dbEaterToHouseholdEater));
     } catch (err) {
       console.error("[HouseholdEaters] GET error:", err);
       res.status(500).json({ message: "Failed to fetch household eaters" });
@@ -9073,7 +9040,11 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     }
   });
 
-  // Edit an existing child eater (kind === "child") — adults are synced from accounts.
+  // Edit an eater. CONV1 P4 (WRITE-2): the 403 that blocked account-backed rows is
+  // lifted — the eater row is the canonical owner of EVERY member's diet (Register
+  // Domain 16; Principle 2), and a household may now correct any member's declared
+  // diets and restrictions on the row that owns them. The old 403 existed to enforce
+  // the retired ownership inversion ("the profile is authoritative for adults").
   app.patch("/api/household/eaters/:eaterId", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
@@ -9082,7 +9053,6 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       const allEaters = await storage.getHouseholdEaters(householdId);
       const target = allEaters.find(e => e.id === eaterId);
       if (!target) return res.status(404).json({ message: "Eater not found" });
-      if (target.userId !== null) return res.status(403).json({ message: "Adult eaters cannot be edited here" });
 
       const parsed = z.object({
         displayName: z.string().min(1).max(100).optional(),
@@ -11094,6 +11064,15 @@ Generate a complete recipe using these as the foundation.`;
         return res.status(400).json({ message: 'suggestions array required' });
       }
 
+      // Resolve against the canonical owner and discard the caller's copy. Done
+      // BEFORE the fork below, so a rejected request never forks a system meal or
+      // mutates an ingredient list.
+      const resolution = resolveAcceptedSuggestions(suggestions, UPLIFT_RULES);
+      if (!resolution.ok) {
+        return res.status(400).json({ message: resolution.reason });
+      }
+      const resolved = resolution.resolved;
+
       const userId = req.user!.id;
       let meal = await storage.getMeal(mealId);
 
@@ -11137,7 +11116,7 @@ Generate a complete recipe using these as the foundation.`;
       }
 
       // Merge uplift ingredients (duplicate-safe)
-      const ingredientsToAdd = suggestions.map(s => s.ingredient);
+      const ingredientsToAdd = resolved.map(r => r.suggestion.ingredient);
       const { merged, added, skipped } = mergeUpliftIngredients(meal.ingredients, ingredientsToAdd);
 
       // Persist the updated ingredient list
@@ -11147,17 +11126,19 @@ Generate a complete recipe using these as the foundation.`;
 
       // Record provenance for every accepted suggestion (including skipped dupes)
       const applications = [];
-      for (const suggestion of suggestions) {
+      for (const { rule, suggestion } of resolved) {
         const wasAdded = added.includes(suggestion.ingredient);
         const application = await storage.createUpliftApplication({
           mealId: meal.id,
           userId,
-          ruleId: suggestion.ruleId,
-          ruleName: suggestion.ruleName,
+          // Every field below is the owner's, never the caller's — which is what
+          // makes the `tha_uplift` stamp on the next line true.
+          ruleId: rule.id,
+          ruleName: rule.name,
           ingredient: suggestion.ingredient,
           action: suggestion.action,
           quantity: suggestion.quantity ?? null,
-          explanation: suggestion.explanation,
+          explanation: suggestion.why,
           addedBy: 'tha_uplift',
           plannerEntryId: plannerEntryId ?? null,
           forkedFromMealId,
@@ -11368,7 +11349,7 @@ Generate a complete recipe using these as the foundation.`;
 
       for (const day of days) {
         const dayEntries = await storage.getPlannerEntriesForDay(day.id);
-        // dayOfWeek: 0 = Monday in plannerDays convention; shift so recent days are closer to now
+        // dayOfWeek: 0 = Sunday in plannerDays convention (Rule HT8); shift so recent days are closer to now
         const approxDate = new Date(now.getTime() - (weeksAgo * 7 + Math.max(0, 6 - day.dayOfWeek)) * MS_PER_DAY);
 
         for (const entry of dayEntries) {

@@ -34,7 +34,8 @@
  */
 
 import { intelligencePlatform } from "../intelligence-platform.js";
-import type { CapabilityGuidance, GuidanceAction, IntentVerb } from "../types.js";
+import type { CapabilityGuidance, CompanionDomain, GuidanceAction, IntentVerb } from "../types.js";
+import { COMPANION_PLATFORM } from "../types.js";
 
 // ---------------------------------------------------------------------------
 // Public contract
@@ -60,38 +61,36 @@ export interface GuidanceSuggestion {
 const MAX_SUGGESTIONS = 2;
 
 // ---------------------------------------------------------------------------
-// Capability id → Companion Card domain (base + discovery capability ids)
+// Capability id → Companion domain — READ FROM THE REGISTRY THAT OWNS IT
 // ---------------------------------------------------------------------------
 
 /**
- * Every live, user-reachable capability id resolves to one of the 7 Companion
- * Card domains (native-discovery.ts's vocabulary: meal, planner, shopping,
- * pantry, diary, nutrition, household). Deliberately excludes administration/
- * developer — never reachable from an ordinary Companion turn. This is
- * presentation vocabulary (which UI domain a capability belongs to) — it is
- * NOT workflow knowledge (which capability leads to which), so it stays here
- * rather than moving into the Capability Guidance Registry.
+ * CONV1 BEH-8. This module used to hold CAPABILITY_DOMAIN: a hand-maintained
+ * table of 18 capability ids, used as a hard gate against a registry that had
+ * grown to 24. It is gone. The Capability Registry declares each capability's
+ * own `companionDomain`, and this module reads it — one owner, no bridge
+ * (Principle 7).
+ *
+ * The table was not merely stale; it was stale SILENTLY, and in the one
+ * direction that cannot be noticed from here. Four capabilities registered
+ * after it was written — food-intelligence, opportunity-delivery,
+ * evidence-learning, product-knowledge — were absent from it, so every
+ * `!CAPABILITY_DOMAIN[id]` test read them as "not a domain" and skipped them,
+ * killing 6 registry-declared enrichment items and 1 guidance block. Nothing
+ * failed. Nothing logged. The capabilities were registered, tested, documented
+ * and unreachable.
+ *
+ * Note what the gate is NOT: `administration` and `developer` are still
+ * unreachable, and must be. That absence is now declared on their registry
+ * records rather than inferred from a table that forgot to mention them —
+ * which is the whole difference between a decision and an omission.
  */
-export const CAPABILITY_DOMAIN: Readonly<Record<string, string>> = {
-  planner: "planner",
-  "planner-discovery": "planner",
-  shopping: "shopping",
-  "shopping-discovery": "shopping",
-  "nutrition-knowledge": "nutrition",
-  "nutrition-discovery": "nutrition",
-  meals: "meal",
-  "meal-discovery": "meal",
-  templates: "meal",
-  pantry: "pantry",
-  "pantry-discovery": "pantry",
-  diary: "diary",
-  "diary-discovery": "diary",
-  household: "household",
-  "household-discovery": "household",
-  profile: "household",
-  partners: "shopping",
-  analyser: "nutrition",
-};
+
+/** Injectable domain lookup — defaults to the production registry, pure/testable otherwise. */
+export type GetCompanionDomainFn = (capabilityId: string) => CompanionDomain | undefined;
+
+const defaultGetCompanionDomain: GetCompanionDomainFn = (capabilityId) =>
+  intelligencePlatform.getCompanionDomain(capabilityId);
 
 // ---------------------------------------------------------------------------
 // Guidance-action resolution — reads the Capability Guidance Registry
@@ -139,10 +138,15 @@ function resolveSuggestions(
   mode: "success" | "recovery",
   canExecute: CanExecuteFn,
   getGuidance: GetGuidanceFn,
+  getCompanionDomain: GetCompanionDomainFn = defaultGetCompanionDomain,
 ): GuidanceSuggestion[] {
   const seenSources = new Set<string>();
+  // A source only needs to be Companion-reachable — it is where the household
+  // just was, not where they are being sent. A cross-cutting `platform`
+  // capability is a legitimate source: Food Intelligence answering a question
+  // is exactly the turn whose "where to next" matters most.
   const orderedSources = sourceCapabilityIds.filter((id) => {
-    if (seenSources.has(id) || !CAPABILITY_DOMAIN[id]) return false;
+    if (seenSources.has(id) || !getCompanionDomain(id)) return false;
     seenSources.add(id);
     return true;
   });
@@ -150,14 +154,21 @@ function resolveSuggestions(
 
   const suggestions: GuidanceSuggestion[] = [];
   // Never re-suggest a domain already answered/attempted this turn.
-  const seenTargetDomains = new Set<string>(orderedSources.map((id) => CAPABILITY_DOMAIN[id]));
+  const seenTargetDomains = new Set<string>(
+    orderedSources.map((id) => getCompanionDomain(id)!),
+  );
 
   for (const sourceId of orderedSources) {
-    const sourceDomain = CAPABILITY_DOMAIN[sourceId];
+    const sourceDomain = getCompanionDomain(sourceId)!;
     const actions = candidateActions(getGuidance(sourceId), mode);
     for (const action of actions) {
-      const targetDomain = CAPABILITY_DOMAIN[action.capabilityId];
-      if (!targetDomain || seenTargetDomains.has(targetDomain)) continue;
+      const targetDomain = getCompanionDomain(action.capabilityId);
+      // A Next Step routes to "the domain's canonical landing page"
+      // (THA_COMPANION_CARD_EXPERIENCE_PRINCIPLE.md). Only a room has one, so a
+      // `platform` capability is never a destination — aiming a household at it
+      // would route them to a page that does not exist.
+      if (!targetDomain || targetDomain === COMPANION_PLATFORM) continue;
+      if (seenTargetDomains.has(targetDomain)) continue;
       if (!canExecute(action.capabilityId, action.verb)) continue;
       seenTargetDomains.add(targetDomain);
       suggestions.push({
@@ -188,8 +199,9 @@ export function buildGuidanceSuggestions(
   successCapabilityIds: readonly string[],
   canExecute: CanExecuteFn = defaultCanExecute,
   getGuidance: GetGuidanceFn = defaultGetGuidance,
+  getCompanionDomain: GetCompanionDomainFn = defaultGetCompanionDomain,
 ): GuidanceSuggestion[] {
-  return resolveSuggestions(successCapabilityIds, "success", canExecute, getGuidance);
+  return resolveSuggestions(successCapabilityIds, "success", canExecute, getGuidance, getCompanionDomain);
 }
 
 /**
@@ -206,6 +218,7 @@ export function buildRecoverySuggestions(
   attemptedCapabilityIds: readonly string[],
   canExecute: CanExecuteFn = defaultCanExecute,
   getGuidance: GetGuidanceFn = defaultGetGuidance,
+  getCompanionDomain: GetCompanionDomainFn = defaultGetCompanionDomain,
 ): GuidanceSuggestion[] {
-  return resolveSuggestions(attemptedCapabilityIds, "recovery", canExecute, getGuidance);
+  return resolveSuggestions(attemptedCapabilityIds, "recovery", canExecute, getGuidance, getCompanionDomain);
 }

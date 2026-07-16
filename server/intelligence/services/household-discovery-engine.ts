@@ -92,7 +92,13 @@ export class HouseholdDiscoveryEngine implements HouseholdDiscoveryPort {
         id: `household-member:${uid || eater.id}`,
         displayName: eater.displayName,
         userId: uid,
-        role: uid ? (roleMap.get(uid) ?? "member") : "guest",
+        // An account-less eater has no household_members row and therefore no role.
+        // This said "guest" (CONV1 BEH-1) — a word THA already uses for something else
+        // entirely: GuestEater, a visitor at a single planner entry who is not in the
+        // household. One word, two meanings, and the LLM saw both. "no-account" is the
+        // canonical vocabulary of shared/household-eater.ts and states account backing,
+        // which is the only thing actually known here.
+        role: uid ? (roleMap.get(uid) ?? "member") : "no-account",
         dietTypes: eater.defaultDietTypes ?? [],
         hardRestrictions: eater.hardRestrictions ?? [],
         source: "household-discovery",

@@ -194,6 +194,19 @@ export class IntelligencePlatform {
     return this.registry.isExecutable(capabilityId, verb);
   }
 
+  /**
+   * CONV1 BEH-8 — the Companion domain the capability declares for itself, or
+   * undefined when it declares none (not Companion-reachable, by design).
+   */
+  getCompanionDomain(capabilityId: string) {
+    return this.registry.getCompanionDomain(capabilityId);
+  }
+
+  /** CONV1 BEH-8 — whether a Next Step may route to this capability (rooms only). */
+  isCompanionDestination(capabilityId: string): boolean {
+    return this.registry.isCompanionDestination(capabilityId);
+  }
+
   /** INT39 — the capability-owned "where to next" guidance, if any (Capability Guidance Registry). */
   getGuidance(capabilityId: string) {
     return this.registry.getGuidance(capabilityId);

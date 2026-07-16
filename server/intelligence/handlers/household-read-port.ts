@@ -9,13 +9,12 @@
  *   • the handler delegates (never re-implements) household reads, and
  *   • tests can inject an in-memory owner to prove delegation without a live database.
  *
- * `getUser` is included because the canonical Capability Card's "eaters" scope requires
- * enriching adult (userId != null) eater rows from `users.dietPattern` / `users.dietRestrictions`
- * at read time, mirroring `server/routes.ts:8526–8541` — the same 1:1 `storage.getUser()`
- * delegation the Profile binding (INT12) already uses.
+ * `getUser` remains for the "household" scope's member views. The "eaters" scope no
+ * longer needs it: CONV1 P4 (READ-1) deleted the read-time enrichment — eater rows
+ * store their own diets and restrictions, being the canonical owner (OWN-1).
  *
- * `syncMembersAsEaters` is DELIBERATELY NOT exposed here — it is a write (it inserts
- * household_eaters rows) and this binding is read-only by construction.
+ * No write method is exposed here (eater creation happens at membership events in
+ * the owner, never in a read binding) — this binding is read-only by construction.
  *
  * GOVERNANCE: the Household service (storage) remains the authoritative owner of all
  * household data and business rules (TIP1 Principles 2 & 7). This port only *reads* what

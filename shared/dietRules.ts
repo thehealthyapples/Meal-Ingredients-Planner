@@ -109,6 +109,47 @@ export function canonicaliseDietPattern(pattern: string | null | undefined): str
   return DIET_PATTERN_BY_LOWER.get(pattern.trim().toLowerCase()) ?? pattern;
 }
 
+// ─── Diet pattern ⇄ diet type (CONV1 P4 / READ-2) ────────────────────────────
+//
+// The ONE owner of the pattern → type mapping. Until CONV1 P4 this table existed as
+// five byte-identical copies (server/routes.ts, household-meal-matcher.ts,
+// household-read-handler.ts, sim-slot-fill.ts, and a test) — Register Rule 4 failed
+// five ways. It lives here because this file already owns the diet PATTERN
+// vocabulary and its canonical spelling; the mapping is that vocabulary's second
+// face, not new knowledge.
+//
+// The mapping is the lowercase of the canonical spelling for every pattern, which is
+// what lets `household_eaters.default_diet_types` own a person's diet pattern
+// losslessly (CONV1 P4 / OWN-1): the pattern is stored as its diet type and derived
+// back by the strict inverse below.
+
+/** Diet pattern ("Vegan") → the diet type stored on eater rows ("vegan"). */
+export const DIET_PATTERN_TO_DIET_TYPE: Record<string, string> = Object.fromEntries(
+  DIET_PATTERNS.map(p => [p, p.toLowerCase()]),
+);
+
+/** The canonical diet-type values — exactly the lowercase diet patterns. */
+export const CANONICAL_DIET_TYPE_VALUES: ReadonlySet<string> = new Set(
+  Object.values(DIET_PATTERN_TO_DIET_TYPE),
+);
+
+/**
+ * Derive a person's diet pattern from their eater row's `defaultDietTypes` — the
+ * strict inverse of `DIET_PATTERN_TO_DIET_TYPE`: the FIRST entry that is a canonical
+ * diet type wins ("vegan" → "Vegan"). Non-canonical soft preferences ("halal",
+ * "pescatarian") never derive a pattern — the diet-rules engine implements no filter
+ * for them, so deriving one would claim an enforcement that does not exist.
+ */
+export function dietPatternFromDietTypes(
+  dietTypes: readonly string[] | null | undefined,
+): string | null {
+  for (const t of dietTypes ?? []) {
+    const canonical = DIET_PATTERN_BY_LOWER.get(t.trim().toLowerCase());
+    if (canonical) return canonical;
+  }
+  return null;
+}
+
 // ─── Keyword Sets ────────────────────────────────────────────────────────────
 
 const GLUTEN_KEYWORDS = [

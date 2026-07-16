@@ -14,7 +14,6 @@ import { AdminBanner } from "@/components/admin-banner";
 import FloatingAssistant from "@/components/conversation/FloatingAssistant";
 import { CompanionContextProvider } from "@/components/conversation/companion-context";
 import { WorkspaceHeaderSlotContext } from "@/components/workspace-header";
-import OrchardBackdrop from "@/components/layout/orchard-backdrop";
 import OrchardShell from "@/components/layout/orchard-shell";
 import TrialBanner from "@/components/TrialBanner";
 import SiteBanner from "@/components/SiteBanner";
@@ -206,8 +205,22 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
             publishes the pointers on screen) and the one FloatingAssistant (which
             reads them). One channel, one assistant — never one per surface. */}
         <CompanionContextProvider>
+          {/* CONV1 BEH-7 — the OrchardBackdrop was mounted here, behind every room:
+              a photographic orchard, fixed inset-0, objectFit cover, opacity 0.90.
+              THA_EXPERIENCE_BLUEPRINT.md § 6.1 forbids it by name — "The orchard is
+              never wallpaper. No room contains the orchard; every room is oriented
+              toward it. A backdrop applied uniformly behind everything is the
+              flattening the Place Principles forbid" — and § 16 names wallpaper an
+              anti-pattern. The canon was right and the render was wrong; no new
+              principle was needed or written (NORTH2's refusal).
+              Rooms now stand on the warm canvas, which is the Blueprint's own E1
+              ("the orchard as illumination and warmth, not image"). Home's E3 open
+              view and the E2 window are a DECLARED GAP, not a silent one — they are
+              a positive build that ships only through the path § 2.4 fixes (the
+              UIA § 4 amendment, tokens by admission). Arrival keeps its orchard:
+              /auth, /onboarding (orchard-shell.tsx) and the marketing landing are
+              not rooms, and § 6.2 rule 3 expressly permits arrival at E3. */}
           <div className="relative min-h-[100dvh]">
-            <OrchardBackdrop />
             <div className="relative z-10 flex flex-col h-[100dvh]">
               {user?.isDemo && <TrialBanner />}
               <SiteBanner />
@@ -216,7 +229,7 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
               {/* UX1 — the canonical BottomNav is the sole primary navigation on all
                   screen sizes; the left DesktopSidebar is retired (dormant in nav-bar.tsx). */}
               <div className="flex flex-1 overflow-hidden">
-                <main className="flex-1 overflow-y-auto overflow-x-hidden main-safe bg-background/25 flex flex-col">
+                <main className="flex-1 overflow-y-auto overflow-x-hidden main-safe flex flex-col">
                   {isLoading ? (
                     <div className="flex h-full items-center justify-center">
                       <Loader2 className="h-8 w-8 animate-spin text-primary/50" />

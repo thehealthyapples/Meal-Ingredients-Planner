@@ -42,26 +42,31 @@
  * This resolver is the one place all of that is now read.
  *
  * ── Hard versus preference ───────────────────────────────────────────────────
- * The distinction is load-bearing and is drawn exactly where the schema draws it:
+ * The distinction is load-bearing and is drawn exactly where the schema draws it.
+ * Since CONV1 P4 (OWN-1) every member's diet — account-holder or not — is owned by
+ * their `household_eaters` row (Register Domain 16; Principle 2); the old
+ * `users.diet_pattern` / `users.diet_restrictions` shadow is retired:
  *
  *   HARD — never overridable, unioned across the WHOLE household. An allergen
  *   belonging to any member binds every meal the household is offered.
- *     · `users.diet_restrictions`            (the profile — authoritative for adults)
  *     · `household_eaters.hard_restrictions` ("always enforced, never overridable")
  *
  *   PREFERENCE — soft, advisory, never a safety gate.
- *     · `user_preferences.diet_types`
+ *     · `household_eaters.default_diet_types` (declared soft diets, all members)
+ *     · `user_preferences.diet_types`         (the account's own soft list)
  *     · `user_preferences.excluded_ingredients`
- *     · `household_eaters.default_diet_types` ("soft diet preferences")
  *
- *   PER-MEMBER HARD — `users.diet_pattern`. Hard for the member who declared it,
- *   but deliberately NOT unioned household-wide: a vegan and an omnivore sharing a
- *   kitchen do not make every meal vegan, and unioning patterns would change
- *   recommendation ranking far beyond what safety requires. Every member's pattern
- *   is still CARRIED into the AI context so the Companion can reason about the whole
- *   household; only the requester's pattern gates their own recommendations. A
- *   member who means "no meat, ever, in this house" declares it as a restriction —
- *   which is exactly what the live data shows them doing.
+ *   PER-MEMBER HARD — the member's diet pattern, DERIVED from their eater row's
+ *   diet types (the first canonical entry, e.g. "vegan" → "Vegan"). Hard for the
+ *   member who declared it, but deliberately NOT unioned household-wide: a vegan
+ *   and an omnivore sharing a kitchen do not make every meal vegan, and unioning
+ *   patterns would change recommendation ranking far beyond what safety requires.
+ *   Every member's pattern is still CARRIED into the AI context so the Companion
+ *   can reason about the whole household; only the requester's pattern gates their
+ *   own recommendations. A member who means "no meat, ever, in this house"
+ *   declares it as a restriction — which is exactly what the live data shows them
+ *   doing. (Account-less members keep `dietPattern: null`, exactly as before P4 —
+ *   they are never the requester, so no pattern of theirs ever gates a meal.)
  *
  * ── Fail-safe ────────────────────────────────────────────────────────────────
  * If the safety context cannot be resolved, this module returns
@@ -75,7 +80,7 @@ import { eq, and, inArray } from "drizzle-orm";
 import { users, userPreferences, householdMembers, householdEaters } from "@shared/schema";
 import { getHouseholdForUser } from "./household";
 import { candidateHardExcluded } from "./smart-suggest-service";
-import { shouldExcludeRecipe, canonicaliseDietPattern } from "@shared/dietRules";
+import { shouldExcludeRecipe, dietPatternFromDietTypes } from "@shared/dietRules";
 import { resolveActiveRestrictions } from "@shared/restrictions/restriction-resolver.js";
 import type { RestrictionDefinition } from "@shared/restrictions/restriction-types.js";
 
@@ -150,12 +155,9 @@ const dedupe = (values: Array<string | null | undefined>): string[] =>
  * Resolve the canonical dietary safety context for the household `userId` belongs to.
  *
  * Reads every canonical owner, and re-derives nothing:
- *   adults   → `users.diet_pattern` + `users.diet_restrictions` (authoritative)
- *   children → `household_eaters.hard_restrictions` + `default_diet_types`
- *   soft     → `user_preferences.diet_types` + `excluded_ingredients`
- *
- * Adult eater rows are also unioned in, so the households whose mirror IS populated
- * lose nothing. The profile remains authoritative; the mirror can only add.
+ *   every member → `household_eaters.hard_restrictions` + `default_diet_types`
+ *                  (the ONE owner of a person's diet — CONV1 P4 / OWN-1)
+ *   soft extras  → `user_preferences.diet_types` + `excluded_ingredients`
  *
  * NEVER throws. On any failure it returns `status: "unavailable"` with empty lists —
  * which every consumer must treat as "refuse", not as "unrestricted".
@@ -184,8 +186,6 @@ export async function resolveHouseholdSafetyContext(
         userId: householdMembers.userId,
         displayName: users.displayName,
         username: users.username,
-        dietPattern: users.dietPattern,
-        dietRestrictions: users.dietRestrictions,
       })
       .from(householdMembers)
       .innerJoin(users, eq(householdMembers.userId, users.id))
@@ -229,21 +229,25 @@ export async function resolveHouseholdSafetyContext(
 
     const members: HouseholdMemberSafety[] = [];
 
-    // 1. Account holders — profile is authoritative, adult eater row may only add.
+    // 1. Account holders — the eater row is the canonical owner (CONV1 P4 / OWN-1;
+    //    Register Domain 16; Principle 2). The retired users.diet* shadow no longer
+    //    exists; the member's pattern is DERIVED from their eater row's diet types
+    //    (the first canonical entry, spelled canonically), exactly inverse to how
+    //    the write door stores it.
     for (const row of memberRows) {
       const prefs = prefsByUser.get(row.userId);
       const eater = eatersByUser.get(row.userId);
       members.push({
         userId: row.userId,
         displayName: row.displayName || row.username,
-        hardRestrictions: dedupe([
-          ...(row.dietRestrictions ?? []),
-          ...(eater?.hardRestrictions ?? []),
+        hardRestrictions: dedupe(eater?.hardRestrictions ?? []),
+        dietPattern: dietPatternFromDietTypes(eater?.defaultDietTypes),
+        // Soft preferences: the eater row's declared diet types, plus the account's
+        // own soft preference list (Domain 27's fact — never a gate).
+        dietTypes: dedupe([
+          ...(eater?.defaultDietTypes ?? []),
+          ...(prefs?.dietTypes ?? []),
         ]),
-        // Canonicalised at the boundary: the database holds lower-cased patterns
-        // that the dietRules switch would otherwise ignore entirely.
-        dietPattern: canonicaliseDietPattern(row.dietPattern),
-        dietTypes: dedupe(prefs?.dietTypes ?? []),
         excludedIngredients: dedupe(prefs?.excludedIngredients ?? []),
       });
     }

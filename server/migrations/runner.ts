@@ -1844,6 +1844,285 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    // SEC2 + SEC3 — the two auth token expiry columns become TIMESTAMPTZ, matching
+    // the 99 other timestamp columns in the schema and their own declarations.
+    //
+    // These are INSTANT values: a token expires at a point on the timeline, and that
+    // point does not move because a household — or a server — is somewhere else. A
+    // naive column has no such point. It holds a wall-clock reading whose meaning is
+    // supplied by whichever process reads it, so the expiry drifts by the process's
+    // UTC offset: early is a lockout, late is an extended window on a password-reset
+    // token. Both columns have been naive since they were created, and the platform's
+    // containers default to UTC — which is why nothing has gone wrong yet. That is a
+    // deployment accident, not a control.
+    //
+    // WHY THE 2026-02-27 MIGRATION DID NOT ALREADY DO THIS. It tried:
+    //   "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_expires TIMESTAMPTZ"
+    // It is recorded as applied. It did nothing, because `drizzle-kit push` had already
+    // created the column from shared/schema.ts as naive, and ADD COLUMN IF NOT EXISTS
+    // silently succeeds against an existing column of the wrong type. So the physical
+    // type of a security-token column is decided by whether push or the migration
+    // reached the database first, and it can differ between environments with nothing
+    // to detect it.
+    //
+    // WHY THE GUARD IS NOT DECORATION. In an environment where the migration won that
+    // race, the column is ALREADY timestamptz — and `x AT TIME ZONE 'UTC'` on a
+    // timestamptz returns a NAIVE timestamp, which would then be re-cast using the
+    // session zone and silently shift every live token. The conditional makes this
+    // migration correct in both environments: convert only what is still naive.
+    //
+    // WHY 'UTC' IS THE RIGHT READING. The values already in these columns were written
+    // by node-postgres from a JS Date under a UTC process, so the stored wall-clock IS
+    // UTC. Verified empirically before writing this. The explicit `AT TIME ZONE 'UTC'`
+    // does not rely on the session TimeZone, so the result does not depend on who runs it.
+    id: "2026-07-16_sec23_auth_token_expiry_timestamptz",
+    statements: [
+      `DO $$
+       BEGIN
+         IF EXISTS (
+           SELECT 1 FROM information_schema.columns
+           WHERE table_name = 'users'
+             AND column_name = 'password_reset_expires'
+             AND data_type = 'timestamp without time zone'
+         ) THEN
+           ALTER TABLE users
+             ALTER COLUMN password_reset_expires TYPE TIMESTAMPTZ
+             USING password_reset_expires AT TIME ZONE 'UTC';
+         END IF;
+       END $$`,
+      `DO $$
+       BEGIN
+         IF EXISTS (
+           SELECT 1 FROM information_schema.columns
+           WHERE table_name = 'users'
+             AND column_name = 'email_verification_expires'
+             AND data_type = 'timestamp without time zone'
+         ) THEN
+           ALTER TABLE users
+             ALTER COLUMN email_verification_expires TYPE TIMESTAMPTZ
+             USING email_verification_expires AT TIME ZONE 'UTC';
+         END IF;
+       END $$`,
+    ],
+  },
+
+  {
+    // CONV1 P4 / WRITE-3 — household_eaters membership integrity.
+    //
+    // `syncMembersAsEaters` was a read-then-insert inside GET /api/household/eaters:
+    // a write during a GET, racing itself, into a table with no uniqueness guard —
+    // concurrent GETs could duplicate an adult. Creation now happens at the four
+    // membership events (createUser / joinHousehold / leaveHousehold /
+    // removeHouseholdMember), guarded by the partial unique index this migration adds.
+    //
+    // Order inside this migration matters: existing duplicates must be merged before
+    // the index can be created. Duplicate rows are folded into the lowest id — their
+    // planner references are repointed, their diet arrays unioned — so no household
+    // loses a declaration or a planner selection.
+    id: "2026-07-16_conv1_p4_household_eaters_integrity",
+    statements: [
+      // 1a. Repoint planner entry selections from duplicate eater rows to the keeper,
+      //     unless the keeper is already selected on that entry.
+      `UPDATE planner_entry_eaters pee
+       SET household_eater_id = d.keeper
+       FROM (
+         SELECT id, min(id) OVER (PARTITION BY household_id, user_id) AS keeper
+         FROM household_eaters WHERE user_id IS NOT NULL
+       ) d
+       WHERE pee.household_eater_id = d.id
+         AND d.id <> d.keeper
+         AND NOT EXISTS (
+           SELECT 1 FROM planner_entry_eaters p2
+           WHERE p2.entry_id = pee.entry_id AND p2.household_eater_id = d.keeper
+         )`,
+      // 1b. Any selection still pointing at a duplicate collides with an existing
+      //     keeper selection on the same entry — the selection survives via the keeper.
+      `DELETE FROM planner_entry_eaters pee
+       USING (
+         SELECT id, min(id) OVER (PARTITION BY household_id, user_id) AS keeper
+         FROM household_eaters WHERE user_id IS NOT NULL
+       ) d
+       WHERE pee.household_eater_id = d.id AND d.id <> d.keeper`,
+      // 1c/1d. Same two steps for weekly diet overrides.
+      `UPDATE planner_week_eater_overrides pweo
+       SET eater_id = d.keeper
+       FROM (
+         SELECT id, min(id) OVER (PARTITION BY household_id, user_id) AS keeper
+         FROM household_eaters WHERE user_id IS NOT NULL
+       ) d
+       WHERE pweo.eater_id = d.id
+         AND d.id <> d.keeper
+         AND NOT EXISTS (
+           SELECT 1 FROM planner_week_eater_overrides p2
+           WHERE p2.week_id = pweo.week_id AND p2.eater_id = d.keeper
+         )`,
+      `DELETE FROM planner_week_eater_overrides pweo
+       USING (
+         SELECT id, min(id) OVER (PARTITION BY household_id, user_id) AS keeper
+         FROM household_eaters WHERE user_id IS NOT NULL
+       ) d
+       WHERE pweo.eater_id = d.id AND d.id <> d.keeper`,
+      // 1e. Union duplicate rows' diet arrays into the keeper (first-occurrence order).
+      `UPDATE household_eaters k
+       SET default_diet_types = (
+             SELECT COALESCE(array_agg(v ORDER BY ord), '{}')
+             FROM (
+               SELECT v, min(ord) AS ord
+               FROM unnest(COALESCE(k.default_diet_types, '{}') || COALESCE(agg.diet_types, '{}'))
+                 WITH ORDINALITY AS t(v, ord)
+               GROUP BY v
+             ) s
+           ),
+           hard_restrictions = (
+             SELECT COALESCE(array_agg(v ORDER BY ord), '{}')
+             FROM (
+               SELECT v, min(ord) AS ord
+               FROM unnest(COALESCE(k.hard_restrictions, '{}') || COALESCE(agg.restrictions, '{}'))
+                 WITH ORDINALITY AS t(v, ord)
+               GROUP BY v
+             ) s
+           )
+       FROM (
+         SELECT min(id) AS keeper,
+                (SELECT COALESCE(array_agg(v), '{}') FROM (
+                   SELECT DISTINCT unnest(COALESCE(dd.default_diet_types, '{}')) AS v
+                   FROM household_eaters dd
+                   WHERE dd.household_id = he.household_id AND dd.user_id = he.user_id
+                 ) x) AS diet_types,
+                (SELECT COALESCE(array_agg(v), '{}') FROM (
+                   SELECT DISTINCT unnest(COALESCE(dd.hard_restrictions, '{}')) AS v
+                   FROM household_eaters dd
+                   WHERE dd.household_id = he.household_id AND dd.user_id = he.user_id
+                 ) x) AS restrictions
+         FROM household_eaters he
+         WHERE he.user_id IS NOT NULL
+         GROUP BY he.household_id, he.user_id
+         HAVING count(*) > 1
+       ) agg
+       WHERE k.id = agg.keeper`,
+      // 1f. Delete the duplicates.
+      `DELETE FROM household_eaters he
+       USING (
+         SELECT id, min(id) OVER (PARTITION BY household_id, user_id) AS keeper
+         FROM household_eaters WHERE user_id IS NOT NULL
+       ) d
+       WHERE he.id = d.id AND d.id <> d.keeper`,
+      // 2. The guard that makes the race impossible.
+      `CREATE UNIQUE INDEX IF NOT EXISTS household_eaters_household_user_uniq
+         ON household_eaters (household_id, user_id)
+         WHERE user_id IS NOT NULL`,
+      // 3. Backfill: every ACTIVE member has an eater row from now on — creation is a
+      //    membership event, no longer a side effect of loading a page.
+      `INSERT INTO household_eaters (household_id, display_name, user_id, default_diet_types, hard_restrictions)
+       SELECT hm.household_id, COALESCE(u.display_name, u.username), hm.user_id, '{}', '{}'
+       FROM household_members hm
+       JOIN users u ON u.id = hm.user_id
+       WHERE hm.status = 'active'
+         AND NOT EXISTS (
+           SELECT 1 FROM household_eaters he
+           WHERE he.household_id = hm.household_id AND he.user_id = hm.user_id
+         )`,
+    ],
+  },
+
+  {
+    // CONV1 P4 / WRITE-2 — the diet fact moves to its declared owner.
+    //
+    // ARCHITECTURE_PRINCIPLES.md Principle 2 (2026-06-25) and Register Domain 16 name
+    // `household_eaters` the owner of a person's diet; `users.diet_pattern` /
+    // `users.diet_restrictions` are a redundant shadow ordered retired (OWN-1). This
+    // migration copies every ACTIVE member's declared diet onto their eater row:
+    //
+    //   default_diet_types := dedupe( pattern-head ∥ existing ∥ user_preferences.diet_types )
+    //   hard_restrictions  := dedupe( users.diet_restrictions ∥ existing )
+    //
+    // The pattern head goes FIRST: the canonical diet type of `users.diet_pattern`
+    // (its lowercase form for the ten canonical patterns, the raw value otherwise), so
+    // the requester's derived diet pattern after the move equals the pattern before it
+    // — the safety gate must not weaken. Departed memberships are NOT copied: a former
+    // household has no claim on a person's current declarations (SEC-1).
+    id: "2026-07-16_conv1_p4_move_diet_to_household_eaters",
+    statements: [
+      `UPDATE household_eaters he
+       SET default_diet_types = (
+             SELECT COALESCE(array_agg(v ORDER BY ord), '{}')
+             FROM (
+               SELECT v, min(ord) AS ord
+               FROM unnest(
+                 CASE
+                   WHEN u.diet_pattern IS NULL THEN '{}'::text[]
+                   WHEN lower(u.diet_pattern) IN ('vegan','vegetarian','flexitarian','keto','low-carb','paleo','carnivore','mediterranean','dash','mind')
+                     THEN ARRAY[lower(u.diet_pattern)]
+                   ELSE ARRAY[u.diet_pattern]
+                 END
+                 || COALESCE(he.default_diet_types, '{}')
+                 || COALESCE(up.diet_types, '{}')
+               ) WITH ORDINALITY AS t(v, ord)
+               GROUP BY v
+             ) s
+           ),
+           hard_restrictions = (
+             SELECT COALESCE(array_agg(v ORDER BY ord), '{}')
+             FROM (
+               SELECT v, min(ord) AS ord
+               FROM unnest(
+                 COALESCE(u.diet_restrictions, '{}') || COALESCE(he.hard_restrictions, '{}')
+               ) WITH ORDINALITY AS t(v, ord)
+               GROUP BY v
+             ) s
+           )
+       FROM users u
+       JOIN household_members hm
+         ON hm.user_id = u.id AND hm.status = 'active'
+       LEFT JOIN user_preferences up ON up.user_id = u.id
+       WHERE he.user_id = u.id
+         AND he.household_id = hm.household_id`,
+    ],
+  },
+
+  {
+    // CONV1 P4 / OWN-1 — retire the shadow columns.
+    //
+    // The DROP is gated: if any ACTIVE member's declared restrictions or diet pattern
+    // is not already present on their eater row, the migration REFUSES rather than
+    // dropping. "The migration moves live allergens — not one may be lost"
+    // (PEOPLE1 § 9.2 constraint 1). A raised exception aborts this migration's
+    // transaction, so the columns survive for diagnosis.
+    id: "2026-07-16_conv1_p4_retire_users_diet_columns",
+    statements: [
+      `DO $$
+       DECLARE bad integer;
+       BEGIN
+         IF NOT EXISTS (
+           SELECT 1 FROM information_schema.columns
+           WHERE table_name = 'users' AND column_name = 'diet_pattern'
+         ) THEN
+           RETURN; -- already retired
+         END IF;
+         SELECT count(*) INTO bad
+         FROM users u
+         JOIN household_members hm ON hm.user_id = u.id AND hm.status = 'active'
+         LEFT JOIN household_eaters he
+           ON he.household_id = hm.household_id AND he.user_id = u.id
+         WHERE (
+                 u.diet_restrictions IS NOT NULL
+             AND cardinality(u.diet_restrictions) > 0
+             AND (he.id IS NULL OR NOT (COALESCE(he.hard_restrictions, '{}') @> u.diet_restrictions))
+               )
+            OR (
+                 u.diet_pattern IS NOT NULL
+             AND (he.id IS NULL OR NOT (COALESCE(he.default_diet_types, '{}') && ARRAY[lower(u.diet_pattern), u.diet_pattern]))
+               );
+         IF bad > 0 THEN
+           RAISE EXCEPTION 'CONV1-P4/OWN-1 refused: % active member(s) hold diet facts not yet present on their eater row. Not one allergen may be lost (PEOPLE1 §9.2).', bad;
+         END IF;
+       END $$`,
+      `ALTER TABLE users DROP COLUMN IF EXISTS diet_pattern`,
+      `ALTER TABLE users DROP COLUMN IF EXISTS diet_restrictions`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

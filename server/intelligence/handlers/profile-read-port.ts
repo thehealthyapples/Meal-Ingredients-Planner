@@ -29,6 +29,12 @@ export interface ProfileReadPort {
   getUser(userId: number): Promise<User | undefined>;
   /** Profile owner — the caller's stored preferences row, or undefined if none saved yet. */
   getUserPreferences(userId: number): Promise<UserPreferences | undefined>;
+  /**
+   * The caller's OWN declared diet, read from its canonical owner — their eater row
+   * (CONV1 P4 / OWN-1; Register Domain 16). Still a 1:1 forward to an owner method
+   * (`storage.getPersonDiet`), still the caller's own data only.
+   */
+  getPersonDiet(userId: number): Promise<{ dietPattern: string | null; dietTypes: string[]; hardRestrictions: string[] }>;
 }
 
 /**
@@ -41,5 +47,6 @@ export async function createStorageProfileReadPort(): Promise<ProfileReadPort> {
   return {
     getUser: (userId) => storage.getUser(userId),
     getUserPreferences: (userId) => storage.getUserPreferences(userId),
+    getPersonDiet: (userId) => storage.getPersonDiet(userId),
   };
 }

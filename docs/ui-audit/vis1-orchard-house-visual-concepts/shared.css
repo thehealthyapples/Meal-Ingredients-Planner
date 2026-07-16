@@ -1,0 +1,440 @@
+/* ============================================================================
+   VIS1 — THE ORCHARD HOUSE VISUAL DESIGN PROGRAMME
+   The board register.
+
+   Continuous with HOUSE5's drawing set (docs/ui-audit/house5-orchard-house/):
+   same drawing office, same graphite, different sheets. HOUSE5 § 2.3 fixed the
+   reason and it binds here unchanged — "a board that looked like the product
+   would be a render wearing a plan's clothes."
+
+   TWO RULES THIS FILE ENFORCES BY CONSTRUCTION:
+
+   1. NOTHING HERE IS A SCREEN. There is no card, no button, no header, no nav,
+      no layout primitive in this stylesheet. There is a sheet, a figure, a
+      legend, a specimen, and prose. A board cannot be pasted into a component
+      because there is no component shape in it.
+
+   2. THE BOARD IS GRAPHITE. The only warmth on it is a real material specimen
+      carrying a real cited value. The board decorates itself with nothing.
+      It practises the law it describes: warmth is carried by light and
+      material, never by ornament (OHDB § 12; TRANSLATION1 § 5.3).
+
+   MOTION: none. No @keyframes, no animation, no transition, anywhere.
+   "An architect's board does not animate, and neither does this house."
+   (HOUSE5 § 5.) The restraint is the subject.
+   ========================================================================== */
+
+:root {
+  /* The drafting register — HOUSE5's palette, adopted unchanged. NOT THA's. */
+  --paper:      #F1F2EE;
+  --paper-2:    #E7E9E3;
+  --graphite:   #23261F;
+  --pencil:     #5A6152;
+  --feint:      #A8AEA0;
+  --rule:       #C9CEC2;
+  --orchard:    #4A8B3F;
+  --redline:    #C0391A;
+
+  --mono:  ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --sans:  ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  --serif: ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
+
+  --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px;
+  --s5: 24px; --s6: 32px; --s7: 48px; --s8: 72px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper:    #131611;
+    --paper-2:  #1B1F19;
+    --graphite: #E4E7DE;
+    --pencil:   #A2A99A;
+    --feint:    #5E6557;
+    --rule:     #343A2E;
+    --orchard:  #7FBF6E;
+    --redline:  #E86A4A;
+  }
+}
+:root[data-theme="dark"] {
+  --paper:    #131611;  --paper-2: #1B1F19;
+  --graphite: #E4E7DE;  --pencil:  #A2A99A;
+  --feint:    #5E6557;  --rule:    #343A2E;
+  --orchard:  #7FBF6E;  --redline: #E86A4A;
+}
+:root[data-theme="light"] {
+  --paper:    #F1F2EE;  --paper-2: #E7E9E3;
+  --graphite: #23261F;  --pencil:  #5A6152;
+  --feint:    #A8AEA0;  --rule:    #C9CEC2;
+  --orchard:  #4A8B3F;  --redline: #C0391A;
+}
+
+body {
+  background: var(--paper);
+  color: var(--graphite);
+  font-family: var(--sans);
+  line-height: 1.6;
+  padding: var(--s5) var(--s4) var(--s8);
+  max-width: 1180px;
+  margin: 0 auto;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---- Sheet ---------------------------------------------------------------
+   A sheet is a drawing, not a page of an app. It has a number, a title, a
+   scale note, and a foot strip naming its source and status.                */
+
+.sheet {
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  margin-bottom: var(--s7);
+}
+
+.sheet-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s3);
+  align-items: baseline;
+  justify-content: space-between;
+  padding: var(--s3) var(--s4);
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper-2);
+}
+.sheet-no {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  color: var(--pencil);
+}
+.sheet-title {
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.sheet-scale {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--feint);
+  letter-spacing: 0.08em;
+}
+
+.sheet-body { padding: var(--s5) var(--s4); }
+
+.sheet-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s4);
+  padding: var(--s2) var(--s4);
+  border-top: 1px solid var(--rule);
+  background: var(--paper-2);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  color: var(--pencil);
+}
+
+/* ---- Figures -------------------------------------------------------------
+   Every figure is an instrument: a specimen, a section, a ladder, an
+   aperture diagram, a massing study. Never an elevation of a screen.        */
+
+figure { margin: 0 0 var(--s5); }
+figure svg { display: block; width: 100%; height: auto; }
+figcaption {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--pencil);
+  margin-top: var(--s2);
+  text-transform: uppercase;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2) var(--s5);
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--pencil);
+  margin: var(--s3) 0 var(--s5);
+  padding-top: var(--s3);
+  border-top: 1px dashed var(--rule);
+}
+.legend span { display: flex; align-items: center; gap: var(--s2); }
+.key {
+  width: 16px; height: 10px;
+  border: 1px solid var(--pencil);
+  flex: none;
+}
+.key.orchard { background: var(--orchard); border-color: var(--orchard); opacity: 0.5; }
+.key.solid   { background: var(--pencil); }
+.key.void    { background: transparent; border-style: dashed; border-color: var(--redline); }
+.key.red     { background: var(--redline); border-color: var(--redline); }
+
+/* ---- Prose ---------------------------------------------------------------- */
+
+.prose { max-width: 66ch; }
+.prose p { margin: 0 0 var(--s4); }
+.prose h3 {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin: var(--s6) 0 var(--s3);
+  color: var(--pencil);
+}
+.prose strong { font-weight: 650; }
+.prose em { font-style: italic; }
+
+.quote {
+  font-family: var(--serif);
+  font-size: 17px;
+  font-style: italic;
+  line-height: 1.55;
+  border-left: 2px solid var(--rule);
+  padding-left: var(--s4);
+  margin: 0 0 var(--s2);
+  max-width: 62ch;
+}
+.cite {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--feint);
+  padding-left: calc(var(--s4) + 2px);
+  margin: 0 0 var(--s5);
+}
+
+.note {
+  border: 1px solid var(--rule);
+  border-left-width: 3px;
+  padding: var(--s3) var(--s4);
+  margin: 0 0 var(--s4);
+  font-size: 14.5px;
+  max-width: 74ch;
+  background: var(--paper-2);
+}
+.note-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pencil);
+  display: block;
+  margin-bottom: var(--s1);
+}
+/* Red is spent ONLY on conditions no document owns, or values that contradict
+   the canon. HOUSE5 § 2.3: "The red is the argument." */
+.note.red { border-left-color: var(--redline); }
+.note.red .note-label { color: var(--redline); }
+.note.green { border-left-color: var(--orchard); }
+.note.green .note-label { color: var(--orchard); }
+
+/* ---- Tables --------------------------------------------------------------- */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  margin: 0 0 var(--s5);
+}
+th, td {
+  text-align: left;
+  padding: var(--s2) var(--s3);
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+th {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pencil);
+  font-weight: 600;
+}
+td.mono { font-family: var(--mono); font-size: 12px; }
+td .src {
+  display: block;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--feint);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 2px;
+}
+
+/* ---- Material specimens --------------------------------------------------
+   THE ONLY WARMTH ON THE BOARD.
+
+   A specimen is a chip of real material carrying a real, cited value. It is
+   fixed: it does NOT re-light for the viewer's colour scheme, because the
+   house has one morning and a specimen is lit by it (BLUEPRINT § 7). A swatch
+   that re-lights for its viewer is a second sun.
+
+   These are quotations of hsl() values owned by client/src/index.css and
+   THA_UI_ARCHITECTURE.md § 7. They are reproduced here to be LOOKED AT, and
+   they ship nothing: the depth/light vocabulary these specimens describe
+   remains bound by UIA § 4 until the governed amendment lands
+   (BLUEPRINT § 2.4; OHDB § 2.4; TRANSLATION1 § 7.4).                        */
+
+.specimens {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--s3);
+  margin: 0 0 var(--s5);
+}
+.specimen { border: 1px solid var(--rule); }
+.chip {
+  height: 76px;
+  border-bottom: 1px solid var(--rule);
+}
+.specimen-label {
+  padding: var(--s2) var(--s3) var(--s3);
+  background: var(--paper);
+}
+.specimen-name {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  display: block;
+}
+.specimen-val {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--pencil);
+  display: block;
+  margin-top: 2px;
+}
+.specimen-src {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  color: var(--feint);
+  display: block;
+  margin-top: var(--s1);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.specimen.flag { border-color: var(--redline); border-width: 1.5px; }
+.specimen.flag .specimen-name { color: var(--redline); }
+
+/* ---- Room identity strip -------------------------------------------------- */
+
+.room-id {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--s4);
+  padding: var(--s4);
+  border: 1px solid var(--rule);
+  background: var(--paper-2);
+  margin: 0 0 var(--s5);
+}
+.room-id dt {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--feint);
+  margin-bottom: var(--s1);
+}
+.room-id dd {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 550;
+}
+.room-id dd .src {
+  display: block;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  color: var(--feint);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 2px;
+}
+
+/* ---- Contents / navigation between sheets --------------------------------- */
+
+.contents { list-style: none; padding: 0; margin: 0; }
+.contents li {
+  display: flex;
+  gap: var(--s4);
+  align-items: baseline;
+  padding: var(--s3) 0;
+  border-bottom: 1px solid var(--rule);
+}
+.contents .c-no {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--pencil);
+  letter-spacing: 0.1em;
+  flex: none;
+  width: 5.5em;
+}
+.contents .c-name { font-weight: 550; }
+.contents .c-desc { color: var(--pencil); font-size: 13px; }
+a { color: inherit; text-decoration-color: var(--feint); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--orchard); outline-offset: 3px; }
+
+.setnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s4);
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: var(--s3) 0;
+  border-top: 1px solid var(--rule);
+  color: var(--pencil);
+}
+
+.meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--s4);
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--pencil);
+  padding: var(--s4) 0;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  margin: var(--s5) 0;
+}
+.meta-grid b {
+  display: block;
+  color: var(--feint);
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 9.5px;
+  margin-bottom: 2px;
+}
+
+.cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--s5);
+  margin: 0 0 var(--s5);
+}
+.cols h4 {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin: 0 0 var(--s2);
+  padding-bottom: var(--s2);
+  border-bottom: 1px solid var(--rule);
+}
+.cols ul { margin: 0; padding-left: var(--s4); font-size: 13.5px; }
+.cols li { margin-bottom: var(--s2); }
+
+ol.refusals { padding-left: var(--s5); max-width: 74ch; }
+ol.refusals li { margin-bottom: var(--s3); font-size: 14.5px; }
+ol.refusals b { font-weight: 650; }
+
+/* Wide figures scroll inside their own container; the page body never does. */
+.scroll-x { overflow-x: auto; }
+.scroll-x > svg { min-width: 560px; }

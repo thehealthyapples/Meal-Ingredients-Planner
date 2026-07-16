@@ -20,12 +20,15 @@ export const users = pgTable("users", {
   isBetaUser: boolean("is_beta_user").notNull().default(false),
   emailVerified: boolean("email_verified").notNull().default(false),
   emailVerificationToken: text("email_verification_token"),
-  emailVerificationExpires: timestamp("email_verification_expires"),
-  dietPattern: text("diet_pattern"),
-  dietRestrictions: text("diet_restrictions").array(),
+  emailVerificationExpires: timestamp("email_verification_expires", { withTimezone: true }),
+  // CONV1 P4 (OWN-1): diet_pattern / diet_restrictions are RETIRED. A person's diet
+  // is owned by their household_eaters row (Register Domain 16; Principle 2) — the
+  // pattern lives in default_diet_types as its canonical diet type, restrictions in
+  // hard_restrictions. Migration 2026-07-16_conv1_p4_retire_users_diet_columns
+  // dropped the columns after gating on zero data loss.
   eatingSchedule: text("eating_schedule"),
   passwordResetToken: text("password_reset_token"),
-  passwordResetExpires: timestamp("password_reset_expires"),
+  passwordResetExpires: timestamp("password_reset_expires", { withTimezone: true }),
   role: text("role").notNull().default("user"),
   subscriptionTier: text("subscription_tier").notNull().default("free"),
   subscriptionStatus: text("subscription_status"),
@@ -1159,13 +1162,20 @@ export const householdEaters = pgTable("household_eaters", {
   id: serial("id").primaryKey(),
   householdId: integer("household_id").notNull().references(() => households.id, { onDelete: "cascade" }),
   displayName: text("display_name").notNull(),
-  /** Null for children who don't have an account. */
+  /** Null for eaters without an account. */
   userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
   /** Soft diet preferences — can be overridden per meal plan. */
   defaultDietTypes: text("default_diet_types").array(),
   /** Hard restrictions — always enforced, never overridable. */
   hardRestrictions: text("hard_restrictions").array(),
-});
+}, (table) => [
+  // CONV1 P4 (WRITE-3): one eater row per account per household. Without this,
+  // concurrent creation could duplicate a person. Account-less eaters (userId NULL)
+  // are exempt — a household may declare several people who share no account.
+  uniqueIndex("household_eaters_household_user_uniq")
+    .on(table.householdId, table.userId)
+    .where(sql`user_id IS NOT NULL`),
+]);
 
 /**
  * Which household eaters are associated with a specific planner entry.

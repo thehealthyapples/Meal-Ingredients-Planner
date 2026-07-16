@@ -138,11 +138,12 @@ async function ensureAccount(
   // Canonical profile + benchmark account flags. Direct column update — the
   // beta/verified flags have no storage setter (registration is closed in dev
   // and would send real emails), matching how createDemoUser sets them.
+  // CONV1 P4 (OWN-1): users.diet* is retired — the fixture's account-level diet is
+  // seeded onto the eater row (the canonical owner) by the eater loop below, which
+  // writes each account eater's defaultDietTypes/hardRestrictions from the fixture.
   const [updated] = await db.update(users).set({
     displayName: account.displayName,
     firstName: account.firstName,
-    dietPattern: account.dietPattern ?? null,
-    dietRestrictions: account.dietRestrictions ? [...account.dietRestrictions] : null,
     isBetaUser: true,
     emailVerified: true,
     onboardingCompleted: !fixture.coldStart,
@@ -319,8 +320,14 @@ async function reseedHousehold(
     plannerEnableChildMeals: p.plannerEnableChildMeals ?? false,
   });
 
-  // 2. Eaters — adult members first (canonical write path), then fixture detail
-  await storage.syncMembersAsEaters(householdId);
+  // 2. Eaters — adult members first (canonical write path), then fixture detail.
+  // CONV1 P4 (WRITE-3): membership events create eater rows; this loop only covers a
+  // reset world whose eater rows were wiped after the memberships already existed.
+  const activeMembers = await db.select({ userId: householdMembers.userId }).from(householdMembers)
+    .where(and(eq(householdMembers.householdId, householdId), eq(householdMembers.status, "active")));
+  for (const m of activeMembers) {
+    await storage.ensureEaterForMember(householdId, m.userId);
+  }
   const syncedEaters = await storage.getHouseholdEaters(householdId);
   for (const eater of fixture.eaters) {
     if (eater.accountKey) {

@@ -37,14 +37,13 @@ import { getMealNutrients } from "@/lib/nutrition-insights";
 import PlannerIntelligenceStrip from "@/components/PlannerIntelligenceStrip";
 import { AmbientIntelligence } from "@/components/intelligence";
 import { CookbookMealIntelligenceStrip } from "@/components/CookbookMealIntelligenceStrip";
-import { getMealBoosts } from "@/lib/nutrition-boosts";
 import { MealNutrientTags } from "@/components/nutrition-insights-panel";
 import { useUser } from "@/hooks/use-user";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { FirstVisitHint } from "@/components/first-visit-hint";
 import { MealUpliftPanel, UpliftCardIndicator, SHOPPING_LIST_KEYS, selectVisibleBoosts } from "@/components/MealUpliftPanel";
 import type { UpliftMatchResult } from "@/components/MealUpliftPanel";
-import { buildWeeklyReuseMap, normaliseForReuse } from "@/lib/ingredient-reuse";
+import { buildWeeklyReuseMap } from "@/lib/ingredient-reuse";
 import { useToast } from "@/hooks/use-toast";
 import { useTrackedMutation } from "@/hooks/use-tracked-mutation";
 import { ToastAction } from "@/components/ui/toast";
@@ -52,8 +51,6 @@ import { api } from "@shared/routes";
 import type { PlannerWeek, PlannerDay, PlannerEntry, Meal, FreezerMeal, Nutrition, MealCategory, WeekEaterOverride, MealUpliftApplication } from "@shared/schema";
 import type { HouseholdEater, GuestEater } from "@shared/household-eater";
 import type { AdaptationResult, HouseholdSafePreview } from "@shared/meal-adaptation";
-import { computeRestrictionSafety, type EaterProfile } from "@shared/restrictions/restriction-safety";
-import { shouldExcludeRecipe } from "@shared/dietRules";
 import { ONBOARDING_DIET_OPTIONS, DIET_PATTERN_OPTIONS, ALLERGY_INTOLERANCE_OPTIONS } from "@/lib/diets";
 import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
 import { AdaptationReviewSheet } from "@/components/AdaptationReviewSheet";
@@ -296,73 +293,19 @@ function saveCookedEntries(ids: Set<number>): void {
   } catch {}
 }
 
-// ─── Fallback uplift helper ───────────────────────────────────────────────────
-// Converts deterministic boost suggestions from nutrition-boosts.ts into the
-// UpliftMatchResult shape consumed by MealUpliftPanel, applying household
-// filtering and deduplication against server-backed suggestions.
-
-function buildFallbackUpliftMatch(
-  mealName: string,
-  ingredients: string[],
-  householdEaters: HouseholdEater[],
-  serverKeys: Set<string>,
-): UpliftMatchResult | null {
-  const candidates = getMealBoosts(mealName, ingredients);
-
-  const eaterProfiles: EaterProfile[] = householdEaters.map((e) => ({
-    displayName: e.displayName,
-    hardRestrictions: e.hardRestrictions,
-  }));
-  const allDietTypes = householdEaters.flatMap((e) => e.defaultDietTypes);
-
-  const filtered = candidates.filter((boost) => {
-    if (eaterProfiles.length > 0) {
-      const safety = computeRestrictionSafety([boost.name], eaterProfiles);
-      if (safety.some((r) => r.status === "unsafe" || r.status === "warning")) return false;
-    }
-    for (const diet of allDietTypes) {
-      if (shouldExcludeRecipe(boost.name, { dietPattern: diet, dietRestrictions: [] })) return false;
-    }
-    return true;
-  });
-
-  // Suppress items already covered by server uplift (normalised key comparison)
-  const deduplicated = filtered.filter(
-    (boost) => !serverKeys.has(normaliseForReuse(boost.name)),
-  );
-
-  if (deduplicated.length === 0) return null;
-
-  return {
-    ruleId: "fallback-deterministic-boosts",
-    ruleName: "Nutrition Boost",
-    suggestions: deduplicated.map((boost) => ({
-      ingredient: boost.name,
-      action: "add" as const,
-      why: `A nutritious ${boost.category.replace("-", " ")} suggestion for this meal.`,
-    })),
-    nutritionTags: [],
-    confidence: "medium" as const,
-    priority: 0,
-  };
-}
-
-// Builds the merged uplift match list (server rules + deterministic fallback
-// boosts) shown for a meal. Used by both the planner card indicator and the
-// detail-dialog panel so they operate on identical data — the card previously
-// counted server matches only and omitted the fallback, undercounting the panel.
-function buildMergedMatches(
-  mealName: string,
-  ingredients: string[],
-  serverMatches: UpliftMatchResult[],
-  householdEaters: HouseholdEater[],
-): UpliftMatchResult[] {
-  const serverKeys = new Set(
-    serverMatches.flatMap((m) => m.suggestions.map((s) => normaliseForReuse(s.ingredient))),
-  );
-  const fallbackMatch = buildFallbackUpliftMatch(mealName, ingredients, householdEaters, serverKeys);
-  return fallbackMatch ? [...serverMatches, fallbackMatch] : serverMatches;
-}
+// ─── Uplift matches ───────────────────────────────────────────────────────────
+// The uplift suggestions shown for a meal are exactly the ones the canonical owner
+// authored and reviewed (server/lib/uplift-rules.ts, SoT Domain 17), matched by
+// server/lib/uplift-engine.ts. There is nothing to merge them with, and that is
+// the point.
+//
+// SEC4 retired a client-side fallback that ran nutrition-boosts.ts through a
+// browser-authored rule identity — a rule that existed nowhere on the server, with
+// a `why` string templated in the browser. It
+// was shown beside the reviewed rules and was indistinguishable from them, and on
+// accept it was persisted stamped as THA's own reviewed guidance. Nothing replaces
+// it: an unreviewed suggestion is not one THA is entitled to make
+// (ARCHITECTURE_PRINCIPLES.md Principle 6), and /api/uplift/accept now rejects it.
 
 export default function WeeklyPlannerPage() {
   const { toast } = useToast();
@@ -2182,8 +2125,7 @@ export default function WeeklyPlannerPage() {
                                     {!isPlaceholder && !isCooked && (() => {
                                       const isBoosted = boostedMealIds.has(meal.id);
                                       const serverMatches = upliftByMealId.get(meal.id) ?? [];
-                                      const mergedMatches = buildMergedMatches(meal.name, meal.ingredients ?? [], serverMatches, householdEaters);
-                                      const suggestionCount = selectVisibleBoosts(mergedMatches, weeklyReuseMap, meal.name).length;
+                                                                            const suggestionCount = selectVisibleBoosts(serverMatches, weeklyReuseMap, meal.name).length;
                                       if (isBoosted) {
                                         return (
                                           <button
@@ -2473,8 +2415,7 @@ export default function WeeklyPlannerPage() {
                                         {!isPlaceholder && (() => {
                                           const isBoosted = boostedMealIds.has(meal.id);
                                           const serverMatches = upliftByMealId.get(meal.id) ?? [];
-                                          const mergedMatches = buildMergedMatches(meal.name, meal.ingredients ?? [], serverMatches, householdEaters);
-                                          const suggestionCount = selectVisibleBoosts(mergedMatches, weeklyReuseMap, meal.name).length;
+                                                                                    const suggestionCount = selectVisibleBoosts(serverMatches, weeklyReuseMap, meal.name).length;
                                           if (isBoosted) {
                                             return (
                                               <button
@@ -3201,9 +3142,10 @@ export default function WeeklyPlannerPage() {
                                     }}
                                   />
                                   <span className="text-foreground/90">{eater.displayName}</span>
-                                  {eater.kind === "child" && (
-                                    <span className="text-[10px] text-muted-foreground">(child)</span>
-                                  )}
+                                  {/* CONV1 BEH-1 — a "(child)" tag stood here, derived from
+                                      `kind`, which means "has no THA account" and says nothing
+                                      about age. Deleted rather than reworded: whether someone
+                                      holds an account has no bearing on who is eating this meal. */}
                                 </label>
                               );
                             })}
@@ -3409,7 +3351,10 @@ export default function WeeklyPlannerPage() {
                             {/* Per-eater compatibility rows */}
                             <ul className="space-y-0 divide-y divide-border/40">
                               {result.adaptations.map((a, i) => {
-                                const isChild = householdEaters.find(e => e.displayName === a.eaterName)?.kind === "child";
+                                // CONV1 BEH-1 — an `isChild` flag derived from `kind` tagged
+                                // rows here. `kind` means "has no THA account"; it is not an
+                                // age, and account backing has no bearing on whether a meal
+                                // suits someone — which is the only question this list asks.
                                 const needsChange = a.changeType !== "none";
                                 const noData = !!a.hasNoDietaryData;
                                 return (
@@ -3428,9 +3373,6 @@ export default function WeeklyPlannerPage() {
                                     <div className="flex-1 min-w-0">
                                       <div className="flex items-center gap-1.5 flex-wrap">
                                         <span className="text-sm font-medium text-foreground">{a.eaterName}</span>
-                                        {isChild && (
-                                          <span className="text-[10px] text-muted-foreground/70 bg-muted px-1 py-0.5 rounded">child</span>
-                                        )}
                                       </div>
                                       <p className="text-xs mt-0.5">
                                         {needsChange ? (
@@ -3685,26 +3627,19 @@ export default function WeeklyPlannerPage() {
                    * which are affected by this removal.
                    */}
 
-                  {/* Single Nutrition Boost panel — merges server uplift with deterministic
-                      fallback boosts from nutrition-boosts.ts. All visible suggestions are
-                      actionable (Add to meal). Fallback boosts are deduplicated against
-                      server suggestions using normalised ingredient keys. */}
+                  {/* Single Nutrition Boost panel — the uplift rules the canonical owner
+                      authored and reviewed. All visible suggestions are actionable
+                      (Add to meal). */}
                   {(() => {
                     const serverMatches = upliftByMealId.get(meal.id) ?? [];
-                    const mergedMatches = buildMergedMatches(
-                      meal.name,
-                      meal.ingredients ?? [],
-                      serverMatches,
-                      householdEaters,
-                    );
                     const hasBoostedThisSession = boostedMealIds.has(meal.id);
-                    if (mergedMatches.length === 0 && !hasBoostedThisSession) return null;
+                    if (serverMatches.length === 0 && !hasBoostedThisSession) return null;
                     return (
                       <MealUpliftPanel
                         mealId={meal.id}
                         plannerEntryId={entry.id}
                         mealSlot={mealType}
-                        upliftMatches={mergedMatches}
+                        upliftMatches={serverMatches}
                         currentMealName={meal.name}
                         weeklyReuseMap={weeklyReuseMap}
                         onMealForked={(newMealId) => {

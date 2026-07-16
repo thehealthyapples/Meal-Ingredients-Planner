@@ -21,7 +21,7 @@
  *   Plane 2 (household context)    → the Household capability's own port +
  *                                     enrichment (server/intelligence/handlers/
  *                                     household-read-port.ts, household-read-
- *                                     handler.ts's enrichEater) for restriction
+ *                                     handler.ts's toEaterView) for restriction
  *                                     safety, and server/lib/food-intelligence-
  *                                     assembler.ts's fetchHouseholdPlannerFoods
  *                                     for planner familiarity (SoT D14)
@@ -69,7 +69,7 @@ import {
 import type { RestrictionDefinition } from "@shared/restrictions/restriction-types.js";
 import { fetchHouseholdPlannerFoods } from "../../lib/food-intelligence-assembler.js";
 import { createStorageHouseholdReadPort } from "../handlers/household-read-port.js";
-import { enrichEater } from "../handlers/household-read-handler.js";
+import { toEaterView } from "../handlers/household-read-handler.js";
 
 // ---------------------------------------------------------------------------
 // Limits
@@ -254,7 +254,7 @@ export function rankAndExplain(
  *
  * Exported (FI4) so the Food Opportunity Engine (`opportunity-engine.ts`) reuses
  * this exact household resolution rather than re-deriving it a second time — the
- * same reuse discipline FI3 already established for `enrichEater`.
+ * same reuse discipline FI3 already established for `toEaterView`.
  */
 export async function resolveHouseholdSignal(userId: number | undefined): Promise<HouseholdSignal> {
   if (userId == null) return NO_HOUSEHOLD_SIGNAL;
@@ -266,7 +266,7 @@ export async function resolveHouseholdSignal(userId: number | undefined): Promis
       port.getHouseholdEaters(householdId),
       fetchHouseholdPlannerFoods(householdId),
     ]);
-    const eaters = await Promise.all(eaterRows.map((row) => enrichEater(row, port)));
+    const eaters = eaterRows.map(toEaterView);
     const allHardRestrictions = eaters.flatMap((e) => e.hardRestrictions);
     const restrictionDefs = resolveActiveRestrictions(allHardRestrictions);
 

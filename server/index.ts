@@ -3,10 +3,6 @@ import compression from "compression";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
-import { runTemplateMigration } from "./template-migration";
-import { seedReadyMeals } from "./lib/seed-ready-meals";
-import { seedFoodKnowledge } from "./lib/seed-food-knowledge";
-import { seedPantryKnowledge } from "./seeds/seed-pantry-knowledge";
 import { runMigrations } from "./migrations/runner";
 import { storage } from "./storage";
 import { getUploadDir, isLocalMediaProvider, logMediaStorageStatus } from "./lib/media-storage";
@@ -113,11 +109,31 @@ app.use((req, res, next) => {
     process.exit(1);
   }
 
+  // ── Schema, and ONLY schema ──────────────────────────────────────────────────
+  // CONV1 WRITE-4. Four writers used to publish here on every boot — the template
+  // backfill, and the ready-meals, food-knowledge and pantry-knowledge seeds —
+  // every one .catch()-swallowed, none declared in the Source of Truth Register.
+  // THA declares exactly one publication mechanism (`npm run seed:*`,
+  // operator-invoked, CPuBA4); this was a second one, and it was invisible.
+  // A boot is not an act of authorship.
+  //
+  // The three seeds did not move, they are only reachable the declared way now:
+  // `npm run seed:all`, or one at a time (server/seeds/run-boot-retired-seeds.ts).
+  // Provisioning is a deliberate operator act, which is the point — it can be
+  // observed, ordered and failed. Swallowing a seed error at boot meant a
+  // half-published platform came up healthy and served requests.
+  //
+  // The template backfill is not among them because it no longer exists. It was a
+  // one-time backfill wired to the boot path, where it had become a permanent
+  // meals → meal_templates bridge (Principle 7): it authored 1,162 of 1,316
+  // template rows and wrote into meal_plan_entries, a store already retired.
+  //
+  // Deliberately naming no function here: `npm run verify:publication` greps this
+  // file for those call sites, and cannot tell a call from a comment about one.
+  //
+  // runMigrations stays. Schema is not publication: it makes the tables exist, it
+  // authors no fact, and the platform cannot serve a request without it.
   await runMigrations();
-  await runTemplateMigration().catch(err => console.error("[Template Migration] Error:", err));
-  await seedReadyMeals().catch(err => console.error("[Seed Ready Meals] Error:", err));
-  await seedFoodKnowledge().catch(err => console.error("[Seed Food Knowledge] Error:", err));
-  await seedPantryKnowledge().catch(err => console.error("[Seed Pantry Knowledge] Error:", err));
   // Sync default pantry items for all households. Runs in the background so it
   // does not delay server startup. Idempotent: only inserts missing defaults,
   // never overwrites user-created or user-modified items.

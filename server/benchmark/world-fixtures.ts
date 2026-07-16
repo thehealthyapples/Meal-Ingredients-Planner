@@ -80,7 +80,7 @@ export interface BenchmarkPantryItemFixture {
 export interface BenchmarkPlannerEntryFixture {
   /** Planner week number (1–6). The world only seeds week 1 unless stated. */
   readonly week: number;
-  /** 0 = Monday … 6 = Sunday (planner convention). */
+  /** 0 = Sunday … 6 = Saturday (planner convention, Rule HT8). */
   readonly dayOfWeek: number;
   readonly mealType: "breakfast" | "lunch" | "dinner" | "snack";
   /** References a meal in this household's `meals` by exact name. */

@@ -20,7 +20,6 @@ import {
   type EnrichmentSource,
   type GetEnrichmentFn,
 } from "../intelligence/conversation/companion-enrichment.js";
-import { CAPABILITY_DOMAIN } from "../intelligence/conversation/companion-guidance.js";
 import { CapabilityRegistry } from "../intelligence/capability-registry.js";
 import { intelligencePlatform } from "../intelligence/intelligence-platform.js";
 import type { CapabilityEnrichment } from "../intelligence/types.js";
@@ -169,7 +168,27 @@ async function main(): Promise<void> {
     assert(capped.length === 3, "output is capped at MAX_ENRICHMENT_ITEMS(3) even when a capability declares more");
     assert(capped.map((i) => i.title).join("") === "ABC", "capped items are taken in declared order, not shuffled");
 
-    assert(CAPABILITY_DOMAIN["nutrition-knowledge"] === "nutrition", "companion-enrichment.ts reuses the SAME CAPABILITY_DOMAIN table as companion-guidance.ts — no duplicated domain vocabulary");
+    // CONV1 BEH-8 — both modules now read the Capability Registry that owns the
+    // domain, rather than sharing one module's private table. No duplicated
+    // domain vocabulary, and no bridge to fall behind (Principle 7).
+    assert(new CapabilityRegistry().getCompanionDomain("nutrition-knowledge") === "nutrition", "the Companion domain is read from the registry that owns it — no second table");
+
+    // BEH-8 regression — the six enrichment items the retired table killed. Each
+    // of these capabilities registered enrichment, was tested and documented, and
+    // was silently unreachable because a hand-maintained list in another module
+    // had never heard of it.
+    const beh8Registry = new CapabilityRegistry();
+    for (const [id, expectedItems] of [["food-intelligence", 3], ["evidence-learning", 2], ["opportunity-delivery", 1]] as const) {
+      const declared = beh8Registry.getEnrichment(id)?.items.length ?? 0;
+      assert(declared === expectedItems, `${id} declares ${expectedItems} enrichment item(s)`);
+      const reachable = buildEnrichment(
+        [{ capabilityId: id, verb: "read" }],
+        (cid) => beh8Registry.getEnrichment(cid),
+        (cid) => beh8Registry.getCompanionDomain(cid),
+      );
+      assert(reachable.length > 0, `${id}'s registered enrichment reaches the Companion (BEH-8 — it did not before)`);
+      assert(reachable.every((i) => i.sourceDomain === "platform"), `${id} attributes as platform — an explanation of how the platform reasons is not a fact about a room`);
+    }
 
     const multiSource = buildEnrichment(
       [
