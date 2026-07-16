@@ -52,8 +52,9 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { eq, and, inArray } from 'drizzle-orm';
 import { db } from '../db.js';
-import { users, meals, userPreferences } from '../../shared/schema.js';
+import { users, meals, userPreferences, householdEaters, householdMembers } from '../../shared/schema.js';
 import type { Meal } from '../../shared/schema.js';
+import { dietPatternFromDietTypes } from '../../shared/dietRules.js';
 import { getStarterMeals, pickMealsWithBackfill } from '../lib/meal-service.js';
 import { detectDietTypes } from '../lib/external-meal-service.js';
 import {
@@ -473,9 +474,29 @@ function sec9_perMember(): void {
 async function sec10_liveData(): Promise<void> {
   section('10  LIVE DATA — every live household, every starter meal, the real gate');
 
-  const allUsers = await db
-    .select({ id: users.id, dietPattern: users.dietPattern, dietRestrictions: users.dietRestrictions })
-    .from(users);
+  // CONV1 P4 (OWN-1): each person's diet lives on their eater row in their active
+  // household — users.diet_pattern / diet_restrictions are retired. The sweep reads
+  // the canonical owner and derives the pattern exactly as the platform does.
+  const userRows = await db
+    .select({
+      id: users.id,
+      defaultDietTypes: householdEaters.defaultDietTypes,
+      hardRestrictions: householdEaters.hardRestrictions,
+    })
+    .from(users)
+    .leftJoin(householdMembers, and(
+      eq(householdMembers.userId, users.id),
+      eq(householdMembers.status, 'active'),
+    ))
+    .leftJoin(householdEaters, and(
+      eq(householdEaters.householdId, householdMembers.householdId),
+      eq(householdEaters.userId, users.id),
+    ));
+  const allUsers = userRows.map((r) => ({
+    id: r.id,
+    dietPattern: dietPatternFromDietTypes(r.defaultDietTypes ?? []),
+    dietRestrictions: r.hardRestrictions ?? [],
+  }));
   const systemMeals = await db
     .select()
     .from(meals)
@@ -513,7 +534,16 @@ async function sec10_liveData(): Promise<void> {
   assert(served > 10_000, 'the gate did not pass by emptying the cookbook — it still serves thousands of meals', `only ${served}`);
 
   // The vegan breakfast slot — the exact slot SURF1B4 named as a live fail-open.
-  const veganUser = vegHouseholds.find((u) => (u.dietPattern ?? '').toLowerCase() === 'vegan');
+  // The slots-fill assertions below are about a household whose ONLY constraint is
+  // the vegan pattern. The eater-row sweep (CONV1 P4) also surfaces vegans who hold
+  // hard allergies on top — for them a SHORT list is the correct behaviour (layer 2:
+  // fewer, never unsafe) — so pick a vegan household with no hard restrictions.
+  let veganUser: { id: number; dietPattern: string | null } | undefined;
+  for (const u of vegHouseholds) {
+    if ((u.dietPattern ?? '').toLowerCase() !== 'vegan') continue;
+    const c = await resolveHouseholdSafetyContext(u.id);
+    if (c.status === 'resolved' && c.hardRestrictions.length === 0) { veganUser = u; break; }
+  }
   if (veganUser) {
     const ctx = await resolveHouseholdSafetyContext(veganUser.id);
     const breakfasts = systemMeals.filter((m) => m.categoryId === 1);

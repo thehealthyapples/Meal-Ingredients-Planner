@@ -446,8 +446,17 @@ async function run(): Promise<void> {
     const { db } = await import('../db.js');
     const { sql } = await import('drizzle-orm');
 
+    // CONV1 P4 (OWN-1): restrictions live on the eater row of each user's ACTIVE
+    // household — users.diet_restrictions is retired.
     const restricted = await db.execute(
-      sql`SELECT id FROM users WHERE diet_restrictions IS NOT NULL AND cardinality(diet_restrictions) > 0 ORDER BY id`,
+      sql`SELECT DISTINCT he.user_id AS id
+          FROM household_eaters he
+          JOIN household_members hm
+            ON hm.household_id = he.household_id
+           AND hm.user_id = he.user_id
+           AND hm.status = 'active'
+          WHERE he.user_id IS NOT NULL AND cardinality(he.hard_restrictions) > 0
+          ORDER BY id`,
     );
     const rows = (restricted as unknown as { rows: Array<{ id: number }> }).rows ?? [];
     dbReached = true;
@@ -486,7 +495,16 @@ async function run(): Promise<void> {
 
     // An unrestricted household still resolves, and still says "none".
     const unrestricted = await db.execute(
-      sql`SELECT id FROM users WHERE diet_restrictions IS NULL OR cardinality(diet_restrictions) = 0 ORDER BY id LIMIT 1`,
+      sql`SELECT u.id FROM users u
+          WHERE NOT EXISTS (
+            SELECT 1 FROM household_eaters he
+            JOIN household_members hm
+              ON hm.household_id = he.household_id
+             AND hm.user_id = he.user_id
+             AND hm.status = 'active'
+            WHERE he.user_id = u.id AND cardinality(he.hard_restrictions) > 0
+          )
+          ORDER BY u.id LIMIT 1`,
     );
     const uRows = (unrestricted as unknown as { rows: Array<{ id: number }> }).rows ?? [];
     if (uRows.length) {

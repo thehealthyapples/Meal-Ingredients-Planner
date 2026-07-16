@@ -151,7 +151,7 @@ async function main() {
   const newWorld = await resolved({ hard: ['Nuts'], soft: [] });
   assert(
     !isMealSafeForHousehold(SATAY, newWorld).safe,
-    'the SAME allergy, routed to users.diet_restrictions, REFUSES the satay',
+    'the SAME allergy, routed to the hard-restriction owner (the eater row — CONV1 P4), REFUSES the satay',
   );
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -240,7 +240,7 @@ async function main() {
   //
   // Onboarding used to key its chips `nuts`/`dairy`/`gluten`; the profile keys its
   // chips `Nuts`/`Dairy-Free`/`Gluten-Free`. Routing the onboarding value verbatim into
-  // `users.diet_restrictions` would have stored a restriction the profile page cannot
+  // the hard-restriction owner would have stored a restriction the profile page cannot
   // render as selected — and, under the profile's old seven-literal enum, could not
   // re-save without a 400. The household would have declared an allergy and then been
   // locked out of their own profile by it.
@@ -297,8 +297,9 @@ async function main() {
     'POST /api/user/complete-onboarding routes soft allergy values through the canonical promoter',
   );
   assert(
-    /profileUpdate\.dietRestrictions\s*=\s*hardRestrictions/.test(routesCode),
-    '…and writes the result to users.diet_restrictions — the canonical hard-restriction owner',
+    /storage\.updatePersonDiet\(req\.user!\.id/.test(routesCode) &&
+      /writeRestrictions\s*\?\s*\{\s*hardRestrictions\s*\}/.test(routesCode),
+    '…and writes the result through updatePersonDiet to the eater row — the canonical hard-restriction owner (CONV1 P4 / WRITE-2)',
   );
 
   const onboardingSource = readFileSync(join(process.cwd(), 'client/src/pages/onboarding-page.tsx'), 'utf-8');
@@ -373,6 +374,7 @@ async function main() {
 
   let dbReached = false;
   let testUserId: number | null = null;
+  let testHouseholdId: number | null = null;
   try {
     const { storage } = await import('../storage.js');
     const { db } = await import('../db.js');
@@ -387,6 +389,8 @@ async function main() {
       email: `surf1b3-${Date.now()}@test.invalid`,
     } as any);
     testUserId = user.id;
+    const { getHouseholdForUser } = await import('../lib/household.js');
+    testHouseholdId = await getHouseholdForUser(user.id);
 
     // The onboarding submission: a nut allergy, and a genuine dislike of mushrooms.
     // Routed exactly as the door routes it.
@@ -394,7 +398,9 @@ async function main() {
       allergies: ['Nuts', ONBOARDING_OTHER_VALUE],
       otherText: 'mushrooms',
     });
-    await storage.updateUserProfile(user.id, { dietRestrictions: routed.hardRestrictions } as any);
+    // CONV1 P4 (WRITE-2): the hard restrictions land on the eater row — the canonical
+    // owner — through the one write door, exactly as the onboarding route writes them.
+    await storage.updatePersonDiet(user.id, { hardRestrictions: routed.hardRestrictions });
     await storage.upsertUserPreferences(user.id, {
       excludedIngredients: routed.softExclusions,
     } as any);
@@ -472,6 +478,10 @@ async function main() {
       try {
         const { db } = await import('../db.js');
         const { sql } = await import('drizzle-orm');
+        if (testHouseholdId != null) {
+          // Registration now creates a household + eater row (CONV1 P4) — remove it too.
+          await db.execute(sql`DELETE FROM households WHERE id = ${testHouseholdId}`);
+        }
         await db.execute(sql`DELETE FROM users WHERE id = ${testUserId}`);
       } catch { /* best effort — the row is inert either way */ }
     }
@@ -569,10 +579,15 @@ async function main() {
   try {
     const { db } = await import('../db.js');
     const { sql } = await import('drizzle-orm');
+    // CONV1 P4 (OWN-1): a person's hard restrictions live on their eater row in their
+    // active household — users.diet_restrictions is retired. The sweep pairs each live
+    // user's soft exclusions with the restrictions the canonical owner now holds.
     const result: any = await db.execute(sql`
-      SELECT u.id, u.diet_restrictions, p.excluded_ingredients
+      SELECT u.id, he.hard_restrictions AS diet_restrictions, p.excluded_ingredients
       FROM users u
       LEFT JOIN user_preferences p ON p.user_id = u.id
+      LEFT JOIN household_members hm ON hm.user_id = u.id AND hm.status = 'active'
+      LEFT JOIN household_eaters he ON he.household_id = hm.household_id AND he.user_id = u.id
       WHERE p.excluded_ingredients IS NOT NULL
         AND array_length(p.excluded_ingredients, 1) > 0
       ORDER BY u.id

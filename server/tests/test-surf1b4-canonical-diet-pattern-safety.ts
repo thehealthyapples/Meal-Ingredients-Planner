@@ -37,7 +37,7 @@
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { shouldExcludeRecipe, scoreRecipeForDiet, canonicaliseDietPattern } from '../../shared/dietRules.js';
+import { shouldExcludeRecipe, scoreRecipeForDiet, canonicaliseDietPattern, dietPatternFromDietTypes } from '../../shared/dietRules.js';
 import {
   findRestrictionById,
   resolveIngredientRestrictions,
@@ -50,8 +50,8 @@ import {
   type SafetyCheckableMeal,
 } from '../lib/household-dietary-safety.js';
 import { db } from '../db.js';
-import { users, meals } from '../../shared/schema.js';
-import { isNotNull } from 'drizzle-orm';
+import { meals, householdEaters, householdMembers } from '../../shared/schema.js';
+import { and, eq, isNotNull, sql } from 'drizzle-orm';
 
 // ─── Harness ──────────────────────────────────────────────────────────────────
 
@@ -548,10 +548,25 @@ async function main(): Promise<void> {
   // ═══════════════════════════════════════════════════════════════════════════
   section('12. LIVE DATA — real households, the real cookbook, the real gate');
 
-  const patternUsers = await db
-    .select({ id: users.id, dietPattern: users.dietPattern })
-    .from(users)
-    .where(isNotNull(users.dietPattern));
+  // CONV1 P4 (OWN-1): a person's diet pattern lives on their eater row — the first
+  // canonical entry of `default_diet_types` — not on the retired users.diet_pattern
+  // column. The sweep reads the canonical owner for every ACTIVE account member.
+  const eaterRows = await db
+    .select({ userId: householdEaters.userId, defaultDietTypes: householdEaters.defaultDietTypes })
+    .from(householdEaters)
+    .innerJoin(householdMembers, and(
+      eq(householdMembers.householdId, householdEaters.householdId),
+      eq(householdMembers.userId, householdEaters.userId),
+      eq(householdMembers.status, 'active'),
+    ))
+    .where(and(
+      isNotNull(householdEaters.userId),
+      sql`cardinality(${householdEaters.defaultDietTypes}) > 0`,
+    ));
+
+  const patternUsers = eaterRows
+    .map(r => ({ id: r.userId!, dietPattern: dietPatternFromDietTypes(r.defaultDietTypes ?? []) }))
+    .filter(u => u.dietPattern !== null);
 
   const veganish = patternUsers.filter(u => {
     const p = canonicaliseDietPattern(u.dietPattern);

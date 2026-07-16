@@ -13,8 +13,9 @@ Find the active session, open its run file, and continue from **Next action**.
 
 | Session ID | Stage | Rollback ID | Next action | Run file |
 |---|---|---|---|---|
+| `ODL2_Visual_Language_Foundation` | Planning | `rollback/ODL2-visual-language-foundation-20260716` → `35d84533` | Draft the UIA §4 amendment from the gathered governing extracts; then token admission + adoption register + ODL2 foundation doc. | [`runs/ODL2_Visual_Language_Foundation.md`](./runs/ODL2_Visual_Language_Foundation.md) |
 | `DEV1_Diet_Pattern_Launch_Recovery` | Complete | `rollback/DEV1-diet-pattern-launch-recovery-20260716` → `9900e405` | None — complete. DEV restored (stale pre-P4 process restarted onto the post-P4 tree after CONV1 P4's OWN-1 drop landed mid-boot). Next deployment must build from `9900e405`+. | [`runs/DEV1_Diet_Pattern_Launch_Recovery.md`](./runs/DEV1_Diet_Pattern_Launch_Recovery.md) |
-| `CONV1_Phase_P4_Household_Person` | In Progress | `rollback/CONV1-phase-p4-household-person-20260716` → `7d1dd2ce` | All six workstreams implemented; migrations applied; Household Dietary Preference gate 🔴→🟢; E2E verified. Awaiting test-suite conversion results, then finalise `CONV1_PHASE_P4_COMPLETION.md` § 6 and close. | [`runs/CONV1_Phase_P4_Household_Person.md`](./runs/CONV1_Phase_P4_Household_Person.md) |
+| `CONV1_Phase_P4_Household_Person` | Complete | `rollback/CONV1-phase-p4-household-person-20260716` → `7d1dd2ce` | None — complete. All six workstreams closed; Household Dietary Preference 🔴→🟢; 26 suites green. Recommends **CONV1 P5** (`OWN-4` → `OWN-3` → `SCH-1`) next. Report: `docs/implementation/governance/CONV1_PHASE_P4_COMPLETION.md`. | [`runs/CONV1_Phase_P4_Household_Person.md`](./runs/CONV1_Phase_P4_Household_Person.md) |
 | `ODL1_Home_Orchard_Design_Language` | Waiting for User | `rollback/ODL1-home-orchard-design-language-20260716` → `7d1dd2ce` | Delivered — lawful North Star subset on `/home` (display-voice greeting, named type roles, honest plant absence, Companion beat). Gated elements (orchard light, signature hand, depth) named with unlock paths in the report. Await review; ADOPT on signature typography unlocks the hand-written greeting. | [`runs/ODL1_Home_Orchard_Design_Language.md`](./runs/ODL1_Home_Orchard_Design_Language.md) |
 | `DCA1_User_Visible_Data_Coverage_Audit` | Waiting for User | `rollback/DCA1-user-visible-data-coverage-audit-20260714` → `f9c23c97` | `SURF1A` (W1) delivered. Await direction on the remaining `SURF1` phases — W0 (household safety) is the highest. | [`runs/DCA1_User_Visible_Data_Coverage_Audit.md`](./runs/DCA1_User_Visible_Data_Coverage_Audit.md) |
 | `SURF1A_Existing_Data_Surfacing` | Complete | `rollback/SURF1A-existing-data-surfacing-20260714` → `f9c23c97` | None — complete. Recommends DCA1 gap #1 (`dietRestrictions` never reach the Companion) next. | [`runs/SURF1A_Existing_Data_Surfacing.md`](./runs/SURF1A_Existing_Data_Surfacing.md) |
@@ -83,4 +84,4 @@ When a session reaches **Complete**, move its row out of this table and add a
 line to [INDEX.md](./INDEX.md) — `.engineering/scripts/session-complete.sh` does
 both. If no active sessions remain, set the top marker to `ESR:IDLE`.
 
-_Last automatic heartbeat (Stop hook): 2026-07-16T23:24:59Z UTC_
+_Last automatic heartbeat (Stop hook): 2026-07-16T23:35:32Z UTC_

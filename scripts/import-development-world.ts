@@ -333,11 +333,11 @@ async function ensureAccount(fixture: HouseholdFixture, key: "owner" | "partner"
   // Canonical profile + dev-world account flags. Direct column update — the
   // verified/beta flags have no storage setter (registration is closed in dev),
   // matching how the Benchmark World seeder and createDemoUser set them.
+  // CONV1 P4 (OWN-1): users.diet* is retired — the fixture's account-level diet is
+  // seeded onto the eater row (the canonical owner) by the eater loop below.
   const [updated] = await db.update(users).set({
     displayName: account.displayName,
     firstName: account.firstName,
-    dietPattern: account.dietPattern ?? null,
-    dietRestrictions: account.dietRestrictions ? [...account.dietRestrictions] : null,
     eatingSchedule: account.eatingSchedule ?? "None",
     isBetaUser: true,
     emailVerified: true,
@@ -521,8 +521,14 @@ async function reseedHousehold(
     companionPersonality: p.companionPersonality ?? "companion",
   } as Parameters<typeof storage.upsertUserPreferences>[1]);
 
-  // 2. Eaters — adult members auto-synced first, then adjusted; children created.
-  await storage.syncMembersAsEaters(householdId);
+  // 2. Eaters — the reset wiped this household's eater rows above, so recreate the
+  // members' rows first (CONV1 P4 / WRITE-3: creation is otherwise a membership
+  // event), then adjust to fixture detail; children created.
+  const activeMembers = await db.select({ userId: householdMembers.userId }).from(householdMembers)
+    .where(and(eq(householdMembers.householdId, householdId), eq(householdMembers.status, "active")));
+  for (const m of activeMembers) {
+    await storage.ensureEaterForMember(householdId, m.userId);
+  }
   const syncedEaters = await storage.getHouseholdEaters(householdId);
   for (const eater of fixture.eaters) {
     if (eater.accountKey) {

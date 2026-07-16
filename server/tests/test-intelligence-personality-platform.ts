@@ -510,6 +510,8 @@ async function assertProfileViewOmitsVoice(): Promise<void> {
   const handler = createProfileReadHandler(async () => ({
     getUser: async () => ({ id: 7, username: "t", displayName: "T" }) as any,
     getUserPreferences: async () => prefsRow as any,
+    // CONV1 P4 (OWN-1): the port reads the person's diet from its canonical owner.
+    getPersonDiet: async () => ({ dietPattern: null, dietTypes: [], hardRestrictions: [] }),
   }));
   const result = (await handler(
     { verb: "read", capabilityId: "profile", parameters: {} } as any,

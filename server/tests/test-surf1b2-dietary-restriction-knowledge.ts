@@ -462,8 +462,11 @@ async function run(): Promise<void> {
     const { db } = await import('../db.js');
     const { sql } = await import('drizzle-orm');
 
+    // CONV1 P4 (OWN-1): users.diet_restrictions is retired. What the profile door
+    // writes now lives on the ACCOUNT-BACKED eater rows; the second sweep still
+    // covers every eater row (children included) — together, the one owner, whole.
     const profileRows: any = await db.execute(
-      sql`SELECT DISTINCT unnest(diet_restrictions) AS value FROM users WHERE diet_restrictions IS NOT NULL`,
+      sql`SELECT DISTINCT unnest(hard_restrictions) AS value FROM household_eaters WHERE user_id IS NOT NULL AND hard_restrictions IS NOT NULL`,
     );
     const eaterRows: any = await db.execute(
       sql`SELECT DISTINCT unnest(hard_restrictions) AS value FROM household_eaters WHERE hard_restrictions IS NOT NULL`,
@@ -473,13 +476,13 @@ async function run(): Promise<void> {
     const liveProfile: string[] = (profileRows.rows ?? profileRows).map((r: any) => r.value).filter(Boolean);
     const liveEater: string[] = (eaterRows.rows ?? eaterRows).map((r: any) => r.value).filter(Boolean);
 
-    console.log(`  … users.diet_restrictions holds ${liveProfile.length} distinct values: ${liveProfile.join(', ')}`);
+    console.log(`  … account members' hard_restrictions hold ${liveProfile.length} distinct values: ${liveProfile.join(', ')}`);
     console.log(`  … household_eaters.hard_restrictions holds ${liveEater.length} distinct values: ${liveEater.join(', ')}`);
 
     const badProfile = unenforceableRestrictions(liveProfile);
     assert(
       badProfile.length === 0,
-      `EVERY distinct restriction in live users.diet_restrictions resolves (${liveProfile.length}/${liveProfile.length})`,
+      `EVERY distinct restriction the profile door has stored on account members' eater rows resolves (${liveProfile.length}/${liveProfile.length})`,
       badProfile.length ? `unenforceable: ${badProfile.join(', ')}` : undefined,
     );
     const badEater = unenforceableRestrictions(liveEater);
@@ -491,12 +494,18 @@ async function run(): Promise<void> {
 
     // The four households SURF1B named as unprotected-by-knowledge: users 181–184,
     // who declared {meat, fish, dairy, eggs, honey}. Resolve them for real.
+    // CONV1 P4: the declaration lives on the eater row of each user's ACTIVE household.
     const restrictedUsers: any = await db.execute(
-      sql`SELECT id, diet_restrictions FROM users
-          WHERE diet_restrictions IS NOT NULL
-            AND array_length(diet_restrictions, 1) > 0
-            AND (diet_restrictions && ARRAY['meat','fish','honey'])
-          ORDER BY id`,
+      sql`SELECT he.user_id AS id, he.hard_restrictions AS diet_restrictions
+          FROM household_eaters he
+          JOIN household_members hm
+            ON hm.household_id = he.household_id
+           AND hm.user_id = he.user_id
+           AND hm.status = 'active'
+          WHERE he.user_id IS NOT NULL
+            AND array_length(he.hard_restrictions, 1) > 0
+            AND (he.hard_restrictions && ARRAY['meat','fish','honey'])
+          ORDER BY he.user_id`,
     );
     const rows = (restrictedUsers.rows ?? restrictedUsers) as Array<{ id: number; diet_restrictions: string[] }>;
     console.log(`  … ${rows.length} live user(s) declare meat / fish / honey`);
