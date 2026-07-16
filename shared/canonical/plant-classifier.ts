@@ -212,9 +212,26 @@ const SINGLE_PLANT_SLUGS = new Set(
  * Returns false for non-canonical foods and for foods with diversityGroupSlug null.
  */
 export function isPlantIngredient(ingredient: string): boolean {
+  return plantDiversityGroup(ingredient) !== null;
+}
+
+/**
+ * The diversity group an ingredient counts as for the 30-plants counter, or null
+ * if it is not a distinct plant.
+ *
+ * THIS IS THE KEY A PLANT COUNT MUST DEDUPE ON — never the ingredient slug, and
+ * never the canonical slug. Kale and cavolo nero are one plant (`brassica-leafy`);
+ * every tomato variety is one plant. A counter that dedupes on the ingredient slug
+ * counts them twice and tells the household it ate more plants than it did, which
+ * is the one thing the 30-plants number must never do (CPI1 S1-2).
+ *
+ * `isPlantIngredient` above is the same question asked as a yes/no, and is now
+ * answered by this function so the two can never disagree.
+ */
+export function plantDiversityGroup(ingredient: string): string | null {
   const r = resolveCanonicalFood(ingredient);
-  if (!r.matched || !r.diversityGroupSlug) return false;
-  return SINGLE_PLANT_SLUGS.has(r.diversityGroupSlug);
+  if (!r.matched || !r.diversityGroupSlug) return null;
+  return SINGLE_PLANT_SLUGS.has(r.diversityGroupSlug) ? r.diversityGroupSlug : null;
 }
 
 /**

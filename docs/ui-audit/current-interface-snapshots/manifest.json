@@ -1,0 +1,1403 @@
+{
+  "captured_for": "UX_CURRENT_INTERFACE_VISUAL_EVIDENCE",
+  "base_url": "http://localhost:5000",
+  "zero_write": "No database write of any kind. No account created. No production data invented.",
+  "sessions": {
+    "household": {
+      "world": "Development World",
+      "account": "price.single.parent.owner@dev.thehealthyapples.dev",
+      "note": "fictional, DEV-only, already imported"
+    },
+    "benchmark": {
+      "world": "Benchmark",
+      "account": "john.harris.auto@benchmark.thehealthyapples.dev",
+      "note": "fictional, seeded; the only household with a real shopping list"
+    },
+    "public": "no session"
+  },
+  "viewports": {
+    "desktop": {
+      "width": 1440,
+      "height": 900
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844
+    }
+  },
+  "admin": "NOT CAPTURED — requires an admin session; skipped by explicit decision to avoid a privilege change.",
+  "captured": 137,
+  "failed": 0,
+  "shots": [
+    {
+      "route": "/home",
+      "state": "populated (natural)",
+      "component": "Home",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "01-home-desktop-1440-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/home",
+      "state": "populated (natural)",
+      "component": "Home",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "01-home-desktop-1440-full.png",
+      "ok": true
+    },
+    {
+      "route": "/planner",
+      "state": "populated (natural)",
+      "component": "Planner",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "02-planner-desktop-1440-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/planner",
+      "state": "populated (natural)",
+      "component": "Planner",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "02-planner-desktop-1440-full.png",
+      "ok": true
+    },
+    {
+      "route": "/cookbook",
+      "state": "populated (natural)",
+      "component": "Cookbook",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "03-cookbook-desktop-1440-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/cookbook",
+      "state": "populated (natural)",
+      "component": "Cookbook",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "03-cookbook-desktop-1440-full.png",
+      "ok": true
+    },
+    {
+      "route": "/meals/3653",
+      "state": "populated (natural)",
+      "component": "Meal detail",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "04-meal-detail-desktop-1440-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/meals/3653",
+      "state": "populated (natural)",
+      "component": "Meal detail",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "04-meal-detail-desktop-1440-full.png",
+      "ok": true
+    },
+    {
+      "route": "/shopping-workspace",
+      "state": "populated (natural)",
+      "component": "Shopping workspace",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "05-shopping-desktop-1440-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/shopping-workspace",
+      "state": "populated (natural)",
+      "component": "Shopping workspace",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "05-shopping-desktop-1440-full.png",
+      "ok": true
+    },
+    {
+      "route": "/pantry",
+      "state": "populated (natural)",
+      "component": "Pantry",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "06-pantry-desktop-1440-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/pantry",
+      "state": "populated (natural)",
+      "component": "Pantry",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "06-pantry-desktop-1440-full.png",
+      "ok": true
+    },
+    {
+      "route": "/plant-diversity",
+      "state": "populated (natural)",
+      "component": "Nutrition (Plant Diversity)",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "07-nutrition-desktop-1440-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/plant-diversity",
+      "state": "populated (natural)",
+      "component": "Nutrition (Plant Diversity)",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "07-nutrition-desktop-1440-full.png",
+      "ok": true
+    },
+    {
+      "route": "/profile",
+      "state": "populated (natural)",
+      "component": "Profile / Household",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "08-profile-desktop-1440-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/profile",
+      "state": "populated (natural)",
+      "component": "Profile / Household",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "08-profile-desktop-1440-full.png",
+      "ok": true
+    },
+    {
+      "route": "/my-diary",
+      "state": "populated (natural)",
+      "component": "My Diary",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "09-diary-desktop-1440-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/my-diary",
+      "state": "populated (natural)",
+      "component": "My Diary",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "09-diary-desktop-1440-full.png",
+      "ok": true
+    },
+    {
+      "route": "/analyser",
+      "state": "populated (natural)",
+      "component": "Analyser",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "10-analyser-desktop-1440-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/analyser",
+      "state": "populated (natural)",
+      "component": "Analyser",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "10-analyser-desktop-1440-full.png",
+      "ok": true
+    },
+    {
+      "route": "/dashboard",
+      "state": "populated (natural)",
+      "component": "Dashboard (legacy home)",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "11-dashboard-desktop-1440-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/dashboard",
+      "state": "populated (natural)",
+      "component": "Dashboard (legacy home)",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "11-dashboard-desktop-1440-full.png",
+      "ok": true
+    },
+    {
+      "route": "/partners",
+      "state": "populated (natural)",
+      "component": "Partners",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "12-partners-desktop-1440-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/partners",
+      "state": "populated (natural)",
+      "component": "Partners",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "12-partners-desktop-1440-full.png",
+      "ok": true
+    },
+    {
+      "route": "/basket",
+      "state": "populated (natural)",
+      "component": "Basket / Analyse basket",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "13-basket-desktop-1440-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/basket",
+      "state": "populated (natural)",
+      "component": "Basket / Analyse basket",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "13-basket-desktop-1440-full.png",
+      "ok": true
+    },
+    {
+      "route": "/home",
+      "state": "populated (natural)",
+      "component": "Home",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "01-home-mobile-390-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/home",
+      "state": "populated (natural)",
+      "component": "Home",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "01-home-mobile-390-full.png",
+      "ok": true
+    },
+    {
+      "route": "/planner",
+      "state": "populated (natural)",
+      "component": "Planner",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "02-planner-mobile-390-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/planner",
+      "state": "populated (natural)",
+      "component": "Planner",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "02-planner-mobile-390-full.png",
+      "ok": true
+    },
+    {
+      "route": "/cookbook",
+      "state": "populated (natural)",
+      "component": "Cookbook",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "03-cookbook-mobile-390-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/cookbook",
+      "state": "populated (natural)",
+      "component": "Cookbook",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "03-cookbook-mobile-390-full.png",
+      "ok": true
+    },
+    {
+      "route": "/meals/3653",
+      "state": "populated (natural)",
+      "component": "Meal detail",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "04-meal-detail-mobile-390-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/meals/3653",
+      "state": "populated (natural)",
+      "component": "Meal detail",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "04-meal-detail-mobile-390-full.png",
+      "ok": true
+    },
+    {
+      "route": "/shopping-workspace",
+      "state": "populated (natural)",
+      "component": "Shopping workspace",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "05-shopping-mobile-390-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/shopping-workspace",
+      "state": "populated (natural)",
+      "component": "Shopping workspace",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "05-shopping-mobile-390-full.png",
+      "ok": true
+    },
+    {
+      "route": "/pantry",
+      "state": "populated (natural)",
+      "component": "Pantry",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "06-pantry-mobile-390-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/pantry",
+      "state": "populated (natural)",
+      "component": "Pantry",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "06-pantry-mobile-390-full.png",
+      "ok": true
+    },
+    {
+      "route": "/plant-diversity",
+      "state": "populated (natural)",
+      "component": "Nutrition (Plant Diversity)",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "07-nutrition-mobile-390-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/plant-diversity",
+      "state": "populated (natural)",
+      "component": "Nutrition (Plant Diversity)",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "07-nutrition-mobile-390-full.png",
+      "ok": true
+    },
+    {
+      "route": "/profile",
+      "state": "populated (natural)",
+      "component": "Profile / Household",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "08-profile-mobile-390-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/profile",
+      "state": "populated (natural)",
+      "component": "Profile / Household",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "08-profile-mobile-390-full.png",
+      "ok": true
+    },
+    {
+      "route": "/my-diary",
+      "state": "populated (natural)",
+      "component": "My Diary",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "09-diary-mobile-390-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/my-diary",
+      "state": "populated (natural)",
+      "component": "My Diary",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "09-diary-mobile-390-full.png",
+      "ok": true
+    },
+    {
+      "route": "/analyser",
+      "state": "populated (natural)",
+      "component": "Analyser",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "10-analyser-mobile-390-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/analyser",
+      "state": "populated (natural)",
+      "component": "Analyser",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "10-analyser-mobile-390-full.png",
+      "ok": true
+    },
+    {
+      "route": "/dashboard",
+      "state": "populated (natural)",
+      "component": "Dashboard (legacy home)",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "11-dashboard-mobile-390-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/dashboard",
+      "state": "populated (natural)",
+      "component": "Dashboard (legacy home)",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "11-dashboard-mobile-390-full.png",
+      "ok": true
+    },
+    {
+      "route": "/partners",
+      "state": "populated (natural)",
+      "component": "Partners",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "12-partners-mobile-390-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/partners",
+      "state": "populated (natural)",
+      "component": "Partners",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "12-partners-mobile-390-full.png",
+      "ok": true
+    },
+    {
+      "route": "/basket",
+      "state": "populated (natural)",
+      "component": "Basket / Analyse basket",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "13-basket-mobile-390-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/basket",
+      "state": "populated (natural)",
+      "component": "Basket / Analyse basket",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "13-basket-mobile-390-full.png",
+      "ok": true
+    },
+    {
+      "route": "/",
+      "state": "populated (natural)",
+      "component": "Landing (logged out)",
+      "session": "public",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "14-landing-desktop-1440-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/",
+      "state": "populated (natural)",
+      "component": "Landing (logged out)",
+      "session": "public",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "14-landing-desktop-1440-full.png",
+      "ok": true
+    },
+    {
+      "route": "/auth",
+      "state": "form (natural)",
+      "component": "Sign in — form",
+      "session": "public",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "15-auth-desktop-1440-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/auth",
+      "state": "form (natural)",
+      "component": "Sign in — form",
+      "session": "public",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "15-auth-desktop-1440-full.png",
+      "ok": true
+    },
+    {
+      "route": "/this-route-does-not-exist",
+      "state": "error — 404 (natural)",
+      "component": "Not Found",
+      "session": "public",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "16-not-found-desktop-1440-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/this-route-does-not-exist",
+      "state": "error — 404 (natural)",
+      "component": "Not Found",
+      "session": "public",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "16-not-found-desktop-1440-full.png",
+      "ok": true
+    },
+    {
+      "route": "/",
+      "state": "populated (natural)",
+      "component": "Landing (logged out)",
+      "session": "public",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "14-landing-mobile-390-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/",
+      "state": "populated (natural)",
+      "component": "Landing (logged out)",
+      "session": "public",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "14-landing-mobile-390-full.png",
+      "ok": true
+    },
+    {
+      "route": "/auth",
+      "state": "form (natural)",
+      "component": "Sign in — form",
+      "session": "public",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "15-auth-mobile-390-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/auth",
+      "state": "form (natural)",
+      "component": "Sign in — form",
+      "session": "public",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "15-auth-mobile-390-full.png",
+      "ok": true
+    },
+    {
+      "route": "/this-route-does-not-exist",
+      "state": "error — 404 (natural)",
+      "component": "Not Found",
+      "session": "public",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "16-not-found-mobile-390-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/this-route-does-not-exist",
+      "state": "error — 404 (natural)",
+      "component": "Not Found",
+      "session": "public",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "16-not-found-mobile-390-full.png",
+      "ok": true
+    },
+    {
+      "route": "/home",
+      "state": "closed (natural)",
+      "component": "FloatingAssistant — FAB",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "20-companion-fab-desktop-1440.png",
+      "ok": true
+    },
+    {
+      "route": "/home",
+      "state": "open (natural)",
+      "component": "FloatingAssistant — Companion drawer",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "21-companion-open-desktop-1440-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/home",
+      "state": "open (natural)",
+      "component": "FloatingAssistant — Companion drawer",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "21-companion-open-desktop-1440-full.png",
+      "ok": true
+    },
+    {
+      "route": "/cookbook",
+      "state": "open (natural)",
+      "component": "CookbookWorkspacePanel — large workspace (Overlay → Dialog)",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "22-workspace-large-desktop-1440-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/cookbook",
+      "state": "open (natural)",
+      "component": "CookbookWorkspacePanel — large workspace (Overlay → Dialog)",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "22-workspace-large-desktop-1440-full.png",
+      "ok": true
+    },
+    {
+      "route": "/cookbook",
+      "state": "populated (natural)",
+      "component": "MealCard",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "24-meal-card-desktop-1440.png",
+      "ok": true
+    },
+    {
+      "route": "/cookbook",
+      "state": "default (natural)",
+      "component": "Button variant=\"default\" (primary) — \"Add to list\", inline on the meal card",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "27a-button-primary-desktop-1440.png",
+      "ok": true
+    },
+    {
+      "route": "/cookbook",
+      "state": "default (natural)",
+      "component": "Button — secondary/outline variant, inline on the meal card",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "27b-button-secondary-desktop-1440.png",
+      "ok": true
+    },
+    {
+      "route": "/cookbook",
+      "state": "empty input (natural)",
+      "component": "WorkspaceHeader — canonical search",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "25-search-desktop-1440.png",
+      "ok": true
+    },
+    {
+      "route": "/home",
+      "state": "populated (natural)",
+      "component": "Home intelligence card — \"A gentle reminder\"",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "26a-insight-card-reminders-desktop-1440.png",
+      "ok": true
+    },
+    {
+      "route": "/home",
+      "state": "populated — 0 of 30 plants (natural)",
+      "component": "Home intelligence card — Plant Diversity",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "26b-insight-card-plants-desktop-1440.png",
+      "ok": true
+    },
+    {
+      "route": "/profile",
+      "state": "populated (natural)",
+      "component": "Profile settings rows (NOT an HTML <form>)",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "29a-profile-settings-rows-desktop-1440.png",
+      "ok": true
+    },
+    {
+      "route": "/profile",
+      "state": "populated (natural)",
+      "component": "Profile feature toggles — Switch controls",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "29b-profile-toggles-desktop-1440.png",
+      "ok": true
+    },
+    {
+      "route": "/home",
+      "state": "closed (natural)",
+      "component": "FloatingAssistant — FAB",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "20-companion-fab-mobile-390.png",
+      "ok": true
+    },
+    {
+      "route": "/home",
+      "state": "open (natural)",
+      "component": "FloatingAssistant — Companion drawer",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "21-companion-open-mobile-390-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/home",
+      "state": "open (natural)",
+      "component": "FloatingAssistant — Companion drawer",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "21-companion-open-mobile-390-full.png",
+      "ok": true
+    },
+    {
+      "route": "/cookbook",
+      "state": "open (natural)",
+      "component": "CookbookWorkspacePanel — mobile bottom sheet (Overlay → Drawer)",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "23-mobile-bottom-sheet-mobile-390-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/cookbook",
+      "state": "open (natural)",
+      "component": "CookbookWorkspacePanel — mobile bottom sheet (Overlay → Drawer)",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "23-mobile-bottom-sheet-mobile-390-full.png",
+      "ok": true
+    },
+    {
+      "route": "/cookbook",
+      "state": "populated (natural)",
+      "component": "MealCard",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "24-meal-card-mobile-390.png",
+      "ok": true
+    },
+    {
+      "route": "/cookbook",
+      "state": "default (natural)",
+      "component": "Button — primary action inside the meal action sheet (the inline card buttons are HIDDEN at this width)",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "27a-button-primary-mobile-390.png",
+      "ok": true
+    },
+    {
+      "route": "/cookbook",
+      "state": "default (natural)",
+      "component": "Button — secondary action inside the meal action sheet",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "27b-button-secondary-mobile-390.png",
+      "ok": true
+    },
+    {
+      "route": "/cookbook",
+      "state": "expanded via mobile search toggle (natural)",
+      "component": "WorkspaceHeader — mobile search. NOTE: this is a SECOND search input (input-workspace-search-mobile); the desktop one (input-workspace-search) is in the DOM at this width but hidden. Two inputs own one concern.",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "25-search-mobile-390.png",
+      "ok": true
+    },
+    {
+      "route": "/home",
+      "state": "populated (natural)",
+      "component": "Home intelligence card — \"A gentle reminder\"",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "26a-insight-card-reminders-mobile-390.png",
+      "ok": true
+    },
+    {
+      "route": "/home",
+      "state": "populated — 0 of 30 plants (natural)",
+      "component": "Home intelligence card — Plant Diversity",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "26b-insight-card-plants-mobile-390.png",
+      "ok": true
+    },
+    {
+      "route": "/home",
+      "state": "default (natural)",
+      "component": "BottomNav — primary navigation (all breakpoints)",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "28-bottom-nav-mobile-390.png",
+      "ok": true
+    },
+    {
+      "route": "/profile",
+      "state": "populated (natural)",
+      "component": "Profile settings rows (NOT an HTML <form>)",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "29a-profile-settings-rows-mobile-390.png",
+      "ok": true
+    },
+    {
+      "route": "/profile",
+      "state": "populated (natural)",
+      "component": "Profile feature toggles — Switch controls",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "29b-profile-toggles-mobile-390.png",
+      "ok": true
+    },
+    {
+      "route": "/home",
+      "state": "loading — Skeleton / RouteFallback",
+      "component": "ui/skeleton.tsx, App.tsx RouteFallback",
+      "session": "household",
+      "induced": "page.route delayed every /api/** response by 15s — browser-only, nothing persisted",
+      "viewport": "1440x900",
+      "file": "30-loading-desktop-1440-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/home",
+      "state": "loading — Skeleton / RouteFallback",
+      "component": "ui/skeleton.tsx, App.tsx RouteFallback",
+      "session": "household",
+      "induced": "page.route delayed every /api/** response by 15s — browser-only, nothing persisted",
+      "viewport": "1440x900",
+      "file": "30-loading-desktop-1440-full.png",
+      "ok": true
+    },
+    {
+      "route": "/home",
+      "state": "error — designed LoadError, one section failed, rest of page healthy",
+      "component": "ui/load-error.tsx (\"We couldn't load…\" + Try again), error-boundary.tsx",
+      "session": "household",
+      "induced": "page.route returned HTTP 500 for /api/home/intelligence only — every other endpoint healthy. Browser-only, nothing persisted",
+      "viewport": "1440x900",
+      "file": "31-error-desktop-1440-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/home",
+      "state": "error — designed LoadError, one section failed, rest of page healthy",
+      "component": "ui/load-error.tsx (\"We couldn't load…\" + Try again), error-boundary.tsx",
+      "session": "household",
+      "induced": "page.route returned HTTP 500 for /api/home/intelligence only — every other endpoint healthy. Browser-only, nothing persisted",
+      "viewport": "1440x900",
+      "file": "31-error-desktop-1440-full.png",
+      "ok": true
+    },
+    {
+      "route": "/home",
+      "state": "error — TOTAL API failure (session lost): renders a blank white page, no designed state",
+      "component": "(none — no owner for this state)",
+      "session": "household",
+      "induced": "page.route returned HTTP 500 for every /api/** including /api/user — browser-only, nothing persisted",
+      "viewport": "1440x900",
+      "file": "31b-error-total-api-failure-desktop-1440-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/home",
+      "state": "error — TOTAL API failure (session lost): renders a blank white page, no designed state",
+      "component": "(none — no owner for this state)",
+      "session": "household",
+      "induced": "page.route returned HTTP 500 for every /api/** including /api/user — browser-only, nothing persisted",
+      "viewport": "1440x900",
+      "file": "31b-error-total-api-failure-desktop-1440-full.png",
+      "ok": true
+    },
+    {
+      "route": "/shopping-workspace",
+      "state": "empty (NATURAL — this household has no shopping list)",
+      "component": "ui/empty-state.tsx (variant=empty)",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "32-empty-shopping-desktop-1440-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/shopping-workspace",
+      "state": "empty (NATURAL — this household has no shopping list)",
+      "component": "ui/empty-state.tsx (variant=empty)",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "32-empty-shopping-desktop-1440-full.png",
+      "ok": true
+    },
+    {
+      "route": "/cookbook?q=zzzzqqqxnotathing",
+      "state": "empty — filtered / no results (natural: real search, no matches)",
+      "component": "ui/empty-state.tsx (variant=filtered)",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "33-empty-filtered-desktop-1440-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/cookbook?q=zzzzqqqxnotathing",
+      "state": "empty — filtered / no results (natural: real search, no matches)",
+      "component": "ui/empty-state.tsx (variant=filtered)",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "33-empty-filtered-desktop-1440-full.png",
+      "ok": true
+    },
+    {
+      "route": "/shopping-workspace",
+      "state": "populated (natural — 7 real seeded items)",
+      "component": "Shopping workspace — populated",
+      "session": "benchmark",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "05b-shopping-populated-desktop-1440-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/shopping-workspace",
+      "state": "populated (natural — 7 real seeded items)",
+      "component": "Shopping workspace — populated",
+      "session": "benchmark",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "05b-shopping-populated-desktop-1440-full.png",
+      "ok": true
+    },
+    {
+      "route": "/basket",
+      "state": "populated (natural — 7 real seeded items)",
+      "component": "Basket — populated",
+      "session": "benchmark",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "13b-basket-populated-desktop-1440-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/basket",
+      "state": "populated (natural — 7 real seeded items)",
+      "component": "Basket — populated",
+      "session": "benchmark",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "13b-basket-populated-desktop-1440-full.png",
+      "ok": true
+    },
+    {
+      "route": "/basket",
+      "state": "unresolved / warning — 'Needs attention' items (needsReview)",
+      "component": "ShoppingListView — Needs attention section, amber warning treatment",
+      "session": "benchmark",
+      "induced": "page.route rewrote GET /api/shopping-list, setting needsReview=true + reviewReason='ambiguous_term' on 3 of the household's OWN 7 real items — browser-only, nothing invented, nothing persisted",
+      "viewport": "1440x900",
+      "file": "34-unresolved-desktop-1440-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/basket",
+      "state": "unresolved / warning — 'Needs attention' items (needsReview)",
+      "component": "ShoppingListView — Needs attention section, amber warning treatment",
+      "session": "benchmark",
+      "induced": "page.route rewrote GET /api/shopping-list, setting needsReview=true + reviewReason='ambiguous_term' on 3 of the household's OWN 7 real items — browser-only, nothing invented, nothing persisted",
+      "viewport": "1440x900",
+      "file": "34-unresolved-desktop-1440-full.png",
+      "ok": true
+    },
+    {
+      "route": "/cookbook",
+      "state": "open (natural)",
+      "component": "\"Who's eating this meal?\" — audience-selection modal, shown BEFORE the add completes",
+      "session": "benchmark",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "38-audience-modal-desktop-1440-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/cookbook",
+      "state": "open (natural)",
+      "component": "\"Who's eating this meal?\" — audience-selection modal, shown BEFORE the add completes",
+      "session": "benchmark",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "38-audience-modal-desktop-1440-full.png",
+      "ok": true
+    },
+    {
+      "route": "/cookbook",
+      "state": "success feedback — toast (\"Added to basket\")",
+      "component": "ui/toaster.tsx, ui/toast.tsx (CheckCircle2, primary, 2500ms)",
+      "session": "benchmark",
+      "induced": "real UI interaction (\"Add to basket\" on a meal card). Both writes it fires (POST /api/user-basket and POST /api/shopping-list/from-meals) were intercepted and answered locally with 200 — the toast is genuine, neither write reached the server, nothing persisted",
+      "viewport": "1440x900",
+      "file": "35-success-toast-desktop-1440-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/cookbook",
+      "state": "success feedback — toast (\"Added to basket\")",
+      "component": "ui/toaster.tsx, ui/toast.tsx (CheckCircle2, primary, 2500ms)",
+      "session": "benchmark",
+      "induced": "real UI interaction (\"Add to basket\" on a meal card). Both writes it fires (POST /api/user-basket and POST /api/shopping-list/from-meals) were intercepted and answered locally with 200 — the toast is genuine, neither write reached the server, nothing persisted",
+      "viewport": "1440x900",
+      "file": "35-success-toast-desktop-1440-full.png",
+      "ok": true
+    },
+    {
+      "route": "/cookbook",
+      "state": "open (natural)",
+      "component": "AddToWeekModal — compact modal (ui/dialog-foundation.ts)",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "36-compact-modal-desktop-1440-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/cookbook",
+      "state": "open (natural)",
+      "component": "AddToWeekModal — compact modal (ui/dialog-foundation.ts)",
+      "session": "household",
+      "induced": null,
+      "viewport": "1440x900",
+      "file": "36-compact-modal-desktop-1440-full.png",
+      "ok": true
+    },
+    {
+      "route": "/home",
+      "state": "loading — Skeleton / RouteFallback",
+      "component": "ui/skeleton.tsx, App.tsx RouteFallback",
+      "session": "household",
+      "induced": "page.route delayed every /api/** response by 15s — browser-only, nothing persisted",
+      "viewport": "390x844",
+      "file": "30-loading-mobile-390-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/home",
+      "state": "loading — Skeleton / RouteFallback",
+      "component": "ui/skeleton.tsx, App.tsx RouteFallback",
+      "session": "household",
+      "induced": "page.route delayed every /api/** response by 15s — browser-only, nothing persisted",
+      "viewport": "390x844",
+      "file": "30-loading-mobile-390-full.png",
+      "ok": true
+    },
+    {
+      "route": "/home",
+      "state": "error — designed LoadError, one section failed, rest of page healthy",
+      "component": "ui/load-error.tsx (\"We couldn't load…\" + Try again), error-boundary.tsx",
+      "session": "household",
+      "induced": "page.route returned HTTP 500 for /api/home/intelligence only — every other endpoint healthy. Browser-only, nothing persisted",
+      "viewport": "390x844",
+      "file": "31-error-mobile-390-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/home",
+      "state": "error — designed LoadError, one section failed, rest of page healthy",
+      "component": "ui/load-error.tsx (\"We couldn't load…\" + Try again), error-boundary.tsx",
+      "session": "household",
+      "induced": "page.route returned HTTP 500 for /api/home/intelligence only — every other endpoint healthy. Browser-only, nothing persisted",
+      "viewport": "390x844",
+      "file": "31-error-mobile-390-full.png",
+      "ok": true
+    },
+    {
+      "route": "/home",
+      "state": "error — TOTAL API failure (session lost): renders a blank white page, no designed state",
+      "component": "(none — no owner for this state)",
+      "session": "household",
+      "induced": "page.route returned HTTP 500 for every /api/** including /api/user — browser-only, nothing persisted",
+      "viewport": "390x844",
+      "file": "31b-error-total-api-failure-mobile-390-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/home",
+      "state": "error — TOTAL API failure (session lost): renders a blank white page, no designed state",
+      "component": "(none — no owner for this state)",
+      "session": "household",
+      "induced": "page.route returned HTTP 500 for every /api/** including /api/user — browser-only, nothing persisted",
+      "viewport": "390x844",
+      "file": "31b-error-total-api-failure-mobile-390-full.png",
+      "ok": true
+    },
+    {
+      "route": "/shopping-workspace",
+      "state": "empty (NATURAL — this household has no shopping list)",
+      "component": "ui/empty-state.tsx (variant=empty)",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "32-empty-shopping-mobile-390-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/shopping-workspace",
+      "state": "empty (NATURAL — this household has no shopping list)",
+      "component": "ui/empty-state.tsx (variant=empty)",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "32-empty-shopping-mobile-390-full.png",
+      "ok": true
+    },
+    {
+      "route": "/cookbook?q=zzzzqqqxnotathing",
+      "state": "empty — filtered / no results (natural: real search, no matches)",
+      "component": "ui/empty-state.tsx (variant=filtered)",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "33-empty-filtered-mobile-390-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/cookbook?q=zzzzqqqxnotathing",
+      "state": "empty — filtered / no results (natural: real search, no matches)",
+      "component": "ui/empty-state.tsx (variant=filtered)",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "33-empty-filtered-mobile-390-full.png",
+      "ok": true
+    },
+    {
+      "route": "/shopping-workspace",
+      "state": "populated (natural — 7 real seeded items)",
+      "component": "Shopping workspace — populated",
+      "session": "benchmark",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "05b-shopping-populated-mobile-390-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/shopping-workspace",
+      "state": "populated (natural — 7 real seeded items)",
+      "component": "Shopping workspace — populated",
+      "session": "benchmark",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "05b-shopping-populated-mobile-390-full.png",
+      "ok": true
+    },
+    {
+      "route": "/basket",
+      "state": "populated (natural — 7 real seeded items)",
+      "component": "Basket — populated",
+      "session": "benchmark",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "13b-basket-populated-mobile-390-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/basket",
+      "state": "populated (natural — 7 real seeded items)",
+      "component": "Basket — populated",
+      "session": "benchmark",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "13b-basket-populated-mobile-390-full.png",
+      "ok": true
+    },
+    {
+      "route": "/basket",
+      "state": "unresolved / warning — 'Needs attention' items (needsReview)",
+      "component": "ShoppingListView — Needs attention section, amber warning treatment",
+      "session": "benchmark",
+      "induced": "page.route rewrote GET /api/shopping-list, setting needsReview=true + reviewReason='ambiguous_term' on 3 of the household's OWN 7 real items — browser-only, nothing invented, nothing persisted",
+      "viewport": "390x844",
+      "file": "34-unresolved-mobile-390-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/basket",
+      "state": "unresolved / warning — 'Needs attention' items (needsReview)",
+      "component": "ShoppingListView — Needs attention section, amber warning treatment",
+      "session": "benchmark",
+      "induced": "page.route rewrote GET /api/shopping-list, setting needsReview=true + reviewReason='ambiguous_term' on 3 of the household's OWN 7 real items — browser-only, nothing invented, nothing persisted",
+      "viewport": "390x844",
+      "file": "34-unresolved-mobile-390-full.png",
+      "ok": true
+    },
+    {
+      "route": "/cookbook",
+      "state": "open (natural)",
+      "component": "\"Who's eating this meal?\" — audience-selection modal, shown BEFORE the add completes",
+      "session": "benchmark",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "38-audience-modal-mobile-390-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/cookbook",
+      "state": "open (natural)",
+      "component": "\"Who's eating this meal?\" — audience-selection modal, shown BEFORE the add completes",
+      "session": "benchmark",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "38-audience-modal-mobile-390-full.png",
+      "ok": true
+    },
+    {
+      "route": "/cookbook",
+      "state": "success feedback — toast (\"Added to basket\")",
+      "component": "ui/toaster.tsx, ui/toast.tsx (CheckCircle2, primary, 2500ms)",
+      "session": "benchmark",
+      "induced": "real UI interaction (\"Add to basket\" on a meal card). Both writes it fires (POST /api/user-basket and POST /api/shopping-list/from-meals) were intercepted and answered locally with 200 — the toast is genuine, neither write reached the server, nothing persisted",
+      "viewport": "390x844",
+      "file": "35-success-toast-mobile-390-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/cookbook",
+      "state": "success feedback — toast (\"Added to basket\")",
+      "component": "ui/toaster.tsx, ui/toast.tsx (CheckCircle2, primary, 2500ms)",
+      "session": "benchmark",
+      "induced": "real UI interaction (\"Add to basket\" on a meal card). Both writes it fires (POST /api/user-basket and POST /api/shopping-list/from-meals) were intercepted and answered locally with 200 — the toast is genuine, neither write reached the server, nothing persisted",
+      "viewport": "390x844",
+      "file": "35-success-toast-mobile-390-full.png",
+      "ok": true
+    },
+    {
+      "route": "/cookbook",
+      "state": "open (natural)",
+      "component": "AddToWeekModal — compact modal (ui/dialog-foundation.ts)",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "36-compact-modal-mobile-390-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/cookbook",
+      "state": "open (natural)",
+      "component": "AddToWeekModal — compact modal (ui/dialog-foundation.ts)",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "36-compact-modal-mobile-390-full.png",
+      "ok": true
+    },
+    {
+      "route": "/cookbook",
+      "state": "open (natural)",
+      "component": "Meal action sheet — drawer-meal-action-sheet (vaul Drawer). MOBILE ONLY.",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "37-meal-action-sheet-mobile-390-fold.png",
+      "ok": true
+    },
+    {
+      "route": "/cookbook",
+      "state": "open (natural)",
+      "component": "Meal action sheet — drawer-meal-action-sheet (vaul Drawer). MOBILE ONLY.",
+      "session": "household",
+      "induced": null,
+      "viewport": "390x844",
+      "file": "37-meal-action-sheet-mobile-390-full.png",
+      "ok": true
+    }
+  ]
+}

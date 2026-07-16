@@ -1,0 +1,767 @@
+<title>DESIGN1 · The Entrance Hall — Canonical Home Visual Design</title>
+<style>
+  /* ============================================================
+     DESIGN1 — The Entrance Hall · Canonical Home Visual Design
+     A design-intent plate-set. NOT implementation.
+     Every binding value (colour, type size, shadow, duration) remains
+     the UI Architecture's (UIA §7/§8/§9/§11). These plates show
+     COMPOSITION, PROPORTION, HIERARCHY and RELATIONSHIP only.
+     The Kept Room's warm depth ships only via the governed path
+     (HOUSE1 §0.4 · TRANSLATION1 §2.4). Nothing here is a token.
+     ============================================================ */
+
+  /* ---- Presentation chrome tokens (adapt to viewer theme) ---- */
+  :root{
+    --paper:#E7E3D6;         /* mineral limewash ground, faint green-grey bias */
+    --paper-2:#EFEBDF;       /* raised plate mount */
+    --paper-3:#DED9C9;       /* recessed rail */
+    --ink:#282621;           /* warm charcoal, never pure black */
+    --ink-2:#5E5A4F;         /* muted ink */
+    --ink-3:#8C8676;         /* faint ink / annotation grey */
+    --line:#C9C3B2;          /* hairline */
+    --line-2:#B4AD98;        /* stronger hairline */
+    --green:#47593F;         /* muted orchard green — the ONE primacy voice */
+    --green-ink:#3B4A34;
+    --amber:#B4813A;         /* amber-gold — the one morning light, spent rarely */
+    --shadow:24 20 12;       /* warm shadow rgb components */
+    --maxw:1120px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --paper:#1C1A16; --paper-2:#242119; --paper-3:#15130F;
+      --ink:#EAE5D6; --ink-2:#B4AD98; --ink-3:#807A69;
+      --line:#3A3529; --line-2:#4A4432;
+      --green:#93A382; --green-ink:#A8B795; --amber:#D6A65C;
+      --shadow:0 0 0;
+    }
+  }
+  :root[data-theme="light"]{
+    --paper:#E7E3D6; --paper-2:#EFEBDF; --paper-3:#DED9C9;
+    --ink:#282621; --ink-2:#5E5A4F; --ink-3:#8C8676;
+    --line:#C9C3B2; --line-2:#B4AD98;
+    --green:#47593F; --green-ink:#3B4A34; --amber:#B4813A; --shadow:24 20 12;
+  }
+  :root[data-theme="dark"]{
+    --paper:#1C1A16; --paper-2:#242119; --paper-3:#15130F;
+    --ink:#EAE5D6; --ink-2:#B4AD98; --ink-3:#807A69;
+    --line:#3A3529; --line-2:#4A4432;
+    --green:#93A382; --green-ink:#A8B795; --amber:#D6A65C; --shadow:0 0 0;
+  }
+
+  /* ---- The Home "world" tokens: FIXED. The room keeps one warm
+     morning whatever theme the frame is in. These never invert —
+     a deliberate demonstration of the one-morning law (EXPBLUE §7). ---- */
+  :root{
+    --h-plaster:#E9E0CC;     /* warm plaster ground of Home */
+    --h-plaster-lo:#E0D5BC;
+    --h-oak:#DCC79C;         /* the lit oak counter (middle ground) */
+    --h-oak-edge:#CBB184;
+    --h-shade:#D5CBB0;       /* support surface, penumbra */
+    --h-ink:#33301F;         /* text on the counter */
+    --h-ink-2:#6B6244;
+    --h-view-hi:#F2E7C6;     /* morning light, upper-left */
+    --h-view-mid:#DCE0C0;
+    --h-view-lo:#C3CBA6;     /* orchard body, low contrast, still */
+    --h-tree:#A9B389;
+    --h-green:#4C6B3F;       /* the one door, standing in the light */
+    --h-amber:#C89A4E;
+    --h-comp:#B7A98A;        /* companion, foreground, low emphasis */
+    --h-shadow:38 30 16;
+  }
+
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:var(--font-body); line-height:1.6;
+    font-size:clamp(15px,0.6vw + 13px,17px);
+    -webkit-font-smoothing:antialiased;
+  }
+  :root{
+    --font-display:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+    --font-body:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --font-mono:ui-monospace,"SF Mono","Cascadia Mono","Roboto Mono",Menlo,Consolas,monospace;
+  }
+
+  .wrap{max-width:var(--maxw); margin:0 auto; padding:0 clamp(18px,4vw,44px)}
+
+  /* ---- annotation / technical voice ---- */
+  .tag{
+    font-family:var(--font-mono); font-size:11px; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--ink-3);
+  }
+  .cite{font-family:var(--font-mono); font-size:10.5px; letter-spacing:.04em; color:var(--green-ink); white-space:nowrap}
+  @media (prefers-color-scheme:dark){ .cite{color:var(--green)} }
+  :root[data-theme="dark"] .cite{color:var(--green)}
+
+  /* ================= MASTHEAD ================= */
+  header.mast{
+    border-bottom:1px solid var(--line-2);
+    padding:clamp(40px,7vw,88px) 0 clamp(28px,4vw,44px);
+    position:relative; overflow:hidden;
+  }
+  .mast .eyebrow{display:flex; gap:14px; flex-wrap:wrap; align-items:baseline; margin-bottom:26px}
+  .mast .eyebrow .k{color:var(--green-ink); font-family:var(--font-mono); font-size:11px; letter-spacing:.22em; text-transform:uppercase}
+  @media (prefers-color-scheme:dark){ .mast .eyebrow .k{color:var(--green)} }
+  :root[data-theme="dark"] .mast .eyebrow .k{color:var(--green)}
+  h1{
+    font-family:var(--font-display); font-weight:600;
+    font-size:clamp(34px,6.2vw,72px); line-height:1.02; letter-spacing:-.015em;
+    margin:0; text-wrap:balance; max-width:16ch;
+  }
+  h1 em{font-style:italic; color:var(--green); font-weight:600}
+  @media (prefers-color-scheme:dark){ h1 em{color:var(--green)} }
+  .mast .vision{
+    font-family:var(--font-display); font-style:italic;
+    font-size:clamp(18px,2vw,25px); color:var(--ink-2);
+    margin:24px 0 0; max-width:34ch; line-height:1.4; text-wrap:balance;
+  }
+  .mast .sun{
+    position:absolute; top:-30%; left:-8%; width:52vw; height:52vw; max-width:560px; max-height:560px;
+    background:radial-gradient(circle at 32% 34%, rgba(var(--shadow),0) 0%, transparent 62%);
+    background:radial-gradient(circle at 32% 34%, color-mix(in srgb, var(--amber) 26%, transparent) 0%, transparent 60%);
+    pointer-events:none; opacity:.55;
+  }
+  .metarow{display:flex; flex-wrap:wrap; gap:10px 26px; margin-top:34px; padding-top:22px; border-top:1px solid var(--line)}
+  .metarow div{font-family:var(--font-mono); font-size:11px; letter-spacing:.03em; color:var(--ink-2)}
+  .metarow b{color:var(--ink); font-weight:600}
+
+  /* ================= TEST STRIP ================= */
+  .teststrip{display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--line); border:1px solid var(--line); margin:0}
+  .teststrip .cell{background:var(--paper-2); padding:22px 22px 24px}
+  .teststrip .q{font-family:var(--font-mono); font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3); margin-bottom:9px}
+  .teststrip .a{font-family:var(--font-display); font-size:clamp(17px,1.6vw,21px); color:var(--ink); line-height:1.25}
+  .teststrip .a small{display:block; font-family:var(--font-body); font-size:13px; color:var(--ink-2); margin-top:7px; font-weight:400; line-height:1.45}
+  @media (max-width:720px){ .teststrip{grid-template-columns:1fr} }
+
+  /* ================= CONTENTS RAIL ================= */
+  .toc{margin:clamp(34px,5vw,60px) 0 8px; border:1px solid var(--line); background:var(--paper-2)}
+  .toc h2{margin:0; padding:16px 22px 14px; font-family:var(--font-mono); font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--ink-3); border-bottom:1px solid var(--line); font-weight:400}
+  .toc ol{margin:0; padding:8px 0; list-style:none; counter-reset:t; columns:2; column-gap:0}
+  .toc li{break-inside:avoid; padding:7px 22px; display:flex; gap:14px; align-items:baseline; border-bottom:1px solid transparent}
+  .toc li::before{counter-increment:t; content:counter(t,decimal-leading-zero); font-family:var(--font-mono); font-size:11px; color:var(--green-ink); letter-spacing:.05em}
+  @media (prefers-color-scheme:dark){ .toc li::before{color:var(--green)} }
+  :root[data-theme="dark"] .toc li::before{color:var(--green)}
+  .toc a{color:var(--ink); text-decoration:none; font-size:14.5px}
+  .toc a:hover{color:var(--green)}
+  .toc .d{margin-left:auto; font-family:var(--font-mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3)}
+  @media (max-width:640px){ .toc ol{columns:1} }
+
+  /* ================= PLATE ================= */
+  .plate{padding:clamp(46px,7vw,84px) 0 clamp(20px,3vw,34px); border-top:1px solid var(--line); scroll-margin-top:16px}
+  .plate-head{display:flex; align-items:baseline; gap:18px; flex-wrap:wrap; margin-bottom:8px}
+  .plate-no{font-family:var(--font-mono); font-size:12px; letter-spacing:.16em; color:var(--green-ink); font-weight:600}
+  @media (prefers-color-scheme:dark){ .plate-no{color:var(--green)} }
+  :root[data-theme="dark"] .plate-no{color:var(--green)}
+  .plate-kind{font-family:var(--font-mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3); margin-left:auto}
+  h3.plate-title{font-family:var(--font-display); font-weight:600; font-size:clamp(24px,3.3vw,38px); letter-spacing:-.01em; margin:0; line-height:1.06; text-wrap:balance}
+  .lede{color:var(--ink-2); max-width:62ch; margin:14px 0 26px; font-size:clamp(15px,1vw,16.5px)}
+  .lede strong{color:var(--ink); font-weight:600}
+
+  .plate-body{display:grid; grid-template-columns:1fr; gap:clamp(20px,3vw,34px)}
+  .plate-body.split{grid-template-columns:minmax(0,1.55fr) minmax(220px,1fr)}
+  @media (max-width:840px){ .plate-body.split{grid-template-columns:1fr} }
+
+  /* ---- figure / drawing mount ---- */
+  figure.draw{margin:0}
+  .mount{
+    background:var(--h-plaster); border:1px solid var(--line-2);
+    border-radius:2px; position:relative; overflow:hidden;
+    box-shadow:0 1px 0 rgba(var(--shadow),.04), 0 18px 40px -30px rgba(var(--shadow),.5);
+  }
+  .caption{margin-top:12px; font-family:var(--font-mono); font-size:11px; letter-spacing:.03em; color:var(--ink-2); display:flex; gap:10px; align-items:baseline}
+  .caption b{color:var(--ink); font-weight:600; letter-spacing:.06em; text-transform:uppercase; font-size:10px}
+
+  /* ---- the HOME composition (device frame) ---- */
+  .home{position:relative; width:100%; background:var(--h-plaster); color:var(--h-ink); font-family:var(--font-body)}
+  .home .walls{
+    display:flex; align-items:center; gap:10px; padding:11px 16px;
+    border-bottom:1px solid rgba(var(--h-shadow),.14); font-size:12px; color:var(--h-ink-2);
+    background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0));
+  }
+  .home .brand{display:flex; align-items:center; gap:8px; font-weight:600; color:var(--h-ink)}
+  .home .brand .apple{width:14px; height:14px; border-radius:50% 50% 50% 0; background:var(--h-green); transform:rotate(-12deg); display:inline-block}
+  .home .nav{display:flex; gap:16px; font-size:11.5px}
+  .home .nav span:first-child{color:var(--h-ink); font-weight:600; border-bottom:2px solid var(--h-green); padding-bottom:2px}
+  .home .home-anchor{margin-left:auto; width:18px; height:18px; border:1.5px solid var(--h-ink-2); border-radius:3px; position:relative}
+  .home .home-anchor::after{content:""; position:absolute; inset:3px 3px auto 3px; height:6px; border:1.5px solid var(--h-ink-2); border-bottom:0; border-radius:3px 3px 0 0; top:5px}
+
+  /* the open view — E3 */
+  .home .view{
+    position:relative; overflow:hidden;
+    background:
+      radial-gradient(120% 150% at 18% 0%, var(--h-view-hi) 0%, transparent 46%),
+      linear-gradient(180deg, var(--h-view-mid) 0%, var(--h-view-lo) 100%);
+  }
+  .home .treeline{position:absolute; left:0; right:0; bottom:0; height:38%; opacity:.5}
+  .home .treeline i{position:absolute; bottom:0; background:var(--h-tree); border-radius:50% 50% 0 0; opacity:.85}
+  .home .horizon{position:absolute; left:0; right:0; bottom:0; height:1px; background:linear-gradient(90deg,transparent,rgba(var(--h-shadow),.18),transparent)}
+
+  /* the counter — compact, centred-low, one lit oak plane */
+  .home .stage{position:relative; padding:0 8% 7%}
+  .home .counter{
+    position:relative; margin:-8% auto 0; max-width:74%;
+    background:linear-gradient(180deg,var(--h-oak) 0%, var(--h-oak-edge) 140%);
+    border:1px solid rgba(var(--h-shadow),.12); border-radius:4px;
+    padding:clamp(14px,2.4vw,26px) clamp(16px,3vw,32px);
+    /* one soft, warm, single-direction shadow — agrees with the upper-left sun */
+    box-shadow:0 14px 30px -18px rgba(var(--h-shadow),.55), 0 2px 0 rgba(255,255,255,.25) inset;
+  }
+  .home .greeting{font-family:var(--font-display); font-style:italic; font-size:clamp(16px,2.3vw,26px); color:var(--h-ink); line-height:1.15; margin:0}
+  .home .orient{margin:8px 0 0; font-size:clamp(11px,1.15vw,13.5px); color:var(--h-ink-2); line-height:1.4}
+  .home .door{
+    display:inline-flex; align-items:center; gap:8px; margin-top:clamp(12px,1.8vw,18px);
+    background:var(--h-green); color:#F4EFDF; font-size:clamp(11px,1.15vw,13px); font-weight:600;
+    padding:9px 16px; border-radius:3px; letter-spacing:.01em;
+    box-shadow:0 8px 18px -10px rgba(var(--h-shadow),.6);
+  }
+  .home .door::after{content:"→"; font-weight:400}
+  .home .notes{display:flex; gap:12px; margin:14px auto 0; max-width:74%}
+  .home .note{flex:1; background:rgba(255,255,255,.22); border:1px solid rgba(var(--h-shadow),.08); border-radius:3px; padding:10px 12px; font-size:10.5px; color:var(--h-ink-2); line-height:1.35}
+  .home .note b{display:block; color:var(--h-ink); font-size:10px; letter-spacing:.06em; text-transform:uppercase; margin-bottom:4px; font-weight:600}
+  .home .companion{
+    position:absolute; right:5.5%; bottom:6%; width:clamp(26px,4vw,40px); height:clamp(26px,4vw,40px);
+    border-radius:50%; background:
+      linear-gradient(90deg, var(--h-comp) 0 50%, rgba(var(--h-shadow),.16) 50% 100%);
+    border:1px solid rgba(var(--h-shadow),.2); box-shadow:0 6px 14px -8px rgba(var(--h-shadow),.5);
+  }
+  .home.quiet .counter{max-width:56%}
+  .home.quiet .view{min-height:0}
+
+  /* ---- callout markers + legend ---- */
+  .cx{position:absolute; z-index:5; width:22px; height:22px; border-radius:50%;
+      background:var(--paper); color:var(--ink); border:1.5px solid var(--green);
+      font-family:var(--font-mono); font-size:11px; font-weight:600; display:flex; align-items:center; justify-content:center;
+      box-shadow:0 2px 8px -2px rgba(var(--shadow),.5); transform:translate(-50%,-50%)}
+  @media (prefers-color-scheme:dark){ .cx{border-color:var(--green); color:var(--ink); background:var(--paper-2)} }
+  .legend{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:14px}
+  .legend li{display:grid; grid-template-columns:24px 1fr; gap:12px; align-items:start}
+  .legend .n{font-family:var(--font-mono); font-size:11px; font-weight:600; color:var(--green-ink);
+      border:1.5px solid var(--green); border-radius:50%; width:24px; height:24px; display:flex; align-items:center; justify-content:center}
+  @media (prefers-color-scheme:dark){ .legend .n{color:var(--green)} }
+  :root[data-theme="dark"] .legend .n{color:var(--green)}
+  .legend .t{font-size:13.5px; color:var(--ink-2); line-height:1.4}
+  .legend .t b{color:var(--ink); font-weight:600}
+  .legend .t .cite{display:block; margin-top:3px}
+
+  /* ---- reusable note grid ---- */
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--line); border:1px solid var(--line); margin-top:8px}
+  .grid2 .c{background:var(--paper-2); padding:16px 18px}
+  .grid2 .c h4{margin:0 0 6px; font-family:var(--font-mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3); font-weight:400}
+  .grid2 .c p{margin:0; font-size:13.5px; color:var(--ink-2); line-height:1.5}
+  .grid2 .c p b{color:var(--ink); font-weight:600}
+  @media (max-width:640px){ .grid2{grid-template-columns:1fr} }
+
+  /* ---- decision ledger (never/always) ---- */
+  .ledger{border:1px solid var(--line); margin-top:12px}
+  .ledger .row{display:grid; grid-template-columns:1fr 1fr; border-top:1px solid var(--line)}
+  .ledger .row:first-child{border-top:0}
+  .ledger .row > div{padding:13px 18px; font-size:13px; line-height:1.45}
+  .ledger .keeps{color:var(--ink); border-right:1px solid var(--line)}
+  .ledger .keeps::before{content:"KEEPS  "; font-family:var(--font-mono); font-size:9.5px; letter-spacing:.12em; color:var(--green-ink)}
+  .ledger .refuses{color:var(--ink-2)}
+  .ledger .refuses::before{content:"REFUSES  "; font-family:var(--font-mono); font-size:9.5px; letter-spacing:.12em; color:var(--amber)}
+  @media (prefers-color-scheme:dark){ .ledger .keeps::before{color:var(--green)} }
+  @media (max-width:640px){ .ledger .row{grid-template-columns:1fr} .ledger .keeps{border-right:0; border-bottom:1px solid var(--line)} }
+
+  /* ---- typography specimen ---- */
+  .spec{background:var(--h-plaster); color:var(--h-ink); border:1px solid var(--line-2); border-radius:2px; padding:clamp(22px,3vw,34px)}
+  .spec .row{display:grid; grid-template-columns:120px 1fr; gap:20px; padding:18px 0; border-top:1px solid rgba(var(--h-shadow),.12); align-items:baseline}
+  .spec .row:first-child{border-top:0}
+  .spec .role{font-family:var(--font-mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--h-ink-2); line-height:1.5}
+  .spec .role span{display:block; color:var(--h-ink); font-weight:600; letter-spacing:.03em; margin-bottom:4px}
+  .v-hand{font-family:var(--font-display); font-style:italic; font-size:clamp(22px,3vw,32px); color:var(--h-ink)}
+  .v-display{font-family:var(--font-display); font-weight:600; font-size:clamp(19px,2.4vw,26px); color:var(--h-ink)}
+  .v-work{font-size:clamp(14px,1.4vw,16px); color:var(--h-ink); line-height:1.5}
+  .v-work small{color:var(--h-ink-2)}
+  @media (max-width:560px){ .spec .row{grid-template-columns:1fr; gap:6px} }
+
+  /* ---- spacing rhythm bar ---- */
+  .rhythm{display:flex; align-items:flex-end; gap:10px; padding:22px; background:var(--h-plaster); border:1px solid var(--line-2); border-radius:2px; flex-wrap:wrap}
+  .rhythm .step{display:flex; flex-direction:column; align-items:center; gap:8px}
+  .rhythm .bar{background:var(--h-oak); border:1px solid var(--h-oak-edge); border-radius:2px; width:34px}
+  .rhythm .lab{font-family:var(--font-mono); font-size:10px; color:var(--h-ink-2); letter-spacing:.05em}
+
+  /* ---- motion diagram ---- */
+  .motion{display:grid; grid-template-columns:repeat(2,1fr); gap:1px; background:var(--line); border:1px solid var(--line)}
+  .motion .m{background:var(--paper-2); padding:20px}
+  .motion .m .track{position:relative; height:70px; margin:14px 0 10px; border-bottom:1px dashed var(--line-2)}
+  .motion .m .dot{position:absolute; bottom:0; width:14px; height:14px; border-radius:50%; background:var(--h-green)}
+  .motion .m .arc{position:absolute; left:8px; right:8px; bottom:0; height:52px; border:1.5px solid var(--amber); border-bottom:0; border-radius:80px 80px 0 0; opacity:.55}
+  .motion .m h4{margin:0; font-family:var(--font-display); font-size:16px; color:var(--ink)}
+  .motion .m p{margin:6px 0 0; font-size:12.5px; color:var(--ink-2); line-height:1.45}
+  .motion .m .cite{margin-top:8px}
+  @media (max-width:640px){ .motion{grid-template-columns:1fr} }
+
+  /* ---- pull principle ---- */
+  .pull{font-family:var(--font-display); font-style:italic; font-size:clamp(19px,2.4vw,28px); color:var(--ink); line-height:1.35; max-width:26ch; margin:0; text-wrap:balance}
+  .pull.center{margin:0 auto; text-align:center; max-width:30ch}
+
+  /* ================= CLOSING ================= */
+  .contract{border:1px solid var(--line-2); margin-top:14px}
+  .contract .row{display:grid; grid-template-columns:1fr 1fr; border-top:1px solid var(--line)}
+  .contract .row:first-child{border-top:0}
+  .contract .row > div{padding:12px 18px; font-size:13.5px; line-height:1.5}
+  .contract .keep{border-right:1px solid var(--line); color:var(--ink)}
+  .contract .change{color:var(--ink-2)}
+  .contract .hd{background:var(--paper-3); font-family:var(--font-mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3); padding:10px 18px}
+  @media (max-width:640px){ .contract .row{grid-template-columns:1fr} .contract .keep{border-right:0; border-bottom:1px solid var(--line)} }
+
+  footer{border-top:1px solid var(--line-2); margin-top:clamp(40px,6vw,72px); padding:clamp(30px,5vw,56px) 0 clamp(50px,8vw,90px)}
+  footer .gov{background:var(--paper-2); border:1px solid var(--line); border-left:3px solid var(--green); padding:20px 24px; font-size:13.5px; color:var(--ink-2); line-height:1.6}
+  footer .gov b{color:var(--ink)}
+  footer .sig{margin-top:26px; font-family:var(--font-mono); font-size:11px; letter-spacing:.04em; color:var(--ink-3); line-height:1.8}
+
+  a.self{color:var(--green); text-decoration:none; border-bottom:1px solid var(--line-2)}
+  .abbr{margin-top:10px; font-family:var(--font-mono); font-size:10.5px; color:var(--ink-3); line-height:1.9; letter-spacing:.02em}
+
+  /* one gentle settle on load — the one morning arriving, once (EXPBLUE §9) */
+  @media (prefers-reduced-motion:no-preference){
+    .plate, .teststrip, .toc, .mast .vision{animation:settle .7s cubic-bezier(.2,.7,.2,1) both}
+    @keyframes settle{from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:none}}
+  }
+</style>
+
+<header class="mast">
+  <div class="sun" aria-hidden="true"></div>
+  <div class="wrap">
+    <div class="eyebrow">
+      <span class="k">DESIGN1</span>
+      <span class="k" style="color:var(--ink-3)">The Healthy Apples · Canonical Home</span>
+    </div>
+    <h1>The Entrance&nbsp;Hall<br>— Home, drawn as <em>The Kept Room</em></h1>
+    <p class="vision">"A warm, lived-in home where someone has already thought about dinner."</p>
+    <div class="metarow">
+      <div><b>Deliverable</b> — the definitive VISUAL design of the permanent Home</div>
+      <div><b>Fidelity</b> — design intent · no code · no components · no tokens</div>
+      <div><b>Builds on</b> — EXPBLUE · OHDB · OLB · ORCHARD2 · ORCHARD3 · HOUSE1 · TRANSLATION1</div>
+    </div>
+  </div>
+</header>
+
+<section class="wrap" aria-label="The Experience Test">
+  <div class="teststrip">
+    <div class="cell">
+      <div class="q">Which room is this?</div>
+      <div class="a">Home — the threshold &amp; the heart.<small>The one room at E3, the open view; the Entrance Hall every session begins in and every room is reached through. <span class="cite">EXPBLUE §4·§6.2</span></small></div>
+    </div>
+    <div class="cell">
+      <div class="q">How should someone feel here?</div>
+      <div class="a">At home.<small>Welcomed &amp; expected on arrival; oriented &amp; unhurried while here; calm &amp; kept on return — the seven feelings at their warm temperature. <span class="cite">EXPLANG §3·§3A</span></small></div>
+    </div>
+    <div class="cell">
+      <div class="q">The one thing it helps them do?</div>
+      <div class="a">Arrive &amp; be oriented.<small>"How are we, and what's next?" — then step through the one right door for the hour. <span class="cite">EXPARCH P4 · EXPBLUE §4.1</span></small></div>
+    </div>
+  </div>
+</section>
+
+<nav class="wrap">
+  <div class="toc">
+    <h2>The plates — eleven, in the reading order of the room</h2>
+    <ol>
+      <li><a href="#p1">Desktop Home — the room entire</a><span class="d">Concept</span></li>
+      <li><a href="#p2">Annotated layout — the anatomy</a><span class="d">Diagram</span></li>
+      <li><a href="#p3">Visual hierarchy — the eye's path</a><span class="d">Diagram</span></li>
+      <li><a href="#p4">Tablet Home — the room on the table</a><span class="d">Concept</span></li>
+      <li><a href="#p5">Mobile Home — the room in the hand</a><span class="d">Concept</span></li>
+      <li><a href="#p6">Typography — the three voices</a><span class="d">System</span></li>
+      <li><a href="#p7">Spacing — air as a material</a><span class="d">System</span></li>
+      <li><a href="#p8">Companion — one fixed chair</a><span class="d">Placement</span></li>
+      <li><a href="#p9">Motion — lighting, not light shows</a><span class="d">Notes</span></li>
+      <li><a href="#p10">Empty state — the kept quiet</a><span class="d">State</span></li>
+      <li><a href="#p11">Returning Home — constancy</a><span class="d">State</span></li>
+    </ol>
+  </div>
+</nav>
+
+<main class="wrap">
+
+  <!-- ============ 01 DESKTOP ============ -->
+  <section class="plate" id="p1">
+    <div class="plate-head"><span class="plate-no">PLATE 01</span><h3 class="plate-title">Desktop Home — the room entire</h3><span class="plate-kind">Concept · widest horizon</span></div>
+    <p class="lede">The fullest expression of the three grounds. <strong>The orchard is the largest thing and the quietest thing</strong> — area, not attention. The extra width of a large screen becomes air and view, never a wider dashboard. The counter stays compact and centred so the view keeps its share. <span class="cite">HOUSE1 §2·§19.3 · EXPBLUE §8.1 · TRANSLATION1 §4.1 WINDOWS</span></p>
+    <div class="plate-body split">
+      <figure class="draw">
+        <div class="mount">
+          <div class="home">
+            <div class="walls">
+              <span class="brand"><span class="apple"></span>THA</span>
+              <span class="nav"><span>Home</span><span>Planner</span><span>Cookbook</span><span>Pantry</span><span>Diary</span></span>
+              <span class="home-anchor" aria-hidden="true"></span>
+              <span class="cx" style="left:3%; top:14%">1</span>
+            </div>
+            <div class="view" style="min-height:190px">
+              <div class="treeline" aria-hidden="true">
+                <i style="left:6%;width:70px;height:60%"></i><i style="left:20%;width:90px;height:80%"></i>
+                <i style="left:38%;width:60px;height:55%"></i><i style="left:52%;width:100px;height:78%"></i>
+                <i style="left:72%;width:80px;height:66%"></i><i style="left:88%;width:64px;height:50%"></i>
+              </div>
+              <div class="horizon" aria-hidden="true"></div>
+              <span class="cx" style="left:24%; top:34%">2</span>
+            </div>
+            <div class="stage">
+              <div class="counter">
+                <p class="greeting">Good morning, Sarah.</p>
+                <p class="orient">Thursday · a calm week ahead. You're all set for tonight.</p>
+                <span class="door">Look at the week</span>
+                <span class="cx" style="left:-2%; top:20%">3</span>
+                <span class="cx" style="left:-2%; top:78%">4</span>
+              </div>
+              <div class="companion" aria-hidden="true"></div>
+              <span class="cx" style="right:2%; bottom:14%; left:auto; transform:translate(50%,50%)">5</span>
+            </div>
+          </div>
+        </div>
+        <figcaption class="caption"><b>Fig 01</b> Desktop · 1 viewport · no scroll to arrive or be oriented. Tonal drawing — all colour/type/shadow values are UIA §7/§8/§9.</figcaption>
+      </figure>
+      <ul class="legend">
+        <li><span class="n">1</span><span class="t"><b>The walls (shell).</b> One frame, one nav, Home in the anchor — byte-identical in every room and at every hour; never animates. <span class="cite">TRANSLATION1 §4.3 PERMANENCE · EXPBLUE §14</span></span></li>
+        <li><span class="n">2</span><span class="t"><b>The open view (E3).</b> Ancient orchard, one morning, still &amp; in leaf. Largest in area, quietest in attention; never carries text, never animates. <span class="cite">TRANSLATION1 §4.1 ORCHARD VIEWS · EXPBLUE §6</span></span></li>
+        <li><span class="n">3</span><span class="t"><b>The greeting.</b> The single warmest, most human mark — THA's own hand, spent once a day. <span class="cite">TRANSLATION1 §4.4 HOUSEHOLD · EXPBLUE §10</span></span></li>
+        <li><span class="n">4</span><span class="t"><b>The one door.</b> Exactly one primary action, standing in the light, re-aimed by the hour. <span class="cite">TRANSLATION1 §4.1 THRESHOLDS · EXPARCH P4·P5</span></span></li>
+        <li><span class="n">5</span><span class="t"><b>The Companion.</b> One fixed chair, lower-right foreground; arrives a beat behind; lowest emphasis until invited. <span class="cite">TRANSLATION1 §4.4 COMPANION · EXPBLUE §13</span></span></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ 02 ANNOTATED LAYOUT ============ -->
+  <section class="plate" id="p2">
+    <div class="plate-head"><span class="plate-no">PLATE 02</span><h3 class="plate-title">Annotated layout — the anatomy of the hall</h3><span class="plate-kind">Diagram · vertical rhythm</span></div>
+    <p class="lede">The frame reads top-to-bottom as <strong>sky → light → surface → hand</strong>. Three grounds, and only the middle one — the counter — ever varies from room to room. The one horizon is where the morning meets the working plane. <span class="cite">EXPBLUE §8.1 · TRANSLATION1 §6 (three grounds) · HOUSE1 §2.2</span></p>
+    <div class="plate-body split">
+      <figure class="draw">
+        <div class="mount" style="background:var(--h-plaster)">
+          <div style="position:relative; font-family:var(--font-mono); font-size:11px; color:var(--h-ink-2)">
+            <div style="padding:10px 16px; border-bottom:1px dashed rgba(56,48,22,.25); letter-spacing:.06em">THE WALLS — constant, any hour, any size <span style="float:right; color:var(--h-ink)">ground: FRONT (shell)</span></div>
+            <div style="height:120px; background:radial-gradient(120% 150% at 18% 0%, var(--h-view-hi), transparent 46%), linear-gradient(180deg,var(--h-view-mid),var(--h-view-lo)); position:relative; display:flex; align-items:center; justify-content:center">
+              <span style="letter-spacing:.14em">THE OPEN VIEW · E3 — look UP &amp; OUT</span>
+              <span style="position:absolute; right:14px; top:12px; color:var(--h-ink)">ground: BEHIND (orchard)</span>
+            </div>
+            <div style="text-align:center; padding:5px; background:linear-gradient(90deg,transparent,rgba(56,48,22,.16),transparent); color:var(--h-ink); letter-spacing:.1em">↕ ONE HORIZON — the morning meets the counter ↕</div>
+            <div style="padding:22px 16px; background:linear-gradient(180deg,var(--h-oak),var(--h-oak-edge)); position:relative">
+              <div style="max-width:70%; margin:0 auto; background:rgba(255,255,255,.16); border:1px solid rgba(56,48,22,.14); border-radius:4px; padding:16px; text-align:center; box-shadow:0 12px 26px -16px rgba(56,48,22,.5)">
+                <div style="font-family:var(--font-display); font-style:italic; color:var(--h-ink); font-size:16px">greeting · orientation · ONE door</div>
+                <div style="margin-top:6px">solid ground under ALL text — never on the view</div>
+              </div>
+              <span style="position:absolute; right:14px; top:12px; color:var(--h-ink)">ground: MIDDLE (counter · the only variable layer)</span>
+            </div>
+            <div style="padding:9px 16px; border-top:1px dashed rgba(56,48,22,.25); letter-spacing:.06em">THE COMPANION — foreground, lower-right, its usual place <span style="float:right; color:var(--h-ink)">ground: FRONT</span></div>
+          </div>
+        </div>
+        <figcaption class="caption"><b>Fig 02</b> Only Home earns this much sky; every other room lowers the horizon because it has more work. <span class="cite">EXPBLUE §6.2</span></figcaption>
+      </figure>
+      <div>
+        <div class="grid2">
+          <div class="c"><h4>Ground · behind</h4><p><b>The orchard.</b> Setting, never decoration. Oriented-toward, never contained. Constant across every room. <span class="cite">TRANSLATION1 §4.1</span></p></div>
+          <div class="c"><h4>Ground · middle</h4><p><b>The counter.</b> One solid lit oak plane, never nested. The <b>only</b> layer that changes room to room. <span class="cite">TRANSLATION1 §4.2 KITCHEN ISLAND</span></p></div>
+          <div class="c"><h4>Ground · front</h4><p><b>Companion &amp; overlays.</b> What genuinely floats — elevation reserved for these alone. <span class="cite">EXPBLUE §8.1</span></p></div>
+          <div class="c"><h4>The law of depth</h4><p><b>Depth means distance, not drama.</b> One soft, warm, single-direction shadow; no parallax. <span class="cite">TRANSLATION1 §5.4</span></p></div>
+        </div>
+        <p class="pull" style="margin-top:22px">Sky, then light, then the surface where a hand rests. The architecture of a real kitchen at the good hour.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 03 VISUAL HIERARCHY ============ -->
+  <section class="plate" id="p3">
+    <div class="plate-head"><span class="plate-no">PLATE 03</span><h3 class="plate-title">Visual hierarchy — the eye's path</h3><span class="plate-kind">Diagram · weight, not styling</span></div>
+    <p class="lede">The order in which the eye meets Home. The deliberate inversion is Home's signature: <strong>the orchard is the largest thing and the quietest thing.</strong> Hierarchy is carried by light and weight — the primary leads by standing in the morning, not by wearing an accent the room lacks. <span class="cite">TRANSLATION1 §5.2 (light before colour) · OHDB §6·§7 · HOUSE1 §4</span></p>
+    <div class="plate-body">
+      <div class="grid2" style="grid-template-columns:1fr; gap:1px">
+        <div class="c" style="display:grid; grid-template-columns:44px 1fr auto; gap:16px; align-items:center"><h4 style="margin:0; font-size:20px; color:var(--green-ink)">1st</h4><p style="font-size:15px"><b>The greeting / orientation.</b> The household in THA's hand — the single warmest, most human mark. Who we are, how we are.</p><span class="cite">EXPARCH §4</span></div>
+        <div class="c" style="display:grid; grid-template-columns:44px 1fr auto; gap:16px; align-items:center"><h4 style="margin:0; font-size:20px; color:var(--green-ink)">2nd</h4><p style="font-size:15px"><b>The one door.</b> The next step, standing in the light — the brightest-weighted element after the greeting.</p><span class="cite">EXPARCH P4</span></div>
+        <div class="c" style="display:grid; grid-template-columns:44px 1fr auto; gap:16px; align-items:center"><h4 style="margin:0; font-size:20px; color:var(--green-ink)">3rd</h4><p style="font-size:15px"><b>The orientation line(s).</b> "How we're doing / what's next" — calm human sentences on the counter, low contrast.</p><span class="cite">EXPLANG §5.1</span></div>
+        <div class="c" style="display:grid; grid-template-columns:44px 1fr auto; gap:16px; align-items:center"><h4 style="margin:0; font-size:20px; color:var(--amber)">4th</h4><p style="font-size:15px"><b>The open view.</b> The orchard — LARGE in area, QUIET in attention. It holds the eye's rest between reading and reaching, never its work.</p><span class="cite">EXPBLUE §6.2</span></div>
+        <div class="c" style="display:grid; grid-template-columns:44px 1fr auto; gap:16px; align-items:center"><h4 style="margin:0; font-size:20px; color:var(--ink-3)">5th</h4><p style="font-size:15px"><b>The Companion.</b> Present, foreground, waiting; lowest emphasis until invited.</p><span class="cite">EXPBLUE §13</span></div>
+        <div class="c" style="display:grid; grid-template-columns:44px 1fr auto; gap:16px; align-items:center"><h4 style="margin:0; font-size:14px; color:var(--ink-3); letter-spacing:.1em">—</h4><p style="font-size:15px; color:var(--ink-2)"><b>The walls.</b> Read as PLACE, not content; never competing.</p><span class="cite">EXPBLUE §14</span></div>
+      </div>
+      <p class="pull center" style="margin-top:26px">In a warm minimalist room, hierarchy is made of light and material — so colour and motion never have to shout.</p>
+    </div>
+  </section>
+
+  <!-- ============ 04 TABLET ============ -->
+  <section class="plate" id="p4">
+    <div class="plate-head"><span class="plate-no">PLATE 04</span><h3 class="plate-title">Tablet Home — the room on the table</h3><span class="plate-kind">Concept · the wide window</span></div>
+    <p class="lede">The room widens; the counter does not sprawl. As width grows the counter holds a comfortable measure and lets <strong>air take the extra room</strong>. Tablet is where E3 begins to feel most like standing at the wide window onto a landscape. <span class="cite">HOUSE1 §19.2 · EXPBLUE §8.2 · OHDB §8</span></p>
+    <div class="plate-body split">
+      <figure class="draw">
+        <div class="mount" style="max-width:560px; margin:0 auto">
+          <div class="home">
+            <div class="walls"><span class="brand"><span class="apple"></span>THA</span><span class="nav"><span>Home</span><span>Planner</span><span>Cookbook</span><span>Pantry</span></span><span class="home-anchor" aria-hidden="true"></span></div>
+            <div class="view" style="min-height:150px">
+              <div class="treeline" aria-hidden="true"><i style="left:8%;width:60px;height:60%"></i><i style="left:26%;width:80px;height:78%"></i><i style="left:46%;width:56px;height:52%"></i><i style="left:64%;width:88px;height:74%"></i><i style="left:84%;width:60px;height:56%"></i></div>
+              <div class="horizon" aria-hidden="true"></div>
+            </div>
+            <div class="stage">
+              <div class="counter" style="max-width:80%">
+                <p class="greeting">Good morning, Sarah.</p>
+                <p class="orient">A calm week ahead.</p>
+                <span class="door">Look at the week</span>
+              </div>
+              <div class="companion" aria-hidden="true"></div>
+            </div>
+          </div>
+        </div>
+        <figcaption class="caption"><b>Fig 04</b> The horizon lengthens; the counter keeps its measure, not the full width.</figcaption>
+      </figure>
+      <ul class="legend">
+        <li><span class="n">✓</span><span class="t"><b>Fuller nav returns</b> where width allows; the Companion keeps its corner. <span class="cite">EXPARCH §8</span></span></li>
+        <li><span class="n">✓</span><span class="t"><b>The view becomes a window onto a landscape</b> — the Pavilion's disciplined view, kept warm at Home. <span class="cite">ORCHARD3 §5.2</span></span></li>
+        <li><span class="n">✓</span><span class="t"><b>Air takes the growth,</b> not the type — the house never stretches type to fill a screen. <span class="cite">TRANSLATION1 §4.1 SPACE</span></span></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ 05 MOBILE ============ -->
+  <section class="plate" id="p5">
+    <div class="plate-head"><span class="plate-no">PLATE 05</span><h3 class="plate-title">Mobile Home — the room in the hand</h3><span class="plate-kind">Concept · the primary design</span></div>
+    <p class="lede">Designed <strong>mobile-first</strong>, because that is where most households arrive. The vertical rhythm — sky above, counter below, one horizon — is the phone's native gift, so Home's composition is <em>most itself</em> here. E3 is <strong>held</strong>: the orchard keeps a generous band, never dropped to a thin strip. <span class="cite">HOUSE1 §19.1 · PX1 · UX1 (canonical bottom nav)</span></p>
+    <div class="plate-body split">
+      <figure class="draw" style="display:flex; justify-content:center">
+        <div class="mount" style="max-width:288px; width:100%; border-radius:26px; padding:8px; background:var(--paper-3)">
+          <div class="home" style="border-radius:18px; overflow:hidden">
+            <div class="walls" style="padding:9px 13px"><span class="brand" style="font-size:12px"><span class="apple" style="width:12px;height:12px"></span>THA</span><span class="home-anchor" style="width:15px;height:15px" aria-hidden="true"></span></div>
+            <div class="view" style="min-height:132px">
+              <div class="treeline" aria-hidden="true"><i style="left:8%;width:44px;height:62%"></i><i style="left:34%;width:60px;height:82%"></i><i style="left:60%;width:40px;height:54%"></i><i style="left:80%;width:56px;height:70%"></i></div>
+              <div class="horizon" aria-hidden="true"></div>
+            </div>
+            <div class="stage" style="padding:0 5% 16%">
+              <div class="counter" style="max-width:94%; margin-top:-14%">
+                <p class="greeting" style="font-size:18px">Good morning, Sarah.</p>
+                <p class="orient">A calm week ahead.<br>You're set for tonight.</p>
+                <span class="door" style="width:100%; justify-content:center">Look at the week</span>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; padding:9px 14px; border-top:1px solid rgba(56,48,22,.14); font-size:9px; color:var(--h-ink-2); font-family:var(--font-mono); letter-spacing:.06em">
+              <span style="color:var(--h-green); font-weight:700">HOME</span><span>PLAN</span><span>COOK</span><span>SHOP</span>
+              <span class="companion" style="position:static; margin-left:auto; width:22px; height:22px" aria-hidden="true"></span>
+            </div>
+          </div>
+        </div>
+      </figure>
+      <ul class="legend">
+        <li><span class="n">1</span><span class="t"><b>Counter fills the width;</b> greeting, state and ONE door stack in reading order. Compact in the vertical, not the horizontal. <span class="cite">HOUSE1 §19.1</span></span></li>
+        <li><span class="n">2</span><span class="t"><b>E3 held</b> — the view keeps a generous band; Home's purpose still includes looking. <span class="cite">EXPBLUE §6.2</span></span></li>
+        <li><span class="n">3</span><span class="t"><b>One door in the lower third,</b> thumb-reachable; everything read is above it. <span class="cite">EXPARCH P4</span></span></li>
+        <li><span class="n">4</span><span class="t"><b>Canonical bottom nav</b> is the shell on mobile; Companion keeps its fixed corner. <span class="cite">UX1 · EXPBLUE §14</span></span></li>
+      </ul>
+    </div>
+    <p class="pull center" style="margin-top:30px">One house at three sizes — same walls, same morning, same counter, same one door. The device changes the room's proportions, never its identity.</p>
+  </section>
+
+  <!-- ============ 06 TYPOGRAPHY ============ -->
+  <section class="plate" id="p6">
+    <div class="plate-head"><span class="plate-no">PLATE 06</span><h3 class="plate-title">Typography — the three voices</h3><span class="plate-kind">System · relationship, not values</span></div>
+    <p class="lede">Three voices, one hierarchy. Type is set for <strong>breathing</strong> — generous measure and leading; the house never shrinks type to fit more in, it discloses more instead. <em>Every size, weight and face is UIA §8; shown here as role and relationship only.</em> <span class="cite">TRANSLATION1 §6 (one quiet human voice) · OHDB §8 · UIA §8</span></p>
+    <div class="spec">
+      <div class="row">
+        <div class="role"><span>The Hand</span>signature voice · rationed to hello</div>
+        <div><p class="v-hand" style="margin:0">Good morning, Sarah.</p><p style="margin:6px 0 0; font-size:12.5px; color:var(--h-ink-2)">THA's own hand — spent once a day, at the threshold, and forbidden in all functional UI. How the house says hello, never how it works. <span class="cite">EXPBLUE §10 · TRANSLATION1 §4.1 THRESHOLDS</span></p></div>
+      </div>
+      <div class="row">
+        <div class="role"><span>Display</span>identity moments</div>
+        <div><p class="v-display" style="margin:0">This week · In the house</p><p style="margin:6px 0 0; font-size:12.5px; color:var(--h-ink-2)">Section identity and titles — quiet weight, never shouting in bold. <span class="cite">UIA §8</span></p></div>
+      </div>
+      <div class="row">
+        <div class="role"><span>Working</span>the whole product</div>
+        <div><p class="v-work" style="margin:0">Thursday · a calm week ahead. You're all set for tonight. <small>Read, never noticed — the humane reading voice that carries every room, calm and legible.</small></p><p style="margin:6px 0 0; font-size:12.5px; color:var(--h-ink-2)">Warmth lives in the <em>setting</em> — measure and leading — never in decorative letterforms. <span class="cite">OHDB §8 · TRANSLATION1 §4.2 LINEN</span></p></div>
+      </div>
+    </div>
+    <div class="ledger">
+      <div class="row"><div class="keeps">One type scale &amp; three voices, identical in every room. <span class="cite">EXPBLUE §5.2</span></div><div class="refuses">A room coining its own typeface to "feel like itself" — the costume. <span class="cite">TRANSLATION1 §4.1 ROOMS</span></div></div>
+      <div class="row"><div class="keeps">Text on the counter's solid ground; contrast measured against the floors before adoption. <span class="cite">UIA §15</span></div><div class="refuses">Type on the view; legibility traded for atmosphere. <span class="cite">EXPBLUE §6.1</span></div></div>
+    </div>
+  </section>
+
+  <!-- ============ 07 SPACING ============ -->
+  <section class="plate" id="p7">
+    <div class="plate-head"><span class="plate-no">PLATE 07</span><h3 class="plate-title">Spacing — air as a material</h3><span class="plate-kind">System · the resting state</span></div>
+    <p class="lede">Air is a <strong>building material</strong>, not leftover room — generous breathing space is the resting state of every surface. When there is more to say, the counter <strong>gives more room; it never crowds the work to fit</strong>. All spacing draws from one named scale. <em>Values are UIA §9.</em> <span class="cite">TRANSLATION1 §4.1 SPACE · §5.1 (space before decoration) · EXPBLUE §8.2</span></p>
+    <div class="plate-body split">
+      <div class="rhythm" role="img" aria-label="One spacing scale rising in even steps">
+        <div class="step"><div class="bar" style="height:16px"></div><span class="lab">·</span></div>
+        <div class="step"><div class="bar" style="height:28px"></div><span class="lab">·</span></div>
+        <div class="step"><div class="bar" style="height:46px"></div><span class="lab">·</span></div>
+        <div class="step"><div class="bar" style="height:74px"></div><span class="lab">·</span></div>
+        <div class="step"><div class="bar" style="height:118px"></div><span class="lab">·</span></div>
+        <div class="step" style="flex:1; min-width:120px; align-self:stretch; justify-content:center"><div style="width:100%; height:118px; border:1px dashed var(--h-oak-edge); border-radius:2px; display:flex; align-items:center; justify-content:center; color:var(--h-ink-2); font-family:var(--font-mono); font-size:10.5px; text-align:center; letter-spacing:.05em">AIR<br>the resting state</div></div>
+      </div>
+      <div>
+        <div class="grid2" style="grid-template-columns:1fr">
+          <div class="c"><h4>The emphasis budget</h4><p>Spent on a few elements — the greeting, the one door — and <b>withheld</b> from everything else. Calm <em>is</em> the layout. <span class="cite">UIA §3 · TRANSLATION1 §4.3 CALM</span></p></div>
+          <div class="c"><h4>Disclosure, not compression</h4><p>Content that won't fit with its air intact is too much for one surface — it is split, not compressed. <span class="cite">UIA §9</span></p></div>
+          <div class="c"><h4>A bigger screen breathes more</h4><p>Extra width becomes air and view, <b>never more widgets</b>. A larger screen should feel calmer, not busier. <span class="cite">HOUSE1 §19.3</span></p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 08 COMPANION ============ -->
+  <section class="plate" id="p8">
+    <div class="plate-head"><span class="plate-no">PLATE 08</span><h3 class="plate-title">Companion — one fixed chair</h3><span class="plate-kind">Placement &amp; conduct</span></div>
+    <p class="lede">The knowledgeable friend at the counter — <strong>a presence, not a room</strong>. One fixed chair, lower-right foreground, at every hour and in every room, so the household never hunts for it. Its <strong>entire sign of life is timing</strong>: it arrives a beat after you. No face, no pulse, no typing dots, no simulated mood. <span class="cite">TRANSLATION1 §4.4 COMPANION · EXPBLUE §13 · UIA §10</span></p>
+    <div class="plate-body split">
+      <figure class="draw">
+        <div class="mount" style="min-height:210px; display:flex; align-items:flex-end; justify-content:flex-end; padding:24px">
+          <div style="position:absolute; inset:0; background:radial-gradient(120% 130% at 18% 0%, var(--h-view-hi), transparent 48%), linear-gradient(180deg,var(--h-plaster),var(--h-plaster-lo))"></div>
+          <div style="position:absolute; left:8%; top:22%; width:52%; background:linear-gradient(180deg,var(--h-oak),var(--h-oak-edge)); border:1px solid rgba(56,48,22,.14); border-radius:4px; padding:16px; box-shadow:0 12px 26px -16px rgba(56,48,22,.5)">
+            <div style="font-family:var(--font-display); font-style:italic; color:var(--h-ink); font-size:15px">the counter &amp; its work</div>
+          </div>
+          <div style="position:relative; text-align:center">
+            <div class="companion" style="position:static; width:46px; height:46px; margin:0 auto"></div>
+            <div style="font-family:var(--font-mono); font-size:9.5px; color:var(--h-ink-2); margin-top:8px; letter-spacing:.08em">◐ the fixed chair<br>· arrives a beat behind ·</div>
+          </div>
+        </div>
+        <figcaption class="caption"><b>Fig 08</b> Foreground &amp; unobtrusive — it holds the room's own warm light, never a view or stage of its own.</figcaption>
+      </figure>
+      <div class="ledger">
+        <div class="row"><div class="keeps">Waits — silence is a valid state; speaks only when something is worth saying. <span class="cite">EXPLANG §5.7</span></div><div class="refuses">Filling every silence to seem useful. <span class="cite">EXPARCH §11</span></div></div>
+        <div class="row"><div class="keeps">Offers once, then puts the attention back; the choice stays the household's. <span class="cite">EXPARCH P5</span></div><div class="refuses">Deciding for the household, or performing helpfulness.</div></div>
+        <div class="row"><div class="keeps">The person crosses first; the Companion joins after. <span class="cite">EXPBLUE §12.2</span></div><div class="refuses">Greeting before the house has, or following room to room.</div></div>
+        <div class="row"><div class="keeps">Lit as part of the room. <span class="cite">EXPBLUE §13</span></div><div class="refuses">Lit differently, so it becomes a stage. A face, a fake gaze, theatrics. <span class="cite">TRANSLATION1 §4.4</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 09 MOTION ============ -->
+  <section class="plate" id="p9">
+    <div class="plate-head"><span class="plate-no">PLATE 09</span><h3 class="plate-title">Motion — lighting, not light shows</h3><span class="plate-kind">Notes · what may move</span></div>
+    <p class="lede">The one test, quotable in any review: <strong>if the person notices the animation before the content, the animation has failed.</strong> Home moves almost never, and only to mean something. Exactly two motions are sanctioned; everything else is still. <span class="cite">EXPLANG P.H · EXPBLUE §9 · UIA §11 · HOUSE1 §14</span></p>
+    <div class="motion">
+      <div class="m">
+        <h4>1 · The one light moment</h4>
+        <div class="track" aria-hidden="true"><div class="arc"></div><div class="dot" style="left:8px; background:var(--amber)"></div><div class="dot" style="right:8px; left:auto"></div></div>
+        <p>Morning sun settling on the counter — <b>once a day, on arrival</b>. Reads as light landing on a surface, softly. Returns and the rest of the day have none; the room is simply, already, there. <span class="cite">ORCHARD2 §5.2 · HOUSE1 §7</span></p>
+      </div>
+      <div class="m">
+        <h4>2 · The Companion's arrival beat</h4>
+        <div class="track" aria-hidden="true"><div class="dot" style="left:8px; opacity:.3"></div><div class="dot" style="left:44%; opacity:.6"></div><div class="dot" style="right:8px; left:auto"></div></div>
+        <p>You cross first; the friend takes its chair a beat behind. <b>Manners rendered as timing</b> — its entire sign of life. No pulse, no dots. <span class="cite">EXPBLUE §12.2 · §13</span></p>
+      </div>
+      <div class="m">
+        <h4>Still by construction</h4>
+        <div class="track" aria-hidden="true" style="border-bottom-style:solid; border-color:var(--line)"><div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:10px; color:var(--ink-3); letter-spacing:.1em">— no movement —</div></div>
+        <p>The shell never moves. The orchard never moves. Living Details never animate. Place survives total stillness; the view's life is warmth and light, never movement. <span class="cite">EXPBLUE §6.1·§12.5·§14</span></p>
+      </div>
+      <div class="m">
+        <h4>Yields to intent</h4>
+        <div class="track" aria-hidden="true"><div class="dot" style="left:8px"></div><div style="position:absolute; left:30%; bottom:22px; font-family:var(--font-mono); font-size:16px; color:var(--amber)">→ ⟩⟩</div></div>
+        <p>If the person acts during any settle, the motion completes immediately and gets out of the way. <b>Attention is borrowed, never taken.</b> <span class="cite">EXPLANG P.12 · EXPARCH P8</span></p>
+      </div>
+    </div>
+    <div class="ledger" style="margin-top:14px">
+      <div class="row"><div class="keeps">Reduced-motion fully honoured — with motion off, Home is <b>already there</b>, complete, losing nothing. The arrival is felt, not watched. <span class="cite">UIA §11 · ORCHARD2 §5</span></div><div class="refuses">An evening theme, a dusk sweep, a pulsing glow, a loading theatre — the second sun. <span class="cite">TRANSLATION1 §4.3 MORNING RHYTHM · §4.1 LIGHT</span></div></div>
+    </div>
+  </section>
+
+  <!-- ============ 10 EMPTY STATE ============ -->
+  <section class="plate" id="p10">
+    <div class="plate-head"><span class="plate-no">PLATE 10</span><h3 class="plate-title">Empty state — the kept quiet</h3><span class="plate-kind">State · primary, not edge</span></div>
+    <p class="lede">A well-run household on a calm day has little to report, so the quiet Home is not an edge case — it is a <strong>primary state, and it must be the warmest one</strong>. <em>The deliberate quiet of a room someone keeps, not the emptiness of a room no one uses.</em> This exact distinction is why the Kept Room was chosen over the cold Glass Pavilion. <span class="cite">TRANSLATION1 §4.3 QUIET CORNERS · OHDB §4 · ORCHARD3 §5</span></p>
+    <div class="plate-body split">
+      <figure class="draw">
+        <div class="mount">
+          <div class="home quiet">
+            <div class="walls"><span class="brand"><span class="apple"></span>THA</span><span class="nav"><span>Home</span><span>Planner</span><span>Cookbook</span><span>Pantry</span></span><span class="home-anchor" aria-hidden="true"></span></div>
+            <div class="view" style="min-height:200px">
+              <div class="treeline" aria-hidden="true"><i style="left:8%;width:66px;height:58%"></i><i style="left:28%;width:88px;height:80%"></i><i style="left:50%;width:58px;height:52%"></i><i style="left:68%;width:96px;height:74%"></i><i style="left:88%;width:60px;height:56%"></i></div>
+              <div class="horizon" aria-hidden="true"></div>
+            </div>
+            <div class="stage" style="padding:0 8% 8%">
+              <div class="counter" style="max-width:56%; text-align:center">
+                <p class="greeting">Good morning, Sarah.</p>
+                <p class="orient">Nothing needs you this morning.<br>Everything's in hand.</p>
+              </div>
+              <div class="companion" aria-hidden="true"></div>
+            </div>
+          </div>
+        </div>
+        <figcaption class="caption"><b>Fig 10</b> Honest in absence: no invented content, no filler, no guilt. The view breathes; the counter stays small. Warm, tended, unmistakably <em>kept</em>.</figcaption>
+      </figure>
+      <div>
+        <div class="grid2" style="grid-template-columns:1fr">
+          <div class="c"><h4>The single guard against cold</h4><p>A quiet Home is visibly <b>lived in</b> — the household's own name in the greeting, the orchard alive beyond the glass, the friend in the chair. <span class="cite">EXPLANG §3A.4 · HOUSE1 §15</span></p></div>
+          <div class="c"><h4>No door is fine</h4><p>When there is no useful next step, Home offers none and stays complete. A calm day should <em>feel</em> calm, not be dressed into busyness. <span class="cite">EXPBLUE §12.3</span></p></div>
+          <div class="c"><h4>Never</h4><p>Calm curdling into cold — the funeral parlour, the empty white room, the one thing THA must never be. <span class="cite">EXPLANG §3A.1</span></p></div>
+        </div>
+        <p class="pull" style="margin-top:22px">A full-strength room with nothing in it must never read as "nobody home."</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 11 RETURNING HOME ============ -->
+  <section class="plate" id="p11">
+    <div class="plate-head"><span class="plate-no">PLATE 11</span><h3 class="plate-title">Returning Home — the design of constancy</h3><span class="plate-kind">State · every entry after the first</span></div>
+    <p class="lede">A household enters Home many times a day. <strong>Every entry after the first is a return, not an arrival</strong> — and the design of a return is the design of <em>constancy</em>. The room is exactly as it was left: same warm morning, same still orchard, nothing rearranged to seem fresh. The greeting is not re-spent. <span class="cite">HOUSE1 §8 · EXPBLUE §12.2 · OLB Returning Home</span></p>
+    <div class="plate-body">
+      <div class="grid2">
+        <div class="c" style="padding:22px">
+          <h4 style="color:var(--green-ink)">First entry · once a day</h4>
+          <div style="margin-top:12px; padding:14px; background:var(--h-plaster); border:1px solid var(--line-2); border-radius:3px">
+            <p style="font-family:var(--font-display); font-style:italic; font-size:19px; color:var(--h-ink); margin:0">Good morning, Sarah.</p>
+            <p style="font-size:12.5px; color:var(--h-ink-2); margin:8px 0 0; line-height:1.5">the greeting in THA's hand · the one light moment · full orientation to the day · <em>"I've come home."</em></p>
+          </div>
+        </div>
+        <div class="c" style="padding:22px">
+          <h4 style="color:var(--ink-3)">Later returns · every other entry</h4>
+          <div style="margin-top:12px; padding:14px; background:var(--h-plaster); border:1px solid var(--line-2); border-radius:3px">
+            <p style="font-size:15px; color:var(--h-ink); margin:0">Tonight's still handled.</p>
+            <p style="font-size:12.5px; color:var(--h-ink-2); margin:8px 0 0; line-height:1.5">no greeting re-performed · no light moment — already, simply there · the true thing for this hour, often a single calm line · <em>"…it kept. I'm just back."</em></p>
+          </div>
+        </div>
+      </div>
+      <div class="ledger" style="margin-top:14px">
+        <div class="row"><div class="keeps">The room is exactly as it was left. <span class="cite">OLB Returning Home</span></div><div class="refuses">Rearranging to seem fresh, or greeting differently to prove it was busy.</div></div>
+        <div class="row"><div class="keeps">The warmth of return is <b>being kept</b>, not being performed at. <span class="cite">EXPLANG P.E</span></div><div class="refuses">Re-spending the signature hand on every return. <span class="cite">EXPBLUE §12.2</span></div></div>
+        <div class="row"><div class="keeps">The Companion is there again, in the same chair, a beat behind. <span class="cite">EXPBLUE §13</span></div><div class="refuses">Pouncing with everything that happened while you were out.</div></div>
+      </div>
+      <p class="pull center" style="margin-top:26px">Does coming back feel like walking into your own kitchen — unchanged, warm, one step from anywhere — or like reloading an app that rearranged itself while you were gone?</p>
+    </div>
+  </section>
+
+  <!-- ============ PERMANENCE CONTRACT ============ -->
+  <section class="plate" id="contract" style="border-top:2px solid var(--line-2)">
+    <div class="plate-head"><span class="plate-no">THE CONTRACT</span><h3 class="plate-title">What always remains · what may change</h3><span class="plate-kind">The one reference table</span></div>
+    <p class="lede">The house keeps; the household's day shows through. If a proposed change moves something from the left column, it must <strong>STOP</strong>. <span class="cite">HOUSE1 §20 · EXPBLUE §15.2 · TRANSLATION1 §4.3 PERMANENCE</span></p>
+    <div class="contract">
+      <div class="row"><div class="hd keep" style="border-right:1px solid var(--line)">Always remains — the house</div><div class="hd change">May change — the household's own truth</div></div>
+      <div class="row"><div class="keep">One upper-left morning light — never dusk, never dimmed</div><div class="change">The greeting word — morning / afternoon / evening (clock, once a day)</div></div>
+      <div class="row"><div class="keep">The still, in-leaf, ancient orchard at E3</div><div class="change">The orientation line — the true, useful thing for the hour</div></div>
+      <div class="row"><div class="keep">The warm plaster ground &amp; lit oak counter</div><div class="change">The one door's destination — re-aimed by relevance</div></div>
+      <div class="row"><div class="keep">The permanent layout &amp; the counter's position</div><div class="change">The Living Detail's data — real clock, real name</div></div>
+      <div class="row"><div class="keep">The shell / walls, byte-identical, all hours · the Companion's chair &amp; manners · the seven feelings' warm temperature · one primary action · the accessibility floors</div><div class="change">Whether Home is quiet or has content to disclose<br><span style="color:var(--ink-3)">— nothing else —</span></div></div>
+    </div>
+    <p class="pull center" style="margin-top:26px">The house keeps one unchanging morning; the household's day moves through it. Home's rhythm is carried entirely by what is true right now — never by the house's light, theme, palette, or mood.</p>
+  </section>
+
+  <!-- ============ GOLD STANDARD ============ -->
+  <section class="plate" id="gold">
+    <div class="plate-head"><span class="plate-no">THE GOLD STANDARD</span><h3 class="plate-title">What every future room inherits</h3><span class="plate-kind">Home is entered first, returned to most</span></div>
+    <p class="lede">Home is the Entrance Hall, so its design <em>is</em> the household's sense of the whole house — which is exactly why it is the reference every room inherits. A future room takes the <strong>grammar</strong>, not the E3 horizon. <span class="cite">HOUSE1 §22 · EXPBLUE §5</span></p>
+    <div class="grid2">
+      <div class="c"><h4>Inherited · always</h4><p><b>Arrive before you work.</b> Every room opens with its own miniature arrival — a calm posture before its first task. <span class="cite">EXPLANG §5</span></p></div>
+      <div class="c"><h4>Inherited · always</h4><p><b>One warm working ground, one primary action, the friend a beat behind, constant walls.</b> These do not change room to room. <span class="cite">TRANSLATION1 §4</span></p></div>
+      <div class="c"><h4>Inherited · always</h4><p><b>One morning, one orchard, one Companion, one shell — forever.</b> The constants Home establishes, every room keeps. <span class="cite">EXPBLUE §5.2</span></p></div>
+      <div class="c"><h4>Inherited · the principle only</h4><p><b>Size the view to the room's purpose.</b> Home spends the most (E3) because looking is its purpose; every other room spends less. The <em>discipline</em> is Home's gift; the <em>level</em> is each room's own. <span class="cite">EXPBLUE §6.2</span></p></div>
+    </div>
+    <p class="pull center" style="margin-top:26px">Get the entrance hall right and every room off it is already half-designed.</p>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="gov">
+      <b>Design intent — not implementation, and not governing law.</b> This plate-set applies the governing blueprints and owns only the concrete visual design of one room; it creates no rule and no second owner (EXPBLUE §18; Architecture Principle 2). Nothing here is a token, a component, or a colour value: every binding value remains the <b>UI Architecture's</b> (§7/§8/§9/§11), and the tonal drawings show composition, proportion and hierarchy only. The Kept Room's warm ground, lit oak counter and soft single-direction depth sit <b>beyond the UI Architecture's current flat-surface law (UIA §4)</b> and ship only once the governed <b>UIA §4 amendment</b> admits them, exposure &amp; light enter as <b>semantic tokens by admission</b> (UIA §16), the greeting is admitted as its own <b>Living Detail</b> decision, and the Kept Room itself graduates by amendment. Two Blueprint open items bear directly on Home and must close first: the <b>orchard's canonical owner</b> and <b>Home's header</b>. This design declares that governance path (HOUSE1 §0.4 · TRANSLATION1 §2.4) — it does not jump it.
+    </div>
+    <div class="abbr">
+      EXPBLUE — THA Experience Blueprint · OHDB — Orchard House Design Blueprint · OLB — Orchard Living Book · EXPARCH — Experience Architecture · EXPLANG — Experience Language · UIA — UI Architecture · TRANSLATION1 — The Kept Room Translation · ORCHARD2 — First Light · ORCHARD3 — The Kept Room · HOUSE1 — The Entrance Hall
+    </div>
+    <div class="sig">
+      DESIGN1 · The Entrance Hall — Canonical Home Visual Design<br>
+      The Healthy Apples · a modern home in an ancient orchard · 2026-07-15<br>
+      Passes the Experience Test · the Blueprint Checks · the Design Character Check — read against the Kept Room Translation.
+    </div>
+  </div>
+</footer>

@@ -4,6 +4,7 @@
 **Classification:** Experience Governance (canonical)
 **Adopted:** 2026-07-15 (EXPLANG1)
 **Enhanced:** 2026-07-15 (EXPLANG1A) — added § 4A *The Place Principles*, eight arrival-derived principles of feeling discovered during the ARRIVAL1 experience prototype, plus the review questions and anti-patterns they genuinely require. An enhancement only: no § 4 principle was rewritten and no existing guidance was duplicated.
+**Enhanced:** 2026-07-15 (EXPLANG1B) — added § 3A *The Emotional Palette of THA*, the emotional temperature discovered during the Arrival prototype reviews: what THA must never feel, the seven-note palette it must always feel, the orchard as *life*, and the governing principle *"Calm must never become lifeless"* — plus the review questions and anti-patterns the palette genuinely requires. An enhancement only: § 3's seven feelings and every § 4/§ 4A principle are unchanged and unrenumbered, and no existing guidance was duplicated.
 **Governed by:** [`THA_EXPERIENCE_ARCHITECTURE.md`](./THA_EXPERIENCE_ARCHITECTURE.md) (EXP1/EXP2) — **where this document and the Experience Architecture conflict, the Experience Architecture wins** (§ 2.1)
 **Governing documents:** [`ARCHITECTURE_PRINCIPLES.md`](./ARCHITECTURE_PRINCIPLES.md), [`ENGINEERING_WORKFLOW.md`](./ENGINEERING_WORKFLOW.md)
 **Sibling, non-overlapping:** [`THA_UI_ARCHITECTURE.md`](./THA_UI_ARCHITECTURE.md) — it owns *how THA looks*; this document owns *how THA feels* (§ 2.2)
@@ -85,6 +86,58 @@ Every surface, however different its job, must leave the same emotional signatur
 And it must produce all seven **without ever becoming theatrical, gimmicky, or distracting.** This is the hardest constraint in the document, because the lazy route to each feeling is its counterfeit: calm faked with emptiness, welcome faked with a splash screen, intelligence faked with animation, memorability faked with a signature effect. Every counterfeit is louder than the real thing and cheaper to build, and every one is forbidden. The test throughout: **the feeling must be a consequence of care, never a performance of it.** If a household would feel the care, it is the experience; if they would only notice the effect, it is decoration, and it is removed.
 
 > **The one-line standard for this whole document:** *the household should remember that THA felt calm, welcoming and effortless — and be entirely unable to name a single thing that made it so.* The moment they can name the effect, the effect has become the experience, and the experience has been lost.
+
+## 3A. THE EMOTIONAL PALETTE OF THA
+
+This section was discovered during the **Arrival prototype reviews** (`EXP2`/`EXP3`) and admitted by governance (`EXPLANG1B`, 2026-07-15) — the way § 8 requires any governing feeling to enter. Reviewing the arrival candidates exposed a failure mode no existing section named: a surface can honour every feeling in § 3 and every principle in § 4 and still drift, prototype by prototype, toward *stillness* — misty, hushed, spa-like, beautifully dead. § 3 already forbids the loud counterfeits of calm; nothing yet forbade the quiet one. The palette closes that side.
+
+Where § 3 names the seven feelings THA must produce, the palette names the **emotional temperature they must be produced at** — the register the whole product is played in. The two sections are one standard seen from two sides: § 3 says *what* the household must feel; the palette says the feeling must be **warm and alive**, never achieved by cooling the product down. Where a palette note deepens a § 3 feeling or a § 4 principle it **cites** it and adds only what the reviews revealed — it restates nothing, because restating a rule creates a second owner of it (§ 2, § 8).
+
+### 3A.1 What THA must never feel
+
+However calm, however finished, however expensive it looks, THA must **never** feel:
+
+- **cold**
+- **clinical**
+- **empty**
+- **silent**
+- **sterile**
+- **luxury for luxury's sake**
+- **funeral parlour calm**
+- **emotionally distant**
+
+Each of these is calm's failure state rather than its achievement. Deliberate breathing space and honest empty states remain exactly what Principle 8 says they are — the product breathing; what this list forbids is the *temperature* those qualities are sometimes mistaken for: quiet that reads as nobody home, restraint that reads as indifference, and finish that reads as a showroom no one is allowed to live in.
+
+### 3A.2 What THA must always feel
+
+The palette has seven notes. Together they are the temperature of every THA surface, in every realm, in every state — including errors, empty states, and admin.
+
+- **Calm** — never rushed, never overwhelming. (The baseline of § 3 and the discipline of Principle 2; the palette adds only that calm is a *warm* quiet, never a cold one.)
+- **Warm** — like somebody has thoughtfully prepared something for you. Warmth is the felt evidence of the care § 3 defines premium as; a surface that is correct but cold has withheld it.
+- **Energised** — full of life, freshness, and optimism — and never loud or busy. Energy in THA is the freshness of good food and a bright morning, not motion or noise; it is entirely compatible with calm, and the palette exists chiefly to say so.
+- **Thoughtful** — the platform quietly thinks ahead for the household; it anticipates rather than interrupts. (The temperature of § 3's *intelligent* and Principle 7's manner — felt as being thought of, not as being watched.)
+- **Comforting** — like sitting down with a warm cup of tea. Familiar. Relaxing. Reassuring. (The domestic warmth in which § 3's *reassuring* — "today is under control" — must land.)
+- **Decisive** — quiet confidence. Recommendations feel considered rather than hesitant; the product does not hedge, waver, or hand its uncertainty to the household as homework. (Honesty about genuine unknowns is untouched — decisiveness is confidence in what *is* known, never certainty theatre, which § 7 already forbids.)
+- **Curious** — the product encourages gentle exploration and invites discovery without ever demanding attention. There is always a little more to wander into, never a next thing being pushed.
+
+> **The one-sentence feel:** THA should feel like **"a warm, lived-in home where someone has already thought about dinner."** This is § 1.1's calm kitchen with the palette's addition made explicit — *lived-in*. A home has life in it: light, warmth, food, evidence of care. A show home has none, however beautiful, and THA must never feel like one.
+
+### 3A.3 The orchard represents life
+
+The orchard is THA's identity (Principle 5) and its environment (Principle B). The palette fixes what the orchard *means*:
+
+> **The orchard represents life. Not silence. Not stillness. Not decoration.**
+
+The orchard should feel **bright · growing · healthy · optimistic · welcoming** — an orchard in morning light, in season, tended. It must never feel gloomy, misty, or melancholy: an orchard at dusk, in fog, or in mourning is still an orchard, and it is still wrong. (Whether orchard character is environment or ornament remains Principle 5's; how it is drawn remains the UI Architecture's. This note governs only the *life* the environment must carry.)
+
+### 3A.4 Calm must never become lifeless
+
+> **Governing principle: calm must never become lifeless. The platform should always feel alive without becoming noisy.**
+
+This is the palette compressed to one rule, and the test the Arrival reviews proved necessary. Calm and life are not in tension — a kitchen on a bright morning is both — and THA is only THA when it is both. A surface that achieved its quiet by draining the life out is not calm; it is empty, and emptiness is on the never-feel list.
+
+- **Good — the feeling of alive calm:** warm morning light · freshness · breathing space · optimism · quiet confidence.
+- **Avoid — the feeling of lifeless calm:** empty luxury · spa-like stillness · meditation-retreat aesthetics · overly desaturated palettes · excessive silence · emotional coldness. (What a palette's actual values are is the UI Architecture's § 7; *"overly desaturated"* is named here only as a feeling — the sense that the colour of food and daylight has been bled out of the room.)
 
 ## 4. THE EXPERIENCE PRINCIPLES OF FEELING
 
@@ -459,6 +512,15 @@ Every future UX implementation is evaluated against these questions **before it 
   never a greeting stapled to a workload? (Principle C)
 □ If this is Home, does it still feel like the place the household arrives —
   not merely a dashboard? (Principle G)
+
+── WARMTH & LIFE (§ 3A) ────────────────────────────────────────────────
+□ Does this feel warm as well as calm — or has the calm been achieved by
+  cooling it down?
+□ Does this space feel alive — bright, fresh, optimistic — rather than still,
+  misty, or hushed?
+□ Would a family feel welcomed here — not merely impressed?
+□ Does this feel like somewhere you would enjoy spending time, rather than
+  somewhere you admire and leave?
 ```
 
 ## 7. EXPERIENCE ANTI-PATTERNS
@@ -480,6 +542,11 @@ These are behaviours THA must **never** adopt, in any surface, for any reason, h
 - **Paging instead of walking.** Movement that makes the household feel it is advancing through disconnected slides or documents rather than moving through one continuous place. It is the opposite failure to scroll-jacking — and just as corrosive to the sense of home (Principle D).
 - **Home reduced to a dashboard.** Treating the household's place of arrival as a metrics screen — collapsing the home into one of its rooms. A dashboard is checked; a home is belonged to (Principle G).
 - **A welcome that is also work.** A greeting fused with a task, so the household must labour at the very moment it should simply arrive. Arrival and work are different beats and must never be made the same one (Principle C).
+- **Calm becoming lifeless.** Quiet achieved by draining the life out — stillness, hush, and desaturation posing as serenity. It is the *quiet* counterfeit of calm, exactly as forbidden as the loud ones (§ 3A.4).
+- **Clinical minimalism.** Emptiness and sterility wearing the costume of elegance. Principle 8's breathing space is content's room to breathe; this is the room with the furniture removed — reduction pursued until nothing warm survives it (§ 3A.1).
+- **Cold luxury.** Premium executed as expense, exclusivity, or showroom polish rather than as care — luxury for luxury's sake. It impresses and does not welcome, which inverts what § 3 defines premium to be (§ 3A.1).
+- **Emotionally distant experiences.** Surfaces that are behaviourally and visually correct but feel like nobody is home — no warmth, no anticipation, no evidence anyone thought about this household. Correctness without care is not THA (§ 3A.2).
+- **Beautiful but unwelcoming interfaces.** A surface built to be admired rather than lived in — a show home. If the honest reaction is *"impressive"* rather than *"I'm glad to be here,"* the beauty is working against the product (§ 3A.2).
 
 > **The anti-pattern test, in one line:** if a thing would make a person *notice the product* rather than *feel at home in it*, it is an anti-pattern — no matter how well it is made.
 
@@ -488,7 +555,7 @@ These are behaviours THA must **never** adopt, in any surface, for any reason, h
 ## 8. GOVERNANCE AND ADMISSION
 
 - **This document is governing architecture.** Every user-facing implementation is made under it. It is required reading in the Architecture Bootstrap alongside the Experience and UI Architectures, and its Experience Review Questions (§ 6) are part of the Experience & UI Governance Compliance gate in `ENGINEERING_WORKFLOW.md`.
-- **A new principle of feeling, or a new anti-pattern, is admitted by governance, never by shipping.** § 4's thirteen principles and § 7's anti-patterns are governing but not closed; a fourteenth enters the way any governing rule does — named, checked for conflict against this document and its two governors, and added deliberately — not by a surface quietly assuming it. **§ 4A's eight Place Principles were admitted exactly this way** (`EXPLANG1A`, 2026-07-15): discovered in the ARRIVAL1 prototype, checked for conflict and duplication against § 4, and added by governance — they deepen the thirteen without renumbering or replacing them.
+- **A new principle of feeling, or a new anti-pattern, is admitted by governance, never by shipping.** § 4's thirteen principles and § 7's anti-patterns are governing but not closed; a fourteenth enters the way any governing rule does — named, checked for conflict against this document and its two governors, and added deliberately — not by a surface quietly assuming it. **§ 4A's eight Place Principles were admitted exactly this way** (`EXPLANG1A`, 2026-07-15): discovered in the ARRIVAL1 prototype, checked for conflict and duplication against § 4, and added by governance — they deepen the thirteen without renumbering or replacing them. **§ 3A's Emotional Palette was admitted the same way** (`EXPLANG1B`, 2026-07-15): discovered in the Arrival prototype reviews (`EXP2`/`EXP3`), checked for conflict and duplication against § 3 and § 4, and added by governance — it fixes the temperature of § 3's seven feelings without rewriting any of them.
 - **This document owns feeling and nothing else.** It defines no colour, component, token, route, or motion value, and retires none. It creates no runtime dependency. Where it appears to define look or behaviour, that is a defect in this document to be corrected toward the UI Architecture or the Experience Architecture respectively.
 - **Precedence, stated once.** Experience Architecture (behaviour) > this document (feeling) > and beside it the UI Architecture (look), which this document never overrides and which never overrides it. Any conflict resolves upward to the Experience Architecture, and both subordinate documents are corrected.
 
@@ -496,4 +563,4 @@ These are behaviours THA must **never** adopt, in any surface, for any reason, h
 
 *Required reading before any user-facing experience or implementation work.*
 *Subordinate to the Experience Architecture: it governs how THA feels; the Experience Architecture governs how THA behaves, and prevails in any conflict. Sibling to the UI Architecture, which governs how THA looks.*
-*Rollback: this document only — `git checkout HEAD docs/architecture/THA_EXPERIENCE_LANGUAGE.md` will fail until it is committed; to revert before commit, delete the file. Rollback tag for the EXPLANG1 workstream (original document): `rollback/EXPLANG1-tha-experience-language-20260715` → `0f0615aa`. Rollback tag for the EXPLANG1A enhancement (§ 4A and its review questions / anti-patterns): `rollback/EXPLANG1A-experience-language-enhancements-20260715` → `b7ddc442`.*
+*Rollback: this document only — `git checkout HEAD docs/architecture/THA_EXPERIENCE_LANGUAGE.md` will fail until it is committed; to revert before commit, delete the file. Rollback tag for the EXPLANG1 workstream (original document): `rollback/EXPLANG1-tha-experience-language-20260715` → `0f0615aa`. Rollback tag for the EXPLANG1A enhancement (§ 4A and its review questions / anti-patterns): `rollback/EXPLANG1A-experience-language-enhancements-20260715` → `b7ddc442`. Rollback tag for the EXPLANG1B enhancement (§ 3A, the Emotional Palette, and its review questions / anti-patterns): `rollback/EXPLANG1B-emotional-palette-20260715` → `b3c650cd`.*

@@ -90,10 +90,11 @@ The following domains have been identified by reading all TypeScript files under
 | Authoritative Source | **WS0 Knowledge Registry** (`shared/knowledge/` → DB `knowledge_foods`, `knowledge_nutrients`, `knowledge_health_benefits`, `knowledge_food_nutrients`, `knowledge_food_benefits`, `knowledge_nutrient_benefits`) |
 | Read layer | `server/services/nutrition-knowledge-registry.ts` |
 | Seed data | `shared/knowledge/foods.ts`, `nutrients.ts`, `health-benefits.ts`, `relationships.ts` |
-| DB seed runner | `server/seeds/seed-knowledge-registry.ts` |
-| Foods covered | 188 foods |
+| DB seed runner | `server/seeds/seed-knowledge-registry.ts` (upsert + KNOW5 reconcile) |
+| Foods covered | **610 foods** (272 editorial + 338 graduated, `KNOWLEDGE_SEED_COUNTS.foods`) |
+| Published | **610 / 610** — projection verified equal to the owner (PUB1, 2026-07-14) |
 | Consumers (authoritative) | Pantry Explore (`/api/knowledge/*`), Food Report (`shared/canonical/food-report-adapter.ts`), Weekly Nutrition Report, Simply Better Choices |
-| Status | **Authoritative — declared** |
+| Status | **Authoritative — published and verified** |
 
 ---
 
@@ -104,10 +105,14 @@ The following domains have been identified by reading all TypeScript files under
 | Attribute | Value |
 |-----------|-------|
 | Authoritative Source | **WS2A Canonical Seed** (`shared/canonical/foods.ts` → DB `canonical_food`, `food_variety`, `canonical_food_alias`, `diversity_group`) |
-| Foods covered | 239 entries in shared/canonical/foods.ts |
-| Seed runner | `server/seeds/seed-canonical-food.ts` |
-| Consumers | Food Report adapter, Variety surfacing, Pantry Explore drill-down |
-| Status | **Authoritative — declared** |
+| Foods covered | **312 canonical foods** (`CANONICAL_SEED`), 68 varieties, 801 aliases, 173 diversity groups |
+| Seed runner | `server/seeds/seed-canonical-food.ts` (upsert + PUB1 reconcile sweep) |
+| Published | **312 / 312** foods, 68 / 68 varieties, 801 / 801 aliases, 173 / 173 diversity groups — projection verified equal to the owner (PUB1, 2026-07-14). Before PUB1 the projection held **53** foods: the seed could not run, because `canonical_food` was missing six columns its owner declares (migration `2026-07-14_pub1_canonical_food_projection_columns`). |
+| Knowledge binding | 256 published canonical foods carry `knowledge_food_slug` → Domain 1. 99.3% of bindable identities are bound; the remainder are recorded in `DEFERRED_KNOWLEDGE_BINDINGS`, never guessed. |
+| Candidate pool | `canonical_food` also holds **295 `tier='catalogue'` / `status='draft'`** rows — the WS0.11 USDA candidates. They are **not** a publication: Stage 1 of the graduation pipeline (PKCA §1.1), quarantined out of every published read and never touched by the reconcile sweep. |
+| Runtime read path | The seed itself (`resolveCanonicalFood`) — identity resolves against the owner; the DB tables are its published projection. |
+| Consumers | Food Report adapter, Variety surfacing, Pantry Explore drill-down, 30-plants counter (via `plantDiversityGroup`) |
+| Status | **Authoritative — published and verified** |
 
 ---
 
@@ -129,8 +134,11 @@ The following domains have been identified by reading all TypeScript files under
 
 | Attribute | Value |
 |-----------|-------|
-| Authoritative Source | **WS2A Canonical → diversity_group table** (`shared/canonical/diversity-groups.ts`) |
-| Status | **Contested — see Phase 3** |
+| Authoritative Source | **WS2A Canonical → diversity_group table** (`shared/canonical/diversity-groups.ts`, `DIVERSITY_GROUP_SEED`, 173 groups) |
+| Seed runner | `server/seeds/seed-canonical-food.ts` |
+| Published | **173 / 173** groups (PUB1, 2026-07-14; previously 52) |
+| Counting rule | One diversity group = one plant. `plantDiversityGroup()` (`shared/canonical/plant-classifier.ts`) is the sole owner of that question. A counter that dedupes on the ingredient slug over-counts and is a defect (CPI1 S1-2). |
+| Status | **Authoritative — published and verified.** The former contest with `client/src/lib/nutrition-variety.ts` was resolved by **M4** in the canonical seed's favour; PUB1 published the projection and converged the user-facing counter. Remaining consumer gaps are listed under Domain 22. |
 
 ---
 
@@ -335,8 +343,12 @@ The following domains have been identified by reading all TypeScript files under
 
 | Attribute | Value |
 |-----------|-------|
-| Authoritative Source | **Contested** (`client/src/lib/nutrition-variety.ts` keyword lists vs `diversity_group` DB table) |
-| Status | **Contested — see Phase 3** |
+| Authoritative Source | **`shared/canonical/diversity-groups.ts`** (`DIVERSITY_GROUP_SEED`, 173 groups) → DB `diversity_group`. The contest with `client/src/lib/nutrition-variety.ts` was **resolved by M4** in the canonical seed's favour. |
+| Published | **173 / 173** groups — projection verified equal to the owner (PUB1, 2026-07-14; previously 52). |
+| Counting rule | One **diversity group** = one plant. `plantDiversityGroup()` (`shared/canonical/plant-classifier.ts`) is the single owner of that question, and is the key every counter must dedupe on — never the ingredient slug. Kale and cavolo nero are one plant; every tomato variety is one plant. |
+| Seed runner | `server/seeds/seed-canonical-food.ts` |
+| Status | **Authoritative — published and verified** |
+| Known gap | Two counters still dedupe on the canonical slug rather than the group and so can over-count: `server/lib/household-nutrition-assembler.ts` (`weekPlantFacts`) and `server/lib/nutrition-centre-assembler.ts` (`plantDiversity`). The user-facing 30-plants number on Home and Planner (`routes.ts`) was converged by PUB1; these two were not. |
 
 ---
 
@@ -446,7 +458,7 @@ The following domains have been identified by reading all TypeScript files under
 
 | System | Location | Coverage | Purpose | Status |
 |--------|----------|----------|---------|--------|
-| WS0 Knowledge Registry | `shared/knowledge/` → DB `knowledge_*` tables | 188 foods, structured nutrients + benefits | Primary nutrition knowledge store for Pantry Explore, Food Report | **Authoritative** |
+| WS0 Knowledge Registry | `shared/knowledge/` → DB `knowledge_*` tables | 610 foods, structured nutrients + benefits | Primary nutrition knowledge store for Pantry Explore, Food Report | **Authoritative** |
 | `pantry-knowledge.ts` | `client/src/lib/pantry-knowledge.ts` | ~50 ingredients (flat map) | Pantry inventory context: why it matters, how to choose, tags | **Parallel — not retired** |
 | `nutrition-benefit-library.ts` | `client/src/lib/nutrition-benefit-library.ts` | ~25 boost ingredients | Boost ingredient display: key nutrients + one-line summary | **Parallel — not retired** |
 | `pantryIngredientKnowledge` table | DB `pantry_ingredient_knowledge` | 1 row per ingredient_key | AI-enriched version of pantry-knowledge, same schema | **Parallel — enrichment cache** |
@@ -835,7 +847,7 @@ who reads all three will notice. A user who trusts THA will wonder which is "rig
 | Food Knowledge (Nutrition) | `shared/knowledge/` → DB `knowledge_*` tables via `nutrition-knowledge-registry.ts` |
 | Canonical Food Identity | `shared/canonical/foods.ts` → DB `canonical_food`, `food_variety`, `canonical_food_alias` |
 | Food Relationships | `shared/relationships/food-graph.ts` |
-| Plant Diversity | DB `diversity_group` (via WS2A canonical) ← **NOT yet enforced** |
+| Plant Diversity | `shared/canonical/diversity-groups.ts` → DB `diversity_group`; one group = one plant, via `plantDiversityGroup()` |
 | Dietary Restrictions | `shared/restrictions/restriction-library.ts` |
 | Dietary Rules (pattern) | `server/lib/dietRules.ts` ← **duplicated in client** |
 | Dietary Preferences (user) | DB `users.dietPattern` + `users.dietRestrictions` |

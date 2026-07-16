@@ -179,7 +179,7 @@
         {
           "what": "`<Loader2>` usages",
           "pattern": "<Loader2[\\s>]",
-          "ceiling": 180,
+          "ceiling": 179,
           "note": "Capped, not banned: 140 are the exempt inline pending mark above. The population may fall, never rise."
         }
       ],
@@ -232,7 +232,7 @@
         {
           "what": "Raw `useMutation` — feedback owned by the call site",
           "pattern": "\\buseMutation\\s*[(<]",
-          "ceiling": 138,
+          "ceiling": 137,
           "excludePaths": [
             "client/src/hooks/use-tracked-mutation.ts"
           ],
@@ -670,8 +670,8 @@
         {
           "what": "`dark:` utilities authored across the client",
           "pattern": "\\bdark:",
-          "asAt": 855,
-          "asAtDate": "2026-07-14"
+          "asAt": 895,
+          "asAtDate": "2026-07-15"
         }
       ],
       "openMigration": {
@@ -733,7 +733,7 @@
         "--font-signature",
         ".signature-ink"
       ],
-      "owns": "THA in its own hand. The signature voice admitted by **UIA §8 (amended by UXHOME1)**, which replaced *\"two voices only; no third typeface, ever\"* with three named families and a hard boundary: the signature is for **emotionally significant branded moments only** and is forbidden in all functional UI — buttons, forms, navigation, tables, cards, modals, planner, shopping. `.text-signature` is the ONE entry point: no `font-signature` Tailwind utility exists, deliberately (tailwind.config.ts carries the comment saying so), because a utility would be a one-token door into the third typeface from any surface in the product. **The webfont is not loaded in production** — the token resolves, but the only surface that fetches Caveat is the dev-only prototype below, so no household downloads a font for a page they cannot reach. **Permitted surfaces — exactly one, and it is not a household surface:** `pages/dev/arrival-experience.tsx` (`/dev/arrival`, `import.meta.env.DEV` only; the chunk is dropped from the production bundle, verified in the build). This surface replaced UXHOME1's `home-arrival-prototype.tsx`, which was discarded by ARRIVAL1 — the signature voice now says its one word (\"Welcome home\") inside an *arrival* rather than over an animated Home page. A second surface does not follow from the first: §8 requires a further governed decision, per surface. The failure mode this row exists to catch is not ugliness but **familiarity** — the moment the signature becomes an ordinary UI font, the identity it was admitted to carry is gone and using it more cannot bring it back.",
+      "owns": "THA in its own hand. The signature voice admitted by **UIA §8 (amended by UXHOME1)**, which replaced *\"two voices only; no third typeface, ever\"* with three named families and a hard boundary: the signature is for **emotionally significant branded moments only** and is forbidden in all functional UI — buttons, forms, navigation, tables, cards, modals, planner, shopping. `.text-signature` is the ONE entry point: no `font-signature` Tailwind utility exists, deliberately (tailwind.config.ts carries the comment saying so), because a utility would be a one-token door into the third typeface from any surface in the product. **The webfont is not loaded in production** — the token resolves, but the only surface that fetches Caveat is the dev-only prototype below, so no household downloads a font for a page they cannot reach. **Permitted surfaces — exactly three, and none is a household surface:** `pages/dev/arrival-experience.tsx` (`/dev/arrival`, ARRIVAL1), `pages/dev/arrival-a-welcome.tsx` (`/dev/arrival-a-welcome`, EXP2 exploration Prototype A — admitted by a governed edit, 2026-07-15, for the same emotionally significant moment: the arrival greeting, and nothing else), and `pages/dev/arrival-s1-quiet.tsx` (`/dev/arrival-s1-quiet`, EXP3 synthesis candidate S1 — admitted by this governed edit, 2026-07-15, carrying Prototype A's greeting forward into the synthesis: the same one moment, the arrival greeting, and nothing else). All three are `import.meta.env.DEV` only; the chunks are dropped from the production bundle, verified in the build. This surface replaced UXHOME1's `home-arrival-prototype.tsx`, which was discarded by ARRIVAL1 — the signature voice now says its one word (\"Welcome home\") inside an *arrival* rather than over an animated Home page. A second surface does not follow from the first: §8 requires a further governed decision, per surface. The failure mode this row exists to catch is not ugliness but **familiarity** — the moment the signature becomes an ordinary UI font, the identity it was admitted to carry is gone and using it more cannot bring it back.",
       "status": "governed",
       "enforcement": "review",
       "exemptions": [
@@ -746,7 +746,7 @@
         "finding": "ARRIVAL1 — the signature voice is admitted, and adopted by nothing a household can see.",
         "owner": "Colin Clapson — pending review of the prototype",
         "why": "A signature typeface is a brand decision, not an engineering one, and it is the kind of decision that is made by looking rather than by reading. The prototype exists to be looked at. It is recorded here on the day it was built rather than after it is forgotten, because a prototype nobody decided about is how a third typeface enters a product by accident — the exact failure the original §8 rule was written to prevent, and the one the amendment is only safe if this row is honoured.",
-        "remaining": "The decision itself. `/dev/arrival` (ARRIVAL1, which replaced UXHOME1's `/dev/home-arrival`) is a proposal with a binary disposition and no third option: **ADOPT** — fold the Arrival Experience into `home-experience-page.tsx`, move the Caveat `@import` into index.css, and DELETE the prototype; or **REJECT** — DELETE the prototype, and delete `.text-signature`, `.signature-ink` and `--font-signature` with it, reverting §8 to two voices. What may not happen is the third outcome: the prototype surviving its own decision, which is precisely the authored-but-unadopted successor sitting live-looking in the tree that this register exists to make impossible to hide (PX1's `PageHeader.tsx`)."
+        "remaining": "The decision itself. `/dev/arrival` (ARRIVAL1, which replaced UXHOME1's `/dev/home-arrival`) is a proposal with a binary disposition and no third option: **ADOPT** — fold the Arrival Experience into `home-experience-page.tsx`, move the Caveat `@import` into index.css, and DELETE the prototype; or **REJECT** — DELETE the prototype, and delete `.text-signature`, `.signature-ink` and `--font-signature` with it, reverting §8 to two voices. What may not happen is the third outcome: the prototype surviving its own decision, which is precisely the authored-but-unadopted successor sitting live-looking in the tree that this register exists to make impossible to hide (PX1's `PageHeader.tsx`). **EXP2 (2026-07-15) adds five exploration prototypes** (`/dev/arrival-{a..e}-*`), of which only Prototype A speaks the signature voice; they share the same binary disposition — ideas graduate into the ONE adopted arrival, and every EXP2 prototype file is then DELETED. The exploration widens the evidence for the decision; it does not add a third option. **EXP3 (2026-07-15) adds two synthesis candidates** (`/dev/arrival-s1-quiet`, `/dev/arrival-s2-walking-home`), of which only S1 speaks the signature voice — the strongest EXP2 ideas combined into candidate arrivals, expected to be the FINAL exploration before one canonical arrival is selected. Same binary disposition: the selected ideas graduate; every exploration prototype (ARRIVAL1's successor decision permitting), the EXP3 pair included, is then DELETED."
       }
     }
   ],

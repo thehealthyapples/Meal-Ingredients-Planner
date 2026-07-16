@@ -223,16 +223,29 @@ async function run() {
       `select count(*)::int c from knowledge_foods where description = 'whole_or_minimally_processed'`);
     check("no live row serves the classification enum as a description", liveDesc[0].c === 0, `${liveDesc[0].c} row(s)`);
 
-    // Relationship rows the seed cannot reproduce. KNOW2 leaves the 38
-    // `plant-protein` rows alone (KNOW1's documented residue) and nothing else.
+    // Relationship rows the seed cannot reproduce.
+    //
+    // PUB1 — this used to assert that the KNOW1 residue was STILL THERE: "plant-protein
+    // residue is exactly the 38 rows KNOW1 recorded". It passed because the defect had
+    // never been reconciled, and on a fresh database it only passed because a CI fixture
+    // (scripts/ci/seed-know1-residue.ts) re-inserted the defect to keep it passing. A
+    // test that fails when you fix the bug is not protecting anything.
+    //
+    // The assertion it should always have made — and now does — is the one PUB1's
+    // publication makes true: the PUBLISHED set is exactly the seed. A retired row may
+    // remain in the table (KNOW5 retires, never deletes), but it must be inactive, and
+    // nothing the owner disowns may still be live. This holds on a freshly-seeded CI
+    // database (zero residue rows) and on the long-lived development one (38 retired
+    // rows), which is precisely the coupling that has now been broken.
     const fnPairs = new Set(FOOD_NUTRIENT_SEED.map((r) => `${r.foodSlug}|${r.nutrientSlug}`));
-    const liveFn = await q("select food_slug, nutrient_slug from knowledge_food_nutrients");
+    const liveFn = await q("select food_slug, nutrient_slug, is_active from knowledge_food_nutrients");
     const orphanFn = liveFn.filter((r) => !fnPairs.has(`${r.food_slug}|${r.nutrient_slug}`));
-    check("the only unreproducible nutrient links are the retired plant-protein residue",
-      orphanFn.every((r) => r.nutrient_slug === "plant-protein"),
-      `${orphanFn.filter((r) => r.nutrient_slug !== "plant-protein").length} unexpected`);
-    check("plant-protein residue is exactly the 38 rows KNOW1 recorded",
-      orphanFn.length === 38, `got ${orphanFn.length}`);
+    const activeOrphanFn = orphanFn.filter((r) => r.is_active);
+    check("no ACTIVE nutrient link is unreproducible from the seed (the residue is retired)",
+      activeOrphanFn.length === 0,
+      `${activeOrphanFn.length} still live, e.g. ${activeOrphanFn.slice(0, 3).map((r) => `${r.food_slug}→${r.nutrient_slug}`).join(", ")}`);
+    check("every unreproducible row that remains is retired, never deleted (KNOW5)",
+      orphanFn.every((r) => !r.is_active), `${orphanFn.filter((r) => r.is_active).length} unexpected`);
 
     const fbPairs = new Set(FOOD_BENEFIT_SEED.map((r) => `${r.foodSlug}|${r.benefitSlug}`));
     const liveFb = await q("select food_slug, benefit_slug from knowledge_food_benefits");

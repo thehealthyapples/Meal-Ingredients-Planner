@@ -57,6 +57,7 @@ The documents referenced by that README are the **governing architecture** for T
 
 **For any user-facing implementation, it additionally always includes:**
 
+- `docs/architecture/THA_EXPERIENCE_BLUEPRINT.md` (the unifying blueprint — the vision, One Home Many Places, the orchard, the house's light and materials, the Living Details; cites the three documents below and restates none of them)
 - `docs/architecture/THA_EXPERIENCE_ARCHITECTURE.md` (how THA behaves and feels — **prevails over UI in any conflict**)
 - `docs/architecture/THA_EXPERIENCE_LANGUAGE.md` (how THA must **feel** — the emotional target behaviour and presentation exist to produce; subordinate to the Experience Architecture)
 - `docs/architecture/THA_UI_ARCHITECTURE.md` (how THA looks)
@@ -438,13 +439,14 @@ For every AI-related implementation confirm:
 
 **Adopted under `ARCH-VERIFY1` (2026-07-11), closing a governance gap.** This section applies to **every user-facing implementation** — anything a person sees, reads, hears, or does — in addition to the general Architecture Compliance Checklist above.
 
-Three governing documents own the user-facing layer, and each holds its own full checklist. **This workflow does not restate them** (that would create a second owner of the same law, which drifts); it makes them mandatory and names the precedence between them:
+Four governing documents own the user-facing layer, and each holds its own full checklist. **This workflow does not restate them** (that would create a second owner of the same law, which drifts); it makes them mandatory and names the precedence between them:
 
 | Document | Owns | Its checklist |
 |---|---|---|
 | [`THA_EXPERIENCE_ARCHITECTURE.md`](./THA_EXPERIENCE_ARCHITECTURE.md) (EXP1, + EXP2 Premium Experience Principles) | How THA **behaves and feels** — Home, progressive disclosure, calm before capability, one primary action, journeys, companion conduct, trust, language, errors, notifications, accessibility, and the premium standard of craft | **UX Governance Checklist** — its § 18, *including the Premium Standard block* |
 | [`THA_EXPERIENCE_LANGUAGE.md`](./THA_EXPERIENCE_LANGUAGE.md) (EXPLANG1) | How THA must **feel** — the emotional target the other two produce: calm, welcoming, effortless, intelligent, reassuring, premium, quietly memorable; the thirteen Principles of Feeling, the six-beat Experience Rhythm, and the Anti-Patterns THA must never adopt | **Experience Review Questions** — its § 6 |
 | [`THA_UI_ARCHITECTURE.md`](./THA_UI_ARCHITECTURE.md) (UIA2) | How THA **looks** — the Calm Orchard visual language, visual hierarchy, layout, colour, typography, spacing, motion, brand identity, state presentation, Visual Trust, design tokens, and one-owner-per-visual-concern | **UI Governance Checklist** — its § 18 |
+| [`THA_EXPERIENCE_BLUEPRINT.md`](./THA_EXPERIENCE_BLUEPRINT.md) (EXPBLUE1) | The **vision and the place** — the unifying blueprint: One Home Many Places, the domain place map, the Orchard Exposure Scale (E0–E3), the house's one-morning light and material direction, the Living Details, the Companion's place, and the spatial anti-patterns. It cites the three documents above and restates none of them | **Blueprint Checks** — its § 15.2, for any change touching a room's place character, the orchard, light/materials, or a Living Detail |
 
 ```
 ----------------------------------------
@@ -461,6 +463,14 @@ For every user-facing implementation confirm:
     answered — the change produces the required FEELING (calm, welcoming,
     effortless, intelligent, reassuring, premium, quietly memorable) and adopts
     none of the Experience Anti-Patterns (§ 7)
+✓ The Experience Test (THA_EXPERIENCE_BLUEPRINT.md § 15.3) has a clear
+    one-sentence answer for every screen: which room this is, how someone
+    should feel here, and the one thing the room helps them do
+✓ The Blueprint Checks (THA_EXPERIENCE_BLUEPRINT.md § 15.2) have been completed
+    for any change touching a room's place character, the orchard, the house's
+    light or materials, the Companion's place, the shell's constancy, or a
+    Living Detail — and none of the spatial anti-patterns (§ 16 there) was
+    adopted
 ✓ Any conflict between them was resolved in the EXPERIENCE Architecture's
     favour — Experience governs behaviour, the Experience Language governs the
     feeling that behaviour and presentation produce, UI governs presentation,

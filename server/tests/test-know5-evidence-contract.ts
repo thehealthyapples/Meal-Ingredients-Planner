@@ -28,6 +28,7 @@ import {
   FOOD_NUTRIENT_SEED,
   FOOD_NUTRIENT_SOURCES,
   NUTRIENT_BENEFIT_SOURCES,
+  NUTRIENT_SEED,
   attachCompositionSources,
   deriveClaimConfidence,
   deriveEvidenceConfidence,
@@ -364,37 +365,85 @@ async function run() {
     // the real deactivateAbsentRows() and upsertFoodNutrients() against the real
     // database inside a transaction, assert the deactivate → reactivate
     // round-trip, then ROLL BACK so the database is left exactly as found.
+    //
+    // PUB1 — THIS TEST NOW SUPPLIES ITS OWN DIRT.
+    //
+    // A cleanup test needs something to clean, and until PUB1 it got that from the
+    // database: the live KNOW1 `plant-protein` residue, 38 orphaned rows that were a
+    // real defect nobody had reconciled. The suite asserted they were still there
+    // ("fixture: the retired plant-protein nutrient STILL has active composition
+    // rows"), and scripts/ci/seed-know1-residue.ts re-inserted them into every CI
+    // database so the assertion would hold — a fixture whose job was to keep a bug
+    // alive, and which CPI1 §4.5 named as a synchronisation bridge for a defect.
+    //
+    // PUB1 published the knowledge registry and reconciled the residue away, so the
+    // dirt is gone. Rather than restore it, the test now INJECTS a synthetic orphan
+    // inside the transaction it already rolls back. Nothing is weakened: reconcile is
+    // still driven for real, against real rows, and still has to deactivate exactly
+    // the orphans and exactly nothing else. What changed is that the test no longer
+    // needs the product to be broken in order to pass.
     console.log("\n── 7. Reversible publish: deactivate → reactivate, then roll back ──");
     {
       const { deactivateAbsentRows, upsertFoodNutrients, seedDb, seedPool } = await import("../seeds/seed-knowledge-registry.js");
-      const { knowledgeFoodNutrients, knowledgeNutrients } = await import("../../shared/schema.js");
+      const { knowledgeFoodNutrients, knowledgeNutrients, knowledgeNutrientBenefits } = await import("../../shared/schema.js");
       const { sql } = await import("drizzle-orm");
+
+      // A nutrient identity the owner does not author, and never will.
+      const ORPHAN = "__pub1_test_retired_nutrient__";
+      const ORPHAN_FOODS = ["spinach", "lentils", "walnuts"] as const;
+      const ORPHAN_BENEFITS = ["muscle-recovery", "energy-support"] as const;
 
       const totalRows = async (tx: any) =>
         Number((await tx.select({ n: sql<number>`count(*)::int` }).from(knowledgeFoodNutrients))[0].n);
       const activeRows = async (tx: any) =>
         Number((await tx.select({ n: sql<number>`count(*)::int` }).from(knowledgeFoodNutrients).where(eq(knowledgeFoodNutrients.isActive, true)))[0].n);
-      const plantProteinActive = async (tx: any) =>
+      const orphanActive = async (tx: any) =>
         Number((await tx.select({ n: sql<number>`count(*)::int` }).from(knowledgeFoodNutrients)
-          .where(and(eq(knowledgeFoodNutrients.nutrientSlug, "plant-protein"), eq(knowledgeFoodNutrients.isActive, true))))[0].n);
+          .where(and(eq(knowledgeFoodNutrients.nutrientSlug, ORPHAN), eq(knowledgeFoodNutrients.isActive, true))))[0].n);
 
-      const before = { total: await totalRows(seedDb), active: await activeRows(seedDb), orphans: await plantProteinActive(seedDb) };
-      check("fixture: the retired `plant-protein` nutrient still has active composition rows", before.orphans === 38, `got ${before.orphans}`);
+      // The published state PUB1 left behind: not one active row the owner disowns.
+      const liveOrphans = await seedDb.select({ slug: knowledgeNutrients.slug }).from(knowledgeNutrients)
+        .where(eq(knowledgeNutrients.isActive, true));
+      const authored = new Set(NUTRIENT_SEED.map((n) => n.slug));
+      const stillOrphaned = liveOrphans.map((r: any) => r.slug).filter((s: string) => !authored.has(s));
+      check("the published nutrient vocabulary carries no orphan (KNOW1 residue is retired)",
+        stillOrphaned.length === 0, `still active: ${stillOrphaned.join(", ")}`);
+
+      const before = { total: await totalRows(seedDb), active: await activeRows(seedDb) };
 
       const ROLLBACK = new Error("__intentional_rollback__");
       try {
         await seedDb.transaction(async (tx: any) => {
+          // Inject the dirt: one retired-vocabulary nutrient, its composition rows,
+          // and its benefit links — the exact shape of the KNOW1 residue, minus the
+          // requirement that the product actually be broken.
+          await tx.insert(knowledgeNutrients).values({
+            slug: ORPHAN, name: "Test Retired Nutrient", category: "macronutrient",
+            source: "PUB1 test fixture", displayOrder: 99, isActive: true,
+          });
+          await tx.insert(knowledgeFoodNutrients).values(ORPHAN_FOODS.map((foodSlug, i) => ({
+            foodSlug, nutrientSlug: ORPHAN, confidence: "established" as const,
+            ranking: i, source: "PUB1 test fixture", isActive: true,
+          })));
+          await tx.insert(knowledgeNutrientBenefits).values(ORPHAN_BENEFITS.map((benefitSlug, i) => ({
+            nutrientSlug: ORPHAN, benefitSlug, evidenceStrength: "good" as const,
+            ranking: i, source: "PUB1 test fixture", isActive: true,
+          })));
+
+          const injected = { total: await totalRows(tx), active: await activeRows(tx) };
+          check("test premise: the injected orphan is live", (await orphanActive(tx)) === ORPHAN_FOODS.length);
+
           const deactivated = await deactivateAbsentRows(tx);
 
-          check("reconcile deactivates exactly the 38 orphaned composition rows", deactivated.knowledge_food_nutrients === 38, `got ${deactivated.knowledge_food_nutrients}`);
-          check("reconcile deactivates the retired `plant-protein` vocabulary row", deactivated.knowledge_nutrients === 1);
-          check("reconcile deactivates its 2 orphaned nutrient→benefit rows", deactivated.knowledge_nutrient_benefits === 2);
+          check(`reconcile deactivates exactly the ${ORPHAN_FOODS.length} orphaned composition rows`, deactivated.knowledge_food_nutrients === ORPHAN_FOODS.length, `got ${deactivated.knowledge_food_nutrients}`);
+          check("reconcile deactivates the retired vocabulary row", deactivated.knowledge_nutrients === 1, `got ${deactivated.knowledge_nutrients}`);
+          check(`reconcile deactivates its ${ORPHAN_BENEFITS.length} orphaned nutrient→benefit rows`, deactivated.knowledge_nutrient_benefits === ORPHAN_BENEFITS.length, `got ${deactivated.knowledge_nutrient_benefits}`);
           check("reconcile touches no food identity (the seed owns all 610)", deactivated.knowledge_foods === 0);
           check("reconcile touches no food→benefit row", deactivated.knowledge_food_benefits === 0);
 
-          check("NOTHING IS DELETED — the row total is unchanged", (await totalRows(tx)) === before.total, `${before.total} → ${await totalRows(tx)}`);
-          check("the orphans are merely inactive", (await plantProteinActive(tx)) === 0);
-          check("exactly the orphans left the active set", (await activeRows(tx)) === before.active - 38);
+          check("NOTHING IS DELETED — the row total is unchanged", (await totalRows(tx)) === injected.total, `${injected.total} → ${await totalRows(tx)}`);
+          check("the orphans are merely inactive", (await orphanActive(tx)) === 0);
+          check("exactly the orphans left the active set", (await activeRows(tx)) === injected.active - ORPHAN_FOODS.length);
 
           // Reversibility: an owned row that was wrongly deactivated comes back
           // when the seed runs again. This is what makes an import undoable.
@@ -424,10 +473,13 @@ async function run() {
         if (err !== ROLLBACK) throw err;
       }
 
-      const after = { total: await totalRows(seedDb), active: await activeRows(seedDb), orphans: await plantProteinActive(seedDb) };
+      const after = { total: await totalRows(seedDb), active: await activeRows(seedDb) };
       check("the database is left exactly as found (transaction rolled back)",
-        after.total === before.total && after.active === before.active && after.orphans === before.orphans,
+        after.total === before.total && after.active === before.active,
         `${JSON.stringify(before)} → ${JSON.stringify(after)}`);
+      const injectedSurvivors = Number((await seedDb.select({ n: sql<number>`count(*)::int` }).from(knowledgeNutrients)
+        .where(eq(knowledgeNutrients.slug, ORPHAN)))[0].n);
+      check("the injected fixture left no trace in the database", injectedSurvivors === 0, `${injectedSurvivors} row(s) survived`);
 
       await seedPool.end();
     }

@@ -67,6 +67,45 @@ const HomeExperiencePage = lazy(() => import("@/pages/home-experience-page"));
 const ArrivalExperiencePage = import.meta.env.DEV
   ? lazy(() => import("@/pages/dev/arrival-experience"))
   : null;
+// EXP2 — five development-only Arrival Experience exploration prototypes. Same
+// load-bearing ternary as ARRIVAL1 above: each `import()` must sit inside the
+// compile-time DEV branch so Rollup drops the chunks from production entirely.
+const ArrivalAWelcomePage = import.meta.env.DEV
+  ? lazy(() => import("@/pages/dev/arrival-a-welcome"))
+  : null;
+const ArrivalBOrchardPage = import.meta.env.DEV
+  ? lazy(() => import("@/pages/dev/arrival-b-orchard"))
+  : null;
+const ArrivalCWorkspacePage = import.meta.env.DEV
+  ? lazy(() => import("@/pages/dev/arrival-c-workspace"))
+  : null;
+const ArrivalDQuietPage = import.meta.env.DEV
+  ? lazy(() => import("@/pages/dev/arrival-d-quiet"))
+  : null;
+const ArrivalERestraintPage = import.meta.env.DEV
+  ? lazy(() => import("@/pages/dev/arrival-e-restraint"))
+  : null;
+// EXP3 — two development-only Arrival SYNTHESIS prototypes: the strongest EXP2
+// ideas deliberately combined into candidate arrivals. Same load-bearing
+// ternary as ARRIVAL1 above, so nothing ships in the production bundle.
+const ArrivalS1QuietPage = import.meta.env.DEV
+  ? lazy(() => import("@/pages/dev/arrival-s1-quiet"))
+  : null;
+const ArrivalS2WalkingHomePage = import.meta.env.DEV
+  ? lazy(() => import("@/pages/dev/arrival-s2-walking-home"))
+  : null;
+// EXP4 — three development-only Materiality & Depth studies: how THA should
+// occupy visual space (layers · light · restraint). Same load-bearing ternary
+// as ARRIVAL1 above, so nothing ships in the production bundle.
+const MaterialAWarmLayersPage = import.meta.env.DEV
+  ? lazy(() => import("@/pages/dev/material-a-warm-layers"))
+  : null;
+const MaterialBAtmospherePage = import.meta.env.DEV
+  ? lazy(() => import("@/pages/dev/material-b-atmosphere"))
+  : null;
+const MaterialCRestraintPage = import.meta.env.DEV
+  ? lazy(() => import("@/pages/dev/material-c-restraint"))
+  : null;
 const DashboardPage = lazy(() => import("@/pages/dashboard"));
 const FoodDetailPage = lazy(() => import("@/pages/food-detail-page"));
 const ShoppingWorkspacePage = lazy(() => import("@/pages/shopping-workspace-page"));
@@ -271,6 +310,72 @@ function Router() {
         <Route
           path="/dev/arrival"
           component={() => <ProtectedRoute component={ArrivalExperiencePage} />}
+        />
+      )}
+      {/* EXP2 — development only, like ARRIVAL1 above: each prototype composes
+          the ONE shell via ProtectedRoute; none copies it. */}
+      {ArrivalAWelcomePage && (
+        <Route
+          path="/dev/arrival-a-welcome"
+          component={() => <ProtectedRoute component={ArrivalAWelcomePage} />}
+        />
+      )}
+      {ArrivalBOrchardPage && (
+        <Route
+          path="/dev/arrival-b-orchard"
+          component={() => <ProtectedRoute component={ArrivalBOrchardPage} />}
+        />
+      )}
+      {ArrivalCWorkspacePage && (
+        <Route
+          path="/dev/arrival-c-workspace"
+          component={() => <ProtectedRoute component={ArrivalCWorkspacePage} />}
+        />
+      )}
+      {ArrivalDQuietPage && (
+        <Route
+          path="/dev/arrival-d-quiet"
+          component={() => <ProtectedRoute component={ArrivalDQuietPage} />}
+        />
+      )}
+      {ArrivalERestraintPage && (
+        <Route
+          path="/dev/arrival-e-restraint"
+          component={() => <ProtectedRoute component={ArrivalERestraintPage} />}
+        />
+      )}
+      {/* EXP3 — development only: the two synthesis candidates, composed from
+          the ONE shell exactly like the EXP2 prototypes above. */}
+      {ArrivalS1QuietPage && (
+        <Route
+          path="/dev/arrival-s1-quiet"
+          component={() => <ProtectedRoute component={ArrivalS1QuietPage} />}
+        />
+      )}
+      {ArrivalS2WalkingHomePage && (
+        <Route
+          path="/dev/arrival-s2-walking-home"
+          component={() => <ProtectedRoute component={ArrivalS2WalkingHomePage} />}
+        />
+      )}
+      {/* EXP4 — development only: the three Materiality & Depth studies,
+          composed from the ONE shell exactly like the prototypes above. */}
+      {MaterialAWarmLayersPage && (
+        <Route
+          path="/dev/material-a-warm-layers"
+          component={() => <ProtectedRoute component={MaterialAWarmLayersPage} />}
+        />
+      )}
+      {MaterialBAtmospherePage && (
+        <Route
+          path="/dev/material-b-atmosphere"
+          component={() => <ProtectedRoute component={MaterialBAtmospherePage} />}
+        />
+      )}
+      {MaterialCRestraintPage && (
+        <Route
+          path="/dev/material-c-restraint"
+          component={() => <ProtectedRoute component={MaterialCRestraintPage} />}
         />
       )}
       <Route path="/dashboard" component={() => <ProtectedRoute component={DashboardPage} />} />

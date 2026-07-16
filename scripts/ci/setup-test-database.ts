@@ -99,17 +99,20 @@ try {
 //   canonical   -> test:canonical-knowledge-binding / test:know4-graduated-food-reports
 //
 console.log("[ci:db] 4/4  reference seeds the TEST SUITE depends on");
-//   know1-residue -> test:know5-evidence-contract / test:knowledge-food-ownership
-//                    Two suites REQUIRE the residue of KNOW1's historical bad import to exist,
-//                    because they test that `reconcile` DEACTIVATES it. A cleanup test needs dirt
-//                    to clean. The dev database supplies it by accident of history; a fresh one
-//                    does not. See scripts/ci/seed-know1-residue.ts — it must run AFTER the
-//                    knowledge seed, whose foods its rows point at.
+//
+// PUB1 — the `know1-residue` fixture is GONE, and this is where it used to be listed.
+// It re-inserted the KNOW1 `plant-protein` defect into every CI database because two
+// suites asserted the defect was still present: they tested that `reconcile` deactivates
+// orphans, and a cleanup test needs dirt to clean. So CI supplied the dirt by keeping a
+// known bug alive — the synchronisation bridge CPI1 §4.5 named.
+//
+// PUB1 published the knowledge registry and reconciled the residue away, and rewrote both
+// suites to inject their own orphan inside a rolled-back transaction. The dirt is now the
+// test's own, which is where a fixture belongs. Nothing here needs to reproduce a defect.
 const REFERENCE_SEEDS: ReadonlyArray<readonly [string, string]> = [
   ["additives", "server/seeds/run-additives-seed.ts"],
   ["knowledge", "server/seeds/seed-knowledge-registry.ts"],
   ["canonical", "server/seeds/seed-canonical-food.ts"],
-  ["know1-residue (test fixture)", "scripts/ci/seed-know1-residue.ts"],
 ];
 
 for (const [name, script] of REFERENCE_SEEDS) {

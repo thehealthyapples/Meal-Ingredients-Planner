@@ -77,6 +77,25 @@ export const CANONICAL_PUBLICATION_REGISTER: DomainDeclaration[] = [
         tableName: "canonical_food",
         authorisedWriters: ["server/seeds/seed-canonical-food.ts"],
       }),
+      // PUB1 — these three count the PUBLISHED projection, not every row in the table.
+      //
+      // Two kinds of row legitimately sit in these tables without being a publication,
+      // and counting either against the owner's declaration asks a question nobody
+      // asked:
+      //
+      //   RETIRED rows — the platform's retirement law is soft (KNOW5; schema.ts:2236
+      //   "identities are retireable, never deleted"). A row the owner drops is set
+      //   status='retired' / is_active=false and KEEPS its id and history. Counting it
+      //   as published would make the reconcile sweep — the correct behaviour these
+      //   checks exist to demand — register as drift the moment it did its job.
+      //
+      //   DRAFT candidates — the 309 WS0.11 USDA rows are Stage 1 (CANDIDATE) of the
+      //   graduation pipeline (PKCA §1.1), awaiting human promotion. A candidate is not
+      //   a stale publication; it is a food THA has not yet decided to know.
+      //
+      // Neither is swept under the carpet: `fi-unowned-rows` below counts every row in
+      // canonical_food the owner does not author and names it, so the candidate pool
+      // stays visible and an unowned row can never hide behind this narrowing.
       seedCountCheck({
         id: "fi-food-publication",
         law: "no-stale-projections",
@@ -84,6 +103,7 @@ export const CANONICAL_PUBLICATION_REGISTER: DomainDeclaration[] = [
         severity: "warn",
         cpi1: "§4.3",
         tableName: "canonical_food",
+        where: "status = 'active'",
         expected: CANONICAL_SEED.length,
         ownerLabel: "CANONICAL_SEED",
       }),
@@ -94,6 +114,7 @@ export const CANONICAL_PUBLICATION_REGISTER: DomainDeclaration[] = [
         severity: "warn",
         cpi1: "§4.3",
         tableName: "food_variety",
+        where: "status = 'active'",
         expected: CANONICAL_VARIETY_COUNT,
         ownerLabel: "CANONICAL_SEED varieties",
       }),
@@ -104,8 +125,38 @@ export const CANONICAL_PUBLICATION_REGISTER: DomainDeclaration[] = [
         severity: "warn",
         cpi1: "§4.3",
         tableName: "canonical_food_alias",
+        where: "is_active",
         expected: CANONICAL_ALIAS_COUNT,
         ownerLabel: "CANONICAL_SEED aliases",
+      }),
+      customCheck({
+        id: "fi-unowned-rows",
+        law: "one-owner",
+        title: "Every row in canonical_food is authored by the owner",
+        severity: "warn",
+        cpi1: "S2-5",
+        run: async (ctx) => {
+          const rows = await ctx.query(`SELECT slug, status, tier FROM canonical_food`);
+          const authored = new Set(CANONICAL_SEED.map((e) => e.food.slug));
+          const unowned = rows.filter((r) => !authored.has(String(r.slug)));
+          if (unowned.length === 0) {
+            return { violated: false, detail: `All ${rows.length} rows in canonical_food are owner-authored.` };
+          }
+          const byTier = new Map<string, number>();
+          for (const r of unowned) {
+            const k = `${r.tier ?? "?"}/${r.status ?? "?"}`;
+            byTier.set(k, (byTier.get(k) ?? 0) + 1);
+          }
+          const breakdown = Array.from(byTier.entries()).map(([k, n]) => `${n} ${k}`).join(", ");
+          return {
+            violated: true,
+            detail:
+              `${unowned.length} row(s) in canonical_food the owner never authored (${breakdown}) — ` +
+              `the WS0.11 USDA candidate pool, deposited by the unauthorised writer above. ` +
+              `They are quarantined out of the published projection (status='draft') and no runtime path reads them, ` +
+              `but the declared owner still cannot reproduce its own table until they are promoted or retired.`,
+          };
+        },
       }),
       sourceCheck({
         id: "fi-reconcile-sweep",
@@ -151,7 +202,13 @@ export const CANONICAL_PUBLICATION_REGISTER: DomainDeclaration[] = [
         severity: "fail",
         cpi1: "§4.3 (KNOW1 residue)",
         run: async (ctx) => {
-          const rows = await ctx.query(`SELECT slug FROM knowledge_nutrients`);
+          // PUB1 — `is_active` is the published set. KNOW5's reconcile RETIRES an orphan
+          // (is_active = false) rather than deleting it, deliberately: the row keeps its id,
+          // its citations and its sign-off history, which is what makes a bad import
+          // reversible. Counting a retired row as published would mean the only way to
+          // satisfy this check was a hard delete — the one thing the owner's publication
+          // law forbids. A retired nutrient renders nowhere; it is not published.
+          const rows = await ctx.query(`SELECT slug FROM knowledge_nutrients WHERE is_active`);
           const authored = new Set(NUTRIENT_SEED.map((n) => n.slug));
           const orphans = rows
             .map((r) => String(r.slug))
@@ -240,6 +297,9 @@ export const CANONICAL_PUBLICATION_REGISTER: DomainDeclaration[] = [
         severity: "fail",
         cpi1: "§4.3",
         tableName: "diversity_group",
+        // PUB1 — the published set, for the same reason as Food Identity above: a group
+        // the owner retires is deactivated, never deleted.
+        where: "is_active",
         expected: DIVERSITY_GROUP_SEED.length,
         ownerLabel: "DIVERSITY_GROUP_SEED",
       }),

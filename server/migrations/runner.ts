@@ -1785,6 +1785,47 @@ const MIGRATIONS: Migration[] = [
   },
 
   {
+    // PUB1 — the canonical_food projection catches up with its owner.
+    //
+    // CANONICAL_SEED declares six columns that `canonical_food` does not have, so
+    // `npm run seed:canonical` — the domain's ONE authorised writer — could not run
+    // at all: Postgres rejected the INSERT with `column "family" does not exist`.
+    // That is why the projection has sat at 53 of 312 foods since WS2A. A publication
+    // path that cannot execute is not a slow publication; it is an absent one, and it
+    // failed silently because nothing reads the table (CPI1 §4.3, S2-5).
+    //
+    // The six columns were added to shared/schema.ts by NK6R (`family`), WS0X.5 (the
+    // four food-context columns) and M4.5 (`fermented`) — each declared by its owner,
+    // none of them ever given a migration. They reach the database here, through the
+    // one sanctioned DDL path (schema-push-guard.ts: "Production schema changes happen
+    // in exactly ONE way: a reviewed migration appended to server/migrations/runner.ts").
+    //
+    // Additive and nullable-or-defaulted throughout. Nothing is dropped, no column is
+    // altered, and no existing read changes: every one of these columns is unread by
+    // any runtime path today (identity resolves against the seed, per CPI1's trace),
+    // so the migration is behaviour-neutral on its own. It is the seed run that
+    // follows which publishes the data.
+    //
+    // NOT NULL + DEFAULT on the array and boolean columns matches the owner's
+    // declaration exactly (schema.ts:2258, 2262, 2270). Adding them with a default is
+    // safe on an existing table — Postgres 11+ rewrites no rows.
+    id: "2026-07-14_pub1_canonical_food_projection_columns",
+    statements: [
+      // NK6R — parent canonical identity (stilton → blue-cheese → cheese). Nullable:
+      // null means the food is top-level, which is the common case.
+      `ALTER TABLE canonical_food ADD COLUMN IF NOT EXISTS family TEXT`,
+      // WS0X.5 — food context. The single owner of food-intrinsic availability,
+      // seasonality and origin.
+      `ALTER TABLE canonical_food ADD COLUMN IF NOT EXISTS availability TEXT`,
+      `ALTER TABLE canonical_food ADD COLUMN IF NOT EXISTS availability_modifiers TEXT[] NOT NULL DEFAULT '{}'`,
+      `ALTER TABLE canonical_food ADD COLUMN IF NOT EXISTS peak_seasons TEXT[] NOT NULL DEFAULT '{}'`,
+      `ALTER TABLE canonical_food ADD COLUMN IF NOT EXISTS origin_region TEXT`,
+      // M4.5 — fermentation status.
+      `ALTER TABLE canonical_food ADD COLUMN IF NOT EXISTS fermented BOOLEAN NOT NULL DEFAULT FALSE`,
+    ],
+  },
+
+  {
     // RM3 — retire the duplicate ready-meal product representation.
     //
     // `meal_template_products` was a second, denormalized product representation
