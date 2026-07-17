@@ -1677,6 +1677,152 @@ export const CANONICAL_PUBLICATION_REGISTER: DomainDeclaration[] = [
         },
       }),
       customCheck({
+        id: "ht-one-planner-week-owner",
+        law: "no-duplicate-runtime-identity",
+        title: "There is ONE answer to 'which planner week is this household living in?' (HT1, READ-3)",
+        severity: "fail",
+        run: async (ctx) => {
+          // CONV1 P8 / READ-3. THA had FIVE answers and none was a computation:
+          // three server `max(weekNumber)` variants (≡ the constant 6), the dashboard's
+          // `plannerFull[0]` (≡ 1) and Home's localStorage (≡ 1). The gate that matters is
+          // the one that fails when someone writes a sixth.
+          const owner = "server/lib/household-planner-week.ts";
+          if (!ctx.sources.has(owner)) {
+            return {
+              violated: true,
+              detail: `${owner} is missing — the one server-side answer to "which planner week is this household living in?" has no home. Without it every consumer derives its own, which is the five rivals READ-3 retired.`,
+            };
+          }
+          const strip = (s: string) =>
+            s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+          // A rival is any consumer picking the household's current week out of the rota
+          // itself: reduce/sort/max over weekNumber, or the first row of the planner.
+          const RIVALS: Array<[RegExp, string]> = [
+            [/\.reduce\(\s*\((?:\w+),\s*(?:\w+)\)\s*=>[\s\S]{0,120}?weekNumber\s*>/, "reduce(max weekNumber) — the constant 6, not a computation"],
+            [/Math\.max\([\s\S]{0,60}?\.map\(\s*\w+\s*=>\s*\w+\.weekNumber/, "Math.max over weekNumber"],
+            [/plannerFull\s*\[\s*0\s*\]/, "plannerFull[0] — a fact about array order, not the household"],
+            [/localStorage\.getItem\(\s*["'`]planner:active-week/, "localStorage — HOME3 §4: not household state"],
+          ];
+          const offenders: string[] = [];
+          for (const [file, raw] of Array.from(ctx.sources)) {
+            if (file.startsWith("server/verification/") || file.startsWith("server/tests/")) continue;
+            // The owner itself, and the planner's own view state, are not rivals.
+            if (file === owner) continue;
+            // The planner page and its helpers legitimately track WHICH WEEK AM I EDITING
+            // — device-local view state, which is nobody's idea of a household fact. The
+            // defect OWN-6 retired was HOME reading it as the CURRENT week.
+            if (
+              file === "client/src/pages/weekly-planner-page.tsx" ||
+              file === "client/src/hooks/use-week-meal-entries.ts" ||
+              file === "client/src/components/AddToWeekModal.tsx" ||
+              file.startsWith("client/src/pages/dev/")
+            ) continue;
+            let code = strip(raw);
+            // `buildHouseholdHistory`'s `maxWeek` is approxDate's, and approxDate is
+            // CONV1 P9's (BEH-5). It orders the rota to FABRICATE A DATE — it is not a
+            // rival "current week" — and converging it before the fabricator is retired
+            // would make a fabricated date precisely wrong, "the worst outcome available"
+            // (CONV1 R3/§4.1). Its body is excised by NAME rather than by a loose
+            // file-wide exemption, so a genuine rival appearing elsewhere in routes.ts is
+            // still caught. WHEN P9 RETIRES approxDate, DELETE THIS BLOCK — it is the
+            // only thing standing between that function and this gate.
+            const fabricator = /async function buildHouseholdHistory[\s\S]*?\n  \}/.exec(code);
+            if (fabricator) code = code.replace(fabricator[0], "");
+            for (const [pattern, why] of RIVALS) {
+              if (pattern.test(code)) offenders.push(`${file} (${why})`);
+            }
+          }
+          return offenders.length > 0
+            ? {
+                violated: true,
+                detail: `${offenders.length} rival "current week" implementation(s) derive the household's planner week without asking the owner: ${offenders.join("; ")}. HT1 — a second implementation of any T1–T5 derivation is an architecture violation on arrival. Ask ${owner} (READ-3).`,
+              }
+            : {
+                violated: false,
+                detail: `One answer to "which planner week is this household living in?", in ${owner}, over resolvePlannerWeek (CONV1 P8 / READ-3). The five rivals are retired.`,
+              };
+        },
+      }),
+      customCheck({
+        id: "ht-unanchored-is-never-filled-in",
+        law: "one-owner",
+        title: "No consumer invents a week when the owner says it cannot know (HT6, BEH-3)",
+        severity: "fail",
+        run: async (ctx) => {
+          // THE GATE FOR THE GOVERNING DECISION OF 2026-07-17 (§ 13.1, as amended).
+          //
+          // 192 of 195 households are unanchored FOREVER (HT7), so `anchored: false` is
+          // the ORDINARY answer, and the temptation to paper over it with `?? 1` or
+          // "the latest week" is exactly how the platform grew five rivals. BEH-3 forbids
+          // it by name: "do not pick a week to fix it". A comment cannot stop this; a
+          // gate can.
+          const strip = (s: string) =>
+            s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+          const offenders: string[] = [];
+          for (const [file, raw] of Array.from(ctx.sources)) {
+            if (file.startsWith("server/verification/") || file.startsWith("server/tests/")) continue;
+            const code = strip(raw);
+            if (!/anchored/.test(code)) continue;
+            // `!anchored → substitute a week number` in any of its idioms.
+            const FILLS: Array<[RegExp, string]> = [
+              [/anchored\s*\?[\s\S]{0,80}?:\s*\{?\s*weekNumber:\s*\d/, "a literal weekNumber substituted when unanchored"],
+              [/(?:weekNumber|activeWeek|currentWeek)\s*=\s*[\s\S]{0,40}?\?\?\s*1\b/, "?? 1 — the localStorage default, resurrected"],
+              [/!\s*\w*[Aa]nchored[\s\S]{0,60}?return\s+weeks\[weeks\.length - 1\]/, "the latest week substituted when unanchored"],
+            ];
+            for (const [pattern, why] of FILLS) {
+              if (pattern.test(code)) offenders.push(`${file} (${why})`);
+            }
+          }
+          return offenders.length > 0
+            ? {
+                violated: true,
+                detail: `${offenders.join("; ")} fills in a week the owner said it could not know. HT6 — "anchored: false" is a first-class ANSWER, not a gap to paper over, and it is the permanent truth for the 192 of 195 households whose weeks predate the anchor (HT7). Render the honest state; do not pick a week (BEH-3; THA_HOUSEHOLD_TIME_ARCHITECTURE.md § 13.1 as amended by CONV1 P8).`,
+              }
+            : {
+                violated: false,
+                detail: "No consumer substitutes a week when the owner answers `anchored: false`. The unanchored state is stated, not filled in (CONV1 P8 / BEH-3).",
+              };
+        },
+      }),
+      customCheck({
+        id: "ht-home-door-is-the-resolvers",
+        law: "no-duplicate-runtime-identity",
+        title: "Home's one door is aimed by HOME2's resolver, never by a device (BEH-9)",
+        severity: "fail",
+        run: async (ctx) => {
+          const file = "client/src/pages/home-experience-page.tsx";
+          const raw = ctx.sources.get(file);
+          if (raw === undefined) return { violated: true, detail: `${file} is missing.` };
+          const code = raw.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+          // Home hand-rolled `todaysMeals.length === 0 ? "Plan today" : "Open today's plan"`
+          // while shared/home/home-primary-action.ts sat built, total, 47-tests-green and
+          // with ZERO production consumers. Worse, that door was aimed THROUGH
+          // todaysMeals → activeWeek → localStorage, which HOME3 §4 refused by name.
+          if (!/resolveHomePrimaryAction\s*\(/.test(code)) {
+            return {
+              violated: true,
+              detail: `${file} does not use HOME2's canonical resolver. Home has exactly one door and one owner of where it points (shared/home/home-primary-action.ts); a hand-rolled label ladder is the rival BEH-9 retired, and a resolver with no consumers is a rival copy in waiting (CONV1 R3).`,
+            };
+          }
+          if (/localStorage\.getItem\(\s*["'`]planner:active-week/.test(code)) {
+            return {
+              violated: true,
+              detail: `${file} reads planner:active-week. OWN-6/HOME3 §4 — localStorage is not household state; a door aimed at it moves when the household changes DEVICE, which breaks HOME2 §6.1's theorem (the door changes when the household's state changes) at its root.`,
+            };
+          }
+          if (/new Date\(\)\s*\.\s*getDay\(\)/.test(code)) {
+            return {
+              violated: true,
+              detail: `${file} derives the day of week from the device. HT12 — the client renders household time; it never derives it. The day arrives with the week from one resolution (HT11).`,
+            };
+          }
+          return {
+            violated: false,
+            detail: "Home's door is aimed by HOME2's resolver over household facts; the week and the day both come from the one owner (CONV1 P8 / BEH-9, OWN-6).",
+          };
+        },
+      }),
+      customCheck({
         id: "ht-anchor-is-stamped-from-the-owner",
         law: "no-duplicate-runtime-identity",
         title: "The anchor is stamped at creation, from the owner's week arithmetic (HT1, HT11)",

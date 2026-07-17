@@ -70,6 +70,8 @@ import {
   type EvidenceCitation,
 } from "@shared/attention/decision.js";
 import { resolveHouseholdSignal, type HouseholdSignal } from "./engine.js";
+// CONV1 P8 / READ-3 — the one owner of "which planner week is this household living in?".
+import { resolveHouseholdPlannerWeek } from "../../lib/household-planner-week.js";
 import { createStoragePlannerReadPort } from "../handlers/planner-read-port.js";
 import { createStoragePantryReadPort } from "../handlers/pantry-read-port.js";
 import { createStorageShoppingReadPort } from "../handlers/shopping-read-port.js";
@@ -189,11 +191,22 @@ export interface FoodOpportunityRequest {
 // ---------------------------------------------------------------------------
 
 /**
- * Planner domain — a day in the household's own most-recent planner week with
- * zero entries is an actionable gap. "Most recent week" mirrors the one existing
- * convention in this codebase for "current week" (server/routes.ts:10972-10977 —
- * highest `weekNumber`); planner has no calendar date field to compute this from
- * any other way (confirmed against shared/schema.ts).
+ * Planner domain — a day in the household's CURRENT planner week with zero entries is
+ * an actionable gap.
+ *
+ * CONV1 P8 / READ-3. This comment previously read: *"'Most recent week' mirrors the one
+ * existing convention in this codebase for 'current week' (server/routes.ts — highest
+ * `weekNumber`); planner has no calendar date field to compute this from any other way
+ * (confirmed against shared/schema.ts)."*
+ *
+ * **Both halves stopped being true.** The "convention" was `max(weekNumber)` ≡ the constant
+ * 6 — a fact about `createPlannerWeeks`, not about the household (TIME1 § 3.1; HOME3 § 4) —
+ * and it is retired. And the planner HAS a calendar date field: `planner_weeks.weekStartDate`
+ * (CONV1 P7 / SCH-2, 2026-07-17). Corrected in the same change that made it false (DOC-4).
+ *
+ * The caller now supplies the week that `resolveHouseholdPlannerWeek` resolved, or does not
+ * call this at all — because a gap in a week nobody can date is not an actionable gap, it is
+ * a guess about which week the household is living in (HT6).
  */
 export function identifyPlannerGapOpportunities(
   week: PlannerWeek,
@@ -381,8 +394,21 @@ export async function identifyOpportunities(request: FoodOpportunityRequest): Pr
   try {
     const plannerPort = await createStoragePlannerReadPort();
     const weeks = await plannerPort.getPlannerWeeks(request.userId);
-    if (weeks.length > 0) {
-      const currentWeek = weeks.reduce((latest, week) => (week.weekNumber > latest.weekNumber ? week : latest));
+    // CONV1 P8 / READ-3 — rival #2 of five, retired. Was:
+    //   weeks.reduce((latest, week) => week.weekNumber > latest.weekNumber ? week : latest)
+    // ≡ the constant 6. It aimed every planner gap opportunity at a week the household
+    // was not looking at.
+    //
+    // When the household has no anchor there is NO FALLBACK and NO planner opportunity:
+    // "Thursday in Week 6 has no meals planned" is only actionable if Week 6 is a week
+    // this household is actually living in, and for an unanchored household nobody knows
+    // that. Guessing would put a fabricated premise into DEC1's governed output and,
+    // through it, into what the Companion says. Silence stays first-class (HT6/HT14) —
+    // and this is the honest degrade this block ALREADY practised for an unreadable
+    // planner, now extended to an undatable one.
+    const plannerWeek = await resolveHouseholdPlannerWeek(request.userId, weeks);
+    if (plannerWeek.anchored) {
+      const currentWeek = plannerWeek.week;
       const [days, entries] = await Promise.all([
         plannerPort.getPlannerDays(currentWeek.id),
         plannerPort.getPlannerEntriesForWeek(currentWeek.id),

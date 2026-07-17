@@ -40,6 +40,8 @@
  */
 
 import { storage } from "../storage";
+// CONV1 P8 / READ-3 — the one owner of "which planner week is this household living in?".
+import { resolveHouseholdPlannerWeek } from "./household-planner-week";
 import { fetchHouseholdPlannerFoods, type PlannerWeekFacts } from "./food-intelligence-assembler";
 import { assembleNutritionCentre } from "./nutrition-centre-assembler";
 import {
@@ -197,10 +199,24 @@ function weekPlantFacts(week: PlannerWeekFacts | undefined): {
 /**
  * Assemble the household's nutrition report for ONE planner week.
  *
- * `weekNumber` defaults to the household's LATEST planned week — the week a household
- * looking at their dashboard is actually living in. An explicit `weekNumber` reports
- * that week instead, and an unknown one is an honest gap (`available: false`), never
- * the latest week silently substituted.
+ * An explicit `weekNumber` reports that week, and an unknown one is an honest gap
+ * (`available: false`), never another week silently substituted.
+ *
+ * WITHOUT an explicit `weekNumber`, the week is the household's CURRENT one, resolved by
+ * the single owner (`resolveHouseholdPlannerWeek`) from the planner anchor and the
+ * household's zone.
+ *
+ * CONV1 P8 / READ-3 — rival #3 of five, retired. This doc comment previously claimed the
+ * default was *"the household's LATEST planned week — the week a household looking at their
+ * dashboard is actually living in"*. **The second half was never true.** `latest` was the
+ * last of the sorted week numbers ≡ 6, and all six weeks are created at first touch, so it
+ * was the constant six — a fact about `createPlannerWeeks`, not about the household
+ * (TIME1 § 3.1; HOME3 § 4). A household in their first week got a report about their sixth.
+ *
+ * **When the household has no anchor, this returns UNAVAILABLE and substitutes nothing.**
+ * That is the shape this module already used for "the household has told THA nothing about
+ * how it eats" — silence, never a zero score — and an undatable week is the same kind of
+ * absence: THA cannot say which week to report on, so it does not pretend to (HT6).
  */
 export async function assembleHouseholdNutrition(
   userId: number,
@@ -213,9 +229,20 @@ export async function assembleHouseholdNutrition(
   // and THA has nothing honest to say back. Silence, never a zero score.
   if (planner.byWeek.size === 0) return UNAVAILABLE;
 
-  const weeks = Array.from(planner.byWeek.keys()).sort((a, b) => a - b);
-  const latest = weeks[weeks.length - 1];
-  const targetWeek = weekNumber ?? latest;
+  // CONV1 P8 / READ-3. Was `const latest = weeks[weeks.length - 1]; weekNumber ?? latest`
+  // — the constant 6 wearing the costume of a computation.
+  //
+  // An explicit weekNumber is a caller telling us which week to report; that is a fact and
+  // it is honoured. Without one, the current week is the OWNER's to decide, and if the
+  // owner cannot decide it, neither can this module: no `latest`, no fallback, no report.
+  let targetWeek: number;
+  if (weekNumber != null) {
+    targetWeek = weekNumber;
+  } else {
+    const plannerWeek = await resolveHouseholdPlannerWeek(userId, await storage.getPlannerWeeks(userId));
+    if (!plannerWeek.anchored) return UNAVAILABLE;
+    targetWeek = plannerWeek.week.weekNumber;
+  }
 
   const week = planner.byWeek.get(targetWeek);
   // An explicitly requested week that the household never planned is an honest gap.

@@ -222,7 +222,16 @@
          sitting on it": a door belongs to the wall it is cut into, and you can
          see the wall in it. */
   --surface-primary:        hsl(42 46% 98%);
-  --surface-primary-border: hsl(38 24% 91.5%);
+  /* NORTH2 — a joint, not a ring. This was `hsl(36 30% 91%)`: about seven lightness
+     points off its own fill, which is not an edge but an OUTLINE drawn around a
+     rectangle — and an outlined rectangle is a card, whatever colour it is. It is now
+     a whisper off the fill, so the panel is separated from the counter by the SHADOW
+     beneath it and the rim of light along its top, which is how a real surface is
+     read against a real one. Depth before shadows, light before colour
+     (TRANSLATION1 §5); the panel stays fully solid, so §6.1's "type gets ground
+     without negotiation" and §15's measure-once contrast are both untouched — what
+     left is the drawn frame, not the ground. */
+  --surface-primary-border: hsl(38 22% 94.5%);
   /* The groove's floor is the counter's own material, one whisper deeper — a recess
      receives slightly less of the morning than the plane around it, and that is the
      ONLY reason it is darker at all. Mostly transparent (0.34), so what a household

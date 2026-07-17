@@ -32,7 +32,61 @@
  * home and a name.
  */
 
-/** ARRIVAL's orchard — the full-bleed E3 beat. Unchanged since ODL2. */
+/**
+ * NORTH2 (2026-07-17) — THE GRADE IS IN THE ASSET, AND WHY IT HAD TO BE.
+ *
+ * The asset was pale. Laid at E3 behind a warm room it read as a haze — "like a
+ * background image", which is what the brief refuses and what a view is not. So it is
+ * graded: saturation 1.28, contrast 1.06, applied ONCE, at 1536×1024, and baked into
+ * `/orchard-bg.webp` itself. Saturation puts the life back in the greens — the orchard
+ * is LIFE (Experience Language §3A.3), and a desaturated orchard is the "gloomy, misty,
+ * melancholy" §3A fixes it AGAINST by name. Contrast gives the hills their distance
+ * back, which is what makes it a place rather than a wash. It adds no second light and
+ * moves no sun: a grade changes how a negative is PRINTED, never where the morning
+ * comes from, so every shadow in every room still agrees with the same upper-left sun
+ * (Blueprint §7).
+ *
+ * ⚠️ IT WAS A CSS `filter:` FIRST, AND THAT WAS A LATENT SECOND ORCHARD.
+ * The filter was applied here, to the three shapes this file owns, under a comment
+ * asserting that one constant on every shape kept Blueprint §6.1's ONE orchard intact.
+ * That assertion was false, and the picture is what proved it. **Five surfaces mount
+ * this asset WITHOUT this owner**, straight from `url('/orchard-bg.webp')`:
+ *
+ *     client/src/components/ui/dialog.tsx:48
+ *     client/src/pages/list-page.tsx:417
+ *     client/src/pages/shopping-list-page.tsx:3014
+ *     client/src/pages/onboarding-page.tsx:454
+ *     client/src/pages/shopping-workspace-page.tsx:2328
+ *
+ * A filter here would have graded arrival and Home and left those five ungraded — two
+ * different orchards seen from one house, which is the same defect as two suns (§16)
+ * wearing different clothes. Grading the ASSET makes §6.1 true BY CONSTRUCTION rather
+ * than by discipline: every consumer gets the same morning whether it asks this file
+ * for it or not, and no future bypass can fork it either. It also costs no runtime
+ * filter, and it will not double-grade the real orchard photograph when it lands.
+ *
+ * The asset got SMALLER doing it — 56,986 → 51,722 bytes — so PX1-W3's performance
+ * budget ("Make the Product Feel Instant") is improved, not spent.
+ *
+ * 🔴 THOSE FIVE BYPASSES ARE A REAL DEFECT AND NORTH2 DID NOT FIX THEM. This file's
+ * header says "One asset, one owner, two governed shapes", and the adoption register's
+ * `orchard-environment` row says "two permitted surfaces (arrival, and /home) ·
+ * nothing else." **Both sentences are false today** and were false before NORTH2: there
+ * are five more, one of which (`dialog.tsx`) puts the orchard behind EVERY dialog in
+ * the product. Fixing them is architecture, not art direction, and this change was
+ * scoped to craft — so they are reported in docs/implementation/NORTH2_HOME_REFINEMENT.md
+ * §6 rather than quietly corrected or quietly ignored.
+ *
+ * ⚠️ THE GRADE IS A CEILING, NOT A FIX. This asset is a pale watercolour of a MEADOW:
+ * rolling hills, a path, a few generic horizon trees. No apple trees, no rows, no
+ * blossom, no fruit — nothing that makes an orchard an orchard. Every copy in the
+ * repository is byte-identical (md5 332f82…) and the shipped webp was visually
+ * indistinguishable from the 2MB PNG it came from, so there was never a richer version
+ * to restore. No grade adds a tree. This makes a weak asset carry as far as it can and
+ * no further; the real fix is a new asset, specified in §5 of that report.
+ */
+
+/** ARRIVAL's orchard — the full-bleed E3 beat. */
 export default function OrchardBackdrop() {
   return (
     <div

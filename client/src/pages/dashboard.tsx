@@ -1,6 +1,9 @@
 import { useMemo, useState, useCallback } from "react";
 import { householdGreeting } from "@/lib/greeting";
-import { DECLARED_DEFAULT_ZONE } from "@shared/time/household-time";
+import { DECLARED_DEFAULT_ZONE, MONDAY_FIRST_ORDER } from "@shared/time/household-time";
+// CONV1 P8 / READ-3 — the one client answer to "which planner week is this household
+// living in?". This page used to answer it with `plannerFull[0]`.
+import { useCurrentPlannerWeek } from "@/hooks/use-current-planner-week";
 import { useUser } from "@/hooks/use-user";
 import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
 import HomeIntelligenceCompanion from "@/components/HomeIntelligenceCompanion";
@@ -53,7 +56,16 @@ const APPLE_BORDER = "hsl(90, 20%, 85%)";
 
 const BERRY = "hsl(340, 28%, 48%)";
 
-const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+// CONV1 P8 / READ-3 — labels keyed BY the declared key space, not by position.
+//
+// This was `["Mon", "Tue", … "Sun"]` indexed positionally against Sunday-first planner
+// data, which rendered Sunday under "Mon" for every household (TIME1 § 3.2, reported and
+// unfixed until now). A label array whose correctness depends on the reader remembering
+// which end the week starts is exactly the week-shape rival § 14 target 2 retires: the
+// order is `MONDAY_FIRST_ORDER`'s to declare, and the number's meaning is HT8's.
+const DAY_LABEL_BY_DOW: Record<number, string> = {
+  0: "Sun", 1: "Mon", 2: "Tue", 3: "Wed", 4: "Thu", 5: "Fri", 6: "Sat",
+};
 
 // CONV1 P6 (Phase 3) — the local `getGreeting()` is RETIRED into
 // `@/lib/greeting` (architecture § 14, target 3: 4 → 1). It read
@@ -107,6 +119,10 @@ export default function Dashboard() {
     queryKey: ["/api/planner/full"],
     enabled: !!user,
   });
+  // CONV1 P8 / READ-3 — the household's week comes from the one owner, never from
+  // `plannerFull[0]`. `anchored:false` is an answer, and this page states it (below)
+  // rather than charting Week 1 and calling it "This Week".
+  const { data: currentWeek } = useCurrentPlannerWeek(!!user);
 
   const shoppingListItems = shoppingQuery.data ?? [];
   const plannerFull = plannerQuery.data ?? [];
@@ -193,17 +209,31 @@ export default function Dashboard() {
     ].filter(d => d.value > 0);
   }, [meals]);
 
+  // CONV1 P8 / READ-3 — rival #4 of five, retired; and with it a live off-by-one.
+  //
+  // WAS: `const firstWeek = plannerFull[0]` — the household's "This Week" was whichever
+  // row the API returned first, i.e. always Week 1. That is a fact about array order, not
+  // about the household (HOME3 § 4). It is now the week the ONE owner resolved, and when
+  // the owner says it cannot know, this chart says so too rather than charting Week 1 and
+  // calling it "This Week" (BEH-3 — "do not pick a week to fix it").
+  //
+  // AND: the days were rotated by one, live, for every household. `DAY_LABELS` is
+  // Monday-first; `days[i]` is Sunday-first (`dayOfWeek` 0 = Sunday — the declared key
+  // space, HT8), so `days[0]` is SUNDAY and it was rendered under "Mon". TIME1 § 3.2
+  // reported this and did not fix it. Fixing the week without fixing the order would have
+  // been HT11's half-convergence — the RIGHT week's meals under the WRONG days, which is a
+  // confident lie where there had merely been a confused one. `MONDAY_FIRST_ORDER` is the
+  // owner's declared shape (§ 14 target 2), and this is its first consumer.
   const weekData = useMemo(() => {
-    if (!plannerFull.length) {
-      return DAY_LABELS.map(d => ({ day: d, count: 0 }));
-    }
-    const firstWeek = plannerFull[0];
-    const days = [...(firstWeek?.days || [])].sort((a: any, b: any) => a.dayOfWeek - b.dayOfWeek);
-    return DAY_LABELS.map((label, i) => {
-      const day = days[i];
-      return { day: label, count: day?.entries?.length ?? 0 };
-    });
-  }, [plannerFull]);
+    const empty = MONDAY_FIRST_ORDER.map(dow => ({ day: DAY_LABEL_BY_DOW[dow], count: 0 }));
+    if (!currentWeek?.anchored || !plannerFull.length) return empty;
+    const week = plannerFull.find((w: any) => w.weekNumber === currentWeek.weekNumber);
+    if (!week) return empty;
+    return MONDAY_FIRST_ORDER.map(dow => ({
+      day: DAY_LABEL_BY_DOW[dow],
+      count: (week.days || []).find((d: any) => d.dayOfWeek === dow)?.entries?.length ?? 0,
+    }));
+  }, [plannerFull, currentWeek]);
 
   const mealsPlannedThisWeek = weekData.reduce((s, d) => s + d.count, 0);
   const daysWithMeals = weekData.filter(d => d.count > 0).length;
@@ -437,19 +467,34 @@ export default function Dashboard() {
                         <CalendarDays className="h-4 w-4 text-muted-foreground" />
                       </div>
                     </div>
-                    <div className="flex items-end gap-2">
-                      <div className="text-numeric">{daysWithMeals}</div>
-                      <div className="text-sm text-muted-foreground mb-0.5">/ 7 days</div>
-                    </div>
-                    <div className="flex gap-1 mt-2">
-                      {weekData.map((d, i) => (
-                        <div key={i} className="flex flex-col items-center gap-0.5">
-                          {d.count > 0
-                            ? <CheckCircle2 className="h-3 w-3" style={{ color: GREEN_MID }} />
-                            : <Circle className="h-3 w-3 text-muted-foreground/30" />}
+                    {/* CONV1 P8 / BEH-3 — "0 / 7 days" is a CLAIM, and THA may only make
+                        it about a week it can name. Unanchored, the honest thing is to say
+                        so: a seven-dot row at zero would report an empty week to a
+                        household who may have planned all of it. Same rule as the plant
+                        ring on Home, and the same one the server already keeps by
+                        returning `weeklyProgress: null` rather than a zero. */}
+                    {!currentWeek?.anchored ? (
+                      <p className="text-sm text-muted-foreground" data-testid="text-dashboard-week-unanchored">
+                        Your planner isn't linked to a calendar week yet, so there's no
+                        "this week" to count.
+                      </p>
+                    ) : (
+                      <>
+                        <div className="flex items-end gap-2">
+                          <div className="text-numeric">{daysWithMeals}</div>
+                          <div className="text-sm text-muted-foreground mb-0.5">/ 7 days</div>
                         </div>
-                      ))}
-                    </div>
+                        <div className="flex gap-1 mt-2">
+                          {weekData.map((d, i) => (
+                            <div key={i} className="flex flex-col items-center gap-0.5">
+                              {d.count > 0
+                                ? <CheckCircle2 className="h-3 w-3" style={{ color: GREEN_MID }} />
+                                : <Circle className="h-3 w-3 text-muted-foreground/30" />}
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               </Link>
@@ -517,6 +562,26 @@ export default function Dashboard() {
               <CardContent className="p-5 pt-4">
                 {plannerQuery.isLoading ? (
                   <Skeleton className="h-36 w-full" data-testid="loading-week-plan" />
+                ) : !currentWeek?.anchored ? (
+                  /* CONV1 P8 / BEH-3 — this MUST come before the "no meals planned"
+                     branch. Unanchored, `mealsPlannedThisWeek` is 0 because THA cannot
+                     name the week, NOT because the household planned nothing — and
+                     "No meals planned yet" would tell a household who planned all seven
+                     days that they had planned none. An absence of knowledge is not an
+                     absence of meals (Core Principle 6). */
+                  <EmptyState
+                    variant="empty"
+                    size="compact"
+                    icon={CalendarDays}
+                    title="Not linked to a calendar week yet"
+                    description="Your planner's weeks aren't tied to dates, so THA can't tell which one is this week. Open the planner to see your plan."
+                    action={
+                      <Link href="/planner">
+                        <Button variant="outline" size="sm" data-testid="button-open-planner-unanchored">Open planner</Button>
+                      </Link>
+                    }
+                    data-testid="empty-week-plan-unanchored"
+                  />
                 ) : mealsPlannedThisWeek === 0 ? (
                   <EmptyState
                     variant="empty"

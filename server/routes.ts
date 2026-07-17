@@ -118,6 +118,11 @@ import {
 import { enrichRetailData, STORE_TAG_MAP, UK_RETAILER_STORE_TAGS } from "./lib/retailIntelligence";
 import { getCanonicalProduct, isCompatibleSwap } from "./lib/productCanonicaliser";
 import { getHouseholdForUser } from "./lib/household";
+// CONV1 P8 / READ-3 — the one answer to "which planner week is this household living in?".
+// This route used to compute its own (max(weekNumber) ≡ 6, the constant wearing the costume
+// of a computation). It asks the owner now.
+import { resolveHouseholdPlannerWeek } from "./lib/household-planner-week";
+import { householdDayOfWeek } from "@shared/time/household-time";
 import { assembleNutritionCentre } from "./lib/nutrition-centre-assembler";
 import { pool } from "./db";
 import { db } from "./db";
@@ -5971,6 +5976,50 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     }
   });
 
+  // ── The household's current planner week — CONV1 P8 / READ-3 ────────────────
+  //
+  // THE ONE DOOR to "which planner week is this household living in?", and the only
+  // projection of that fact. Home and the Dashboard both read it through
+  // `useCurrentPlannerWeek()`; nothing else may answer the question.
+  //
+  // It creates no fact and stores nothing: it is `resolvePlannerWeek` over the two
+  // canonical facts (households.timeZone, planner_weeks.weekStartDate), composed by
+  // server/lib/household-planner-week.ts.
+  //
+  // `anchored: false` is a 200, not a 404 (HT6). It is not an error and not an empty
+  // result — it is THA saying truthfully "I do not know which week this is", which is
+  // the honest answer for the 192 of 195 households whose weeks predate the anchor and
+  // can never be back-filled (HT7). The client renders that state; it never fills it in.
+  app.get("/api/planner/current-week", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const userId = req.user!.id;
+      const weeks = await storage.getPlannerWeeks(userId);
+      const resolved = await resolveHouseholdPlannerWeek(userId, weeks);
+      res.json(
+        resolved.anchored
+          ? {
+              anchored: true,
+              weekId: resolved.week.id,
+              weekNumber: resolved.week.weekNumber,
+              weekName: resolved.week.weekName,
+              weekStartDate: resolved.week.weekStartDate,
+              relation: resolved.relation,
+              // HT11 — all of it, or none of it. The day ships ONLY with the week, from
+              // the SAME resolution, so a consumer cannot take the household's week and
+              // then pick the day off the device (HT12). Home did exactly that with
+              // `new Date().getDay()`. 0 = Sunday — the planner's declared key space
+              // (HT8/R9), never renumbered.
+              todayDayOfWeek: householdDayOfWeek(resolved.today),
+            }
+          : { anchored: false, reason: resolved.reason },
+      );
+    } catch (err) {
+      console.error("[Planner] current-week error:", err);
+      res.status(500).json({ message: "Failed to resolve the current planner week" });
+    }
+  });
+
   app.get("/api/planner/weeks/:weekId/days", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
@@ -11521,11 +11570,21 @@ Generate a complete recipe using these as the foundation.`;
         daysWithMeals: number;
       } | null = null;
 
+      // CONV1 P8 / READ-3 — rival #1 of five, retired.
+      //
+      // This was `weeks.reduce((a, b) => b.weekNumber > a.weekNumber ? b : a)` — which is
+      // not a computation, it is the constant 6 (TIME1 § 3.1): all six weeks are created
+      // eagerly at first touch and the API bounds them at 6. "The highest week that exists"
+      // is a fact about createPlannerWeeks, never about the household (HOME3 § 4).
+      //
+      // Now the household's own planner week, from the one owner. When it answers
+      // `anchored: false` there is NO FALLBACK — `weeklyProgress` stays null, which is the
+      // shape this route ALREADY had for "no weekly picture". Substituting week 6 here
+      // would re-create the rival (BEH-3: "do not pick a week to fix it").
       const weeks = await storage.getPlannerWeeks(userId);
-      if (weeks.length > 0) {
-        const currentWeek = weeks.reduce((a, b) =>
-          b.weekNumber > a.weekNumber ? b : a
-        );
+      const plannerWeek = await resolveHouseholdPlannerWeek(userId, weeks);
+      if (plannerWeek.anchored) {
+        const currentWeek = plannerWeek.week;
         const days = await storage.getPlannerDays(currentWeek.id);
         // Deduped by DIVERSITY GROUP, not ingredient slug: kale and cavolo nero are
         // one plant, as the canonical owner says (CPI1 S1-2).
@@ -11566,6 +11625,12 @@ Generate a complete recipe using these as the foundation.`;
       const { celebration, seasonalHighlight, opportunity, householdInsight } =
         deriveHouseholdCompanionFields(history);
 
+      // The resolution itself is NOT published here. It has one door
+      // (`GET /api/planner/current-week`) and two consumers (Home and the Dashboard);
+      // re-publishing it in this payload would make Home's copy a second projection of
+      // one fact, and the Dashboard would have to fetch Home's intelligence to read the
+      // planner's week. `weeklyProgress` above is this route USING the owner, not
+      // republishing it.
       res.json({
         weeklyProgress,
         celebration,
