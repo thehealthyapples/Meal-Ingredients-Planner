@@ -31,6 +31,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useEffect, useRef, useState } from "react";
+import { householdGreeting } from "@/lib/greeting";
+import { DECLARED_DEFAULT_ZONE } from "@shared/time/household-time";
 import { motion } from "framer-motion";
 import { useWithholdCompanion } from "@/components/conversation/companion-context";
 import { WorkspaceHeader } from "@/components/workspace-header";
@@ -53,12 +55,22 @@ const T = {
 
 const SESSION_KEY = "tha:exp2a-seen";
 
-/** The greeting follows the day. Resolved once per mount. */
+/**
+ * The greeting follows the day. Resolved once per mount.
+ *
+ * CONV1 P6 (Phase 3) — the private copy is RETIRED into `@/lib/greeting`
+ * (architecture § 14, target 3: 4 → 1). It read `new Date().getHours()` with its
+ * own 12/**18** boundary, while the two live surfaces used 12/**17** — a
+ * divergence that would have shipped the day this prototype's idea graduated.
+ * It is settled on the boundary the owner DECLARES: 17, what is already live.
+ *
+ * The zone is the declared default because a prototype has no household — this
+ * file deliberately reads no data (see the header). That is the honest input, and
+ * it means the only thing an idea has to change on graduation is to pass the real
+ * household's zone. It no longer carries a clock of its own.
+ */
 function timeOfDayGreeting(): string {
-  const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 18) return "Good afternoon";
-  return "Good evening";
+  return householdGreeting(new Date(), DECLARED_DEFAULT_ZONE);
 }
 
 export default function ArrivalAWelcomePage() {

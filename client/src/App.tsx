@@ -93,18 +93,16 @@ const ArrivalS1QuietPage = import.meta.env.DEV
 const ArrivalS2WalkingHomePage = import.meta.env.DEV
   ? lazy(() => import("@/pages/dev/arrival-s2-walking-home"))
   : null;
-// EXP4 — three development-only Materiality & Depth studies: how THA should
-// occupy visual space (layers · light · restraint). Same load-bearing ternary
-// as ARRIVAL1 above, so nothing ships in the production bundle.
-// ODL2 (2026-07-17): Study A won EXP4's selection and graduated into UIA §4 as
-// the canonical depth/light vocabulary; it survives as that vocabulary's
-// dev-only reference implementation until Home's E3 adopts the tokens.
-// Studies B (material-b-atmosphere) and C (material-c-restraint) LOST and were
-// deleted in the same change — both set type directly on the orchard, which
-// Blueprint §6.1 forbids without negotiation.
-const MaterialAWarmLayersPage = import.meta.env.DEV
-  ? lazy(() => import("@/pages/dev/material-a-warm-layers"))
-  : null;
+// EXP4's three Materiality & Depth studies are all gone, and the disposition EXP4 §6
+// set for them is complete. B (material-b-atmosphere) and C (material-c-restraint) lost
+// ODL2's selection and were deleted then — both set type directly on the orchard, which
+// Blueprint §6.1 forbids without negotiation. A (material-a-warm-layers) won, graduated
+// into UIA §4 as the canonical depth/light vocabulary, and survived as that vocabulary's
+// dev-only reference implementation ONLY until a household surface adopted the tokens.
+// NORTH1 (2026-07-17) is that adoption: Home now stands at E3 on the real ground plane,
+// so the reference was deleted in the same change — the closing trigger the adoption
+// register recorded against `depth-light-ground`. A study that survives its own decision
+// has become the thing it was built to prevent.
 const DashboardPage = lazy(() => import("@/pages/dashboard"));
 const FoodDetailPage = lazy(() => import("@/pages/food-detail-page"));
 const ShoppingWorkspacePage = lazy(() => import("@/pages/shopping-workspace-page"));
@@ -369,14 +367,6 @@ function Router() {
         <Route
           path="/dev/arrival-s2-walking-home"
           component={() => <ProtectedRoute component={ArrivalS2WalkingHomePage} />}
-        />
-      )}
-      {/* EXP4 — development only: the three Materiality & Depth studies,
-          composed from the ONE shell exactly like the prototypes above. */}
-      {MaterialAWarmLayersPage && (
-        <Route
-          path="/dev/material-a-warm-layers"
-          component={() => <ProtectedRoute component={MaterialAWarmLayersPage} />}
         />
       )}
       <Route path="/dashboard" component={() => <ProtectedRoute component={DashboardPage} />} />

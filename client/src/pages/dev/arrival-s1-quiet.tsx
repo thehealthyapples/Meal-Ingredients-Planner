@@ -33,6 +33,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useEffect, useRef, useState } from "react";
+import { householdGreeting } from "@/lib/greeting";
+import { DECLARED_DEFAULT_ZONE } from "@shared/time/household-time";
 import { motion } from "framer-motion";
 import { useWithholdCompanion } from "@/components/conversation/companion-context";
 import { WorkspaceHeader } from "@/components/workspace-header";
@@ -57,13 +59,23 @@ const T = {
 
 const SESSION_KEY = "tha:exp3s1-seen";
 
-/** The greeting follows the day (EXP2 A). Resolved once per mount. Local copy —
- *  EXP2's prototype files are under their own review and stay byte-untouched. */
+/**
+ * The greeting follows the day (EXP2 A). Resolved once per mount.
+ *
+ * CONV1 P6 (Phase 3) — the private copy is RETIRED into `@/lib/greeting`
+ * (architecture § 14, target 3: 4 → 1). It was the fourth copy, and its own note
+ * recorded exactly why it existed: *"Local copy — EXP2's prototype files are under
+ * their own review and stay byte-untouched."* That was a sound reason to avoid
+ * importing from a prototype, and it is why the owner is not a prototype. The
+ * boundary moves 18 → **17**, the one the owner declares and the live surfaces
+ * already use. Both files now read the same rule without either importing the
+ * other.
+ *
+ * The zone is the declared default because a prototype has no household (see
+ * `arrival-a-welcome.tsx`).
+ */
 function timeOfDayGreeting(): string {
-  const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 18) return "Good afternoon";
-  return "Good evening";
+  return householdGreeting(new Date(), DECLARED_DEFAULT_ZONE);
 }
 
 export default function ArrivalS1QuietPage() {

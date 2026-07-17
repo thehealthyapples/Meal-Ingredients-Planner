@@ -6949,7 +6949,11 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
   app.post("/api/freezer", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
-      const data = insertFreezerMealSchema.parse(req.body);
+      // CONV1 P6 / BEH-6 — `frozenDate` is omitted from the accepted body and
+      // stamped by the write funnel from the household's own clock (HT12: the
+      // device may supply the instant, never the day). Zod strips it, so a client
+      // that still sends its UTC guess is not broken — it is simply not believed.
+      const data = insertFreezerMealSchema.omit({ frozenDate: true }).parse(req.body);
       const meal = await storage.getMeal(data.mealId);
       if (!meal) return res.status(404).json({ message: "Meal not found" });
       if (!meal.isFreezerEligible) return res.status(400).json({ message: "This meal is not marked as freezer eligible" });

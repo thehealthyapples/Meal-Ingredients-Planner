@@ -36,7 +36,14 @@ function PantryIcon({ className }: { className?: string }) {
 // every navigation surface (the canonical BottomNav on all screen sizes, and the
 // retired-but-retained DesktopSidebar kept dormant for safe rollback).
 // hasWorkspace: true → repeat-tap on the active page opens that page's workspace drawer.
-const NAV_ITEMS = [
+//
+// NORTH1 (2026-07-17) exported it. Home's North Star shows four of the house's rooms as
+// doors on the counter, which makes Home a navigation surface — and "ONE ordered list is
+// the single source of truth for EVERY navigation surface" is this comment's own rule. A
+// second list on Home would have been a second owner of every room's href, label and
+// glyph, so Home reads its doors from here (`roomsByHref`) and owns only their
+// descriptions. Consumers may read this list; nothing may reorder or fork it.
+export const NAV_ITEMS = [
   { href: "/home", label: "Home", icon: Home, hasWorkspace: false },
   { href: "/planner", label: "Planner", icon: CalendarDays, hasWorkspace: true },
   { href: "/cookbook", label: "Cookbook", icon: ChefHat, hasWorkspace: true },
@@ -46,6 +53,24 @@ const NAV_ITEMS = [
   { href: "/my-diary", label: "Diary", icon: BookOpen, hasWorkspace: true },
   { href: "/analyser", label: "Analyser", icon: Microscope, hasWorkspace: true },
 ];
+
+export type NavItem = (typeof NAV_ITEMS)[number];
+
+/**
+ * The canonical entries for the given hrefs, in the order asked for.
+ *
+ * Home's doors are a chosen SUBSET in a chosen order, and the choice is Home's to make —
+ * but the href, the label and the glyph of each room stay this file's. Throws on an
+ * unknown href rather than rendering a door to nowhere: a typo is a broken room, and it
+ * should fail where it is written, not in front of a household.
+ */
+export function roomsByHref(hrefs: readonly string[]): NavItem[] {
+  return hrefs.map((href) => {
+    const item = NAV_ITEMS.find((i) => i.href === href);
+    if (!item) throw new Error(`roomsByHref: no canonical nav item for "${href}"`);
+    return item;
+  });
+}
 
 const REALM_STYLES: Record<string, { active: string; hover: string; inactive: string; mobileActive: string; mobileInactive: string }> = {
   "/home": {

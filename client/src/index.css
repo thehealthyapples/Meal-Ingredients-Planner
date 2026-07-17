@@ -1,4 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+/* NORTH1 (2026-07-17) added Caveat — the signature voice, adopted onto /home.
+   Two weights only (500/600), which is every weight `.text-signature` can reach: the
+   role carries no weight scale, so a third would be a download nothing can render.
+   `display=swap` keeps the greeting readable while the hand is still arriving — the
+   name is never withheld waiting for a font. */
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=DM+Sans:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -44,14 +49,16 @@
      significant branded moments only: never a button, a label, a status, or a
      value a household reads in order to act. Its rarity is the whole point.
      Permitted surfaces are named one at a time in the adoption register; today
-     there is exactly one, and it is a development-only prototype.
+     there is exactly one, and it is `/home` — the household's own name in the
+     greeting, which is Home's one ornament and is data-borne.
 
-     The webfont is NOT loaded here on purpose. Until a household-facing surface
-     adopts this voice, loading it would cost every household a font download for
-     a page only a developer can reach. The prototype loads it itself. On
-     adoption, add Caveat to the @import at the top of this file and delete the
-     loader in the adopting page — the TOKEN's home is here either way (§16: one
-     definition source), so nothing else moves. */
+     ADOPTED 2026-07-17 (NORTH1), on Colin Clapson's ADOPT ruling recorded by ODL2.
+     The webfont is now loaded in the @import at the top of this file, which is the
+     first time a household downloads it — a real cost, borne once, on the one
+     surface that earns it (§15). It was deliberately NOT loaded here for as long
+     as the only consumer was a development-only prototype that loaded it itself;
+     that prototype is deleted, and with it `useSignatureFont`. The TOKEN's home
+     was always here (§16: one definition source), so nothing else moved. */
   --font-signature: 'Caveat', 'Segoe Script', 'Bradley Hand', cursive;
 
   --sidebar:             0 0% 100%;

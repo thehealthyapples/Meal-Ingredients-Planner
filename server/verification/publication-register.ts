@@ -1322,7 +1322,8 @@ export const CANONICAL_PUBLICATION_REGISTER: DomainDeclaration[] = [
     sotRegisterRef: "Appendix A (Household Time) / D14 / D16",
     knownGaps: [
       "DECLARED, NOT BUILT is now partly discharged: the module exists (P5/OWN-4) and households.timeZone exists (P5/SCH-1). planner_weeks.weekStartDate does NOT — it is Phase 4 (CONV1 P7 / SCH-2), so resolvePlannerWeek returns anchored:false for every household today. That is the honest floor, not a defect.",
-      "No consumer has converged yet: Phase 3 (CONV1 P6) moves the Companion's temporal anchor, the freezer expiry, the diary and the four getGreeting() copies. Until then the twenty private clocks are still live — the module's value is that they now have one owner to converge onto.",
+      "Phase 3 (CONV1 P6) is DONE for the T2/T3 consumers: the Companion's temporal anchor (READ-4), the freezer's write/comparison (BEH-6), the diary's day and copy-from-planner (SCH-4), and the four getGreeting() copies now read the owner. Not every private clock is retired — the T5 consumers (the five rival 'current weeks', streaks, savings) need the anchor and are CONV1 P7/P8; product_history.scannedAt and user_health_trends.date still compare text dates across frames.",
+      "The greeting's WORDS are still client-side strings outside the Personality Registry. That is INT21's, not Household Time's: § 9 schedules it as CP3. CONV1 P6 converged the clock and collapsed four copies to one site, which is CP3's remaining surface.",
     ],
     checks: [
       sourceCheck({
@@ -1406,6 +1407,77 @@ export const CANONICAL_PUBLICATION_REGISTER: DomainDeclaration[] = [
                   "household-time.ts computes a season. HT17: season is NOT Household Time — a season computed inside the time module is the second owner Principle 2 forbids. The module supplies a civil date; shared/seasonal/season-rule.ts answers.",
               }
             : { violated: false, detail: "The time module owns no season (HT17)." };
+        },
+      }),
+      customCheck({
+        id: "ht-no-rival-greeting",
+        law: "no-duplicate-runtime-identity",
+        title: "The time-of-day greeting has exactly one implementation (§ 14 target 3)",
+        severity: "fail",
+        run: async (ctx) => {
+          // THE GATE § 16 NAMES BY NAME: "the gate that matters is the one that
+          // fails when someone writes a sixth getGreeting()".
+          //
+          // CONV1 P6 converged four (dashboard.tsx, HomeIntelligenceCompanion.tsx
+          // — boundary 17; two arrival prototypes — boundary 18) onto
+          // client/src/lib/greeting.ts, which reads householdPhase() and never an
+          // ambient hour. The retired shape is exact: an ambient hour read
+          // reaching a greeting word. Four authors each wrote it privately, and a
+          // phone left on US time said "Good evening" to a household eating
+          // breakfast in London.
+          const rivals: string[] = [];
+          ctx.sources.forEach((content, file) => {
+            if (file.startsWith("server/tests/")) return;
+            if (file.startsWith("server/verification/")) return;
+            const code = content.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+            if (/getHours\(\)[\s\S]{0,400}?"Good (morning|afternoon|evening)"/.test(code)) {
+              rivals.push(file);
+            }
+          });
+          return rivals.length > 0
+            ? {
+                violated: true,
+                detail: `${rivals.length} rival greeting implementation(s) derive a greeting from an ambient hour: ${rivals.join(", ")}. The phase belongs to shared/time/household-time.ts (householdPhase — the household's hour, not the device's) and the one greeting site is client/src/lib/greeting.ts. CONV1 P6 converged four into one; the words themselves are INT21's and are scheduled as CP3.`,
+              }
+            : {
+                violated: false,
+                detail: "One time-of-day greeting: client/src/lib/greeting.ts, over householdPhase(). Four copies converged to one (CONV1 P6); no surface reads an ambient hour to greet.",
+              };
+        },
+      }),
+      customCheck({
+        id: "ht-companion-anchor-is-the-households",
+        law: "one-owner",
+        title: "The Companion's TODAY is the household's, not UTC's (READ-4, HT12)",
+        severity: "fail",
+        run: async (ctx) => {
+          const file = "server/intelligence/conversation/context-frame-assembler.ts";
+          const src = ctx.sources.get(file);
+          if (src === undefined) {
+            return { violated: true, detail: `${file} is missing — the temporal anchor has no home.` };
+          }
+          const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+          // The retired line, verbatim: `new Date().toISOString().slice(0, 10)`.
+          // Its own doc comment claimed it "grounds the LLM to today"; it grounded
+          // the LLM to UTC's today, and it became BOTH the `TODAY:` in the system
+          // prompt AND the diary day the Companion reads and writes. It is the
+          // single highest-leverage line in the platform (CONV1 READ-4).
+          if (/toISOString\(\)\s*\.\s*slice\(\s*0\s*,\s*10\s*\)/.test(code)) {
+            return {
+              violated: true,
+              detail: `${file} serialises an instant through UTC to make a civil date. HT12 — the device may supply the instant; it may never decide the day. The anchor must be formatCivilDate(householdToday(now, zone)) over the household's own zone (CONV1 P6 / READ-4).`,
+            };
+          }
+          if (!/householdToday\s*\(/.test(code)) {
+            return {
+              violated: true,
+              detail: `${file} no longer derives its temporal anchor from householdToday(). The Companion's TODAY must come from the one owner of household time (HT1), or it is a 21st private clock.`,
+            };
+          }
+          return {
+            violated: false,
+            detail: "The Companion's temporal anchor is the household's civil date, derived by shared/time/household-time.ts from the household's zone (CONV1 P6 / READ-4).",
+          };
         },
       }),
       customCheck({

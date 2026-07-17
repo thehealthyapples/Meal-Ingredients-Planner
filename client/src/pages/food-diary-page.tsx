@@ -1,4 +1,13 @@
 import { useState, useMemo, useEffect, useRef } from "react";
+// CONV1 P6 (Phase 3) — the diary reads the one owner of household time (HT1).
+import {
+  DECLARED_DEFAULT_ZONE,
+  addCivilDays,
+  civilDaysBetween,
+  formatCivilDate,
+  householdToday,
+  parseCivilDate,
+} from "@shared/time/household-time";
 import { ImportDiaryModal } from "@/components/import-diary-modal";
 import { UPFInfoModal } from "@/components/upf-info-modal";
 import { FirstVisitHint } from "@/components/first-visit-hint";
@@ -120,12 +129,25 @@ const EXTRA_METRIC_OPTIONS = [
   { key: "bpm", label: "Heart rate (BPM)", icon: Heart, supported: true },
 ];
 
-function toDateStr(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
+// CONV1 P6 (Phase 3) — `toDateStr` is RETIRED.
+//
+// It was `d.toISOString().slice(0, 10)`, and it was the funnel that destroyed the
+// one piece of date handling in this codebase that was right. Someone here knew
+// about DST and noon-anchored every local Date (`T12:00:00`) so a ±1h shift could
+// never cross a date boundary — and then `toDateStr` pushed the result back
+// through UTC. At 00:30 BST `goToday()` resolved to yesterday: the household
+// tapped "Today" and landed on yesterday's diary (TIME2 § 9.4 defect 4).
+//
+// The civil date is now derived by the one owner from the household's zone, so
+// there is nothing to anchor and nothing to funnel (architecture § 14, target 8).
 
 function formatDisplayDate(dateStr: string): string {
-  const d = new Date(dateStr + "T12:00:00");
+  // Built from civil PARTS, so no zone conversion can move it — this replaces the
+  // `new Date(dateStr + "T12:00:00")` guard, which survived only within ±12h and
+  // broke past UTC+13.
+  const date = parseCivilDate(dateStr);
+  if (date === null) return dateStr;
+  const d = new Date(date.year, date.month - 1, date.day);
   return d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 }
 
@@ -900,7 +922,7 @@ function DailySignalsPanel({
 
 // ── Looking Forward widget ──────────────────────────────────────────────────
 
-function LookingForwardWidget() {
+function LookingForwardWidget({ zone }: { zone: string }) {
   const [items, setItems] = useState<Countdown[]>(() => {
     try {
       return JSON.parse(localStorage.getItem("tha_diary_countdowns") || "[]");
@@ -927,11 +949,26 @@ function LookingForwardWidget() {
 
   const removeItem = (id: string) => persist(items.filter((i) => i.id !== id));
 
+  /**
+   * CONV1 P6 (Phase 3) — the LAST `T12:00:00` guard in this file, retired
+   * (architecture § 14, target 8: → 0). It was:
+   *
+   *   const today = new Date(); today.setHours(0, 0, 0, 0);
+   *   const target = new Date(dateStr + "T12:00:00");
+   *   return Math.ceil((target.getTime() - today.getTime()) / 86_400_000);
+   *
+   * AND IT WAS OFF BY ONE, live. Noon-of-target minus midnight-of-today is half a
+   * day, so `Math.ceil` rounded every countdown up: an event happening TODAY
+   * returned 1 and read "1 day away", and tomorrow read "2 days away". The
+   * `days === 0 → "Today!"` branch below was therefore UNREACHABLE — it could
+   * never fire, for anyone. Counting civil days makes it reachable for the first
+   * time. (Found by this phase's own suite, not by a household — but a household
+   * has been reading "1 day away" on the morning of the day itself.)
+   */
   const daysUntil = (dateStr: string): number => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const target = new Date(dateStr + "T12:00:00");
-    return Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    const target = parseCivilDate(dateStr);
+    if (target === null) return 0;
+    return civilDaysBetween(householdToday(new Date(), zone), target);
   };
 
   return (
@@ -1192,7 +1229,22 @@ export default function FoodDiaryPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
 
-  const [date, setDate] = useState<string>(toDateStr(new Date()));
+  // CONV1 P6 / SCH-4 — the diary day is the household's, not the device's.
+  //
+  // `selectedDate` is null until the household actually picks a day, and the
+  // effective `date` falls through to the household's today. That is deliberate:
+  // the zone arrives asynchronously, and seeding useState with a device-derived
+  // date would bake in the wrong day at mount and then have to yank it back.
+  // Null also gives `goToday()` an exact meaning — "today" stops being a snapshot
+  // of when the page loaded and becomes the household's actual today.
+  const { data: householdForClock } = useQuery<{ timeZone: string | null }>({
+    queryKey: ["/api/household"],
+  });
+  const householdZone = householdForClock?.timeZone ?? DECLARED_DEFAULT_ZONE;
+  const householdTodayStr = formatCivilDate(householdToday(new Date(), householdZone));
+
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const date = selectedDate ?? householdTodayStr;
   const [activeTab, setActiveTab] = useState<"diary" | "progress">("diary");
   const [progressRange, setProgressRange] = useState<ProgressRange>("month");
 
@@ -1442,18 +1494,19 @@ export default function FoodDiaryPage() {
     },
   });
 
-  const prevDay = () => {
-    const d = new Date(date + "T12:00:00");
-    d.setDate(d.getDate() - 1);
-    setDate(toDateStr(d));
+  // Calendar arithmetic on a civil date — no noon anchor, because there is no
+  // instant to protect (architecture § 14, target 8). The retired shape stepped a
+  // noon-anchored local Date and serialised it through UTC, which skipped two days
+  // at UTC+13 and appeared not to move going forward.
+  const stepDay = (delta: number) => {
+    const current = parseCivilDate(date);
+    if (current === null) return;
+    setSelectedDate(formatCivilDate(addCivilDays(current, delta)));
   };
-  const nextDay = () => {
-    const d = new Date(date + "T12:00:00");
-    d.setDate(d.getDate() + 1);
-    setDate(toDateStr(d));
-  };
-  const goToday = () => setDate(toDateStr(new Date()));
-  const isToday = date === toDateStr(new Date());
+  const prevDay = () => stepDay(-1);
+  const nextDay = () => stepDay(1);
+  const goToday = () => setSelectedDate(null);
+  const isToday = date === householdTodayStr;
 
   const entriesBySlot = useMemo<Record<MealSlot, DiaryEntry[]>>(() => {
     const base: Record<MealSlot, DiaryEntry[]> = {
@@ -1806,7 +1859,7 @@ export default function FoodDiaryPage() {
 
               {/* ── Right: Looking Forward ────────────────────────── */}
               <div className="mt-3 lg:mt-0">
-                <LookingForwardWidget />
+                <LookingForwardWidget zone={householdZone} />
               </div>
             </div>
 

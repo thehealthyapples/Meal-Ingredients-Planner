@@ -1,6 +1,13 @@
 import { User, InsertUser, Meal, MealSummary, InsertMeal, Nutrition, InsertNutrition, ShoppingListItem, InsertShoppingListItem, MealAllergen, IngredientSwap, MealPlan, InsertMealPlan, MealPlanEntry, InsertMealPlanEntry, Diet, MealDiet, MealCategory, SupermarketLink, ProductMatch, InsertProductMatch, IngredientSource, InsertIngredientSource, NormalizedIngredient, InsertNormalizedIngredient, GroceryProduct, InsertGroceryProduct, UserPreferences, InsertUserPreferences, Additive, InsertAdditive, ProductAdditive, InsertProductAdditive, BasketItem, InsertBasketItem, MealTemplate, InsertMealTemplate, PlannerWeek, PlannerDay, PlannerEntry, InsertPlannerEntry, UserStreak, UserHealthTrend, ProductHistory, InsertProductHistory, FreezerMeal, InsertFreezerMeal, MealPlanTemplate, InsertMealPlanTemplate, MealPlanTemplateItem, InsertMealPlanTemplateItem, AdminAuditLog, UserPantryItem, ShoppingListExtra, MealPairing, InsertMealPairing, IngredientProduct, InsertIngredientProduct, Household, HouseholdMember, HouseholdEaterRow, WeekEaterOverride, FoodDiaryDay, FoodDiaryEntry, FoodDiaryMetrics, InsertFoodDiaryEntry, InsertFoodDiaryMetrics, users, meals, nutrition, shoppingList, mealAllergens, ingredientSwaps, mealPlans, mealPlanEntries, diets, mealDiets, mealCategories, supermarketLinks, productMatches, ingredientSources, normalizedIngredients, groceryProducts, userPreferences, additives, productAdditives, basketItems, mealTemplates, plannerWeeks, plannerDays, plannerEntries, userStreaks, userHealthTrends, productHistory, freezerMeals, mealPlanTemplates, mealPlanTemplateItems, adminAuditLog, userPantryItems, shoppingListExtras, mealPairings, ingredientProducts, households, householdMembers, householdEaters, plannerEntryEaters, plannerWeekEaterOverrides, foodDiaryDays, foodDiaryEntries, foodDiaryMetrics, foodKnowledge, FoodKnowledge, siteSettings, mealItems, MealItem, InsertMealItem, userItemUsage, savingsEvents, SavingsEvent, InsertSavingsEvent, pantryIngredientKnowledge, PantryIngredientKnowledge, mealUpliftApplications, MealUpliftApplication, InsertMealUpliftApplication, weekProvisioningItems, WeekProvisioningItem } from "@shared/schema";
 import { normalizeIngredientKey } from "@shared/normalize";
-import { isKnownZone } from "@shared/time/household-time";
+import {
+  DECLARED_DEFAULT_ZONE,
+  formatCivilDate,
+  householdDayOfWeek,
+  householdToday,
+  isKnownZone,
+  parseCivilDate,
+} from "@shared/time/household-time";
 import { deriveAcquisitionFromLegacy } from "@shared/recipe-acquisition";
 import { db } from "./db";
 import { eq, and, ilike, or, sql, inArray, isNull, isNotNull, desc } from "drizzle-orm";
@@ -179,7 +186,8 @@ export interface IStorage {
   getFreezerMeals(userId: number): Promise<FreezerMeal[]>;
   getFreezerMeal(id: number): Promise<FreezerMeal | undefined>;
   getFreezerMealsByMealId(userId: number, mealId: number): Promise<FreezerMeal[]>;
-  addFreezerMeal(userId: number, data: InsertFreezerMeal): Promise<FreezerMeal>;
+  /** `frozenDate` is stamped by the server from the household's own clock (BEH-6/HT12) — never supplied by the caller. */
+  addFreezerMeal(userId: number, data: Omit<InsertFreezerMeal, "frozenDate">): Promise<FreezerMeal>;
   updateFreezerMealPortions(id: number, remainingPortions: number): Promise<FreezerMeal | undefined>;
   useFreezerMealPortion(id: number): Promise<FreezerMeal | undefined>;
   deleteFreezerMeal(id: number): Promise<void>;
@@ -1509,9 +1517,30 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(freezerMeals.householdId, householdId), eq(freezerMeals.mealId, mealId)));
   }
 
-  async addFreezerMeal(userId: number, data: InsertFreezerMeal): Promise<FreezerMeal> {
+  /**
+   * CONV1 P6 / BEH-6 — the freezer's civil day is stamped HERE, by the server.
+   *
+   * It used to arrive from the client as `new Date().toISOString().split('T')[0]`
+   * — the device's UTC day, authored in two places (meals-page.tsx,
+   * use-planner-operations.ts). HT12 is exact about this: the device may supply
+   * the *instant*; it may never decide *the day*. Freeze a meal at 20:00 in New
+   * York and UTC had already recorded it as tomorrow.
+   *
+   * Stamping it in the single write funnel (CPuBA4) rather than at the route
+   * means every caller gets the household's day, not only the one route that
+   * remembered to ask. `frozenDate` is therefore no longer part of the caller's
+   * input at all — which is the only way a client cannot get it wrong.
+   */
+  async addFreezerMeal(userId: number, data: Omit<InsertFreezerMeal, "frozenDate">): Promise<FreezerMeal> {
     const householdId = await getHouseholdForUser(userId);
-    const [result] = await db.insert(freezerMeals).values({ ...data, userId, householdId }).returning();
+    const household = await db.query.households.findFirst({ where: eq(households.id, householdId) });
+    // The declared default resolves at READ time and is never written to the
+    // household row (CP8/HT7): NULL means "THA has not been told", which is a
+    // different fact from "the household said Europe/London".
+    const frozenDate = formatCivilDate(
+      householdToday(new Date(), household?.timeZone ?? DECLARED_DEFAULT_ZONE),
+    );
+    const [result] = await db.insert(freezerMeals).values({ ...data, frozenDate, userId, householdId }).returning();
     return result;
   }
 
@@ -3294,8 +3323,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async copyPlannerToFoodDiary(userId: number, date: string, slots?: string[]): Promise<{ copied: number; skipped: number }> {
-    const targetDate = new Date(date);
-    const plannerDay = targetDate.getDay(); // 0=Sun...6=Sat, matches planner dayOfWeek
+    // CONV1 P6 / SCH-4 — this was:
+    //   const targetDate = new Date(date);      // parses "2026-07-17" as UTC MIDNIGHT
+    //   const plannerDay = targetDate.getDay(); // ...then reads it in SERVER-LOCAL
+    // Two frames, one line apart. TIME2 verified it empirically: under
+    // TZ=America/New_York, `new Date("2026-07-16").getDay()` is 3 and under TZ=UTC
+    // it is 4 — so any server west of Greenwich copied the WRONG WEEKDAY's meals
+    // into the household's diary, silently.
+    //
+    // A civil date's day-of-week needs no zone at all — that is the whole point of
+    // asking the owner. `householdDayOfWeek` returns the DECLARED key space
+    // (0 = Sunday … 6 = Saturday — HT8), which is exactly what planner_days.dayOfWeek
+    // stores. The key space is declared, never renumbered (CONV1 R9).
+    const targetDate = parseCivilDate(date);
+    if (targetDate === null) return { copied: 0, skipped: 0 };
+    const plannerDay: number = householdDayOfWeek(targetDate);
 
     const householdId = await getHouseholdForUser(userId);
     const weeks = await db.select().from(plannerWeeks)

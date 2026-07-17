@@ -1,4 +1,14 @@
 import { useState, useEffect, useMemo, useRef, useCallback, useDeferredValue, Fragment } from "react";
+// CONV1 P6 (Phase 3) — the freezer consumes the one owner of household time
+// instead of hand-rolling a private clock (HT1). shared/ is importable by both
+// sides precisely so the rule has one implementation, not two.
+import {
+  DECLARED_DEFAULT_ZONE,
+  civilDaysBetween,
+  compareCivilDates,
+  householdToday,
+  parseCivilDate,
+} from "@shared/time/household-time";
 import { Skeleton } from "@/components/ui/skeleton";
 import thaAppleLogo from "@/assets/icons/tha-apple.png";
 import { useMeals, invalidateMealLibrary } from "@/hooks/use-meals";
@@ -2499,6 +2509,25 @@ const SECTION_LABELS: Record<string, string> = {
 };
 const CATEGORY_DROPDOWN_ORDER = ["Drink", "Smoothie", "Baby Meal", "Kids Meal", "Frozen Meal"];
 
+/**
+ * Render a stored civil date (`YYYY-MM-DD` text) in the viewer's locale.
+ *
+ * CONV1 P6 / BEH-6. The retired shape was `new Date(frozen.frozenDate)
+ * .toLocaleDateString()`, which parses a bare date as UTC midnight and then
+ * renders it in the *local* zone — so a stored 17 July displays as 16 July for
+ * every household west of Greenwich. Building the Date from civil PARTS gives it
+ * no zone to convert through, so what is stored is what is shown.
+ *
+ * This is a display formatter, not a derivation: the civil date is parsed by the
+ * owner (`shared/time/household-time.ts`); only the locale rendering is local to
+ * this page, which is the UI's concern and not Household Time's (HT13).
+ */
+function displayCivilDate(text: string | null): string {
+  const date = parseCivilDate(text);
+  if (date === null) return text ?? "";
+  return new Date(date.year, date.month - 1, date.day).toLocaleDateString();
+}
+
 function getMealDisplayCategory(meal: Meal): string {
   if (meal.isDrink || meal.mealFormat === "drink") return "drinks";
   if (meal.isReadyMeal || meal.mealFormat === "ready-meal") return "ready_meals";
@@ -2618,6 +2647,14 @@ export default function MealsPage() {
   const { data: freezerMeals = [], refetch: refetchFreezer } = useQuery<FreezerMeal[]>({
     queryKey: ['/api/freezer'],
   });
+  // CONV1 P6 / BEH-6 — the household's own clock, so the freezer can compare a
+  // stored civil date against the household's today rather than against UTC.
+  // `timeZone` is null until the household tells THA where it lives; the DECLARED
+  // default resolves here, at read time, and is never written to the row (CP8).
+  const { data: householdForClock } = useQuery<{ timeZone: string | null }>({
+    queryKey: ['/api/household'],
+  });
+  const householdZone = householdForClock?.timeZone ?? DECLARED_DEFAULT_ZONE;
   const [addToFreezerMealId, setAddToFreezerMealId] = useState<number | null>(null);
   const [expandedMealId, setExpandedMealId] = useState<number | string | null>(null);
   const [cardInfoTabs, setCardInfoTabs] = useState<Map<number, 'ingredients' | 'nutrition' | 'intelligence'>>(new Map());
@@ -2782,11 +2819,15 @@ export default function MealsPage() {
 
   const addToFreezerMutation = useMutation({
     mutationFn: async (data: { mealId: number; totalPortions: number; batchLabel?: string; notes?: string }) => {
+      // CONV1 P6 / BEH-6: `frozenDate` is NOT sent. The server stamps the
+      // household's own civil day (HT12 — the device may supply the instant, it
+      // may never decide the day). This line used to be
+      // `new Date().toISOString().split('T')[0]` — the device's UTC day, which
+      // recorded a 20:00 freeze in New York as tomorrow.
       const res = await apiRequest("POST", "/api/freezer", {
         mealId: data.mealId,
         totalPortions: data.totalPortions,
         remainingPortions: data.totalPortions,
-        frozenDate: new Date().toISOString().split('T')[0],
         batchLabel: data.batchLabel || null,
         notes: data.notes || null,
       });
@@ -4411,8 +4452,20 @@ export default function MealsPage() {
               {freezerMeals.map((frozen, index) => {
                 const meal = meals?.find(m => m.id === frozen.mealId);
                 const portionPercent = frozen.totalPortions > 0 ? (frozen.remainingPortions / frozen.totalPortions) * 100 : 0;
-                const isExpired = frozen.expiryDate && new Date(frozen.expiryDate) < new Date();
-                const daysUntilExpiry = frozen.expiryDate ? Math.ceil((new Date(frozen.expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null;
+                // CONV1 P6 / BEH-6 + SCH-4 — "fix the comparison before the column type;
+                // the comparison is what harms". Both lines below compared a stored civil
+                // date against an instant:
+                //   new Date(frozen.expiryDate) < new Date()
+                // parsed the bare date as UTC MIDNIGHT and compared it to a LOCAL instant,
+                // so the badge flipped at 01:00 BST and a UK household lost the whole final
+                // day; and Math.ceil over epoch-ms turned a 23/25-hour DST day into a whole
+                // day, letting "expires in 1 day" and "expired" both be true at once.
+                // Civil dates have no frame to mix and no hours to lose. Expiry day itself
+                // is NOT expired — the household keeps their last day.
+                const expiryOn = parseCivilDate(frozen.expiryDate);
+                const todayForHousehold = householdToday(new Date(), householdZone);
+                const isExpired = expiryOn !== null && compareCivilDates(expiryOn, todayForHousehold) < 0;
+                const daysUntilExpiry = expiryOn !== null ? civilDaysBetween(todayForHousehold, expiryOn) : null;
                 return (
                   <motion.div
                     key={frozen.id}
@@ -4469,8 +4522,8 @@ export default function MealsPage() {
                           />
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          Frozen {new Date(frozen.frozenDate).toLocaleDateString()}
-                          {frozen.expiryDate && ` · Expires ${new Date(frozen.expiryDate).toLocaleDateString()}`}
+                          Frozen {displayCivilDate(frozen.frozenDate)}
+                          {frozen.expiryDate && ` · Expires ${displayCivilDate(frozen.expiryDate)}`}
                         </p>
                         {frozen.notes && <p className="text-xs text-muted-foreground italic">{frozen.notes}</p>}
                         <NutritionBadges mealId={frozen.mealId} nutrition={nutritionMap.get(frozen.mealId)} />

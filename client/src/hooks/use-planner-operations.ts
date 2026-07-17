@@ -344,8 +344,10 @@ export function usePlannerOperations({
   // ("500: Internal Server Error") into the freezer toast. Declared copy only now.
   const addToFreezerMutation = useTrackedMutation({
     mutationFn: async (mealId: number) => {
-      const today = new Date().toISOString().split("T")[0];
-      const res = await apiRequest("POST", "/api/freezer", { mealId, totalPortions: 1, remainingPortions: 1, frozenDate: today });
+      // CONV1 P6 / BEH-6: `frozenDate` is NOT sent — the server stamps the
+      // household's civil day (HT12). This was the second copy of the client's
+      // UTC "today"; both are retired.
+      const res = await apiRequest("POST", "/api/freezer", { mealId, totalPortions: 1, remainingPortions: 1 });
       if (!res.ok) {
         const b = await res.json().catch(() => ({}));
         throw new Error(b.message ?? "Failed to add to freezer");

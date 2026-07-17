@@ -10,6 +10,8 @@
 // has actually done.
 
 import { useQuery } from "@tanstack/react-query";
+import { householdGreeting } from "@/lib/greeting";
+import { DECLARED_DEFAULT_ZONE } from "@shared/time/household-time";
 import { useUser } from "@/hooks/use-user";
 import { Leaf, Sparkles, Sun, Compass, Heart } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -29,13 +31,11 @@ interface HomeIntelligenceData {
 }
 
 // ── Greeting ──────────────────────────────────────────────────────────────────
-
-function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
+//
+// CONV1 P6 (Phase 3) — the local `getGreeting()` is RETIRED into `@/lib/greeting`
+// (architecture § 14, target 3: 4 → 1). It read `new Date().getHours()` — the
+// DEVICE's hour — with its own private 12/17 boundary, byte-identical to the copy
+// on the dashboard. Same words, same boundary; the hour is now the household's.
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
@@ -72,10 +72,18 @@ export default function HomeIntelligenceCompanion() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // CONV1 P6 / greeting — the household's own clock (CP8: the declared default
+  // resolves at read time; the row keeps its honest null).
+  const { data: householdForClock } = useQuery<{ timeZone: string | null }>({
+    queryKey: ["/api/household"],
+    enabled: !!user,
+  });
+  const householdZone = householdForClock?.timeZone ?? DECLARED_DEFAULT_ZONE;
+
   // While loading, show just the greeting to avoid layout shift
   const displayName = user?.displayName || user?.username || null;
   const nameFragment = displayName ? `, ${displayName.split("@")[0]}` : "";
-  const greeting = `${getGreeting()}${nameFragment}.`;
+  const greeting = `${householdGreeting(new Date(), householdZone)}${nameFragment}.`;
 
   // Count visible modules to decide if we render the card at all
   const hasAnyModule =

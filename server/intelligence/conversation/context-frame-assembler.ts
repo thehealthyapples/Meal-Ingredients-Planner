@@ -19,6 +19,12 @@
  */
 
 import { storage } from "../../storage.js";
+import {
+  DECLARED_DEFAULT_ZONE,
+  formatCivilDate,
+  householdToday,
+  type IANAZone,
+} from "../../../shared/time/household-time.js";
 import type { IntelligenceContext } from "../types.js";
 import type { ConversationSurface, EntityRef } from "./conversation-store.js";
 
@@ -76,7 +82,12 @@ export interface SurfaceHints {
  * - `householdId`         — pointer to the household, if the user belongs to one.
  * - `selectedMealId`      — pointer to a meal currently in focus, if any.
  * - `currentFoodSlug`     — food slug for nutrition/analyser contexts, if any.
- * - `temporalAnchor`      — ISO date (YYYY-MM-DD) of now; grounds the LLM to today.
+ * - `temporalAnchor`      — ISO date (YYYY-MM-DD): the HOUSEHOLD's today, derived by
+ *                           `shared/time/household-time.ts` from the instant and the
+ *                           household's zone (CONV1 P6 / READ-4). It is not UTC's today,
+ *                           and it is not the device's. Where a household has stated no
+ *                           zone the declared default resolves at read time (CP8) — the
+ *                           row is never written to.
  * - `selectedPlannerDayId`/`selectedMealSlot` — INT40, client-supplied only (see SurfaceHints).
  */
 export interface ContextFrame {
@@ -116,14 +127,53 @@ export async function assembleContextFrame(
   priorEntityRefs: EntityRef[],
   identity: IntelligenceContext,
 ): Promise<ContextFrame> {
-  const temporalAnchor = new Date().toISOString().slice(0, 10);
-
-  // ── Household (pointer only) ────────────────────────────────────────────
+  // ── Household (pointer only) + the household's own clock ────────────────
+  //
+  // CONV1 P6 / READ-4: the zone is read HERE because the household is already
+  // read here — the anchor used to be computed two lines above this call, in
+  // UTC, while the fact that would have made it true was fetched immediately
+  // below it and thrown away.
+  //
+  // `timeZone` does not break the pointer discipline (§ BOUNDARIES above): it is
+  // a primitive anchor, not an inline business row, and it never reaches the
+  // frame — only the civil date it resolves does. `temporalAnchor` was already
+  // a declared primitive anchor.
   let householdId: number | undefined;
+  let householdZone: IANAZone | undefined;
   try {
     const hh = await storage.getHouseholdByUser(userId);
-    if (hh) householdId = hh.household.id;
+    if (hh) {
+      householdId = hh.household.id;
+      householdZone = hh.household.timeZone ?? undefined;
+    }
   } catch { /* non-critical — degrade gracefully */ }
+
+  // ── The temporal anchor — the household's today, not UTC's ──────────────
+  //
+  // CONV1 P6 / READ-4. This line was
+  //   `new Date().toISOString().slice(0, 10)`
+  // whose own doc comment claimed it "grounds the LLM to today". It grounded the
+  // LLM to UTC's today, and it is the single highest-leverage line in the
+  // platform: it becomes `TODAY:` in the system prompt AND the diary day the
+  // Companion reads and writes (pattern-intent-resolver.ts). A UK household
+  // between 00:00–01:00 BST was told yesterday's date; a New York household
+  // after ~19:00 local was told tomorrow's — and could log tonight's dinner into
+  // tomorrow's diary.
+  //
+  // HT5 — `now` is a parameter to the owner; the instant enters in exactly one
+  // place, here. HT12 — the device may supply the instant; it may never decide
+  // the day, and it no longer does.
+  //
+  // The zone falls back to the DECLARED default (CP8): a household that has not
+  // told THA where it lives holds NULL, and NULL means "THA has not been told" —
+  // never a fabricated fact. Resolving the declared default AT READ TIME is what
+  // keeps it out of the row (HT7). For every household today this yields
+  // Europe/London, which is what makes this change safe: it is a strict
+  // improvement on UTC for a UK product, and exact for any household that has
+  // stated a zone.
+  const temporalAnchor = formatCivilDate(
+    householdToday(new Date(), householdZone ?? DECLARED_DEFAULT_ZONE),
+  );
 
   // ── Active planner week (pointer only) ─────────────────────────────────
   let activePlannerWeekId: number | undefined;

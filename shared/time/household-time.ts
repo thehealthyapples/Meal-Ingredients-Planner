@@ -234,6 +234,84 @@ function daysBetween(a: CivilDate, b: CivilDate): number {
   return Math.round(ms / 86_400_000);
 }
 
+/**
+ * The canonical serialisation of a civil date: ISO-8601 `YYYY-MM-DD`.
+ *
+ * Added by CONV1 P6 (Phase 3) because the alternative is worse. Three converging
+ * consumers need a civil date as a string — the Companion's temporal anchor
+ * (READ-4), the freezer's `frozen_date` (BEH-6) and the text date columns (SCH-4)
+ * — and each hand-rolling `${y}-${pad(m)}-${pad(d)}` would mint three new rival
+ * copies of a rule this module exists to own (HT1; Register Rule 4). TIME2 § 4.6
+ * already places this fact here rather than with a consumer: the Diary
+ * "must NOT own ... the date serialisation format".
+ *
+ * It is the honest inverse of the shape being retired: `.toISOString().slice(0,10)`
+ * serialises an INSTANT through UTC and calls the result a civil date. This
+ * serialises a CivilDate, which has no zone to get wrong.
+ */
+export function formatCivilDate(date: CivilDate): string {
+  const safe = isValidCivilDate(date) ? date : { year: 1970, month: 1, day: 1 };
+  const mm = String(safe.month).padStart(2, "0");
+  const dd = String(safe.day).padStart(2, "0");
+  return `${String(safe.year).padStart(4, "0")}-${mm}-${dd}`;
+}
+
+/**
+ * Read a civil date THA previously stored as `YYYY-MM-DD` text.
+ *
+ * HT6 — total: returns null for anything that is not a real calendar date, and
+ * the caller states what it does about that. Null is an answer.
+ *
+ * This exists because the stored civil dates are `text` and the database
+ * validates nothing (SCH-4): `food_diary_days.date` even carries a UNIQUE
+ * constraint over an unvalidated client string. The retired shape is
+ * `new Date("2026-07-17")`, which parses a bare date as **UTC midnight** and is
+ * then compared against a local instant — the exact cross-frame comparison that
+ * makes the freezer's badge wrong. Parsing to a CivilDate has no frame to mix.
+ */
+export function parseCivilDate(text: unknown): CivilDate | null {
+  if (typeof text !== "string") return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text.trim());
+  if (m === null) return null;
+  const date = { year: Number(m[1]), month: Number(m[2]), day: Number(m[3]) };
+  return isValidCivilDate(date) ? date : null;
+}
+
+/**
+ * Whole civil days from `a` to `b`; negative when `b` precedes `a`.
+ *
+ * DST-proof BY CONSTRUCTION, and that is the whole point: a civil day is 23 or 25
+ * hours across a transition, so the retired shape —
+ * `Math.ceil((expiry.getTime() - Date.now()) / 86_400_000)` — converts that hour
+ * into a whole day and lets "expires in 1 day" and "expired" both be true at once
+ * (TIME2 § 4.5 defect 4). Civil dates have no hours to lose.
+ */
+export function civilDaysBetween(a: CivilDate, b: CivilDate): number {
+  if (!isValidCivilDate(a) || !isValidCivilDate(b)) return 0;
+  return daysBetween(a, b);
+}
+
+/** Negative when `a` precedes `b`, 0 when equal, positive when `a` follows `b`. */
+export function compareCivilDates(a: CivilDate, b: CivilDate): number {
+  return -civilDaysBetween(a, b);
+}
+
+/**
+ * The civil date `days` after `date` (negative goes back). Calendar arithmetic,
+ * never epoch arithmetic.
+ *
+ * This is what retires the diary's `T12:00:00` guard (architecture § 14,
+ * target 8). That guard is genuinely clever — noon-anchoring a local Date so a
+ * ±1h DST shift can never cross a date boundary — and it is the only place in
+ * the codebase that reasoned about DST and got it right. But it survives only
+ * within ±12h: at UTC+13 `prevDay()` skips two days and `nextDay()` appears not
+ * to move. A civil date needs no anchor because it has no instant to protect.
+ */
+export function addCivilDays(date: CivilDate, days: number): CivilDate {
+  if (!isValidCivilDate(date) || !Number.isFinite(days)) return date;
+  return addDays(date, Math.trunc(days));
+}
+
 /** True when `date` is a real calendar date (rejects 31 February, month 13, …). */
 function isValidCivilDate(date: CivilDate): boolean {
   if (!Number.isInteger(date.year) || !Number.isInteger(date.month) || !Number.isInteger(date.day)) {

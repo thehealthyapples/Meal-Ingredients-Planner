@@ -1,4 +1,6 @@
 import { useMemo, useState, useCallback } from "react";
+import { householdGreeting } from "@/lib/greeting";
+import { DECLARED_DEFAULT_ZONE } from "@shared/time/household-time";
 import { useUser } from "@/hooks/use-user";
 import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
 import HomeIntelligenceCompanion from "@/components/HomeIntelligenceCompanion";
@@ -53,12 +55,10 @@ const BERRY = "hsl(340, 28%, 48%)";
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
+// CONV1 P6 (Phase 3) — the local `getGreeting()` is RETIRED into
+// `@/lib/greeting` (architecture § 14, target 3: 4 → 1). It read
+// `new Date().getHours()` — the DEVICE's hour — with its own private 12/17
+// boundary. Same words, same boundary; the hour is now the household's.
 
 function getMealDisplayCat(meal: any): "user" | "web" | "tha" | "ready" {
   if (meal.isReadyMeal || meal.mealFormat === "ready-meal") return "ready";
@@ -88,6 +88,15 @@ export default function Dashboard() {
   const { meals, isLoading: mealsLoading, isError: mealsError, refetch: refetchMeals } = useMealsSummary();
   const { toast } = useToast();
   const qc = useQueryClient();
+
+  // CONV1 P6 / greeting — the household's own clock. `timeZone` is null until the
+  // household tells THA where it lives; the DECLARED default resolves at read time
+  // and is never written to the row (CP8).
+  const { data: householdForClock } = useQuery<{ timeZone: string | null }>({
+    queryKey: ["/api/household"],
+    enabled: !!user,
+  });
+  const householdZone = householdForClock?.timeZone ?? DECLARED_DEFAULT_ZONE;
 
   const shoppingQuery = useQuery<any[]>({
     queryKey: [api.shoppingList.list.path],
@@ -235,7 +244,7 @@ export default function Dashboard() {
       }}
       actions={
         <p className="text-sm font-medium realm-title leading-none hidden sm:block whitespace-nowrap" data-testid="text-welcome">
-          {getGreeting()}, {displayName.split("@")[0]}
+          {householdGreeting(new Date(), householdZone)}, {displayName.split("@")[0]}
         </p>
       }
       contextBar={
