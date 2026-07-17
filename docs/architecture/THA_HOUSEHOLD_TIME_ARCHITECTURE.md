@@ -5,7 +5,7 @@
 **Authority:** Promoted from investigations [`TIME1 — The Household Time Foundation`](../investigations/platform/TIME1_HOUSEHOLD_TIME_FOUNDATION.md) and [`TIME2 — The Household Time Consumer Audit`](../investigations/platform/TIME2_HOUSEHOLD_TIME_CONSUMER_AUDIT.md), under `ARCHITECTURE_PRINCIPLES.md` and `CANONICAL_PUBLICATION_ARCHITECTURE.md`.
 **Rollback:** `rollback/TIME3-household-time-architecture-promotion-20260716` → `7d1dd2ce`
 **Enforcement:** Architecture Compliance Checklist (`ENGINEERING_WORKFLOW.md`); the Source of Truth Register's Appendix A; the § 16 verification gate at implementation.
-**Implementation status:** **DECLARED, BUILT, AND CONVERGING** — see § 17. The module (`shared/time/household-time.ts`) and `households.timeZone` exist as of 2026-07-17 (`CONV1 P5`); **Phase 3's T2/T3 consumers converged on 2026-07-17 (`CONV1 P6`)** — the Companion's anchor, the freezer, the diary, and the four `getGreeting()` copies now read the owner. `planner_weeks.weekStartDate` still does not exist (Phase 4), so the **T5 consumers** — the five rival "current weeks" — are still live.
+**Implementation status:** **DECLARED, BUILT, AND CONVERGING** — see § 17. The module (`shared/time/household-time.ts`) and `households.timeZone` exist as of 2026-07-17 (`CONV1 P5`); **Phase 3's T2/T3 consumers converged on 2026-07-17 (`CONV1 P6`)** — the Companion's anchor, the freezer, the diary, and the four `getGreeting()` copies now read the owner. **`planner_weeks.weekStartDate` exists as of 2026-07-17 (`CONV1 P7` / `SCH-2`) — both facts are built and the declaration is fully discharged**; it is written only at week creation and never back-filled (**HT7**), so every week created before that date is honestly unanchored, forever. **The T5 consumers — the five rival "current weeks", streaks and savings — are still live and still guessing: they now have an anchor and none of them reads it yet (Phase 5 / `CONV1 P8`).** *(This line previously read "`planner_weeks.weekStartDate` still does not exist (Phase 4)" — corrected in the same change that made it false.)*
 
 ---
 
@@ -394,11 +394,11 @@ Five principles govern every phase. **They are what make the migration honest ra
 
 | # | Target | Count | Phase | Status |
 |---|---|---|---|---|
-| 1 | **Rival "current week" implementations** — three server-side `max(weekNumber)` variants, the dashboard's `plannerFull[0]`, and Home's `localStorage` active-week | **5 → 1** | 5 | **live** — gated on the anchor |
+| 1 | **Rival "current week" implementations** — three server-side `max(weekNumber)` variants, the dashboard's `plannerFull[0]`, and Home's `localStorage` active-week | **5 → 1** | 5 | **live — and no longer gated.** The anchor landed 2026-07-17 (`CONV1 P7`); these five are now simply unconverged, and are Phase 5 (`CONV1 P8`). *Previously "gated on the anchor" — corrected when that stopped being true* |
 | 2 | **Week-shape declarations** — Sunday-first arrays, Monday-first arrays, and the `[1,2,3,4,5,6,0]` reorder map | **19 across 16 files → 1** | 1, 3, 5 | **live** — `MONDAY_FIRST_ORDER` is declared and unconsumed |
 | 3 | **`getGreeting()` copies** — two live (boundary 17), two in prototypes (boundary 18) | **4 → 1** | 3 | ✅ **DONE** — `CONV1 P6`, `client/src/lib/greeting.ts`. The 17-vs-18 divergence is settled on the declared 17. **The words remain INT21's (CP3)** |
 | 4 | **Season implementations** — one exported, two private and byte-identical | **3 → 1** | 1a | ✅ **DONE** — `CONV1 P5` |
-| 5 | **Fabricated-date builders** — duplicated despite a docblock stating the extraction exists to prevent it | **2 → 0** | 6 | **live** — gated absolutely on the anchor |
+| 5 | **Fabricated-date builders** — duplicated despite a docblock stating the extraction exists to prevent it | **2 → 0** | 6 | **live — the absolute gate is now open.** `BEH-5` could never precede the anchor (*fixing a fabricated date's timezone first makes it precisely wrong*); the anchor exists as of `CONV1 P7`, so Phase 6 (`CONV1 P9`) is reachable for the first time. *Previously "gated absolutely on the anchor"* |
 | 6 | **Monday-week implementations** — the streak week, the savings week/month, and the client's | **3 → 1** | 5 | **live** |
 | 7 | **Client-derived "today" for intelligence purposes** | **→ 0** | 3, **HT12** | ✅ **DONE** — `CONV1 P6`. The freezer's two client writes are server-stamped; the diary derives from the household's zone |
 | 8 | **The diary's `T12:00:00` guard** — a ±12h workaround that breaks past UTC+12 | **→ 0** | 3 | ✅ **DONE** — `CONV1 P6`. **Both** occurrences; the second hid a live off-by-one that made *"Today!"* unreachable |
@@ -406,6 +406,11 @@ Five principles govern every phase. **They are what make the migration honest ra
 | 10 | **The duplicated `WEEKLY_PLANT_TARGET`** — declared canonically and re-declared on Home | **2 → 1** | 5 | **live** |
 
 > **Five frames are live today — UTC · server-process-local · browser-local · noon-anchored-local · week-index.** The retirement target is **one**.
+>
+> **As of `CONV1 P7` (2026-07-17), not one live entry on this list is blocked by a missing fact.** Both
+> facts exist (§ 17). Targets 1, 2, 5, 6, 9 and 10 are live because **no consumer has been converged onto
+> them yet**, which is Phase 5/6 work (`CONV1 P8`/`P9`) — not because the platform is unable to. The
+> excuse is spent; what remains is the convergence.
 
 ---
 
@@ -456,9 +461,9 @@ restated elsewhere: a governing document that is stale about its own domain is t
 | **`shared/time/household-time.ts`** | ✅ **BUILT — 2026-07-17** (`CONV1 P5` / `OWN-4`). Phase 1. Pure, zero-I/O, reads no clock. Its § 16 verification entry landed in the same change |
 | **The season rule** | ✅ **CONVERGED — 2026-07-17** (`CONV1 P5` / `OWN-3`). Phase 1a. Three implementations → one: `shared/seasonal/season-rule.ts` (Domain 11). **Not Household Time** (HT17) — this module supplies its input |
 | **`households.timeZone`** | ✅ **BUILT — 2026-07-17** (`CONV1 P5` / `SCH-1`). Phase 2. Nullable, additive, no back-fill, no SQL default; detected at signup, owner-correctable |
-| **`planner_weeks.weekStartDate`** | **Does not exist.** Phase 4. So `resolvePlannerWeek` returns `anchored: false` for **every household**, which is the honest floor (§ 13.1), not a defect |
+| **`planner_weeks.weekStartDate`** | ✅ **BUILT — 2026-07-17** (`CONV1 P7` / `SCH-2`). Phase 4. Nullable, additive, **no SQL default, no row rewritten**. Written **only** by `storage.createPlannerWeeks` — the Planner's existing single write funnel, no new writer — as `mondayOf(householdToday(now, zone)) + 7 × (N − 1)`, because the moment the six slots are made consecutive is the only moment THA can honestly know what they mean (**HT7**; TIME1 § 6.2). **NEVER back-filled (HT7):** the 1,152 planner weeks that existed on the day it landed hold `NULL` and keep it **forever**, so `resolvePlannerWeek` still answers `anchored: false` for every household that was already planning — the honest floor (§ 13.1), not a defect and not a backlog. *This row previously read "**Does not exist.** Phase 4" — corrected in the same change that made it false* |
 | **The T2/T3 consumers** | ✅ **CONVERGED — 2026-07-17** (`CONV1 P6`). Phase 3. The Companion's temporal anchor (`READ-4` — it was UTC's today, in the system prompt and the diary day), the freezer's write and comparison (`BEH-6`), the diary's day, both `T12:00:00` guards and `copyPlannerToFoodDiary`'s weekday (`SCH-4`), and the four `getGreeting()` copies. **Proven byte-identical to the frozen pre-convergence oracles wherever it must not change** |
-| **The T5 consumers** | **Still read their own private clocks**, and cannot do otherwise: they need the anchor, which is Phase 4. The five rival "current weeks", streaks and savings are **live** (`CONV1 P7`/`P8`) |
+| **The T5 consumers** | **Still read their own private clocks — but the excuse is gone.** They needed the anchor; it exists as of 2026-07-17. The five rival "current weeks", streaks and savings are **live and unconverged**, and **not one of them reads `weekStartDate` yet**: that is Phase 5 (`CONV1 P8`). *This row previously read "cannot do otherwise: they need the anchor, which is Phase 4" — corrected in the same change that made it false. **A fact with no consumers is the shape `R3` names**, and it is now true of the anchor exactly as it was true of the module between P5 and P6* |
 | **§ 14's retirement list** | **Substantially discharged, not complete.** Done: target 3 (`getGreeting()` ×4 → 1), target 4 (seasons 3 → 1), target 7 (client-derived "today" for intelligence → 0), target 8 (the diary's `T12:00:00` guard → 0). **Live:** target 1 (five "current weeks"), target 2 (nineteen week-shapes), targets 5, 6, 9, 10 — every one of them gated on the anchor |
 | **This document** | **In force from 2026-07-16** |
 

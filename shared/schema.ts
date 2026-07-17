@@ -424,8 +424,36 @@ export const plannerWeeks = pgTable("planner_weeks", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
   householdId: integer("household_id"),
+  /**
+   * A slot label in a fixed six-slot rota — NOT a time coordinate (TIME1 § 3.1).
+   * All six exist from first touch; the number never advances and never rolls over.
+   * Bounded 1–6. Declared, never renumbered (HT8 / CONV1 R9).
+   */
   weekNumber: integer("week_number").notNull(),
   weekName: text("week_name").notNull(),
+  /**
+   * The Monday this slot means — a CIVIL date (`YYYY-MM-DD`), or NULL when THA has
+   * never been told. CONV1 P7 / SCH-2; Domain 14; governance: THA_HOUSEHOLD_TIME_ARCHITECTURE.md.
+   *
+   * WRITTEN ONLY AT CREATION, AND NEVER BACK-FILLED (HT7).
+   * ------------------------------------------------------
+   * `storage.createPlannerWeeks` is the only writer, because the moment the six slots
+   * are made consecutive is the only moment THA can honestly know what they mean
+   * (TIME1 § 6.2). Every row that existed before that migration holds NULL and MUST
+   * KEEP IT, FOREVER: THA cannot know which calendar week a household's existing
+   * Week 3 meant, and must never guess.
+   *
+   * NULL IS NOT A BUG. It is the honest answer, and `resolvePlannerWeek` states it as
+   * one (`{ anchored: false, reason: "no-anchor" }` — HT6). A back-filled anchor is
+   * `approxDate` with a schema (CONV1 R5): indistinguishable from a real one, which is
+   * what makes it worse than an absent one. The only legitimate route to anchoring an
+   * existing week is the household DECLARING it — an extension point (TIME1 § 6.2),
+   * not built. A declared anchor is a fact; an inferred one is fabrication.
+   *
+   * Text, not `date`: it is a civil date with no zone, and this is the type the whole
+   * civil-date vocabulary in shared/time/household-time.ts already speaks.
+   */
+  weekStartDate: text("week_start_date"),
 }, (table) => [
   unique("planner_weeks_user_week_unique").on(table.userId, table.weekNumber),
 ]);

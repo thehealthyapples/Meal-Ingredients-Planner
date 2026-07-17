@@ -9,14 +9,50 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ═══ NORTH2 (2026-07-17) — the material warmth ══════════════════════════════
+   The house had one light and no material to catch it.
+
+   Every surface below was `0 0% 100%` — pure white, zero hue, zero saturation —
+   in a room lit by a warm morning (`--light-rim: 48 60% 98%`, ambient 46 85% 90%).
+   That is not a material. It is the absence of a decision, and it is the single
+   strongest reason Home read as a beautiful web application rather than a room:
+   **white cards are the universal signature of software.** No natural material is
+   pure white. Plaster, linen, oak and stone all carry hue and saturation, and a
+   surface standing in warm light picks up the colour of the light that falls on it
+   — which is why the ladder below gets WARMER and MORE saturated as it gets closer
+   to the light, rather than draining to neutral at the top.
+
+   This changes no law. UIA §7 fixes the semantic STRUCTURE — one definition source,
+   no raw colour in a surface, one meaning per colour — and every one of those still
+   holds: these are the same named roles, resolved in the same one place, and not a
+   single surface anywhere gained a colour of its own. §7 never fixed the VALUES,
+   and the values are what was wrong. Authorised platform-wide by Colin Clapson
+   (2026-07-17) on the brief's "warm the entire palette"; scoping it to Home would
+   have forked the one visual language UIA §17 forbids forking, and the warmth would
+   have died the moment a household walked into the Planner.
+
+   The value RANGE is deliberately narrower than it was, and that is the point.
+   Before: canvas 95% → card 100%, with saturation collapsing 27 → 0. The card was
+   not merely brighter than the room; it was a different material family, which is
+   exactly the "sitting on top of it" the brief names. After: canvas 94% → plaster
+   98%, saturation RISING 28 → 46. Same family, one light. Planes are now read from
+   the shadow and the rim of light along an edge — which is how a real counter is
+   read against a real wall — and never from a jump to a foreign colour. Depth is
+   carried by light, not by contrast (Blueprint §8.1; TRANSLATION1 §5, "depth before
+   shadows · light before colour").
+   ════════════════════════════════════════════════════════════════════════════ */
 :root {
-  --background:          42 27% 95%;
+  /* The canvas — the room's floor. A half-step deeper and a touch warmer than it
+     was, so the lit surfaces have somewhere to rise FROM. A surface cannot read as
+     lit if the room behind it is the same brightness. */
+  --background:          42 28% 94%;
   --foreground:          120 14% 14%;
 
-  --card:                0 0% 100%;
+  /* PLASTER — the lit surface. Was `0 0% 100%`. */
+  --card:                42 46% 98%;
   --card-foreground:     120 14% 14%;
 
-  --popover:             0 0% 100%;
+  --popover:             42 46% 98%;
   --popover-foreground:  120 14% 14%;
 
   --primary:             132 14% 44%;
@@ -61,7 +97,11 @@
      was always here (§16: one definition source), so nothing else moved. */
   --font-signature: 'Caveat', 'Segoe Script', 'Bradley Hand', cursive;
 
-  --sidebar:             0 0% 100%;
+  /* NORTH2: plaster, with the rest. `--primary-foreground` and
+     `--sidebar-primary-foreground` stay `0 0% 100%` deliberately — they are INK on
+     a saturated green fill, not materials standing in the light, and warming ink
+     buys nothing a household could feel while spending contrast that §15 measures. */
+  --sidebar:             42 46% 98%;
   --sidebar-foreground:  120 14% 14%;
   --sidebar-border:      33 22% 87%;
   --sidebar-ring:        132 14% 44%;
@@ -123,23 +163,81 @@
      sits above what is beneath it, and nothing else. */
   --shadow-ground:        0 1px 3px hsl(28 25% 28% / 0.05);
   --shadow-primary:       inset 0 1px 0 hsl(48 60% 98%), 0 1px 2px hsl(28 25% 28% / 0.05), 0 10px 24px -10px hsl(28 30% 25% / 0.16);
-  --shadow-support:       inset 0 1px 0 hsl(48 50% 97% / 0.7), 0 1px 2px hsl(28 25% 28% / 0.04), 0 4px 10px -6px hsl(28 30% 25% / 0.1);
-  --shadow-support-hover: inset 0 1px 0 hsl(48 60% 98%), 0 1px 2px hsl(28 25% 28% / 0.05), 0 10px 22px -9px hsl(28 30% 25% / 0.16);
-  --shadow-support-press: inset 0 1px 0 hsl(48 50% 97% / 0.7), 0 1px 2px hsl(28 25% 28% / 0.06), 0 2px 6px -4px hsl(28 30% 25% / 0.12);
 
-  /* The ground plane — one per workspace, never nested (§4). */
-  --ground-plane:        hsl(42 40% 97% / 0.75);
-  --ground-plane-border: hsl(36 28% 88% / 0.7);
+  /* ── NORTH2 — SUPPORT IS ETCHED, NOT STACKED ──────────────────────────────
+     The doors of the house were rounded rectangles with a border ring and a drop
+     shadow: a card floating ON the counter. The brief asked for the opposite —
+     "crafted into the house … subtle timber/etched material language rather than
+     application tiles" — and the opposite is a real, physical thing, not a style:
+     a panel ROUTED INTO the counter rather than laid on top of it.
+
+     So the depth inverts. There is no drop shadow, because a recess is not
+     floating. What remains is the one light, read honestly against a cut edge:
+
+       • `inset 0 2px 3px -1px` warm shadow — the counter's upper lip, holding the
+         light off the top of the groove. Top only: the morning is upper-left and
+         forever (Blueprint §7), so a recess is dark at its top and nowhere else. A
+         shadow inset on ALL FOUR sides is the disabled-input tell, and a disabled
+         input is a worse thing to look like than a tile.
+       • `inset 0 -1px 0` light rim — the morning catching the LOWER inner lip,
+         which is the one edge of a groove that faces the sun. This single line is
+         what separates "etched into oak" from "greyed out": it is light, it is
+         warm, and a disabled control never has it.
+
+     The material inside the groove is the counter's own (see --surface-support),
+     because the door IS the counter, carved — not a different substance inserted
+     into it. That is the whole idea, and it is why the fill is nearly a no-op and
+     the etch carries the definition.
+
+     HOVER is where the physics pays off: the door rises out of the groove to meet
+     the hand — the inset resolves and a real drop shadow appears, so it becomes
+     proud of the counter exactly when reached for. The house is still until you
+     touch it. PRESS seats it back into the cut. This still answers the hand
+     physically, which is what --shadow-support-* has always meant; what changed is
+     the resting state it answers FROM. */
+  --shadow-support:       inset 0 2px 3px -1px hsl(28 25% 28% / 0.10), inset 0 -1px 0 hsl(48 60% 98% / 0.85);
+  --shadow-support-hover: inset 0 1px 0 hsl(48 60% 98%), 0 1px 2px hsl(28 25% 28% / 0.05), 0 10px 22px -9px hsl(28 30% 25% / 0.16);
+  --shadow-support-press: inset 0 3px 4px -1px hsl(28 25% 28% / 0.13), inset 0 -1px 0 hsl(48 60% 98% / 0.6);
+
+  /* The ground plane — one per workspace, never nested (§4).
+     NORTH2: the counter is STONE — warmer, and a shade more opaque than it was,
+     because a counter you can see straight through is not a counter. It still
+     lets the world behind it breathe (that is what makes it a middle ground,
+     Blueprint §8.1); it no longer dissolves into it. */
+  --ground-plane:        hsl(42 44% 96.5% / 0.82);
+  --ground-plane-border: hsl(36 26% 87% / 0.65);
   --ground-blur:         12px;
 
   /* The penumbra — rank carried by light: the primary stands in it, support
      waits in it. Solidity follows importance; support is anchored, never
-     naked ink on the environment. */
-  --surface-primary:        hsl(0 0% 100%);
-  --surface-primary-border: hsl(36 30% 91%);
-  --surface-support:        hsl(0 0% 100% / 0.65);
-  --surface-support-border: hsl(36 26% 90% / 0.8);
-  --surface-support-hover:  hsl(0 0% 100% / 0.85);
+     naked ink on the environment.
+     NORTH2 — the two materials, and the reason they differ:
+       • PRIMARY is plaster. It faces the light, so it is the warmest and
+         brightest thing in the room, and it is solid: it carries type, and type
+         gets ground without negotiation (Blueprint §6.1).
+       • SUPPORT is LINEN over the counter. It waits in the penumbra, so it is
+         cooler, softer, and MORE translucent than it was (0.65 → 0.52) — the
+         stone of the counter now shows through the doors rather than being
+         hidden by them. That is the whole of "crafted into the house rather than
+         sitting on it": a door belongs to the wall it is cut into, and you can
+         see the wall in it. */
+  --surface-primary:        hsl(42 46% 98%);
+  --surface-primary-border: hsl(38 24% 91.5%);
+  /* The groove's floor is the counter's own material, one whisper deeper — a recess
+     receives slightly less of the morning than the plane around it, and that is the
+     ONLY reason it is darker at all. Mostly transparent (0.34), so what a household
+     actually sees inside the door is the counter itself, showing through. The etch
+     line (--shadow-support) carries the definition; this fill deliberately does
+     almost nothing, because a door carved from a counter is not a different colour
+     from the counter. */
+  --surface-support:        hsl(40 38% 95.5% / 0.34);
+  /* A whisper, not a ring. The edge of a routed groove is a SHADOW, not a drawn
+     outline — the border ring is most of what made these read as application tiles,
+     so what is left here is barely a joint. Blueprint §6.2's "framed by
+     composition, never by a drawn frame" is about the orchard, but the instinct is
+     the same one, and a door obeys it too. */
+  --surface-support-border: hsl(36 22% 88% / 0.30);
+  --surface-support-hover:  hsl(42 48% 98.5% / 0.88);
   --surface-blur:           2px;
 
   /* The nested radius ladder (§4). A surface takes the step below whatever it

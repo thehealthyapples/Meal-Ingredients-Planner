@@ -1321,8 +1321,10 @@ export const CANONICAL_PUBLICATION_REGISTER: DomainDeclaration[] = [
     runtimeReadPath: "shared/time/household-time.ts (direct import)",
     sotRegisterRef: "Appendix A (Household Time) / D14 / D16",
     knownGaps: [
-      "DECLARED, NOT BUILT is now partly discharged: the module exists (P5/OWN-4) and households.timeZone exists (P5/SCH-1). planner_weeks.weekStartDate does NOT — it is Phase 4 (CONV1 P7 / SCH-2), so resolvePlannerWeek returns anchored:false for every household today. That is the honest floor, not a defect.",
-      "Phase 3 (CONV1 P6) is DONE for the T2/T3 consumers: the Companion's temporal anchor (READ-4), the freezer's write/comparison (BEH-6), the diary's day and copy-from-planner (SCH-4), and the four getGreeting() copies now read the owner. Not every private clock is retired — the T5 consumers (the five rival 'current weeks', streaks, savings) need the anchor and are CONV1 P7/P8; product_history.scannedAt and user_health_trends.date still compare text dates across frames.",
+      "BOTH FACTS NOW EXIST: the module (P5/OWN-4), households.timeZone (P5/SCH-1) and planner_weeks.weekStartDate (P7/SCH-2, 2026-07-17). The declaration is fully discharged. This entry previously read 'planner_weeks.weekStartDate does NOT [exist]' — corrected in the same change that made it false (DOC-4).",
+      "EVERY WEEK THAT EXISTED BEFORE 2026-07-17 IS UNANCHORED, AND STAYS THAT WAY FOREVER (HT7). resolvePlannerWeek answers anchored:false for them, and that is the honest floor, NOT a defect and NOT a migration backlog: the only moment THA could know what those weeks meant has passed. Only weeks created from P7 onward carry an anchor. The one legitimate route to anchoring an existing week is the household DECLARING it (TIME1 § 6.2) — an extension point, not built.",
+      "Phase 3 (CONV1 P6) is DONE for the T2/T3 consumers: the Companion's temporal anchor (READ-4), the freezer's write/comparison (BEH-6), the diary's day and copy-from-planner (SCH-4), and the four getGreeting() copies now read the owner. NO T5 CONSUMER HAS CONVERGED: the five rival 'current weeks', streaks and savings still guess, and now have an anchor to read — that is CONV1 P8, not P7. product_history.scannedAt and user_health_trends.date still compare text dates across frames.",
+      "user_streaks.weekStartDate is a SIXTH private notion of a week (schema.ts, written by routes.ts via upsertUserStreak from a rival Monday). It is a different fact on a different table and is deliberately NOT gated by the anchor checks here, which are scoped to plannerWeeks. Converging it is CONV1 P8 (OWN-2/BEH-9). Recorded rather than swept in: a gate that fires falsely is worse than no gate (CONV1 R2).",
       "The greeting's WORDS are still client-side strings outside the Personality Registry. That is INT21's, not Household Time's: § 9 schedules it as CP3. CONV1 P6 converged the clock and collapsed four copies to one site, which is CP3's remaining surface.",
     ],
     checks: [
@@ -1573,6 +1575,155 @@ export const CANONICAL_PUBLICATION_REGISTER: DomainDeclaration[] = [
                 violated: false,
                 detail: "One zone, on the household (Domain 16) — a clock is a property of the home (HT4).",
               };
+        },
+      }),
+      customCheck({
+        id: "ht-anchor-is-the-planners",
+        law: "one-owner",
+        title: "The anchor exists, on the planner week, and the rejected household epoch does not (HT2, SCH-2)",
+        severity: "fail",
+        run: async (ctx) => {
+          const schema = ctx.sources.get("shared/schema.ts") ?? "";
+          if (!parseObjectLiteralKeys(schema, "plannerWeeks").includes("weekStartDate")) {
+            return {
+              violated: true,
+              detail:
+                "planner_weeks.weekStartDate is not declared in shared/schema.ts. HT2: the anchor is the second of Household Time's two facts, owned by Domain 14 — without it resolvePlannerWeek can only answer anchored:false, and every T5 consumer (the five rival 'current weeks', streaks, savings) stays unconvergeable (CONV1 P7 / SCH-2).",
+            };
+          }
+          // TIME1 § 6.1 design (a) — "slot 1 began on date D", derive slot N = D + 7(N−1)
+          // — was REJECTED: it assumes the six slots stay calendar-consecutive, which
+          // nothing enforces, and that is the assumption approxDate already makes and is
+          // already wrong about. A household epoch would encode today's fabrication as a
+          // schema. The anchor is PER WEEK so a household who skips a week is
+          // representable, and resolution is a LOOKUP, never arithmetic.
+          const epochScopes = (["households", "users", "userPreferences"] as const).filter((table) => {
+            const keys = parseObjectLiteralKeys(schema, table);
+            return keys.some((k) => /^(plannerEpoch|plannerStartDate|weekEpoch|plannerWeekStartDate)$/.test(k));
+          });
+          return epochScopes.length > 0
+            ? {
+                violated: true,
+                detail: `A planner epoch is declared on ${epochScopes.join(", ")}. TIME1 § 6.1 REJECTED design (a): deriving slot N from a household-level start date assumes the six slots are calendar-consecutive, and nothing enforces that. The anchor is per-week (Domain 14) so that a household who skipped a week is representable and resolution stays a lookup.`,
+              }
+            : {
+                violated: false,
+                detail: "One anchor, per planner week (Domain 14) — the per-week design TIME1 § 6.1 adopted; no household epoch exists (CONV1 P7 / SCH-2).",
+              };
+        },
+      }),
+      customCheck({
+        id: "ht-anchor-is-never-back-filled",
+        law: "one-owner",
+        title: "The anchor is never back-filled — NULL is the answer, not a bug (HT7, CONV1 R5)",
+        severity: "fail",
+        run: async (ctx) => {
+          // THE R5 GATE. The column is trivial; the danger is the one-line UPDATE that
+          // "fixes" the NULLs and looks like housekeeping. THA cannot know which calendar
+          // week a household's existing Week 3 meant (TIME1 § 6.2) — a back-filled anchor
+          // is approxDate with a schema, indistinguishable from a real one, which is what
+          // makes it worse than an absent one. A comment cannot stop this; a gate can.
+          const strip = (s: string) =>
+            s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+
+          // 1. The sanctioned DDL path: no migration may UPDATE the anchor, and none may
+          //    add it with a DEFAULT — a DEFAULT back-fills every existing row silently,
+          //    which is the same fabrication wearing an ALTER's clothes.
+          const runner = strip(ctx.sources.get("server/migrations/runner.ts") ?? "");
+          if (/UPDATE\s+planner_weeks[\s\S]{0,400}?week_start_date/i.test(runner)) {
+            return {
+              violated: true,
+              detail:
+                "A migration UPDATEs planner_weeks.week_start_date. HT7 is absolute: the anchor is written ONLY at creation and NEVER back-filled. Existing rows stay NULL forever — the moment THA could honestly know what those weeks meant has passed, and guessing is the approxDate this architecture exists to retire (CONV1 R5).",
+            };
+          }
+          if (/ADD\s+COLUMN[\s\S]{0,120}?week_start_date[\s\S]{0,120}?DEFAULT/i.test(runner)) {
+            return {
+              violated: true,
+              detail:
+                "A migration adds planner_weeks.week_start_date WITH A DEFAULT. That back-fills every existing row in one statement — the same fabrication as an UPDATE, wearing an ALTER's clothes. The column must be nullable with no default: NULL is the honest answer for every week created before the anchor existed (HT7, CONV1 R5).",
+            };
+          }
+
+          // 2. The application: no update path may set it. Scoped to plannerWeeks by
+          //    parsing the .set({...}) that belongs to `.update(plannerWeeks)` — because
+          //    user_streaks carries its OWN weekStartDate (a different fact, and the sixth
+          //    private notion of a week), and a gate that fires falsely is worse than no
+          //    gate (CONV1 R2).
+          const offenders: string[] = [];
+          for (const [file, raw] of Array.from(ctx.sources)) {
+            if (file.startsWith("server/verification/") || file.startsWith("server/tests/")) continue;
+            const code = strip(raw);
+            if (!/plannerWeeks|planner_weeks/.test(code)) continue;
+            const updates = Array.from(
+              code.matchAll(/\.update\(\s*plannerWeeks\s*\)[\s\S]{0,200}?\.set\(\s*\{([\s\S]*?)\}\s*\)/g),
+            );
+            for (const m of updates) {
+              if (/weekStartDate/.test(m[1])) offenders.push(file);
+            }
+            if (/UPDATE\s+planner_weeks[\s\S]{0,200}?week_start_date/i.test(code)) offenders.push(file);
+          }
+          if (offenders.length > 0) {
+            return {
+              violated: true,
+              detail: `${Array.from(new Set(offenders)).join(", ")} updates planner_weeks.weekStartDate after creation. HT7: the anchor is an observation of the present made at the moment the six slots are made consecutive — it is never revised and never back-filled. The only legitimate route to anchoring an existing week is the HOUSEHOLD declaring it (TIME1 § 6.2), which is an extension point and is not this (CONV1 R5).`,
+            };
+          }
+          return {
+            violated: false,
+            detail:
+              "No migration and no code path back-fills the anchor. Weeks created before CONV1 P7 hold NULL and keep it, which resolvePlannerWeek states honestly as anchored:false (HT6/HT7).",
+          };
+        },
+      }),
+      customCheck({
+        id: "ht-anchor-is-stamped-from-the-owner",
+        law: "no-duplicate-runtime-identity",
+        title: "The anchor is stamped at creation, from the owner's week arithmetic (HT1, HT11)",
+        severity: "fail",
+        run: async (ctx) => {
+          const file = "server/storage.ts";
+          const raw = ctx.sources.get(file);
+          if (raw === undefined) {
+            return { violated: true, detail: `${file} is missing — the planner's single write funnel has no home.` };
+          }
+          const code = raw.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+          const funnel = /async createPlannerWeeks\s*\([\s\S]*?\n  \}/.exec(code)?.[0] ?? "";
+          if (funnel === "") {
+            return {
+              violated: true,
+              detail: `${file} no longer declares createPlannerWeeks. It is the Planner's existing single write funnel and the ONLY moment the anchor may be written (HT7; TIME1 § 6.2).`,
+            };
+          }
+          if (!/weekStartDate/.test(funnel)) {
+            return {
+              violated: true,
+              detail:
+                "createPlannerWeeks does not stamp weekStartDate. The anchor must be written at creation or never: it is the one moment THA can honestly know which calendar week a slot means (HT7). A week created without one is unanchored forever.",
+            };
+          }
+          // HT11 — all of it, or none of it. A funnel that took today from the owner but
+          // hand-rolled its own Monday would compare the household against two calendars
+          // at once, and half-converged is worse than unconverged.
+          if (!/householdWeekOf\s*\(\s*householdToday\s*\(/.test(funnel)) {
+            return {
+              violated: true,
+              detail:
+                "createPlannerWeeks derives the anchor without householdWeekOf(householdToday(...)). HT1/HT11: the week convention (Monday-first, ISO) is the owner's, not the planner's — a private Monday here is a rival copy, and a consumer that takes today from the owner but keeps its own week arithmetic compares the household against two calendars at once.",
+            };
+          }
+          if (/getDay\(\)|toISOString\(\)\s*\.\s*slice\(\s*0\s*,\s*10\s*\)/.test(funnel)) {
+            return {
+              violated: true,
+              detail:
+                "createPlannerWeeks derives a civil date from an ambient/UTC frame (getDay() or toISOString().slice(0,10)). HT12: the device may supply the instant; it may never decide the day. The anchor a household lives by would be stamped in the wrong frame for anyone west of Greenwich.",
+            };
+          }
+          return {
+            violated: false,
+            detail:
+              "The anchor is stamped in the Planner's single write funnel, from the owner's own week arithmetic — mondayOf(householdToday(now, zone)) + 7 × (N−1) (CONV1 P7 / SCH-2; TIME1 § 6.2).",
+          };
         },
       }),
     ],

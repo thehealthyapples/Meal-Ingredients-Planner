@@ -52,11 +52,15 @@ function section(name: string): void {
 
 const HOUSEHOLD = { user1: 100, user2: 200 } as const;
 
+// `weekStartDate: null` is the honest fixture, not a placeholder: these stand for
+// weeks that already existed, and an existing week's anchor is never back-filled
+// (HT7; CONV1 P7 / SCH-2). This suite is about who may READ a week, not when it is —
+// so the unanchored floor is exactly the right state to assert ownership against.
 const weeks: PlannerWeek[] = [
-  { id: 10, userId: 1, householdId: 100, weekNumber: 1, weekName: "Week 1" },
-  { id: 11, userId: 1, householdId: 100, weekNumber: 2, weekName: "Week 2" },
+  { id: 10, userId: 1, householdId: 100, weekNumber: 1, weekName: "Week 1", weekStartDate: null },
+  { id: 11, userId: 1, householdId: 100, weekNumber: 2, weekName: "Week 2", weekStartDate: null },
   // Another household's week — must never be readable by user 1.
-  { id: 20, userId: 2, householdId: 200, weekNumber: 1, weekName: "Other Week 1" },
+  { id: 20, userId: 2, householdId: 200, weekNumber: 1, weekName: "Other Week 1", weekStartDate: null },
 ];
 
 const days: PlannerDay[] = [

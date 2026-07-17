@@ -1,10 +1,12 @@
 import { User, InsertUser, Meal, MealSummary, InsertMeal, Nutrition, InsertNutrition, ShoppingListItem, InsertShoppingListItem, MealAllergen, IngredientSwap, MealPlan, InsertMealPlan, MealPlanEntry, InsertMealPlanEntry, Diet, MealDiet, MealCategory, SupermarketLink, ProductMatch, InsertProductMatch, IngredientSource, InsertIngredientSource, NormalizedIngredient, InsertNormalizedIngredient, GroceryProduct, InsertGroceryProduct, UserPreferences, InsertUserPreferences, Additive, InsertAdditive, ProductAdditive, InsertProductAdditive, BasketItem, InsertBasketItem, MealTemplate, InsertMealTemplate, PlannerWeek, PlannerDay, PlannerEntry, InsertPlannerEntry, UserStreak, UserHealthTrend, ProductHistory, InsertProductHistory, FreezerMeal, InsertFreezerMeal, MealPlanTemplate, InsertMealPlanTemplate, MealPlanTemplateItem, InsertMealPlanTemplateItem, AdminAuditLog, UserPantryItem, ShoppingListExtra, MealPairing, InsertMealPairing, IngredientProduct, InsertIngredientProduct, Household, HouseholdMember, HouseholdEaterRow, WeekEaterOverride, FoodDiaryDay, FoodDiaryEntry, FoodDiaryMetrics, InsertFoodDiaryEntry, InsertFoodDiaryMetrics, users, meals, nutrition, shoppingList, mealAllergens, ingredientSwaps, mealPlans, mealPlanEntries, diets, mealDiets, mealCategories, supermarketLinks, productMatches, ingredientSources, normalizedIngredients, groceryProducts, userPreferences, additives, productAdditives, basketItems, mealTemplates, plannerWeeks, plannerDays, plannerEntries, userStreaks, userHealthTrends, productHistory, freezerMeals, mealPlanTemplates, mealPlanTemplateItems, adminAuditLog, userPantryItems, shoppingListExtras, mealPairings, ingredientProducts, households, householdMembers, householdEaters, plannerEntryEaters, plannerWeekEaterOverrides, foodDiaryDays, foodDiaryEntries, foodDiaryMetrics, foodKnowledge, FoodKnowledge, siteSettings, mealItems, MealItem, InsertMealItem, userItemUsage, savingsEvents, SavingsEvent, InsertSavingsEvent, pantryIngredientKnowledge, PantryIngredientKnowledge, mealUpliftApplications, MealUpliftApplication, InsertMealUpliftApplication, weekProvisioningItems, WeekProvisioningItem } from "@shared/schema";
 import { normalizeIngredientKey } from "@shared/normalize";
 import {
+  addCivilDays,
   DECLARED_DEFAULT_ZONE,
   formatCivilDate,
   householdDayOfWeek,
   householdToday,
+  householdWeekOf,
   isKnownZone,
   parseCivilDate,
 } from "@shared/time/household-time";
@@ -1237,10 +1239,47 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
+  /**
+   * CONV1 P7 / SCH-2 — the planner week anchor is stamped HERE, and nowhere else.
+   *
+   * This is the only moment THA can honestly know which calendar week a planner slot
+   * means (HT7; TIME1 § 6.2). All six slots are created in one transaction, at a known
+   * instant, for a household that is — at that instant — looking at the week they are
+   * living in. So anchoring here is an OBSERVATION OF THE PRESENT, not a reconstruction
+   * of the past:
+   *
+   *     weekStartDate(N) = mondayOf(householdToday(now, zone)) + 7 × (N − 1)
+   *
+   * The arithmetic is legitimate HERE AND NOWHERE ELSE, because here the slots genuinely
+   * are consecutive: they are being made consecutive, now, in one statement. Applied to
+   * an existing rota it would be design (a) — the household epoch TIME1 § 6.1 REJECTED,
+   * because nothing enforces that the six slots stay calendar-consecutive, and a
+   * household who skips a week breaks the assumption silently.
+   *
+   * `if (existing.length > 0) return existing` above is therefore not an optimisation —
+   * IT IS THE NO-BACK-FILL GUARANTEE (CONV1 R5). A household that already has weeks gets
+   * them back with their anchors exactly as they are, NULL included, forever. Do not
+   * "improve" this by stamping them: see the gate `ht-anchor-is-never-back-filled` and
+   * the migration comment in server/migrations/runner.ts.
+   *
+   * The week arithmetic is the owner's, not this file's: `householdWeekOf` decides which
+   * Monday opens the week, so the planner cannot disagree with the rest of the platform
+   * about where a week starts (HT1/HT11). This function reads the clock; the module never
+   * does (HT5).
+   */
   async createPlannerWeeks(userId: number): Promise<PlannerWeek[]> {
     const householdId = await getHouseholdForUser(userId);
     const existing = await db.select().from(plannerWeeks).where(eq(plannerWeeks.householdId, householdId)).orderBy(plannerWeeks.weekNumber);
     if (existing.length > 0) return existing;
+
+    // The declared default resolves at READ time and is never written to the household
+    // row (CP8): NULL means "THA has not been told where this household lives", which is
+    // a different fact from "the household said Europe/London". The anchor this stamps is
+    // a real fact either way — it is the Monday of the day this household is having now,
+    // on the best zone THA can honestly claim for them at this instant.
+    const household = await db.query.households.findFirst({ where: eq(households.id, householdId) });
+    const zone = household?.timeZone ?? DECLARED_DEFAULT_ZONE;
+    const thisMonday = householdWeekOf(householdToday(new Date(), zone)).start;
 
     try {
       const weeks: PlannerWeek[] = [];
@@ -1251,6 +1290,9 @@ export class DatabaseStorage implements IStorage {
             householdId,
             weekNumber: w,
             weekName: `Week ${w}`,
+            // Slot 1 IS this week and slot 2 IS next week — at creation, and only at
+            // creation, that is exactly what the UX has always promised (TIME1 § 6.2).
+            weekStartDate: formatCivilDate(addCivilDays(thisMonday, 7 * (w - 1))),
           }).returning();
           for (let d = 0; d < 7; d++) {
             await tx.insert(plannerDays).values({
@@ -1278,6 +1320,11 @@ export class DatabaseStorage implements IStorage {
           .orderBy(plannerWeeks.weekNumber);
         if (nullRows.length > 0) {
           console.warn(`[Planner] Patching ${nullRows.length} planner_weeks with null household_id for user ${userId}`);
+          // Repairs `household_id` ONLY. These are legacy rows — their creation moment
+          // has passed, so their `weekStartDate` is unknowable and stays NULL (HT7).
+          // Adding it to this `.set()` would be the back-fill CONV1 R5 names: it would
+          // look like finishing the repair, and it would fabricate a week the household
+          // never chose. The gate `ht-anchor-is-never-back-filled` fails if it appears.
           await db.update(plannerWeeks)
             .set({ householdId })
             .where(and(eq(plannerWeeks.userId, userId), isNull(plannerWeeks.householdId)));

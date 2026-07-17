@@ -14,7 +14,9 @@
 //
 // The two facts it reads are supplied by callers and owned elsewhere (HT2):
 //   • households.timeZone          → Domain 16 (added by CONV1 P5 / SCH-1)
-//   • planner_weeks.weekStartDate  → Domain 14 (NOT YET BUILT — Phase 4 / SCH-2)
+//   • planner_weeks.weekStartDate  → Domain 14 (added by CONV1 P7 / SCH-2; written only
+//     at week creation and never back-filled — HT7, so weeks created before 2026-07-17
+//     hold NULL forever and resolve to `anchored: false`, which is the honest answer)
 // Nothing derived here is ever stored (HT3): today, this week, the phase and the
 // current planner week are derivations. A column or cache holding one would be the
 // permanent sync bridge Principle 7 forbids.
@@ -176,11 +178,19 @@ export interface CalendarWeek {
  * not an import of shared/schema.ts: the module is pure and must not depend on the
  * database's shape (or on Drizzle) to stay zero-I/O and universally importable.
  *
- * `weekStartDate` is null for every planner week that exists today: the column is
- * Phase 4 (CONV1 P7 / SCH-2) and does NOT exist yet. When it lands it is written
- * ONLY at week creation and NEVER back-filled (HT7) — existing rows stay null
- * forever, because the moment of creation is the only moment THA can honestly know
- * what a week means. A back-filled anchor is approxDate with a schema (CONV1 R5).
+ * `weekStartDate` is written ONLY at week creation and NEVER back-filled (HT7) —
+ * the column landed with CONV1 P7 / SCH-2 on 2026-07-17. Every week created BEFORE
+ * that holds null and keeps it forever, because the moment of creation is the only
+ * moment THA can honestly know what a week means, and that moment has passed. A
+ * back-filled anchor is approxDate with a schema (CONV1 R5).
+ *
+ * So null is not a legacy artefact to be tidied away: it is the truthful answer for
+ * every household that was already planning before the anchor existed, and it stays
+ * the answer unless THAT HOUSEHOLD declares otherwise (TIME1 § 6.2 — an extension
+ * point, not built).
+ *
+ * (This comment previously read "the column is Phase 4 … and does NOT exist yet",
+ * corrected in the same change that made it false — the DOC-4 failure mode.)
  */
 export interface PlannerWeek {
   /** 1–6. A slot label in a fixed rota — NOT a time coordinate (TIME1 § 3.1). */

@@ -2144,6 +2144,57 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  // CONV1 P7 / SCH-2 — planner_weeks.weekStartDate (TIME3 Phase 4, THE ANCHOR).
+  //
+  // Additive and nullable. NO ROW IS REWRITTEN. THERE IS NO BACK-FILL — NOT NOW, NOT EVER.
+  //
+  // ── THIS COMMENT IS THE MITIGATION, AND IT IS LOAD-BEARING (CONV1 R5) ──────────
+  // The column is trivial to add. The danger is not the ALTER: it is the next person
+  // who sees several hundred NULLs, reads them as a bug, and writes the one-line
+  // UPDATE that "fixes" them. That UPDATE is the single most damaging change anyone
+  // could make to this schema, and it would look like housekeeping.
+  //
+  // DO NOT WRITE IT. Here is why, in the architecture's own terms:
+  //
+  //   • HT7 is absolute: the anchor is written ONLY at creation and NEVER back-filled.
+  //     The only moment THA can honestly know which calendar week a planner slot means
+  //     is the moment the slot is created (TIME1 § 6.2). That moment has passed for
+  //     every row this migration touches. It cannot be recovered afterwards.
+  //   • THA cannot know which calendar week a household's existing Week 3 meant.
+  //     `weekNumber` is a slot label in a fixed rota, not a time coordinate (TIME1 § 3.1):
+  //     all six weeks are created eagerly at first touch, and nothing has ever made them
+  //     calendar-consecutive. A household whose Week 1 is w/c 20 July and whose Week 2 is
+  //     w/c 3 August — because they skipped a week — is a household this column can
+  //     represent and no back-fill could ever reconstruct.
+  //   • A back-filled anchor is `approxDate` with a schema (CONV1 R5). It would be
+  //     INDISTINGUISHABLE from one the household actually meant, which is precisely what
+  //     makes it worse than an absent one — and `approxDate` is the fabrication this
+  //     whole architecture exists to retire (TIME1 § 3.3; CONV1 P9).
+  //   • NULL IS NOT A BUG; IT IS THE ANSWER. `resolvePlannerWeek` returns
+  //     `{ anchored: false, reason: "no-anchor" }` and every consumer keeps exactly its
+  //     current behaviour (HT6 — totality IS the compatibility strategy). Nothing is
+  //     broken by these NULLs. Something WOULD be broken by filling them.
+  //   • Core Principle 6 — honest gaps over invented facts.
+  //
+  // The ONLY legitimate route to anchoring an existing week is the household DECLARING
+  // it — an explicit, offered, never-forced confirmation ("Is this week beginning Monday
+  // 20 July?"). That is an extension point (TIME1 § 6.2), deliberately not built here.
+  // A declared anchor is a fact. An inferred one is fabrication.
+  //
+  // A gate enforces this rather than trusting the comment: `verify:publication`, domain
+  // `household-time`, check `ht-anchor-is-never-back-filled` — it fails if this migration
+  // list ever learns to UPDATE this column (CP10: a convergence is finished when a gate
+  // can fail).
+  //
+  // No consumer converges in this migration or this phase — that is Phase 5 (CONV1 P8).
+  // This lands the fact so that the five rival "current weeks" HAVE something to read.
+  {
+    id: "2026-07-17_conv1_p7_planner_week_anchor",
+    statements: [
+      `ALTER TABLE planner_weeks ADD COLUMN IF NOT EXISTS week_start_date text`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 
