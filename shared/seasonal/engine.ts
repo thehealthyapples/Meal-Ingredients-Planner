@@ -31,7 +31,8 @@
 import { CANONICAL_SEED } from "../canonical/foods";
 import { discover } from "../discovery/engine";
 import { stories } from "../stories/engine";
-import type { MealEntry, StoryCard, StoryFact, UKSeason } from "../stories/types";
+import { isDated, type DatedMealEntry, type MealEntry, type StoryCard, type StoryFact, type UKSeason }
+  from "../stories/types";
 import { seasonOfLocalDate } from "./season-rule";
 import { isTextTrustworthy } from "./trust";
 import {
@@ -197,7 +198,7 @@ interface SeasonAggregate {
   topFoods: Array<{ slug: string; name: string; count: number }>;
 }
 
-function aggregateSeason(entries: MealEntry[]): SeasonAggregate {
+function aggregateSeason(entries: DatedMealEntry[]): SeasonAggregate {
   const occasions = new Set<string>();
   const canonical = new Map<string, { name: string; count: number }>();
 
@@ -326,7 +327,21 @@ export function seasonalStories(
   const window = windowFor(ref);
   const wanted = new Set(blocks);
 
-  const seasonEntries = household.entries.filter((e) => inWindow(e.date, window));
+  // CONV1 P9 / BEH-5 — a seasonal window is a claim about WHEN, so it may only ever be
+  // asked of an entry THA can honestly date. Until today the date was fabricated at
+  // request time from the planner's week number (`now − weeksAgo × 7 − …`), so "this
+  // summer you cooked…" was a window applied to fiction: every entry drifted forward as
+  // the clock moved, and a meal planned for next month was timestamped five weeks in the
+  // past. `isDated` first, then the window — an undated entry is not outside the window,
+  // it has no place on the calendar at all (HT7: for weeks created before the anchor,
+  // that is permanent and true).
+  //
+  // The `enjoys` half of this engine's input is unaffected and deliberately so: it is a
+  // list of FOOD SLUGS, which needs no calendar. What the household plans survives; only
+  // claims about WHEN they planned it go quiet.
+  const seasonEntries = household.entries.filter(
+    (e): e is DatedMealEntry => isDated(e) && inWindow(e.date, window),
+  );
   const agg = aggregateSeason(seasonEntries);
 
   const out: SeasonalBlock[] = [];

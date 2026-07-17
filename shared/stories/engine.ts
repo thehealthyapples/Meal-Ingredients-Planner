@@ -34,6 +34,8 @@ import { isTextTrustworthy } from "./trust";
 import { JOURNEY_CLUSTERS } from "./journey-map";
 import {
   SECTION_TITLES,
+  isDated,
+  type DatedMealEntry,
   type MealEntry,
   type StoryCard,
   type StoryFact,
@@ -172,14 +174,14 @@ function makeCard(
 // is counted as one story, not fragmented across 4 entries.
 
 function favouriteFoods(
-  entries: MealEntry[],
+  entries: DatedMealEntry[],
   now: Date,
   limit: number,
 ): StorySection | null {
   // Group by canonical slug — all tomato varieties count toward "tomato".
   const byCanonical = new Map<
     string,
-    { name: string; entries: MealEntry[]; meals: Set<string> }
+    { name: string; entries: DatedMealEntry[]; meals: Set<string> }
   >();
 
   for (const e of entries) {
@@ -261,7 +263,7 @@ function favouriteFoods(
 // "you explored N varieties" card.
 
 function discoveryStories(
-  entries: MealEntry[],
+  entries: DatedMealEntry[],
   timeframe: TimeWindow | undefined,
   limit: number,
 ): StorySection | null {
@@ -390,7 +392,7 @@ function discoveryStories(
 // without requiring day-of-week regularity.
 
 function familyTraditions(
-  entries: MealEntry[],
+  entries: DatedMealEntry[],
   limit: number,
 ): StorySection | null {
   const cards: StoryCard[] = [];
@@ -457,7 +459,7 @@ function familyTraditions(
   const sortedEntries = [...entries].sort(
     (a, b) => a.date.getTime() - b.date.getTime(),
   );
-  const byFood = new Map<string, MealEntry[]>();
+  const byFood = new Map<string, DatedMealEntry[]>();
   for (const e of sortedEntries) {
     // Key by mealName when present — same-meal entries share one go-to slot
     const key = e.mealName ?? e.food;
@@ -527,8 +529,8 @@ function familyTraditions(
 // Top 3 foods (by count) in each qualifying season are surfaced. Only the
 // canonical food name is used (cherry-tomato → Tomato) to avoid fragmentation.
 
-function seasonalHabits(entries: MealEntry[], limit: number): StorySection | null {
-  const bySeason = new Map<UKSeason, MealEntry[]>();
+function seasonalHabits(entries: DatedMealEntry[], limit: number): StorySection | null {
+  const bySeason = new Map<UKSeason, DatedMealEntry[]>();
   for (const e of entries) {
     const season = seasonOf(e.date);
     const g = bySeason.get(season) ?? [];
@@ -593,7 +595,7 @@ function seasonalHabits(entries: MealEntry[], limit: number): StorySection | nul
 //   • First and latest cluster food ≥ 60 days apart (progression, not coincidence)
 // Never invented; never forward-looking.
 
-function foodJourneys(entries: MealEntry[], limit: number): StorySection | null {
+function foodJourneys(entries: DatedMealEntry[], limit: number): StorySection | null {
   const bySlug = new Map<
     string,
     { name: string; firstSeen: Date; count: number }
@@ -697,7 +699,31 @@ export function stories(request: StoryRequest): StoriesResult {
     limitPerType = DEFAULT_LIMIT,
   } = request;
 
-  const { entries } = household;
+  // ── CONV1 P9 / BEH-5 — THE SEAM ────────────────────────────────────────────
+  //
+  // EVERY ONE of the five story types makes a claim about WHEN: the favourite gate is
+  // "last seen within 180 days", discovery says "this spring", traditions say "Friday",
+  // seasonal habits say "Summer became…", and the journey is ordered by first-seen. So a
+  // story may only ever be told about an entry THA can honestly place on a calendar.
+  //
+  // Until today none of them could. The route layer handed this engine a date it had
+  // INVENTED at request time from the planner's week number — `now − (weeksAgo × 7 +
+  // max(0, 6 − dayOfWeek))` — which reduces to `(now.getDay() + dayOfWeek + 1) mod 7`.
+  // **The weekday in "Friday became curry night" was the day the household opened the
+  // app.** It was right on Saturdays and wrong the other six days, and it said nothing
+  // whatever about the household. All the arithmetic below was arithmetic on fiction
+  // (CONV1 BEH-5).
+  //
+  // Filtering HERE, once, rather than guarding each of the fourteen `.date` reads, is
+  // deliberate: it makes an undated entry unrepresentable inside every story function, so
+  // a future story cannot forget the rule — the type system carries it (`DatedMealEntry`).
+  //
+  // For a household whose planner weeks predate the anchor this yields NO STORIES, and
+  // that is the honest answer, not a regression: it is what THA actually knows (HT7 — the
+  // anchor is never back-filled, so those weeks have no dates and never will). Stories'
+  // own first principles already required this — "Memory, never report card"; "Trust by
+  // non-computation". A silent Stories is a Stories that has stopped making things up.
+  const entries = household.entries.filter(isDated);
   const wanted = new Set(types);
   const sections: StorySection[] = [];
 

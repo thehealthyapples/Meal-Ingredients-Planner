@@ -52,8 +52,38 @@ export interface MealEntry {
    * Required for day-of-week tradition detection ("Friday became pizza night").
    */
   mealName?: string;
-  /** When this entry occurred (createdAt on planner entry / date on diary day). */
-  date: Date;
+  /**
+   * When this entry occurred — or `null` when THA cannot honestly know.
+   *
+   * CONV1 P9 / BEH-5. This was `date: Date`, and it was NEVER a date. The route layer
+   * fabricated it at request time from the planner's week NUMBER:
+   *
+   *     approxDate = now − (weeksAgo × 7 + max(0, 6 − dayOfWeek)) days
+   *
+   * which reduces to `reportedDay = (now.getDay() + dayOfWeek + 1) mod 7` — **the weekday
+   * this engine reported was the day the household happened to open the app**, correct
+   * only on a Saturday and only by coincidence. "Friday became curry night" was a fact
+   * about the request, not about the household. All of Stories' arithmetic — the
+   * 30/90/180/365 tiers, the 180-day favourite gate, the seasons — was arithmetic on
+   * fiction (CONV1 BEH-5).
+   *
+   * **It is now the real date, or nothing.** A planner entry is dated only when its week
+   * carries an anchor (`planner_weeks.weekStartDate`, CONV1 P7 / SCH-2): the entry's date
+   * is that Monday plus the day's own offset. A week with no anchor has no dates and
+   * never will — the anchor is written only at creation and never back-filled (HT7), so
+   * for the households whose weeks predate it, `null` is permanent and true.
+   *
+   * **`null` is an ANSWER, and every date claim must respect it.** A story that reads a
+   * date may only read a DATED entry (`isDated`), and an entry without one is not
+   * evidence of *when* anything happened — only of *what* the household plans. That
+   * distinction is why `date` is nullable rather than the undated entries being dropped:
+   * food identity survives without a calendar (`discover()` needs no date at all), and
+   * dropping them would have silenced discovery to fix a defect it never had.
+   *
+   * A diary entry (`source: "logged"`) is always dated — `food_diary_days.date` is a real
+   * civil date the household authored.
+   */
+  date: Date | null;
   /**
    * Slot the meal occupied. Optional — informs breakfast habit and seasonal
    * habit stories.
@@ -73,6 +103,25 @@ export interface MealEntry {
    * only planning is evidenced.
    */
   source: MealSource;
+}
+
+/**
+ * A meal entry THA can honestly place on a calendar.
+ *
+ * CONV1 P9 / BEH-5. The whole of the fabrication's retirement is this distinction: an
+ * entry either has a real date or it has none, and only the first kind may support a
+ * claim about WHEN. Narrowing at the seam (rather than guarding at each of the fourteen
+ * `.date` reads) is what makes it impossible to forget one.
+ */
+export type DatedMealEntry = MealEntry & { date: Date };
+
+/**
+ * The guard. `null` is not a missing value to be defaulted — it is THA saying it does not
+ * know which day this was, which is the truth for every planner week created before the
+ * anchor existed and never back-filled (HT7).
+ */
+export function isDated(entry: MealEntry): entry is DatedMealEntry {
+  return entry.date != null;
 }
 
 /** The household's food history — in-memory, assembled by the route layer. */

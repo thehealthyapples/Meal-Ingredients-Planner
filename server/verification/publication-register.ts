@@ -1717,17 +1717,19 @@ export const CANONICAL_PUBLICATION_REGISTER: DomainDeclaration[] = [
               file === "client/src/components/AddToWeekModal.tsx" ||
               file.startsWith("client/src/pages/dev/")
             ) continue;
-            let code = strip(raw);
-            // `buildHouseholdHistory`'s `maxWeek` is approxDate's, and approxDate is
-            // CONV1 P9's (BEH-5). It orders the rota to FABRICATE A DATE — it is not a
-            // rival "current week" — and converging it before the fabricator is retired
-            // would make a fabricated date precisely wrong, "the worst outcome available"
-            // (CONV1 R3/§4.1). Its body is excised by NAME rather than by a loose
-            // file-wide exemption, so a genuine rival appearing elsewhere in routes.ts is
-            // still caught. WHEN P9 RETIRES approxDate, DELETE THIS BLOCK — it is the
-            // only thing standing between that function and this gate.
-            const fabricator = /async function buildHouseholdHistory[\s\S]*?\n  \}/.exec(code);
-            if (fabricator) code = code.replace(fabricator[0], "");
+            const code = strip(raw);
+            // CONV1 P9 DELETED THE EXCISION P8 LEFT HERE, exactly as P8 instructed:
+            // "WHEN P9 RETIRES approxDate, DELETE THIS BLOCK — it is the only thing
+            // standing between that function and this gate."
+            //
+            // P8 had to excise `buildHouseholdHistory`'s body by name, because its
+            // `maxWeek` ordered the rota to fabricate a date and converging it before the
+            // fabricator was retired would have made a fabricated date precisely wrong
+            // ("the worst outcome available" — CONV1 R3/§4.1). BEH-5 retired the
+            // fabricator on 2026-07-17: `maxWeek`, `weeksAgo`, `now` and both copies of
+            // the function are gone. **The exemption has nothing left to protect, so the
+            // whole of routes.ts is held to this gate again** — which is the point of
+            // writing a temporary exemption down instead of leaving it to be discovered.
             for (const [pattern, why] of RIVALS) {
               if (pattern.test(code)) offenders.push(`${file} (${why})`);
             }
@@ -1782,6 +1784,103 @@ export const CANONICAL_PUBLICATION_REGISTER: DomainDeclaration[] = [
                 violated: false,
                 detail: "No consumer substitutes a week when the owner answers `anchored: false`. The unanchored state is stated, not filled in (CONV1 P8 / BEH-3).",
               };
+        },
+      }),
+      customCheck({
+        id: "ht-no-fabricated-dates",
+        law: "one-owner",
+        title: "No date is invented from a week number (BEH-5, Core Principle 6)",
+        severity: "fail",
+        run: async (ctx) => {
+          // CONV1 P9 / BEH-5 — the last live fabrication in the time family.
+          //
+          // `approxDate = now − (weeksAgo × 7 + max(0, 6 − dayOfWeek))` reduced to
+          // `reportedDay = (now.getDay() + dayOfWeek + 1) mod 7`: the weekday Stories
+          // reported was THE DAY THE HOUSEHOLD OPENED THE APP. "Friday became curry
+          // night" was a fact about the request. It existed in TWO copies (TIME3 § 14
+          // target 5 — "2 → 0"), one of them a closure duplicating the very module
+          // extracted to prevent it.
+          //
+          // A date is now a LOOKUP over `planner_weeks.weekStartDate`, or it is null.
+          // The shape this gate forbids is the one that made the defect possible:
+          // deriving a calendar position from a week NUMBER and a clock.
+          const strip = (s: string) =>
+            s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+          const offenders: string[] = [];
+          for (const [file, raw] of Array.from(ctx.sources)) {
+            if (file.startsWith("server/verification/") || file.startsWith("server/tests/")) continue;
+            const code = strip(raw);
+            if (/\bapproxDate\b/.test(code)) {
+              offenders.push(`${file} (approxDate — a date invented at request time)`);
+              continue;
+            }
+            // The arithmetic itself, under any name: a clock, minus a multiple of a week
+            // index, to make a calendar position.
+            if (/now\.getTime\(\)\s*-\s*\([\s\S]{0,120}?week[\s\S]{0,60}?\*\s*7/i.test(code)) {
+              offenders.push(`${file} (a date derived from now − weeks × 7 — approxDate under another name)`);
+            }
+          }
+          if (offenders.length > 0) {
+            return {
+              violated: true,
+              detail: `${offenders.join("; ")} invents a date from a week number and a clock. BEH-5 — the planner's weekNumber is a SLOT LABEL, not a time coordinate (TIME1 § 3.1); a date built from it is fiction, and every story told on top of it is an invented fact about a household's life told in the household's own voice. A planner entry's date is a LOOKUP over planner_weeks.weekStartDate (CONV1 P7), or it is null (HT6 / Core Principle 6).`,
+            };
+          }
+          return {
+            violated: false,
+            detail: "No date is invented from a week number. A planner entry is dated from its week's anchor, or it is honestly undated (CONV1 P9 / BEH-5).",
+          };
+        },
+      }),
+      customCheck({
+        id: "ht-stories-tell-no-undated-story",
+        law: "one-owner",
+        title: "A story may only be told about an entry THA can date (BEH-5, HT6)",
+        severity: "fail",
+        run: async (ctx) => {
+          // The fabricator is gone; this is the gate that stops it growing back in a new
+          // shape. Every one of the five story types makes a claim about WHEN — the
+          // weekday, the 180-day favourite gate, "this spring", the season, the journey's
+          // ordering — so a story engine that accepts an undated entry has re-opened the
+          // defect, whatever it does with it.
+          const types = ctx.sources.get("shared/stories/types.ts") ?? "";
+          if (!/date:\s*Date\s*\|\s*null/.test(types)) {
+            return {
+              violated: true,
+              detail:
+                "shared/stories/types.ts no longer declares `date: Date | null`. An entry THA cannot date must be REPRESENTABLE as undated, or the route layer is forced to invent one — which is precisely how approxDate was born (BEH-5). 192 of 195 households have planner weeks that predate the anchor and can never be dated (HT7).",
+            };
+          }
+          if (!/export function isDated/.test(types)) {
+            return {
+              violated: true,
+              detail:
+                "The `isDated` guard is gone. It is the seam that makes an undated entry unrepresentable inside a story function, so a future story cannot forget the rule (BEH-5).",
+            };
+          }
+          const engine = (ctx.sources.get("shared/stories/engine.ts") ?? "")
+            .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+          if (!/household\.entries\.filter\(isDated\)/.test(engine)) {
+            return {
+              violated: true,
+              detail:
+                "shared/stories/engine.ts no longer filters to dated entries at its seam. Every story type claims a WHEN; telling one about an undated entry is the fabrication BEH-5 retired. Silence is the honest answer, and Stories' own first principles already require it ('Memory, never report card'; 'Trust by non-computation').",
+            };
+          }
+          const seasonal = (ctx.sources.get("shared/seasonal/engine.ts") ?? "")
+            .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+          if (!/isDated\(e\)\s*&&\s*inWindow/.test(seasonal)) {
+            return {
+              violated: true,
+              detail:
+                "shared/seasonal/engine.ts windows entries without checking they are dated. A season is a claim about WHEN — an undated entry is not outside the window, it has no place on the calendar at all (BEH-5).",
+            };
+          }
+          return {
+            violated: false,
+            detail:
+              "Undated entries are representable and no story is told about one: `date: Date | null`, `isDated` at both engines' seams (CONV1 P9 / BEH-5).",
+          };
         },
       }),
       customCheck({

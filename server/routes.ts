@@ -118,6 +118,10 @@ import {
 import { enrichRetailData, STORE_TAG_MAP, UK_RETAILER_STORE_TAGS } from "./lib/retailIntelligence";
 import { getCanonicalProduct, isCompatibleSwap } from "./lib/productCanonicaliser";
 import { getHouseholdForUser } from "./lib/household";
+// CONV1 P9 / BEH-5 — the one household-history owner. This file used to carry a private
+// copy of it (a closure inside registerRoutes), which is exactly the duplication the
+// module was extracted to prevent.
+import { buildHouseholdHistory } from "./lib/household-history";
 // CONV1 P8 / READ-3 — the one answer to "which planner week is this household living in?".
 // This route used to compute its own (max(weekNumber) ≡ 6, the constant wearing the costume
 // of a computation). It asks the owner now.
@@ -11425,48 +11429,20 @@ Generate a complete recipe using these as the foundation.`;
   // tables, call WS8–WS11 engines, strip internal signals before responding.
   // No writes. No business logic. No stored summaries.
 
-  async function buildHouseholdHistory(userId: number): Promise<HouseholdHistory> {
-    const weeks = await storage.getPlannerWeeks(userId);
-    if (!weeks.length) return { entries: [] };
+  // CONV1 P9 / BEH-5 — THE SECOND FABRICATOR IS RETIRED, AND SO IS THE DUPLICATE.
+  //
+  // A private `buildHouseholdHistory` closure lived here, byte-for-byte the same
+  // derivation as `server/lib/household-history.ts` — whose OWN docblock exists to
+  // explain why it was extracted: *"a canonical derivation that only one caller can reach
+  // grows a second copy the moment a second caller needs it… given a module of its own so
+  // it can have more than one honest caller."* The extraction happened; **the closure was
+  // never deleted**, so the platform carried two copies of one fabrication and the
+  // document explaining why that must not happen (TIME3 § 14 target 5 — "2 → 0", and
+  // Principle 8: retire on introduction).
+  //
+  // Both are gone. This file now imports the one owner, which no longer invents a date:
+  // an entry is dated from its week's anchor or it is not dated at all.
 
-    const now = new Date();
-    const maxWeek = Math.max(...weeks.map(w => w.weekNumber));
-    const entries: MealEntry[] = [];
-    const MS_PER_DAY = 24 * 60 * 60 * 1000;
-
-    for (const week of weeks) {
-      const days = await storage.getPlannerDays(week.id);
-      const weeksAgo = maxWeek - week.weekNumber;
-
-      for (const day of days) {
-        const dayEntries = await storage.getPlannerEntriesForDay(day.id);
-        // dayOfWeek: 0 = Sunday in plannerDays convention (Rule HT8); shift so recent days are closer to now
-        const approxDate = new Date(now.getTime() - (weeksAgo * 7 + Math.max(0, 6 - day.dayOfWeek)) * MS_PER_DAY);
-
-        for (const entry of dayEntries) {
-          const meal = await storage.getMeal(entry.mealId);
-          if (!meal) continue;
-          const slot = entry.mealType === "snacks" ? "snack"
-            : (["breakfast", "lunch", "dinner"].includes(entry.mealType) ? entry.mealType as "breakfast" | "lunch" | "dinner" : undefined);
-
-          for (const rawIng of meal.ingredients) {
-            const parsed = parseIngredientShared(rawIng);
-            const foodSlug = singularizeIngredientKey(parsed.normalizedName);
-            entries.push({
-              food: foodSlug,
-              foodName: parsed.productName,
-              mealName: meal.name,
-              date: approxDate,
-              mealSlot: slot,
-              source: "planned",
-            });
-          }
-        }
-      }
-    }
-
-    return { entries };
-  }
 
   app.get("/api/pantry/discover", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
