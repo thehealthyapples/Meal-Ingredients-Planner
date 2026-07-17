@@ -17,7 +17,11 @@ export type DiscoveryType =
   | "cuisine" // 5. Cuisine exploration       (Mediterranean → fennel)
   | "seasonal"; // 6. Seasonal exploration      (summer → courgettes, peaches)
 
-export type UKSeason = "spring" | "summer" | "autumn" | "winter";
+// CONV1 P5 / OWN-3: the season vocabulary is declared with the season rule that
+// produces it, so the two cannot drift apart. Re-exported here because WS8's
+// consumers import it from this file; this is not a second declaration.
+import type { UKSeason } from "../seasonal/season-rule";
+export type { UKSeason };
 
 /** What the household already enjoys — used gently, never as judgement. */
 export interface HouseholdContext {

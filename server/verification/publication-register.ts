@@ -1294,6 +1294,218 @@ export const CANONICAL_PUBLICATION_REGISTER: DomainDeclaration[] = [
     ],
   },
 
+  // ── 23. Household Time (TIME3) ─────────────────────────────────────────────
+  // Landed by CONV1 P5 / OWN-4, in the SAME CHANGE as the module it verifies —
+  // THA_HOUSEHOLD_TIME_ARCHITECTURE.md § 16 requires exactly that, and CONV1's
+  // risk R1 ("the declared owners are never built") is closed by this entry
+  // existing at all: a convergence is finished when a gate can fail (CP10).
+  //
+  // Household Time has NO PROJECTION, and stating why is the point. It is not
+  // seed-owned (no seed), not knowledge (no claim, no source, no reviewedAt), and
+  // not database-owned (it owns the RULES of household time and none of its data).
+  // Its owner is the module; its publication is nothing; its runtime read path is
+  // the module itself. So:
+  //
+  //   VERIFICATION IS THAT NO SECOND IMPLEMENTATION EXISTS (HT18).
+  //
+  // For a pure vocabulary, drift is not a stale row — it is a RIVAL COPY. The gate
+  // that matters is the one that fails when someone writes a sixth getGreeting().
+  // These checks are therefore RATCHETS over source, not queries over data.
+  {
+    id: "household-time",
+    name: "Household Time (TIME3)",
+    variant: "platform",
+    canonicalOwner: "shared/time/household-time.ts (reference vocabulary, Principle 5 — no DB owner)",
+    authorisedWriters: [],
+    publicationPath: "none — the module IS the publication (no projection, by design)",
+    runtimeReadPath: "shared/time/household-time.ts (direct import)",
+    sotRegisterRef: "Appendix A (Household Time) / D14 / D16",
+    knownGaps: [
+      "DECLARED, NOT BUILT is now partly discharged: the module exists (P5/OWN-4) and households.timeZone exists (P5/SCH-1). planner_weeks.weekStartDate does NOT — it is Phase 4 (CONV1 P7 / SCH-2), so resolvePlannerWeek returns anchored:false for every household today. That is the honest floor, not a defect.",
+      "No consumer has converged yet: Phase 3 (CONV1 P6) moves the Companion's temporal anchor, the freezer expiry, the diary and the four getGreeting() copies. Until then the twenty private clocks are still live — the module's value is that they now have one owner to converge onto.",
+    ],
+    checks: [
+      sourceCheck({
+        id: "ht-owner-exists",
+        law: "one-owner",
+        title: "The declared owner of household time exists (HT1)",
+        severity: "fail",
+        file: "shared/time/household-time.ts",
+        pattern: /export function householdToday/,
+        expect: "present",
+        violationDetail:
+          "shared/time/household-time.ts does not exist or no longer exports the contract. The Source of Truth Register's Appendix A declares it the owner of household time; a declared owner nobody builds is a 21st time implementation with better manners (CONV1 R1).",
+        passDetail:
+          "The canonical owner exists and exports the § 6 contract (CONV1 P5 / OWN-4).",
+      }),
+      customCheck({
+        id: "ht-reads-no-clock",
+        law: "one-owner",
+        title: "The owner reads no clock — `now` is a parameter (HT5)",
+        severity: "fail",
+        run: async (ctx) => {
+          const src = ctx.sources.get("shared/time/household-time.ts");
+          if (src === undefined) {
+            return { violated: true, detail: "shared/time/household-time.ts is missing." };
+          }
+          // Comments discuss the rule; only code may violate it.
+          const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+          const ambient = /new Date\(\)|Date\.now\(\)|getTimezoneOffset/.test(code);
+          return ambient
+            ? {
+                violated: true,
+                detail:
+                  "household-time.ts reads an ambient clock. HT5: `now` is a parameter, never an ambient read — it is what makes the module testable, replayable and incapable of disagreeing with itself.",
+              }
+            : { violated: false, detail: "The module reads no clock; every instant is supplied by the caller (HT5)." };
+        },
+      }),
+      customCheck({
+        id: "ht-no-rival-season",
+        law: "no-duplicate-runtime-identity",
+        title: "The season rule has exactly one implementation (HT17, OWN-3)",
+        severity: "fail",
+        run: async (ctx) => {
+          // The retired shape: a month read followed directly by a season return.
+          // CONV1 OWN-3 found this THREE times — and two of them used different
+          // month bases, so a reviewer diffing them saw different numbers and
+          // could not tell they agreed.
+          const rivals: string[] = [];
+          ctx.sources.forEach((content, file) => {
+            if (file === "shared/seasonal/season-rule.ts") return;
+            if (file.startsWith("server/tests/")) return;
+            if (file.startsWith("server/verification/")) return;
+            const code = content.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+            if (/getMonth\(\)[\s\S]{0,400}?return\s+"(spring|summer|autumn|winter)"/.test(code)) {
+              rivals.push(file);
+            }
+          });
+          return rivals.length > 0
+            ? {
+                violated: true,
+                detail: `${rivals.length} rival season implementation(s) re-derive the season from a month: ${rivals.join(", ")}. The declared owner is shared/seasonal/season-rule.ts (Register Domain 11); CONV1 P5 (OWN-3) converged three into one.`,
+              }
+            : {
+                violated: false,
+                detail: "One season rule: shared/seasonal/season-rule.ts (Domain 11). Three implementations converged to one (CONV1 P5 / OWN-3).",
+              };
+        },
+      }),
+      customCheck({
+        id: "ht-time-owns-no-season",
+        law: "one-owner",
+        title: "Household Time supplies the season's input, never its answer (HT17)",
+        severity: "fail",
+        run: async (ctx) => {
+          const src = ctx.sources.get("shared/time/household-time.ts") ?? "";
+          const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+          return /"(spring|summer|autumn|winter)"/.test(code)
+            ? {
+                violated: true,
+                detail:
+                  "household-time.ts computes a season. HT17: season is NOT Household Time — a season computed inside the time module is the second owner Principle 2 forbids. The module supplies a civil date; shared/seasonal/season-rule.ts answers.",
+              }
+            : { violated: false, detail: "The time module owns no season (HT17)." };
+        },
+      }),
+      customCheck({
+        id: "ht-nothing-derived-is-stored",
+        law: "no-sync-bridges",
+        title: "Nothing derived from household time is stored (HT3)",
+        severity: "fail",
+        run: async (ctx) => {
+          // A column holding today / this week / the phase / the current planner
+          // week is a permanent sync bridge (Principle 7): it is wrong the moment
+          // the clock moves, and a job to refresh it is the bridge itself.
+          const schema = ctx.sources.get("shared/schema.ts") ?? "";
+          const stored = [
+            /\btodayDate\b|"today_date"/,
+            /\bcurrentWeekNumber\b|"current_week_number"/,
+            /\bphaseOfDay\b|"phase_of_day"/,
+            /\bcachedToday\b|"cached_today"/,
+          ].filter((p) => p.test(schema));
+          return stored.length > 0
+            ? {
+                violated: true,
+                detail:
+                  "shared/schema.ts declares a column holding a household-time DERIVATION (today / current week / phase). HT3: nothing derived is stored — determinism, not memoisation. activity_summary is the register's own cautionary precedent (a derived cache that drifted).",
+              }
+            : {
+                violated: false,
+                detail: "No derivation of household time is stored; today, this week and the phase are computed (HT3).",
+              };
+        },
+      }),
+      customCheck({
+        id: "ht-instant-domains-clean",
+        law: "one-owner",
+        title: "The five MUST-NOT-consume domains hold no clock of the household's (HT10, CP6)",
+        severity: "fail",
+        run: async (ctx) => {
+          // A PERMANENT VERDICT, not a backlog. Trial, Auth, Learning, Caching and
+          // Observation are correct BECAUSE they are INSTANT: a duration is not a
+          // date. "Converging" one would be a new defect wearing a canonical badge.
+          const forbidden: Array<[string, string]> = [
+            ["server/lib/access.ts", "Trial / Subscription"],
+            ["server/intelligence/evidence-learning/evidence-learning-store.ts", "Learning / Evidence"],
+          ];
+          const offenders: string[] = [];
+          for (const [file, domain] of forbidden) {
+            const content = ctx.sources.get(file);
+            if (content === undefined) continue;
+            if (/from ["'].*time\/household-time|householdToday|householdPhase/.test(content)) {
+              offenders.push(`${domain} (${file})`);
+            }
+          }
+          return offenders.length > 0
+            ? {
+                violated: true,
+                detail: `An INSTANT domain consumes Household Time: ${offenders.join(", ")}. HT10/CP6 — a trial's length or an evidence window must never depend on where a family lives. This is a permanent verdict, not a migration backlog.`,
+              }
+            : {
+                violated: false,
+                detail: "The INSTANT domains consume no household clock — correct because a duration is not a date (HT9).",
+              };
+        },
+      }),
+      customCheck({
+        id: "ht-zone-is-the-homes",
+        law: "one-owner",
+        title: "The zone is a property of the home, and there is one of it (HT4, HT2)",
+        severity: "fail",
+        run: async (ctx) => {
+          const schema = ctx.sources.get("shared/schema.ts") ?? "";
+          // Parse each table's own declaration block. A bare regex over the whole
+          // file cannot answer "which TABLE declares this column" — it matches the
+          // word `users` anywhere within reach of the column and reports a
+          // split-brain that does not exist. A gate that fires falsely is worse
+          // than no gate (CONV1 R2), so the question is asked per table.
+          const householdKeys = parseObjectLiteralKeys(schema, "households");
+          if (!householdKeys.includes("timeZone")) {
+            return {
+              violated: true,
+              detail:
+                "households.timeZone is not declared in shared/schema.ts. HT2: the zone is one of Household Time's two facts, owned by Domain 16 — the platform cannot answer 'what time is it for this household' without it (CONV1 P5 / SCH-1).",
+            };
+          }
+          // HT4 — per-member zones are refused: a split-brain over one shared plan.
+          const rivalScopes = (["users", "householdMembers", "userPreferences"] as const).filter(
+            (table) => parseObjectLiteralKeys(schema, table).includes("timeZone"),
+          );
+          return rivalScopes.length > 0
+            ? {
+                violated: true,
+                detail: `A time zone is declared on ${rivalScopes.join(", ")} as well as households. HT4: the zone is a property of the HOME, never of the device, the session or the member — per-member zones are a split-brain over one shared plan.`,
+              }
+            : {
+                violated: false,
+                detail: "One zone, on the household (Domain 16) — a clock is a property of the home (HT4).",
+              };
+        },
+      }),
+    ],
+  },
+
   // ── 22. Learning (EL1) ─────────────────────────────────────────────────────
   {
     id: "learning",

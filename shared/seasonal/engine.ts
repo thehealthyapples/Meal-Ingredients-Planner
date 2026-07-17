@@ -32,6 +32,7 @@ import { CANONICAL_SEED } from "../canonical/foods";
 import { discover } from "../discovery/engine";
 import { stories } from "../stories/engine";
 import type { MealEntry, StoryCard, StoryFact, UKSeason } from "../stories/types";
+import { seasonOfLocalDate } from "./season-rule";
 import { isTextTrustworthy } from "./trust";
 import {
   BLOCK_TITLES,
@@ -86,19 +87,17 @@ function resolveCanonical(slug: string): { slug: string; name: string } {
 
 // ── Season model ───────────────────────────────────────────────────────────────
 //
-// FIXED UK meteorological seasons (Spring = Mar–May, Summer = Jun–Aug,
-// Autumn = Sep–Nov, Winter = Dec–Feb). This matches WS10's seasonOf and WS8's
-// seasonForDate exactly — three engines, one season truth. Hemisphere/location
-// awareness is deliberately deferred (see investigation §"Season Definitions"
-// and SUGGESTION); the entire current food catalogue and seasonal seed are UK,
-// so a Southern-hemisphere season model would point at the wrong produce anyway.
+// CONV1 P5 / OWN-3: this file no longer holds a season rule. It used to carry a
+// private copy, which the comment here defended as a virtue — "three engines, one
+// season truth" — and that was a comment, not an owner. WS11 is Domain 11, the
+// season's DECLARED owner, so the rule now lives beside this file as a leaf
+// (`./season-rule.ts`) that WS8's map and WS10's stories can both reach without a
+// circular import. Same rule, same answers, one implementation.
+//
+// The hemisphere/location deferral and its reasoning moved with the rule.
 
 function seasonOf(date: Date): UKSeason {
-  const m = date.getMonth() + 1;
-  if (m >= 3 && m <= 5) return "spring";
-  if (m >= 6 && m <= 8) return "summer";
-  if (m >= 9 && m <= 11) return "autumn";
-  return "winter";
+  return seasonOfLocalDate(date);
 }
 
 const SEASON_LABEL: Record<UKSeason, string> = {

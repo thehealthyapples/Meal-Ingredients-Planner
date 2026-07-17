@@ -101,6 +101,10 @@ const HOUSEHOLD_10: Household = {
   name: "The Apples",
   inviteCode: "SECRET-JOIN-CODE",
   createdByUserId: 1,
+  // CONV1 P5 / SCH-1: null is the honest state — "THA has not been told this
+  // household's zone" — and it is what every household holds today. No consumer
+  // reads it yet (Phase 3 / CONV1 P6).
+  timeZone: null,
   createdAt: new Date("2025-01-01T00:00:00Z"),
   updatedAt: new Date("2025-01-01T00:00:00Z"),
 };

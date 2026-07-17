@@ -8879,6 +8879,12 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         name: household.name,
         inviteCode: household.inviteCode,
         myRole: myMembership?.member.role ?? "member",
+        // CONV1 P5 / SCH-1: the household's own zone, surfaced so the household can
+        // SEE what THA believes and correct it (PATCH /api/household/time-zone).
+        // A correction path nobody can read is not a correction path. `null` is
+        // shown as null — THA never presents its declared default as though the
+        // household had stated it (CP8).
+        timeZone: household.timeZone,
         members: members.map(({ member, user }) => ({
           userId: member.userId,
           displayName: user.displayName || user.username,
@@ -8895,12 +8901,18 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
   app.post("/api/household", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
-      const { name } = z.object({ name: z.string().min(1).max(100) }).parse(req.body);
+      // CONV1 P5 / SCH-1: the device may DETECT the household's zone at signup
+      // (HT12 — the client may detect the zone and supply the instant; it may
+      // never decide the day). It is optional and unvalidated ids are dropped to
+      // NULL by the write door, never stored and never defaulted.
+      const { name, timeZone } = z
+        .object({ name: z.string().min(1).max(100), timeZone: z.string().max(64).optional() })
+        .parse(req.body);
       const existing = await storage.getHouseholdByUser(req.user!.id);
       if (existing) {
         return res.status(400).json({ message: "You already have an active household." });
       }
-      const household = await storage.createHouseholdForUser(req.user!.id, name);
+      const household = await storage.createHouseholdForUser(req.user!.id, name, timeZone ?? null);
       res.status(201).json(household);
     } catch (err) {
       if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
@@ -8955,6 +8967,32 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       if (err?.message === "NOT_OWNER") return res.status(403).json({ message: "Only the household owner can rename it." });
       console.error("[Household] RENAME error:", err);
       res.status(500).json({ message: "Failed to rename household" });
+    }
+  });
+
+  // CONV1 P5 / SCH-1 — the household's correction path for its own zone.
+  //
+  // A zone detected at signup is a DEVICE'S GUESS; the household is always
+  // believed over it. Without this door the column would be a fact THA inferred
+  // and nobody could correct — which is the shape CP8 forbids, with a schema.
+  // No consumer reads the zone yet: converging them is Phase 3 (CONV1 P6).
+  app.patch("/api/household/time-zone", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const { timeZone } = z.object({ timeZone: z.string().min(1).max(64) }).parse(req.body);
+      const householdId = await getHouseholdForUser(req.user!.id);
+      const updated = await storage.setHouseholdTimeZone(req.user!.id, householdId, timeZone);
+      res.json({ id: updated.id, timeZone: updated.timeZone });
+    } catch (err: any) {
+      if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
+      if (err?.message === "UNKNOWN_ZONE") {
+        return res.status(400).json({ message: "Not a recognised time zone." });
+      }
+      if (err?.message === "NOT_OWNER") {
+        return res.status(403).json({ message: "Only the household owner can change the household's time zone." });
+      }
+      console.error("[Household] TIME ZONE error:", err);
+      res.status(500).json({ message: "Failed to update the household's time zone" });
     }
   });
 

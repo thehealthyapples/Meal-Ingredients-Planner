@@ -243,7 +243,7 @@ export function setupAuth(app: Express) {
       return res.status(403).json({ message: "Private beta — registration is currently closed. Request access to join." });
     }
 
-    const { username, password } = req.body;
+    const { username, password, timeZone } = req.body;
     if (!username || !password) {
       return res.status(400).json({ message: "Username and password are required." });
     }
@@ -257,10 +257,18 @@ export function setupAuth(app: Express) {
         return res.status(409).json({ message: "An account with that email already exists." });
       }
 
-      const user = await storage.createUser({
-        username,
-        password: await hashPassword(password),
-      });
+      // CONV1 P5 / SCH-1: the signing-up device reports the household's zone
+      // (HT12 — the client may DETECT the zone; it may never decide the day). It
+      // is advisory: the write door drops an unknown id to NULL, and the household
+      // can always correct it (PATCH /api/household/time-zone). A zone is never
+      // required to sign up.
+      const user = await storage.createUser(
+        {
+          username,
+          password: await hashPassword(password),
+        },
+        typeof timeZone === "string" ? timeZone : null,
+      );
 
       storage.seedDefaultHouseholdItems(user.id).catch(e =>
         console.warn("[Auth] Failed to seed household items:", e)
@@ -471,7 +479,9 @@ export function setupAuth(app: Express) {
 
   app.post("/api/demo/start", ...authRateLimit("/api/demo/start"), async (req, res, next) => {
     try {
-      const user = await storage.createDemoUser();
+      // CONV1 P5 / SCH-1: the demo device may detect its zone too (HT12).
+      const { timeZone } = req.body ?? {};
+      const user = await storage.createDemoUser(typeof timeZone === "string" ? timeZone : null);
       await storage.seedDemoData(user.id).catch(e =>
         console.error("[Demo] Seed error (non-fatal):", e?.message)
       );

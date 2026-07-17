@@ -104,7 +104,7 @@ The place concepts in §§ 4–8 and § 12 were discovered in prototypes and inv
 
 Adoption here changes **no visual law**. Three things remain exactly as the discoveries themselves declared them (EXP4 § 6, EXP5 § 9.2):
 
-- The depth and light **vocabulary** (ground plane, warm shadows, penumbra) sits beyond the UI Architecture's current flat-surface law (UIA § 4) and may not ship on any surface until the **governed UIA amendment** admits it. Until that amendment lands, UIA § 4 as written remains the binding law of every shipped surface.
+- The depth and light **vocabulary** (ground plane, warm shadows, penumbra) sat beyond the UI Architecture's flat-surface law and could not ship until a **governed UIA amendment** admitted it. **That amendment has landed** — UIA § 4, amended by ODL2 (2026-07-17), admits four named members (the ground plane, one light, warm shadow, the penumbra) and owns them outright. Ownership yielded here in the same change, per § 18 below: this blueprint keeps the *place* direction of §§ 7–8 and cites UIA § 4 for the binding visual law. **UIA § 4 as amended remains the binding law of every shipped surface** — admission of the vocabulary is not permission for a value.
 - The exposure scale and per-domain light values enter as **semantic tokens by admission** (UIA § 16), never as per-surface choices.
 - Each Living Detail is admitted **one at a time** against the Experience Review Questions — never as a batch of charm.
 
@@ -239,7 +239,7 @@ Light is the fastest carrier of THA's emotional temperature, and the house has e
 - **Light is hierarchy's quietest instrument.** Within a room, the primary stands in the light, support waits in the penumbra, quiet content sits in the shade — depth meaning distance, never drama — measured against the accessibility floors before any adoption.
 - **Rooms have lighting, not light shows.** Light never moves, sweeps, or glows. The house's one sanctioned light *moment* remains the arrival's, and it reads as morning sun on a surface: once, softly, carrying warmth rather than attention.
 
-*(The feeling of light is the Experience Language's; every actual value — hue, gradient, shadow colour, contrast — is the UI Architecture's, entering through the § 2.4 governance path.)*
+*(The feeling of light is the Experience Language's. The light **vocabulary** — one light, warm shadow, the penumbra — is now **owned by UIA § 4** (amended by ODL2), which this section cites and does not re-legislate; every actual value — hue, gradient, shadow colour, contrast — is the UI Architecture's, entering as tokens by admission (UIA § 16). What this section keeps is the *place* question: which room stands in how much of that one morning (§ 5.1).)*
 
 ## 8. MATERIALS
 
@@ -262,7 +262,7 @@ The house is built from a small material vocabulary, spoken identically in every
 - **Air is a material.** Generous breathing space is the resting state of every room — what makes it inhabitable rather than furnished to the walls. *(The feeling is Experience Language Principle 8's; the spacing scale is the UI Architecture's.)*
 - **The hand answers physically, identically everywhere.** Hover lifts into the light; press seats; focus is the canonical ring. One interaction feel, product-wide — rooms never invent their own physics.
 
-*(Direction owned here; the binding visual law remains UIA § 4 until the governed amendment of § 2.4 admits this vocabulary, and every value enters as tokens by admission. No surface ships this section ahead of that path.)*
+*(Direction owned here; the **ground plane and its material vocabulary are now owned by UIA § 4** (amended by ODL2), which this section cites and does not re-legislate — ownership yielded in that same change, per § 18. Every value still enters as tokens by admission (UIA § 16). No surface ships a value ahead of that admission.)*
 
 ## 9. MOTION
 
@@ -467,10 +467,11 @@ The star is not a rule and adds none; it is the direction all the rules point. A
 - **Change enters by governance, never by shipping.** A new room in the map (§ 5.1), a change to a domain's exposure level, a new or retired Living Detail, or a new spatial anti-pattern is admitted the way any governing rule is — named, checked for conflict against this document and its governors, and added deliberately. A surface that quietly assumes one is a defect regardless of its quality.
 - **One rule, one owner, forever.** If any statement in this blueprint is found to duplicate a rule owned elsewhere, the statement here is the defect and is corrected to a citation. If a concern owned here later earns a fuller governing home (for example, the depth/light vocabulary graduating into the UI Architecture by amendment), this document yields ownership in the same change and cites the new owner — one owner per rule survives every migration.
 - **Open items at adoption, named so they are not lost:**
-  1. **The orchard's owner** — the environment asset has no named canonical owner in the adoption register yet (§ 6.1); it needs one before exposure levels become governed tokens.
+  1. ~~**The orchard's owner**~~ — **CLOSED by ODL2 (2026-07-17).** The environment asset's named canonical owner is `components/layout/orchard-backdrop.tsx`, recorded in the adoption register as the `orchard-environment` concern. The register row that had stood since CONV1-P3 was *named* "Orchard exposure" while in fact owning the asset, and disclaimed the scale in its own text — so the asset looked unowned and the scale looked owned, when the truth was the reverse. ODL2 renamed it to what it owns and gave the E0–E3 scale its own row. The § 6.1 requirement is met; the ordering gate this item imposed on exposure tokens is lifted.
   2. **Home's header** — the live Home and the realm surfaces currently present two shell treatments; one must be canonical or the exception recorded in the register (§ 14).
-  3. **The UIA § 4 amendment** — the ground-plane/light vocabulary of §§ 7–8 remains unshippable until the governed amendment specified by EXP4 § 6 / EXP5 § 9.2 lands.
+  3. ~~**The UIA § 4 amendment**~~ — **CLOSED by ODL2 (2026-07-17).** The governed amendment has landed: UIA § 4 admits the ground-plane/light vocabulary as four named members and owns it, and §§ 7–8 here yielded ownership in that same change (§ 18 third bullet). The vocabulary of §§ 7–8 is no longer unshippable *as vocabulary*. It remains unshippable *as values* until each is admitted as a semantic token (UIA § 16) with its first consumer — see the new open item 5. ODL2 read EXP4 § 6 / EXP5 § 9.2 as **evidence informing** the amendment, not as its specification, resolving the contradiction between this item's "specified by" and § 2.4's "never to be read as law": the specification is UIA § 4's own text, which is the only place it could lawfully live.
   4. **Dark mode** — the entire light vocabulary is designed in daylight; any offering of dark mode must resolve every exposure and light token completely (UIA § 7's complete-mode law) and is unexplored design work.
+  5. **The exposure and depth token *values*** — opened by ODL2 (2026-07-17), which closed items 1 and 3. The *names and intent* are admitted (UIA § 4, § 16); no value exists in the definition source and no surface consumes one. This is deliberate: the adoption register forbids authoring a foundation and adopting it later, so the values land **with their first consumer**, in the workstream that builds Home's E3 — not before. Owner: Colin Clapson, with the North Star Home implementation. Until then every surface stands where it stands today (rooms at E1/E0 on the warm canvas; arrival at E3), and the pre-existing raw `opacity: 0.90` in `orchard-backdrop.tsx` plus the three dead `--orchard-*` tokens are that workstream's to resolve (UIA § 16: a raw value in a surface is a defect).
 
 ---
 

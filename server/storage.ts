@@ -1,5 +1,6 @@
 import { User, InsertUser, Meal, MealSummary, InsertMeal, Nutrition, InsertNutrition, ShoppingListItem, InsertShoppingListItem, MealAllergen, IngredientSwap, MealPlan, InsertMealPlan, MealPlanEntry, InsertMealPlanEntry, Diet, MealDiet, MealCategory, SupermarketLink, ProductMatch, InsertProductMatch, IngredientSource, InsertIngredientSource, NormalizedIngredient, InsertNormalizedIngredient, GroceryProduct, InsertGroceryProduct, UserPreferences, InsertUserPreferences, Additive, InsertAdditive, ProductAdditive, InsertProductAdditive, BasketItem, InsertBasketItem, MealTemplate, InsertMealTemplate, PlannerWeek, PlannerDay, PlannerEntry, InsertPlannerEntry, UserStreak, UserHealthTrend, ProductHistory, InsertProductHistory, FreezerMeal, InsertFreezerMeal, MealPlanTemplate, InsertMealPlanTemplate, MealPlanTemplateItem, InsertMealPlanTemplateItem, AdminAuditLog, UserPantryItem, ShoppingListExtra, MealPairing, InsertMealPairing, IngredientProduct, InsertIngredientProduct, Household, HouseholdMember, HouseholdEaterRow, WeekEaterOverride, FoodDiaryDay, FoodDiaryEntry, FoodDiaryMetrics, InsertFoodDiaryEntry, InsertFoodDiaryMetrics, users, meals, nutrition, shoppingList, mealAllergens, ingredientSwaps, mealPlans, mealPlanEntries, diets, mealDiets, mealCategories, supermarketLinks, productMatches, ingredientSources, normalizedIngredients, groceryProducts, userPreferences, additives, productAdditives, basketItems, mealTemplates, plannerWeeks, plannerDays, plannerEntries, userStreaks, userHealthTrends, productHistory, freezerMeals, mealPlanTemplates, mealPlanTemplateItems, adminAuditLog, userPantryItems, shoppingListExtras, mealPairings, ingredientProducts, households, householdMembers, householdEaters, plannerEntryEaters, plannerWeekEaterOverrides, foodDiaryDays, foodDiaryEntries, foodDiaryMetrics, foodKnowledge, FoodKnowledge, siteSettings, mealItems, MealItem, InsertMealItem, userItemUsage, savingsEvents, SavingsEvent, InsertSavingsEvent, pantryIngredientKnowledge, PantryIngredientKnowledge, mealUpliftApplications, MealUpliftApplication, InsertMealUpliftApplication, weekProvisioningItems, WeekProvisioningItem } from "@shared/schema";
 import { normalizeIngredientKey } from "@shared/normalize";
+import { isKnownZone } from "@shared/time/household-time";
 import { deriveAcquisitionFromLegacy } from "@shared/recipe-acquisition";
 import { db } from "./db";
 import { eq, and, ilike, or, sql, inArray, isNull, isNotNull, desc } from "drizzle-orm";
@@ -54,7 +55,7 @@ export type ReadyMealLibraryItem = {
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  createUser(user: InsertUser, timeZone?: string | null): Promise<User>;
   updateUserPreference(id: number, measurementPreference: string): Promise<User | undefined>;
   getMeals(userId: number): Promise<Meal[]>;
   getMealsSummary(userId: number): Promise<MealSummary[]>;
@@ -260,7 +261,8 @@ export interface IStorage {
   // ── Household System ────────────────────────────────────────────────────────
   getHouseholdByUser(userId: number): Promise<{ household: Household; members: HouseholdMember[] } | null>;
   getUserHouseholdRole(userId: number): Promise<string | null>;
-  createHouseholdForUser(userId: number, name: string): Promise<Household>;
+  createHouseholdForUser(userId: number, name: string, timeZone?: string | null): Promise<Household>;
+  setHouseholdTimeZone(userId: number, householdId: number, timeZone: string): Promise<Household>;
   getHouseholdWithMembers(householdId: number): Promise<{ household: Household; members: { member: HouseholdMember; user: { id: number; displayName: string | null; username: string } }[] }>;
   findHouseholdByInviteCode(inviteCode: string): Promise<Household | null>;
   joinHousehold(userId: number, inviteCode: string): Promise<{ household: Household; role: string }>;
@@ -316,7 +318,7 @@ export interface IStorage {
   getSavingsAggregates(userId: number): Promise<SavingsAggregates>;
 
   // ── Demo User Lifecycle ───────────────────────────────────────────────────────
-  createDemoUser(): Promise<User>;
+  createDemoUser(timeZone?: string | null): Promise<User>;
   seedDemoData(userId: number): Promise<void>;
   cleanupDemoUser(userId: number): Promise<void>;
 
@@ -444,7 +446,14 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
+  /**
+   * CONV1 P5 / SCH-1: `timeZone` is the zone the SIGNING-UP DEVICE reported. This
+   * is the signup detection point — the household is created here, inline, not via
+   * createHouseholdForUser (which no client path calls). Optional; an unknown id is
+   * dropped to NULL rather than stored, and NULL is never silently replaced by the
+   * declared default (CP8).
+   */
+  async createUser(insertUser: InsertUser, timeZone?: string | null): Promise<User> {
     return await db.transaction(async (tx) => {
       const [user] = await tx.insert(users).values(insertUser).returning();
 
@@ -453,6 +462,7 @@ export class DatabaseStorage implements IStorage {
         name: `${user.username}'s Household`,
         inviteCode,
         createdByUserId: user.id,
+        timeZone: isKnownZone(timeZone) ? timeZone : null,
       }).returning();
 
       await tx.insert(householdMembers).values({
@@ -2561,7 +2571,15 @@ export class DatabaseStorage implements IStorage {
     throw new Error("Failed to generate unique invite code after 20 attempts");
   }
 
-  async createHouseholdForUser(userId: number, name: string): Promise<Household> {
+  /**
+   * CONV1 P5 / SCH-1: `timeZone` is the household's IANA zone, detected by the
+   * device at signup (HT12 — the client may detect the zone; it may never decide
+   * the day). It is OPTIONAL and stays NULL when absent or unrecognised: NULL is
+   * the honest "THA has not been told", and is never silently replaced by the
+   * declared default (CP8). An unknown id is dropped rather than stored, so a
+   * malformed zone can never become a household's civil frame.
+   */
+  async createHouseholdForUser(userId: number, name: string, timeZone?: string | null): Promise<Household> {
     const inviteCode = await this.generateUniqueInviteCode();
     let createdHousehold: Household;
     await db.transaction(async (tx) => {
@@ -2569,6 +2587,7 @@ export class DatabaseStorage implements IStorage {
         name,
         inviteCode,
         createdByUserId: userId,
+        timeZone: isKnownZone(timeZone) ? timeZone : null,
       }).returning();
       createdHousehold = hh;
       await tx.insert(householdMembers).values({
@@ -2760,6 +2779,38 @@ export class DatabaseStorage implements IStorage {
     }
     const [updated] = await db.update(households)
       .set({ name, updatedAt: new Date() })
+      .where(eq(households.id, householdId))
+      .returning();
+    return updated;
+  }
+
+  /**
+   * The correction path for the household's zone (CONV1 P5 / SCH-1).
+   *
+   * A detected zone is a guess by a device; the household is always believed over
+   * it. This is the door that makes `households.timeZone` a fact the home states
+   * rather than one THA inferred — without it, a wrong zone would be permanent and
+   * the column would be a fabrication with a schema.
+   *
+   * Owner-only, following `renameHousehold`'s precedent for household-level facts:
+   * the zone is a property of the HOME (HT4), shared by every member, so it is
+   * governed like the household's other shared facts. This introduces no new
+   * permission model.
+   */
+  async setHouseholdTimeZone(userId: number, householdId: number, timeZone: string): Promise<Household> {
+    if (!isKnownZone(timeZone)) throw new Error("UNKNOWN_ZONE");
+    const membership = await db.query.householdMembers.findFirst({
+      where: and(
+        eq(householdMembers.userId, userId),
+        eq(householdMembers.householdId, householdId),
+        eq(householdMembers.status, "active")
+      ),
+    });
+    if (!membership || membership.role !== "owner") {
+      throw new Error("NOT_OWNER");
+    }
+    const [updated] = await db.update(households)
+      .set({ timeZone, updatedAt: new Date() })
       .where(eq(households.id, householdId))
       .returning();
     return updated;
@@ -3404,7 +3455,17 @@ export class DatabaseStorage implements IStorage {
   }
   // ── Demo User Lifecycle ───────────────────────────────────────────────────────
 
-  async createDemoUser(): Promise<User> {
+  /**
+   * CONV1 P5 / SCH-1: `timeZone` is the demo device's detected zone — the second
+   * household-creation door, kept consistent with createUser so a demo household
+   * is not born without the fact every other household gets.
+   *
+   * NOTE `demoExpiresAt` below is a DURATION (issue + 20 minutes) and stays an
+   * INSTANT: Trial/Subscription is one of the five domains that must NEVER consume
+   * household time (HT10, CP6). A trial's length must not depend on where the
+   * family lives. It is correct as it is, and this change does not touch it.
+   */
+  async createDemoUser(timeZone?: string | null): Promise<User> {
     const { randomBytes } = await import("crypto");
     const suffix = randomBytes(6).toString("hex");
     const username = `demo_${suffix}@demo.thehealthyapples.com`;
@@ -3429,6 +3490,7 @@ export class DatabaseStorage implements IStorage {
         name: "Demo Household",
         inviteCode,
         createdByUserId: user.id,
+        timeZone: isKnownZone(timeZone) ? timeZone : null,
       }).returning();
 
       await tx.insert(householdMembers).values({

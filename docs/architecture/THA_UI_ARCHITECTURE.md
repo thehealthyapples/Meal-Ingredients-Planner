@@ -96,10 +96,32 @@ Calm Orchard is defined by its character, not by its current values:
 - **A warm, light, natural canvas.** The product feels like daylight in a kitchen: warm neutrals, generous whitespace, an atmosphere of unhurried order. Never clinical white, never dark-and-dramatic by default.
 - **One green voice.** A single muted, natural green is the brand's voice — the colour of the primary action and the brand's presence. There is exactly one "THA green"; no neighbouring greens compete with it.
 - **One warm accent.** A single warm amber-gold accent provides the language's warmth. It is an accent, not a second voice: used sparingly, never as ambient decoration, and never doubling as an alarm colour.
-- **Flat, frosted, calm surfaces.** Content sits on soft, flat cards — no heavy shadows, no skeuomorphic depth. Elevation is reserved for what genuinely floats above the page (overlays), so that when depth appears, it means something.
+- **Calm surfaces, on a ground, in one light.** Content sits on soft cards, and those cards rest on a warm ground — never directly on the environment. Depth is shallow, warm, and single-directional: a shadow's whole job is to say how far one surface sits above another. No skeuomorphic depth, no drama, no stage. Elevation remains reserved for what genuinely floats above the page (overlays), so that when depth appears, it means something. The vocabulary this permits is named and bounded below.
 - **Realm tinting as orientation.** Each realm of the product (cooking, planning, shopping, and their peers) may carry a quiet identifying tint — a whisper of place that aids orientation. Realm colour is *wayfinding only*: never emphasis, never status, never a second palette inside content.
 - **Whitespace as a material.** Space is the language's principal luxury. Density is a designed, governed choice (§ 9), never the accident of cramming.
 - **Quiet by default.** Nothing moves, pulses, glows, or saturates without a reason the person would recognise as their own.
+
+Calm Orchard renders **one room, in one light, at one hour**. Its depth and light vocabulary admits **four members, and no more** — each of which describes space; none of which decorates it:
+
+| Member | What it is | Where it may appear |
+|---|---|---|
+| **The ground plane** | The prepared warm surface a workspace rests on — the room's identity, made material | **One per workspace, never nested.** Any type that must be read legibly gets ground beneath it, without negotiation |
+| **One light** | A single product-wide light: one direction, one hour, a perpetual bright morning | Every shadow in the product agrees with it. No surface lights itself; no room keeps its own hour |
+| **Warm shadow** | Distance made visible. Its hue is drawn from the room's warm foreground — never black, never grey | Wherever a surface genuinely sits above another, at the strength that distance warrants — never more |
+| **The penumbra** | Hierarchy carried by light: the primary stands in the light, support waits in the penumbra, quiet content sits in the shade | Wherever § 5's order is better served by light than by spending colour |
+
+**Depth is a description of space, not a material of its own.** The vocabulary is admitted under one condition and constrained by three prohibitions:
+
+- **It is admitted to describe space.** A ground, a shadow, or a fall of light is lawful exactly when it answers *how far apart are these things* or *what matters here*. Depth that answers neither is decoration — and decoration is what this section has forbidden since the day it was written.
+- **It never carries meaning that colour, weight, or words should carry.** Depth is not status, not urgency, not emphasis, and never a second hierarchy competing with § 5. Light demotes; it never alarms.
+- **It never becomes a scene.** No parallax, no ambient life, no drifting, no gloss, no glassmorphism, no stage. The person is at home, not inside a rendering. § 11 is unchanged and unbent: this vocabulary is admitted **still**.
+- **Its values are tokens, never surface choices.** The four names above are admitted here; every value that resolves them lives in the one definition source and enters by admission (§ 16, § 17). A hand-picked shadow on a surface is a defect exactly as a hand-picked colour is (§ 7).
+
+**Radius descends with resting.** Curvature is how a surface says what it is lying on, so it is governed rather than chosen: **a surface takes the radius step below whatever it rests on** — ground, then what sits on the ground, then what sits on that — from a small named ladder in the one definition source, never an arbitrary value. Two surfaces at the same radius read as the same plane, and a surface curved *more* than its container reads as a mistake the eye notices before the mind does. Depth is limited to those three steps by *one ground per workspace, never nested*: a language that needed a fourth step would be describing a room nobody is standing in. Ungrounded UI keeps the card default, which is deliberately the same step as the ground's support tier — a card on the canvas and a card on the counter are the same object, in different rooms.
+
+**Orchard exposure.** *How much* orchard a room admits is a question about place, not about look: its E0–E3 scale and its per-domain map are the Experience Blueprint's (§ 6.2 and § 5.1 there), and this document does not restate them. What is admitted **here** is their expression — exposure resolves through named semantic tokens (§ 16), set once per domain, never a per-surface or per-component choice, never adjusted for taste mid-feature. The orchard never carries working text, and never animates.
+
+> **Why depth and not flatness.** The previous rule — *"Content sits on soft, flat cards — no heavy shadows, no skeuomorphic depth"* — was written to prevent the failure this document exists to prevent: a product that reaches for drama because it has nothing to say, until every surface competes and none is calm. That danger is real and the rule was right about it. But it defended against the danger by forbidding the *category*, and in doing so it also forbade the one thing a warm, physical, kitchen-table product most needs — a room that reads as a room, in which the eye knows what is near, what is far, and what is merely resting on the counter. Flatness was never the goal; **calm** was, and flatness was one way of buying it cheaply. The amendment keeps the defence and moves it to where the danger actually lives: **not in depth's existence, but in its drama.** Depth that is shallow, warm, single-directional, still, and tokenised cannot become the stage this section feared, because every member above is bounded by the distance it describes, and none of them can be spent for effect. This remains **one visual language with one definition source** — the depth vocabulary is a governed member of Calm Orchard, not an exception to it, and it obeys every other rule in this section, § 5's hierarchy and § 11's stillness included.
 
 Rules of adoption:
 
@@ -247,6 +269,7 @@ The test for every trust decision: **a person who believes exactly what the pixe
 Experience Architecture § 16 makes accessibility a design input. At the visual layer it becomes measurable floors — checked before adoption, not retrofitted:
 
 - **Contrast is measured**, to recognised accessibility standards as a floor, for every semantic colour pairing in every supported mode — including status and realm tints, in the one place their values are defined.
+- **A graded surface is measured at its worst point.** A gradient, wash, or fall of light has no single colour pairing, and therefore has no contrast at all until one is declared. Any graded surface that carries text names the semantic role it is measured *against* and is measured at **the extreme of its range least favourable to what sits on it** — a surface that clears the floor at one end and fails at the other has failed, and the average is not a defence. **A graded surface that carries no text declares a ceiling instead of a pairing**: the strength it may never exceed, named as a token (§ 16), so that ambience cannot be turned up later by taste. Every graded surface has one or the other, and none has neither.
 - **Every interactive element** has a visible focus state, a minimum comfortable touch target, and an accessible name — icon-only controls included, without exception.
 - **Text scales to at least double size** without loss of content or capability; layout reflows rather than truncates.
 - **Meaning is never colour-alone** (§ 7), imagery never carries unnamed meaning (§ 10), and motion never carries meaning without a still equivalent (§ 11).
@@ -257,7 +280,7 @@ Experience Architecture § 16 makes accessibility a design input. At the visual 
 
 The mechanism by which everything above stays true is one semantic naming system:
 
-- **Three tiers.** *Primitive tokens* (the raw scales: colour values, size steps, duration steps) → *semantic tokens* (named intent: surface, muted text, success, card radius, fast duration) → *component tokens* (only where a canonical component needs a governed override).
+- **Three tiers.** *Primitive tokens* (the raw scales: colour values, size steps, duration steps, shadow steps, exposure levels) → *semantic tokens* (named intent: surface, muted text, success, card radius, fast duration, ground plane, warm shadow, orchard exposure) → *component tokens* (only where a canonical component needs a governed override).
 - **Surfaces speak semantic only.** Pages and components reference the semantic tier exclusively. Primitive values appear in exactly one definition source; a raw value in a surface is a defect.
 - **Modes and densities are value sets.** Light, dark, and every density resolve the same semantic names to different values in the one definition source. Offering a mode means resolving *every* name in it — a partially-resolved mode is not offered.
 - **One definition source, pointed to.** This document defines token *names and intent* (enduring); their *values* live in exactly one implementation source that this document points to and never copies. The document, the definitions, and the surfaces cannot be allowed to drift apart, and a value's home is therefore singular.
@@ -285,8 +308,18 @@ Every implementation that changes anything a person sees must pass this checklis
 
 □ One visual language
   Does every touched surface speak Calm Orchard — canvas, one green voice,
-  one warm accent, flat calm surfaces, realm tint as orientation only?
-  Nothing introduces a second identity?
+  one warm accent, calm surfaces on a ground in one light, realm tint as
+  orientation only? Nothing introduces a second identity?
+
+□ Depth, light and ground discipline (§ 4)
+  If this surface uses ground, shadow, or the fall of light: does every
+  shadow describe a real distance, under the one product-wide light, in a
+  hue drawn from the room rather than from black? Is there exactly one
+  ground, unnested, beneath any type that must be read? Is the depth still
+  — no parallax, no ambience, no stage? Does it carry no meaning that
+  colour, weight or words should carry? Is every value a token admitted
+  through governance, and every exposure level a per-domain constant rather
+  than a per-surface choice?
 
 □ Beauty through consistency
   Does the change reuse the canonical anatomy, scale, and patterns rather

@@ -1137,6 +1137,27 @@ export const households = pgTable("households", {
   name: text("name").notNull(),
   inviteCode: text("invite_code").notNull().unique(),
   createdByUserId: integer("created_by_user_id"),
+  /**
+   * The household's IANA time zone, e.g. "Europe/London". NULLABLE BY DESIGN.
+   *
+   * TIME3 / CONV1 P5 (SCH-1). One of Household Time's two facts (HT2), owned here
+   * on Domain 16 — an EXISTING owner, extended. No new domain, no new store, no
+   * new write funnel. The rules that read it live with their own owner,
+   * `shared/time/household-time.ts`, which owns none of this data (HT1).
+   *
+   * A CLOCK IS A PROPERTY OF THE HOME (HT4) — never of the device, the session or
+   * the member. A family on holiday is still a household at home. Per-member zones
+   * are refused: they are a different fact at a different scope and would be a
+   * split-brain over one shared plan.
+   *
+   * NULL IS AN HONEST ANSWER, and it means "THA has not been told" — which is not
+   * the same as, and must never be silently overwritten by, "THA assumed
+   * Europe/London" (CP8; Core Principle 6). Detected at signup from the device and
+   * correctable by the household thereafter; when it is NULL, consumers fall back
+   * to the DECLARED default in shared/time/household-time.ts, whose provenance is
+   * recorded there. A declared default is not fabrication; a silent one is.
+   */
+  timeZone: text("time_zone"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

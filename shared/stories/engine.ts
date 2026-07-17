@@ -29,6 +29,7 @@
 // Layer 1 (the food–food graph) — that is WS8's domain.
 
 import { CANONICAL_SEED } from "../canonical/foods";
+import { seasonOfLocalDate } from "../seasonal/season-rule";
 import { isTextTrustworthy } from "./trust";
 import { JOURNEY_CLUSTERS } from "./journey-map";
 import {
@@ -134,12 +135,10 @@ function recencyFactor(lastSeen: Date, now: Date): number {
   return 0.1;
 }
 
+// CONV1 P5 / OWN-3: was a private copy, byte-identical to WS11's. The season's
+// declared owner is Domain 11 — `shared/seasonal/season-rule.ts`. Same answers.
 function seasonOf(date: Date): UKSeason {
-  const m = date.getMonth() + 1;
-  if (m >= 3 && m <= 5) return "spring";
-  if (m >= 6 && m <= 8) return "summer";
-  if (m >= 9 && m <= 11) return "autumn";
-  return "winter";
+  return seasonOfLocalDate(date);
 }
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];

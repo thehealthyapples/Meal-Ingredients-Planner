@@ -16,6 +16,7 @@
 // becomes a derived curated view), never become a fourth representation.
 // See docs/investigations/knowledge/WS0X_4_FOOD_INTELLIGENCE_CONSOLIDATION_GATE.md.
 
+import { seasonOfLocalDate } from "../seasonal/season-rule";
 import type { UKSeason } from "./types";
 
 export const SEASON_SEED: Record<UKSeason, Array<{ slug: string; name: string }>> = {
@@ -59,13 +60,20 @@ export const SEASON_SEED: Record<UKSeason, Array<{ slug: string; name: string }>
   ],
 };
 
-/** UK meteorological seasons from a date (month-based, geography-honest). */
+/**
+ * UK meteorological seasons from a date.
+ *
+ * CONV1 P5 / OWN-3: the rule this used to hand-roll now lives with its DECLARED
+ * owner — `shared/seasonal/season-rule.ts` (Register Domain 11). This is a thin
+ * delegation, kept exported because nine consumers import it from here; it holds
+ * no season rule of its own. Behaviour is unchanged (proven byte-identical across
+ * a four-year sweep in `server/tests/test-time3-household-time.ts` § 10).
+ *
+ * The process-local frame it reads is Phase 3's target, not this phase's — see the
+ * adapter's own retirement note.
+ */
 export function seasonForDate(date: Date): UKSeason {
-  const m = date.getMonth(); // 0 = Jan
-  if (m >= 2 && m <= 4) return "spring"; // Mar–May
-  if (m >= 5 && m <= 7) return "summer"; // Jun–Aug
-  if (m >= 8 && m <= 10) return "autumn"; // Sep–Nov
-  return "winter"; // Dec–Feb
+  return seasonOfLocalDate(date);
 }
 
 export const SEASON_LABEL: Record<UKSeason, string> = {

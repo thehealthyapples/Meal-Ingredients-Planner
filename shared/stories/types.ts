@@ -31,7 +31,8 @@ export type StoryType =
   | "seasonal_habits"   // 4. Summer became: Tomatoes, Basil, Courgettes.
   | "food_journey";     // 5. Chickpeas → butter beans → cannellini beans.
 
-export type UKSeason = "spring" | "summer" | "autumn" | "winter";
+// CONV1 P5 / OWN-3: declared with its rule (Domain 11). Re-exported, not re-declared.
+export type { UKSeason } from "../seasonal/season-rule";
 
 /** Provenance of a meal entry — shapes the verbs used in story text. */
 export type MealSource = "planned" | "logged";

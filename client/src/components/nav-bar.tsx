@@ -610,7 +610,7 @@ export function DesktopSidebar() {
           style={{
             background:
               "linear-gradient(180deg, hsl(var(--accent)) 0%, hsl(var(--background)) 80%)",
-            opacity: "var(--orchard-sidebar-opacity, 0.40)",
+            opacity: "var(--sidebar-tint-opacity)",
           }}
         />
 

@@ -50,22 +50,10 @@ const STUDIES: Study[] = [
     supportTestId: "card-ma-shopping",
     supportPairSel: '[data-testid="card-ma-shopping"] >> xpath=ancestor::div[contains(@class,"grid")]',
   },
-  {
-    key: "b-atmosphere",
-    route: "/dev/material-b-atmosphere",
-    mountTestId: "material-b",
-    primaryTestId: "card-mb-todays-meals",
-    supportTestId: "card-mb-shopping",
-    supportPairSel: '[data-testid="card-mb-shopping"] >> xpath=ancestor::div[contains(@class,"grid")]',
-  },
-  {
-    key: "c-restraint",
-    route: "/dev/material-c-restraint",
-    mountTestId: "material-c",
-    primaryTestId: "card-mc-todays-meals",
-    supportTestId: "row-mc-shopping",
-    supportPairSel: '[data-testid="mc-support"]',
-  },
+  // ODL2 (2026-07-17): B and C lost the selection and were deleted. A survives
+  // as the §4 vocabulary's reference implementation, so this harness survives
+  // with it — it is now a regression capture for the canonical material rather
+  // than a comparison between candidates. Both die when Home's E3 adopts.
 ];
 
 async function login(ctx: BrowserContext) {

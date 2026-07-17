@@ -55,29 +55,50 @@ import {
   useHomeData, useSceneHeight, DashboardLink, todayLabel, WEEKLY_PLANT_TARGET,
 } from "./exp2-shared";
 
-// The material, named once. Warm-hued shadows describe distance-from-counter;
-// the inset hairline is the rim of light along a surface's top edge.
+// The material, named once — and, since ODL2, named in the ONE place names live.
+//
+// This study won EXP4's selection and graduated into UIA §4 as the canonical
+// depth and light vocabulary (ground plane, one light, warm shadow, penumbra).
+// It won on law rather than on taste: studies B and C set type directly on the
+// orchard, and Blueprint §6.1 gives type ground beneath it "without negotiation".
+// Both were deleted when this one graduated (§17, retire on introduction).
+//
+// Every value below used to be an inline arbitrary utility. EXP4 said so out
+// loud and said why: a study that tokenised first would have put values in the
+// definition source before governance admitted the names. Governance has now
+// admitted them, so the values moved to client/src/index.css (§16: one
+// definition source) and this file resolves them like any other surface. The
+// rendering is unchanged — same numbers, one home.
+//
+// The `dark:` variants are gone, not lost: the tokens resolve per mode, which
+// is what a mode is for. At night every warm shadow resolves to none, because
+// the vocabulary is a morning sun and at night there is no sun.
+//
+// THIS PAGE IS THE VOCABULARY'S REFERENCE IMPLEMENTATION, and dev-only. It is
+// the sole consumer keeping these tokens honest until Home's E3 adopts them —
+// which is also its deletion trigger, recorded in the adoption register
+// (`depth-light-ground`). It does not survive Home.
+// NOTE the `shadow:` type hint on every box-shadow below. Without it Tailwind
+// reads `shadow-[var(--x)]` as a shadow COLOUR — it cannot tell a colour from a
+// box-shadow inside a var() — and silently emits `--tw-shadow-color`, which
+// leaves the surface with no shadow at all. The hint is not decoration; it is
+// the difference between this vocabulary rendering and not.
 const M = {
   ground:
-    "rounded-[1.75rem] border border-[hsl(36,28%,88%)]/70 bg-[hsl(42,40%,97%)]/75 backdrop-blur-md " +
-    "shadow-[0_1px_3px_hsl(28_25%_28%/0.05)] " +
-    "dark:bg-card/40 dark:border-border/30 dark:shadow-none",
+    "rounded-[var(--radius-ground)] border border-[var(--ground-plane-border)] " +
+    "bg-[var(--ground-plane)] backdrop-blur-[var(--ground-blur)] shadow-[shadow:var(--shadow-ground)]",
   primary:
-    "rounded-2xl border-[hsl(36,30%,91%)] bg-white " +
-    "shadow-[inset_0_1px_0_hsl(48_60%_98%),0_1px_2px_hsl(28_25%_28%/0.05),0_10px_24px_-10px_hsl(28_30%_25%/0.16)] " +
-    "dark:bg-card dark:border-border/40 dark:shadow-none",
+    "rounded-[var(--radius-primary)] border-[var(--surface-primary-border)] " +
+    "bg-[var(--surface-primary)] shadow-[shadow:var(--shadow-primary)]",
   support:
-    "h-full rounded-xl border-[hsl(36,26%,90%)]/80 bg-white/65 backdrop-blur-[2px] " +
-    "shadow-[inset_0_1px_0_hsl(48_50%_97%/0.7),0_1px_2px_hsl(28_25%_28%/0.04),0_4px_10px_-6px_hsl(28_30%_25%/0.10)] " +
-    "dark:bg-card/70 dark:border-border/40 dark:shadow-none " +
+    "h-full rounded-[var(--radius-support)] border-[var(--surface-support-border)] " +
+    "bg-[var(--surface-support)] backdrop-blur-[var(--surface-blur)] shadow-[shadow:var(--shadow-support)] " +
     // The hand: hover lifts, press settles, nothing moves unasked.
     "transition-[transform,box-shadow,background-color] duration-200 ease-out motion-reduce:transition-none " +
-    "hover:-translate-y-0.5 hover:bg-white/85 " +
-    "hover:shadow-[inset_0_1px_0_hsl(48_60%_98%),0_1px_2px_hsl(28_25%_28%/0.05),0_10px_22px_-9px_hsl(28_30%_25%/0.16)] " +
-    "active:translate-y-0 " +
-    "active:shadow-[inset_0_1px_0_hsl(48_50%_97%/0.7),0_1px_2px_hsl(28_25%_28%/0.06),0_2px_6px_-4px_hsl(28_30%_25%/0.12)]",
+    "hover:-translate-y-0.5 hover:bg-[var(--surface-support-hover)] hover:shadow-[shadow:var(--shadow-support-hover)] " +
+    "active:translate-y-0 active:shadow-[shadow:var(--shadow-support-press)]",
   supportLink:
-    "block h-full rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+    "block h-full rounded-[var(--radius-support)] outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
 } as const;
 
 export default function MaterialAWarmLayersPage() {

@@ -96,14 +96,14 @@ const ArrivalS2WalkingHomePage = import.meta.env.DEV
 // EXP4 — three development-only Materiality & Depth studies: how THA should
 // occupy visual space (layers · light · restraint). Same load-bearing ternary
 // as ARRIVAL1 above, so nothing ships in the production bundle.
+// ODL2 (2026-07-17): Study A won EXP4's selection and graduated into UIA §4 as
+// the canonical depth/light vocabulary; it survives as that vocabulary's
+// dev-only reference implementation until Home's E3 adopts the tokens.
+// Studies B (material-b-atmosphere) and C (material-c-restraint) LOST and were
+// deleted in the same change — both set type directly on the orchard, which
+// Blueprint §6.1 forbids without negotiation.
 const MaterialAWarmLayersPage = import.meta.env.DEV
   ? lazy(() => import("@/pages/dev/material-a-warm-layers"))
-  : null;
-const MaterialBAtmospherePage = import.meta.env.DEV
-  ? lazy(() => import("@/pages/dev/material-b-atmosphere"))
-  : null;
-const MaterialCRestraintPage = import.meta.env.DEV
-  ? lazy(() => import("@/pages/dev/material-c-restraint"))
   : null;
 const DashboardPage = lazy(() => import("@/pages/dashboard"));
 const FoodDetailPage = lazy(() => import("@/pages/food-detail-page"));
@@ -377,18 +377,6 @@ function Router() {
         <Route
           path="/dev/material-a-warm-layers"
           component={() => <ProtectedRoute component={MaterialAWarmLayersPage} />}
-        />
-      )}
-      {MaterialBAtmospherePage && (
-        <Route
-          path="/dev/material-b-atmosphere"
-          component={() => <ProtectedRoute component={MaterialBAtmospherePage} />}
-        />
-      )}
-      {MaterialCRestraintPage && (
-        <Route
-          path="/dev/material-c-restraint"
-          component={() => <ProtectedRoute component={MaterialCRestraintPage} />}
         />
       )}
       <Route path="/dashboard" component={() => <ProtectedRoute component={DashboardPage} />} />

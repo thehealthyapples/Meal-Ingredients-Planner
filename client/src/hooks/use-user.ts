@@ -71,10 +71,23 @@ export function useUser() {
 
   const registerMutation = useMutation({
     mutationFn: async (credentials: InsertUser) => {
+      // CONV1 P5 / SCH-1: the device DETECTS the new household's time zone at
+      // signup, and that is the whole of what the client may do with household
+      // time (HT12 — the client renders household time and never derives it; the
+      // device may supply the instant and detect the zone, but may never decide
+      // the day). The server validates it, drops it to NULL if it is not a known
+      // IANA id, and the household can correct it afterwards. Detection failing is
+      // not an error: a null zone is honest, and signup must never depend on it.
+      let detectedZone: string | null = null;
+      try {
+        detectedZone = Intl.DateTimeFormat().resolvedOptions().timeZone ?? null;
+      } catch {
+        detectedZone = null;
+      }
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(credentials),
+        body: JSON.stringify(detectedZone ? { ...credentials, timeZone: detectedZone } : credentials),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Registration failed");

@@ -5,7 +5,7 @@
 **Authority:** Promoted from investigations [`TIME1 — The Household Time Foundation`](../investigations/platform/TIME1_HOUSEHOLD_TIME_FOUNDATION.md) and [`TIME2 — The Household Time Consumer Audit`](../investigations/platform/TIME2_HOUSEHOLD_TIME_CONSUMER_AUDIT.md), under `ARCHITECTURE_PRINCIPLES.md` and `CANONICAL_PUBLICATION_ARCHITECTURE.md`.
 **Rollback:** `rollback/TIME3-household-time-architecture-promotion-20260716` → `7d1dd2ce`
 **Enforcement:** Architecture Compliance Checklist (`ENGINEERING_WORKFLOW.md`); the Source of Truth Register's Appendix A; the § 16 verification gate at implementation.
-**Implementation status:** **DECLARED, NOT BUILT** — see § 17. This document is the owner; the module does not yet exist.
+**Implementation status:** **DECLARED, AND PARTLY BUILT** — see § 17. The module (`shared/time/household-time.ts`) and `households.timeZone` exist as of 2026-07-17 (`CONV1 P5`); `planner_weeks.weekStartDate` does not (Phase 4), and **no consumer has converged yet** (Phase 3).
 
 ---
 
@@ -441,17 +441,29 @@ Against `CANONICAL_PUBLICATION_ARCHITECTURE.md`'s three variants:
 
 ---
 
-## 17. STATUS — DECLARED, NOT BUILT
+## 17. STATUS — DECLARED, AND PARTLY BUILT
 
 **This must be read before anyone cites this document as describing the running system.**
 
+*This section read **DECLARED, NOT BUILT** from 2026-07-16 until 2026-07-17, when `CONV1 P5`
+built Phases 1, 1a and 2. It is corrected here rather than restated elsewhere: a governing
+document that is stale about its own domain is the `DOC-4`/`KC14` failure, and this document
+owns this fact.*
+
 | | |
 |---|---|
-| **`shared/time/household-time.ts`** | **Does not exist.** Phase 1 |
-| **`households.timeZone`** | **Does not exist.** Phase 2 |
-| **`planner_weeks.weekStartDate`** | **Does not exist.** Phase 4 |
-| **Every consumer in § 8** | **Reads its own private clock today** |
+| **`shared/time/household-time.ts`** | ✅ **BUILT — 2026-07-17** (`CONV1 P5` / `OWN-4`). Phase 1. Pure, zero-I/O, reads no clock. Its § 16 verification entry landed in the same change |
+| **The season rule** | ✅ **CONVERGED — 2026-07-17** (`CONV1 P5` / `OWN-3`). Phase 1a. Three implementations → one: `shared/seasonal/season-rule.ts` (Domain 11). **Not Household Time** (HT17) — this module supplies its input |
+| **`households.timeZone`** | ✅ **BUILT — 2026-07-17** (`CONV1 P5` / `SCH-1`). Phase 2. Nullable, additive, no back-fill, no SQL default; detected at signup, owner-correctable |
+| **`planner_weeks.weekStartDate`** | **Does not exist.** Phase 4. So `resolvePlannerWeek` returns `anchored: false` for **every household**, which is the honest floor (§ 13.1), not a defect |
+| **Every consumer in § 8** | **Still reads its own private clock.** Phase 3 has not started — no consumer has converged. The module's value today is that the twenty private clocks finally have **one owner to converge onto** |
+| **§ 14's retirement list** | **Begun, not discharged.** Target 4 (seasons, 3 → 1) is done. The five rival "current weeks", nineteen week-shapes and four `getGreeting()` copies are **live** |
 | **This document** | **In force from 2026-07-16** |
+
+> **The law was in force for one day before the code existed, and that was the point** (§ 17's
+> original argument, now discharged rather than disproved): the declaration stopped the
+> duplication growing while the module was written, and the module landed with a gate that fails
+> the moment a rival copy returns. **What remains is not the declaration — it is the convergence.**
 
 **This is the correct and required order,** not a gap: `CANONICAL_PUBLICATION_ARCHITECTURE.md` § Transition Rules — *"Every new domain must be declared **before** implementation (owner, variant, publication path)."*
 

@@ -70,9 +70,77 @@
   --space-6: 24px;
   --space-8: 32px;
 
-  --orchard-opacity: 0.72;
-  --orchard-sidebar-opacity: 0.65;
-  --orchard-parallax-strength: 10px;
+  /* ODL2 — the sidebar's gradient tint strength. Renamed from its former
+     orchard-prefixed name, which was a misnomer: nav-bar.tsx spends this on a
+     linear-gradient(accent → background) wash, never on the orchard image. The
+     old name implied membership of the exposure scale (§4); it is not a member,
+     and that misnomer is why the orchard read as governed when it was not.
+     Value unchanged, in both modes. Retirement recorded in the adoption
+     register (`orchard-exposure`). */
+  --sidebar-tint-opacity: 0.65;
+
+  /* ═══ ODL2 — the UIA §4 depth and light vocabulary ═══════════════════════
+     §4 admits the names (ground plane, one light, warm shadow, penumbra);
+     this file is their one home (§16). Values graduated from EXP4 Study A —
+     the only study that puts ground beneath every line of type, which
+     Blueprint §6.1 requires "without negotiation". Studies B and C were
+     deleted in the same change (§17, retire on introduction).
+
+     Two orchard-prefixed tokens were RETIRED here and replaced by the exposure
+     scale below: a bare image-opacity, and a parallax strength. Both were dead
+     (defined since the scaffold, consumed by nothing). The parallax one was
+     additionally UNLAWFUL the moment §4 was amended — the amendment forbids
+     parallax by name — so that retirement is by law, not by tidiness. The
+     adoption register keeps them dead by pattern; see `orchard-exposure`. */
+
+  /* Orchard exposure (E0–E3). Blueprint §6.2 owns WHICH room stands at which
+     level; §4 owns what a level resolves to. The value is the orchard image's
+     presence — E1's "light only" and E0's canvas are --background, already
+     live, which is why both resolve to zero image rather than to a new token. */
+  --orchard-exposure-e0: 0;
+  --orchard-exposure-e1: 0;
+  --orchard-exposure-e2: 0.55;
+  --orchard-exposure-e3: 0.90;
+
+  /* One light — upper-left, a perpetual bright morning. The rim is the light
+     caught along a surface's top edge; the ambient is the pool it casts.
+     The ambient carries no text, so under §15 it declares a CEILING (the
+     strength it may never exceed) rather than a contrast pairing. */
+  --light-rim:             hsl(48 60% 98%);
+  --light-rim-soft:        hsl(48 50% 97% / 0.7);
+  --light-ambient:         radial-gradient(85% 70% at 30% 6%, hsl(46 85% 90% / 0.55), hsl(46 85% 90% / 0) 72%);
+  --light-ambient-ceiling: 0.55;
+
+  /* Warm shadow — hue drawn from the room's foreground, never black (§4).
+     Every offset is single-directional and shallow: it says how far a surface
+     sits above what is beneath it, and nothing else. */
+  --shadow-ground:        0 1px 3px hsl(28 25% 28% / 0.05);
+  --shadow-primary:       inset 0 1px 0 hsl(48 60% 98%), 0 1px 2px hsl(28 25% 28% / 0.05), 0 10px 24px -10px hsl(28 30% 25% / 0.16);
+  --shadow-support:       inset 0 1px 0 hsl(48 50% 97% / 0.7), 0 1px 2px hsl(28 25% 28% / 0.04), 0 4px 10px -6px hsl(28 30% 25% / 0.1);
+  --shadow-support-hover: inset 0 1px 0 hsl(48 60% 98%), 0 1px 2px hsl(28 25% 28% / 0.05), 0 10px 22px -9px hsl(28 30% 25% / 0.16);
+  --shadow-support-press: inset 0 1px 0 hsl(48 50% 97% / 0.7), 0 1px 2px hsl(28 25% 28% / 0.06), 0 2px 6px -4px hsl(28 30% 25% / 0.12);
+
+  /* The ground plane — one per workspace, never nested (§4). */
+  --ground-plane:        hsl(42 40% 97% / 0.75);
+  --ground-plane-border: hsl(36 28% 88% / 0.7);
+  --ground-blur:         12px;
+
+  /* The penumbra — rank carried by light: the primary stands in it, support
+     waits in it. Solidity follows importance; support is anchored, never
+     naked ink on the environment. */
+  --surface-primary:        hsl(0 0% 100%);
+  --surface-primary-border: hsl(36 30% 91%);
+  --surface-support:        hsl(0 0% 100% / 0.65);
+  --surface-support-border: hsl(36 26% 90% / 0.8);
+  --surface-support-hover:  hsl(0 0% 100% / 0.85);
+  --surface-blur:           2px;
+
+  /* The nested radius ladder (§4). A surface takes the step below whatever it
+     rests on: ground → primary → support. --radius (0.75rem) stays the card
+     default for ungrounded UI, and is deliberately the same step as support. */
+  --radius-ground:  1.75rem;
+  --radius-primary: 1rem;
+  --radius-support: 0.75rem;
 
   /* Basket realm identity — shared across Review and Shopping Assistant modes */
   --basket-realm:         26 17% 38%;
@@ -152,9 +220,54 @@
   --sidebar-accent:      120 10% 16%;
   --sidebar-accent-foreground: 40 20% 93%;
 
-  --orchard-opacity: 0.18;
-  --orchard-sidebar-opacity: 0.28;
-  --orchard-parallax-strength: 6px;
+  --sidebar-tint-opacity: 0.28;
+
+  /* ═══ ODL2 — the §4 vocabulary at night ═════════════════════════════════
+     §16's complete-mode law: "Offering a mode means resolving EVERY name in
+     it — a partially-resolved mode is not offered." Every name above is
+     resolved here. Blueprint §18.4 called dark mode "unexplored design work"
+     because the light vocabulary is designed in daylight; the resolution is
+     that the daylight IS the vocabulary, and at night there is no sun.
+
+     So every warm shadow resolves to `none` rather than to a dimmer warm
+     shadow: a warm shadow at midnight is a lie about where the light comes
+     from, and §4 admits depth only to describe space truthfully. Rank is
+     carried instead by tint and border — the same hierarchy, a different
+     instrument. This is a complete answer, not an omission.
+
+     EXP4 Study A reached the same answer independently (its dark variants set
+     shadow to none and thinned the ground), and the retired orchard image
+     opacity carried 0.18 at night against 0.72 by day — corroborating E3's
+     night value below rather than inventing it. */
+  --orchard-exposure-e0: 0;
+  --orchard-exposure-e1: 0;
+  --orchard-exposure-e2: 0.12;
+  --orchard-exposure-e3: 0.18;
+
+  --light-rim:             transparent;
+  --light-rim-soft:        transparent;
+  --light-ambient:         none;
+  --light-ambient-ceiling: 0;
+
+  --shadow-ground:        none;
+  --shadow-primary:       none;
+  --shadow-support:       none;
+  --shadow-support-hover: none;
+  --shadow-support-press: none;
+
+  --ground-plane:        hsl(var(--card) / 0.4);
+  --ground-plane-border: hsl(var(--border) / 0.3);
+  --ground-blur:         12px;
+
+  --surface-primary:        hsl(var(--card));
+  --surface-primary-border: hsl(var(--border) / 0.4);
+  --surface-support:        hsl(var(--card) / 0.7);
+  --surface-support-border: hsl(var(--border) / 0.4);
+  --surface-support-hover:  hsl(var(--card) / 0.85);
+  --surface-blur:           2px;
+
+  /* The radius ladder does not change with the hour — it is geometry, not
+     light — so it resolves by inheritance rather than by restatement. */
 
   /* Basket realm identity — slightly lighter in dark mode */
   --basket-realm:         26 17% 52%;

@@ -2123,6 +2123,27 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  // CONV1 P5 / SCH-1 — households.timeZone (TIME3 Phase 2, the zone).
+  //
+  // Additive and nullable. NO ROW IS REWRITTEN and there is NO BACK-FILL: a NULL
+  // zone means "THA has not been told where this household lives", which is an
+  // honest gap and the truth for every household that exists today. Defaulting it
+  // in SQL would manufacture a fact indistinguishable from one the household
+  // stated — the exact shape CP8 and Core Principle 6 forbid. THA's declared
+  // default (Europe/London, with its provenance) lives in
+  // shared/time/household-time.ts and is applied at READ time by consumers, never
+  // written here.
+  //
+  // No consumer converges in this migration or this phase: that is Phase 3
+  // (CONV1 P6). This lands the fact so that the seven of twelve consumers that
+  // need only the zone HAVE one to read.
+  {
+    id: "2026-07-17_conv1_p5_household_time_zone",
+    statements: [
+      `ALTER TABLE households ADD COLUMN IF NOT EXISTS time_zone text`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 
