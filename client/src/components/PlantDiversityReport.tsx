@@ -2,8 +2,10 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Leaf, Check, ChevronRight, Compass } from "lucide-react";
-import { isPlantIngredient, getPlantCategory } from "@shared/canonical/plant-classifier";
+import { isPlantIngredient, getPlantCategory, plantDiversityGroup } from "@shared/canonical/plant-classifier";
 import type { PlantCategory } from "@shared/canonical/plant-classifier";
+import { parseIngredient } from "@shared/parse-ingredient";
+import { singularizeIngredientKey } from "@shared/normalize";
 import { normaliseForReuse } from "@/lib/ingredient-reuse";
 import { getCategoryEmoji } from "@/lib/ingredient-imagery";
 import { HEALTH_DISCLAIMER } from "@/lib/health-benefits-model";
@@ -139,8 +141,29 @@ function matchesKeywords(text: string, keywords: readonly string[]): boolean {
   return keywords.some((w) => containsKeyword(text, w));
 }
 
+/**
+ * NUT_VERIFY1 — a raw recipe line reduced to the canonical ingredient slug.
+ *
+ * This is the EXACT chain the server already uses (`server/routes.ts` — the
+ * 30-plants counter converged by PUB1): parse off quantity/unit/prep notes,
+ * then singularise. It introduces no rule and owns no classification; it only
+ * hands `shared/canonical/*` the key shape those owners can actually resolve.
+ *
+ * It exists because `resolveCanonicalFood` is EXACT-KEY, never substring
+ * (`shared/canonical/resolver.ts:10-11`). Passing it a whole recipe line —
+ * "400g tin chickpeas, drained" — cannot match, and returns UNRESOLVED, which
+ * every caller downstream reads as "not a plant". Bare "chickpeas" resolves.
+ */
+function canonicalIngredientSlug(raw: string): string {
+  return singularizeIngredientKey(parseIngredient(raw).normalizedName);
+}
+
 function getSectionForIngredient(raw: string): ReportSection {
-  if (isPlantIngredient(raw)) return "plant-based";
+  // NUT_VERIFY1 — was `isPlantIngredient(raw)`, on the unparsed line. Every
+  // quantity-prefixed plant fell through to "other", which is why the Plant
+  // Based section contained only "Black Pepper" — the one ingredient
+  // conventionally written with no quantity.
+  if (isPlantIngredient(canonicalIngredientSlug(raw))) return "plant-based";
   const lower = raw.toLowerCase();
   if (matchesKeywords(lower, MEAT_KEYWORDS)) return "meat";
   if (matchesKeywords(lower, DAIRY_KEYWORDS)) return "dairy";
@@ -254,17 +277,37 @@ function computeAllRows(
   totalIngredients: number;
   categoriesFound: Set<PlantCategory>;
 } {
-  // Pass 1 — plant count (UNCHANGED, source of truth).
-  // Uses normaliseForReuse(raw) directly, same as before WS3A.
-  const plantCountKeys = new Set<string>();
+  // Pass 1 — plant count.
+  //
+  // NUT_VERIFY1 fixed TWO defects here, both of which LAUNCH1 § "Plant
+  // diversity" had already named and which pushed the number in OPPOSITE
+  // directions, so the figure on screen had no bounded error:
+  //
+  //   1. UNDER-COUNT — the predicate ran on the RAW recipe line. The canonical
+  //      resolver is exact-key (`resolver.ts:10-11`), so "400g tin chickpeas,
+  //      drained" never resolved and read as "not a plant". Measured against 14
+  //      real founding-cookbook recipes (147 ingredient lines): 1 plant counted.
+  //
+  //   2. OVER-COUNT — it deduped on the INGREDIENT key. The Source of Truth
+  //      Register, Domain 4, is explicit: "One diversity group = one plant …
+  //      A counter that dedupes on the ingredient slug over-counts and is a
+  //      defect (CPI1 S1-2)." Kale and cavolo nero are one plant; every tomato
+  //      variety is one plant.
+  //
+  // Both are fixed by adopting the chain the server counter already used —
+  // parse → singularise → `plantDiversityGroup()` → dedupe on the GROUP. This
+  // file now owns no counting rule of its own; `plantDiversityGroup()` remains
+  // the sole owner of "does this count as a plant, and which one". Same 14
+  // recipes after the fix: 31 plants.
+  const plantGroups = new Set<string>();
   for (const meal of weekMeals) {
     for (const raw of meal.ingredients) {
-      if (!raw.trim() || !isPlantIngredient(raw)) continue;
-      const key = normaliseForReuse(raw);
-      if (key) plantCountKeys.add(key);
+      if (!raw.trim()) continue;
+      const group = plantDiversityGroup(canonicalIngredientSlug(raw));
+      if (group) plantGroups.add(group);
     }
   }
-  const plantCount = plantCountKeys.size;
+  const plantCount = plantGroups.size;
 
   // Pass 2 — display rows, grouped by getDisplayKey (measurement-stripped).
   type RowAcc = {

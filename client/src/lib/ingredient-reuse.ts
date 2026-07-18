@@ -31,7 +31,14 @@ function stripForMatch(ingredient: string): string {
   return ingredient
     .toLowerCase()
     .replace(/[½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]/g, '')
-    .replace(/\d+(\.\d+)?\s*(g|kg|ml|l|tsp|tbsp|cup|cups|oz|lb|lbs|clove|cloves)?\s*/gi, '')
+    // NUT_VERIFY1 — the unit alternation had NO trailing word boundary, so a
+    // number followed by a food beginning with a unit letter had that letter
+    // eaten as the unit: "3 garlic cloves, crushed" matched "3 g" as *3 grams*
+    // and reduced to "arlic", which is what the Nutrition room displayed.
+    // `\b` inside the optional group means a unit, IF matched, must end at a
+    // word boundary; "g" in "garlic" no longer qualifies, so only "3 " is
+    // stripped. "200g garlic" and "1 clove garlic" are unaffected.
+    .replace(/\d+(\.\d+)?\s*(?:(?:g|kg|ml|l|tsp|tbsp|cup|cups|oz|lb|lbs|clove|cloves)\b)?\s*/gi, '')
     .replace(/\b(tsp|tbsp|g|kg|ml|l|oz|lb|lbs|cup|cups|clove|cloves)\b/gi, '')
     .split(/\s+/)
     .filter(w => w.length > 0 && !STRIP_WORDS.has(w))
