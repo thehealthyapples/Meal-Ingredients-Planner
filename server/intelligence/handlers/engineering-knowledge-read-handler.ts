@@ -182,6 +182,41 @@ async function handleExplain(intent: Intent, port: EngineeringKnowledgeReadPort)
 
   const aspect = toStr(intent.parameters?.aspect)?.toLowerCase();
 
+  // ENGINT2 — "Why does this feature exist? Which investigation led to this
+  // implementation? Which architecture governs this?" are one question asked of
+  // a document's neighbourhood in three directions, so they share one path.
+  if (aspect === "relationships" || aspect === "graph" || aspect === "related") {
+    const graph = await port.documentGraph(topic);
+    if (!graph) {
+      throw gap(
+        `Honest gap: no engineering document is indexed under ${JSON.stringify(topic)}, so it has no ` +
+          "derivable relationships. Relationships are derived from citations between documents that exist; " +
+          "the platform will not relate a document it has not read.",
+      );
+    }
+    return {
+      topic,
+      aspect: "relationships",
+      document: graph.document,
+      // What this document cites — its governing architecture and prior investigations.
+      cites: graph.outgoing,
+      // What cites this document — the work that followed from it.
+      citedBy: graph.incoming,
+      promotedFrom: graph.promotedFrom,
+      commits: graph.commits,
+      // Ids named in prose that resolve to no document. Reported, never inferred
+      // into an edge: most are intra-document rule ids, not broken links.
+      unresolvedReferences: graph.unresolvedReferences,
+      gap: graph.gap,
+      source: "engineering-knowledge-registry",
+      note:
+        GROUNDED_NOTE +
+        " Every relationship above is DERIVED at read time from a citation in a file, and carries the " +
+        "path:line that proves it. Nothing is stored, and no relationship is inferred from subject-matter " +
+        "similarity — if the link was never written down, it is not claimed here.",
+    };
+  }
+
   // "Why was this decision made? What investigations exist? Which release
   // introduced this behaviour?" — the history question.
   if (aspect === "history" || aspect === "why" || aspect === "implementation") {
@@ -236,6 +271,56 @@ async function handleReport(intent: Intent, port: EngineeringKnowledgeReadPort):
       gap: recent.gap,
       source: "engineering-knowledge-registry",
       note: GROUNDED_NOTE,
+    };
+  }
+
+  // ENGINT2 — "Which architecture has no implementation? Which implementations
+  // have no governing architecture? Which investigations remain unresolved?"
+  if (subject.includes("coverage") || subject.includes("orphan") || subject.includes("unresolved")) {
+    const coverage = await port.coverageGaps();
+    return {
+      subject: "record-coverage",
+      architectureWithoutImplementation: coverage.architectureWithoutImplementation,
+      implementationsWithoutGoverningArchitecture: coverage.implementationsWithoutGoverningArchitecture,
+      unresolvedInvestigations: coverage.unresolvedInvestigations,
+      counts: coverage.counts,
+      source: "engineering-knowledge-registry",
+      // The caveat is part of the answer, not a footnote to it.
+      note: `${GROUNDED_NOTE} ${coverage.caveat}`,
+    };
+  }
+
+  // ENGINT2 — "What has not yet shipped?" This repository cannot answer it.
+  if (subject.includes("ship") || subject.includes("release") || subject.includes("deploy")) {
+    const shipping = await port.shippingStatus();
+    return {
+      subject: "shipping-status",
+      answerable: shipping.answerable,
+      gap: shipping.gap,
+      tagEvidence: shipping.tagEvidence,
+      proxy: shipping.proxy,
+      source: "engineering-knowledge-registry",
+      note:
+        GROUNDED_NOTE +
+        " THA records no release ledger, so 'shipped' is not a fact this repository holds. The gap above " +
+        "states the evidence; the proxy answers a narrower question and is labelled as a proxy, not an answer.",
+    };
+  }
+
+  // ENGINT2 — "Which roadmap item owns this?" Not derivable; the WS token space collides.
+  if (subject.includes("owns") || subject.includes("ownership") || subject.includes("workstream")) {
+    const ownership = await port.roadmapOwnership();
+    return {
+      subject: "roadmap-ownership",
+      answerable: ownership.answerable,
+      gap: ownership.gap,
+      declaredWorkstreams: ownership.position.workstreams,
+      completionRecorded: ownership.position.completionRecorded,
+      source: "engineering-knowledge-registry",
+      note:
+        GROUNDED_NOTE +
+        " The roadmap's declared workstreams are shown because they ARE recorded; the link from a document " +
+        "to the workstream that owns it is not, and is reported as a gap rather than guessed from a token.",
     };
   }
 

@@ -377,7 +377,7 @@ async function buildIndex(): Promise<IndexSnapshot> {
   const docFrequency = new Map<string, number>();
   for (const doc of docs) {
     const surface = new Set(terms(`${doc.title} ${doc.headings.join(" ")} ${path.basename(doc.path)}`));
-    for (const term of surface) docFrequency.set(term, (docFrequency.get(term) ?? 0) + 1);
+    surface.forEach((term) => docFrequency.set(term, (docFrequency.get(term) ?? 0) + 1));
   }
 
   return { docs, builtAtMs: Date.now(), rootMtimeMs, docFrequency };
@@ -892,5 +892,638 @@ export async function openRisks(): Promise<RiskAnswer> {
       "Surfaced from the roadmap's unchecked Definition-of-Done items and from documents that declare " +
       "their own risk as RED. Engineering Intelligence does not assess risk — it reports the risk THA " +
       "has already recorded about itself. An unrecorded risk will not appear here.",
+  };
+}
+
+// ===========================================================================
+// ENGINT2 — THE ENGINEERING KNOWLEDGE GRAPH (derived, never stored)
+// ===========================================================================
+//
+// Relationships between engineering artefacts, DERIVED AT QUERY TIME from the
+// documents themselves. There is no graph store, no edge table, no second
+// index, and no new source of truth: an edge exists only for as long as the
+// sentence that proves it exists in a file, and every edge carries the
+// `path:line` of that sentence. Delete this section and no relationship is
+// lost, because none was ever held.
+//
+// It reuses the ONE index built above. `edgesFor` reads a document's own text
+// on demand; whole-corpus questions memoise per snapshot in a WeakMap that dies
+// with the snapshot it was derived from — a cache of a derivation (Principle 7),
+// not a store of a fact.
+//
+// WHAT THIS SECTION REFUSES TO DERIVE, AND WHY. An empirical study of the live
+// corpus (ENGINT2) found that three of the five relationships the mission named
+// are not supported by evidence in this repository. They are reported as
+// structured gaps with their evidence, rather than approximated:
+//
+//   • Commit → included in → Release. THERE ARE NO RELEASE TAGS. Of 900 git
+//     tags, 750 are `rollback/…` and the remainder are workstream markers
+//     (`investigation/…`, `fix/…`, `impl/…`, `audit/…`). `git tag --contains`
+//     returns rollback tags, not releases. RELEASE.md's baseline table lists 2
+//     tags and has not been updated since 2026-05-12. A "release" derived from
+//     this would be a rollback point wearing a release's name.
+//
+//   • Roadmap → owns → Workstream. THE `WS<n>` TOKEN SPACE IS SPLIT ACROSS AT
+//     LEAST THREE SCHEMES. The roadmap declares WS0–WS5; `docs/investigations/
+//     knowledge/` contains a larger, unrelated WS series (27 files beginning
+//     WS0, plus a WS0X_1…WS0X_13 sub-series); and WS6–WS11 exist with no
+//     roadmap cell at all. "WS0" occurs ~1369 times, overwhelmingly the
+//     knowledge scheme. Matching the token would attribute the wrong work to
+//     the roadmap, confidently.
+//
+//   • Status → shipped / unresolved. THE FIELD IS EFFECTIVELY FREE TEXT: 317
+//     distinct `Status:` values across ~340 documents, with no negative
+//     vocabulary (`BLOCKED`, `UNRESOLVED`, `NOT SHIPPED`, `SUPERSEDED` all
+//     score zero) and with `Complete` and `Investigation complete` meaning
+//     OPPOSITE things about whether anything shipped.
+//
+// Reporting these as gaps is the deliverable, not a shortfall against it: the
+// mission's own rule is *"never infer unsupported relationships"*, and each gap
+// names a concrete repository change that would make the question answerable.
+
+/**
+ * The relationships this module can prove. Each is evidenced by a specific
+ * sentence in a specific file, or it does not exist.
+ */
+export type EngineeringEdgeKind =
+  /** The source document cites the target's PATH (in prose or a reference list). */
+  | "references"
+  /** The source ARCHITECTURE document was promoted from the target investigation. */
+  | "promoted-from"
+  /** The source names the target's EWO id in prose, and that id resolves to a real document. */
+  | "mentions";
+
+export interface EngineeringEdge {
+  readonly from: string;
+  readonly to: string;
+  readonly kind: EngineeringEdgeKind;
+  /** The sentence that proves this edge. An edge without evidence is never emitted. */
+  readonly evidence: EngineeringCitation;
+}
+
+/**
+ * An EWO id named in prose that resolves to no document. These are REPORTED,
+ * never silently dropped and never invented into an edge — most are intra-
+ * document rule or item ids (`KC7`, `BW03`) rather than broken document links,
+ * and the distinction is not machine-decidable from the citation alone.
+ */
+export interface UnresolvedReference {
+  readonly id: string;
+  readonly evidence: EngineeringCitation;
+}
+
+export interface CommitLink {
+  readonly sha: string;
+  readonly date: string;
+  readonly subject: string;
+  /**
+   * `delivered-by` — the commit subject names this document's id, so the commit
+   * carried the work.
+   * `preceded-by` — a `chore: preserve … before <ID>` snapshot. This is the
+   * INVERSE of delivery: it marks the state BEFORE the work, and conflating the
+   * two would attribute a workstream's content to the commit that predates it.
+   */
+  readonly relation: "delivered-by" | "preceded-by";
+}
+
+// ---------------------------------------------------------------------------
+// Resolution — turning a citation into a document, or into an honest unknown
+// ---------------------------------------------------------------------------
+
+/** Any `.md` token: a full path, a relative link, or a bare filename. */
+const MD_TOKEN = /(?:\.\.\/|\.\/)?[A-Za-z0-9_\-/.]*[A-Za-z0-9_\-]\.md/g;
+
+/** An EWO id: uppercase, containing at least one digit. `TIME1`, `COMP_ACT1`, `PHASE5A`. */
+const EWO_TOKEN = /\b[A-Z][A-Z0-9_-]*[0-9][A-Z0-9_-]*\b/g;
+
+/** `-`, `_` and spaces are used interchangeably across the corpus (`GOV-AI1` vs `GOV_AI1`). */
+function normaliseId(id: string): string {
+  return id.replace(/[-_\s]/g, "").toUpperCase();
+}
+
+interface Resolver {
+  readonly byPath: ReadonlyMap<string, EngineeringDocRef>;
+  /** Basename → docs. Ambiguous basenames resolve to nothing rather than to a guess. */
+  readonly byBasename: ReadonlyMap<string, readonly EngineeringDocRef[]>;
+  readonly byId: ReadonlyMap<string, readonly EngineeringDocRef[]>;
+}
+
+const resolverCache = new WeakMap<IndexSnapshot, Resolver>();
+
+function resolverFor(snap: IndexSnapshot): Resolver {
+  const cached = resolverCache.get(snap);
+  if (cached) return cached;
+
+  const byPath = new Map<string, EngineeringDocRef>();
+  const byBasename = new Map<string, EngineeringDocRef[]>();
+  const byId = new Map<string, EngineeringDocRef[]>();
+
+  for (const doc of snap.docs) {
+    byPath.set(doc.path, doc);
+
+    const base = path.basename(doc.path).toLowerCase();
+    (byBasename.get(base) ?? byBasename.set(base, []).get(base)!).push(doc);
+
+    if (doc.docId) {
+      const key = normaliseId(doc.docId);
+      (byId.get(key) ?? byId.set(key, []).get(key)!).push(doc);
+    }
+  }
+
+  const resolver: Resolver = { byPath, byBasename, byId };
+  resolverCache.set(snap, resolver);
+  return resolver;
+}
+
+/**
+ * Resolve a bare uppercase token in prose to the document(s) it names.
+ *
+ * Three forms occur in the corpus and all three must resolve, or the
+ * "unresolved" list fills with false gaps — which would be worse than useless,
+ * because the whole value of that list is that a human can trust every entry in
+ * it is genuinely a dangling reference:
+ *
+ *   1. the EWO id itself            — `TIME1`
+ *   2. the full filename stem       — `TIME1_HOUSEHOLD_TIME_FOUNDATION`
+ *   3. a stem whose leading segment is the id, where the file itself is
+ *      named differently — `TIME1_SOMETHING_ELSE` → `TIME1`
+ *
+ * Anything still unmatched is genuinely unresolved and is reported as such.
+ */
+function resolveEwoToken(token: string, resolver: Resolver): readonly EngineeringDocRef[] | undefined {
+  const byId = resolver.byId.get(normaliseId(token));
+  if (byId?.length) return byId;
+
+  const asStem = resolver.byBasename.get(`${token.toLowerCase()}.md`);
+  if (asStem?.length) return asStem;
+
+  const lead = /^([A-Z][A-Z0-9-]*[0-9][A-Z0-9-]*)_/.exec(token);
+  if (lead) {
+    const byLead = resolver.byId.get(normaliseId(lead[1]));
+    if (byLead?.length) return byLead;
+  }
+
+  return undefined;
+}
+
+/**
+ * Resolve a `.md` citation to a document. Handles the four citation formats the
+ * corpus actually uses: full repo path, relative link (`../investigations/…`),
+ * bare filename, and backticked variants of each.
+ *
+ * An AMBIGUOUS basename resolves to `undefined` — if two documents share a
+ * filename, this module does not pick one. A guessed edge is worse than none.
+ */
+function resolveMdCitation(token: string, resolver: Resolver): EngineeringDocRef | undefined {
+  const cleaned = token.replace(/^\.{1,2}\//, "").replace(/^\/+/, "");
+
+  const direct = resolver.byPath.get(cleaned);
+  if (direct) return direct;
+
+  // A relative link resolves by its tail: `../investigations/platform/TIME1_X.md`.
+  const tailMatch = Array.from(resolver.byPath.keys()).find((p) => p.endsWith(`/${cleaned}`));
+  if (tailMatch) return resolver.byPath.get(tailMatch);
+
+  const candidates = resolver.byBasename.get(path.basename(cleaned).toLowerCase());
+  return candidates?.length === 1 ? candidates[0] : undefined;
+}
+
+// ---------------------------------------------------------------------------
+// Edge derivation from one document's own text
+// ---------------------------------------------------------------------------
+
+/** Lines asserting promotion. `promoted under` names the WORKSTREAM, not the source — excluded. */
+const PROMOTED_FROM = /promoted\s+(?:and\s+renamed\s+)?from/i;
+
+interface DerivedOutgoing {
+  readonly edges: readonly EngineeringEdge[];
+  readonly unresolved: readonly UnresolvedReference[];
+}
+
+const outgoingCache = new WeakMap<IndexSnapshot, Map<string, DerivedOutgoing>>();
+
+/**
+ * Every outgoing edge a document's own text proves, plus every EWO id it names
+ * that resolves to nothing.
+ *
+ * Self-references are dropped: a document naming its own id is not a
+ * relationship, and every implementation report names its own id repeatedly.
+ */
+export async function edgesFor(doc: EngineeringDocRef): Promise<DerivedOutgoing> {
+  const snap = await index();
+  const perSnapshot = outgoingCache.get(snap) ?? outgoingCache.set(snap, new Map()).get(snap)!;
+  const memo = perSnapshot.get(doc.path);
+  if (memo) return memo;
+
+  const resolver = resolverFor(snap);
+  let text: string;
+  try {
+    text = await readFile(path.join(repoRoot(), doc.path), "utf8");
+  } catch {
+    const empty: DerivedOutgoing = { edges: [], unresolved: [] };
+    perSnapshot.set(doc.path, empty);
+    return empty;
+  }
+
+  const lines = text.split("\n");
+  const edges: EngineeringEdge[] = [];
+  const unresolved: UnresolvedReference[] = [];
+  const seenEdge = new Set<string>();
+  const seenUnresolved = new Set<string>();
+  const ownId = doc.docId ? normaliseId(doc.docId) : null;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const citation: EngineeringCitation = { path: doc.path, line: i + 1, text: line.trim().slice(0, 400) };
+    const isPromotion = doc.kind === "architecture" && PROMOTED_FROM.test(line);
+
+    // --- path citations -------------------------------------------------
+    for (const token of line.match(MD_TOKEN) ?? []) {
+      const target = resolveMdCitation(token, resolver);
+      if (!target || target.path === doc.path) continue;
+
+      // A promotion line on an architecture document names its SOURCE
+      // investigation — a stronger, differently-directed claim than a citation.
+      const kind: EngineeringEdgeKind =
+        isPromotion && target.kind === "investigation" ? "promoted-from" : "references";
+
+      const key = `${kind}:${target.path}`;
+      if (seenEdge.has(key)) continue;
+      seenEdge.add(key);
+      edges.push({ from: doc.path, to: target.path, kind, evidence: citation });
+    }
+
+    // --- bare EWO id citations -------------------------------------------
+    for (const token of line.match(EWO_TOKEN) ?? []) {
+      const key = normaliseId(token);
+      if (ownId && key === ownId) continue;
+
+      const matches = resolveEwoToken(token, resolver);
+      if (!matches || matches.length === 0) {
+        // Unresolved: report it, never invent an edge for it.
+        if (!seenUnresolved.has(key)) {
+          seenUnresolved.add(key);
+          unresolved.push({ id: token, evidence: citation });
+        }
+        continue;
+      }
+      if (matches.length > 1) continue; // ambiguous id — no guess
+
+      const target = matches[0];
+      if (target.path === doc.path) continue;
+
+      const edgeKey = `mentions:${target.path}`;
+      if (seenEdge.has(edgeKey) || seenEdge.has(`references:${target.path}`)) continue;
+      seenEdge.add(edgeKey);
+      edges.push({ from: doc.path, to: target.path, kind: "mentions", evidence: citation });
+    }
+  }
+
+  const derived: DerivedOutgoing = { edges, unresolved };
+  perSnapshot.set(doc.path, derived);
+  return derived;
+}
+
+// ---------------------------------------------------------------------------
+// The whole-corpus edge set — derived on demand, memoised per snapshot
+// ---------------------------------------------------------------------------
+
+const graphCache = new WeakMap<IndexSnapshot, Promise<readonly EngineeringEdge[]>>();
+
+async function allEdges(): Promise<readonly EngineeringEdge[]> {
+  const snap = await index();
+  const cached = graphCache.get(snap);
+  if (cached) return cached;
+
+  const build = (async () => {
+    const collected: EngineeringEdge[] = [];
+    for (const doc of snap.docs) {
+      const { edges } = await edgesFor(doc);
+      collected.push(...edges);
+    }
+    return collected;
+  })();
+
+  graphCache.set(snap, build);
+  return build;
+}
+
+// ---------------------------------------------------------------------------
+// Question: the neighbourhood of one document
+// ---------------------------------------------------------------------------
+
+export interface DocumentGraphAnswer {
+  readonly document: EngineeringDocRef;
+  /** What this document cites, with the line that proves each citation. */
+  readonly outgoing: readonly EngineeringEdge[];
+  /** What cites this document — "why does this exist" read backwards. */
+  readonly incoming: readonly EngineeringEdge[];
+  /** The investigation(s) this architecture document was promoted from. */
+  readonly promotedFrom: readonly EngineeringEdge[];
+  /** Commits naming this document's EWO id. */
+  readonly commits: readonly CommitLink[];
+  /** Ids named in prose that resolve to no document. Reported, never inferred. */
+  readonly unresolvedReferences: readonly UnresolvedReference[];
+  readonly gap: EngineeringGap | null;
+}
+
+/**
+ * "Why does this feature exist? Which investigation led to this implementation?
+ * Which architecture governs this?" — all three are the same question asked of
+ * one document's neighbourhood, in different directions.
+ */
+export async function documentGraph(idOrPath: string): Promise<DocumentGraphAnswer | undefined> {
+  const doc = await getDocument(idOrPath);
+  if (!doc) return undefined;
+
+  const { edges: outgoing, unresolved } = await edgesFor(doc);
+  const incoming = (await allEdges()).filter((e) => e.to === doc.path);
+  const commits = doc.docId ? await commitsForDocId(doc.docId) : [];
+
+  const gap: EngineeringGap | null =
+    outgoing.length === 0 && incoming.length === 0
+      ? {
+          question: `What is ${doc.path} related to?`,
+          reason:
+            "This document neither cites another engineering document by path or id, nor is cited by one. " +
+            "It is isolated in the record. That is a fact about the documentation, not proof the work stands " +
+            "alone — a relationship that was never written down cannot be derived, and this module will not " +
+            "invent one from subject-matter similarity.",
+          searched: ["path citations", "REFERENCE DOCUMENTS READ entries", "bare EWO id citations in prose"],
+        }
+      : null;
+
+  return {
+    document: doc,
+    outgoing,
+    incoming,
+    promotedFrom: outgoing.filter((e) => e.kind === "promoted-from"),
+    commits,
+    unresolvedReferences: unresolved,
+    gap,
+  };
+}
+
+/**
+ * Commits whose subject names this document's EWO id.
+ *
+ * Two conventions in the live log are handled explicitly. A commit may carry
+ * SEVERAL ids (`PKR1/PKR2/PKR3 + EXP2 + UIA2`), so matching is per-token rather
+ * than prefix-only. And `chore: preserve … before <ID>` is a snapshot of the
+ * state BEFORE the work — recorded as `preceded-by`, never as delivery, because
+ * calling it delivery would credit a workstream to the commit that predates it.
+ */
+export async function commitsForDocId(docId: string, limit = 200): Promise<CommitLink[]> {
+  const target = normaliseId(docId);
+  try {
+    const { stdout } = await execFileAsync(
+      "git",
+      ["log", `-${Math.max(1, Math.min(limit, 500))}`, "--date=short", `--pretty=format:%h${SEP}%ad${SEP}%s`],
+      { cwd: repoRoot(), timeout: 10_000, maxBuffer: 4 * 1024 * 1024 },
+    );
+
+    const links: CommitLink[] = [];
+    for (const line of stdout.split("\n")) {
+      if (!line.includes(SEP)) continue;
+      const [sha, date, subject] = line.split(SEP);
+      const ids = (subject.match(EWO_TOKEN) ?? []).map(normaliseId);
+      if (!ids.includes(target)) continue;
+
+      const isSnapshot = /^chore:\s*preserve\b/i.test(subject) || /\bbefore\b/i.test(subject);
+      links.push({ sha, date, subject, relation: isSnapshot ? "preceded-by" : "delivered-by" });
+    }
+    return links;
+  } catch {
+    return [];
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Question: where the record is incomplete
+// ---------------------------------------------------------------------------
+
+export interface CoverageEntry {
+  readonly document: EngineeringDocRef;
+  /** Why this document is listed — stated so the reader can disagree with it. */
+  readonly basis: string;
+}
+
+export interface CoverageAnswer {
+  readonly architectureWithoutImplementation: readonly CoverageEntry[];
+  readonly implementationsWithoutGoverningArchitecture: readonly CoverageEntry[];
+  readonly unresolvedInvestigations: readonly CoverageEntry[];
+  readonly counts: Readonly<Record<string, number>>;
+  readonly caveat: string;
+}
+
+/**
+ * "Which architecture has no implementation? Which implementations have no
+ * governing architecture? Which investigations remain unresolved?"
+ *
+ * Each answer is derived from CITATION EVIDENCE ONLY, and the caveat below is
+ * part of the answer rather than a footnote to it: absence of a citation is
+ * absence of a written link, NOT absence of the work. The empirical study
+ * behind ENGINT2 found only 57 of 327 implementation reports cite an
+ * investigation by path, so this list over-reports by construction. It is a
+ * list of places the RECORD is thin — which is a genuinely useful thing to know,
+ * and a different thing from a list of unimplemented architecture.
+ */
+export async function coverageGaps(): Promise<CoverageAnswer> {
+  const snap = await index();
+  const edges = await allEdges();
+
+  const citedBy = new Map<string, EngineeringDocRef[]>();
+  const byPath = new Map(snap.docs.map((d) => [d.path, d] as const));
+
+  for (const edge of edges) {
+    const source = byPath.get(edge.from);
+    if (!source) continue;
+    (citedBy.get(edge.to) ?? citedBy.set(edge.to, []).get(edge.to)!).push(source);
+  }
+
+  const architectureWithoutImplementation: CoverageEntry[] = [];
+  const implementationsWithoutGoverningArchitecture: CoverageEntry[] = [];
+  const unresolvedInvestigations: CoverageEntry[] = [];
+
+  for (const doc of snap.docs) {
+    const inbound = citedBy.get(doc.path) ?? [];
+
+    if (doc.kind === "architecture" && doc.path !== ROADMAP_PATH) {
+      if (!inbound.some((d) => d.kind === "implementation")) {
+        architectureWithoutImplementation.push({
+          document: doc,
+          basis: "No implementation report cites this document by path or by id.",
+        });
+      }
+    }
+
+    if (doc.kind === "investigation") {
+      const leadsTo = inbound.filter((d) => d.kind === "implementation");
+      const promoted = edges.some((e) => e.kind === "promoted-from" && e.to === doc.path);
+      if (leadsTo.length === 0 && !promoted) {
+        unresolvedInvestigations.push({
+          document: doc,
+          basis:
+            "No implementation report cites this investigation, and no architecture document was promoted " +
+            "from it. Nothing in the record shows it was acted on.",
+        });
+      }
+    }
+
+    if (doc.kind === "implementation") {
+      const governing = edges.some(
+        (e) => e.from === doc.path && (byPath.get(e.to)?.kind === "architecture"),
+      );
+      if (!governing) {
+        implementationsWithoutGoverningArchitecture.push({
+          document: doc,
+          basis: "This report cites no document under docs/architecture/ by path or by id.",
+        });
+      }
+    }
+  }
+
+  const byDate = (a: CoverageEntry, b: CoverageEntry) =>
+    (b.document.date ?? "").localeCompare(a.document.date ?? "") || a.document.path.localeCompare(b.document.path);
+
+  architectureWithoutImplementation.sort(byDate);
+  implementationsWithoutGoverningArchitecture.sort(byDate);
+  unresolvedInvestigations.sort(byDate);
+
+  return {
+    architectureWithoutImplementation,
+    implementationsWithoutGoverningArchitecture,
+    unresolvedInvestigations,
+    counts: {
+      architectureWithoutImplementation: architectureWithoutImplementation.length,
+      implementationsWithoutGoverningArchitecture: implementationsWithoutGoverningArchitecture.length,
+      unresolvedInvestigations: unresolvedInvestigations.length,
+      totalEdges: edges.length,
+    },
+    caveat:
+      "These lists are derived from CITATION EVIDENCE ONLY. An absent citation means the link was never " +
+      "WRITTEN DOWN — it does not mean the work was never done. Only 57 of 327 implementation reports cite " +
+      "an investigation by path, so this over-reports by construction. Read it as 'where the engineering " +
+      "record is thin', never as 'what has not been built'.",
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Question: what has not shipped — and why this repository cannot answer it
+// ---------------------------------------------------------------------------
+
+export interface ShippingAnswer {
+  readonly answerable: false;
+  readonly gap: EngineeringGap;
+  /** The closest honest proxy, clearly labelled as a proxy and not an answer. */
+  readonly proxy: {
+    readonly description: string;
+    readonly documentsWithNoDeliveringCommit: readonly EngineeringDocRef[];
+  };
+  readonly tagEvidence: { readonly totalTags: number; readonly rollbackTags: number; readonly releaseTags: number };
+}
+
+/**
+ * "What has not yet shipped?"
+ *
+ * THIS REPOSITORY CANNOT ANSWER IT, and the honest response is to say so with
+ * the evidence rather than approximate it. There is no release ledger: of 900
+ * git tags, 750 are `rollback/…` and the rest are workstream markers
+ * (`investigation/…`, `fix/…`, `impl/…`, `audit/…`); `git tag --contains`
+ * therefore returns rollback points, and RELEASE.md's baseline table lists two
+ * tags, last updated 2026-05-12. Deriving "shipped" from any of that would
+ * dress a rollback point as a release.
+ *
+ * The `Status:` field cannot substitute: 317 distinct values across ~340
+ * documents, no negative vocabulary at all, and `Complete` vs `Investigation
+ * complete` meaning opposite things about shipping.
+ *
+ * What IS returned is a labelled proxy — implementation reports with no commit
+ * naming their id — which answers a narrower question honestly: "what is
+ * written down but not visible in the commit log?"
+ */
+export async function shippingStatus(): Promise<ShippingAnswer> {
+  const reports = await listDocuments({ kind: "implementation" });
+
+  const withoutCommit: EngineeringDocRef[] = [];
+  for (const doc of reports) {
+    if (!doc.docId) continue;
+    const commits = await commitsForDocId(doc.docId);
+    if (!commits.some((c) => c.relation === "delivered-by")) withoutCommit.push(doc);
+  }
+
+  let totalTags = 0;
+  let rollbackTags = 0;
+  try {
+    const { stdout } = await execFileAsync("git", ["tag"], {
+      cwd: repoRoot(),
+      timeout: 10_000,
+      maxBuffer: 4 * 1024 * 1024,
+    });
+    const tags = stdout.split("\n").filter((t) => t.trim().length > 0);
+    totalTags = tags.length;
+    rollbackTags = tags.filter((t) => t.includes("rollback")).length;
+  } catch {
+    /* git unavailable — the counts stay zero and the gap below still stands */
+  }
+
+  return {
+    answerable: false,
+    gap: {
+      question: "What has not yet shipped?",
+      reason:
+        "THA has no release ledger, so 'shipped' is not a fact this repository records. Of " +
+        `${totalTags} git tags, ${rollbackTags} are rollback points and the remainder are workstream ` +
+        "markers (investigation/, fix/, impl/, audit/); none denotes a release, and `git tag --contains` " +
+        "returns rollback tags. RELEASE.md's baseline table lists 2 tags and was last updated 2026-05-12. " +
+        "The Status: field cannot stand in for it either — 317 distinct values across ~340 documents, with " +
+        "no negative vocabulary, and 'Complete' and 'Investigation complete' meaning opposite things about " +
+        "whether anything shipped. To make this answerable, THA needs release tags, or a release field on " +
+        "implementation reports. Engineering Intelligence will not call a rollback point a release.",
+      searched: ["git tag", "git tag --contains", "RELEASE.md", "docs/release-notes.md", "docs/release-matrix.md"],
+    },
+    proxy: {
+      description:
+        "PROXY, NOT AN ANSWER: implementation reports with no commit whose subject names their EWO id. " +
+        "This finds work that is written down but not visible in the commit log — a narrower and different " +
+        "question from 'what has not shipped'. A report may be committed under a differently-named commit, " +
+        "and a shipped feature may have no report at all.",
+      documentsWithNoDeliveringCommit: withoutCommit,
+    },
+    tagEvidence: { totalTags, rollbackTags, releaseTags: 0 },
+  };
+}
+
+/**
+ * "Which roadmap item owns this?"
+ *
+ * NOT DERIVABLE, and reported as such. The roadmap declares WS0–WS5, but the
+ * `WS<n>` token space is split across at least three unrelated schemes: the
+ * roadmap's own cells, a larger series under `docs/investigations/knowledge/`
+ * (27 files beginning WS0, plus WS0X_1…WS0X_13), and WS6–WS11 which have no
+ * roadmap cell. "WS0" occurs roughly 1369 times across the docs tree,
+ * overwhelmingly the knowledge scheme. Matching the token would attribute the
+ * wrong work to the roadmap with total confidence, which is the specific
+ * failure this capability exists to avoid.
+ */
+export async function roadmapOwnership(): Promise<{ answerable: false; gap: EngineeringGap; position: RoadmapPositionAnswer }> {
+  return {
+    answerable: false,
+    gap: {
+      question: "Which roadmap item owns this work?",
+      reason:
+        "The roadmap declares WS0–WS5, but the WS<n> token space is shared by at least three unrelated " +
+        "schemes: the roadmap's cells, a larger workstream series under docs/investigations/knowledge/ " +
+        "(27 files beginning WS0, plus a WS0X_1…WS0X_13 sub-series), and WS6–WS11 which have no roadmap " +
+        "cell at all. 'WS0' appears ~1369 times across docs/, overwhelmingly the knowledge scheme, so " +
+        "matching the token would attribute the wrong work to the roadmap. No document declares which " +
+        "scheme its WS reference belongs to. To make this answerable, roadmap workstreams need a distinct " +
+        "identifier, or documents need to name their roadmap workstream explicitly.",
+      searched: [
+        ROADMAP_PATH,
+        "docs/implementation/ and docs/investigations/ (WS<n> token census across three colliding schemes)",
+      ],
+    },
+    position: await roadmapPosition(),
   };
 }

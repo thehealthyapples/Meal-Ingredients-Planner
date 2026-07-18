@@ -22,8 +22,11 @@
  */
 
 import type {
+  CoverageAnswer,
+  DocumentGraphAnswer,
   EngineeringDocKind,
   EngineeringDocRef,
+  EngineeringGap,
   EngineeringIndexSummary,
   EngineeringSearchHit,
   GoverningOwnerAnswer,
@@ -32,6 +35,7 @@ import type {
   RiskAnswer,
   RoadmapPositionAnswer,
   SearchOptions,
+  ShippingAnswer,
 } from "../../services/engineering-knowledge-registry.js";
 
 export interface EngineeringKnowledgeReadPort {
@@ -56,6 +60,22 @@ export interface EngineeringKnowledgeReadPort {
   recentWork(limit?: number): Promise<RecentWorkAnswer>;
   /** Risks and gaps THA has already recorded about itself. */
   openRisks(): Promise<RiskAnswer>;
+
+  // --- ENGINT2: derived relationships -------------------------------------
+  //
+  // No new store backs any of these. Every relationship is derived from the
+  // documents at query time and carries the `path:line` that proves it; the
+  // three that this repository cannot evidence are declared `answerable: false`
+  // in their return types, so a caller cannot mistake a gap for an answer.
+
+  /** One document's neighbourhood: what it cites, what cites it, its commits. */
+  documentGraph(idOrPath: string): Promise<DocumentGraphAnswer | undefined>;
+  /** Where the record is thin — unimplemented architecture, ungoverned reports, unresolved investigations. */
+  coverageGaps(): Promise<CoverageAnswer>;
+  /** "What has not shipped" — structurally unanswerable here; returns the gap and a labelled proxy. */
+  shippingStatus(): Promise<ShippingAnswer>;
+  /** "Which roadmap item owns this" — not derivable; returns the gap and the roadmap position. */
+  roadmapOwnership(): Promise<{ answerable: false; gap: EngineeringGap; position: RoadmapPositionAnswer }>;
 }
 
 /**
@@ -75,5 +95,9 @@ export async function createRegistryEngineeringKnowledgeReadPort(): Promise<Engi
     roadmapPosition: async () => registry.roadmapPosition(),
     recentWork: async (limit) => registry.recentWork(limit),
     openRisks: async () => registry.openRisks(),
+    documentGraph: async (idOrPath) => registry.documentGraph(idOrPath),
+    coverageGaps: async () => registry.coverageGaps(),
+    shippingStatus: async () => registry.shippingStatus(),
+    roadmapOwnership: async () => registry.roadmapOwnership(),
   };
 }
