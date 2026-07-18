@@ -1,0 +1,80 @@
+{
+  "base": "http://localhost:5000",
+  "label": "verify",
+  "results": [
+    {
+      "room": "home",
+      "path": "/home",
+      "status": "PASS",
+      "httpErrors": [],
+      "consoleErrors": [],
+      "pageErrors": [],
+      "notes": [],
+      "screenshot": "docs/ui-audit/experience-verify1/verify-home.png"
+    },
+    {
+      "room": "planner",
+      "path": "/planner",
+      "status": "PASS",
+      "httpErrors": [],
+      "consoleErrors": [
+        "Warning: Each child in a list should have a unique \"key\" prop.%s%s See https://reactjs.org/link/warning-keys for more information.%s \n\nCheck the render method of `WeeklyPlannerPage`.  \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/weekly-planner-page.tsx:225:21)\n    at PlannerProvider (h"
+      ],
+      "pageErrors": [],
+      "notes": [],
+      "screenshot": "docs/ui-audit/experience-verify1/verify-planner.png"
+    },
+    {
+      "room": "pantry",
+      "path": "/pantry",
+      "status": "PASS",
+      "httpErrors": [],
+      "consoleErrors": [],
+      "pageErrors": [],
+      "notes": [],
+      "screenshot": "docs/ui-audit/experience-verify1/verify-pantry.png"
+    },
+    {
+      "room": "shopping",
+      "path": "/shopping-workspace",
+      "status": "PASS",
+      "httpErrors": [],
+      "consoleErrors": [],
+      "pageErrors": [],
+      "notes": [],
+      "screenshot": "docs/ui-audit/experience-verify1/verify-shopping.png"
+    },
+    {
+      "room": "nutrition",
+      "path": "/plant-diversity",
+      "status": "PASS",
+      "httpErrors": [],
+      "consoleErrors": [],
+      "pageErrors": [],
+      "notes": [],
+      "screenshot": "docs/ui-audit/experience-verify1/verify-nutrition.png"
+    },
+    {
+      "room": "diary",
+      "path": "/my-diary",
+      "status": "PASS",
+      "httpErrors": [],
+      "consoleErrors": [],
+      "pageErrors": [],
+      "notes": [],
+      "screenshot": "docs/ui-audit/experience-verify1/verify-diary.png"
+    },
+    {
+      "room": "companion",
+      "path": "/home (overlay)",
+      "status": "PASS",
+      "httpErrors": [],
+      "consoleErrors": [],
+      "pageErrors": [],
+      "notes": [
+        "assistant-panel opened and is visible"
+      ],
+      "screenshot": "docs/ui-audit/experience-verify1/verify-companion.png"
+    }
+  ]
+}
