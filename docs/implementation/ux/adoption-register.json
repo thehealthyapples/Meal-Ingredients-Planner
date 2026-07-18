@@ -1,7 +1,7 @@
 {
   "$schema_note": "The Platform Experience Adoption Register (PX1-W5.1). THE single source of truth. ADOPTION_REGISTER.md is GENERATED from this file — never edit the .md by hand. Verified by scripts/ci/adoption-register-gate.ts, which fails CI when an owner loses its last consumer, a rival count rises, a retired predecessor returns, or a new orphan appears. Mandated by THA_UI_ARCHITECTURE.md §17; operational, not architectural — it creates no law.",
   "version": "1.0.0",
-  "updated": "2026-07-17",
+  "updated": "2026-07-18",
   "owner": "Colin Clapson",
   "governedBy": [
     "[THA_UI_ARCHITECTURE.md §17](../../architecture/THA_UI_ARCHITECTURE.md) (the mandate)",
@@ -956,6 +956,17 @@
       "status": "governed",
       "enforcement": "review",
       "adoptionFloor": "Every household-facing surface that sets a heading or a table/numeric voice. A raw `text-[Npx] font-[weight]` on a heading in any surface is a rival to this owner and should be reported here."
+    },
+    {
+      "id": "household-learning-presentation",
+      "concern": "Household learning (Patterns)",
+      "owner": "components/LearningSignalsPanel.tsx",
+      "ownerPath": "client/src/components/LearningSignalsPanel.tsx",
+      "ownerKind": "module",
+      "owns": "How a household meets a Pattern THA has learned about it (EL1 `evidence-learning`, `search` verb). Owns the room-scoping (`domains`), the cap, the eyebrow and the honest-absence rule: nothing learned yet renders nothing, never an empty-state placeholder implying something is missing. HOUSE_ACT2 Door 1 moved it from one household-wide mount on Profile to five — Profile keeps the unfiltered view; Planner, Pantry, Shopping and Cookbook each show only the Patterns learned from behaviour in that room. Filtering is client-side over the ONE shared query, mirroring AmbientIntelligence: a per-room server query would fragment a cache the hook already holds in full.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 4
     }
   ],
   "orphans": {

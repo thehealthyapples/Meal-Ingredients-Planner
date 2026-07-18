@@ -6,7 +6,7 @@
 
 # The Platform Experience Adoption Register
 
-**Version:** 1.0.0 · **Updated:** 2026-07-17 · **Owner:** Colin Clapson
+**Version:** 1.0.0 · **Updated:** 2026-07-18 · **Owner:** Colin Clapson
 
 > **UIA § 17:** *"Every canonical building block carries a visible register: what it owns,
 > which surfaces have adopted it, which are exempt and why. **Authored-but-unadopted must be
@@ -117,6 +117,7 @@ Both are now live and both were verified in the **compiled production CSS**, not
 **What did NOT move:** `.scrollbar-hide`, `.text-premium` and `.calm-table` stayed in `@layer utilities`, because they are genuine utilities and component styles respectively. Only the six roles moved (the five here plus `.text-signature`, which keeps its own row), because only they are roles.
 
 **The rule this row exists to carry:** *a role is a starting point, not a cage.* A surface that names a role and then adjusts one property of it is using the scale correctly, and it must be able to. If a role ever needs to be un-overridable, that is a decision to state out loud in this register — never a side-effect of which `@layer` block someone happened to paste it into. | ✅ governed | review |
+| 44 | **Household learning (Patterns)** | `components/LearningSignalsPanel.tsx` | How a household meets a Pattern THA has learned about it (EL1 `evidence-learning`, `search` verb). Owns the room-scoping (`domains`), the cap, the eyebrow and the honest-absence rule: nothing learned yet renders nothing, never an empty-state placeholder implying something is missing. HOUSE_ACT2 Door 1 moved it from one household-wide mount on Profile to five — Profile keeps the unfiltered view; Planner, Pantry, Shopping and Cookbook each show only the Patterns learned from behaviour in that room. Filtering is client-side over the ONE shared query, mirroring AmbientIntelligence: a per-room server query would fragment a cache the hook already holds in full. | ✅ governed | machine |
 
 ## 2. Rivals — the ratchet
 

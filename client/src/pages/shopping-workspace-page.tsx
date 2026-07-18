@@ -48,6 +48,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { LoadError } from "@/components/ui/load-error";
 import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
 import { AmbientIntelligence } from "@/components/intelligence";
+import LearningSignalsPanel from "@/components/LearningSignalsPanel";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -2338,6 +2339,16 @@ export default function ShoppingWorkspacePage() {
         domains={["shopping"]}
         title="Worth a look before you shop"
         className="mb-4"
+      />
+
+      {/* HOUSE_ACT2 Door 1 — Patterns learned from how this household actually
+          shops, shown on the list they were learned from. */}
+      <LearningSignalsPanel
+        domains={["shopping"]}
+        limit={2}
+        eyebrow="What we've noticed about your shopping"
+        className="mb-4"
+        data-testid="learning-signals-shopping"
       />
 
       {/* PROD1 — the failed load is announced ACROSS EVERY MODE, not inside one.

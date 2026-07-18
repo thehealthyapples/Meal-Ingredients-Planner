@@ -38,6 +38,7 @@ import {
 import { PantryKnowledgeHub } from "@/components/PantryKnowledgeHub";
 import PantryIntelligencePanel from "@/components/PantryIntelligencePanel";
 import { AmbientIntelligence } from "@/components/intelligence";
+import LearningSignalsPanel from "@/components/LearningSignalsPanel";
 import { usePublishCompanionContext } from "@/components/conversation/companion-context";
 
 /**
@@ -1225,6 +1226,16 @@ export default function PantryPage() {
           surfaceKey="pantry"
           domains={["pantry"]}
           title="Ways to use what you have"
+        />
+
+        {/* HOUSE_ACT2 Door 1 — Patterns learned from how this household actually
+            keeps its pantry, shown on the shelves they describe. */}
+        <LearningSignalsPanel
+          domains={["pantry"]}
+          limit={2}
+          eyebrow="What we've noticed about your pantry"
+          className="mt-3"
+          data-testid="learning-signals-pantry"
         />
 
         <FirstVisitHint

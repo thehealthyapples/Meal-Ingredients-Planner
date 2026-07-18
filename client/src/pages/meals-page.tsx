@@ -34,6 +34,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { CreateMealModal, type ImportedRecipeDraft } from "@/components/create-meal-modal";
 import AmbientIntelligence from "@/components/intelligence/AmbientIntelligence";
+import LearningSignalsPanel from "@/components/LearningSignalsPanel";
 import { RecipeScanReview, type RecipeScanData } from "@/components/RecipeScanReview";
 import { MealImageWidget } from "@/components/MealImageWidget";
 import BarcodeScanner from "@/components/BarcodeScanner";
@@ -3601,6 +3602,19 @@ export default function MealsPage() {
           domains={["cookbook"]}
           title="From your cookbook"
           data-testid="ambient-cookbook"
+        />
+      )}
+
+      {/* HOUSE_ACT2 Door 1 — Patterns learned from how this household actually
+          cooks. Hidden while searching, on the same reasoning as the ambient
+          strip above: it never competes with a search the household began. */}
+      {!searchTerm.trim() && (
+        <LearningSignalsPanel
+          domains={["cookbook"]}
+          limit={2}
+          eyebrow="What we've noticed about your cooking"
+          className="mb-3"
+          data-testid="learning-signals-cookbook"
         />
       )}
 

@@ -39,6 +39,7 @@ import { computeMealVariety, EMPTY_VARIETY_SCORE } from "@shared/canonical/plant
 import { getMealNutrients } from "@/lib/nutrition-insights";
 import PlannerIntelligenceStrip from "@/components/PlannerIntelligenceStrip";
 import { AmbientIntelligence } from "@/components/intelligence";
+import LearningSignalsPanel from "@/components/LearningSignalsPanel";
 import { CookbookMealIntelligenceStrip } from "@/components/CookbookMealIntelligenceStrip";
 import { MealNutrientTags } from "@/components/nutrition-insights-panel";
 import { useUser } from "@/hooks/use-user";
@@ -2024,6 +2025,18 @@ export default function WeeklyPlannerPage() {
           domains={["planner"]}
           title="Gaps in your week"
           className="mt-3"
+        />
+
+        {/* HOUSE_ACT2 Door 1 — the Patterns THA has learned from how this
+            household actually plans, shown where the planning happens. Profile
+            keeps the household-wide view; this is the planner's own share of it.
+            Same shared query as every other mount, filtered client-side. */}
+        <LearningSignalsPanel
+          domains={["planner"]}
+          limit={2}
+          eyebrow="What we've noticed about your planning"
+          className="mt-3"
+          data-testid="learning-signals-planner"
         />
 
         {fullPlanner.map((week) => (
