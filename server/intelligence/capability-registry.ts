@@ -758,21 +758,42 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     availability: "registered",
   },
   {
+    // ENGINT1 — Engineering Intelligence. This capability was DECLARED by TIP1
+    // and stayed unbuilt; ENGINT1 built its owner and handler and left the
+    // declaration itself where it was. No `engineering-intelligence` capability
+    // was created beside it: this one already owns "repo + docs/ + SoT Register",
+    // and a second registration would have given one body of knowledge two
+    // owners (Architecture Compliance — no duplicate ownership, no duplicate
+    // entities).
     id: "developer",
     displayName: "Developer / Platform",
-    description: "Architecture/workflow knowledge — isolated developer plane only; never user plane.",
+    description:
+      "Read-only Engineering Intelligence — architecture, investigations, implementation reports, the " +
+      "roadmap, release documentation and git history, read live from the repository and answered with " +
+      "path:line citations. It READS engineering knowledge and never owns it: nothing at runtime may " +
+      "create, edit or retire a governing document, and no completion status is derived that the " +
+      "repository has not recorded. Isolated developer plane only; never user plane.",
     owner: "repo + docs/ + SoT Register",
-    owningService: "n/a (read tooling, isolated dev plane)",
-    apiSurface: "n/a (no production route)",
-    supportedIntents: ["read", "explain", "report"],
+    owningService: "server/services/engineering-knowledge-registry.ts (ENGINT1)",
+    apiSurface: "n/a (no production route; developer plane only — see server/intelligence/developer-plane.ts)",
+    // ENGINT1 added "search" to the three verbs TIP1 declared. It is an additive
+    // extension for locating documents and files (Principle 8 — extension, not
+    // replacement); the capability's class, posture, permissions and plane are
+    // untouched, and "search" is read-only like the other three.
+    supportedIntents: ["read", "explain", "search", "report"],
     executableIntents: [],
     permissions: { minimumRole: "developer", knowledgeClass: "developer", ownershipScoped: false, audited: true },
     capabilityClass: "read-only",
     aiAccess: "never",
     // TIP1 §7: the developer plane is PHYSICALLY isolated; in this (canonical
-    // user-facing) registry the capability must never be reachable. A future
-    // developer-plane deployment would register it as "registered"/"available"
-    // in its own isolated registry instance.
+    // user-facing) registry the capability must never be reachable. The
+    // developer-plane deployment registers it as "registered" in its own
+    // isolated registry instance — see developerPlaneSeed() below.
+    //
+    // This value is load-bearing, not decorative: permissions.canInvokeCapability
+    // rejects "never" BEFORE any role check, so it is the first of ENGINT1's four
+    // independent locks. Do not change it to unlock Engineering Intelligence on
+    // the user plane; §4.2 forbids that surface outright.
     availability: "never",
   },
 ];
@@ -792,6 +813,27 @@ const SEED_CAPABILITIES: readonly Capability[] = SEED_CAPABILITIES_BASE.map((cap
   const withGuidance = GUIDANCE[cap.id] ? { ...cap, guidance: GUIDANCE[cap.id] } : cap;
   return ENRICHMENT[cap.id] ? { ...withGuidance, enrichment: ENRICHMENT[cap.id] } : withGuidance;
 });
+
+/**
+ * ENGINT1 — the developer-plane seed. Identical to the canonical user-facing
+ * seed in every capability except `developer`, whose `availability` is raised
+ * from "never" to "registered" so a handler may be bound to it.
+ *
+ * This is a derivation, not a second table: there is still exactly one seed, and
+ * a capability added above appears on both planes automatically. The one
+ * difference is stated in one place, which is what makes it reviewable.
+ *
+ * It is exported for `server/intelligence/developer-plane.ts` and its tests, and
+ * for nothing else. Passing this seed to the user-facing platform would defeat
+ * lock 1 of four; the remaining three (no binding on the user singleton, no
+ * `developer` role from resolveContext, and the env flag) would still hold, but
+ * TIP1 §7 is not a boundary to be left standing on its spares.
+ */
+export function developerPlaneSeed(): readonly Capability[] {
+  return SEED_CAPABILITIES.map((cap) =>
+    cap.id === "developer" ? { ...cap, availability: "registered" as const } : cap,
+  );
+}
 
 /** Honest GAPs (TIP2 §2.4) — desired intents THA does not own an endpoint for yet. */
 const SEED_GAPS: readonly CapabilityGap[] = [

@@ -1,1 +1,0 @@
-/nix/store/sfq01yi77yczvzvr79f2vq69nd4fwpmh-golden-cheetah-3.7-extracted/lib

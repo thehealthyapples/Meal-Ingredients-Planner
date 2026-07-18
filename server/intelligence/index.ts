@@ -102,6 +102,34 @@ export {
   createRegistryProductKnowledgeReadPort,
   type ProductKnowledgeReadPort,
 } from "./handlers/product-knowledge-read-port.js";
+
+// ENGINT1 — Engineering Intelligence: the read path onto THA's own engineering
+// record, activating the `developer` capability TIP1 declared.
+//
+// EXPORTED FOR THE DEVELOPER PLANE AND ITS TESTS ONLY. Importing the binder here
+// does NOT make the capability reachable: the user-facing platform never calls
+// it, and the user-facing seed keeps `developer` at `availability: "never"`.
+// Anything wiring this into a user-facing route is a §4.2 defect, not a feature.
+export {
+  bindEngineeringKnowledgeReadCapability,
+  ENGINEERING_KNOWLEDGE_CAPABILITY_ID,
+  ENGINEERING_KNOWLEDGE_INTENTS,
+} from "./bindings/engineering-knowledge.js";
+export {
+  createEngineeringKnowledgeReadHandler,
+  ENGINEERING_KNOWLEDGE_EXECUTABLE_INTENTS,
+} from "./handlers/engineering-knowledge-read-handler.js";
+export {
+  createRegistryEngineeringKnowledgeReadPort,
+  type EngineeringKnowledgeReadPort,
+} from "./handlers/engineering-knowledge-read-port.js";
+export {
+  developerPlaneContext,
+  developerPlanePlatform,
+  DEVELOPER_PLANE_ENV_FLAG,
+  isDeveloperPlaneEnabled,
+  resetDeveloperPlane,
+} from "./developer-plane.js";
 // INT8 — fourth live capability binding (read-only Pantry).
 export { bindPantryReadCapability, PANTRY_CAPABILITY_ID, PANTRY_EXECUTABLE_INTENTS } from "./bindings/pantry.js";
 export {
