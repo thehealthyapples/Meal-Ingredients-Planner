@@ -79,6 +79,43 @@ check "REPOSITORY_CONVENTIONS.md exists" $?
 grep -q "REPOSITORY_CONVENTIONS.md" docs/architecture/README.md 2>/dev/null
 check "REPOSITORY_CONVENTIONS.md indexed in architecture README" $?
 
+# 7. Every governing architecture document is indexed in its README (DOCGOV1).
+#    An architecture doc in the right folder but absent from the index is still
+#    drift — "invisible by navigation" — so a new one cannot land silently.
+#    Capability Cards live in the capabilities/ subtree and are indexed there.
+unindexed=""
+for f in docs/architecture/*.md; do
+  b="$(basename "$f")"
+  [ "$b" = "README.md" ] && continue
+  grep -q "$b" docs/architecture/README.md 2>/dev/null || unindexed="$unindexed $b"
+done
+[ -z "$unindexed" ]
+check "every architecture document indexed in README.md" $?
+[ -n "$unindexed" ] && for u in $unindexed; do echo "        unindexed: $u"; done
+
+# 8. Companion and House reports live in their own workstreams (DOCGOV2), never in
+#    the generic ux/ folder. Loose-root filing is already caught by #3. A small,
+#    documented allow-list grandfathers pre-existing ux/ files that cannot move
+#    (governing-doc citation lock, an unresolved ux/architecture name-duplication,
+#    or a genuine cross-domain owner call) — see REPOSITORY_CONVENTIONS.md §4.
+CH_ALLOW="CP2_COMPANION_PERSONALITIES_ACTIVATION.md EWX1_LIVING_COMPANION_EXPERIENCE.md \
+INT37_COMPANION_CARD_EXPERIENCE_IMPLEMENTATION.md EXP5_ONE_HOME_MANY_PLACES.md \
+DESIGN1_HOME_VISUAL_DESIGN.md HOUSE1_THE_ENTRANCE_HALL.md \
+NORTH2_EXPERIENCE_ARCHITECTURE_REFINEMENT.md WX2_HOME_INTELLIGENCE_COMPANION_IMPLEMENTATION.md \
+WX3_PLANNER_INTELLIGENCE_COMPANION_IMPLEMENTATION.md"
+CH_ALLOW="$(printf '%s' "$CH_ALLOW" | tr -s '[:space:]' ' ')"
+misfiled=""
+for f in docs/implementation/ux/*.md docs/investigations/ux/*.md; do
+  [ -e "$f" ] || continue
+  b="$(basename "$f")"
+  case " $CH_ALLOW " in *" $b "*) continue;; esac
+  if printf '%s' "$b" | grep -qE 'COMPANION|^CP[0-9]'; then misfiled="$misfiled companion→$f"; fi
+  if printf '%s' "$b" | grep -qE 'ARRIVAL|NORTH[0-9]|(^|_)HOME(_|\.)|HOUSE[0-9]|ORCHARD_HOUSE'; then misfiled="$misfiled house→$f"; fi
+done
+[ -z "$misfiled" ]
+check "no Companion/House reports in the generic ux/ folder (belong in companion/ , house/)" $?
+[ -n "$misfiled" ] && for m in $misfiled; do echo "        misfiled: $m"; done
+
 echo
 if [ "$fail" -eq 0 ]; then echo "Repository structure is clean."
 else echo "Structure violations found — see docs/architecture/REPOSITORY_CONVENTIONS.md" >&2; fi

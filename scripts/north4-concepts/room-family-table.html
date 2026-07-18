@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en" data-state="filled">
+<head>
+<meta charset="utf-8">
+<title>The Family Table · Planner — where the household makes up its mind</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,300;9..144,0,400;9..144,1,300;9..144,1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./_palette.css">
+<link rel="stylesheet" href="./_house.css">
+<script>
+  /* THE FAMILY TABLE (Planner) — HOUSE_COMPLETE §3.
+     Same house (Concept B · Kept House · one morning · pressed apple · Companion
+     apple · constant shell); ONE deliberate move: THE WINDOW CLOSES TO LIGHT (E1),
+     and one solid oak table holds the whole week.
+       ?state=filled → a week mostly decided
+       ?state=empty  → a fresh week: open days as LAID PLACES, never accusations */
+  (function () {
+    var s = new URLSearchParams(location.search).get("state");
+    document.documentElement.dataset.state = s === "empty" ? "empty" : "filled";
+  })();
+</script>
+<style>
+/* =============================================================================
+   THE FAMILY TABLE — the house's PRACTICAL centre.
+   Home is where the household is welcomed; this is where it makes up its mind.
+
+   THE ONE MOVE: the window closes. This is the first room in the house at E1, and
+   the orchard is here only as LIGHT. The defence (HOUSE_COMPLETE T5) is that E1 is
+   BROADER, NEVER DARKER: where E2 commits the light to one region, E1 lays the
+   same morning across the whole plane. More lit surface than the Kitchen — simply
+   no view. Walking in from the Kitchen must never feel like the light left.
+   ========================================================================== */
+
+:root {
+  /* E1 — LIGHT ONLY. The same morning, laid across the whole plane rather than
+     committed to one window. Broader, and a half-step brighter than the Pantry. */
+  --light-angle: 104deg;
+  --light-stops: var(--wall-warm) 0%, hsl(39 46% 93%) 30%, var(--wall) 72%, var(--wall-cool) 100%;
+
+  /* the table's own timber — the widest, deepest oak surface in the house */
+  --table-top:  hsl(40 34% 88%);
+  --table-edge: hsl(42 40% 62%);
+}
+
+/* ============================  THE TABLE  ============================
+   ONE SOLID PLANE holding all seven days. The days are PLACES ON the table, not
+   cards in a grid; a planned meal is an OBJECT RESTING on it. One ground, never
+   nested (Blueprint §8.2, rule T1) — a week rendered as seven cards each holding
+   meal cards is three grounds and a database. */
+.table {
+  position: relative; margin-top: 34px; border-radius: 4px;
+  background: linear-gradient(176deg, var(--table-top), hsl(38 30% 85%));
+  box-shadow: 0 22px 48px -26px hsl(56 45% 9% / .34), 0 2px 5px hsl(56 45% 9% / .10);
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  overflow: hidden;
+}
+/* the lit front lip of the timber — one real edge, so it reads as a SURFACE */
+.table::before { content: ""; position: absolute; z-index: 3; left: 0; right: 0; top: 0; height: 3px;
+  background: linear-gradient(to bottom, hsl(44 62% 92% / .95), hsl(42 40% 78% / .2)); }
+.table::after { content: ""; position: absolute; z-index: 3; left: 0; right: 0; bottom: 0; height: 5px;
+  background: linear-gradient(to bottom, hsl(42 38% 66% / .5), var(--table-edge));
+  box-shadow: 0 12px 20px -10px hsl(56 45% 9% / .3); }
+
+/* a DAY — a place at the table, divided by the grain of the timber and nothing else */
+.day { position: relative; padding: 20px 15px 26px; min-height: 300px; }
+.day + .day::before { content: ""; position: absolute; left: 0; top: 18px; bottom: 18px; width: 1px;
+  background: linear-gradient(to bottom, transparent, hsl(42 30% 72% / .55) 18%, hsl(42 30% 72% / .55) 82%, transparent); }
+.day-name { font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-weight: 400; font-size: 15px; color: hsl(30 16% 26%); }
+.day-date { margin-top: 2px; font-size: 11px; color: var(--ink-quiet); }
+
+/* ---- THE SUN ON TODAY — the room's ONE Living Detail ----------------------
+   A HALF-STEP OF WARMTH on the current day. Never a colour, never a border,
+   never a TODAY chip, never a badge (Blueprint §12.2 ceiling, rule T3). The week
+   has a "now", and the LIGHT says so — nothing labels it.
+
+   NOTE (HOUSE_COMPLETE D4): the live Planner cannot currently know what day it is
+   (PLAN1 §11.4 — no date column). Per Article VII this detail is data-borne or
+   dead: where the anchor is absent it renders NOT AT ALL, and the table is still
+   complete. It is never faked from the request's own weekday. */
+.day.today { background: radial-gradient(120% 78% at 50% 0%, hsl(43 66% 92% / .78), transparent 76%); }
+.day.today .day-name { color: hsl(30 18% 20%); }
+
+/* ---- A PLANNED MEAL — an object set down on the table -------------------- */
+.meal { position: relative; margin-top: 14px; background: hsl(39 50% 97%); border-radius: 3px; padding: 11px 12px 12px;
+  box-shadow: 0 5px 14px -8px hsl(56 45% 9% / .26), 0 1px 2px hsl(56 45% 9% / .09);
+  border-top: 1px solid hsl(41 50% 93%); }
+.meal .m-when { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-quiet); }
+.meal .m-name { margin-top: 4px; font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-weight: 400; font-size: 14.5px; line-height: 1.25; color: hsl(30 16% 24%); }
+.meal .m-note { margin-top: 4px; font-size: 11.5px; color: var(--ink-quiet); }  /* "for the table" — never a metric */
+
+/* ---- THE OPEN DAY — A LAID PLACE, NEVER AN ACCUSATION (rule T2) ----------
+   Clear warm oak with air around it: a setting waiting. NO dashed ghost outline,
+   NO red gap, NO "+ Add meal" shouting into the space, NO count of what is
+   missing, NO completion percentage on the week. The single quiet affordance is
+   a hairline of light on the timber — the place is laid, and it simply waits. */
+.open { margin-top: 14px; padding: 15px 12px; border-radius: 3px;
+  background: linear-gradient(170deg, hsl(41 44% 94% / .5), hsl(40 32% 90% / .28)); }
+.open .o-word { font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-weight: 300; font-style: italic; font-size: 13.5px; color: hsl(32 14% 46%); }
+
+/* ============================  THE WEEK'S REST  ============================
+   Completion is "the plan is made" — a restful, finished state, never a prompt to
+   do more and never a score (rule T7, T9). One quiet true sentence. */
+.rest { margin-top: 26px; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.rest .r-line { font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-weight: 300; font-style: italic; font-size: 17px; color: hsl(30 14% 34%); }
+.rest .r-sub { font-size: 12.5px; color: var(--ink-quiet); }
+
+/* the Companion leans at the END of the table — one grounded, refusable idea for
+   an open day. It NEVER plans the week and nothing is ever auto-filled (rule T6). */
+.table-end { margin-top: 30px; display: grid; grid-template-columns: 1fr 300px; gap: 48px; align-items: start; }
+
+/* ============================  RESPONSIVE  ============================
+   The rule (HOUSE_COMPLETE §3.5): YOU NEVER GET FEWER DAYS ON A SMALLER SCREEN —
+   YOU STAND CLOSER TO THE SAME TABLE. The week is never paginated, never split
+   across screens, never collapsed into an accordion of day-cards. */
+@media (max-width: 980px) {
+  /* the table TURNS rather than breaks: two bands on the same single plane
+     (four and three), the timber continuous beneath both */
+  .table { grid-template-columns: repeat(4, 1fr); }
+  .day { min-height: 232px; padding: 17px 12px 20px; }
+  .day:nth-child(5)::before { display: none; }   /* the band break is not a grain line */
+  .table-end { grid-template-columns: 1fr; gap: 26px; }
+}
+@media (max-width: 560px) {
+  /* TODAY AT THE HEAD OF THE TABLE, at full size, with the rest of the week
+     continuing as one horizontal strip you move along — the same plane, seen from
+     closer. Never seven stacked cards; never a day-picker that hides six to show
+     one. Horizontal movement WALKS THE WEEK; vertical scroll reveals a day. */
+  .table { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; }
+  .day { flex: 0 0 78%; scroll-snap-align: start; min-height: 300px; }
+  .day.today { flex-basis: 88%; }
+}
+</style>
+</head>
+<body>
+<div class="room">
+  <div class="shell"></div>
+
+  <div class="floor">
+    <div class="head">
+      <div class="eyebrow">Planner</div>
+      <h1 class="title">The week</h1>
+      <p class="subtitle">
+        <span class="filled-only" style="display:inline">Mostly decided — and Thursday's still open, which is no bad thing.</span>
+        <span class="empty-only">A fresh week, and nothing on it yet. There's no hurry; the table's laid.</span>
+      </p>
+    </div>
+
+    <!-- EMPTY STATE: designed first, and designed WARM (Article VIII).
+         A fresh week gets air and an invitation — never "0 of 7 planned". -->
+    <div class="empty-only invite">
+      <div class="bi-title">Nothing planned yet — the table's laid.</div>
+      <div class="bi-body">Put something down whenever you like, in any order. Most families start with the two or three nights they already know, and let the rest fill in. Nothing here is owed, and nothing is counting.</div>
+    </div>
+
+    <!-- ===================== THE TABLE — one solid plane ===================== -->
+    <div class="table">
+      <div class="day">
+        <div class="day-name">Monday</div><div class="day-date">14 July</div>
+        <div class="filled-only" style="display:block">
+          <div class="meal"><div class="m-when">Dinner</div><div class="m-name">Roast chicken traybake</div><div class="m-note">for the table</div></div>
+        </div>
+        <div class="empty-only open"><span class="o-word">open</span></div>
+      </div>
+
+      <div class="day">
+        <div class="day-name">Tuesday</div><div class="day-date">15 July</div>
+        <div class="filled-only" style="display:block">
+          <div class="meal"><div class="m-when">Dinner</div><div class="m-name">Orzo with spinach &amp; lemon</div><div class="m-note">quick · serves 4</div></div>
+        </div>
+        <div class="empty-only open"><span class="o-word">open</span></div>
+      </div>
+
+      <div class="day today">
+        <div class="day-name">Wednesday</div><div class="day-date">16 July</div>
+        <div class="filled-only" style="display:block">
+          <div class="meal"><div class="m-when">Dinner</div><div class="m-name">Butternut squash traybake</div><div class="m-note">for the table</div></div>
+        </div>
+        <div class="empty-only open"><span class="o-word">open</span></div>
+      </div>
+
+      <div class="day">
+        <div class="day-name">Thursday</div><div class="day-date">17 July</div>
+        <!-- the OPEN day in the filled week: a laid place, not a gap -->
+        <div class="open"><span class="o-word">open</span></div>
+      </div>
+
+      <div class="day">
+        <div class="day-name">Friday</div><div class="day-date">18 July</div>
+        <div class="filled-only" style="display:block">
+          <div class="meal"><div class="m-when">Dinner</div><div class="m-name">Salmon, peas &amp; new potatoes</div><div class="m-note">serves 4</div></div>
+        </div>
+        <div class="empty-only open"><span class="o-word">open</span></div>
+      </div>
+
+      <div class="day">
+        <div class="day-name">Saturday</div><div class="day-date">19 July</div>
+        <div class="filled-only" style="display:block">
+          <div class="meal"><div class="m-when">Dinner</div><div class="m-name">Slow-cooked lamb ragù</div><div class="m-note">for the table</div></div>
+        </div>
+        <div class="empty-only open"><span class="o-word">open</span></div>
+      </div>
+
+      <div class="day">
+        <div class="day-name">Sunday</div><div class="day-date">20 July</div>
+        <div class="filled-only" style="display:block">
+          <div class="meal"><div class="m-when">Dinner</div><div class="m-name">Chickpea &amp; tomato stew</div><div class="m-note">serves 4 · in season</div></div>
+        </div>
+        <div class="empty-only open"><span class="o-word">open</span></div>
+      </div>
+    </div>
+
+    <div class="table-end">
+      <div>
+        <div class="rest filled-only" style="display:flex">
+          <span class="r-line">Six nights down, and Thursday's open.</span>
+          <span class="r-sub">Nothing left to fetch for any of them.</span>
+        </div>
+        <div class="rest empty-only">
+          <span class="r-line">The table's laid whenever you are.</span>
+        </div>
+      </div>
+
+      <div>
+        <div class="counter-note" style="margin-top:0">
+          <div class="counter-from"><span class="dot"></span> The Companion</div>
+          <div class="counter-body">
+            <span class="filled-only" style="display:inline">There's still a good bit of that squash — it'd go well on Thursday, if you want an easy one.</span>
+            <span class="empty-only">Whenever you're ready. If it helps, last week's roast and the orzo both went down well.</span>
+          </div>
+          <a class="counter-link" href="#">See what it goes with ›</a>
+        </div>
+
+        <div class="wall-apple" aria-hidden="true">
+          <i class="wa-occ"></i><i class="wa-up"></i><i class="wa-lo"></i><i class="wa-face"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="doors">
+    <div class="door"><span class="door-name">Home</span><span class="door-handle"></span></div>
+    <div class="door"><span class="door-name">Cookbook</span><span class="door-handle"></span></div>
+    <div class="door here"><span class="door-name">Planner</span><span class="door-handle"></span></div>
+    <div class="door"><span class="door-name">Pantry</span><span class="door-handle"></span></div>
+  </nav>
+
+  <button class="companion" aria-label="The Companion"><i></i></button>
+</div>
+</body>
+</html>

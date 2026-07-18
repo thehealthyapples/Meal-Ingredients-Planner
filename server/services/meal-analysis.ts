@@ -191,7 +191,7 @@ export async function scrapeNutritionFromSource(meal: { id: number; sourceUrl?: 
   try {
     const response = await axios.get(meal.sourceUrl, {
       timeout: 10000,
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SmartMealPlanner/1.0)' },
+      headers: { 'User-Agent': 'TheHealthyApples/1.0 (+https://thehealthyapples.com; support@thehealthyapples.com)' },
     });
     const $ = cheerio.load(response.data);
     const jsonLdRecipe = extractJsonLdRecipe($);
@@ -283,8 +283,8 @@ export async function autoAnalyzeMeal(mealId: number) {
         try {
           const cleanIngredient = cleanIngredientForLookup(ingredient);
           const response = await axios.get(
-            `https://world.openfoodfacts.net/cgi/search.pl?search_terms=${encodeURIComponent(cleanIngredient)}&json=1&page_size=3`,
-            { timeout: 8000, headers: { 'User-Agent': 'SmartMealPlanner/1.0' } }
+            `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(cleanIngredient)}&json=1&page_size=3`,
+            { timeout: 8000, headers: { 'User-Agent': 'TheHealthyApples/1.0 (+https://thehealthyapples.com; support@thehealthyapples.com)' } }
           );
 
           const products = response.data.products || [];

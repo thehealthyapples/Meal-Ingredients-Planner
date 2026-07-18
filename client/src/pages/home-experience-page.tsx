@@ -85,15 +85,20 @@ import { useCurrentPlannerWeek } from "@/hooks/use-current-planner-week";
 // instead. This is its first consumer.
 import { resolveHomePrimaryAction } from "@shared/home/home-primary-action";
 import { useFoodOpportunities } from "@/hooks/use-food-opportunities";
+import AmbientIntelligence from "@/components/intelligence/AmbientIntelligence";
 import { useWithholdCompanion } from "@/components/conversation/companion-context";
 import { prefersReducedMotion } from "@/lib/companion-delight";
 import { WorkspaceHeader, PageContainer } from "@/components/workspace-header";
 import { roomsByHref } from "@/components/nav-bar";
-import { OrchardOpenView } from "@/components/layout/orchard-backdrop";
+import { OrchardArch } from "@/components/layout/orchard-backdrop";
 import { MealCard } from "@/components/MealCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LoadError } from "@/components/ui/load-error";
+// MAT1 — imported, not redeclared. This file held its own `= 30`; so did two other
+// client surfaces and the shared core, so the platform's single most user-visible
+// number was declared four times. One owner, one source of truth.
+import { WEEKLY_PLANT_TARGET } from "@shared/nutrition/household-nutrition";
 import {
   CalendarDays, ShoppingCart, Leaf, ArrowRight, ChevronRight,
 } from "lucide-react";
@@ -106,7 +111,6 @@ import {
 // mirroring a DEVICE's key made Home agree with the planner tab and disagree with the
 // household's own laptop — and with the server, twenty-one lines below (BEH-3).
 // Home asks the owner now: `useCurrentPlannerWeek()`.
-const WEEKLY_PLANT_TARGET = 30;
 
 // ── The material, resolved from the one definition source ────────────────────
 //
@@ -118,24 +122,21 @@ const WEEKLY_PLANT_TARGET = 30;
 // inside a var() — and silently emits `--tw-shadow-color`, leaving the surface flat
 // while the build, the typecheck and the gate all stay green. ODL2 §6.3 found this by
 // looking at a picture, which is the only way it can be found.
+// ARRIVAL1 — the room's surfaces are now the orchard's own materials, defined once
+// in index.css (the .home-arrival block) and named here as classes:
+//   • .home-arch / .home-arch__view / .home-arch__light — the plaster aperture
+//     (owned by orchard-backdrop.tsx's OrchardArch shape).
+//   • .home-console — the bounded oak furniture the day rests on (wall visible
+//     left and right; a light-pool from the arch; a shadow onto the wall behind and
+//     a contact shadow onto the floor). Never full-width, never a colour band.
+//   • .home-object — an ivory surface resting ON the console: a thing left on the
+//     wood, each with its own contact shadow, not a cell in a grid.
+//   • .home-door — a quiet handle at the floor line, in the penumbra.
+//   • .home-floor — the near stone ground.
+// The counter/ground/support material chips (--ground-plane etc.) are the other
+// rooms' surfaces and are untouched; Home no longer consumes them.
 const M = {
-  // The counter. One ground per workspace, never nested (Blueprint §8.2).
-  ground:
-    "rounded-[var(--radius-ground)] border border-[var(--ground-plane-border)] " +
-    "bg-[var(--ground-plane)] backdrop-blur-[var(--ground-blur)] shadow-[shadow:var(--shadow-ground)]",
-  // The lit surface: solid, warmest, the rim of light along its top edge where the
-  // morning catches. The radius step below the ground it rests on (UIA §4).
-  primary:
-    "rounded-[var(--radius-primary)] border border-[var(--surface-primary-border)] " +
-    "bg-[var(--surface-primary)] shadow-[shadow:var(--shadow-primary)]",
-  // Support waits in the penumbra: lower, quieter, the ground breathing through.
-  // The hand answers physically — hover lifts toward you, press seats it back.
-  support:
-    "h-full rounded-[var(--radius-support)] border border-[var(--surface-support-border)] " +
-    "bg-[var(--surface-support)] backdrop-blur-[var(--surface-blur)] shadow-[shadow:var(--shadow-support)] " +
-    "transition-[transform,box-shadow,background-color] duration-200 ease-out motion-reduce:transition-none " +
-    "hover:-translate-y-0.5 hover:bg-[var(--surface-support-hover)] hover:shadow-[shadow:var(--shadow-support-hover)] " +
-    "active:translate-y-0 active:shadow-[shadow:var(--shadow-support-press)]",
+  radius: "rounded-[var(--radius-support)]",
   focus:
     "outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
 } as const;
@@ -145,12 +146,30 @@ const M = {
 // rooms a household cooks out of — Nutrition, Diary and Analyser are a walk further in,
 // and the walls hold all eight at every size regardless.
 const DOOR_HREFS = ["/planner", "/cookbook", "/pantry", "/shopping-workspace"] as const;
-const DOOR_LINES: Record<string, string> = {
-  "/planner": "Plan your meals with ease",
-  "/cookbook": "Discover recipes and inspiration",
-  "/pantry": "See what you have at home",
-  "/shopping-workspace": "Your list and reminders",
-};
+
+// NORTH3 — `DOOR_LINES` IS RETIRED, AND IT WAS A MARKETING LINE THIS PAGE HAD
+// ALREADY REFUSED ONCE.
+//
+// It read:
+//   "/planner":            "Plan your meals with ease"
+//   "/cookbook":           "Discover recipes and inspiration"
+//   "/pantry":             "See what you have at home"
+//   "/shopping-workspace": "Your list and reminders"
+//
+// NORTH1 §5.7 deleted the render's "Nourishing food. Happy home." from this room
+// and gave the reason in one line: *a marketing line inside the product*. It is
+// the same sentence four times. "Discover recipes and inspiration" is not a fact
+// about the household, it is not a fact about their cookbook, and it is not
+// something anybody has ever needed to be told while standing in their own hall.
+// It is the brochure, and the brochure had already been shown the door.
+//
+// A door in a house carries a NAME and a HANDLE. It does not carry a paragraph
+// explaining the room behind it — you can see the room behind it, and if you
+// cannot, a sentence in 12px will not help. The label and the glyph are UX1's
+// (roomsByHref); the sentence was Home's own invention, and it is gone.
+//
+// This is the Kept Room's ordering law 8 — TRUTH BEFORE CHARM — applied to the
+// only four strings on this page that had no owner and no source.
 
 // CONV1 P8 / OWN-6 — `loadActiveWeek()` is RETIRED from Home.
 //
@@ -502,59 +521,37 @@ export default function HomeExperiencePage() {
     <>
       <WorkspaceHeader realm="home" title="Home" wide titleTestId="text-home-title" />
 
-      {/* The room. `isolate` gives the view and the light their own stacking context, so
-          the orchard can never climb over the shell or under the canvas. */}
-      <div className="relative isolate flex-1" data-testid="home-room">
-        {/* ── 1. THE MORNING ──────────────────────────────────────────────────────
-               Home does NOT pour --light-ambient. It is the only room that must not.
-               The pool is the morning for a room with no window — E1's "the orchard as
-               illumination and warmth, not image" (Blueprint §6.2). At E3 the window is
-               open, and the light in it is the asset's own. Laying the pool over the
-               view as well put a second sun in one room — the anti-pattern Blueprint §16
-               names — and it looked exactly like what it was: the whole upper room blew
-               out to a flat yellow haze and the orchard stopped reading as a place. Two
-               lights, no direction, no view. One sun (§7), and at Home it rises in the
-               window. Found by looking; it typechecked perfectly. */}
+      {/* ── THE ROOM ──────────────────────────────────────────────────────────
+             ARRIVAL1 — NORTH5's definitive Home. One continuous plaster wall (the
+             .home-arrival background), a stone floor at its base, a plaster archway
+             onto the orchard, and a bounded oak console the day rests on. The law
+             is wall → furniture → floor (NORTH5 §4): cover the console and the wall
+             is continuous behind it; the orchard is an opening in that wall, not a
+             banner above a dashboard. `isolate` keeps the light and the arch in
+             their own stacking context. */}
+      <div className="home-arrival relative isolate flex-1" data-testid="home-room">
+        {/* THE FLOOR — the near stone ground the room stands on, behind the content.
+             Its soft top edge is the floor line where the wall turns into the floor. */}
+        <div className="home-floor" aria-hidden data-testid="home-floor" />
 
-        {/* ── 2. THE OPEN VIEW ── E3. Home only. The room's one light source. */}
-        <OrchardOpenView />
+        <PageContainer className="relative z-10 pt-4 sm:pt-6 lg:pt-6 pb-28">
+          {/* ── THE ARCH — the emotional focal point ─────────────────────────────
+                 A plaster aperture cut into the wall, the orchard genuinely behind it
+                 (Blueprint §6.2 rule 4, amended ARRIVAL1). The morning enters here and
+                 here only; the shape, reveal, depth and petal-light are the CSS, the
+                 asset and its crop are OrchardArch's. It carries no type and never
+                 animates (§6.1). The orchard continues beyond it. */}
+          <div className="flex justify-center">
+            <OrchardArch />
+          </div>
 
-        {/* Below `lg` the view is a band across the top of the room, so the room begins
-            beneath it. This padding is what keeps the greeting off the orchard at narrow
-            widths, and it clears the band at every viewport height by construction: the
-            band is clamp(190px, 26vh, 260px) and this is clamp(206px, 28vh, 278px), which
-            is larger at every point of both ranges. At `lg` the view moves beside the
-            greeting and the room reclaims its own top.
-            ⚠️ The `sm:` variant is NOT redundant, and removing it reintroduces a shipped
-            bug. `pageContainerClass` carries `pt-4 sm:pt-6`; tailwind-merge only dedupes
-            within a variant, so an unprefixed `pt-[…]` here loses to `sm:pt-6` at every
-            width from 640 up. It did: the room ignored the band and laid "Welcome home,
-            Chloe" across the orchard at 820px — while 390px, which is below `sm` and
-            therefore unaffected, looked perfect and was the only narrow width being
-            looked at. The tablet shot in scripts/capture-north1-home.ts exists because
-            of this. */}
-        {/* NORTH2 reclaimed `lg:pt-16` → `lg:pt-10`. The air the welcome needed came
-            out of the DEAD SPACE ABOVE IT, not out of the room below — see the note on
-            the counter's margin. Air above the first word is not breathing space; it
-            is just a shorter page. */}
-        <PageContainer className="relative z-10 pt-[clamp(206px,28vh,278px)] sm:pt-[clamp(206px,28vh,278px)] lg:pt-10 pb-14">
-          {/* ── 3. THE ARRIVAL ────────────────────────────────────────────────────
+          {/* ── THE ARRIVAL ────────────────────────────────────────────────────
                  The household's name in THA's own hand — the house's one ornament at
-                 Home, and it is data-borne (Blueprint §12.1: Home's one is the
-                 greeting). It stands on the warm canvas, in the light, with the view
-                 opening to its right: the orchard is never under these words.
-
-                 UXHOME1's signature voice reaches a household here for the first time.
-                 Colin Clapson ruled ADOPT on 2026-07-17 (adoption register,
-                 `signature-typography`); /home is the one permitted surface, and the
-                 rarity is the whole point — it is never a button, a label, a status,
-                 or a value a household reads in order to act. */}
-          {/* NORTH2 — the welcome is given room to be a welcome.
-                `lg:pt-6` → `lg:pt-14`, and the block below it is pushed further down
-                (§ THE COUNTER). Breathing space around an arrival is not empty space:
-                it is the pause between opening a door and being spoken to. */}
-          <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-12">
-            <header className="max-w-xl lg:pt-8">
+                 Home, data-borne (Blueprint §12.1). It stands on the plaster wall, in
+                 the light spilling from the arch above — never on the orchard (§6.1).
+                 The Companion's card is propped on the wall beside it. */}
+          <div className="mt-6 sm:mt-7 lg:mt-8 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-12">
+            <header className="max-w-xl">
               <h1 data-testid="text-home-greeting" className="text-foreground">
                 {name ? (
                   <>
@@ -620,7 +617,7 @@ export default function HomeExperiencePage() {
                 The sentences are the Behaviour Engine's, verbatim. Absent in silence. */}
             {reminders.length > 0 && (
               <aside
-                className={`${M.primary} p-5 animate-in fade-in duration-700 motion-reduce:animate-none`}
+                className="home-object rounded-[var(--radius-primary)] p-5 animate-in fade-in duration-700 motion-reduce:animate-none"
                 data-testid="card-home-companion"
                 aria-labelledby="home-companion-heading"
               >
@@ -646,31 +643,19 @@ export default function HomeExperiencePage() {
             )}
           </div>
 
-          {/* ── 4. THE COUNTER ─────────────────────────────────────────────────────
-                 It rises INTO the bottom of the view. The world is behind, the room is
-                 in front of it, and the counter's top edge is where the orchard stops
-                 being visible — which is what a sill is (Blueprint §8.1, the three
-                 grounds; "the middle ground is the whole trick of many places"). The
-                 view's fade is spent by the time the counter arrives, so nothing the
-                 counter carries has an image behind it. */}
-          {/* NORTH2 — `mt-10 sm:mt-12` → `mt-12 sm:mt-14 lg:mt-16`. The counter stands
-                further back from the welcome than it did: with the work pressed up
-                against the greeting, the arrival was a caption on a dashboard rather
-                than a room speaking first.
+          {/* ── THE CONSOLE — the oak furniture the day rests on ────────────────────
+                 The day's information is gently placed on a bounded oak console: wall
+                 visible left and right, a light-pool from the arch, a shadow onto the
+                 wall behind and a contact shadow onto the floor. It is FURNITURE inside
+                 the room, not a coloured lower band and not the counter's full-width
+                 ground (NORTH5 §4 — the hand test). The three facts rest on it as ivory
+                 objects, each with its own contact shadow: things left on the wood.
 
-                ⚠️ It is `lg:mt-16` and NOT the `lg:mt-24` this change first tried,
-                and the reason is worth keeping. At mt-24 the room breathed beautifully
-                and pushed **"Open today's plan" off the bottom of a 1440×900 desktop,
-                behind the nav.** That is the one door — the only primary action on the
-                page, the thing NORTH1 §8.3 named as the render's most serious failure
-                for lacking — and a door you must scroll to find is a door the room did
-                not offer. Home's whole job is *arrive, be oriented, step through the
-                one right door*; two thirds of that is not the job. Breathing space is
-                worth a great deal and it is not worth the door, so the air was taken
-                from the dead padding ABOVE the greeting instead, where it cost nothing.
-                Found by looking at the picture; every gate was green. */}
-          <section className="mt-12 sm:mt-14 lg:mt-16" aria-labelledby="home-today-heading">
-            <div className="mb-5 px-1">
+                 It stands back from the greeting so the arrival speaks first (the
+                 NORTH2 pause), but the whole composition is shorter than the old
+                 open-view room, so the one lit action never falls behind the nav. */}
+          <section className="mt-7 sm:mt-8" aria-labelledby="home-today-heading">
+            <div className="mb-4 px-1 max-w-4xl mx-auto">
               <h2
                 id="home-today-heading"
                 className="title-section text-foreground"
@@ -685,14 +670,12 @@ export default function HomeExperiencePage() {
               )}
             </div>
 
-            {/* The ground plane: the prepared counter the whole room rests on. One per
-                workspace, never nested — the glance and the doors are ON it, not in
-                grounds of their own. */}
-            <div className={`${M.ground} p-4 sm:p-6`} data-testid="ground-home">
-              {/* The glance — the room's lit surface. Three columns, one panel: the
-                  render's own composition, carrying THA's real three. Family and Pantry
-                  are the render's other two and Home has no validated data for either;
-                  they are not invented here. */}
+            {/* The console: the bounded oak surface. `max-w-4xl mx-auto` keeps the wall
+                visible on both sides — furniture in the room, never edge to edge. */}
+            <div className="home-console mx-auto max-w-4xl p-4 sm:p-6" data-testid="ground-home">
+              {/* The glance — THA's real three, each a separate ivory object resting on
+                  the oak (oak shows between them). Family and Pantry are the render's
+                  other two and Home has no validated data for either; not invented. */}
               {mealsBroken && shoppingQuery.isError && homeIntelQuery.isError ? (
                 <LoadError
                   what="today at a glance"
@@ -701,11 +684,11 @@ export default function HomeExperiencePage() {
                 />
               ) : (
                 <div
-                  className={`${M.primary} grid grid-cols-1 divide-y divide-border/50 md:grid-cols-3 md:divide-y-0 md:divide-x`}
+                  className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-3"
                   data-testid="card-home-glance"
                 >
                   {/* ── Meals ── */}
-                  <div className="p-5 sm:p-7 min-w-0" data-testid="glance-meals">
+                  <div className={`home-object ${M.radius} p-5 min-w-0`} data-testid="glance-meals">
                     <div className="flex items-center gap-3 mb-4">
                       <Chip><CalendarDays style={{ width: 18, height: 18 }} /></Chip>
                       <div className="min-w-0">
@@ -789,7 +772,7 @@ export default function HomeExperiencePage() {
                   </div>
 
                   {/* ── Shopping ── */}
-                  <div className="p-5 sm:p-7 min-w-0" data-testid="glance-shopping">
+                  <div className={`home-object ${M.radius} p-5 min-w-0`} data-testid="glance-shopping">
                     <div className="flex items-center gap-3 mb-4">
                       <Chip><ShoppingCart style={{ width: 18, height: 18 }} /></Chip>
                       <div className="min-w-0">
@@ -842,7 +825,7 @@ export default function HomeExperiencePage() {
 
                   {/* ── From the orchard ── the week's variety. The render's ring, kept:
                       it is the one thing in that frame already drawing a true number. */}
-                  <div className="p-5 sm:p-7 min-w-0" data-testid="glance-plants">
+                  <div className={`home-object ${M.radius} p-5 min-w-0`} data-testid="glance-plants">
                     <div className="flex items-center gap-3 mb-4">
                       <Chip><Leaf style={{ width: 18, height: 18 }} /></Chip>
                       <div className="min-w-0">
@@ -885,64 +868,85 @@ export default function HomeExperiencePage() {
                 </div>
               )}
 
-              {/* ── The one door ─────────────────────────────────────────────────────
+              {/* ── The one lit action, on the console ────────────────────────────
                      Orientation, then one door — the whole of Home's job (DESIGN1 §0.1).
-                     It is re-aimed by the truth of today, and it is the only
-                     primary-styled control on the page. */}
-              <div className="mt-5 px-1">
+                     Re-aimed by the truth of today (HOME2's resolver), the only
+                     primary-styled control on the page, sitting on the oak among the
+                     day's facts. Its destination is the RESOLVER's, not this page's. */}
+              <div className="mt-4 sm:mt-5 px-1">
                 <Button asChild variant="default" className="w-full sm:w-auto" data-testid="button-home-primary">
-                  {/* The destination is the RESOLVER's, not this page's: aiming it at
-                      /planner unconditionally is what made the old door a rival. */}
                   <Link href={primaryHref}>{primaryLabel}</Link>
                 </Button>
               </div>
-
-              {/* ── The doors of the house ───────────────────────────────────────────
-                     One home, many places (Blueprint §5.1). Support surfaces, in the
-                     penumbra, visibly subordinate to the door above. Their hrefs,
-                     labels and glyphs are UX1's one list — Home does not keep a second
-                     copy of the house's rooms. No photographs: a stock notebook is
-                     set-dressing, and this house is decorated only by the household's
-                     own life (Blueprint §12.1). */}
-              <nav
-                className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4"
-                aria-label="The rooms of your home"
-                data-testid="home-doors"
-              >
-                {doors.map((room) => {
-                  const Icon = room.icon;
-                  return (
-                    <Link
-                      key={room.href}
-                      href={room.href}
-                      className={`${M.focus} block rounded-[var(--radius-support)]`}
-                      data-testid={`door-home-${room.label.toLowerCase()}`}
-                    >
-                      <div className={`${M.support} group/door p-4 sm:p-5 flex flex-col`}>
-                        <Icon className="h-5 w-5" style={{ color: "var(--primary-border)" }} />
-                        <h3 className="title-card text-foreground mt-3">{room.label}</h3>
-                        <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                          {DOOR_LINES[room.href]}
-                        </p>
-                        {/* The handle. The render draws this as a filled green disc on
-                            every tile — four of them, each as loud as the one real
-                            action on the page. Here it is the house's accent, quiet
-                            until the hand arrives: a door handle catches the light when
-                            you reach for it, and does not glow across the room. */}
-                        <span
-                          className="mt-4 flex h-7 w-7 items-center justify-center rounded-full bg-accent
-                                     transition-colors duration-200 ease-out motion-reduce:transition-none"
-                          style={{ color: "var(--primary-border)" }}
-                        >
-                          <ChevronRight className="h-3.5 w-3.5 transition-transform duration-200 ease-out group-hover/door:translate-x-0.5 motion-reduce:transition-none" />
-                        </span>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </nav>
             </div>
           </section>
+
+          {/* ── THE DOORS — quiet handles at the floor line ─────────────────────────
+                 One home, many places (Blueprint §5.1). Set down on the stone floor now,
+                 below the console rather than carved into it — in the penumbra, visibly
+                 subordinate to the one lit action on the console above. Their hrefs,
+                 labels and glyphs are UX1's one list; Home keeps no second copy of the
+                 rooms, and hangs no photographs (Blueprint §12.1). NORTH3 made these
+                 doors and not feature cards — a NAME and a HANDLE on one line; ARRIVAL1
+                 stands them on the floor. Bounded to the console's width so the wall
+                 shows past them too. */}
+          <nav
+            className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4 max-w-4xl mx-auto"
+            aria-label="The rooms of your home"
+            data-testid="home-doors"
+          >
+            {doors.map((room) => {
+              const Icon = room.icon;
+              return (
+                <Link
+                  key={room.href}
+                  href={room.href}
+                  className={`${M.focus} block ${M.radius}`}
+                  data-testid={`door-home-${room.label.toLowerCase()}`}
+                >
+                  <div className={`home-door group/door ${M.radius} py-3 pl-4 pr-3 flex items-center gap-3`}>
+                    <Icon className="h-[18px] w-[18px] shrink-0" style={{ color: "var(--primary-border)" }} />
+                    <h3 className="title-card text-foreground min-w-0 truncate">{room.label}</h3>
+                    {/* The handle — the house's accent, quiet until the hand arrives:
+                        a door handle catches the light when you reach for it. */}
+                    <span
+                      className="ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent
+                                 transition-colors duration-200 ease-out motion-reduce:transition-none"
+                      style={{ color: "var(--primary-border)" }}
+                    >
+                      <ChevronRight className="h-3.5 w-3.5 transition-transform duration-200 ease-out group-hover/door:translate-x-0.5 motion-reduce:transition-none" />
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* ── The room's ambient intelligence ──────────────────────────────────
+                 INT19 — Home gains the ONE ambient surface, so the arrival room
+                 becomes THA's primary ambient intelligence experience (its mission,
+                 §1/§5). It is a MOUNT, not a new channel: it composes the same
+                 `useFoodOpportunities` bundle this page ALREADY fetches (line ~337,
+                 until now read only to aim the door's safety tier), so TanStack
+                 dedupes it — no new request, no new endpoint, no new ownership.
+
+                 It sits BELOW the doors deliberately. Home's job is arrive → orient →
+                 one door, and the counter's primary action must never fall behind the
+                 nav (the NORTH2/NORTH3 collision). A collapsed row here changes no
+                 layout above it. For the 192/195 unanchored households it renders
+                 NOTHING (`isPending || items.length === 0` → null), so the quiet day
+                 stays quiet. A `critical` — the restriction conflict, THA's one safety
+                 signal — auto-opens the surface itself.
+
+                 Home is the ONE sanctioned aggregate view alongside the dashboard, so
+                 no `domains` filter: every domain's opportunities, ranked by the
+                 Decision Engine, rendered in its order verbatim. This mirrors the exact
+                 pairing the dashboard already ships (HomeIntelligenceCompanion beside
+                 AmbientIntelligence): the Companion card above speaks the phrased
+                 notice; this surface carries the resolvable card with its evidence. */}
+          <div className="mt-10 max-w-4xl mx-auto">
+            <AmbientIntelligence surfaceKey="home" title="Things you could do" />
+          </div>
 
           {/* ── Quiet way back to the full dashboard ── */}
           <div className="mt-8 flex justify-center">

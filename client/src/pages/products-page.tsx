@@ -3,6 +3,9 @@ import { useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+// PROD1 — adopt the canonical absence owner (PX1-W4.8). This room already told the
+// two absences apart correctly; it simply hand-rolled both.
+import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -1193,20 +1196,30 @@ export default function ProductsPage() {
 
         {/* Suppress the "no products found" empty state when a whole food analysis
             is already shown — the WF card is the analysis for that query. */}
+        {/* PROD1 — both absences below already told the two truths apart correctly
+            (a search that matched nothing vs filters hiding real results); they were
+            simply hand-rolled. Adopting the canonical owner keeps that distinction
+            and makes it structural rather than a convention this page happened to
+            follow. Both are `filtered`: a catalogue exists, and the household's own
+            query or filter is what is hiding it — never "you have nothing". */}
         {hasSearched && searchResults.length === 0 && !isSearching && !wholeFoodAnalysis && (
-          <div className="text-center py-12 text-muted-foreground">
-            <Package className="h-16 w-16 mx-auto mb-4 opacity-30" />
-            <p className="text-lg">No products found for &ldquo;{searchQuery}&rdquo;</p>
-            <p className="text-sm mt-1">Try a different search term like &ldquo;ketchup&rdquo; or &ldquo;cereal&rdquo;</p>
-          </div>
+          <EmptyState
+            variant="filtered"
+            icon={Package}
+            title={`No products found for “${searchQuery}”`}
+            description="Try a different search term like “ketchup” or “cereal”."
+            data-testid="empty-search-no-results"
+          />
         )}
 
         {hasSearched && filteredResults.length === 0 && searchResults.length > 0 && !isSearching && !retailerFilter && (
-          <div className="text-center py-12 text-muted-foreground">
-            <Filter className="h-16 w-16 mx-auto mb-4 opacity-30" />
-            <p className="text-lg">All products filtered out</p>
-            <p className="text-sm mt-1">Try adjusting your filters to see more results</p>
-          </div>
+          <EmptyState
+            variant="filtered"
+            icon={Filter}
+            title="All products filtered out"
+            description="Your search did find products — the current filters are hiding them."
+            data-testid="empty-all-filtered"
+          />
         )}
 
         {!hasSearched && productHistoryData && productHistoryData.length > 0 && (

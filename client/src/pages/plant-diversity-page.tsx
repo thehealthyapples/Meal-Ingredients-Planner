@@ -1,20 +1,30 @@
 import { useState, useEffect } from "react";
-import { Loader2, Leaf, Lightbulb, BarChart3, Salad, X } from "lucide-react";
+import { BarChart3, Salad, X } from "lucide-react";
 import { useWeekMealEntries } from "@/hooks/use-week-meal-entries";
 import { PlantDiversityReport } from "@/components/PlantDiversityReport";
 import { HouseholdNutritionCentre } from "@/components/HouseholdNutritionCentre";
 import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
-import { Link } from "wouter";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
-import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
-type NutritionTab = "foods" | "nutrients" | "benefits" | "suggestions";
+/**
+ * PROD2: the "Benefits" and "Suggestions" tabs were withdrawn.
+ *
+ * Both rendered a "Coming soon" card and nothing else, so half of this room's
+ * doors opened onto a description of unbuilt work. A tab is a promise that
+ * there is something behind it; two of these four had nothing, which is the
+ * incomplete-experience-presented-as-a-destination this programme removes.
+ *
+ * This is a withdrawal, not a deletion of intent: the Health Benefits Explorer
+ * and Personalised Suggestions remain unbuilt product ideas, and their absence
+ * is now silent rather than advertised. When either is built, it returns here
+ * as a tab with a room behind it.
+ */
+type NutritionTab = "foods" | "nutrients";
 
 const NUTRITION_TABS: Array<{ id: NutritionTab; label: string; icon: React.ComponentType<{ className?: string }> }> = [
   { id: "foods", label: "Foods", icon: Salad },
   { id: "nutrients", label: "Nutrients", icon: BarChart3 },
-  { id: "benefits", label: "Benefits", icon: Leaf },
-  { id: "suggestions", label: "Suggestions", icon: Lightbulb },
 ];
 
 export default function PlantDiversityPage() {
@@ -77,8 +87,15 @@ export default function PlantDiversityPage() {
               discover ingredients to try next.
             </p>
             {isLoading ? (
-              <div className="flex items-center justify-center py-20">
-                <Loader2 className="h-6 w-6 animate-spin text-primary/50" />
+              /* PROD2: adopts the canonical loading owner (UIA §17) in place of a
+                 centred spinner. A skeleton that mirrors the report's own shape
+                 tells the household what is arriving; a spinner only says "wait". */
+              <div className="space-y-3" aria-busy="true" aria-label="Loading your plant diversity report">
+                <Skeleton className="h-8 w-56" />
+                <Skeleton className="h-24 w-full rounded-lg" />
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full rounded-lg" />
+                ))}
               </div>
             ) : (
               <PlantDiversityReport weekMeals={weekMeals} />
@@ -93,93 +110,6 @@ export default function PlantDiversityPage() {
             </p>
             <HouseholdNutritionCentre />
           </>
-        )}
-
-        {activeTab === "benefits" && (
-          <div className="space-y-6">
-            <p className="text-sm text-muted-foreground/60 leading-relaxed max-w-2xl">
-              Learn how the foods you eat support your health — from gut health and immunity
-              to energy, sleep, and longevity.
-            </p>
-            <Card className="p-6 sm:p-8 max-w-2xl space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-[hsl(145,22%,88%)] dark:bg-[hsl(145,14%,17%)] flex items-center justify-center shrink-0">
-                  <Leaf className="h-5 w-5 text-[hsl(145,36%,28%)] dark:text-[hsl(145,26%,70%)]" />
-                </div>
-                <div>
-                  <h2 className="font-semibold text-base">Health Benefits Explorer</h2>
-                  <p className="text-xs text-muted-foreground">Coming soon</p>
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                We're building a benefits explorer that maps each food group to its specific
-                health properties — so you can see exactly why cruciferous vegetables support
-                detoxification, or why fermented foods strengthen immunity.
-              </p>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                In the meantime, the <strong className="font-medium text-foreground">Foods</strong> tab
-                shows your plant diversity score, and the <strong className="font-medium text-foreground">Nutrients</strong> tab
-                tracks your household's macro and micronutrient data.
-              </p>
-              <div className="pt-2">
-                <Link href="/cookbook">
-                  <button
-                    type="button"
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium realm-banner-btn transition-colors"
-                  >
-                    <Salad className="h-3.5 w-3.5" />
-                    Explore recipes by food group
-                  </button>
-                </Link>
-              </div>
-            </Card>
-          </div>
-        )}
-
-        {activeTab === "suggestions" && (
-          <div className="space-y-6">
-            <p className="text-sm text-muted-foreground/60 leading-relaxed max-w-2xl">
-              Personalised ideas for what to eat more of based on your household's plant diversity and nutrient patterns.
-            </p>
-            <Card className="p-6 sm:p-8 max-w-2xl space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-[hsl(145,22%,88%)] dark:bg-[hsl(145,14%,17%)] flex items-center justify-center shrink-0">
-                  <Lightbulb className="h-5 w-5 text-[hsl(145,36%,28%)] dark:text-[hsl(145,26%,70%)]" />
-                </div>
-                <div>
-                  <h2 className="font-semibold text-base">Personalised Suggestions</h2>
-                  <p className="text-xs text-muted-foreground">Coming soon</p>
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                We're building personalised suggestions that look at your plant diversity gaps
-                and recommend specific ingredients and meals to round out your household's diet.
-              </p>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                For now, your <strong className="font-medium text-foreground">Foods</strong> tab
-                shows which plant families you've eaten this week — look for gaps to inspire
-                what to cook next.
-              </p>
-              <div className="flex flex-wrap gap-2 pt-2">
-                <Link href="/planner">
-                  <button
-                    type="button"
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium realm-banner-btn transition-colors"
-                  >
-                    Plan this week
-                  </button>
-                </Link>
-                <Link href="/cookbook">
-                  <button
-                    type="button"
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-                  >
-                    Browse recipes
-                  </button>
-                </Link>
-              </div>
-            </Card>
-          </div>
         )}
 
       </div>

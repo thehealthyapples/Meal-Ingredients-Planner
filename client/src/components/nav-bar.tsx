@@ -12,7 +12,7 @@ import {
   LayoutDashboard, CalendarDays, ShoppingCart,
   LogOut, ShieldCheck,
   Search, ChevronLeft, ChevronRight,
-  Microscope, BookOpen, Heart, ChefHat,
+  Microscope, BookOpen, ChefHat,
   User, BarChart3, Home,
 } from "lucide-react";
 import { api } from "@shared/routes";
@@ -383,12 +383,12 @@ function AppleMenu({ location, isAdmin }: { location: string; isAdmin: boolean }
             Profile
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/partners" className="flex items-center gap-2 cursor-pointer" data-testid="apple-menu-partners">
-            <Heart className="h-4 w-4" />
-            Partners
-          </Link>
-        </DropdownMenuItem>
+        {/* PROD2: the "Partners" entry was withdrawn. Every one of the 12
+            partners in client/src/data/partners.ts is invented, with an
+            example.com URL, shipped behind a real affiliate-disclosure notice —
+            so THA was recommending health and nutrition practitioners that do
+            not exist. The page and its data are kept for a real partner
+            programme; the doors are closed until the partners are real. */
         {isAdmin && (
           <>
             <DropdownMenuSeparator />
@@ -402,192 +402,6 @@ function AppleMenu({ location, isAdmin }: { location: string; isAdmin: boolean }
         )}
       </DropdownMenuContent>
     </DropdownMenu>
-  );
-}
-
-/* ── TopBar - logo only on desktop, hamburger + logo + search on mobile ── */
-export function TopBar() {
-  const [location] = useLocation();
-  const { user } = useUser();
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchValue, setSearchValue] = useState("");
-  const [, navigate] = useLocation();
-  const { data: shoppingListItems = [] } = useQuery<any[]>({
-    queryKey: [api.shoppingList.list.path],
-    enabled: !!user,
-  });
-  const itemCount = shoppingListItems.length;
-  const isAdmin = (user as any)?.role === "admin";
-
-  if (!user) return null;
-
-  const handleMobileSearch = () => {
-    if (searchValue.trim()) {
-      navigate(`/cookbook?q=${encodeURIComponent(searchValue.trim())}`);
-      setMobileSearchOpen(false);
-      setSearchValue("");
-    }
-  };
-
-  return (
-    <div className="sticky top-0 z-50 shrink-0" data-testid="top-nav-bar">
-      <header className="w-full bg-card/60 backdrop-blur-md border-b border-border py-0.5">
-
-        {/* Desktop: [Dashboard, Search, Diary] | logo (center) | [Basket, Partners, Profile] */}
-        <div className="hidden md:grid items-center px-4" style={{ gridTemplateColumns: "1fr auto 1fr" }}>
-          {/* Left: Dashboard + Search + List */}
-          <div className="flex items-center gap-1">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Link
-                  href="/dashboard"
-                  className={`flex items-center justify-center h-10 w-10 rounded-lg transition-colors ${location === "/dashboard" ? "bg-[hsl(42,45%,88%)] text-[hsl(42,58%,20%)] dark:bg-[hsl(42,22%,17%)] dark:text-[hsl(42,48%,72%)]" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
-                  aria-label="Dashboard"
-                  data-testid="button-topbar-dashboard"
-                >
-                  <LayoutDashboard className="h-5 w-5" />
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent>Dashboard</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  className="flex items-center justify-center h-10 w-10 rounded-lg hover:bg-accent/60 text-muted-foreground hover:text-foreground transition-colors"
-                  onClick={() => setSearchOpen(true)}
-                  aria-label="Search"
-                  data-testid="button-topbar-search"
-                >
-                  <Search className="h-5 w-5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>Search</TooltipContent>
-            </Tooltip>
-          </div>
-
-          {/* Center: logo */}
-          <Link href="/dashboard" data-testid="link-logo" className="flex items-center justify-center">
-            <img
-              src="/logo-long.png"
-              alt="The Healthy Apples"
-              className="h-auto max-h-[88px] w-auto max-w-[700px]"
-            />
-          </Link>
-
-          {/* Right: Basket + Apple menu */}
-          <div className="flex items-center gap-1 justify-end">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Link
-                  href="/shopping-workspace"
-                  className={`relative flex items-center justify-center h-10 w-10 rounded-lg transition-colors ${location === "/shopping-workspace" || location === "/basket" || location === "/analyse-basket" ? "bg-[hsl(190,30%,86%)] text-[hsl(190,42%,20%)] dark:bg-[hsl(190,18%,17%)] dark:text-[hsl(190,32%,72%)]" : "text-[hsl(190,38%,44%)] hover:bg-[hsl(190,22%,92%)] hover:text-[hsl(190,42%,28%)] dark:text-[hsl(190,28%,58%)] dark:hover:bg-[hsl(190,12%,18%)] dark:hover:text-[hsl(190,28%,68%)]"}`}
-                  aria-label="Shopping"
-                  data-testid="button-topbar-basket"
-                >
-                  <ShoppingCart className="h-5 w-5" />
-                  {itemCount > 0 && (
-                    <span className="absolute top-1 right-1 bg-primary text-primary-foreground text-[10px] font-semibold rounded-full min-w-[15px] h-[15px] flex items-center justify-center px-0.5 leading-none pointer-events-none">
-                      {itemCount > 99 ? "99+" : itemCount}
-                    </span>
-                  )}
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent>Shopping{itemCount > 0 ? ` (${itemCount})` : ""}</TooltipContent>
-            </Tooltip>
-            <AppleMenu location={location} isAdmin={isAdmin} data-testid="button-topbar-apple-menu" />
-          </div>
-        </div>
-
-        {/* Mobile: [Dashboard, Search] | logo | [Basket, Profile] */}
-        <div className="md:hidden flex items-center justify-between px-1 h-14">
-
-          {/* Left: Dashboard + Search + List */}
-          <div className="flex items-center">
-            <Link
-              href="/dashboard"
-              className={`flex items-center justify-center h-11 w-11 rounded-lg transition-colors ${location === "/dashboard" ? "text-[hsl(42,58%,20%)] dark:text-[hsl(42,48%,72%)]" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
-              aria-label="Dashboard"
-              data-testid="button-topbar-dashboard"
-            >
-              <LayoutDashboard className="h-5 w-5" />
-            </Link>
-            <button
-              className="flex items-center justify-center h-11 w-11 rounded-lg hover:bg-accent/60 text-muted-foreground transition-colors"
-              onClick={() => setMobileSearchOpen((v) => !v)}
-              aria-label="Search"
-              data-testid="button-mobile-search"
-            >
-              <Search className="h-5 w-5" />
-            </button>
-          </div>
-
-          {/* Center: logo */}
-          <Link href="/dashboard" data-testid="link-logo-mobile" className="flex items-center">
-            <img
-              src="/logo-long.png"
-              alt="The Healthy Apples"
-              className="h-auto max-h-[44px] w-auto max-w-[160px]"
-            />
-          </Link>
-
-          {/* Right: Basket + Apple menu */}
-          <div className="flex items-center">
-            <Link
-              href="/shopping-workspace"
-              className={`relative flex items-center justify-center h-11 w-11 rounded-lg transition-colors ${location === "/shopping-workspace" || location === "/basket" || location === "/analyse-basket" ? "text-[hsl(190,42%,20%)] dark:text-[hsl(190,32%,72%)]" : "text-[hsl(190,38%,44%)] hover:bg-[hsl(190,22%,92%)] dark:text-[hsl(190,28%,58%)] dark:hover:bg-[hsl(190,12%,18%)]"}`}
-              aria-label="Shopping"
-              data-testid="button-topbar-basket"
-            >
-              <ShoppingCart className="h-5 w-5" />
-              {itemCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 bg-primary text-primary-foreground text-[10px] font-semibold rounded-full min-w-[15px] h-[15px] flex items-center justify-center px-0.5 leading-none pointer-events-none">
-                  {itemCount > 99 ? "99+" : itemCount}
-                </span>
-              )}
-            </Link>
-            <AppleMenu location={location} isAdmin={isAdmin} />
-          </div>
-
-        </div>
-      </header>
-
-      <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
-
-      {/* Mobile search panel */}
-      {mobileSearchOpen && (
-        <div className="md:hidden bg-card/90 backdrop-blur-md border-b border-border px-3 py-2 flex items-center gap-2">
-          <div className="relative flex-1">
-            <input
-              type="text"
-              placeholder="Search meals…"
-              value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleMobileSearch();
-                if (e.key === "Escape") setMobileSearchOpen(false);
-              }}
-              autoFocus
-              className="w-full h-9 pl-3 pr-8 rounded-lg border border-border bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-              data-testid="input-search"
-            />
-            <button
-              onClick={handleMobileSearch}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-              aria-label="Search"
-            >
-              <Search className="h-4 w-4" />
-            </button>
-          </div>
-          <button
-            className="text-muted-foreground hover:text-foreground text-sm shrink-0 px-1"
-            onClick={() => setMobileSearchOpen(false)}
-          >
-            Cancel
-          </button>
-        </div>
-      )}
-    </div>
   );
 }
 

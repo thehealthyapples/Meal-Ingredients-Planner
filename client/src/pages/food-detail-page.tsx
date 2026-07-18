@@ -22,6 +22,7 @@ import {
   Loader2,
   ChefHat,
   Archive,
+  Scale,
 } from "lucide-react";
 import {
   IntelligenceCard,
@@ -203,6 +204,19 @@ function FoodIntelligenceView({ data }: { data: FoodIntelligence }) {
             {food.aliases.join(", ")}
           </p>
         )}
+        {/* FI20 — the way into the Food Comparison Engine (COMP1). "Is this better
+            than…?" is the food page's natural question; this hands the built,
+            cited engine the current food and lets the household name the other. */}
+        <div className="pl-8 pt-1">
+          <Link
+            href={`/compare?items=${encodeURIComponent(data.slug)}`}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+            data-testid="link-compare"
+          >
+            <Scale className="h-3.5 w-3.5" />
+            Compare with another food
+          </Link>
+        </div>
       </header>
 
       {/* ── Why it matters ── */}

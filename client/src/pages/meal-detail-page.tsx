@@ -25,6 +25,11 @@ import { MealFamilyConfidence } from "@/components/meal-detail/MealFamilyConfide
 import { HouseholdAdaptationsSummary } from "@/components/meal-detail/HouseholdAdaptationsSummary";
 import { SimplyBetterChoicesPanel } from "@/components/meal-detail/SimplyBetterChoicesPanel";
 import { useMealFoodIntelligence, MealDiscoveryRow } from "@/components/meal-detail/MealFoodIntelligenceSection";
+// AFI1 — the ONE ambient surface, mounted here so a meal card can carry the
+// household's evidence-backed "small lift" for a meal already on this week's plan.
+// Scoped to the `planner-meal-uplift` type so a meal page shows only that calm
+// suggestion, never an unrelated planner/pantry/shopping opportunity.
+import { AmbientIntelligence } from "@/components/intelligence";
 import { invalidateMealLibrary } from "@/hooks/use-meals";
 
 type SwapGoal = "vegetarian" | "keto" | "lower-cost" | "less-processed" | "under-time" | "household";
@@ -1216,6 +1221,16 @@ export default function MealDetailPage() {
           mealName={meal.name}
           upliftMatches={[]}
           density={density}
+        />
+        {/* AFI1 — the ambient "small lift" for a meal already on this week's plan.
+            Same shared bundle as Planner/Home; scoped to the uplift type so this
+            card stays about meals, calm and collapsed until asked. */}
+        <AmbientIntelligence
+          surfaceKey="meal-detail"
+          domains={["planner"]}
+          types={["planner-meal-uplift"]}
+          title="A small lift for this week"
+          data-testid="ambient-meal-uplift"
         />
       </div>
 

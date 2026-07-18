@@ -7,6 +7,9 @@ and abandoned).
 
 | Date (UTC) | Session ID | Final stage | Rollback ID | Run file |
 |---|---|---|---|---|
+| 2026-07-18 | `AFI_VERIFY1_Ambient_Food_Intelligence_Conformance_Audit` | Complete | `rollback/AFI_VERIFY1-ambient-food-intelligence-conformance-audit-20260718` → `7bfad50c` | [runs/AFI_VERIFY1_Ambient_Food_Intelligence_Conformance_Audit.md](./runs/AFI_VERIFY1_Ambient_Food_Intelligence_Conformance_Audit.md) |
+| 2026-07-18 | `AFI3_5_Ambient_Food_Intelligence_Completion` | Complete | `rollback/AFI3_5-ambient-food-intelligence-completion-20260718` → `7bfad50c` | [runs/AFI3_5_Ambient_Food_Intelligence_Completion.md](./runs/AFI3_5_Ambient_Food_Intelligence_Completion.md) |
+| 2026-07-17 | `OPS1_Canonical_Operation_Experience` | Complete | `rollback/OPS1-canonical-operation-experience-20260717` → `7bfad50c` | [runs/OPS1_Canonical_Operation_Experience.md](./runs/OPS1_Canonical_Operation_Experience.md) |
 | 2026-07-15 | `RM3_Ready_Meal_Product_Representation_Convergence` | Complete | `rollback/RM3-ready-meal-product-representation-convergence-20260715` → `b7ddc442` | [runs/RM3_Ready_Meal_Product_Representation_Convergence.md](./runs/RM3_Ready_Meal_Product_Representation_Convergence.md) |
 | 2026-07-15 | `EXPLANG1_THA_Experience_Language` | Complete | `rollback/EXPLANG1-tha-experience-language-20260715` → `0f0615aa` | [runs/EXPLANG1_THA_Experience_Language.md](./runs/EXPLANG1_THA_Experience_Language.md) |
 | 2026-07-14 | `SURF1B4_Canonical_Diet_Pattern_Safety_Convergence` | Complete | `rollback/SURF1B4-canonical-diet-pattern-safety-convergence-20260714` | [runs/SURF1B4_Canonical_Diet_Pattern_Safety_Convergence.md](./runs/SURF1B4_Canonical_Diet_Pattern_Safety_Convergence.md) |

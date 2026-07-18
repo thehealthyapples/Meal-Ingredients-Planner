@@ -1,6 +1,41 @@
 # HHP2 — Household Health Opportunity Platform — Implementation
 
-**Status:** Complete
+> ## ⛔ STATUS CORRECTION — 2026-07-17 — THIS WORKSTREAM DID NOT LAND
+>
+> **This document declared "Status: Complete" on 2026-07-12. It was not complete, and the
+> claim was false on the day it was written.** The correction is recorded here, at the top,
+> because a false completion record is worse than a gap: a gap invites investigation, and
+> *"Complete" stops anyone looking.* This document is the reason nobody looked for five days.
+>
+> **What was actually true, measured 2026-07-17 (FI18 → P0 Food Intelligence Recovery):**
+>
+> | This document claimed | Reality on 2026-07-12 and every day since |
+> |---|---|
+> | `household-health` enrolled in `OPPORTUNITY_SOURCES` (DEC1 §7 — "the door this workstream walks through") | **It never walked through it.** `household-health` appeared **zero** times in `framework.ts`; the map held exactly one entry (`food-intelligence`) |
+> | The capability is registered | **Absent from `SEED_CAPABILITIES_BASE` entirely.** `bindHandler` would have thrown *"unknown capability"* (`capability-registry.ts:849`) |
+> | The binding is activated | `bindHouseholdHealthCapability` was **never called** — absent from the activation block (`intelligence-platform.ts:281-302`) |
+> | Its tests prove it | The test **source-scanned** for `"household-health": { verb: "report"` — text that was not in the file — called the handler **directly** to bypass the unregistered registry, **crashed on import**, and **was not in `npm test`**, so it never ran to disagree |
+>
+> **The compounding harm.** `HHP3` (which depends on this workstream) removed `opportunities`
+> from the `/api/household-nutrition` wire on the strength of this record, stating the
+> producer path *"is untouched and still receives every opportunity HNP1 composes."* There
+> was no producer path. **A live path was deleted in favour of one that was never connected.**
+>
+> **What was done on 2026-07-17.** The unenrolled activation code was **RETIRED, not
+> finished** — `bindings/household-health.ts`, `handlers/household-health-handler.ts`,
+> `handlers/household-health-read-port.ts` and both tests are deleted. Enrolment would have
+> **added a capability and a producer**, which the recovery's mandate forbids; it is
+> legitimate work, and it must go through DEC1 §7's one door as **its own approved
+> workstream**, with the reviewed enrolment this one skipped.
+>
+> **This is the `PX1`/UIA §17 failure — authored-but-unadopted — repeated on the SERVER,
+> where no adoption register exists to catch it.** That absence is recorded as the standing
+> blocker in `docs/implementation/intelligence/P0_FOOD_INTELLIGENCE_RECOVERY.md`.
+>
+> **Everything below this line is the original 2026-07-12 text, preserved unedited as the
+> historical record. Its "Complete" claims are FALSE. Read them as evidence, never as status.**
+
+**Status:** ~~Complete~~ → **RETIRED, NOT COMPLETE** (corrected 2026-07-17 — see the block above)
 **Date:** 2026-07-12
 **Governing architecture:** `docs/architecture/THA_DECISION_ENGINE_ARCHITECTURE.md` (DEC1) — §7 producer enrolment is the door this workstream walks through.
 **Depends on:** HNP1 (Household Nutrition Platform), OD1/DEC1 (Opportunity Delivery Framework = the canonical Decision Engine), ATTN1, LEARN1/EL2, COACH1, INT20/NTC-P2 (Notice Engine + Gateway).

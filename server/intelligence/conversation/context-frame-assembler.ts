@@ -69,6 +69,30 @@ export interface SurfaceHints {
    * produce a confident explanation of a suggestion the household never questioned.
    */
   selectedOpportunityId?: string;
+  /**
+   * COMP_ACT2 — pointers to what the household is working with on screen, so the
+   * Companion can offer the write actions COMP_ACT1 bound (Planner Move/Replace,
+   * Shopping Delete, Pantry Add/Remove, Diary Log) against a REAL target.
+   *
+   * Client-supplied pass-through ONLY, on the same trust model as the hints above:
+   * the assembler resolves none of them, infers none from a prior entity ref, and
+   * falls back to no stored record. An action whose pointer is absent is simply
+   * not offered (companion-actions.ts) — it is never offered against a guess.
+   *
+   * `selectedPlannerEntrySlot` is deliberately separate from `selectedMealSlot`:
+   * an entry's own slot is a fact ABOUT THAT ENTRY, whereas `selectedMealSlot`
+   * means "the slot in view", which the Planner deliberately never publishes.
+   */
+  selectedPlannerEntryId?: number;
+  selectedPlannerEntryMealId?: number;
+  selectedPlannerEntryDayId?: number;
+  selectedPlannerEntrySlot?: string;
+  /** The pantry category tab the household has CHOSEN (never the render default). */
+  selectedPantryCategory?: string;
+  /** The diary day on screen (YYYY-MM-DD) — always exactly the day rendered. */
+  selectedDiaryDate?: string;
+  /** The diary meal slot the household explicitly opened, when unambiguous. */
+  selectedDiarySlot?: string;
 }
 
 /**
@@ -103,6 +127,14 @@ export interface ContextFrame {
   readonly selectedMealSlot?:     string;
   /** PHASE5E — pointer to the opportunity card explicitly asked about, if any (see SurfaceHints). */
   readonly selectedOpportunityId?: string;
+  /** COMP_ACT2 — on-screen action targets, client-supplied pass-through only (see SurfaceHints). */
+  readonly selectedPlannerEntryId?: number;
+  readonly selectedPlannerEntryMealId?: number;
+  readonly selectedPlannerEntryDayId?: number;
+  readonly selectedPlannerEntrySlot?: string;
+  readonly selectedPantryCategory?: string;
+  readonly selectedDiaryDate?: string;
+  readonly selectedDiarySlot?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -224,6 +256,16 @@ export async function assembleContextFrame(
     // PHASE5E — pass-through only, and deliberately WITHOUT the prior-entity-ref
     // fallback the pointers above have. See SurfaceHints.
     selectedOpportunityId: surfaceHints.selectedOpportunityId,
+    // COMP_ACT2 — pass-through only, for the same reason: an action target is
+    // never inherited from an earlier turn or recovered from storage. When the
+    // household closes the sheet, the action stops being offered.
+    selectedPlannerEntryId: surfaceHints.selectedPlannerEntryId,
+    selectedPlannerEntryMealId: surfaceHints.selectedPlannerEntryMealId,
+    selectedPlannerEntryDayId: surfaceHints.selectedPlannerEntryDayId,
+    selectedPlannerEntrySlot: surfaceHints.selectedPlannerEntrySlot,
+    selectedPantryCategory: surfaceHints.selectedPantryCategory,
+    selectedDiaryDate: surfaceHints.selectedDiaryDate,
+    selectedDiarySlot: surfaceHints.selectedDiarySlot,
   };
 }
 

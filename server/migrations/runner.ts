@@ -15,6 +15,37 @@
  *    migration can be re-run safely if the transaction was partially applied.
  * 5. Commit and deploy — the runner applies it once and records it.
  * ---------------------------
+ *
+ * THE ONE EXCEPTION TO "APPEND TO THE END" — THE BASELINE (CONV1 P10 / SCH-3)
+ * ---------------------------------------------------------------------------
+ * The FIRST entry in the list is a **schema baseline**: it creates the 45 tables that
+ * predate this migration system and were only ever created by `drizzle-kit push`. It sits
+ * at the HEAD, and it is the only entry that may.
+ *
+ * **Why the append-only rule could not cover it.** Those tables existed BEFORE migration
+ * #1. The list's second entry is `2026-02-27_add_user_diet_fields`, which does
+ * `ALTER TABLE users …` — and `users` was created by no migration at all. Appending the
+ * CREATEs would put them AFTER the 76 migrations that alter them, so a rebuild from empty
+ * fails on the second statement it reaches. **This is not a theory; both were measured**
+ * (CONV1 P10's report § 3):
+ *
+ *     baseline APPENDED : 17/93 migrations apply · 65/91 tables built  ← and the coverage
+ *                                                                        gate still reports 100%
+ *     baseline AT HEAD  : 93/93 migrations apply · 91/91 tables built
+ *
+ * The same statements. Only the position differs. **Appending would have made the gate
+ * green and left the schema unbuildable** — the exact failure that gate exists to detect.
+ *
+ * **Why this does not break the rule's purpose.** The rule protects APPLIED HISTORY: never
+ * remove an entry, never reorder entries relative to one another, never edit one that has
+ * shipped. The baseline does none of that — it removes nothing, edits nothing, and changes
+ * no existing entry's relative order. And position is irrelevant to a database that already
+ * exists: `runMigrations()` keys on IDs and applies only what is pending, so the baseline
+ * arrives as a no-op wherever it sits in the array.
+ *
+ * **Rule, going forward: there is exactly ONE baseline and it is already here. Everything
+ * else appends to the END.** A second entry at the head would be reordering, and that is
+ * what this rule forbids.
  */
 
 import { pool } from "../db";
@@ -26,8 +57,989 @@ interface Migration {
 
 // ─── ORDERED MIGRATION LIST ──────────────────────────────────────────────────
 // IMPORTANT: Never remove or reorder entries. Only append new ones at the end.
+//
+// AMENDED 2026-07-17 (CONV1 P10 / SCH-3), by the change that made the unqualified rule
+// impossible to obey: entry [0] is the SCHEMA BASELINE and is the sole permitted
+// exception — see "THE ONE EXCEPTION" in this file's header. It creates the tables that
+// predate this list, so it must precede the migrations that alter them. There is exactly
+// one, it is already here, and everything after it appends to the END.
 // ─────────────────────────────────────────────────────────────────────────────
 const MIGRATIONS: Migration[] = [
+  // ── CONV1 P10 / SCH-3 — THE SCHEMA BASELINE. THE LONG GAME. ─────────────────
+  //
+  // ** THIS ENTRY IS FIRST ON PURPOSE, AND IT IS THE ONLY ONE THAT MAY BE. **
+  // It creates the tables that predate this migration list, so it must run before the
+  // migrations that ALTER them. Measured both ways, on one pinned connection, into an
+  // empty schema:
+  //
+  //     this entry APPENDED at the end : 17/93 migrations apply · 65/91 tables built
+  //     this entry AT THE HEAD         : 93/93 migrations apply · 91/91 tables built
+  //
+  // Same statements; only the position differs. See this file's header for why the
+  // append-only rule was amended rather than quietly broken, and CONV1 P10's report § 3.
+  //
+  // 45 of THA's 91 declared tables had no reviewed migration. They existed in a database
+  // ONLY because somebody once ran `drizzle-kit push` from shared/schema.ts — no review,
+  // no transaction boundary, no version record, no reproducible provenance. Every domain
+  // in the CONV1 programme publishes into a projection whose TABLE could not be rebuilt
+  // from this file: `users`, `meals`, `planner_weeks`, `planner_days`, `planner_entries`,
+  // `shopping_list`, `user_preferences`, `meal_templates` among them. CPI1 called it
+  // "arguably the deepest structural defect in the platform", and it survived this long
+  // for one reason: **it has no user impact at all.** It is a disaster-recovery and
+  // reproducibility defect. You notice it exactly once, on the worst day.
+  //
+  // ── WHY THIS IS SAFE, STATED PRECISELY ──────────────────────────────────────
+  // Every statement below is guarded — a table create with an existence check, a
+  // constraint add, or a guarded index create. **On every database that exists today,
+  // every one of them
+  // is a NO-OP** — the tables are already there. This migration changes no row, no column,
+  // no type and no behaviour. Its only effect is on an EMPTY database: CI, a fresh dev
+  // box, a restore. That is the entire point.
+  //
+  // ── WHERE THIS DDL CAME FROM, AND WHY IT MATTERS ────────────────────────────
+  // **It was introspected from the live database's ACTUAL shape (information_schema), not
+  // transcribed from shared/schema.ts.** That distinction is the whole risk of this
+  // phase. A `CREATE TABLE` that disagrees with reality would be INVISIBLE here — the
+  // `IF NOT EXISTS` swallows it on every existing database — while quietly building a
+  // WRONG schema on a fresh one. And the coverage gate is a text grep, so it would report
+  // 100% either way. **`SEC-3` is exactly this defect at one column** ("two identical
+  // declarations, two different physical types"), which is why the declaration was not
+  // trusted as the source.
+  //
+  // ── IT WAS PROVEN, NOT ASSERTED (CP10) — TWICE, BECAUSE ONCE WAS NOT ENOUGH ──
+  // This migration must satisfy TWO different properties, and proving one does not prove
+  // the other:
+  //
+  //   1. IT BUILDS FROM NOTHING. Every statement executed into an EMPTY Postgres schema,
+  //      then diffed column by column against the live tables:
+  //          tables 45/45 · constraints 22/22 · indexes 11/11 built from this DDL alone
+  //          column-by-column diff vs live: 45/45 IDENTICAL
+  //   2. IT IS A NO-OP ON A DATABASE THAT ALREADY HAS EVERYTHING. Applied at boot against
+  //      the live database and the full column census compared before and after.
+  //
+  // **The first draft passed (1) and FAILED (2), at boot, loudly**: the constraint
+  // statements were bare `ALTER TABLE … ADD CONSTRAINT`, which an empty schema accepts
+  // and an existing database rejects ("constraint … already exists"). The runner's
+  // transaction rolled the whole thing back and the boot aborted — failing closed, as
+  // designed — so nothing leaked; but had this shipped, **every existing deployment would
+  // have failed to start.** Postgres has no ADD CONSTRAINT … IF NOT EXISTS, so each one
+  // is now wrapped in a pg_constraint existence check.
+  //
+  // The lesson is worth more than the fix: "it rebuilds an empty database" and "it does
+  // nothing to a full one" are different claims, and a scratch-schema test can only ever
+  // demonstrate the first.
+  //
+  // ── A NOTE FOR WHOEVER EDITS THESE COMMENTS ─────────────────────────────────
+  // `verify:schema-coverage` greps this WHOLE FILE, comments included, for
+  // `CREATE TABLE [IF NOT EXISTS] <name>`. Its optional existence-check group requires
+  // trailing WHITESPACE, so writing that phrase in prose immediately followed by a
+  // backtick makes the gate capture the word "IF" and report a phantom orphan table.
+  // (It did, from this very comment block, until it was reworded.) Prose in this file is
+  // read by the gate as if it were DDL — so describe the statements; do not quote them.
+  //
+  // ── WHAT THIS MIGRATION IS NOT ──────────────────────────────────────────────
+  // It is **additive only**. No DROP, no ALTER of an existing column, no retype, no data
+  // touched — `R7`: "the scaffolding is deleted first, because it looks like obvious
+  // debt." It gives 45 tables a reviewed PROVENANCE; it gives none of them a new owner
+  // (Register Rule 7 is not triggered). And it closes the TABLE-level gap only: columns
+  // added declaratively to already-covered tables remain undetected by the gate, which
+  // says so itself — "true coverage is no better than the figure above".
+  {
+    id: "2026-07-17_conv1_p10_schema_coverage",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS "additives" (
+  "id" serial NOT NULL,
+  "name" text NOT NULL,
+  "type" text NOT NULL,
+  "risk_level" text DEFAULT 'low'::text NOT NULL,
+  "description" text,
+  "is_regulatory" boolean DEFAULT false,
+  "aliases" text[],
+  CONSTRAINT "additives_pkey" PRIMARY KEY (id),
+  CONSTRAINT "additives_name_unique" UNIQUE (name)
+)`,
+      `CREATE TABLE IF NOT EXISTS "basket_items" (
+  "id" serial NOT NULL,
+  "user_id" integer NOT NULL,
+  "meal_id" integer NOT NULL,
+  "quantity" integer DEFAULT 1 NOT NULL,
+  CONSTRAINT "basket_items_pkey" PRIMARY KEY (id)
+)`,
+      `CREATE TABLE IF NOT EXISTS "diversity_group" (
+  "id" serial NOT NULL,
+  "slug" text NOT NULL,
+  "display_name" text NOT NULL,
+  "description" text,
+  "count_as_single_plant" boolean DEFAULT true NOT NULL,
+  "source" text DEFAULT 'THA editorial'::text NOT NULL,
+  "is_active" boolean DEFAULT true NOT NULL,
+  "created_at" timestamptz DEFAULT now() NOT NULL,
+  "updated_at" timestamptz DEFAULT now() NOT NULL,
+  CONSTRAINT "diversity_group_pkey" PRIMARY KEY (id),
+  CONSTRAINT "diversity_group_slug_key" UNIQUE (slug)
+)`,
+      `CREATE TABLE IF NOT EXISTS "canonical_food" (
+  "id" serial NOT NULL,
+  "slug" text NOT NULL,
+  "name" text NOT NULL,
+  "category" text NOT NULL,
+  "subcategory" text,
+  "description" text,
+  "knowledge_food_slug" text,
+  "diversity_group_slug" text,
+  "status" text DEFAULT 'active'::text NOT NULL,
+  "source" text DEFAULT 'THA editorial'::text NOT NULL,
+  "created_at" timestamptz DEFAULT now() NOT NULL,
+  "updated_at" timestamptz DEFAULT now() NOT NULL,
+  "tier" text DEFAULT 'canonical'::text NOT NULL,
+  "scientific_name" text,
+  "source_ref" text,
+  "confidence" text,
+  "family" text,
+  "availability" text,
+  "availability_modifiers" text[] DEFAULT '{}'::text[] NOT NULL,
+  "peak_seasons" text[] DEFAULT '{}'::text[] NOT NULL,
+  "origin_region" text,
+  "fermented" boolean DEFAULT false NOT NULL,
+  CONSTRAINT "canonical_food_pkey" PRIMARY KEY (id),
+  CONSTRAINT "canonical_food_slug_key" UNIQUE (slug)
+)`,
+      `CREATE TABLE IF NOT EXISTS "canonical_food_alias" (
+  "id" serial NOT NULL,
+  "canonical_food_id" integer NOT NULL,
+  "alias" text NOT NULL,
+  "alias_key" text NOT NULL,
+  "alias_type" text NOT NULL,
+  "source" text DEFAULT 'THA editorial'::text NOT NULL,
+  "is_active" boolean DEFAULT true NOT NULL,
+  "created_at" timestamptz DEFAULT now() NOT NULL,
+  CONSTRAINT "canonical_food_alias_pkey" PRIMARY KEY (id),
+  CONSTRAINT "canonical_food_alias_alias_key_key" UNIQUE (alias_key)
+)`,
+      `CREATE TABLE IF NOT EXISTS "companion_action_proposals" (
+  "id" serial NOT NULL,
+  "conversation_turn_id" integer NOT NULL,
+  "workflow_id" text NOT NULL,
+  "capability_id" text NOT NULL,
+  "verb" text NOT NULL,
+  "label" text NOT NULL,
+  "parameters" jsonb DEFAULT '{}'::jsonb NOT NULL,
+  "confirmation_tier" text NOT NULL,
+  "status" text DEFAULT 'proposed'::text NOT NULL,
+  "result_summary" text,
+  "error_code" text,
+  "error_message" text,
+  "created_at" timestamptz DEFAULT now() NOT NULL,
+  "resolved_at" timestamptz,
+  CONSTRAINT "companion_action_proposals_pkey" PRIMARY KEY (id)
+)`,
+      `CREATE TABLE IF NOT EXISTS "companion_guidance_events" (
+  "id" serial NOT NULL,
+  "conversation_turn_id" integer NOT NULL,
+  "event_kind" text NOT NULL,
+  "source_domain" text NOT NULL,
+  "domain" text NOT NULL,
+  "created_at" timestamptz DEFAULT now() NOT NULL,
+  "source_capability_id" text,
+  "target_capability_id" text,
+  "target_verb" text,
+  CONSTRAINT "companion_guidance_events_pkey" PRIMARY KEY (id)
+)`,
+      `CREATE TABLE IF NOT EXISTS "companion_health_snapshots" (
+  "id" serial NOT NULL,
+  "total_events" integer NOT NULL,
+  "total_turns" integer NOT NULL,
+  "by_stage" jsonb NOT NULL,
+  "by_state" jsonb NOT NULL,
+  "by_surface" jsonb NOT NULL,
+  "gap_counts" jsonb NOT NULL,
+  "top_unmatched_utterances" jsonb NOT NULL,
+  "routing_failures" jsonb NOT NULL,
+  "capability_gap_clusters" jsonb NOT NULL,
+  "created_at" timestamptz DEFAULT now() NOT NULL,
+  CONSTRAINT "companion_health_snapshots_pkey" PRIMARY KEY (id)
+)`,
+      `CREATE TABLE IF NOT EXISTS "users" (
+  "id" serial NOT NULL,
+  "username" text NOT NULL,
+  "password" text NOT NULL,
+  "measurement_preference" text DEFAULT 'metric'::text NOT NULL,
+  "preferred_price_tier" text DEFAULT 'standard'::text NOT NULL,
+  "onboarding_completed" boolean DEFAULT false NOT NULL,
+  "starter_meals_loaded" boolean DEFAULT false NOT NULL,
+  "is_beta_user" boolean DEFAULT false NOT NULL,
+  "display_name" text,
+  "profile_photo_url" text,
+  "email_verified" boolean DEFAULT false NOT NULL,
+  "email_verification_token" text,
+  "email_verification_expires" timestamptz,
+  "eating_schedule" text,
+  "password_reset_token" text,
+  "password_reset_expires" timestamptz,
+  "role" text DEFAULT 'user'::text NOT NULL,
+  "subscription_tier" text DEFAULT 'free'::text NOT NULL,
+  "subscription_status" text,
+  "subscription_expires_at" timestamptz,
+  "updated_at" timestamptz DEFAULT now() NOT NULL,
+  "is_demo" boolean DEFAULT false NOT NULL,
+  "demo_expires_at" timestamptz,
+  "demo_claimed_email" text,
+  "first_name" text,
+  "created_at" timestamptz DEFAULT now() NOT NULL,
+  "last_login_at" timestamptz,
+  "last_seen_at" timestamptz,
+  "custom_metric_defs" jsonb,
+  "diary_extra_metrics" jsonb,
+  CONSTRAINT "users_pkey" PRIMARY KEY (id),
+  CONSTRAINT "users_role_check" CHECK ((role = ANY (ARRAY['user'::text, 'admin'::text]))),
+  CONSTRAINT "users_subscription_tier_check" CHECK ((subscription_tier = ANY (ARRAY['free'::text, 'premium'::text, 'friends_family'::text]))),
+  CONSTRAINT "users_username_unique" UNIQUE (username)
+)`,
+      `CREATE TABLE IF NOT EXISTS "companion_learning_recommendations" (
+  "id" serial NOT NULL,
+  "snapshot_id" integer NOT NULL,
+  "kind" text NOT NULL,
+  "status" text DEFAULT 'pending'::text NOT NULL,
+  "payload" jsonb NOT NULL,
+  "rationale" text NOT NULL,
+  "confidence" text DEFAULT 'low'::text NOT NULL,
+  "reviewed_by" integer,
+  "reviewed_at" timestamptz,
+  "review_notes" text,
+  "created_at" timestamptz DEFAULT now() NOT NULL,
+  CONSTRAINT "companion_learning_recommendations_pkey" PRIMARY KEY (id)
+)`,
+      `CREATE TABLE IF NOT EXISTS "companion_response_feedback" (
+  "id" serial NOT NULL,
+  "conversation_turn_id" integer NOT NULL,
+  "rating" text NOT NULL,
+  "reason_code" text,
+  "note" text,
+  "created_at" timestamptz DEFAULT now() NOT NULL,
+  "updated_at" timestamptz DEFAULT now() NOT NULL,
+  CONSTRAINT "companion_response_feedback_pkey" PRIMARY KEY (id),
+  CONSTRAINT "companion_response_feedback_conversation_turn_id_key" UNIQUE (conversation_turn_id)
+)`,
+      `CREATE TABLE IF NOT EXISTS "diets" (
+  "id" serial NOT NULL,
+  "name" text NOT NULL,
+  CONSTRAINT "diets_pkey" PRIMARY KEY (id),
+  CONSTRAINT "diets_name_unique" UNIQUE (name)
+)`,
+      `CREATE TABLE IF NOT EXISTS "food_variety" (
+  "id" serial NOT NULL,
+  "canonical_food_id" integer NOT NULL,
+  "slug" text NOT NULL,
+  "name" text NOT NULL,
+  "description" text,
+  "display_order" integer DEFAULT 0 NOT NULL,
+  "status" text DEFAULT 'active'::text NOT NULL,
+  "source" text DEFAULT 'THA editorial'::text NOT NULL,
+  "created_at" timestamptz DEFAULT now() NOT NULL,
+  "updated_at" timestamptz DEFAULT now() NOT NULL,
+  CONSTRAINT "food_variety_pkey" PRIMARY KEY (id),
+  CONSTRAINT "food_variety_slug_key" UNIQUE (slug)
+)`,
+      `CREATE TABLE IF NOT EXISTS "freezer_meals" (
+  "id" serial NOT NULL,
+  "user_id" integer NOT NULL,
+  "meal_id" integer NOT NULL,
+  "total_portions" integer DEFAULT 1 NOT NULL,
+  "remaining_portions" integer DEFAULT 1 NOT NULL,
+  "frozen_date" text NOT NULL,
+  "expiry_date" text,
+  "batch_label" text,
+  "notes" text,
+  "household_id" integer,
+  CONSTRAINT "freezer_meals_pkey" PRIMARY KEY (id)
+)`,
+      `CREATE TABLE IF NOT EXISTS "grocery_products" (
+  "id" serial NOT NULL,
+  "ingredient_name" text NOT NULL,
+  "name" text NOT NULL,
+  "brand" text,
+  "image_url" text,
+  "weight" text,
+  "supermarket" text NOT NULL,
+  "tier" text DEFAULT 'standard'::text NOT NULL,
+  "price" real,
+  "currency" text DEFAULT 'GBP'::text NOT NULL,
+  "product_url" text,
+  "price_per_unit" text,
+  CONSTRAINT "grocery_products_pkey" PRIMARY KEY (id)
+)`,
+      `CREATE TABLE IF NOT EXISTS "ingredient_sources" (
+  "id" serial NOT NULL,
+  "shopping_list_item_id" integer NOT NULL,
+  "meal_id" integer NOT NULL,
+  "meal_name" text NOT NULL,
+  "quantity_multiplier" integer DEFAULT 1 NOT NULL,
+  "week_number" integer,
+  "day_of_week" integer,
+  "meal_slot" text,
+  "eater_ids" int4[],
+  "guest_eaters" jsonb,
+  CONSTRAINT "ingredient_sources_pkey" PRIMARY KEY (id)
+)`,
+      `CREATE TABLE IF NOT EXISTS "ingredient_swaps" (
+  "id" serial NOT NULL,
+  "original" text NOT NULL,
+  "healthier" text NOT NULL,
+  CONSTRAINT "ingredient_swaps_pkey" PRIMARY KEY (id)
+)`,
+      `CREATE TABLE IF NOT EXISTS "knowledge_releases" (
+  "id" serial NOT NULL,
+  "published_at" timestamptz DEFAULT now() NOT NULL,
+  "approved_by_user_id" integer,
+  "approved_by_user_ids" jsonb DEFAULT '[]'::jsonb NOT NULL,
+  "published_by_user_id" integer,
+  "aliases_published" integer DEFAULT 0 NOT NULL,
+  "new_entities" integer DEFAULT 0 NOT NULL,
+  "updated_entities" integer DEFAULT 0 NOT NULL,
+  "rejected_proposals" integer DEFAULT 0 NOT NULL,
+  "deferred_proposals" integer DEFAULT 0 NOT NULL,
+  "linked_batch_ids" jsonb DEFAULT '[]'::jsonb NOT NULL,
+  "linked_proposal_ids" jsonb DEFAULT '[]'::jsonb NOT NULL,
+  "rollback_id" integer,
+  "notes" text,
+  "status" text DEFAULT 'published'::text NOT NULL,
+  "rolled_back_at" timestamptz,
+  "rolled_back_by_user_id" integer,
+  "created_at" timestamptz DEFAULT now() NOT NULL,
+  CONSTRAINT "knowledge_releases_pkey" PRIMARY KEY (id)
+)`,
+      `CREATE TABLE IF NOT EXISTS "knowledge_review_audit" (
+  "id" serial NOT NULL,
+  "entity" text NOT NULL,
+  "entity_id" integer,
+  "action" text NOT NULL,
+  "actor_kind" text DEFAULT 'human'::text NOT NULL,
+  "actor_user_id" integer,
+  "release_id" integer,
+  "before" jsonb,
+  "after" jsonb,
+  "detail" text,
+  "created_at" timestamptz DEFAULT now() NOT NULL,
+  CONSTRAINT "knowledge_review_audit_pkey" PRIMARY KEY (id)
+)`,
+      `CREATE TABLE IF NOT EXISTS "knowledge_review_batches" (
+  "id" serial NOT NULL,
+  "direction" text DEFAULT 'import'::text NOT NULL,
+  "format" text DEFAULT 'json'::text NOT NULL,
+  "schema_version" text,
+  "checksum" text,
+  "exported_at" timestamptz,
+  "reviewer_model" text,
+  "source_filename" text,
+  "item_count" integer DEFAULT 0 NOT NULL,
+  "proposal_count" integer DEFAULT 0 NOT NULL,
+  "status" text DEFAULT 'imported'::text NOT NULL,
+  "notes" text,
+  "created_by_user_id" integer,
+  "created_at" timestamptz DEFAULT now() NOT NULL,
+  CONSTRAINT "knowledge_review_batches_pkey" PRIMARY KEY (id)
+)`,
+      `CREATE TABLE IF NOT EXISTS "knowledge_review_queue" (
+  "id" serial NOT NULL,
+  "review_type" text DEFAULT 'vocabulary'::text NOT NULL,
+  "domain" text NOT NULL,
+  "dedupe_key" text NOT NULL,
+  "label" text NOT NULL,
+  "source" text NOT NULL,
+  "contexts" jsonb DEFAULT '[]'::jsonb NOT NULL,
+  "details" jsonb DEFAULT '{}'::jsonb NOT NULL,
+  "occurrence_count" integer DEFAULT 1 NOT NULL,
+  "status" text DEFAULT 'unresolved'::text NOT NULL,
+  "first_seen_at" timestamptz DEFAULT now() NOT NULL,
+  "last_seen_at" timestamptz DEFAULT now() NOT NULL,
+  "created_at" timestamptz DEFAULT now() NOT NULL,
+  "updated_at" timestamptz DEFAULT now() NOT NULL,
+  "priority" text,
+  "knowledge_origin" text,
+  "review_notes" text,
+  "suggested_canonical_slug" text,
+  CONSTRAINT "knowledge_review_queue_pkey" PRIMARY KEY (id),
+  CONSTRAINT "uq_knowledge_review_item" UNIQUE (review_type, domain, dedupe_key)
+)`,
+      `CREATE TABLE IF NOT EXISTS "knowledge_review_decisions" (
+  "id" serial NOT NULL,
+  "batch_id" integer NOT NULL,
+  "term_id" integer NOT NULL,
+  "review_type" text DEFAULT 'vocabulary'::text NOT NULL,
+  "domain" text,
+  "decision_type" text NOT NULL,
+  "target_canonical_slug" text,
+  "alias_string" text,
+  "proposed_new_slug" text,
+  "proposed_new_name" text,
+  "proposed_new_description" text,
+  "rationale" text,
+  "confidence" text,
+  "reviewer_model" text,
+  "reviewer_notes" text,
+  "original_context" jsonb DEFAULT '{}'::jsonb NOT NULL,
+  "status" text DEFAULT 'proposed'::text NOT NULL,
+  "approved_by_user_id" integer,
+  "approved_at" timestamptz,
+  "rejected_at" timestamptz,
+  "created_at" timestamptz DEFAULT now() NOT NULL,
+  "updated_at" timestamptz DEFAULT now() NOT NULL,
+  "reviewer" text,
+  CONSTRAINT "knowledge_review_decisions_pkey" PRIMARY KEY (id)
+)`,
+      `CREATE TABLE IF NOT EXISTS "knowledge_rollback_points" (
+  "id" serial NOT NULL,
+  "release_id" integer,
+  "snapshot" jsonb DEFAULT '{}'::jsonb NOT NULL,
+  "status" text DEFAULT 'active'::text NOT NULL,
+  "created_at" timestamptz DEFAULT now() NOT NULL,
+  "consumed_at" timestamptz,
+  CONSTRAINT "knowledge_rollback_points_pkey" PRIMARY KEY (id)
+)`,
+      `CREATE TABLE IF NOT EXISTS "knowledge_vocabulary_aliases" (
+  "id" serial NOT NULL,
+  "kind" text NOT NULL,
+  "alias_normalised" text NOT NULL,
+  "canonical_slug" text NOT NULL,
+  "decision_id" integer,
+  "release_id" integer,
+  "is_active" boolean DEFAULT true NOT NULL,
+  "created_at" timestamptz DEFAULT now() NOT NULL,
+  "deactivated_at" timestamptz,
+  CONSTRAINT "knowledge_vocabulary_aliases_pkey" PRIMARY KEY (id)
+)`,
+      `CREATE TABLE IF NOT EXISTS "meal_allergens" (
+  "id" serial NOT NULL,
+  "meal_id" integer NOT NULL,
+  "allergen" text NOT NULL,
+  CONSTRAINT "meal_allergens_pkey" PRIMARY KEY (id)
+)`,
+      `CREATE TABLE IF NOT EXISTS "meal_categories" (
+  "id" serial NOT NULL,
+  "name" text NOT NULL,
+  CONSTRAINT "meal_categories_pkey" PRIMARY KEY (id),
+  CONSTRAINT "meal_categories_name_unique" UNIQUE (name)
+)`,
+      `CREATE TABLE IF NOT EXISTS "meal_diets" (
+  "id" serial NOT NULL,
+  "meal_id" integer NOT NULL,
+  "diet_id" integer NOT NULL,
+  CONSTRAINT "meal_diets_pkey" PRIMARY KEY (id)
+)`,
+      `CREATE TABLE IF NOT EXISTS "meal_plan_entries" (
+  "id" serial NOT NULL,
+  "plan_id" integer NOT NULL,
+  "day_of_week" integer NOT NULL,
+  "slot" text NOT NULL,
+  "meal_id" integer NOT NULL,
+  "meal_template_id" integer,
+  "resolved_source_type" text,
+  CONSTRAINT "meal_plan_entries_pkey" PRIMARY KEY (id)
+)`,
+      `CREATE TABLE IF NOT EXISTS "meal_plans" (
+  "id" serial NOT NULL,
+  "user_id" integer NOT NULL,
+  "week_start" text NOT NULL,
+  "name" text NOT NULL,
+  "calorie_target" integer,
+  "people_count" integer DEFAULT 1 NOT NULL,
+  CONSTRAINT "meal_plans_pkey" PRIMARY KEY (id)
+)`,
+      `CREATE TABLE IF NOT EXISTS "meal_templates" (
+  "id" serial NOT NULL,
+  "name" text NOT NULL,
+  "category" text DEFAULT 'dinner'::text NOT NULL,
+  "description" text,
+  "image_url" text,
+  "default_calories" integer,
+  "default_protein" integer,
+  "default_carbs" integer,
+  "default_fat" integer,
+  "title" text,
+  "cuisine" text,
+  "shared_base_components" text[],
+  "protein_slots" text[],
+  "carb_slots" text[],
+  "veg_slots" text[],
+  "topping_slots" text[],
+  "sauce_slots" text[],
+  "compatible_diets" text[],
+  "estimated_total_time" integer,
+  "estimated_extra_time_per_variant" integer,
+  "cost_band" text,
+  "is_active" boolean DEFAULT true NOT NULL,
+  "primary_slot" text,
+  "suitable_slots" text[] DEFAULT '{}'::text[] NOT NULL,
+  "energy_band" text,
+  "style_tags" text[] DEFAULT '{}'::text[] NOT NULL,
+  "nutrition_opportunities" text[] DEFAULT '{}'::text[] NOT NULL,
+  CONSTRAINT "meal_templates_pkey" PRIMARY KEY (id)
+)`,
+      `CREATE TABLE IF NOT EXISTS "meals" (
+  "id" serial NOT NULL,
+  "user_id" integer NOT NULL,
+  "name" text NOT NULL,
+  "ingredients" text[] NOT NULL,
+  "image_url" text,
+  "servings" integer DEFAULT 1 NOT NULL,
+  "category_id" integer,
+  "instructions" text[],
+  "source_url" text,
+  "meal_template_id" integer,
+  "meal_source_type" text DEFAULT 'scratch'::text NOT NULL,
+  "is_ready_meal" boolean DEFAULT false NOT NULL,
+  "is_system_meal" boolean DEFAULT false NOT NULL,
+  "meal_format" text DEFAULT 'recipe'::text NOT NULL,
+  "diet_types" text[] DEFAULT '{}'::text[] NOT NULL,
+  "is_freezer_eligible" boolean DEFAULT true NOT NULL,
+  "audience" text DEFAULT 'adult'::text NOT NULL,
+  "is_drink" boolean DEFAULT false NOT NULL,
+  "drink_type" text,
+  "barcode" text,
+  "brand" text,
+  "original_meal_id" integer,
+  "created_at" timestamptz DEFAULT now() NOT NULL,
+  "kind" text DEFAULT 'meal'::text NOT NULL,
+  "is_household_safe_variant" boolean DEFAULT false NOT NULL,
+  "household_safe_for" jsonb,
+  "variant_kind" text,
+  "show_in_cookbook" boolean DEFAULT false NOT NULL,
+  "primary_slot" text,
+  "suitable_slots" text[] DEFAULT '{}'::text[] NOT NULL,
+  "energy_band" text,
+  "style_tags" text[] DEFAULT '{}'::text[] NOT NULL,
+  "acquisition_lane" text,
+  "acquisition_type" text,
+  "acquisition_source_key" text,
+  "licence_ref" text,
+  "attribution_text" text,
+  CONSTRAINT "meals_pkey" PRIMARY KEY (id)
+)`,
+      `CREATE TABLE IF NOT EXISTS "normalized_ingredients" (
+  "id" serial NOT NULL,
+  "name" text NOT NULL,
+  "normalized_name" text NOT NULL,
+  "category" text DEFAULT 'other'::text NOT NULL,
+  CONSTRAINT "normalized_ingredients_pkey" PRIMARY KEY (id)
+)`,
+      `CREATE TABLE IF NOT EXISTS "nutrition" (
+  "id" serial NOT NULL,
+  "meal_id" integer NOT NULL,
+  "calories" text,
+  "protein" text,
+  "carbs" text,
+  "fat" text,
+  "sugar" text,
+  "salt" text,
+  "source" text,
+  CONSTRAINT "nutrition_pkey" PRIMARY KEY (id)
+)`,
+      `CREATE TABLE IF NOT EXISTS "planner_days" (
+  "id" serial NOT NULL,
+  "week_id" integer NOT NULL,
+  "day_of_week" integer NOT NULL,
+  CONSTRAINT "planner_days_pkey" PRIMARY KEY (id),
+  CONSTRAINT "planner_days_week_day_unique" UNIQUE (week_id, day_of_week)
+)`,
+      `CREATE TABLE IF NOT EXISTS "planner_entries" (
+  "id" serial NOT NULL,
+  "day_id" integer NOT NULL,
+  "meal_type" text NOT NULL,
+  "audience" text DEFAULT 'adult'::text NOT NULL,
+  "meal_id" integer NOT NULL,
+  "calories" integer DEFAULT 0,
+  "is_drink" boolean DEFAULT false NOT NULL,
+  "drink_type" text,
+  "position" integer DEFAULT 0 NOT NULL,
+  "adaptation_result" jsonb,
+  "guest_eaters" jsonb,
+  "original_meal_id_before_variant" integer,
+  CONSTRAINT "planner_entries_pkey" PRIMARY KEY (id)
+)`,
+      `CREATE TABLE IF NOT EXISTS "planner_weeks" (
+  "id" serial NOT NULL,
+  "user_id" integer NOT NULL,
+  "week_number" integer NOT NULL,
+  "week_name" text NOT NULL,
+  "household_id" integer,
+  "week_start_date" text,
+  CONSTRAINT "planner_weeks_pkey" PRIMARY KEY (id),
+  CONSTRAINT "planner_weeks_user_week_unique" UNIQUE (user_id, week_number)
+)`,
+      `CREATE TABLE IF NOT EXISTS "product_additives" (
+  "id" serial NOT NULL,
+  "product_barcode" text NOT NULL,
+  "additive_id" integer NOT NULL,
+  CONSTRAINT "product_additives_pkey" PRIMARY KEY (id)
+)`,
+      `CREATE TABLE IF NOT EXISTS "product_history" (
+  "id" serial NOT NULL,
+  "user_id" integer NOT NULL,
+  "barcode" text,
+  "product_name" text NOT NULL,
+  "brand" text,
+  "image_url" text,
+  "nova_group" integer,
+  "nutriscore_grade" text,
+  "smp_rating" integer,
+  "upf_score" integer,
+  "health_score" integer,
+  "scanned_at" text NOT NULL,
+  "source" text DEFAULT 'search'::text NOT NULL,
+  CONSTRAINT "product_history_pkey" PRIMARY KEY (id)
+)`,
+      `CREATE TABLE IF NOT EXISTS "product_matches" (
+  "id" serial NOT NULL,
+  "shopping_list_item_id" integer NOT NULL,
+  "supermarket" text NOT NULL,
+  "product_name" text NOT NULL,
+  "price" real,
+  "price_per_unit" text,
+  "product_url" text,
+  "image_url" text,
+  "currency" text DEFAULT 'GBP'::text NOT NULL,
+  "tier" text DEFAULT 'standard'::text NOT NULL,
+  "product_weight" text,
+  "tesco_product_id" text,
+  "sainsburys_product_id" text,
+  "ocado_product_id" text,
+  "smp_rating" integer,
+  "price_source" text,
+  CONSTRAINT "product_matches_pkey" PRIMARY KEY (id)
+)`,
+      `CREATE TABLE IF NOT EXISTS "shopping_list" (
+  "id" serial NOT NULL,
+  "user_id" integer NOT NULL,
+  "product_name" text NOT NULL,
+  "image_url" text,
+  "quantity" integer DEFAULT 1 NOT NULL,
+  "brand" text,
+  "normalized_name" text,
+  "quantity_value" real,
+  "unit" text,
+  "category" text,
+  "selected_tier" text,
+  "quantity_in_grams" real,
+  "ingredient_id" integer,
+  "matched_product_id" text,
+  "matched_store" text,
+  "matched_price" real,
+  "checked" boolean DEFAULT false NOT NULL,
+  "needs_review" boolean DEFAULT false NOT NULL,
+  "validation_note" text,
+  "selected_store" text,
+  "available_stores" text,
+  "smp_rating" integer,
+  "household_id" integer,
+  "added_by_user_id" integer,
+  "item_type" text,
+  "variant_selections" text,
+  "attribute_preferences" text,
+  "confidence_level" text,
+  "confidence_reason" text,
+  "basket_label" text,
+  "shop_status" text,
+  "original_text" text,
+  "canonical_name" text,
+  "subcategory" text,
+  "resolution_state" text DEFAULT 'raw'::text,
+  "review_reason" text,
+  "review_suggestions" text,
+  "cupboard_quantity" real,
+  "source" text,
+  CONSTRAINT "shopping_list_pkey" PRIMARY KEY (id)
+)`,
+      `CREATE TABLE IF NOT EXISTS "shopping_list_extras" (
+  "id" serial NOT NULL,
+  "user_id" integer NOT NULL,
+  "name" text NOT NULL,
+  "category" text DEFAULT 'household'::text NOT NULL,
+  "created_at" timestamptz DEFAULT now() NOT NULL,
+  "household_id" integer,
+  "always_add" boolean DEFAULT false NOT NULL,
+  "in_basket" boolean DEFAULT true NOT NULL,
+  CONSTRAINT "shopping_list_extras_pkey" PRIMARY KEY (id)
+)`,
+      `CREATE TABLE IF NOT EXISTS "supermarket_links" (
+  "id" serial NOT NULL,
+  "name" text NOT NULL,
+  "country" text NOT NULL,
+  "search_url" text NOT NULL,
+  "logo_url" text,
+  CONSTRAINT "supermarket_links_pkey" PRIMARY KEY (id)
+)`,
+      `CREATE TABLE IF NOT EXISTS "user_health_trends" (
+  "id" serial NOT NULL,
+  "user_id" integer NOT NULL,
+  "date" text NOT NULL,
+  "average_smp_rating" real NOT NULL,
+  "elite_count" integer DEFAULT 0 NOT NULL,
+  "processed_count" integer DEFAULT 0 NOT NULL,
+  "sample_count" integer DEFAULT 0 NOT NULL,
+  CONSTRAINT "user_health_trends_pkey" PRIMARY KEY (id)
+)`,
+      `CREATE TABLE IF NOT EXISTS "user_preferences" (
+  "id" serial NOT NULL,
+  "user_id" integer NOT NULL,
+  "diet_types" text[] DEFAULT '{}'::text[] NOT NULL,
+  "excluded_ingredients" text[] DEFAULT '{}'::text[] NOT NULL,
+  "health_goals" text[] DEFAULT '{}'::text[] NOT NULL,
+  "budget_level" text DEFAULT 'standard'::text NOT NULL,
+  "preferred_stores" text[] DEFAULT '{}'::text[] NOT NULL,
+  "upf_sensitivity" text DEFAULT 'moderate'::text NOT NULL,
+  "quality_preference" text DEFAULT 'standard'::text NOT NULL,
+  "calorie_target" integer,
+  "sound_enabled" boolean DEFAULT true NOT NULL,
+  "elite_tracking_enabled" boolean DEFAULT true NOT NULL,
+  "health_trend_enabled" boolean DEFAULT true NOT NULL,
+  "barcode_scanner_enabled" boolean DEFAULT true NOT NULL,
+  "planner_show_calories" boolean DEFAULT true NOT NULL,
+  "planner_enable_baby_meals" boolean DEFAULT false NOT NULL,
+  "planner_enable_child_meals" boolean DEFAULT false NOT NULL,
+  "planner_enable_drinks" boolean DEFAULT false NOT NULL,
+  "calorie_mode" text DEFAULT 'auto'::text NOT NULL,
+  "height_cm" real,
+  "weight_kg" real,
+  "activity_level" text DEFAULT 'moderate'::text NOT NULL,
+  "goal_type" text DEFAULT 'maintain'::text NOT NULL,
+  "adults_count" integer DEFAULT 1 NOT NULL,
+  "children_count" integer DEFAULT 0 NOT NULL,
+  "babies_count" integer DEFAULT 0 NOT NULL,
+  "preferred_ingredients" text[] DEFAULT '{}'::text[] NOT NULL,
+  "max_prep_tolerance" integer,
+  "meal_mode" text DEFAULT 'exact'::text NOT NULL,
+  "max_extra_prep_minutes" integer,
+  "max_total_cook_time" integer,
+  "prefer_less_processed" boolean DEFAULT false NOT NULL,
+  "include_regulatory_additives_in_scoring" boolean DEFAULT true NOT NULL,
+  "muted_opportunity_types" text[] DEFAULT '{}'::text[] NOT NULL,
+  "companion_personality" text DEFAULT 'companion'::text NOT NULL,
+  CONSTRAINT "user_preferences_pkey" PRIMARY KEY (id),
+  CONSTRAINT "user_preferences_user_id_unique" UNIQUE (user_id)
+)`,
+      `CREATE TABLE IF NOT EXISTS "user_streaks" (
+  "id" serial NOT NULL,
+  "user_id" integer NOT NULL,
+  "current_elite_streak" integer DEFAULT 0 NOT NULL,
+  "best_elite_streak" integer DEFAULT 0 NOT NULL,
+  "last_elite_date" text,
+  "weekly_elite_count" integer DEFAULT 0 NOT NULL,
+  "week_start_date" text,
+  CONSTRAINT "user_streaks_pkey" PRIMARY KEY (id),
+  CONSTRAINT "user_streaks_user_id_unique" UNIQUE (user_id)
+)`,
+      `DO $$ BEGIN
+         IF NOT EXISTS (
+           SELECT 1 FROM pg_constraint c
+           JOIN pg_class r ON r.oid = c.conrelid
+           WHERE c.conname = 'canonical_food_diversity_group_slug_fkey' AND r.relname = 'canonical_food'
+         ) THEN
+           ALTER TABLE "canonical_food" ADD CONSTRAINT "canonical_food_diversity_group_slug_fkey" FOREIGN KEY (diversity_group_slug) REFERENCES diversity_group(slug) ON DELETE SET NULL;
+         END IF;
+       END $$`,
+      `DO $$ BEGIN
+         IF NOT EXISTS (
+           SELECT 1 FROM pg_constraint c
+           JOIN pg_class r ON r.oid = c.conrelid
+           WHERE c.conname = 'canonical_food_knowledge_food_slug_fkey' AND r.relname = 'canonical_food'
+         ) THEN
+           ALTER TABLE "canonical_food" ADD CONSTRAINT "canonical_food_knowledge_food_slug_fkey" FOREIGN KEY (knowledge_food_slug) REFERENCES knowledge_foods(slug) ON DELETE SET NULL;
+         END IF;
+       END $$`,
+      `DO $$ BEGIN
+         IF NOT EXISTS (
+           SELECT 1 FROM pg_constraint c
+           JOIN pg_class r ON r.oid = c.conrelid
+           WHERE c.conname = 'canonical_food_alias_canonical_food_id_fkey' AND r.relname = 'canonical_food_alias'
+         ) THEN
+           ALTER TABLE "canonical_food_alias" ADD CONSTRAINT "canonical_food_alias_canonical_food_id_fkey" FOREIGN KEY (canonical_food_id) REFERENCES canonical_food(id) ON DELETE CASCADE;
+         END IF;
+       END $$`,
+      `DO $$ BEGIN
+         IF NOT EXISTS (
+           SELECT 1 FROM pg_constraint c
+           JOIN pg_class r ON r.oid = c.conrelid
+           WHERE c.conname = 'companion_action_proposals_conversation_turn_id_fkey' AND r.relname = 'companion_action_proposals'
+         ) THEN
+           ALTER TABLE "companion_action_proposals" ADD CONSTRAINT "companion_action_proposals_conversation_turn_id_fkey" FOREIGN KEY (conversation_turn_id) REFERENCES conversation_turns(id) ON DELETE CASCADE;
+         END IF;
+       END $$`,
+      `DO $$ BEGIN
+         IF NOT EXISTS (
+           SELECT 1 FROM pg_constraint c
+           JOIN pg_class r ON r.oid = c.conrelid
+           WHERE c.conname = 'companion_guidance_events_conversation_turn_id_fkey' AND r.relname = 'companion_guidance_events'
+         ) THEN
+           ALTER TABLE "companion_guidance_events" ADD CONSTRAINT "companion_guidance_events_conversation_turn_id_fkey" FOREIGN KEY (conversation_turn_id) REFERENCES conversation_turns(id) ON DELETE CASCADE;
+         END IF;
+       END $$`,
+      `DO $$ BEGIN
+         IF NOT EXISTS (
+           SELECT 1 FROM pg_constraint c
+           JOIN pg_class r ON r.oid = c.conrelid
+           WHERE c.conname = 'companion_learning_recommendations_reviewed_by_fkey' AND r.relname = 'companion_learning_recommendations'
+         ) THEN
+           ALTER TABLE "companion_learning_recommendations" ADD CONSTRAINT "companion_learning_recommendations_reviewed_by_fkey" FOREIGN KEY (reviewed_by) REFERENCES users(id);
+         END IF;
+       END $$`,
+      `DO $$ BEGIN
+         IF NOT EXISTS (
+           SELECT 1 FROM pg_constraint c
+           JOIN pg_class r ON r.oid = c.conrelid
+           WHERE c.conname = 'companion_learning_recommendations_snapshot_id_fkey' AND r.relname = 'companion_learning_recommendations'
+         ) THEN
+           ALTER TABLE "companion_learning_recommendations" ADD CONSTRAINT "companion_learning_recommendations_snapshot_id_fkey" FOREIGN KEY (snapshot_id) REFERENCES companion_health_snapshots(id);
+         END IF;
+       END $$`,
+      `DO $$ BEGIN
+         IF NOT EXISTS (
+           SELECT 1 FROM pg_constraint c
+           JOIN pg_class r ON r.oid = c.conrelid
+           WHERE c.conname = 'companion_response_feedback_conversation_turn_id_fkey' AND r.relname = 'companion_response_feedback'
+         ) THEN
+           ALTER TABLE "companion_response_feedback" ADD CONSTRAINT "companion_response_feedback_conversation_turn_id_fkey" FOREIGN KEY (conversation_turn_id) REFERENCES conversation_turns(id) ON DELETE CASCADE;
+         END IF;
+       END $$`,
+      `DO $$ BEGIN
+         IF NOT EXISTS (
+           SELECT 1 FROM pg_constraint c
+           JOIN pg_class r ON r.oid = c.conrelid
+           WHERE c.conname = 'food_variety_canonical_food_id_fkey' AND r.relname = 'food_variety'
+         ) THEN
+           ALTER TABLE "food_variety" ADD CONSTRAINT "food_variety_canonical_food_id_fkey" FOREIGN KEY (canonical_food_id) REFERENCES canonical_food(id) ON DELETE CASCADE;
+         END IF;
+       END $$`,
+      `DO $$ BEGIN
+         IF NOT EXISTS (
+           SELECT 1 FROM pg_constraint c
+           JOIN pg_class r ON r.oid = c.conrelid
+           WHERE c.conname = 'knowledge_releases_approved_by_user_id_fkey' AND r.relname = 'knowledge_releases'
+         ) THEN
+           ALTER TABLE "knowledge_releases" ADD CONSTRAINT "knowledge_releases_approved_by_user_id_fkey" FOREIGN KEY (approved_by_user_id) REFERENCES users(id);
+         END IF;
+       END $$`,
+      `DO $$ BEGIN
+         IF NOT EXISTS (
+           SELECT 1 FROM pg_constraint c
+           JOIN pg_class r ON r.oid = c.conrelid
+           WHERE c.conname = 'knowledge_releases_published_by_user_id_fkey' AND r.relname = 'knowledge_releases'
+         ) THEN
+           ALTER TABLE "knowledge_releases" ADD CONSTRAINT "knowledge_releases_published_by_user_id_fkey" FOREIGN KEY (published_by_user_id) REFERENCES users(id);
+         END IF;
+       END $$`,
+      `DO $$ BEGIN
+         IF NOT EXISTS (
+           SELECT 1 FROM pg_constraint c
+           JOIN pg_class r ON r.oid = c.conrelid
+           WHERE c.conname = 'knowledge_releases_rolled_back_by_user_id_fkey' AND r.relname = 'knowledge_releases'
+         ) THEN
+           ALTER TABLE "knowledge_releases" ADD CONSTRAINT "knowledge_releases_rolled_back_by_user_id_fkey" FOREIGN KEY (rolled_back_by_user_id) REFERENCES users(id);
+         END IF;
+       END $$`,
+      `DO $$ BEGIN
+         IF NOT EXISTS (
+           SELECT 1 FROM pg_constraint c
+           JOIN pg_class r ON r.oid = c.conrelid
+           WHERE c.conname = 'knowledge_review_audit_actor_user_id_fkey' AND r.relname = 'knowledge_review_audit'
+         ) THEN
+           ALTER TABLE "knowledge_review_audit" ADD CONSTRAINT "knowledge_review_audit_actor_user_id_fkey" FOREIGN KEY (actor_user_id) REFERENCES users(id);
+         END IF;
+       END $$`,
+      `DO $$ BEGIN
+         IF NOT EXISTS (
+           SELECT 1 FROM pg_constraint c
+           JOIN pg_class r ON r.oid = c.conrelid
+           WHERE c.conname = 'knowledge_review_batches_created_by_user_id_fkey' AND r.relname = 'knowledge_review_batches'
+         ) THEN
+           ALTER TABLE "knowledge_review_batches" ADD CONSTRAINT "knowledge_review_batches_created_by_user_id_fkey" FOREIGN KEY (created_by_user_id) REFERENCES users(id);
+         END IF;
+       END $$`,
+      `DO $$ BEGIN
+         IF NOT EXISTS (
+           SELECT 1 FROM pg_constraint c
+           JOIN pg_class r ON r.oid = c.conrelid
+           WHERE c.conname = 'knowledge_review_decisions_approved_by_user_id_fkey' AND r.relname = 'knowledge_review_decisions'
+         ) THEN
+           ALTER TABLE "knowledge_review_decisions" ADD CONSTRAINT "knowledge_review_decisions_approved_by_user_id_fkey" FOREIGN KEY (approved_by_user_id) REFERENCES users(id);
+         END IF;
+       END $$`,
+      `DO $$ BEGIN
+         IF NOT EXISTS (
+           SELECT 1 FROM pg_constraint c
+           JOIN pg_class r ON r.oid = c.conrelid
+           WHERE c.conname = 'knowledge_review_decisions_batch_id_fkey' AND r.relname = 'knowledge_review_decisions'
+         ) THEN
+           ALTER TABLE "knowledge_review_decisions" ADD CONSTRAINT "knowledge_review_decisions_batch_id_fkey" FOREIGN KEY (batch_id) REFERENCES knowledge_review_batches(id) ON DELETE CASCADE;
+         END IF;
+       END $$`,
+      `DO $$ BEGIN
+         IF NOT EXISTS (
+           SELECT 1 FROM pg_constraint c
+           JOIN pg_class r ON r.oid = c.conrelid
+           WHERE c.conname = 'knowledge_review_decisions_term_id_fkey' AND r.relname = 'knowledge_review_decisions'
+         ) THEN
+           ALTER TABLE "knowledge_review_decisions" ADD CONSTRAINT "knowledge_review_decisions_term_id_fkey" FOREIGN KEY (term_id) REFERENCES knowledge_review_queue(id) ON DELETE CASCADE;
+         END IF;
+       END $$`,
+      `DO $$ BEGIN
+         IF NOT EXISTS (
+           SELECT 1 FROM pg_constraint c
+           JOIN pg_class r ON r.oid = c.conrelid
+           WHERE c.conname = 'knowledge_vocabulary_aliases_decision_id_fkey' AND r.relname = 'knowledge_vocabulary_aliases'
+         ) THEN
+           ALTER TABLE "knowledge_vocabulary_aliases" ADD CONSTRAINT "knowledge_vocabulary_aliases_decision_id_fkey" FOREIGN KEY (decision_id) REFERENCES knowledge_review_decisions(id);
+         END IF;
+       END $$`,
+      `DO $$ BEGIN
+         IF NOT EXISTS (
+           SELECT 1 FROM pg_constraint c
+           JOIN pg_class r ON r.oid = c.conrelid
+           WHERE c.conname = 'meals_meal_template_id_fkey' AND r.relname = 'meals'
+         ) THEN
+           ALTER TABLE "meals" ADD CONSTRAINT "meals_meal_template_id_fkey" FOREIGN KEY (meal_template_id) REFERENCES meal_templates(id) ON DELETE SET NULL;
+         END IF;
+       END $$`,
+      `DO $$ BEGIN
+         IF NOT EXISTS (
+           SELECT 1 FROM pg_constraint c
+           JOIN pg_class r ON r.oid = c.conrelid
+           WHERE c.conname = 'meals_meal_template_id_meal_templates_id_fk' AND r.relname = 'meals'
+         ) THEN
+           ALTER TABLE "meals" ADD CONSTRAINT "meals_meal_template_id_meal_templates_id_fk" FOREIGN KEY (meal_template_id) REFERENCES meal_templates(id);
+         END IF;
+       END $$`,
+      `DO $$ BEGIN
+         IF NOT EXISTS (
+           SELECT 1 FROM pg_constraint c
+           JOIN pg_class r ON r.oid = c.conrelid
+           WHERE c.conname = 'planner_entries_original_meal_id_before_variant_fkey' AND r.relname = 'planner_entries'
+         ) THEN
+           ALTER TABLE "planner_entries" ADD CONSTRAINT "planner_entries_original_meal_id_before_variant_fkey" FOREIGN KEY (original_meal_id_before_variant) REFERENCES meals(id) ON DELETE SET NULL;
+         END IF;
+       END $$`,
+      `DO $$ BEGIN
+         IF NOT EXISTS (
+           SELECT 1 FROM pg_constraint c
+           JOIN pg_class r ON r.oid = c.conrelid
+           WHERE c.conname = 'shopping_list_extras_user_id_users_id_fk' AND r.relname = 'shopping_list_extras'
+         ) THEN
+           ALTER TABLE "shopping_list_extras" ADD CONSTRAINT "shopping_list_extras_user_id_users_id_fk" FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+         END IF;
+       END $$`,
+      `CREATE INDEX IF NOT EXISTS companion_action_proposals_conversation_turn_id_idx ON companion_action_proposals USING btree (conversation_turn_id)`,
+      `CREATE INDEX IF NOT EXISTS companion_action_proposals_workflow_id_idx ON companion_action_proposals USING btree (workflow_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_knowledge_review_audit_entity ON knowledge_review_audit USING btree (entity, entity_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_knowledge_review_audit_release ON knowledge_review_audit USING btree (release_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_knowledge_review_type ON knowledge_review_queue USING btree (review_type, status)`,
+      `CREATE INDEX IF NOT EXISTS idx_knowledge_review_decision_batch ON knowledge_review_decisions USING btree (batch_id, status)`,
+      `CREATE INDEX IF NOT EXISTS idx_knowledge_review_decision_term ON knowledge_review_decisions USING btree (term_id)`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS uq_knowledge_vocab_alias_active ON knowledge_vocabulary_aliases USING btree (kind, alias_normalised) WHERE is_active`,
+      `CREATE INDEX IF NOT EXISTS meals_household_safe_variant_idx ON meals USING btree (user_id, is_household_safe_variant) WHERE (is_household_safe_variant = true)`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS meals_tha_original_source_key_uniq ON meals USING btree (acquisition_source_key) WHERE ((is_system_meal = true) AND (acquisition_source_key ~~ 'tha_original:%'::text))`,
+      `CREATE INDEX IF NOT EXISTS meals_variant_kind_idx ON meals USING btree (user_id, variant_kind) WHERE (variant_kind IS NOT NULL)`,
+    ],
+  },
+
   {
     id: "2026-02-27_add_user_diet_fields",
     statements: [
@@ -2195,6 +3207,7 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+
   // ← Add new migrations here, appended to the end
 ];
 
@@ -2220,7 +3233,16 @@ export const MIGRATION_IDS: ReadonlyArray<string> = MIGRATIONS.map(m => m.id);
 
 /**
  * The migration a fully-migrated database is expected to be at: the last entry, by definition —
- * the runner applies in order and the list is append-only (see the header of this file).
+ * the runner applies in order and the list appends at the end (see the header of this file; the
+ * one baseline at [0] is not an append and does not affect which entry is LAST).
+ *
+ * CONV1 P10 note — a database that adopts the baseline AFTER the fact (i.e. every database that
+ * existed before 2026-07-17) will have the baseline as its chronologically-newest `applied_at`
+ * row while this returns the list's last entry, so `runMigrations()` logs one cosmetic parity
+ * WARNING on the next boot. It is not a failure, it self-resolves the moment any further
+ * migration is appended, and it is invisible to a fresh database (which applies in list order,
+ * baseline first). `scripts/verify-prod.ts` is unaffected: `compareMigrationState` is SET-based
+ * on purpose — it asks "is anything missing, anywhere", never "is the newest row this literal".
  */
 export function expectedMigrationHead(): string {
   const head = MIGRATIONS[MIGRATIONS.length - 1]?.id;

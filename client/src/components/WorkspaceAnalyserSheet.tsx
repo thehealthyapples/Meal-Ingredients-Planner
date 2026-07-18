@@ -25,6 +25,7 @@ import type { ShoppingListItem } from "@shared/schema";
 import { BrowserMultiFormatReader } from "@zxing/browser";
 import { canShowScoreForItem } from "@/lib/basket-item-classifier";
 import RestrictionSafetyPanel from "@/components/analyser/RestrictionSafetyPanel";
+import ShoppingIntelligencePanel from "@/components/ShoppingIntelligencePanel";
 import { WholeFoodAnalysisCard } from "@/components/analyser/WholeFoodAnalysisCard";
 import { computeRestrictionSafety, parseIngredientText } from "@shared/restrictions/restriction-safety";
 import type { EaterProfile } from "@shared/restrictions/restriction-safety";
@@ -567,6 +568,23 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
 
         {/* ── Scrollable content ─────────────────────────────────────── */}
         <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-8 space-y-5">
+
+          {/* ── WX6 food story (INT19) ───────────────────────────────────
+                The workspace's per-item analyser is where a purchasing decision is
+                made — and it is the natural home the WX6 Shopping Intelligence Panel
+                LOST in the legacy /basket → workspace move (the legacy ProductInsight
+                dialog still mounts it, `shopping-list-page.tsx:895`). This is a MOUNT
+                of an already-built component, not new intelligence: it reads
+                `/api/shopping/intelligence`, which resolves the item to a canonical
+                food and delegates to the existing Food Intelligence assemblers. It
+                owns nothing, hides entirely when the item is not a recognised food or
+                nothing is validated, and the Analyser's score/alternatives below are
+                its own — never duplicated here. Placed first, as WX6 intends: the food
+                story before the score's mechanics. */}
+          <ShoppingIntelligencePanel
+            name={item.canonicalName ?? item.productName}
+            data-testid="workspace-analyser-shopping-intelligence"
+          />
 
           {/* ── Why this score ─────────────────────────────────────────── */}
           <div data-testid="analyser-why-score">

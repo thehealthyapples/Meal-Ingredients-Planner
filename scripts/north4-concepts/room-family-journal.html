@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en" data-state="filled">
+<head>
+<meta charset="utf-8">
+<title>The Family Journal · Diary — the window seat, where nothing is due</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,300;9..144,0,400;9..144,1,300;9..144,1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./_palette.css">
+<link rel="stylesheet" href="./_house.css">
+<script>
+  /* THE FAMILY JOURNAL (Diary) — HOUSE_COMPLETE §6.
+     Same house; ONE deliberate move: THE ROOM EMPTIES. The most air in the house,
+     and quiet made of SPACE rather than of darkness.
+       ?state=filled → a few entries of the person's own
+       ?state=empty  → a clean desk in good light — a pleasant thing to arrive at */
+  (function () {
+    var s = new URLSearchParams(location.search).get("state");
+    document.documentElement.dataset.state = s === "empty" ? "empty" : "filled";
+  })();
+</script>
+<style>
+/* =============================================================================
+   THE FAMILY JOURNAL — the quietest room in the house, and the only one with no
+   job. Every other room helps the household DO something. The window seat asks
+   nothing at all, and that is precisely its purpose.
+
+   THE ONE MOVE: the room empties. Where the Family Table is dense with a week and
+   the Tasting Bench dense with findings, this room is MOSTLY EMPTY ON PURPOSE —
+   the most generous margins, the narrowest single column, the largest untouched
+   surface in the product.
+
+   THE MISTAKE THIS ROOM INVITES, AND THE RULE THAT CLOSES IT: the instinct when
+   asked for "quiet, reflective" is to TURN THE LIGHTS DOWN. That is the counterfeit
+   calm (Experience Language §3A.4), forbidden explicitly by OHDB §13.6 — "quieter
+   is never darker". So: QUIET IS AIR, NEVER DARK (rule J4). The hush comes from
+   less content and more space; the light stays the same morning as every other
+   room, simply GATHERED INTO A POOL where the person sits.
+   ========================================================================== */
+
+:root {
+  /* E2, SOFTLY — a gathered pool of the same morning. Quiet, NEVER DIM: note the
+     values here are as HIGH as the Kitchen's; only the FALL is gentler. */
+  --light-angle: 152deg;
+  --light-stops: hsl(41 56% 96%) 0%, hsl(39 42% 94%) 34%, var(--wall) 78%, hsl(35 24% 89%) 100%;
+}
+
+/* the pool — the light gathers where you sit, rather than spreading across the room */
+.room .pool { position: absolute; z-index: 1; inset: 0; pointer-events: none;
+  background: radial-gradient(58% 44% at 62% 26%, hsl(43 68% 94% / .72), transparent 72%); }
+
+/* THE MOST AIR IN THE HOUSE — the room's real material. These are the most
+   generous margins anywhere in THA, at every breakpoint. */
+.floor { max-width: 1120px; padding: 132px 40px 132px; display: grid;
+  grid-template-columns: minmax(0, 560px) 1fr; gap: 88px; align-items: start; }
+
+/* ============================  THE LAP DESK  ============================
+   The room's ground: small, personal, HELD. Not a table (the family's), not a
+   bench (the work's), not a shelf (the store's). Its SCALE is the tell that this
+   room is one person's — never merge the two postures (rule J7). */
+.desk { position: relative; margin-top: 40px; border-radius: 4px; padding: 34px 34px 30px;
+  background: linear-gradient(172deg, hsl(40 42% 95%), hsl(38 30% 91%));
+  box-shadow: 0 18px 40px -24px hsl(56 45% 9% / .26), 0 1px 3px hsl(56 45% 9% / .07); }
+.desk::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px; border-radius: 4px 4px 0 0;
+  background: linear-gradient(to bottom, hsl(44 62% 93% / .9), transparent); }
+
+/* ---- AN ENTRY — the household's own words, given room ------------------- */
+.entry { padding: 24px 0 26px; border-bottom: 1px solid hsl(38 24% 82% / .5); }
+.entry:last-child { border-bottom: 0; padding-bottom: 4px; }
+.entry .e-when { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-quiet); }
+/* the household's own words are the CONTENT; THA's voice is quieter here than
+   anywhere in the product. Generous leading — one entry reads as one entry. */
+.entry .e-body { margin-top: 11px; font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-weight: 300; font-size: 18px; line-height: 1.72; color: hsl(30 15% 25%); }
+.entry .e-who { margin-top: 12px; font-size: 12px; color: var(--ink-quiet); }
+
+/* ---- YESTERDAY'S TRACE — the room's ONE Living Detail -------------------
+   ONE LINE from the PERSON'S OWN last entry, only when true, and NEVER ANALYSED
+   BACK UNASKED (Blueprint §12.2 ceiling). Those seven words are the whole ethic
+   of the room. When there is nothing true to show, the trace is simply ABSENT and
+   the room is still complete (rule J6). It is not a summary, not a mood, not a
+   theme, not a pattern — it is the person's own sentence, handed back. */
+.trace { position: relative; padding-left: 20px; }
+.trace::before { content: ""; position: absolute; left: 0; top: 4px; bottom: 4px; width: 2px; border-radius: 2px;
+  background: linear-gradient(to bottom, transparent, hsl(43 50% 76% / .8) 20%, hsl(43 50% 76% / .8) 80%, transparent); }
+.trace .t-lab { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-quiet); }
+.trace .t-line { margin-top: 9px; font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-weight: 300; font-style: italic; font-size: 17px; line-height: 1.6; color: hsl(30 14% 34%); }
+
+/* the seat's own aside — deliberately almost nothing. NO onward action, no next
+   step, no prompt, no streak, nothing due (rule J1, J9). */
+.seat { position: sticky; top: 132px; }
+
+@media (max-width: 980px) {
+  .floor { grid-template-columns: 1fr; gap: 44px; padding: 116px 34px 116px; max-width: 720px; }
+  .seat { position: static; }
+  .room .pool { background: radial-gradient(70% 32% at 60% 14%, hsl(43 68% 94% / .7), transparent 74%); }
+}
+@media (max-width: 560px) {
+  /* THE ROOM THAT GETS *MORE* AIR ON A SMALL SCREEN, NOT LESS (rule J5) —
+     the inverse of every other room. Density is the enemy here, so the small
+     screen is an opportunity for quiet rather than a constraint on content. */
+  .floor { padding: 104px 24px 108px; gap: 38px; }
+  .desk { padding: 26px 22px 24px; }
+  .entry { padding: 22px 0 24px; }
+  .entry .e-body { font-size: 17.5px; line-height: 1.8; }   /* the most generous leading in THA */
+}
+</style>
+</head>
+<body>
+<div class="room">
+  <span class="pool" aria-hidden="true"></span>
+  <div class="shell"></div>
+
+  <div class="floor">
+    <main>
+      <div class="head">
+        <div class="eyebrow">Diary</div>
+        <h1 class="title">The journal</h1>
+        <p class="subtitle">
+          <span class="filled-only" style="display:inline">Yours, and only yours. Nothing here is read back to you.</span>
+          <span class="empty-only">A clean page, whenever you feel like it.</span>
+        </p>
+      </div>
+
+      <!-- EMPTY STATE: a clean desk in good light — a perfectly pleasant thing to
+           arrive at. NO prompt, NO "you haven't written in 5 days", NO streak. -->
+      <div class="empty-only invite">
+        <div class="bi-title">Nothing written yet.</div>
+        <div class="bi-body">This is the one room that asks nothing of you. Write when you want to, about whatever you want to — a meal that went well, a week that didn't, or nothing at all. It won't be analysed, summarised, or handed to anyone else.</div>
+      </div>
+
+      <div class="desk filled-only" style="display:block">
+        <div class="entry">
+          <div class="e-when">Wednesday</div>
+          <div class="e-body">The squash traybake again, and nobody complained — which for this house is a standing ovation. Made twice as much as we needed so there's lunch tomorrow.</div>
+          <div class="e-who">Written by you</div>
+        </div>
+        <div class="entry">
+          <div class="e-when">Sunday</div>
+          <div class="e-body">Long lunch, everyone home. The lamb took most of the afternoon and it was worth it. Worth remembering that it needs starting before noon.</div>
+          <div class="e-who">Written by you</div>
+        </div>
+        <div class="entry">
+          <div class="e-when">Thursday last week</div>
+          <div class="e-body">Nobody fancied cooking. Toast, and no regrets.</div>
+          <div class="e-who">Written by you</div>
+        </div>
+      </div>
+    </main>
+
+    <aside class="seat">
+      <!-- YESTERDAY'S TRACE — one line, the person's own, only when true -->
+      <div class="trace filled-only" style="display:block">
+        <div class="t-lab">Last time you wrote</div>
+        <div class="t-line">"Toast, and no regrets."</div>
+      </div>
+
+      <!-- The Companion is at its QUIETEST here: present, available, and SILENT
+           ABOUT WHAT WAS WRITTEN (rule J2, J10). It offers nothing to do. -->
+      <div class="counter-note" style="margin-top:40px">
+        <div class="counter-from"><span class="dot"></span> The Companion</div>
+        <div class="counter-body">I'm here if you want me. I don't read this.</div>
+      </div>
+
+      <div class="wall-apple" aria-hidden="true">
+        <i class="wa-occ"></i><i class="wa-up"></i><i class="wa-lo"></i><i class="wa-face"></i>
+      </div>
+    </aside>
+  </div>
+
+  <nav class="doors">
+    <div class="door"><span class="door-name">Home</span><span class="door-handle"></span></div>
+    <div class="door"><span class="door-name">Cookbook</span><span class="door-handle"></span></div>
+    <div class="door here"><span class="door-name">Diary</span><span class="door-handle"></span></div>
+    <div class="door"><span class="door-name">Pantry</span><span class="door-handle"></span></div>
+  </nav>
+
+  <button class="companion" aria-label="The Companion"><i></i></button>
+</div>
+</body>
+</html>

@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en" data-day="quiet">
+<head>
+<meta charset="utf-8">
+<title>NORTH4 · Concept B, Evolved — The Panoramic Living Room</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./_palette.css">
+<script>
+  /* Read the day BEFORE first paint so the screenshot never catches a flash.
+     ?day=full  → a household with a planned day (B at its most generous, E3).
+     ?day=quiet → the default day: 192 of 195 households (CONV1 P8). The window
+                  closes one level toward the room so an empty day reads as a
+                  quiet morning, never as "nobody home".  (NORTH4 §10 carried in.) */
+  (function () {
+    var d = new URLSearchParams(location.search).get("day");
+    document.documentElement.dataset.day = d === "full" ? "full" : "quiet";
+  })();
+</script>
+<style>
+/* =============================================================================
+   CONCEPT B — EVOLVED.  The Panoramic Living Room opening into the orchard.
+   This is a REFINEMENT of scripts/north4-concepts/concept-b.html, not a redesign.
+   The architecture is unchanged and approved:
+       glass above · oak sill between · room below · doors along the floor.
+   Everything here only polishes what NORTH4 §7 named as B's own weaknesses:
+       R1  the quiet day (the default day) must not read as "nobody home"
+       R2  the mullions + sill are load-bearing FOREVER — make them unmistakably
+           architecture so no future hand "cleans them up" into a hero banner
+       R3  the sun stays composed by crop (§7 compliance; D3 status quo)
+       R4  warm the wall, never add a second sun (Blueprint §16)
+       R5  mobile keeps the orchard generous — a tall window, not a letterbox
+       R6  the greeting is the one Living Detail; the Companion is a propped note
+   ========================================================================== */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: "Inter", "DejaVu Sans", system-ui, sans-serif;
+  color: var(--ink-body);
+  background: var(--plaster);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ---- the room, and the two honest days -------------------------------------
+   --sill-y is the boundary. On the quiet day it rises: the blind is lowered a
+   touch, more wall carries the arrival. The VIEW (object-position) never moves —
+   arrival always presents the same familiar orchard; only how much of it we open
+   changes.  That is "closes one level toward the room", built literally. */
+.room {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  --glass-top: 74px;
+  --sill-h: 30px;
+}
+:root[data-day="full"]  .room { --sill-y: 398px; }   /* E3 — the open view, generous */
+:root[data-day="quiet"] .room { --sill-y: 344px; }   /* stepped toward E2 — more room */
+
+/* THE ROOM IS LIT BY ITS OWN WINDOW. Brightest just under the sill, warming a
+   half-step there (R4), then falling to the floor. This gradient — not the photo —
+   is what keeps the lower half a ROOM and not a beige panel with text on it.
+   It is a wash on plaster, NEVER a second light source (Blueprint §16). */
+.room::before {
+  content: ""; position: absolute; inset: 0; z-index: 0;
+  background:
+    linear-gradient(to bottom,
+      hsl(37 40% 92%) 0px,
+      hsl(37 40% 92%) var(--glass-top),
+      hsl(41 70% 97%) calc(var(--sill-y) + var(--sill-h)),   /* warmed at the sill */
+      hsl(37 42% 92%) calc(var(--sill-y) + var(--sill-h) + 230px),
+      hsl(33 26% 82%) 100%);
+}
+
+/* ---- the constant shell, on the wall above the window head ---- */
+.shell {
+  position: absolute; z-index: 7; top: 0; left: 0; right: 0;
+  height: 74px; padding: 0 40px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.mark { display: flex; align-items: center; gap: 11px; }
+.mark-apple {
+  width: 22px; height: 22px; border-radius: 50% 50% 48% 48%;
+  background: linear-gradient(150deg, var(--leaf-lift), var(--leaf)); position: relative;
+}
+.mark-apple::after {
+  content: ""; position: absolute; top: -3px; left: 11px;
+  width: 9px; height: 6px; border-radius: 0 70% 0 70%;
+  background: var(--gold); transform: rotate(-18deg);
+}
+.mark-name { font-size: 11px; letter-spacing: .17em; text-transform: uppercase; color: var(--ink-quiet); font-weight: 500; }
+.bell { width: 18px; height: 18px; opacity: .32; color: var(--ink-quiet); }
+
+/* ---- THE GLASS — the orchard, full bleed, full opacity ---------------------
+   The same view every morning. The crop is deliberately anchored high so the
+   sun's flare (upper-right of the asset) never sits centre-frame and reads as
+   one soft morning — the §7 crop is the compliance mechanism (R3) and must be
+   preserved. Anchored at top so, when the sill rises on a quiet day, only the
+   near ground is trimmed and the skyline stays put: the same view, opened less. */
+.glass {
+  position: absolute; z-index: 1;
+  top: var(--glass-top); left: 0; right: 0;
+  height: calc(var(--sill-y) - var(--glass-top));
+  overflow: hidden;
+  transition: height .0s;
+}
+.glass img {
+  width: 100%; height: 100%;
+  object-fit: cover; object-position: 50% 22%;
+  display: block;
+}
+/* the HEAD of the window: the wall has real thickness above the glass — a reveal,
+   not an edge. Deeper than B v1 so the opening reads as cut INTO a wall (R2). */
+.glass::before {
+  content: ""; position: absolute; z-index: 3; top: 0; left: 0; right: 0; height: 22px;
+  background: linear-gradient(to bottom, hsl(45 42% 24% / .40), hsl(45 42% 24% / 0));
+}
+/* the JAMBS: the reveal returns down each side, so the glass is held by a wall
+   with depth rather than bleeding to the screen edge like a photograph (R2). */
+.glass::after {
+  content: ""; position: absolute; z-index: 3; inset: 0;
+  box-shadow: inset 26px 0 34px -26px hsl(45 42% 24% / .34),
+              inset -26px 0 34px -26px hsl(45 42% 24% / .34);
+  pointer-events: none;
+}
+
+/* ---- THE MULLIONS — what makes it a WINDOW and not a photograph -------------
+   Three bays. They are LOAD-BEARING IN PERPETUITY: remove them and B collapses
+   into a marketing hero. Given a lit inner edge and a cast shadow so they read
+   as structure HOLDING glass, not lines drawn ON it — the strongest defence
+   against a future "simplification" (R2). */
+.mullion {
+  position: absolute; z-index: 2; top: var(--glass-top);
+  height: calc(var(--sill-y) - var(--glass-top));
+  width: 8px;
+  background: linear-gradient(to right,
+    hsl(45 42% 22% / .55), hsl(43 44% 44%) 38%, hsl(43 42% 64%) 52%, hsl(45 42% 22% / .55));
+  box-shadow: 0 0 14px hsl(56 40% 9% / .22), inset 0 0 0 .5px hsl(45 30% 80% / .35);
+}
+.mullion.one { left: 33.333%; }
+.mullion.two { left: 66.666%; }
+
+/* ---- THE SILL — the boundary, absolute. A real oak object with thickness -----
+   Everything the household reads sits BELOW this line. Nothing ever sits on the
+   glass: text over the orchard needs a scrim, and a scrim is the "second sun"
+   fog the Blueprint forbids (§16). Given a lit top face, a body, and a contact
+   shadow cast onto the wall so it is a SILL you could set a cup on, not a rule. */
+.sill {
+  position: absolute; z-index: 4; left: 0; right: 0;
+  top: var(--sill-y); height: var(--sill-h);
+  background: linear-gradient(to bottom,
+    hsl(41 48% 74%) 0px, hsl(43 42% 56%) 5px, hsl(44 40% 42%) 60%, hsl(45 42% 25%) 100%);
+  box-shadow: 0 16px 30px -12px hsl(56 45% 9% / .34);   /* the sill casts onto the wall */
+}
+.sill::before {   /* the lit front lip catching the one morning */
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px;
+  background: hsl(44 60% 86% / .8);
+}
+
+/* ---- THE ROOM BELOW ---- */
+.below {
+  position: relative; z-index: 5;
+  padding: calc(var(--sill-y) + var(--sill-h) + 40px) 40px 0;
+  max-width: 1240px; margin: 0 auto;
+}
+.upper { display: flex; align-items: flex-start; justify-content: space-between; gap: 52px; }
+
+/* the greeting — the one Living Detail: the household's name in THA's hand (R6) */
+.greeting { flex: 1 1 auto; }
+.welcome {
+  font-family: "Fraunces", "DejaVu Serif", Georgia, serif;
+  font-weight: 300; font-size: 26px; color: var(--ink-body); opacity: .76;
+}
+.name {
+  font-family: "Fraunces", "DejaVu Serif", Georgia, serif;
+  font-weight: 300; font-size: 72px; line-height: 1.02; letter-spacing: -.022em;
+  color: var(--ink); margin-top: 2px;
+}
+.date { margin-top: 14px; font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-quiet); }
+.action {
+  margin-top: 26px; padding: 13px 34px; border: 0; border-radius: 999px;
+  background: var(--leaf); color: var(--raw-blossom);
+  font-family: inherit; font-size: 14.5px; font-weight: 500; letter-spacing: .015em;
+  box-shadow: var(--shade-2); cursor: pointer;
+}
+
+/* the Companion — a note propped against the wall just under the sill.
+   One warm, true, data-borne line; verbatim from the Notice Engine, never
+   invented, quieter when the day is quiet (Core Principle 6). */
+.note {
+  width: 328px; flex: none;
+  background: var(--surface); border-radius: 3px;
+  padding: 17px 19px 16px;
+  box-shadow: var(--shade-3);
+  border-top: 2px solid hsl(43 46% 72% / .6);
+}
+.note-from {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 10px; letter-spacing: .15em; text-transform: uppercase;
+  color: var(--ink-quiet); margin-bottom: 9px;
+}
+.note-leaf { width: 11px; height: 11px; }
+.note-body { font-size: 13.5px; line-height: 1.52; color: var(--ink-body); }
+.note-link { display: inline-block; margin-top: 11px; font-size: 12.5px; color: var(--leaf-lift); font-weight: 500; }
+
+/* ---- THE LONG LOW CONSOLE — the three facts, spread wide like the window -----
+   The furniture echoes the room: long, low, horizontal, the same proportion as
+   the window above it. */
+.console {
+  margin-top: 40px;
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid hsl(38 22% 76% / .8);
+  padding-top: 22px;
+}
+.console-item { position: relative; padding-right: 30px; }
+.console-item + .console-item { padding-left: 30px; }
+.console-item + .console-item::before {
+  content: ""; position: absolute; left: 0; top: 2px; bottom: 2px; width: 1px; background: var(--hair);
+}
+.console-label { font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-quiet); margin-bottom: 9px; }
+.console-value { font-family: "Fraunces", "DejaVu Serif", Georgia, serif; font-size: 23px; font-weight: 400; color: var(--ink); }
+.console-value .unit { font-size: 13px; color: var(--ink-quiet); }
+.console-value.quiet { font-size: 16px; color: var(--ink-quiet); font-style: italic; }
+
+/* ---- THE DOORS — a low run along the floor of the room ---- */
+.doors {
+  position: absolute; z-index: 5; left: 0; right: 0; bottom: 0;
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid hsl(38 22% 78%);
+  background: linear-gradient(to bottom, hsl(36 30% 88% / .5), hsl(34 26% 84% / .92));
+}
+.door {
+  height: 64px; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 28px; position: relative;
+}
+.door + .door::before {
+  content: ""; position: absolute; left: 0; top: 13px; bottom: 13px; width: 1px; background: var(--hair);
+}
+.door-name { font-size: 14px; font-weight: 500; color: var(--ink-body); }
+.door-handle {
+  width: 5px; height: 5px; border-radius: 50%; background: var(--gold); opacity: .8;
+  box-shadow: 0 0 0 3px hsl(43 62% 47% / .12);
+}
+
+/* ---- the two days: show the right content, hide the other ---- */
+:root[data-day="full"]  .only-quiet { display: none; }
+:root[data-day="quiet"] .only-full  { display: none; }
+
+/* =======================  TABLET  =======================
+   The window keeps its bays; the room grows. Two bays are honest here. */
+@media (max-width: 900px) {
+  :root[data-day="full"]  .room { --sill-y: 486px; }
+  :root[data-day="quiet"] .room { --sill-y: 372px; }
+  .mullion.two { display: none; }
+  .mullion.one { left: 50%; }
+  .upper { flex-direction: column; gap: 32px; }
+  .note { width: 100%; max-width: 460px; }
+  .name { font-size: 64px; }
+  .below { padding-bottom: 120px; }
+  .doors { position: relative; margin-top: 48px; }
+}
+
+/* =======================  MOBILE  =======================
+   R5 — B's old cost was a thin letterbox. Refined: the window stands TALL and
+   portrait, so the orchard stays generous and the concept keeps its whole point.
+   One bay only; the sill still the boundary; the room reads below. */
+@media (max-width: 520px) {
+  .room { --glass-top: 62px; --sill-h: 20px; }
+  :root[data-day="full"]  .room { --sill-y: 486px; }   /* tall, generous portrait view */
+  :root[data-day="quiet"] .room { --sill-y: 396px; }
+  .shell { height: 62px; padding: 0 20px; }
+  .mullion { width: 6px; }
+  .mullion.one { left: 50%; }
+  .mullion.two { display: none; }
+  .glass img { object-position: 50% 26%; }
+  .below { padding-left: 20px; padding-right: 20px; padding-bottom: 96px; }
+  .upper { gap: 26px; }
+  .welcome { font-size: 19px; }
+  .name { font-size: 50px; }
+  .date { margin-top: 12px; font-size: 11px; }
+  .action { margin-top: 22px; padding: 13px 30px; font-size: 14px; width: 100%; }
+  .note { max-width: none; }
+  .console { grid-template-columns: 1fr; margin-top: 34px; padding-top: 0; border-top: 0; }
+  .console-item { padding: 16px 0; border-top: 1px solid hsl(38 22% 78% / .8); display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+  .console-item + .console-item { padding-left: 0; }
+  .console-item + .console-item::before { display: none; }
+  .console-label { margin-bottom: 0; }
+  .console-value { font-size: 19px; text-align: right; }
+  .console-value.quiet { font-size: 14px; }
+  .doors { grid-template-columns: 1fr 1fr; margin-top: 36px; }
+  .door { height: 58px; padding: 0 20px; }
+  .door:nth-child(3), .door:nth-child(4) { border-top: 1px solid var(--hair); }
+  .door:nth-child(3)::before { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="room">
+
+  <header class="shell">
+    <div class="mark">
+      <div class="mark-apple"></div>
+      <div class="mark-name">The Healthy Apples</div>
+    </div>
+    <svg class="bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/>
+    </svg>
+  </header>
+
+  <!-- the view — the same orchard, every morning -->
+  <div class="glass">
+    <img src="../../attached_assets/design/north_star/v2/ORCHARD.png" alt="">
+  </div>
+  <div class="mullion one"></div>
+  <div class="mullion two"></div>
+  <div class="sill"></div>
+
+  <div class="below">
+    <div class="upper">
+      <div class="greeting">
+        <div class="welcome">Welcome home,</div>
+        <h1 class="name">Chloe</h1>
+        <div class="date">Friday, 17 July</div>
+        <button class="action only-full">Plan today</button>
+        <button class="action only-quiet">Plan the week</button>
+      </div>
+
+      <aside class="note">
+        <div class="note-from">
+          <svg class="note-leaf" viewBox="0 0 24 24" fill="none" stroke="var(--leaf-lift)" stroke-width="1.8">
+            <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+          </svg>
+          Companion
+        </div>
+        <div class="note-body only-full">Three meals planned, the greens are at their best, and there's nothing left to fetch.</div>
+        <div class="note-body only-quiet">The orchard is in blossom — a good week for something green and simple.</div>
+        <a class="note-link" href="#">View suggestion &rsaquo;</a>
+      </aside>
+    </div>
+
+    <!-- THE FULL DAY: real facts, spread wide -->
+    <div class="console only-full">
+      <div class="console-item">
+        <div class="console-label">Today's meals</div>
+        <div class="console-value">3<span class="unit"> planned</span></div>
+      </div>
+      <div class="console-item">
+        <div class="console-label">Shopping</div>
+        <div class="console-value quiet">Nothing left to fetch</div>
+      </div>
+      <div class="console-item">
+        <div class="console-label">From the orchard</div>
+        <div class="console-value">28<span class="unit"> / 30 this week</span></div>
+      </div>
+    </div>
+
+    <!-- THE QUIET DAY: the default day, said plainly — a clear morning, not zeroes -->
+    <div class="console only-quiet">
+      <div class="console-item">
+        <div class="console-label">Today's meals</div>
+        <div class="console-value quiet">A clear morning</div>
+      </div>
+      <div class="console-item">
+        <div class="console-label">Shopping</div>
+        <div class="console-value quiet">List is clear</div>
+      </div>
+      <div class="console-item">
+        <div class="console-label">From the orchard</div>
+        <div class="console-value quiet">Blossom this week</div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="doors">
+    <div class="door"><span class="door-name">Planner</span><span class="door-handle"></span></div>
+    <div class="door"><span class="door-name">Cookbook</span><span class="door-handle"></span></div>
+    <div class="door"><span class="door-name">Pantry</span><span class="door-handle"></span></div>
+    <div class="door"><span class="door-name">Shopping</span><span class="door-handle"></span></div>
+  </nav>
+
+</div>
+</body>
+</html>

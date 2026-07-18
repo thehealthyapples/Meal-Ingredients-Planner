@@ -1,0 +1,118 @@
+{
+  "captured_by": "PROD1_Product_Completion_Programme",
+  "base_url": "http://localhost:5056",
+  "viewport": {
+    "width": 430,
+    "height": 932
+  },
+  "accepted": 7,
+  "judged": 7,
+  "evidence": {
+    "shipped_logo_href": "/home",
+    "links_to_home_present": 2,
+    "logo_element_found": true,
+    "document_metadata": {
+      "title": "The Healthy Apples",
+      "description": "Plan your household's meals, keep track of what's in the pantry, build the shopping list, and understand what's in the food you buy — in one place.",
+      "ogTitle": "The Healthy Apples",
+      "ogImage": "/logo-long.png",
+      "twitterCard": "summary_large_image",
+      "themeColor": "#4a7c3f"
+    }
+  },
+  "shots": [
+    {
+      "id": "shopping-failed-load",
+      "name": "Shopping — the P0: a household at the supermarket",
+      "file": "shopping-failed-load.png",
+      "ok": true,
+      "route": "/shopping-workspace",
+      "abortedRequest": "/api/shopping-list",
+      "stillClaimsDataIsEmpty": false,
+      "namesTheFailureAndOffersRetry": true,
+      "accepted": true
+    },
+    {
+      "id": "cookbook-failed-load",
+      "name": "Cookbook — rendered a blank page on failure",
+      "file": "cookbook-failed-load.png",
+      "ok": true,
+      "route": "/meals",
+      "abortedRequest": "/api/meals",
+      "stillClaimsDataIsEmpty": false,
+      "namesTheFailureAndOffersRetry": true,
+      "accepted": true
+    },
+    {
+      "id": "planner-failed-load",
+      "name": "Planner — painted seven blank days on failure",
+      "file": "planner-failed-load.png",
+      "ok": true,
+      "route": "/weekly-planner",
+      "abortedRequest": "/api/planner/full",
+      "stillClaimsDataIsEmpty": false,
+      "namesTheFailureAndOffersRetry": true,
+      "accepted": true
+    },
+    {
+      "id": "diary-failed-load",
+      "name": "Diary — a logged day read as an unlogged one",
+      "file": "diary-failed-load.png",
+      "ok": true,
+      "route": "/diary",
+      "abortedRequest": "/api/food-diary",
+      "stillClaimsDataIsEmpty": false,
+      "namesTheFailureAndOffersRetry": true,
+      "accepted": true
+    },
+    {
+      "id": "pantry-failed-load",
+      "name": "Pantry — a stocked larder read as empty",
+      "file": "pantry-failed-load.png",
+      "ok": true,
+      "route": "/pantry",
+      "abortedRequest": "/api/pantry",
+      "stillClaimsDataIsEmpty": false,
+      "namesTheFailureAndOffersRetry": true,
+      "accepted": true
+    },
+    {
+      "id": "not-found",
+      "name": "404 — the wrong door",
+      "file": "not-found.png",
+      "ok": true,
+      "leaksDeveloperLanguage": false,
+      "offersWayHome": true,
+      "accepted": true
+    },
+    {
+      "id": "logo-destination",
+      "name": "The brand logo reaches the canonical home",
+      "file": null,
+      "ok": true,
+      "shippedLogoHref": "/home",
+      "accepted": true
+    },
+    {
+      "id": "shopping-empty",
+      "name": "Shopping — a genuinely empty list, with its way forward",
+      "file": "shopping-empty.png",
+      "ok": true,
+      "route": "/shopping-workspace"
+    },
+    {
+      "id": "cookbook-working",
+      "name": "Cookbook — working",
+      "file": "cookbook-working.png",
+      "ok": true,
+      "route": "/meals"
+    },
+    {
+      "id": "pantry-working",
+      "name": "Pantry — working",
+      "file": "pantry-working.png",
+      "ok": true,
+      "route": "/pantry"
+    }
+  ]
+}

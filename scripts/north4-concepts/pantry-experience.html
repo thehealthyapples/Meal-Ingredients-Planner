@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en" data-view="stocked">
+<head>
+<meta charset="utf-8">
+<title>HOUSE6 · The Pantry — where food lives, honestly told</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,300;9..144,0,400;9..144,1,300;9..144,1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./_palette.css">
+<script>
+  /* HOUSE6 — THE PANTRY. Same house as Arrival and the Kitchen (Concept B · Kept
+     House · Warm Hour · pressed apple · Companion apple), its own personality: the
+     window shrinks to the SMALLEST in the house (E2, Blueprint §5.1 "the pantry,
+     orchard beyond · E2 — the smallest window · practical morning-warm · shelf
+     strata · freshness, honestly told"), because this is a working cupboard and
+     the work is looking. The HERO is the honest SHELF STRATA — what is in the house
+     right now, told kindly. Never inventory, never a scarcity alarm.
+       ?view=stocked → a well-stocked pantry: honest abundance, freshness told kindly.
+       ?view=bare    → a near-empty pantry: calmer and WARMER, never "you're low on 12". */
+  (function () {
+    var v = new URLSearchParams(location.search).get("view");
+    document.documentElement.dataset.view = v === "bare" ? "bare" : "stocked";
+  })();
+</script>
+<style>
+/* =============================================================================
+   HOUSE6 — THE PANTRY.  Where food lives.
+   You walked from the Kitchen worktop, reached for the shelf, and stepped into the
+   pantry of the same house. Same plaster, same oak, same one morning — but the
+   window is at its SMALLEST now (this is a working cupboard), and the hero is the
+   honest STRATA of the shelves: what is in the house right now, told kindly.
+   Its whole grace is honesty without guilt (Living Book, "The Pantry Shelves").
+   ========================================================================== */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  /* THE KEPT HOUSE interior, carried verbatim from Arrival + the Kitchen */
+  --wall:       hsl(36 30% 91%);   /* chalky matte plaster */
+  --wall-warm:  hsl(41 62% 95%);   /* the wall where the practical morning-warm light falls */
+  --wall-cool:  hsl(35 22% 87%);   /* the wall in the depth of the cupboard, away from the window */
+  --oak-lip:  hsl(41 40% 68%);
+  --oak-body: hsl(42 42% 36%);
+  --oak-edge: hsl(44 46% 20%);
+  --grain: .05;
+
+  /* Freshness, honestly told — CALM status vocabulary, never a warning system.
+     Three honest words, each a quiet WARMTH on the label, never a red alarm, never
+     a countdown, never a number. "getting on" is the most a thing is ever said to
+     be — it is a thing to KNOW, not a thing to feel bad about (Living Detail §12.2). */
+  --fresh-ink:   hsl(74 22% 34%);   /* "fresh" — a quiet olive, the orchard's own green */
+  --soon-ink:    hsl(38 44% 38%);   /* "use soon" — warm oak, a gentle nudge, never amber-alarm */
+  --gettingon-ink: hsl(28 30% 44%); /* "getting on" — softer still; kind, never a red flag */
+
+  --apple: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 24c-4-10-14-13-20-12 2 6 8 10 14 11-8-4-18-2-24 5-8 9-6 26 3 38 4 5 9 9 14 9 3 0 5-1 7-2 2 1 4 2 7 2 5 0 10-4 14-9 4-6 6-13 6-19-7 0-13 4-16 10-1-9 4-18 12-22-6-6-15-7-22-3 2-1 4-1 6-1-6-4-14-4-20 1z' fill='%23000'/%3E%3C/svg%3E");
+}
+
+body {
+  font-family: "Inter", "DejaVu Sans", system-ui, sans-serif;
+  color: hsl(30 12% 30%);
+  background: var(--wall);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ---- THE ROOM, lit by practical morning-warm light -------------------------
+   Arrival's morning fell from the top wall; the Kitchen's raked across the page;
+   the Pantry's is the plain, honest light you'd want to actually see the shelves
+   by — warm near the small window, cooler in the depth of the cupboard. A wash on
+   plaster, never a second sun (Blueprint §16). */
+.room { position: relative; min-height: 100vh; overflow: hidden; }
+.room::before {
+  content: ""; position: absolute; inset: 0; z-index: 0;
+  background:
+    linear-gradient(118deg,
+      var(--wall-warm) 0%, var(--wall) 34%, var(--wall) 66%, var(--wall-cool) 100%);
+}
+/* hand-troweled plaster grain — materials before effects (the one grain of Linen Calm) */
+.room::after {
+  content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  opacity: var(--grain); mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---- THE SHELL — the prominent band is retired, as in Arrival and the Kitchen ---- */
+.shell { position: absolute; z-index: 7; top: 0; left: 0; right: 0; height: 72px; }
+
+/* ============================  LAYOUT  ============================
+   Left: the SHELVES (the hero — the strata of the house). Right: one SMALL high
+   pantry window over a short oak ledge, with the Companion's line beneath it — the
+   smallest committed E2 region in the house. The content never crosses the glass. */
+.floor {
+  position: relative; z-index: 5;
+  max-width: 1320px; margin: 0 auto; padding: 92px 40px 108px;
+  display: grid; grid-template-columns: 1fr 300px; gap: 56px; align-items: start;
+}
+
+/* ---- THE SMALL PANTRY WINDOW (E2, the smallest) — high in the corner ---------
+   A real opening, but modest: the orchard has receded to a glimpse because this is
+   a working cupboard. Framed by composition; the content never covers it. */
+.window-col { position: sticky; top: 92px; }
+.window {
+  position: relative; height: 168px; border-radius: 2px; overflow: hidden;
+  box-shadow: 0 18px 38px -20px hsl(56 45% 9% / .32);
+}
+.window img { width: 100%; height: 100%; object-fit: cover; object-position: 60% 34%; display: block; }
+.window::before {   /* the head reveal — wall thickness above the glass */
+  content: ""; position: absolute; z-index: 3; top: 0; left: 0; right: 0; height: 18px;
+  background: linear-gradient(to bottom, hsl(45 42% 20% / .42), hsl(45 42% 20% / 0));
+}
+.window::after {    /* jambs — the glass is held by a wall with depth */
+  content: ""; position: absolute; z-index: 3; inset: 0; pointer-events: none;
+  box-shadow: inset 20px 0 28px -20px hsl(45 42% 20% / .34), inset -20px 0 28px -20px hsl(45 42% 20% / .34);
+}
+.mullion { position: absolute; z-index: 2; top: 0; bottom: 0; left: 50%; width: 6px;
+  background: linear-gradient(to right, hsl(45 42% 18% / .55), var(--oak-body) 40%, var(--oak-lip) 54%, hsl(45 42% 18% / .55));
+  box-shadow: 0 0 12px hsl(56 40% 9% / .22); }
+
+/* a short oak ledge beneath the small window — the pantry's own sill, where the
+   Companion's line rests. Not a working worktop (that is the Kitchen); a shelf lip. */
+.ledge {
+  position: relative; height: 16px; border-radius: 0 0 2px 2px;
+  background: linear-gradient(to bottom, var(--oak-lip) 0, hsl(43 42% 52%) 4px, var(--oak-body) 62%, var(--oak-edge) 100%);
+  box-shadow: 0 14px 22px -14px hsl(56 45% 9% / .32);
+}
+.ledge::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: hsl(44 60% 86% / .8); }
+
+/* the Companion's line — the friend who glances over your shoulder and says
+   something USEFUL, never something that makes you feel caught out (Living Book;
+   IntLang §4.4). Data-borne, one line, connects what you HAVE to what you might DO.
+   In the bare pantry it is quieter and offers a hand, never an alarm. */
+.counter-note { margin-top: 22px; padding-left: 2px; }
+.counter-from { display: flex; align-items: center; gap: 6px; font-size: 10px; letter-spacing: .15em; text-transform: uppercase; color: hsl(30 10% 52%); margin-bottom: 8px; }
+.counter-from .dot { width: 13px; height: 13px; border-radius: 50%; background: radial-gradient(120% 90% at 50% 12%, hsl(132 16% 54%), hsl(132 14% 44%)); }
+.counter-body { font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-weight: 300; font-style: italic; font-size: 16px; line-height: 1.5; color: hsl(30 14% 26%); }
+.counter-body .stocked-line { display: block; }
+.counter-body .bare-line { display: none; }
+:root[data-view="bare"] .counter-body .stocked-line { display: none; }
+:root[data-view="bare"] .counter-body .bare-line { display: block; }
+.counter-link { display: inline-block; margin-top: 9px; font-size: 12px; color: hsl(96 26% 34%); font-weight: 500; }
+
+/* the pressed apple — the sole brand mark, discovered in the plaster by the ledge
+   (BRAND2, carried from Arrival + the Kitchen). Tone-on-tone, never displayed. */
+.wall-apple { position: relative; margin-top: 30px; width: 84px; height: 84px; margin-left: auto; margin-right: 10px; opacity: .9; }
+.wall-apple i { position: absolute; inset: 0; display: block;
+  -webkit-mask: var(--apple) center / contain no-repeat; mask: var(--apple) center / contain no-repeat; }
+.wall-apple .wa-occ { background: hsl(38 20% 64%); filter: blur(2px); transform: scale(1.05) translateY(1.5px); opacity: .42; }
+.wall-apple .wa-up  { background: hsl(42 26% 44%); transform: translateY(-2px); opacity: .78; }
+.wall-apple .wa-lo  { background: hsl(44 62% 93%); transform: translateY(2px); opacity: .6; }
+.wall-apple .wa-face { background: linear-gradient(to bottom, hsl(35 16% 71%), hsl(37 24% 82%) 50%, hsl(41 46% 90%)); }
+
+/* ============================  THE HEADING  ============================ */
+.head { max-width: 640px; }
+.eyebrow { font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: hsl(30 10% 52%); opacity: .85; }
+.title { font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-weight: 300; font-size: 44px; line-height: 1.05; letter-spacing: -.02em; color: hsl(30 16% 22%); margin-top: 8px; }
+.subtitle { font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-weight: 300; font-style: italic; font-size: 18.5px; color: hsl(30 12% 40%); margin-top: 12px; }
+.subtitle .stocked-sub { display: inline; }
+.subtitle .bare-sub { display: none; }
+:root[data-view="bare"] .subtitle .stocked-sub { display: none; }
+:root[data-view="bare"] .subtitle .bare-sub { display: inline; }
+
+/* ============================  THE SHELF STRATA  ============================
+   The room's hero. Open oak shelving in TIERS, grouped the way a HOME groups its
+   food — Larder, Fridge, Freezer — not the way a shop merchandises it. Each item
+   is a small honest object resting on the shelf; a shelf line runs beneath each
+   tier (TRANSLATION1 Shelving: "the strata of the middle ground"). One ground,
+   never nested; never a spreadsheet of rows, never a supermarket gondola. */
+.strata { margin-top: 30px; display: flex; flex-direction: column; gap: 30px; }
+
+.tier { position: relative; }
+.tier-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 14px; }
+.tier-name { font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-weight: 400; font-size: 18px; color: hsl(30 16% 24%); }
+.tier-note { font-size: 12px; color: hsl(30 10% 52%); }   /* honest, plain — never a count-as-alarm */
+
+.shelf-row { position: relative; display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; padding-bottom: 16px; }
+/* the open oak shelf line beneath each tier — the strata made of real timber */
+.shelf-row::after { content: ""; position: absolute; left: -6px; right: -6px; bottom: 0; height: 6px; border-radius: 2px;
+  background: linear-gradient(to bottom, var(--oak-lip), hsl(43 40% 46%) 55%, var(--oak-edge));
+  box-shadow: 0 10px 16px -10px hsl(56 45% 9% / .34); }
+
+/* an item — a small object standing ON the shelf. A calm surface, a name in the
+   serif hand, and (only when the data supports it) one honest freshness word. */
+.item { position: relative; background: hsl(39 46% 96%); border-radius: 3px; padding: 13px 14px 14px;
+  box-shadow: 0 5px 14px -8px hsl(56 45% 9% / .26), 0 1px 2px hsl(56 45% 9% / .10);
+  border-top: 1px solid hsl(41 50% 92%); }
+.item .n { font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-weight: 400; font-size: 15px; color: hsl(30 16% 24%); line-height: 1.25; }
+.item .q { margin-top: 3px; font-size: 12px; color: hsl(30 10% 52%); }   /* "a good bit" / "half a bag" — human, never a decimal */
+/* Freshness, honestly told — a quiet word, never a badge, never red, never a
+   countdown. Absent entirely when the data is silent (honest in absence). */
+.item .fresh { display: inline-block; margin-top: 9px; font-size: 11px; letter-spacing: .02em; padding: 2px 0; }
+.item .fresh.is-fresh { color: var(--fresh-ink); }
+.item .fresh.is-soon  { color: var(--soon-ink); }
+.item .fresh.is-on    { color: var(--gettingon-ink); }
+/* an item the Companion has quietly connected to a plan — a HALF-STEP of warmth
+   behind it, never a badge or a "use me!" flag (below the emphasis budget) */
+.item.noticed { box-shadow: 0 8px 20px -8px hsl(38 56% 44% / .34), 0 1px 2px hsl(56 45% 9% / .10); }
+.item.noticed::before { content: ""; position: absolute; inset: -1px; z-index: -1; border-radius: 4px;
+  background: radial-gradient(120% 100% at 50% 0%, hsl(41 66% 90% / .7), transparent 74%); }
+
+/* THE BARE PANTRY — honest, not empty-feeling. Fewer things, MORE light and air,
+   and a warm invitation — never a catalogue of what is missing (rule P10/P12). */
+.bare-only { display: none; }
+:root[data-view="bare"] .bare-only { display: block; }
+:root[data-view="bare"] .stocked-only { display: none; }
+:root[data-view="bare"] .room::before {
+  background: linear-gradient(118deg, var(--wall-warm) 0%, var(--wall-warm) 42%, var(--wall) 78%, var(--wall-cool) 100%);
+}
+.bare-invite { margin-top: 8px; padding: 22px 22px 24px; border-radius: 4px;
+  background: linear-gradient(160deg, hsl(41 52% 95%), hsl(38 34% 92%));
+  box-shadow: inset 0 0 0 1px hsl(41 40% 86% / .7); max-width: 520px; }
+.bare-invite .bi-title { font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-weight: 300; font-style: italic; font-size: 21px; color: hsl(30 16% 26%); }
+.bare-invite .bi-body { margin-top: 8px; font-size: 14px; line-height: 1.6; color: hsl(30 12% 40%); }
+
+/* ============================  THE DOORS  ============================
+   The low run along the floor — the constant shell; leave the pantry for any room
+   (same house). "Pantry" reads as here. */
+.doors { position: absolute; z-index: 5; left: 0; right: 0; bottom: 0;
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid hsl(38 22% 80% / .7);
+  background: linear-gradient(to bottom, hsl(36 30% 88% / .4), hsl(34 26% 84% / .82)); }
+.door { height: 62px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; position: relative; }
+.door + .door::before { content: ""; position: absolute; left: 0; top: 14px; bottom: 14px; width: 1px; background: hsl(38 24% 82% / .7); }
+.door-name { font-size: 13.5px; font-weight: 400; letter-spacing: .01em; color: hsl(30 14% 30%); opacity: .9; }
+.door.here .door-name { color: hsl(30 16% 20%); font-weight: 500; }
+.door-handle { width: 5px; height: 5px; border-radius: 50%; background: hsl(43 62% 47%); opacity: .7; box-shadow: 0 0 0 3px hsl(43 62% 47% / .1); }
+.door.here .door-handle { opacity: 1; box-shadow: 0 0 0 4px hsl(43 62% 47% / .16); }
+
+/* ---- THE COMPANION — the apple carved into a sage disc (COMP1), calm at rest ---- */
+.companion { position: fixed; z-index: 40; right: 24px; bottom: 24px; width: 48px; height: 48px; border-radius: 50%; border: 0; cursor: pointer;
+  background: radial-gradient(120% 90% at 50% 8%, hsl(132 16% 54%), hsl(132 14% 44%) 70%);
+  box-shadow: 0 10px 22px -8px hsl(140 20% 20% / .5), inset 0 1px 1px hsl(132 20% 66% / .6); }
+.companion i { position: absolute; inset: 12px; display: block; background: hsl(120 12% 30%);
+  -webkit-mask: var(--apple) center / contain no-repeat; mask: var(--apple) center / contain no-repeat; opacity: .82; }
+
+/* ============================  RESPONSIVE  ============================
+   Tablet (834) and mobile (390): the small window becomes a slim committed band at
+   the top (still the smallest in the house, still E2, content never covering it),
+   the Companion's line beneath it, then the greeting and the strata — the shelves
+   narrowing to 3-up, then 2-up, but never collapsing into a list of rows. */
+@media (max-width: 980px) {
+  .floor { grid-template-columns: 1fr; gap: 30px; padding: 84px 26px 100px; }
+  .window-col { position: static; order: -1; display: grid; grid-template-columns: 200px 1fr; gap: 20px; align-items: start; }
+  .window { height: 116px; }
+  .counter-note { margin-top: 0; align-self: center; }
+  .wall-apple { display: none; }   /* one mark per room; on small screens it yields to the shelves */
+  .shelf-row { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 560px) {
+  .floor { padding: 76px 16px 96px; }
+  .window-col { grid-template-columns: 1fr; }
+  .window { height: 104px; }
+  .title { font-size: 34px; }
+  .shelf-row { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .doors { display: none; }   /* the shell's door-run collapses to the Companion + nav on mobile */
+}
+</style>
+</head>
+<body>
+<div class="room">
+  <div class="shell"></div>
+
+  <div class="floor">
+    <!-- ===================== THE SHELVES — the hero ===================== -->
+    <main>
+      <div class="head">
+        <div class="eyebrow">Pantry</div>
+        <h1 class="title">What's in the house</h1>
+        <p class="subtitle">
+          <span class="stocked-sub">A good week on the shelves — plenty to work with, and a few things worth using first.</span>
+          <span class="bare-sub">A quiet cupboard this week. Here's what's in, and an easy way to fill it back up.</span>
+        </p>
+      </div>
+
+      <!-- BARE view: a warm invitation, never a catalogue of what's missing -->
+      <div class="bare-only bare-invite">
+        <div class="bi-title">The shelves are light this week.</div>
+        <div class="bi-body">That's completely fine — a pantry breathes in and out. Add what's in as you notice it, and I'll keep an eye on what's worth using first. There's still enough here for a simple supper or two.</div>
+      </div>
+
+      <div class="strata stocked-only">
+        <!-- ---- LARDER ---- -->
+        <section class="tier">
+          <div class="tier-head"><span class="tier-name">Larder</span><span class="tier-note">the cupboard shelves</span></div>
+          <div class="shelf-row">
+            <div class="item noticed"><div class="n">Butternut squash</div><div class="q">still a good bit</div><span class="fresh is-on">getting on — lovely roasted</span></div>
+            <div class="item"><div class="n">Chickpeas</div><div class="q">two tins</div><span class="fresh is-fresh">keeps well</span></div>
+            <div class="item"><div class="n">Orzo</div><div class="q">half a bag</div></div>
+            <div class="item"><div class="n">Tinned tomatoes</div><div class="q">three tins</div><span class="fresh is-fresh">keeps well</span></div>
+          </div>
+        </section>
+        <!-- ---- FRIDGE ---- -->
+        <section class="tier">
+          <div class="tier-head"><span class="tier-name">Fridge</span><span class="tier-note">the cold shelf</span></div>
+          <div class="shelf-row">
+            <div class="item"><div class="n">Greek yoghurt</div><div class="q">most of a pot</div><span class="fresh is-soon">use soon</span></div>
+            <div class="item"><div class="n">Spinach</div><div class="q">a bag</div><span class="fresh is-soon">use soon — at its best now</span></div>
+            <div class="item"><div class="n">Cheddar</div><div class="q">a wedge</div><span class="fresh is-fresh">fresh</span></div>
+            <div class="item"><div class="n">Eggs</div><div class="q">half a box</div><span class="fresh is-fresh">fresh</span></div>
+          </div>
+        </section>
+        <!-- ---- FREEZER ---- -->
+        <section class="tier">
+          <div class="tier-head"><span class="tier-name">Freezer</span><span class="tier-note">the bottom drawer</span></div>
+          <div class="shelf-row">
+            <div class="item"><div class="n">Peas</div><div class="q">most of a bag</div><span class="fresh is-fresh">keeps well</span></div>
+            <div class="item"><div class="n">Salmon fillets</div><div class="q">two</div><span class="fresh is-fresh">keeps well</span></div>
+            <div class="item"><div class="n">Sourdough</div><div class="q">half a loaf</div></div>
+            <div class="item"><div class="n">Berries</div><div class="q">a good bag</div><span class="fresh is-fresh">keeps well</span></div>
+          </div>
+        </section>
+      </div>
+
+      <!-- BARE view: a couple of honest things, well-spaced, warmly lit -->
+      <div class="bare-only strata">
+        <section class="tier">
+          <div class="tier-head"><span class="tier-name">Larder</span><span class="tier-note">the cupboard shelves</span></div>
+          <div class="shelf-row">
+            <div class="item"><div class="n">Pasta</div><div class="q">a bag</div><span class="fresh is-fresh">keeps well</span></div>
+            <div class="item"><div class="n">Tinned tomatoes</div><div class="q">two tins</div><span class="fresh is-fresh">keeps well</span></div>
+            <div class="item"><div class="n">Olive oil</div><div class="q">most of a bottle</div></div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- ============ THE SMALL WINDOW + LEDGE + COMPANION + MARK ============ -->
+    <aside class="window-col">
+      <div>
+        <div class="window">
+          <img src="../../attached_assets/design/north_star/v2/ORCHARD.png" alt="">
+          <span class="mullion"></span>
+        </div>
+        <div class="ledge"></div>
+      </div>
+
+      <div class="counter-note">
+        <div class="counter-from"><span class="dot"></span> The Companion</div>
+        <div class="counter-body">
+          <span class="stocked-line">There's still a good bit of that squash — it'd be lovely in Sunday's traybake.</span>
+          <span class="bare-line">You've got most of tomorrow's already — pasta, tomatoes and a little oil go a long way.</span>
+        </div>
+        <a class="counter-link" href="#">See what it goes with ›</a>
+      </div>
+
+      <div class="wall-apple" aria-hidden="true">
+        <i class="wa-occ"></i><i class="wa-up"></i><i class="wa-lo"></i><i class="wa-face"></i>
+      </div>
+    </aside>
+  </div>
+
+  <!-- the constant shell of doors along the floor -->
+  <nav class="doors">
+    <div class="door"><span class="door-name">Home</span><span class="door-handle"></span></div>
+    <div class="door"><span class="door-name">Cookbook</span><span class="door-handle"></span></div>
+    <div class="door here"><span class="door-name">Pantry</span><span class="door-handle"></span></div>
+    <div class="door"><span class="door-name">Shopping</span><span class="door-handle"></span></div>
+  </nav>
+
+  <button class="companion" aria-label="The Companion"><i></i></button>
+</div>
+</body>
+</html>

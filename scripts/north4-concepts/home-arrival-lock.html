@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en" data-day="quiet">
+<head>
+<meta charset="utf-8">
+<title>HOME · Arrival — Production Lock (Concept B · The Kept House)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,300;9..144,0,400;9..144,1,300&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./_palette.css">
+<script>
+  /* THE DESIGN LOCK — do not re-open (HOME_ARRIVAL_PRODUCTION_LOCK).
+     Architecture : NORTH4 Concept B — glass above · oak sill · plaster room · doors on the floor.
+     Interior     : The Kept House, warmed by The Warm Hour, one grain of The Linen Calm.
+     Brand        : the prominent band is retired; the sole identity is a monochrome apple
+                    pressed into the plaster wall — discovered, not displayed (BRAND2).
+     Companion    : the single THA apple, a soft sage embossed button, calm and always
+                    available, never dominant (COMP1); its voice a line resting on the wall.
+
+     Read the day BEFORE first paint so no screenshot catches a flash.
+       ?day=full  → a planned day — B at its most generous (E3).
+       ?day=quiet → the default day: 192 of 195 households (CONV1 P8). The blind lowers
+                    one level so an empty day reads as a quiet morning, never "nobody home". */
+  (function () {
+    var d = new URLSearchParams(location.search).get("day");
+    document.documentElement.dataset.day = d === "full" ? "full" : "quiet";
+  })();
+</script>
+<style>
+/* =============================================================================
+   HOME · ARRIVAL — PRODUCTION LOCK
+   One finished room. The architecture of Concept B is byte-fixed; the interior is
+   The Kept House (age, not objects); the identity is a pressed apple in the wall;
+   the Companion is the apple, carved into a sage disc. Nothing is staged — the
+   room was only kept.
+   ========================================================================== */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  /* ---- THE KEPT HOUSE interior, warmed by THE WARM HOUR, matte per THE LINEN CALM ---- */
+  --wall-top:   hsl(36 30% 91%);   /* chalky matte plaster (Linen grain of restraint) */
+  --wall-sill:  hsl(42 78% 96%);   /* the wall just under the window — warmed (Warm Hour) */
+  --wall-floor: hsl(33 22% 81%);
+  --oak-lip:  hsl(41 40% 68%);     /* timber darkened by years of the same morning (Kept House) */
+  --oak-body: hsl(42 42% 36%);
+  --oak-edge: hsl(44 46% 20%);
+  --ink-name: hsl(70 32% 12%);
+  --grain: .06;                    /* hand-troweled plaster — materials before effects */
+  --shadow-soft: .32;
+  --apple: url("data:image/png;base64,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");
+}
+
+body {
+  font-family: "Inter", "DejaVu Sans", system-ui, sans-serif;
+  color: var(--ink-body);
+  background: var(--wall-top);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ---- the room, and the two honest days -------------------------------------
+   --sill-y is the boundary. On the quiet day it rises: the blind is lowered a
+   touch, more wall carries the arrival. The VIEW never moves — arrival always
+   presents the same familiar orchard; only how much of it we open changes. */
+.room {
+  position: relative; min-height: 100vh; overflow: hidden;
+  --glass-top: 74px; --sill-h: 30px;
+}
+:root[data-day="full"]  .room { --sill-y: 372px; }   /* E3 — the open view, generous (eased one notch so the fuller day's room clears the floor) */
+:root[data-day="quiet"] .room { --sill-y: 344px; }   /* stepped toward the room */
+
+/* THE ROOM LIT BY ITS OWN WINDOW — warmed a half-step at the sill (The Warm Hour),
+   falling to the floor. A wash on plaster, NEVER a second sun (Blueprint §16).
+   The mullions lay soft long shadows on the wall below — the room RECEIVING the
+   morning, never light added to the orchard. */
+.room::before {
+  content: ""; position: absolute; inset: 0; z-index: 0;
+  background:
+    linear-gradient(to bottom,
+      var(--wall-top) 0px,
+      var(--wall-top) var(--glass-top),
+      var(--wall-sill) calc(var(--sill-y) + var(--sill-h)),
+      hsl(40 58% 93%) calc(var(--sill-y) + var(--sill-h) + 190px),
+      var(--wall-floor) 100%),
+    linear-gradient(104deg,
+      transparent 32.6%, hsl(45 30% 40% / .045) 33.3%, transparent 34%,
+      transparent 65.9%, hsl(45 30% 40% / .045) 66.6%, transparent 67.3%);
+}
+/* PLASTER TEXTURE — a hand-troweled wall, not a flat fill. Faint fractal grain.
+   The one grain of The Linen Calm: matte, chalky, real material. */
+.room::after {
+  content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  opacity: var(--grain); mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---- THE SHELL — the prominent band is RETIRED. -----------------------------
+   No wordmark, no second apple, no notification bell. The interface recedes; the
+   wall carries the identity alone (the pressed apple below), and the Companion
+   owns presence. This empty band IS the brand decision, made visible. */
+.shell { position: absolute; z-index: 7; top: 0; left: 0; right: 0; height: 74px; }
+
+/* ---- THE GLASS — the orchard, full bleed, full opacity ---------------------
+   The same view every morning. The crop is anchored high so the sun's flare
+   (upper-right of the asset) never sits centre-frame — the §7 crop is the
+   compliance mechanism and MUST be preserved. Anchored at top so, when the sill
+   rises on a quiet day, only the near ground trims and the skyline stays put. */
+.glass {
+  position: absolute; z-index: 1; top: var(--glass-top); left: 0; right: 0;
+  height: calc(var(--sill-y) - var(--glass-top)); overflow: hidden;
+}
+.glass img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 22%; display: block; }
+/* the HEAD of the window: the wall has real thickness above the glass — a reveal,
+   not an edge; it reads as an opening cut INTO a wall, never a hero banner. */
+.glass::before {
+  content: ""; position: absolute; z-index: 3; top: 0; left: 0; right: 0; height: 22px;
+  background: linear-gradient(to bottom, hsl(45 42% 20% / .42), hsl(45 42% 20% / 0));
+}
+/* the JAMBS: the reveal returns down each side. */
+.glass::after {
+  content: ""; position: absolute; z-index: 3; inset: 0; pointer-events: none;
+  box-shadow: inset 26px 0 34px -26px hsl(45 42% 20% / .36), inset -26px 0 34px -26px hsl(45 42% 20% / .36);
+}
+
+/* ---- THE MULLIONS — structure holding glass, load-bearing IN PERPETUITY -----
+   Given a lit inner edge and a cast shadow so they read as timber HOLDING glass,
+   not lines drawn ON a photo. Timber tone is the Kept House's darkened oak. */
+.mullion {
+  position: absolute; z-index: 2; top: var(--glass-top);
+  height: calc(var(--sill-y) - var(--glass-top)); width: 8px;
+  background: linear-gradient(to right,
+    hsl(45 42% 18% / .58), var(--oak-body) 38%, var(--oak-lip) 52%, hsl(45 42% 18% / .58));
+  box-shadow: 0 0 14px hsl(56 40% 9% / .24), inset 0 0 0 .5px hsl(45 30% 80% / .32);
+}
+.mullion.one { left: 33.333%; }
+.mullion.two { left: 66.666%; }
+
+/* ---- THE SILL — the boundary, absolute. A real oak object with thickness -----
+   Everything the household reads sits BELOW this line; nothing ever on the glass.
+   The Kept House's worn lip: a band lighter where hands and cups have rested. */
+.sill {
+  position: absolute; z-index: 4; left: 0; right: 0; top: var(--sill-y); height: var(--sill-h);
+  background: linear-gradient(to bottom, var(--oak-lip) 0px, hsl(43 42% 52%) 5px, var(--oak-body) 60%, var(--oak-edge) 100%);
+  box-shadow: 0 16px 30px -12px hsl(56 45% 9% / var(--shadow-soft));
+}
+.sill::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: hsl(44 60% 86% / .78); }
+.sill::after {   /* the worn lip — patina, the one thing a printed logo can never fake */
+  content: ""; position: absolute; left: 8%; right: 46%; top: 3px; height: 5px; border-radius: 3px;
+  background: radial-gradient(ellipse at center, hsl(44 54% 82% / .7), transparent 72%);
+}
+
+/* ---- THE PRESSED APPLE — the sole brand identity, in the plaster wall --------
+   BRAND2 "The Pressed Apple": a monochrome apple pressed a medium-shallow relief
+   into the OPEN plaster, offset right, at eye height, deepened where the morning
+   grazes it. It holds NO pigment — tone-on-tone; it IS the wall, not an image on
+   it. Built as a three-layer intaglio masked by the canonical THA apple:
+     · contact shadow  — the apple sits SUNK in the material
+     · recess face     — an interior gradient, dark at the shadowed top,
+                          light pooling toward the lit lower lip
+     · two-rim relief  — dark rim UP, lit rim DOWN, lit by the room's one morning.
+   Discovered the moment the eye leaves the orchard; never a mark the light must
+   switch on — always faintly present, more fully revealed where the light finds it. */
+.wall-apple {
+  position: absolute; z-index: 3; pointer-events: none;
+  width: clamp(112px, 11vw, 156px); aspect-ratio: 1 / 1;
+  top: calc(var(--sill-y) + 92px); right: 7.5%;
+}
+.wall-apple i {
+  position: absolute; inset: 0; display: block;
+  -webkit-mask: var(--apple) center / contain no-repeat;
+          mask: var(--apple) center / contain no-repeat;
+}
+/* Layer order (back → front): the morning is lit from the top-left, so a shape
+   pressed INTO the plaster shows a DARK rim at its top and a LIT rim at its
+   bottom (BRAND2 §2). The two rims sit behind and peek past the face's edge;
+   the face, drawn last, carries the recessed interior. Medium-shallow: reads on
+   an ordinary screen, stays a whisper. Tone-on-tone — it holds no pigment. */
+.wall-apple .wa-occ {   /* ambient occlusion — the wall darkens softly around a real recess */
+  background: hsl(38 20% 64%); filter: blur(2.5px); transform: scale(1.05) translateY(1.5px); opacity: .42; }
+.wall-apple .wa-rim-up {  /* dark rim along the pressed-in top edge (in shadow) */
+  background: hsl(42 26% 44%); transform: translateY(-2.5px); opacity: .78; }
+.wall-apple .wa-rim-lo {  /* the morning just catches the lower lip — a whisper, not a halo */
+  background: hsl(44 62% 93%); transform: translateY(2.5px); opacity: .6; }
+.wall-apple .wa-face {  /* the recessed face — shadow pooling at the top, easing to the lit lip */
+  background: linear-gradient(to bottom,
+    hsl(35 16% 71%) 0%, hsl(37 24% 82%) 50%, hsl(41 46% 90%) 100%); }
+
+/* ---- THE ROOM BELOW ---- */
+.below { position: relative; z-index: 5; padding: calc(var(--sill-y) + var(--sill-h) + 40px) 40px 0; max-width: 1240px; margin: 0 auto; }
+
+/* the greeting — the one Living Detail: the household's name in THA's hand.
+   The Companion has become a line resting on the wall beneath it (Kept House). */
+.greeting { max-width: 640px; }
+.welcome { font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-weight: 300; font-size: 26px; color: var(--ink-body); opacity: .74; }
+.name { font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-weight: 300; font-size: 72px; line-height: 1.02; letter-spacing: -.022em; color: var(--ink-name); margin-top: 2px; }
+.date { margin-top: 14px; font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-quiet); }
+.action {
+  margin-top: 26px; padding: 13px 34px; border: 0; border-radius: 999px;
+  background: var(--leaf); color: var(--raw-blossom);
+  font-family: inherit; font-size: 14.5px; font-weight: 500; letter-spacing: .015em;
+  box-shadow: var(--shade-2); cursor: pointer;
+}
+
+/* THE COMPANION'S VOICE — dissolved into the wall, not a card. One warm, true,
+   data-borne line; verbatim from the Notice Engine, never invented, quieter when
+   the day is quiet (Core Principle 6). It rests on the plaster, no border, no box. */
+.note { margin-top: 30px; max-width: 560px; }
+:root[data-day="full"] .note { margin-top: 26px; }
+:root[data-day="full"] .console { margin-top: 36px; }
+.note-from { display: flex; align-items: center; gap: 6px; font-size: 10px; letter-spacing: .15em; text-transform: uppercase; color: var(--ink-quiet); margin-bottom: 8px; }
+.note-leaf { width: 11px; height: 11px; }
+.note-body { font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-weight: 300; font-style: italic; font-size: 18px; line-height: 1.5; color: var(--ink-body); }
+.note-link { display: inline-block; margin-top: 10px; font-size: 12.5px; color: var(--leaf-lift); font-weight: 500; font-family: "Inter", sans-serif; font-style: normal; }
+
+/* THE CONSOLE — reduced interface (Kept House): no dividing rules, no loud
+   numerals; the day's facts set in a quiet serif italic with air around them. */
+.console { margin-top: 44px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.console-item { position: relative; padding-right: 24px; }
+.console-label { font-size: 10px; letter-spacing: .17em; text-transform: uppercase; color: var(--ink-quiet); margin-bottom: 9px; opacity: .82; }
+.console-value { font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-size: 19px; font-weight: 300; font-style: italic; color: var(--ink-quiet); }
+
+/* ---- THE DOORS — a low run along the floor of the room, quietened ---- */
+.doors {
+  position: absolute; z-index: 5; left: 0; right: 0; bottom: 0;
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid hsl(38 22% 80% / .7);
+  background: linear-gradient(to bottom, hsl(36 30% 88% / .4), hsl(34 26% 84% / .82));
+}
+.door { height: 62px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; position: relative; }
+.door + .door::before { content: ""; position: absolute; left: 0; top: 14px; bottom: 14px; width: 1px; background: hsl(38 24% 82% / .7); }
+.door-name { font-size: 13.5px; font-weight: 400; letter-spacing: .01em; color: var(--ink-body); opacity: .9; }
+.door-handle { width: 5px; height: 5px; border-radius: 50%; background: var(--gold); opacity: .7; box-shadow: 0 0 0 3px hsl(43 62% 47% / .1); }
+
+/* ---- THE COMPANION — the apple, carved into a sage disc (COMP1) --------------
+   A 48px soft sage-green button in the house's material language, the canonical
+   THA apple pressed deep into it. Calm at rest — no halo, no badge, no motion:
+   the friend at the counter. Always in the same corner, never dominant. (The
+   aware breathing light is held behind governance ratification — COMP1 §10.) */
+.companion {
+  position: fixed; z-index: 40; right: 24px; bottom: 24px;
+  width: 48px; height: 48px; border-radius: 50%; border: 0; cursor: pointer;
+  background:
+    radial-gradient(120% 90% at 50% 8%, hsl(132 16% 54%), hsl(132 14% 44%) 70%);
+  box-shadow:
+    inset 0 1px 0 hsl(132 20% 72% / .7),        /* lit top rim — the material has a lip */
+    inset 0 -2px 3px hsl(132 24% 26% / .5),      /* shaded lower body */
+    0 6px 16px -4px hsl(56 45% 9% / .34);        /* it sits on the wall, furniture not sticker */
+}
+.companion i {   /* the apple, carved as a recess into the sage */
+  position: absolute; inset: 0; margin: auto; width: 80%; height: 80%; display: block;
+  -webkit-mask: var(--apple) center / contain no-repeat;
+          mask: var(--apple) center / contain no-repeat;
+}
+.companion .c-occ { background: hsl(132 28% 26%); filter: blur(1px); transform: scale(1.04) translateY(1px); opacity: .7; }
+.companion .c-rim-up { background: hsl(132 30% 28%); transform: translateY(-1.5px); opacity: .9; }   /* dark rim top */
+.companion .c-rim-lo { background: hsl(132 42% 72%); transform: translateY(1.5px); opacity: .95; }   /* lit rim bottom */
+.companion .c-face { background: linear-gradient(to bottom, hsl(132 22% 34%) 0%, hsl(132 17% 44%) 52%, hsl(132 24% 56%) 100%); }
+
+/* ---- the two days: show the right content, hide the other ---- */
+:root[data-day="full"]  .only-quiet { display: none; }
+:root[data-day="quiet"] .only-full  { display: none; }
+
+/* =======================  TABLET  =======================
+   The window keeps its bays; the room grows. Two bays are honest here. */
+@media (max-width: 900px) {
+  :root[data-day="full"]  .room { --sill-y: 486px; }
+  :root[data-day="quiet"] .room { --sill-y: 372px; }
+  .mullion.two { display: none; }
+  .mullion.one { left: 50%; }
+  .name { font-size: 64px; }
+  .wall-apple { width: clamp(104px, 13vw, 132px); top: calc(var(--sill-y) + 78px); right: 6%; }
+  .below { padding-bottom: 132px; }
+  .console { margin-top: 40px; }
+  .doors { position: relative; margin-top: 52px; }
+}
+
+/* =======================  MOBILE  =======================
+   The window stands TALL and portrait — the orchard stays the hero, never a
+   letterbox. One bay; the sill still the boundary; the room reads below. The
+   pressed apple stays in the wall beside the greeting, small but present. */
+@media (max-width: 520px) {
+  .room { --glass-top: 62px; --sill-h: 20px; }
+  :root[data-day="full"]  .room { --sill-y: 486px; }
+  :root[data-day="quiet"] .room { --sill-y: 396px; }
+  .shell { height: 62px; }
+  .mullion { width: 6px; } .mullion.one { left: 50%; } .mullion.two { display: none; }
+  .glass img { object-position: 50% 26%; }
+  .below { padding-left: 20px; padding-right: 20px; padding-bottom: 104px; }
+  .greeting { max-width: none; }
+  .welcome { font-size: 19px; } .name { font-size: 50px; } .date { margin-top: 12px; font-size: 11px; }
+  .action { margin-top: 22px; padding: 13px 30px; font-size: 14px; width: 100%; }
+  .note { margin-top: 30px; max-width: none; }
+  .note-body { font-size: 16px; }
+  .console { grid-template-columns: 1fr; gap: 0; margin-top: 32px; }
+  .console-item { padding: 15px 0; border-top: 1px solid hsl(38 22% 82% / .55); display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+  .console-label { margin-bottom: 0; } .console-value { text-align: right; }
+  /* on a phone the wall is narrow — the apple presses into the plaster low-right,
+     below the greeting and clear of the console, still discovered by the eye */
+  .wall-apple { width: 84px; top: auto; bottom: 150px; right: 7%; }
+  .doors { position: relative; grid-template-columns: 1fr 1fr; margin-top: 36px; }
+  .door { height: 58px; padding: 0 20px; }
+  .door:nth-child(3), .door:nth-child(4) { border-top: 1px solid hsl(38 24% 82% / .7); }
+  .door:nth-child(3)::before { display: none; }
+  .companion { right: 16px; bottom: calc(58px + 20px); }   /* above the doors/nav, same corner */
+}
+</style>
+</head>
+<body>
+<div class="room">
+
+  <header class="shell"><!-- the band is retired; the wall carries the identity --></header>
+
+  <!-- the view — the same orchard, every morning -->
+  <div class="glass"><img src="../../attached_assets/design/north_star/v2/ORCHARD.png" alt=""></div>
+  <div class="mullion one"></div>
+  <div class="mullion two"></div>
+  <div class="sill"></div>
+
+  <!-- the sole brand mark: the THA apple pressed into the open plaster wall -->
+  <div class="wall-apple" aria-hidden="true">
+    <i class="wa-occ"></i><i class="wa-rim-up"></i><i class="wa-rim-lo"></i><i class="wa-face"></i>
+  </div>
+
+  <div class="below">
+    <div class="greeting">
+      <div class="welcome">Welcome home,</div>
+      <h1 class="name">Chloe</h1>
+      <div class="date">Friday, 17 July</div>
+      <button class="action only-full">Plan today</button>
+      <button class="action only-quiet">Plan the week</button>
+
+      <div class="note">
+        <div class="note-from">
+          <svg class="note-leaf" viewBox="0 0 24 24" fill="none" stroke="var(--leaf-lift)" stroke-width="1.8">
+            <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+          </svg>
+          Companion
+        </div>
+        <div class="note-body only-full">Three meals planned — and nothing left to fetch.</div>
+        <div class="note-body only-quiet">The orchard is in blossom — a good week for something green and simple.</div>
+        <a class="note-link" href="#">View suggestion &rsaquo;</a>
+      </div>
+    </div>
+
+    <!-- THE FULL DAY: the real facts, hushed to the Kept House's quiet hand -->
+    <div class="console only-full">
+      <div class="console-item"><div class="console-label">Today's meals</div><div class="console-value">three planned</div></div>
+      <div class="console-item"><div class="console-label">Shopping</div><div class="console-value">nothing to fetch</div></div>
+      <div class="console-item"><div class="console-label">From the orchard</div><div class="console-value">28 of 30 this week</div></div>
+    </div>
+
+    <!-- THE QUIET DAY: the default day, said plainly — a clear morning, not zeroes -->
+    <div class="console only-quiet">
+      <div class="console-item"><div class="console-label">Today's meals</div><div class="console-value">a clear morning</div></div>
+      <div class="console-item"><div class="console-label">Shopping</div><div class="console-value">list is clear</div></div>
+      <div class="console-item"><div class="console-label">From the orchard</div><div class="console-value">blossom this week</div></div>
+    </div>
+  </div>
+
+  <nav class="doors">
+    <div class="door"><span class="door-name">Planner</span><span class="door-handle"></span></div>
+    <div class="door"><span class="door-name">Cookbook</span><span class="door-handle"></span></div>
+    <div class="door"><span class="door-name">Pantry</span><span class="door-handle"></span></div>
+    <div class="door"><span class="door-name">Shopping</span><span class="door-handle"></span></div>
+  </nav>
+
+</div>
+
+<!-- THE COMPANION — the apple, carved into a sage disc. Calm at rest, always available. -->
+<button class="companion" aria-label="Companion" type="button">
+  <i class="c-occ"></i><i class="c-rim-up"></i><i class="c-rim-lo"></i><i class="c-face"></i>
+</button>
+
+</body>
+</html>

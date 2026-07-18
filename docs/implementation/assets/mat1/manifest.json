@@ -1,0 +1,128 @@
+{
+  "captured_by": "MAT1_Platform_Maturity_And_Trust",
+  "base_url": "http://localhost:5055",
+  "viewport": {
+    "width": 430,
+    "height": 932
+  },
+  "captured": 7,
+  "failed": 0,
+  "evidence": {
+    "delivered_total": 5,
+    "delivered_by_domain": {
+      "planner": 5
+    },
+    "delivered_by_priority": {
+      "medium": 3,
+      "low": 2
+    },
+    "low_priority_delivered": 2,
+    "pantry_delivered": 0,
+    "unlabelled_domains": [],
+    "retired_route": {
+      "probed": {
+        "status": 200,
+        "contentType": "text/html; charset=utf-8"
+      },
+      "control": {
+        "status": 200,
+        "contentType": "text/html; charset=utf-8"
+      },
+      "absent": true
+    },
+    "companion_notices": [
+      "[planner-gap] Add a meal to Monday in \"Week 1\".",
+      "[planner-gap] Add a meal to Saturday in \"Week 1\"."
+    ],
+    "after_capture_total": 10,
+    "after_capture_by_domain": {
+      "planner": 5,
+      "shopping": 5
+    },
+    "seeding_drifted_during_capture": true,
+    "unlabelled_domains_after_capture": []
+  },
+  "shots": [
+    {
+      "id": "pantry-ambient",
+      "name": "Pantry — the surface AFI_VERIFY1 §4.2 measured rendering EMPTY for a stocked pantry",
+      "route": "/pantry",
+      "toggle": "ambient-intelligence-pantry-toggle",
+      "wait": "[data-testid=\"ambient-intelligence-pantry\"]",
+      "file": "pantry-ambient.png",
+      "status": 200,
+      "surfaceFound": false,
+      "toggled": false,
+      "ok": true
+    },
+    {
+      "id": "home-ambient-aggregate",
+      "name": "Home — aggregate ambient across all four registered domains",
+      "route": "/home",
+      "toggle": "ambient-intelligence-home-toggle",
+      "wait": "[data-testid=\"ambient-intelligence-home\"]",
+      "file": "home-ambient-aggregate.png",
+      "status": 200,
+      "surfaceFound": true,
+      "toggled": true,
+      "ok": true
+    },
+    {
+      "id": "shopping-ambient",
+      "name": "Shopping — ambient, incl. the sole `critical` emitter's safety path",
+      "route": "/shopping-workspace",
+      "toggle": "ambient-intelligence-shopping-toggle",
+      "wait": "[data-testid=\"ambient-intelligence-shopping\"]",
+      "file": "shopping-ambient.png",
+      "status": 200,
+      "surfaceFound": true,
+      "toggled": true,
+      "ok": true
+    },
+    {
+      "id": "cookbook-ambient",
+      "name": "Cookbook — the domain whose label MAT1's conformance suite now guards",
+      "route": "/meals",
+      "toggle": "ambient-cookbook-toggle",
+      "wait": "[data-testid=\"ambient-cookbook\"]",
+      "file": "cookbook-ambient.png",
+      "status": 200,
+      "surfaceFound": false,
+      "toggled": false,
+      "ok": true
+    },
+    {
+      "id": "planner-ambient",
+      "name": "Planner — ambient",
+      "route": "/weekly-planner",
+      "toggle": "ambient-intelligence-planner-toggle",
+      "wait": "[data-testid=\"ambient-intelligence-planner\"]",
+      "file": "planner-ambient.png",
+      "status": 200,
+      "surfaceFound": true,
+      "toggled": true,
+      "ok": true
+    },
+    {
+      "id": "home-companion-notices",
+      "name": "Home — the Companion card (the notice channel, same OD1 bundle)",
+      "route": "/home",
+      "wait": "[data-testid=\"card-home-companion\"]",
+      "file": "home-companion-notices.png",
+      "status": 200,
+      "surfaceFound": true,
+      "toggled": false,
+      "ok": true
+    },
+    {
+      "id": "plant-diversity",
+      "name": "Plant diversity — the surface whose WEEKLY_PLANT_TARGET MAT1 converged to one owner",
+      "route": "/plant-diversity",
+      "file": "plant-diversity.png",
+      "status": 200,
+      "surfaceFound": null,
+      "toggled": false,
+      "ok": true
+    }
+  ]
+}

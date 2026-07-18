@@ -17,6 +17,10 @@ import {
   RefreshCw, Scale, Search, ScanLine, Maximize2, Minimize2,
   Download, ExternalLink, Trash2, Columns2, Copy, Store, Check, Plus,
   Loader2, Sparkles, Mic, Camera, ImageUp, RotateCcw, X,
+  // PROD1 — the mark for "a filter is hiding this", distinct from ShoppingCart's
+  // "there is genuinely nothing here". The icon carries the difference too, so the
+  // two absences are never mistaken for each other at a glance.
+  Filter,
 } from "lucide-react";
 import { api, buildUrl } from "@shared/routes";
 import { apiRequest } from "@/lib/queryClient";
@@ -29,6 +33,19 @@ import { canShowScoreForItem } from "@/lib/basket-item-classifier";
 import type { ShoppingListItem, IngredientSource } from "@shared/schema";
 import type { HouseholdEater } from "@shared/household-eater";
 import { WorkspaceAnalyserSheet } from "@/components/WorkspaceAnalyserSheet";
+// PROD1 — adopt the canonical owner of "there is nothing here"
+// (`components/ui/empty-state.tsx`, PX1-W4.8). This room hand-rolled five
+// absences as bare `<p>` tags, and — the reason this matters beyond consistency —
+// rendered TWO DIFFERENT TRUTHS identically: "your list is empty" (nothing exists
+// yet) and "no items match this filter" (things exist; your filter hides them).
+// A household reading the second one as the first believes it has lost its
+// shopping list. EmptyState's `variant` discriminator makes that confusion
+// structurally impossible.
+import { EmptyState } from "@/components/ui/empty-state";
+// PROD1 — the canonical error presentation, adopted as the PAIR of EmptyState.
+// Adopting one without the other is what turned a server outage into a confident,
+// well-designed lie about the household's own data.
+import { LoadError } from "@/components/ui/load-error";
 import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
 import { AmbientIntelligence } from "@/components/intelligence";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
@@ -1444,7 +1461,16 @@ export default function ShoppingWorkspacePage() {
   const measurementPref: "metric" | "imperial" =
     (user?.measurementPreference as "metric" | "imperial") || "metric";
 
-  const { data: items = [], isPending: isLoading } = useQuery<WorkspaceItem[]>({
+  // PROD1 — `isError`/`refetch` are destructured because WITHOUT them this room's
+  // worst failure is silent and confident. `queryClient.ts` sets `retry: false`, so
+  // a single failed request leaves `data` undefined forever; the `= []` default
+  // then swallows it, `items.length === 0` is true, and the household is shown
+  // "Your shopping list is empty" — with an "Add items" button — while standing in
+  // the supermarket with a list the server simply failed to return. They would
+  // retype a list they never lost. This is the exact confusion `LoadError` was
+  // built to make impossible (see its header: "The household could not tell 'the
+  // server is down' from 'you have nothing'").
+  const { data: items = [], isPending: isLoading, isError, refetch } = useQuery<WorkspaceItem[]>({
     queryKey: [api.shoppingList.list.path],
   });
 
@@ -2314,6 +2340,29 @@ export default function ShoppingWorkspacePage() {
         className="mb-4"
       />
 
+      {/* PROD1 — the failed load is announced ACROSS EVERY MODE, not inside one.
+          This was caught by the acceptance capture rather than by reading the
+          code: the first fix put the error branch inside the `mode !== "add"`
+          block, and this room DEFAULTS to "add" mode (see the `useState`
+          initialiser — an absent `?stage=` lands on "add"). So on a failed load
+          the household was dropped silently into the "add items" composer, which
+          says, by its mere presence, "your list is empty — start typing". The
+          error was correct, well-worded, and unreachable at the one moment it
+          mattered most.
+          A load error belongs to the ROOM, not to a mode. The composer below stays
+          usable — adding items never needed the read that failed — so this informs
+          without blocking. */}
+      {isError && !isLoading && (
+        <div className="mb-4" data-testid="error-shopping-list-banner">
+          <LoadError
+            what="your shopping list"
+            onRetry={() => refetch()}
+            description="Nothing has been lost — your list is safe. This is a problem at our end. You can still add items below."
+            data-testid="error-shopping-list"
+          />
+        </div>
+      )}
+
       {/* ── Add mode ──────────────────────────────────────────────────── */}
       {mode === "add" && (
         <div className="flex gap-6 items-start">
@@ -2554,15 +2603,33 @@ export default function ShoppingWorkspacePage() {
             <div key={i} className="h-14 rounded-lg bg-muted/40 animate-pulse" />
           ))}
         </div>
+      ) : isError ? (
+        // ORDER IS LOAD-BEARING: tested BEFORE `items.length === 0`, because on
+        // error `items` IS empty (the `= []` default) and the empty state would
+        // otherwise win and lie. "We couldn't load your shopping list" and "your
+        // shopping list is empty" are different sentences about different worlds,
+        // and only one of them is ever true.
+        //
+        // Nothing is rendered here: the banner above already carries the error for
+        // every mode. This branch exists to STOP the empty state below from
+        // claiming the list is empty when the truth is that it failed to load.
+        null
       ) : items.length === 0 ? (
-        <div className="rounded-xl border border-border/50 bg-card/60 px-4 py-8 text-center">
-          <ShoppingCart className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
-          <p className="text-sm text-muted-foreground">Your shopping list is empty.</p>
-          <p className="text-xs text-muted-foreground/70 mt-1">
-            <button onClick={() => setMode("add")} className="text-primary hover:underline">Add items</button>
-            {" "}to get started.
-          </p>
-        </div>
+        // PROD1 — the room's primary absence, and the one a household meets first.
+        // It keeps its own call to action (EmptyState §"the one next action"): an
+        // empty list that does not offer the way out is a dead end, not a state.
+        <EmptyState
+          variant="empty"
+          icon={ShoppingCart}
+          title="Your shopping list is empty"
+          description="Add what you need, and THA will check it against your pantry and your household as you shop."
+          action={
+            <Button variant="default" onClick={() => setMode("add")} data-testid="button-empty-add-items">
+              Add items
+            </Button>
+          }
+          data-testid="empty-list-primary"
+        />
       ) : (
         <>
 
@@ -2572,15 +2639,23 @@ export default function ShoppingWorkspacePage() {
           {mode === "review" && (
             <>
               {uncheckedItems.length === 0 && checkedItems.length === 0 ? (
-                <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                  Your basket is empty.
-                </div>
+                <EmptyState
+                  variant="empty"
+                  size="compact"
+                  icon={ShoppingCart}
+                  title="Your basket is empty."
+                  data-testid="empty-basket-review"
+                />
               ) : (
                 <>
                   {sortedFilteredItems.length === 0 && sourceFilter !== "all" ? (
-                    <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                      No items match this filter.
-                    </div>
+                    <EmptyState
+                      variant="filtered"
+                      icon={Filter}
+                      title="No items match this filter."
+                      description="Your list still has items — this filter is hiding them."
+                      data-testid="empty-filtered-review"
+                    />
                   ) : sortOrder === "item"
                     ? sortedFilteredItems.map(renderRow)
                     : sortOrder === "item_category" || !splitByShop
@@ -2613,13 +2688,21 @@ export default function ShoppingWorkspacePage() {
           {mode === "shop" && (
             <>
               {items.length === 0 ? (
-                <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                  Your shopping list is empty.
-                </div>
+                <EmptyState
+                  variant="empty"
+                  size="compact"
+                  icon={ShoppingCart}
+                  title="Your shopping list is empty."
+                  data-testid="empty-list-shop"
+                />
               ) : filteredItems.length === 0 && sourceFilter !== "all" ? (
-                <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                  No items match this filter.
-                </div>
+                <EmptyState
+                  variant="filtered"
+                  icon={Filter}
+                  title="No items match this filter."
+                  description="Your list still has items — this filter is hiding them."
+                  data-testid="empty-filtered-shop"
+                />
               ) : (
                 <>
                   {/* Still need — grouped by in-store category */}
@@ -2703,9 +2786,13 @@ export default function ShoppingWorkspacePage() {
           {mode === "prep" && (
             <>
               {filteredUncheckedItems.length === 0 && filteredCheckedItems.length === 0 && sourceFilter !== "all" && (
-                <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                  No items match this filter.
-                </div>
+                <EmptyState
+                  variant="filtered"
+                  icon={Filter}
+                  title="No items match this filter."
+                  description="Your list still has items — this filter is hiding them."
+                  data-testid="empty-filtered-prep"
+                />
               )}
               {prepGroups.pantry.length > 0 && (
                 <>

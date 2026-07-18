@@ -1,4 +1,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
+// PROD1 — the canonical error presentation, adopted beside the Skeleton PX1
+// already brought to this room. Loading had an owner here; failure did not.
+import { LoadError } from "@/components/ui/load-error";
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -477,7 +480,11 @@ export default function WeeklyPlannerPage() {
     },
   });
 
-  const { data: fullPlanner = [], isPending: isLoading } = useQuery<FullWeek[]>({
+  // PROD1 — without `isError`, the `= []` default swallows a failed load and the
+  // week grid paints seven blank days: the household is shown an empty plan and
+  // concludes their week's planning has been wiped. Nothing was lost; the request
+  // failed. Those are different sentences and the room must be able to say both.
+  const { data: fullPlanner = [], isPending: isLoading, isError: plannerError, refetch: refetchPlanner } = useQuery<FullWeek[]>({
     queryKey: ["/api/planner/full"],
   });
 
@@ -1629,9 +1636,33 @@ export default function WeeklyPlannerPage() {
   //     is chosen per-action, never "in view". Inventing one here is exactly the
   //     guess companion-actions.ts:103 refuses to make, so the planner `add` action
   //     stays an honest gap rather than a coin-flip about someone's dinner.
+  //
+  // COMP_ACT2 — a fourth pointer, and it does not weaken the third.
+  //
+  //   selectedPlannerEntry* — the entry whose sheet or detail dialog the household
+  //     has OPEN. Opening one is an unambiguous act ("I am working with this meal"),
+  //     which is what makes it safe to act on where an ambient "current entry" would
+  //     not be. It carries the entry's own id, its meal, its day and its slot — so
+  //     the Companion can offer Move (to the day they separately selected) and
+  //     Replace (with a meal they've just found) against a REAL target instead of a
+  //     guess. All four go together: a partial pointer is not a target.
+  //
+  //     Published only while the sheet is open, and cleared the moment it closes —
+  //     the household stops being offered an action on a meal they have put down.
+  //     `contextEntry` (long-press sheet) wins over `mealDetail` (tap dialog) when
+  //     both exist, because it is the more specific, more recent act.
+  //
+  //     Note this still publishes NO `selectedMealSlot`: the paragraph above stands
+  //     unchanged. An entry's OWN slot is a fact about that entry; it is not a claim
+  //     that any slot is "in view", and it is deliberately sent under its own name.
+  const openPlannerEntry = contextEntry ?? mealDetail;
   usePublishCompanionContext({
     activePlannerWeekId: activeWeekData?.id,
     selectedPlannerDayId: selectedDayId ?? undefined,
+    selectedPlannerEntryId: openPlannerEntry?.entry.id,
+    selectedPlannerEntryMealId: openPlannerEntry?.meal.id,
+    selectedPlannerEntryDayId: openPlannerEntry?.dayId,
+    selectedPlannerEntrySlot: openPlannerEntry?.mealType,
   });
 
   const placeholderItems = useMemo((): PlaceholderItem[] => {
@@ -1699,6 +1730,27 @@ export default function WeeklyPlannerPage() {
             ))}
           </div>
           <Skeleton className="h-64 sm:hidden" />
+        </div>
+      </>
+    );
+  }
+
+  // PROD1 — the failed load, following the exact shape PX1-W4.8 established for
+  // the loading branch directly above: the header stays painted, and only the
+  // content region carries the state. Before this, a failed `/api/planner/full`
+  // fell through to the grid below and painted seven blank days — a household's
+  // whole week, apparently erased, with nothing to click and nothing to read.
+  if (plannerError) {
+    return (
+      <>
+        <WorkspaceHeader title="Planner" realm="planner" wide titleTestId="text-weekly-planner-title" />
+        <div className={`${pageContainerClass(true)} pb-4`} data-testid="error-planner">
+          <LoadError
+            what="your planner"
+            onRetry={() => refetchPlanner()}
+            description="Nothing has been lost — your week is safe. This is a problem at our end."
+            data-testid="error-planner-card"
+          />
         </div>
       </>
     );

@@ -18,6 +18,7 @@ import {
   WifiOff,
 } from "lucide-react";
 import NotFound from "./not-found";
+import { OperationDialog, type OperationSpec } from "@/components/admin/operation";
 
 // Mirrors server/verification/publication-types.ts — the API is the owner.
 type CheckOutcome = "pass" | "warn" | "fail" | "skipped";
@@ -204,6 +205,46 @@ export default function AdminCanonicalPublicationIntegrityPage() {
     enabled: !!user && (user as any)?.role === "admin",
   });
 
+  // OPS1 — Verify Publication runs through the one canonical Operation experience. It reuses the
+  // page's existing query (via refetch) — no new endpoint. Read-only, so a light confirm and no
+  // destructive weight; the completion summary reports the server's own domain classification.
+  const [verifyOpen, setVerifyOpen] = useState(false);
+  const verifySpec: OperationSpec<PlatformVerificationReport> = {
+    id: "verify-publication",
+    title: "Verify Publication",
+    purpose: "Re-check every canonical domain against its declared owner, writers, publication path and runtime read path.",
+    impact: { level: "read-only", line: "Read-only — this reads and verifies; it changes nothing any household sees." },
+    guidance: [
+      { q: "What does this do?", a: "Runs the full CPI audit across every canonical domain and cross-cutting check, live." },
+      { q: "Why would I run it?", a: "To confirm the platform is publishing correctly — before a release, or after a publish or a suspected drift." },
+      { q: "What happens?", a: "Each domain is checked against its owner and publication path; the result is classified healthy / needs-attention / failure. Skipped is never treated as healthy." },
+      { q: "Production impact", a: "None — it only reads and verifies." },
+    ],
+    expectedDuration: "a few moments",
+    run: async () => {
+      const res = await refetch();
+      if (res.error || !res.data) throw (res.error ?? new Error("Verification could not run. Check the server logs and try again."));
+      return res.data;
+    },
+    summarise: (r) => {
+      const bad = r.summary.needsAttention + r.summary.publicationFailure;
+      return {
+        tone: r.summary.publicationFailure > 0 ? "warning" : bad > 0 ? "warning" : "good",
+        headline: r.summary.publicationFailure > 0
+          ? `${r.summary.publicationFailure} domain${r.summary.publicationFailure === 1 ? "" : "s"} failed publication.`
+          : bad > 0
+            ? `${r.summary.needsAttention} domain${r.summary.needsAttention === 1 ? "" : "s"} need a look.`
+            : "All canonical domains are healthy.",
+        lines: [
+          `${r.summary.healthy} of ${r.summary.domains} domains healthy`,
+          `${r.summary.checksRun} checks — ${r.summary.passed} passed, ${r.summary.warned} warned, ${r.summary.failed} failed, ${r.summary.skipped} skipped`,
+        ],
+      };
+    },
+    // No next-step button: the full domain breakdown is on this page, revealed the moment the
+    // dialog closes. The completion summary points there without a redundant navigation.
+  };
+
   if (userLoading) return null;
   if (!user || (user as any)?.role !== "admin") {
     return <NotFound />;
@@ -227,7 +268,7 @@ export default function AdminCanonicalPublicationIntegrityPage() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => refetch()}
+          onClick={() => setVerifyOpen(true)}
           disabled={isPending || isRefetching}
           data-testid="button-rerun-verification"
         >
@@ -235,6 +276,10 @@ export default function AdminCanonicalPublicationIntegrityPage() {
           Re-verify
         </Button>
       </div>
+
+      {/* OPS1 — the canonical Operation experience for Verify Publication. */}
+      <OperationDialog spec={verifySpec} open={verifyOpen} onOpenChange={setVerifyOpen} />
+
 
       {isPending && (
         <div className="space-y-3">

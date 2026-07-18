@@ -80,6 +80,36 @@ export interface CompanionSurfaceHints {
    * household had stopped thinking about — confidently, and about the wrong thing.
    */
   selectedOpportunityId?: string;
+  // ── COMP_ACT2 — what the household is WORKING WITH, not just looking at ────
+  //
+  // These pointers let the Companion offer the write actions COMP_ACT1 bound
+  // (Planner Move/Replace, Shopping Delete, Pantry Add/Remove, Diary Log) against
+  // a real target. Every one is read from state the page ALREADY holds because
+  // the household chose it — never from a render default, and never invented for
+  // the Companion's benefit. Absent means the action is not offered.
+  /** The planner entry whose sheet/detail is open (set while it is open, cleared on close). */
+  selectedPlannerEntryId?: number;
+  /** The meal currently ON that entry — lets the server refuse a no-op replace. */
+  selectedPlannerEntryMealId?: number;
+  /** The day that entry currently sits on — lets the server refuse a no-op move. */
+  selectedPlannerEntryDayId?: number;
+  /**
+   * That entry's OWN meal slot. Deliberately not `selectedMealSlot`: the Planner
+   * still refuses to claim a slot is "in view", and this does not change that. An
+   * entry's slot is a fact about the entry the household opened.
+   */
+  selectedPlannerEntrySlot?: string;
+  /**
+   * The pantry category tab the household has CHOSEN. Published only after a real
+   * tab change — the initial "larder"/"household" is a render default, and filing
+   * someone's food into a cupboard they never picked is exactly the guess this
+   * channel exists to avoid.
+   */
+  selectedPantryCategory?: string;
+  /** The diary day on screen (YYYY-MM-DD) — always exactly the day being rendered. */
+  selectedDiaryDate?: string;
+  /** The diary meal slot the household explicitly opened, when unambiguous. */
+  selectedDiarySlot?: string;
 }
 
 /**
@@ -178,7 +208,14 @@ export function usePublishCompanionContext(hints: CompanionSurfaceHints): void {
 
   // Depend on the VALUES, not the object identity — callers pass an inline object
   // literal, which is a new reference on every render.
-  const { activePlannerWeekId, selectedMealId, currentFoodSlug, selectedPlannerDayId, selectedMealSlot } = hints;
+  const {
+    activePlannerWeekId, selectedMealId, currentFoodSlug, selectedPlannerDayId, selectedMealSlot,
+    // COMP_ACT2 — destructured (and listed in the deps below) for the same reason
+    // as the pointers above: a field this hook forgets is a field a page cannot
+    // publish, however correctly it passes it in.
+    selectedPlannerEntryId, selectedPlannerEntryMealId, selectedPlannerEntryDayId,
+    selectedPlannerEntrySlot, selectedPantryCategory, selectedDiaryDate, selectedDiarySlot,
+  } = hints;
 
   useEffect(() => {
     if (!publish) return;
@@ -188,12 +225,23 @@ export function usePublishCompanionContext(hints: CompanionSurfaceHints): void {
       currentFoodSlug,
       selectedPlannerDayId,
       selectedMealSlot,
+      selectedPlannerEntryId,
+      selectedPlannerEntryMealId,
+      selectedPlannerEntryDayId,
+      selectedPlannerEntrySlot,
+      selectedPantryCategory,
+      selectedDiaryDate,
+      selectedDiarySlot,
     });
     // Clearing on unmount is what keeps this a channel and not a store: when the
     // household leaves the planner, the assistant stops being told a week is on
     // screen, because none is.
     return () => publish({});
-  }, [publish, activePlannerWeekId, selectedMealId, currentFoodSlug, selectedPlannerDayId, selectedMealSlot]);
+  }, [
+    publish, activePlannerWeekId, selectedMealId, currentFoodSlug, selectedPlannerDayId, selectedMealSlot,
+    selectedPlannerEntryId, selectedPlannerEntryMealId, selectedPlannerEntryDayId,
+    selectedPlannerEntrySlot, selectedPantryCategory, selectedDiaryDate, selectedDiarySlot,
+  ]);
 }
 
 // ── Read (the one assistant) ────────────────────────────────────────────────

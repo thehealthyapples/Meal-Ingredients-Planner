@@ -1,0 +1,45 @@
+{
+  "captured_by": "AFI1_Ambient_Food_Intelligence",
+  "base_url": "http://localhost:5000",
+  "viewport": {
+    "width": 430,
+    "height": 932
+  },
+  "captured": 3,
+  "failed": 0,
+  "shots": [
+    {
+      "id": "planner-ambient-uplift",
+      "name": "Planner — ambient (gaps + the new small lift)",
+      "route": "/planner",
+      "toggle": "ambient-intelligence-planner-toggle",
+      "wait": "[data-testid=\"ambient-intelligence-planner\"]",
+      "file": "planner-ambient-uplift.png",
+      "status": 200,
+      "toggled": true,
+      "ok": true
+    },
+    {
+      "id": "home-ambient-aggregate",
+      "name": "Home — aggregate ambient",
+      "route": "/home",
+      "toggle": "ambient-intelligence-home-toggle",
+      "wait": "[data-testid=\"ambient-intelligence-home\"]",
+      "file": "home-ambient-aggregate.png",
+      "status": 200,
+      "toggled": true,
+      "ok": true
+    },
+    {
+      "id": "meal-card-ambient-uplift",
+      "name": "Meal card — scoped ambient uplift",
+      "route": "/meals/4769",
+      "toggle": "ambient-meal-uplift-toggle",
+      "wait": "[data-testid=\"ambient-meal-uplift\"]",
+      "file": "meal-card-ambient-uplift.png",
+      "status": 200,
+      "toggled": true,
+      "ok": true
+    }
+  ]
+}

@@ -46,7 +46,11 @@ Derive a canonical Session ID from the EWO / implementation name, e.g.
    Verification → Documentation → Waiting for User → Complete (or Blocked).
 4. **Close out.** `.engineering/scripts/session-complete.sh <SESSION_ID>` moves
    the row from `CURRENT.md` to `INDEX.md` and sets the marker to `ESR:IDLE` if
-   no sessions remain active.
+   no sessions remain active. Before it moves anything it runs
+   `repo-structure-verify.sh` as a **canonical filing gate** (DOCGOV1): if any
+   report is misfiled, a stray sits at the root, or a new architecture document
+   is unindexed, completion is refused and nothing is moved. Canonical filing is
+   therefore self-enforcing — fix the filing and re-run to close out.
 
 ## 4. When to update the session record (mandatory triggers)
 

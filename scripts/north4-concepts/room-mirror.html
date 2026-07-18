@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en" data-state="filled">
+<head>
+<meta charset="utf-8">
+<title>The Mirror · Profile — the family record, with no dark corners</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,300;9..144,0,400;9..144,1,300;9..144,1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./_palette.css">
+<link rel="stylesheet" href="./_house.css">
+<script>
+  /* THE MIRROR (Profile / Household) — HOUSE_COMPLETE §7.
+     Same house; ONE deliberate move: THE LIGHT BECOMES EVEN AND UNSHADOWED, and
+     the PEOPLE come first.
+       ?state=filled → a household of four, its record complete
+       ?state=empty  → a new household: one person, and honestly little known */
+  (function () {
+    var s = new URLSearchParams(location.search).get("state");
+    document.documentElement.dataset.state = s === "empty" ? "empty" : "filled";
+  })();
+</script>
+<style>
+/* =============================================================================
+   THE MIRROR — the room the rest of the house rests on.
+   If the Mirror is wrong, every other room is confidently wrong.
+
+   THE ONE MOVE: THE ONLY ROOM IN THA WITH NO DIRECTIONAL LIGHT. Everywhere else
+   the morning comes from somewhere — a full wall (Home), the side (Kitchen), a high
+   corner (Pantry), across the table (Planner), a gathered pool (Journal), the
+   clearest task light (Bench). Here it is EVEN, and the reason is the room's
+   promise: A SHADOW IS SOMEWHERE A THING CAN HIDE, AND THIS ROOM HAS NO DARK
+   CORNERS. The light is the ethic again (rule M3, M6).
+
+   THE NAME, HANDLED HONESTLY: a mirror is the most dangerous metaphor available to
+   a food product. This one is admitted in exactly the honest sense — it REFLECTS
+   the record, and NEVER APPRAISES. Two mirrors are refused on purpose: the funhouse
+   mirror (a flattering distortion of what THA holds — rule M4) and the bathroom
+   scale (the mirror that judges bodies, weight, progress — rule M5).
+   ========================================================================== */
+
+:root {
+  /* EVEN, HONEST, UNSHADOWED — no directional fall at all. The one room whose
+     gradient is deliberately almost flat: nothing here is lit more than anything
+     else, because no fact in the record is louder than another. */
+  --light-angle: 180deg;
+  --light-stops: hsl(39 40% 94%) 0%, hsl(38 34% 93%) 50%, hsl(37 30% 92%) 100%;
+}
+
+/* ============================  THE PEOPLE  ============================
+   The room's CONTENT and its top stratum — not a header above the settings, but
+   THE SUBJECT OF THE ROOM. At real size, at every breakpoint, and the one thing in
+   THA that never gets smaller on a small screen (rule M1).
+   The failure mode this defeats: "treating people as form fields" (OHDB §13.7). */
+.people { margin-top: 34px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+.person { position: relative; border-radius: 4px; padding: 24px 22px 24px;
+  background: linear-gradient(174deg, hsl(40 46% 96%), hsl(38 32% 92%));
+  box-shadow: 0 10px 26px -14px hsl(56 45% 9% / .24), 0 1px 2px hsl(56 45% 9% / .08);
+  border-top: 1px solid hsl(41 50% 94%); }
+/* THE FAMILY, FIRST-CLASS — the room's ONE Living Detail: the canonical avatar and
+   name treatment from REAL household membership, saying "this is a record of
+   people". NO album theming, NO cover imagery, NO profile decoration (§12.2). */
+.person .av { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center;
+  font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-weight: 400; font-size: 21px; color: hsl(74 26% 26%);
+  background: radial-gradient(120% 92% at 50% 10%, hsl(74 20% 84%), hsl(74 16% 74%));
+  box-shadow: inset 0 1px 1px hsl(74 30% 92% / .8), 0 2px 6px -3px hsl(56 45% 9% / .3); }
+.person .nm { margin-top: 15px; font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-weight: 400; font-size: 20px; color: hsl(30 16% 20%); }
+.person .rl { margin-top: 3px; font-size: 12px; color: var(--ink-quiet); }
+/* PREFERENCES READ AS FACTS ABOUT PEOPLE, NEVER AS CONFIGURATION (rule M2).
+   "Sam doesn't eat fish" — a sentence about Sam. Not a checkbox labelled
+   `pescatarian: false`, not a toggle in a list, not a tag on a chip. This single
+   translation is the difference between a family record and an account settings
+   page. */
+.person .facts { margin-top: 14px; }
+.person .fact { font-size: 13px; line-height: 1.62; color: hsl(30 13% 32%); }
+.person .fact + .fact { margin-top: 4px; }
+.person .none { font-size: 13px; font-style: italic; color: var(--ink-quiet); }
+
+/* ============================  ANCHORED STRATA  ============================
+   Tiers, like the Pantry — but where the Pantry's strata hold THINGS, the Mirror's
+   hold THE RECORD, and ANCHORED means THE ORDER NEVER SHUFFLES. The household
+   finds the same thing in the same place every time, at every breakpoint.
+   Permanence is how a record earns trust: a record that rearranges itself is a
+   record you have to re-read (rule M7). */
+.strata { margin-top: 36px; display: flex; flex-direction: column; gap: 26px; }
+.stratum { position: relative; padding-top: 17px; }
+.stratum::before {   /* the oak record ledge each stratum rests on */
+  content: ""; position: absolute; left: -6px; right: -6px; top: 0; height: 5px; border-radius: 2px;
+  background: linear-gradient(to bottom, var(--oak-lip), hsl(43 40% 46%) 55%, var(--oak-edge));
+  box-shadow: 0 9px 15px -10px hsl(56 45% 9% / .32); }
+.st-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 13px; }
+.st-name { font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-weight: 400; font-size: 18px; color: hsl(30 16% 24%); }
+.st-note { font-size: 12px; color: var(--ink-quiet); }
+
+.recs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px 26px; }
+.rec { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: baseline;
+  padding: 11px 0; border-bottom: 1px solid hsl(38 24% 82% / .5); }
+.rec .r-what { font-size: 13.5px; color: hsl(30 14% 28%); }
+.rec .r-val { font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-weight: 400; font-size: 14.5px; color: hsl(30 16% 22%); }
+.rec .r-fix { font-size: 11.5px; color: hsl(96 26% 34%); font-weight: 500; }
+/* NO DARK CORNERS — a fact THA holds and will not show is a defect, not a design
+   choice. Where THA holds nothing, it says so plainly rather than omitting the row
+   (rule M3, M4 — never a tidier picture than the truth). */
+.rec.blank .r-val { font-style: italic; font-weight: 300; color: var(--ink-quiet); }
+
+/* ---- EVERY CHANGE STATES ITS CONSEQUENCE (rule M8) ----------------------
+   The Mirror is upstream of the whole house, so it is the one room that owes the
+   household a plain sentence about what its edit will do ELSEWHERE. */
+.consequence { margin-top: 30px; padding: 18px 20px 19px; border-radius: 4px; max-width: 620px;
+  background: linear-gradient(160deg, hsl(41 52% 95%), hsl(38 34% 92%));
+  box-shadow: inset 0 0 0 1px hsl(41 40% 86% / .7); }
+.consequence .c-lab { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-quiet); }
+.consequence .c-body { margin-top: 8px; font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-weight: 300; font-style: italic; font-size: 16.5px; line-height: 1.55; color: hsl(30 14% 28%); }
+
+/* the foot of the record — the Companion's line, and the house's one mark in the
+   clear plaster beside it. Nothing else; the record has already said everything. */
+.mirror-foot { display: grid; grid-template-columns: 1fr auto; gap: 40px; align-items: end; }
+.mirror-foot .wall-apple { margin-top: 0; }
+
+@media (max-width: 980px) {
+  .people { grid-template-columns: repeat(2, 1fr); }
+  .recs { grid-template-columns: 1fr; gap: 0; }
+}
+@media (max-width: 560px) {
+  /* THE PEOPLE FIRST AND UNSHRUNKEN — the one thing in THA that never gets smaller
+     on a small screen. The strata continue as one column, IN THE IDENTICAL ORDER
+     TO DESKTOP: "anchored" means anchored at every size, and a record that reorders
+     itself on a phone is not anchored (rule M1, M7). */
+  .people { grid-template-columns: 1fr; gap: 14px; }
+  .person { padding: 20px 18px; }
+  .person .av { width: 52px; height: 52px; }   /* unchanged — deliberately */
+  .person .nm { font-size: 20px; }             /* unchanged — deliberately */
+}
+</style>
+</head>
+<body>
+<div class="room">
+  <div class="shell"></div>
+
+  <div class="floor">
+    <div class="head">
+      <div class="eyebrow">Household</div>
+      <h1 class="title">Your household</h1>
+      <p class="subtitle">
+        <span class="filled-only" style="display:inline">Everything The Healthy Apples knows about you — all of it, and all of it yours to change.</span>
+        <span class="empty-only">Just you so far. Here's everything we know, which isn't much yet.</span>
+      </p>
+    </div>
+
+    <!-- ===================== THE PEOPLE — first, at real size ===================== -->
+    <div class="people">
+      <div class="person">
+        <div class="av">C</div>
+        <div class="nm">Chloe</div>
+        <div class="rl">Set up this household</div>
+        <div class="facts">
+          <div class="fact">Doesn't eat shellfish.</div>
+          <div class="fact">Prefers meals that stretch to lunch the next day.</div>
+        </div>
+      </div>
+      <div class="person filled-only" style="display:block">
+        <div class="av">S</div>
+        <div class="nm">Sam</div>
+        <div class="rl">In the household</div>
+        <div class="facts">
+          <div class="fact">Doesn't eat fish.</div>
+          <div class="fact">Not keen on very spicy food.</div>
+        </div>
+      </div>
+      <div class="person filled-only" style="display:block">
+        <div class="av">M</div>
+        <div class="nm">Maya</div>
+        <div class="rl">In the household · 9</div>
+        <div class="facts">
+          <div class="fact">Allergic to peanuts.</div>
+          <div class="fact">Eats separately on weeknights.</div>
+        </div>
+      </div>
+      <div class="person filled-only" style="display:block">
+        <div class="av">T</div>
+        <div class="nm">Theo</div>
+        <div class="rl">In the household · 6</div>
+        <div class="facts">
+          <div class="none">Nothing recorded yet.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EMPTY STATE: honest, and never a "complete your profile" scold -->
+    <div class="empty-only invite">
+      <div class="bi-title">It's just you at the moment.</div>
+      <div class="bi-body">Add the people you cook for whenever you like — it's what makes the rest of the house useful. Nothing here is required, and nothing works badly until you do.</div>
+    </div>
+
+    <!-- ===================== ANCHORED STRATA ===================== -->
+    <div class="strata">
+      <section class="stratum">
+        <div class="st-head"><span class="st-name">What we know</span><span class="st-note">the facts the rest of the house reads</span></div>
+        <div class="recs">
+          <div class="rec"><span class="r-what">People in the household</span><span class="r-val filled-only" style="display:inline">4</span><span class="r-val empty-only">1</span></div>
+          <div class="rec"><span class="r-what">Allergies recorded</span><span class="r-val filled-only" style="display:inline">Peanuts (Maya)</span><span class="r-val empty-only">none</span></div>
+          <div class="rec"><span class="r-what">Things nobody eats</span><span class="r-val filled-only" style="display:inline">Fish, shellfish</span><span class="r-val empty-only">shellfish</span></div>
+          <div class="rec"><span class="r-what">Usual number at the table</span><span class="r-val filled-only" style="display:inline">4, fewer on weeknights</span><span class="r-val empty-only">1</span></div>
+          <div class="rec blank"><span class="r-what">Where you shop</span><span class="r-val">not set</span><span class="r-fix">Add ›</span></div>
+          <div class="rec blank"><span class="r-what">Your time zone</span><span class="r-val">not set</span><span class="r-fix">Add ›</span></div>
+        </div>
+      </section>
+
+      <section class="stratum">
+        <div class="st-head"><span class="st-name">How it's used</span><span class="st-note">where each of those facts shows up</span></div>
+        <div class="recs">
+          <div class="rec"><span class="r-what">Allergies</span><span class="r-val">Hidden everywhere, always</span></div>
+          <div class="rec"><span class="r-what">Things nobody eats</span><span class="r-val">Left out of suggestions</span></div>
+          <div class="rec"><span class="r-what">Number at the table</span><span class="r-val">Sets portions in the Cookbook</span></div>
+          <div class="rec"><span class="r-what">What you've planned</span><span class="r-val">Read by Nutrition and the Pantry</span></div>
+          <div class="rec"><span class="r-what">What you write in the journal</span><span class="r-val">Read by nothing, and nobody</span></div>
+          <div class="rec blank"><span class="r-what">Anything else</span><span class="r-val">there is nothing else</span></div>
+        </div>
+      </section>
+
+      <section class="stratum">
+        <div class="st-head"><span class="st-name">Yours to change</span><span class="st-note">nothing here happens as a side effect</span></div>
+        <div class="recs">
+          <div class="rec"><span class="r-what">Export everything we hold</span><span class="r-fix">Download ›</span></div>
+          <div class="rec"><span class="r-what">Correct anything above</span><span class="r-fix">Edit ›</span></div>
+          <div class="rec"><span class="r-what">Remove a person</span><span class="r-fix">Remove ›</span></div>
+          <div class="rec"><span class="r-what">Close the household</span><span class="r-fix">Close ›</span></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- EVERY CHANGE STATES ITS CONSEQUENCE, AT THE MOMENT OF THE CHANGE -->
+    <div class="consequence filled-only" style="display:block">
+      <div class="c-lab">If you change this</div>
+      <div class="c-body">Adding "no fish" for Sam means the Cookbook and the Family Table will stop suggesting it for everyone at the table — including Friday's salmon, which is currently planned.</div>
+    </div>
+
+    <div class="mirror-foot">
+      <div class="counter-note" style="max-width:560px">
+        <div class="counter-from"><span class="dot"></span> The Companion</div>
+        <div class="counter-body">
+          <span class="filled-only" style="display:inline">Ask me what any of this changes and I'll tell you before you change it.</span>
+          <span class="empty-only">Add people whenever you're ready — I'll tell you what each thing affects as you go.</span>
+        </div>
+      </div>
+
+      <!-- THE PRESSED APPLE — the sole mark, in the plaster, tone-on-tone.
+           It is in EVERY room without exception (Article I; BRAND2 §6): the house
+           has one mark, and a room that drops it is a room that left the house.
+           Here it sits in clear wall BESIDE the record — never over the people,
+           and never inside the strata, whose order is anchored (M7). -->
+      <div class="wall-apple" aria-hidden="true">
+        <i class="wa-occ"></i><i class="wa-up"></i><i class="wa-lo"></i><i class="wa-face"></i>
+      </div>
+    </div>
+  </div>
+
+  <nav class="doors">
+    <div class="door"><span class="door-name">Home</span><span class="door-handle"></span></div>
+    <div class="door"><span class="door-name">Cookbook</span><span class="door-handle"></span></div>
+    <div class="door here"><span class="door-name">Household</span><span class="door-handle"></span></div>
+    <div class="door"><span class="door-name">Pantry</span><span class="door-handle"></span></div>
+  </nav>
+
+  <button class="companion" aria-label="The Companion"><i></i></button>
+</div>
+</body>
+</html>

@@ -8,6 +8,9 @@ import {
   householdToday,
   parseCivilDate,
 } from "@shared/time/household-time";
+// PROD1 — the canonical error presentation (PX1-W0). This room had no error
+// branch at all, so a failed load was indistinguishable from an unlogged day.
+import { LoadError } from "@/components/ui/load-error";
 import { ImportDiaryModal } from "@/components/import-diary-modal";
 import { UPFInfoModal } from "@/components/upf-info-modal";
 import { FirstVisitHint } from "@/components/first-visit-hint";
@@ -47,6 +50,7 @@ import ThaAppleIcon from "@/components/icons/ThaAppleIcon";
 import AppleRating from "@/components/AppleRating";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
+import { usePublishCompanionContext } from "@/components/conversation/companion-context";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -269,14 +273,11 @@ function CopyFromPlannerModal({
               <span className="text-sm">{opt.label}</span>
             </label>
           ))}
-          <label
-            className="flex items-center gap-3 px-3 py-2 rounded-md border border-border hover:bg-muted/40 cursor-pointer opacity-50"
-            title="Coming soon"
-          >
-            <input type="radio" name="copy-slot" disabled />
-            <span className="text-sm text-muted-foreground">Import from Cookbook</span>
-            <Badge variant="outline" className="ml-auto text-[10px]">Soon</Badge>
-          </label>
+          {/* PROD2: the permanently-disabled "Import from Cookbook" option was
+              removed. It had no handler and no route behind it — a control that
+              can never be pressed is a promise the product does not keep, and it
+              made a working chooser look half-broken. Removed rather than
+              enabled: the import path does not exist to wire it to. */}
         </div>
         <DialogFooter className="gap-2">
           <Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
@@ -1285,6 +1286,24 @@ export default function FoodDiaryPage() {
   });
   const [expandedSlots, setExpandedSlots] = useState<Set<MealSlot>>(new Set());
 
+  // ── COMP_ACT2 — the day and slot a diary entry would be logged against ─────
+  //
+  //   selectedDiaryDate — `date` is always exactly the day this page is showing
+  //     (the household's own today until they step off it), and it is already the
+  //     query key for everything rendered. It is a fact about the screen, not a
+  //     resolution of "today" — which is the thing diary-write-handler.ts refuses
+  //     to guess.
+  //
+  //   selectedDiarySlot — a slot only when the household has named one. Pressing
+  //     "Add" on Lunch says so outright; so does opening exactly one slot. Two
+  //     open slots say nothing about which, so nothing is published and Diary Log
+  //     is an honest gap rather than a coin-flip about which meal someone ate.
+  const soleExpandedSlot = expandedSlots.size === 1 ? Array.from(expandedSlots)[0] : undefined;
+  usePublishCompanionContext({
+    selectedDiaryDate: date,
+    selectedDiarySlot: addModalSlot ?? soleExpandedSlot,
+  });
+
   const toggleHealthSnapshot = (v: boolean) => {
     setShowHealthSnapshot(v);
     try { localStorage.setItem("tha_diary_show_health_snapshot", String(v)); } catch {}
@@ -1310,7 +1329,12 @@ export default function FoodDiaryPage() {
 
   const diaryKey = ["/api/food-diary", date];
 
-  const { data: diary, isPending: isLoading } = useQuery<DiaryResponse>({
+  // PROD1 — this query already THROWS correctly on a bad response (below), and
+  // that throw had nowhere to land: with `retry: false` the room fell straight
+  // through to its per-slot "Nothing added yet - tap Add to log something", so a
+  // day of carefully logged food read as a day the household never ate. The error
+  // was being detected properly and then described as an absence.
+  const { data: diary, isPending: isLoading, isError: diaryError, refetch: refetchDiary } = useQuery<DiaryResponse>({
     queryKey: diaryKey,
     queryFn: async () => {
       const res = await fetch(`/api/food-diary/${date}`, { credentials: "include" });
@@ -1710,6 +1734,17 @@ export default function FoodDiaryPage() {
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
+        ) : diaryError ? (
+          // PROD1 — tested BEFORE the slots render, for the same load-bearing
+          // reason as in the Shopping room: on error every slot is empty, and the
+          // "Nothing added yet" copy would otherwise tell the household they logged
+          // nothing on a day they did.
+          <LoadError
+            what="your diary for this day"
+            onRetry={() => refetchDiary()}
+            description="Nothing has been lost — what you logged is safe. This is a problem at our end."
+            data-testid="error-diary"
+          />
         ) : (
           <>
             {/* ── Health Snapshot ──────────────────────────────── */}

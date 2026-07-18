@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en" data-state="filled">
+<head>
+<meta charset="utf-8">
+<title>The Tasting Bench · Analyser — the outside world, examined on your own terms</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,300;9..144,0,400;9..144,1,300;9..144,1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./_palette.css">
+<link rel="stylesheet" href="./_house.css">
+<script>
+  /* THE TASTING BENCH (Analyser) — HOUSE_COMPLETE §5.
+     Same house; ONE deliberate move: THE CLEAREST TASK LIGHT IN THE HOUSE, and the
+     bench holds ONE OBJECT AT A TIME.
+       ?state=filled → a product on the bench, E1 (light only)
+       ?state=empty  → BEFORE FIRST USE: the window opens to E2 and the room invites
+                       (Blueprint §6.2 rule 2 — an honestly empty working room may
+                       open one level, and returns the moment there is an object) */
+  (function () {
+    var s = new URLSearchParams(location.search).get("state");
+    document.documentElement.dataset.state = s === "empty" ? "empty" : "filled";
+  })();
+</script>
+<style>
+/* =============================================================================
+   THE TASTING BENCH — the house's threshold for the outside world.
+   The Entrance Hall is where PEOPLE arrive; the bench is where PRODUCTS do —
+   brought in from the shop and examined in your own light, on your own terms.
+
+   THE ONE MOVE: the light. This is the clearest, most even-handed light THA has,
+   because YOU CANNOT EXAMINE SOMETHING HONESTLY IN FLATTERING LIGHT — the room's
+   ethic made visible. And it is STILL WARM: the bench is CLEAR, not CLINICAL, and
+   that distinction is the room (rule B4; Experience Language §3A.1).
+   ========================================================================== */
+
+:root {
+  /* THE CLEAREST TASK LIGHT IN THE HOUSE — the most even, least flattering fall of
+     the one morning. Highest overall value in the house; warmth floor intact. */
+  --light-angle: 96deg;
+  --light-stops: hsl(40 44% 96%) 0%, hsl(39 38% 94%) 42%, hsl(37 28% 91%) 100%;
+
+  --bench-top:  hsl(39 30% 87%);
+  --bench-edge: hsl(42 40% 60%);
+}
+
+/* ---- BEFORE FIRST USE: the window opens to E2 (governed, not invented) ---- */
+/* the mark's own place on this room's wall — clear plaster, left of the bench,
+   below the object. Never on the bench itself (rule B1: the bench holds ONE thing). */
+.bench-mark { position: absolute; z-index: 6; left: 44px; bottom: 108px; margin: 0; }
+
+.first-window { display: none; }
+:root[data-state="empty"] .first-window { display: block; }
+:root[data-state="empty"] .floor { display: grid; grid-template-columns: 1fr 340px; gap: 56px; align-items: start; }
+.first-window .window { height: 260px; }
+
+/* ============================  THE BENCH  ============================
+   The room's ground: a clear oak working plane with the most honest patina in the
+   house — a bench is USED, and it shows. MOSTLY EMPTY BY DESIGN. Where the Kitchen
+   is many objects on a shelf and the Pantry many objects in strata, THE BENCH
+   HOLDS ONE (rule B1) — never a comparison grid, never a catalogue. */
+.bench { position: relative; margin-top: 34px; border-radius: 4px; overflow: hidden;
+  background: linear-gradient(176deg, var(--bench-top), hsl(37 26% 84%));
+  box-shadow: 0 22px 48px -26px hsl(56 45% 9% / .32), 0 2px 5px hsl(56 45% 9% / .09);
+  display: grid; grid-template-columns: 340px 1fr; gap: 40px; padding: 34px 34px 38px; }
+.bench::before { content: ""; position: absolute; z-index: 3; left: 0; right: 0; top: 0; height: 3px;
+  background: linear-gradient(to bottom, hsl(44 62% 93% / .95), hsl(42 40% 78% / .18)); }
+.bench::after { content: ""; position: absolute; z-index: 3; left: 0; right: 0; bottom: 0; height: 5px;
+  background: linear-gradient(to bottom, hsl(42 38% 64% / .5), var(--bench-edge)); }
+/* the bench's patina — a used surface, worn where things have been set down */
+.bench .patina { position: absolute; inset: 0; pointer-events: none; opacity: .5;
+  background:
+    radial-gradient(46% 34% at 26% 46%, hsl(40 32% 78% / .55), transparent 70%),
+    radial-gradient(30% 22% at 62% 72%, hsl(40 30% 76% / .4), transparent 72%); }
+
+/* ---- THE OBJECT — the examined product, the hero of the room ------------- */
+.object { position: relative; z-index: 2; }
+.pack { position: relative; border-radius: 3px; padding: 26px 22px 24px; min-height: 260px;
+  background: linear-gradient(168deg, hsl(39 52% 97%), hsl(38 34% 93%));
+  box-shadow: 0 14px 30px -14px hsl(56 45% 9% / .32), 0 1px 3px hsl(56 45% 9% / .1);
+  border-top: 1px solid hsl(41 52% 94%);
+  display: flex; flex-direction: column; }
+.pack .p-kind { font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-quiet); }
+.pack .p-name { margin-top: 9px; font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-weight: 300; font-size: 27px; line-height: 1.14; color: hsl(30 16% 20%); }
+.pack .p-brand { margin-top: 6px; font-size: 13px; color: var(--ink-body); }
+.pack .p-meta { margin-top: auto; padding-top: 20px; font-size: 11.5px; color: var(--ink-quiet); line-height: 1.6; }
+
+/* ---- THE FINDINGS — laid out beside the object, in reading order ---------
+   On the SAME bench plane (never a nested panel, never a tabbed report). Every
+   finding is cited and can show its working. NO VERDICT THEATRE: no score reveal,
+   no animated grade, no red/green judgement delivered as a moment (rule B2). */
+.findings { position: relative; z-index: 2; }
+.f-head { font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-weight: 400; font-size: 18px; color: hsl(30 16% 24%); }
+.f-sub { margin-top: 5px; font-size: 12.5px; color: var(--ink-quiet); }
+.f-list { margin-top: 18px; }
+.finding { padding: 13px 0; border-bottom: 1px solid hsl(38 24% 80% / .5); }
+.finding:last-child { border-bottom: 0; }
+.finding .f-what { font-size: 13.5px; color: hsl(30 14% 28%); }
+.finding .f-say { margin-top: 4px; font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-weight: 400; font-size: 15.5px; color: hsl(30 16% 22%); }
+.finding .f-src { margin-top: 5px; font-size: 11px; color: hsl(96 26% 34%); }
+/* HONEST UNCERTAINTY IS A FIRST-CLASS RESULT — "we don't know" is a complete,
+   dignified answer that fills the bench honestly, never a gap papered over with an
+   estimate and never a confident score computed from missing data (rule B5). */
+.finding.unknown .f-say { font-style: italic; font-weight: 300; color: var(--ink-quiet); }
+
+/* ---- WHERE YOU LEFT OFF — the room's ONE Living Detail -------------------
+   Analysis history as ONE LOW CARD that disappears when stale (Blueprint §12.2
+   ceiling). It says "a used bench", and nothing more: NEVER a history list, NEVER
+   a log, NEVER a count of how many products you have examined (rule B8). */
+.left-off { margin-top: 26px; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  font-size: 12.5px; color: var(--ink-quiet); }
+.left-off .lo-name { font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-style: italic; font-weight: 300; font-size: 14.5px; color: hsl(30 14% 38%); }
+
+@media (max-width: 980px) {
+  .bench { grid-template-columns: 1fr; gap: 28px; padding: 26px 24px 30px; }
+  .pack { min-height: 0; }
+  :root[data-state="empty"] .floor { grid-template-columns: 1fr; gap: 28px; }
+  .first-window { order: -1; }
+  .first-window .window { height: 168px; }
+}
+@media (max-width: 560px) {
+  /* THE OBJECT FIRST AND LARGEST — you are holding the packet. Findings continue
+     below in one column on the same bench. Never a tabbed report; never a score at
+     the top with the working buried beneath it. */
+  .bench { padding: 20px 16px 24px; }
+  .pack .p-name { font-size: 24px; }
+  .first-window .window { height: 132px; }
+}
+</style>
+</head>
+<body>
+<div class="room">
+  <div class="shell"></div>
+
+  <div class="floor">
+    <main>
+      <div class="head">
+        <div class="eyebrow">Analyser</div>
+        <h1 class="title">
+          <span class="filled-only" style="display:inline">On the bench</span>
+          <span class="empty-only">The bench</span>
+        </h1>
+        <p class="subtitle">
+          <span class="filled-only" style="display:inline">Here's what's in it, what that means, and what we couldn't read.</span>
+          <span class="empty-only">Bring something in from the shop and we'll look at it properly, in good light.</span>
+        </p>
+      </div>
+
+      <!-- EMPTY / BEFORE FIRST USE: the room INVITES rather than reading as an
+           empty tool. This is the window's one governed level-up (§6.2 rule 2). -->
+      <div class="empty-only invite">
+        <div class="bi-title">Nothing on the bench yet.</div>
+        <div class="bi-body">Scan a barcode or search for something you've bought, and it'll be laid out here: what's in it, what that means, and — just as plainly — anything we can't tell you. We won't guess, and we won't have an opinion about your shopping.</div>
+      </div>
+
+      <!-- ===================== THE BENCH — one object ===================== -->
+      <div class="bench filled-only" style="display:grid">
+        <span class="patina" aria-hidden="true"></span>
+
+        <div class="object">
+          <div class="pack">
+            <div class="p-kind">On the bench</div>
+            <div class="p-name">Tomato &amp; basil pasta sauce</div>
+            <div class="p-brand">400g jar · a supermarket own-label</div>
+            <div class="p-meta">
+              Read from the label and the manufacturer's published data.<br>
+              Last checked today.
+            </div>
+          </div>
+        </div>
+
+        <div class="findings">
+          <div class="f-head">What we found</div>
+          <div class="f-sub">Facts about the product. Nothing here is a judgement about you.</div>
+
+          <div class="f-list">
+            <div class="finding">
+              <div class="f-what">What's in it</div>
+              <div class="f-say">Tomatoes, onion, olive oil, basil, salt, sugar.</div>
+              <div class="f-src">from the ingredients list</div>
+            </div>
+            <div class="finding">
+              <div class="f-what">How processed it is</div>
+              <div class="f-say">Lightly processed — a short list, all of it recognisable.</div>
+              <div class="f-src">NOVA group 3 · classified from the ingredients list</div>
+            </div>
+            <div class="finding">
+              <div class="f-what">Salt</div>
+              <div class="f-say">0.8g per 100g — around a third of a jar's worth in a portion.</div>
+              <div class="f-src">from the label's per-100g panel</div>
+            </div>
+            <div class="finding unknown">
+              <div class="f-what">Where the tomatoes come from</div>
+              <div class="f-say">We don't know — the label doesn't say.</div>
+              <div class="f-src">not published by the manufacturer</div>
+            </div>
+            <div class="finding unknown">
+              <div class="f-what">Added sugar, as distinct from the tomatoes' own</div>
+              <div class="f-say">We can't separate the two from what's published.</div>
+              <div class="f-src">no breakdown available</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- WHERE YOU LEFT OFF — one low line, gone when stale. Never a log. -->
+      <div class="left-off filled-only" style="display:flex">
+        <span>Last on the bench:</span>
+        <span class="lo-name">wholemeal seeded loaf</span>
+        <span>· two days ago</span>
+      </div>
+    </main>
+
+    <!-- BEFORE FIRST USE ONLY: the orchard, at E2. It closes the moment there is
+         an object on the bench and the work gets the whole room. -->
+    <aside class="first-window">
+      <div>
+        <div class="window">
+          <img src="../../attached_assets/design/north_star/v2/ORCHARD.png" alt="">
+          <span class="mullion"></span>
+        </div>
+        <div class="ledge"></div>
+      </div>
+
+      <div class="counter-note">
+        <div class="counter-from"><span class="dot"></span> The Companion</div>
+        <div class="counter-body">Whenever you've got something in front of you, I'll help you read it — including the parts the label leaves out.</div>
+      </div>
+
+    </aside>
+  </div>
+
+  <!-- THE PRESSED APPLE — the sole mark, in the clear plaster to the left of the
+       bench. It sits OUTSIDE both state blocks deliberately: the house has one
+       mark and it is in every room in EVERY state (Article I; BRAND2 §6). Kept
+       clear of the bench plane, because nothing is ever placed on the working
+       surface but the object being examined (rule B1). -->
+  <div class="bench-mark wall-apple" aria-hidden="true">
+    <i class="wa-occ"></i><i class="wa-up"></i><i class="wa-lo"></i><i class="wa-face"></i>
+  </div>
+
+  <!-- FILLED: the Companion holds the light — explains a finding, never delivers
+       the verdict. The judgement stays with the household (rule B2, B3). -->
+  <div class="filled-only" style="display:block; position:absolute; z-index:6; right:40px; bottom:96px; width:300px">
+    <div class="counter-note" style="margin-top:0">
+      <div class="counter-from"><span class="dot"></span> The Companion</div>
+      <div class="counter-body">The two blanks are the label's, not ours — I can tell you what we'd need to answer them.</div>
+      <a class="counter-link" href="#">What's missing, and why ›</a>
+    </div>
+  </div>
+
+  <nav class="doors">
+    <div class="door"><span class="door-name">Home</span><span class="door-handle"></span></div>
+    <div class="door"><span class="door-name">Cookbook</span><span class="door-handle"></span></div>
+    <div class="door here"><span class="door-name">Analyser</span><span class="door-handle"></span></div>
+    <div class="door"><span class="door-name">Pantry</span><span class="door-handle"></span></div>
+  </nav>
+
+  <button class="companion" aria-label="The Companion"><i></i></button>
+</div>
+</body>
+</html>

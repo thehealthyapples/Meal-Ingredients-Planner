@@ -42,6 +42,12 @@ export interface ShoppingAddResult {
   };
 }
 
+/** The result of a successful "delete" — the extra id the owner removed. */
+export interface ShoppingDeleteResult {
+  readonly scope: "delete";
+  readonly id: number;
+}
+
 function toResult(extra: ShoppingListExtra): ShoppingAddResult {
   return {
     scope: "add",
@@ -71,21 +77,43 @@ async function handleAdd(
   return toResult(extra);
 }
 
+async function handleDelete(
+  intent: Intent,
+  userId: number,
+  port: ShoppingWritePort,
+): Promise<ShoppingDeleteResult> {
+  const params = intent.parameters ?? {};
+  const id = typeof params.id === "number" && Number.isInteger(params.id)
+    ? params.id
+    : typeof params.id === "string" && /^\d+$/.test(params.id)
+      ? Number(params.id)
+      : undefined;
+  if (id === undefined) {
+    throw gap('Deleting a shopping item needs { id } — the shopping-list extra to remove.');
+  }
+  // Own-data only by construction: the owner method scopes the delete to this userId,
+  // so a foreign extra id simply removes nothing — no cross-user delete is possible.
+  await port.deleteShoppingListExtra(userId, id);
+  return { scope: "delete", id };
+}
+
 /**
  * Create the shopping write handler. `resolvePort` provides the owning-service surface
- * (production: real storage; tests: in-memory owner).
+ * (production: real storage; tests: in-memory owner). Executes "add" (INT40) and
+ * "delete" (COMP_ACT1); any other verb is an honest gap.
  */
 export function createShoppingWriteHandler(
   resolvePort: () => Promise<ShoppingWritePort>,
 ): CapabilityHandler {
   return async (intent: Intent, context: IntelligenceContext): Promise<unknown> => {
-    if (intent.verb !== "add") {
+    if (intent.verb !== "add" && intent.verb !== "delete") {
       throw gap(
-        `Shopping is bound to the Intelligence Platform for write ONLY on "add": "${intent.verb}" is not executable via the platform yet.`,
+        `Shopping is bound to the Intelligence Platform for write on "add" and "delete": "${intent.verb}" is not executable via the platform yet.`,
       );
     }
     const userId = requireUserId(context, "Shopping");
     const port = await resolvePort();
+    if (intent.verb === "delete") return handleDelete(intent, userId, port);
     return handleAdd(intent, userId, port);
   };
 }

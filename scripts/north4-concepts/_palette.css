@@ -1,0 +1,81 @@
+/*
+  NORTH4 — The Orchard Palette.
+  Every value below is DERIVED from attached_assets/design/north_star/v2/ORCHARD.png
+  by scripts/extract-orchard-palette.ts. Nothing here was invented.
+
+  THE RULE THIS FILE OBEYS:
+    The artwork's HUES are law. Its SATURATIONS are not.
+    Grass at 7am is hsl(47 79% 44%) because the light is gold. A button filled
+    with that value is mustard — same colour, wrong result, because a button is
+    not lit by that sun. So: hue transfers verbatim; saturation and lightness are
+    re-derived per surface, because the screen supplies its own light.
+
+  MEASURED: 94.37% of the orchard's chroma lies in hue 30-80.
+             0.01% lies in hue 110-140 — the band THA's --primary/--accent/
+             --foreground currently occupy.
+*/
+
+:root {
+  /* ---- RAW: sampled straight from the artwork, unaltered ---- */
+
+  /* Morning light — sky + flare, 51.6% / 6.1% of the lit region */
+  --raw-light-morning: #f8eada;  /* hsl( 33 69% 91%) */
+  --raw-light-flare:   #f0ca8c;  /* hsl( 37 76% 74%) */
+
+  /* Blossom whites — lit petals only. The brightest honest white in the orchard. */
+  --raw-blossom:       #fdf1da;  /* hsl( 39 90% 92%)  31.9% */
+  --raw-blossom-shade: #fbe5c7;  /* hsl( 35 88% 88%)  66.2% */
+
+  /* Warm stone — the pale ground of the picture */
+  --raw-stone:         #e4d9cc;  /* hsl( 32 31% 85%)  46.7% */
+  --raw-stone-cool:    #c7c4bc;  /* hsl( 45  9% 76%)  14.8% */
+
+  /* Natural oak — the gate timber */
+  --raw-oak-lit:       #c0962e;  /* hsl( 43 62% 47%)  18.7% */
+  --raw-oak:           #80631a;  /* hsl( 43 66% 30%)  24.2% */
+  --raw-oak-shadow:    #4a3d15;  /* hsl( 45 56% 19%)  57.1% */
+
+  /* Fresh greens — foliage in the golden hour. Gold-biased BY THE LIGHT. */
+  --raw-leaf-sun:      #c9a317;  /* hsl( 47 79% 44%)  24.6% */
+  --raw-leaf:          #9a801a;  /* hsl( 48 71% 35%)  31.2% */
+  --raw-leaf-deep:     #6b6118;  /* hsl( 52 63% 26%)  37.2% */
+
+  /* The ONLY true greens: foliage NOT overwhelmed by the sun.
+     Three independent regions agree on hue 70-74. This is THA's green. */
+  --raw-leaf-shade:    #39450d;  /* hsl( 73 68% 16%)  grass in shadow, p15 */
+  --raw-leaf-deepest:  #2b3208;  /* hsl( 70 72% 11%)  orchard rows, p15 */
+
+  /* Soft shadows — what shadow is MADE of here. Olive. Never grey, never black. */
+  --raw-shadow-soft:   #292708;  /* hsl( 56 69%  9%)  41.7% */
+  --raw-shadow-deep:   #1c1d05;  /* hsl( 62 71%  7%)  38.0% */
+
+  /* ---- TRANSLATED: hue held, S/L re-derived for a lit screen ---- */
+
+  /* Grounds. Three, per Experience Blueprint § 8. */
+  --plaster:      hsl(36 46% 94%);   /* the wall — from morning light, hue held */
+  --plaster-deep: hsl(34 34% 89%);   /* the wall in shadow — from warm stone */
+  --surface:      hsl(39 62% 96%);   /* paper/ivory — from blossom. NOT #fff. */
+  --oak:          hsl(43 40% 62%);   /* the counter, lit face */
+  --oak-mid:      hsl(43 44% 46%);   /* the counter, body */
+  --oak-edge:     hsl(45 40% 28%);   /* the counter, shadow edge */
+
+  /* Ink. From the shadow family — warm olive-black, hue 60-73. */
+  --ink:          hsl(70 30% 13%);   /* headings, the household's name */
+  --ink-body:     hsl(64 16% 26%);   /* body text */
+  --ink-quiet:    hsl(52 10% 44%);   /* dates, captions, the soft voice */
+
+  /* The one green. From leaf-in-shade (hue 73), lifted to carry ivory text. */
+  --leaf:         hsl(74 34% 24%);
+  --leaf-lift:    hsl(74 26% 33%);
+
+  /* The one warm accent. From lit oak / sunlit foliage (hue 43-47). */
+  --gold:         hsl(43 62% 47%);
+  --gold-quiet:   hsl(43 46% 72%);
+
+  /* Shadow. Olive-tinted, never neutral. Depth per Kept Room Translation § 4. */
+  --shade-1: 0 1px 2px hsl(56 40% 9% / 0.07);
+  --shade-2: 0 2px 10px hsl(56 40% 9% / 0.08), 0 1px 2px hsl(56 40% 9% / 0.06);
+  --shade-3: 0 12px 40px hsl(56 40% 9% / 0.13), 0 2px 6px hsl(56 40% 9% / 0.07);
+
+  --hair: hsl(38 24% 82%);   /* the thinnest line — from warm stone */
+}

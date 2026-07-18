@@ -31,13 +31,16 @@ import { createStoragePlannerWritePort, type PlannerWritePort } from "../handler
 export const PLANNER_CAPABILITY_ID = "planner";
 
 /**
- * The verbs this binding actually executes: "read"/"explain" (INT2, read-only) and
- * "add" (INT40, write — one meal into a known day+slot). All other allow-listed verbs
- * (generate, move, replace, delete, import, share) return an honest gap. Declared here
- * so the registry can surface truthful executableIntents and discovery cannot
- * over-advertise (INT6A).
+ * The verbs this binding actually executes: "read"/"explain" (INT2, read-only), "add"
+ * (INT40, write — one meal into a known day+slot), and "move"/"replace" (COMP_ACT1,
+ * write — relocate an entry, swap an entry's meal). All other allow-listed verbs
+ * (generate, delete, import, share) return an honest gap. Declared here so the registry
+ * can surface truthful executableIntents and discovery cannot over-advertise (INT6A).
  */
-export const PLANNER_EXECUTABLE_INTENTS: readonly IntentVerb[] = ["read", "explain", "add"];
+export const PLANNER_EXECUTABLE_INTENTS: readonly IntentVerb[] = ["read", "explain", "add", "move", "replace"];
+
+/** The write verbs the write handler owns (COMP_ACT1: add + move + replace). */
+const PLANNER_WRITE_VERBS: ReadonlySet<IntentVerb> = new Set<IntentVerb>(["add", "move", "replace"]);
 
 /** Compose the read and write handlers into one capability-level dispatcher. */
 function composePlannerHandler(
@@ -45,7 +48,7 @@ function composePlannerHandler(
   writeHandler: CapabilityHandler,
 ): CapabilityHandler {
   return (intent: Intent, context: IntelligenceContext): Promise<unknown> => {
-    if (intent.verb === "add") return writeHandler(intent, context);
+    if (PLANNER_WRITE_VERBS.has(intent.verb)) return writeHandler(intent, context);
     return readHandler(intent, context);
   };
 }

@@ -557,7 +557,13 @@ async function main(): Promise<void> {
     const captures = gateway.match(/kind: "behaviour-decision"/g) ?? [];
     assert(captures.length === 1, "the gateway has exactly one behaviour-decision capture point");
     const sealed = gateway.match(/recordBehaviourDecision\(\{/g) ?? [];
-    assert(sealed.length === 5, "every one of the gateway's five exit paths records a behaviour decision");
+    // INT20 added a SIXTH exit path: a natural-language command that resolves to a
+    // Companion Action proposal, or to one clarification question. It records its
+    // decision as `not-voiced` with a `notVoicedReason`, which is precisely the
+    // declared route BEH1 kept in the vocabulary for a surface that does not yet
+    // speak through the Personality Registry. The invariant this assertion protects
+    // — EVERY exit path seals a decision — is unchanged; only the count moved.
+    assert(sealed.length === 6, "every one of the gateway's six exit paths records a behaviour decision");
   }
 
   {

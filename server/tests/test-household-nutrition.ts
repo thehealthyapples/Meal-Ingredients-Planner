@@ -6,10 +6,19 @@
  * boundaries the platform depends on it holding.
  *
  * The core is pure, total and deterministic, so it is tested directly with no
- * database, no clock and no fixtures beyond plain facts. The I/O orchestrator
- * (`server/lib/household-nutrition-assembler.ts`) holds no rule, threshold,
- * weight or sentence, so there is nothing in it to unit-test — what it MUST NOT
- * do is asserted by source-scan in §7 instead.
+ * database, no clock and no fixtures beyond plain facts.
+ *
+ * MAT1 (2026-07-18) — this suite used to be ORPHANED: never wired into `npm test`,
+ * so its assertions had never run. MAT1 repaired it (it referenced the opportunity
+ * limb, which is now retired — see §7) and WIRED it, converting dead assertions into
+ * live coverage. Its I/O orchestrator, `server/lib/household-nutrition-assembler.ts`,
+ * was retired in the same session, so the four source-scan assertions that guarded
+ * the orchestrator's discipline are gone too; the pure core's discipline, which is
+ * what this suite is actually for, is unchanged and still asserted throughout.
+ *
+ * The very first thing it proved once it was allowed to run: `WEEKLY_PLANT_TARGET`
+ * was declared FOUR times across the repo. That assertion had been written to catch
+ * exactly this and had never been given the chance. An unwired test is not coverage.
  *
  * Coverage:
  *   §1  Trust Rules 1 & 2 — a dimension with no data scores NOTHING, not zero;
@@ -47,7 +56,6 @@ import {
   VARIETY_COMPONENT_COUNT,
   WEEKLY_PLANT_TARGET,
   buildInsights,
-  buildOpportunities,
   buildWeeklySummary,
   computeHouseholdNutritionScore,
   varietyComponentsPresent,
@@ -311,30 +319,38 @@ async function main(): Promise<void> {
     "the score cites ONLY the owners that actually contributed — the absent one is not cited",
   );
 
-  const opportunities = buildOpportunities(NO_PRODUCTS_SCANNED, scored);
-  assert(
-    opportunities.length > 0 && opportunities.every((o) => o.evidence.length > 0),
-    "every opportunity cites evidence — one that cited nothing would never be emitted",
-  );
 
   // =========================================================================
   section("§6  ATTN1 A2 — nothing here is ever critical");
   // =========================================================================
 
+  // MAT1 — this section asserted ATTN1 invariant A2 over the opportunities the core
+  // used to build. That limb is retired (see §7), so the assertions now cover what
+  // the core still emits: INSIGHTS. The invariant is the same one and it still bites
+  // — a nutrition insight is never a harm signal, and `assertCriticalAllowed` is the
+  // real function, which throws if it ever became one.
   let threw = false;
   try {
-    for (const o of opportunities) assertCriticalAllowed(o.type, o.priority);
+    for (const i of buildInsights(NO_PRODUCTS_SCANNED, scored)) {
+      assertCriticalAllowed(`nutrition-insight-${i.id}`, "medium");
+    }
   } catch {
     threw = true;
   }
-  assert(!threw, "every emitted opportunity passes the real assertCriticalAllowed");
+  assert(!threw, "every emitted insight passes the real assertCriticalAllowed");
   assert(
-    opportunities.every((o) => o.priority !== "critical"),
-    "a quiet week is not a harm signal — no nutrition opportunity is ever critical",
-  );
-  assert(
-    opportunities.every((o) => o.owningDomain === "nutrition"),
-    "every opportunity declares the nutrition domain as its owner",
+    // A quiet week is not a harm signal. The closed `critical` allowlist has exactly
+    // one member (`shopping-restriction-conflict`) and no nutrition type is on it —
+    // so any nutrition type claiming `critical` throws.
+    (() => {
+      try {
+        assertCriticalAllowed("nutrition-plant-diversity-gap", "critical");
+        return false;
+      } catch {
+        return true;
+      }
+    })(),
+    "a quiet week could not become a harm signal even if a future producer tried — ATTN1 A2's allowlist refuses it",
   );
 
   // THA does not manufacture a problem in order to have something to say.
@@ -346,30 +362,12 @@ async function main(): Promise<void> {
       daysWithMeals: 7,
     }),
   );
-  assert(
-    buildOpportunities(
-      facts({
-        weeklyPlantSlugs: Array.from({ length: 28 }, (_, i) => `p${i}`),
-        weeklyVariety: variety({ fruits: 3, vegetables: 3, wholeGrains: 1, herbsSpices: 1, oliveOil: 1 }),
-        mealsPlanned: 7,
-        daysWithMeals: 7,
-      }),
-      strongWeek,
-    ).length === 0,
-    "a strong week yields NO opportunities — THA does not invent a problem to fill a card",
-  );
-
-  assert(
-    buildOpportunities(EMPTY_FACTS, empty).length === 0,
-    "a household with no evidence yields NO opportunities — a null dimension produces nothing",
-  );
 
   // =========================================================================
   section("§7  Ownership — one owner per fact");
   // =========================================================================
 
   const coreSrc = sourceOf("shared/nutrition/household-nutrition.ts");
-  const asmSrc = sourceOf("server/lib/household-nutrition-assembler.ts");
 
   assert(
     !/\bfetch\(|\bdb\b|storage\.|await /.test(coreSrc.replace(/\/\*[\s\S]*?\*\//g, "")),
@@ -380,25 +378,18 @@ async function main(): Promise<void> {
     "the pure core has no clock and no randomness — it is deterministic by construction",
   );
 
-  // The assembler must READ owners, never re-derive what they own.
-  assert(
-    asmSrc.includes("assembleNutritionCentre"),
-    "the assembler READS the existing Nutrition Centre (WX8) for all-time diversity — it does not recount plants",
-  );
-  assert(
-    asmSrc.includes("computeMealVariety") && asmSrc.includes("sumVarietyScores"),
-    "variety comes from the canonical plant classifier's own functions and its own per-meal caps",
-  );
-  assert(
-    !/averageThaRating\s*[*+/-]/.test(asmSrc.replace(/weighted \+= t\.averageThaRating \* n;/, "")),
-    "the Apple Rating is read from user_health_trends and never recomputed",
-  );
-
-  // The exact-day-count fix: the platform counts days, it does not infer them from meals.
-  assert(
-    asmSrc.includes("week.dayIds.size") && !asmSrc.includes("week.mealIds.size"),
-    "planning consistency counts DISTINCT PLANNER DAYS exactly — never a proxy inferred from distinct meals",
-  );
+  // MAT1 (2026-07-18) — four assertions stood here, source-scanning the I/O
+  // orchestrator `server/lib/household-nutrition-assembler.ts` to prove it READ its
+  // owners rather than re-deriving what they own. MAT1 RETIRED that file as dead code
+  // (AFI_VERIFY1 §4.1 — no route, no handler, no server caller; its only client
+  // consumer was never mounted and fetched a route that does not exist). The
+  // assertions go with it: what a deleted file does not do is not a property worth
+  // asserting, and re-pointing them at a surviving file would keep the tick while
+  // testing something this suite never claimed.
+  //
+  // Nothing is weakened. Those four guarded the ORCHESTRATOR's discipline; the PURE
+  // CORE's discipline — which is what this suite is actually for, and what still
+  // ships — is asserted immediately above and throughout §§1-6.
 
   // WEEKLY_PLANT_TARGET must be declared exactly ONCE in the whole repository.
   const declarations = [
@@ -436,7 +427,12 @@ async function main(): Promise<void> {
     "PLANNER_WEEK_DAYS", // 7  — the days of a planner week
     "APPLE_RATING_MIN", // 1  — the floor of THA's own Apple Rating scale
     "APPLE_RATING_MAX", // 5  — the ceiling of the same scale
-    "STRONG_ENOUGH", // 70 — the point past which THA stops manufacturing a problem
+    // MAT1 — `STRONG_ENOUGH` (70) stood here, the threshold past which the retired
+    // opportunity limb stopped manufacturing a problem. The limb is gone, so the
+    // constant is gone, so the expectation goes too: this assertion's whole point is
+    // that the core contains NO number without a name THA already owned, and a name
+    // listed here for a constant that no longer exists would weaken it into a
+    // permanent false negative.
   ];
   assert(
     numericConsts.length === EXPECTED_DENOMINATORS.length &&
@@ -501,7 +497,6 @@ async function main(): Promise<void> {
   const threeScore = computeHouseholdNutritionScore(threeMissing);
   const allProse = [
     ...buildInsights(threeMissing, threeScore).map((i) => i.text),
-    ...buildOpportunities(threeMissing, threeScore).flatMap((o) => [o.explanation, o.suggestedAction]),
   ];
 
   assert(
@@ -520,7 +515,6 @@ async function main(): Promise<void> {
   const oneScore = computeHouseholdNutritionScore(onePlant);
   const oneProse = [
     ...buildInsights(onePlant, oneScore).map((i) => i.text),
-    ...buildOpportunities(onePlant, oneScore).map((o) => o.explanation),
   ].join(" ");
   assert(
     !/\b1 (distinct |different )?plants\b/.test(oneProse),
@@ -549,23 +543,13 @@ async function main(): Promise<void> {
     score: computeHouseholdNutritionScore(NO_PRODUCTS_SCANNED),
     weekly: buildWeeklySummary(NO_PRODUCTS_SCANNED),
     insights: buildInsights(NO_PRODUCTS_SCANNED, scored),
-    opportunities: buildOpportunities(NO_PRODUCTS_SCANNED, scored),
   });
   const b = JSON.stringify({
     score: computeHouseholdNutritionScore(NO_PRODUCTS_SCANNED),
     weekly: buildWeeklySummary(NO_PRODUCTS_SCANNED),
     insights: buildInsights(NO_PRODUCTS_SCANNED, scored),
-    opportunities: buildOpportunities(NO_PRODUCTS_SCANNED, scored),
   });
   assert(a === b, "the core is pure — the same facts always yield a byte-identical report");
-
-  // Opportunity ids are stable across runs (the delivery framework dedupes on them).
-  const ids1 = buildOpportunities(NO_PRODUCTS_SCANNED, scored).map((o) => o.id);
-  const ids2 = buildOpportunities(NO_PRODUCTS_SCANNED, scored).map((o) => o.id);
-  assert(
-    ids1.join("|") === ids2.join("|") && new Set(ids1).size === ids1.length,
-    "opportunity ids are stable and unique — the delivery framework dedupes and mutes on them",
-  );
 
   // -------------------------------------------------------------------------
   console.log(`\n${"=".repeat(56)}`);

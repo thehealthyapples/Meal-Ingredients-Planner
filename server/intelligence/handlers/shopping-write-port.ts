@@ -30,6 +30,13 @@ export interface ShoppingWritePort {
     category?: string,
     alwaysAdd?: boolean,
   ): Promise<ShoppingListExtra>;
+  /**
+   * Shopping owner — delete one of the caller's own shopping-list extras (COMP_ACT1).
+   * The SAME call `DELETE /api/shopping-list/extras/:id` makes: the owner method takes
+   * `userId` and scopes the delete to that user, so another user's extra can never be
+   * removed — own-data only by construction.
+   */
+  deleteShoppingListExtra(userId: number, id: number): Promise<void>;
 }
 
 /**
@@ -42,5 +49,6 @@ export async function createStorageShoppingWritePort(): Promise<ShoppingWritePor
   return {
     addShoppingListExtra: (userId, name, category, alwaysAdd) =>
       storage.addShoppingListExtra(userId, name, category, alwaysAdd),
+    deleteShoppingListExtra: (userId, id) => storage.deleteShoppingListExtra(userId, id),
   };
 }

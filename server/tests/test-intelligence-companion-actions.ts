@@ -95,7 +95,11 @@ async function testShoppingWriteHandler(): Promise<void> {
   section("§1 Shopping write handler — delegation, honest gaps, guards");
 
   const added: { userId: number; name: string; category?: string; alwaysAdd?: boolean }[] = [];
+  const deleted: { userId: number; id: number }[] = [];
   const port: ShoppingWritePort = {
+    // COMP_ACT1 extended this port; the fixture had not caught up, so the file did
+    // not typecheck. Completing the stub (not relaxing the port) is what fixes it.
+    deleteShoppingListExtra: async (userId, id) => { deleted.push({ userId, id }); },
     addShoppingListExtra: async (userId, name, category, alwaysAdd) => {
       added.push({ userId, name, category, alwaysAdd });
       return { id: 1, householdId: 100, name, category: category ?? "household", alwaysAdd: alwaysAdd ?? false, inBasket: false, createdAt: new Date() } as any;
@@ -157,6 +161,10 @@ async function testPlannerWriteHandler(): Promise<void> {
     getPlannerDay: async (id) => days.find((d) => d.id === id),
     getPlannerWeek: async (id) => weeks.find((w) => w.id === id),
     getMeal: async (id) => meals[id],
+    // COMP_ACT1 additions — stubbed so the fixture satisfies the real port.
+    getPlannerEntryById: async () => undefined,
+    updatePlannerEntryLocation: async () => undefined,
+    replacePlannerEntryMeal: async () => undefined,
     addPlannerEntry: async (dayId, mealSlot, audience, mealId, position, calories, isDrink, drinkType) => {
       const entry = { id: 5000, dayId, mealType: mealSlot, audience, mealId, position, calories, isDrink, drinkType } as any;
       added.push(entry);
@@ -218,6 +226,7 @@ async function testComposedBindings(): Promise<void> {
   section("§3 Composed bindings — read unchanged, write requires confirmation (CONFIRM step now genuinely exercised)");
 
   const readPort: ShoppingReadPort = {
+    getProductMatchesForUser: async () => [],
     getShoppingListItems: async () => [],
     getShoppingListExtras: async () => [
       { id: 1, householdId: 100, name: "Milk", category: "household", alwaysAdd: true, inBasket: false, createdAt: new Date() } as any,
@@ -225,6 +234,7 @@ async function testComposedBindings(): Promise<void> {
   };
   const added: any[] = [];
   const writePort: ShoppingWritePort = {
+    deleteShoppingListExtra: async () => {},
     addShoppingListExtra: async (userId, name, category, alwaysAdd) => {
       added.push({ userId, name });
       return { id: 2, householdId: 100, name, category: category ?? "household", alwaysAdd: alwaysAdd ?? false, inBasket: false, createdAt: new Date() } as any;
@@ -317,6 +327,105 @@ function testCompanionActionsBuilder(): void {
     actions: [{ kind: "add-to-planner" as const, label: "Add", appliesTo: "entity" as const }], entityRefs: [],
   }];
   assert(buildActionProposals(nonMealCard, { selectedPlannerDayId: 1000, selectedMealSlot: "dinner" }, allowAll, getCap).length === 0, "only meal-kind cards with a 'meal' ref can carry add-to-planner/add-to-shopping — mirrors native-discovery.ts, never re-derived differently");
+}
+
+// ---------------------------------------------------------------------------
+// §9 — COMP_ACT2: surfacing the write verbs COMP_ACT1 bound
+// ---------------------------------------------------------------------------
+
+/** A discovery card carrying a row the household already owns (shopping/pantry/diary). */
+function ownedRowFixture(domain: string, refType: string, id: number, title: string) {
+  return [{
+    domain,
+    summary: `s`,
+    entities: [{ kind: "entity" as const, ref: { type: refType, id }, title }],
+    // Deliberately only the actions native-discovery really emits for these
+    // domains — `open` + `view-all`. COMP_ACT2 keys on the REF TYPE, so it must
+    // work without any add-to-* vocabulary being invented for them.
+    actions: [
+      { kind: "open" as const, label: "Open", appliesTo: "entity" as const },
+      { kind: "view-all" as const, label: "View All", appliesTo: "results" as const },
+    ],
+    entityRefs: [{ type: refType, id }],
+  }];
+}
+
+function testCompActTwoSurfacing(): void {
+  section("§9 COMP_ACT2 — the COMP_ACT1 write verbs surfaced as contextual proposals");
+
+  const allowAll = () => true;
+  const denyAll = () => false;
+  const cap = (id: string): Capability => ({
+    id, displayName: id, description: "", owner: "", owningService: "", apiSurface: "",
+    supportedIntents: ["add"], executableIntents: ["add"],
+    permissions: { minimumRole: "user", knowledgeClass: "public", ownershipScoped: true, audited: false },
+    capabilityClass: "write", aiAccess: "W", availability: "available",
+  });
+  const getCap = (id: string) => cap(id);
+  const only = (drafts: CompanionActionProposalDraft[], capabilityId: string, verb: string) =>
+    drafts.filter((d) => d.capabilityId === capabilityId && d.verb === verb);
+
+  // ── Shopping Delete — the target is a row already on screen ───────────────
+  const shopping = buildActionProposals(ownedRowFixture("shopping", "shopping_item", 77, "Oat milk"), {}, allowAll, getCap);
+  const del = only(shopping, "shopping", "delete");
+  assert(del.length === 1, "a shopping row surfaced this turn is offered for removal — no hint needed, the row IS the context");
+  assert(del[0].parameters.id === 77, "the delete parameter is exactly the surfaced row id — the key the handler expects ('id'), never a name");
+  assert(del[0].confirmationTier === "strong", "delete is a strong-confirmation action via the shared confirmationFor(), not re-decided here");
+  assert(del[0].label.includes("Oat milk"), "the label names the actual row so the household can see what would go");
+
+  // ── Pantry Remove — same shape ────────────────────────────────────────────
+  const pantryDel = only(buildActionProposals(ownedRowFixture("pantry", "pantry_item", 9, "Chickpeas"), {}, allowAll, getCap), "pantry", "delete");
+  assert(pantryDel.length === 1 && pantryDel[0].parameters.id === 9, "a pantry row surfaced this turn is offered for removal against its own id");
+  assert(pantryDel[0].confirmationTier === "strong", "pantry removal is also strong-confirmation");
+
+  // ── Pantry Add — needs a category the household actually chose ────────────
+  const foodCard = ownedRowFixture("nutrition", "food", 5, "Olive oil");
+  assert(only(buildActionProposals(foodCard, {}, allowAll, getCap), "pantry", "add").length === 0, "without a chosen pantry category, Pantry Add is an honest gap — a food is never filed into a guessed cupboard");
+  assert(only(buildActionProposals(foodCard, { selectedPantryCategory: "cellar" }, allowAll, getCap), "pantry", "add").length === 0, "a category the handler would reject is refused at proposal time too — never a button that cannot succeed");
+  const pantryAdd = only(buildActionProposals(foodCard, { selectedPantryCategory: "fridge" }, allowAll, getCap), "pantry", "add");
+  assert(pantryAdd.length === 1, "with a chosen category, the food in view can be added to the pantry");
+  assert(pantryAdd[0].parameters.ingredient === "Olive oil" && pantryAdd[0].parameters.category === "fridge", "parameters are exactly the handler's keys ('ingredient','category') — the chosen category, never a default");
+  assert(pantryAdd[0].confirmationTier === "light", "add is a light-confirmation action");
+
+  // ── Diary Log — needs BOTH a day and a slot, guesses neither ──────────────
+  assert(only(buildActionProposals(foodCard, { selectedDiaryDate: "2026-07-18" }, allowAll, getCap), "diary", "add").length === 0, "a day without a slot is not enough to log a meal");
+  assert(only(buildActionProposals(foodCard, { selectedDiarySlot: "lunch" }, allowAll, getCap), "diary", "add").length === 0, "a slot without a day is not enough either — the platform never resolves 'today' here");
+  assert(only(buildActionProposals(foodCard, { selectedDiaryDate: "18-07-2026", selectedDiarySlot: "lunch" }, allowAll, getCap), "diary", "add").length === 0, "a malformed date is refused rather than reformatted into a guess");
+  assert(only(buildActionProposals(foodCard, { selectedDiaryDate: "2026-07-18", selectedDiarySlot: "brunch" }, allowAll, getCap), "diary", "add").length === 0, "a slot outside the diary's own vocabulary is refused ('snack' singular, not planner's 'snacks')");
+  const diary = only(buildActionProposals(foodCard, { selectedDiaryDate: "2026-07-18", selectedDiarySlot: "snack" }, allowAll, getCap), "diary", "add");
+  assert(diary.length === 1, "with both a day and a slot on screen, the food in view can be logged");
+  assert(diary[0].parameters.name === "Olive oil" && diary[0].parameters.mealSlot === "snack" && diary[0].parameters.date === "2026-07-18", "parameters are exactly the handler's keys ('name','mealSlot','date') — the day shown, never today-resolved-here");
+
+  // ── Planner Move — entry from the open sheet, target from the selected day ─
+  const entryHints = { selectedPlannerEntryId: 500, selectedPlannerEntryDayId: 10, selectedPlannerEntrySlot: "dinner" };
+  assert(only(buildActionProposals([], { selectedPlannerDayId: 11 }, allowAll, getCap), "planner", "move").length === 0, "no open entry → nothing to move (honest gap)");
+  assert(only(buildActionProposals([], entryHints, allowAll, getCap), "planner", "move").length === 0, "an open entry with no selected target day → still nothing to move");
+  assert(only(buildActionProposals([], { ...entryHints, selectedPlannerDayId: 10 }, allowAll, getCap), "planner", "move").length === 0, "a target day equal to the entry's own day is refused — a no-op is worse than silence");
+  const move = only(buildActionProposals([], { ...entryHints, selectedPlannerDayId: 11 }, allowAll, getCap), "planner", "move");
+  assert(move.length === 1, "an open entry plus a different selected day is a real move");
+  assert(move[0].parameters.entryId === 500 && move[0].parameters.dayId === 11 && move[0].parameters.mealSlot === "dinner", "move parameters are the handler's keys ('entryId','dayId','mealSlot') — target day from the selection, slot from the entry's OWN slot");
+  assert(move[0].confirmationTier === "required", "move is a required-confirmation action — a dialog, not an inline tap");
+  assert(only(buildActionProposals(ownedRowFixture("meal", "meal", 1, "A"), { ...entryHints, selectedPlannerDayId: 11 }, allowAll, getCap), "planner", "move").length === 1, "Move is built once per turn regardless of how many cards were surfaced — never duplicated per card");
+
+  // ── Planner Replace — the open entry, swapped for a meal found this turn ───
+  const mealCard = ownedRowFixture("meal", "meal", 42, "Spaghetti Bolognese");
+  assert(only(buildActionProposals(mealCard, {}, allowAll, getCap), "planner", "replace").length === 0, "a meal in view with no open entry → nothing to replace");
+  assert(only(buildActionProposals(mealCard, { selectedPlannerEntryId: 500, selectedPlannerEntryMealId: 42 }, allowAll, getCap), "planner", "replace").length === 0, "replacing a meal with itself is refused — never a no-op dressed as a suggestion");
+  const replace = only(buildActionProposals(mealCard, { selectedPlannerEntryId: 500, selectedPlannerEntryMealId: 7 }, allowAll, getCap), "planner", "replace");
+  assert(replace.length === 1 && replace[0].parameters.entryId === 500 && replace[0].parameters.mealId === 42, "replace parameters are the handler's keys ('entryId','mealId') — the open entry, the discovered meal");
+  assert(replace[0].confirmationTier === "required", "replace is a required-confirmation action");
+
+  // ── The executability gate and the proposal cap still hold ────────────────
+  const allHints = {
+    ...entryHints, selectedPlannerDayId: 11, selectedPantryCategory: "fridge",
+    selectedDiaryDate: "2026-07-18", selectedDiarySlot: "lunch",
+  };
+  assert(buildActionProposals(mealCard, allHints, denyAll, getCap).length === 0, "when canExecute is false, not one of the new actions is proposed — the gate is the same one INT40 uses");
+  const saturated = buildActionProposals(mealCard, allHints, allowAll, getCap);
+  assert(saturated.length <= 4, "even with every pointer present, a turn never carries more than MAX_PROPOSALS buttons");
+
+  // ── No existing behaviour changed ─────────────────────────────────────────
+  assert(only(buildActionProposals(mealDiscoveryFixture(), { selectedPantryCategory: "fridge" }, allowAll, getCap), "planner", "add").length === 0, "COMP_ACT2's pointers do not switch on planner ADD — it still needs its own day+slot hints, exactly as before");
 }
 
 // ---------------------------------------------------------------------------
@@ -530,6 +639,7 @@ async function main(): Promise<void> {
   await testPlannerWriteHandler();
   await testComposedBindings();
   testCompanionActionsBuilder();
+  testCompActTwoSurfacing();
   await testActionStore();
   testDelegationAnalytics();
   await testEndToEnd();

@@ -41,6 +41,16 @@ export interface AmbientIntelligenceProps {
    * only on Home/Dashboard, the one sanctioned aggregate view.
    */
   domains?: readonly string[];
+  /**
+   * AFI1 — optional filter to a specific opportunity `type` (or types). Additive:
+   * omitted means "every type in the selected domains", the prior behaviour. A
+   * subject-scoped surface (e.g. a meal card, which is about ONE planned meal, not
+   * the whole planner) sets this so it shows only the opportunity that belongs
+   * there and never borrows an unrelated domain-mate — calm over complete. The
+   * server still owns selection/ranking/budget; this only narrows what THIS surface
+   * draws from the one shared bundle (it re-ranks nothing — DEC1 §3).
+   */
+  types?: readonly string[];
   /** Max opportunities to show. The server's budget already applies above this. */
   limit?: number;
   /** The quiet label on the collapsed row. */
@@ -53,6 +63,7 @@ export interface AmbientIntelligenceProps {
 
 export default function AmbientIntelligence({
   domains,
+  types,
   limit = 5,
   title = "Things you could do",
   surfaceKey,
@@ -76,11 +87,12 @@ export default function AmbientIntelligence({
     // not an empty household. It renders as absence, never as a fabricated "all
     // clear" (Core Principle 6).
     if (!data?.resolved) return [];
-    const source = domains
+    const byDomain = domains
       ? domains.flatMap((d) => data.grouped[d] ?? [])
       : data.opportunities;
+    const source = types ? byDomain.filter((o) => types.includes(o.type)) : byDomain;
     return source.slice(0, limit);
-  }, [data, domains, limit]);
+  }, [data, domains, types, limit]);
 
   // A critical opportunity is never left folded away behind a click.
   const hasCritical = items.some((o) => presentationFor(o.priority).demandsAttention);

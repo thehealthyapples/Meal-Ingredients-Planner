@@ -1534,7 +1534,7 @@ export async function registerRoutes(
       }
 
       const offFields = 'code,product_name,product_name_en,brands,image_url,image_front_url,image_front_small_url,nutriments,nutriscore_grade,nova_group,categories_tags,ingredients_text,ingredients_text_en,quantity,serving_size,categories,stores_tags,stores,purchase_places_tags,countries_tags,languages_tags';
-      const offHeaders = { timeout: 20000, headers: { 'User-Agent': 'SmartMealPlanner/1.0 (contact: smartmealplanner@replit.app)' } };
+      const offHeaders = { timeout: 20000, headers: { 'User-Agent': 'TheHealthyApples/1.0 (+https://thehealthyapples.com; support@thehealthyapples.com)' } };
 
       const ukParams = new URLSearchParams({
         search_terms: q,
@@ -1555,8 +1555,8 @@ export async function registerRoutes(
         fields: offFields,
       });
 
-      const ukUrl = `https://world.openfoodfacts.net/cgi/search.pl?${ukParams.toString()}`;
-      const globalUrl = `https://world.openfoodfacts.net/cgi/search.pl?${globalParams.toString()}`;
+      const ukUrl = `https://world.openfoodfacts.org/cgi/search.pl?${ukParams.toString()}`;
+      const globalUrl = `https://world.openfoodfacts.org/cgi/search.pl?${globalParams.toString()}`;
 
       const [ukResult, globalResult] = await Promise.allSettled([
         axios.get(ukUrl, offHeaders),
@@ -3307,11 +3307,11 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         : `${q} organic natural`;
 
       const altFields = 'code,product_name,product_name_en,brands,image_front_url,image_url,ingredients_text,ingredients_text_en,nutriments,nova_group,nutriscore_grade,countries_tags,categories_tags';
-      const altHeaders = { timeout: 15000, headers: { 'User-Agent': 'SmartMealPlanner/1.0 (contact: smartmealplanner@replit.app)' } };
+      const altHeaders = { timeout: 15000, headers: { 'User-Agent': 'TheHealthyApples/1.0 (+https://thehealthyapples.com; support@thehealthyapples.com)' } };
 
       const [ukAltRes, globalAltRes] = await Promise.allSettled([
-        axios.get(`https://world.openfoodfacts.net/cgi/search.pl?search_terms=${encodeURIComponent(searchTerms)}&json=1&page_size=12&fields=${altFields}&tagtype_0=countries&tag_contains_0=contains&tag_0=united-kingdom`, altHeaders),
-        axios.get(`https://world.openfoodfacts.net/cgi/search.pl?search_terms=${encodeURIComponent(searchTerms)}&json=1&page_size=12&fields=${altFields}`, altHeaders),
+        axios.get(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(searchTerms)}&json=1&page_size=12&fields=${altFields}&tagtype_0=countries&tag_contains_0=contains&tag_0=united-kingdom`, altHeaders),
+        axios.get(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(searchTerms)}&json=1&page_size=12&fields=${altFields}`, altHeaders),
       ]);
 
       const ukAltProducts: any[] = ukAltRes.status === 'fulfilled' ? (ukAltRes.value.data.products || []) : [];
@@ -3485,8 +3485,8 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
             try {
               const cleanIngredient = cleanIngredientForLookup(ingredient);
               const response = await axios.get(
-                `https://world.openfoodfacts.net/cgi/search.pl?search_terms=${encodeURIComponent(cleanIngredient)}&json=1&page_size=3`,
-                { timeout: 8000, headers: { 'User-Agent': 'SmartMealPlanner/1.0' } }
+                `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(cleanIngredient)}&json=1&page_size=3`,
+                { timeout: 8000, headers: { 'User-Agent': 'TheHealthyApples/1.0 (+https://thehealthyapples.com; support@thehealthyapples.com)' } }
               );
 
               const products = response.data.products || [];
@@ -4052,7 +4052,7 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
 
       const allAdditives = await storage.getAllAdditives();
       const OFF_FIELDS = 'code,product_name,brands,ingredients_text,ingredients_text_en,nutriments,nova_group';
-      const OFF_HEADERS = { timeout: 10000, headers: { 'User-Agent': 'SmartMealPlanner/1.0 (contact: smartmealplanner@replit.app)' } };
+      const OFF_HEADERS = { timeout: 10000, headers: { 'User-Agent': 'TheHealthyApples/1.0 (+https://thehealthyapples.com; support@thehealthyapples.com)' } };
       const updated: { id: number; thaRating: number }[] = [];
       const skipped: string[] = [];
 
@@ -4079,7 +4079,7 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
               return;
             }
 
-            const url = `https://world.openfoodfacts.net/cgi/search.pl?search_terms=${encodeURIComponent(cleanName)}&json=1&page_size=5&fields=${OFF_FIELDS}&tagtype_0=countries&tag_contains_0=contains&tag_0=united-kingdom`;
+            const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(cleanName)}&json=1&page_size=5&fields=${OFF_FIELDS}&tagtype_0=countries&tag_contains_0=contains&tag_0=united-kingdom`;
             const response = await axios.get(url, OFF_HEADERS);
             const products = response.data?.products || [];
             if (products.length === 0) {
@@ -5439,6 +5439,42 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     }
   });
 
+  // ── FI20: Food Comparison (activates COMP1) ───────────────────────────────────
+  // Read-only projection of the already-built Food Comparison Engine
+  // (server/intelligence/food-intelligence/comparison-engine.ts). Answers
+  // "which of these foods is the better choice for us, and why?" from existing
+  // owners only — canonical seed, the evidence-gated Food Knowledge Registry, the
+  // caller's OWN scan history, and their household's restrictions/planner
+  // familiarity. Owns nothing, writes nothing, adds no new nutrition knowledge
+  // (Rule FI1). The engine was reachable via a Companion utterance but had no
+  // HTTP surface and no UI; this route gives the built intelligence a way in.
+  // Items are the caller's own two-to-four food/product names or canonical slugs,
+  // taken as-said and passed verbatim to the engine (it resolves + gaps honestly).
+  app.get("/api/foods/compare", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const raw = req.query.items;
+    const items = (Array.isArray(raw) ? raw : String(raw ?? "").split(","))
+      .map((i) => String(i).trim())
+      .filter((i) => i.length > 0);
+    if (items.length < 2) {
+      return res.status(400).json({
+        message: "A comparison needs at least two items (e.g. ?items=broccoli,spinach).",
+      });
+    }
+    try {
+      const { assembleFoodComparison } = await import(
+        "./intelligence/food-intelligence/comparison-engine"
+      );
+      const bundle = await assembleFoodComparison({ items, userId: req.user!.id });
+      res.json(bundle);
+    } catch (err) {
+      // The engine throws only for a structurally invalid request (fewer than two
+      // non-empty items) — already guarded above — so this is an unexpected fault.
+      console.error("[FI20] food-comparison error:", err);
+      res.status(500).json({ message: "Failed to assemble food comparison" });
+    }
+  });
+
   // ── WX4: Food Intelligence Pages ──────────────────────────────────────────────
   // Thin wrapper around FoodIntelligenceAssembler. Returns assembled runtime
   // intelligence for a single canonical food. Computes nothing here; owns nothing;
@@ -6567,12 +6603,12 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     console.log(`[SCAN-BACKEND] received="${rawBarcode}" normalised="${barcode}" sent_to_off="${barcode}"`);
 
     const OFF_FIELDS = 'code,product_name,product_name_en,brands,image_front_url,image_url,ingredients_text,ingredients_text_en,nutriments,nova_group,categories_tags,nutriscore_grade,countries_tags,stores_tags,stores,purchase_places_tags';
-    const offUrl = `https://world.openfoodfacts.net/api/v0/product/${barcode}.json?fields=${OFF_FIELDS}`;
+    const offUrl = `https://world.openfoodfacts.org/api/v0/product/${barcode}.json?fields=${OFF_FIELDS}`;
 
     try {
       const response = await axios.get(offUrl, {
         timeout: 15000,
-        headers: { 'User-Agent': 'SmartMealPlanner/1.0 (contact: smartmealplanner@replit.app)' },
+        headers: { 'User-Agent': 'TheHealthyApples/1.0 (+https://thehealthyapples.com; support@thehealthyapples.com)' },
       });
 
       const offHttpStatus = response.status;
@@ -12134,6 +12170,19 @@ Generate a complete recipe using these as the foundation.`;
           // the Decision Engine before saying a word about it, and an id that is no longer
           // being delivered yields an honest gap, never a fabricated justification.
           selectedOpportunityId: typeof surfaceHints.selectedOpportunityId === "string" ? surfaceHints.selectedOpportunityId : undefined,
+          // COMP_ACT2 — on-screen targets for the write actions COMP_ACT1 bound.
+          // Type-checked here for the same reason as every hint above: an
+          // unrecognised or wrongly-typed hint is dropped rather than trusted, and
+          // a dropped target means the action is simply not offered. Nothing here
+          // is authority — every one of these is re-validated, and re-checked for
+          // ownership, by the capability handler before anything is written.
+          selectedPlannerEntryId:     typeof surfaceHints.selectedPlannerEntryId     === "number" ? surfaceHints.selectedPlannerEntryId     : undefined,
+          selectedPlannerEntryMealId: typeof surfaceHints.selectedPlannerEntryMealId === "number" ? surfaceHints.selectedPlannerEntryMealId : undefined,
+          selectedPlannerEntryDayId:  typeof surfaceHints.selectedPlannerEntryDayId  === "number" ? surfaceHints.selectedPlannerEntryDayId  : undefined,
+          selectedPlannerEntrySlot:   typeof surfaceHints.selectedPlannerEntrySlot   === "string" ? surfaceHints.selectedPlannerEntrySlot   : undefined,
+          selectedPantryCategory:     typeof surfaceHints.selectedPantryCategory     === "string" ? surfaceHints.selectedPantryCategory     : undefined,
+          selectedDiaryDate:          typeof surfaceHints.selectedDiaryDate          === "string" ? surfaceHints.selectedDiaryDate          : undefined,
+          selectedDiarySlot:          typeof surfaceHints.selectedDiarySlot          === "string" ? surfaceHints.selectedDiarySlot          : undefined,
         },
         intelligencePlatform.contextFor(user),
       );

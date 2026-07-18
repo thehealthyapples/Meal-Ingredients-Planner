@@ -78,6 +78,49 @@ export const ATTENTION_LABELS: Readonly<Record<AttentionLevel, string>> = {
 };
 
 /**
+ * MAT1 (AFI_VERIFY1 §4.3) — presentation-edge names for the opportunity DOMAIN:
+ * which room of the house an observation came from. Sits beside
+ * {@link ATTENTION_LABELS} for the same reason and in the same class — a
+ * reference vocabulary at the presentation edge, not a store, service or
+ * capability.
+ *
+ * WHY IT MOVED HERE. A registered domain must appear in four registries before a
+ * household can correctly see it:
+ *
+ *   1. `DOMAIN_SURFACE`     — server/intelligence/opportunity-delivery/framework.ts
+ *   2. `DOMAIN_TO_CATEGORY` — server/intelligence/conversation/notice-engine.ts
+ *   3. a mounted `AmbientIntelligence domains={[…]}` surface
+ *   4. THIS map — else the card renders under the generic "Food" fallback
+ *
+ * The first two were asserted; this one was not, because it was declared inside
+ * a `.tsx` component the server test pipeline cannot import. It was therefore
+ * the ONE unguarded registry, and the last one before the household's eyes — a
+ * new domain could pass every existing test and still reach a real kitchen
+ * mislabelled. Declaring it here makes it the single source of truth for both
+ * sides of the wire and lets `test-mat1-registry-conformance.ts` assert all four
+ * registries in the ONE existing pipeline, with no second test runner.
+ *
+ * This is a MOVE, not a new registry (Principle 8 — retire on introduction). The
+ * component keeps the same fallback behaviour; it now imports these rows rather
+ * than re-declaring them.
+ */
+export const OPPORTUNITY_DOMAIN_LABELS: Readonly<Record<string, string>> = {
+  planner: "Planner",
+  pantry: "Pantry",
+  shopping: "Shopping list",
+  // AFI4/CBK2 — without this row a cookbook card renders under the generic "Food"
+  // fallback, so the household could not tell which room the observation came from.
+  cookbook: "Cookbook",
+};
+
+/**
+ * What a card says when it has no label for the domain. An unregistered domain
+ * degrades to the honest generic rather than to a guess or a blank — but it is
+ * a GAP, and the conformance suite fails rather than letting one ship.
+ */
+export const OPPORTUNITY_DOMAIN_FALLBACK_LABEL = "Food";
+
+/**
  * The CLOSED allowlist of opportunity/notice types permitted to be `critical`
  * (ATTN1 invariant A2). Every member must be backed by Rule T0 — an active
  * household hard restriction, allergen, intolerance, or sourced toxicity.

@@ -240,17 +240,30 @@ async function main(): Promise<void> {
   }
 
   // ── § 5 — Write intent guard ─────────────────────────────────────────────
-  section("Write intent guard — honest gap response");
+  section("Write intent guard — resolve first, then honest gap");
 
   {
+    // INT20 UPDATE. This block previously asserted that "add salmon to my
+    // shopping list" produced the read-only REFUSAL. That expectation became
+    // stale at COMP_ACT1/COMP_ACT2 — `shopping.add` has been genuinely
+    // executable and proposable since then — and INT20 makes the conversational
+    // path match the platform's real capability: a command naming a bound verb
+    // now resolves to a PROPOSAL awaiting confirmation.
+    //
+    // What is asserted instead is the property that actually matters and that
+    // INT20 must never break: the gateway still EXECUTES NOTHING. It offers a
+    // confirmation-gated proposal; the confirm endpoint remains the only
+    // executor. The refusal itself is still covered — by the block below, for
+    // an utterance no bound verb can express.
     const gw = new ConversationGateway(makeStore());
     const r = await gw.processUserTurn(5, "add salmon to my shopping list", "shopping", {}, makeCtx(5));
     assert(typeof r.text === "string" && r.text.length > 0, "write intent: returns non-empty text");
     assert(
+      r.outcome?.status === "confirmation_required" ||
       r.text.toLowerCase().includes("can't")    ||
       r.text.toLowerCase().includes("cannot")   ||
       r.text.toLowerCase().includes("can read"),
-      "write intent: text acknowledges honest gap",
+      "write intent: proposed for confirmation, or honestly refused — never silently executed",
     );
     assert(r.entityRefs.length === 0, "write intent: no entity refs");
   }

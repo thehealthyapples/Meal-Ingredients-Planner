@@ -294,6 +294,10 @@ const DOMAIN_SURFACE: Readonly<Record<string, ConversationSurface>> = {
   planner: "planner",
   pantry: "pantry",
   shopping: "shopping",
+  // AFI4/CBK2 — the Cookbook domain routes to the EXISTING `meals` conversation surface.
+  // No new surface is introduced: a question about a recipe belongs where recipes already
+  // live.
+  cookbook: "meals",
 };
 
 /** An unmapped domain is an honest gap, never a guess — it falls back to the Companion's own floating surface. */
@@ -740,12 +744,46 @@ export function sealDeliveryDecision(input: DeliveryDecisionInput): DeliveryDeci
 // I/O orchestration — fan out to producers, then call the pure core
 // ---------------------------------------------------------------------------
 
-/** Fetches one producer's raw platform outcome. Injectable so tests never touch the real platform/DB. */
+/**
+ * Fetches one producer's raw platform outcome. Injectable so tests never touch the
+ * real platform/DB.
+ *
+ * MAT1 — `parameters` is the fourth argument. It carries the CANDIDATE-SET request
+ * described on {@link PRODUCER_CANDIDATE_LIMIT}; a fetch that ignores it still
+ * compiles and still works, it simply offers whatever its own default was.
+ */
 export type ProducerFetch = (
   capabilityId: string,
   verb: IntentVerb,
   context: IntelligenceContext,
+  parameters?: Readonly<Record<string, unknown>>,
 ) => Promise<IntentOutcome>;
+
+/**
+ * MAT1 (AFI_VERIFY1 §4.2) — how many candidates OD1 asks each producer for.
+ *
+ * This is the CANDIDATE set, not the DELIVERED set. They are different numbers and
+ * conflating them was the defect: producers defaulted to `DELIVERY_DEFAULT_LIMIT`
+ * (10) and clamped there, so the ~2/3 of a household's generated observations that
+ * fell below that line were discarded INSIDE the producer — before this framework's
+ * LEARN1 re-ranking and seen-suppression had ever seen them. A household's own
+ * Confirmed Understanding could therefore never promote one, which is the entire
+ * point of LEARN1. Empirically (AFI3_5, demo household 905) that starved the whole
+ * Pantry surface: 30 observations generated, 10 survived the producer's clamp, and
+ * 20 `pantry-item-unused-in-plan` candidates were unreachable by learning.
+ *
+ * Asking for `DELIVERY_MAX_LIMIT` restores them to ELIGIBILITY only — nothing about
+ * what a household is finally shown changes here. `prioritiseAndGroup` still applies
+ * the one household-facing clamp, at the delivery boundary that owns it, using the
+ * caller's own `requestedLimit`. So this is a SEQUENCING correction, not a new
+ * policy: the same shared DEC1 mechanics, now composed in the right order — rank
+ * first with the household's learning, clamp once afterwards.
+ *
+ * It is deliberately the EXISTING canonical ceiling rather than a new constant. The
+ * producer's own `prioritizeOpportunities` bound is unchanged and still holds at
+ * `DELIVERY_MAX_LIMIT`, so this can never ask for an unbounded set.
+ */
+const PRODUCER_CANDIDATE_LIMIT = DELIVERY_MAX_LIMIT;
 
 /**
  * Default production fetch — calls the canonical Intelligence Platform singleton.
@@ -759,9 +797,10 @@ async function defaultProducerFetch(
   capabilityId: string,
   verb: IntentVerb,
   context: IntelligenceContext,
+  parameters?: Readonly<Record<string, unknown>>,
 ): Promise<IntentOutcome> {
   const { intelligencePlatform } = await import("../intelligence-platform.js");
-  return intelligencePlatform.handle({ verb, capabilityId }, context);
+  return intelligencePlatform.handle({ verb, capabilityId, parameters }, context);
 }
 
 async function collectFromProducers(
@@ -777,7 +816,13 @@ async function collectFromProducers(
 
   for (const [capabilityId, source] of Object.entries(OPPORTUNITY_SOURCES)) {
     try {
-      const outcome = await fetchProducer(capabilityId, source.verb, context);
+      // MAT1 — ask for the CANDIDATE set, not the delivered set. See
+      // PRODUCER_CANDIDATE_LIMIT: this is what lets LEARN1 below rank every
+      // observation the household actually generated, rather than only the
+      // top slice a producer happened to keep.
+      const outcome = await fetchProducer(capabilityId, source.verb, context, {
+        limit: PRODUCER_CANDIDATE_LIMIT,
+      });
       if (outcome.status !== "ok") continue; // honest degrade — this producer has nothing right now
 
       let offered = 0;

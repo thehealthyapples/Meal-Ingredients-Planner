@@ -9,8 +9,23 @@
  * ---------------------------------------------------------------------------
  * It is NOT a nutrition engine, and it computes NO nutrition fact.
  *
- * Every number it touches was already computed by an existing canonical owner
- * and is handed to it as plain data by `server/lib/household-nutrition-assembler.ts`:
+ * MAT1 (2026-07-18) — THIS MODULE CURRENTLY HAS NO PRODUCTION CALLER. Its I/O
+ * orchestrator (`server/lib/household-nutrition-assembler.ts`) and its only UI
+ * (`client/src/components/HouseholdNutritionPanel.tsx`) were retired as dead code,
+ * along with this file's own opportunity limb — see
+ * `docs/implementation/MAT1_PLATFORM_MATURITY_AND_TRUST.md` §3.3. The pure core
+ * below was KEPT deliberately: unlike the opportunity limb, it duplicates no live
+ * observation, and retiring it would raise the cost of the still-open decision on
+ * whether to enrol a nutrition producer (which must go through DEC1 §7's one door).
+ * It is covered by `server/tests/test-household-nutrition.ts`, now wired into
+ * `npm test`, so it cannot rot unnoticed while that decision is pending.
+ *
+ * Read the paragraph below in the PAST tense. This file's history is the cautionary
+ * tale of a comment written in the present tense about something never built (see
+ * the HNP1 → HHP2 → P0 sequence recorded in git); it must not acquire a second one.
+ *
+ * Every number it touches was already computed by an existing canonical owner and
+ * was handed to it as plain data by the retired assembler:
  *
  *   plant diversity      → shared/canonical/plant-classifier (M4 — the single
  *                          canonical owner of "is this a plant, and which kind")
@@ -543,117 +558,4 @@ function capitalise(s: string): string {
 
 function plural(n: number, one: string, many: string): string {
   return n === 1 ? one : many;
-}
-
-// ---------------------------------------------------------------------------
-// Opportunities — the SAME shape FI4 already produces
-// ---------------------------------------------------------------------------
-
-/**
- * A household nutrition opportunity, in the EXACT shape FI4's `FoodOpportunity` already
- * uses — so that it flows through the SAME `opportunity-delivery` framework, adapted by the
- * SAME shared adapter (`adaptOpportunityReport`), and inherits its prioritisation, muting,
- * de-duplication, delivery lifecycle, attention budget and Evidence→Learning loop without
- * one line of new delivery code.
- *
- * HHP2 (2026-07-12) MADE THAT TRUE. HNP1 wrote the sentence above in the present tense while
- * building none of it: these opportunities were composed correctly and then returned only to
- * `GET /api/household-nutrition` and one React panel. No producer was ever enrolled in
- * `OPPORTUNITY_SOURCES`, so they never reached the Decision Engine — no muting, no lifecycle,
- * no budget, no learning, no Companion. The shape was right and the wiring was absent, which
- * is the most expensive kind of near-miss, because the comment asserting it had shipped is
- * exactly what stops the next reader from checking.
- *
- * The claim is now load-bearing rather than aspirational: the `household-health` capability
- * (HHP2) exposes these via its `report` verb, and it is registered in `OPPORTUNITY_SOURCES`.
- * Asserted by `server/tests/test-hhp2-household-health-opportunities.ts`.
- *
- * `owningDomain` is `"nutrition"`. Priority is NEVER `critical` (ATTN1 A2 — a quiet week is
- * not a harm signal, and `assertCriticalAllowed` would throw at the producer adapter if it
- * tried).
- */
-export interface HouseholdNutritionOpportunity {
-  readonly id: string;
-  readonly type: string;
-  readonly owningDomain: "nutrition";
-  readonly priority: AttentionLevel;
-  readonly explanation: string;
-  readonly evidence: readonly EvidenceCitation[];
-  readonly suggestedAction: string;
-}
-
-export const NUTRITION_OPPORTUNITY_TYPES = {
-  plantDiversity: "nutrition-plant-diversity-gap",
-  balance: "nutrition-balance-gap",
-  planning: "nutrition-planning-gap",
-} as const;
-
-/**
- * Turn the WEAK dimensions of an existing score into opportunities. This adds no
- * fact: every opportunity restates a dimension the score already computed, cites the
- * same owner, and proposes the action that dimension implies.
- *
- * Emitted only where there is genuinely something to say:
- *   - a dimension that scored `null` produces NOTHING (no evidence → no card, Rule E1)
- *   - a dimension already at or above `STRONG_ENOUGH` produces nothing (THA does not
- *     manufacture a problem to have something to say)
- */
-const STRONG_ENOUGH = 70;
-
-export function buildOpportunities(
-  facts: HouseholdNutritionFacts,
-  score: HouseholdNutritionScore,
-): HouseholdNutritionOpportunity[] {
-  const out: HouseholdNutritionOpportunity[] = [];
-  const by = new Map(score.dimensions.map((d) => [d.key, d]));
-
-  const plant = by.get("plant-diversity");
-  if (plant?.value != null && plant.value < STRONG_ENOUGH) {
-    const remaining = WEEKLY_PLANT_TARGET - plant.actual;
-    out.push({
-      id: `${NUTRITION_OPPORTUNITY_TYPES.plantDiversity}:${facts.weekNumber ?? 0}`,
-      type: NUTRITION_OPPORTUNITY_TYPES.plantDiversity,
-      owningDomain: "nutrition",
-      priority: "medium",
-      explanation:
-        `Your household has ${plant.actual} distinct ${plural(plant.actual, "plant", "plants")} ` +
-        `planned this week, ${remaining} short of a diverse ${WEEKLY_PLANT_TARGET}.`,
-      evidence: plant.evidence,
-      suggestedAction: "Add a meal with a plant your household has not cooked recently",
-    });
-  }
-
-  const balance = by.get("nutrition-balance");
-  if (balance?.value != null && balance.value < STRONG_ENOUGH) {
-    const missing = VARIETY_COMPONENTS.filter((c) => (facts.weeklyVariety[c] ?? 0) === 0);
-    if (missing.length > 0) {
-      out.push({
-        id: `${NUTRITION_OPPORTUNITY_TYPES.balance}:${facts.weekNumber ?? 0}`,
-        type: NUTRITION_OPPORTUNITY_TYPES.balance,
-        owningDomain: "nutrition",
-        priority: "low",
-        explanation:
-          `This week's plan covers ${balance.actual} of ${VARIETY_COMPONENT_COUNT} food components. ` +
-          `${capitalise(joinAnd(missing.map(componentLabel)))} ${plural(missing.length, "is", "are")} missing.`,
-        evidence: balance.evidence,
-        suggestedAction: `Add ${joinOr(missing.map(componentLabel))} to a meal this week`,
-      });
-    }
-  }
-
-  const consistency = by.get("planning-consistency");
-  if (consistency?.value != null && consistency.value < STRONG_ENOUGH) {
-    const empty = PLANNER_WEEK_DAYS - consistency.actual;
-    out.push({
-      id: `${NUTRITION_OPPORTUNITY_TYPES.planning}:${facts.weekNumber ?? 0}`,
-      type: NUTRITION_OPPORTUNITY_TYPES.planning,
-      owningDomain: "nutrition",
-      priority: "low",
-      explanation: `${empty} ${empty === 1 ? "day has" : "days have"} no meal planned this week.`,
-      evidence: consistency.evidence,
-      suggestedAction: "Plan a meal for an empty day",
-    });
-  }
-
-  return out;
 }

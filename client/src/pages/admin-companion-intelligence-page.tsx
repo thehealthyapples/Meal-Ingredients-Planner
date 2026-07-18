@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { OperationDialog, type OperationSpec } from "@/components/admin/operation";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -458,24 +459,10 @@ function RecommendationQueue() {
 export default function AdminCompanionIntelligencePage() {
   const { toast } = useToast();
   const [drillDown, setDrillDown] = useState<{ title: string; body: React.ReactNode } | null>(null);
+  const [snapshotOpen, setSnapshotOpen] = useState(false);
 
   const { data, isPending, isError } = useQuery<DashboardResponse>({
     queryKey: ["/api/intelligence/learning/dashboard"],
-  });
-
-  const snapshotMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/intelligence/learning/snapshot", {});
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/intelligence/learning/dashboard"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/intelligence/learning/recommendations"] });
-      toast({ title: "Snapshot recorded", description: "New recommendations queued for review." });
-    },
-    onError: () => {
-      toast({ title: "Could not generate recommendations", variant: "destructive" });
-    },
   });
 
   if (isPending) {
@@ -504,6 +491,59 @@ export default function AdminCompanionIntelligencePage() {
     );
   }
 
+  // OPS1 — Learning Snapshot through the one canonical Operation experience. Reuses the existing
+  // POST /learning/snapshot endpoint verbatim; the Operation owns purpose → readiness → confirm →
+  // progress → completion summary → next step. Reversible: it records a health snapshot and queues
+  // ADVISORY recommendations — every one starts pending and is reviewed by a human before anything
+  // is applied. Nothing it writes goes live on its own.
+  const pendingReviews = data.recommendationCounts.pending;
+  const snapshotSpec: OperationSpec<{ snapshot: { id: number; totalTurns: number }; recommendations: unknown[]; capabilityReport: { available: boolean; note?: string } }> = {
+    id: "learning-snapshot",
+    title: "Generate recommendations",
+    purpose: "Take a fresh Companion health snapshot and queue advisory recommendations from the current learning gaps.",
+    impact: {
+      level: "reversible",
+      line: "Records a health snapshot and queues advisory recommendations. Every recommendation starts as pending review — nothing is applied to the Companion until a human approves it.",
+    },
+    guidance: [
+      { q: "What does this do?", a: "Analyses the retained misses and gap clusters, records a health snapshot, and generates matcher, capability and regression-test recommendations for review." },
+      { q: "Why would I run it?", a: "To turn accumulated learning gaps into concrete, reviewable improvement proposals — and to add a point to the understanding-rate trend." },
+      { q: "What happens?", a: "A snapshot row is written and recommendations are queued as pending. They appear in the review queue; none change Companion behaviour until approved." },
+      { q: "Data impact", a: "Writes one health snapshot and a batch of pending recommendations. It changes no canonical knowledge and applies nothing automatically." },
+      { q: "Production impact", a: "None until a human reviews and approves a recommendation." },
+    ],
+    readiness: [
+      data.summary.totalEvents > 0
+        ? { label: `${data.summary.totalEvents} retained signal${data.summary.totalEvents === 1 ? "" : "s"} to analyse`, state: "ready" }
+        : { label: "No retained misses to analyse", state: "info", detail: "A snapshot will still record, but it may produce no new recommendations." },
+      pendingReviews > 0
+        ? { label: `${pendingReviews} recommendation${pendingReviews === 1 ? "" : "s"} already awaiting review`, state: "info", detail: "New ones will be added to the same queue." }
+        : { label: "Review queue is clear", state: "info" },
+    ],
+    confirmLabel: "Generate recommendations",
+    expectedDuration: "up to a minute — it calls the AI provider",
+    run: () =>
+      apiRequest("POST", "/api/intelligence/learning/snapshot", {}).then((r) => r.json()),
+    summarise: (res) => {
+      const n = res.recommendations.length;
+      const aiOff = res.capabilityReport && res.capabilityReport.available === false;
+      return {
+        tone: aiOff && n === 0 ? "warning" : "good",
+        headline: n > 0 ? `${n} recommendation${n === 1 ? "" : "s"} queued for review.` : "Snapshot recorded — no new recommendations.",
+        lines: [
+          `Snapshot #${res.snapshot.id} · ${res.snapshot.totalTurns} turn${res.snapshot.totalTurns === 1 ? "" : "s"} analysed`,
+          ...(aiOff ? [res.capabilityReport.note ?? "The AI provider was unavailable, so no capability recommendations were generated."] : []),
+          ...(n > 0 ? ["Review and approve them in the queue below — nothing is applied until you do."] : []),
+        ],
+      };
+    },
+    // No next-step button: the review queue is on this page, revealed the moment the dialog closes.
+    onComplete: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/intelligence/learning/dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/intelligence/learning/recommendations"] });
+    },
+  };
+
   const mostRequestedCapabilities = Object.values(
     data.classification.capabilityGaps.reduce<Record<string, { capability: string; count: number }>>((acc, g) => {
       acc[g.capability] = acc[g.capability] ?? { capability: g.capability, count: 0 };
@@ -531,14 +571,16 @@ export default function AdminCompanionIntelligencePage() {
           </p>
         </div>
         <Button variant="default"
-          onClick={() => snapshotMutation.mutate()}
-          disabled={snapshotMutation.isPending}
+          onClick={() => setSnapshotOpen(true)}
           data-testid="button-generate-recommendations"
         >
           <Sparkles className="w-4 h-4 mr-1.5" />
-          {snapshotMutation.isPending ? "Generating…" : "Generate recommendations"}
+          Generate recommendations
         </Button>
       </div>
+
+      {/* OPS1 — the canonical Operation experience for Learning Snapshot. */}
+      <OperationDialog spec={snapshotSpec} open={snapshotOpen} onOpenChange={setSnapshotOpen} />
 
       {/* Headline rates */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

@@ -29,7 +29,13 @@ export function useMeals() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: meals, isPending: isLoading } = useQuery<Meal[]>({
+  // PROD1 — `isError`/`refetch` surfaced to consumers. Without them the Cookbook
+  // renders NOTHING on a failed load: `meals` stays undefined, every downstream
+  // guard is written `filteredMeals?.length`, and the grid, the "show more" and
+  // the empty state all fail their optional-chain together — leaving white space
+  // under the header that is indistinguishable from a slow load. The household is
+  // given no message, no retry, and no way to tell the two apart.
+  const { data: meals, isPending: isLoading, isError, refetch } = useQuery<Meal[]>({
     queryKey: [api.meals.list.path],
   });
 
@@ -70,6 +76,8 @@ export function useMeals() {
   return {
     meals,
     isLoading,
+    isError,
+    refetch,
     createMeal,
     deleteMeal,
   };

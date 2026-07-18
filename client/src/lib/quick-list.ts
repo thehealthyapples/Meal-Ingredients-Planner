@@ -1,6 +1,10 @@
 // Canonical Quick List write path.
-// All surfaces that write pending ingredients for /list to pick up must go through here.
-// list-page.tsx reads PENDING_LIST_KEY on mount and supports both payload formats.
+// All surfaces that write pending ingredients must go through here.
+//
+// The reader is shopping-workspace-page.tsx, which reads PENDING_LIST_KEY on
+// mount, clears it, and supports both payload formats. (This comment previously
+// named list-page.tsx and the /list route; both were retired by PROD2 — the
+// workspace had already taken the handoff over, leaving list-page a dead rival.)
 
 const PENDING_LIST_KEY = "tha-pending-list-ingredients";
 

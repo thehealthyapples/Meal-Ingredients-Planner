@@ -161,15 +161,15 @@ async function main(): Promise<void> {
   );
   assert(
     intelligencePlatform.getCapability("pantry")!.executableIntents.includes("read") &&
-      intelligencePlatform.getCapability("pantry")!.executableIntents.includes("explain"),
-    "executableIntents declares read + explain (truthful registry — INT6A)",
+      intelligencePlatform.getCapability("pantry")!.executableIntents.includes("explain") &&
+      intelligencePlatform.getCapability("pantry")!.executableIntents.includes("add") &&
+      intelligencePlatform.getCapability("pantry")!.executableIntents.includes("delete"),
+    "executableIntents declares read + explain (INT8) and add + delete (COMP_ACT1) — truthful registry (INT6A)",
   );
   assert(
-    !intelligencePlatform.getCapability("pantry")!.executableIntents.includes("add") &&
-      !intelligencePlatform.getCapability("pantry")!.executableIntents.includes("delete") &&
-      !intelligencePlatform.getCapability("pantry")!.executableIntents.includes("search") &&
+    !intelligencePlatform.getCapability("pantry")!.executableIntents.includes("search") &&
       !intelligencePlatform.getCapability("pantry")!.executableIntents.includes("recommend"),
-    "add / delete / search / recommend are NOT in executableIntents (no live code path — INT6A)",
+    "search / recommend are NOT in executableIntents (no live code path — INT6A)",
   );
 
   const platform = platformWithFakePantry();

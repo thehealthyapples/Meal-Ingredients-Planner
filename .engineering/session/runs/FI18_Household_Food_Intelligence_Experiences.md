@@ -37,7 +37,14 @@ Constraints from the mission, treated as binding:
 
 ## Stage
 
-**Investigation → Documentation**
+**Waiting for User** — investigation complete, report committed.
+
+| Item | Value |
+|---|---|
+| Report | `docs/investigations/intelligence/FI18_HOUSEHOLD_FOOD_INTELLIGENCE_EXPERIENCES.md` |
+| Commit | `10573dd20baa9497975c4ed05837b75162305410` |
+| Product source | **Byte-untouched** — `git status` modified-list identical to session start |
+| `CURRENT.md` | **Deliberately not committed.** It carried three sibling sessions' uncommitted dashboard rows (NORTH3, NORTH4, CONV1 P10); committing it would have swept up work that is not mine. Recovery is file-based (§ 1), so the row on disk is fully effective — and every sibling session left it dirty for the same reason. |
 
 ## Checkpoints
 

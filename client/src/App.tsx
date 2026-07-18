@@ -32,6 +32,7 @@ const ImportRecipePage = lazy(() => import("@/pages/import-recipe-page"));
 const ProductsPage = lazy(() => import("@/pages/products-page"));
 const SupermarketsPage = lazy(() => import("@/pages/supermarkets-page"));
 const MealDetailPage = lazy(() => import("@/pages/meal-detail-page"));
+const FoodComparisonPage = lazy(() => import("@/pages/food-comparison-page"));
 const WeeklyPlannerPage = lazy(() => import("@/pages/weekly-planner-page"));
 const ProfilePage = lazy(() => import("@/pages/profile-page"));
 const AdminPage = lazy(() => import("@/pages/admin-page"));
@@ -51,7 +52,8 @@ const SharedPlanPage = lazy(() => import("@/pages/shared-plan-page"));
 const PantryPage = lazy(() => import("@/pages/pantry-page"));
 const PlantDiversityPage = lazy(() => import("@/pages/plant-diversity-page"));
 const FoodDiaryPage = lazy(() => import("@/pages/food-diary-page"));
-const PartnersPage = lazy(() => import("@/pages/partners-page"));
+// PROD2: PartnersPage is deliberately not imported — the /partners route is
+// withdrawn (see the Routes block). Kept on disk, out of the bundle.
 const QuickMealPage = lazy(() => import("@/pages/quick-meal-page"));
 const HomePage = lazy(() => import("@/pages/home-page"));
 const HomeExperiencePage = lazy(() => import("@/pages/home-experience-page"));
@@ -295,11 +297,27 @@ const AdminCanonicalPublicationIntegrityChrome = withAdminBanner(AdminCanonicalP
 
 function Router() {
   useRoutingCorrectionTracker();
+  const [routerLocation] = useLocation();
 
   return (
-    // PX1-W3: the outer boundary serves the routes that render outside the
-    // ProtectedRoute shell (auth, onboarding, shared plans, logged-out home).
-    // Same spinner the app has always shown while the session loads.
+    // PROD1 — an ERROR boundary around the outer SUSPENSE boundary.
+    //
+    // PX1-W0 put an ErrorBoundary inside `ProtectedRoute`, which covers every
+    // authenticated household page. The routes that render OUTSIDE that shell had
+    // none — and they are the ones that matter most commercially:
+    //   • /auth and /onboarding — every new household passes through both, so a
+    //     throw here is a white screen at the exact moment of acquisition;
+    //   • /shared/:token — the only viral loop in the product;
+    //   • the logged-out marketing home.
+    //
+    // It also wraps the Suspense rather than sitting inside it, which is the whole
+    // point: every route below is a lazy chunk, so after a redeploy an old client
+    // requesting a hashed chunk that no longer exists throws DURING suspense. That
+    // is a routine event for a frequently-deployed app — frequent enough that this
+    // very file ships a version-mismatch reloader — and with no boundary above the
+    // Suspense it was an unrecoverable white screen. Keyed on location, so
+    // navigating away from a broken route clears it.
+    <ErrorBoundary resetKey={routerLocation}>
     <Suspense
       fallback={
         <div className="flex h-screen items-center justify-center">
@@ -372,6 +390,7 @@ function Router() {
       <Route path="/dashboard" component={() => <ProtectedRoute component={DashboardPage} />} />
       <Route path="/meals/:id" component={() => <ProtectedRoute component={MealDetailPage} />} />
       <Route path="/foods/:slug" component={() => <ProtectedRoute component={FoodDetailPage} />} />
+      <Route path="/compare" component={() => <ProtectedRoute component={FoodComparisonPage} />} />
       <Route path="/meals" component={() => <ProtectedRoute component={MealsPage} />} />
       <Route path="/cookbook" component={() => <ProtectedRoute component={MealsPage} />} />
       <Route path="/import-recipe" component={() => <ProtectedRoute component={ImportRecipePage} />} />
@@ -401,7 +420,12 @@ function Router() {
       <Route path="/diary" component={() => <ProtectedRoute component={FoodDiaryPage} />} />
       <Route path="/my-diary" component={() => <ProtectedRoute component={FoodDiaryPage} />} />
       <Route path="/shared/:token" component={SharedPlanPage} />
-      <Route path="/partners" component={() => <ProtectedRoute component={PartnersPage} />} />
+      {/* PROD2: /partners is withdrawn — all 12 entries in data/partners.ts are
+          invented businesses on example.com, marked isActive, and presented under
+          a genuine affiliate-disclosure notice. A health-adjacent product must not
+          recommend practitioners that do not exist (Core Principle 6). The page,
+          its data file and its types are intact and the route returns the moment
+          the partners are real; until then the door is closed rather than ajar. */}
       <Route path="/quick-meal" component={() => <ProtectedRoute component={QuickMealPage} />} />
       <Route path="/list" component={() => <Redirect to="/shopping-workspace" />} />
       <Route path="/shopping-list" component={() => <Redirect to="/shopping-workspace" />} />
@@ -410,6 +434,7 @@ function Router() {
       <Route component={NotFound} />
     </Switch>
     </Suspense>
+    </ErrorBoundary>
   );
 }
 

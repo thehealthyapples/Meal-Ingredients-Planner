@@ -1,6 +1,6 @@
 {
   "workstream": "WS11 — Seasonal Stories Engine",
-  "generatedAt": "2026-06-22T06:50:48.143Z",
+  "generatedAt": "2026-07-18T12:38:32.423Z",
   "totalCards": 77,
   "examples": {
     "mediterranean-spring-2026": {
@@ -742,19 +742,19 @@
           "title": "Looking ahead",
           "cards": [
             {
-              "headline": "Looking ahead to spring, you may enjoy Spring Onion, Asparagus, Rocket.",
+              "headline": "Looking ahead to spring, you may enjoy Spring Onion, Rocket, Watercress.",
               "facts": [
                 {
                   "text": "Spring Onion — At its best in the UK spring — a lovely time to enjoy spring onion."
-                },
-                {
-                  "text": "Asparagus — At its best in the UK spring — a lovely time to enjoy asparagus."
                 },
                 {
                   "text": "Rocket — At its best in the UK spring — a lovely time to enjoy rocket."
                 },
                 {
                   "text": "Watercress — At its best in the UK spring — a lovely time to enjoy watercress."
+                },
+                {
+                  "text": "Asparagus — At its best in the UK spring — a lovely time to enjoy asparagus."
                 },
                 {
                   "text": "Peas — At its best in the UK spring — a lovely time to enjoy peas."

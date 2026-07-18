@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en" data-study="1">
+<head>
+<meta charset="utf-8">
+<title>HOME · Emotional Interior — Concept B, unchanged architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,300;9..144,0,400;9..144,1,300&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./_palette.css">
+<script>
+  /* The ARCHITECTURE never changes between studies — glass · sill · room · console ·
+     doors · layout are byte-identical to concept-b-evolved. Only the INTERIOR
+     LANGUAGE changes: material, patina, light, textiles, the few honest objects a
+     family accumulates, and how far the interface recedes into the home.
+     ?study=1..6 ; default 1 (The Kept House). Read before paint. */
+  (function () {
+    var s = parseInt(new URLSearchParams(location.search).get("study"), 10);
+    document.documentElement.dataset.study = (s >= 1 && s <= 6) ? String(s) : "1";
+  })();
+</script>
+<style>
+/* =============================================================================
+   HOME · EMOTIONAL INTERIOR DESIGN — six interior languages, one room.
+   The room is finished and canonical. Nothing architectural moves. This file
+   only makes the house feel LOVED: warmth · familiarity · patina · craft ·
+   hospitality · memory — accumulated over years, never staged.
+   ========================================================================== */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  /* interior variables the studies re-tune — defaults are the derived Orchard Palette */
+  --wall-top: hsl(37 40% 92%);
+  --wall-sill: hsl(41 70% 97%);     /* the wall just under the window — warmed */
+  --wall-floor: hsl(33 26% 82%);
+  --oak-lip: hsl(41 48% 74%);
+  --oak-body: hsl(44 40% 42%);
+  --oak-edge: hsl(45 42% 25%);
+  --ink-name: var(--ink);
+  --grain: 0;                       /* plaster texture strength, 0–1 */
+  --shadow-soft: .34;               /* how soft/long the room's shadows are */
+  --note-card: 1;                   /* 1 = the Companion is a propped card; 0 = dissolved into the wall */
+}
+
+body {
+  font-family: "Inter", "DejaVu Sans", system-ui, sans-serif;
+  color: var(--ink-body);
+  background: var(--wall-top);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ---- the room, the quiet (default) day — the day a family actually lives ---- */
+.room {
+  position: relative; min-height: 100vh; overflow: hidden;
+  --glass-top: 74px; --sill-y: 344px; --sill-h: 30px;
+}
+.room::before {   /* the room lit by its own window; warmed at the sill, never a second sun */
+  content: ""; position: absolute; inset: 0; z-index: 0;
+  background:
+    linear-gradient(to bottom,
+      var(--wall-top) 0px, var(--wall-top) var(--glass-top),
+      var(--wall-sill) calc(var(--sill-y) + var(--sill-h)),
+      var(--wall-top) calc(var(--sill-y) + var(--sill-h) + 230px),
+      var(--wall-floor) 100%);
+}
+/* PLASTER TEXTURE — a hand-troweled wall, not a flat fill. Faint fractal grain,
+   strength set per study by --grain. This is "materials before effects". */
+.room::after {
+  content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  opacity: var(--grain);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+}
+
+/* ---- the constant shell: the band dissolved into plaster, one quiet apple ----
+   (BRAND1 C+D — the one un-architectural element, retired.) Interface recedes. */
+.shell {
+  position: absolute; z-index: 7; top: 0; left: 0; right: 0;
+  height: 74px; padding: 0 40px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.mark-apple {
+  width: 20px; height: 20px; border-radius: 50% 50% 48% 48%;
+  background: linear-gradient(150deg, var(--leaf-lift), var(--leaf)); position: relative; opacity: .9;
+}
+.mark-apple::after {
+  content: ""; position: absolute; top: -3px; left: 10px;
+  width: 8px; height: 5px; border-radius: 0 70% 0 70%;
+  background: var(--gold); transform: rotate(-18deg);
+}
+.bell { width: 18px; height: 18px; opacity: .28; color: var(--ink-quiet); }
+
+/* ---- THE GLASS — the orchard. Unchanged: same view, same crop, every study. ---- */
+.glass {
+  position: absolute; z-index: 1; top: var(--glass-top); left: 0; right: 0;
+  height: calc(var(--sill-y) - var(--glass-top)); overflow: hidden;
+}
+.glass img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 22%; display: block; }
+.glass::before {   /* the head reveal — a wall with thickness above the glass */
+  content: ""; position: absolute; z-index: 3; top: 0; left: 0; right: 0; height: 22px;
+  background: linear-gradient(to bottom, hsl(45 42% 24% / .40), hsl(45 42% 24% / 0));
+}
+.glass::after {    /* the reveal returns down the jambs */
+  content: ""; position: absolute; z-index: 3; inset: 0; pointer-events: none;
+  box-shadow: inset 26px 0 34px -26px hsl(45 42% 24% / .34), inset -26px 0 34px -26px hsl(45 42% 24% / .34);
+}
+
+/* ---- THE MULLIONS — structure holding glass. Timber tone tunes with the study. ---- */
+.mullion {
+  position: absolute; z-index: 2; top: var(--glass-top);
+  height: calc(var(--sill-y) - var(--glass-top)); width: 8px;
+  background: linear-gradient(to right,
+    hsl(45 42% 22% / .55), var(--oak-body) 38%, var(--oak-lip) 52%, hsl(45 42% 22% / .55));
+  box-shadow: 0 0 14px hsl(56 40% 9% / .22), inset 0 0 0 .5px hsl(45 30% 80% / .35);
+}
+.mullion.one { left: 33.333%; }
+.mullion.two { left: 66.666%; }
+
+/* ---- THE SILL — the one horizontal ledge, where a family sets things down ---- */
+.sill {
+  position: absolute; z-index: 4; left: 0; right: 0; top: var(--sill-y); height: var(--sill-h);
+  background: linear-gradient(to bottom, var(--oak-lip) 0px, hsl(43 42% 56%) 5px, var(--oak-body) 60%, var(--oak-edge) 100%);
+  box-shadow: 0 16px 30px -12px hsl(56 45% 9% / var(--shadow-soft));
+}
+.sill::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: hsl(44 60% 86% / .8); }
+/* PATINA — a worn band along the front lip where hands and cups have rested for
+   years. Shown only in the studies whose language is age. */
+.sill::after {
+  content: ""; position: absolute; left: 8%; right: 46%; top: 3px; height: 5px;
+  border-radius: 3px; opacity: 0;
+  background: radial-gradient(ellipse at center, hsl(44 54% 82% / .7), transparent 72%);
+}
+
+/* ---- objects a family accumulates. Always in the DOM; each study reveals only
+       what belongs to its language. Every object has a real CONTACT SHADOW — the
+       difference between a thing set on a sill and a sticker on a screen. ---- */
+.on-sill { position: absolute; z-index: 5; top: var(--sill-y); pointer-events: none; opacity: 0; }
+
+/* a shallow bowl of the orchard's own fruit (hospitality) */
+.bowl { left: 7%; width: 132px; height: 30px; }
+.bowl .vessel {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 22px;
+  border-radius: 0 0 60px 60px / 0 0 26px 26px;
+  background: linear-gradient(to bottom, hsl(39 46% 90%), hsl(35 30% 80%));
+  box-shadow: inset 0 3px 4px hsl(39 40% 96% / .8), 6px 14px 16px -8px hsl(56 45% 9% / .4);
+}
+.bowl .apple { position: absolute; bottom: 9px; width: 20px; height: 19px; border-radius: 50% 50% 52% 52%;
+  background: radial-gradient(circle at 34% 30%, hsl(74 30% 40%), hsl(74 34% 24%)); }
+.bowl .apple.a { left: 30px; } .bowl .apple.b { left: 54px; bottom: 11px; } .bowl .apple.c { left: 78px; }
+
+/* one hand-thrown jug with a single stem of orchard blossom (the garden, one pace in) */
+.stem { left: 9%; width: 60px; height: 96px; top: calc(var(--sill-y) - 66px); }
+.stem .jug { position: absolute; bottom: 0; left: 14px; width: 30px; height: 34px; border-radius: 8px 8px 12px 12px;
+  background: linear-gradient(150deg, hsl(38 40% 88%), hsl(34 24% 74%));
+  box-shadow: 5px 12px 14px -7px hsl(56 45% 9% / .42), inset 0 2px 3px hsl(39 40% 96% / .7); }
+.stem .branch { position: absolute; bottom: 30px; left: 28px; width: 2px; height: 52px; background: hsl(45 40% 30%);
+  transform: rotate(9deg); transform-origin: bottom; border-radius: 2px; }
+.stem .bloom { position: absolute; width: 9px; height: 9px; border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, hsl(40 80% 96%), hsl(38 60% 88%)); box-shadow: 0 0 0 1px hsl(45 30% 82% / .5); }
+.stem .bloom.b1 { bottom: 78px; left: 30px; } .stem .bloom.b2 { bottom: 70px; left: 40px; } .stem .bloom.b3 { bottom: 60px; left: 24px; }
+.stem .leaf { position: absolute; bottom: 52px; left: 33px; width: 12px; height: 7px; border-radius: 0 80% 0 80%;
+  background: hsl(74 30% 34%); transform: rotate(-20deg); }
+
+/* a small stack of two well-read books + folded reading glasses (rest, evening of a life) */
+.books { right: 30%; width: 96px; height: 26px; }
+.books .b { position: absolute; bottom: 0; height: 8px; border-radius: 1px 2px 2px 1px; box-shadow: 4px 9px 11px -6px hsl(56 45% 9% / .38); }
+.books .b1 { left: 0; width: 92px; background: linear-gradient(hsl(30 24% 60%), hsl(30 22% 50%)); }
+.books .b2 { left: 6px; bottom: 8px; width: 80px; background: linear-gradient(hsl(74 20% 40%), hsl(74 22% 32%)); }
+
+/* a folded linen runner softening the sill's hard front edge (softness, calm) */
+.linen {
+  position: absolute; z-index: 5; top: calc(var(--sill-y) + var(--sill-h) - 3px); left: 12%; width: 210px; height: 20px;
+  background: repeating-linear-gradient(90deg, hsl(38 26% 90%), hsl(38 26% 90%) 3px, hsl(38 22% 86%) 3px, hsl(38 22% 86%) 4px);
+  border-radius: 2px 2px 3px 3px; opacity: 0;
+  box-shadow: 0 8px 12px -7px hsl(56 45% 9% / .32), inset 0 2px 2px hsl(39 40% 96% / .6);
+}
+.linen::after { content:""; position:absolute; left:0; right:0; bottom:-6px; height:8px;
+  background: linear-gradient(hsl(38 22% 84%), hsl(38 20% 80%)); border-radius:0 0 3px 3px; transform: skewX(-3deg); transform-origin: top; }
+
+/* the marks of THIS family — a child's drawing corner-tucked, a small photo turned slightly (memory) */
+.record { right: 6%; width: 150px; height: 120px; top: calc(var(--sill-y) - 92px); }
+.record .drawing { position: absolute; bottom: 0; right: 34px; width: 74px; height: 92px; background: hsl(39 44% 95%);
+  transform: rotate(-4deg); box-shadow: 3px 10px 14px -8px hsl(56 45% 9% / .34); border: 1px solid hsl(38 24% 86%); }
+.record .drawing::before { content:""; position:absolute; inset: 14px 12px auto; height: 30px;
+  background:
+    radial-gradient(circle at 20% 60%, hsl(43 62% 47% / .8) 5px, transparent 6px),
+    radial-gradient(circle at 60% 40%, hsl(74 34% 34% / .8) 6px, transparent 7px),
+    linear-gradient(90deg, transparent 30%, hsl(30 40% 60% / .6) 30%, hsl(30 40% 60% / .6) 34%, transparent 34%); }
+.record .drawing::after { content:""; position:absolute; left:12px; right:12px; bottom:16px; height:2px;
+  background: hsl(52 20% 60%); box-shadow: 0 6px 0 hsl(52 16% 66%), 0 12px 0 hsl(52 14% 70%); }
+.record .photo { position: absolute; bottom: 6px; right: 0; width: 52px; height: 62px; background: hsl(39 30% 96%);
+  padding: 4px 4px 12px; transform: rotate(5deg); box-shadow: 3px 9px 13px -7px hsl(56 45% 9% / .4); }
+.record .photo i { display:block; width:100%; height:100%;
+  background: linear-gradient(150deg, hsl(37 40% 78%), hsl(45 30% 62%) 60%, hsl(74 24% 42%)); }
+
+/* ---- THE ROOM BELOW ---- */
+.below { position: relative; z-index: 5; padding: calc(var(--sill-y) + var(--sill-h) + 40px) 40px 0; max-width: 1240px; margin: 0 auto; }
+.upper { display: flex; align-items: flex-start; justify-content: space-between; gap: 52px; }
+.greeting { flex: 1 1 auto; }
+.welcome { font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-weight: 300; font-size: 26px; color: var(--ink-body); opacity: .76; }
+.name { font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-weight: 300; font-size: 72px; line-height: 1.02; letter-spacing: -.022em; color: var(--ink-name); margin-top: 2px; }
+.date { margin-top: 14px; font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-quiet); }
+.action { margin-top: 26px; padding: 13px 34px; border: 0; border-radius: 999px; background: var(--leaf); color: var(--raw-blossom);
+  font-family: inherit; font-size: 14.5px; font-weight: 500; letter-spacing: .015em; box-shadow: var(--shade-2); cursor: pointer; }
+
+/* the Companion — a propped note, OR (interface receding) dissolved into the wall */
+.note { width: 328px; flex: none; padding: 17px 19px 16px; }
+.note.card { background: var(--surface); border-radius: 3px; box-shadow: var(--shade-3); border-top: 2px solid hsl(43 46% 72% / .6); }
+:root:not([data-note-card]) .note {}
+.note-from { display: flex; align-items: center; gap: 6px; font-size: 10px; letter-spacing: .15em; text-transform: uppercase; color: var(--ink-quiet); margin-bottom: 9px; }
+.note-leaf { width: 11px; height: 11px; }
+.note-body { font-size: 13.5px; line-height: 1.52; color: var(--ink-body); }
+.note-link { display: inline-block; margin-top: 11px; font-size: 12.5px; color: var(--leaf-lift); font-weight: 500; }
+
+/* THE CONSOLE — reduced interface. No dividers, quieter labels, more air than
+   concept-b-evolved. The day's life, set down like things on a surface. */
+.console { margin-top: 42px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.console-item { position: relative; }
+.console-label { font-size: 10px; letter-spacing: .17em; text-transform: uppercase; color: var(--ink-quiet); margin-bottom: 8px; opacity: .82; }
+.console-value { font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-size: 18px; font-weight: 300; font-style: italic; color: var(--ink-quiet); }
+
+/* THE DOORS — the rooms of the house. Navigation, quietened. */
+.doors { position: absolute; z-index: 5; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid hsl(38 22% 80% / .7); background: linear-gradient(to bottom, hsl(36 30% 88% / .32), hsl(34 26% 84% / .72)); }
+.door { height: 62px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; position: relative; }
+.door + .door::before { content: ""; position: absolute; left: 0; top: 14px; bottom: 14px; width: 1px; background: hsl(38 24% 82% / .7); }
+.door-name { font-size: 13.5px; font-weight: 400; letter-spacing: .01em; color: var(--ink-body); opacity: .9; }
+.door-handle { width: 5px; height: 5px; border-radius: 50%; background: var(--gold); opacity: .7; box-shadow: 0 0 0 3px hsl(43 62% 47% / .1); }
+
+/* =============================================================================
+   THE SIX INTERIOR LANGUAGES — same room, only the feeling changes.
+   ========================================================================== */
+
+/* 1 · THE KEPT HOUSE — patina, age, wear. No objects. The room simply grown older. */
+:root[data-study="1"] {
+  --wall-top: hsl(36 34% 90%); --wall-sill: hsl(39 52% 95%); --wall-floor: hsl(32 24% 80%);
+  --oak-lip: hsl(41 40% 68%); --oak-body: hsl(42 42% 36%); --oak-edge: hsl(44 46% 20%);  /* timber darkened by years of sun */
+  --ink-name: hsl(70 32% 12%); --grain: .05; --shadow-soft: .3;
+}
+:root[data-study="1"] .sill::after { opacity: 1; }              /* the worn lip */
+:root[data-study="1"] .note { padding-left: 0; }                /* the note dissolves into the wall */
+
+/* 2 · THE WARM HOUR — light & long shadow only. The beloved hour, no objects. */
+:root[data-study="2"] {
+  --wall-top: hsl(37 44% 91%); --wall-sill: hsl(42 82% 96%); --wall-floor: hsl(34 34% 82%);
+  --oak-lip: hsl(41 52% 75%); --oak-body: hsl(43 46% 44%); --oak-edge: hsl(45 44% 26%);
+  --ink-name: hsl(66 30% 15%); --grain: .03; --shadow-soft: .46;
+}
+/* the mullions throw soft long shadows across the wall below the sill — the room
+   receiving the morning, NOT a second sun on the orchard */
+:root[data-study="2"] .below { position: relative; }
+:root[data-study="2"] .room::before {
+  background:
+    linear-gradient(to bottom,
+      var(--wall-top) 0px, var(--wall-top) var(--glass-top),
+      var(--wall-sill) calc(var(--sill-y) + var(--sill-h)),
+      hsl(40 60% 93%) calc(var(--sill-y) + var(--sill-h) + 180px),
+      var(--wall-floor) 100%),
+    linear-gradient(105deg, transparent 34%, hsl(45 30% 40% / .05) 34.4%, transparent 35%, transparent 66%, hsl(45 30% 40% / .05) 66.4%, transparent 67%);
+}
+
+/* 3 · THE LINEN CALM — soft textiles, matte plaster. One folded runner. */
+:root[data-study="3"] {
+  --wall-top: hsl(36 26% 92%); --wall-sill: hsl(38 40% 96%); --wall-floor: hsl(34 18% 84%);
+  --oak-lip: hsl(41 34% 72%); --oak-body: hsl(43 34% 46%); --oak-edge: hsl(45 34% 30%);
+  --ink-name: hsl(60 18% 20%); --grain: .07; --shadow-soft: .24;
+}
+:root[data-study="3"] .linen { opacity: 1; }
+
+/* 4 · THE MORNING TABLE — hospitality. A bowl of the orchard's own fruit, on the sill. */
+:root[data-study="4"] {
+  --wall-top: hsl(37 42% 91%); --wall-sill: hsl(41 74% 96%); --wall-floor: hsl(33 28% 82%);
+  --oak-lip: hsl(41 46% 72%); --oak-body: hsl(44 42% 42%); --oak-edge: hsl(45 44% 25%);
+  --grain: .04; --shadow-soft: .38;
+}
+:root[data-study="4"] .bowl { opacity: 1; }
+
+/* 5 · THE GARDENER'S SILL — one stem of orchard blossom in a hand-thrown jug. */
+:root[data-study="5"] {
+  --wall-top: hsl(37 40% 92%); --wall-sill: hsl(41 68% 96%); --wall-floor: hsl(33 26% 82%);
+  --oak-lip: hsl(41 46% 72%); --oak-body: hsl(44 40% 42%); --oak-edge: hsl(45 42% 25%);
+  --grain: .04; --shadow-soft: .34;
+}
+:root[data-study="5"] .stem { opacity: 1; }
+
+/* 6 · THE FAMILY RECORD — memory. A child's drawing, a small photo, corner of the sill. */
+:root[data-study="6"] {
+  --wall-top: hsl(36 32% 90%); --wall-sill: hsl(40 54% 95%); --wall-floor: hsl(32 24% 81%);
+  --oak-lip: hsl(41 42% 70%); --oak-body: hsl(43 42% 38%); --oak-edge: hsl(45 44% 22%);
+  --ink-name: hsl(68 30% 13%); --grain: .05; --shadow-soft: .32;
+}
+:root[data-study="6"] .record { opacity: 1; }
+:root[data-study="6"] .sill::after { opacity: .7; }
+
+/* =======================  MOBILE  — a tall portrait window, generous orchard  ======= */
+@media (max-width: 520px) {
+  .room { --glass-top: 62px; --sill-h: 20px; --sill-y: 396px; }
+  .shell { height: 62px; padding: 0 20px; }
+  .mullion { width: 6px; } .mullion.one { left: 50%; } .mullion.two { display: none; }
+  .glass img { object-position: 50% 26%; }
+  .below { padding-left: 20px; padding-right: 20px; padding-bottom: 96px; }
+  .upper { flex-direction: column; gap: 26px; }
+  .welcome { font-size: 19px; } .name { font-size: 50px; } .date { margin-top: 12px; font-size: 11px; }
+  .action { margin-top: 22px; padding: 13px 30px; font-size: 14px; width: 100%; }
+  .note { width: 100%; padding-left: 0; padding-right: 0; }
+  .console { grid-template-columns: 1fr; gap: 0; margin-top: 34px; }
+  .console-item { padding: 15px 0; border-top: 1px solid hsl(38 22% 82% / .6); display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+  .console-label { margin-bottom: 0; } .console-value { text-align: right; }
+  .doors { position: relative; grid-template-columns: 1fr 1fr; margin-top: 40px; }
+  .door { height: 58px; padding: 0 20px; }
+  .door:nth-child(3), .door:nth-child(4) { border-top: 1px solid hsl(38 24% 82% / .7); }
+  .door:nth-child(3)::before { display: none; }
+  /* on a phone, the sill is small — keep only the objects that read at this size */
+  .bowl { left: 5%; } .stem { left: 6%; } .books { right: 8%; } .record { right: 3%; }
+  .linen { left: 6%; width: 60%; }
+}
+</style>
+</head>
+<body>
+<div class="room">
+
+  <header class="shell">
+    <div class="mark-apple"></div>
+    <svg class="bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/>
+    </svg>
+  </header>
+
+  <div class="glass"><img src="../../attached_assets/design/north_star/v2/ORCHARD.png" alt=""></div>
+  <div class="mullion one"></div>
+  <div class="mullion two"></div>
+  <div class="sill"></div>
+
+  <!-- the few honest things a family accumulates on the one ledge; each study shows only its own -->
+  <div class="on-sill bowl"><div class="vessel"></div><div class="apple a"></div><div class="apple b"></div><div class="apple c"></div></div>
+  <div class="on-sill stem"><div class="branch"></div><div class="leaf"></div><div class="bloom b1"></div><div class="bloom b2"></div><div class="bloom b3"></div><div class="jug"></div></div>
+  <div class="on-sill books"><div class="b b1"></div><div class="b b2"></div></div>
+  <div class="linen"></div>
+  <div class="on-sill record"><div class="drawing"></div><div class="photo"><i></i></div></div>
+
+  <div class="below">
+    <div class="upper">
+      <div class="greeting">
+        <div class="welcome">Welcome home,</div>
+        <h1 class="name">Chloe</h1>
+        <div class="date">Friday, 17 July</div>
+        <button class="action">Plan the week</button>
+      </div>
+
+      <aside class="note card">
+        <div class="note-from">
+          <svg class="note-leaf" viewBox="0 0 24 24" fill="none" stroke="var(--leaf-lift)" stroke-width="1.8">
+            <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+          </svg>
+          Companion
+        </div>
+        <div class="note-body">The orchard is in blossom — a good week for something green and simple.</div>
+        <a class="note-link" href="#">View suggestion &rsaquo;</a>
+      </aside>
+    </div>
+
+    <div class="console">
+      <div class="console-item"><div class="console-label">Today's meals</div><div class="console-value">a clear morning</div></div>
+      <div class="console-item"><div class="console-label">Shopping</div><div class="console-value">list is clear</div></div>
+      <div class="console-item"><div class="console-label">From the orchard</div><div class="console-value">blossom this week</div></div>
+    </div>
+  </div>
+
+  <nav class="doors">
+    <div class="door"><span class="door-name">Planner</span><span class="door-handle"></span></div>
+    <div class="door"><span class="door-name">Cookbook</span><span class="door-handle"></span></div>
+    <div class="door"><span class="door-name">Pantry</span><span class="door-handle"></span></div>
+    <div class="door"><span class="door-name">Shopping</span><span class="door-handle"></span></div>
+  </nav>
+
+</div>
+
+<!-- The Kept House dissolves the Companion card into the wall (interface receding). -->
+<script>
+  (function () {
+    var s = document.documentElement.dataset.study;
+    if (s === "1" || s === "3") {
+      var note = document.querySelector(".note");
+      if (note) note.classList.remove("card");   // the line rests on the wall, not in a card
+    }
+  })();
+</script>
+</body>
+</html>

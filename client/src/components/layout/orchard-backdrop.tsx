@@ -86,6 +86,47 @@
  * no further; the real fix is a new asset, specified in §5 of that report.
  */
 
+/**
+ * ARRIVAL1 (2026-07-17) — HOME's orchard, seen THROUGH THE ARCH.
+ *
+ * NORTH5's definitive Home replaces the dissolving open view with a plaster
+ * archway: the orchard is not a region that fades into the room, it is a real
+ * view through an opening cut into the wall. Blueprint §6.2 rule 4 (amended
+ * ARRIVAL1) admits this — an architectural aperture is not the decorative
+ * drawn frame E2 forbids; the orchard is seen through the architecture, never
+ * hung on it.
+ *
+ * This is a THIRD governed shape on the ONE owner (this file), added exactly as
+ * OrchardOpenView was — not a second component and not a second `url(...)`
+ * bypass, which UIA §17 forbids and this file's header names by count.
+ *
+ * The asset is the REAL orchard — /orchard.webp, converted from the canonical
+ * ORCHARD.png (apple trees, blossom, the oak gate, the mown path). The old
+ * /orchard-bg.webp (a pale meadow, no blossom, no gate) stays where the arch's
+ * blossom threshold does not reach: arrival and the five dialog surfaces. That
+ * two-orchards state is a known tension, reported in the ARRIVAL1 report, not
+ * hidden — the eventual convergence (one orchard everywhere) is out of Home's
+ * scope.
+ *
+ * The arch's SHAPE, reveal, depth and light are the .home-arrival CSS (index.css,
+ * ARRIVAL1 block); this component owns only the ASSET and its crop. The crop keeps
+ * the sun out of the direct frame (the asset's flare is upper-right; §7 wants the
+ * one morning upper-left) and centres the receding path with blossom at the top —
+ * V1's safe crop, so §7 needs no amendment, only §6.2 did.
+ *
+ * STILL — no drift, no sway (§6.1: "the orchard never animates").
+ */
+export function OrchardArch() {
+  return (
+    <div className="home-arch" aria-hidden data-testid="home-orchard-arch">
+      <div className="home-arch__light" />
+      <div className="home-arch__view">
+        <img src="/orchard.webp" alt="" />
+      </div>
+    </div>
+  );
+}
+
 /** ARRIVAL's orchard — the full-bleed E3 beat. */
 export default function OrchardBackdrop() {
   return (

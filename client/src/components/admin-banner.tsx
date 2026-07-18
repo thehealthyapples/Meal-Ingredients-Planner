@@ -46,7 +46,7 @@ export function AdminBanner() {
         <div className="flex items-center gap-2 py-2.5">
           <div className="flex items-center gap-2 pr-3 mr-1 border-r border-border shrink-0">
             <ShieldCheck className="h-5 w-5 text-primary" />
-            <span className="text-sm font-semibold tracking-tight">Admin</span>
+            <span className="text-sm font-semibold tracking-tight">Support Hub</span>
           </div>
           <nav className="flex items-center gap-1 overflow-x-auto" data-testid="admin-banner-nav">
             {ADMIN_NAV.map((item) => {

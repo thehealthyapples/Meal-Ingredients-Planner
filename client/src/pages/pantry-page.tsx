@@ -8,6 +8,9 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+// PROD1 — this room adopted EmptyState but never its pair. An absence owner
+// without an error owner is how a stocked pantry reads as an empty one.
+import { LoadError } from "@/components/ui/load-error";
 import {
   Trash2, Plus, Loader2, Home, Refrigerator, Archive, Layers,
   ShoppingBasket, ChevronDown, PawPrint, Apple, Search, X,
@@ -35,6 +38,7 @@ import {
 import { PantryKnowledgeHub } from "@/components/PantryKnowledgeHub";
 import PantryIntelligencePanel from "@/components/PantryIntelligencePanel";
 import { AmbientIntelligence } from "@/components/intelligence";
+import { usePublishCompanionContext } from "@/components/conversation/companion-context";
 
 /**
  * PX1-W4b (fnd-px-success-silent-error-loud).
@@ -251,12 +255,22 @@ function CategoryTabs<T extends string>({
 function FoodPantrySection({
   items,
   isLoading,
+  // PROD1 — threaded in beside `isLoading`, which this section already accepted.
+  // Without them a failed `/api/pantry` renders this room's per-category empty
+  // copy — e.g. "No larder staples yet — try adding olive oil or pasta." — to a
+  // household whose larder is fully stocked, inviting them to re-add food they
+  // already own. The absence copy is good; it was simply being shown for the
+  // wrong reason.
+  isError,
+  onRetry,
   activeCategory,
   onCategoryChange,
   searchFilter,
 }: {
   items: PantryItem[];
   isLoading: boolean;
+  isError: boolean;
+  onRetry: () => void;
   activeCategory: FoodCat;
   onCategoryChange: (c: FoodCat) => void;
   searchFilter?: string;
@@ -549,6 +563,16 @@ function FoodPantrySection({
           <Skeleton className="h-6 w-full" />
           <Skeleton className="h-6 w-3/4" />
         </div>
+      ) : isError ? (
+        // Before the filtered and empty branches, for the same load-bearing reason
+        // as every other room: on error the item list is empty, so an absence
+        // branch tested first would win and misdescribe the failure.
+        <LoadError
+          what="your pantry"
+          onRetry={onRetry}
+          description="Nothing has been lost — what's in your pantry is safe. This is a problem at our end."
+          data-testid="error-pantry"
+        />
       ) : activeFilter && displayedItems.length === 0 ? (
         <EmptyState variant="filtered" title={`No items matched "${activeFilter}"`} data-testid="empty-pantry-filter" />
       ) : (
@@ -741,11 +765,21 @@ function FoodPantrySection({
 function HomePantrySection({
   items,
   isLoading,
+  // PROD1 — the SECOND half of this room. Both sections read the SAME
+  // `/api/pantry` query, so fixing only the food list left the household section
+  // still answering a failed load with "No household items yet." The screenshot
+  // evidence showed exactly that: an honest error card above, and a confident
+  // false absence directly below it in the same failure. A room is not fixed
+  // until every section fed by the failed read stops claiming an absence.
+  isError,
+  onRetry,
   activeCategory,
   onCategoryChange,
 }: {
   items: PantryItem[];
   isLoading: boolean;
+  isError: boolean;
+  onRetry: () => void;
   activeCategory: HomeCat;
   onCategoryChange: (c: HomeCat) => void;
 }) {
@@ -980,6 +1014,13 @@ function HomePantrySection({
             <Skeleton key={i} className="h-10 w-full" />
           ))}
         </div>
+      ) : isError ? (
+        <LoadError
+          what="your household items"
+          onRetry={onRetry}
+          description="Nothing has been lost — what's in your home is safe. This is a problem at our end."
+          data-testid="error-pantry-home"
+        />
       ) : query.trim() && displayedItems.length === 0 ? (
         <EmptyState variant="filtered" title={`No items matched "${query}"`} data-testid="empty-home-filter" />
       ) : (
@@ -1065,13 +1106,36 @@ function HomePantrySection({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function PantryPage() {
-  const { data: items = [], isPending: isLoading } = useQuery<PantryItem[]>({
+  const { data: items = [], isPending: isLoading, isError, refetch } = useQuery<PantryItem[]>({
     queryKey: ["/api/pantry"],
   });
 
   const [activeFood, setActiveFood] = useState<FoodCat>("larder");
   const [activeHome, setActiveHome] = useState<HomeCat>("household");
   const [mobileHomeOpen, setMobileHomeOpen] = useState(false);
+
+  // ── COMP_ACT2 — which category the household actually CHOSE ───────────────
+  //
+  // `activeFood`/`activeHome` are always a concrete category, but their initial
+  // values are RENDER DEFAULTS, not decisions: a household that has just landed
+  // here has not told us anything about where a food belongs. Publishing "larder"
+  // on arrival would let the Companion offer to file someone's olive oil into a
+  // cupboard they never picked — the category is required by the pantry handler,
+  // so a wrong one is not a cosmetic error, it is a wrong shelf.
+  //
+  // So the pointer is published only once a tab has genuinely been changed. Before
+  // that, Pantry Add is an honest gap. No new selection UI — this reads the tabs
+  // that already exist.
+  // The Food and Home sections can both be on screen at once, so "the active
+  // category" is genuinely ambiguous — but "the last category tab the household
+  // picked" is not, and it is the honest answer to "where would this go?".
+  const [chosenCategory, setChosenCategory] = useState<FoodCat | HomeCat | null>(null);
+  const chooseFood = (c: FoodCat) => { setActiveFood(c); setChosenCategory(c); };
+  const chooseHome = (c: HomeCat) => { setActiveHome(c); setChosenCategory(c); };
+
+  // Published only once a tab has genuinely been picked — before that it is null,
+  // and Pantry Add is an honest gap.
+  usePublishCompanionContext({ selectedPantryCategory: chosenCategory ?? undefined });
 
   // ── Inventory / Explore mode (URL-driven so it is deep-linkable) ──────────
   const [, navigate] = useLocation();
@@ -1138,7 +1202,7 @@ export default function PantryPage() {
               <CategoryTabs
                 categories={FOOD_CATS}
                 active={activeFood}
-                onChange={setActiveFood}
+                onChange={chooseFood}
                 className="flex items-center gap-1 rounded-lg bg-muted/40 p-1 overflow-x-auto scrollbar-hide"
               />
             )}
@@ -1179,8 +1243,10 @@ export default function PantryPage() {
               <FoodPantrySection
                 items={items}
                 isLoading={isLoading}
+                isError={isError}
+                onRetry={() => refetch()}
                 activeCategory={activeFood}
-                onCategoryChange={setActiveFood}
+                onCategoryChange={chooseFood}
                 searchFilter={pantrySearch}
               />
             </div>
@@ -1188,8 +1254,10 @@ export default function PantryPage() {
               <HomePantrySection
                 items={items}
                 isLoading={isLoading}
+                isError={isError}
+                onRetry={() => refetch()}
                 activeCategory={activeHome}
-                onCategoryChange={setActiveHome}
+                onCategoryChange={chooseHome}
               />
             </div>
           </div>
@@ -1220,7 +1288,7 @@ export default function PantryPage() {
             <CategoryTabs
               categories={HOME_CATS}
               active={activeHome}
-              onChange={(v) => { setActiveHome(v); setMobileHomeOpen(false); }}
+              onChange={(v) => { chooseHome(v); setMobileHomeOpen(false); }}
             />
           </div>
         </DrawerContent>

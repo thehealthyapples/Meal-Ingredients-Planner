@@ -31,12 +31,16 @@ import { createStorageShoppingWritePort, type ShoppingWritePort } from "../handl
 export const SHOPPING_CAPABILITY_ID = "shopping";
 
 /**
- * The verbs this binding actually executes: "read"/"explain" (INT3, read-only) and
- * "add" (INT40, write — a single household staple/extra). All other allow-listed verbs
- * (delete, generate) return an honest gap. Declared here so the registry can surface
- * truthful executableIntents and discovery cannot over-advertise (INT6A).
+ * The verbs this binding actually executes: "read"/"explain" (INT3, read-only), "add"
+ * (INT40, write — a single household staple/extra) and "delete" (COMP_ACT1, write —
+ * remove one of the caller's own extras). The remaining allow-listed verb (generate)
+ * returns an honest gap. Declared here so the registry can surface truthful
+ * executableIntents and discovery cannot over-advertise (INT6A).
  */
-export const SHOPPING_EXECUTABLE_INTENTS: readonly IntentVerb[] = ["read", "explain", "add"];
+export const SHOPPING_EXECUTABLE_INTENTS: readonly IntentVerb[] = ["read", "explain", "add", "delete"];
+
+/** The write verbs the write handler owns (INT40 add; COMP_ACT1 delete). */
+const SHOPPING_WRITE_VERBS: ReadonlySet<IntentVerb> = new Set<IntentVerb>(["add", "delete"]);
 
 /** Compose the read and write handlers into one capability-level dispatcher. */
 function composeShoppingHandler(
@@ -44,7 +48,7 @@ function composeShoppingHandler(
   writeHandler: CapabilityHandler,
 ): CapabilityHandler {
   return (intent: Intent, context: IntelligenceContext): Promise<unknown> => {
-    if (intent.verb === "add") return writeHandler(intent, context);
+    if (SHOPPING_WRITE_VERBS.has(intent.verb)) return writeHandler(intent, context);
     return readHandler(intent, context);
   };
 }

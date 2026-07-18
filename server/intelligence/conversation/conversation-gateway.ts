@@ -95,6 +95,11 @@ import {
   type BehaviourResolution,
 } from "./behaviour-engine.js";
 import { storage } from "../../storage.js";
+// INT20 — natural-language action resolution. `parseActionCommand` is pure
+// (words → symbolic command); `resolveActionCommand` turns that into a proposal
+// for an EXISTING bound capability, or one clarification question.
+import { parseActionCommand } from "./action-language.js";
+import { resolveActionCommand } from "./action-resolution.js";
 import {
   buildNativeDiscoveryResponse,
   type NativeDiscoveryResponse,
@@ -469,7 +474,126 @@ async function buildGroundedResponse(
     return decision;
   };
 
-  // Write-intent guard (INT18 Risk R4 / INT24) — honest gap, no resolver, no LLM
+  // INT20 — RESOLVE BEFORE REFUSING.
+  //
+  // COMP_ACT1 made eight write verbs genuinely executable and COMP_ACT2 surfaced
+  // them as one-tap proposals — but only ever from ON-SCREEN context. A household
+  // that simply SAID what it wanted got the blanket read-only refusal, because the
+  // write guard below short-circuits the turn before any resolution happens. The
+  // verbs were live and unreachable by speech.
+  //
+  // This runs BEFORE `detectWriteIntent`, deliberately. That guard is a coarse
+  // REFUSAL trigger, never an enumeration of household commands, and it misses most
+  // of the ones INT20 exists to serve: "remove milk from my shopping list" (its
+  // remove pattern wants meal/entry/item, not "list"), "log porridge for breakfast"
+  // (it has no log pattern at all) and "add tuna spaghetti to Tuesday lunch" (its
+  // add pattern wants a surface word like planner/list/pantry). Nesting resolution
+  // inside it would leave five of the six canonical commands unreachable — which is
+  // exactly what end-to-end verification showed before this was hoisted.
+  //
+  // Safety is unchanged: `parseActionCommand` carries the same advisory-frame guard
+  // the write guard uses, so a question is never read as a command; a command it
+  // cannot express returns null and falls straight through to the guard below. It
+  // executes nothing — the proposal is persisted by the caller exactly like every
+  // COMP_ACT2 proposal, and the confirm endpoint remains the only executor.
+  {
+    const command = parseActionCommand(utterance);
+    if (command) {
+      const resolution = await resolveActionCommand(command, {
+        identity:               frame.identity,
+        temporalAnchor:         frame.temporalAnchor,
+        activePlannerWeekId:    frame.activePlannerWeekId,
+        selectedPlannerDayId:   frame.selectedPlannerDayId,
+        selectedPlannerEntryId: frame.selectedPlannerEntryId,
+        selectedMealSlot:       frame.selectedMealSlot,
+        selectedPantryCategory: frame.selectedPantryCategory,
+      });
+
+      if (resolution.kind === "proposal" || resolution.kind === "clarification") {
+        // BEH1/CP2: these two exit paths are NOT registry-voiced. Both emit a
+        // caller-verified, closed-set string — the resolver's own clarification
+        // question, or the proposal label COMP_ACT2 already shows on the button —
+        // never model output and never a fabricated household fact. The engine's
+        // vocabulary keeps `not-voiced` precisely so a surface in this position
+        // must declare itself rather than quietly bypass the voice; adding the six
+        // registry templates is the natural follow-up (see the INT20 report §7).
+        recordBehaviourDecision({
+          resolution: behaviour,
+          outcome: "not-voiced",
+          surfaces: [],
+          notVoicedReason:
+            resolution.kind === "proposal" ? "int20-action-proposal" : "int20-action-clarification",
+        });
+
+        if (resolution.kind === "clarification") {
+          // OBS1: a question back to the household is a recovery, not a refusal —
+          // the command WAS understood; one fact was missing.
+          recordObservation({
+            kind: "escalation",
+            severity: "info",
+            outcome: "gap",
+            recoveryPath: "action-clarification",
+            metadata: {
+              reason: "int20-clarification",
+              capability: command.capability,
+              verb: command.verb,
+            },
+            ...obs,
+          });
+          return {
+            text: resolution.question,
+            entityRefs: [],
+            outcome: {
+              status: "gap",
+              message: `Natural-language action understood (${command.capability}.${command.verb}) but one parameter was unresolved — asked the household rather than guessing.`,
+            },
+            discoveries: [],
+            guidance: [],
+            enrichment: [],
+            resolvedIntent: null,
+            actionDrafts: [],
+          };
+        }
+
+        recordObservation({
+          kind: "capability-invocation",
+          severity: "info",
+          capability: command.capability,
+          verb: command.verb,
+          outcome: "confirmation_required",
+          metadata: { reason: "int20-action-proposal" },
+          ...obs,
+        });
+        return {
+          text: `${resolution.draft.label}? Confirm below and I'll do it.`,
+          entityRefs: [],
+          outcome: {
+            status: "confirmation_required",
+            capabilityId: resolution.draft.capabilityId,
+            verb: resolution.draft.verb,
+            confirmation: resolution.draft.confirmationTier,
+            message: `Resolved "${utterance}" to ${resolution.draft.capabilityId}.${resolution.draft.verb} — proposed for confirmation, not executed.`,
+          },
+          discoveries: [],
+          guidance: [],
+          enrichment: [],
+          resolvedIntent: {
+            capabilities: [
+              {
+                capabilityId: resolution.draft.capabilityId,
+                verb: resolution.draft.verb,
+                status: "ok-data",
+              },
+            ],
+          },
+          actionDrafts: [resolution.draft],
+        };
+      }
+    }
+  }
+
+  // Write-intent guard (INT18 Risk R4 / INT24) — honest gap, no resolver, no LLM.
+  // Reached only for a mutation INT20 could not express as a bound capability.
   const writeAction = detectWriteIntent(utterance);
   if (writeAction) {
     // OBS1: the refusal redirects the user to manual action — an escalation.
@@ -904,9 +1028,21 @@ async function buildGroundedResponse(
   // context (see companion-actions.ts). Never persisted here — buildGroundedResponse
   // stays a pure read; the caller (processUserTurn) persists once the assistant
   // turn id exists.
+  //
+  // COMP_ACT2 extends the SAME call with the on-screen action targets the frame
+  // now carries, so the Companion can also offer the write verbs COMP_ACT1 bound
+  // (Planner Move/Replace, Shopping Delete, Pantry Add/Remove, Diary Log). Still
+  // one builder, still pure, still no execution here.
   const actionDrafts = buildActionProposals(discoveries, {
     selectedPlannerDayId: frame.selectedPlannerDayId,
     selectedMealSlot: frame.selectedMealSlot,
+    selectedPlannerEntryId: frame.selectedPlannerEntryId,
+    selectedPlannerEntryMealId: frame.selectedPlannerEntryMealId,
+    selectedPlannerEntryDayId: frame.selectedPlannerEntryDayId,
+    selectedPlannerEntrySlot: frame.selectedPlannerEntrySlot,
+    selectedPantryCategory: frame.selectedPantryCategory,
+    selectedDiaryDate: frame.selectedDiaryDate,
+    selectedDiarySlot: frame.selectedDiarySlot,
   });
 
   // INTQ8 P1: surface the turn's PRIMARY platform outcome on the success path.

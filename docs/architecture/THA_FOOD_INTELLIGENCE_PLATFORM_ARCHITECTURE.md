@@ -343,6 +343,52 @@ Carried forward from NUT2 §9 as forward-looking guidance (not a commitment made
 
 ## 13. ARCHITECTURE CONVERGENCE STATUS
 
+> ### ⛔ CORRECTED 2026-07-17 — THIS SECTION WAS MATERIALLY FALSE FOR OVER SIX MONTHS
+>
+> **This section stated "No Food Intelligence Engine … exists yet" and "0% Domain
+> Intelligence layer build-out", and scheduled the engine as Phase 1 future work.**
+> **The engine exists.** `server/intelligence/food-intelligence/engine.ts` (359 lines,
+> FI3 — a deterministic JOIN + RANK + EXPLAIN composition) opens by naming **this document**
+> as its governing architecture and stating: *"This module **IS** the 'Domain Intelligence'
+> layer named there (§2, §7.1)."*
+>
+> **Why this mattered more than an ordinary stale line.** This document is **mandatory
+> Architecture Bootstrap reading** (`docs/architecture/README.md`). Every workstream touching
+> Food Intelligence starts here, and this section told each one that the engine was unbuilt
+> and gated behind a Phase 0 exit — **so the correct next step it implied was "build the
+> engine", when the engine was already built and merely unreachable.** FI18 (2026-07-17)
+> measured rather than read, and found the opposite problem: the engine is built and **no
+> user utterance can reach it** (`food-intelligence:recommend`/`:explain` have no HTTP route
+> and no resolver matcher). `pattern-intent-resolver.ts:1231-1236` says so in the codebase's
+> own words — *"the 'shipped, tested reasoning engine that no user utterance can reach'."*
+>
+> **This is the `DOC-4`/`KC14` failure the Bootstrap README already records twice** — a stale
+> claim sitting in mandatory reading, where the cost is paid by everyone who obeys it. It is
+> corrected here in the same change that measured it, rather than left for a later pass.
+>
+> **This correction changes NO RULE.** Rules FI1–FIn, the §8 phase gates, and every ownership
+> boundary stand byte-untouched. Only the **status claims** below are corrected. The Phase 0
+> convergence gate remains in force: the engine existing does not mean it was built through
+> the gate, and §8's ordering is unaffected.
+>
+> **Corrected status, measured 2026-07-17:**
+>
+> | Component | §13 claimed | Measured |
+> |---|---|---|
+> | Food Intelligence Engine (`engine.ts`, FI3) | Does not exist; Phase 1, 2027 H1 | **EXISTS.** 🔴 Unreachable — no route, no resolver matcher |
+> | FI4 Opportunity Engine | — (not named) | 🟢 **LIVE** — the one producer in `OPPORTUNITY_SOURCES`; THA's entire ambient layer |
+> | COMP1 Comparison Engine | — (not named) | **EXISTS** (712 lines, cited). 🟠 Conversation-only — no route, no UI |
+> | HNP1 Household Nutrition assembler | — (not named) | 🔴 **DEAD** — its only binding was never registered; retired 2026-07-17 |
+> | PANTRY1 pantry-intelligence-assembler | — (not named) | 🔴 **DEAD** — fully built, **zero** non-test importers |
+> | Personalisation Event Log · Goals capability · Signals Gateway · Community capability | Do not exist yet | **Still true** — unbuilt, correctly stated |
+> | Domain Intelligence build-out | 0% | **Built and largely unreachable.** The gap is CONNECTION, not construction |
+>
+> **The one-sentence correction:** *THA did not fail to build its Domain Intelligence layer.
+> It built it, did not connect it, and then wrote down that it had never been built.*
+>
+> Evidence: `docs/investigations/intelligence/FI18_HOUSEHOLD_FOOD_INTELLIGENCE_EXPERIENCES.md`
+> (Finding 3). Correction performed under `docs/implementation/intelligence/P0_FOOD_INTELLIGENCE_RECOVERY.md`.
+
 ```
 Domain:
   Food Intelligence (Domain Intelligence layer over Food Knowledge + its
@@ -360,12 +406,32 @@ Current Runtime Consumer(s):
   (uplift engine), Intelligence Platform nutrition-knowledge binding + NUT1
   enrichment, meal/food intelligence assemblers.
 
-Domain Intelligence layer status:
-  This document is governance-only. No Food Intelligence Engine, Personalisation
-  Event Log, Goals capability, Signals Gateway, or Community capability exists
-  yet. NUT1's existing Companion nutrition enrichment binding is the only live
-  Domain-Intelligence-shaped capability today, and it already satisfies Rule FI1
-  (reads via existing services, writes via registered capability intents).
+Domain Intelligence layer status:  [CORRECTED 2026-07-17 — see the block above §13]
+  This document is governance-only, and that remains true: it builds nothing.
+  But it no longer describes a layer that does not exist.
+
+  BUILT (and reachable):
+    - FI4 Opportunity Engine — LIVE. The one entry in OPPORTUNITY_SOURCES, and
+      therefore the whole of THA's ambient intelligence today (3 types, 2 of
+      which are absence-detectors).
+    - NUT1's Companion nutrition enrichment binding — live, satisfies Rule FI1.
+
+  BUILT BUT UNREACHABLE (the real state of the layer):
+    - Food Intelligence Engine (engine.ts, FI3) — the Domain Intelligence layer
+      itself. No HTTP route, no resolver matcher: `recommend`/`explain` cannot be
+      reached by any user utterance.
+    - COMP1 Comparison Engine — 712 lines, cited, honest-gapped. No route, no UI.
+    - PANTRY1 pantry-intelligence-assembler — zero non-test importers.
+
+  NOT BUILT (correctly stated when this document was written, still true):
+    - Personalisation Event Log, Goals capability, Signals Gateway, Community
+      capability.
+
+  RETIRED 2026-07-17 (authored, never enrolled — P0 Food Intelligence Recovery):
+    - The `household-health` capability activation path (HHP2). Its binding was
+      never called and it was registered nowhere, while its completion record
+      said "Complete". HNP1's assembler now reaches no surface: a gap with a
+      known door (DEC1 §7), not a loss.
 
 Duplicate Owners Remaining (Business Domain layer, inherited, unchanged):
   - client/src/lib/nutrition-benefit-library.ts (M1 pending)
@@ -375,9 +441,15 @@ Duplicate Owners Remaining (Business Domain layer, inherited, unchanged):
 Current Convergence (%):
   ~60% at the Business Domain / Food Knowledge layer (inherited from the SoT
   Register, unchanged by this document — see ARCHITECTURE_PRINCIPLES.md
-  Contested Domains). 0% Domain Intelligence layer build-out (by design — this
-  document is governance only; Phase 0 (§8) must complete before Phase 1 build
-  work begins).
+  Contested Domains).
+
+  Domain Intelligence layer: [CORRECTED 2026-07-17 — was "0% build-out (by design)"]
+  The engines are BUILT; most are UNREACHABLE. Build-out is not the measurement
+  that matters here and never was — CONNECTION is. Of the reasoning engines that
+  exist, exactly one (FI4) reaches a household. State the gap as connection, not
+  as construction, or the next reader will build a second engine beside the
+  unreachable first one — which is precisely what this section previously
+  instructed them to do.
 
 Target Convergence (%):
   This document changes nothing. It sets 100% Business Domain / Plane 1
@@ -386,8 +458,15 @@ Target Convergence (%):
 
 Next Planned Milestone:
   M1 (retire nutrition-benefit-library.ts), then M2, M4, per the Master
-  Evolution Roadmap; Phase 0 of §8 is the umbrella; the Food Intelligence
-  Engine (Phase 1) is future work, not started.
+  Evolution Roadmap; Phase 0 of §8 is the umbrella.
+
+  [CORRECTED 2026-07-17 — this previously read "the Food Intelligence Engine
+  (Phase 1) is future work, not started". The engine was built as FI3 and this
+  line went on instructing readers to start it.]
+
+  The engine is built. Its next milestone is REACHABILITY, not construction:
+  a resolver matcher for `food-intelligence:recommend`/`:explain` (FI18 QW4).
+  Phase 0's convergence gate is unaffected by this correction and stands.
 
 Remaining Architectural Risks:
   The three unretired prototype stores; users.diet* overlap; risk that Phase

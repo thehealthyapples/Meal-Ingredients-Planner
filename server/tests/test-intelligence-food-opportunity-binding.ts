@@ -26,9 +26,21 @@ import {
   identifyPlannerGapOpportunities,
   identifyPantryUnusedOpportunities,
   identifyShoppingRestrictionOpportunities,
+  identifyPlannerMealUpliftOpportunities,
+  identifyPlannerBatchCookOpportunities,
+  // AFI3/AFI4 — the generators specified by PANTRY1 and CBK2, whose own suites cannot
+  // load (see the note at their sections below).
+  identifyPantryNeedOpportunities,
+  identifyCookbookCookableNowOpportunities,
+  identifyCookbookHouseholdConflictOpportunities,
   prioritizeOpportunities,
   type FoodOpportunity,
+  type PlannedMealRef,
 } from "../intelligence/food-intelligence/opportunity-engine.js";
+// AFI5 — the Companion seam: proves the new `cookbook` domain is registered rather than
+// silently dropped one step before a household could read it.
+import { noticeOpportunities } from "../intelligence/conversation/notice-engine.js";
+import { selectSurface } from "../intelligence/opportunity-delivery/framework.js";
 import {
   IntelligencePlatform,
   CapabilityRegistry,
@@ -169,6 +181,280 @@ async function main(): Promise<void> {
     "no active restrictions → no opportunities (never invents a conflict)",
   );
 
+  section("§1 identifyPlannerMealUpliftOpportunities (AFI1) — reuses the Uplift Rules; one excellent, safety-filtered, cited");
+
+  // "Spaghetti Bolognese" matches several reviewed uplift rules (wholemeal swap,
+  // greens addition, lentil boost) in the ONE canonical UPLIFT_RULES set.
+  const plannedMeals: PlannedMealRef[] = [{ entryId: 900, dayOfWeek: 2, mealName: "Spaghetti Bolognese", mealId: 500 }];
+
+  const upliftOps = identifyPlannerMealUpliftOpportunities(plannedMeals, week1, []);
+  assert(upliftOps.length === 1, "a matching planned meal → exactly ONE lift (prefer one excellent over many)", String(upliftOps.length));
+  const uplift = upliftOps[0];
+  assert(uplift.type === "planner-meal-uplift", "type is 'planner-meal-uplift'");
+  assert(uplift.owningDomain === "planner", "owning domain is 'planner' (routes to the planner surface + Companion)");
+  assert(uplift.priority === "low", "an uplift is CALM — low priority, never urgent");
+  assert(uplift.subject.entity === "planner-meal" && uplift.subject.id === 900, "subject is the planner-meal keyed on the entry's own id");
+  assert(/Spaghetti Bolognese/.test(uplift.explanation), "explanation names the ACTUAL planned meal (household-specific, grounded)");
+  assert(
+    uplift.evidence.some((e) => e.source === "planner-week") && uplift.evidence.some((e) => e.source === "nutrition-enhancement"),
+    "evidence cites BOTH the plan and the uplift rule's own approved 'why' (Rule E1 — no citation, no card)",
+  );
+
+  const runU1 = identifyPlannerMealUpliftOpportunities(plannedMeals, week1, []);
+  const runU2 = identifyPlannerMealUpliftOpportunities(plannedMeals, week1, []);
+  assert(JSON.stringify(runU1) === JSON.stringify(runU2), "deterministic: identical input yields byte-identical output (Rule LT3)");
+
+  assert(identifyPlannerMealUpliftOpportunities([], week1, []).length === 0, "no planned meals → no opportunity, never fabricated");
+  assert(
+    identifyPlannerMealUpliftOpportunities([{ entryId: 901, dayOfWeek: 3, mealName: "Glass of tap water zzzq", mealId: 501 }], week1, []).length === 0,
+    "a meal with no known lift → honest none (never invents an uplift)",
+  );
+
+  // SAFETY (Rule T0, reused): the ingredient surfaced with no restrictions is parsed,
+  // then restricted — and must never be surfaced again (the filter removed it).
+  const surfaced = uplift.suggestedAction.match(/(?:swap in|add more|add) (.+)\.$/)?.[1] ?? "";
+  const RESTRICT_SURFACED: RestrictionDefinition = {
+    id: "restrict_surfaced",
+    displayName: surfaced,
+    tier: "major_allergen",
+    aliases: [surfaced],
+    derivedIngredients: [],
+    hiddenIngredients: [],
+    substitutions: [],
+    prohibitedPhrases: [],
+  };
+  const safe = identifyPlannerMealUpliftOpportunities(plannedMeals, week1, [RESTRICT_SURFACED]);
+  const safeIngredient = safe[0]?.suggestedAction.match(/(?:swap in|add more|add) (.+)\.$/)?.[1] ?? "";
+  assert(
+    surfaced.length > 0 && (safe.length === 0 || safeIngredient !== surfaced),
+    "a suggested ingredient conflicting with a household hard restriction is never surfaced (reuses the exact Rule T0 matcher)",
+    `surfaced="${surfaced}" safeIngredient="${safeIngredient}"`,
+  );
+
+  section("§1 identifyPlannerBatchCookOpportunities (AFI2) — cook-once for a meal repeated across the week; one excellent, distinct-days, cited");
+
+  // A week where "Overnight Oats" is planned on 3 distinct days (Tue/Wed/Fri), "Salad" on
+  // 2 (Mon/Thu), and "Soup" once. dayOfWeek: 0=Mon. Mirrors the seeded demo household.
+  const batchWeekMeals: PlannedMealRef[] = [
+    { entryId: 1, dayOfWeek: 1, mealName: "Overnight Oats", mealId: 4773 },
+    { entryId: 2, dayOfWeek: 2, mealName: "Overnight Oats", mealId: 4773 },
+    { entryId: 3, dayOfWeek: 4, mealName: "Overnight Oats", mealId: 4773 },
+    { entryId: 4, dayOfWeek: 0, mealName: "Chicken Salad", mealId: 4774 },
+    { entryId: 5, dayOfWeek: 3, mealName: "Chicken Salad", mealId: 4774 },
+    { entryId: 6, dayOfWeek: 5, mealName: "Lentil Soup", mealId: 4776 },
+  ];
+
+  const batchOps = identifyPlannerBatchCookOpportunities(batchWeekMeals, week1);
+  assert(batchOps.length === 1, "several repeated meals → exactly ONE card (prefer one excellent over many)", String(batchOps.length));
+  const batch = batchOps[0];
+  assert(batch.type === "planner-batch-cook", "type is 'planner-batch-cook'");
+  assert(batch.owningDomain === "planner", "owning domain is 'planner' (surfaces on the planner ambient surface + Companion)");
+  assert(batch.priority === "low", "a batch-cook nudge is CALM — low priority, never urgent");
+  assert(batch.subject.entity === "planner-meal" && batch.subject.id === 4773, "subject is the planner-meal keyed on the MEAL's own id (recurs across entries), the meal on the most days");
+  assert(/Overnight Oats/.test(batch.explanation) && /3 days/.test(batch.explanation), "picks the meal on the MOST distinct days (Overnight Oats, 3), names the count");
+  assert(/Tuesday/.test(batch.explanation) && /Wednesday/.test(batch.explanation) && /Friday/.test(batch.explanation), "names the actual days it is planned on (household-specific, grounded)");
+  assert(batch.evidence.some((e) => e.source === "planner-week"), "evidence cites the plan it read (Rule E1 — no citation, no card)");
+  assert(batch.id === `planner-batch-cook:${week1.id}:4773`, "id is stable per week + meal");
+
+  // The same meal twice on ONE day is one cooking day, not two — never a false positive.
+  const sameDayTwice: PlannedMealRef[] = [
+    { entryId: 10, dayOfWeek: 2, mealName: "Stew", mealId: 700 },
+    { entryId: 11, dayOfWeek: 2, mealName: "Stew", mealId: 700 },
+  ];
+  assert(identifyPlannerBatchCookOpportunities(sameDayTwice, week1).length === 0, "a meal on ONE day (even twice) → nothing (distinct days, never a fabricated batch)");
+
+  // Determinism + honest none.
+  const runB1 = identifyPlannerBatchCookOpportunities(batchWeekMeals, week1);
+  const runB2 = identifyPlannerBatchCookOpportunities(batchWeekMeals, week1);
+  assert(JSON.stringify(runB1) === JSON.stringify(runB2), "deterministic: identical input yields byte-identical output (Rule LT3)");
+  assert(identifyPlannerBatchCookOpportunities([{ entryId: 20, dayOfWeek: 1, mealName: "Solo Meal", mealId: 800 }], week1).length === 0, "no meal repeated across days → honest none, never a manufactured batch");
+  assert(identifyPlannerBatchCookOpportunities([], week1).length === 0, "no planned meals → no opportunity");
+
+  // ---------------------------------------------------------------------------
+  // AFI3/AFI4 — the generators specified by PANTRY1 and CBK2.
+  //
+  // WHY THEY ARE COVERED HERE. `test-pantry1-intelligent-pantry.ts` and
+  // `test-cbk2-intelligent-cookbook.ts` specify these three generators, but NEITHER
+  // SUITE CAN LOAD: they also import `generatePantryExplanation`,
+  // `EMPTY_PANTRY_HOUSEHOLD_FACTS`, `generateRecipeExplanation`,
+  // `PlannerOpportunitySignal` and `LearnedPreference`, none of which exist. Those are
+  // EXPLAINER specifications — a separate workstream from the opportunity generators.
+  // Until they are built, those suites cannot run and cannot be wired into `npm test`
+  // (recorded as engineering debt in the AFI3–5 report), so the generator contracts are
+  // proven HERE, in the suite that is already wired and green.
+  // ---------------------------------------------------------------------------
+
+  section("§1 identifyPantryNeedOpportunities (AFI3/PANTRY1) — the household's OWN recorded need, absent from their list");
+
+  const needsMilk = { ...makePantryItem(10, "milk", "Milk"), needQuantityValue: 2, needUnit: "litres" };
+  const fired = identifyPantryNeedOpportunities([needsMilk], []);
+  assert(fired.length === 1, "a recorded need absent from the shopping list fires ONE card");
+  const needCard = fired[0]!;
+  assert(needCard.type === "pantry-need-not-on-shopping-list", "carries the PANTRY1 type", needCard.type);
+  assert(needCard.owningDomain === "pantry", "owned by the PANTRY domain", needCard.owningDomain);
+  assert(needCard.priority === "medium", "a missed shop is an inconvenience, never critical", needCard.priority);
+  assert(needCard.id === "pantry-need-not-on-shopping-list:10", "id is deterministic and row-keyed", needCard.id);
+  assert(
+    needCard.subject.entity === "pantry-item" && needCard.subject.id === 10 && needCard.subject.label === "Milk",
+    "subject is the structured pantry row (PHASE5E)",
+  );
+  assert(needCard.evidence.length === 2, "Rule E1 — cites BOTH owners it joined", String(needCard.evidence.length));
+  assert(
+    needCard.evidence.some((e) => e.source === "pantry-items") && needCard.evidence.some((e) => e.source === "shopping-list"),
+    "the two owners are the pantry row and the shopping list",
+  );
+  assert(
+    needCard.explanation.includes("2 litres") && needCard.explanation.includes("Milk"),
+    "reports back what the household THEMSELVES declared",
+    needCard.explanation,
+  );
+
+  // Honest gaps — every one of these must stay silent.
+  assert(
+    identifyPantryNeedOpportunities([needsMilk], [makeShoppingItem(1, "Milk")]).length === 0,
+    "a need already on the list is SILENT — matched on canonical identity, not spelling",
+  );
+  assert(
+    identifyPantryNeedOpportunities([makePantryItem(11, "milk", "Milk")], []).length === 0,
+    "no recorded need fires nothing — consumption is NEVER modelled",
+  );
+  assert(
+    identifyPantryNeedOpportunities([{ ...makePantryItem(12, "milk", "Milk"), needQuantityValue: 0 }], []).length === 0,
+    "a zero need is not a need",
+  );
+  assert(
+    identifyPantryNeedOpportunities([{ ...makePantryItem(13, "milk", "Milk", true), needQuantityValue: 2 }], []).length === 0,
+    "a deleted pantry row is not read",
+  );
+  assert(
+    identifyPantryNeedOpportunities(
+      [{ ...makePantryItem(14, "zzz-not-a-real-food-xyz", "Grandma's Secret Spice Blend"), needQuantityValue: 1, needUnit: "jar" }],
+      [],
+    ).length === 0,
+    "THE REFUSAL — an unidentifiable food is SILENT, never guessed at",
+  );
+  assert(
+    identifyPantryNeedOpportunities([{ ...makePantryItem(15, "milk", "Milk"), needQuantityValue: 2, needUnit: null }], [])[0]
+      ?.explanation.includes("2 Milk") === false,
+    "a null unit degrades gracefully — never the string \"2 null\"",
+  );
+
+  section("§1 identifyCookbookCookableNowOpportunities (AFI4/CBK2) — every ingredient owned, or no card at all");
+
+  const cookPantry = [makePantryItem(1, "tomato", "Tomatoes"), makePantryItem(2, "onion", "Onions")];
+  const cookable = identifyCookbookCookableNowOpportunities(
+    [{ id: 10, name: "Tomato & Onion Salad", ingredients: ["tomato", "onion"] }],
+    cookPantry,
+  );
+  assert(cookable.length === 1, "a recipe whose EVERY ingredient is in the pantry produces a card");
+  assert(
+    cookable[0]?.owningDomain === "cookbook" && cookable[0]?.subject.entity === "meal",
+    "the card is owned by the COOKBOOK domain and is about a MEAL",
+  );
+  assert(cookable[0]?.id === "cookbook-recipe-cookable-now:10", "id is keyed on the meal's own primary key", cookable[0]?.id);
+  assert((cookable[0]?.evidence.length ?? 0) >= 2, "Rule E1 — cites BOTH owners it joined (meals + pantry-items)");
+  assert(cookable[0]?.priority === "low", "a meal you COULD cook is a possibility, not a call to action");
+
+  // The two refusals this generator exists for.
+  assert(
+    identifyCookbookCookableNowOpportunities(
+      [{ id: 11, name: "Tomato & Beef Stew", ingredients: ["tomato", "onion", "beef"] }],
+      cookPantry,
+    ).length === 0,
+    "a recipe missing ONE ingredient produces NO card (never \"nearly cookable\")",
+  );
+  assert(
+    identifyCookbookCookableNowOpportunities(
+      [{ id: 12, name: "Mystery Dish", ingredients: ["tomato", "onion", "xyzzy-not-a-food-42"] }],
+      cookPantry,
+    ).length === 0,
+    "an UNIDENTIFIABLE ingredient BLOCKS the card — a knowledge gap is never treated as \"owned\"",
+  );
+  assert(
+    identifyCookbookCookableNowOpportunities([{ id: 13, name: "Tomato Salad", ingredients: ["tomato"] }], []).length === 0,
+    "an empty pantry produces no cookable-now card",
+  );
+  assert(
+    identifyCookbookCookableNowOpportunities([{ id: 14, name: "Empty Recipe", ingredients: [] }], cookPantry).length === 0,
+    "a recipe with NO recorded ingredients never fires (no vacuous truth)",
+  );
+  assert(
+    JSON.stringify(
+      identifyCookbookCookableNowOpportunities([{ id: 10, name: "Tomato & Onion Salad", ingredients: ["tomato", "onion"] }], cookPantry),
+    ) === JSON.stringify(cookable),
+    "deterministic: identical input yields byte-identical output (Rule LT3)",
+  );
+
+  section("§1 identifyCookbookHouseholdConflictOpportunities (AFI4/CBK2) — names the ingredient, never edits the recipe");
+
+  const VEGETARIAN_DEF: RestrictionDefinition = {
+    id: "vegetarian",
+    displayName: "Vegetarian",
+    tier: "additional_restriction",
+    aliases: ["chicken", "beef", "pork"],
+    derivedIngredients: [],
+    hiddenIngredients: [],
+    substitutions: [],
+    prohibitedPhrases: [],
+  };
+  const conflicts = identifyCookbookHouseholdConflictOpportunities(
+    [
+      { id: 20, name: "Chicken Curry", ingredients: ["chicken", "onion"] },
+      { id: 21, name: "Tomato Pasta", ingredients: ["tomato", "pasta"] },
+    ],
+    [VEGETARIAN_DEF],
+  );
+  assert(conflicts.length === 1, "only the recipe that ACTUALLY conflicts produces a card", String(conflicts.length));
+  assert(conflicts[0]?.subject.id === 20, "the card names the conflicting recipe");
+  assert(
+    conflicts[0]?.evidence.some((e) => e.source === "household-eaters"),
+    "Rule E1 — the restriction is cited to household-eaters",
+  );
+  assert(
+    conflicts[0]?.evidence.some((e) => e.detail.includes("chicken")),
+    "names the INGREDIENT that caused the conflict, not just the recipe",
+  );
+  assert(
+    conflicts[0]?.priority === "medium",
+    "a cookbook conflict is medium — only shopping-restriction-conflict may be critical",
+    conflicts[0]?.priority,
+  );
+  assert(
+    /adapt|keep it as it is/i.test(conflicts[0]?.suggestedAction ?? ""),
+    "the action SUGGESTS adapting or keeping — CBK2 never edits a household's recipe",
+    conflicts[0]?.suggestedAction,
+  );
+  assert(
+    identifyCookbookHouseholdConflictOpportunities([{ id: 20, name: "Chicken Curry", ingredients: ["chicken"] }], []).length === 0,
+    "no stored restrictions ⇒ no conflict cards (never a guessed restriction)",
+  );
+
+  section("§1 AFI5 (Companion) — the cookbook domain is REGISTERED, not silently dropped");
+
+  // The silent-drop guard. An unregistered domain is produced, delivered, budgeted and
+  // learned from — then vanishes one step before the household could read it.
+  const cookbookNotices = noticeOpportunities([
+    {
+      id: "food-intelligence:cookbook-recipe-cookable-now:10",
+      domain: "cookbook",
+      priority: "low",
+      explanation: "You have everything for \"Tomato Salad\".",
+      suggestedAction: "Cook it from what you already have.",
+      evidence: [{ source: "meals", detail: "It is in your cookbook." }],
+    },
+  ]);
+  assert(
+    cookbookNotices.length === 1 && cookbookNotices[0]?.category === "cookbook-opportunity",
+    "a cookbook opportunity reaches the Companion as a `cookbook-opportunity` notice",
+  );
+  assert(
+    noticeOpportunities([
+      { id: "x", domain: "cookbook", priority: "low", explanation: "e", suggestedAction: "a", evidence: [] },
+    ]).length === 0,
+    "an UNCITED cookbook opportunity is still DROPPED at the notice boundary (Rule E1)",
+  );
+  assert(selectSurface("cookbook") === "meals", "the cookbook domain routes to the EXISTING meals surface", selectSurface("cookbook"));
+
   section("§1 prioritizeOpportunities — stable priority ordering, limit clamping");
 
   // PHASE5E — every opportunity names the canonical entity it is about. It is a
@@ -237,6 +523,9 @@ async function main(): Promise<void> {
     return {
       assembleFoodIntelligence: async () => {
         throw new Error("report tests must not call assembleFoodIntelligence");
+      },
+      assembleFoodComparison: async () => {
+        throw new Error("report tests must not call assembleFoodComparison");
       },
       identifyOpportunities: async (request) => {
         calls.push(`identifyOpportunities(${request.userId})`);

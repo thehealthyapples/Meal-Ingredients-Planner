@@ -32,6 +32,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Loader2, RotateCcw, Eye, UserCheck, PlayCircle, Sprout, AlertTriangle, Home, BarChart3,
 } from "lucide-react";
+import { OperationDialog, type OperationSpec } from "@/components/admin/operation";
 
 // ---------------------------------------------------------------------------
 // API shapes (mirror server/benchmark/)
@@ -98,6 +99,7 @@ export default function AdminBenchmarkHouseholdsPage() {
   const [runMode, setRunMode] = useState<"quick" | "full">("quick");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [lastRuns, setLastRuns] = useState<RunSummary[] | null>(null);
+  const [runOpen, setRunOpen] = useState(false);
 
   const { data, isPending, error } = useQuery<ListResponse>({
     queryKey: ["/api/admin/benchmark-households"],
@@ -147,19 +149,6 @@ export default function AdminBenchmarkHouseholdsPage() {
     onError: (e: Error) => toast({ title: "Impersonation failed", description: e.message, variant: "destructive" }),
   });
 
-  const runMutation = useMutation({
-    mutationFn: async (payload: { mode: string; households: "all" | string[] }) => {
-      const res = await apiRequest("POST", "/api/admin/benchmark-households/run-benchmark", payload);
-      return res.json() as Promise<{ runs: RunSummary[] }>;
-    },
-    onSuccess: (result) => {
-      setLastRuns(result.runs);
-      invalidate();
-      toast({ title: "Benchmark complete", description: `${result.runs.length} household run(s) recorded.` });
-    },
-    onError: (e: Error) => toast({ title: "Benchmark run failed", description: e.message, variant: "destructive" }),
-  });
-
   if ((user as any)?.role !== "admin") {
     setLocation("/");
     return null;
@@ -176,6 +165,58 @@ export default function AdminBenchmarkHouseholdsPage() {
 
   const runHouseholds: "all" | string[] = selected.size === 0 || selected.size === households.length
     ? "all" : Array.from(selected);
+  const runTargetCount = runHouseholds === "all" ? households.length : runHouseholds.length;
+
+  // OPS1 — Run Benchmark through the one canonical Operation experience. Reuses the existing
+  // POST /run-benchmark endpoint verbatim; the Operation owns purpose → readiness → confirm →
+  // progress → completion summary → next step. Reversible: it writes only into the deterministic
+  // benchmark world (resets the targeted households and records run artefacts), never canonical
+  // knowledge any real household sees.
+  const runSpec: OperationSpec<{ runs: RunSummary[] }> = {
+    id: "run-benchmark",
+    title: "Run Intelligence Benchmark",
+    purpose: `Run the Companion benchmark (${runMode === "full" ? "Full · 100 questions" : "Quick · 10 questions"}) against ${runHouseholds === "all" ? `all ${households.length} households` : `${runTargetCount} selected household${runTargetCount === 1 ? "" : "s"}`}.`,
+    impact: {
+      level: "reversible",
+      line: "Writes only into the deterministic benchmark world. Each targeted household is reset to canonical state before it runs, and one run artefact per household is recorded. It changes nothing any real household sees.",
+    },
+    guidance: [
+      { q: "What does this do?", a: "Executes through the one Companion seam as each targeted household's owner, then records a benchmark run artefact per household in the history (world mode “benchmark-world”)." },
+      { q: "Why would I run it?", a: "To measure Companion intelligence — headline score, honest-gap rate and gates fired — against a fixed, deterministic world before a release." },
+      { q: "What happens?", a: "Each targeted household is reset to its canonical fixture, the benchmark runs as its owner, and the result is scored and saved to benchmark history." },
+      { q: "Data impact", a: "Resets the targeted benchmark households and writes benchmark run rows. It touches no real user or household data." },
+      { q: "Production impact", a: "None — the benchmark world is isolated from what any real household sees." },
+    ],
+    readiness: [
+      households.length > 0
+        ? { label: `${runTargetCount} household${runTargetCount === 1 ? "" : "s"} targeted`, state: "ready", detail: runHouseholds === "all" ? "All households" : (runHouseholds as string[]).join(", ") }
+        : { label: "No benchmark households available", state: "blocked", detail: "Seed the Benchmark World first." },
+      { label: `${runMode === "full" ? "Full run — 100 questions per household" : "Quick run — 10 questions per household"}`, state: "info" },
+    ],
+    confirmLabel: households.length > 0 ? `Run ${runMode} benchmark` : "Run benchmark",
+    expectedDuration: runMode === "full" ? "several minutes for a full run" : "a minute or two",
+    run: () =>
+      apiRequest("POST", "/api/admin/benchmark-households/run-benchmark", { mode: runMode, households: runHouseholds })
+        .then((r) => r.json() as Promise<{ runs: RunSummary[] }>),
+    summarise: (res) => {
+      const n = res.runs.length;
+      const avg = n > 0 ? Math.round(res.runs.reduce((s, r) => s + r.headline, 0) / n) : 0;
+      const ready = res.runs.filter((r) => r.verdict.toLowerCase().includes("ready") || r.verdict.toLowerCase().includes("pass")).length;
+      return {
+        tone: n > 0 ? "good" : "warning",
+        headline: n > 0 ? `${n} household run${n === 1 ? "" : "s"} recorded.` : "No households were run.",
+        lines: n > 0
+          ? [
+              `Average headline score ${avg}`,
+              `${ready} of ${n} verdict${n === 1 ? "" : "s"} release-ready`,
+              "Full per-household breakdown is in the run history below.",
+            ]
+          : ["Nothing was recorded — check the households were seeded and try again."],
+      };
+    },
+    nextStep: () => ({ label: "View Companion Intelligence", href: "/admin/companion-intelligence" }),
+    onComplete: (res) => { setLastRuns(res.runs); invalidate(); },
+  };
 
   return (
     <div className="container mx-auto max-w-6xl px-4 py-6 space-y-6" data-testid="admin-benchmark-households-page">
@@ -303,14 +344,17 @@ export default function AdminBenchmarkHouseholdsPage() {
               Target: {runHouseholds === "all" ? `all ${households.length} households` : `${(runHouseholds as string[]).length} selected (${(runHouseholds as string[]).join(", ")})`}
             </div>
             <Button variant="default"
-              onClick={() => runMutation.mutate({ mode: runMode, households: runHouseholds })}
-              disabled={runMutation.isPending || households.length === 0}
+              onClick={() => setRunOpen(true)}
+              disabled={households.length === 0}
               data-testid="run-benchmark-button"
             >
-              {runMutation.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <PlayCircle className="h-4 w-4 mr-1" />}
-              {runMutation.isPending ? "Running…" : "Run benchmark"}
+              <PlayCircle className="h-4 w-4 mr-1" />
+              Run benchmark
             </Button>
           </div>
+
+          {/* OPS1 — the canonical Operation experience for Run Benchmark. */}
+          <OperationDialog spec={runSpec} open={runOpen} onOpenChange={setRunOpen} />
 
           {lastRuns && (
             <div className="overflow-x-auto">

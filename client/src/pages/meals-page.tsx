@@ -24,9 +24,16 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplets, Activity, AlertTriangle, ArrowRight, Loader2, Sparkles, Cookie, Droplet, Leaf, Globe, Save, Download, Minus, ShoppingBasket, Check, Package, CalendarPlus, CalendarDays, Coffee, Sun, Moon, UtensilsCrossed, Snowflake, Microscope, Baby, PersonStanding, Wine, ExternalLink, Pencil, Camera, Mic, Share2, Zap, Layers, ScanLine, ListPlus, Info, ClipboardList, Image as ImageIcon, Wand2, ChevronDown, Users, UserPlus, Shield, Eye, EyeOff, Sliders, MoreVertical } from "lucide-react";
+// PROD1 — adopt the canonical state owners (PX1-W4.8 / PX1-W0). PX1 built these
+// and rolled them out to Home/Dashboard/Profile; the six bottom-nav rooms never
+// adopted them. They are adopted here as a PAIR: EmptyState alone would make the
+// "you have nothing" lie more confident on a failed load, not less.
+import { EmptyState } from "@/components/ui/empty-state";
+import { LoadError } from "@/components/ui/load-error";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { CreateMealModal, type ImportedRecipeDraft } from "@/components/create-meal-modal";
+import AmbientIntelligence from "@/components/intelligence/AmbientIntelligence";
 import { RecipeScanReview, type RecipeScanData } from "@/components/RecipeScanReview";
 import { MealImageWidget } from "@/components/MealImageWidget";
 import BarcodeScanner from "@/components/BarcodeScanner";
@@ -2538,7 +2545,7 @@ function getMealDisplayCategory(meal: Meal): string {
 }
 
 export default function MealsPage() {
-  const { meals, isLoading, deleteMeal, createMeal } = useMeals();
+  const { meals, isLoading, isError: mealsError, refetch: refetchMeals, deleteMeal, createMeal } = useMeals();
   const { user } = useUser();
   const [, navigate] = useLocation();
   const searchStr = useSearch();
@@ -3584,6 +3591,18 @@ export default function MealsPage() {
       <div className="flex gap-3 items-start">
       <div className="flex-1 min-w-0">
 
+      {/* AFI4/CBK2 — the Cookbook's ambient surface: recipes you could cook from what's
+          already in the pantry, and recipes that collide with a household restriction.
+          Same shared bundle as Planner/Pantry/Shopping/Home, collapsed until asked.
+          Hidden while searching, so it never competes with a search the household began. */}
+      {!searchTerm.trim() && (
+        <AmbientIntelligence
+          surfaceKey="cookbook"
+          domains={["cookbook"]}
+          title="From your cookbook"
+          data-testid="ambient-cookbook"
+        />
+      )}
 
       {user?.isDemo && !searchTerm.trim() && (
         <div className="mb-3 p-3 rounded-lg bg-primary/5 border border-primary/15 flex items-start gap-3" data-testid="demo-cookbook-intro">
@@ -4610,19 +4629,52 @@ export default function MealsPage() {
         </div>
       )}
 
-      {!isLoading && filteredMeals?.length === 0 && !webSearchResults.length && !webIsSearching && !productResults.length && !productIsSearching && (
-        <div className="text-center py-20">
-          <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-            <ChefHat className="h-10 w-10 text-muted-foreground" />
-          </div>
-          <h3 className="text-base font-medium mb-2">No meals found</h3>
-          <p className="text-muted-foreground">
-            {searchTerm.trim().length >= 2 
-              ? "No local matches. Web results will appear below if found."
-              : "Try creating a new meal to get started."
+      {/* PROD1 — the Cookbook's failed load. It rendered NOTHING before this
+          branch existed: `meals` is undefined on error, so `filteredMeals` is
+          undefined too, and every guard below is written `filteredMeals?.length`
+          — the grid, the "show more" and the empty state all fell through their
+          optional chain together, leaving blank space under the header. */}
+      {!isLoading && mealsError && (
+        <LoadError
+          what="your cookbook"
+          onRetry={() => refetchMeals()}
+          description="Nothing has been lost — your meals are safe. This is a problem at our end."
+          data-testid="error-cookbook"
+        />
+      )}
+
+      {!isLoading && !mealsError && filteredMeals?.length === 0 && !webSearchResults.length && !webIsSearching && !productResults.length && !productIsSearching && (
+        // PROD1 — two different absences, told apart. A search that matched nothing
+        // is `filtered` (the cookbook still has meals); a cookbook with no meals at
+        // all is `empty` — and that one now carries the action it always lacked.
+        // An empty cookbook whose only words were "try creating a new meal", with
+        // no button to do it, was a dead end on a household's very first visit.
+        searchTerm.trim().length >= 2 ? (
+          <EmptyState
+            variant="filtered"
+            icon={ChefHat}
+            title="No meals found"
+            description="No local matches. Web results will appear below if found."
+            data-testid="empty-cookbook-filtered"
+          />
+        ) : (
+          <EmptyState
+            variant="empty"
+            icon={ChefHat}
+            title="Your cookbook is empty"
+            description="Add the meals your household already cooks, and THA will plan, shop and check against them."
+            action={
+              // Reuses the SAME control the header's "Add Recipe" primary CTA already
+              // drives (`CreateMealDialog`'s `externalOpen`) — one way to add a meal,
+              // reached from two places. It does not open a second dialog of its own.
+              <Button variant="default" onClick={() => setCookbookAddRecipeOpen(true)} data-testid="button-empty-create-meal">
+                <Plus className="w-4 h-4 mr-1.5" aria-hidden="true" />
+                Add your first meal
+              </Button>
             }
-          </p>
-        </div>
+            data-testid="empty-cookbook"
+          />
+        )
       )}
 
       {(productResults.length > 0 || productIsSearching) && searchSource !== "recipes" && (

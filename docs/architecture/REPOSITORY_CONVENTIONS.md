@@ -105,12 +105,14 @@ to `docs/investigations/` under `DOCSTRUCT1` (2026-07-10, §8).
 
 | Folder | Covers |
 |---|---|
-| `intelligence/` | Intelligence Platform, capability bindings, companion, engines (observation, behaviour, decision, attention), conversation/intents, Food Intelligence runtime, nutrition-boost feature |
+| `intelligence/` | Intelligence Platform, capability bindings, engines (observation, behaviour, decision, attention), conversation/intents, Food Intelligence runtime, nutrition-boost feature. **Not the Companion itself** — that is its own workstream (`companion/`, below). |
+| `companion/` | The Companion as a surface and as intelligence: identity, presence, conversation, authority, integration, runtime behaviour, and Companion Intelligence implementation. Carved out of `intelligence/` and `ux/` under `DOCGOV2` (2026-07-18) because the Companion is a stream of work in its own right, filed loosely across both before then. |
+| `house/` | The **House experience**: Home, Arrival, the North Star, the Orchard House, rooms, spatial experience, and the household interior design language. Carved out of `ux/` under `DOCGOV2` (2026-07-18). Not general UX-system work — that stays in `ux/`. |
 | `knowledge/` | Canonical food & nutrition knowledge, evidence, food imports (WS0/WS0X/WS1–WS11 food-catalogue programme), plant diversity, dietary dictionaries, knowledge review workbench |
 | `benchmarking/` | Benchmark framework, execution, measurement, scoring, reporting |
 | `cookbook/` | Recipes and meal content, meal detail, meal shells/templates/catalogue, meal-occasion & component modelling, recipe acquisition |
 | `planner/` | Weekly & smart planner, plan generation, meal–household compatibility, dietary enforcement in plans, meal discovery for planning |
-| `ux/` | Companion presence and identity, UI/interaction, dialogs, density/layout, workspace/header, profile display, copy/rename |
+| `ux/` | **General** UI/interaction system work: dialogs, density/layout, workspace/header, navigation, profile display, copy/rename, platform-wide visual language. **Not** the Companion (→ `companion/`) and **not** the House experience (→ `house/`). A Home/Arrival/North Star/Orchard-House report, or a Companion identity/presence/conversation report, does not belong here even if it touches the UI. |
 | `platform/` | Platform architecture & quality, resilience, operations, release engineering, launch-readiness, platform regressions |
 | `governance/` | Architecture promotions, specifications, source-of-truth and governance decisions |
 | `engineering/` | Engineering workflow & process, repository structure, release/deployment mechanics, documentation rules, session/dev-status records |
@@ -124,6 +126,46 @@ A workstream folder is created **only when a document needs it** (so a tree may
 carry a subset of the folders above); the vocabulary is shared, the folders are
 materialised on demand. `production/` was folded into `platform/` under
 `DOCSTRUCT1` so both trees speak one vocabulary.
+
+### Companion and House routing (DOCGOV2)
+
+A **Companion** report (identity · presence · conversation · authority ·
+integration · runtime behaviour · Companion Intelligence) belongs in
+`companion/`. A **House** report (Home · Arrival · North Star · Orchard House ·
+rooms · spatial experience · household interior design language) belongs in
+`house/`. Neither may be filed loosely at a tree root (already forbidden by §1
+rule 5 and enforced by check #3) nor in the **generic `ux/` folder**.
+`repo-structure-verify.sh` fails on a Companion- or House-named report found
+directly under `docs/implementation/ux/` or `docs/investigations/ux/`.
+
+**Grandfathered exceptions (do not relocate).** The verifier carries a small,
+documented allow-list of pre-existing `ux/` files the rule does **not** fail on,
+each for a stated reason:
+
+- **Cited by a governing architecture document** — relocating would break an
+  inbound citation, which §5 forbids for a cosmetic move:
+  `CP2_COMPANION_PERSONALITIES_ACTIVATION`, `EWX1_LIVING_COMPANION_EXPERIENCE`,
+  `INT37_COMPANION_CARD_EXPERIENCE_IMPLEMENTATION`, `EXP5_ONE_HOME_MANY_PLACES`.
+- **Unresolved `ux/`↔`architecture/` name-duplication** — the same EWO name holds
+  *different* documents in both folders (a pre-existing "one canonical home"
+  defect to be resolved by its owner, not by this move):
+  `DESIGN1_HOME_VISUAL_DESIGN`, `HOUSE1_THE_ENTRANCE_HALL`.
+- **Genuinely cross-domain** — a Home/Planner *and* Companion hybrid, or a general
+  Experience-Architecture refinement, whose owning workstream is a judgment call
+  left to its owner: `WX2_HOME_INTELLIGENCE_COMPANION_IMPLEMENTATION`,
+  `WX3_PLANNER_INTELLIGENCE_COMPANION_IMPLEMENTATION`,
+  `NORTH2_EXPERIENCE_ARCHITECTURE_REFINEMENT`.
+
+The allow-list binds every *new* report to the rule without demanding a
+citation-breaking rename of an old one. A separate set of Companion runtime
+reports remains under `intelligence/` for the same citation-lock reason
+(`EWO2_COMPANION_PERSONALITY_PLATFORM_IMPLEMENTATION`,
+`INT35B_COMPANION_LEARNING_AND_OBSERVABILITY`,
+`INT35C_GOVERNED_COMPANION_LEARNING_AND_DASHBOARD`, and the source investigations
+`EWO1_COMPANION_PLATFORM_FOUNDATION`,
+`THA_COMPANION_PLATFORM_ARCHITECTURE_INVESTIGATION`); `intelligence/` is a valid
+workstream and is not policed by this rule. When any of these documents is next
+revised through its governing owner, it should move to its workstream.
 
 ---
 

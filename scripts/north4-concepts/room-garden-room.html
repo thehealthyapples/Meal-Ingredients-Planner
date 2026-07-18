@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en" data-state="filled">
+<head>
+<meta charset="utf-8">
+<title>The Garden Room · Nutrition — informing, never grading</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,300;9..144,0,400;9..144,1,300;9..144,1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./_palette.css">
+<link rel="stylesheet" href="./_house.css">
+<script>
+  /* THE GARDEN ROOM (Nutrition) — HOUSE_COMPLETE §4.
+     Same house; ONE deliberate move: THE TIERS INVERT THE INDUSTRY — plain words
+     ABOVE, evidence SOLID BENEATH. Progressive disclosure built as a building.
+       ?state=filled → a household with real history
+       ?state=empty  → too early to say much, said honestly and warmly */
+  (function () {
+    var s = new URLSearchParams(location.search).get("state");
+    document.documentElement.dataset.state = s === "empty" ? "empty" : "filled";
+  })();
+</script>
+<style>
+/* =============================================================================
+   THE GARDEN ROOM — the most dangerous room in the house, and therefore the most
+   carefully built. Nutrition is where every other product moralises.
+
+   THE ONE MOVE: the tiers. The Experience Blueprint already specified "noticeboard
+   tier over a solid data tier" (§5.1), and THAT ORDER IS THE ENTIRE ETHIC OF THE
+   ROOM RENDERED AS ARCHITECTURE — plain human language above, the working solid
+   beneath it, always reachable, imposed on nobody. Inverting the tiers (numbers on
+   top, words as a caption) would turn this into every other nutrition product in
+   existence, which is why the order is permanent (rule G3).
+   ========================================================================== */
+
+:root {
+  /* GARDEN-BRIGHT, OPTIMISTIC (Blueprint §5.1) — the brightest room after Arrival.
+     Still the one morning; simply the most open-hearted angle of it. */
+  --light-angle: 128deg;
+  --light-stops: var(--wall-warm) 0%, hsl(42 58% 95%) 26%, var(--wall) 70%, var(--wall-cool) 100%;
+}
+
+.floor { display: grid; grid-template-columns: 1fr 300px; gap: 56px; align-items: start; }
+.window-col { position: sticky; top: 92px; }
+.window { height: 210px; }       /* E2 — one committed garden-bright region */
+
+/* ============================  TIER 1 — THE NOTICEBOARD  ============================
+   The room's VOICE, and the upper tier. A small number of PINNED TRUE SENTENCES in
+   plain language, in the household's register — never a row of KPI tiles. Each note
+   is one thing THA can defend, with its working reachable beneath.
+   The oak rail is the noticeboard's timber; the notes rest against it. */
+.board { position: relative; margin-top: 30px; padding-top: 18px; }
+.board::before {   /* the oak noticeboard rail */
+  content: ""; position: absolute; left: -6px; right: -6px; top: 0; height: 6px; border-radius: 2px;
+  background: linear-gradient(to bottom, var(--oak-lip), hsl(43 40% 46%) 55%, var(--oak-edge));
+  box-shadow: 0 10px 16px -10px hsl(56 45% 9% / .34);
+}
+.notes { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.note { position: relative; background: hsl(39 50% 97%); border-radius: 3px; padding: 17px 18px 18px;
+  box-shadow: 0 6px 16px -9px hsl(56 45% 9% / .26), 0 1px 2px hsl(56 45% 9% / .09);
+  border-top: 1px solid hsl(41 50% 93%); }
+.note .n-say { font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-weight: 300; font-size: 19px; line-height: 1.32; color: hsl(30 16% 22%); }
+.note .n-why { margin-top: 8px; font-size: 12.5px; line-height: 1.55; color: var(--ink-body); }
+/* "show the working" — reachable from the figure itself, imposed on nobody (G4) */
+.note .n-work { margin-top: 10px; font-size: 11.5px; color: hsl(96 26% 34%); font-weight: 500; }
+
+/* ---- THE GARDEN FILLING IN — the room's ONE Living Detail ----------------
+   Plant-diversity counts rendered as COPY PLUS THE EXISTING COUNT. The ceiling is
+   explicit and absolute (Blueprint §12.2): NO LEAF IMAGERY, NO DRAWN GARDEN, NO
+   STREAK, NO PROGRESS RING. The garden is a SENTENCE, not a picture — a drawn
+   garden here would be the theme park. Growth is the frame; nothing ever "drops". */
+.note.garden { background: linear-gradient(164deg, hsl(41 54% 96%), hsl(38 34% 93%)); }
+.note.garden .n-count { font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-weight: 300; font-size: 40px; line-height: 1; color: hsl(74 24% 30%); }
+.note.garden .n-count sup { font-size: 15px; font-weight: 400; color: var(--ink-quiet); vertical-align: super; margin-left: 5px; }
+
+/* ============================  TIER 2 — THE DATA TIER  ============================
+   The SOLID GROUND beneath: the real figures, methodology, provenance, citations —
+   calm, complete, honest, available to whoever asks. It sits BENEATH the words at
+   every breakpoint, on the same ground, never behind a chevron that would imply
+   the evidence is optional trivia. */
+.data { margin-top: 34px; position: relative; border-radius: 4px; overflow: hidden;
+  background: linear-gradient(176deg, hsl(40 34% 90%), hsl(38 28% 87%));
+  box-shadow: 0 18px 40px -24px hsl(56 45% 9% / .3), 0 1px 3px hsl(56 45% 9% / .08); }
+.data::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px;
+  background: linear-gradient(to bottom, hsl(44 62% 92% / .9), transparent); }
+.data-head { padding: 18px 22px 0; }
+.data-head .d-t { font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-weight: 400; font-size: 17px; color: hsl(30 16% 24%); }
+.data-head .d-s { margin-top: 4px; font-size: 12px; color: var(--ink-quiet); }
+.rows { padding: 14px 22px 22px; }
+.row { display: grid; grid-template-columns: 1fr auto auto; gap: 18px; align-items: baseline; padding: 11px 0; border-bottom: 1px solid hsl(38 24% 82% / .55); }
+.row:last-child { border-bottom: 0; }
+.row .r-what { font-size: 13.5px; color: hsl(30 14% 28%); }
+/* CONFIDENCE EXACTLY AS STRONG AS THE EVIDENCE — no precision theatre, no
+   invented decimals. "around thirty" when THA knows around thirty (rule G5). */
+.row .r-val { font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-weight: 400; font-size: 15px; color: hsl(30 16% 22%); }
+.row .r-src { font-size: 11px; color: hsl(96 26% 34%); }
+/* an honest gap, stated as a gap and never estimated into (Core Principle 6) */
+.row.unknown .r-val { font-style: italic; font-weight: 300; color: var(--ink-quiet); }
+
+@media (max-width: 980px) {
+  .floor { grid-template-columns: 1fr; gap: 30px; }
+  .window-col { position: static; order: -1; display: grid; grid-template-columns: 240px 1fr; gap: 20px; align-items: start; }
+  .window { height: 132px; }
+  .counter-note { margin-top: 0; align-self: center; }
+}
+@media (max-width: 560px) {
+  /* THE NOTICEBOARD *IS* THE ROOM. The one fact that matters arrives first, in
+     plain language; the data tier continues below ON THE SAME GROUND — never a
+     separate tab, never behind a chevron. Scrolling down is walking closer to the
+     noticeboard, not opening a drawer. */
+  .window-col { grid-template-columns: 1fr; }
+  .window { height: 112px; }
+  .notes { grid-template-columns: 1fr; }
+  .row { grid-template-columns: 1fr auto; }
+  .row .r-src { grid-column: 1 / -1; }
+}
+</style>
+</head>
+<body>
+<div class="room">
+  <div class="shell"></div>
+
+  <div class="floor">
+    <main>
+      <div class="head">
+        <div class="eyebrow">Nutrition</div>
+        <h1 class="title">How you've been eating</h1>
+        <p class="subtitle">
+          <span class="filled-only" style="display:inline">A few true things, in plain words — and everything behind them, if you want it.</span>
+          <span class="empty-only">Not much to go on yet, and that's fine. Here's what we can honestly say so far.</span>
+        </p>
+      </div>
+
+      <!-- EMPTY STATE: honest absence, warmly. Never a zeroed dashboard, never
+           "complete your profile to unlock your score" (there is no score). -->
+      <div class="empty-only invite">
+        <div class="bi-title">It's early days — there isn't much to read yet.</div>
+        <div class="bi-body">A few weeks of ordinary cooking is all it takes before this room has something useful to say. Nothing is missing and nothing is late; there just isn't enough here yet to tell you anything true, so we won't guess.</div>
+      </div>
+
+      <!-- ================= TIER 1 — THE NOTICEBOARD (words) ================= -->
+      <div class="board filled-only" style="display:block">
+        <div class="notes">
+          <div class="note garden">
+            <div class="n-count">28<sup>plants</sup></div>
+            <div class="n-say" style="margin-top:10px">A good spread this month.</div>
+            <div class="n-why">Twenty-eight different plants so far — up from twenty-two last month, mostly from the traybakes and the chickpea stew.</div>
+            <div class="n-work">How this is counted ›</div>
+          </div>
+          <div class="note">
+            <div class="n-say">Most weeks have had something green in them.</div>
+            <div class="n-why">Five of the last six weeks included a leafy vegetable at least twice. The sixth was the week you were away.</div>
+            <div class="n-work">See the weeks ›</div>
+          </div>
+          <div class="note">
+            <div class="n-say">Fish has been the quiet one.</div>
+            <div class="n-why">It's appeared about twice a month. That's not a target and it isn't behind on anything — it's just the thing that's shown up least.</div>
+            <div class="n-work">Where this comes from ›</div>
+          </div>
+          <div class="note">
+            <div class="n-say">The shop-bought things have been mostly simple ones.</div>
+            <div class="n-why">Of the products you've looked at on the bench, most were lightly processed. A few we couldn't read properly, and those aren't counted either way.</div>
+            <div class="n-work">See what we couldn't read ›</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= TIER 2 — THE DATA TIER (evidence) ================= -->
+      <div class="data filled-only" style="display:block">
+        <div class="data-head">
+          <div class="d-t">What's behind those notes</div>
+          <div class="d-s">Every figure here can show its working. Nothing is estimated into a gap.</div>
+        </div>
+        <div class="rows">
+          <div class="row"><span class="r-what">Distinct plants, last 30 days</span><span class="r-val">28</span><span class="r-src">from your planned meals</span></div>
+          <div class="row"><span class="r-what">Weeks with leafy veg twice or more</span><span class="r-val">5 of 6</span><span class="r-src">from your planned meals</span></div>
+          <div class="row"><span class="r-what">Fish, per month</span><span class="r-val">around twice</span><span class="r-src">from your planned meals</span></div>
+          <div class="row"><span class="r-what">Fibre, typical day</span><span class="r-val">around 26g</span><span class="r-src">McCance &amp; Widdowson, 7th ed.</span></div>
+          <div class="row unknown"><span class="r-what">Salt, typical day</span><span class="r-val">not enough to say</span><span class="r-src">most products lack a per-100g figure</span></div>
+          <div class="row unknown"><span class="r-what">Portion sizes</span><span class="r-val">we don't record these</span><span class="r-src">—</span></div>
+        </div>
+      </div>
+    </main>
+
+    <aside class="window-col">
+      <div>
+        <div class="window">
+          <img src="../../attached_assets/design/north_star/v2/ORCHARD.png" alt="">
+          <span class="mullion"></span>
+        </div>
+        <div class="ledge"></div>
+      </div>
+
+      <div class="counter-note">
+        <div class="counter-from"><span class="dot"></span> The Companion</div>
+        <div class="counter-body">
+          <span class="filled-only" style="display:inline">If you ever want, I can explain any of these — including the two we can't answer yet.</span>
+          <span class="empty-only">Nothing to explain yet. I'll have something worth saying once there's a few weeks behind us.</span>
+        </div>
+        <a class="counter-link" href="#">Ask about any of this ›</a>
+      </div>
+
+      <div class="wall-apple" aria-hidden="true">
+        <i class="wa-occ"></i><i class="wa-up"></i><i class="wa-lo"></i><i class="wa-face"></i>
+      </div>
+    </aside>
+  </div>
+
+  <nav class="doors">
+    <div class="door"><span class="door-name">Home</span><span class="door-handle"></span></div>
+    <div class="door"><span class="door-name">Cookbook</span><span class="door-handle"></span></div>
+    <div class="door here"><span class="door-name">Nutrition</span><span class="door-handle"></span></div>
+    <div class="door"><span class="door-name">Pantry</span><span class="door-handle"></span></div>
+  </nav>
+
+  <button class="companion" aria-label="The Companion"><i></i></button>
+</div>
+</body>
+</html>

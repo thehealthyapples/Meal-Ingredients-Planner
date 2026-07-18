@@ -165,14 +165,14 @@ async function main(): Promise<void> {
   );
   assert(
     intelligencePlatform.getCapability("diary")!.executableIntents.includes("read") &&
-      intelligencePlatform.getCapability("diary")!.executableIntents.includes("explain"),
-    "executableIntents declares read + explain (truthful registry — INT6A)",
+      intelligencePlatform.getCapability("diary")!.executableIntents.includes("explain") &&
+      intelligencePlatform.getCapability("diary")!.executableIntents.includes("add"),
+    "executableIntents declares read + explain (INT10) and add (COMP_ACT1) — truthful registry (INT6A)",
   );
   assert(
-    !intelligencePlatform.getCapability("diary")!.executableIntents.includes("add") &&
-      !intelligencePlatform.getCapability("diary")!.executableIntents.includes("delete") &&
+    !intelligencePlatform.getCapability("diary")!.executableIntents.includes("delete") &&
       !intelligencePlatform.getCapability("diary")!.executableIntents.includes("import"),
-    "add / delete / import are NOT in executableIntents (no live code path — INT6A)",
+    "delete / import are NOT in executableIntents (no live code path — INT6A)",
   );
 
   const platform = platformWithFakeDiary();

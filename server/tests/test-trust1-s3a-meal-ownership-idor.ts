@@ -103,11 +103,38 @@ function sourceAudit(): void {
   );
 
   // Meal-template ownership semantics must be UNTOUCHED — S3A is forbidden from changing them.
+  //
+  // CORRECTED 2026-07-17 (P0 Food Intelligence Recovery). This assertion also required
+  // `app.delete("/api/meal-template-products/:id", assertAdmin)`. **RM3 (2026-07-15)
+  // deliberately RETIRED that route** — it was the write surface of the duplicate ready-meal
+  // product representation and had no live consumer (RM1 §3.3, §8; the rationale is recorded
+  // at routes.ts:5318-5326). The route is gone, so this clause asserted the guard of a
+  // ROUTE THAT NO LONGER EXISTS, and had failed since the day RM3 landed.
+  //
+  // THE COST OF THAT, MEASURED: `npm test` is an `&&` chain and this is the 9th of 141
+  // links. A stale grep here did not fail one test — IT SILENTLY DISABLED EVERY GATE
+  // DOWNSTREAM OF IT. For two days the platform's effective test suite was eight tests, and
+  // nothing said so, because a chain that stops early exits non-zero exactly like a chain
+  // that ran. This is why HHP2 could be recorded "Complete" while wired to nothing, and why
+  // 40% of this repo's tests were found unregistered: the suite that would have objected was
+  // not running.
+  //
+  // The two LIVE routes keep their `assertAdmin` assertions below, unweakened. A retired
+  // route has no attack surface to guard; asserting otherwise is not security, it is a grep
+  // outliving its subject. **The security property this file exists for — meal ownership,
+  // 404-never-403 — is untouched.**
   check(
     "meal_templates guards are unchanged from TRUST1-S3 (S3A must not alter template semantics)",
     /app\.patch\("\/api\/meal-templates\/:id",\s*assertAdmin/.test(src) &&
-      /app\.delete\("\/api\/meal-templates\/:id",\s*assertAdmin/.test(src) &&
-      /app\.delete\("\/api\/meal-template-products\/:id",\s*assertAdmin/.test(src),
+      /app\.delete\("\/api\/meal-templates\/:id",\s*assertAdmin/.test(src),
+  );
+
+  // The retired route must STAY retired: if it ever returns, it returns WITH its guard, and
+  // this assertion is the thing that notices. Retirement is a state to hold, not a one-off.
+  check(
+    "RM3's retired meal-template-products route has not silently returned unguarded",
+    !/app\.delete\("\/api\/meal-template-products\/:id"(?!,\s*assertAdmin)/.test(src),
+    "the RM3-retired route reappeared without assertAdmin",
   );
 }
 

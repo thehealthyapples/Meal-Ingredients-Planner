@@ -1,0 +1,51 @@
+{
+  "captured_by": "FI20_Food_Intelligence_Activation",
+  "base_url": "http://localhost:5000",
+  "viewport": {
+    "width": 430,
+    "height": 932
+  },
+  "captured": 4,
+  "failed": 0,
+  "shots": [
+    {
+      "id": "compare-deeplink-cheddar-brie",
+      "name": "Compare — deep-linked (cheddar vs brie)",
+      "route": "/compare?items=cheddar,brie",
+      "wait": "[data-testid=\"food-comparison\"], [data-testid=\"compare-error\"]",
+      "full": true,
+      "file": "compare-deeplink-cheddar-brie.png",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "id": "compare-empty-entry",
+      "name": "Compare — empty entry state",
+      "route": "/compare",
+      "wait": "[data-testid=\"compare-title\"]",
+      "full": true,
+      "file": "compare-empty-entry.png",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "id": "compare-broccoli-spinach",
+      "name": "Compare — broccoli vs spinach",
+      "route": "/compare?items=broccoli,spinach",
+      "wait": "[data-testid=\"food-comparison\"], [data-testid=\"compare-error\"]",
+      "full": true,
+      "file": "compare-broccoli-spinach.png",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "id": "food-page-compare-entry",
+      "name": "Food page — Compare entry (cheddar)",
+      "route": "/foods/cheddar",
+      "note": "Re-captured on a real canonical food; the script's auto-picked first slug resolved to an additive (acidity-regulator) whose page correctly shows the empty state and no Compare entry.",
+      "file": "food-page-compare-entry.png",
+      "status": 200,
+      "ok": true
+    }
+  ]
+}

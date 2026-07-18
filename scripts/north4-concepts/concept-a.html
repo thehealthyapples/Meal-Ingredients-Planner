@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>NORTH4 — Concept A · The Quiet Entrance Hall</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./_palette.css">
+<style>
+/* =========================================================================
+   CONCEPT A — THE QUIET ENTRANCE HALL
+   Three seconds: "I'm inside. It's quiet. The house was expecting me."
+
+   Composition : VERTICAL. One centre axis. Symmetrical.
+   The orchard  : NOT a view — a single lit aperture at the end of the hall.
+                  You see the orchard's LIGHT more than the orchard itself.
+   Materials    : warm stone + soft shadow lead. Oak only at the doors.
+   Light        : from AHEAD, through the open door. No sun in frame.
+   ========================================================================= */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: "Inter", "DejaVu Sans", system-ui, sans-serif;
+  background: var(--plaster);
+  color: var(--ink-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The hall. A room has a WALL and a FLOOR meeting at a line; without that line
+   this is a beige plain, not a hall. The walls fall into shadow at the edges so
+   the eye is pushed down the centre, toward the light. That is the whole trick. */
+.hall {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  --floor-line: 466px;
+  background:
+    /* the wall darkens hard at the edges — enclosure, not emptiness */
+    radial-gradient(88% 76% at 50% 34%,
+      hsl(39 56% 97%) 0%,
+      hsl(37 44% 93%) 38%,
+      hsl(34 28% 85%) 72%,
+      hsl(31 20% 76%) 100%),
+    var(--plaster);
+}
+/* THE FLOOR — a second plane, warmer and a shade deeper. The door stands ON it. */
+.floor {
+  position: absolute; z-index: 1; left: 0; right: 0;
+  top: var(--floor-line); bottom: 0;
+  background:
+    linear-gradient(to bottom, hsl(34 30% 84%) 0%, hsl(35 34% 88%) 26%, hsl(35 30% 85%) 100%);
+}
+/* where wall meets floor: the skirting. One hairline does the architectural work. */
+.floor::before {
+  content: ""; position: absolute; top: 0; left: 0; right: 0; height: 10px;
+  background: linear-gradient(to bottom, hsl(33 22% 72% / .5), hsl(34 26% 82% / 0));
+}
+
+/* ---- the constant shell (unchanged architecture, drawn quiet) ---- */
+.shell {
+  position: relative; z-index: 6;
+  height: 64px; padding: 0 32px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.mark { display: flex; align-items: center; gap: 10px; }
+.mark-apple {
+  width: 22px; height: 22px; border-radius: 50% 50% 48% 48%;
+  background: linear-gradient(150deg, var(--leaf-lift), var(--leaf));
+  position: relative;
+}
+.mark-apple::after {
+  content: ""; position: absolute; top: -3px; left: 11px;
+  width: 9px; height: 6px; border-radius: 0 70% 0 70%;
+  background: var(--gold); transform: rotate(-18deg);
+}
+.mark-name {
+  font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--ink-quiet); font-weight: 500;
+}
+.bell { width: 18px; height: 18px; opacity: .34; }
+
+/* ---- THE APERTURE — the open door at the end of the hall ----
+   A tall slot. The orchard at FULL opacity, but small and far. It is the
+   only saturated thing in the room, so it reads as light, not wallpaper. */
+.aperture-wrap {
+  position: absolute; z-index: 2;
+  left: 50%; transform: translateX(-50%);
+  top: 86px;
+  width: 300px; height: 380px;   /* base lands exactly on --floor-line: a door stands on the floor */
+}
+.aperture {
+  position: absolute; inset: 0;
+  border-radius: 150px 150px 0 0;   /* an arched opening, not a photo frame */
+  overflow: hidden;
+  /* the reveal — the wall has thickness. Structural honesty, OHDB § 13. */
+  box-shadow:
+    inset 0 0 0 1px hsl(38 24% 74% / .5),
+    0 0 0 7px var(--plaster),
+    0 0 0 8px hsl(38 22% 78% / .7),
+    22px 26px 60px hsl(56 40% 9% / .10);
+}
+.aperture img {
+  /* Cropped to the CENTRE of the artwork: the mown path receding between the
+     rows. The path is the invitation. The sun is deliberately out of frame. */
+  position: absolute; width: 300%; height: 100%;
+  left: 50%; transform: translateX(-50%);
+  object-fit: cover; object-position: 52% 62%;
+}
+/* the door's own reveal shadow, cast by the wall onto the view */
+.aperture::after {
+  content: ""; position: absolute; inset: 0; z-index: 2;
+  border-radius: inherit;
+  box-shadow: inset 14px 0 28px -10px hsl(56 50% 9% / .38),
+              inset -8px 0 22px -10px hsl(56 50% 9% / .22),
+              inset 0 16px 24px -12px hsl(56 50% 9% / .28);
+}
+
+/* ---- THE LIGHTFALL — morning coming through the door onto the floor ----
+   A trapezoid, widening toward the viewer. This is the room's one light
+   moment, and it does not move (Blueprint § 7). */
+/* Starts AT the floor line and at exactly the door's width, then widens toward
+   the viewer — light through a doorway does this, and nothing else does. */
+.lightfall {
+  position: absolute; z-index: 2;
+  left: 50%; transform: translateX(-50%);
+  top: var(--floor-line); width: 1000px; height: 434px;
+  clip-path: polygon(35% 0%, 65% 0%, 100% 100%, 0% 100%);
+  background: linear-gradient(to bottom,
+    hsl(41 92% 92% / .96) 0%,
+    hsl(39 80% 91% / .62) 30%,
+    hsl(38 66% 92% / .26) 62%,
+    hsl(36 50% 94% / 0) 100%);
+  filter: blur(10px);
+  pointer-events: none;
+}
+
+/* ---- THE GREETING — standing on the floor, IN the light from the door ----
+   Never on the photograph. Text on the orchard would need a scrim, and a scrim
+   is fog — the Blueprint's "second sun" (§ 16). The light comes to the name;
+   the name does not go into the light. */
+.centre { position: relative; z-index: 4; width: min(720px, 88vw); margin: 0 auto; }
+.greeting {
+  /* .centre begins below the 64px shell, so this is (floor-line + 30) - 64:
+     the name clears the threshold and stands in the lightfall. */
+  padding-top: 430px;
+  text-align: center;
+}
+.welcome {
+  font-family: "Fraunces", "DejaVu Serif", Georgia, serif;
+  font-weight: 300; font-size: 25px; letter-spacing: .01em;
+  color: var(--ink-body); opacity: .78;
+}
+.name {
+  font-family: "Fraunces", "DejaVu Serif", Georgia, serif;
+  font-weight: 300; font-size: 68px; line-height: 1.04;
+  letter-spacing: -.022em; color: var(--ink);
+  margin-top: 1px;
+}
+.date {
+  margin-top: 14px; font-size: 12.5px; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--ink-quiet);
+}
+
+/* ---- THE CONSOLE — the hall table. Not cards. Marks on the plaster. ----
+   Meals · Shopping · Plants, all three preserved, none of them a box. */
+.console {
+  position: relative; z-index: 4;
+  margin: 26px auto 0;
+  width: min(660px, 84vw);
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  border-top: 1px solid hsl(38 22% 74% / .7);
+  padding-top: 22px;
+}
+.console-item { text-align: center; padding: 0 14px; position: relative; }
+.console-item + .console-item::before {
+  content: ""; position: absolute; left: 0; top: 4px; bottom: 4px;
+  width: 1px; background: var(--hair); opacity: .8;
+}
+.console-label {
+  font-size: 10.5px; letter-spacing: .15em; text-transform: uppercase;
+  color: var(--ink-quiet); margin-bottom: 9px;
+}
+.console-value {
+  font-family: "Fraunces", "DejaVu Serif", Georgia, serif;
+  font-size: 22px; font-weight: 400; color: var(--ink); letter-spacing: -.01em;
+}
+.console-value .unit { font-size: 13px; color: var(--ink-quiet); }
+/* the honest quiet day — 192 of 195 households live here */
+.console-value.quiet { font-size: 16px; color: var(--ink-quiet); font-style: italic; }
+
+/* ---- THE ONE ACTION ---- */
+.action {
+  position: relative; z-index: 4;
+  margin: 28px auto 0; display: block;
+  padding: 13px 34px; border: 0; border-radius: 999px;
+  background: var(--leaf); color: var(--raw-blossom);
+  font-family: inherit; font-size: 14.5px; font-weight: 500; letter-spacing: .015em;
+  box-shadow: var(--shade-2); cursor: pointer;
+}
+
+/* ---- THE DOORS — four openings along the hall wall, low and quiet ----
+   A door is a name and a handle. Nothing else. (NORTH3 retired DOOR_LINES.) */
+.doors {
+  position: absolute; z-index: 5; bottom: 34px;
+  left: 50%; transform: translateX(-50%);
+  display: flex; gap: 14px;
+}
+.door {
+  width: 158px; height: 60px;
+  border-radius: 4px 4px 2px 2px;
+  background: linear-gradient(180deg, hsl(39 40% 95%), hsl(37 30% 91%));
+  border: 1px solid hsl(38 24% 84%);
+  border-top: 1px solid hsl(40 44% 97%);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 15px;
+  box-shadow: inset 0 -8px 16px -12px hsl(56 40% 9% / .3);
+}
+.door-name {
+  font-size: 13.5px; font-weight: 500; color: var(--ink-body); letter-spacing: .005em;
+}
+.door-handle {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--gold); opacity: .78;
+  box-shadow: 0 0 0 3px hsl(43 62% 47% / .12);
+}
+
+/* ---- THE COMPANION — a note pinned to the wall, beside the door, at eye
+   height. A presence in the hall, never a room of its own (Blueprint § 11).
+   It hangs on the wall plane, so it casts a real shadow onto the plaster. */
+.note {
+  position: absolute; z-index: 5;
+  left: calc(50% + 214px); top: 168px;
+  width: 254px; padding: 16px 18px 15px;
+  background: var(--surface);
+  border-radius: 2px;
+  box-shadow: var(--shade-3);
+  border-top: 2px solid hsl(43 46% 72% / .55);
+}
+.note-from {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--ink-quiet); margin-bottom: 8px;
+}
+.note-leaf { width: 11px; height: 11px; opacity: .85; }
+.note-body { font-size: 13.5px; line-height: 1.5; color: var(--ink-body); }
+.note-link {
+  display: inline-block; margin-top: 10px;
+  font-size: 12.5px; color: var(--leaf-lift); font-weight: 500;
+}
+
+/* =======================  TABLET  =======================
+   The hall gets taller and narrower. The door and the floor line stay; the
+   Companion comes off the wall and onto the floor, below the greeting, because
+   there is no longer wall beside the door to hang it on. */
+@media (max-width: 900px) {
+  .hall { --floor-line: 470px; }
+  .aperture-wrap { width: 272px; height: 384px; top: 86px; }
+  .aperture { border-radius: 136px 136px 0 0; }
+  .lightfall { width: 860px; height: 642px; }
+  .greeting { padding-top: 436px; }
+  .name { font-size: 70px; }
+  .welcome { font-size: 23px; }
+  .note {
+    position: relative; left: auto; top: auto;
+    margin: 34px auto 0; width: min(430px, 84vw);
+  }
+  .doors { position: relative; bottom: auto; margin: 46px auto 40px; flex-wrap: wrap; justify-content: center; max-width: 84vw; }
+  .door { width: 178px; }
+}
+
+/* =======================  MOBILE  =======================
+   The hall narrows to a corridor. The door stays — it IS the concept; shrinking
+   it to a strip would leave a beige page with a greeting on it. */
+@media (max-width: 520px) {
+  .shell { padding: 0 18px; }
+  .hall { --floor-line: 352px; }
+  .aperture-wrap { width: 176px; height: 268px; top: 84px; }
+  .aperture { border-radius: 88px 88px 0 0; }
+  .aperture::after { box-shadow: inset 8px 0 16px -6px hsl(56 50% 9% / .38), inset 0 10px 16px -8px hsl(56 50% 9% / .28); }
+  .lightfall { width: 520px; height: 500px; clip-path: polygon(33% 0%, 67% 0%, 100% 100%, 0% 100%); filter: blur(8px); }
+  .greeting { padding-top: 318px; }
+  .welcome { font-size: 18px; }
+  .name { font-size: 50px; }
+  .date { margin-top: 12px; font-size: 11px; }
+  .console { width: 90vw; margin-top: 26px; padding-top: 18px; }
+  .console-item { padding: 0 5px; }
+  .console-label { font-size: 8.5px; letter-spacing: .1em; margin-bottom: 6px; }
+  .console-value { font-size: 17px; }
+  .console-value.quiet { font-size: 12px; }
+  .action { margin-top: 26px; padding: 12px 28px; font-size: 14px; }
+  .note { margin-top: 24px; width: 90vw; }
+  /* the doors stack into a quiet list — still names and handles, never cards */
+  .doors { flex-direction: column; gap: 8px; width: 90vw; margin: 28px auto 32px; }
+  .door { width: 100%; height: 52px; }
+}
+</style>
+</head>
+<body>
+<div class="hall">
+
+  <header class="shell">
+    <div class="mark">
+      <div class="mark-apple"></div>
+      <div class="mark-name">The Healthy Apples</div>
+    </div>
+    <svg class="bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/>
+    </svg>
+  </header>
+
+  <div class="floor"></div>
+
+  <!-- the open door at the end of the hall -->
+  <div class="aperture-wrap">
+    <div class="aperture">
+      <img src="../../attached_assets/design/north_star/v2/ORCHARD.png" alt="">
+    </div>
+  </div>
+  <div class="lightfall"></div>
+
+  <div class="centre">
+  <!-- standing on the floor, in the light from the door -->
+  <div class="greeting">
+    <div class="welcome">Welcome home,</div>
+    <h1 class="name">Chloe</h1>
+    <div class="date">Friday, 17 July</div>
+  </div>
+
+  <!-- the hall table: all three glance facts, no boxes -->
+  <div class="console">
+    <div class="console-item">
+      <div class="console-label">Meals</div>
+      <div class="console-value quiet">Nothing planned</div>
+    </div>
+    <div class="console-item">
+      <div class="console-label">Shopping</div>
+      <div class="console-value quiet">List is clear</div>
+    </div>
+    <div class="console-item">
+      <div class="console-label">From the orchard</div>
+      <div class="console-value">0<span class="unit"> / 30 plants</span></div>
+    </div>
+  </div>
+
+  <button class="action">Plan today</button>
+  </div>
+
+  <!-- the Companion: a note on the wall, not a room -->
+  <aside class="note">
+    <div class="note-from">
+      <svg class="note-leaf" viewBox="0 0 24 24" fill="none" stroke="var(--leaf-lift)" stroke-width="1.8">
+        <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+      </svg>
+      Companion
+    </div>
+    <div class="note-body">The orchard is in blossom. A good week for something green and simple.</div>
+    <a class="note-link" href="#">View suggestion &rsaquo;</a>
+  </aside>
+
+  <!-- the doors of the house -->
+  <nav class="doors">
+    <div class="door"><span class="door-name">Planner</span><span class="door-handle"></span></div>
+    <div class="door"><span class="door-name">Cookbook</span><span class="door-handle"></span></div>
+    <div class="door"><span class="door-name">Pantry</span><span class="door-handle"></span></div>
+    <div class="door"><span class="door-name">Shopping</span><span class="door-handle"></span></div>
+  </nav>
+
+</div>
+</body>
+</html>

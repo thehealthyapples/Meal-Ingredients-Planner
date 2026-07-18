@@ -8,6 +8,49 @@
          pinch-zoom (WCAG 1.4.4) and is dropped. -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <link rel="icon" type="image/png" href="/favicon.png" />
+
+    <!-- PROD1 — the document had NO <title> and no metadata of any kind.
+         Consequences, in order of commercial cost:
+
+         1. /shared/:token is the product's only viral loop — a household shares
+            their meal plan. Pasted into WhatsApp, iMessage or Slack it unfurled
+            as a bare URL: no name, no description, no image. The single highest-
+            leverage growth surface had zero social metadata.
+         2. The browser tab and every bookmark showed the raw URL. Six pages set
+            document.title imperatively and reset it on unmount, so the title was
+            correct only AFTER leaving a subpage — never on first load.
+         3. "Add to Home Screen" produced a generic screenshot icon, which matters
+            for a Capacitor-targeted app.
+
+         The wording is deliberately restrained. THA is a health-adjacent product
+         under a non-fabrication principle (ARCHITECTURE_PRINCIPLES Principle 6),
+         so the description states what the app DOES and claims no health outcome.
+         The tagline is not invented here: it is the canonical Vision owned by
+         THA_EXPERIENCE_BLUEPRINT.md §1.4, quoted rather than re-authored. -->
+    <title>The Healthy Apples</title>
+    <meta
+      name="description"
+      content="Plan your household's meals, keep track of what's in the pantry, build the shopping list, and understand what's in the food you buy — in one place."
+    />
+    <meta name="theme-color" content="#4a7c3f" />
+    <link rel="apple-touch-icon" href="/apple-logo.png" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="The Healthy Apples" />
+    <meta property="og:title" content="The Healthy Apples" />
+    <meta
+      property="og:description"
+      content="A warm, lived-in home where someone has already thought about dinner."
+    />
+    <meta property="og:image" content="/logo-long.png" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="The Healthy Apples" />
+    <meta
+      name="twitter:description"
+      content="A warm, lived-in home where someone has already thought about dinner."
+    />
+    <meta name="twitter:image" content="/logo-long.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <!-- PX1-W3 (fnd-px-oversized-assets): this render-blocking request used to

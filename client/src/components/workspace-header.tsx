@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  ShoppingCart, Search, Heart, User, ShieldCheck, LogOut, ArrowLeft,
+  ShoppingCart, Search, User, ShieldCheck, LogOut, ArrowLeft,
 } from "lucide-react";
 import { api } from "@shared/routes";
 import { Button } from "@/components/ui/button";
@@ -113,12 +113,12 @@ function ProfileMenu({
             Profile
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/partners" className="flex items-center gap-2 cursor-pointer" data-testid="workspace-menu-partners">
-            <Heart className="h-4 w-4" />
-            Partners
-          </Link>
-        </DropdownMenuItem>
+        {/* PROD2: the "Partners" entry was withdrawn. Every one of the 12
+            partners in client/src/data/partners.ts is invented, with an
+            example.com URL, shipped behind a real affiliate-disclosure notice —
+            so THA was recommending health and nutrition practitioners that do
+            not exist. The page and its data are kept for a real partner
+            programme; the doors are closed until the partners are real. */
         {isAdmin && (
           <>
             <DropdownMenuSeparator />

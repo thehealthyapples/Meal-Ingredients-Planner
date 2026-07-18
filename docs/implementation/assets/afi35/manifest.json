@@ -1,0 +1,93 @@
+{
+  "captured_by": "AFI3_5_Ambient_Food_Intelligence_Completion",
+  "base_url": "http://localhost:5000",
+  "viewport": {
+    "width": 430,
+    "height": 932
+  },
+  "captured": 7,
+  "failed": 0,
+  "live_observations": {
+    "shopping-item-already-in-pantry": "\"Free Range Eggs (12)\" is on your shopping list, and Eggs is already in your pantry.",
+    "cookbook-recipe-household-conflict": "\"Baked Salmon with Tenderstem Broccoli\" in your cookbook contains Salmon fillets, which conflicts with a stored household restriction (Fish)."
+  },
+  "shots": [
+    {
+      "id": "cookbook-ambient",
+      "name": "Cookbook — the new ambient surface (AFI4/AFI5, the `cookbook` domain's first)",
+      "route": "/meals",
+      "toggle": "ambient-cookbook-toggle",
+      "wait": "[data-testid=\"ambient-cookbook\"]",
+      "file": "cookbook-ambient.png",
+      "status": 200,
+      "surfaceFound": true,
+      "toggled": true,
+      "ok": true
+    },
+    {
+      "id": "shopping-ambient",
+      "name": "Shopping — ambient (AFI3: already-in-pantry, rating comparison, less-processed)",
+      "route": "/shopping-workspace",
+      "toggle": "ambient-intelligence-shopping-toggle",
+      "wait": "[data-testid=\"ambient-intelligence-shopping\"]",
+      "file": "shopping-ambient.png",
+      "status": 200,
+      "surfaceFound": true,
+      "toggled": true,
+      "ok": true
+    },
+    {
+      "id": "pantry-ambient",
+      "name": "Pantry — ambient (AFI3/PANTRY1: a recorded need missing from the list)",
+      "route": "/pantry",
+      "toggle": "ambient-intelligence-pantry-toggle",
+      "wait": "[data-testid=\"ambient-intelligence-pantry\"]",
+      "file": "pantry-ambient.png",
+      "status": 200,
+      "surfaceFound": false,
+      "toggled": false,
+      "ok": true
+    },
+    {
+      "id": "home-ambient-aggregate",
+      "name": "Home — aggregate ambient (all domains, incl. the new Cookbook, in one calm surface)",
+      "route": "/home",
+      "toggle": "ambient-intelligence-home-toggle",
+      "wait": "[data-testid=\"ambient-intelligence-home\"]",
+      "file": "home-ambient-aggregate.png",
+      "status": 200,
+      "surfaceFound": true,
+      "toggled": true,
+      "ok": true
+    },
+    {
+      "id": "home-companion-notices",
+      "name": "Home — the Companion card (AFI5: the new observations reach the household's own voice)",
+      "route": "/home",
+      "wait": "[data-testid=\"card-home-companion\"]",
+      "file": "home-companion-notices.png",
+      "status": 200,
+      "surfaceFound": true,
+      "toggled": false,
+      "ok": true
+    },
+    {
+      "id": "cookbook-household-conflict-card",
+      "name": "Cookbook — a recipe colliding with a household restriction (AFI4/CBK2), focused",
+      "route": "/meals",
+      "toggle": "ambient-cookbook-toggle",
+      "hasText": "conflicts with a stored household restriction",
+      "file": "cookbook-household-conflict-card.png",
+      "ok": true
+    },
+    {
+      "id": "shopping-already-in-pantry-card",
+      "name": "Shopping — \"already in your pantry\" (AFI3/SHOP1), focused",
+      "route": "/shopping-workspace",
+      "toggle": "ambient-intelligence-shopping-toggle",
+      "hasText": "is already in your pantry",
+      "file": "shopping-already-in-pantry-card.png",
+      "ok": true
+    }
+  ]
+}

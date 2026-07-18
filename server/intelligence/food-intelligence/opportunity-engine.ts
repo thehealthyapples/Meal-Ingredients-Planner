@@ -75,6 +75,37 @@ import { resolveHouseholdPlannerWeek } from "../../lib/household-planner-week.js
 import { createStoragePlannerReadPort } from "../handlers/planner-read-port.js";
 import { createStoragePantryReadPort } from "../handlers/pantry-read-port.js";
 import { createStorageShoppingReadPort } from "../handlers/shopping-read-port.js";
+// AFI1 — the ONE reusable "simply better" knowledge: the Uplift Rules the Food
+// page's "Simply better choices" (connected-food-intelligence-assembler.ts) and the
+// Meal Intelligence assembler already read. Imported here so a planned meal can be
+// offered ONE evidence-backed lift. This engine adds NO new nutrition knowledge
+// (Rule FI1): the rules are read verbatim, and their own `why` is the cited evidence.
+import { buildRuleIndex, matchUpliftRules } from "../../lib/uplift-engine.js";
+import { UPLIFT_RULES } from "../../lib/uplift-rules.js";
+import type { UpliftSuggestion } from "../../lib/uplift-types.js";
+// AFI4 (CBK2) — the EXISTING INT15 Meals read port, used to read the household's OWN
+// cookbook (`getMeals(userId)`, user-scoped by the owner), exactly as
+// pantry-intelligence-assembler.ts already does. No new port, no new owner.
+import { createStorageMealsReadPort } from "../handlers/meals-read-port.js";
+// AFI3 (SHOP1) — WS9 Alternatives. The curated less-processed options and their
+// editorial reasons have exactly one owner (`shared/alternatives`); this engine reads
+// them and copies them verbatim. It authors NO alternative and NO reason, and WS9's own
+// fail-closed trust gate has already vetted every string that can reach a household.
+import { alternatives, resolveAnchorKey } from "@shared/alternatives/index.js";
+// The canonical food-name index type, shared with the planner explanation context —
+// the one key space (canonical slug) every generator below joins on.
+import type { FoodNameIndex } from "../../lib/planner-explanation-context.js";
+
+/**
+ * AFI1 — the uplift rule index, built once per process from the same canonical
+ * `UPLIFT_RULES` every other consumer reads (Principle 8 — one knowledge source,
+ * many readers). Mirrors the memoisation the food-page/meal assemblers already use.
+ */
+let _upliftRuleIndex: ReturnType<typeof buildRuleIndex> | null = null;
+function upliftRuleIndex(): ReturnType<typeof buildRuleIndex> {
+  if (!_upliftRuleIndex) _upliftRuleIndex = buildRuleIndex(UPLIFT_RULES);
+  return _upliftRuleIndex;
+}
 
 // ---------------------------------------------------------------------------
 // Limits — DEC1: the delivery budget pair lives once, in shared/attention/decision.ts
@@ -96,6 +127,15 @@ function dayName(dayOfWeek: number): string {
   return PLANNER_DAY_NAMES[((dayOfWeek % 7) + 7) % 7];
 }
 
+/** AFI2 — "Tuesday, Wednesday and Friday" from an ordered list of names (display only).
+ *  AFI3–AFI5 reuse it verbatim for food lists ("onions, garlic and rice") — same join,
+ *  no second implementation. */
+function joinPhrase(names: readonly string[]): string {
+  if (names.length <= 1) return names[0] ?? "";
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}
+
 // ---------------------------------------------------------------------------
 // Public types
 // ---------------------------------------------------------------------------
@@ -108,14 +148,67 @@ function dayName(dayOfWeek: number): string {
 export type FoodOpportunityType =
   | "planner-empty-day"
   | "pantry-item-unused-in-plan"
-  | "shopping-restriction-conflict";
+  | "shopping-restriction-conflict"
+  // AFI1 — the first Ambient Food Intelligence capability added since FI4: a
+  // single evidence-backed "simply better" lift for a meal the household has
+  // already planned this week (the fourth opportunity type FI4 named as its own
+  // next milestone). Reuses the Uplift Rules knowledge; adds no new fact.
+  | "planner-meal-uplift"
+  // AFI2 — the fifth opportunity type: a calm "cook once, cover the week" observation
+  // for a meal the household has planned on MULTIPLE days of this week. Pure planner
+  // reasoning (ingredient reuse / leftovers, brief's own list) — reuses the planned
+  // meals already resolved for the uplift generator; adds no new knowledge.
+  | "planner-batch-cook"
+  // AFI3 (SHOP1) — a shopping line the household ALREADY has in the pantry. Joins the
+  // two reads the orchestrator already performs on the ONE canonical food identity.
+  | "shopping-item-already-in-pantry"
+  // AFI3 (SHOP1) — a product ALREADY matched to the household's own line that the
+  // ANALYSER (SoT D19) has already rated higher. States two ratings; ranks nothing.
+  | "shopping-higher-rated-product-available"
+  // AFI3 (SHOP1) — a WS9-curated less-processed option for a line whose food WS9 knows.
+  // WS9 owns the option and its reason; this engine copies both verbatim.
+  | "shopping-less-processed-option"
+  // AFI3 (PANTRY1) — a quantity the household THEMSELVES recorded as needed, absent
+  // from the shopping list. Reports their own declaration back; models no consumption.
+  | "pantry-need-not-on-shopping-list"
+  // AFI4 (CBK2) — a cookbook recipe whose EVERY ingredient resolves and is in the
+  // pantry. Never "nearly cookable": one missing or one unidentifiable ingredient
+  // refuses the card outright.
+  | "cookbook-recipe-cookable-now"
+  // AFI4 (CBK2) — a cookbook recipe colliding with a stored household hard restriction.
+  // Suggests adapting or keeping; never edits or hides a household's own recipe.
+  | "cookbook-recipe-household-conflict";
 
 // ATTN1 — attention is the one canonical vocabulary in shared/attention. The
 // module-local `FoodOpportunityPriority` union this file used to declare is
 // retired (Principle 8); the sort function below stays layer-independent.
 
-/** The Business Domain that owns the activity this opportunity was generated from (and where its suggested action would be taken). */
-export type FoodOpportunityDomain = "planner" | "pantry" | "shopping";
+/**
+ * The Business Domain that owns the activity this opportunity was generated from (and
+ * where its suggested action would be taken).
+ *
+ * AFI4/AFI5 (CBK2) — `cookbook` joins the three original domains. A domain is NOT just a
+ * union member: an unregistered domain is produced, delivered, budgeted, persisted and
+ * learned from, then SILENTLY DROPPED one step before the household could read it. Adding
+ * one means registering it everywhere it is keyed:
+ *   `DOMAIN_SURFACE`   (opportunity-delivery/framework.ts) → else routes to `floating`
+ *   `DOMAIN_TO_CATEGORY` + `NoticeCategory` (conversation/notice-engine.ts) → else the
+ *                                                            Companion NEVER voices it
+ *   `OPPORTUNITY_DOMAIN_LABELS` (shared/attention/index.ts) → else renders as "Food"
+ *   a mounted `AmbientIntelligence domains={[…]}` surface → else nothing renders it
+ * All four are registered for `cookbook`.
+ *
+ * MAT1 (AFI_VERIFY1 §4.3) — that paragraph was a comment, and a comment cannot fail
+ * a build. The union is now DERIVED from the array below rather than declared beside
+ * it, so the closed set is enumerable at runtime and
+ * `server/tests/test-mat1-registry-conformance.ts` can walk every member and assert
+ * it is registered in all four places. Adding a domain to this array without
+ * registering it now fails the pipeline instead of reaching a household mislabelled.
+ * The union's members and order are unchanged.
+ */
+export const FOOD_OPPORTUNITY_DOMAINS = ["planner", "pantry", "shopping", "cookbook"] as const;
+
+export type FoodOpportunityDomain = (typeof FOOD_OPPORTUNITY_DOMAINS)[number];
 
 /**
  * One supporting fact for an opportunity — always a real, named read from an
@@ -126,7 +219,18 @@ export type FoodOpportunityDomain = "planner" | "pantry" | "shopping";
 export type FoodOpportunityEvidence = EvidenceCitation;
 
 /** The canonical entity an opportunity is ABOUT. Closed set — one per generator below. */
-export type FoodOpportunitySubjectEntity = "planner-day" | "pantry-item" | "shopping-item";
+export type FoodOpportunitySubjectEntity =
+  | "planner-day"
+  | "pantry-item"
+  | "shopping-item"
+  // AFI1 — a specific planned meal (keyed on its own planner-entry id, or its meal id
+  // for a whole-meal observation), the entity `planner-meal-uplift` (AFI1) and
+  // `planner-batch-cook` (AFI2) opportunities concern.
+  | "planner-meal"
+  // AFI4 (CBK2) — a meal in the household's own COOKBOOK, keyed on the meal's own id.
+  // Distinct from `planner-meal`: that entity is a meal in the context of a planned
+  // week; this one is a recipe the household owns, with no week attached at all.
+  | "meal";
 
 /**
  * PHASE5E — the structured entity this opportunity concerns.
@@ -330,6 +434,589 @@ export function identifyShoppingRestrictionOpportunities(
   return opportunities;
 }
 
+/**
+ * AFI1 — the minimal planned-meal reference the uplift generator reasons over.
+ * Built by the orchestrator from the planner read it ALREADY performs (the entry's
+ * own id + its day + the meal name from the planner port's `getMeal`) — no new
+ * query, no new owner.
+ */
+export interface PlannedMealRef {
+  readonly entryId: number;
+  readonly dayOfWeek: number;
+  readonly mealName: string;
+  // AFI2 — the meal owner's own id (the same meal can be planned on several days; its
+  // entryId differs per day, its mealId does not). Additive; the AFI1 uplift generator
+  // ignores it.
+  readonly mealId: number;
+}
+
+/**
+ * AFI1 — Planner domain, the fourth opportunity type. For a meal the household has
+ * ALREADY planned this week, offer the single best evidence-backed "simply better"
+ * lift — the same Uplift Rules knowledge the Food page's "Simply better choices"
+ * shows per-food, now made AMBIENT and timely: it names a meal on THIS week's plan
+ * and a lift they can make when they cook it ("how does this help my household right
+ * now?"). One excellent suggestion, never a list of average ones — across the whole
+ * week exactly one opportunity is emitted (lowest rule `priority` wins; ties keep
+ * planner order), or an honest none.
+ *
+ * PURE (no I/O): reasons over already-fetched planned meals + the already-resolved
+ * household restrictions, exactly like the three generators above.
+ *
+ * SAFETY (Rule T0, reused not re-implemented): a suggestion whose ingredient
+ * conflicts with a stored household hard restriction is dropped via the SAME
+ * `resolveIngredientRestrictions` matcher the shopping generator uses — the engine
+ * never suggests adding something a named member cannot have.
+ *
+ * EVIDENCE (Rule E1): the cited `why` is the uplift rule's own approved,
+ * user-facing explanation — never a phrase this engine invents.
+ */
+export function identifyPlannerMealUpliftOpportunities(
+  plannedMeals: readonly PlannedMealRef[],
+  week: PlannerWeek,
+  restrictionDefs: readonly RestrictionDefinition[],
+): FoodOpportunity[] {
+  if (plannedMeals.length === 0) return [];
+
+  const idx = upliftRuleIndex();
+  const defs = [...restrictionDefs];
+
+  let best:
+    | { meal: PlannedMealRef; suggestion: UpliftSuggestion; rulePriority: number }
+    | null = null;
+
+  for (const meal of plannedMeals) {
+    // The uplift engine matches on the meal name (and ingredients, when known);
+    // the planner port gives us the name, which is enough to find a lift.
+    const matches = matchUpliftRules({ mealName: meal.mealName, ingredients: [], dietTypes: [] }, idx);
+    for (const match of matches) {
+      const safe = match.suggestions.find(
+        (s) => defs.length === 0 || resolveIngredientRestrictions(s.ingredient, defs).length === 0,
+      );
+      if (!safe) continue;
+      // Lower rule priority = surfaced first (uplift-types.ts). Prefer one excellent.
+      if (best === null || match.priority < best.rulePriority) {
+        best = { meal, suggestion: safe, rulePriority: match.priority };
+      }
+    }
+  }
+
+  if (!best) return [];
+
+  const { meal, suggestion } = best;
+  const verb =
+    suggestion.action === "swap" ? "swap in" : suggestion.action === "boost" ? "add more" : "add";
+
+  return [
+    {
+      id: `planner-meal-uplift:${meal.entryId}`,
+      type: "planner-meal-uplift" as const,
+      owningDomain: "planner" as const,
+      priority: "low",
+      explanation: `"${meal.mealName}" (${dayName(meal.dayOfWeek)} in "${week.weekName}") could have a small lift — ${verb} ${suggestion.ingredient}.`,
+      evidence: [
+        {
+          source: "planner-week",
+          detail: `"${meal.mealName}" is on your plan for ${dayName(meal.dayOfWeek)} in "${week.weekName}" (Week ${week.weekNumber}).`,
+        },
+        // The uplift rule's own approved, user-facing reason — cited verbatim (Rule E1).
+        { source: "nutrition-enhancement", detail: suggestion.why },
+      ],
+      suggestedAction: `When you make "${meal.mealName}", ${verb} ${suggestion.ingredient}.`,
+      subject: { entity: "planner-meal" as const, id: meal.entryId, label: meal.mealName },
+    },
+  ];
+}
+
+/**
+ * AFI2 — Planner domain, the fifth opportunity type. For a meal the household has planned
+ * on MULTIPLE days of this week, offer the calm "cook once, cover the week" observation:
+ * batch-cook it once and it covers every day it appears on. This is the brief's "ingredient
+ * reuse / leftovers" opportunity, and it answers "how does this improve THIS week's plan?"
+ * directly — less effort and less waste across days the household has ALREADY chosen.
+ *
+ * NO NEW KNOWLEDGE (Rule FI1): it reasons only over the household's OWN plan — the planned
+ * meals already resolved for the AFI1 uplift generator (same read, no extra query). It
+ * asserts nothing about nutrition, bodies or outcomes (Rule T1 — it names a meal and the
+ * days it is on), and it touches no contested domain (unlike plant diversity, whose one
+ * canonical owner this engine must never duplicate).
+ *
+ * PURE (no I/O): reasons over the already-fetched planned meals, like the generators above.
+ *
+ * ONE EXCELLENT, never a list: a week may repeat several meals; the ambient planner shows
+ * exactly one — the meal on the MOST distinct days (the biggest cook-once win). Ties keep
+ * planner order (earliest day first, stable). A meal must appear on ≥2 distinct days to
+ * count — a meal planned once is not a batch-cook opportunity — so a week with no repeats
+ * is an honest none.
+ */
+export function identifyPlannerBatchCookOpportunities(
+  plannedMeals: readonly PlannedMealRef[],
+  week: PlannerWeek,
+): FoodOpportunity[] {
+  if (plannedMeals.length === 0) return [];
+
+  // Group this week's planned meals by the meal itself, collecting the DISTINCT days each
+  // is on (the same meal twice on one day is one day of cooking, not two).
+  const byMeal = new Map<number, { name: string; days: Set<number> }>();
+  for (const meal of plannedMeals) {
+    const acc = byMeal.get(meal.mealId);
+    if (acc) acc.days.add(meal.dayOfWeek);
+    else byMeal.set(meal.mealId, { name: meal.mealName, days: new Set([meal.dayOfWeek]) });
+  }
+
+  // Prefer one excellent: the meal on the most distinct days is the biggest cook-once win.
+  // First-seen order (Map preserves insertion = planner/day order), so ties keep the
+  // earliest-planned meal — no re-derived score, no clock, deterministic (Rule LT3).
+  let best: { mealId: number; name: string; days: number[] } | null = null;
+  for (const [mealId, acc] of Array.from(byMeal.entries())) {
+    if (acc.days.size < 2) continue;
+    if (best === null || acc.days.size > best.days.length) {
+      best = { mealId, name: acc.name, days: Array.from(acc.days).sort((a, b) => a - b) };
+    }
+  }
+
+  if (!best) return [];
+
+  const dayList = joinPhrase(best.days.map(dayName));
+  return [
+    {
+      id: `planner-batch-cook:${week.id}:${best.mealId}`,
+      type: "planner-batch-cook" as const,
+      owningDomain: "planner" as const,
+      priority: "low",
+      explanation: `You've planned "${best.name}" on ${best.days.length} days this week (${dayList}) — cook one batch and it covers them all.`,
+      evidence: [
+        {
+          source: "planner-week",
+          detail: `"${best.name}" is on your plan for ${best.days.length} of the week's days (${dayList}) in "${week.weekName}" (Week ${week.weekNumber}).`,
+        },
+      ],
+      suggestedAction: `Batch-cook "${best.name}" once and portion it across ${dayList}.`,
+      // The meal this observation is about, keyed on the meal owner's own id (not an entry
+      // id — the meal recurs across several entries this week).
+      subject: { entity: "planner-meal" as const, id: best.mealId, label: best.name },
+    },
+  ];
+}
+
+// ---------------------------------------------------------------------------
+// AFI3 (SHOP1 + PANTRY1) — Pantry & Shopping
+// AFI4 (CBK2)            — Meal & Food
+//
+// Six generators, all PURE, all reasoning over rows the orchestrator has already
+// fetched. Together they complete the Ambient Food Intelligence surface AFI1/AFI2
+// began, WITHOUT a second engine, a second pipeline, or one new nutrition fact:
+// every claim below is either the household's OWN recorded data, or an existing
+// owner's own words copied verbatim (the Analyser's rating, WS9's editorial reason,
+// the restriction registry's match).
+// ---------------------------------------------------------------------------
+
+/**
+ * The household's pantry as canonical foods (slug → the household's own display name).
+ *
+ * PURE. Mirrors the gate and resolution the one existing pantry-identity reader uses
+ * (`readPantryFoods`, planner-explanation-context.ts) — `defaultHave` is the household's
+ * own "I have this" flag, and identity comes from the ONE canonical resolver. That
+ * function is private to its module and performs its own I/O, so it cannot be called
+ * from a pure generator; the discipline is copied, not the knowledge, and no second
+ * identity mapping is introduced.
+ */
+function pantryCanonicalFoods(pantryItems: readonly UserPantryItem[]): FoodNameIndex {
+  const foods = new Map<string, string>();
+  for (const item of pantryItems) {
+    // `defaultHave` is the household's own "I have this" flag. It is NOT NULL with a
+    // default of true at the owner, so only an EXPLICIT false is a household saying they
+    // do not have it — an absent value is not evidence of absence.
+    if (item.isDeleted || item.defaultHave === false) continue;
+    const r = resolveCanonicalFood(item.ingredientKey || item.displayName || "");
+    if (r.matched && r.canonicalSlug) {
+      foods.set(r.canonicalSlug, item.displayName ?? r.canonicalName ?? r.canonicalSlug);
+    }
+  }
+  return foods;
+}
+
+/** The canonical food a shopping line names, or null when THA cannot identify it. */
+function shoppingCanonicalSlug(item: ShoppingListItem): string | null {
+  const r = resolveCanonicalFood(item.canonicalName || item.normalizedName || item.productName || "");
+  return r.matched && r.canonicalSlug ? r.canonicalSlug : null;
+}
+
+/**
+ * AFI3 (SHOP1) — Shopping domain. A line on the list the household ALREADY has in the
+ * pantry.
+ *
+ * The one observation neither room can make alone: the Pantry knows what is in the
+ * cupboard, the Shopping list knows what is about to be bought, and neither can see the
+ * other. This NEVER edits the list (no autonomous action, FI4 scope) — it surfaces the
+ * overlap and leaves the decision where it belongs.
+ *
+ * NO NEW KNOWLEDGE (Rule FI1): identity is the ONE canonical resolver both rooms already
+ * use. Rule T1 — it names two things the household itself recorded.
+ *
+ * HONEST, NOT NAGGING: a `checked` line is a decision already made and is never
+ * re-raised; a deleted pantry row is not a holding; an unidentifiable name on either
+ * side is a gap and is skipped rather than guessed at; and with no pantry there is no
+ * claim to make at all.
+ */
+export function identifyShoppingPantryDuplicateOpportunities(
+  shoppingItems: readonly ShoppingListItem[],
+  pantryItems: readonly UserPantryItem[],
+): FoodOpportunity[] {
+  const pantryFoods = pantryCanonicalFoods(pantryItems);
+  if (pantryFoods.size === 0) return [];
+
+  const opportunities: FoodOpportunity[] = [];
+  for (const item of shoppingItems) {
+    if (item.checked) continue; // already actioned by the household — not an open opportunity
+    const slug = shoppingCanonicalSlug(item);
+    if (!slug) continue;
+    const pantryLabel = pantryFoods.get(slug);
+    if (!pantryLabel) continue;
+
+    opportunities.push({
+      id: `shopping-item-already-in-pantry:${item.id}`,
+      type: "shopping-item-already-in-pantry",
+      owningDomain: "shopping",
+      priority: "medium",
+      explanation: `"${item.productName}" is on your shopping list, and ${pantryLabel} is already in your pantry.`,
+      evidence: [
+        { source: "shopping-list", detail: `"${item.productName}" is on your current, unchecked shopping list.` },
+        { source: "pantry-items", detail: `${pantryLabel} is recorded as being in your pantry.` },
+      ],
+      suggestedAction: `Check whether you still need "${item.productName}" before you shop.`,
+      subject: { entity: "shopping-item", id: item.id, label: item.productName },
+    });
+  }
+  return opportunities;
+}
+
+/**
+ * AFI3 (SHOP1) — Shopping domain. A product ALREADY matched to the household's own
+ * shopping line that the Analyser has ALREADY rated higher than the line itself.
+ *
+ * THE TRUST BOUNDARY THIS GENERATOR EXISTS TO RESPECT: "healthier product suggestions"
+ * hides two questions with two different owners. The ANALYSER (SoT D19) owns a product
+ * RATING, so a rating may be STATED. Nobody here owns a JUDGEMENT, so nothing is ranked
+ * or editorialised. This card therefore reports both numbers and lets the household
+ * draw the conclusion — it never says "better", "healthier" or "you should swap".
+ *
+ * NO NEW KNOWLEDGE (Rule FI1): every rating is the Analyser's own, already persisted
+ * against rows the household already has. This engine computes no rating and no score.
+ *
+ * HONEST GAPS: an UNRATED line is a gap in the Analyser's knowledge, never a zero to be
+ * beaten — it produces no card. Neither does a line already rated at or above every
+ * match, nor a line with no matched products at all. THA never invents an improvement.
+ */
+export function identifyShoppingHigherRatedProductOpportunities(
+  shoppingItems: readonly ShoppingListItem[],
+  productMatches: readonly { readonly shoppingListItemId: number; readonly productName: string; readonly thaRating: number | null }[],
+): FoodOpportunity[] {
+  if (productMatches.length === 0) return [];
+
+  const opportunities: FoodOpportunity[] = [];
+  for (const item of shoppingItems) {
+    // An unrated line is an honest gap, NOT a zero the Analyser can beat.
+    if (item.thaRating == null) continue;
+
+    let best: { productName: string; thaRating: number } | null = null;
+    for (const match of productMatches) {
+      if (match.shoppingListItemId !== item.id || match.thaRating == null) continue;
+      if (match.thaRating <= item.thaRating) continue;
+      // Strictly greater keeps ties out; first-seen wins so the order is the owner's own.
+      if (best === null || match.thaRating > best.thaRating) {
+        best = { productName: match.productName, thaRating: match.thaRating };
+      }
+    }
+    if (!best) continue;
+
+    opportunities.push({
+      id: `shopping-higher-rated-product-available:${item.id}`,
+      type: "shopping-higher-rated-product-available",
+      owningDomain: "shopping",
+      priority: "medium",
+      // States both ratings; draws no conclusion between them.
+      explanation: `"${item.productName}" is rated ${item.thaRating}/5. "${best.productName}", already matched to this line, is rated ${best.thaRating}/5.`,
+      evidence: [
+        { source: "shopping-list", detail: `"${item.productName}" is on your current shopping list.` },
+        {
+          source: "analyser-rating",
+          detail: `The Analyser rates "${item.productName}" ${item.thaRating}/5 and "${best.productName}" ${best.thaRating}/5.`,
+        },
+      ],
+      suggestedAction: `Compare "${item.productName}" with "${best.productName}" before you shop.`,
+      subject: { entity: "shopping-item", id: item.id, label: item.productName },
+    });
+  }
+  return opportunities;
+}
+
+/**
+ * AFI3 (SHOP1) — Shopping domain. A WS9-curated, less-processed option for a line whose
+ * food WS9 already knows.
+ *
+ * WS9 (`shared/alternatives`) owns both the option and the editorial REASON for it. This
+ * generator authors NEITHER: it looks the household's own line up by canonical anchor and
+ * copies WS9's option name and reason VERBATIM into the citation. WS9's own trust gate
+ * (`validateReason`, fail-closed) has already vetted every string this card can carry, so
+ * no ranking or judgement language can reach a household through it.
+ *
+ * NO NEW KNOWLEDGE (Rule FI1). Rule T1 — it names foods, never bodies or outcomes.
+ *
+ * A POSSIBILITY, NOT A CALL TO ACTION: `low` attention, so it can never outrank an
+ * actionable card.
+ *
+ * HONEST GAPS: an anchor WS9 does not know is SILENT (WS9's own "empty is silent"
+ * discipline — never a guessed alternative).
+ *
+ * SAFETY (Rule T0, reused not re-implemented): every option is checked against the
+ * household's stored hard restrictions with the SAME `resolveIngredientRestrictions`
+ * matcher the restriction generator uses. If every option collides, the WHOLE card is
+ * dropped — the engine never offers a household something a named member cannot have.
+ */
+export function identifyShoppingLessProcessedOpportunities(
+  shoppingItems: readonly ShoppingListItem[],
+  restrictionDefs: readonly RestrictionDefinition[],
+): FoodOpportunity[] {
+  const defs = [...restrictionDefs];
+  const opportunities: FoodOpportunity[] = [];
+
+  for (const item of shoppingItems) {
+    if (item.checked) continue;
+
+    // WS9 resolves its own anchors (exact slug/alias). An unknown anchor is silent.
+    const anchorKey = resolveAnchorKey(item.normalizedName || item.productName || "");
+    if (!anchorKey) continue;
+
+    const result = alternatives({ food: anchorKey, types: ["lower_upf"] });
+    const options = result.sections.flatMap((s) => s.options);
+    if (options.length === 0) continue;
+
+    // Rule T0 — drop any option colliding with a stored hard restriction.
+    const safe = options.filter(
+      (o) => defs.length === 0 || resolveIngredientRestrictions(o.name, defs).length === 0,
+    );
+    if (safe.length === 0) continue;
+
+    // Prefer one excellent: WS9's own first (editorial) option.
+    const option = safe[0];
+    const anchorName = result.anchor?.name ?? item.productName;
+
+    opportunities.push({
+      id: `shopping-less-processed-option:${item.id}`,
+      type: "shopping-less-processed-option",
+      owningDomain: "shopping",
+      priority: "low",
+      explanation: `"${item.productName}" is on your list. ${option.name} is a less processed option for ${anchorName}.`,
+      evidence: [
+        { source: "shopping-list", detail: `"${item.productName}" is on your current shopping list.` },
+        // WS9's curated option and its editorial reason, copied character for character.
+        { source: "food-alternatives", detail: `${option.name}: ${option.reason}` },
+      ],
+      suggestedAction: `Have a look at ${option.name} next time you shop for ${anchorName}.`,
+      subject: { entity: "shopping-item", id: item.id, label: item.productName },
+    });
+  }
+  return opportunities;
+}
+
+/**
+ * AFI3 (PANTRY1) — Pantry domain. A quantity the household THEMSELVES recorded as needed,
+ * which is not on the shopping list.
+ *
+ * THE DISCIPLINE THIS ENCODES: THA never models consumption. It does not infer that milk
+ * has run low, or predict when it will. It reads back only what the household explicitly
+ * declared they need (`needQuantityValue`/`needUnit`) and observes that it is missing from
+ * the list they are about to shop from. A missed shop is an inconvenience, so this is
+ * `medium` — never `critical`.
+ *
+ * NO NEW KNOWLEDGE (Rule FI1): the household's own recorded need, and their own list.
+ *
+ * HONEST GAPS: no recorded need, or a zero need, is not a need. A deleted row is not
+ * read. An EMPTY shopping list is a read list, not an unknown one — the need still fires.
+ * And a food THA cannot identify is SILENT: it is never guessed at, because a wrong match
+ * here would either nag about something already on the list or stay quiet about something
+ * missing from it.
+ */
+export function identifyPantryNeedOpportunities(
+  pantryItems: readonly UserPantryItem[],
+  shoppingItems: readonly ShoppingListItem[],
+): FoodOpportunity[] {
+  // The canonical foods the list already covers — matched on identity, not on spelling.
+  const listed = new Set<string>();
+  for (const item of shoppingItems) {
+    const slug = shoppingCanonicalSlug(item);
+    if (slug) listed.add(slug);
+  }
+
+  const opportunities: FoodOpportunity[] = [];
+  for (const item of pantryItems) {
+    if (item.isDeleted) continue;
+    // A need is a POSITIVE quantity the household recorded. Null and zero are not needs.
+    const needValue = item.needQuantityValue;
+    if (needValue == null || !(needValue > 0)) continue;
+
+    // THE REFUSAL — an unidentifiable food is silent, never guessed at.
+    const r = resolveCanonicalFood(item.ingredientKey);
+    if (!r.matched || !r.canonicalSlug) continue;
+    if (listed.has(r.canonicalSlug)) continue;
+
+    const label = item.displayName ?? r.canonicalName ?? item.ingredientKey;
+    // `needUnit` is nullable even on a positive need — degrade to the bare number.
+    const needPhrase = item.needUnit ? `${needValue} ${item.needUnit}` : `${needValue}`;
+
+    opportunities.push({
+      id: `pantry-need-not-on-shopping-list:${item.id}`,
+      type: "pantry-need-not-on-shopping-list",
+      owningDomain: "pantry",
+      priority: "medium",
+      explanation: `You've recorded that you need ${needPhrase} of ${label}, and it isn't on your shopping list.`,
+      evidence: [
+        { source: "pantry-items", detail: `Your pantry records a need of ${needPhrase} for ${label}.` },
+        { source: "shopping-list", detail: `${label} does not appear on your current shopping list.` },
+      ],
+      suggestedAction: `Add ${label} to your shopping list.`,
+      subject: { entity: "pantry-item", id: item.id, label },
+    });
+  }
+  return opportunities;
+}
+
+/**
+ * AFI4 (CBK2) — Cookbook domain. A recipe the household could cook RIGHT NOW, entirely
+ * from what is already in the pantry.
+ *
+ * THE LOAD-BEARING REFUSAL: this card is emitted only when EVERY ingredient in the recipe
+ * both RESOLVES canonically and is present in the pantry. There is deliberately no
+ * partial-coverage threshold and no "you're nearly there" — sending someone to the hob
+ * without the thing they are missing is worse than staying quiet.
+ *
+ * And the sharper half: an ingredient THA CANNOT IDENTIFY is a gap in THA's KNOWLEDGE,
+ * not evidence the household owns it. So an unresolvable ingredient BLOCKS the card
+ * outright — it is never silently skipped, which is the one implementation shortcut that
+ * would quietly turn this card into a lie.
+ *
+ * NO NEW KNOWLEDGE (Rule FI1): the household's own cookbook and own pantry, joined by the
+ * ONE canonical resolver. Rule T1 — it names a recipe and foods, never a body.
+ *
+ * A POSSIBILITY, NOT A CALL TO ACTION: `low` attention. A meal you COULD cook is an
+ * option, not an instruction.
+ *
+ * HONEST GAPS: no pantry, no claim. A recipe with no recorded ingredients cannot be
+ * proven cookable, so an empty ingredient list never fires (no vacuous truth).
+ */
+export function identifyCookbookCookableNowOpportunities(
+  meals: readonly { readonly id: number; readonly name: string; readonly ingredients: readonly string[] }[],
+  pantryItems: readonly UserPantryItem[],
+): FoodOpportunity[] {
+  const pantryFoods = pantryCanonicalFoods(pantryItems);
+  if (pantryFoods.size === 0) return [];
+
+  const opportunities: FoodOpportunity[] = [];
+  for (const meal of meals) {
+    const name = meal.name?.trim();
+    if (!name) continue;
+    // A recipe with nothing recorded cannot be proven cookable.
+    if (meal.ingredients.length === 0) continue;
+
+    const have: string[] = [];
+    let provable = true;
+    for (const raw of meal.ingredients) {
+      const r = resolveCanonicalFood(raw ?? "");
+      // A knowledge gap is NOT an owned ingredient — it blocks the card.
+      if (!r.matched || !r.canonicalSlug) {
+        provable = false;
+        break;
+      }
+      const label = pantryFoods.get(r.canonicalSlug);
+      if (!label) {
+        provable = false;
+        break;
+      }
+      have.push(label);
+    }
+    if (!provable) continue;
+
+    opportunities.push({
+      id: `cookbook-recipe-cookable-now:${meal.id}`,
+      type: "cookbook-recipe-cookable-now",
+      owningDomain: "cookbook",
+      priority: "low",
+      explanation: `You have everything for "${name}" — ${joinPhrase(have)} are all in your pantry.`,
+      evidence: [
+        { source: "meals", detail: `"${name}" is a recipe in your cookbook.` },
+        { source: "pantry-items", detail: `Every ingredient it needs is in your pantry: ${joinPhrase(have)}.` },
+      ],
+      suggestedAction: `Cook "${name}" from what you already have.`,
+      subject: { entity: "meal", id: meal.id, label: name },
+    });
+  }
+  return opportunities;
+}
+
+/**
+ * AFI4 (CBK2) — Cookbook domain. A recipe in the household's OWN cookbook that collides
+ * with a stored household hard restriction.
+ *
+ * WHAT THIS CARD REFUSES TO DO: it never deletes, hides, filters or auto-adapts a
+ * household's own recipe. A cookbook is theirs, not THA's, and a restriction may belong to
+ * one member of several. So the card names the recipe AND the ingredient that caused the
+ * collision, and offers the two honest choices — adapt it, or keep it as it is.
+ *
+ * Reuses `resolveIngredientRestrictions` exactly as the shopping and uplift generators do
+ * — no second restriction-matching implementation (Rule T0's additive face).
+ *
+ * `medium`, never `critical`: `shopping-restriction-conflict` is the platform's sole
+ * `critical` emitter (ATTN1 invariant A2, a closed allowlist) because that is a thing
+ * about to be BOUGHT. A recipe sitting in a cookbook is not.
+ *
+ * HONEST GAPS: no stored restrictions means no conflict cards — a restriction is never
+ * inferred, defaulted or guessed.
+ */
+export function identifyCookbookHouseholdConflictOpportunities(
+  meals: readonly { readonly id: number; readonly name: string; readonly ingredients: readonly string[] }[],
+  restrictionDefs: readonly RestrictionDefinition[],
+): FoodOpportunity[] {
+  if (restrictionDefs.length === 0) return [];
+  const defs = [...restrictionDefs];
+
+  const opportunities: FoodOpportunity[] = [];
+  for (const meal of meals) {
+    const name = meal.name?.trim();
+    if (!name) continue;
+
+    // The first colliding ingredient, kept EXACTLY as the recipe spells it, so the card
+    // can name the real cause rather than a re-worded one.
+    let hit: { ingredient: string; restrictionNames: string } | null = null;
+    for (const raw of meal.ingredients) {
+      const ingredient = (raw ?? "").trim();
+      if (!ingredient) continue;
+      const matches = resolveIngredientRestrictions(ingredient, defs);
+      if (matches.length === 0) continue;
+      hit = {
+        ingredient,
+        restrictionNames: matches.map((m) => m.restriction.displayName).join(", "),
+      };
+      break;
+    }
+    if (!hit) continue;
+
+    opportunities.push({
+      id: `cookbook-recipe-household-conflict:${meal.id}`,
+      type: "cookbook-recipe-household-conflict",
+      owningDomain: "cookbook",
+      priority: "medium",
+      explanation: `"${name}" in your cookbook contains ${hit.ingredient}, which conflicts with a stored household restriction (${hit.restrictionNames}).`,
+      evidence: [
+        { source: "meals", detail: `"${name}" is a recipe in your cookbook and it contains ${hit.ingredient}.` },
+        { source: "household-eaters", detail: `Your household has an active hard restriction: ${hit.restrictionNames}.` },
+      ],
+      suggestedAction: `Adapt "${name}" to work around ${hit.ingredient}, or keep it as it is.`,
+      subject: { entity: "meal", id: meal.id, label: name },
+    });
+  }
+  return opportunities;
+}
 // ---------------------------------------------------------------------------
 // Prioritisation — pure, deterministic, no re-derived score
 // ---------------------------------------------------------------------------
@@ -391,6 +1078,20 @@ export async function identifyOpportunities(request: FoodOpportunityRequest): Pr
   const opportunities: FoodOpportunity[] = [];
   const sources = new Set<string>(["household-eaters"]);
 
+  // AFI3–AFI5 — the pantry is read ONCE and shared by every generator that needs it
+  // (the pantry generator below, and the three cross-room observations). Read up front,
+  // independently guarded: an unreadable pantry degrades those observations to an honest
+  // silence and never blocks the planner or shopping domains.
+  let pantryItems: UserPantryItem[] = [];
+  let pantryRead = false;
+  try {
+    const pantryPort = await createStoragePantryReadPort();
+    pantryItems = await pantryPort.getPantryItems(request.userId);
+    pantryRead = true;
+  } catch {
+    // Honest degrade — this household has no readable pantry activity yet.
+  }
+
   try {
     const plannerPort = await createStoragePlannerReadPort();
     const weeks = await plannerPort.getPlannerWeeks(request.userId);
@@ -414,6 +1115,35 @@ export async function identifyOpportunities(request: FoodOpportunityRequest): Pr
         plannerPort.getPlannerEntriesForWeek(currentWeek.id),
       ]);
       opportunities.push(...identifyPlannerGapOpportunities(currentWeek, days, entries));
+
+      // AFI1 — resolve each planned entry's meal NAME via the planner port's own
+      // meal reference (no new query, no new owner), so the uplift generator can
+      // offer ONE evidence-backed lift for a meal already on this week's plan.
+      const dayOfWeekById = new Map(days.map((d) => [d.id, d.dayOfWeek]));
+      const plannedMeals = (
+        await Promise.all(
+          entries.map(async (entry): Promise<PlannedMealRef | null> => {
+            const meal = await plannerPort.getMeal(entry.mealId);
+            const name = meal?.name?.trim();
+            if (!name) return null;
+            return {
+              entryId: entry.id,
+              dayOfWeek: dayOfWeekById.get(entry.dayId) ?? 0,
+              mealName: name,
+              mealId: entry.mealId,
+            } satisfies PlannedMealRef;
+          }),
+        )
+      ).filter((m): m is PlannedMealRef => m !== null);
+      opportunities.push(
+        ...identifyPlannerMealUpliftOpportunities(plannedMeals, currentWeek, household.restrictionDefs),
+      );
+
+      // AFI2 — the "cook once, cover the week" observation for a meal planned on several
+      // days of this week. Reuses the SAME `plannedMeals` resolved just above — no extra
+      // read, no new knowledge, no contested domain.
+      opportunities.push(...identifyPlannerBatchCookOpportunities(plannedMeals, currentWeek));
+
       sources.add("planner");
     }
   } catch {
@@ -421,15 +1151,11 @@ export async function identifyOpportunities(request: FoodOpportunityRequest): Pr
     // never fabricated, and it does not block the other domains below.
   }
 
-  try {
-    const pantryPort = await createStoragePantryReadPort();
-    const pantryItems = await pantryPort.getPantryItems(request.userId);
-    if (pantryItems.length > 0) {
-      opportunities.push(...identifyPantryUnusedOpportunities(pantryItems, new Set(household.familiarAppearances.keys())));
-      sources.add("pantry");
-    }
-  } catch {
-    // Honest degrade — see planner comment above.
+  // AFI3 (SHOP1) — the pantry read is HOISTED above: it is now used by three domains
+  // (pantry, shopping and cookbook) and is fetched exactly once.
+  if (pantryItems.length > 0) {
+    opportunities.push(...identifyPantryUnusedOpportunities(pantryItems, new Set(household.familiarAppearances.keys())));
+    sources.add("pantry");
   }
 
   try {
@@ -437,10 +1163,70 @@ export async function identifyOpportunities(request: FoodOpportunityRequest): Pr
     const shoppingItems = await shoppingPort.getShoppingListItems(request.userId);
     if (shoppingItems.length > 0) {
       opportunities.push(...identifyShoppingRestrictionOpportunities(shoppingItems, household.restrictionDefs));
+
+      // AFI3 (SHOP1) — a line the household already has in the cupboard. Joins the two
+      // reads already performed — no third read, no new owner.
+      if (pantryRead) {
+        opportunities.push(...identifyShoppingPantryDuplicateOpportunities(shoppingItems, pantryItems));
+      }
+
+      // AFI3 (SHOP1) — WS9's curated less-processed option for a line whose food it knows.
+      opportunities.push(
+        ...identifyShoppingLessProcessedOpportunities(shoppingItems, household.restrictionDefs),
+      );
+
+      // AFI3 (SHOP1) — the Analyser's already-persisted product ratings. INDEPENDENTLY
+      // OPTIONAL: a household with no matched products simply contributes no comparison,
+      // and it never blocks the shopping cards above.
+      try {
+        const productMatches = await shoppingPort.getProductMatchesForUser(request.userId);
+        if (productMatches.length > 0) {
+          opportunities.push(
+            ...identifyShoppingHigherRatedProductOpportunities(shoppingItems, productMatches),
+          );
+          sources.add("analyser-rating");
+        }
+      } catch {
+        // Honest degrade — no matches read, so no comparison is invented.
+      }
+
+      // AFI3 (PANTRY1) — a need the household recorded that the list does not cover.
+      // Needs BOTH owners, so it lives here where both have been read.
+      if (pantryRead) {
+        opportunities.push(...identifyPantryNeedOpportunities(pantryItems, shoppingItems));
+      }
+
       sources.add("shopping");
+    } else if (pantryRead) {
+      // An EMPTY shopping list is a READ list, not an unknown one — a recorded need is
+      // still missing from it, so the pantry-need observation still stands.
+      opportunities.push(...identifyPantryNeedOpportunities(pantryItems, []));
     }
   } catch {
     // Honest degrade — see planner comment above.
+  }
+
+  // AFI4 (CBK2) — the Cookbook domain. Reads the caller's OWN meals through the EXISTING
+  // INT15 meals read port (user-scoped by the owner). Independently optional, like every
+  // other domain: a household with no cookbook contributes nothing and blocks nothing.
+  if (pantryRead || household.restrictionDefs.length > 0) {
+    try {
+      const mealsPort = await createStorageMealsReadPort();
+      const cookbook = (await mealsPort.getMeals(request.userId)).map((m) => ({
+        id: m.id,
+        name: m.name,
+        ingredients: m.ingredients ?? [],
+      }));
+      if (cookbook.length > 0) {
+        opportunities.push(...identifyCookbookCookableNowOpportunities(cookbook, pantryItems));
+        opportunities.push(
+          ...identifyCookbookHouseholdConflictOpportunities(cookbook, household.restrictionDefs),
+        );
+        sources.add("meals");
+      }
+    } catch {
+      // Honest degrade — an unreadable cookbook contributes nothing, never a guess.
+    }
   }
 
   return {

@@ -1,0 +1,197 @@
+/* =============================================================================
+   THE HOUSE — the shared Kept House language, extracted verbatim from the three
+   locked rooms (HOME_ARRIVAL_PRODUCTION_LOCK · HOUSE5 Kitchen · HOUSE6 Pantry).
+
+   NOTHING HERE IS NEW. Every value below already existed, copied identically in
+   three room compositions. This file makes them ONE owner, which is what
+   HOUSE_COMPLETE §12.1.2 recommends before the second room is ever built:
+     "If Arrival ships them as page-local CSS, the second room copies them and the
+      house has two owners of its own materials by room three."
+
+   What lives here is exactly what Experience Blueprint §5.2 says may NEVER vary
+   per domain: the shell, the doors, the Companion, the pressed apple, the Kept
+   House materials, the one morning, the type voices, the motion vocabulary.
+
+   What does NOT live here is each room's ONE deliberate move — its window (or
+   absence of one), its ground posture, and its Living Detail. Those belong to the
+   room, and only to the room.
+
+   Design/exploration only — nothing here is imported by the app.
+   ========================================================================== */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  /* ---- THE KEPT HOUSE interior (Arrival §3.2), carried verbatim ---- */
+  --wall:       hsl(36 30% 91%);   /* chalky matte plaster */
+  --wall-warm:  hsl(41 62% 95%);   /* the wall where the morning falls */
+  --wall-cool:  hsl(35 22% 87%);   /* the wall away from the light */
+
+  /* Subtly aged oak — darkened the way timber darkens after years of the same
+     morning sun. The one material every room's ground is cut from. */
+  --oak-lip:  hsl(41 40% 68%);     /* the lit front lip */
+  --oak-body: hsl(42 42% 36%);     /* the body of the timber */
+  --oak-edge: hsl(44 46% 20%);     /* the shadow edge */
+
+  --grain: .05;                    /* the one grain of The Linen Calm */
+
+  /* Ink — the warm olive-black of the shadow family. Never neutral grey. */
+  --ink:       hsl(30 16% 22%);
+  --ink-body:  hsl(30 12% 40%);
+  --ink-quiet: hsl(30 10% 52%);
+
+  /* The canonical THA apple, inlined as an SVG data-URI mask.
+     (A file:// mask-image loads empty in this headless build — the recipe the
+     Arrival, Kitchen and Pantry sessions each recorded.) */
+  --apple: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 24c-4-10-14-13-20-12 2 6 8 10 14 11-8-4-18-2-24 5-8 9-6 26 3 38 4 5 9 9 14 9 3 0 5-1 7-2 2 1 4 2 7 2 5 0 10-4 14-9 4-6 6-13 6-19-7 0-13 4-16 10-1-9 4-18 12-22-6-6-15-7-22-3 2-1 4-1 6-1-6-4-14-4-20 1z' fill='%23000'/%3E%3C/svg%3E");
+}
+
+body {
+  font-family: "Inter", "DejaVu Sans", system-ui, sans-serif;
+  color: hsl(30 12% 30%);
+  background: var(--wall);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ---- THE ROOM — plaster, and the one morning ------------------------------
+   Every room is this same wall, lit by the same sun. A room differs ONLY in the
+   ANGLE the light arrives from and how much of it there is — never in its hour,
+   never in its colour, and never by a second sun (Blueprint §7, §16).
+   Each room sets --light-angle and --light-stops; nothing else. */
+.room { position: relative; min-height: 100vh; overflow: hidden; }
+.room::before {
+  content: ""; position: absolute; inset: 0; z-index: 0;
+  background: linear-gradient(var(--light-angle, 118deg), var(--light-stops,
+    var(--wall-warm) 0%, var(--wall) 34%, var(--wall) 66%, var(--wall-cool) 100%));
+}
+/* hand-troweled plaster grain — materials before effects, never a texture image */
+.room::after {
+  content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  opacity: var(--grain); mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---- THE SHELL — the prominent band is retired in every room (BRAND2 §6) ---- */
+.shell { position: absolute; z-index: 7; top: 0; left: 0; right: 0; height: 72px; }
+
+/* ---- THE FLOOR — the room's content plane -------------------------------- */
+.floor {
+  position: relative; z-index: 5;
+  max-width: 1320px; margin: 0 auto; padding: 92px 40px 108px;
+}
+
+/* ============================  THE THREE VOICES  ============================
+   The signature serif (Fraunces) for the household's own register; Inter for the
+   quiet functional voice. No third face, in any room (UIA §10). */
+.head { max-width: 640px; }
+.eyebrow { font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: var(--ink-quiet); opacity: .85; }
+.title { font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-weight: 300; font-size: 44px; line-height: 1.05; letter-spacing: -.02em; color: var(--ink); margin-top: 8px; }
+.subtitle { font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-weight: 300; font-style: italic; font-size: 18.5px; color: var(--ink-body); margin-top: 12px; }
+
+/* ---- THE COMPANION'S LINE — one warm, true, data-borne sentence -----------
+   Verbatim from its producer; quieter when the day is quiet; happy to say nothing
+   at all. The friend at the counter, in every room, in the same voice. */
+.counter-note { margin-top: 22px; padding-left: 2px; }
+.counter-from { display: flex; align-items: center; gap: 6px; font-size: 10px; letter-spacing: .15em; text-transform: uppercase; color: var(--ink-quiet); margin-bottom: 8px; }
+.counter-from .dot { width: 13px; height: 13px; border-radius: 50%; background: radial-gradient(120% 90% at 50% 12%, hsl(132 16% 54%), hsl(132 14% 44%)); }
+.counter-body { font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-weight: 300; font-style: italic; font-size: 16px; line-height: 1.5; color: hsl(30 14% 26%); }
+.counter-link { display: inline-block; margin-top: 9px; font-size: 12px; color: hsl(96 26% 34%); font-weight: 500; }
+
+/* ---- THE PRESSED APPLE — the sole brand mark (BRAND2 §6) ------------------
+   A three-layer intaglio pressed into the open plaster: ambient occlusion, a
+   recessed face with the light pooling to the lit lower lip, and a two-rim relief
+   (dark rim up, lit rim down) lit by the room's one morning. It holds NO pigment.
+   It is the wall, not an image on it — discovered, never displayed. */
+.wall-apple { position: relative; margin-top: 30px; width: 84px; height: 84px; margin-left: auto; margin-right: 10px; opacity: .9; }
+.wall-apple i { position: absolute; inset: 0; display: block;
+  -webkit-mask: var(--apple) center / contain no-repeat; mask: var(--apple) center / contain no-repeat; }
+.wall-apple .wa-occ  { background: hsl(38 20% 64%); filter: blur(2px); transform: scale(1.05) translateY(1.5px); opacity: .42; }
+.wall-apple .wa-up   { background: hsl(42 26% 44%); transform: translateY(-2px); opacity: .78; }
+.wall-apple .wa-lo   { background: hsl(44 62% 93%); transform: translateY(2px); opacity: .6; }
+.wall-apple .wa-face { background: linear-gradient(to bottom, hsl(35 16% 71%), hsl(37 24% 82%) 50%, hsl(41 46% 90%)); }
+
+/* ============================  THE DOORS  ============================
+   The constant shell along the floor — you can leave any room for any room. The
+   room you are in reads as HERE. This never varies per domain (Blueprint §14),
+   and this composition introduces no navigation the house does not already have. */
+.doors { position: absolute; z-index: 5; left: 0; right: 0; bottom: 0;
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid hsl(38 22% 80% / .7);
+  background: linear-gradient(to bottom, hsl(36 30% 88% / .4), hsl(34 26% 84% / .82)); }
+.door { height: 62px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; position: relative; }
+.door + .door::before { content: ""; position: absolute; left: 0; top: 14px; bottom: 14px; width: 1px; background: hsl(38 24% 82% / .7); }
+.door-name { font-size: 13.5px; font-weight: 400; letter-spacing: .01em; color: hsl(30 14% 30%); opacity: .9; }
+.door.here .door-name { color: hsl(30 16% 20%); font-weight: 500; }
+.door-handle { width: 5px; height: 5px; border-radius: 50%; background: hsl(43 62% 47%); opacity: .7; box-shadow: 0 0 0 3px hsl(43 62% 47% / .1); }
+.door.here .door-handle { opacity: 1; box-shadow: 0 0 0 4px hsl(43 62% 47% / .16); }
+
+/* ---- THE COMPANION — the apple carved into a sage ceramic disc (COMP1 §2) --
+   A lit top rim, a shaded lower body, a soft contact shadow: furniture, not a
+   sticker. CALM AT REST — no halo, no badge, no pulse, no motion. Same corner in
+   every room, 48px, always available and never visually dominant. */
+.companion { position: fixed; z-index: 40; right: 24px; bottom: 24px; width: 48px; height: 48px; border-radius: 50%; border: 0; cursor: pointer;
+  background: radial-gradient(120% 90% at 50% 8%, hsl(132 16% 54%), hsl(132 14% 44%) 70%);
+  box-shadow: 0 10px 22px -8px hsl(140 20% 20% / .5), inset 0 1px 1px hsl(132 20% 66% / .6); }
+.companion i { position: absolute; inset: 12px; display: block; background: hsl(120 12% 30%);
+  -webkit-mask: var(--apple) center / contain no-repeat; mask: var(--apple) center / contain no-repeat; opacity: .82; }
+
+/* ---- THE WINDOW — real joinery, for the rooms that have one ---------------
+   A head reveal with wall-thickness above the glass, jamb returns down each side,
+   and timber mullions with a lit inner edge: STRUCTURE HOLDING GLASS UP, never
+   bars drawn on a photo. Rooms set only the window's SIZE (their exposure);
+   the joinery itself is the same carpentry in every room that has a window.
+   E1 rooms (Family Table, Tasting Bench, Mirror) include none of this. */
+.window { position: relative; border-radius: 2px; overflow: hidden;
+  box-shadow: 0 18px 38px -20px hsl(56 45% 9% / .32); }
+.window img { width: 100%; height: 100%; object-fit: cover; object-position: 60% 34%; display: block; }
+.window::before {   /* the head reveal — wall thickness above the glass */
+  content: ""; position: absolute; z-index: 3; top: 0; left: 0; right: 0; height: 18px;
+  background: linear-gradient(to bottom, hsl(45 42% 20% / .42), hsl(45 42% 20% / 0)); }
+.window::after {    /* jambs — the glass is held by a wall with depth */
+  content: ""; position: absolute; z-index: 3; inset: 0; pointer-events: none;
+  box-shadow: inset 20px 0 28px -20px hsl(45 42% 20% / .34), inset -20px 0 28px -20px hsl(45 42% 20% / .34); }
+.mullion { position: absolute; z-index: 2; top: 0; bottom: 0; left: 50%; width: 6px;
+  background: linear-gradient(to right, hsl(45 42% 18% / .55), var(--oak-body) 40%, var(--oak-lip) 54%, hsl(45 42% 18% / .55));
+  box-shadow: 0 0 12px hsl(56 40% 9% / .22); }
+
+/* an oak ledge/sill beneath a window — the boundary the room is built on */
+.ledge { position: relative; height: 16px; border-radius: 0 0 2px 2px;
+  background: linear-gradient(to bottom, var(--oak-lip) 0, hsl(43 42% 52%) 4px, var(--oak-body) 62%, var(--oak-edge) 100%);
+  box-shadow: 0 14px 22px -14px hsl(56 45% 9% / .32); }
+.ledge::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: hsl(44 60% 86% / .8); }
+
+/* ============================  STATE  ============================
+   Every room ships two honest states, and per Article VIII the EMPTIER one is
+   designed first and designed WARM. Rooms declare data-state="filled"|"empty".
+
+   The state law must WIN over any room's own layout rule. A room that styles a
+   state element (e.g. `.rest { display: flex }`) out-specifies a bare
+   `.empty-only { display: none }` on source order alone, and BOTH states then
+   render at once — the filled week showing its own empty line underneath it.
+   So the law HIDES with !important and never DECLARES how a shown element
+   displays: the room keeps its own posture, and only the wrong state is removed. */
+:root[data-state="filled"] .empty-only,
+:root[data-state="empty"]  .filled-only { display: none !important; }
+
+/* the warm invitation that stands where a scarcity alarm would be — never a
+   catalogue of what is missing, never a count of what was not done */
+.invite { margin-top: 8px; padding: 22px 22px 24px; border-radius: 4px;
+  background: linear-gradient(160deg, hsl(41 52% 95%), hsl(38 34% 92%));
+  box-shadow: inset 0 0 0 1px hsl(41 40% 86% / .7); max-width: 560px; }
+.invite .bi-title { font-family: "Fraunces","DejaVu Serif",Georgia,serif; font-weight: 300; font-style: italic; font-size: 21px; color: hsl(30 16% 26%); }
+.invite .bi-body { margin-top: 8px; font-size: 14px; line-height: 1.6; color: var(--ink-body); }
+
+/* ============================  RESPONSIVE  ============================
+   The two breakpoints the whole house shares. A room may add its own reflow, but
+   never its own breakpoints — the house changes shape at the same two sizes
+   everywhere, or it stops being one house. */
+@media (max-width: 980px) {
+  .floor { padding: 84px 26px 100px; }
+  .wall-apple { display: none; }   /* one mark per room; on small screens it yields to the content */
+}
+@media (max-width: 560px) {
+  .floor { padding: 76px 16px 96px; }
+  .title { font-size: 34px; }
+  .doors { display: none; }        /* the door-run collapses to the Companion on mobile */
+}

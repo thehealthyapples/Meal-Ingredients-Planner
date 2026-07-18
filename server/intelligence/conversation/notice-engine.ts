@@ -119,7 +119,20 @@ export type NoticeCategory =
   // It has a registered owner (the `evidence-learning` capability), which is the §9
   // condition on any new category: "any new notice category without a registered owner
   // behind it — stop."
-  | "household-learning";
+  | "household-learning"
+  // AFI4/CBK2 — the ninth category, carrying the Cookbook domain's opportunities.
+  //
+  // It satisfies §9's condition on any new category — "any new notice category without a
+  // registered owner behind it — stop" — because its owner is the ALREADY-registered
+  // `food-intelligence` producer, the same one behind `planner-gap`,
+  // `pantry-opportunity` and `shopping-opportunity`. No new producer is enrolled in
+  // `OPPORTUNITY_SOURCES` and no second notice channel is created.
+  //
+  // WHY THIS ROW IS LOAD-BEARING: an unmapped domain is dropped by `noticeOpportunities`
+  // one step before a household could ever read it. Without this member and its
+  // `DOMAIN_TO_CATEGORY` row, every cookbook opportunity would still be produced,
+  // delivered, budgeted, persisted and learned from — and then silently vanish.
+  | "cookbook-opportunity";
 
 
 /**
@@ -297,6 +310,8 @@ const DOMAIN_TO_CATEGORY: Readonly<Record<string, NoticeCategory>> = {
   planner: "planner-gap",
   pantry: "pantry-opportunity",
   shopping: "shopping-opportunity",
+  // AFI4/CBK2 — see the `cookbook-opportunity` note on NoticeCategory above.
+  cookbook: "cookbook-opportunity",
 };
 
 /**

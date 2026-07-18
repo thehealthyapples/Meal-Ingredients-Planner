@@ -20,7 +20,7 @@
  * matches products, fetches live prices, builds baskets, or places orders.
  */
 
-import type { ShoppingListItem, ShoppingListExtra } from "@shared/schema";
+import type { ShoppingListItem, ShoppingListExtra, ProductMatch } from "@shared/schema";
 
 /**
  * The read-only owning-service surface. Each method forwards to the existing Shopping
@@ -32,6 +32,18 @@ export interface ShoppingReadPort {
   getShoppingListItems(userId: number): Promise<ShoppingListItem[]>;
   /** Shopping owner — the caller's "extras" lines (household staples; household-scoped by the owner). */
   getShoppingListExtras(userId: number): Promise<ShoppingListExtra[]>;
+  /**
+   * SHOP1 — the retailer products ALREADY matched to the caller's own shopping lines,
+   * each carrying the `thaRating` the Analyser (SoT D19) already computed. A 1:1 forward
+   * to the existing `storage.getProductMatchesForUser`, which resolves the caller's
+   * household internally and returns only that household's rows — so this method inherits
+   * the same ownership scoping as the two above.
+   *
+   * This does NOT match products, fetch live prices or contact a retailer (see the module
+   * header): it reads matches THA has already written. The result is flat — matches are
+   * not grouped by line, so callers group by `shoppingListItemId` themselves.
+   */
+  getProductMatchesForUser(userId: number): Promise<ProductMatch[]>;
 }
 
 /**
@@ -44,5 +56,6 @@ export async function createStorageShoppingReadPort(): Promise<ShoppingReadPort>
   return {
     getShoppingListItems: (userId) => storage.getShoppingListItems(userId),
     getShoppingListExtras: (userId) => storage.getShoppingListExtras(userId),
+    getProductMatchesForUser: (userId) => storage.getProductMatchesForUser(userId),
   };
 }

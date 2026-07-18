@@ -31,6 +31,7 @@ import {
   Rocket, Activity, RotateCcw, TrendingUp, TrendingDown, Minus, Database,
   FileClock, Link2,
 } from "lucide-react";
+import { OperationDialog, type OperationSpec } from "@/components/admin/operation";
 
 // KQ1C — Knowledge Review Workbench, Phase 1. The first Knowledge Review
 // WORKSPACE: browse, inline & bulk edit of editorial review fields, advanced
@@ -681,9 +682,11 @@ function fmtHours(h: number | null): string {
 // surface that changes canonical knowledge, and it does so only via the governed
 // alias overlay behind the human gate (approved proposals only).
 function ReleasesPanel({ onPublished }: { onPublished: () => void }) {
-  const { toast } = useToast();
   const [notes, setNotes] = useState("");
   const [openId, setOpenId] = useState<number | null>(null);
+  // OPS1 — Publish and Rollback now run through the one canonical Operation experience.
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [rollbackTarget, setRollbackTarget] = useState<Release | null>(null);
 
   const { data: releases, isPending } = useQuery<Release[]>({
     queryKey: ["/api/admin/knowledge-review/releases"],
@@ -701,19 +704,76 @@ function ReleasesPanel({ onPublished }: { onPublished: () => void }) {
       queryClient.invalidateQueries({ queryKey: [`/api/admin/knowledge-review/${k}`] });
     }
   };
-  const publishMutation = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/admin/knowledge-review/publish", { notes: notes.trim() || undefined }).then(r => r.json()),
-    onSuccess: (res: PublishResult) => {
-      invalidateAll(); setNotes("");
-      toast({ description: `Published release #${res.releaseId}: ${res.aliasesPublished} alias(es), ${res.newEntities} hand-off(s), ${res.rejectedProposals} rejected, ${res.deferredProposals} deferred.` });
-      onPublished();
+  // Publish Knowledge — the ONE surface that changes canonical knowledge. Reuses the existing
+  // POST /publish endpoint verbatim; the Operation experience owns purpose → readiness → confirm
+  // gate → progress → completion summary → next step.
+  const publishSpec: OperationSpec<PublishResult> = {
+    id: "publish-knowledge",
+    title: "Publish Knowledge",
+    purpose: "Apply every approved proposal to the canonical knowledge overlay the resolver reads.",
+    impact: {
+      level: "canonical",
+      line: "This changes canonical knowledge every household will see. It records a Knowledge Release and a rollback point.",
     },
-    onError: (e: any) => toast({ variant: "destructive", description: e?.message || "Publish failed." }),
-  });
-  const rollbackMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("POST", `/api/admin/knowledge-review/releases/${id}/rollback`).then(r => r.json()),
-    onSuccess: (res: any) => { invalidateAll(); toast({ description: `Release rolled back — ${res.aliasesDeactivated} alias(es) deactivated, ${res.decisionsReverted} proposal(s) reverted.` }); },
-    onError: (e: any) => toast({ variant: "destructive", description: e?.message || "Rollback failed." }),
+    guidance: [
+      { q: "What does this do?", a: "Applies each approved alias to the governed overlay the single resolver reads, emits a hand-off artifact for every new-identity term (it never auto-mints an entity), and records a Knowledge Release." },
+      { q: "Why would I run it?", a: "To make reviewed-and-approved knowledge changes live for every household." },
+      { q: "When should I run it?", a: "Once proposals have been reviewed and approved on the Consensus tab." },
+      { q: "What happens?", a: "Only approved proposals are published. Rejected and deferred proposals are recorded, not applied. A rollback point is created so the release can be reverted." },
+      { q: "Data impact", a: "Writes the alias overlay and a Knowledge Release row. It does not delete or overwrite canonical entities." },
+      { q: "Production impact", a: "Changes what every household sees the moment it completes." },
+    ],
+    readiness: [
+      approvedCount > 0
+        ? { label: `${approvedCount} approved proposal${approvedCount === 1 ? "" : "s"} ready to publish`, state: "ready" }
+        : { label: "No approved proposals to publish", state: "blocked", detail: "Approve proposals on the Consensus tab first." },
+      notes.trim()
+        ? { label: "Release notes added", state: "info" }
+        : { label: "No release notes", state: "info", detail: "Optional — you can still publish." },
+    ],
+    confirmLabel: approvedCount > 0 ? `Publish ${approvedCount} approved` : "Publish",
+    expectedDuration: "a few moments",
+    run: () => apiRequest("POST", "/api/admin/knowledge-review/publish", { notes: notes.trim() || undefined }).then(r => r.json()),
+    summarise: (res) => ({
+      tone: res.warnings?.length ? "warning" : "good",
+      headline: `Published release #${res.releaseId}.`,
+      lines: [
+        `${res.aliasesPublished} alias${res.aliasesPublished === 1 ? "" : "es"} published · ${res.newEntities} hand-off${res.newEntities === 1 ? "" : "s"}`,
+        `${res.rejectedProposals} rejected · ${res.deferredProposals} deferred`,
+        ...(res.warnings?.length ? [`${res.warnings.length} warning${res.warnings.length === 1 ? "" : "s"} — review the release detail.`] : []),
+      ],
+    }),
+    nextStep: () => ({ label: "Check publication integrity", href: "/admin/canonical-publication-integrity" }),
+    onComplete: () => { invalidateAll(); setNotes(""); onPublished(); },
+  };
+
+  // Rollback — reverts a published release. Reuses the existing POST /rollback endpoint. Built per
+  // target release, so it is only constructed when a release is selected for rollback.
+  const rollbackSpec = (rel: Release): OperationSpec<{ aliasesDeactivated: number; decisionsReverted: number }> => ({
+    id: "rollback-knowledge",
+    title: "Roll back release",
+    purpose: `Revert Knowledge Release #${rel.id} — deactivate the aliases it published and revert its proposals.`,
+    impact: {
+      level: "canonical",
+      line: "This changes canonical knowledge every household sees. It deactivates the aliases this release published and reverts its proposals to their prior decision.",
+    },
+    guidance: [
+      { q: "What does this do?", a: `Deactivates every alias Knowledge Release #${rel.id} activated and reverts the proposals it published, returning the resolver to its pre-release state.` },
+      { q: "Why would I run it?", a: "To undo a release that turned out to be wrong or incomplete." },
+      { q: "What happens?", a: "The release is marked rolled-back; its aliases stop resolving and its proposals return to their earlier decision." },
+      { q: "Production impact", a: "Changes what every household sees the moment it completes." },
+    ],
+    readiness: [{ label: `Release #${rel.id} is published and can be rolled back`, state: "ready" }],
+    confirmLabel: `Roll back release #${rel.id}`,
+    expectedDuration: "a few moments",
+    run: () => apiRequest("POST", `/api/admin/knowledge-review/releases/${rel.id}/rollback`).then(r => r.json()),
+    summarise: (res) => ({
+      tone: "good",
+      headline: `Release #${rel.id} rolled back.`,
+      lines: [`${res.aliasesDeactivated} alias${res.aliasesDeactivated === 1 ? "" : "es"} deactivated · ${res.decisionsReverted} proposal${res.decisionsReverted === 1 ? "" : "s"} reverted`],
+    }),
+    nextStep: () => ({ label: "Check publication integrity", href: "/admin/canonical-publication-integrity" }),
+    onComplete: () => invalidateAll(),
   });
 
   return (
@@ -736,15 +796,24 @@ function ReleasesPanel({ onPublished }: { onPublished: () => void }) {
             <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="What this release covers…" data-testid="input-release-notes" />
           </div>
           <Button variant="default"
-            onClick={() => publishMutation.mutate()}
-            disabled={publishMutation.isPending || approvedCount === 0}
+            onClick={() => setPublishOpen(true)}
             data-testid="button-publish"
           >
             <Rocket className="h-4 w-4 mr-1.5" />
-            Publish {approvedCount > 0 ? `${approvedCount} approved` : "(none approved)"}
+            Publish {approvedCount > 0 ? `${approvedCount} approved` : "…"}
           </Button>
         </div>
       </div>
+
+      {/* OPS1 — the canonical Operation experience for Publish. */}
+      <OperationDialog spec={publishSpec} open={publishOpen} onOpenChange={setPublishOpen} />
+      {rollbackTarget !== null && (
+        <OperationDialog
+          spec={rollbackSpec(rollbackTarget)}
+          open={rollbackTarget !== null}
+          onOpenChange={(o) => { if (!o) setRollbackTarget(null); }}
+        />
+      )}
 
       {/* Release history */}
       {isPending ? (
@@ -792,8 +861,8 @@ function ReleasesPanel({ onPublished }: { onPublished: () => void }) {
                         {openId === r.id ? "Hide" : "Details"}
                       </Button>
                       {r.status === "published" && (
-                        <Button size="sm" variant="outline" className="h-8 ml-1" disabled={rollbackMutation.isPending}
-                          onClick={() => rollbackMutation.mutate(r.id)} data-testid={`button-rollback-${r.id}`}>
+                        <Button size="sm" variant="outline" className="h-8 ml-1"
+                          onClick={() => setRollbackTarget(r)} data-testid={`button-rollback-${r.id}`}>
                           <RotateCcw className="h-3.5 w-3.5 mr-1" /> Roll back
                         </Button>
                       )}

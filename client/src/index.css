@@ -601,7 +601,56 @@
   .text-premium {
     color: hsl(var(--secondary));
   }
+}
 
+/* ── THE TYPE ROLES ─────────────────────────────────────────────────────────
+   NORTH3 (2026-07-17): these are COMPONENTS, not utilities, and the layer they
+   sat in was silently deciding what surfaces could say.
+
+   They were inside `@layer utilities` — which is declared at line 593, AFTER
+   `@tailwind utilities` at line 10. A role and a Tailwind utility are both
+   single-class selectors, so specificity ties and SOURCE ORDER settles it: the
+   role won, always, and every utility aimed at a role was dead on arrival. The
+   role was not a starting point. It was a cage, and it was silent about it.
+
+   Two of Home's own stated intentions had already been killed by it, both of
+   them written deliberately, both of them shipped, neither of them true:
+
+     • NORTH2 re-voiced the salutation to `title-page font-normal` and wrote a
+       paragraph explaining why the household's NAME must be the loudest thing
+       in the room, citing UIA §8's own rule ("shouting in bold is spending the
+       emphasis budget on the shout"). `.title-page`'s `font-weight: 600` beat
+       it. The salutation stayed semibold. The comment describing the fix
+       outlived the fix by shipping without it.
+     • Home's signature carries `leading-[1.02]` to pull the hand tight. It
+       measured 1.15 — `.text-signature`'s own line-height, to the decimal.
+
+   Tailwind's layer order (base → components → utilities) exists to express
+   exactly this relationship: components name a thing, utilities adjust it. The
+   roles belong in `components`, and putting them there is not a new pattern
+   admitted under UIA §17 — it is the pattern the layer system already had,
+   applied to the one block that had opted out of it.
+
+   ⚠️ THE BLAST RADIUS IS ONE SURFACE, AND IT WAS MEASURED BEFORE THIS MOVED.
+   A grep of every `title-page|title-section|title-card` in `client/src` for an
+   adjacent font-weight or font-size utility returns exactly ONE hit:
+   home-experience-page.tsx:576, NORTH2's `font-normal`. Nothing else in the
+   codebase attempts to override a role, so nothing else can change when
+   overriding starts working. That is a claim about the whole tree and it is
+   checkable in one command — it is written down here so the next person can
+   re-run it rather than re-derive it:
+
+     grep -rnoE "title-(page|section|card)[^\"'\`]{0,70}" client/src --include=*.tsx \
+       | grep -E "font-(thin|light|normal|medium|semibold|bold)|text-(xs|sm|base|lg|xl|2xl|\[)"
+
+   Verified by looking as well as by grep: the five other rooms were captured
+   before and after (scripts/capture-north2-rooms.ts) and are unchanged.
+
+   What did NOT move: `.scrollbar-hide`, `.text-premium` and `.calm-table` are
+   genuine utilities and component styles respectively and are left exactly
+   where they were. Only the six named type roles move, because only they are
+   roles. */
+@layer components {
   .title-page {
     font-family: var(--font-display);
     font-size: 32px;
@@ -641,10 +690,14 @@
     font-family: var(--font-signature);
     font-weight: 600;
     letter-spacing: 0.005em;
-    /* A hand sits high on its box; this pulls the baseline back onto the grid. */
+    /* A hand sits high on its box; this pulls the baseline back onto the grid.
+       It is the role's DEFAULT now, not its verdict: a surface that needs the
+       hand tighter says so with `leading-[…]` and is finally listened to. */
     line-height: 1.15;
   }
+}
 
+@layer utilities {
   .calm-table tbody tr:nth-child(even) {
     background: hsl(var(--row-alt));
   }
@@ -811,6 +864,187 @@
             mask-position: 0 0;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ARRIVAL1 (2026-07-17) — THE DEFINITIVE HOME.
+
+   NORTH5's chosen arrival, built: the archway · one continuous plaster wall ·
+   a bounded oak console · a visible stone floor. Composition law — wall →
+   furniture → floor (NORTH5 §4), never a banner over a dashboard. Blend: V2's
+   orchard connection · V1's calm restraint · V3's oak materiality.
+
+   The orchard MATERIAL palette (NORTH4 §3, sampled from ORCHARD.png; the governing
+   rule "hues are law, saturations re-derived per surface") is scoped HERE — every
+   token below is consumed only under .home-arrival, so NO other room changes. The
+   one green and the accent are overridden in-scope too, so Home speaks the
+   orchard's own green (hue 74, leaf-in-shade) while the global --primary (hue 132)
+   is left byte-untouched: the platform-wide green swap (NORTH4 D1) is the owner's
+   decision, out of this Home-scoped change (no unrelated refactoring).
+   ═══════════════════════════════════════════════════════════════════════════ */
+.home-arrival {
+  /* materials — number triplets, consumed via hsl(var(--x)) */
+  --wall:        36 46% 94%;
+  --wall-shadow: 34 34% 88%;
+  --wall-lit:    38 62% 96%;
+  --floor:       33 27% 84%;
+  --floor-near:  32 22% 79%;
+  --oak:         41 36% 58%;
+  --oak-lit:     42 43% 66%;
+  --oak-body:    41 38% 47%;
+  --oak-edge:    44 42% 28%;
+  --ivory:       39 64% 97%;
+  --ivory-edge:  38 32% 90%;
+  --reveal:      36 44% 92%;
+  --olive:       56 40% 9%;
+
+  /* the one green + accent, the orchard's own, SCOPED to Home only */
+  --primary:        74 30% 34%;
+  --ring:           74 30% 34%;
+  --accent:         41 46% 90%;
+  --primary-border: hsl(74 32% 26%);
+
+  position: relative;
+  /* THE WALL — one continuous plaster surface, warm, washed by the arch's morning
+     at the top and settling a touch darker at the edges so the eye is drawn in.
+     This is the single background behind BOTH the arch and the console — cover the
+     furniture and the wall is continuous behind it (the hand test, NORTH5 §4). */
+  background:
+    radial-gradient(132% 54% at 50% -8%, hsl(var(--wall-lit)) 0%, hsl(var(--wall-lit) / 0) 62%),
+    radial-gradient(80% 62% at 0% 26%, hsl(var(--wall-shadow) / 0.45) 0%, hsl(var(--wall-shadow) / 0) 55%),
+    radial-gradient(80% 62% at 100% 26%, hsl(var(--wall-shadow) / 0.45) 0%, hsl(var(--wall-shadow) / 0) 55%),
+    hsl(var(--wall));
+}
+
+/* THE FLOOR — the near stone ground the room stands on. Stone (hue 33) sits close
+   to the plaster (hue 36), so it reads as a receding ground and never as a colour
+   band. Pinned to the room's base, behind the content; its top edge is a soft
+   floor line where the wall turns into the floor. */
+.home-floor {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: clamp(200px, 26vh, 320px);
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg,
+      hsl(var(--wall) / 0) 0%,
+      hsl(var(--floor) / 0.5) 24%,
+      hsl(var(--floor)) 52%,
+      hsl(var(--floor-near)) 100%);
+}
+.home-floor::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: clamp(28px, 6vh, 66px);
+  height: 22px;
+  background: linear-gradient(180deg, hsl(var(--olive) / 0.06), hsl(var(--olive) / 0));
+}
+
+/* THE ARCH — a plaster aperture cut into the wall (Blueprint §6.2 rule 4, amended
+   ARRIVAL1). Rounded top, straight reveals, the orchard genuinely BEHIND it, seen
+   THROUGH the architecture rather than hung on it. The reveal is plaster turning
+   into the opening — a warm rim plus an inner shadow give the wall its thickness;
+   there is no hard drawn edge. It carries no type and never animates (§6.1). */
+.home-arch {
+  position: relative;
+  width: clamp(252px, 28vw, 384px);
+  height: clamp(280px, 34vh, 432px);
+  border-radius: 50% 50% 0 0 / 42% 42% 0 0;
+  padding: clamp(7px, 0.9vw, 12px);
+  background: hsl(var(--reveal));
+  box-shadow:
+    inset 0 2px 6px hsl(var(--olive) / 0.14),
+    0 24px 60px -18px hsl(var(--olive) / 0.28),
+    0 4px 12px -6px hsl(var(--olive) / 0.16);
+}
+.home-arch__view {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 50% 50% 0 0 / 42% 42% 0 0;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px hsl(var(--olive) / 0.08), inset 0 7px 22px hsl(var(--olive) / 0.20);
+}
+.home-arch__view img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 45% 26%;
+}
+/* THE PETAL LIGHT — the orchard's morning spilling from the opening onto the
+   plaster around it: warm, soft, atmosphere softening inside/outside (NORTH5 §3.8),
+   without a decorative cut-out branch, which would be fabricated content. */
+.home-arch__light {
+  position: absolute;
+  inset: -16% -24% -26% -24%;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(58% 52% at 50% 32%, hsl(43 72% 82% / 0.55) 0%, hsl(43 72% 82% / 0) 70%);
+}
+
+/* THE CONSOLE — the oak furniture the day rests on. Bounded (wall visible left and
+   right — never full-width), a lit oak surface with a light-pool where the arch's
+   morning falls, casting a soft shadow onto the wall behind and a contact shadow
+   onto the floor below. This is the "furniture, not a coloured rectangle" of the
+   brief. */
+.home-console {
+  position: relative;
+  border-radius: var(--radius-primary);
+  background:
+    radial-gradient(120% 82% at 50% -12%, hsl(var(--oak-lit)) 0%, hsl(var(--oak-lit) / 0) 62%),
+    linear-gradient(178deg, hsl(var(--oak)) 0%, hsl(var(--oak-body)) 100%);
+  border: 1px solid hsl(var(--oak-edge) / 0.5);
+  box-shadow:
+    inset 0 1px 0 hsl(44 60% 86% / 0.55),
+    0 2px 4px hsl(var(--olive) / 0.10),
+    0 26px 52px -24px hsl(var(--olive) / 0.45);
+}
+.home-console::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0.045;
+  background: repeating-linear-gradient(93deg, hsl(var(--oak-edge)) 0 1px, transparent 1px 7px);
+}
+.home-console::after {
+  content: "";
+  position: absolute;
+  inset-inline: 7%;
+  bottom: -20px;
+  height: 28px;
+  z-index: -1;
+  background: radial-gradient(50% 100% at 50% 0%, hsl(var(--olive) / 0.20) 0%, hsl(var(--olive) / 0) 72%);
+}
+
+/* an ivory object resting on the oak — what today's facts are printed on. Warm
+   ivory (never #fff — the brightest honest white in the orchard is hue 39), each
+   with its own small contact shadow on the wood, so it reads as a thing left on a
+   surface rather than a cell in a grid. */
+.home-object {
+  background: hsl(var(--ivory));
+  border: 1px solid hsl(var(--ivory-edge));
+  box-shadow: 0 1px 2px hsl(var(--olive) / 0.10), 0 7px 16px -9px hsl(var(--olive) / 0.22);
+}
+
+/* a door of the house — a quiet handle at the floor line. On the stone floor, in
+   the penumbra, subordinate to the one lit action on the console above. */
+.home-door {
+  background: hsl(var(--ivory) / 0.55);
+  border: 1px solid hsl(var(--ivory-edge) / 0.7);
+  box-shadow: 0 1px 2px hsl(var(--olive) / 0.07);
+  transition: transform .2s ease-out, background-color .2s ease-out, box-shadow .2s ease-out;
+}
+.home-door:hover {
+  background: hsl(var(--ivory) / 0.85);
+  box-shadow: 0 8px 18px -10px hsl(var(--olive) / 0.28);
+}
+@media (prefers-reduced-motion: reduce) { .home-door { transition: none; } }
 
 /* Cards and panels inside modals sit on top of the orchard background,
    so they must be fully opaque to remain readable */

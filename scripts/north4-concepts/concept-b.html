@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>NORTH4 — Concept B · The Panoramic Living Room</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./_palette.css">
+<style>
+/* =========================================================================
+   CONCEPT B — THE PANORAMIC LIVING ROOM OPENING INTO THE ORCHARD
+   Three seconds: "The whole wall is glass. It's a beautiful morning here."
+
+   Composition : HORIZONTAL BANDS. Glass above, room below, an oak sill between.
+   The orchard  : THE VIEW. Full bleed, full opacity, edge to edge. Not behind
+                  the content — ABOVE it. Content never sits on the glass.
+   Materials    : morning light + fresh greens lead. Oak at the sill only.
+   Light        : the window lights the room. The wall below is bright at the
+                  sill and falls away — that gradient is what makes it a room
+                  and not a hero banner.
+   ========================================================================= */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: "Inter", "DejaVu Sans", system-ui, sans-serif;
+  color: var(--ink-body);
+  background: var(--plaster);
+  -webkit-font-smoothing: antialiased;
+}
+
+.room {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  --glass-top: 74px;
+  --sill-y: 440px;
+  --sill-h: 26px;
+  /* THE ROOM IS LIT BY ITS WINDOW. Brightest just under the sill, falling away
+     toward the floor. Without this the lower half is a beige panel and the
+     whole thing collapses into a landing page with a hero image. */
+  background:
+    linear-gradient(to bottom,
+      hsl(37 40% 92%) 0px,
+      hsl(37 40% 92%) var(--glass-top),
+      hsl(40 66% 97%) calc(var(--sill-y) + var(--sill-h)),
+      hsl(37 40% 91%) calc(var(--sill-y) + 210px),
+      hsl(33 24% 81%) 100%);
+}
+
+/* ---- the constant shell, on the wall above the window head ---- */
+.shell {
+  position: absolute; z-index: 6; top: 0; left: 0; right: 0;
+  height: 74px; padding: 0 36px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.mark { display: flex; align-items: center; gap: 10px; }
+.mark-apple {
+  width: 22px; height: 22px; border-radius: 50% 50% 48% 48%;
+  background: linear-gradient(150deg, var(--leaf-lift), var(--leaf)); position: relative;
+}
+.mark-apple::after {
+  content: ""; position: absolute; top: -3px; left: 11px;
+  width: 9px; height: 6px; border-radius: 0 70% 0 70%;
+  background: var(--gold); transform: rotate(-18deg);
+}
+.mark-name { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-quiet); font-weight: 500; }
+.bell { width: 18px; height: 18px; opacity: .34; }
+
+/* ---- THE GLASS — the orchard, full bleed, full opacity ---- */
+.glass {
+  position: absolute; z-index: 1;
+  top: var(--glass-top); left: 0; right: 0; height: calc(var(--sill-y) - var(--glass-top));
+  overflow: hidden;
+}
+.glass img {
+  width: 100%; height: 100%;
+  object-fit: cover; object-position: 50% 38%;
+  display: block;
+}
+/* the head of the window: the wall has thickness above the glass */
+.glass::before {
+  content: ""; position: absolute; z-index: 3; top: 0; left: 0; right: 0; height: 16px;
+  background: linear-gradient(to bottom, hsl(45 40% 28% / .34), hsl(45 40% 28% / 0));
+}
+
+/* ---- THE MULLIONS — what makes it a WINDOW and not a photograph ----
+   Three bays. Thin, structural, honest. Remove these and B is a hero banner. */
+.mullion {
+  position: absolute; z-index: 2; top: var(--glass-top);
+  height: calc(var(--sill-y) - var(--glass-top));
+  width: 7px;
+  background: linear-gradient(to right,
+    hsl(45 40% 28% / .5), hsl(43 44% 46%) 40%, hsl(43 40% 62%) 55%, hsl(45 40% 28% / .5));
+  box-shadow: 0 0 12px hsl(56 40% 9% / .18);
+}
+.mullion.one { left: 33.333%; }
+.mullion.two { left: 66.666%; }
+
+/* ---- THE SILL — the boundary. Oak, lit along its top edge. ----
+   Everything the household reads sits BELOW this line. Nothing sits on the
+   glass: text over the orchard would need a scrim, and a scrim is fog
+   (Experience Blueprint § 16 — "the second sun"). */
+.sill {
+  position: absolute; z-index: 4; left: 0; right: 0;
+  top: var(--sill-y); height: var(--sill-h);
+  background: linear-gradient(to bottom,
+    hsl(41 46% 72%) 0px, hsl(43 40% 54%) 4px, hsl(44 38% 42%) 62%, hsl(45 40% 26%) 100%);
+  box-shadow: 0 14px 26px -10px hsl(56 45% 9% / .30);   /* the sill casts onto the wall */
+}
+
+/* ---- THE ROOM BELOW ---- */
+.below {
+  position: relative; z-index: 5;
+  padding: calc(var(--sill-y) + var(--sill-h) + 36px) 36px 0;
+  max-width: 1440px; margin: 0 auto;
+}
+.upper { display: flex; align-items: flex-start; justify-content: space-between; gap: 48px; }
+
+/* the greeting — ranged left, in the room, under the window */
+.welcome {
+  font-family: "Fraunces", "DejaVu Serif", Georgia, serif;
+  font-weight: 300; font-size: 25px; color: var(--ink-body); opacity: .78;
+}
+.name {
+  font-family: "Fraunces", "DejaVu Serif", Georgia, serif;
+  font-weight: 300; font-size: 68px; line-height: 1.04; letter-spacing: -.022em;
+  color: var(--ink); margin-top: 1px;
+}
+.date { margin-top: 13px; font-size: 12.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-quiet); }
+.action {
+  margin-top: 24px; padding: 13px 32px; border: 0; border-radius: 999px;
+  background: var(--leaf); color: var(--raw-blossom);
+  font-family: inherit; font-size: 14.5px; font-weight: 500; letter-spacing: .015em;
+  box-shadow: var(--shade-2); cursor: pointer;
+}
+
+/* the Companion — propped against the wall just under the sill */
+.note {
+  width: 320px; flex: none;
+  background: var(--surface); border-radius: 3px;
+  padding: 16px 18px 15px;
+  box-shadow: var(--shade-3);
+  border-top: 2px solid hsl(43 46% 72% / .55);
+}
+.note-from {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--ink-quiet); margin-bottom: 8px;
+}
+.note-leaf { width: 11px; height: 11px; }
+.note-body { font-size: 13.5px; line-height: 1.5; color: var(--ink-body); }
+.note-link { display: inline-block; margin-top: 10px; font-size: 12.5px; color: var(--leaf-lift); font-weight: 500; }
+
+/* ---- THE LONG LOW CONSOLE — the three facts, spread wide like the window ----
+   The room's furniture echoes the room's proportion: long and horizontal. */
+.console {
+  margin-top: 46px;
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid hsl(38 22% 76% / .8);
+  padding-top: 20px;
+}
+.console-item { position: relative; padding-right: 28px; }
+.console-item + .console-item { padding-left: 28px; }
+.console-item + .console-item::before {
+  content: ""; position: absolute; left: 0; top: 2px; bottom: 2px; width: 1px; background: var(--hair);
+}
+.console-label { font-size: 10.5px; letter-spacing: .15em; text-transform: uppercase; color: var(--ink-quiet); margin-bottom: 8px; }
+.console-value { font-family: "Fraunces", "DejaVu Serif", Georgia, serif; font-size: 22px; font-weight: 400; color: var(--ink); }
+.console-value .unit { font-size: 13px; color: var(--ink-quiet); }
+.console-value.quiet { font-size: 16px; color: var(--ink-quiet); font-style: italic; }
+
+/* ---- THE DOORS — a low run along the bottom of the room ---- */
+.doors {
+  position: absolute; z-index: 5; left: 0; right: 0; bottom: 0;
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid hsl(38 22% 78%);
+  background: linear-gradient(to bottom, hsl(36 30% 88% / .5), hsl(34 26% 84% / .9));
+}
+.door {
+  height: 62px; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 26px; position: relative;
+}
+.door + .door::before {
+  content: ""; position: absolute; left: 0; top: 12px; bottom: 12px; width: 1px; background: var(--hair);
+}
+.door-name { font-size: 14px; font-weight: 500; color: var(--ink-body); }
+.door-handle {
+  width: 5px; height: 5px; border-radius: 50%; background: var(--gold); opacity: .8;
+  box-shadow: 0 0 0 3px hsl(43 62% 47% / .12);
+}
+
+/* =======================  TABLET  =======================
+   The window becomes a letterbox but keeps its bays. The room grows. */
+@media (max-width: 900px) {
+  .room { --sill-y: 396px; }
+  .upper { flex-direction: column; gap: 30px; }
+  .note { width: 100%; }
+  .name { font-size: 62px; }
+  .console { margin-top: 38px; }
+  .below { padding-bottom: 110px; }
+  .doors { position: relative; margin-top: 44px; }
+}
+
+/* =======================  MOBILE  =======================
+   THE HONEST COST OF B. A panorama on a 390px screen is a letterbox: the
+   window keeps its full width but loses most of its height, and two of the
+   three bays go with it. B is the concept that pays the most to be here.  */
+@media (max-width: 520px) {
+  .room { --glass-top: 62px; --sill-y: 268px; --sill-h: 18px; }
+  .shell { height: 62px; padding: 0 18px; }
+  .mullion { width: 5px; }
+  .mullion.one { left: 50%; }
+  .mullion.two { display: none; }   /* three bays will not fit; two is honest */
+  .glass img { object-position: 50% 42%; }
+  .below { padding-left: 18px; padding-right: 18px; padding-bottom: 90px; }
+  .welcome { font-size: 18px; }
+  .name { font-size: 48px; }
+  .date { margin-top: 11px; font-size: 11px; }
+  .action { margin-top: 20px; padding: 12px 28px; font-size: 14px; width: 100%; }
+  .console { grid-template-columns: 1fr; margin-top: 32px; padding-top: 0; border-top: 0; }
+  .console-item { padding: 15px 0; border-top: 1px solid hsl(38 22% 78% / .8); display: flex; align-items: baseline; justify-content: space-between; }
+  .console-item + .console-item { padding-left: 0; }
+  .console-item + .console-item::before { display: none; }
+  .console-label { margin-bottom: 0; }
+  .console-value { font-size: 19px; }
+  .console-value.quiet { font-size: 14px; }
+  .doors { grid-template-columns: 1fr 1fr; margin-top: 34px; }
+  .door { height: 56px; padding: 0 18px; }
+  .door:nth-child(3), .door:nth-child(4) { border-top: 1px solid var(--hair); }
+  .door:nth-child(3)::before { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="room">
+
+  <header class="shell">
+    <div class="mark">
+      <div class="mark-apple"></div>
+      <div class="mark-name">The Healthy Apples</div>
+    </div>
+    <svg class="bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/>
+    </svg>
+  </header>
+
+  <!-- the view -->
+  <div class="glass">
+    <img src="../../attached_assets/design/north_star/v2/ORCHARD.png" alt="">
+  </div>
+  <div class="mullion one"></div>
+  <div class="mullion two"></div>
+  <div class="sill"></div>
+
+  <div class="below">
+    <div class="upper">
+      <div class="greeting">
+        <div class="welcome">Welcome home,</div>
+        <h1 class="name">Chloe</h1>
+        <div class="date">Friday, 17 July</div>
+        <button class="action">Plan today</button>
+      </div>
+
+      <aside class="note">
+        <div class="note-from">
+          <svg class="note-leaf" viewBox="0 0 24 24" fill="none" stroke="var(--leaf-lift)" stroke-width="1.8">
+            <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+          </svg>
+          Companion
+        </div>
+        <div class="note-body">The orchard is in blossom. A good week for something green and simple.</div>
+        <a class="note-link" href="#">View suggestion &rsaquo;</a>
+      </aside>
+    </div>
+
+    <div class="console">
+      <div class="console-item">
+        <div class="console-label">Meals</div>
+        <div class="console-value quiet">Nothing planned</div>
+      </div>
+      <div class="console-item">
+        <div class="console-label">Shopping</div>
+        <div class="console-value quiet">List is clear</div>
+      </div>
+      <div class="console-item">
+        <div class="console-label">From the orchard</div>
+        <div class="console-value">0<span class="unit"> / 30 plants</span></div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="doors">
+    <div class="door"><span class="door-name">Planner</span><span class="door-handle"></span></div>
+    <div class="door"><span class="door-name">Cookbook</span><span class="door-handle"></span></div>
+    <div class="door"><span class="door-name">Pantry</span><span class="door-handle"></span></div>
+    <div class="door"><span class="door-name">Shopping</span><span class="door-handle"></span></div>
+  </nav>
+
+</div>
+</body>
+</html>

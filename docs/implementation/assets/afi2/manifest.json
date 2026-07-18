@@ -1,0 +1,41 @@
+{
+  "captured_by": "AFI2_Planner_Ambient_Intelligence",
+  "base_url": "http://localhost:5055",
+  "viewport": {
+    "width": 430,
+    "height": 932
+  },
+  "captured": 3,
+  "failed": 0,
+  "shots": [
+    {
+      "id": "planner-ambient-batchcook",
+      "name": "Planner — ambient (gaps + uplift + the new cook-once)",
+      "route": "/planner",
+      "toggle": "ambient-intelligence-planner-toggle",
+      "wait": "[data-testid=\"ambient-intelligence-planner\"]",
+      "file": "planner-ambient-batchcook.png",
+      "status": 200,
+      "toggled": true,
+      "ok": true
+    },
+    {
+      "id": "home-ambient-aggregate",
+      "name": "Home — aggregate ambient (the new cook-once among the week's opportunities)",
+      "route": "/home",
+      "toggle": "ambient-intelligence-home-toggle",
+      "wait": "[data-testid=\"ambient-intelligence-home\"]",
+      "file": "home-ambient-aggregate.png",
+      "status": 200,
+      "toggled": true,
+      "ok": true
+    },
+    {
+      "id": "planner-batchcook-card",
+      "name": "Planner — the cook-once card, focused",
+      "route": "/planner",
+      "file": "planner-batchcook-card.png",
+      "ok": true
+    }
+  ]
+}

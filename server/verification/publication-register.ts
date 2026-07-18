@@ -990,11 +990,33 @@ export const CANONICAL_PUBLICATION_REGISTER: DomainDeclaration[] = [
     id: "companion-notice",
     name: "Companion / Notice",
     variant: "platform",
-    canonicalOwner: "conversation-gateway.ts + notice-gateway.ts",
+    canonicalOwner: "conversation-gateway.ts",
     authorisedWriters: ["server/intelligence/conversation/"],
-    publicationPath: "one assistant, one conversation state (NTC-P2 convergence)",
+    publicationPath: "one assistant, one conversation state",
     runtimeReadPath: "server/intelligence/conversation/conversation-gateway.ts",
-    knownGaps: [],
+    /**
+     * P0 Food Intelligence Recovery (2026-07-17) — NTC-P2 is NOT BUILT.
+     *
+     * `notice-gateway.ts` was retired here rather than repaired: it could not load
+     * (it imported three producers `notice-engine.ts` does not export, and scoped four
+     * categories absent from the closed `NoticeCategory` taxonomy), and it had zero
+     * runtime importers. Repairing it would have meant opening that taxonomy — which is
+     * NTC-P2's own separately-gated rollout (Notice Engine Architecture §8), refused by
+     * §9: "any new notice category without a registered owner behind it — stop."
+     *
+     * So there is no notice DELIVERY SCOPE owner to verify, and this domain declares that
+     * as a gap rather than greping for one. The `cn-undeclared-category` check that stood
+     * here is deleted, not replaced: it read `notice-gateway.ts` as text and tested for a
+     * `cookbook-opportunity` category that exists in NEITHER file — so it passed
+     * vacuously, over a module that threw `SyntaxError` on import. A green check that
+     * verifies nothing is worse than an absent one, because it answers "is this covered?"
+     * with yes. This is CONV1 P10's finding at a second gate: THE GATE IS A TEXT GREP.
+     */
+    knownGaps: [
+      "NTC-P2 not built: the three ungoverned notice channels (/api/home/intelligence, " +
+        "/api/planner/weeks/:weekId/intelligence, the WX7 pantry block) remain live and " +
+        "unconverged. No notice delivery-scope owner exists to verify.",
+    ],
     checks: [
       sourceCheck({
         id: "cn-one-assistant",
@@ -1006,22 +1028,6 @@ export const CANONICAL_PUBLICATION_REGISTER: DomainDeclaration[] = [
         expect: "present",
         violationDetail: "The single conversation gateway singleton is gone.",
         passDetail: "One assistant, one gateway singleton.",
-      }),
-      customCheck({
-        id: "cn-undeclared-category",
-        law: "approved-read-path",
-        title: "Every notice category has a declared delivery scope",
-        severity: "warn",
-        cpi1: "S3-5",
-        run: async (ctx) => {
-          const engine = ctx.sources.get("server/intelligence/conversation/notice-engine.ts") ?? "";
-          const gateway = ctx.sources.get("server/intelligence/conversation/notice-gateway.ts") ?? "";
-          const undeclared =
-            engine.includes("cookbook-opportunity") && !gateway.includes("cookbook-opportunity");
-          return undeclared
-            ? { violated: true, detail: "'cookbook-opportunity' exists in the notice engine but no surface declared itself its mouth in the notice gateway." }
-            : { violated: false, detail: "Every notice category has a declared scope." };
-        },
       }),
     ],
   },

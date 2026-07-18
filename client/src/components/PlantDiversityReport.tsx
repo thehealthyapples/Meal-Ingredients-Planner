@@ -14,6 +14,10 @@ import {
 import { FoodReport } from "@/components/FoodReport";
 import { Card } from "@/components/ui/card";
 
+// MAT1 — imported, not redeclared. This file held its own `= 30`; so did two other
+// client surfaces and the shared core, so the platform's single most user-visible
+// number was declared four times. One owner, one source of truth.
+import { WEEKLY_PLANT_TARGET } from "@shared/nutrition/household-nutrition";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface WeekMealEntry {
@@ -57,7 +61,6 @@ export interface PlantDiversityReportProps {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const WEEKLY_PLANT_TARGET = 30;
 
 const CATEGORY_ORDER: PlantCategory[] = [
   "Vegetables",

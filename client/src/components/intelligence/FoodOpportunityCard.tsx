@@ -32,12 +32,14 @@ import { IntelligenceCard } from "./IntelligenceCard";
 import { bodyText, presentationFor, subtleText } from "./intelligence-tokens";
 import { useAskCompanion } from "@/components/conversation/companion-context";
 import type { FoodOpportunity } from "@/hooks/use-food-opportunities";
-
-const DOMAIN_LABEL: Record<string, string> = {
-  planner: "Planner",
-  pantry: "Pantry",
-  shopping: "Shopping list",
-};
+// MAT1 (AFI_VERIFY1 §4.3) — the domain labels are no longer re-declared here.
+// They are the canonical shared registry, so the ONE test pipeline can assert
+// that every registered domain has a label before a household ever sees a card
+// fall through to the generic "Food". Rendering behaviour is unchanged.
+import {
+  OPPORTUNITY_DOMAIN_FALLBACK_LABEL,
+  OPPORTUNITY_DOMAIN_LABELS,
+} from "@shared/attention/index";
 
 interface FoodOpportunityCardProps {
   opportunity: FoodOpportunity;
@@ -104,7 +106,11 @@ export function FoodOpportunityCard({
         )
       }
       // A critical opportunity says what it is before it says where it came from.
-      eyebrow={attention.label ?? DOMAIN_LABEL[opportunity.domain] ?? "Food"}
+      eyebrow={
+        attention.label ??
+        OPPORTUNITY_DOMAIN_LABELS[opportunity.domain] ??
+        OPPORTUNITY_DOMAIN_FALLBACK_LABEL
+      }
       body={opportunity.explanation}
       details={
         opportunity.evidence.length > 0 ? (

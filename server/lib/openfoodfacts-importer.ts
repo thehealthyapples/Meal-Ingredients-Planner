@@ -4,7 +4,7 @@ import { eq, and, or } from "drizzle-orm";
 import { log } from "../index";
 
 const SYSTEM_USER_ID = 0;
-const BASE_URL = "https://world.openfoodfacts.net";
+const BASE_URL = "https://world.openfoodfacts.org";
 
 interface OFFProduct {
   product_name?: string;
@@ -128,7 +128,7 @@ async function fetchOFFCategory(
     try {
       const url = `${BASE_URL}/cgi/search.pl?action=process&tagtype_0=categories&tag_contains_0=contains&tag_0=${encodeURIComponent(category)}&sort_by=unique_scans_n&page_size=24&page=${page}&json=1`;
       const response = await fetch(url, {
-        headers: { "User-Agent": "SmartMealPlanner/1.0 (contact@smartmealplanner.com)" },
+        headers: { "User-Agent": "TheHealthyApples/1.0 (+https://thehealthyapples.com; support@thehealthyapples.com)" },
         signal: AbortSignal.timeout(15000),
       });
 
@@ -173,7 +173,7 @@ async function fetchOFFCategory(
       try {
         const url = `${BASE_URL}/cgi/search.pl?action=process&tagtype_0=categories&tag_contains_0=contains&tag_0=${encodeURIComponent(category)}&sort_by=unique_scans_n&page_size=24&page=${page}&json=1`;
         const response = await fetch(url, {
-          headers: { "User-Agent": "SmartMealPlanner/1.0 (contact@smartmealplanner.com)" },
+          headers: { "User-Agent": "TheHealthyApples/1.0 (+https://thehealthyapples.com; support@thehealthyapples.com)" },
           signal: AbortSignal.timeout(15000),
         });
 

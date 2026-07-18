@@ -33,7 +33,7 @@
  * Run with: npx tsx server/tests/test-time3-p8-t5-convergence.ts
  */
 
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
@@ -65,6 +65,11 @@ function sourceOf(rel: string): string {
 /** Comments discuss the retired rivals at length; only code may violate the rules. */
 function codeOf(rel: string): string {
   return sourceOf(rel).replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+}
+/** MAT1 — a retired rival is proven retired by its ABSENCE, not by its contents. */
+function isRetired(rel: string): boolean {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  return !existsSync(path.resolve(here, "../..", rel));
 }
 
 // ── The rota, as the database holds it ──────────────────────────────────────
@@ -256,29 +261,52 @@ async function main(): Promise<void> {
   section("§6 The Unanchored Home — the governing decision, asserted over the sources");
 
   // "Do not invent or floor a planner week for unanchored households." (2026-07-17)
+  //
+  // MAT1 (2026-07-18) — this section asserted over THREE consumers. The third,
+  // `server/lib/household-nutrition-assembler.ts`, was RETIRED by MAT1 as dead code
+  // (AFI_VERIFY1 §4.1: no route, no handler, no server caller, and its only client
+  // consumer — `HouseholdNutritionPanel.tsx` — was itself never mounted and fetched
+  // `/api/household-nutrition`, a route that does not exist).
+  //
+  // Its assertions are DELETED rather than rehomed, and that is the honest move: a
+  // source-text assertion proves a consumer behaves, so when the consumer is gone
+  // there is nothing left to prove. Retargeting them at a surviving file would keep
+  // a green tick while testing something this section never claimed. The decision
+  // T5 governs — "do not invent or floor a planner week" — is unweakened: it is
+  // still asserted over every consumer that actually exists (routes, the opportunity
+  // engine, home and dashboard), and the retired file cannot regress because it no
+  // longer ships.
   const routes = codeOf("server/routes.ts");
-  const assembler = codeOf("server/lib/household-nutrition-assembler.ts");
   const engine = codeOf("server/intelligence/food-intelligence/opportunity-engine.ts");
 
   assert(/resolveHouseholdPlannerWeek\s*\(/.test(routes), "routes asks the owner");
-  assert(/resolveHouseholdPlannerWeek\s*\(/.test(assembler), "the nutrition assembler asks the owner");
   assert(/resolveHouseholdPlannerWeek\s*\(/.test(engine), "the opportunity engine asks the owner");
 
   // Each consumer's honest-absence shape — and every one of them ALREADY EXISTED, which
   // is the clearest evidence available that absence was always the right answer.
   assert(/plannerWeek\.anchored\s*\)\s*\{/.test(routes), "routes computes weeklyProgress ONLY when anchored — `weeklyProgress: null` was already this route's shape for 'no weekly picture'");
-  assert(/if \(!plannerWeek\.anchored\) return UNAVAILABLE;/.test(assembler), "the assembler returns UNAVAILABLE — already its shape for 'the household has told THA nothing'");
   assert(/if \(plannerWeek\.anchored\) \{/.test(engine), "the engine raises NO planner opportunity — already its honest degrade for an unreadable planner");
 
   // Nobody fills the gap in. This is the gate `ht-unanchored-is-never-filled-in` in
   // assertion form, over the real sources.
-  for (const [name, code] of [["routes", routes], ["assembler", assembler], ["engine", engine], ["home", home], ["dashboard", dash]] as const) {
+  for (const [name, code] of [["routes", routes], ["engine", engine], ["home", home], ["dashboard", dash]] as const) {
     assert(
       !/anchored\s*\?[\s\S]{0,80}?:\s*\{?\s*weekNumber:\s*\d/.test(code),
       `${name} substitutes no week when the owner says it cannot know (BEH-3 — "do not pick a week to fix it")`,
     );
   }
-  assert(!/weeks\[weeks\.length - 1\]/.test(assembler), "the assembler's `latest` fallback is gone — no silent substitution");
+
+  // MAT1 — the retired assembler stays retired. This is the one assertion the
+  // deletion ADDS: it replaces four source-text checks on a file with a single check
+  // that the file is gone, so a future session cannot restore the dead limb quietly.
+  assert(
+    isRetired("server/lib/household-nutrition-assembler.ts"),
+    "the dead household-nutrition assembler stays retired (MAT1 / AFI_VERIFY1 §4.1) — no caller, no route, no surface",
+  );
+  assert(
+    isRetired("client/src/components/HouseholdNutritionPanel.tsx"),
+    "the never-mounted HouseholdNutritionPanel stays retired — its only route (/api/household-nutrition) does not exist",
+  );
 
   // Home says so, rather than saying nothing or saying something false.
   const homeRaw = sourceOf("client/src/pages/home-experience-page.tsx");

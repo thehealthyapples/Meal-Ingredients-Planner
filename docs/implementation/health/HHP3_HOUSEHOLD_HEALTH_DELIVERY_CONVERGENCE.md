@@ -1,6 +1,37 @@
 # HHP3 — Household Health Delivery Convergence — Implementation
 
-**Status:** Complete
+> ## ⚠️ STATUS CORRECTION — 2026-07-17 — THIS WORKSTREAM RESTED ON A FALSE PREMISE
+>
+> **This document declared "Status: Complete" and "Depends on: HHP2 (Household Health
+> producer enrolment)". HHP2's enrolment never happened** — see the correction block at the
+> top of `HHP2_HOUSEHOLD_HEALTH_OPPORTUNITY_PLATFORM.md`. HHP2's record said "Complete", so
+> this workstream believed it and never checked.
+>
+> **The consequence.** HHP3 removed `opportunities` from the `/api/household-nutrition` wire
+> and wrote into `HouseholdNutritionPanel.tsx` that *"The producer path (the
+> `household-health` capability → HNP1's assembler → the Decision Engine) is **untouched and
+> still receives every opportunity HNP1 composes**."*
+>
+> **That sentence was false when written.** `household-health` was registered in no registry
+> and enrolled in no `OPPORTUNITY_SOURCES`. **HHP3 deleted a live path in favour of a dead
+> one, and cited the dead one's existence as proof the deletion was safe.** The false comment
+> was corrected in the panel on 2026-07-17.
+>
+> **What is NOT being undone, and why.** The wire removal **stands**. It is separately
+> correct on its own merits: the route WAS a bypass of the Decision Engine (DEC1 §3), and
+> re-adding `opportunities` would rebuild the bypass rather than the producer. **The honest
+> state is that HNP1's opportunities currently reach no surface at all.** That is a gap with
+> a known door (DEC1 §7 enrolment, unbuilt and gated), not a regression to reverse here.
+>
+> **No user was affected.** `HouseholdNutritionPanel.tsx` has **zero importers** — nothing
+> renders it — so the field HHP3 removed was already reaching no household. The panel is
+> retained rather than deleted, because it is the only consumer of `/api/household-nutrition`
+> and removing it orphans a route that is HNP1's to decide about.
+>
+> **Everything below this line is the original 2026-07-12 text, preserved unedited as the
+> historical record. Its dependency on HHP2's enrolment is FALSE.**
+
+**Status:** ~~Complete~~ → **LANDED ON A FALSE PREMISE** (corrected 2026-07-17 — see the block above)
 **Date:** 2026-07-12
 **Governing architecture:** `docs/architecture/THA_DECISION_ENGINE_ARCHITECTURE.md` (DEC1) — §3 (a surface never re-ranks, re-budgets or re-derives what the engine delivered) and the one-owner-per-fact rule are what this workstream enforces.
 **Depends on:** HNP1 (Household Nutrition Platform), HHP2 (Household Health producer enrolment), OD1/DEC1 (Opportunity Delivery Framework = the canonical Decision Engine), PHASE5C (`AmbientIntelligence` — the one ambient surface), ATTN1, LEARN1/EL2, COACH1.
