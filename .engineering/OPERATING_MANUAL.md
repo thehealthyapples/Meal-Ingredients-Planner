@@ -62,7 +62,7 @@ satisfy the **AI Architecture Compliance** block.
 
 ```bash
 git status
-.engineering/scripts/repo-structure-verify.sh
+.engineering/scripts/engineering-verify.sh    # structure + boundary + rollback
 ```
 
 Report whether the tree is clean or intentionally dirty, and **say what the dirt
@@ -203,7 +203,7 @@ Pause and get explicit approval before any of these:
 
 ```
 1  Read Architecture ....... docs/architecture/README.md
-2  Check Status ........... git status && .engineering/scripts/repo-structure-verify.sh
+2  Check Status ........... git status && .engineering/scripts/engineering-verify.sh
 3  Rollback ............... git tag -a rollback/<name>-<date>   → REPORT THE ID
 4  Session ................ .engineering/scripts/session-new.sh  (or claude --continue)
 5  Implement .............. scope-locked

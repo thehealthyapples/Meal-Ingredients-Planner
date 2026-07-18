@@ -29,6 +29,28 @@ if [ -e "$RUN" ]; then
   exit 1
 fi
 
+# Rollback gate (ENGAUTO1). ROLLBACK_PROTECTION_PROTOCOL §1: "No implementation
+# may begin until a rollback identifier has been created and reported." Until
+# now this argument was an unvalidated string — a session could be registered
+# against a rollback point that had never been created, and the gap would not
+# surface until the moment it was needed. On the live dashboard that had already
+# happened 12 times.
+#
+# Only NON-EXISTENCE is fatal here: no tag means no protection, which §1 forbids
+# outright. A lightweight tag warns rather than fails — §2 asks for `-a`, but 31
+# of 98 dashboard sessions use lightweight tags, so hard-failing would block real
+# work on a divergence between protocol and practice that is the owner's to
+# settle, not this script's.
+if ! git rev-parse -q --verify "refs/tags/$ROLLBACK^{commit}" >/dev/null 2>&1; then
+  echo "error: rollback tag does not exist: $ROLLBACK" >&2
+  echo "       ROLLBACK_PROTECTION_PROTOCOL §1 — create and report it before starting:" >&2
+  echo "         git tag -a $ROLLBACK -m \"Rollback point before <WORKSTREAM>\" HEAD" >&2
+  exit 1
+fi
+if [ "$(git cat-file -t "refs/tags/$ROLLBACK" 2>/dev/null)" != "tag" ]; then
+  echo "warning: $ROLLBACK is a lightweight tag; §2 asks for an annotated tag (-a)." >&2
+fi
+
 STAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 sed -e "s|<SESSION_ID>|$SESSION_ID|g" \

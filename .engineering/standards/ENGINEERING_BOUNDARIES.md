@@ -84,4 +84,25 @@ hooks and scripts touch no database and no network; it is not an input to
 Asserts the repository structure rules in
 [`../../docs/architecture/REPOSITORY_CONVENTIONS.md`](../../docs/architecture/REPOSITORY_CONVENTIONS.md).
 
-Run both after any structural change. Neither touches the application.
+```bash
+.engineering/scripts/rollback-verify.sh
+```
+
+Asserts [`../protocols/ROLLBACK_PROTECTION_PROTOCOL.md`](../protocols/ROLLBACK_PROTECTION_PROTOCOL.md)
+against the live dashboard: every active session's rollback identifier exists,
+is annotated, resolves to a commit, and matches between its run file and
+`CURRENT.md`. Added by `ENGAUTO1`.
+
+```bash
+.engineering/scripts/engineering-verify.sh
+```
+
+Runs all three in one command. Added by `ENGAUTO1`, which found that
+`session-verify.sh` — the verifier of this document — was referenced by the
+Operating Manual, the README and a checklist, and **executed by nothing**: no
+script, no hook, no CI job. It is now a gate on session completion. This
+aggregate is **not** a pre-deployment gate and is deliberately not wired into
+CI; the single deploy gate remains
+[`../protocols/PRE_DEPLOYMENT_VERIFICATION_GATE.md`](../protocols/PRE_DEPLOYMENT_VERIFICATION_GATE.md) §1.
+
+Run these after any structural change. None touches the application.
