@@ -53,8 +53,7 @@ export type EngineeringDocKind =
   | "investigation"
   | "implementation"
   | "roadmap"
-  | "release"
-  | "protocol";
+  | "release";
 
 /**
  * The canonical sources, each named with the owner it points AT. This table is
@@ -86,12 +85,6 @@ const SOURCE_ROOTS: readonly SourceRoot[] = [
     kind: "implementation",
     recursive: true,
     owner: "docs/implementation/<workstream>/ — implementation reports",
-  },
-  {
-    dir: ".engineering/protocols",
-    kind: "protocol",
-    recursive: false,
-    owner: ".engineering/protocols/ — engineering process protocols",
   },
 ];
 
@@ -295,7 +288,7 @@ function parseHeader(text: string): {
   };
 }
 
-function classify(relPath: string): { kind: EngineeringDocKind; workstream: string | null } {
+function classify(relPath: string): { kind: EngineeringDocKind; workstream: string | null } | null {
   if (relPath === ROADMAP_PATH) return { kind: "roadmap", workstream: null };
 
   for (const file of SOURCE_FILES) {
@@ -309,7 +302,9 @@ function classify(relPath: string): { kind: EngineeringDocKind; workstream: stri
     return { kind: root.kind, workstream: segments.length > 1 ? segments[0] : null };
   }
 
-  return { kind: "protocol", workstream: null };
+  // Unreachable: every path reaching here came from SOURCE_ROOTS, SOURCE_FILES
+  // or ROADMAP_PATH. Classify nothing rather than guess a kind.
+  return null;
 }
 
 /** `ENGINT1_ENGINEERING_INTELLIGENCE_FOUNDATION.md` → `ENGINT1`. */
@@ -343,7 +338,9 @@ async function buildIndex(): Promise<IndexSnapshot> {
     if (!info.isFile()) continue;
 
     const relPath = path.relative(root, abs).split(path.sep).join("/");
-    const { kind, workstream } = classify(relPath);
+    const classified = classify(relPath);
+    if (!classified) continue; // Unclassifiable — skip rather than mislabel.
+    const { kind, workstream } = classified;
 
     let text: string;
     try {

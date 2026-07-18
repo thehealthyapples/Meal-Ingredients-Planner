@@ -72,7 +72,6 @@ const KINDS: readonly EngineeringDocKind[] = [
   "implementation",
   "roadmap",
   "release",
-  "protocol",
 ];
 
 function toKind(value: unknown): EngineeringDocKind | undefined {
@@ -108,8 +107,8 @@ async function handleRead(intent: Intent, port: EngineeringKnowledgeReadPort): P
     if (!doc) {
       throw gap(
         `Honest gap: no engineering document is indexed under ${JSON.stringify(id)}. ` +
-          "Engineering Intelligence indexes docs/architecture/, docs/investigations/, docs/implementation/, " +
-          ".engineering/protocols/ and the release documents. If the document exists outside those owners, " +
+          "Engineering Intelligence indexes docs/architecture/, docs/investigations/, docs/implementation/ " +
+          "and the release documents. If the document exists outside those owners, " +
           "it is not engineering knowledge as this capability defines it — and the platform will not " +
           "describe a document it has not read.",
       );
@@ -157,7 +156,7 @@ async function handleSearch(intent: Intent, port: EngineeringKnowledgeReadPort):
   if (hits.length === 0) {
     throw gap(
       `Honest gap: nothing in THA's engineering record matches ${JSON.stringify(query)}. ` +
-        "Searched: docs/architecture/, docs/investigations/, docs/implementation/, .engineering/protocols/ " +
+        "Searched: docs/architecture/, docs/investigations/, docs/implementation/ " +
         "and the release documents. This means the repository does not record it under that name — it does " +
         "NOT mean the work was never done. Engineering Intelligence will not answer from anything other " +
         "than the record.",
