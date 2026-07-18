@@ -2178,7 +2178,7 @@ export default function ShoppingWorkspacePage() {
           {recalculateScores.isPending ? "Recalculating…" : "Recalculate Scores"}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <Link href="/shopping" asChild>
+        <Link href="/basket" asChild>
           <DropdownMenuItem data-testid="button-open-basket">
             <ShoppingBasket className="h-4 w-4 mr-2 text-primary/70" />
             <span className="flex-1">Basket</span>

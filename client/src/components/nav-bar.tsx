@@ -388,7 +388,7 @@ function AppleMenu({ location, isAdmin }: { location: string; isAdmin: boolean }
             example.com URL, shipped behind a real affiliate-disclosure notice —
             so THA was recommending health and nutrition practitioners that do
             not exist. The page and its data are kept for a real partner
-            programme; the doors are closed until the partners are real. */
+            programme; the doors are closed until the partners are real. */}
         {isAdmin && (
           <>
             <DropdownMenuSeparator />

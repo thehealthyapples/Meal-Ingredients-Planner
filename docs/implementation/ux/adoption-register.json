@@ -77,7 +77,7 @@
         {
           "what": "`<DrawerContent>` — a second overlay container chosen per-file",
           "pattern": "<DrawerContent[\\s>]",
-          "ceiling": 12,
+          "ceiling": 11,
           "note": "Capped. New overlays use `Overlay`, which decides sheet-vs-dialog by viewport."
         },
         {
@@ -232,7 +232,7 @@
         {
           "what": "Raw `useMutation` — feedback owned by the call site",
           "pattern": "\\buseMutation\\s*[(<]",
-          "ceiling": 137,
+          "ceiling": 133,
           "excludePaths": [
             "client/src/hooks/use-tracked-mutation.ts"
           ],
@@ -501,7 +501,7 @@
         {
           "what": "Raw `<button>` elements outside the design system",
           "pattern": "<button[\\s>]",
-          "ceiling": 538,
+          "ceiling": 524,
           "note": "Each reinvents press feedback and misses the touch floor. Capped: the population may fall, never rise."
         }
       ],
@@ -670,8 +670,8 @@
         {
           "what": "`dark:` utilities authored across the client",
           "pattern": "\\bdark:",
-          "asAt": 855,
-          "asAtDate": "2026-07-17"
+          "asAt": 846,
+          "asAtDate": "2026-07-18"
         }
       ],
       "openMigration": {
@@ -969,12 +969,6 @@
     ],
     "known": [
       {
-        "path": "client/src/pages/list-page.tsx",
-        "loc": 774,
-        "disposition": "An entire page with no route. `App.tsx` routes `/basket` and `/analyse-basket` to `shopping-list-page`; nothing routes here. 774 LOC of live-looking shopping UI that a future workstream could adopt instead of the real owner — `PageHeader.tsx`'s exact failure mode, still in the tree.",
-        "owner": "Colin Clapson — confirm unreachable, then delete"
-      },
-      {
         "path": "client/src/components/illustrations/orchard-hero.tsx",
         "loc": 62,
         "disposition": "Dead illustration component, 0 importers. Survived PX1-W4.7's sweep.",
@@ -991,6 +985,12 @@
         "loc": 34,
         "disposition": "Dead module, 0 importers.",
         "owner": "Colin Clapson — delete"
+      },
+      {
+        "path": "client/src/pages/partners-page.tsx",
+        "loc": 596,
+        "disposition": "Orphaned DELIBERATELY by PROD2, and the only entry here that is a withdrawal rather than a discovery. All 12 partners in `client/src/data/partners.ts` are invented businesses on `example.com`, every one `isActive: true`, rendered under a genuine affiliate-disclosure notice — so THA recommended health and nutrition practitioners that do not exist, from two live menus. The route and both nav entries were withdrawn and the lazy import removed, so the page and its fabricated data no longer reach the bundle (verified: `Calm Orchard Yoga` absent from `dist/`). The page, its data file and its types are intact on disk. This is NOT the PageHeader failure mode — it is not a rival owner of anything, and nothing should adopt it while its data is invented.",
+        "owner": "Colin Clapson — restore the route when real partners exist, or delete the page and its data"
       }
     ]
   }
