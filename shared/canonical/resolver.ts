@@ -12,6 +12,7 @@
 // the DB). If the seed ever produced two foods for one key, buildCanonicalIndex
 // records it as a conflict and validateCanonicalSeed refuses to seed.
 import { normalizeIngredientKey, singularizeIngredientKey } from "../normalize";
+import { LEADING_INGREDIENT_DESCRIPTORS } from "../ingredient-descriptors";
 import { CANONICAL_SEED, type AliasType } from "./foods";
 
 export type ResolutionMatchType = "canonical" | "variety" | "alias" | "unknown" | "ambiguous";
@@ -138,6 +139,72 @@ export function ingredientKeyVariants(norm: string): string[] {
   return out;
 }
 
+/**
+ * NUT_VERIFY2 — candidate keys for FREE TEXT a person wrote, in priority order.
+ *
+ * This is `ingredientKeyVariants` (the identity variants, above) applied to the
+ * faithful key and then to each progressively descriptor-peeled form of it:
+ * "dried red lentils" → "red lentils" → (stop; "red" is not a descriptor).
+ *
+ * WHY THIS IS SEPARATE FROM `ingredientKeyVariants`, AND MUST STAY SEPARATE
+ *
+ * The two functions answer different questions and only one of them may peel:
+ *
+ *   · `ingredientKeyVariants` answers "what forms IS this identity?" and is
+ *     used by `knowledge-binding.ts` to match canonical identities against
+ *     knowledge identities (KNOW3). Peeling there is WRONG and was measured
+ *     as such: with peeling folded into it, `smoked-cheese` reduced to
+ *     `cheese`, `ground-coffee` to `coffee`, `baby-spinach` to `spinach` and
+ *     `smoked-paprika` to `paprika` — so `validateCanonicalSeed()` began
+ *     reporting ambiguous knowledge bindings for six real seed entries that
+ *     are not ambiguous at all. Three suites went red.
+ *
+ *   · This function answers "what might a person have MEANT by this line?"
+ *     and is used only by `resolveCanonicalFood`, the free-text entry point.
+ *
+ * Identity matching stays faithful; free text gets the wider net. Neither is
+ * fuzzy and neither is substring: every candidate either equals a canonical
+ * key exactly or matches nothing at all.
+ *
+ * Ordering guarantees, all pinned by `test-nut-verify2-descriptor-resolution.ts`:
+ *   · the faithful key is ALWAYS first, so a descriptor that begins a real
+ *     canonical name — "dried lentils", "ground cumin", "baby spinach",
+ *     "tinned tomatoes", "rolled oats" — resolves at full length and is
+ *     never reduced;
+ *   · peeling stops at the first non-descriptor word, so only the leading run
+ *     of descriptors is removed and the food itself is never touched;
+ *   · COLOURS ARE NOT DESCRIPTORS — "red cabbage" and "black pepper" are their
+ *     own canonical foods with their own diversity groups, distinct from
+ *     "cabbage" and "pepper" (see `shared/ingredient-descriptors.ts`);
+ *   · the last remaining word is never peeled, so a key is never reduced to
+ *     nothing.
+ */
+export function freeTextIngredientKeyVariants(norm: string): string[] {
+  const out: string[] = [];
+  const push = (s: string) => { if (s && !out.includes(s)) out.push(s); };
+
+  for (const v of ingredientKeyVariants(norm)) push(v);
+
+  // A leading descriptor may be written plural — "2 x 400g tins chickpeas",
+  // "3 cans tomatoes". The vocabulary holds singulars, and
+  // `singularizeIngredientKey` addresses only a key's LAST word (it returns
+  // "tins" unchanged), so a bare trailing "s" is tolerated here for the
+  // MEMBERSHIP TEST alone. A word only ever matches if its singular is already
+  // in the vocabulary, so this widens nothing beyond the declared descriptors —
+  // and the key itself is never rewritten, only whole words dropped.
+  const isDescriptor = (w: string) =>
+    LEADING_INGREDIENT_DESCRIPTORS.has(w) ||
+    (w.endsWith("s") && LEADING_INGREDIENT_DESCRIPTORS.has(w.slice(0, -1)));
+
+  let words = norm.split(" ").filter(Boolean);
+  while (words.length > 1 && isDescriptor(words[0])) {
+    words = words.slice(1);
+    for (const v of ingredientKeyVariants(words.join(" "))) push(v);
+  }
+
+  return out;
+}
+
 /** "cherry-tomato" → ["cherry tomato", …]. The identity keys a slug spells. */
 export function slugKey(slug: string): string {
   return slugToKey(slug);
@@ -159,7 +226,9 @@ export function resolveCanonicalFood(input: string): CanonicalResolution {
   if (!key) return UNRESOLVED(input, key);
 
   const { byKey } = getIndex();
-  for (const candidate of ingredientKeyVariants(key)) {
+  // NUT_VERIFY2 — free text gets the descriptor-peeled candidate list. Identity
+  // matching (knowledge-binding.ts) keeps `ingredientKeyVariants` and does not.
+  for (const candidate of freeTextIngredientKeyVariants(key)) {
     const hit = byKey.get(candidate);
     if (hit) {
       return {

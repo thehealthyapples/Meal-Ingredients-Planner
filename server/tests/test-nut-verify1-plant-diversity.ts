@@ -62,6 +62,15 @@ const RESOLVES_AFTER_PARSE: ReadonlyArray<readonly [string, string]> = [
   ["2 celery sticks, sliced", "celery"],
   ["2 raw beetroot, peeled and grated", "beetroot"],
   ["2 cloves garlic, crushed", "garlic"],
+  // NUT_VERIFY2 — promoted from BLOCKED_BY_DESCRIPTORS below, which is exactly
+  // what that fixture existed to prompt. Descriptor-aware resolution now peels
+  // "tin", "dried", "chopped", "small", "rolled" and their kin.
+  ["400g tin chickpeas, drained", "chickpeas"],
+  ["200g dried red lentils", "lentils"],
+  ["1 x 400g tin chopped tomatoes", "tomatoes"],
+  ["1 small red cabbage, shredded", "red cabbage"],
+  ["160g rolled wholegrain oats", "oats"],
+  ["1 tbsp chopped walnuts, optional", "walnuts"],
 ];
 
 /**
@@ -83,12 +92,10 @@ const RESOLVES_AFTER_PARSE: ReadonlyArray<readonly [string, string]> = [
  * architectural decision about a canonical owner, outside NUT_VERIFY1's scope.
  */
 const BLOCKED_BY_DESCRIPTORS: ReadonlyArray<readonly [string, string, string]> = [
-  ["400g tin chickpeas, drained", "chickpeas", "tin"],
-  ["200g dried red lentils", "lentils", "dried red"],
-  ["1 x 400g tin chopped tomatoes", "tomatoes", "tin chopped"],
-  ["1 small red cabbage, shredded", "cabbage", "small red"],
-  ["160g rolled wholegrain oats", "oats", "rolled wholegrain"],
-  ["1 tbsp chopped walnuts, optional", "walnuts", "chopped"],
+  // DISCHARGED by NUT_VERIFY2 — every original entry now resolves and has been
+  // promoted into RESOLVES_AFTER_PARSE above. The fixture is kept, empty, on
+  // purpose: it is the place the NEXT unresolvable descriptor shape gets
+  // recorded, and its emptiness is itself the measurement that none is known.
 ];
 
 const REAL_RECIPE_LINES = RESOLVES_AFTER_PARSE;

@@ -1,5 +1,6 @@
 import { normalizeIngredientKey } from "./normalize";
 import { INGREDIENT_QUANTITY_UNIT_PATTERN } from "./ingredient-units";
+import { TRAILING_PREP_NOTE_PATTERN } from "./ingredient-descriptors";
 
 /**
  * Canonical ingredient string parser — shared by client and server.
@@ -16,12 +17,21 @@ export function parseIngredient(raw: string): {
   quantity: string | null;
   unit: string | null;
 } {
-  const text = raw.trim();
+  // NUT_VERIFY2 — the multiplier form. "1 x 400g tin chopped tomatoes" and
+  // "2 × 400g tins" defeated every pattern below: pattern 1 needs the digits
+  // adjacent to a unit, so the leading "1 x " survived into the key as
+  // "x 400g tin chopped tomatoes". Removing the multiplier hands the remaining
+  // text to the existing patterns unchanged; it introduces no new pattern.
+  const text = raw.trim().replace(/^\d+\s*[x×]\s*(?=\d)/i, "");
 
   const UNIT_PATTERN = INGREDIENT_QUANTITY_UNIT_PATTERN;
 
-  const PREP_NOTES =
-    /,\s*(chopped|diced|minced|sliced|crushed|grated|peeled|fresh|dried|ground|finely|coarsely|roughly|thinly|to taste|optional).*$/i;
+  // NUT_VERIFY2 — the prep-note vocabulary now has ONE owner
+  // (`shared/ingredient-descriptors.ts`), shared with the resolver's leading-
+  // descriptor peeling. The previous inline list omitted common recipe words —
+  // "drained", "shredded", "rinsed", "to serve" — so "400g tin chickpeas,
+  // drained" kept "drained" in its key and could never resolve.
+  const PREP_NOTES = new RegExp(`,\\s*(?:${TRAILING_PREP_NOTE_PATTERN}).*$`, "i");
 
   function capitalise(s: string): string {
     return s.charAt(0).toUpperCase() + s.slice(1);
