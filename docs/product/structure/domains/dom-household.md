@@ -5,8 +5,8 @@ section: domains
 status: live
 visibility: household
 owner: Colin Clapson
-last_verified: 2026-07-11
-version: 1
+last_verified: 2026-07-18
+version: 2
 ---
 
 # Household & Profile
@@ -42,8 +42,11 @@ in its own card.
 - [[page-profile]] — the page that renders this domain
 - [[cap-household]] — the household capability
 - [[cap-profile]] — the profile capability
+- [[page-privacy-settings]] — the data rights reached from Settings & Support
+- [[page-help-centre]] — the written help reached from Settings & Support
+- [[page-contact]] — the contact form reached from Settings & Support
 
 ---
 
 _Registry entry. Present tense; if it is no longer true it is a defect, not
-history (Rule PKR15). Owner: Colin Clapson. Last verified 2026-07-11._
+history (Rule PKR15). Owner: Colin Clapson. Last verified 2026-07-18._

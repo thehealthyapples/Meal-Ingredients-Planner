@@ -179,8 +179,8 @@
         {
           "what": "`<Loader2>` usages",
           "pattern": "<Loader2[\\s>]",
-          "ceiling": 179,
-          "note": "Capped, not banned: 140 are the exempt inline pending mark above. The population may fall, never rise."
+          "ceiling": 181,
+          "note": "Capped, not banned: 140 are the exempt inline pending mark above. The population may fall, never rise. BUS1 raised 179 → 181: two `<Loader2>` marks on Privacy Settings, both INSIDE a control (the data-download button and the account-deletion confirm button) while an indeterminate request is in flight. That is the usage this concern's own rule assigns to Loader2 rather than to Skeleton — 'Skeleton owns content arriving; Loader2 owns indeterminate work inside a control' — so the ceiling is raised rather than the marks replaced. Content-arriving states on that page use Skeleton, as the rule requires."
         }
       ],
       "openMigration": {
@@ -670,7 +670,7 @@
         {
           "what": "`dark:` utilities authored across the client",
           "pattern": "\\bdark:",
-          "asAt": 846,
+          "asAt": 848,
           "asAtDate": "2026-07-18"
         }
       ],
@@ -967,6 +967,28 @@
       "status": "governed",
       "enforcement": "machine",
       "adoptionFloor": 4
+    },
+    {
+      "id": "legal-document-presentation",
+      "concern": "Legal document presentation",
+      "owner": "components/legal/legal-document-view.tsx (LegalDocumentView, LegalPlaceholderNotice)",
+      "ownerPath": "client/src/components/legal/legal-document-view.tsx",
+      "ownerKind": "module",
+      "owns": "How a policy document renders: its heading, its version line, its section anchors, and the four block kinds a clause can take (paragraph, list, definitions, table). Introduced by BUS1 with three documents — Privacy Policy, Terms of Service, Cookie Policy — which would otherwise have been three separate pieces of markup and three chances to disagree about what a legal heading looks like. It also owns the placeholder notice, which is what stops THA publishing an invented company number without saying so. It renders content it is given and owns no words: shared/legal owns every string.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 1,
+      "definedIn": "client/src/components/legal/legal-document-view.tsx",
+      "definedSymbols": [
+        "LegalDocumentView",
+        "LegalPlaceholderNotice"
+      ],
+      "exemptions": [
+        {
+          "surface": "client/src/pages/legal-page.tsx sub-processor table",
+          "why": "The sub-processor list is not a clause of the document — it is generated from shared/legal/subprocessors.ts, which is read out of the code, and it renders as cards rather than as prose blocks. Putting it through the block renderer would have required a fifth block kind that exactly one document uses."
+        }
+      ]
     }
   ],
   "orphans": {

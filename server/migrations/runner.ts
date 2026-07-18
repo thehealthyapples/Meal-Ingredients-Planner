@@ -3207,6 +3207,99 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  // ─── BUS1 — Trust & Compliance ─────────────────────────────────────────────
+  //
+  // Three tables, declared together in shared/schema.ts under the same heading.
+  // Governing architecture: docs/architecture/THA_TRUST_AND_COMPLIANCE_ARCHITECTURE.md
+  //
+  // All three are ADDITIVE. Nothing here alters, drops, or rewrites an existing
+  // table or row, so this migration is a no-op on every existing household.
+  //
+  // Note the deliberate FK asymmetry, which is the whole compliance design and
+  // not an inconsistency to be tidied up later:
+  //
+  //   user_consents.user_id        → ON DELETE SET NULL. The row must OUTLIVE the
+  //                                  account (Art. 7(1) — THA must be able to show
+  //                                  consent was obtained for processing that has
+  //                                  already happened), while identifying nobody.
+  //   support_requests.user_id     → ON DELETE SET NULL, same reasoning: proof a
+  //                                  data-subject request was answered.
+  //   privacy_activity_log.user_id → NO FOREIGN KEY AT ALL. A FK would either
+  //                                  block the erasure or cascade the evidence of
+  //                                  it away with the account. This row exists
+  //                                  precisely to prove the erasure happened, so
+  //                                  it must survive the row it refers to.
+  //
+  // Every statement is idempotent (IF NOT EXISTS), per the runner's rule 4.
+  {
+    id: "2026-07-18_bus1_trust_and_compliance",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS user_consents (
+         id SERIAL PRIMARY KEY,
+         user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+         consent_type TEXT NOT NULL,
+         granted BOOLEAN NOT NULL,
+         document_slug TEXT,
+         document_version TEXT,
+         source TEXT NOT NULL,
+         recorded_ip TEXT,
+         recorded_user_agent TEXT,
+         recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+       )`,
+      `CREATE INDEX IF NOT EXISTS user_consents_user_id_idx ON user_consents (user_id)`,
+      `CREATE INDEX IF NOT EXISTS user_consents_lookup_idx ON user_consents (user_id, consent_type, recorded_at)`,
+
+      `CREATE TABLE IF NOT EXISTS support_requests (
+         id SERIAL PRIMARY KEY,
+         user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+         kind TEXT NOT NULL,
+         subject TEXT NOT NULL,
+         body TEXT NOT NULL,
+         context_path TEXT,
+         contact_email TEXT,
+         status TEXT NOT NULL DEFAULT 'new',
+         internal_note TEXT,
+         resolved_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+         resolved_at TIMESTAMPTZ,
+         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+       )`,
+      `CREATE INDEX IF NOT EXISTS support_requests_user_id_idx ON support_requests (user_id)`,
+      `CREATE INDEX IF NOT EXISTS support_requests_status_idx ON support_requests (status, created_at)`,
+      `CREATE INDEX IF NOT EXISTS support_requests_kind_idx ON support_requests (kind)`,
+
+      `CREATE TABLE IF NOT EXISTS privacy_activity_log (
+         id SERIAL PRIMARY KEY,
+         user_id INTEGER,
+         action TEXT NOT NULL,
+         detail JSONB,
+         occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+       )`,
+      `CREATE INDEX IF NOT EXISTS privacy_activity_log_action_idx ON privacy_activity_log (action, occurred_at)`,
+      `CREATE INDEX IF NOT EXISTS privacy_activity_log_user_id_idx ON privacy_activity_log (user_id)`,
+
+      // The ONE statement in BUS1 that alters an existing table, and it is here
+      // because Article 17 was otherwise unsatisfiable for an entire class of
+      // account.
+      //
+      // `admin_audit_log.admin_user_id` is a foreign key to users.id with no ON
+      // DELETE action AND a NOT NULL constraint. Together those meant Postgres
+      // REFUSED to delete any operator account that had ever performed an
+      // audited action — so a staff member exercising their right to erasure
+      // could not be honoured at all, by anyone, at any point in the platform's
+      // history.
+      //
+      // Dropping NOT NULL lets the erasure service null the actor while keeping
+      // the audit row. Deleting the rows instead was rejected: an audit log that
+      // can be erased on request is not an audit log, and this one records who
+      // approved the platform's food and knowledge decisions.
+      //
+      // Safe and backward compatible: dropping a NOT NULL constraint invalidates
+      // no existing row and no existing INSERT — every current writer supplies
+      // the column.
+      `ALTER TABLE admin_audit_log ALTER COLUMN admin_user_id DROP NOT NULL`,
+    ],
+  },
 
   // ← Add new migrations here, appended to the end
 ];

@@ -140,9 +140,9 @@ entries:
     purpose: Who lives here, what each person eats and cannot eat, and how the household wants THA to behave.
     owner: Colin Clapson
     sources: [client/src/pages/profile-page.tsx, docs/architecture/capabilities/household.md]
-    related: [page-profile, cap-household, cap-profile]
-    last_verified: 2026-07-11
-    version: 1
+    related: [page-profile, cap-household, cap-profile, page-privacy-settings, page-help-centre, page-contact]
+    last_verified: 2026-07-18
+    version: 2
 
   - id: dom-partners
     name: Partners
@@ -166,6 +166,18 @@ entries:
     sources: [client/src/pages/admin-page.tsx, client/src/components/admin-banner.tsx]
     related: [adm-home, adm-users, cap-administration]
     last_verified: 2026-07-11
+    version: 1
+
+  - id: dom-trust-and-compliance
+    name: Trust & Compliance
+    section: domains
+    status: live
+    visibility: household
+    purpose: The policies THA publishes, what it holds about a household, the rights they can exercise over it, and how they reach a person when something is wrong.
+    owner: Colin Clapson
+    sources: [shared/legal/index.ts, shared/privacy/consent.ts, server/privacy/personal-data-registry.ts, server/trust-routes.ts, docs/architecture/THA_TRUST_AND_COMPLIANCE_ARCHITECTURE.md]
+    related: [page-legal, page-privacy-settings, page-help-centre, page-contact, set-privacy-and-data, hlp-help-centre]
+    last_verified: 2026-07-18
     version: 1
 
   # =========================================================================
@@ -632,6 +644,59 @@ entries:
     last_verified: 2026-07-11
     version: 1
 
+  - id: page-legal
+    name: Policies
+    section: pages
+    status: live
+    visibility: public
+    route: /legal
+    purpose: Read the Privacy Policy, Terms of Service and Cookie Policy in full, without an account and before agreeing to anything.
+    owner: Colin Clapson
+    sources: [client/src/pages/legal-page.tsx, client/src/components/legal/legal-document-view.tsx, shared/legal/index.ts, shared/legal/subprocessors.ts, server/trust-routes.ts]
+    aliases: ["/legal/:slug"]
+    related: [dom-trust-and-compliance, page-auth]
+    last_verified: 2026-07-18
+    version: 1
+
+  - id: page-privacy-settings
+    name: Privacy and your data
+    section: pages
+    status: live
+    visibility: household
+    route: /privacy-settings
+    purpose: See what THA holds about you, download it, ask for a correction, review what you have agreed to, and delete your account.
+    owner: Colin Clapson
+    sources: [client/src/pages/privacy-settings-page.tsx, server/privacy/personal-data-registry.ts, server/privacy/data-export-service.ts, server/privacy/account-erasure-service.ts, server/trust-routes.ts]
+    related: [dom-trust-and-compliance, set-privacy-and-data, page-legal, page-contact, page-profile]
+    last_verified: 2026-07-18
+    version: 1
+
+  - id: page-help-centre
+    name: Help Centre
+    section: pages
+    status: live
+    visibility: household
+    route: /help
+    purpose: Search twenty written articles across seven categories, and be told plainly when the answer has not been written.
+    owner: Colin Clapson
+    sources: [client/src/pages/help-centre-page.tsx, shared/support/help-centre.ts, server/trust-routes.ts]
+    related: [dom-trust-and-compliance, hlp-help-centre, page-contact]
+    last_verified: 2026-07-18
+    version: 1
+
+  - id: page-contact
+    name: Contact
+    section: pages
+    status: live
+    visibility: household
+    route: /contact
+    purpose: Send one message to a person — a question, a problem, an idea, or a request to correct something — and then see that it arrived.
+    owner: Colin Clapson
+    sources: [client/src/pages/contact-page.tsx, shared/support/support-request.ts, server/support/support-service.ts, server/trust-routes.ts]
+    related: [dom-trust-and-compliance, page-help-centre, page-privacy-settings]
+    last_verified: 2026-07-18
+    version: 1
+
   # =========================================================================
   # SECTION 3 — ROUTES (route → page map, incl. aliases and redirects)
   # =========================================================================
@@ -642,11 +707,11 @@ entries:
     visibility: household
     purpose: Every address THA answers, and the page each one resolves to — including the five aliases and two redirects.
     owner: Colin Clapson
-    sources: [client/src/App.tsx#L199-L244]
-    related: [page-cookbook, page-analyser, page-planner, page-diary, page-basket]
+    sources: [client/src/App.tsx]
+    related: [page-cookbook, page-analyser, page-planner, page-diary, page-basket, page-legal, page-privacy-settings, page-help-centre, page-contact]
     known_defects: [fnd-alias-sprawl]
-    last_verified: 2026-07-11
-    version: 1
+    last_verified: 2026-07-18
+    version: 2
 
   # =========================================================================
   # SECTION 4 — JOURNEYS
@@ -1424,13 +1489,13 @@ entries:
     section: apis
     status: live
     visibility: developer
-    purpose: The 322 endpoints THA answers, grouped by domain, and which of them require a household, an admin, or nobody at all.
+    purpose: The 340 endpoints THA answers, grouped by domain, and which of them require a household, an admin, or nobody at all.
     owner: Colin Clapson
-    sources: [server/routes.ts, server/auth.ts, server/lib/access.ts]
-    related: [dev-capability-registry]
+    sources: [server/routes.ts, server/auth.ts, server/trust-routes.ts, server/lib/access.ts]
+    related: [dev-capability-registry, dom-trust-and-compliance]
     known_defects: [fnd-unprotected-admin-endpoints, fnd-public-template-writes]
-    last_verified: 2026-07-11
-    version: 1
+    last_verified: 2026-07-18
+    version: 2
 
   # =========================================================================
   # SECTION 19 — PRODUCT SETTINGS
@@ -1498,6 +1563,20 @@ entries:
     related: [hid-notice-engine]
     evidence: No notification preference table, endpoint or surface exists anywhere in the codebase.
     last_verified: 2026-07-11
+    version: 1
+
+  - id: set-privacy-and-data
+    name: Privacy and your data
+    section: settings
+    status: live
+    visibility: household
+    purpose: What the household has agreed to, and the controls for taking a copy of their data, asking for a correction, or deleting the account.
+    owner: Colin Clapson
+    sources: [client/src/pages/privacy-settings-page.tsx, shared/privacy/consent.ts, server/privacy/consent-service.ts, server/privacy/personal-data-registry.ts]
+    related: [page-privacy-settings, dom-trust-and-compliance, set-inventory, page-legal]
+    default: terms of service, privacy policy and health-data processing, all agreed at registration
+    cannot: be given by a pre-ticked box, and cannot be edited once recorded — a withdrawal is a new row, never a change to the old one
+    last_verified: 2026-07-18
     version: 1
 
   # =========================================================================
@@ -1775,6 +1854,18 @@ entries:
     related: [dom-companion]
     known_defects: [fnd-pkr27-prompt-knowledge]
     last_verified: 2026-07-11
+    version: 1
+
+  - id: hlp-help-centre
+    name: Help Centre articles
+    section: help
+    status: live
+    visibility: household
+    purpose: Twenty written articles in seven categories — getting started, planning, food and allergies, the household, your data, the account, and things going wrong.
+    owner: Colin Clapson
+    sources: [shared/support/help-centre.ts, client/src/pages/help-centre-page.tsx]
+    related: [page-help-centre, dom-trust-and-compliance, hlp-first-visit-hints, page-contact]
+    last_verified: 2026-07-18
     version: 1
 
   # =========================================================================

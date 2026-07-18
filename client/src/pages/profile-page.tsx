@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { useUser } from "@/hooks/use-user";
 import { useToast } from "@/hooks/use-toast";
 import { useTrackedMutation } from "@/hooks/use-tracked-mutation";
@@ -33,6 +33,8 @@ import {
   Sparkles, Mail, Trash2,
   Copy, LogOut, UserMinus, Pencil, X, RefreshCw,
   ChevronDown, MessageSquare,
+  // BUS1 — Help Centre, Contact and Privacy Settings doors.
+  LifeBuoy, ShieldCheck, ChevronRight,
 } from "lucide-react";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import { cn } from "@/lib/utils";
@@ -468,6 +470,7 @@ function ProfilePageContent() {
         testId="section-account"
       >
         <AccountSettings profile={profile} />
+        <PrivacySection />
         <ContactSection />
       </SectionGroup>
 
@@ -1730,42 +1733,121 @@ function ShoppingPreferences({ prefs, onSave }: { prefs: any; onSave: (prefs: an
     </Card>
   );
 }
+/**
+ * BUS1 — the Help & Contact section.
+ *
+ * WHAT THIS REPLACED: two `mailto:` links, which were the entire support surface
+ * of the product. They are kept — writing an email is still the right answer for
+ * some people, and removing a working door to replace it with a form would be a
+ * downgrade dressed as a feature — but they are no longer the only option, and
+ * they no longer carry a second hardcoded copy of the addresses.
+ *
+ * The two hardcoded fallback strings that used to sit here were the second owner
+ * of a fact whose first owner is shared/legal/company-profile.ts (Principle 2).
+ * `/api/config` now serves those values FROM that owner, so this surface reads
+ * them and holds none. If the config request fails, the mailto links are simply
+ * not rendered — an honest absence rather than an address this file invented.
+ */
 function ContactSection() {
   const { data: config } = useQuery<{ supportEmail?: string; suggestionsEmail?: string }>({
     queryKey: ["/api/config"],
   });
 
-  const support = config?.supportEmail || "support@thehealthyapples.com";
-  const suggestions = config?.suggestionsEmail || "suggestions@thehealthyapples.com";
+  const support = config?.supportEmail;
+  const suggestions = config?.suggestionsEmail;
 
   return (
     <Card className="p-4 sm:p-5" data-testid="card-contact">
       <div className="flex items-center gap-2 mb-3">
-        <Mail className="h-4 w-4 text-muted-foreground" />
-        <h3 className="text-sm font-medium">Contact</h3>
+        <LifeBuoy className="h-4 w-4 text-muted-foreground" />
+        <h3 className="text-sm font-medium">Help and contact</h3>
       </div>
       <div className="space-y-2">
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-          <span className="text-sm text-muted-foreground shrink-0">Support</span>
-          <a
-            href={`mailto:${support}`}
-            className="text-sm text-primary hover:underline font-medium break-all"
-            data-testid="link-support-email"
-          >
-            {support}
-          </a>
-        </div>
+        <Link
+          href="/help"
+          className="flex items-center justify-between gap-3 rounded-md py-2 text-sm hover:text-primary"
+          data-testid="link-help-centre"
+        >
+          <span>Help Centre</span>
+          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+        </Link>
         <Separator />
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-          <span className="text-sm text-muted-foreground shrink-0">Suggestions</span>
-          <a
-            href={`mailto:${suggestions}`}
-            className="text-sm text-primary hover:underline font-medium break-all"
-            data-testid="link-suggestions-email"
-          >
-            {suggestions}
-          </a>
-        </div>
+        <Link
+          href="/contact"
+          className="flex items-center justify-between gap-3 rounded-md py-2 text-sm hover:text-primary"
+          data-testid="link-contact-us"
+        >
+          <span>Contact us, report a problem, or suggest an idea</span>
+          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+        </Link>
+
+        {(support || suggestions) && (
+          <>
+            <Separator />
+            <p className="pt-1 text-xs text-muted-foreground">Or write to us directly:</p>
+            {support && (
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                <span className="text-sm text-muted-foreground shrink-0">Support</span>
+                <a
+                  href={`mailto:${support}`}
+                  className="text-sm text-primary hover:underline font-medium break-all"
+                  data-testid="link-support-email"
+                >
+                  {support}
+                </a>
+              </div>
+            )}
+            {suggestions && (
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                <span className="text-sm text-muted-foreground shrink-0">Suggestions</span>
+                <a
+                  href={`mailto:${suggestions}`}
+                  className="text-sm text-primary hover:underline font-medium break-all"
+                  data-testid="link-suggestions-email"
+                >
+                  {suggestions}
+                </a>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+/**
+ * BUS1 — the door to Privacy Settings.
+ *
+ * Placed beside Contact rather than inside Account Settings, and never behind a
+ * "danger zone" heading. A person's data rights are ordinary, not dangerous, and
+ * styling them as a hazard is how products discourage their use.
+ */
+function PrivacySection() {
+  return (
+    <Card className="p-4 sm:p-5" data-testid="card-privacy">
+      <div className="flex items-center gap-2 mb-3">
+        <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+        <h3 className="text-sm font-medium">Privacy and your data</h3>
+      </div>
+      <div className="space-y-2">
+        <Link
+          href="/privacy-settings"
+          className="flex items-center justify-between gap-3 rounded-md py-2 text-sm hover:text-primary"
+          data-testid="link-privacy-settings"
+        >
+          <span>Download your data, correct it, or delete your account</span>
+          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+        </Link>
+        <Separator />
+        <Link
+          href="/legal"
+          className="flex items-center justify-between gap-3 rounded-md py-2 text-sm hover:text-primary"
+          data-testid="link-legal-policies"
+        >
+          <span>Privacy Policy, Terms and Cookies</span>
+          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+        </Link>
       </div>
     </Card>
   );

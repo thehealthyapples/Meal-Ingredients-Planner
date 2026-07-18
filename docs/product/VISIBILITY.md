@@ -4,9 +4,9 @@ _The disclosure surface (PKR §18, added by PKR2). "What can a household be told
 
 **This document classifies; it never authorises.** It declares what tier a fact belongs to. It never decides what tier a *user* belongs to — identity and role are resolved exclusively by `server/lib/access.ts` (Rule PKR25). A missing or invalid label fails closed to `developer` and is served to no one (Rule PKR22).
 
-_Generated from `docs/product/inventory/product.yaml` by PDA1 — do not hand-edit. 154 entries: 27 public, 69 household, 51 admin, 7 developer._
+_Generated from `docs/product/inventory/product.yaml` by PDA1 — do not hand-edit. 161 entries: 28 public, 76 household, 51 admin, 6 developer._
 
-### public — 27 entries
+### public — 28 entries
 
 Anyone, signed in or not. The Companion answers households most from this tier and the household tier below it.
 
@@ -37,10 +37,11 @@ Anyone, signed in or not. The Companion answers households most from this tier a
 | `ntf-email-verification` | Verification email | notifications |
 | `page-auth` | Sign in | pages |
 | `page-landing` | Landing | pages |
+| `page-legal` | Policies | pages |
 | `page-not-found` | Not Found | pages |
 | `page-shared-plan` | Shared Plan | pages |
 
-### household — 69 entries
+### household — 76 entries
 
 Any signed-in household. Everything public, plus the household-facing product itself.
 
@@ -55,6 +56,7 @@ Any signed-in household. Everything public, plus the household-facing product it
 | `cap-pantry` | Pantry capability | intelligence-capabilities |
 | `cap-partners` | Partners capability | intelligence-capabilities |
 | `cap-planner` | Planner capability | intelligence-capabilities |
+| `cap-product-knowledge` | Product Knowledge | knowledge-capabilities |
 | `cap-profile` | Profile capability | intelligence-capabilities |
 | `cap-shopping` | Shopping capability | intelligence-capabilities |
 | `dlg-bad-apple` | Highly Ultra-Processed warning | dialogs |
@@ -69,7 +71,9 @@ Any signed-in household. Everything public, plus the household-facing product it
 | `dom-partners` | Partners | domains |
 | `dom-planner` | Planner | domains |
 | `dom-shopping` | Shopping | domains |
+| `dom-trust-and-compliance` | Trust & Compliance | domains |
 | `hlp-first-visit-hints` | First-visit hints | help |
+| `hlp-help-centre` | Help Centre articles | help |
 | `jrn-add-recipe` | Add a recipe | journeys |
 | `jrn-analyse-product` | Analyse a product | journeys |
 | `jrn-cook-from-plan` | Cook from the plan | journeys |
@@ -91,10 +95,12 @@ Any signed-in household. Everything public, plus the household-facing product it
 | `ntf-trial-banner` | Trial banner | notifications |
 | `page-analyser` | Analyser | pages |
 | `page-basket` | Basket | pages |
+| `page-contact` | Contact | pages |
 | `page-cookbook` | Cookbook | pages |
 | `page-dashboard` | Dashboard | pages |
 | `page-diary` | My Diary | pages |
 | `page-food-detail` | Food | pages |
+| `page-help-centre` | Help Centre | pages |
 | `page-home` | Home | pages |
 | `page-import-recipe` | Import Recipe | pages |
 | `page-meal-detail` | Meal | pages |
@@ -103,6 +109,7 @@ Any signed-in household. Everything public, plus the household-facing product it
 | `page-pantry` | Pantry | pages |
 | `page-partners` | Partners | pages |
 | `page-planner` | Planner | pages |
+| `page-privacy-settings` | Privacy and your data | pages |
 | `page-profile` | Profile | pages |
 | `page-quick-meal` | Build a Meal | pages |
 | `page-shopping-workspace` | Shopping | pages |
@@ -112,6 +119,7 @@ Any signed-in household. Everything public, plus the household-facing product it
 | `set-diet-types` | Diet, allergies and exclusions | settings |
 | `set-inventory` | Household settings | settings |
 | `set-notification-preferences` | Notification preferences | settings |
+| `set-privacy-and-data` | Privacy and your data | settings |
 | `set-subscription-tier` | Subscription tier | settings |
 | `wiz-meal-completion` | Meal completion wizard | wizards |
 | `wiz-onboarding` | Onboarding wizard | wizards |
@@ -174,14 +182,13 @@ Operators. Everything above, plus admin surfaces, hidden experiences, and positi
 | `page-admin-users` | Admin — Users | pages |
 | `shot-manifest` | Screenshot baseline manifest | screenshots |
 
-### developer — 7 entries
+### developer — 6 entries
 
 Everything. Honest gap: THA has no `developer` runtime role today — `users.role` is `user` or `admin`. Developer-tier content is reachable only by reading `docs/product/` directly, and is served to no runtime consumer until such a role exists.
 
 | id | name | section |
 |---|---|---|
 | `api-surface` | THA API surface | apis |
-| `cap-product-knowledge` | Product Knowledge | knowledge-capabilities |
 | `dev-benchmark-world` | Benchmark World | developer-experiences |
 | `dev-capability-registry` | Runtime Capability Registry | developer-experiences |
 | `dev-development-world` | Development World dataset | developer-experiences |

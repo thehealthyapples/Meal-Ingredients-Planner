@@ -78,7 +78,9 @@ npx tsx scripts/build-registry-nav.ts         # regenerates OWNERS.md + VISIBILI
 
 ## What this registry contains today
 
-154 entries, populated by PDA1: 27 public · 69 household · 51 admin · 7 developer.
+161 entries: 28 public · 76 household · 51 admin · 6 developer. 154 were
+populated by PDA1; the Trust & Compliance domain and its surfaces were added by
+BUS1 (2026-07-18).
 An 18-surface [screenshot baseline](./assets/screenshots/) captured against a live
 demo household. And, cited throughout, **31 audit findings** — recorded in the
 [PDA1 investigation report](../investigations/ux/PDA1_PLATFORM_DISCOVERY_AND_EXPERIENCE_AUDIT.md),

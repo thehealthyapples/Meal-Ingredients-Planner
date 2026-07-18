@@ -2,7 +2,7 @@
 
 _One table. Every registry entry and the single named human accountable for it (Rule PKR12: not a team, not a workstream, not "the platform"). Anyone may correct an entry; this person is accountable for it being true (Rule PKR16)._
 
-_Generated from `docs/product/inventory/product.yaml` by PDA1 — do not hand-edit. 154 entries._
+_Generated from `docs/product/inventory/product.yaml` by PDA1 — do not hand-edit. 161 entries._
 
 | id | name | section | owner |
 |---|---|---|---|
@@ -44,6 +44,7 @@ _Generated from `docs/product/inventory/product.yaml` by PDA1 — do not hand-ed
 | `dom-partners` | Partners | domains | Colin Clapson |
 | `dom-planner` | Planner | domains | Colin Clapson |
 | `dom-shopping` | Shopping | domains | Colin Clapson |
+| `dom-trust-and-compliance` | Trust & Compliance | domains | Colin Clapson |
 | `gls-apple` | Apple (the Companion) | glossary | Colin Clapson |
 | `gls-bad-apple` | Bad Apple | glossary | Colin Clapson |
 | `gls-basket` | Basket | glossary | Colin Clapson |
@@ -55,6 +56,7 @@ _Generated from `docs/product/inventory/product.yaml` by PDA1 — do not hand-ed
 | `hlp-first-visit-hints` | First-visit hints | help | Colin Clapson |
 | `hlp-food-knowledge-modal` | Food knowledge | help | Colin Clapson |
 | `hlp-gaps` | The questions THA cannot answer about itself | help | Colin Clapson |
+| `hlp-help-centre` | Help Centre articles | help | Colin Clapson |
 | `hlp-upf-modal` | What is UPF? | help | Colin Clapson |
 | `hid-add-meal-gateway` | Add a Recipe gateway dialog (never rendered) | hidden-experiences | Colin Clapson |
 | `hid-analyse-basket` | /analyse-basket (unclickable alias) | hidden-experiences | Colin Clapson |
@@ -132,13 +134,16 @@ _Generated from `docs/product/inventory/product.yaml` by PDA1 — do not hand-ed
 | `page-analyser` | Analyser | pages | Colin Clapson |
 | `page-auth` | Sign in | pages | Colin Clapson |
 | `page-basket` | Basket | pages | Colin Clapson |
+| `page-contact` | Contact | pages | Colin Clapson |
 | `page-cookbook` | Cookbook | pages | Colin Clapson |
 | `page-dashboard` | Dashboard | pages | Colin Clapson |
 | `page-diary` | My Diary | pages | Colin Clapson |
 | `page-food-detail` | Food | pages | Colin Clapson |
+| `page-help-centre` | Help Centre | pages | Colin Clapson |
 | `page-home` | Home | pages | Colin Clapson |
 | `page-import-recipe` | Import Recipe | pages | Colin Clapson |
 | `page-landing` | Landing | pages | Colin Clapson |
+| `page-legal` | Policies | pages | Colin Clapson |
 | `page-meal-detail` | Meal | pages | Colin Clapson |
 | `page-not-found` | Not Found | pages | Colin Clapson |
 | `page-nutrition` | Nutrition | pages | Colin Clapson |
@@ -146,6 +151,7 @@ _Generated from `docs/product/inventory/product.yaml` by PDA1 — do not hand-ed
 | `page-pantry` | Pantry | pages | Colin Clapson |
 | `page-partners` | Partners | pages | Colin Clapson |
 | `page-planner` | Planner | pages | Colin Clapson |
+| `page-privacy-settings` | Privacy and your data | pages | Colin Clapson |
 | `page-profile` | Profile | pages | Colin Clapson |
 | `page-quick-meal` | Build a Meal | pages | Colin Clapson |
 | `page-shared-plan` | Shared Plan | pages | Colin Clapson |
@@ -157,6 +163,7 @@ _Generated from `docs/product/inventory/product.yaml` by PDA1 — do not hand-ed
 | `set-diet-types` | Diet, allergies and exclusions | settings | Colin Clapson |
 | `set-inventory` | Household settings | settings | Colin Clapson |
 | `set-notification-preferences` | Notification preferences | settings | Colin Clapson |
+| `set-privacy-and-data` | Privacy and your data | settings | Colin Clapson |
 | `set-subscription-tier` | Subscription tier | settings | Colin Clapson |
 | `wiz-meal-completion` | Meal completion wizard | wizards | Colin Clapson |
 | `wiz-onboarding` | Onboarding wizard | wizards | Colin Clapson |

@@ -109,6 +109,16 @@ const DashboardPage = lazy(() => import("@/pages/dashboard"));
 const FoodDetailPage = lazy(() => import("@/pages/food-detail-page"));
 const ShoppingWorkspacePage = lazy(() => import("@/pages/shopping-workspace-page"));
 
+// BUS1 — Trust & Compliance surfaces.
+// `LegalPage` is PUBLIC and serves both `/legal` and `/legal/:slug` (it reads the
+// slug itself with `useRoute`), because a policy a person must agree to before
+// signing up cannot live behind a login. The other three are household surfaces
+// reached from Profile.
+const LegalPage = lazy(() => import("@/pages/legal-page"));
+const PrivacySettingsPage = lazy(() => import("@/pages/privacy-settings-page"));
+const HelpCentrePage = lazy(() => import("@/pages/help-centre-page"));
+const ContactPage = lazy(() => import("@/pages/contact-page"));
+
 // The chunk-loading fallback reuses the exact spinner treatment the shell already
 // shows while the user session loads — no new loading vocabulary (that
 // convergence is W4.8's).
@@ -329,6 +339,15 @@ function Router() {
       <Route path="/auth" component={() => <OrchardShell><AuthPage /></OrchardShell>} />
       <Route path="/onboarding" component={() => <OrchardShell><OnboardingPage /></OrchardShell>} />
 
+      {/* BUS1 — the policies. Public and unauthenticated, deliberately: a person
+          must be able to read what they are agreeing to BEFORE they have an
+          account, and a privacy policy behind a login is not published. Rendered
+          bare (like `/shared/:token`) rather than in OrchardShell — a document a
+          person is reading closely should not sit inside the house's chrome.
+          The `:slug` route precedes the index because wouter matches in order. */}
+      <Route path="/legal/:slug" component={LegalPage} />
+      <Route path="/legal" component={LegalPage} />
+
       <Route path="/" component={HomeRoute} />
       <Route path="/home" component={() => <ProtectedRoute component={HomeExperiencePage} />} />
       {/* ARRIVAL1 — development only. Wrapped in ProtectedRoute so the prototype
@@ -416,7 +435,13 @@ function Router() {
       <Route path="/admin/knowledge-review" component={() => <ProtectedRoute component={AdminKnowledgeReviewPage} />} />
       <Route path="/admin/canonical-publication-integrity" component={() => <ProtectedRoute component={AdminCanonicalPublicationIntegrityChrome} />} />
       <Route path="/pantry" component={() => <ProtectedRoute component={PantryPage} />} />
-      <Route path="/plant-diversity" component={() => <ProtectedRoute component={PlantDiversityPage} />} />
+      {/* PROD4 — the room is called "Nutrition" in the one navigation list and
+          was reachable only at /plant-diversity. Plant diversity is one TAB of
+          this room (the other is Nutrients), so the path named a part after the
+          whole. /nutrition is now canonical and /plant-diversity redirects, so
+          every existing deep link, bookmark and shared URL still lands. */}
+      <Route path="/nutrition" component={() => <ProtectedRoute component={PlantDiversityPage} />} />
+      <Route path="/plant-diversity" component={() => <Redirect to="/nutrition" />} />
       <Route path="/diary" component={() => <ProtectedRoute component={FoodDiaryPage} />} />
       <Route path="/my-diary" component={() => <ProtectedRoute component={FoodDiaryPage} />} />
       <Route path="/shared/:token" component={SharedPlanPage} />
@@ -430,6 +455,13 @@ function Router() {
       <Route path="/list" component={() => <Redirect to="/shopping-workspace" />} />
       <Route path="/shopping-list" component={() => <Redirect to="/shopping-workspace" />} />
       <Route path="/shopping-workspace" component={() => <ProtectedRoute component={ShoppingWorkspacePage} />} />
+
+      {/* BUS1 — the household-facing trust surfaces. All three hang off Profile,
+          which is where a person already goes to change something about
+          themselves rather than about their food. */}
+      <Route path="/privacy-settings" component={() => <ProtectedRoute component={PrivacySettingsPage} />} />
+      <Route path="/help" component={() => <ProtectedRoute component={HelpCentrePage} />} />
+      <Route path="/contact" component={() => <ProtectedRoute component={ContactPage} />} />
 
       <Route component={NotFound} />
     </Switch>

@@ -5,8 +5,8 @@ section: routes
 status: live
 visibility: household
 owner: Colin Clapson
-last_verified: 2026-07-11
-version: 1
+last_verified: 2026-07-18
+version: 2
 ---
 
 # Route Map
@@ -16,8 +16,8 @@ version: 1
 
 ## What it is
 
-THA's client routing is a single `wouter` `<Switch>` in `client/src/App.tsx`
-(lines 199–244). This entry is the complete, exact map of every path it
+THA's client routing is a single `wouter` `<Switch>` in `client/src/App.tsx`.
+This entry is the complete, exact map of every path it
 answers and the page each resolves to. Most household paths render inside
 `ProtectedRoute`, which redirects to `/auth` when signed out and to
 `/onboarding` when onboarding is incomplete; a few paths are public, and two are
@@ -31,6 +31,8 @@ in `App.tsx`.
 | `/auth` | AuthPage (in OrchardShell) | `client/src/pages/auth-page.tsx` |
 | `/onboarding` | OnboardingPage (in OrchardShell) | `client/src/pages/onboarding-page.tsx` |
 | `/shared/:token` | SharedPlanPage — rendered directly, not protected | `client/src/pages/shared-plan-page.tsx` |
+| `/legal/:slug` | LegalPage — one legal document in full, unauthenticated | `client/src/pages/legal-page.tsx` |
+| `/legal` | LegalPage — the index of published policies, unauthenticated | `client/src/pages/legal-page.tsx` |
 
 ## The root
 
@@ -64,6 +66,9 @@ in `App.tsx`.
 | `/partners` | PartnersPage | `client/src/pages/partners-page.tsx` |
 | `/quick-meal` | QuickMealPage | `client/src/pages/quick-meal-page.tsx` |
 | `/shopping-workspace` | ShoppingWorkspacePage | `client/src/pages/shopping-workspace-page.tsx` |
+| `/privacy-settings` | PrivacySettingsPage | `client/src/pages/privacy-settings-page.tsx` |
+| `/help` | HelpCentrePage | `client/src/pages/help-centre-page.tsx` |
+| `/contact` | ContactPage | `client/src/pages/contact-page.tsx` |
 
 ## Admin routes (protected)
 
@@ -116,6 +121,10 @@ today; the "two redirects" is correct.
 - [[page-planner]] — reachable at `/planner` and `/weekly-planner`
 - [[page-diary]] — reachable at `/diary` and `/my-diary`
 - [[page-basket]] — reachable at `/basket` and `/analyse-basket`
+- [[page-legal]] — reachable at `/legal` and `/legal/:slug`, both unprotected
+- [[page-privacy-settings]] — reachable at `/privacy-settings`
+- [[page-help-centre]] — reachable at `/help`
+- [[page-contact]] — reachable at `/contact`
 
 ## Known defects
 
@@ -129,4 +138,4 @@ today; the "two redirects" is correct.
 ---
 
 _Registry entry. Present tense; if it is no longer true it is a defect, not
-history (Rule PKR15). Owner: Colin Clapson. Last verified 2026-07-11._
+history (Rule PKR15). Owner: Colin Clapson. Last verified 2026-07-18._

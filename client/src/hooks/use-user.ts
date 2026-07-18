@@ -70,7 +70,11 @@ export function useUser() {
   });
 
   const registerMutation = useMutation({
-    mutationFn: async (credentials: InsertUser) => {
+    // BUS1 — `acceptedAgreements` accompanies the credentials. It is typed as an
+    // explicit extra rather than folded into InsertUser because it is not a
+    // property of a user: it is a fact about a moment, and the row it produces
+    // lives in the consent ledger, not on the account.
+    mutationFn: async (credentials: InsertUser & { acceptedAgreements?: boolean }) => {
       // CONV1 P5 / SCH-1: the device DETECTS the new household's time zone at
       // signup, and that is the whole of what the client may do with household
       // time (HT12 — the client renders household time and never derives it; the

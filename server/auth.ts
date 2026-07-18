@@ -6,8 +6,18 @@ import { scrypt, randomBytes, timingSafeEqual, createHash } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser } from "@shared/schema";
-import { sendVerificationEmail, sendPasswordResetEmail } from "./email";
+import { sendVerificationEmail, sendPasswordResetEmail, sendWelcomeEmail } from "./email";
 import { sanitizeUser } from "./lib/sanitizeUser";
+// BUS1 — the consent ledger. Registration is the moment consent is given, so it
+// is the moment it must be recorded; capturing it anywhere later would be
+// recording an agreement THA cannot show was ever actually made.
+import { recordConsents, consentContextFrom } from "./privacy/consent-service";
+import { REQUIRED_CONSENTS_AT_REGISTRATION } from "@shared/privacy/consent";
+// BUS1 — company contact addresses converged onto their single owner. These
+// defaults previously lived as string literals here AND as a second hardcoded
+// copy in client/src/pages/profile-page.tsx; both are now this one file
+// (Principle 2). The environment overrides below are unchanged.
+import { COMPANY_PROFILE } from "@shared/legal";
 // TRUST1-S5. `authRateLimit(route)` returns that route's middleware chain — per-IP, and per-account
 // where an account can be identified. server/lib/auth-rate-limit.ts is the ONE owner of every limit,
 // every window, and the policy list; nothing here decides a number. It throws on an unknown route
@@ -30,7 +40,10 @@ export async function hashPassword(password: string) {
   return `${buf.toString("hex")}.${salt}`;
 }
 
-async function comparePasswords(supplied: string, stored: string) {
+// Exported for BUS1: account erasure re-verifies the password at the moment of
+// deletion. An irreversible action must be confirmed by the person holding the
+// password, not merely by whoever holds the session cookie.
+export async function comparePasswords(supplied: string, stored: string) {
   const [hashed, salt] = stored.split(".");
   const hashedBuf = Buffer.from(hashed, "hex");
   const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
@@ -214,8 +227,8 @@ export function setupAuth(app: Express) {
     }
   });
 
-  const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || "support@thehealthyapples.com";
-  const SUGGESTIONS_EMAIL = process.env.SUGGESTIONS_EMAIL || "suggestions@thehealthyapples.com";
+  const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || COMPANY_PROFILE.supportEmail;
+  const SUGGESTIONS_EMAIL = process.env.SUGGESTIONS_EMAIL || COMPANY_PROFILE.suggestionsEmail;
 
   app.get("/api/config", (_req, res) => {
     const familyPlanEnabled = process.env.FAMILY_PLAN_ENABLED !== "false";
@@ -243,12 +256,27 @@ export function setupAuth(app: Express) {
       return res.status(403).json({ message: "Private beta — registration is currently closed. Request access to join." });
     }
 
-    const { username, password, timeZone } = req.body;
+    const { username, password, timeZone, acceptedAgreements } = req.body;
     if (!username || !password) {
       return res.status(400).json({ message: "Username and password are required." });
     }
     if (password.length < 6) {
       return res.status(400).json({ message: "Password must be at least 6 characters." });
+    }
+
+    // BUS1 — consent is a precondition of the account existing, not a step after
+    // it. THA stores allergies and health goals, which are special category data
+    // under UK GDPR Art. 9 and lawful only on explicit consent, so an account
+    // created without it would be unlawful from its first row.
+    //
+    // The check is a REFUSAL, never a default: a missing or false flag creates no
+    // account. There is deliberately no way to pass this by omission, because a
+    // pre-ticked box is not consent (Art. 4(11) — a clear affirmative action).
+    if (acceptedAgreements !== true) {
+      return res.status(400).json({
+        message:
+          "Please confirm you agree to the Terms of Service and Privacy Policy, and to us storing your household's dietary needs.",
+      });
     }
 
     try {
@@ -276,6 +304,19 @@ export function setupAuth(app: Express) {
       storage.seedDefaultFoodPantryItems(user.id).catch(e =>
         console.warn("[Auth] Failed to seed food pantry items:", e)
       );
+
+      // Recorded immediately after the account exists and BEFORE anything else
+      // can fail, so there can be no account whose consent went unrecorded.
+      // Awaited, not fire-and-forget: if the ledger write fails, that is a
+      // registration failure, because an account THA cannot show consent for is
+      // an account it is not entitled to have.
+      await recordConsents({
+        userId: user.id,
+        consentTypes: REQUIRED_CONSENTS_AT_REGISTRATION,
+        granted: true,
+        source: "registration",
+        context: consentContextFrom(req),
+      });
 
       const token = randomBytes(32).toString("hex");
       const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
@@ -325,6 +366,14 @@ export function setupAuth(app: Express) {
       }
 
       await storage.markEmailVerified(user.id);
+
+      // BUS1 — the welcome email is sent HERE and not at registration, because
+      // until this moment THA does not know the address belongs to the person
+      // who typed it. Fire-and-forget: a welcome that fails to send must never
+      // turn a successful verification into an error the household sees.
+      sendWelcomeEmail(user.username).catch((e) =>
+        console.warn("[Auth] Welcome email failed:", e?.message),
+      );
 
       return res.redirect(`${APP_BASE_URL}/auth?verified=1`);
     } catch (err: any) {

@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   ArrowRight, Lock, UserPlus, CheckCircle2, AlertTriangle, Mail,
   Loader2, RefreshCw, KeyRound, CalendarDays, Search, ShoppingBasket, ChevronDown,
@@ -571,7 +572,11 @@ export default function AuthPage() {
                 <AuthForm
                   onSubmit={(data) => {
                     setLastLoginEmail(data.username);
-                    register(data);
+                    // BUS1 — the form cannot submit unless the box is ticked (see
+                    // AuthForm below), and the server refuses the request without
+                    // this flag regardless. Two independent checks, because a
+                    // client-side-only consent gate is not a consent gate.
+                    register({ ...data, acceptedAgreements: true });
                   }}
                   submitLabel="Create Account"
                   isSubmitting={isRegistering}
@@ -612,6 +617,27 @@ export default function AuthPage() {
                 <p className="text-xs text-muted-foreground/50">Secure login. Your data stays private.</p>
               </div>
 
+              {/* BUS1 — the policies, reachable before signing up.
+                  This is the ONLY public entrance to them in the product, which
+                  is why it is here and not only inside Profile. There is
+                  deliberately no cookie consent banner: THA sets one strictly
+                  necessary session cookie and none at all until you sign in, so
+                  a banner asking permission for it would be consent theatre.
+                  The Cookie Policy records that reasoning in full. */}
+              <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 pt-1">
+                <a href="/legal/privacy-policy" className="text-xs text-muted-foreground/50 hover:text-muted-foreground" data-testid="link-footer-privacy">
+                  Privacy
+                </a>
+                <span aria-hidden="true" className="text-xs text-muted-foreground/30">·</span>
+                <a href="/legal/terms-of-service" className="text-xs text-muted-foreground/50 hover:text-muted-foreground" data-testid="link-footer-terms">
+                  Terms
+                </a>
+                <span aria-hidden="true" className="text-xs text-muted-foreground/30">·</span>
+                <a href="/legal/cookie-policy" className="text-xs text-muted-foreground/50 hover:text-muted-foreground" data-testid="link-footer-cookies">
+                  Cookies
+                </a>
+              </div>
+
               {/* Explore CTA - secondary route, below main auth flow */}
               <div className="pt-3 border-t border-border/40">
                 <button
@@ -648,6 +674,11 @@ function AuthForm({ onSubmit, submitLabel, isSubmitting, testIdPrefix, isRegiste
   showPasswordToggle?: boolean;
 }) {
   const [showPassword, setShowPassword] = useState(false);
+  // BUS1 — starts FALSE and is never pre-ticked. UK GDPR Art. 4(11) requires a
+  // clear affirmative action, and a pre-ticked box is the canonical example of
+  // what does not count. It is also not persisted between renders: if the form
+  // is abandoned and returned to, the person agrees again.
+  const [agreed, setAgreed] = useState(false);
   const form = useForm<InsertUser>({
     resolver: zodResolver(insertUserSchema),
     defaultValues: { username: "", password: "" },
@@ -711,10 +742,45 @@ function AuthForm({ onSubmit, submitLabel, isSubmitting, testIdPrefix, isRegiste
                 </FormItem>
               )}
             />
+            {/* BUS1 — consent at the moment of signing up.
+                Shown ONLY when registering: an existing account has already
+                agreed, and asking again at every sign-in would train people to
+                click past it.
+
+                The three agreements are presented as one action deliberately.
+                All three are required — the product cannot lawfully run without
+                any of them — so three separate boxes would be three ways to say
+                the same "no" while implying a choice that does not exist. What
+                IS separated is the third clause: storing allergies is special
+                category health data under Art. 9, and it is named in plain words
+                rather than buried inside "and the Privacy Policy". */}
+            {isRegister && (
+              <div className="flex gap-3 rounded-lg border border-border/70 bg-background/40 p-3">
+                <Checkbox
+                  id="register-agree"
+                  checked={agreed}
+                  onCheckedChange={(v) => setAgreed(v === true)}
+                  className="mt-0.5"
+                  data-testid="checkbox-register-agree"
+                />
+                <label htmlFor="register-agree" className="text-xs leading-relaxed text-muted-foreground cursor-pointer">
+                  I agree to the{" "}
+                  <a href="/legal/terms-of-service" target="_blank" rel="noreferrer" className="text-primary hover:underline" data-testid="link-register-terms">
+                    Terms of Service
+                  </a>{" "}
+                  and the{" "}
+                  <a href="/legal/privacy-policy" target="_blank" rel="noreferrer" className="text-primary hover:underline" data-testid="link-register-privacy">
+                    Privacy Policy
+                  </a>
+                  , and I consent to The Healthy Apples storing my household's allergies and dietary
+                  needs so it can keep us safe.
+                </label>
+              </div>
+            )}
             <Button variant="default"
               type="submit"
               className="w-full h-12 text-base font-semibold shadow-sm shadow-primary/15 mt-1"
-              disabled={isSubmitting}
+              disabled={isSubmitting || (isRegister && !agreed)}
               data-testid={`button-${testIdPrefix}-submit`}
             >
               {isRegister ? (

@@ -962,7 +962,21 @@ export type InsertMealPlanTemplateItem = z.infer<typeof insertMealPlanTemplateIt
 
 export const adminAuditLog = pgTable("admin_audit_log", {
   id: serial("id").primaryKey(),
-  adminUserId: integer("admin_user_id").notNull().references(() => users.id),
+  /**
+   * BUS1: NOT NULL was DROPPED (migration `2026-07-18_bus1_trust_and_compliance`).
+   *
+   * The column is a foreign key to users.id with no ON DELETE action, and it was
+   * NOT NULL — which together meant an operator account that had ever performed
+   * an audited action could not be deleted at all. Not "was deleted badly": the
+   * database refused, so UK GDPR Art. 17 was unsatisfiable for every staff
+   * account in the platform.
+   *
+   * Deleting the audit rows instead was rejected — an audit log a person can
+   * erase by asking is not an audit log. So the row survives with the actor
+   * nulled: what was done is still recorded, who did it is not. Art. 17(3)(b)
+   * permits exactly this.
+   */
+  adminUserId: integer("admin_user_id").references(() => users.id),
   action: text("action").notNull(),
   targetUserId: integer("target_user_id").references(() => users.id),
   metadata: jsonb("metadata"),
@@ -2836,3 +2850,180 @@ export const barcodeLookupEvents = pgTable("barcode_lookup_events", {
 }));
 
 export type BarcodeLookupEvent = typeof barcodeLookupEvents.$inferSelect;
+
+// ─── BUS1 — TRUST & COMPLIANCE ───────────────────────────────────────────────
+//
+// Three tables. Governing architecture:
+// docs/architecture/THA_TRUST_AND_COMPLIANCE_ARCHITECTURE.md
+//
+// Created by the reviewed migration `2026-07-18_bus1_trust_and_compliance`
+// (server/migrations/runner.ts). Per MIGRATIONS.md, a table declared here and
+// nowhere else does not exist in production — both places, always.
+
+// ─── user_consents ───────────────────────────────────────────────────────────
+//
+// THE APPEND-ONLY CONSENT LEDGER. Register Domain 34.
+//
+// One row per consent DECISION, never per consent STATE. A withdrawal is a new
+// row with `granted = false`; nothing here is ever updated or deleted while the
+// account lives. The current answer for a (user_id, consent_type) pair is the
+// row with the newest `recorded_at`.
+//
+// WHY IT IS SHAPED THIS WAY: UK GDPR Art. 7(1) requires THA to be able to
+// DEMONSTRATE consent. A mutable row demonstrates nothing — it cannot tell
+// "consented, then withdrew" apart from "never consented, and somebody edited
+// the row". The vocabulary (which consents exist, their wording, their lawful
+// basis) is owned by shared/privacy/consent.ts and is NOT restated here;
+// this table owns only what a household answered, and when.
+//
+// `document_version` is not decoration. "Agreed to the privacy policy" is not a
+// demonstrable fact, because the policy may have changed since. "Agreed to
+// privacy policy 1.0.0 on this date" is. The version comes from
+// shared/legal/index.ts.
+//
+// SURVIVES ERASURE, DELIBERATELY AND LAWFULLY. On account deletion `user_id` is
+// set to NULL rather than the row being removed (see the FK below), because THA
+// may need to show that consent was obtained for processing that has already
+// happened — a legal obligation under Art. 6(1)(c), and one of the two records
+// the Privacy Policy tells households will outlive their account. Once nulled,
+// the row identifies nobody: no email, no name, no household.
+export const userConsents = pgTable("user_consents", {
+  id: serial("id").primaryKey(),
+  /** NULL once the account is erased. The row survives; the person does not. */
+  userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
+  /** A ConsentType from shared/privacy/consent.ts. */
+  consentType: text("consent_type").notNull(),
+  granted: boolean("granted").notNull(),
+  /** The legal document consented against, if any. A LegalDocumentSlug. */
+  documentSlug: text("document_slug"),
+  /** The version of that document. Without it the row proves nothing. */
+  documentVersion: text("document_version"),
+  /** A ConsentSource from shared/privacy/consent.ts. */
+  source: text("source").notNull(),
+  /**
+   * Evidence of the circumstances of consent, retained under Art. 7(1).
+   * Both are personal data and both are stated in the Privacy Policy. They are
+   * nulled at erasure along with user_id — see the erasure service.
+   */
+  recordedIp: text("recorded_ip"),
+  recordedUserAgent: text("recorded_user_agent"),
+  recordedAt: timestamp("recorded_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  userIdx: index("user_consents_user_id_idx").on(table.userId),
+  lookupIdx: index("user_consents_lookup_idx").on(table.userId, table.consentType, table.recordedAt),
+}));
+
+export type UserConsent = typeof userConsents.$inferSelect;
+export const insertUserConsentSchema = createInsertSchema(userConsents).omit({
+  id: true,
+  recordedAt: true,
+});
+export type InsertUserConsent = z.infer<typeof insertUserConsentSchema>;
+
+// ─── support_requests ────────────────────────────────────────────────────────
+//
+// EVERY MESSAGE A HOUSEHOLD SENDS THA. Register Domain 35.
+//
+// ONE table, four kinds — `question`, `issue`, `feature`, `data-correction`.
+// Not four tables, and this is a deliberate architectural decision rather than a
+// convenience: a contact form, a bug report, a feature request and a rectifica-
+// tion request differ ONLY in what the person wants; they share every other
+// property (who sent it, what they said, what it is about, has anyone answered).
+// Four tables would be four owners of one fact — the thing Principle 2 forbids —
+// and would guarantee that the operator surface, the triage state machine and
+// the notification path each got built three times and drifted twice.
+//
+// `data-correction` is not a fifth thing bolted on: a UK GDPR Art. 16
+// rectification request IS a message from a household that a person must act on,
+// with a legal clock attached. Giving it its own table would have split one
+// queue in two and made it possible for a lawful request to sit unseen in the
+// half nobody watches.
+//
+// SURVIVES ERASURE AS AN ANONYMOUS ROW, for the same reason as the consent
+// ledger: THA must be able to show it answered a data-subject request. `user_id`
+// is nulled and the free text is redacted by the erasure service — see there.
+export const supportRequests = pgTable("support_requests", {
+  id: serial("id").primaryKey(),
+  /** NULL once the account is erased, or for a request from a signed-out person. */
+  userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
+  /** 'question' | 'issue' | 'feature' | 'data-correction'. */
+  kind: text("kind").notNull(),
+  subject: text("subject").notNull(),
+  body: text("body").notNull(),
+  /**
+   * Where the person was when they wrote it — a route like `/planner`.
+   * Supplied by the client for an `issue`, so an operator can reproduce it
+   * without a conversation. Never inferred, never required.
+   */
+  contextPath: text("context_path"),
+  /** Reply-to address. For a signed-in person, defaults to their account email. */
+  contactEmail: text("contact_email"),
+  /** 'new' | 'acknowledged' | 'resolved' | 'closed'. */
+  status: text("status").notNull().default("new"),
+  /** Operator-only. Never shown to the household. */
+  internalNote: text("internal_note"),
+  resolvedByUserId: integer("resolved_by_user_id").references(() => users.id, { onDelete: "set null" }),
+  resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  userIdx: index("support_requests_user_id_idx").on(table.userId),
+  statusIdx: index("support_requests_status_idx").on(table.status, table.createdAt),
+  kindIdx: index("support_requests_kind_idx").on(table.kind),
+}));
+
+export type SupportRequest = typeof supportRequests.$inferSelect;
+export const insertSupportRequestSchema = createInsertSchema(supportRequests).omit({
+  id: true,
+  status: true,
+  internalNote: true,
+  resolvedByUserId: true,
+  resolvedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertSupportRequest = z.infer<typeof insertSupportRequestSchema>;
+
+// ─── privacy_activity_log ────────────────────────────────────────────────────
+//
+// PROOF THAT THA HONOURED A DATA-SUBJECT REQUEST. Register Domain 36.
+//
+// One row per exercised right: an export taken, an account erased, a correction
+// requested. It is an accountability record under UK GDPR Art. 5(2), and it is
+// the ONLY record that survives an erasure intact — which is precisely why it is
+// built to identify nobody.
+//
+// THE DESIGN CONSTRAINT THAT SHAPES EVERY COLUMN: this table must be able to
+// answer "did we erase account 4192, and when?" WITHOUT storing anything that
+// could reconstitute who 4192 was. So it holds the integer id and the action and
+// the date, and it holds no email, no name, no household, and no free text.
+// `user_id` is a plain integer with NO foreign key — deliberately, because a FK
+// to `users` would either block the delete or cascade the evidence away with it,
+// and the whole point of this row is to outlive the account.
+export const privacyActivityLog = pgTable("privacy_activity_log", {
+  id: serial("id").primaryKey(),
+  /**
+   * The account the action concerned. Plain integer, no FK — see above.
+   * After erasure this number refers to no row anywhere, which is the intent:
+   * it is an opaque token that proves an action happened, not a way back.
+   */
+  userId: integer("user_id"),
+  /** 'data-export' | 'account-erasure' | 'correction-request'. */
+  action: text("action").notNull(),
+  /**
+   * Machine-readable outcome detail with NO personal data — for an erasure, the
+   * per-table row counts removed, so THA can show the erasure was complete.
+   */
+  detail: jsonb("detail").$type<Record<string, number | string>>(),
+  occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  actionIdx: index("privacy_activity_log_action_idx").on(table.action, table.occurredAt),
+  userIdx: index("privacy_activity_log_user_id_idx").on(table.userId),
+}));
+
+export type PrivacyActivityLogEntry = typeof privacyActivityLog.$inferSelect;
+export const insertPrivacyActivityLogSchema = createInsertSchema(privacyActivityLog).omit({
+  id: true,
+  occurredAt: true,
+});
+export type InsertPrivacyActivityLogEntry = z.infer<typeof insertPrivacyActivityLogSchema>;

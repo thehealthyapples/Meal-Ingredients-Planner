@@ -3751,50 +3751,42 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
+  /**
+   * BUS1 — RETIRED IMPLEMENTATION. This method is now a thin alias over the
+   * canonical account erasure service (Principle 8 — evolution over
+   * replacement; the predecessor is migrated, not left beside its successor).
+   *
+   * WHAT IT USED TO DO, AND WHY THAT COULD NOT BE KEPT:
+   *   It hand-deleted 13 tables out of the ~45 that hold data attributable to a
+   *   person. It was written for demo accounts, where that was survivable, and
+   *   it was the ONLY multi-table user deletion in the platform — so it was also
+   *   the thing a GDPR erasure would inevitably have been built on top of.
+   *
+   *   Three defects made that unsafe:
+   *     1. It found planner weeks by `household_id` alone. That column is
+   *        NULLABLE, so every week created before a household existed was
+   *        invisible to it and survived deletion, along with its days and
+   *        entries — none of which declares a foreign key, so nothing cascaded.
+   *     2. It deleted the WHOLE household and every membership of it, even when
+   *        other real people were members. As a template for erasure that would
+   *        have destroyed other households' data on one person's request.
+   *     3. It left ~30 tables untouched, including the food diary, the pantry,
+   *        the freezer, Companion conversations, and — most seriously —
+   *        `household_eaters`, whose ON DELETE SET NULL meant a person's
+   *        declared ALLERGIES (Art. 9 health data) outlived their account.
+   *
+   * The canonical service fixes all three, and is declaration-driven from
+   * server/privacy/personal-data-registry.ts so that export and erasure can
+   * never disagree about what THA holds.
+   *
+   * The signature is unchanged, so both existing callers — DELETE
+   * /api/demo/cleanup and DELETE /api/admin/demo/cleanup-expired in
+   * server/auth.ts — are unaffected and now erase demo accounts COMPLETELY,
+   * which they never previously did.
+   */
   async cleanupDemoUser(userId: number): Promise<void> {
-    let householdId: number | null = null;
-    try {
-      householdId = await getHouseholdForUser(userId);
-    } catch { }
-
-    if (householdId) {
-      const hhWeeks = await db.select().from(plannerWeeks).where(eq(plannerWeeks.householdId, householdId));
-      for (const week of hhWeeks) {
-        const days = await db.select().from(plannerDays).where(eq(plannerDays.weekId, week.id));
-        for (const day of days) {
-          await db.delete(plannerEntries).where(eq(plannerEntries.dayId, day.id));
-        }
-        await db.delete(plannerDays).where(eq(plannerDays.weekId, week.id));
-      }
-      await db.delete(plannerWeeks).where(eq(plannerWeeks.householdId, householdId));
-    }
-
-    const userShoppingItems = await db.select({ id: shoppingList.id }).from(shoppingList).where(eq(shoppingList.userId, userId));
-    const itemIds = userShoppingItems.map(i => i.id);
-    if (itemIds.length > 0) {
-      await db.delete(ingredientSources).where(inArray(ingredientSources.shoppingListItemId, itemIds));
-      await db.delete(productMatches).where(inArray(productMatches.shoppingListItemId, itemIds));
-    }
-    await db.delete(shoppingList).where(eq(shoppingList.userId, userId));
-
-    const userMeals = await db.select({ id: meals.id }).from(meals).where(eq(meals.userId, userId));
-    const mealIds = userMeals.map(m => m.id);
-    if (mealIds.length > 0) {
-      await db.delete(nutrition).where(inArray(nutrition.mealId, mealIds));
-      await db.delete(mealAllergens).where(inArray(mealAllergens.mealId, mealIds));
-    }
-    await db.delete(meals).where(eq(meals.userId, userId));
-
-    await db.delete(userPreferences).where(eq(userPreferences.userId, userId));
-    await db.delete(userStreaks).where(eq(userStreaks.userId, userId));
-    await db.delete(userHealthTrends).where(eq(userHealthTrends.userId, userId));
-
-    if (householdId) {
-      await db.delete(householdMembers).where(eq(householdMembers.householdId, householdId));
-      await db.delete(households).where(eq(households.id, householdId));
-    }
-
-    await db.delete(users).where(eq(users.id, userId));
+    const { eraseAccount } = await import("./privacy/account-erasure-service");
+    await eraseAccount(userId);
   }
 
   async getFoodKnowledgeAll(): Promise<FoodKnowledge[]> {

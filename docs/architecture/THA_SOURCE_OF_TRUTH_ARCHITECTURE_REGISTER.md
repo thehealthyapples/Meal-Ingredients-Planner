@@ -77,10 +77,11 @@ The following domains have been identified by reading all TypeScript files under
 | 26 | Membership / Subscription | User tier: free / premium / friends_family |
 | 27 | User Preferences | Non-dietary preferences: display, saved settings |
 
-> **Domains 28–33 were added after this inventory was taken (2026-06-23).** 28 and 29 were declared
+> **Domains 28–36 were added after this inventory was taken (2026-06-23).** 28 and 29 were declared
 > at their creation, by the workstreams that built them. **30–33 were not**: they are live domains
 > this inventory never listed, declared retrospectively by `OWN-5` (2026-07-16) under CONV1 phase P1.
-> The distinction matters and is not cosmetic — see Domain 30's note.
+> The distinction matters and is not cosmetic — see Domain 30's note. **34–36 were declared at
+> their creation by `BUS1` (2026-07-18)**, the workstream that built them.
 
 | # | Domain | Description |
 |---|--------|-------------|
@@ -90,6 +91,9 @@ The following domains have been identified by reading all TypeScript files under
 | 31 | Evidence & Learning (EL1) | What THA has observed about a household, and what it has confirmed *(declared `OWN-5`)* |
 | 32 | Platform Observations (OBS1) | What the platform did — operator telemetry *(declared `OWN-5`)* |
 | 33 | Benchmark World | The ten authored Benchmark Households and their scored runs *(declared `OWN-5`)* |
+| 34 | Legal Agreement & Consent | What THA promises, and what a household agreed to *(added `BUS1`, 2026-07-18)* |
+| 35 | Personal Data (Subject Rights) | What personal data THA holds about a person, and what happens to it when they ask *(added `BUS1`)* |
+| 36 | Support Requests | Every message a household sends THA, and what was done about it *(added `BUS1`)* |
 
 ---
 
@@ -625,6 +629,77 @@ The following domains have been identified by reading all TypeScript files under
 >
 > **The correction is not pedantry — it changes what the row must say.** Declared as *table-owning*, this domain's SoT would have been recorded as a table that does not exist, and a reader looking for the ten households would search the database and find nothing. Its actual source of truth is **an authored TypeScript fixture and an append-only directory of JSON**, which Rule 1 permits explicitly: *"a file path or DB table name."* **CPI1 and CONV1 are history and are not edited** (`REPOSITORY_CONVENTIONS.md` § 3); the correction of record is this row and `docs/implementation/governance/OWN5_SOURCE_OF_TRUTH_REGISTER_DOMAINS.md` § 4.1.
 
+
+### Domain 34: Legal Agreement & Consent
+
+*(Added `BUS1`, 2026-07-18.)*
+
+> What The Healthy Apples promises a household, and what that household actually agreed to. Two facts, deliberately split across two owners: the **documents** are authored content and never change per household; the **decisions** are per household and never change once made.
+
+| Attribute | Value |
+|-----------|-------|
+| Authoritative Source (documents) | **`shared/legal/`** — `LEGAL_DOCUMENTS` in `index.ts` is the single owner of which documents exist, their `version`, their `effectiveDate`, and every word they say. Pure, zero-I/O, no table (Principle 5) |
+| Authoritative Source (decisions) | **`user_consents`** — the append-only ledger. One row per DECISION, never per state; a withdrawal is a NEW row with `granted = false` |
+| Placeholder company facts | **`shared/legal/company-profile.ts`** — the only file holding an invented company value, with `PLACEHOLDER_FIELDS` naming each. `placeholder` is DERIVED from that list, never set by hand |
+| Sub-processors | **`shared/legal/subprocessors.ts`** — third parties receiving household data, each read out of the code that calls them (Rule TC2) |
+| Consent vocabulary | **`shared/privacy/consent.ts`** — which consents exist, their exact wording, lawful basis, and withdrawal consequence. Owns the vocabulary; owns none of the answers |
+| Read layer | `GET /api/legal`, `GET /api/legal/:slug` (**public**), `GET /api/privacy/consents`, `GET /api/privacy/summary` |
+| Write layer | `recordConsent()` / `recordConsents()` in `server/privacy/consent-service.ts` — the only writers. `POST /api/register` (awaited; a failed ledger write fails registration) and `POST /api/privacy/consents` |
+| Consumers | `client/src/pages/legal-page.tsx`, `privacy-settings-page.tsx`, `auth-page.tsx` |
+| **The enforced invariant** | **Nothing updates or deletes a consent row while the account lives** (Rule TC3). Art. 7(1) requires THA to DEMONSTRATE consent, and a mutable record cannot distinguish *"consented then withdrew"* from *"never consented and somebody edited the row"*. Verified by `server/tests/test-bus1-trust-and-compliance.ts` |
+| Survives erasure | **Yes, anonymised** — `user_id`, IP and user-agent nulled. Lawful basis Art. 6(1)(c); named in the Privacy Policy |
+| Status | **Authoritative — declared and built** |
+
+> **Why the version is part of the fact.** *"Agreed to the privacy policy"* is not demonstrable, because the policy may have changed since. So every row stores the document slug AND its version, taken from `LEGAL_DOCUMENTS` at write time and never accepted from the client — a client-supplied version could claim agreement to a document that was never shown.
+
+---
+
+### Domain 35: Personal Data (Subject Rights)
+
+*(Added `BUS1`, 2026-07-18.)*
+
+> What personal data THA holds about a person, and what happens to it when they exercise a right over it. **This domain owns no data of its own** — every byte it describes belongs to another domain. What it owns is the ENUMERATION, and the two verbs.
+
+| Attribute | Value |
+|-----------|-------|
+| Authoritative Source | **`server/privacy/personal-data-registry.ts`** — one entry per personal-data category, each carrying its physical tables, its export query, and its erasure step |
+| Article 15 consumer | `server/privacy/data-export-service.ts` → `GET /api/privacy/export` |
+| Article 17 consumer | `server/privacy/account-erasure-service.ts` → `DELETE /api/privacy/account`, and `storage.cleanupDemoUser` (retired onto it) |
+| Article 16 consumer | Self-service in Profile, plus a `data-correction` request in Domain 36 |
+| Accountability record | **`privacy_activity_log`** — the only record that survives an erasure intact, and deliberately built to identify nobody: an integer, an action, a date, and per-table row counts. **No foreign key**, so it outlives the row it refers to |
+| Read layer | `GET /api/privacy/summary` — Privacy Settings describes what THA holds by reading THIS registry, so the page cannot describe a platform different from the one holding the data |
+| **The enforced invariant** | **Export and erasure read the same registry; neither may name a table the other does not** (Rule TC6). Art. 15 and Art. 17 are the same question with different verbs, and implemented separately they drift in one direction only — the export gains a table, the erasure does not, and THA quietly keeps data it said it destroyed |
+| Erasure ordering | `ERASURE_ORDER` — `operator-audit` FIRST (its FKs have no `ON DELETE` and BLOCK the delete), `account` LAST. **A registry entry with no position fails the erasure at startup** rather than being silently skipped |
+| Verification | `server/tests/test-bus1-trust-and-compliance.ts` — creates a real account across ~15 tables, erases it, and goes looking for what is left. 42 checks against a live database |
+| Status | **Authoritative — declared and built. Owns no table of its own, and must not acquire one** |
+
+> **Why this registry is executable rather than declarative, recorded as evidence and not preference.** A metadata table interpreted by a generic engine was rejected because this schema is not regular enough for one: `meals`, `shopping_list`, `planner_weeks` and `user_preferences` declare **no foreign key to `users` at all**; ~10 operator-audit tables declare one with **no `ON DELETE`**, so Postgres BLOCKS the delete; `household_eaters` is **`ON DELETE SET NULL`**, so a person's declared allergies — Art. 9 special category health data — would have **orphaned rather than erased**; the planner is two levels of parent with no cascade at either; and `session` is invisible to Drizzle entirely, so a "deleted" account would stay signed in. A generic interpreter would need an escape hatch for each, at which point it is a worse version of a function.
+
+---
+
+### Domain 36: Support Requests
+
+*(Added `BUS1`, 2026-07-18.)*
+
+> Every message a household sends The Healthy Apples, and what was done about it. **One entity, four kinds** — `question`, `issue`, `feature`, `data-correction`.
+
+| Attribute | Value |
+|-----------|-------|
+| Authoritative Source | **`support_requests`** |
+| Vocabulary | **`shared/support/support-request.ts`** — the four kinds, their form wording, their acknowledgements, and the field limits. Owns the words; owns none of the messages |
+| Help content | **`shared/support/help-centre.ts`** — 20 articles, 7 categories. A module today; **retirement condition** (Governance Rule 6): moves to the database when it exceeds ~30 entries or needs non-developer editing |
+| Write layer | `createSupportRequest()` in `server/support/support-service.ts` → `POST /api/support/requests` (authenticated) |
+| Read layer | `GET /api/support/requests` (own), `GET /api/admin/support/requests` (operator), `GET /api/help` (**public**) |
+| Consumers | `client/src/pages/contact-page.tsx`, `help-centre-page.tsx`, `privacy-settings-page.tsx` |
+| **The enforced invariant** | **A new thing a household can send THA is a `kind`, not a table** (Rule TC8). The four differ only in what the sender wants; four tables would be four triage states and four chances for one to be the queue nobody watches |
+| Survives erasure | **Yes, redacted** — `user_id` and email nulled, subject and body replaced. Only the fact that a request was made and answered remains (Art. 5(2)) |
+| Status | **Authoritative — declared and built** |
+
+> **Why `data-correction` shares this table rather than having its own.** A UK GDPR Art. 16 rectification request IS a message a person must act on, with a one-month statutory deadline attached. Giving it a separate table would have split one queue in two and made it possible for a lawful request to sit unseen in the half nobody watches. It is ADDITIONALLY written to `privacy_activity_log` — the log is the accountability record, the queue is how a person answers it, and neither replaces the other.
+
+---
+
+> **The Support Hub finally has an inbound channel.** `SUP1`–`SUP3` and `ADMIN2` built the operator-facing "Support Hub" between them, and it had **no way in**: nothing a household did anywhere in the product created a row an operator could read as *"this person needs help"*. Domain 36 is that channel.
 ---
 
 ## PHASE 3 — DUPLICATION AUDIT

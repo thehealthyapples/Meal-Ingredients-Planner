@@ -530,12 +530,19 @@ function extractJsonLdImage(recipe: JsonLdRecipe): string | null {
 }
 
 import { APP_VERSION } from "./app-version";
+import { registerTrustRoutes } from "./trust-routes";
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
   setupAuth(app);
+
+  // BUS1 — legal documents, the Help Centre, support requests, and the GDPR
+  // rights surface (consent, export, erasure, correction). Registered here in
+  // the same way setupAuth registers the auth endpoints: a bounded domain owns
+  // its own module rather than appending to this file.
+  registerTrustRoutes(app);
 
   app.get('/api/version', (_req, res) => {
     res.json({ version: APP_VERSION });
