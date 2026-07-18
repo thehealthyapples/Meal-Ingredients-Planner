@@ -25,6 +25,7 @@ import { MealFamilyConfidence } from "@/components/meal-detail/MealFamilyConfide
 import { HouseholdAdaptationsSummary } from "@/components/meal-detail/HouseholdAdaptationsSummary";
 import { SimplyBetterChoicesPanel } from "@/components/meal-detail/SimplyBetterChoicesPanel";
 import { useMealFoodIntelligence, MealDiscoveryRow } from "@/components/meal-detail/MealFoodIntelligenceSection";
+import { useCookbookMealIntelligence } from "@/components/CookbookMealIntelligenceStrip";
 // AFI1 — the ONE ambient surface, mounted here so a meal card can carry the
 // household's evidence-backed "small lift" for a meal already on this week's plan.
 // Scoped to the `planner-meal-uplift` type so a meal page shows only that calm
@@ -219,6 +220,15 @@ export default function MealDetailPage() {
   });
 
   const { getIntelligenceFor, discovery } = useMealFoodIntelligence(mealId);
+
+  // HOUSE_ACT3 Door 1 — GET /api/meals/:id/intelligence, on the meal's own page.
+  // The route, its 538-line assembler and this hook all already existed; the
+  // hook's only consumer was CookbookMealIntelligenceStrip on the Cookbook's
+  // Intelligence tab, so the meal detail page — the assembler's most natural
+  // home — never called it. Reused verbatim: no new route, hook, service or
+  // capability, and the 5-minute staleTime means a household arriving from the
+  // Cookbook strip hits cache rather than a second fetch.
+  const { data: mealIntelligence } = useCookbookMealIntelligence(mealId);
 
   const { data: allMeals = [] } = useQuery<Meal[]>({
     queryKey: [api.meals.list.path],
@@ -1217,9 +1227,16 @@ export default function MealDetailPage() {
           adaptations={undefined}
           density={density}
         />
+        {/* HOUSE_ACT3 Door 1 — the uplift suggestions this page had been asking
+            for with a hardcoded `[]`. The meal intelligence assembler has
+            returned `nutritionEnhancement.matches` as `UpliftMatchResult[]` all
+            along (meal-intelligence-assembler.ts:196); until now the only
+            consumer of GET /api/meals/:id/intelligence was the Cookbook strip,
+            so the meal's OWN page never asked. Same route, same hook, same
+            component — no new intelligence and no new service. */}
         <SimplyBetterChoicesPanel
           mealName={meal.name}
-          upliftMatches={[]}
+          upliftMatches={mealIntelligence?.nutritionEnhancement?.matches ?? []}
           density={density}
         />
         {/* AFI1 — the ambient "small lift" for a meal already on this week's plan.

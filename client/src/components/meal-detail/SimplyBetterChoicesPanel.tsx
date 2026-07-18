@@ -28,6 +28,14 @@ export function SimplyBetterChoicesPanel({
 
   const suggestionCount = upliftMatches.reduce((acc, m) => acc + m.suggestions.length, 0);
 
+  // HOUSE_ACT3 — honest absence. This panel had no empty guard, and
+  // meal-detail-page passed it a hardcoded `[]`, so EVERY meal page rendered a
+  // "Simply Better Choices" card containing nothing — a heading promising help
+  // that was never coming. Its siblings all self-guard (HouseholdInsightCard.tsx:34,
+  // SeasonalCard.tsx:35, SimplyBetterChoiceCard.tsx:32); this one now does too.
+  // Nothing to suggest is said by saying nothing, never by an empty shell.
+  if (suggestionCount === 0) return null;
+
   // PX1-W1 (fnd-px-meal-detail-dead-spacing): shared ladder from lib/density-tokens.
   const { padding: paddingClass, stack: stackClass, title: titleSizeClass, text: textSizeClass } = densityClasses(density);
 

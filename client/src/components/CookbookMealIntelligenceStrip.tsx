@@ -10,6 +10,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
+import { type UpliftMatchResult } from "@/components/MealUpliftPanel";
 import { Leaf, Sparkles, CalendarDays, Repeat2, Utensils } from "lucide-react";
 
 // ── Types (mirror server MealIntelligence) ────────────────────────────────────
@@ -26,11 +27,20 @@ interface MealIntelligence {
     plannerAppearanceCount: number;
     lastPlannerWeekNumber: number | null;
   } | null;
+  // HOUSE_ACT3 — typed to the canonical UpliftMatchResult rather than a local
+  // structural subset. The assembler already returns exactly this type
+  // (meal-intelligence-assembler.ts:196), and meal-detail-page now feeds these
+  // matches straight into SimplyBetterChoicesPanel, whose prop is
+  // `UpliftMatchResult[]`. A narrower local shape here would have made the one
+  // real consumer impossible to type without a cast.
   nutritionEnhancement: {
-    matches: Array<{
-      ruleName: string;
-      suggestions: Array<{ ingredient: string; action: string; why: string }>;
-    }>;
+    matches: UpliftMatchResult[];
+  } | null;
+  /** Ingredient-resolution confidence ONLY — never a household or quality judgement. */
+  trust: {
+    totalIngredients: number;
+    resolvedIngredients: number;
+    confidenceLevel: "high" | "medium" | "low" | "unknown";
   } | null;
   foods: Array<{ canonicalName: string; canonicalSlug: string }>;
 }
