@@ -140,7 +140,7 @@ The boundary gate is currently *shadowed* in the real repository: the filing gat
 
 ### Why 98 sessions are sitting on the *active* dashboard
 
-Established by probe, not inference. `session-complete.sh` gates on `repo-structure-verify.sh`, which **fails today** on 12 loose files (10 in `docs/implementation/`, 2 in `docs/investigations/`). Therefore **no session can currently be completed at all** — attempting it on a genuinely finished session returns *"repository structure check failed — session NOT completed."* Sessions accumulate on `CURRENT.md` and the ESR marker never returns to `IDLE`.
+Established by probe, not inference. `session-complete.sh` gates on `repo-structure-verify.sh`, which **fails today** on **10** *(this report originally said 12 — corrected 2026-07-18 by `ENGGOV1`, which established that the two `README.md` files are explicitly permitted: the check reads "README.md index only". The count of actual violations is 9 in `docs/implementation/` + 1 in `docs/investigations/`.)* loose files. Therefore **no session can currently be completed at all** — attempting it on a genuinely finished session returns *"repository structure check failed — session NOT completed."* Sessions accumulate on `CURRENT.md` and the ESR marker never returns to `IDLE`.
 
 The gate is working exactly as DOCGOV1 designed it — drift blocks completion instead of accumulating silently. The drift simply was never cleared, so the block became permanent. The probe mutated nothing (the gate runs before `flock`).
 
@@ -173,7 +173,7 @@ No database, schema, migration, table, or route.
 ## SCOPE LOCK
 
 - **Implemented scope:** Execute the verifier nothing ran; enforce the Rollback Protection Protocol mechanically; give the Operating Manual's mechanical steps one entry point; document all of it.
-- **Explicitly excluded scope:** ENGAUTO2 and every later phase — not begun, not designed, not scaffolded. Remediation of the 45 rollback defects. Filing the 12 loose files. The 29-regression typecheck baseline. Any change to `ci.yml` or the deployment gate.
+- **Explicitly excluded scope:** ENGAUTO2 and every later phase — not begun, not designed, not scaffolded. Remediation of the 45 rollback defects. Filing the 10 loose files. The 29-regression typecheck baseline. Any change to `ci.yml` or the deployment gate.
 
 ---
 
@@ -185,7 +185,7 @@ Per instruction, these were surfaced rather than settled.
 
 **2. The 12 sessions with no rollback protection.** They are historic and cannot be retroactively protected — a tag created today would point at today's commit, not the state those sessions began from, and would be **worse than nothing**: protection that looks real and is not. The honest options are to mark them explicitly unprotected on the dashboard, or to complete and archive them with that fact recorded. **Recommend against back-tagging**, for the same reason `HT7` refuses a back-filled week anchor.
 
-**3. Filing the 12 loose files — this one unblocks everything.** It is the single change that would let *any* session be completed again, and it is a filing judgement (which workstream owns each document), not automation. Small, high-leverage, and blocked on nobody.
+**3. Filing the 10 loose files — this one unblocks everything.** It is the single change that would let *any* session be completed again, and it is a filing judgement (which workstream owns each document), not automation. Small, high-leverage, and blocked on nobody.
 
 **4. Should `session-verify.sh` run in CI?** Deliberately **not** done. `.engineering/` never ships, so its boundary is not a shippability question, and adding it would put a non-shipping concern inside the one deploy gate. Recorded because it is the obvious next question, and the answer should be recorded rather than rediscovered.
 
@@ -202,11 +202,11 @@ Per instruction, these were surfaced rather than settled.
 
 ## OUTCOME
 
-THA's engineering rules are now executed rather than remembered. The boundary verifier that five documents told engineers to run — and that no automation had ever run — is a gate on session completion, proven in an isolated repository to refuse the exact breach that shipped in ENGINT1 and to leave state untouched when it does. The Rollback Protection Protocol, previously enforced by nothing, is now asserted against every active session, and reported 45 defects the moment it was first run, including 12 sessions carrying a rollback identifier that does not exist. The Operating Manual's Step 2 is one command instead of three remembered ones. Nothing was added beside the deployment gate, no application file was touched, and the three most consequential findings — the annotated-tag divergence, the unprotected historic sessions, and the 12 loose files that have made session completion impossible — were stopped at and reported rather than decided.
+THA's engineering rules are now executed rather than remembered. The boundary verifier that five documents told engineers to run — and that no automation had ever run — is a gate on session completion, proven in an isolated repository to refuse the exact breach that shipped in ENGINT1 and to leave state untouched when it does. The Rollback Protection Protocol, previously enforced by nothing, is now asserted against every active session, and reported 45 defects the moment it was first run, including 12 sessions carrying a rollback identifier that does not exist. The Operating Manual's Step 2 is one command instead of three remembered ones. Nothing was added beside the deployment gate, no application file was touched, and the three most consequential findings — the annotated-tag divergence, the unprotected historic sessions, and the 10 loose files that have made session completion impossible — were stopped at and reported rather than decided.
 
 ## NEXT STEPS
 
 - Committed locally, **not pushed**. Pushing requires explicit approval; deployment is a separate approval again and nothing here authorises one.
-- **Four decisions above are the owner's.** Decision 3 (filing 12 loose files) is the highest-leverage: it restores session completion for all 98 active sessions.
+- **Four decisions above are the owner's.** Decision 3 (filing 10 loose files) is the highest-leverage: it restores session completion for all 98 active sessions.
 - **ENGAUTO2 was not begun**, per instruction.
 - The ~239 uncommitted changes authored by others remain untouched, including a concurrently-live `PROD1` session.

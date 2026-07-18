@@ -29,6 +29,12 @@ ALLOWED="$(printf '%s' "$ALLOWED" | tr -s '[:space:]' ' ')"   # one line, single
 strays=""
 while IFS= read -r f; do
   b="${f#./}"
+  # In a LINKED WORKTREE, .git is a FILE (a gitdir pointer), not a directory, so
+  # `find -type f` returns it and it was reported as a stray. That made this
+  # verifier unusable in exactly the place OPERATING_MANUAL.md Step 6 sends you —
+  # "compare against the rollback tag in a temporary worktree if unsure".
+  # .git is never a stray in either form. Fixed by ENGGOV1.
+  [ "$b" = ".git" ] && continue
   git check-ignore -q "$b" 2>/dev/null && continue     # gitignored: not ours
   case " $ALLOWED " in *" $b "*) continue;; esac
   strays="$strays $b"

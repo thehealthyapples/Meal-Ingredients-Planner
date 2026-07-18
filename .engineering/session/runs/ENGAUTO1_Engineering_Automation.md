@@ -29,17 +29,17 @@ Close the gap between THA's engineering protocols and their enforcement: run the
 - [x] `session-new.sh` rollback gate; refuses a nonexistent tag and creates nothing
 - [x] `engineering-verify.sh` aggregator; explicitly NOT a deploy gate, not wired into CI
 - [x] First live run found 45 rollback defects across 98 active sessions (12 with NO protection at all)
-- [x] Root-caused the 98-session dashboard: repo-structure-verify fails on 12 loose files, so NO session can complete
+- [x] Root-caused the 98-session dashboard: repo-structure-verify fails on 10 loose files (ENGAUTO1 said 12; corrected by ENGGOV1 — the 2 README.md files are permitted), so NO session can complete
 - [x] Implementation report written; 4 governance decisions stopped at and reported, not taken
 - [x] Committed locally
 
 **Last checkpoint:** Committed locally; not pushed.
 
 ## Next action
-Owner to review `docs/implementation/engineering/ENGAUTO1_ENGINEERING_AUTOMATION.md` and settle the 4 decisions in it. Highest leverage: file the 12 loose files, which restores session completion for all 98 active sessions. **ENGAUTO2 not begun, per instruction.**
+Owner to review `docs/implementation/engineering/ENGAUTO1_ENGINEERING_AUTOMATION.md` and settle the 4 decisions in it. Highest leverage: file the 10 loose files, which restores session completion for all 98 active sessions — but see `ENGGOV1`/EXC-5: all 10 are other sessions' untracked work and only their authors may file them. **ENGAUTO2 not begun, per instruction.**
 
 ## Blockers
-None for this session. Two pre-existing conditions reported, neither introduced here: session completion is impossible repo-wide until the 12 loose files are filed; and `HEAD` fails its own CI gate with 29 typecheck regressions.
+None for this session. Two pre-existing conditions reported, neither introduced here: session completion is impossible repo-wide until the 10 loose files are filed; and `HEAD` fails its own CI gate with 29 typecheck regressions.
 
 ---
 _Stages: Planning → Rollback Complete → Implementation → Testing → Verification → Documentation → Waiting for User → Complete (or Blocked)._

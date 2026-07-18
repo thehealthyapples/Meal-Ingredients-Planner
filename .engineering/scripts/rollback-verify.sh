@@ -29,10 +29,34 @@ cd "$ROOT"
 SESSION_DIR=".engineering/session"
 CURRENT="$SESSION_DIR/CURRENT.md"
 
+EXCEPTIONS=".engineering/GOVERNANCE_EXCEPTIONS.md"
+
 fail=0
 warned=0
+excepted=0
+EXEMPT=""
+CURRENT_SID=""
+
+# Sessions the governance exceptions register has consciously accepted (ENGGOV1).
+# The register OWNS this list; this script only reads it. A defect covered here is
+# still printed and still counted — it reports as EXC, never as PASS — but it does
+# not fail the run, because 12 of these sessions can NEVER be repaired (a rollback
+# tag created today protects today, not the state the session began from), and a
+# gate that can never go green is a gate that gets switched off.
+if [ -f "$EXCEPTIONS" ]; then
+  EXEMPT="$(sed -n '/<!-- EXEMPT:BEGIN/,/<!-- EXEMPT:END/p' "$EXCEPTIONS" \
+            | grep -vE '^<!--|^```' | tr -d ' \t')"
+fi
+
+is_exempt() { # is_exempt <session-id>
+  [ -n "$1" ] || return 1
+  printf '%s\n' "$EXEMPT" | grep -qxF "$1"
+}
+
 check() { # check <description> <0-if-ok>
   if [ "$2" -eq 0 ]; then printf '  PASS  %s\n' "$1"
+  elif is_exempt "$CURRENT_SID"; then
+    printf '  EXC   %s  [accepted — GOVERNANCE_EXCEPTIONS.md]\n' "$1"; excepted=$((excepted + 1))
   else printf '  FAIL  %s\n' "$1"; fail=1; fi
 }
 warn() { printf '  WARN  %s\n' "$1"; warned=1; }
@@ -99,6 +123,7 @@ tag_from_run_file() { # tag_from_run_file <session-id>
 
 verify_session() { # verify_session <session-id>
   local sid="$1" dash run
+  CURRENT_SID="$sid"
   dash="$(tag_from_dashboard "$sid")"
   run="$(tag_from_run_file "$sid")"
 
@@ -158,6 +183,9 @@ case "$MODE" in
 esac
 
 echo
+if [ "$excepted" -ne 0 ]; then
+  echo "$excepted accepted exception(s) — recorded in GOVERNANCE_EXCEPTIONS.md, not silently passed."
+fi
 if [ "$fail" -ne 0 ]; then
   echo "Rollback protection is INCOMPLETE — see protocols/ROLLBACK_PROTECTION_PROTOCOL.md." >&2
   exit 1
