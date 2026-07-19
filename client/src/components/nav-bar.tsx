@@ -80,76 +80,86 @@ export function roomsByHref(hrefs: readonly string[]): NavItem[] {
   });
 }
 
-const REALM_STYLES: Record<string, { active: string; hover: string; inactive: string; mobileActive: string; mobileInactive: string }> = {
+/* ── Realm styling ────────────────────────────────────────────────────────────
+ *
+ * UX_NAV1 (2026-07-19) — `mobileActive` / `mobileInactive` are GONE, replaced by
+ * `hue`: the one number both of those strings were always built out of.
+ *
+ * They were the nine filled pills the shelf no longer draws. Every room carried
+ * a fill — including the eight you were not in — so navigation read as nine
+ * coloured buttons rather than one piece of furniture. The lit room is now shown
+ * by light (`.nav-shelf-item--lit`, index.css), which needs the hue and nothing
+ * else. NO REALM CHANGED HUE: each `hue` below is read straight off the fills it
+ * replaces, so wayfinding (UIA § 6) means exactly what it meant before and is
+ * only quieter. Realm tint still carries no status and no emphasis.
+ *
+ * `active` / `hover` / `inactive` are UNTOUCHED. They belong to `SidebarNavItem`
+ * and the `DesktopSidebar` that UX1 retired — dormant, mounted nowhere, kept for
+ * safe rollback. They hard-code these same hues a third time, which is a
+ * pre-existing duplication that dies with the sidebar; UX_NAV1 neither fixes it
+ * (the sidebar is out of a visual-refinement brief's scope) nor adds to it.
+ */
+const REALM_STYLES: Record<string, { active: string; hover: string; inactive: string; hue: number }> = {
   "/home": {
     // orchard/apple green — the calm brand-green home anchor
     active:         "bg-[hsl(132,24%,88%)] text-[hsl(132,36%,20%)] dark:bg-[hsl(132,15%,17%)] dark:text-[hsl(132,26%,70%)]",
     hover:          "hover:bg-[hsl(132,18%,92%)] hover:text-[hsl(132,30%,26%)] dark:hover:bg-[hsl(132,10%,14%)] dark:hover:text-[hsl(132,20%,58%)]",
     inactive:       "bg-[hsl(132,10%,94%)] text-[hsl(132,20%,40%)] dark:bg-[hsl(132,8%,12%)] dark:text-[hsl(132,12%,46%)]",
-    mobileActive:   "bg-[hsl(132,24%,86%)] text-[hsl(132,36%,20%)] dark:bg-[hsl(132,15%,19%)] dark:text-[hsl(132,26%,70%)]",
-    mobileInactive: "bg-[hsl(132,12%,92%)] text-[hsl(132,18%,42%)] dark:bg-[hsl(132,8%,14%)] dark:text-[hsl(132,10%,44%)]",
+    hue:            132,
   },
   "/dashboard": {
     active:         "bg-[hsl(42,45%,88%)] text-[hsl(42,58%,20%)] dark:bg-[hsl(42,22%,17%)] dark:text-[hsl(42,48%,72%)]",
     hover:          "hover:bg-[hsl(42,38%,93%)] hover:text-[hsl(42,52%,28%)] dark:hover:bg-[hsl(42,14%,14%)] dark:hover:text-[hsl(42,38%,60%)]",
     inactive:       "bg-[hsl(42,26%,94%)] text-[hsl(42,32%,44%)] dark:bg-[hsl(42,12%,12%)] dark:text-[hsl(42,20%,46%)]",
-    mobileActive:   "bg-[hsl(42,45%,86%)] text-[hsl(42,58%,20%)] dark:bg-[hsl(42,22%,19%)] dark:text-[hsl(42,48%,72%)]",
-    mobileInactive: "bg-[hsl(42,28%,92%)] text-[hsl(42,28%,44%)] dark:bg-[hsl(42,12%,14%)] dark:text-[hsl(42,16%,44%)]",
+    hue:            42,
   },
   "/nutrition": {
     active:         "bg-[hsl(145,22%,88%)] text-[hsl(145,36%,20%)] dark:bg-[hsl(145,14%,17%)] dark:text-[hsl(145,26%,70%)]",
     hover:          "hover:bg-[hsl(145,16%,92%)] hover:text-[hsl(145,30%,26%)] dark:hover:bg-[hsl(145,10%,14%)] dark:hover:text-[hsl(145,20%,58%)]",
     inactive:       "bg-[hsl(145,10%,94%)] text-[hsl(145,20%,42%)] dark:bg-[hsl(145,8%,12%)] dark:text-[hsl(145,12%,46%)]",
-    mobileActive:   "bg-[hsl(145,22%,86%)] text-[hsl(145,36%,20%)] dark:bg-[hsl(145,14%,19%)] dark:text-[hsl(145,26%,70%)]",
-    mobileInactive: "bg-[hsl(145,12%,92%)] text-[hsl(145,16%,44%)] dark:bg-[hsl(145,8%,14%)] dark:text-[hsl(145,10%,44%)]",
+    hue:            145,
   },
   "/cookbook": {
     // wheat amber - warm baked honey tones
     active:         "bg-[hsl(38,50%,87%)] text-[hsl(38,65%,20%)] dark:bg-[hsl(38,28%,17%)] dark:text-[hsl(38,55%,78%)]",
     hover:          "hover:bg-[hsl(38,42%,92%)] hover:text-[hsl(38,58%,27%)] dark:hover:bg-[hsl(38,22%,14%)] dark:hover:text-[hsl(38,45%,65%)]",
     inactive:       "bg-[hsl(38,28%,94%)] text-[hsl(38,40%,40%)] dark:bg-[hsl(38,15%,12%)] dark:text-[hsl(38,28%,52%)]",
-    mobileActive:   "bg-[hsl(38,50%,85%)] text-[hsl(38,65%,20%)] dark:bg-[hsl(38,28%,19%)] dark:text-[hsl(38,55%,78%)]",
-    mobileInactive: "bg-[hsl(38,30%,92%)] text-[hsl(38,38%,40%)] dark:bg-[hsl(38,16%,14%)] dark:text-[hsl(38,24%,50%)]",
+    hue:            38,
   },
   "/planner": {
     // teal-green - cooler, clearer separation from pantry
     active:         "bg-[hsl(172,26%,87%)] text-[hsl(172,38%,18%)] dark:bg-[hsl(172,16%,17%)] dark:text-[hsl(172,30%,72%)]",
     hover:          "hover:bg-[hsl(172,20%,92%)] hover:text-[hsl(172,32%,26%)] dark:hover:bg-[hsl(172,12%,14%)] dark:hover:text-[hsl(172,24%,60%)]",
     inactive:       "bg-[hsl(172,14%,94%)] text-[hsl(172,22%,42%)] dark:bg-[hsl(172,8%,12%)] dark:text-[hsl(172,14%,48%)]",
-    mobileActive:   "bg-[hsl(172,26%,85%)] text-[hsl(172,38%,18%)] dark:bg-[hsl(172,16%,19%)] dark:text-[hsl(172,30%,72%)]",
-    mobileInactive: "bg-[hsl(172,16%,92%)] text-[hsl(172,20%,44%)] dark:bg-[hsl(172,8%,14%)] dark:text-[hsl(172,12%,46%)]",
+    hue:            172,
   },
   "/pantry": {
     // orchard green - warm mid-green, grounded home-storage
     active:         "bg-[hsl(115,22%,88%)] text-[hsl(115,30%,22%)] dark:bg-[hsl(115,15%,17%)] dark:text-[hsl(115,26%,70%)]",
     hover:          "hover:bg-[hsl(115,16%,92%)] hover:text-[hsl(115,26%,28%)] dark:hover:bg-[hsl(115,10%,14%)] dark:hover:text-[hsl(115,20%,58%)]",
     inactive:       "bg-[hsl(115,10%,94%)] text-[hsl(115,20%,40%)] dark:bg-[hsl(115,8%,12%)] dark:text-[hsl(115,14%,46%)]",
-    mobileActive:   "bg-[hsl(115,22%,86%)] text-[hsl(115,30%,22%)] dark:bg-[hsl(115,15%,19%)] dark:text-[hsl(115,26%,70%)]",
-    mobileInactive: "bg-[hsl(115,12%,92%)] text-[hsl(115,18%,42%)] dark:bg-[hsl(115,8%,14%)] dark:text-[hsl(115,12%,44%)]",
+    hue:            115,
   },
   "/analyser": {
     // warm olive - shifted toward golden-olive for clear separation from pantry
     active:         "bg-[hsl(74,22%,89%)] text-[hsl(74,32%,18%)] dark:bg-[hsl(74,12%,18%)] dark:text-[hsl(74,25%,70%)]",
     hover:          "hover:bg-[hsl(74,16%,93%)] hover:text-[hsl(74,26%,26%)] dark:hover:bg-[hsl(74,8%,15%)] dark:hover:text-[hsl(74,18%,58%)]",
     inactive:       "bg-[hsl(74,10%,94%)] text-[hsl(74,18%,44%)] dark:bg-[hsl(74,6%,12%)] dark:text-[hsl(74,10%,44%)]",
-    mobileActive:   "bg-[hsl(74,22%,87%)] text-[hsl(74,32%,18%)] dark:bg-[hsl(74,12%,20%)] dark:text-[hsl(74,25%,70%)]",
-    mobileInactive: "bg-[hsl(74,12%,92%)] text-[hsl(74,14%,44%)] dark:bg-[hsl(74,6%,14%)] dark:text-[hsl(74,10%,42%)]",
+    hue:            74,
   },
   "/my-diary": {
     // apple blossom rose - warm muted berry, reflective and gentle
     active:         "bg-[hsl(348,35%,89%)] text-[hsl(348,45%,24%)] dark:bg-[hsl(348,22%,18%)] dark:text-[hsl(348,35%,72%)]",
     hover:          "hover:bg-[hsl(348,26%,93%)] hover:text-[hsl(348,38%,30%)] dark:hover:bg-[hsl(348,16%,15%)] dark:hover:text-[hsl(348,28%,60%)]",
     inactive:       "bg-[hsl(348,16%,94%)] text-[hsl(348,28%,44%)] dark:bg-[hsl(348,10%,12%)] dark:text-[hsl(348,18%,48%)]",
-    mobileActive:   "bg-[hsl(348,35%,87%)] text-[hsl(348,45%,24%)] dark:bg-[hsl(348,22%,20%)] dark:text-[hsl(348,35%,72%)]",
-    mobileInactive: "bg-[hsl(348,18%,92%)] text-[hsl(348,24%,46%)] dark:bg-[hsl(348,10%,14%)] dark:text-[hsl(348,14%,44%)]",
+    hue:            348,
   },
   "/shopping-workspace": {
     // market teal - fresh, operational, in-store feel
     active:         "bg-[hsl(190,30%,88%)] text-[hsl(190,42%,20%)] dark:bg-[hsl(190,18%,17%)] dark:text-[hsl(190,32%,72%)]",
     hover:          "hover:bg-[hsl(190,22%,92%)] hover:text-[hsl(190,34%,28%)] dark:hover:bg-[hsl(190,12%,14%)] dark:hover:text-[hsl(190,22%,60%)]",
     inactive:       "bg-[hsl(190,12%,94%)] text-[hsl(190,22%,42%)] dark:bg-[hsl(190,8%,12%)] dark:text-[hsl(190,14%,48%)]",
-    mobileActive:   "bg-[hsl(190,30%,86%)] text-[hsl(190,42%,20%)] dark:bg-[hsl(190,18%,19%)] dark:text-[hsl(190,32%,72%)]",
-    mobileInactive: "bg-[hsl(190,16%,92%)] text-[hsl(190,18%,44%)] dark:bg-[hsl(190,8%,14%)] dark:text-[hsl(190,12%,46%)]",
+    hue:            190,
   },
   "/orchard": {
     // COMM2 — warm terracotta; the brick and clay of a settled village, not a
@@ -162,16 +172,14 @@ const REALM_STYLES: Record<string, { active: string; hover: string; inactive: st
     active:         "bg-[hsl(20,34%,89%)] text-[hsl(20,44%,22%)] dark:bg-[hsl(20,20%,18%)] dark:text-[hsl(20,32%,72%)]",
     hover:          "hover:bg-[hsl(20,26%,93%)] hover:text-[hsl(20,38%,28%)] dark:hover:bg-[hsl(20,14%,15%)] dark:hover:text-[hsl(20,24%,60%)]",
     inactive:       "bg-[hsl(20,14%,94%)] text-[hsl(20,24%,42%)] dark:bg-[hsl(20,9%,12%)] dark:text-[hsl(20,14%,47%)]",
-    mobileActive:   "bg-[hsl(20,34%,87%)] text-[hsl(20,44%,22%)] dark:bg-[hsl(20,20%,20%)] dark:text-[hsl(20,32%,72%)]",
-    mobileInactive: "bg-[hsl(20,16%,92%)] text-[hsl(20,22%,44%)] dark:bg-[hsl(20,9%,14%)] dark:text-[hsl(20,13%,45%)]",
+    hue:            20,
   },
   "/shopping-list": {
     // soft sage - light, quick-capture feel
     active:         "bg-[hsl(95,22%,88%)] text-[hsl(95,32%,22%)] dark:bg-[hsl(95,14%,17%)] dark:text-[hsl(95,26%,70%)]",
     hover:          "hover:bg-[hsl(95,16%,92%)] hover:text-[hsl(95,26%,28%)] dark:hover:bg-[hsl(95,10%,14%)] dark:hover:text-[hsl(95,18%,58%)]",
     inactive:       "bg-[hsl(95,10%,94%)] text-[hsl(95,20%,42%)] dark:bg-[hsl(95,6%,12%)] dark:text-[hsl(95,12%,46%)]",
-    mobileActive:   "bg-[hsl(95,22%,86%)] text-[hsl(95,32%,22%)] dark:bg-[hsl(95,14%,19%)] dark:text-[hsl(95,26%,70%)]",
-    mobileInactive: "bg-[hsl(95,12%,92%)] text-[hsl(95,16%,44%)] dark:bg-[hsl(95,6%,14%)] dark:text-[hsl(95,10%,44%)]",
+    hue:            95,
   },
 };
 
@@ -573,15 +581,26 @@ function BottomNavItem({
       type="button"
       onClick={handleClick}
       aria-current={isActive ? "page" : undefined}
-      className={`flex flex-col items-center gap-0.5 px-1.5 md:px-4 py-2 rounded-lg transition-colors min-w-[44px] md:min-w-[64px] min-h-[44px] justify-center select-none ${
+      /* The hue the lit room is lit IN. Passed per item rather than inherited,
+         because nine rooms sit on the shelf at once and `[data-realm]` describes
+         only the one you are in. Inert on the eight unlit ones. */
+      style={{ "--nav-hue": realm?.hue ?? 132 } as React.CSSProperties}
+      className={`nav-shelf-item flex flex-col items-center gap-1 px-1.5 md:px-5 py-2 rounded-xl transition-colors duration-200 min-w-[44px] md:min-w-[64px] min-h-[44px] justify-center select-none ${
         isActive
-          ? realm ? realm.mobileActive : "bg-accent text-primary"
-          : realm ? realm.mobileInactive : "text-muted-foreground"
+          ? "nav-shelf-item--lit"
+          : "text-muted-foreground/80 hover:text-foreground/90"
       }`}
       data-testid={`mobile-nav-${label.toLowerCase().replace(/\s+/g, "-")}`}
     >
-      <Icon className={`h-5 w-5 ${isActive ? "stroke-[2.5]" : ""}`} />
-      <span className="text-[10px] md:text-[11px] font-medium leading-tight">{label}</span>
+      {/* One glyph size and ONE stroke weight, lit or not. The active glyph used
+          to jump to `stroke-[2.5]` while the rest sat at lucide's 2 and the
+          hand-drawn `PantryIcon` at 1.75 — three weights on one shelf, and a
+          thickening glyph as you walked between rooms. The room is now told by
+          light; the furniture does not change shape underneath it. */}
+      <Icon className="h-[18px] w-[18px] stroke-[1.75]" />
+      <span className={`text-[10px] md:text-[11px] leading-tight tracking-[0.01em] ${isActive ? "font-medium" : "font-normal"}`}>
+        {label}
+      </span>
     </button>
   );
 }
@@ -595,7 +614,27 @@ export function BottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-xl border-t border-border"
+      /* UX_NAV1 — the shelf, as ONE surface. `border-border/45` instead of the
+         full-weight rule: the header above already draws a hard realm-tinted
+         edge, and two hard rules bracketing the room made the content between
+         them feel boxed in. The shelf is the quieter of the two on purpose —
+         the header names the room you are in, the shelf only offers the others.
+
+         THE SHELF IS OPAQUE, and the translucency is deliberately retired.
+         `bg-card/95 backdrop-blur-xl` was frosted glass: the room's own content
+         scrolls under a fixed bar, so 5% of it read THROUGH the navigation as
+         ghost words — ingredient names inside the shelf. That was always true;
+         it was merely hidden, because the nine filled pills masked the middle of
+         the bar and the bleed only showed in the gaps. Removing the fills
+         exposed it end to end, which is the useful kind of regression: it showed
+         what the pills had been covering for.
+         Carrying it sheerer (`/85`) was tried first and made it worse. The fix
+         is not a better opacity — it is that a shelf is furniture, and furniture
+         is opaque. Frosted glass is also a technology signature rather than a
+         material one (Blueprint § 8 grounds a surface in material; § 1.5 asks
+         technology to disappear), so the blur goes with it: nothing is left
+         behind that needs blurring. */
+      className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border/45"
       style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       data-testid="mobile-bottom-nav"
       aria-label="Primary"
@@ -612,7 +651,15 @@ export function BottomNav() {
           Scrolling costs a small horizontal nudge on the narrowest phones only;
           every other viewport is byte-identical, and no room is unreachable.
           `md:overflow-visible` keeps desktop exactly as it was. */}
-      <div className="flex items-center justify-around md:justify-center md:gap-2 px-1 py-1 max-w-lg md:max-w-3xl mx-auto overflow-x-auto md:overflow-visible [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {/* UX_NAV1 — `py-1.5` and `md:gap-1` for calmer air around the rooms. The
+          desktop gap came DOWN (2 → 1) and that is not a typo: gaps were what
+          separated nine filled pills, and with the fills gone the same gap only
+          pulls one shelf apart again. Air now sits INSIDE each room's padding
+          (`md:px-5`) where it reads as spacing, not as a seam.
+          The 390px arithmetic COMM2 recorded below is untouched: `min-w-[44px]`
+          is unchanged, `px-1.5` is unchanged, and mobile adds no gap — so nine
+          rooms still need the same ~396px and still scroll, exactly as before. */}
+      <div className="flex items-center justify-around md:justify-center md:gap-1 px-1 py-1.5 max-w-lg md:max-w-3xl mx-auto overflow-x-auto md:overflow-visible [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {NAV_ITEMS.map((item) => {
           const base = item.href.split("?")[0];
           const isActive = isNavItemActive(base, location);

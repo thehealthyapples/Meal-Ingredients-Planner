@@ -559,6 +559,93 @@
 .realm-header-bg     { background-color: var(--realm-bg); }
 .realm-header-border { border-color: var(--realm-border); }
 
+/* ── UX_NAV1 — the navigation shelf ───────────────────────────────────────────
+ *
+ * The shelf is ONE continuous surface, not nine buttons standing on it. Before
+ * this change every room carried its own filled rectangle — including the eight
+ * you were NOT in — so the navigation read as a row of nine coloured pills
+ * competing with each other and with the header above them. Nothing about the
+ * house is nine of anything; a shelf is one piece of furniture.
+ *
+ * The room you are standing in is shown by LIGHT rather than by a filled shape:
+ * a soft glow rising from the shelf beneath that room, and a thin light-line
+ * along its top edge — the under-cabinet light above that room's door. This is
+ * the Experience Blueprint's light (§ 7) and EXPLANG1A § 4A's "Light has
+ * meaning" applied to wayfinding: the lit room is the one you are in.
+ *
+ * The hue arrives per item as `--nav-hue` from `nav-bar.tsx`'s REALM_STYLES,
+ * which has always owned the navigation's colour — only its FORM changed, from
+ * two hard-coded fill strings per realm to the one number they were both built
+ * out of. No realm changed hue, so wayfinding (UIA § 6) is byte-identical in
+ * meaning; it is only quieter. Realm tint here carries no status and no
+ * emphasis, exactly as before.
+ *
+ * These rules are deliberately NOT `[data-realm]`-keyed like the block above.
+ * That vocabulary describes the room you are IN and is set once, on the header;
+ * the shelf needs a different hue on each of nine items at the same time, so
+ * the hue is passed per item instead of inherited from the page.
+ */
+.nav-shelf-item {
+  position: relative;
+  /* Fallback only — every item sets its own. A room with no declared hue lights
+     in the house's own green rather than failing to light at all. */
+  --nav-hue: 132;
+}
+
+/* The lit room: glow beneath, light-line above. Both are pure decoration and
+   sit behind the label, so neither can intercept a tap. */
+.nav-shelf-item--lit::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    62% 72% at 50% 40%,
+    hsl(var(--nav-hue) 40% 58% / 0.19),
+    transparent 74%
+  );
+  pointer-events: none;
+}
+.nav-shelf-item--lit::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 42%;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    hsl(var(--nav-hue) 44% 52% / 0.55),
+    transparent
+  );
+  pointer-events: none;
+}
+.nav-shelf-item--lit > * { position: relative; }
+
+/* The ink of the lit room — the realm hue on the glyph and the word, which is
+   where the colour does its wayfinding work now that the fill is gone. */
+.nav-shelf-item--lit { color: hsl(var(--nav-hue) 34% 29%); }
+
+.dark .nav-shelf-item--lit::before {
+  background: radial-gradient(
+    62% 72% at 50% 40%,
+    hsl(var(--nav-hue) 38% 58% / 0.22),
+    transparent 74%
+  );
+}
+.dark .nav-shelf-item--lit::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    hsl(var(--nav-hue) 40% 60% / 0.5),
+    transparent
+  );
+}
+.dark .nav-shelf-item--lit { color: hsl(var(--nav-hue) 28% 74%); }
+
 /* Realm-aware banner buttons — slightly darker than the banner at rest, darker still when pressed */
 .realm-banner-btn {
   background-color: color-mix(in srgb, var(--realm-bg) 55%, var(--realm-border)) !important;
