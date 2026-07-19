@@ -75,14 +75,6 @@ not 44 units of debt repaid** — the pattern counts `\bdark:` and does not matc
 `.dark `. Recorded in the register's Navigation row so it cannot be misread as
 progress.
 
-## Test result
-
-🔴 **`npm test` is RED and was already red before this change.** It fails at
-`test:benchmark-conversation-isolation`, which NAV1 recorded as failing
-deterministically and **reproduced at `993e1bc8` in a clean detached worktree**.
-UX_NAV1 changed two client presentation files and one script and cannot reach it.
-Not fixed here. NAV1's recommendation stands: **BENCHINT3**.
-
 ## Commit
 
 `169ddc09` — pushed to `origin/int1-intelligence-platform`.
