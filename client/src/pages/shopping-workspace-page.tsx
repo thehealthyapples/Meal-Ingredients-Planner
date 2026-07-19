@@ -30,7 +30,8 @@ import { formatItemDisplay, formatQuantityMetric, formatQuantityImperial, getLiq
 import { deriveQuantityConfidence } from "@/lib/quantity-confidence";
 import AppleRating from "@/components/AppleRating";
 import { canShowScoreForItem } from "@/lib/basket-item-classifier";
-import type { ShoppingListItem, IngredientSource } from "@shared/schema";
+import type { ShoppingListItem, IngredientSource, ProductMatch } from "@shared/schema";
+import { estimateFallbackPrice } from "@shared/price-estimates";
 import type { HouseholdEater } from "@shared/household-eater";
 import { WorkspaceAnalyserSheet } from "@/components/WorkspaceAnalyserSheet";
 // PROD1 — adopt the canonical owner of "there is nothing here"
@@ -139,6 +140,11 @@ type PrepAction =
 
 type SourceFilter = "all" | "planned" | "extras" | "home" | "quick_list";
 type SortOrder = "default" | "apple_score" | "price" | "item" | "item_category";
+/** SHOP3 — canonical here now that the duplicate Shopping surface is retired. */
+type PriceTier = "budget" | "standard" | "premium" | "organic";
+/** A saved household staple from the `shopping_list_extras` table. */
+type ShoppingExtra = { id: number; name: string; category: string; alwaysAdd: boolean; inBasket: boolean };
+const PRICE_TIERS: readonly PriceTier[] = ["budget", "standard", "premium", "organic"] as const;
 
 type PrepSummary = {
   pantryTotal: number;
@@ -675,6 +681,8 @@ function WorkspaceRow({
   onAddItem,
   onConfirmSuggestions,
   onUpdateMeasurement,
+  onRemoveItem,
+  priceInfo,
 }: {
   item: WorkspaceItem;
   sources: IngredientSource[];
@@ -692,6 +700,12 @@ function WorkspaceRow({
   onAddItem?: (name: string) => void;
   onConfirmSuggestions?: (picks: string[]) => void;
   onUpdateMeasurement?: (qty: number | null, unit: string | null) => void;
+  /** Remove this item from the shopping list entirely. */
+  onRemoveItem?: () => void;
+  /** SHOP3 — price for this line at its effective tier. `price: null` means
+   *  no match was found; an estimate is flagged so it is never read as a
+   *  matched price. */
+  priceInfo?: { price: number | null; isEstimate: boolean; onCompare: () => void };
 }) {
   const [editVal, setEditVal] = useState("");
   const [editMode, setEditMode] = useState(false);
@@ -1019,6 +1033,37 @@ function WorkspaceRow({
               </button>
             ) : null
           )}
+          {/* SHOP3 — price for this line. Tap to compare across shops. */}
+          {priceInfo && (
+            <button
+              type="button"
+              onClick={priceInfo.onCompare}
+              className="flex items-center gap-1 tabular-nums text-xs px-1.5 py-1 rounded-md hover:bg-muted/60 transition-colors whitespace-nowrap"
+              aria-label={priceInfo.price != null ? `Compare prices, £${priceInfo.price.toFixed(2)}` : "Compare prices"}
+              data-testid={`ws-price-${item.id}`}
+            >
+              {priceInfo.price != null ? (
+                <>
+                  <span className={priceInfo.isEstimate ? "text-muted-foreground" : "text-foreground font-medium"}>
+                    {priceInfo.isEstimate ? "~" : ""}£{priceInfo.price.toFixed(2)}
+                  </span>
+                </>
+              ) : (
+                <span className="text-muted-foreground">-</span>
+              )}
+            </button>
+          )}
+          {/* Remove — the household's way to take one line off the list. */}
+          {!shopMode && !prepMode && onRemoveItem && (
+            <button
+              onClick={onRemoveItem}
+              className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md border border-transparent text-muted-foreground/70 hover:text-destructive hover:border-destructive/30 hover:bg-destructive/5 transition-colors touch-manipulation whitespace-nowrap"
+              aria-label={`Remove ${item.productName} from the shopping list`}
+              data-testid={`ws-remove-btn-${item.id}`}
+            >
+              <Trash2 className="h-3 w-3 shrink-0" />
+            </button>
+          )}
         </div>
 
         {/* ── Desktop only: Score pinned right (hidden on mobile) ── */}
@@ -1268,6 +1313,42 @@ export default function ShoppingWorkspacePage() {
   const [slCameraOpen, setSlCameraOpen] = useState(false);
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const slFileRef = useRef<HTMLInputElement>(null);
+
+  // ── SHOP3: pricing layer ───────────────────────────────────────────────
+  // Ported wholesale from the retired /basket surface, which was the only
+  // room that rendered cost. localStorage keys are kept identical so a
+  // household's saved retailers, tier and category defaults survive the move.
+  const [selectedRetailers, setSelectedRetailers] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("tha-basket-retailers") || '["Tesco","Sainsbury\'s","Asda"]'); }
+    catch { return ["Tesco", "Sainsbury's", "Asda"]; }
+  });
+  const [globalBasketTier, setGlobalBasketTier] = useState<PriceTier | "item">(
+    () => (localStorage.getItem("tha-basket-tier") as PriceTier | "item") || "item",
+  );
+  const [categoryDefaults, setCategoryDefaultsState] = useState<Record<string, { supermarket: string; tier: string }>>(() => {
+    try { return JSON.parse(localStorage.getItem("tha-basket-category-defaults") || "{}"); } catch { return {}; }
+  });
+  const [comparisonItem, setComparisonItem] = useState<WorkspaceItem | null>(null);
+
+  useEffect(() => {
+    localStorage.setItem("tha-basket-retailers", JSON.stringify(selectedRetailers));
+  }, [selectedRetailers]);
+  useEffect(() => {
+    localStorage.setItem("tha-basket-tier", globalBasketTier);
+  }, [globalBasketTier]);
+  useEffect(() => {
+    localStorage.setItem("tha-basket-category-defaults", JSON.stringify(categoryDefaults));
+  }, [categoryDefaults]);
+
+  const toggleRetailer = useCallback((name: string) => {
+    setSelectedRetailers((prev) => {
+      if (prev.includes(name)) {
+        if (prev.length <= 1) return prev; // never leave the household with no shop
+        return prev.filter((r) => r !== name);
+      }
+      return [...prev, name];
+    });
+  }, []);
 
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>(() => {
     const params = new URLSearchParams(search);
@@ -1642,6 +1723,311 @@ export default function ShoppingWorkspacePage() {
     },
     onError: () => toast({ title: "Failed to clear list", variant: "destructive" }),
   });
+
+  // ── SHOP3: price data ──────────────────────────────────────────────────
+  const { data: allPriceMatches = [] } = useQuery<ProductMatch[]>({
+    queryKey: [api.shoppingList.prices.path],
+  });
+
+  const currentTier = (user?.preferredPriceTier as PriceTier) || "standard";
+
+  const getCategoryDefault = useCallback((cat: string): { supermarket: string; tier: string } => {
+    const saved = categoryDefaults[cat];
+    const defaultTier = globalBasketTier !== "item" ? globalBasketTier : "standard";
+    return { supermarket: saved?.supermarket ?? "", tier: saved?.tier ?? defaultTier };
+  }, [categoryDefaults, globalBasketTier]);
+
+  const setCategoryDefault = useCallback((cat: string, field: "supermarket" | "tier", value: string) => {
+    setCategoryDefaultsState((prev) => {
+      const current = prev[cat] ?? { supermarket: "", tier: globalBasketTier !== "item" ? globalBasketTier : "standard" };
+      return { ...prev, [cat]: { ...current, [field]: value } };
+    });
+  }, [globalBasketTier]);
+
+  const getEffectiveTier = useCallback((item: WorkspaceItem): PriceTier => {
+    const catTier = getCategoryDefault(item.category || "other").tier;
+    return (item.selectedTier as PriceTier) || (catTier as PriceTier) || currentTier;
+  }, [getCategoryDefault, currentTier]);
+
+  const { data: totalCostData } = useQuery<{
+    totalCheapest: number;
+    customTotal: number;
+    supermarketTotals: { supermarket: string; total: number }[];
+    currency: string;
+    preferredTier: string;
+    tierTotals: Record<string, number>;
+  }>({
+    queryKey: [api.shoppingList.totalCost.path, currentTier],
+    queryFn: async () => {
+      const res = await fetch(`${api.shoppingList.totalCost.path}?tier=${currentTier}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch total cost");
+      return res.json();
+    },
+    enabled: allPriceMatches.length > 0,
+  });
+
+  const hasPrices = allPriceMatches.length > 0;
+
+  // Items with no real price contribute a category estimate, so the visible
+  // total covers every line the household can see. Estimates are declared as
+  // estimates — never presented as a matched price.
+  const estimatedExtra = useMemo(() => {
+    let extra = 0;
+    for (const item of items) {
+      const hasReal = allPriceMatches.some(
+        (m) => m.shoppingListItemId === item.id && m.price !== null && m.price !== undefined,
+      );
+      if (hasReal) continue;
+      const est = estimateFallbackPrice(item.category, item.quantityValue, item.unit);
+      if (est != null) extra += est;
+    }
+    return extra;
+  }, [items, allPriceMatches]);
+
+  const hasAnyEstimateInTotal = estimatedExtra > 0;
+
+  const clientBestTotal = useMemo(() => {
+    if (items.length === 0) return null;
+    let total = 0;
+    let anyContribution = hasAnyEstimateInTotal;
+    if (hasPrices) {
+      for (const item of items) {
+        const tier = getEffectiveTier(item);
+        let best: number | null = null;
+        for (const retailer of selectedRetailers) {
+          const match = allPriceMatches.find(
+            (m) => m.shoppingListItemId === item.id && m.supermarket === retailer && m.tier === tier,
+          );
+          if (match?.price !== null && match?.price !== undefined) {
+            if (best === null || match.price < best) best = match.price;
+          }
+        }
+        if (best !== null) { total += best; anyContribution = true; }
+      }
+    }
+    total += estimatedExtra;
+    return anyContribution ? total : null;
+  }, [hasPrices, items, allPriceMatches, selectedRetailers, getEffectiveTier, estimatedExtra, hasAnyEstimateInTotal]);
+
+  // Average Apple Score across items that actually carry one. An unrated item
+  // is excluded rather than counted as zero.
+  const avgThaRating = useMemo(() => {
+    const rated = items.filter((i) =>
+      canShowScoreForItem(i) && i.thaRating != null && (i.thaRating as number) > 0,
+    );
+    if (rated.length === 0) return null;
+    return rated.reduce((sum, i) => sum + (i.thaRating as number), 0) / rated.length;
+  }, [items]);
+
+  // Retailer × tier matrix behind the comparison strip.
+  const comparisonMatrix = useMemo(() => {
+    const matrix: Record<string, Record<PriceTier, number>> = {};
+    for (const retailer of selectedRetailers) {
+      matrix[retailer] = { budget: 0, standard: 0, premium: 0, organic: 0 };
+      for (const tier of PRICE_TIERS) {
+        let sum = 0;
+        for (const item of items) {
+          const match = allPriceMatches.find(
+            (m) => m.shoppingListItemId === item.id && m.supermarket === retailer && m.tier === tier,
+          );
+          if (match?.price != null) sum += match.price;
+        }
+        matrix[retailer][tier] = sum;
+      }
+    }
+    return matrix;
+  }, [selectedRetailers, items, allPriceMatches]);
+
+  const currentByRetailer = useMemo(() => {
+    const out: Record<string, number> = {};
+    for (const retailer of selectedRetailers) {
+      let sum = 0;
+      for (const item of items) {
+        const tier = getEffectiveTier(item);
+        const match = allPriceMatches.find(
+          (m) => m.shoppingListItemId === item.id && m.supermarket === retailer && m.tier === tier,
+        );
+        if (match?.price != null) sum += match.price;
+      }
+      out[retailer] = sum;
+    }
+    return out;
+  }, [selectedRetailers, items, allPriceMatches, getEffectiveTier]);
+
+  // ── SHOP3: "Always in basket" staples ──────────────────────────────────
+  // The `shopping_list_extras` table had NO reader on this surface before
+  // convergence. Note the name collision: the `extras` *source filter* above
+  // means "manually added list item" and is an entirely different concept
+  // from this table. They are deliberately kept apart.
+  const EXTRAS_KEY = ["/api/shopping-list/extras"] as const;
+  const { data: shoppingExtras = [] } = useQuery<ShoppingExtra[]>({ queryKey: EXTRAS_KEY });
+
+  const addExtra = useMutation({
+    mutationFn: ({ name, category, alwaysAdd }: { name: string; category: string; alwaysAdd?: boolean }) =>
+      apiRequest("POST", "/api/shopping-list/extras", { name, category, alwaysAdd }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: EXTRAS_KEY }),
+    onError: () => toast({ title: "Couldn't save that staple", variant: "destructive" }),
+  });
+
+  const deleteExtra = useMutation({
+    mutationFn: (id: number) => apiRequest("DELETE", `/api/shopping-list/extras/${id}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: EXTRAS_KEY }),
+    onError: () => toast({ title: "Couldn't remove that staple", variant: "destructive" }),
+  });
+
+  const updateExtra = useMutation({
+    mutationFn: ({ id, alwaysAdd, inBasket }: { id: number; alwaysAdd?: boolean; inBasket?: boolean }) =>
+      apiRequest("PATCH", `/api/shopping-list/extras/${id}`, { alwaysAdd, inBasket }),
+    onMutate: async ({ id, alwaysAdd, inBasket }) => {
+      await queryClient.cancelQueries({ queryKey: EXTRAS_KEY });
+      const snapshot = queryClient.getQueryData<ShoppingExtra[]>(EXTRAS_KEY);
+      queryClient.setQueryData<ShoppingExtra[]>(EXTRAS_KEY, (old) =>
+        old ? old.map((e) => e.id === id ? {
+          ...e,
+          ...(alwaysAdd !== undefined ? { alwaysAdd } : {}),
+          ...(inBasket !== undefined ? { inBasket } : {}),
+        } : e) : old,
+      );
+      return { snapshot };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.snapshot !== undefined) queryClient.setQueryData(EXTRAS_KEY, ctx.snapshot);
+      // PX1-W0: an optimistic write that silently snaps back reads as a broken
+      // control. Disclose the failure rather than just reverting.
+      toast({ title: "That didn't save", description: "Your change was undone.", variant: "destructive" });
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: EXTRAS_KEY }),
+  });
+
+  const [newExtraName, setNewExtraName] = useState("");
+
+  // Best real price for one line at its effective tier, falling back to a
+  // category estimate. The estimate is returned flagged, never disguised.
+  const resolveItemPrice = useCallback((item: WorkspaceItem): { price: number | null; isEstimate: boolean } => {
+    const tier = getEffectiveTier(item);
+    let best: number | null = null;
+    for (const retailer of selectedRetailers) {
+      const match = allPriceMatches.find(
+        (m) => m.shoppingListItemId === item.id && m.supermarket === retailer && m.tier === tier,
+      );
+      if (match?.price != null && (best === null || match.price < best)) best = match.price;
+    }
+    if (best !== null) return { price: best, isEstimate: false };
+    const est = estimateFallbackPrice(item.category, item.quantityValue, item.unit);
+    return { price: est ?? null, isEstimate: est != null };
+  }, [selectedRetailers, allPriceMatches, getEffectiveTier]);
+
+  // Global tier preference — persisted on the user, as on the retired surface.
+  const updatePriceTier = useMutation({
+    mutationFn: async (tier: PriceTier) => {
+      const res = await fetch(api.priceTier.update.path, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tier }),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to update price tier");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.totalCost.path] });
+    },
+    onError: () => toast({ title: "Couldn't change price tier", variant: "destructive" }),
+  });
+
+  // Per-item tier override.
+  const updateItemTier = useMutation({
+    mutationFn: async ({ id, tier }: { id: number; tier: string }) => {
+      const res = await fetch(buildUrl(api.shoppingList.update.path, { id }), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ selectedTier: tier }),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to update item tier");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.totalCost.path] });
+    },
+    onError: () => toast({ title: "Couldn't change that item's tier", variant: "destructive" }),
+  });
+
+  // SHOP3 — single-item removal. Before convergence this existed only on the
+  // retired /basket surface, so the canonical room had no way to delete one
+  // line from the list.
+  const removeItem = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(buildUrl(api.shoppingList.remove.path, { id }), {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to remove item");
+    },
+    onMutate: async (id) => {
+      const snapshot = queryClient.getQueryData<WorkspaceItem[]>([api.shoppingList.list.path]);
+      queryClient.setQueryData<WorkspaceItem[]>([api.shoppingList.list.path], (old) =>
+        old ? old.filter((it) => it.id !== id) : old,
+      );
+      await queryClient.cancelQueries({ queryKey: [api.shoppingList.list.path] });
+      return { snapshot };
+    },
+    onError: (_err, _id, ctx) => {
+      if (ctx?.snapshot !== undefined) {
+        queryClient.setQueryData([api.shoppingList.list.path], ctx.snapshot);
+      }
+      toast({ title: "Couldn't remove that item", variant: "destructive" });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.prices.path] });
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.totalCost.path] });
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.sources.path] });
+    },
+  });
+
+  // SHOP3 — clear by source. Purely client-side: the server's clear endpoint
+  // removes everything, so a scoped clear is a filtered set of single deletes,
+  // exactly as the retired surface did it.
+  const clearBySource = useCallback(async (source: "all" | "planned" | "quick_list") => {
+    setClearDialogOpen(false);
+    if (source === "all") {
+      clearAll.mutate();
+      return;
+    }
+    const idsToRemove = items
+      .filter((i) => source === "quick_list"
+        ? i.basketLabel?.startsWith("quick_list_")
+        : !i.basketLabel?.startsWith("quick_list_"))
+      .map((i) => i.id);
+    if (idsToRemove.length === 0) {
+      toast({ title: source === "quick_list" ? "No quick list items" : "No planned items" });
+      return;
+    }
+    try {
+      await Promise.all(idsToRemove.map((id) =>
+        fetch(buildUrl(api.shoppingList.remove.path, { id }), { method: "DELETE", credentials: "include" }),
+      ));
+      toast({ title: source === "quick_list" ? "Quick list cleared" : "Planned items cleared" });
+    } catch {
+      toast({ title: "Failed to clear items", variant: "destructive" });
+    } finally {
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.prices.path] });
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.totalCost.path] });
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.sources.path] });
+    }
+  }, [items, clearAll, queryClient, toast]);
+
+  // Quick list rows carry a `quick_list_` basket label; everything else came
+  // from the Planner. Same rule the retired surface used.
+  const quickListCount = useMemo(
+    () => items.filter((i) => i.basketLabel?.startsWith("quick_list_")).length,
+    [items],
+  );
+  const plannedCount = items.length - quickListCount;
 
   const updateMeasurement = useMutation({
     mutationFn: async ({ id, qty, unit }: { id: number; qty: number | null; unit: string | null }) => {
@@ -2072,6 +2458,8 @@ export default function ShoppingWorkspacePage() {
         onCorrectItem={!isShopMode && !isPrepMode ? (newName) => correctItem.mutate({ id: item.id, productName: newName }) : undefined}
         onAddItem={!isShopMode && !isPrepMode ? (name) => addShoppingItem.mutate({ productName: name }) : undefined}
         onUpdateMeasurement={!item.checked ? (qty, unit) => updateMeasurement.mutate({ id: item.id, qty, unit }) : undefined}
+        onRemoveItem={!isShopMode && !isPrepMode ? () => removeItem.mutate(item.id) : undefined}
+        priceInfo={hasPrices || estimatedExtra > 0 ? { ...resolveItemPrice(item), onCompare: () => setComparisonItem(item) } : undefined}
         onConfirmSuggestions={!isShopMode && !isPrepMode ? async (picks) => {
           if (picks.length === 0) return;
           // Carry qty/unit from the parent ambiguous item to all derived items
@@ -2178,13 +2566,9 @@ export default function ShoppingWorkspacePage() {
           <RefreshCw className={`h-4 w-4 mr-2 ${recalculateScores.isPending ? "animate-spin" : ""}`} />
           {recalculateScores.isPending ? "Recalculating…" : "Recalculate Scores"}
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <Link href="/basket" asChild>
-          <DropdownMenuItem data-testid="button-open-basket">
-            <ShoppingBasket className="h-4 w-4 mr-2 text-primary/70" />
-            <span className="flex-1">Basket</span>
-          </DropdownMenuItem>
-        </Link>
+        {/* SHOP3 — the "Basket" item pointed at the duplicate Shopping room
+            from inside the canonical one. There is now one room, so there is
+            nowhere for it to go. */}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={() => setClearDialogOpen(true)}
@@ -2862,9 +3246,191 @@ export default function ShoppingWorkspacePage() {
             </>
           )}
 
+          {/* ── SHOP3: basket total ──────────────────────────────────
+              Cost was invisible on this surface before convergence. An
+              estimate is labelled as one; a total with nothing behind it
+              shows "-" rather than £0.00. */}
+          <div
+            className="px-4 py-2.5 border-t-2 border-border bg-muted/20 flex items-center gap-3 flex-wrap"
+            data-testid="section-basket-totals"
+          >
+            <span className="text-xs font-semibold text-muted-foreground">
+              {hasAnyEstimateInTotal ? "Basket total incl. estimates" : "Basket total"} · {items.length} {items.length === 1 ? "item" : "items"}
+            </span>
+            <div className="flex-1" />
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-semibold tabular-nums" data-testid="text-basket-total-price">
+                {clientBestTotal !== null
+                  ? `£${clientBestTotal.toFixed(2)}`
+                  : <span className="text-muted-foreground font-normal">-</span>}
+              </span>
+              <div data-testid="text-basket-avg-smp">
+                {avgThaRating !== null
+                  ? <AppleRating rating={avgThaRating} sizePx={18} showTooltip={false} animate={false} />
+                  : null}
+              </div>
+            </div>
+          </div>
+
         </div>
+
+        {/* ── SHOP3: price comparison across shops and tiers ───────────── */}
+        {hasPrices && selectedRetailers.length > 0 && (
+          <div className="rounded-xl border border-border/50 bg-card/60 px-4 py-4 mb-6" data-testid="section-comparison-strip">
+            <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+              <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">Price comparison</p>
+              {hasAnyEstimateInTotal && (
+                <p className="text-[10px] italic text-muted-foreground/80" data-testid="text-comparison-excludes-estimates">
+                  Store comparison excludes estimated items
+                </p>
+              )}
+            </div>
+            <div className="overflow-x-auto rounded-md border border-border">
+              <table className="text-xs" style={{ borderCollapse: "separate", borderSpacing: 0, minWidth: "480px" }} data-testid="table-comparison-strip">
+                <thead>
+                  <tr className="bg-muted/30">
+                    <th className="px-3 py-2 text-left font-medium text-muted-foreground whitespace-nowrap sticky left-0 z-20 bg-muted/30 border-b border-r border-border">Shop</th>
+                    {PRICE_TIERS.map((tier) => (
+                      <th key={tier} className="px-3 py-2 text-right font-medium text-muted-foreground whitespace-nowrap border-b border-border capitalize">{tier}</th>
+                    ))}
+                    <th className="px-3 py-2 text-right font-medium text-muted-foreground whitespace-nowrap sticky right-0 z-20 bg-muted/30 border-b border-l border-border">Current</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedRetailers.map((retailer) => (
+                    <tr key={retailer} className="group" data-testid={`row-comparison-${retailer.replace(/[\s']/g, "-").toLowerCase()}`}>
+                      <td className="px-3 py-2 font-medium text-foreground whitespace-nowrap sticky left-0 z-10 bg-background border-b border-r border-border/50 group-hover:bg-muted/20">{retailer}</td>
+                      {PRICE_TIERS.map((tier) => {
+                        const val = comparisonMatrix[retailer]?.[tier] ?? 0;
+                        return <td key={tier} className="px-3 py-2 text-right tabular-nums text-foreground border-b border-border/50">{val > 0 ? `£${val.toFixed(2)}` : "-"}</td>;
+                      })}
+                      <td className="px-3 py-2 text-right tabular-nums font-semibold text-foreground whitespace-nowrap sticky right-0 z-10 bg-background border-b border-l border-border/50 group-hover:bg-muted/20">
+                        {(currentByRetailer[retailer] ?? 0) > 0 ? `£${(currentByRetailer[retailer] ?? 0).toFixed(2)}` : "-"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Which shops to compare, and the household's default tier. */}
+            <div className="flex items-center gap-2 flex-wrap mt-3">
+              <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70 mr-1">Shops</span>
+              {enhancedSupermarkets.map((s) => (
+                <button
+                  key={s.name}
+                  onClick={() => toggleRetailer(s.name)}
+                  className={`text-xs px-2 py-1 rounded-md border transition-colors ${
+                    selectedRetailers.includes(s.name)
+                      ? "border-primary/40 bg-primary/10 text-foreground font-medium"
+                      : "border-border/50 text-muted-foreground hover:text-foreground"
+                  }`}
+                  data-testid={`toggle-retailer-${s.name.replace(/[\s']/g, "-").toLowerCase()}`}
+                >
+                  {s.name}
+                </button>
+              ))}
+              <div className="flex-1" />
+              <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70 mr-1">Tier</span>
+              <select
+                value={globalBasketTier}
+                onChange={(e) => {
+                  const v = e.target.value as PriceTier | "item";
+                  setGlobalBasketTier(v);
+                  if (v !== "item") updatePriceTier.mutate(v);
+                }}
+                className="text-xs rounded-md border border-border/50 bg-background px-2 py-1"
+                aria-label="Default price tier for the basket"
+                data-testid="select-basket-tier"
+              >
+                <option value="item">Per item</option>
+                {PRICE_TIERS.map((t) => (
+                  <option key={t} value={t} className="capitalize">{t}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
         </>
       ))}
+
+      {/* ── SHOP3: Always in basket ────────────────────────────────────
+          The household's saved staples. Before convergence this table was
+          readable only from the retired surface, so these rows were
+          stranded off-nav (DCA1). */}
+      {mode !== "add" && !isLoading && !isError && (
+        <div className="rounded-xl border border-border/50 bg-card/60 px-4 py-4 mb-6" data-testid="section-always-in-basket">
+          <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70 mb-3">Always in basket</p>
+          {shoppingExtras.length === 0 ? (
+            <p className="text-xs text-muted-foreground mb-3">
+              Staples you save here are offered every time you shop.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-1.5 mb-3">
+              {shoppingExtras.map((extra) => (
+                <div
+                  key={extra.id}
+                  className="flex items-center gap-2 text-sm"
+                  data-testid={`extra-row-${extra.id}`}
+                >
+                  <Checkbox
+                    checked={extra.inBasket}
+                    onCheckedChange={(v) => updateExtra.mutate({ id: extra.id, inBasket: !!v })}
+                    aria-label={`Add ${extra.name} to this shopping list`}
+                    data-testid={`extra-in-basket-${extra.id}`}
+                  />
+                  <span className={extra.inBasket ? "text-foreground" : "text-muted-foreground"}>
+                    {capitalizeWords(extra.name)}
+                  </span>
+                  <button
+                    onClick={() => updateExtra.mutate({ id: extra.id, alwaysAdd: !extra.alwaysAdd })}
+                    className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors ${
+                      extra.alwaysAdd
+                        ? "border-primary/40 bg-primary/10 text-foreground font-medium"
+                        : "border-border/50 text-muted-foreground hover:text-foreground"
+                    }`}
+                    aria-label={extra.alwaysAdd ? `Stop always adding ${extra.name}` : `Always add ${extra.name}`}
+                    data-testid={`extra-always-${extra.id}`}
+                  >
+                    Always
+                  </button>
+                  <div className="flex-1" />
+                  <button
+                    onClick={() => deleteExtra.mutate(extra.id)}
+                    className="text-muted-foreground/70 hover:text-destructive transition-colors"
+                    aria-label={`Remove ${extra.name} from staples`}
+                    data-testid={`extra-delete-${extra.id}`}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <form
+            className="flex items-center gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const name = newExtraName.trim();
+              if (!name) return;
+              addExtra.mutate({ name, category: "other" });
+              setNewExtraName("");
+            }}
+          >
+            <input
+              value={newExtraName}
+              onChange={(e) => setNewExtraName(e.target.value)}
+              placeholder="Add a staple"
+              className="flex-1 text-sm rounded-md border border-border/50 bg-background px-2.5 py-1.5"
+              aria-label="Add a staple to always keep in the basket"
+              data-testid="input-add-extra"
+            />
+            <Button type="submit" variant="outline" size="sm" disabled={!newExtraName.trim() || addExtra.isPending} data-testid="button-add-extra">
+              Add
+            </Button>
+          </form>
+        </div>
+      )}
 
       {/* ── Fallback footer ────────────────────────────────────────────── */}
       {/* UX_REFINE1 (D2, accessibility) — was `text-muted-foreground/50`, i.e. a
@@ -2873,9 +3439,13 @@ export default function ShoppingWorkspacePage() {
       <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
         <FlaskConical className="h-3.5 w-3.5 shrink-0" />
         <span>
+          {/* SHOP3 — re-pointed at the Analyser, which is where the full
+              product database actually lives. The old target was the retired
+              Shopping duplicate, whose own browse panel was a third copy of
+              this same capability. */}
           Full product database also available in{" "}
-          <Link href="/basket" className="hover:text-muted-foreground hover:underline">
-            Basket
+          <Link href="/analyser" className="hover:text-muted-foreground hover:underline">
+            the Analyser
           </Link>
           .
         </span>
@@ -3016,6 +3586,13 @@ export default function ShoppingWorkspacePage() {
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <span>{basketResult.matchedCount} product links</span>
                   <span>{basketResult.totalCount - basketResult.matchedCount} search pages</span>
+                  {/* SHOP3 — the field was already carried in state here and
+                      simply never rendered; the retired surface showed it. */}
+                  {basketResult.estimatedTotal != null && (
+                    <span className="tabular-nums" data-testid="text-basket-estimated-total">
+                      Est. total £{basketResult.estimatedTotal.toFixed(2)}
+                    </span>
+                  )}
                 </div>
                 {basketResult.itemUrls.length > 8 && (
                   <Button
@@ -3049,6 +3626,108 @@ export default function ShoppingWorkspacePage() {
         </DialogContent>
       </Dialog>
 
+      {/* ── SHOP3: per-item price comparison ──────────────────────────
+          Ported from the retired surface. Shows every matched product for
+          one line across the household's chosen shops and tiers, and lets
+          them pin a tier for this item or for its whole category. */}
+      <Dialog open={comparisonItem !== null} onOpenChange={(o) => !o && setComparisonItem(null)}>
+        <DialogContent className="sm:max-w-[560px]" data-testid="dialog-price-comparison">
+          <DialogHeader>
+            <DialogTitle className="text-base">
+              {comparisonItem ? capitalizeWords(comparisonItem.productName) : ""}
+            </DialogTitle>
+          </DialogHeader>
+          {comparisonItem && (() => {
+            const matches = allPriceMatches.filter((m) => m.shoppingListItemId === comparisonItem.id);
+            const effTier = getEffectiveTier(comparisonItem);
+            const cat = comparisonItem.category || "other";
+            if (matches.length === 0) {
+              const est = estimateFallbackPrice(comparisonItem.category, comparisonItem.quantityValue, comparisonItem.unit);
+              return (
+                <div className="py-3 space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    No matched products for this item yet.
+                  </p>
+                  {est != null && (
+                    <p className="text-xs text-muted-foreground">
+                      The basket total uses a category estimate of ~£{est.toFixed(2)} for this line.
+                    </p>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { lookupPrices.mutate(); setComparisonItem(null); }}
+                    data-testid="button-compare-match-products"
+                  >
+                    Match products
+                  </Button>
+                </div>
+              );
+            }
+            return (
+              <div className="space-y-3 py-1">
+                <div className="overflow-x-auto rounded-md border border-border">
+                  <table className="w-full text-xs" data-testid="table-item-comparison">
+                    <thead>
+                      <tr className="bg-muted/30">
+                        <th className="px-3 py-2 text-left font-medium text-muted-foreground">Shop</th>
+                        <th className="px-3 py-2 text-left font-medium text-muted-foreground">Product</th>
+                        <th className="px-3 py-2 text-left font-medium text-muted-foreground">Tier</th>
+                        <th className="px-3 py-2 text-right font-medium text-muted-foreground">Price</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {matches.map((m) => (
+                        <tr
+                          key={m.id}
+                          className={`border-t border-border/40 ${m.tier === effTier ? "bg-primary/5" : ""}`}
+                          data-testid={`row-item-price-${m.id}`}
+                        >
+                          <td className="px-3 py-2 whitespace-nowrap">{m.supermarket}</td>
+                          <td className="px-3 py-2">{m.productName ?? "-"}</td>
+                          <td className="px-3 py-2 capitalize whitespace-nowrap">{m.tier ?? "-"}</td>
+                          <td className="px-3 py-2 text-right tabular-nums">
+                            {m.price != null ? `£${m.price.toFixed(2)}` : "-"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">Tier for this item</span>
+                  <select
+                    value={comparisonItem.selectedTier ?? ""}
+                    onChange={(e) => updateItemTier.mutate({ id: comparisonItem.id, tier: e.target.value })}
+                    className="text-xs rounded-md border border-border/50 bg-background px-2 py-1"
+                    aria-label="Price tier for this item"
+                    data-testid="select-item-tier"
+                  >
+                    <option value="">Use default ({effTier})</option>
+                    {PRICE_TIERS.map((t) => (
+                      <option key={t} value={t} className="capitalize">{t}</option>
+                    ))}
+                  </select>
+                  <div className="flex-1" />
+                  <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">All {cat}</span>
+                  <select
+                    value={getCategoryDefault(cat).tier}
+                    onChange={(e) => setCategoryDefault(cat, "tier", e.target.value)}
+                    className="text-xs rounded-md border border-border/50 bg-background px-2 py-1"
+                    aria-label={`Default price tier for ${cat}`}
+                    data-testid="select-category-tier"
+                  >
+                    {PRICE_TIERS.map((t) => (
+                      <option key={t} value={t} className="capitalize">{t}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
       {/* ── Clear confirmation dialog ──────────────────────────────── */}
       <Dialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
         <DialogContent className="sm:max-w-[360px]" data-testid="dialog-clear-list">
@@ -3056,18 +3735,39 @@ export default function ShoppingWorkspacePage() {
             <DialogTitle>Clear shopping list?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground py-2">
-            This will remove all {items.length} item{items.length !== 1 ? "s" : ""} from your shopping list. This cannot be undone.
+            Clear the whole list, or just one source. This cannot be undone.
           </p>
+          {/* SHOP3 — source granularity, ported from the retired /basket surface.
+              Planned items came from the Planner; quick list items were added by
+              hand. Clearing one should not take the other. */}
+          <div className="flex flex-col gap-2">
+            <Button
+              variant="outline"
+              onClick={() => clearBySource("planned")}
+              disabled={plannedCount === 0}
+              data-testid="button-clear-planned"
+            >
+              Clear planned items ({plannedCount})
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => clearBySource("quick_list")}
+              disabled={quickListCount === 0}
+              data-testid="button-clear-quick-list"
+            >
+              Clear quick list ({quickListCount})
+            </Button>
+          </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setClearDialogOpen(false)}>Cancel</Button>
             <Button
               variant="destructive"
-              onClick={() => clearAll.mutate()}
+              onClick={() => clearBySource("all")}
               disabled={clearAll.isPending}
               data-testid="button-confirm-clear"
             >
               {clearAll.isPending ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
-              Clear List
+              Clear all {items.length}
             </Button>
           </DialogFooter>
         </DialogContent>

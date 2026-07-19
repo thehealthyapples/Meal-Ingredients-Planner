@@ -41,7 +41,6 @@ const SHOTS: Shot[] = [
   { id: "cookbook", name: "Cookbook", route: "/cookbook", auth: "household", full: true },
   { id: "analyser", name: "Analyser", route: "/analyser", auth: "household" },
   { id: "shopping-workspace", name: "Shopping", route: "/shopping-workspace", auth: "household", full: true },
-  { id: "basket", name: "Basket", route: "/basket", auth: "household", full: true },
   { id: "pantry", name: "Pantry", route: "/pantry", auth: "household", full: true },
   { id: "nutrition", name: "Nutrition (Plant Diversity)", route: "/plant-diversity", auth: "household", full: true },
   { id: "diary", name: "My Diary", route: "/my-diary", auth: "household", full: true },

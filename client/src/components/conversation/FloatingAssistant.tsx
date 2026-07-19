@@ -82,7 +82,9 @@ type ConversationSurface =
 function useSurface(): ConversationSurface {
   const [location] = useLocation();
   if (/^\/(planner|weekly-planner)/.test(location)) return "planner";
-  if (/^\/(basket|analyse-basket|shopping)/.test(location)) return "shopping";
+  // SHOP3 — `shopping` already matches `/shopping-workspace`; the retired
+  // `/basket` paths redirect there before this ever sees them.
+  if (/^\/shopping/.test(location)) return "shopping";
   if (/^\/(analyser|products)/.test(location)) return "analyser";
   if (/^\/pantry/.test(location)) return "pantry";
   if (/^\/(diary|food-diary)/.test(location)) return "diary";

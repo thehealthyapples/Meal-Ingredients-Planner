@@ -51,8 +51,8 @@ in `App.tsx`.
 | `/meals` | MealsPage | `client/src/pages/meals-page.tsx` |
 | `/cookbook` | MealsPage *(alias of `/meals`)* | `client/src/pages/meals-page.tsx` |
 | `/import-recipe` | ImportRecipePage | `client/src/pages/import-recipe-page.tsx` |
-| `/analyse-basket` | ShoppingListPage | `client/src/pages/shopping-list-page.tsx` |
-| `/basket` | ShoppingListPage *(alias of `/analyse-basket`)* | `client/src/pages/shopping-list-page.tsx` |
+| `/analyse-basket` | *(redirect to `/shopping-workspace`)* — **SHOP3** | — |
+| `/basket` | *(redirect to `/shopping-workspace`)* — **SHOP3** | — |
 | `/products` | ProductsPage | `client/src/pages/products-page.tsx` |
 | `/analyser` | ProductsPage *(alias of `/products`)* | `client/src/pages/products-page.tsx` |
 | `/weekly-planner` | WeeklyPlannerPage (via PlannerPageWrapper) | `client/src/pages/weekly-planner-page.tsx` |
@@ -106,13 +106,14 @@ directly.
 
 ## Aliases and redirects — the actual count
 
-The registered routes include **two pure redirects** (`/list` and
-`/shopping-list`, both to `/shopping-workspace`) and **five aliased paths** —
-five pages each reachable by a second path: `/cookbook` (→ MealsPage),
-`/basket` (→ ShoppingListPage), `/analyser` (→ ProductsPage), `/planner`
-(→ WeeklyPlannerPage) and `/my-diary` (→ FoodDiaryPage). The record's stated
-"eight aliases" does not match the five aliased paths present in `App.tsx`
-today; the "two redirects" is correct.
+The registered routes include **four pure redirects** (`/list`,
+`/shopping-list`, and — since **SHOP3** — `/basket` and `/analyse-basket`, all
+four to `/shopping-workspace`) and **four aliased paths**: `/cookbook`
+(→ MealsPage), `/analyser` (→ ProductsPage), `/planner` (→ WeeklyPlannerPage)
+and `/my-diary` (→ FoodDiaryPage). SHOP3 converted the `/basket` pair from an
+aliased *page* into redirects, retiring the duplicate Shopping surface: the
+household keeps its bookmarks and arrives at the one room that carries the
+`shopping-restriction-conflict` safety card.
 
 ## Related
 
@@ -120,7 +121,8 @@ today; the "two redirects" is correct.
 - [[page-analyser]] — reachable at `/analyser` and `/products`
 - [[page-planner]] — reachable at `/planner` and `/weekly-planner`
 - [[page-diary]] — reachable at `/diary` and `/my-diary`
-- [[page-basket]] — reachable at `/basket` and `/analyse-basket`
+- [[page-shopping-workspace]] — the canonical Shopping room; `/basket` and
+  `/analyse-basket` redirect here (**SHOP3**)
 - [[page-legal]] — reachable at `/legal` and `/legal/:slug`, both unprotected
 - [[page-privacy-settings]] — reachable at `/privacy-settings`
 - [[page-help-centre]] — reachable at `/help`
@@ -130,10 +132,12 @@ today; the "two redirects" is correct.
 
 - `fnd-alias-sprawl` — several pages answer to more than one path and two more
   paths exist only to redirect, spreading a single destination across multiple
-  addresses (`/meals` and `/cookbook`; `/basket` and `/analyse-basket`;
-  `/products` and `/analyser`; `/planner` and `/weekly-planner`; `/diary` and
-  `/my-diary`; plus `/list` and `/shopping-list` redirecting to
-  `/shopping-workspace`). See PDA1.
+  addresses (`/meals` and `/cookbook`; `/products` and `/analyser`; `/planner`
+  and `/weekly-planner`; `/diary` and `/my-diary`; plus `/list`,
+  `/shopping-list`, `/basket` and `/analyse-basket` all redirecting to
+  `/shopping-workspace`). See PDA1. **Partially reduced by SHOP3**, which
+  removed the `/basket` pair as a distinct destination — the sprawl that
+  remains is alias-only and no longer hides a divergent surface.
 
 ---
 

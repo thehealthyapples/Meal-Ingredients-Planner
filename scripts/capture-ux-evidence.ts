@@ -170,7 +170,6 @@ async function main() {
     { id: "10-analyser", route: "/analyser", name: "Analyser" },
     { id: "11-dashboard", route: "/dashboard", name: "Dashboard (legacy home)" },
     { id: "12-partners", route: "/partners", name: "Partners" },
-    { id: "13-basket", route: "/basket", name: "Basket / Analyse basket" },
   ];
 
   for (const vp of [DESKTOP, MOBILE]) {
@@ -493,7 +492,6 @@ async function main() {
       const page = await ctx.newPage();
       for (const s of [
         { id: "05b-shopping-populated", route: "/shopping-workspace", name: "Shopping workspace — populated" },
-        { id: "13b-basket-populated", route: "/basket", name: "Basket — populated" },
       ]) {
         await goto(page, s.route);
         await settle(page, 2500);
@@ -540,12 +538,12 @@ async function main() {
           body: JSON.stringify(body),
         });
       });
-      await goto(page, "/basket");
+      await goto(page, "/shopping-workspace");
       await settle(page, 3000);
       await shootPage(page, "34-unresolved", {
-        route: "/basket",
+        route: "/shopping-workspace",
         state: "unresolved / warning — 'Needs attention' items (needsReview)",
-        component: "ShoppingListView — Needs attention section, amber warning treatment",
+        component: "shopping-workspace-page — Needs attention items, amber warning treatment",
         session: "benchmark",
         induced:
           "page.route rewrote GET /api/shopping-list, setting needsReview=true + reviewReason='ambiguous_term' on 3 of the household's OWN 7 real items — browser-only, nothing invented, nothing persisted",

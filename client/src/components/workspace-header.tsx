@@ -171,7 +171,8 @@ export function WorkspaceHeader({
   const isAdmin = (user as any)?.role === "admin";
   const maxW = wide ? WIDE_MAXW : NARROW_MAXW;
 
-  const isBasketActive = location === "/shopping-workspace" || location === "/basket" || location === "/analyse-basket";
+  // SHOP3 — one canonical Shopping destination; the duplicate paths redirect.
+  const isBasketActive = location === "/shopping-workspace";
 
   /* ── Inline search input (desktop center / mobile panel) ── */
   const searchInput = search ? (

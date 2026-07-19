@@ -27,7 +27,6 @@ const NotFound = lazy(() => import("@/pages/not-found"));
 const AuthPage = lazy(() => import("@/pages/auth-page"));
 const OnboardingPage = lazy(() => import("@/pages/onboarding-page"));
 const MealsPage = lazy(() => import("@/pages/meals-page"));
-const ShoppingListPage = lazy(() => import("@/pages/shopping-list-page"));
 const ImportRecipePage = lazy(() => import("@/pages/import-recipe-page"));
 const ProductsPage = lazy(() => import("@/pages/products-page"));
 const SupermarketsPage = lazy(() => import("@/pages/supermarkets-page"));
@@ -413,8 +412,14 @@ function Router() {
       <Route path="/meals" component={() => <ProtectedRoute component={MealsPage} />} />
       <Route path="/cookbook" component={() => <ProtectedRoute component={MealsPage} />} />
       <Route path="/import-recipe" component={() => <ProtectedRoute component={ImportRecipePage} />} />
-      <Route path="/analyse-basket" component={() => <ProtectedRoute component={ShoppingListPage} />} />
-      <Route path="/basket" component={() => <ProtectedRoute component={ShoppingListPage} />} />
+      {/* SHOP3 — the second Shopping door is closed. `/basket` and
+          `/analyse-basket` were a duplicate of the canonical Shopping room
+          that, critically, never mounted the ambient surface carrying
+          `shopping-restriction-conflict` — THA's only `critical` signal. A
+          household arriving on the old door now lands on the room that
+          warns them. Bookmarks are honoured by redirect, not by 404. */}
+      <Route path="/analyse-basket" component={() => <Redirect to="/shopping-workspace" />} />
+      <Route path="/basket" component={() => <Redirect to="/shopping-workspace" />} />
       <Route path="/products" component={() => <ProtectedRoute component={ProductsPage} />} />
       <Route path="/analyser" component={() => <ProtectedRoute component={ProductsPage} />} />
       <Route path="/weekly-planner" component={() => <ProtectedRoute component={PlannerPageWrapper} />} />

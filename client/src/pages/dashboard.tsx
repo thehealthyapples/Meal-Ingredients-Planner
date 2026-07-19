@@ -430,7 +430,7 @@ export default function Dashboard() {
               </Link>
 
               {/* Basket */}
-              <Link href="/basket" aria-label="Go to Basket">
+              <Link href="/shopping-workspace" aria-label="Go to Shopping">
                 <Card className="h-full group cursor-pointer hover-elevate transition-all duration-200" data-testid="card-basket-items"
                   style={{ background: BASKET_BG, borderColor: BASKET_BORDER }}>
                   <CardContent className="p-5">
@@ -500,7 +500,7 @@ export default function Dashboard() {
               </Link>
 
               {/* THA Health Score */}
-              <Link href="/basket" aria-label="Go to Basket Analysis" className="col-span-2 lg:col-span-1">
+              <Link href="/shopping-workspace" aria-label="Go to Shopping" className="col-span-2 lg:col-span-1">
                 <Card className="h-full group cursor-pointer hover-elevate transition-all duration-200" data-testid="card-tha-score"
                   style={{ background: APPLE_BG, borderColor: APPLE_BORDER }}>
                   <CardContent className="p-5">
@@ -742,7 +742,7 @@ export default function Dashboard() {
                       </CardContent>
                     </Card>
                   </Link>
-                  <Link href="/basket">
+                  <Link href="/shopping-workspace">
                     <Card className="group cursor-pointer hover-elevate transition-all duration-200" data-testid="action-analyse-basket">
                       <CardContent className="p-4 flex items-center gap-4">
                         <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0">

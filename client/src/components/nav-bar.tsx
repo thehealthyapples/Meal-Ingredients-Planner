@@ -499,7 +499,10 @@ const NAV_ACTIVE_ALIASES: Record<string, string[]> = {
   "/cookbook": ["/meals"],
   "/planner": ["/weekly-planner"],
   "/analyser": ["/products"],
-  "/shopping-workspace": ["/basket", "/analyse-basket"],
+  /* SHOP3 — `/basket` and `/analyse-basket` were aliased here so the Shopping
+     pip lit up on the duplicate room, which meant a household standing on the
+     unguarded door had no visual signal they were anywhere else. Both paths now
+     redirect, so there is nothing left to alias. */
 };
 
 function isNavItemActive(basePath: string, location: string): boolean {
