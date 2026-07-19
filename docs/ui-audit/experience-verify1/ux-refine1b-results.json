@@ -1,0 +1,229 @@
+{
+  "D4": {
+    "homeLogoPx": 68,
+    "pantryLogoPx": 68,
+    "equal": true
+  },
+  "D6": [
+    {
+      "overflowing": true,
+      "deadSpaceBelowClip": 1,
+      "padBottom": "8px"
+    },
+    {
+      "overflowing": true,
+      "deadSpaceBelowClip": 1,
+      "padBottom": "8px"
+    }
+  ],
+  "D7": [
+    {
+      "text": "Looking ahead to autumn, you may…",
+      "shortened": true,
+      "hasTitle": true,
+      "midWord": false
+    },
+    {
+      "text": "At its best in the UK summer — a…",
+      "shortened": true,
+      "hasTitle": true,
+      "midWord": false
+    },
+    {
+      "text": "Breakfast",
+      "shortened": false,
+      "hasTitle": false,
+      "midWord": false
+    },
+    {
+      "text": "Lunch",
+      "shortened": false,
+      "hasTitle": false,
+      "midWord": false
+    },
+    {
+      "text": "Dinner",
+      "shortened": false,
+      "hasTitle": false,
+      "midWord": false
+    },
+    {
+      "text": "Snacks",
+      "shortened": false,
+      "hasTitle": false,
+      "midWord": false
+    },
+    {
+      "text": "Kids Breakfast",
+      "shortened": false,
+      "hasTitle": false,
+      "midWord": false
+    },
+    {
+      "text": "Kids Lunch",
+      "shortened": false,
+      "hasTitle": false,
+      "midWord": false
+    },
+    {
+      "text": "Kids Dinner",
+      "shortened": false,
+      "hasTitle": false,
+      "midWord": false
+    }
+  ],
+  "console": [
+    {
+      "room": "home",
+      "errors": [],
+      "keyWarnings": 0
+    },
+    {
+      "room": "pantry",
+      "errors": [],
+      "keyWarnings": 0
+    },
+    {
+      "room": "planner",
+      "errors": [
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week",
+        "Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata \n    at WeeklyPlannerPage (http://localhost:5000/src/pages/week"
+      ],
+      "keyWarnings": 0
+    },
+    {
+      "room": "shopping",
+      "errors": [],
+      "keyWarnings": 0
+    },
+    {
+      "room": "nutrition",
+      "errors": [],
+      "keyWarnings": 0
+    }
+  ]
+}
