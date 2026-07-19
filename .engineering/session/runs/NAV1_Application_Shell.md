@@ -5,7 +5,7 @@
 unified navigation, contextual desktop rail, shared page shell, responsive
 behaviour, active highlighting, Companion entry in the header.
 **Rollback ID:** `rollback/NAV1-application-shell-20260719` → `993e1bc8`
-**Stage:** Verification — full test suite running
+**Stage:** Complete — committed `aa2f58cb`, pushed; awaiting owner review
 **Report:** `docs/implementation/NAV1_APPLICATION_SHELL_IMPLEMENTATION.md`
 
 ---
@@ -65,10 +65,30 @@ uncommitted work.**
 
 ---
 
+## Commit
+
+`aa2f58cb` — pushed to `origin/int1-intelligence-platform`.
+
+🔴 **It carries previously uncommitted COMM1A + COMM2 work**, on owner
+instruction, because the changes could not be safely separated: all three files
+NAV1 touched were already dirty, and `app-shell.tsx`'s `/orchard` realm mapping
+is a **compile dependency** on COMM2's uncommitted `PageRealm` addition.
+Precedent: `1f7be63a`. NAV1 modified none of that work — carried, not reviewed;
+both sessions' open items stand.
+
+## Test result
+
+🔴 **`npm test` is RED and was already red before NAV1.** 104 suites ran, then
+`test:benchmark-conversation-isolation` failed 2 assertions and the `&&` chain
+stopped (~66 suites did not run). Deterministic over two runs, and **reproduced
+at `993e1bc8` in a clean detached worktree with no uncommitted work** — so it is
+neither NAV1's nor the community work's. Not fixed here; recommended as BENCHINT3.
+
 ## Next action
 
-Await the full `npm test` result, record it in the report, then commit and push.
-Two earlier attempts produced unusable logs (first truncated to the final suite;
-second killed when its launching shell returned) — **neither was reported as a
-result**. If interrupted again: re-run `npm test` capturing full output, and do
-not claim a suite result without a complete log.
+Owner to review `docs/implementation/NAV1_APPLICATION_SHELL_IMPLEMENTATION.md`.
+Decisions waiting: **BENCHINT3** (the red suite — the branch's `npm test` has
+been failing independently of this work), **NAV2** (adopt or delete the unadopted
+`RoomActions` rail), NAV3 (admin pages now stack the shell header above
+`AdminBanner`), the Product Registry sweep for the chrome change, and COMM2
+§ 11.4's still-open nine-rooms-at-390px decision.
