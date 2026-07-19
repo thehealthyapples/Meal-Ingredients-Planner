@@ -5,7 +5,7 @@
 one continuous shelf instead of nine pills, the active room lit rather than
 filled, calmer spacing, better balance with the permanent header.
 **Rollback ID:** `rollback/UXNAV1-orchard-navigation-refinement-20260719` → `5d5ccd09`
-**Stage:** Complete — awaiting owner review
+**Stage:** Complete — committed `169ddc09`, pushed; awaiting owner review
 **Report:** `docs/implementation/UX_NAV1_ORCHARD_NAVIGATION_REFINEMENT.md`
 
 ---
@@ -82,6 +82,23 @@ progress.
 deterministically and **reproduced at `993e1bc8` in a clean detached worktree**.
 UX_NAV1 changed two client presentation files and one script and cannot reach it.
 Not fixed here. NAV1's recommendation stands: **BENCHINT3**.
+
+## Commit
+
+`169ddc09` — pushed to `origin/int1-intelligence-platform`.
+
+Two client presentation files, one capture script, and documentation. **It
+carries no other session's work.**
+
+## Test result
+
+🔴 **`npm test` is RED and was already red before this change**, reproducing
+NAV1's record exactly: **104 suites reached**, then
+`test:benchmark-conversation-isolation` fails **the same 2 assertions**
+(`24 passed, 2 failed`) — both about server-side conversation-thread
+`entityRefs` isolation, which two client presentation files cannot reach. NAV1
+reproduced it at `993e1bc8` in a clean detached worktree with no uncommitted
+work. Not fixed here. **BENCHINT3** stands.
 
 ## Next action
 
