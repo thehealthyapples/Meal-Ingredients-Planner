@@ -174,7 +174,7 @@ async function main(): Promise<void> {
     intelligencePlatform.getCapability("nutrition-knowledge")!.availability,
   );
   const live = intelligencePlatform.listCapabilities().filter((c) => c.availability === "available");
-  assert(live.length === 22, "exactly TWENTY-TWO capabilities are live (planner + shopping + nutrition-knowledge + pantry + diary + profile + household + partners + meals + templates + analyser + meal-discovery + nutrition-discovery + planner-discovery + household-discovery + shopping-discovery + pantry-discovery + diary-discovery + food-intelligence + opportunity-delivery + evidence-learning + product-knowledge) — scope lock (updated by PHASE5A)", String(live.length));
+  assert(live.length === 23, "exactly TWENTY-THREE capabilities are live (planner + shopping + nutrition-knowledge + pantry + diary + profile + household + partners + meals + templates + analyser + meal-discovery + nutrition-discovery + planner-discovery + household-discovery + shopping-discovery + pantry-discovery + diary-discovery + food-intelligence + opportunity-delivery + evidence-learning + product-knowledge) — scope lock (updated by PHASE5A)", String(live.length));
   assert(
     live.some((c) => c.id === "planner") && live.some((c) => c.id === "shopping") && live.some((c) => c.id === "nutrition-knowledge") && live.some((c) => c.id === "pantry") && live.some((c) => c.id === "diary") && live.some((c) => c.id === "profile") && live.some((c) => c.id === "household") && live.some((c) => c.id === "partners") && live.some((c) => c.id === "meals") && live.some((c) => c.id === "templates"),
     "the ten live capabilities are planner, shopping, nutrition-knowledge, pantry, diary, profile, household, partners, meals and templates",

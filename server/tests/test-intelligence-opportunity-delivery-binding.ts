@@ -485,7 +485,7 @@ async function main(): Promise<void> {
     "canonical singleton: opportunity-delivery is 'available' (handler bound)",
   );
   const live = intelligencePlatform.listCapabilities().filter((c) => c.availability === "available");
-  assert(live.length === 22, "exactly twenty-two live capabilities on the canonical singleton (EL1 adds evidence-learning)", String(live.length));
+  assert(live.length === 23, "exactly twenty-three live capabilities on the canonical singleton (EL1 adds evidence-learning)", String(live.length));
   const executable = intelligencePlatform.getCapability(OPPORTUNITY_DELIVERY_CAPABILITY_ID)!.executableIntents;
   assert(
     [...executable].sort().join(",") === ["approve", "delete", "explain", "report", "review"].sort().join(","),

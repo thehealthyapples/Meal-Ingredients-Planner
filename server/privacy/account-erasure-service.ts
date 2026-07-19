@@ -73,6 +73,14 @@ const ERASURE_ORDER: readonly string[] = [
   "support-requests",
   "security-records",
   "preferences",
+  // COMM1 — before the household, because the household's deletion is what
+  // cascades these rows away. The category itself erases nothing directly
+  // (`erase: null`): a community membership belongs to the HOUSEHOLD, so one
+  // member erasing their account must not withdraw the whole household from a
+  // neighbourhood. It is named here because ERASURE_ORDER must account for
+  // every registered category — a category with no position makes the platform
+  // refuse to erase at all, which is how this entry was caught.
+  "community-membership",
   "household-membership",
   "household",
   "account",

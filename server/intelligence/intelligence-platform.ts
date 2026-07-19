@@ -124,6 +124,7 @@ import { bindPantryReadCapability } from "./bindings/pantry.js";
 import { bindDiaryReadCapability } from "./bindings/diary.js";
 import { bindProfileReadCapability } from "./bindings/profile.js";
 import { bindHouseholdReadCapability } from "./bindings/household.js";
+import { bindCommunityReadCapability } from "./bindings/community.js";
 import { bindPartnersReadCapability } from "./bindings/partners.js";
 import { bindMealsReadCapability } from "./bindings/meals.js";
 import { bindTemplatesReadCapability } from "./bindings/templates.js";
@@ -285,6 +286,8 @@ bindPantryReadCapability(intelligencePlatform);
 bindDiaryReadCapability(intelligencePlatform);
 bindProfileReadCapability(intelligencePlatform);
 bindHouseholdReadCapability(intelligencePlatform);
+// COMM1 — Community joins the platform as a capability, not an application.
+bindCommunityReadCapability(intelligencePlatform);
 bindPartnersReadCapability(intelligencePlatform);
 bindMealsReadCapability(intelligencePlatform);
 bindTemplatesReadCapability(intelligencePlatform);

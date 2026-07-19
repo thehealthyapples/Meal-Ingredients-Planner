@@ -454,7 +454,7 @@ The following domains have been identified by reading all TypeScript files under
 
 ### Domain 26: Membership / Subscription / Entitlement
 
-*(Extended `BUS2A`, 2026-07-18 — Commercial Platform Foundation. The domain is **extended, not replaced**: no Domain 37 was created, because "what plan is this household on" is the fact this domain already owned.)*
+*(Extended `BUS2A`, 2026-07-18 — Commercial Platform Foundation. The domain is **extended, not replaced**: no new domain was created, because "what plan is this household on" is the fact this domain already owned. Domain 37 was subsequently taken by Community, `COMM1` — unrelated.)*
 
 | Attribute | Value |
 |-----------|-------|
@@ -706,6 +706,29 @@ The following domains have been identified by reading all TypeScript files under
 | Status | **Authoritative — declared and built** |
 
 > **Why `data-correction` shares this table rather than having its own.** A UK GDPR Art. 16 rectification request IS a message a person must act on, with a one-month statutory deadline attached. Giving it a separate table would have split one queue in two and made it possible for a lawful request to sit unseen in the half nobody watches. It is ADDITIONALLY written to `privacy_activity_log` — the log is the accountability record, the queue is how a person answers it, and neither replaces the other.
+
+---
+
+### Domain 37: Community
+
+*(Added `COMM1`, 2026-07-19.)*
+
+> Which communities exist, which **households** belong to them, and who has been invited. **One entity, one kind** — a neighbourhood is a `kind` of community, not a table of its own.
+
+| Attribute | Value |
+|-----------|-------|
+| Authoritative Source | **`communities`, `community_members`, `community_invitations`** |
+| Owning service | **`server/lib/community.ts`** — the only module that reads or writes these three tables. Owns membership and the role ladder; owns no household data |
+| Write layer | `createCommunity`, `inviteHousehold`, `acceptInvitation`, `declineInvitation`, `revokeInvitation`, `leaveCommunity` → `POST/DELETE /api/community/*` (authenticated) |
+| Read layer | `GET /api/community`, `/api/community/:id/members`, `/api/community/invitations`; AI-facing read via the `community` capability (read-only binding, COMM1) |
+| Consumers | Intelligence Platform capability `community` (`server/intelligence/bindings/community.ts`). **No client consumer** — COMM1's scope lock forbids building Community UI |
+| **The membership grain** | **The HOUSEHOLD, never the user** (Rule CM1). A person reaches a community through their household's row in `household_members`, which remains the only user↔household relation. A user↔community table would be a second membership entity parallel to Domain 16's and could drift from it |
+| **The enforced invariant** | **Membership is not a read grant** (Rule CM2). Two households sharing a community learn that they share it, and nothing else. `getMemberHouseholds` returns ids and roles only; no method on the owner or the read port returns another household's name, eaters, restrictions, plans or lists |
+| **One owner of "who may join"** | `community_invitations` — targeted, expiring, revocable, single-use. `households.inviteCode`'s permanent-shared-code pattern is **deliberately not mirrored** here (Rule CM3): two mechanisms would give one fact two owners |
+| Survives erasure | **Yes, at household grain.** Membership belongs to the household, so erasing one member does not withdraw the household. A sole member's erasure erases the household, and `ON DELETE CASCADE` removes its memberships and invitations. Declared as `community-membership` in `server/privacy/personal-data-registry.ts` |
+| Status | **Authoritative — declared and built. No UI.** |
+
+> **Why this domain sits above Domain 16 and owns nothing it owns.** The Household domain owns who is in a home; Community owns which homes are in a neighbourhood. The temptation is to let Community answer "who's in my neighbourhood?" with names and faces, which would mean reading Domain 16's rows through a Domain 37 door — the exact shape of the `SEC1` defect one level up, where a read filtered on household alone and leaked a departed member's allergens. COMM1 forecloses it structurally: the owning service declares `COMMUNITY_READABLE_TABLES`, and its isolation test fails if this module ever imports outside that set.
 
 ---
 

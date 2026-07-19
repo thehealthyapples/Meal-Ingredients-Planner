@@ -114,6 +114,9 @@ import {
   userPreferences,
   userStreaks,
   users,
+  communities,
+  communityMembers,
+  communityInvitations,
 } from "@shared/schema";
 
 /**
@@ -809,6 +812,68 @@ export const PERSONAL_DATA_REGISTRY: readonly PersonalDataEntry[] = [
     erase: null,
     erasureNote:
       "Nothing to erase. The records are hashed, cannot be linked back to you, and expire by themselves within days.",
+  },
+  {
+    // ── COMM1 — Community Foundation (SoT D37) ──────────────────────────
+    //
+    // THE ERASURE STORY IS THE INTERESTING PART, and it follows from the
+    // membership grain. A community membership belongs to the HOUSEHOLD, not
+    // to the person. So:
+    //
+    //   • If this person is NOT the last member of their household, the
+    //     household continues and so do its community memberships. Erasing the
+    //     person must NOT remove the household from its neighbourhood — that
+    //     would be one member silently withdrawing everyone else.
+    //   • If this person IS the last member, the household itself is erased by
+    //     the `household` entry above, and `community_members.household_id` is
+    //     ON DELETE CASCADE, so the memberships and any invitations addressed
+    //     to that household go with it.
+    //
+    // Both paths are therefore handled without a delete of our own, which is
+    // why `erase` is null here — and the note says which cascade does it, as
+    // the registry contract requires.
+    id: "community-membership",
+    label: "Your household's communities",
+    description:
+      "Which neighbourhoods and communities your household belongs to, and any invitations addressed to it.",
+    group: "household",
+    tables: ["communities", "community_members", "community_invitations"],
+    collect: async (s) =>
+      s.householdId === null
+        ? null
+        : {
+            memberships: await db
+              .select({
+                communityId: communityMembers.communityId,
+                role: communityMembers.role,
+                status: communityMembers.status,
+                joinedAt: communityMembers.joinedAt,
+                leftAt: communityMembers.leftAt,
+              })
+              .from(communityMembers)
+              .where(eq(communityMembers.householdId, s.householdId)),
+            communities: await db
+              .select({ id: communities.id, name: communities.name, kind: communities.kind })
+              .from(communities)
+              .innerJoin(communityMembers, eq(communityMembers.communityId, communities.id))
+              .where(eq(communityMembers.householdId, s.householdId)),
+            // Tokens are DELIBERATELY excluded. An export is a document a
+            // household may store or forward; a live bearer token inside it
+            // would be a standing grant to join a community, sitting in a file.
+            invitations: await db
+              .select({
+                id: communityInvitations.id,
+                communityId: communityInvitations.communityId,
+                status: communityInvitations.status,
+                expiresAt: communityInvitations.expiresAt,
+                createdAt: communityInvitations.createdAt,
+              })
+              .from(communityInvitations)
+              .where(eq(communityInvitations.invitedHouseholdId, s.householdId)),
+          },
+    erase: null,
+    erasureNote:
+      "Your household's community memberships belong to the household, not to you alone — erasing your account does not withdraw the rest of your household from a neighbourhood. If you are the last person in your household, the household is erased and its memberships and invitations are removed with it.",
   },
 ] as const;
 

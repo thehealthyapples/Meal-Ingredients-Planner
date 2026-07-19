@@ -3392,6 +3392,106 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    // COMM1 — the Community Foundation. Three tables, one new domain (SoT D37),
+    // sitting ABOVE Domain 16 and owning nothing Domain 16 owns.
+    //
+    // The membership grain is the HOUSEHOLD. `community_members.household_id`
+    // references `households`, never `users` — a person reaches a community
+    // through their household, so this schema creates no second user↔group
+    // membership entity to drift from `household_members`.
+    //
+    // The two CHECK constraints are the load-bearing lines, and both are in the
+    // database rather than in application code for the same reason KNOW2 gave:
+    // TypeScript does not run inside Postgres, and these are the invariants that
+    // decide whether a household is in a community or not.
+    //
+    //   1. A membership that has left must say when. The soft-departure shape is
+    //      copied from `household_members` deliberately — SEC1 was caused by a
+    //      read and a write disagreeing about who was at the table, and identical
+    //      shapes let one predicate serve both.
+    //   2. An invitation's terminal states are exclusive, and anything that is
+    //      not pending must record when it stopped being pending. A row that is
+    //      both accepted and revoked is a grant nobody can adjudicate.
+    id: "2026-07-19_comm1_community_foundation",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS communities (
+         id SERIAL PRIMARY KEY,
+         name TEXT NOT NULL,
+         kind TEXT NOT NULL DEFAULT 'neighbourhood',
+         created_by_household_id INTEGER REFERENCES households(id) ON DELETE SET NULL,
+         status TEXT NOT NULL DEFAULT 'active',
+         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+       )`,
+      `ALTER TABLE communities DROP CONSTRAINT IF EXISTS communities_status_check`,
+      `ALTER TABLE communities ADD CONSTRAINT communities_status_check
+         CHECK (status IN ('active', 'archived'))`,
+
+      `CREATE TABLE IF NOT EXISTS community_members (
+         id SERIAL PRIMARY KEY,
+         community_id INTEGER NOT NULL REFERENCES communities(id) ON DELETE CASCADE,
+         household_id INTEGER NOT NULL REFERENCES households(id) ON DELETE CASCADE,
+         role TEXT NOT NULL DEFAULT 'member',
+         status TEXT NOT NULL DEFAULT 'active',
+         joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+         invited_by_household_id INTEGER REFERENCES households(id) ON DELETE SET NULL,
+         left_at TIMESTAMPTZ
+       )`,
+      `ALTER TABLE community_members DROP CONSTRAINT IF EXISTS community_members_community_household_unique`,
+      `ALTER TABLE community_members ADD CONSTRAINT community_members_community_household_unique
+         UNIQUE (community_id, household_id)`,
+      `ALTER TABLE community_members DROP CONSTRAINT IF EXISTS community_members_role_check`,
+      `ALTER TABLE community_members ADD CONSTRAINT community_members_role_check
+         CHECK (role IN ('member', 'admin', 'owner'))`,
+      // A departure must be dated. An undated "left" row cannot be audited and
+      // cannot be distinguished from a write that half-completed.
+      `ALTER TABLE community_members DROP CONSTRAINT IF EXISTS community_members_status_check`,
+      `ALTER TABLE community_members ADD CONSTRAINT community_members_status_check
+         CHECK (
+           (status = 'active' AND left_at IS NULL)
+           OR (status = 'left' AND left_at IS NOT NULL)
+         )`,
+      // Every membership read filters on this.
+      `CREATE INDEX IF NOT EXISTS community_members_household_active_idx
+         ON community_members (household_id) WHERE status = 'active'`,
+      `CREATE INDEX IF NOT EXISTS community_members_community_active_idx
+         ON community_members (community_id) WHERE status = 'active'`,
+
+      `CREATE TABLE IF NOT EXISTS community_invitations (
+         id SERIAL PRIMARY KEY,
+         community_id INTEGER NOT NULL REFERENCES communities(id) ON DELETE CASCADE,
+         invited_household_id INTEGER NOT NULL REFERENCES households(id) ON DELETE CASCADE,
+         invited_by_household_id INTEGER REFERENCES households(id) ON DELETE SET NULL,
+         token TEXT NOT NULL,
+         status TEXT NOT NULL DEFAULT 'pending',
+         expires_at TIMESTAMPTZ NOT NULL,
+         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+         responded_at TIMESTAMPTZ
+       )`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS community_invitations_token_key
+         ON community_invitations (token)`,
+      `ALTER TABLE community_invitations DROP CONSTRAINT IF EXISTS community_invitations_status_check`,
+      `ALTER TABLE community_invitations ADD CONSTRAINT community_invitations_status_check
+         CHECK (status IN ('pending', 'accepted', 'declined', 'revoked', 'expired'))`,
+      // Terminal states are exclusive with pending, and a resolved invitation
+      // must record when it resolved.
+      `ALTER TABLE community_invitations DROP CONSTRAINT IF EXISTS community_invitations_responded_check`,
+      `ALTER TABLE community_invitations ADD CONSTRAINT community_invitations_responded_check
+         CHECK (
+           (status = 'pending' AND responded_at IS NULL)
+           OR (status <> 'pending' AND responded_at IS NOT NULL)
+         )`,
+      `CREATE INDEX IF NOT EXISTS community_invitations_community_idx
+         ON community_invitations (community_id)`,
+      `CREATE INDEX IF NOT EXISTS community_invitations_invited_household_idx
+         ON community_invitations (invited_household_id)`,
+      // The only invitation lookup that runs on every acceptance attempt.
+      `CREATE INDEX IF NOT EXISTS community_invitations_pending_idx
+         ON community_invitations (invited_household_id, status) WHERE status = 'pending'`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

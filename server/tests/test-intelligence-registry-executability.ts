@@ -524,8 +524,8 @@ assert(
   "listExecutableCapabilities() includes pantry, diary, profile, household, partners, meals, templates, analyser, meal-discovery, nutrition-discovery, planner-discovery, household-discovery, shopping-discovery, pantry-discovery, diary-discovery, food-intelligence, opportunity-delivery and evidence-learning",
 );
 assert(
-  execCapabilities.length === 22,
-  "listExecutableCapabilities() returns exactly 22 (planner + shopping + nutrition-knowledge + pantry + diary + profile + household + partners + meals + templates + analyser + meal-discovery + nutrition-discovery + planner-discovery + household-discovery + shopping-discovery + pantry-discovery + diary-discovery + food-intelligence + opportunity-delivery + evidence-learning + product-knowledge) — scope lock (updated by PHASE5A)",
+  execCapabilities.length === 23,
+  "listExecutableCapabilities() returns exactly 23 (planner + shopping + nutrition-knowledge + pantry + diary + profile + household + partners + meals + templates + analyser + meal-discovery + nutrition-discovery + planner-discovery + household-discovery + shopping-discovery + pantry-discovery + diary-discovery + food-intelligence + opportunity-delivery + evidence-learning + product-knowledge + community) — scope lock (updated by COMM1)",
   String(execCapabilities.length),
 );
 assert(

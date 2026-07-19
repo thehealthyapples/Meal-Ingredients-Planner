@@ -3154,3 +3154,131 @@ export const insertBillingEventSchema = createInsertSchema(billingEvents).omit({
   receivedAt: true,
 });
 export type InsertBillingEventRow = z.infer<typeof insertBillingEventSchema>;
+
+// ─── COMM1 — COMMUNITY FOUNDATION (SoT Domain 37) ────────────────────────────
+//
+// A Community is a group of HOUSEHOLDS. It sits ABOVE Domain 16 (Household) and
+// owns nothing that Domain 16 owns: no user rows, no household rows, no eaters,
+// no restrictions, no plans. It owns exactly three facts — which communities
+// exist, which households belong to them, and who has been invited.
+//
+// THE MEMBERSHIP GRAIN IS THE HOUSEHOLD, NOT THE USER. A person's access to a
+// community is derived, never stored: they reach it through their household's
+// membership (`household_members`), which remains the only place a user↔household
+// relation lives. Storing user↔community rows here would create a SECOND
+// membership entity parallel to `household_members`, letting a person's community
+// identity drift from their household's, and would collide with
+// `getHouseholdForUser`'s one-active-household-per-user assumption.
+//
+// WHAT THIS DOMAIN DELIBERATELY DOES NOT OWN: any household's data. Membership
+// is NOT a read grant. There is no column here that exposes a plan, a list, a
+// pantry, an eater or a restriction to another household, and COMM1 adds no code
+// path that reads across the boundary. Every future capability that wants to
+// cross it must declare what crosses and be gated on its own merits.
+
+/**
+ * A community of households. `kind` is the discriminator — "neighbourhood" is the
+ * only kind COMM1 ships.
+ *
+ * ONE ENTITY, NOT TWO. A neighbourhood is a KIND of community, not a separate
+ * table nested under one. Two tables would give "a group of households" two
+ * owners and force every consumer to ask which one it is holding.
+ */
+export const communities = pgTable("communities", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  /**
+   * The community discriminator. COMM1 ships "neighbourhood" only; the column
+   * exists so a later kind is an enum value rather than a second table.
+   */
+  kind: text("kind").notNull().default("neighbourhood"),
+  /**
+   * The household that created it. NOT a user — creation is a household act, so
+   * the community survives the departure of the individual who clicked the button.
+   */
+  createdByHouseholdId: integer("created_by_household_id").references(() => households.id, { onDelete: "set null" }),
+  /** "active" | "archived". Archived communities keep their rows for audit. */
+  status: text("status").notNull().default("active"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Which households belong to which communities, and in what role.
+ *
+ * MIRRORS `household_members` DELIBERATELY — same role ladder, same status
+ * vocabulary, same soft-departure shape (`leftAt`, never a DELETE). SEC1's
+ * lesson is that the read and the write must agree about who is at the table;
+ * keeping the two membership tables structurally identical means one predicate
+ * is correct for both.
+ */
+export const communityMembers = pgTable("community_members", {
+  id: serial("id").primaryKey(),
+  communityId: integer("community_id").notNull().references(() => communities.id, { onDelete: "cascade" }),
+  householdId: integer("household_id").notNull().references(() => households.id, { onDelete: "cascade" }),
+  /** "member" | "admin" | "owner" — the same ladder as household_members.role. */
+  role: text("role").notNull().default("member"),
+  /** "active" | "left". An invited household has no row here until it accepts. */
+  status: text("status").notNull().default("active"),
+  joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
+  /** The household that invited this one. Household-grained, as with creation. */
+  invitedByHouseholdId: integer("invited_by_household_id").references(() => households.id, { onDelete: "set null" }),
+  leftAt: timestamp("left_at", { withTimezone: true }),
+}, (table) => [
+  // One membership row per household per community. Without this, concurrent
+  // acceptance of two invitations could seat the same household twice and
+  // double every count derived from membership.
+  unique("community_members_community_household_unique").on(table.communityId, table.householdId),
+]);
+
+/**
+ * An invitation for one household to join one community.
+ *
+ * THE SINGLE OWNER OF "WHO MAY JOIN". COMM1 deliberately does NOT mirror
+ * `households.inviteCode` here. A permanent shared join code has no expiry, no
+ * revocation, no target and no audit trail; for a group of households that hold
+ * allergy data about children, a leaked code that admits anyone forever is the
+ * wrong default. Adding a code ALONGSIDE this table would give one fact two
+ * owners — the architecture rule this workstream is bound by.
+ *
+ * Lifecycle is explicit and terminal-state-exclusive (enforced by CHECK in the
+ * migration): pending → accepted | declined | revoked | expired.
+ */
+export const communityInvitations = pgTable("community_invitations", {
+  id: serial("id").primaryKey(),
+  communityId: integer("community_id").notNull().references(() => communities.id, { onDelete: "cascade" }),
+  /** The household being invited. */
+  invitedHouseholdId: integer("invited_household_id").notNull().references(() => households.id, { onDelete: "cascade" }),
+  /** The household doing the inviting. */
+  invitedByHouseholdId: integer("invited_by_household_id").references(() => households.id, { onDelete: "set null" }),
+  /**
+   * The bearer token. Unique. Single-use by construction: accepting sets
+   * `respondedAt` and the status, and a non-pending invitation is never honoured.
+   */
+  token: text("token").notNull().unique(),
+  /** "pending" | "accepted" | "declined" | "revoked" | "expired". */
+  status: text("status").notNull().default("pending"),
+  /**
+   * NOT NULL BY DESIGN. An invitation without an expiry is a permanent standing
+   * grant wearing an invitation's name — exactly the property that made a shared
+   * join code the wrong mechanism.
+   */
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  /** When it left "pending", whichever way it went. */
+  respondedAt: timestamp("responded_at", { withTimezone: true }),
+}, (table) => [
+  index("community_invitations_community_idx").on(table.communityId),
+  index("community_invitations_invited_household_idx").on(table.invitedHouseholdId),
+]);
+
+export type Community = typeof communities.$inferSelect;
+export type CommunityMember = typeof communityMembers.$inferSelect;
+export type CommunityInvitation = typeof communityInvitations.$inferSelect;
+
+export const insertCommunitySchema = createInsertSchema(communities).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertCommunity = z.infer<typeof insertCommunitySchema>;

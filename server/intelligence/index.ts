@@ -171,6 +171,17 @@ export {
   type ProfileReadPort,
 } from "./handlers/profile-read-port.js";
 
+// COMM1 — Community Foundation binding (read-only).
+export { bindCommunityReadCapability, COMMUNITY_CAPABILITY_ID, COMMUNITY_EXECUTABLE_INTENTS } from "./bindings/community.js";
+export {
+  createCommunityReadHandler,
+  type CommunityView,
+  type CommunitiesView,
+  type CommunityMembersView,
+  type CommunityInvitationsView,
+} from "./handlers/community-read-handler.js";
+export { createStorageCommunityReadPort, type CommunityReadPort } from "./handlers/community-read-port.js";
+
 // INT13 — seventh live capability binding (read-only Household).
 export { bindHouseholdReadCapability, HOUSEHOLD_CAPABILITY_ID, HOUSEHOLD_EXECUTABLE_INTENTS } from "./bindings/household.js";
 export {

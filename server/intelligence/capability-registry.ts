@@ -582,6 +582,40 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     companionDomain: "household",
   },
   {
+    // COMM1 — Community is a PLATFORM CAPABILITY, not a separate application.
+    // It is registered here beside its own owner exactly as every other domain
+    // is, which is what makes it reachable from a Companion turn at all
+    // (`companionDomain` absence means "not Companion-reachable", and that is a
+    // declaration, not an omission).
+    //
+    // `capabilityClass: "read-only"` and the empty write surface are load-bearing:
+    // membership lifecycle (create, invite, accept, decline, revoke, leave) is
+    // owned by the Community service and reachable only through the authenticated
+    // HTTP surface. The Companion can tell a household which communities it
+    // belongs to; it cannot join one on their behalf.
+    id: "community",
+    displayName: "Community",
+    description: "Which communities this household belongs to, who else is in them, and pending invitations. Membership only — never another household's data.",
+    owner: "DB communities / community_members / community_invitations (SoT D37)",
+    owningService: "server/lib/community.ts",
+    apiSurface: "/api/community/*",
+    supportedIntents: ["read"],
+    executableIntents: [],
+    permissions: { minimumRole: "user", knowledgeClass: "public", ownershipScoped: true, audited: false },
+    capabilityClass: "read-only",
+    aiAccess: "R",
+    availability: "registered",
+    // PLATFORM, NOT A ROOM — and the type system is what established this.
+    // `COMPANION_ROOMS` are user DESTINATIONS that guidance may route to. COMM1's
+    // scope lock forbids building Community UI, so there is no page to land on:
+    // registering Community as a room would let a Next Step aim a household at a
+    // route that does not exist (types.ts:255-258). "platform" is attribution
+    // only, never a routing target — the honest declaration for a foundation
+    // whose UI is deliberately unbuilt. When Community gains a room, this becomes
+    // a room, and that is a governed change rather than an oversight.
+    companionDomain: COMPANION_PLATFORM,
+  },
+  {
     id: "templates",
     displayName: "Plan Templates",
     description: "Meal and plan templates (publish gated by admin).",

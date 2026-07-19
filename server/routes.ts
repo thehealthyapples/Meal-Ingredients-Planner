@@ -120,6 +120,7 @@ import {
 import { enrichRetailData, STORE_TAG_MAP, UK_RETAILER_STORE_TAGS } from "./lib/retailIntelligence";
 import { getCanonicalProduct, isCompatibleSwap } from "./lib/productCanonicaliser";
 import { getHouseholdForUser } from "./lib/household";
+import * as community from "./lib/community";
 // CONV1 P9 / BEH-5 — the one household-history owner. This file used to carry a private
 // copy of it (a closure inside registerRoutes), which is exactly the duplication the
 // module was extracted to prevent.
@@ -9054,6 +9055,171 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
   });
 
   // ── Household Management API ─────────────────────────────────────────────────
+
+  // ─── COMM1 — Community Foundation (SoT D37) ────────────────────────────
+  //
+  // Every route below resolves the acting household from the SESSION via
+  // `getHouseholdForUser`. No route accepts a household id from the client, so
+  // acting-as-another-household has no code path. Authorisation beyond
+  // membership (who may invite, who may revoke) is enforced inside the owning
+  // service, not here — the route is a thin transport over `server/lib/community.ts`.
+
+  /** The communities this household belongs to. */
+  app.get("/api/community", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const householdId = await getHouseholdForUser(req.user!.id);
+      const communities = await community.getCommunitiesForHousehold(householdId);
+      res.json(communities.map(c => ({ id: c.id, name: c.name, kind: c.kind })));
+    } catch (error) {
+      console.error("[COMM1] list communities failed:", error);
+      res.status(500).json({ error: "Could not load communities" });
+    }
+  });
+
+  /** Create a community. The creating household becomes its owner. */
+  app.post("/api/community", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
+      if (!name) return res.status(400).json({ error: "A community needs a name" });
+      const householdId = await getHouseholdForUser(req.user!.id);
+      const created = await community.createCommunity(name, householdId);
+      res.status(201).json({ id: created.id, name: created.name, kind: created.kind });
+    } catch (error) {
+      console.error("[COMM1] create community failed:", error);
+      res.status(500).json({ error: "Could not create community" });
+    }
+  });
+
+  /**
+   * One community's members — IDS AND ROLES ONLY.
+   *
+   * A community this household is not in returns 404, the SAME response as one
+   * that does not exist. A distinguishable answer would let any household probe
+   * for the existence of communities it does not belong to.
+   */
+  app.get("/api/community/:id/members", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const communityId = Number(req.params.id);
+      if (!Number.isInteger(communityId)) return res.status(400).json({ error: "Invalid community" });
+      const householdId = await getHouseholdForUser(req.user!.id);
+      const found = await community.getCommunityForMember(communityId, householdId);
+      if (!found) return res.status(404).json({ error: "Not found" });
+      const members = await community.getMemberHouseholds(communityId, householdId);
+      res.json({
+        communityId,
+        memberCount: members.length,
+        members: members.map(m => ({ householdId: m.householdId, role: m.role })),
+      });
+    } catch (error) {
+      console.error("[COMM1] list members failed:", error);
+      res.status(500).json({ error: "Could not load members" });
+    }
+  });
+
+  /** Invite a household. Requires community role 'admin' (enforced in the owner). */
+  app.post("/api/community/:id/invitations", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const communityId = Number(req.params.id);
+      const invitedHouseholdId = Number(req.body?.householdId);
+      if (!Number.isInteger(communityId) || !Number.isInteger(invitedHouseholdId)) {
+        return res.status(400).json({ error: "Invalid request" });
+      }
+      const householdId = await getHouseholdForUser(req.user!.id);
+      const result = await community.inviteHousehold(communityId, invitedHouseholdId, householdId);
+      if (!result.ok) return res.status(403).json({ error: result.reason });
+      res.status(201).json({
+        id: result.invitation.id,
+        // The token is returned ONCE, to the inviter, so they can pass it on.
+        // It is never readable again from any list endpoint.
+        token: result.invitation.token,
+        expiresAt: result.invitation.expiresAt,
+      });
+    } catch (error) {
+      console.error("[COMM1] invite failed:", error);
+      res.status(500).json({ error: "Could not create invitation" });
+    }
+  });
+
+  /** Pending invitations addressed to this household. Never returns tokens. */
+  app.get("/api/community/invitations", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const householdId = await getHouseholdForUser(req.user!.id);
+      const invitations = await community.getPendingInvitations(householdId);
+      res.json(invitations.map(i => ({ id: i.id, communityId: i.communityId, expiresAt: i.expiresAt })));
+    } catch (error) {
+      console.error("[COMM1] list invitations failed:", error);
+      res.status(500).json({ error: "Could not load invitations" });
+    }
+  });
+
+  /** Accept an invitation. The token alone is not sufficient — see the owner. */
+  app.post("/api/community/invitations/accept", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const token = typeof req.body?.token === "string" ? req.body.token : "";
+      if (!token) return res.status(400).json({ error: "Invalid invitation" });
+      const householdId = await getHouseholdForUser(req.user!.id);
+      const result = await community.acceptInvitation(token, householdId);
+      if (!result.ok) return res.status(403).json({ error: result.reason });
+      res.json({ communityId: result.membership.communityId, role: result.membership.role });
+    } catch (error) {
+      console.error("[COMM1] accept invitation failed:", error);
+      res.status(500).json({ error: "Could not accept invitation" });
+    }
+  });
+
+  /** Decline an invitation. */
+  app.post("/api/community/invitations/decline", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const token = typeof req.body?.token === "string" ? req.body.token : "";
+      if (!token) return res.status(400).json({ error: "Invalid invitation" });
+      const householdId = await getHouseholdForUser(req.user!.id);
+      const result = await community.declineInvitation(token, householdId);
+      if (!result.ok) return res.status(403).json({ error: result.reason });
+      res.json({ ok: true });
+    } catch (error) {
+      console.error("[COMM1] decline invitation failed:", error);
+      res.status(500).json({ error: "Could not decline invitation" });
+    }
+  });
+
+  /** Revoke a pending invitation. Requires community role 'admin'. */
+  app.delete("/api/community/invitations/:invitationId", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const invitationId = Number(req.params.invitationId);
+      if (!Number.isInteger(invitationId)) return res.status(400).json({ error: "Invalid invitation" });
+      const householdId = await getHouseholdForUser(req.user!.id);
+      const result = await community.revokeInvitation(invitationId, householdId);
+      if (!result.ok) return res.status(403).json({ error: result.reason });
+      res.json({ ok: true });
+    } catch (error) {
+      console.error("[COMM1] revoke invitation failed:", error);
+      res.status(500).json({ error: "Could not revoke invitation" });
+    }
+  });
+
+  /** Leave a community. Soft departure; refuses to strand a community with no owner. */
+  app.post("/api/community/:id/leave", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const communityId = Number(req.params.id);
+      if (!Number.isInteger(communityId)) return res.status(400).json({ error: "Invalid community" });
+      const householdId = await getHouseholdForUser(req.user!.id);
+      const result = await community.leaveCommunity(communityId, householdId);
+      if (!result.ok) return res.status(400).json({ error: result.reason });
+      res.json({ ok: true });
+    } catch (error) {
+      console.error("[COMM1] leave community failed:", error);
+      res.status(500).json({ error: "Could not leave community" });
+    }
+  });
 
   app.get("/api/household", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
