@@ -101,6 +101,21 @@ export interface IntentResolutionHints {
    * fabricated justification.
    */
   readonly selectedOpportunityId?: string;
+  /**
+   * COMP4 — the planner ENTRY the household is asking about, if any
+   * (`planner_entries.id`).
+   *
+   * A POINTER, exactly like `selectedOpportunityId` and `selectedMealId`, and it
+   * carries no explanation with it. The platform re-reads the entry and asks the
+   * canonical explanation owner before saying a word, so a stale or foreign id
+   * yields an honest gap or a denial, never a fabricated reason.
+   *
+   * Distinct from `selectedMealId`: a meal is a recipe, an ENTRY is that recipe
+   * in a particular slot of a particular week — which is the only thing a
+   * planner decision can be explained about. The same meal on Tuesday and
+   * Friday has two explanations.
+   */
+  readonly selectedPlannerEntryId?: number;
 }
 
 /**

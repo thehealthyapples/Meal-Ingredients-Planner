@@ -684,6 +684,10 @@ async function buildGroundedResponse(
     // short-circuits to `opportunity-delivery:explain` when this is present AND the
     // utterance is why-shaped; otherwise it is inert.
     selectedOpportunityId: frame.selectedOpportunityId,
+    // COMP4 — the planner entry the household pressed "Why this?" on. Same
+    // short-circuit shape as the opportunity pointer: present AND why-shaped
+    // routes to `planner:explain`; otherwise inert.
+    selectedPlannerEntryId: frame.selectedPlannerEntryId,
   };
   const resolveStarted = Date.now();
   const resolvedIntents = await intentResolver.resolve(utterance, hints);

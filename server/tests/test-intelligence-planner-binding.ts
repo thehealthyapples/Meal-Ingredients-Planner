@@ -82,6 +82,13 @@ const entries: PlannerEntry[] = [
     adaptationResult: { summary: "Swapped to a nut-free variant for the household." } as any,
     guestEaters: null, originalMealIdBeforeVariant: null,
   } as PlannerEntry,
+  {
+    // COMP4 — an entry whose meal row cannot be read, so NEITHER owner can speak.
+    // This is the case that must still gap honestly.
+    id: 5002, dayId: 1001, mealType: "lunch", audience: "adult", mealId: 9404,
+    calories: 0, isDrink: false, drinkType: null, position: 2,
+    adaptationResult: null, guestEaters: null, originalMealIdBeforeVariant: null,
+  } as PlannerEntry,
 ];
 
 const meals: Record<number, PlannerMealRef> = {
@@ -91,8 +98,53 @@ const meals: Record<number, PlannerMealRef> = {
 
 const calls: string[] = [];
 
+/**
+ * COMP4 — the canonical explanation, as the in-memory owner would return it.
+ * Shaped exactly like `generateMealExplanation`'s output so the handler is
+ * exercised against the real contract; the production port delegates to the real
+ * owner (see planner-read-port.ts).
+ */
+const CANONICAL_EXPLANATIONS: Record<number, unknown> = {
+  9000: {
+    title: "Porridge",
+    reasons: ["Matches your vegetarian diet preference"],
+    evidence: [
+      {
+        dimension: "diet-match",
+        source: "user_preferences.dietTypes",
+        detail: "Matches your vegetarian diet preference",
+      },
+    ],
+    scoreBreakdown: { healthScore: 70, upfScore: 80, budgetScore: 60, preferenceMatch: 90 },
+  },
+  9001: {
+    title: "Veggie Curry",
+    reasons: ["Adds 3 new plants to your week"],
+    evidence: [
+      {
+        dimension: "plant-diversity",
+        source: "planner-explanation-context (canonical plants)",
+        detail: "Adds 3 new plants to your week",
+      },
+    ],
+    scoreBreakdown: { healthScore: 75, upfScore: 85, budgetScore: 65, preferenceMatch: 80 },
+  },
+};
+
 function makePort(): PlannerReadPort {
   return {
+    explainPlannerEntry: async (entryId) => {
+      calls.push(`explainPlannerEntry(${entryId})`);
+      const entry = entries.find((e) => e.id === entryId);
+      if (!entry) return null;
+      const explanation = CANONICAL_EXPLANATIONS[entry.mealId];
+      if (!explanation) return null;
+      return {
+        explanation: explanation as never,
+        asOf: "current-week" as const,
+        unknownTargets: ["fishTarget", "redMeatTarget", "weeklyBudget"],
+      };
+    },
     getHouseholdForUser: async (userId) => {
       calls.push(`getHouseholdForUser(${userId})`);
       if (userId === 1) return HOUSEHOLD.user1;
@@ -210,10 +262,42 @@ async function main(): Promise<void> {
   section("Explain why a meal was selected (existing planner intelligence only)");
   const explainOk = await platform.handle({ verb: "explain", capabilityId: "planner", parameters: { entryId: 5001 } }, user1);
   assert(explainOk.status === "ok", "explain entry with adaptation rationale → ok", explainOk.status);
-  assert((explainOk.result as any)?.source === "planner-household-adaptation", "rationale is sourced from the planner owner, not fabricated");
+  // COMP4 — this entry has BOTH facts, and they are reported side by side under
+  // their own names. Blending them would let an adaptation note ("swapped to a
+  // nut-free variant") be read as the reason the meal was chosen.
+  assert(
+    ((explainOk.result as any)?.sources ?? []).includes("planner-household-adaptation") &&
+      ((explainOk.result as any)?.sources ?? []).includes("planner-explanation-service"),
+    "both owners are named separately when both have something to say",
+    JSON.stringify((explainOk.result as any)?.sources),
+  );
+  assert(
+    (explainOk.result as any)?.explanation?.reasons?.[0] === "Adds 3 new plants to your week",
+    "the canonical explanation is returned verbatim from the explanation owner",
+  );
 
-  const explainGap = await platform.handle({ verb: "explain", capabilityId: "planner", parameters: { entryId: 5000 } }, user1);
-  assert(explainGap.status === "gap", "explain entry with NO recorded rationale → honest gap", explainGap.status);
+  // COMP4 — this assertion INVERTED, and the old one was asserting a falsehood.
+  // Entry 5000 has no adaptation note, so this used to gap with "the Planner
+  // records no selection rationale for this meal". That was not true: the
+  // Planner had a full cited explanation for it, on its own screen, produced by
+  // explainability-service.ts — the conversation layer simply had no way to
+  // reach it. The gap was reporting the platform's own wiring as an absence of
+  // knowledge, which is exactly the kind of statement an honest gap must not be.
+  const explainCanonical = await platform.handle({ verb: "explain", capabilityId: "planner", parameters: { entryId: 5000 } }, user1);
+  assert(explainCanonical.status === "ok", "explain an ordinarily-planned entry → the canonical explanation, not a gap", explainCanonical.status);
+  assert(
+    ((explainCanonical.result as any)?.sources ?? []).join() === "planner-explanation-service",
+    "…sourced from the explanation owner alone, with no adaptation note invented",
+    JSON.stringify((explainCanonical.result as any)?.sources),
+  );
+  assert(
+    (explainCanonical.result as any)?.asOf === "current-week",
+    "…and it says WHICH week it is explaining against, rather than implying it is historic",
+  );
+
+  // The honest gap survives where it is actually true: neither owner can speak.
+  const explainGap = await platform.handle({ verb: "explain", capabilityId: "planner", parameters: { entryId: 5002 } }, user1);
+  assert(explainGap.status === "gap", "explain entry no owner can speak for → honest gap", explainGap.status);
   assert(/will not fabricate/.test(explainGap.message), "gap message refuses to fabricate a reason");
 
   const explainCross = await platform.handle({ verb: "explain", capabilityId: "planner", parameters: { entryId: 9999 } }, user1);

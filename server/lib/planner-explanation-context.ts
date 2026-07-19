@@ -87,6 +87,83 @@ export interface PlannerWeekState {
   readonly weeklyBudget: number | null;
 }
 
+/** One already-placed meal, as much of it as week state actually depends on. */
+export interface PlacedMeal {
+  readonly ingredients: readonly string[];
+  readonly primaryProtein: string | null;
+  readonly estimatedCost: number | null;
+}
+
+/** Targets the household set for the week. Unknown targets are `null`, never 0. */
+export interface PlannerWeekTargets {
+  readonly fishTarget: number | null;
+  readonly redMeatTarget: number | null;
+  readonly weeklyBudget: number | null;
+}
+
+/** Proteins that count towards the weekly fish and red-meat balance. Mirrors the
+ *  sets `explainability-service.ts` reasons over, kept here beside the counting. */
+const FISH_PROTEINS = new Set(["fish", "seafood"]);
+const RED_MEAT_PROTEINS = new Set(["beef", "lamb", "pork"]);
+
+/**
+ * COMP4 — build `PlannerWeekState` from a SET of already-placed meals.
+ *
+ * The smart-suggest loop accumulates this state incrementally, because it is
+ * filling slots one at a time and each choice changes the state the next choice
+ * sees. That loop is the owner of the *selection* it drives and is deliberately
+ * untouched.
+ *
+ * The Companion asks a different question — "explain a meal that is ALREADY in
+ * the plan" — and for that the state has to be derived in one go from the other
+ * meals in the week. This function is that derivation, and it is the ONLY place
+ * the batch form exists, so the rule is not re-expressed at the call site.
+ *
+ * It is the same rule in a different shape, not a second rule: given the same
+ * meals, it produces the same `PlannerWeekState` the loop would have held at the
+ * moment that meal was chosen. `test-comp4-planner-conversation-activation.ts`
+ * §3 asserts that equivalence directly by running meals through both forms and
+ * comparing the results field by field, so the two cannot drift silently.
+ *
+ * `meals` must EXCLUDE the meal being explained. `PlannerWeekState.mealsChosen`
+ * is documented as "meals already placed BEFORE this one" — passing the whole
+ * week including the subject would make a meal appear to be competing with
+ * itself, and would tell a household its dinner clashed with itself.
+ */
+export function buildPlannerWeekState(
+  meals: readonly PlacedMeal[],
+  targets: PlannerWeekTargets,
+): PlannerWeekState {
+  const usedProteins = new Map<string, number>();
+  const plantGroups = new Set<string>();
+  let fishCount = 0;
+  let redMeatCount = 0;
+  let costSoFar = 0;
+
+  for (const meal of meals) {
+    const protein = meal.primaryProtein;
+    if (protein) {
+      usedProteins.set(protein, (usedProteins.get(protein) ?? 0) + 1);
+      if (FISH_PROTEINS.has(protein)) fishCount++;
+      if (RED_MEAT_PROTEINS.has(protein)) redMeatCount++;
+    }
+    for (const slug of mealPlantGroups(meal.ingredients).keys()) plantGroups.add(slug);
+    costSoFar += meal.estimatedCost ?? 0;
+  }
+
+  return {
+    mealsChosen: meals.length,
+    usedProteins,
+    plantGroups,
+    fishCount,
+    fishTarget: targets.fishTarget,
+    redMeatCount,
+    redMeatTarget: targets.redMeatTarget,
+    costSoFar,
+    weeklyBudget: targets.weeklyBudget,
+  };
+}
+
 export const EMPTY_PLANNER_WEEK_STATE: PlannerWeekState = {
   mealsChosen: 0,
   usedProteins: new Map(),

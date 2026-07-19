@@ -27,7 +27,11 @@ import {
   type IntelligenceContext,
   type Intent,
 } from "../types.js";
-import type { PlannerReadPort, PlannerMealRef } from "./planner-read-port.js";
+import type {
+  PlannerReadPort,
+  PlannerMealRef,
+  CanonicalPlannerExplanation,
+} from "./planner-read-port.js";
 import { toInt, requireUserId, gap, denied, readOnlyVerbGuard } from "./_read-kit.js";
 import type { PlannerWeek } from "@shared/schema";
 
@@ -72,9 +76,30 @@ export interface PlannerExplainResult {
   readonly entryId: number;
   readonly mealId: number;
   readonly mealName: string | null;
-  /** Existing planner intelligence only — the household adaptation reasoning, when present. */
+  /**
+   * COMP4 — the CANONICAL planner explanation, produced by
+   * `explainability-service.ts`, the same owner the Planner UI reads. The
+   * sentences here are byte-identical to the ones the Planner would show for
+   * this meal against this week, because they come from the same function call.
+   * Null when the owner could not produce one.
+   */
+  readonly explanation: CanonicalPlannerExplanation["explanation"] | null;
+  /** Provenance for `explanation` — see CanonicalPlannerExplanation. */
+  readonly asOf: "current-week" | null;
+  /** Inputs that were genuinely unavailable, so their dimensions stayed silent. */
+  readonly unknownTargets: readonly string[];
+  /**
+   * The household-adaptation reasoning, when the user tailored this meal. This
+   * is a DIFFERENT fact from `explanation` — it is what changed for the
+   * household, not why the meal was selected — so it is reported beside the
+   * explanation under its own name rather than being blended into it.
+   */
   readonly rationale: unknown;
-  readonly source: "planner-household-adaptation";
+  /**
+   * Which owners actually spoke. Named per fact so a reader can never mistake
+   * an adaptation note for a selection explanation.
+   */
+  readonly sources: readonly ("planner-explanation-service" | "planner-household-adaptation")[];
 }
 
 // ---------------------------------------------------------------------------
@@ -211,11 +236,22 @@ async function readDay(
 }
 
 /**
- * Explain why a meal was selected — using EXISTING planner intelligence only. The only
- * per-entry selection reasoning the Planner owns is the household-adaptation result it
- * records when a user tailors a meal for the household. When an entry has none (a meal a
- * user simply chose), the planner owns no rationale and we return an honest gap rather
- * than inventing a reason.
+ * Explain why a meal was selected — using EXISTING planner intelligence only.
+ *
+ * COMP4. Before this, the only per-entry reasoning reachable here was the
+ * household-adaptation result, recorded solely when a user tapped "Tailor for
+ * household". Every ordinarily-planned meal therefore gapped, while the
+ * Planner's own screen had a full cited evidence trail from
+ * `explainability-service.ts` that no conversational path could reach — so the
+ * Companion answered "why this meal?" from the language model instead, reasoning
+ * over the plan's CONTENTS. That is precisely the fabrication the honest-gap
+ * machinery exists to prevent, and it was being reached around.
+ *
+ * This now asks the canonical owner first, through the port, and reports the
+ * adaptation note BESIDE it as the separate fact it is. Nothing is authored
+ * here: this function chooses which owners to ask and states honestly when none
+ * of them can answer. It contains no planner rule of its own, exactly as the
+ * file header requires.
  */
 async function explainSelection(
   intent: Intent,
@@ -240,11 +276,22 @@ async function explainSelection(
   }
 
   const rationale = (entry as { adaptationResult?: unknown }).adaptationResult ?? null;
-  if (rationale === null) {
+
+  // Ask the canonical explanation owner. A failure here must not be dressed up
+  // as "no reasoning exists" — that would be a different, false statement — so
+  // it degrades to null and is reported as an honest gap below.
+  let canonical: CanonicalPlannerExplanation | null = null;
+  try {
+    canonical = await port.explainPlannerEntry(entry.id, userId);
+  } catch {
+    canonical = null;
+  }
+
+  if (canonical === null && rationale === null) {
     throw gap(
-      "Honest gap: the Planner records no selection rationale for this meal — it was " +
-        "chosen directly rather than generated, so there is no planner-owned reasoning to " +
-        "explain. The Intelligence Platform will not fabricate one.",
+      "Honest gap: the Planner cannot produce reasoning for this meal right now — its " +
+        "meal record could not be read, and no household-adaptation note was recorded " +
+        "for it. The Intelligence Platform will not fabricate one.",
     );
   }
 
@@ -255,12 +302,20 @@ async function explainSelection(
     mealRef = undefined;
   }
 
+  const sources: PlannerExplainResult["sources"] = [
+    ...(canonical !== null ? (["planner-explanation-service"] as const) : []),
+    ...(rationale !== null ? (["planner-household-adaptation"] as const) : []),
+  ];
+
   return {
     entryId: entry.id,
     mealId: entry.mealId,
     mealName: mealRef?.name ?? null,
+    explanation: canonical?.explanation ?? null,
+    asOf: canonical?.asOf ?? null,
+    unknownTargets: canonical?.unknownTargets ?? [],
     rationale,
-    source: "planner-household-adaptation",
+    sources,
   };
 }
 

@@ -2886,6 +2886,38 @@ function resolveOpportunityExplain(
   };
 }
 
+/**
+ * COMP4 — the planner twin of `resolveOpportunityExplain`, and deliberately its
+ * mirror image rather than a new mechanism.
+ *
+ * Before this, "why is this meal in my plan?" matched no `explain` matcher at
+ * all. It fell through to the planner keyword fallback and resolved to
+ * `planner.read`, which returns the plan's CONTENTS — so the language model was
+ * handed a list of meals and a prompt telling it to "explain the why", and it
+ * obliged. The explanation a household read was the model's, not THA's.
+ *
+ * Same narrowness as the opportunity twin: this only fires when a surface has
+ * pointed at one specific entry, so it cannot poach a neighbouring capability's
+ * questions.
+ */
+function resolvePlannerExplain(
+  lower: string,
+  hints: IntentResolutionHints,
+): ResolvedIntent | null {
+  const entryId = hints.selectedPlannerEntryId;
+  if (entryId === undefined || !Number.isFinite(entryId)) return null;
+  // The same question vocabulary the opportunity twin answers — one wording
+  // list, so "why this?" cannot mean different things on two surfaces.
+  if (!OPPORTUNITY_EXPLAIN_PATTERN.test(lower)) return null;
+
+  return {
+    capability: "planner",
+    verb: "explain",
+    parameters: { entryId },
+    confidence: 0.95,
+  };
+}
+
 export class PatternIntentResolver implements IIntentResolver {
   async resolve(
     utterance: string,
@@ -2897,6 +2929,12 @@ export class PatternIntentResolver implements IIntentResolver {
     // by design: one card was asked about, one card is answered about.
     const explainOpportunity = resolveOpportunityExplain(lower, hints);
     if (explainOpportunity) return [explainOpportunity];
+
+    // COMP4 — the planner twin, same rule: one entry was asked about, one entry
+    // is answered about. Ordered after the opportunity pointer because a card
+    // is the more specific thing to have clicked when both are somehow present.
+    const explainPlannerEntry = resolvePlannerExplain(lower, hints);
+    if (explainPlannerEntry) return [explainPlannerEntry];
 
     const collected: ResolvedIntent[] = [];
 
