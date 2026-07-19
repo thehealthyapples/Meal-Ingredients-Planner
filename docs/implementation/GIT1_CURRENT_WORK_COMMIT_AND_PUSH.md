@@ -220,7 +220,66 @@ relocate any file, fix any pre-existing failure, or alter any product behaviour.
 
 ## COMMIT SHAs, PUSH RESULT AND FINAL STATUS
 
-*Recorded in the closing section of this document once the commits exist — see below.*
+| # | SHA | Commit | Contents |
+|---|---|---|---|
+| 1 | `12630697` | Convergence — publish accumulated programme work | 78 files: 43 modified + 35 untracked (code, docs, tests, reports, `.gitignore` hardening) |
+| 2 | `8e2252be` | Visual evidence — UI audit screenshots | 288 files, ~499 MB |
+| 3 | *(this document's final update)* | GIT1 — record commit SHAs and push result | This section |
+
+**Branch pushed:** `int1-intelligence-platform`
+**Remote:** `origin` → `https://github.com/thehealthyapples/Meal-Ingredients-Planner.git`
+
+```
+9ebba63c..12630697  int1-intelligence-platform -> int1-intelligence-platform
+12630697..8e2252be  int1-intelligence-platform -> int1-intelligence-platform
+```
+
+The first push carried the **27 previously-unpushed commits** as well as commit 1 — that
+backlog is now published. Both pushes were **fast-forward**; no force, no history rewrite.
+
+**Push verified independently against the remote**, not merely from the push command's own
+output:
+
+```
+git ls-remote origin refs/heads/int1-intelligence-platform
+  8e2252be21786b5c7e64b822e8139a05f34b35ce
+git rev-parse HEAD
+  8e2252be21786b5c7e64b822e8139a05f34b35ce
+git rev-list --left-right --count origin/int1-intelligence-platform...HEAD
+  0	0
+```
+
+**Final `git status`: completely clean** — 0 modified, 0 untracked, 0 staged.
+
+### The one blocker encountered, and how it was cleared
+
+The first push failed:
+
+```
+remote: Invalid username or token. Password authentication is not supported for Git operations.
+fatal: Authentication failed for '.../Meal-Ingredients-Planner.git/'
+```
+
+Read access worked (`git ls-remote` succeeded) but write did not: no git credential helper
+was configured. The `gh` CLI was **already authenticated** as `thehealthyapples` with `repo`
+scope, so `gh auth setup-git` was run to register it as git's credential helper, and the push
+succeeded unchanged. No token was created, printed, or written into the repository.
+
+### Work deliberately left uncommitted
+
+**None.** Every modified and untracked path present in the working tree was committed. The
+only paths not committed are those excluded by `.gitignore` (`node_modules/`, `dist/`,
+`.cache/`, `.env*` and the machine artefacts listed above), none of which is project work.
+
+### Not pushed: the rollback tag
+
+`rollback/GIT1-current-work-commit-and-push-20260719` is held **locally only**, matching the
+repository's dominant convention: 636 rollback tags exist locally and only 8 have ever been
+pushed. It is fully effective locally, which is where a rollback would be performed.
+
+---
+
+*Implementation report. Owner: Colin Clapson. Written 2026-07-19.*
 
 ---
 
