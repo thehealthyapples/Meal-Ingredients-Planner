@@ -279,8 +279,49 @@ pushed. It is fully effective locally, which is where a rollback would be perfor
 
 ---
 
-*Implementation report. Owner: Colin Clapson. Written 2026-07-19.*
+## RESUME VERIFICATION — 2026-07-19 (post-interruption)
+
+The session was interrupted after the work above completed. On resume, the repository was
+re-inspected **before** any action was taken, to establish how far the workflow had actually
+progressed. Every step was already complete:
+
+| Step | Finding on resume |
+|---|---|
+| Rollback created | ✅ `rollback/GIT1-current-work-commit-and-push-20260719` → `6b93a752` |
+| Report created | ✅ This document |
+| Commits created | ✅ `12630697`, `8e2252be`, `703c9a31` — contents verified by `git show --stat` |
+| Commits pushed | ✅ |
+| Remote up to date | ✅ `HEAD` = `origin/int1-intelligence-platform` = `703c9a31`; `git rev-list --left-right --count` → `0 0` **after a real `git fetch`** |
+
+**No commit was recreated, duplicated, amended or rewritten.** No reset, stash, discard,
+force-push or merge was performed at any point in the resumed session.
+
+### Residual files committed on resume
+
+Two paths appeared in the working tree *after* commit `703c9a31`, both written by the
+Engineering Session Recovery hook rather than by GIT1:
+
+| Path | State | Decision |
+|---|---|---|
+| `.engineering/session/CURRENT.md` | Modified — heartbeat line only (`00:47:12Z` → `00:54:40Z`) | Committed. The file is tracked; leaving it dirty makes every future `git status` misreport |
+| `.engineering/session/runs/NUTPLAN1_Household_Nutrition_Intelligence.md` | Untracked | Committed. Run files are tracked by convention (**154** already in the repository), and this one carries the **live rollback ID and "Next action" of the still-incomplete NUTPLAN1 session** — precisely the state the recovery protocol exists to preserve |
+
+Both were **secret-scanned** (same pattern set as the main scan: OpenAI, Stripe, GitHub, AWS,
+Google, Slack, PEM blocks, credentialled connection strings) — **zero matches**. Both are
+small UTF-8 markdown; no binary, no cache, no machine artefact.
+
+**Validation was not re-run on resume, and this is a deliberate, stated narrowing.** The
+resume commit touches two markdown files under `.engineering/` and this report — no
+TypeScript, no schema, no `package.json`, no build input. Re-running `npm run build` or
+`typecheck:ci` would exercise nothing the commit changes, and re-reporting their earlier
+results as fresh coverage would be dishonest. The validation of record for the *code* remains
+the run in *Validation Results* above, **including its three unfixed pre-existing failures**,
+which remain open and are not represented as resolved.
+
+### Note on this document
+
+An earlier save left the footer duplicated. Corrected on resume; no other content was altered.
 
 ---
 
-*Implementation report. Owner: Colin Clapson. Written 2026-07-19.*
+*Implementation report. Owner: Colin Clapson. Written 2026-07-19. Resume verification appended 2026-07-19.*
