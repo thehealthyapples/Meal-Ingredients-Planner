@@ -318,9 +318,43 @@ results as fresh coverage would be dishonest. The validation of record for the *
 the run in *Validation Results* above, **including its three unfixed pre-existing failures**,
 which remain open and are not represented as resolved.
 
+### Resume commit and push confirmation
+
+| # | SHA | Commit | Contents |
+|---|---|---|---|
+| 4 | `35bbf89b` | GIT1 — commit residual session-recovery state and record resume verification | 3 files: `CURRENT.md` heartbeat, NUTPLAN1 run file, this report |
+| 5 | *(this SHA-recording update)* | GIT1 — record resume SHA | This table |
+
+```
+703c9a31..35bbf89b  int1-intelligence-platform -> int1-intelligence-platform
+```
+
+Verified independently against the remote, not from the push command's output:
+
+```
+git ls-remote origin refs/heads/int1-intelligence-platform
+  35bbf89bd5a7aed4177edb6d2398432352b26912
+git rev-parse HEAD
+  35bbf89bd5a7aed4177edb6d2398432352b26912
+git rev-list --left-right --count HEAD...origin/int1-intelligence-platform
+  0	0
+```
+
+Fast-forward. No force, no history rewrite.
+
+**Final `git status` after commit 4: completely clean** — 0 modified, 0 untracked, 0 staged.
+
+**Remaining uncommitted files: none.** The one file expected to go dirty again on its own is
+`.engineering/session/CURRENT.md`, whose heartbeat line the ESR Stop hook rewrites on every
+session tick. That is hook output, not unpublished work.
+
+**GitHub now contains the latest verified THA work** on `int1-intelligence-platform`.
+
 ### Note on this document
 
 An earlier save left the footer duplicated. Corrected on resume; no other content was altered.
+Commit 5 records commit 4's SHA and is itself the final commit — the chain stops here rather
+than recursing.
 
 ---
 
