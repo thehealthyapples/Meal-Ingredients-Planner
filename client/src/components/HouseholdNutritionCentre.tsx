@@ -9,7 +9,8 @@
 // Registry, Discovery, Seasonality, Nutrition Enhancement). Every section here is
 // rendered with the shared Intelligence Experience System — no Centre-specific
 // card variants. Each section renders only when its canonical owner produced
-// validated content; with nothing to say, the whole Centre disappears.
+// validated content. The Centre itself no longer disappears when there is nothing
+// to say — it is the whole Nutrients tab, so vanishing left a blank room (HOUSE2).
 //
 // Celebrate first, guide second, measure third. Foods link to their Food Pages —
 // the gateway into related foods, meals, benefits and the planner.
@@ -26,6 +27,10 @@ import {
   TrendingUp,
   ChevronRight,
 } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
+import { LoadError } from "@/components/ui/load-error";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import {
   IntelligenceCard,
   IntelligenceChipGroup,
@@ -252,7 +257,7 @@ function CategoryProgressBlock({ categories }: { categories: CategoryProgress[] 
 // ── Main ───────────────────────────────────────────────────────────────────────
 
 export function HouseholdNutritionCentre() {
-  const { data } = useQuery<NutritionCentre>({
+  const { data, isPending, isError, refetch } = useQuery<NutritionCentre>({
     queryKey: ["/api/nutrition-centre"],
     queryFn: async () => {
       const res = await fetch("/api/nutrition-centre");
@@ -262,9 +267,51 @@ export function HouseholdNutritionCentre() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Progressive enrichment: nothing validated → the Centre disappears entirely,
-  // leaving the weekly report below as the sole experience.
-  if (!data || !data.available || !data.overview) return null;
+  // HOUSE2: this used to `return null` on every absence — no data, still loading, and
+  // failed load alike. The original note reasoned that the Centre could vanish because
+  // it left "the weekly report below as the sole experience", but that report now lives
+  // on the *Foods* tab; the Centre is the entire Nutrients tab. So the rule silently
+  // rendered a tab that promises a feature as a blank page, with no way for a household
+  // to tell empty from broken. Progressive enrichment still holds for the *sections*
+  // below — each still withholds itself when unvalidated — it just cannot apply to the
+  // room itself. (EXP §14 — say what happened.)
+  if (isPending) {
+    return (
+      <div className="space-y-3" data-testid="centre-loading">
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-24 w-full" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <LoadError
+        what="your nutrition centre"
+        onRetry={() => refetch()}
+        data-testid="centre-load-error"
+      />
+    );
+  }
+
+  if (!data || !data.available || !data.overview) {
+    return (
+      <EmptyState
+        variant="empty"
+        icon={Sparkles}
+        title="Your nutrition picture starts with a cooked meal"
+        description="Once your household has cooked something, this is where the foods, plants and nutrients behind it are gathered — all-time, not just this week."
+        action={
+          <Button asChild variant="outline" size="sm">
+            <Link href="/planner" data-testid="link-centre-empty-planner">
+              Plan a meal
+            </Link>
+          </Button>
+        }
+        data-testid="centre-empty"
+      />
+    );
+  }
 
   const { overview, journey, categories, benefits, trends, discovery, simplyBetter } = data;
 

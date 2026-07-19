@@ -118,6 +118,133 @@ export function validateReviewState(row: ClaimReviewFields): string[] {
   return problems;
 }
 
+// ── Claim review lifecycle (KNOW2) ────────────────────────────────────────────
+//
+// KNOW5 gave a claim two review columns, and KNOW1 found what they could not
+// say. `reviewedAt IS NULL` carried two different meanings at once — "no one has
+// looked at this yet" and "a reviewer looked at this and refused it" — and a
+// database cannot tell them apart. The consequences are both bad and both
+// silent: a refused health claim is offered back to every future reviewer
+// forever, and the next reviewer, seeing no record of the refusal, may approve
+// what a qualified colleague already rejected.
+//
+// So rejection is given its own terminal state. This vocabulary is pure and
+// zero-I/O — it sits beside the entity spine under ARCHITECTURE_PRINCIPLES.md
+// Principle 5, exactly as the Layer-1/Layer-2 gates above do.
+//
+// IT IS NOT A RENDER GATE, and must never be used as one. `isEvidenceBackedClaim`
+// remains the single gate deciding what a household sees. The distinction is
+// load-bearing:
+//
+//   isEvidenceBackedClaim  →  may a HOUSEHOLD see this claim?   (the Trust Gate)
+//   deriveClaimReviewStatus →  what should a REVIEWER be shown?  (the worklist)
+//
+// A rejected claim is invisible to households because its `reviewedAt` is NULL
+// and the existing gate already refuses it — not because anything new filters it
+// out. That is deliberate: a second filter is a second thing that can be got
+// wrong, and the strongest guarantee available here is that rejection needs no
+// new enforcement to be safe.
+
+export type ClaimReviewStatus = "pending" | "approved" | "rejected";
+
+export const CLAIM_REVIEW_STATUS_LABELS: Readonly<Record<ClaimReviewStatus, string>> = {
+  pending: "Awaiting review",
+  approved: "Approved",
+  rejected: "Rejected",
+};
+
+/** The review columns a claim row carries after KNOW2. */
+export interface ClaimReviewLifecycleFields {
+  reviewedAt: Date | string | null;
+  reviewedBy?: string | null;
+  rejectedAt?: Date | string | null;
+  rejectedBy?: string | null;
+  rejectionReason?: string | null;
+}
+
+/**
+ * The state a claim row is actually in.
+ *
+ * Approval and rejection are mutually exclusive by construction (a database
+ * CHECK constraint enforces it, and `validateClaimLifecycleState` reports it) —
+ * but if a row ever holds both, this reports `rejected`. Failing closed is the
+ * only safe reading: the alternative would surface a claim that a human refused.
+ */
+export function deriveClaimReviewStatus(row: ClaimReviewLifecycleFields): ClaimReviewStatus {
+  if (row.rejectedAt) return "rejected";
+  if (row.reviewedAt) return "approved";
+  return "pending";
+}
+
+/**
+ * Structural integrity of a claim's review state. Empty = valid.
+ *
+ * Extends `validateReviewState` (which owns the "a sign-off must name its
+ * reviewer" rule and is not restated here) with the rejection half: a rejection
+ * must also name its reviewer, must carry a reason, and may never coexist with
+ * an approval on the same row.
+ */
+export function validateClaimLifecycleState(row: ClaimReviewLifecycleFields): string[] {
+  const problems = validateReviewState(row);
+  if (row.reviewedAt && row.rejectedAt) {
+    problems.push("a claim may not be both approved and rejected — the two states are exclusive");
+  }
+  if (row.rejectedAt && !row.rejectedBy) {
+    problems.push("rejectedAt is set without rejectedBy — a rejection must name its reviewer");
+  }
+  if (!row.rejectedAt && row.rejectedBy) {
+    problems.push("rejectedBy is set without rejectedAt — a reviewer without a rejection");
+  }
+  if (row.rejectedAt && !row.rejectionReason?.trim()) {
+    problems.push("a rejection must record why — an unexplained refusal cannot be reviewed or reversed");
+  }
+  return problems;
+}
+
+/** The decisions a reviewer can take on a claim. */
+export type ClaimReviewAction = "approve" | "reject" | "reopen";
+
+/**
+ * Which decisions are legal from a given state.
+ *
+ *   pending  → approve | reject
+ *   approved → reject                (a withdrawal: evidence found wrong later)
+ *   rejected → reopen                (back to pending, for re-examination)
+ *
+ * `rejected → approve` is deliberately NOT permitted in one step. Reversing a
+ * colleague's refusal of a health claim must be an explicit two-part act —
+ * reopen, then approve — so it can never be a mis-click, and so the audit trail
+ * records the reopening as its own decision with its own named reviewer.
+ */
+export function allowedClaimReviewActions(status: ClaimReviewStatus): readonly ClaimReviewAction[] {
+  switch (status) {
+    case "pending":
+      return ["approve", "reject"];
+    case "approved":
+      return ["reject"];
+    case "rejected":
+      return ["reopen"];
+  }
+}
+
+export function isAllowedClaimReviewAction(status: ClaimReviewStatus, action: ClaimReviewAction): boolean {
+  return allowedClaimReviewActions(status).includes(action);
+}
+
+/**
+ * Whether a claim is eligible to be APPROVED at all.
+ *
+ * Approval writes the `reviewedAt` the Trust Gate reads, so approving a claim
+ * whose citation cannot clear Layer 1 would publish an unsourced health claim
+ * through the front door. The reviewer's judgement is required but never
+ * sufficient: the citation must be structurally valid first.
+ */
+export function canApproveClaim(row: ClaimEvidenceFields & ClaimReviewLifecycleFields): boolean {
+  if (deriveClaimReviewStatus(row) !== "pending") return false;
+  if (!Array.isArray(row.sourceRefs) || row.sourceRefs.length === 0) return false;
+  return row.sourceRefs.some((ref) => isValidSourceRef(ref));
+}
+
 // ── Evidence Confidence (KNOW5) ───────────────────────────────────────────────
 //
 // One vocabulary for "how well evidenced is this claim", derived SOLELY from the

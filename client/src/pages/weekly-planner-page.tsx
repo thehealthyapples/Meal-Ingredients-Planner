@@ -2,9 +2,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 // PROD1 — the canonical error presentation, adopted beside the Skeleton PX1
 // already brought to this room. Loading had an owner here; failure did not.
 import { LoadError } from "@/components/ui/load-error";
+import { EmptyState } from "@/components/ui/empty-state";
 import React, { useState, useEffect, useMemo, useRef, useCallback, Fragment } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { safetyUnavailableNote } from "@shared/explanations/household-withholding";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -35,13 +37,17 @@ import { SharePlanDialog } from "@/components/share-plan-dialog";
 import { PlannerScanReview, type PlannerScanData, type PlannerDayEntry } from "@/components/PlannerScanReview";
 import { RecipeScanReview, type RecipeScanData } from "@/components/RecipeScanReview";
 import { emitStageProposal } from "@/lib/planner-staging-bus";
-import { computeMealVariety, EMPTY_VARIETY_SCORE } from "@shared/canonical/plant-classifier";
-import { getMealNutrients } from "@/lib/nutrition-insights";
+// PLAN2 — `computeMealVariety`, `EMPTY_VARIETY_SCORE`, `getMealNutrients` and
+// `MealNutrientTags` were imported here and never used: the per-meal nutrient and
+// variety render was wired as far as the import line and no further. The imports are
+// removed rather than completed, because the renders they were for now live in the
+// components that own them (`PlannerMealCard` draws the variety dots,
+// `nutrition-variety-chips` the chips). Completing them here would have put a second
+// per-meal nutrition render on the page that already delegates it.
 import PlannerIntelligenceStrip from "@/components/PlannerIntelligenceStrip";
 import { AmbientIntelligence } from "@/components/intelligence";
 import LearningSignalsPanel from "@/components/LearningSignalsPanel";
 import { CookbookMealIntelligenceStrip } from "@/components/CookbookMealIntelligenceStrip";
-import { MealNutrientTags } from "@/components/nutrition-insights-panel";
 import { useUser } from "@/hooks/use-user";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { FirstVisitHint } from "@/components/first-visit-hint";
@@ -1521,6 +1527,14 @@ export default function WeeklyPlannerPage() {
     return aIdx - bIdx;
   }) || [];
 
+  // HOUSE2: the Planner had a loading branch (PX1-W4.8) and a failed-load branch
+  // (PROD1) but no *empty* branch — so a household with no meals planned saw seven
+  // blank columns and no words. The only orientation was the dismissible
+  // FirstVisitHint; once dismissed, the room was permanently silent. This is the
+  // room Home's primary CTA sends a new household to first.
+  const activeWeekIsEmpty =
+    !!activeWeekData && sortedDays.every((d) => d.entries.length === 0);
+
   const getNextDay = (currentDayId: number): FullDay | undefined => {
     const idx = sortedDays.findIndex((d) => d.id === currentDayId);
     if (idx < 0 || idx >= sortedDays.length - 1) return undefined;
@@ -1918,10 +1932,48 @@ export default function WeeklyPlannerPage() {
       >
       <div className="flex gap-3 items-start">
       <div className="flex-1 min-w-0">
-      <FirstVisitHint
-        areaKey="planner"
-        message="Plan your meals for the week ahead. Add meals to each day, use templates to get started fast, or tap Plan to get suggestions - then send the whole week to your basket."
-      />
+      {/* HOUSE2: suppressed while the empty-week state below is showing. Both told a
+          household with nothing planned to "tap Plan to get suggestions", stacked one
+          above the other — two prompts for one action. The empty state is the stronger
+          of the two (persistent rather than dismiss-once, and it carries the control
+          itself), so the hint yields to it and returns once the week has meals in it,
+          where it still earns its place explaining templates and send-to-basket. */}
+      {!activeWeekIsEmpty && (
+        <FirstVisitHint
+          areaKey="planner"
+          message="Plan your meals for the week ahead. Add meals to each day, use templates to get started fast, or tap Plan to get suggestions - then send the whole week to your basket."
+        />
+      )}
+
+      {/* The grid below stays rendered — its cells ARE the affordance, so replacing
+          them with a card would remove the very thing to act on. This names the
+          absence above them and carries the one next action. Plan is otherwise
+          desktop-only (`button-plan-my-week` is `hidden md:inline-flex`, mobile
+          reaches it through the workspace drawer), so on a phone this is also the
+          first place the action becomes directly reachable. Same handler, no new
+          capability. */}
+      {activeWeekIsEmpty && (
+        <EmptyState
+          variant="empty"
+          size="compact"
+          icon={Sparkles}
+          title="Nothing planned for this week yet"
+          description="Tap a day to add a meal you already cook, or let THA suggest a week built around your household."
+          action={
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setAssistantMode("smart")}
+              disabled={smartLoading}
+              data-testid="button-plan-empty-week"
+            >
+              {smartLoading ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Sparkles className="mr-1 h-3 w-3" />}
+              {smartLoading ? "Planning…" : "Plan my week"}
+            </Button>
+          }
+          data-testid="empty-planner-week"
+        />
+      )}
 
       {/* ── Week Content ── */}
       <Tabs value={activeWeek} onValueChange={setActiveWeek} className="w-full">
@@ -2020,9 +2072,21 @@ export default function WeeklyPlannerPage() {
             Engine's opportunity bundle. The `planner` domain's canonical page:
             the empty day each opportunity names is on this very screen. Distinct
             from the strip above, which is the week's nutrition/diversity picture. */}
+        {/* PLAN2 — `nutrition` joins `planner` on this ONE mount.
+
+            HNP2 made the household's weekly balance gap an opportunity in the
+            `nutrition` domain, but mounted it only on the nutrition page. Its claim
+            is about THIS WEEK'S PLAN ("no whole grains are planned"), and the plan is
+            on this screen — the household reads the gap in the room where they can
+            act on it, rather than in the room that reports on it afterwards.
+
+            One mount, not two: `AmbientIntelligence` takes a domain LIST and filters
+            the SAME shared bundle client-side, so adding a domain here costs no extra
+            request and no second attention budget. A second component would have
+            re-fetched and re-budgeted the bundle beside the one already here. */}
         <AmbientIntelligence
           surfaceKey="planner"
-          domains={["planner"]}
+          domains={["planner", "nutrition"]}
           title="Gaps in your week"
           className="mt-3"
         />
@@ -3495,7 +3559,10 @@ export default function WeeklyPlannerPage() {
                                       <ShieldAlert className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
                                       <span>
                                         {unresolved
-                                          ? "We couldn't confirm your household's dietary needs, so we haven't suggested a household-safe version."
+                                          ? safetyUnavailableNote({
+                                              subject: "this meal",
+                                              consequence: "we haven't suggested a household-safe version",
+                                            })
                                           : "We couldn't find a household-safe version of this meal that suits everyone eating it, so we haven't suggested one."}
                                       </span>
                                     </p>

@@ -6133,6 +6133,9 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
   const [ingredientSource, setIngredientSource] = useState("");
   const [ingredientDecision, setIngredientDecision] = useState(false);
   const [smartMealResults, setSmartMealResults] = useState<SmartMealResult[] | null>(null);
+  // NUTPLAN1 — what the safety gate withheld, in the household's own words.
+  // A shortened list must never be presented as if it were the whole answer.
+  const [smartMealWithheldNote, setSmartMealWithheldNote] = useState<string | null>(null);
   const [isFindingMeals, setIsFindingMeals] = useState(false);
 
   const isIngredientList = (text: string): boolean => {
@@ -6196,6 +6199,7 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
     setIngredientSource("");
     setIngredientDecision(false);
     setSmartMealResults(null);
+    setSmartMealWithheldNote(null);
     setIsFindingMeals(false);
     speechTranscriptRef.current = "";
     // Reset before stopping so onend doesn't falsely trigger "no speech captured"
@@ -6388,8 +6392,12 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
         setImportFailureMsg((err as any).message || "Could not find meals.");
         return;
       }
-      const data: SmartMealResult[] = await res.json();
-      setSmartMealResults(data);
+      // NUTPLAN1 — the route now returns `{ meals, withheldForSafety?, withheldNote? }`
+      // because it passes every candidate through the canonical household dietary
+      // safety gate before answering.
+      const data: { meals: SmartMealResult[]; withheldNote?: string } = await res.json();
+      setSmartMealResults(data.meals ?? []);
+      setSmartMealWithheldNote(data.withheldNote ?? null);
     } catch {
       setImportFailureMsg("Could not reach the server. Check your connection and try again.");
     } finally {
@@ -6811,6 +6819,16 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
                     ? "Meals you can make with these ingredients:"
                     : "No matching meals found. Try creating a new recipe instead."}
                 </p>
+                {/* NUTPLAN1 — say plainly that the list was shortened for safety,
+                    rather than letting a filtered list read as the whole answer. */}
+                {smartMealWithheldNote && (
+                  <p
+                    className="text-xs text-muted-foreground"
+                    data-testid="smart-meal-withheld-note"
+                  >
+                    {smartMealWithheldNote}
+                  </p>
+                )}
                 {smartMealResults.map((r) => (
                   <div
                     key={r.id}

@@ -660,6 +660,19 @@ entries:
     last_verified: 2026-07-11
     version: 1
 
+  - id: page-admin-knowledge-claims
+    name: Admin — Nutrition Claim Review
+    section: pages
+    status: live
+    visibility: admin
+    route: /admin/knowledge-claims
+    purpose: Approve or reject individual nutrition health claims before a household is ever shown one.
+    owner: Colin Clapson
+    sources: [client/src/pages/admin-knowledge-claims-page.tsx, client/src/App.tsx]
+    related: [dom-admin, adm-knowledge-claims, page-admin-knowledge-review]
+    last_verified: 2026-07-19
+    version: 1
+
   - id: page-legal
     name: Policies
     section: pages
@@ -993,6 +1006,18 @@ entries:
     related: [page-admin-knowledge-review]
     known_defects: [fnd-admin-chrome-inconsistency]
     last_verified: 2026-07-11
+    version: 1
+
+  - id: adm-knowledge-claims
+    name: Nutrition Claim Review
+    section: admin-experiences
+    status: live
+    visibility: admin
+    purpose: Approve, reject or withdraw individual nutrition health claims, with every decision permanently attributed and auditable.
+    owner: Colin Clapson
+    sources: [client/src/pages/admin-knowledge-claims-page.tsx, server/lib/knowledge-claim-review-store.ts]
+    related: [page-admin-knowledge-claims, adm-knowledge-review]
+    last_verified: 2026-07-19
     version: 1
 
   - id: adm-site-banner

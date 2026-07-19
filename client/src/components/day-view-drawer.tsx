@@ -104,10 +104,20 @@ function SlotSection({
   const [lastAddedMealId, setLastAddedMealId] = useState<number | null>(null);
   const [pairingsDismissed, setPairingsDismissed] = useState(false);
 
-  const { data: pairingsData = [] } = useQuery<PairingResult[]>({
+  // NUTPLAN2 — pairings now come through the canonical dietary safety gate, so
+  // the response carries what it withheld. A shortened list with no note reads
+  // as "there is nothing else", which is exactly the silent shortening PROD6
+  // forbids.
+  const { data: pairingsResponse } = useQuery<{
+    pairings: PairingResult[];
+    withheldForSafety: number;
+    withheldNote: string | null;
+  }>({
     queryKey: ["/api/meal-pairings", lastAddedMealId],
     enabled: lastAddedMealId !== null && !pairingsDismissed,
   });
+  const pairingsData = pairingsResponse?.pairings ?? [];
+  const pairingsWithheldNote = pairingsResponse?.withheldNote ?? null;
 
   const filteredResults = search.query.trim()
     ? allMeals.filter(m => {
@@ -175,7 +185,8 @@ function SlotSection({
 
   const SlotIcon = slot.icon;
 
-  const showPairings = lastAddedMealId !== null && !pairingsDismissed && pairingsData.length > 0;
+  const showPairings =
+    lastAddedMealId !== null && !pairingsDismissed && (pairingsData.length > 0 || pairingsWithheldNote !== null);
 
   return (
     <div className="space-y-2">
@@ -266,6 +277,11 @@ function SlotSection({
               <X className="h-3 w-3" />
             </button>
           </div>
+          {pairingsWithheldNote && (
+            <p className="text-[11px] text-muted-foreground" data-testid={`text-pairings-withheld-${slot.key}`}>
+              {pairingsWithheldNote}
+            </p>
+          )}
           <div className="flex flex-wrap gap-1.5">
             {pairingsData.map(({ pairing, meal: suggestedMeal }) => (
               <Button

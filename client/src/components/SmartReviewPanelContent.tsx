@@ -343,9 +343,35 @@ function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, 
         )}
       </div>
 
+      {/* PLAN1's evidence trail, surfaced (PLAN2 activation).
+
+          `reasons` are DERIVED from `evidence` and capped at six; the trail itself is
+          uncapped and carries the `source` — the named owner each sentence was read
+          from. That field has been on the wire since PLAN1 shipped with ZERO readers,
+          so the household saw the claim and never the citation, and any reason ranked
+          seventh or lower was composed server-side and then dropped on the floor.
+
+          Nothing new is computed here. This renders what the server already sent.
+          `evidence` is optional by contract — sessions generated before PLAN1 carry
+          `reasons` without a trail — so the reasons list stays the primary render and
+          the trail is additive. */}
       {expanded && entry.explanation && (
         <div className="px-3 pb-3 text-xs text-muted-foreground space-y-0.5 bg-muted/20 border-t pt-2">
           {entry.explanation.reasons.map((r, i) => <p key={i}>• {r}</p>)}
+
+          {entry.explanation.evidence && entry.explanation.evidence.length > 0 && (
+            <div className="pt-2 mt-1.5 border-t border-border/40 space-y-1" data-testid={`evidence-trail-${key}`}>
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground/70">
+                What this was read from
+              </p>
+              {entry.explanation.evidence.map((e, i) => (
+                <p key={i} className="text-[11px] leading-snug">
+                  <span className="text-foreground/70">{e.source}</span>
+                  <span className="text-muted-foreground/60"> — {e.detail}</span>
+                </p>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

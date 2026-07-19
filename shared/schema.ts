@@ -1677,6 +1677,16 @@ export const knowledgeFoodNutrients = pgTable("knowledge_food_nutrients", {
   sourceRefs: jsonb("source_refs").$type<KnowledgeSourceRef[]>().notNull().default(sql`'[]'::jsonb`),
   reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
   reviewedBy: text("reviewed_by"),
+  // KNOW2 — the terminal REJECTED state. Before it, `reviewed_at IS NULL` meant
+  // both "not yet reviewed" and "reviewed and refused", so a refused health claim
+  // was offered back to every future reviewer forever. A CHECK constraint keeps
+  // approval and rejection exclusive; the vocabulary lives in
+  // shared/knowledge/evidence.ts (deriveClaimReviewStatus). Rejection adds NO
+  // render filter — a rejected row has reviewed_at NULL, so the existing Trust
+  // Gate already refuses it.
+  rejectedAt: timestamp("rejected_at", { withTimezone: true }),
+  rejectedBy: text("rejected_by"),
+  rejectionReason: text("rejection_reason"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => ({
@@ -1708,6 +1718,10 @@ export const knowledgeFoodBenefits = pgTable("knowledge_food_benefits", {
   sourceRefs: jsonb("source_refs").$type<KnowledgeSourceRef[]>().notNull().default(sql`'[]'::jsonb`),
   reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
   reviewedBy: text("reviewed_by"),
+  // KNOW2 — terminal REJECTED state (see knowledgeFoodNutrients above).
+  rejectedAt: timestamp("rejected_at", { withTimezone: true }),
+  rejectedBy: text("rejected_by"),
+  rejectionReason: text("rejection_reason"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => ({
@@ -1725,6 +1739,10 @@ export const knowledgeNutrientBenefits = pgTable("knowledge_nutrient_benefits", 
   sourceRefs: jsonb("source_refs").$type<KnowledgeSourceRef[]>().notNull().default(sql`'[]'::jsonb`),
   reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
   reviewedBy: text("reviewed_by"),
+  // KNOW2 — terminal REJECTED state (see knowledgeFoodNutrients above).
+  rejectedAt: timestamp("rejected_at", { withTimezone: true }),
+  rejectedBy: text("rejected_by"),
+  rejectionReason: text("rejection_reason"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => ({
@@ -1877,6 +1895,10 @@ export const knowledgePreparationEffects = pgTable("knowledge_preparation_effect
   sourceRefs: jsonb("source_refs").$type<KnowledgeSourceRef[]>().notNull().default(sql`'[]'::jsonb`),
   reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
   reviewedBy: text("reviewed_by"),
+  // KNOW2 — terminal REJECTED state (see knowledgeFoodNutrients above).
+  rejectedAt: timestamp("rejected_at", { withTimezone: true }),
+  rejectedBy: text("rejected_by"),
+  rejectionReason: text("rejection_reason"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => ({

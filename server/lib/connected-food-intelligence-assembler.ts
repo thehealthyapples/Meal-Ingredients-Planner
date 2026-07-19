@@ -35,6 +35,7 @@ import { discover } from "@shared/discovery/engine";
 import { seasonForDate, SEASON_SEED } from "@shared/discovery/seasonal-map";
 import { buildRuleIndex, matchUpliftRules } from "./uplift-engine";
 import { UPLIFT_RULES } from "./uplift-rules";
+import { upliftSuggestionText } from "@shared/nutrition/uplift-phrasing";
 
 // ── Caps — quality over quantity (Experience Rule: never spammy / endless). ────
 const MAX_FOODS_PER_SECTION = 6;
@@ -261,12 +262,7 @@ function assembleBetterChoices(foodName: string): ConnectedBetterChoice[] {
   const seen = new Set<string>();
   for (const match of matches) {
     for (const s of match.suggestions) {
-      const label =
-        s.action === "swap"
-          ? `Swap in ${s.ingredient}`
-          : s.action === "boost"
-            ? `Add more ${s.ingredient}`
-            : `Add ${s.ingredient}`;
+      const label = upliftSuggestionText(s);
       if (seen.has(label)) continue;
       seen.add(label);
       out.push({ suggestion: label, why: s.why });

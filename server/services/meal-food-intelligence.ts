@@ -18,6 +18,7 @@ import {
 import { getFoodContext } from "../../shared/canonical/food-context";
 import { SEASON_SEED, seasonForDate } from "../../shared/discovery/seasonal-map";
 import { discover } from "../../shared/discovery/engine";
+import { plantDiversityGroup } from "../../shared/canonical/plant-classifier";
 
 // ── Display labels ────────────────────────────────────────────────────────────
 
@@ -48,8 +49,16 @@ const AVAILABILITY_LABELS: Record<string, string> = {
   rare: "Rare — usually online or specialist",
 };
 
-// WS0 knowledge food categories that count as plant foods
-const PLANT_CATEGORIES = new Set(["Vegetables", "Fruit", "Legumes", "Seeds", "Mushrooms", "Herbs"]);
+// NUTPLAN2 — the hand-maintained PLANT_CATEGORIES set that used to live here is
+// RETIRED (Principle 8). It was a second answer to "is this a plant?", written as
+// six WS0 category strings, sitting beside the canonical owner
+// (`plantDiversityGroup`, shared/canonical/plant-classifier.ts:231) that already
+// owned the question — and the platform's own verification register had it
+// flagged as an open violation (`pd-rival-owner`, publication-register.ts).
+//
+// It carried a second, quieter defect: it incremented once per resolved SLUG, so
+// kale and cavolo nero counted as two plants and every tomato variety counted
+// separately. Counting groups is the whole point of the 30-plants number.
 
 // Nutrient priority for the "Why This Meal Is Great" chip — most notable first
 const HIGHLIGHT_NUTRIENT_PRIORITY = [
@@ -138,7 +147,8 @@ export async function buildMealFoodIntelligence(
   const origins: Array<{ ingredient: string; regionLabel: string }> = [];
   const rareItems: Array<{ ingredient: string; availabilityLabel: string }> = [];
   const seenRegions = new Set<string>();
-  let plantCount = 0;
+  // Distinct diversity GROUPS, not slugs — the canonical dedup key (NUTPLAN2).
+  const plantGroups = new Set<string>();
 
   for (const [raw, slug] of Array.from(slugMap.entries())) {
     // Seasonal check
@@ -147,9 +157,10 @@ export async function buildMealFoodIntelligence(
       if (entry) seasonalIngredients.push({ name: entry.name, season: seasonLabel });
     }
 
-    // Plant food count
+    // Plant food count — one entry per diversity group, via the canonical owner.
     const food = foodBySlug.get(slug);
-    if (food && PLANT_CATEGORIES.has(food.category)) plantCount++;
+    const group = plantDiversityGroup(food ? food.name : raw);
+    if (group) plantGroups.add(group);
 
     // Food context
     const ctx = getFoodContext(slug);
@@ -197,6 +208,7 @@ export async function buildMealFoodIntelligence(
   // Build "Why This Meal Is Great" highlights (up to 5 chips)
   const highlights: string[] = [];
 
+  const plantCount = plantGroups.size;
   if (plantCount >= 2) {
     highlights.push(`Contains ${plantCount} plant food${plantCount !== 1 ? "s" : ""}`);
   }

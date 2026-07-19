@@ -180,17 +180,14 @@ export function isMealCompliantForUser(
   return { compliant: true };
 }
 
-/**
- * Convenience wrapper for write paths that hold a mealId: loads the meal via the
- * supplied loader and applies isMealCompliantForUser. A missing meal is reported
- * as non-compliant so a system path never silently writes an unresolved id.
- */
-export async function assertMealCompliantForPlanner(
-  mealId: number,
-  ctx: PlannerComplianceContext,
-  getMeal: (id: number) => Promise<CompliableMeal | undefined>,
-): Promise<ComplianceResult> {
-  const meal = await getMeal(mealId);
-  if (!meal) return { compliant: false, reason: "meal-not-found" };
-  return isMealCompliantForUser(meal, ctx);
-}
+// NUTPLAN2 — `assertMealCompliantForPlanner` is RETIRED (Principle 8).
+//
+// A convenience wrapper written for "write paths that hold a mealId", with ZERO
+// callers anywhere in the repository including its own tests. All fifteen real
+// call sites use `resolvePlannerComplianceContext` + `isMealCompliantForUser`
+// directly and skip the wrapper built for them.
+//
+// Deleted rather than wired, because wiring it would have changed fifteen
+// working call sites to route through an untested indirection — and the third
+// state, leaving it in place, is the one that costs most: it reads as the
+// sanctioned entry point while protecting nothing.

@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { Meal, Nutrition } from "@shared/schema";
 import type { FullWeek, SmartSuggestEntry, SmartSuggestResult } from "@/lib/planner-types";
+import { withheldClause } from "@shared/explanations/household-withholding";
 
 // ── Session persistence (mirrors scan-review pattern) ────────────────────────
 const SMART_SESSION_KEY = "planner-smart-review-session";
@@ -224,6 +225,11 @@ export function useSmartSuggest({
     setApplyingSmartPlan(true);
     let importedCount = 0;
     let failedCount = 0;
+    // PLAN2 — withheld-for-safety is tracked apart from failed. A household that is
+    // told "3 could not be added" learns nothing; one told a meal was withheld because
+    // it breaks their own dietary rules learns something true and actionable.
+    let withheldCount = 0;
+    const withheldReasons = new Set<string>();
     try {
       for (const entry of smartResult.entries) {
         const day = activeWeekData.days.find(d => d.dayOfWeek === entry.dayOfWeek);
@@ -233,9 +239,26 @@ export function useSmartSuggest({
           if (entry.candidate.isExternal) {
             const importRes = await apiRequest('POST', '/api/smart-suggest/auto-import', { candidate: entry.candidate });
             const importData = await importRes.json();
-            // Server compliance gate may skip a non-compliant candidate (no mealId).
-            // Skip the planner add for that entry rather than posting an invalid id.
-            if (importData.skipped || !importData.mealId) {
+            // PLAN2 — a compliance SKIP is not a FAILURE, and must not be reported as
+            // one. The server's gate withholds a candidate that breaks this household's
+            // own dietary rules and returns the reason it did so
+            // (`routes.ts` smart-apply gate → `{ skipped: true, reason }`). That reason
+            // was logged server-side and thrown away here, so a deliberate safety
+            // decision reached the household as "could not be added" — the exact
+            // silent-shortening PROD6 fixed for meal pairings, still present here.
+            //
+            // Counted and named separately. Nothing new is computed: the server already
+            // decided and already said why.
+            if (importData.skipped) {
+              withheldCount++;
+              // The SERVER's note, rendered verbatim. `reason` is machine-readable
+              // ("household-hard-restriction") and is deliberately NOT shown.
+              if (typeof importData.withheldNote === "string" && importData.withheldNote.trim()) {
+                withheldReasons.add(importData.withheldNote.trim());
+              }
+              continue;
+            }
+            if (!importData.mealId) {
               failedCount++;
               continue;
             }
@@ -260,10 +283,26 @@ export function useSmartSuggest({
       setSmartResult(null);
       clearSmartSession();
       onApplied?.();
-      const desc = failedCount === 0
-        ? `${smartResult.entries.length - failedCount} meals added to Week ${activeWeek}.${importedCount > 0 ? ` ${importedCount} recipes auto-imported.` : ''}`
-        : `${smartResult.entries.length - failedCount} meals added. ${failedCount} could not be added.`;
-      toast({ title: "Plan applied", description: desc });
+      // PLAN2 — the outcome sentence now distinguishes three genuinely different
+      // things, where it previously collapsed two of them into "could not be added":
+      //   added     — it worked
+      //   withheld  — THA deliberately refused it, and says why (a safety statement)
+      //   failed    — something went wrong (an error statement)
+      // Naming the withhold is the point: a filtered result presented as the whole
+      // answer is the defect, not the filtering.
+      const addedCount = smartResult.entries.length - failedCount - withheldCount;
+      const parts = [
+        `${addedCount} meals added to Week ${activeWeek}.`,
+        importedCount > 0 ? `${importedCount} recipes auto-imported.` : "",
+        // The clause after the dash is the SERVER's sentence, rendered verbatim — the
+        // client composes only the count and the connective, never a claim about the
+        // household's own dietary data.
+        withheldCount > 0
+          ? `${withheldCount} left out because ${Array.from(withheldReasons)[0] ?? withheldClause(withheldCount)}.`
+          : "",
+        failedCount > 0 ? `${failedCount} could not be added.` : "",
+      ].filter(Boolean);
+      toast({ title: "Plan applied", description: parts.join(" ") });
     } catch {
       toast({ title: "Failed to apply plan", variant: "destructive" });
     } finally {

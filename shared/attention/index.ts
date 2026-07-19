@@ -111,6 +111,10 @@ export const OPPORTUNITY_DOMAIN_LABELS: Readonly<Record<string, string>> = {
   // AFI4/CBK2 — without this row a cookbook card renders under the generic "Food"
   // fallback, so the household could not tell which room the observation came from.
   cookbook: "Cookbook",
+  // HNP2 — the nutrition domain. "Food" would be actively misleading here: every other
+  // domain in this map IS food, and the one thing this card is about is the shape of the
+  // week rather than any single food in it.
+  nutrition: "Nutrition",
 };
 
 /**

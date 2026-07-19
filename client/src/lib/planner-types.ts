@@ -41,20 +41,19 @@ export interface SmartCandidate {
   };
 }
 
-/** PLAN1 — the owner each reason was read from. Optional: sessions persisted
- *  before PLAN1 carry `reasons` without the evidence trail. */
-export interface PlannerExplanationEvidence {
-  dimension: string;
-  source: string;
-  detail: string;
-}
-
-export interface MealExplanation {
-  title: string;
-  reasons: string[];
-  evidence?: PlannerExplanationEvidence[];
-  scoreBreakdown: { healthScore: number; upfScore: number; budgetScore: number; preferenceMatch: number };
-}
+// COMP3 — these two types were re-declared here as structural twins of the
+// server's, with no shared import: `evidence` was optional here and required
+// there, and `dimension` was `string` here and a 14-member union there. A
+// duplicated TYPE drifts silently — each copy type-checks against itself, so
+// nothing could notice the producer and the renderer disagreeing. Both are now
+// read from the one declaration. (PLAN1's note still holds and now lives there:
+// `evidence` is optional because sessions persisted before PLAN1 carry
+// `reasons` without the evidence trail.)
+export type {
+  PlannerExplanationEvidence,
+  MealExplanation,
+} from "@shared/explanations/planner-explanation";
+import type { MealExplanation } from "@shared/explanations/planner-explanation";
 
 export interface SmartSuggestEntry {
   dayOfWeek: number;

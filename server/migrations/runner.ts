@@ -3393,6 +3393,53 @@ const MIGRATIONS: Migration[] = [
   },
 
   {
+    // KNOW2 — the terminal REJECTED state for a nutrition claim.
+    //
+    // KNOW5 gave every claim table `reviewed_at` + `reviewed_by`, and KNOW1 found
+    // what those two columns could not say. `reviewed_at IS NULL` meant BOTH
+    // "nobody has looked at this yet" AND "a qualified reviewer looked at this and
+    // refused it", and no query could tell the two apart. A refused health claim
+    // was therefore indistinguishable from an unexamined one: it came back to the
+    // top of every future reviewer's queue forever, and the next reviewer — shown
+    // no record of the refusal — could approve what a colleague had already
+    // rejected, with nothing anywhere marking that it had happened.
+    //
+    // These columns are ADDITIVE and NULLABLE, and no row is back-filled. Every
+    // existing claim keeps exactly the state it has: the 21 pre-KNOW5 sign-offs
+    // stay approved, and the 3,299 uncited rows stay pending — which is the truth,
+    // because none of them has been rejected by anyone. Inventing a rejection
+    // would be the fabrication this architecture exists to prevent.
+    //
+    // The CHECK constraint is the load-bearing line. Approval and rejection are
+    // mutually exclusive, and it is enforced in the database rather than in
+    // application code because `reviewed_at` is what the Trust Gate reads: a row
+    // holding both states would be a claim a human refused that renders to
+    // households anyway, and TypeScript does not run inside Postgres.
+    id: "2026-07-19_know2_claim_rejection_state",
+    statements: [
+      ...["knowledge_food_nutrients", "knowledge_food_benefits", "knowledge_nutrient_benefits", "knowledge_preparation_effects"].flatMap(
+        (table) => [
+          `ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS rejected_at TIMESTAMPTZ`,
+          `ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS rejected_by TEXT`,
+          `ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS rejection_reason TEXT`,
+          `ALTER TABLE ${table} DROP CONSTRAINT IF EXISTS ${table}_review_exclusive_check`,
+          `ALTER TABLE ${table} ADD CONSTRAINT ${table}_review_exclusive_check
+             CHECK (reviewed_at IS NULL OR rejected_at IS NULL)`,
+          // A rejection must name its reviewer and say why. An unexplained refusal
+          // cannot be reviewed, appealed, or reversed — it is the rejection-side
+          // twin of KNOW5's "a sign-off must name its reviewer".
+          `ALTER TABLE ${table} DROP CONSTRAINT IF EXISTS ${table}_rejection_attributed_check`,
+          `ALTER TABLE ${table} ADD CONSTRAINT ${table}_rejection_attributed_check
+             CHECK (rejected_at IS NULL OR (rejected_by IS NOT NULL AND btrim(COALESCE(rejection_reason, '')) <> ''))`,
+          // The reviewer's worklist filters on this every time it loads.
+          `CREATE INDEX IF NOT EXISTS ${table}_review_state_idx
+             ON ${table} (reviewed_at, rejected_at) WHERE is_active`,
+        ],
+      ),
+    ],
+  },
+
+  {
     // COMM1 — the Community Foundation. Three tables, one new domain (SoT D37),
     // sitting ABOVE Domain 16 and owning nothing Domain 16 owns.
     //

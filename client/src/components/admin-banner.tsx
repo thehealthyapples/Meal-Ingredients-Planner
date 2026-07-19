@@ -29,6 +29,9 @@ const ADMIN_NAV = [
   { href: "/admin/benchmark-households", label: "Benchmark Households", icon: FlaskConical },
   { href: "/admin/observations", label: "Observations", icon: Activity },
   { href: "/admin/behaviour", label: "Behaviour", icon: ListTree },
+  // KNOW2 — a review surface nobody can find reviews nothing. The claim backlog
+  // is only actionable if a reviewer can reach it without being told the URL.
+  { href: "/admin/knowledge-claims", label: "Claim Review", icon: ShieldCheck },
 ] as const;
 
 export function AdminBanner() {

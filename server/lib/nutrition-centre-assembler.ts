@@ -18,7 +18,7 @@
 // fabricated, estimated, or shown with invented progress.
 
 import { fetchHouseholdPlannerFoods } from "./food-intelligence-assembler";
-import { isPlantIngredient } from "@shared/canonical/plant-classifier";
+import { plantDiversityGroup } from "@shared/canonical/plant-classifier";
 import { seasonForDate, SEASON_SEED, SEASON_LABEL } from "@shared/discovery/seasonal-map";
 import { discover } from "@shared/discovery/engine";
 import {
@@ -29,6 +29,7 @@ import {
 } from "../services/nutrition-knowledge-registry";
 import { buildRuleIndex, matchUpliftRules } from "./uplift-engine";
 import { UPLIFT_RULES } from "./uplift-rules";
+import { upliftSuggestionText } from "@shared/nutrition/uplift-phrasing";
 
 // ── Public projection ──────────────────────────────────────────────────────────
 
@@ -146,10 +147,29 @@ export async function assembleNutritionCentre(
   );
 
   // ── Overview ────────────────────────────────────────────────────────────────
-  const plantDiversity = planner.enjoys.filter((slug) => {
-    const f = bySlug.get(slug);
-    return f ? isPlantIngredient(f.name) : isPlantIngredient(slug.replace(/-/g, " "));
-  }).length;
+  //
+  // NUTPLAN2 — dedup on the DIVERSITY GROUP, which is the only key a plant count
+  // may use (`plantDiversityGroup`, plant-classifier.ts:231).
+  //
+  // This previously filtered `planner.enjoys` — a list of CANONICAL FOOD SLUGS —
+  // with `isPlantIngredient` and took `.length`. That counts a slug, not a plant:
+  // kale and cavolo nero are two slugs in one group, and every tomato variety is
+  // its own slug. So the Nutrition Centre told households they had eaten more
+  // distinct plants than they had, in the one figure the 30-plants target asks
+  // them to act on — the exact error NUTPLAN1 fixed on the planner strip (D1),
+  // surviving here because this site dedups by a third rule again.
+  //
+  // The number is published twice: as `overview.plantDiversity` ("including N
+  // different plants" in the Nutrition Centre) and as a conversational milestone
+  // through the notice engine. Both now count groups.
+  const plantDiversity = new Set(
+    planner.enjoys
+      .map((slug) => {
+        const f = bySlug.get(slug);
+        return plantDiversityGroup(f ? f.name : slug.replace(/-/g, " "));
+      })
+      .filter((group): group is string => group !== null),
+  ).size;
 
   const season = seasonForDate(now);
   const seasonSlugs = new Set(SEASON_SEED[season].map((s) => s.slug));
@@ -291,12 +311,7 @@ export async function assembleNutritionCentre(
   const simplyBetter: CentreSimplyBetter[] = [];
   for (const m of matches) {
     for (const s of m.suggestions ?? []) {
-      const suggestion =
-        s.action === "swap"
-          ? `Swap in ${s.ingredient}`
-          : s.action === "boost"
-            ? `Add more ${s.ingredient}`
-            : `Add ${s.ingredient}`;
+      const suggestion = upliftSuggestionText(s);
       simplyBetter.push({ suggestion, why: s.why });
       if (simplyBetter.length >= 2) break;
     }

@@ -298,6 +298,13 @@ const DOMAIN_SURFACE: Readonly<Record<string, ConversationSurface>> = {
   // No new surface is introduced: a question about a recipe belongs where recipes already
   // live.
   cookbook: "meals",
+  // HNP2 — the Nutrition domain routes to the EXISTING `nutrition` conversation surface
+  // (conversation-store.ts), an exact-name match. No new surface is introduced.
+  //
+  // Without this row the domain falls through to `FALLBACK_SURFACE` — which is the right
+  // DEFAULT for a domain nobody has mapped, and the wrong ANSWER for one that has a
+  // surface of its own already sitting in the union.
+  nutrition: "nutrition",
 };
 
 /** An unmapped domain is an honest gap, never a guess — it falls back to the Companion's own floating surface. */

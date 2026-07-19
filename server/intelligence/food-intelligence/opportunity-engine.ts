@@ -84,8 +84,9 @@ import { buildRuleIndex, matchUpliftRules } from "../../lib/uplift-engine.js";
 import { UPLIFT_RULES } from "../../lib/uplift-rules.js";
 import type { UpliftSuggestion } from "../../lib/uplift-types.js";
 // AFI4 (CBK2) — the EXISTING INT15 Meals read port, used to read the household's OWN
-// cookbook (`getMeals(userId)`, user-scoped by the owner), exactly as
-// pantry-intelligence-assembler.ts already does. No new port, no new owner.
+// cookbook (`getMeals(userId)`, user-scoped by the owner). No new port, no new owner.
+// (This comment cited pantry-intelligence-assembler.ts as precedent; NUTPLAN2
+// retired that file — 328 lines, zero callers, six TypeScript errors.)
 import { createStorageMealsReadPort } from "../handlers/meals-read-port.js";
 // AFI3 (SHOP1) — WS9 Alternatives. The curated less-processed options and their
 // editorial reasons have exactly one owner (`shared/alternatives`); this engine reads
@@ -95,6 +96,33 @@ import { alternatives, resolveAnchorKey } from "@shared/alternatives/index.js";
 // The canonical food-name index type, shared with the planner explanation context —
 // the one key space (canonical slug) every generator below joins on.
 import type { FoodNameIndex } from "../../lib/planner-explanation-context.js";
+// HNP2 — the plant classifier (M4) is the SINGLE owner of what counts as a plant and
+// which of the five variety components a food falls into. This engine classifies
+// nothing itself; it hands ingredient lines to the classifier and uses what comes back.
+//
+// NUTPLAN2 §10 R3 recorded that two plant derivations exist and are NOT interchangeable:
+// `plantGroupsForIngredientLines` PARSES a line before classifying it, while
+// `mealPlantGroups` (planner-explanation-context.ts) asks about the RAW line. A nutrition
+// producer had to pick one and say which. THIS ONE PARSES — the same derivation the
+// household already sees on the plant-diversity surfaces, so the card cannot disagree
+// with the ring the household is looking at while reading it.
+import {
+  computeMealVariety,
+  sumVarietyScores,
+  plantGroupsForIngredientLines,
+  EMPTY_VARIETY_SCORE,
+  type VarietyScore,
+} from "@shared/canonical/plant-classifier.js";
+// HNP2 — the Household Nutrition core: the sole owner of the score, its dimensions,
+// weights, thresholds and every sentence it composes. This engine owns NONE of that.
+// It supplies facts it has already read and projects what the core returns, exactly as
+// it does for the Uplift Rules and WS9 Alternatives above.
+import {
+  computeHouseholdNutritionScore,
+  buildNutritionBalanceOpportunity,
+  PLANNER_WEEK_DAYS,
+  type HouseholdNutritionFacts,
+} from "@shared/nutrition/household-nutrition.js";
 
 /**
  * AFI1 — the uplift rule index, built once per process from the same canonical
@@ -177,7 +205,20 @@ export type FoodOpportunityType =
   | "cookbook-recipe-cookable-now"
   // AFI4 (CBK2) — a cookbook recipe colliding with a stored household hard restriction.
   // Suggests adapting or keeping; never edits or hides a household's own recipe.
-  | "cookbook-recipe-household-conflict";
+  | "cookbook-recipe-household-conflict"
+  // HNP2 — the ONE surviving type of the nutrition limb MAT1 §3.3 retired. Names which
+  // of the plant classifier's five variety components this week's plan does not contain.
+  // Its reasoning is NOT authored here: it is composed by the Household Nutrition core
+  // (`shared/nutrition/household-nutrition.ts`), which remains the sole owner of the
+  // score, the weights, the thresholds and the sentence. This engine supplies facts it
+  // has ALREADY read and projects what that owner returns.
+  //
+  // The limb's other two types (`nutrition-plant-diversity-gap`, `nutrition-planning-gap`)
+  // are deliberately NOT here: MAT1 retired them as duplicates of `planner-meal-uplift`
+  // and `planner-empty-day`, both of which this same engine already emits. Re-adding
+  // either would ship the duplicate advice MAT1 removed — from the same module that
+  // already makes the observation.
+  | "nutrition-balance-gap";
 
 // ATTN1 — attention is the one canonical vocabulary in shared/attention. The
 // module-local `FoodOpportunityPriority` union this file used to declare is
@@ -206,7 +247,19 @@ export type FoodOpportunityType =
  * registering it now fails the pipeline instead of reaching a household mislabelled.
  * The union's members and order are unchanged.
  */
-export const FOOD_OPPORTUNITY_DOMAINS = ["planner", "pantry", "shopping", "cookbook"] as const;
+// HNP2 — `nutrition` joins the four. It is a genuine fifth ROOM, not a relabelling of
+// `planner`: a planner observation is about a slot in a week ("Thursday is empty"), while
+// a nutrition observation is about the week's composition ("it contains no whole grains").
+// The two answer different questions from the same read, and the household acts on them
+// in different places — which is exactly why `nutrition` maps to its own existing
+// `ConversationSurface` below rather than borrowing the planner's.
+export const FOOD_OPPORTUNITY_DOMAINS = [
+  "planner",
+  "pantry",
+  "shopping",
+  "cookbook",
+  "nutrition",
+] as const;
 
 export type FoodOpportunityDomain = (typeof FOOD_OPPORTUNITY_DOMAINS)[number];
 
@@ -230,7 +283,12 @@ export type FoodOpportunitySubjectEntity =
   // AFI4 (CBK2) — a meal in the household's own COOKBOOK, keyed on the meal's own id.
   // Distinct from `planner-meal`: that entity is a meal in the context of a planned
   // week; this one is a recipe the household owns, with no week attached at all.
-  | "meal";
+  | "meal"
+  // HNP2 — the planner WEEK itself, keyed on its own row id. The nutrition balance gap
+  // is about no single day and no single meal: it is a property of the week's whole
+  // composition, and naming a day or a meal as its subject would point the "Why this?"
+  // affordance at a record that does not explain it.
+  | "planner-week";
 
 /**
  * PHASE5E — the structured entity this opportunity concerns.
@@ -1018,6 +1076,77 @@ export function identifyCookbookHouseholdConflictOpportunities(
   return opportunities;
 }
 // ---------------------------------------------------------------------------
+// HNP2 — the nutrition domain
+// ---------------------------------------------------------------------------
+
+/**
+ * HNP2 — the `nutrition` domain. One opportunity per week at most.
+ *
+ * This generator is deliberately THIN, and it is the whole of HNP2's convergence: it
+ * turns facts the orchestrator has ALREADY read into the Household Nutrition core's own
+ * input shape, asks that core for its score and its opportunity, and projects the result.
+ * It computes no score, chooses no threshold, sets no weight and writes no sentence —
+ * a source-scan in `test-hnp2-nutrition-balance-opportunity.ts` asserts exactly that.
+ *
+ * WHY THE FACTS ARE PARTIAL, AND WHY THAT IS HONEST. The core scores four dimensions;
+ * this engine can supply three. It does NOT read `user_health_trends` (the Apple Rating
+ * owner) and it does NOT read the Nutrition Centre's all-time diversity — so both are
+ * passed as `null`, which is that core's own contract for "this owner had nothing to
+ * say". The dimension is then EXCLUDED from the score rather than counted as zero, and
+ * `dimensionsCounted` records that the score rests on three of four.
+ *
+ * Reading those two owners here would have meant a second reader of each — the exact
+ * duplicate ownership HNP2 exists to remove — for a figure the ONE opportunity this
+ * generator emits does not use. `null` is the truthful answer, not a shortcut.
+ */
+export function identifyNutritionBalanceOpportunities(
+  week: PlannerWeek,
+  weekVariety: VarietyScore,
+  weeklyPlantSlugs: readonly string[],
+  mealsPlanned: number,
+  daysWithMeals: number,
+): FoodOpportunity[] {
+  const facts: HouseholdNutritionFacts = {
+    weeklyPlantSlugs,
+    weeklyVariety: weekVariety,
+    mealsPlanned,
+    daysWithMeals,
+    // Not read by this engine — an honest gap, never a zero. See the note above.
+    averageAppleRating: null,
+    appleRatingSampleCount: 0,
+    categoriesCovered: 0,
+    categoriesTotal: 0,
+    allTimePlantDiversity: null,
+    weekNumber: week.weekNumber,
+  };
+
+  const score = computeHouseholdNutritionScore(facts);
+  const opportunity = buildNutritionBalanceOpportunity(facts, score);
+  if (!opportunity) return [];
+
+  return [
+    {
+      // The core keys its own id on the week NUMBER (stable in its own vocabulary);
+      // the engine's key space is `${type}:${record.id}`, so the id is re-keyed onto
+      // the week ROW here — the same discipline every other generator follows, and
+      // what keeps two households' weeks from ever colliding on one id.
+      id: `${opportunity.type}:${week.id}`,
+      type: "nutrition-balance-gap",
+      owningDomain: "nutrition",
+      priority: opportunity.priority,
+      explanation: opportunity.explanation,
+      evidence: opportunity.evidence,
+      suggestedAction: opportunity.suggestedAction,
+      subject: {
+        entity: "planner-week",
+        id: week.id,
+        label: `Week ${week.weekNumber}`,
+      },
+    },
+  ];
+}
+
+// ---------------------------------------------------------------------------
 // Prioritisation — pure, deterministic, no re-derived score
 // ---------------------------------------------------------------------------
 
@@ -1092,6 +1221,34 @@ export async function identifyOpportunities(request: FoodOpportunityRequest): Pr
     // Honest degrade — this household has no readable pantry activity yet.
   }
 
+  // HNP2 — the household's own meals are now read ONCE, up here, for the same reason the
+  // pantry was hoisted before them: TWO domains need them. The cookbook generators need
+  // every recipe the household owns; the nutrition generator needs the INGREDIENTS of the
+  // recipes on this week's plan, which the planner's own `getMeal` reference does not
+  // carry (it returns `{id, name}` only).
+  //
+  // Hoisting is what keeps this a convergence rather than an addition: without it the
+  // nutrition domain would have had to open a second read of the same owner, which is the
+  // duplicate ownership HNP2 exists to remove. There is no new query here — the read that
+  // already happened for the cookbook simply happens earlier and is shared.
+  let meals: { id: number; name: string; ingredients: readonly string[] }[] = [];
+  let mealsRead = false;
+  try {
+    const mealsPort = await createStorageMealsReadPort();
+    // `ingredients` is nullable on the row; normalised ONCE here so neither consumer
+    // repeats the coalesce (this is the shape the cookbook block already built for itself).
+    meals = (await mealsPort.getMeals(request.userId)).map((m) => ({
+      id: m.id,
+      name: m.name,
+      ingredients: m.ingredients ?? [],
+    }));
+    mealsRead = true;
+  } catch {
+    // Honest degrade — this household has no readable cookbook yet. The planner and
+    // nutrition observations below simply go quiet; nothing else is affected.
+  }
+  const mealsById = new Map(meals.map((m) => [m.id, m]));
+
   try {
     const plannerPort = await createStoragePlannerReadPort();
     const weeks = await plannerPort.getPlannerWeeks(request.userId);
@@ -1143,6 +1300,51 @@ export async function identifyOpportunities(request: FoodOpportunityRequest): Pr
       // days of this week. Reuses the SAME `plannedMeals` resolved just above — no extra
       // read, no new knowledge, no contested domain.
       opportunities.push(...identifyPlannerBatchCookOpportunities(plannedMeals, currentWeek));
+
+      // HNP2 — the nutrition domain. Joins the planned meals resolved above to the meals
+      // read ONCE at the top, so the week's composition costs no additional query.
+      //
+      // Gated on `mealsRead`: an UNREADABLE cookbook and a cookbook of recipes with no
+      // recorded ingredients are different claims, and only the second is a week that
+      // honestly contains no components. Without this gate a failed read would render as
+      // "your week is missing all five components" — an accusation from a broken query.
+      if (mealsRead) {
+        const plannedIngredients: string[] = [];
+        const varietyScores: VarietyScore[] = [];
+        for (const planned of plannedMeals) {
+          const meal = mealsById.get(planned.mealId);
+          if (!meal || meal.ingredients.length === 0) continue;
+          const lines = meal.ingredients.filter((line): line is string => typeof line === "string");
+          plannedIngredients.push(...lines);
+          varietyScores.push(computeMealVariety([...lines]));
+        }
+
+        // A meal planned on three days contributes its plants ONCE: this is a claim about
+        // the week's VARIETY, not its volume, and `Set`/`sumVarietyScores` are the
+        // classifier's own way of saying so.
+        const weekVariety =
+          varietyScores.length > 0 ? sumVarietyScores(varietyScores) : EMPTY_VARIETY_SCORE;
+        const weeklyPlantSlugs = [...plantGroupsForIngredientLines(plannedIngredients)];
+
+        // The exact distinct-day count, from the rows already read — never a proxy.
+        // (HNP1 §4.1 measured an approximation here disagreeing with reality in 8% of
+        // real planner weeks, in BOTH directions.)
+        const daysWithMeals = Math.min(
+          new Set(entries.map((entry) => entry.dayId)).size,
+          PLANNER_WEEK_DAYS,
+        );
+
+        opportunities.push(
+          ...identifyNutritionBalanceOpportunities(
+            currentWeek,
+            weekVariety,
+            weeklyPlantSlugs,
+            plannedMeals.length,
+            daysWithMeals,
+          ),
+        );
+        sources.add("plant-classifier");
+      }
 
       sources.add("planner");
     }
@@ -1209,23 +1411,19 @@ export async function identifyOpportunities(request: FoodOpportunityRequest): Pr
   // AFI4 (CBK2) — the Cookbook domain. Reads the caller's OWN meals through the EXISTING
   // INT15 meals read port (user-scoped by the owner). Independently optional, like every
   // other domain: a household with no cookbook contributes nothing and blocks nothing.
-  if (pantryRead || household.restrictionDefs.length > 0) {
-    try {
-      const mealsPort = await createStorageMealsReadPort();
-      const cookbook = (await mealsPort.getMeals(request.userId)).map((m) => ({
-        id: m.id,
-        name: m.name,
-        ingredients: m.ingredients ?? [],
-      }));
-      if (cookbook.length > 0) {
-        opportunities.push(...identifyCookbookCookableNowOpportunities(cookbook, pantryItems));
-        opportunities.push(
-          ...identifyCookbookHouseholdConflictOpportunities(cookbook, household.restrictionDefs),
-        );
-        sources.add("meals");
-      }
-    } catch {
-      // Honest degrade — an unreadable cookbook contributes nothing, never a guess.
+  //
+  // HNP2 — the read itself moved to the top of this function (it is now shared with the
+  // nutrition domain); this block keeps its own gate and its own honest-degrade
+  // behaviour unchanged. `mealsRead` replaces the try/catch that used to wrap the read:
+  // the failure it caught now happens, and is absorbed, at the hoisted read.
+  if ((pantryRead || household.restrictionDefs.length > 0) && mealsRead) {
+    const cookbook = meals;
+    if (cookbook.length > 0) {
+      opportunities.push(...identifyCookbookCookableNowOpportunities(cookbook, pantryItems));
+      opportunities.push(
+        ...identifyCookbookHouseholdConflictOpportunities(cookbook, household.restrictionDefs),
+      );
+      sources.add("meals");
     }
   }
 

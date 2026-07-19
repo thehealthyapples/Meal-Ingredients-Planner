@@ -132,7 +132,21 @@ export type NoticeCategory =
   // one step before a household could ever read it. Without this member and its
   // `DOMAIN_TO_CATEGORY` row, every cookbook opportunity would still be produced,
   // delivered, budgeted, persisted and learned from — and then silently vanish.
-  | "cookbook-opportunity";
+  | "cookbook-opportunity"
+  // HNP2 — the tenth category, carrying the Nutrition domain's one opportunity.
+  //
+  // §9's condition is satisfied the same way `cookbook-opportunity` satisfies it: its
+  // owner is the ALREADY-registered `food-intelligence` producer. No producer is enrolled
+  // in `OPPORTUNITY_SOURCES`, no second notice channel is created, and the attention
+  // budget is not raised — a nutrition notice competes for the existing
+  // `MAX_NOTICES_PER_MOMENT`, it does not add to it.
+  //
+  // IT IS A SIBLING OF `planner-gap`, NOT OF `nutrition-trend`. `nutrition-trend` is an
+  // OBSERVATION about processed-food ratings over time and proposes nothing; this is an
+  // actionable, cited, dismissible, learnable card with a delivery lifecycle. Mapping the
+  // nutrition domain onto `nutrition-trend` would have given one category two owners and
+  // two meanings — and would have made a household's dismissal of one silence the other.
+  | "nutrition-opportunity";
 
 
 /**
@@ -312,6 +326,10 @@ const DOMAIN_TO_CATEGORY: Readonly<Record<string, NoticeCategory>> = {
   shopping: "shopping-opportunity",
   // AFI4/CBK2 — see the `cookbook-opportunity` note on NoticeCategory above.
   cookbook: "cookbook-opportunity",
+  // HNP2 — see the `nutrition-opportunity` note on NoticeCategory above. Without this
+  // row the nutrition opportunity is produced, delivered, budgeted, persisted and
+  // learned from, then silently dropped one step before the household could read it.
+  nutrition: "nutrition-opportunity",
 };
 
 /**

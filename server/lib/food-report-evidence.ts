@@ -22,7 +22,16 @@
 // directly for those two fields now calls this instead.
 //
 // Server-only (imports the DB-backed registry) — never import this from a
-// client-bundled file. The client reads it via GET /api/foods/:slug/report.
+// client-bundled file.
+//
+// NUTPLAN2 correction: this comment used to end "The client reads it via
+// GET /api/foods/:slug/report." THAT ROUTE HAS NEVER EXISTED — the string
+// appeared exactly once in the repository, in this comment. The evidence-gated
+// report reaches the client only INDIRECTLY, embedded in the payloads of
+// `/api/foods/:slug/intelligence`, `/api/foods/:slug/connected` and the meal
+// intelligence assembler. A comment that names a route which does not exist is
+// worse than no comment: the next reader goes looking for a consumer that was
+// never there, and NUTPLAN1 logged exactly that wasted search.
 
 import {
   buildFoodReport,

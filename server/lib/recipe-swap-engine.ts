@@ -1,6 +1,7 @@
 import { db } from "../db";
 import { ingredientSwaps } from "@shared/schema";
 import { validateAdaptationSafety } from "./household-dietary-safety";
+import { withheldClause, withheldNote } from "@shared/explanations/household-withholding";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -297,7 +298,7 @@ function buildSwapExplanation(
     // states honest gaps instead (Core Principle 6): the household is told a
     // suggestion existed and did not suit them, and is never shown what it was.
     if (withheldForSafety > 0) {
-      return "We found a possible swap, but it doesn't suit your household's dietary needs — so we haven't suggested it.";
+      return `We found a possible swap, but ${withheldClause(1)} — so we haven't suggested it.`;
     }
     const goalLabel: Record<SwapGoal, string> = {
       vegetarian:    "vegetarian",
@@ -313,7 +314,7 @@ function buildSwapExplanation(
   // Some swaps survived and some did not — say so, rather than presenting a
   // partial list as if it were the whole answer.
   if (withheldForSafety > 0) {
-    const suffix = ` ${withheldForSafety} further swap${withheldForSafety > 1 ? "s were" : " was"} withheld — ${withheldForSafety > 1 ? "they don't" : "it doesn't"} suit your household's dietary needs.`;
+    const suffix = ` ${withheldNote({ count: withheldForSafety, noun: "further swap" })}`;
     return buildSwapExplanation(goal, changed, prepTimeDelta, 0) + suffix;
   }
 

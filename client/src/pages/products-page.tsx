@@ -1222,6 +1222,23 @@ export default function ProductsPage() {
           />
         )}
 
+        {/* HOUSE2: the Analyser had no first-run state. Every branch above is gated on
+            `hasSearched`, and the history card below on having history — so a household
+            that has never analysed anything fell through all of them and met a search
+            box above an empty page. The dismissible FirstVisitHint was the only
+            orientation, and once dismissed the room said nothing at all. This names the
+            two ways in; both controls live in the header, so it points rather than
+            duplicating them. */}
+        {!hasSearched && !isSearching && !barcodeLoading && (!productHistoryData || productHistoryData.length === 0) && (
+          <EmptyState
+            variant="empty"
+            icon={ScanLine}
+            title="Analyse anything with a label"
+            description="Search a product by name, or scan its barcode with the button in the header. You'll get its ingredients, additives, NOVA group and THA rating — and less processed alternatives where they exist."
+            data-testid="empty-analyser-first-run"
+          />
+        )}
+
         {!hasSearched && productHistoryData && productHistoryData.length > 0 && (
           <Card data-testid="card-product-history">
             <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">

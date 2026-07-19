@@ -9,20 +9,30 @@
  * ---------------------------------------------------------------------------
  * It is NOT a nutrition engine, and it computes NO nutrition fact.
  *
- * MAT1 (2026-07-18) — THIS MODULE CURRENTLY HAS NO PRODUCTION CALLER. Its I/O
- * orchestrator (`server/lib/household-nutrition-assembler.ts`) and its only UI
+ * MAT1 (2026-07-18) — this module had NO production caller. Its I/O orchestrator
+ * (`server/lib/household-nutrition-assembler.ts`) and its only UI
  * (`client/src/components/HouseholdNutritionPanel.tsx`) were retired as dead code,
  * along with this file's own opportunity limb — see
  * `docs/implementation/MAT1_PLATFORM_MATURITY_AND_TRUST.md` §3.3. The pure core
  * below was KEPT deliberately: unlike the opportunity limb, it duplicates no live
- * observation, and retiring it would raise the cost of the still-open decision on
- * whether to enrol a nutrition producer (which must go through DEC1 §7's one door).
- * It is covered by `server/tests/test-household-nutrition.ts`, now wired into
- * `npm test`, so it cannot rot unnoticed while that decision is pending.
+ * observation, and retiring it would have raised the cost of the then-open decision on
+ * whether to enrol a nutrition producer.
  *
- * Read the paragraph below in the PAST tense. This file's history is the cautionary
- * tale of a comment written in the present tense about something never built (see
- * the HNP1 → HHP2 → P0 sequence recorded in git); it must not acquire a second one.
+ * HNP2 (2026-07-19) — THAT DECISION WAS TAKEN, AND THIS MODULE NOW HAS A PRODUCTION
+ * CALLER. `server/intelligence/food-intelligence/opportunity-engine.ts` imports
+ * `computeHouseholdNutritionScore` and `buildNutritionBalanceOpportunity` and emits the
+ * result into the canonical Opportunity Platform as the `nutrition` domain.
+ *
+ * BE SUSPICIOUS OF THE PARAGRAPH ABOVE — it is the fourth present-tense claim this file
+ * has carried about being wired up, and the first three were false (HNP1 asserted it
+ * aspirationally; HHP2 asserted "HHP2 MADE THAT TRUE" and built none of it; P0 found and
+ * corrected both). It is written here only because it is asserted by execution rather
+ * than by comment: `server/tests/test-hnp2-nutrition-balance-opportunity.ts` calls the
+ * production generator, and `test-mat1-registry-conformance.ts` walks all four registries
+ * the domain must appear in. Both are wired into `npm test`. If those suites are ever
+ * removed, treat this paragraph as unproven until you have re-established it yourself.
+ *
+ * Read the paragraph below in the PAST tense.
  *
  * Every number it touches was already computed by an existing canonical owner and
  * was handed to it as plain data by the retired assembler:
@@ -508,6 +518,103 @@ export function buildInsights(
   }
 
   return insights;
+}
+
+// ---------------------------------------------------------------------------
+// The ONE opportunity this module composes (HNP2)
+// ---------------------------------------------------------------------------
+//
+// HISTORY, IN THE PAST TENSE — read it before adding a second type here.
+//
+// This module once carried a THREE-type opportunity limb. MAT1 (2026-07-18) §3.3
+// retired all three, because two of them duplicated observations the LIVE Food
+// Opportunity Engine already makes:
+//
+//   nutrition-plant-diversity-gap  → duplicated `planner-meal-uplift`   (FI4, live)
+//   nutrition-planning-gap         → duplicated `planner-empty-day`     (FI4, live)
+//   nutrition-balance-gap          → NOT a duplicate. Nothing else observes it.
+//
+// Enrolling all three would have shipped visible duplicate advice on day one. HNP2
+// therefore revives EXACTLY ONE — the third — and the other two must never return.
+// `server/tests/test-hnp2-nutrition-balance-opportunity.ts` asserts their absence by
+// name, so a future edit cannot quietly reinstate the duplication MAT1 removed.
+//
+// WHY THIS ONE IS NOT A DUPLICATE, verified rather than assumed: no generator in
+// `server/intelligence/food-intelligence/opportunity-engine.ts` reads `wholeGrains`,
+// `herbsSpices`, `oliveOil`, `VARIETY_COMPONENT*` or `varietyComponentsPresent`.
+// "Your week has no whole grains" is a claim only this module is in a position to make.
+//
+// This function ADDS NO FACT. It restates a dimension `scoreDimensions` already
+// computed, cites that dimension's own evidence, and proposes the action it implies.
+
+/** The single opportunity type this module owns. Not a union — there is exactly one. */
+export const NUTRITION_BALANCE_GAP_TYPE = "nutrition-balance-gap";
+
+/** The `nutrition` domain's opportunity, in the shape the delivery framework's contract defines. */
+export interface HouseholdNutritionOpportunity {
+  readonly id: string;
+  readonly type: typeof NUTRITION_BALANCE_GAP_TYPE;
+  readonly owningDomain: "nutrition";
+  readonly priority: AttentionLevel;
+  readonly explanation: string;
+  readonly evidence: readonly EvidenceCitation[];
+  readonly suggestedAction: string;
+  /** The components absent from the week, lower-case, for a caller composing a subject label. */
+  readonly missingComponents: readonly string[];
+}
+
+/**
+ * Compose the household's balance-gap opportunity, or `null` when there is nothing
+ * honest to say. Pure, total, deterministic.
+ *
+ * Returns `null` — never a padded card — when:
+ *   • the balance dimension scored `null` (no week, no evidence → no card, Rule E1)
+ *   • no component is actually missing (a full week has no gap to name)
+ *
+ * THE THRESHOLD THAT IS DELIBERATELY NOT HERE. The retired limb suppressed this card
+ * unless the dimension scored below `STRONG_ENOUGH = 70`. HNP2 does not revive that
+ * constant, and the omission is the point: 70 was neither a denominator nor a number
+ * THA owned anywhere else — it was invented, and `test-household-nutrition.ts` §7 asserts
+ * that the core contains no such number. Its only real effect was to stay silent when
+ * exactly ONE of the five components was missing, which is a gap the household would
+ * plainly want named.
+ *
+ * So the gate is the honest one — is a component actually absent? — and the noise
+ * question is answered where it is already owned: `low` priority, the attention budget,
+ * muting, and dismissal. This module does not get to pre-empt those by inventing a
+ * number to go quiet behind.
+ *
+ * ATTN1 A2 — `priority` is `low` and can never be `critical`. A quiet week is not a
+ * harm signal, and `CRITICAL_TYPES` does not contain this type.
+ */
+export function buildNutritionBalanceOpportunity(
+  facts: HouseholdNutritionFacts,
+  score: HouseholdNutritionScore,
+): HouseholdNutritionOpportunity | null {
+  const balance = score.dimensions.find((d) => d.key === "nutrition-balance");
+  if (!balance || balance.value === null) return null;
+
+  const missing = VARIETY_COMPONENTS.filter((c) => (facts.weeklyVariety[c] ?? 0) === 0);
+  if (missing.length === 0) return null;
+
+  const labels = missing.map(componentLabel);
+
+  return {
+    // The week scopes the id, so a new week re-surfaces the card and the same week
+    // does not. `?? 0` mirrors the delivery framework's own tolerance for an
+    // unnumbered week rather than inventing a number.
+    id: `${NUTRITION_BALANCE_GAP_TYPE}:${facts.weekNumber ?? 0}`,
+    type: NUTRITION_BALANCE_GAP_TYPE,
+    owningDomain: "nutrition",
+    priority: "low",
+    explanation:
+      `This week's plan covers ${balance.actual} of ${VARIETY_COMPONENT_COUNT} food components. ` +
+      `${capitalise(joinAnd(labels))} ${plural(missing.length, "is", "are")} missing.`,
+    // Rule E1 — the dimension's OWN citation, not a second one written here.
+    evidence: balance.evidence,
+    suggestedAction: `Add ${joinOr(labels)} to a meal this week`,
+    missingComponents: labels,
+  };
 }
 
 /**

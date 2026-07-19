@@ -2048,14 +2048,16 @@ export const CANONICAL_PUBLICATION_REGISTER: DomainDeclaration[] = [
     variant: "knowledge",
     canonicalOwner:
       "shared/knowledge/claim-sources.ts + composition-sources.ts (citations); a named human reviewer (the sign-off)",
-    authorisedWriters: ["server/seeds/signoff-knowledge-claims.ts (the ONLY writer of reviewed_at/reviewed_by)"],
-    publicationPath: 'npm run knowledge:signoff -- --confirm REVIEWED --reviewer "Name"',
+    authorisedWriters: [
+      "server/lib/knowledge-claim-review-store.ts (KNOW2 — the ONLY writer of reviewed_at/reviewed_by/rejected_at; both the CLI and the Admin surface delegate to it)",
+    ],
+    publicationPath:
+      'Admin → Claim Review (/admin/knowledge-claims), per claim; or npm run knowledge:signoff -- --confirm REVIEWED --reviewer "Name" for approve-all-valid',
     runtimeReadPath: "server/services/nutrition-knowledge-registry.ts, gated by isEvidenceBackedClaim()",
     sotRegisterRef: "D1",
     knownGaps: [
       "getFoodsForNutrient() (nutrition-knowledge-registry.ts:181) reads the composition edge with no evidence gate, while getFoodsForBenefit() applies the full chain. Gating it is correct but must follow the composition sign-off, not precede it — closing it first would darken every nutrient page rather than light one up (KNOW1 finding F2).",
       "knowledge_food_benefits carries no citations at all (0 of 1,366) and the sign-off script has no food→benefit edge. That edge is optional corroboration in deriveEvidenceConfidence(), so it blocks no chip — but 'Established' confidence is currently unreachable platform-wide (KNOW1 finding F3).",
-      "The sign-off is approve-all-valid over whatever is pending, not per-claim approve/reject. Honest at 64 rows; a rubber stamp at import scale (signoff-knowledge-claims.ts:29-33, KNOW5C).",
     ],
     checks: [
       sqlCheck({
@@ -2066,17 +2068,17 @@ export const CANONICAL_PUBLICATION_REGISTER: DomainDeclaration[] = [
         sql: `
           SELECT 'composition' AS edge, count(*)::int AS pending
             FROM knowledge_food_nutrients
-           WHERE is_active AND reviewed_at IS NULL
+           WHERE is_active AND reviewed_at IS NULL AND rejected_at IS NULL
              AND jsonb_array_length(COALESCE(source_refs, '[]'::jsonb)) > 0
           UNION ALL
           SELECT 'nutrient-benefit', count(*)::int
             FROM knowledge_nutrient_benefits
-           WHERE is_active AND reviewed_at IS NULL
+           WHERE is_active AND reviewed_at IS NULL AND rejected_at IS NULL
              AND jsonb_array_length(COALESCE(source_refs, '[]'::jsonb)) > 0
           UNION ALL
           SELECT 'preparation-effect', count(*)::int
             FROM knowledge_preparation_effects
-           WHERE is_active AND reviewed_at IS NULL
+           WHERE is_active AND reviewed_at IS NULL AND rejected_at IS NULL
              AND jsonb_array_length(COALESCE(source_refs, '[]'::jsonb)) > 0`,
         evaluate: (rows) => {
           const pending = rows.map((r) => ({ edge: String(r.edge), n: Number(r.pending ?? 0) }));
@@ -2207,6 +2209,89 @@ export const CANONICAL_PUBLICATION_REGISTER: DomainDeclaration[] = [
           "unreviewed nutrition claims can now reach a household. The only sanctioned way to light up a claim is " +
           "to sign it off — never to lower the bar it has to clear.",
         passDetail: "isEvidenceBackedClaim() still refuses any claim without an explicit human sign-off.",
+      }),
+      sqlCheck({
+        id: "ne-rejection-terminal",
+        law: "approved-read-path",
+        title: "A rejected claim is never also approved",
+        severity: "fail",
+        sql: `
+          SELECT 'composition' AS edge, count(*)::int AS both
+            FROM knowledge_food_nutrients WHERE reviewed_at IS NOT NULL AND rejected_at IS NOT NULL
+          UNION ALL
+          SELECT 'food-benefit', count(*)::int
+            FROM knowledge_food_benefits WHERE reviewed_at IS NOT NULL AND rejected_at IS NOT NULL
+          UNION ALL
+          SELECT 'nutrient-benefit', count(*)::int
+            FROM knowledge_nutrient_benefits WHERE reviewed_at IS NOT NULL AND rejected_at IS NOT NULL
+          UNION ALL
+          SELECT 'preparation-effect', count(*)::int
+            FROM knowledge_preparation_effects WHERE reviewed_at IS NOT NULL AND rejected_at IS NOT NULL`,
+        evaluate: (rows) => {
+          // KNOW2's central safety property, asserted rather than assumed. A row
+          // holding both states is a claim a qualified human REFUSED that renders
+          // to households anyway, because the Trust Gate reads reviewed_at and
+          // would never look at rejected_at. A database CHECK constraint makes
+          // this unreachable; this check is what notices if the constraint is
+          // ever dropped.
+          const both = rows.reduce((n, r) => n + Number(r.both ?? 0), 0);
+          return both > 0
+            ? {
+                violated: true,
+                detail:
+                  `${both} claim(s) are simultaneously approved and rejected. A claim a reviewer refused is ` +
+                  "reaching households, because the Trust Gate reads reviewed_at and never looks at rejected_at. " +
+                  "The *_review_exclusive_check constraint has been dropped or bypassed.",
+              }
+            : { violated: false, detail: "No claim holds both an approval and a rejection — the two states remain exclusive." };
+        },
+      }),
+      sqlCheck({
+        id: "ne-decisions-audited",
+        law: "authorised-writers",
+        title: "Every KNOW2-era decision left an audit row",
+        severity: "fail",
+        sql: `
+          WITH decided AS (
+            SELECT id, reviewed_at, rejected_at, 'claim:composition' AS entity FROM knowledge_food_nutrients
+            UNION ALL SELECT id, reviewed_at, rejected_at, 'claim:food-benefit' FROM knowledge_food_benefits
+            UNION ALL SELECT id, reviewed_at, rejected_at, 'claim:nutrient-benefit' FROM knowledge_nutrient_benefits
+            UNION ALL SELECT id, reviewed_at, rejected_at, 'claim:preparation-effect' FROM knowledge_preparation_effects
+          )
+          SELECT count(*)::int AS unaudited
+            FROM decided d
+           WHERE COALESCE(d.reviewed_at, d.rejected_at) >= '2026-07-19'
+             AND NOT EXISTS (
+               SELECT 1 FROM knowledge_review_audit a
+                WHERE a.entity = d.entity AND a.entity_id = d.id
+             )`,
+        evaluate: (rows) => {
+          // The 2026-07-19 boundary is KNOW2's date, and the grandfathering is the
+          // same deliberate kind as ne-review-identity's: the 21 pre-KNOW5 and any
+          // pre-KNOW2 sign-offs pre-date the ledger and are not retroactively
+          // invalid — no audit row was ever written for them, and inventing one
+          // now would be fabricating a decision history.
+          //
+          // Every decision on or after that date went through
+          // recordClaimDecision(), which writes the claim row and its audit row in
+          // ONE transaction. So an unaudited decision can only mean a write that
+          // bypassed the single authorised writer.
+          const unaudited = Number(rows[0]?.unaudited ?? 0);
+          return unaudited > 0
+            ? {
+                violated: true,
+                detail:
+                  `${unaudited} claim(s) decided on/after KNOW2 (2026-07-19) carry no audit row. The decision and its ` +
+                  "audit row are written in one transaction, so these were written by something that bypassed " +
+                  "knowledge-claim-review-store — a health claim was decided and no one can reconstruct by whom or why.",
+              }
+            : {
+                violated: false,
+                detail:
+                  "Every claim decided since KNOW2 has its full decision history in knowledge_review_audit. " +
+                  "(Pre-KNOW2 sign-offs pre-date the ledger and are grandfathered by design.)",
+              };
+        },
       }),
     ],
   },

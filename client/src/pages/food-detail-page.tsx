@@ -12,8 +12,12 @@
 import { Link, useRoute } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { usePublishCompanionContext } from "@/components/conversation/companion-context";
+import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
+import { EmptyState } from "@/components/ui/empty-state";
+import { LoadError } from "@/components/ui/load-error";
+import { Button } from "@/components/ui/button";
+import { upliftSuggestionText } from "@shared/nutrition/uplift-phrasing";
 import {
-  ArrowLeft,
   Apple,
   Leaf,
   Sparkles,
@@ -109,11 +113,16 @@ export default function FoodDetailPage() {
   // the pointer changes what is being asked about, never what may be claimed.
   usePublishCompanionContext({ currentFoodSlug: slug ?? undefined });
 
-  const { data, isPending: isLoading, isError } = useQuery<FoodIntelligence>({
+  const { data, isPending: isLoading, isError, error, refetch } = useQuery<FoodIntelligence>({
     queryKey: ["/api/foods", slug, "intelligence"],
     queryFn: async () => {
       const res = await fetch(`/api/foods/${slug}/intelligence`);
-      if (!res.ok) throw new Error("not-found");
+      // HOUSE2: a 404 and a 500 used to throw the same error, so a failed load told
+      // the household "we don't know this food" — a confident false statement about
+      // their food made by a server outage. EmptyState's own contract forbids exactly
+      // this conflation ("a failed load is none of these variants").
+      if (res.status === 404) throw new Error("not-found");
+      if (!res.ok) throw new Error("load-failed");
       return res.json();
     },
     enabled: !!slug,
@@ -121,37 +130,63 @@ export default function FoodDetailPage() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // HOUSE2 (fnd-food-detail-chrome, fnd-food-detail-back): this page used to render
+  // no header at all and a bespoke inline Back hardcoded to `/cookbook` — so a food
+  // read as a lesser surface than a meal, and a household arriving from Pantry,
+  // Shopping or Nutrition was ejected into the Cookbook regardless.
+  //
+  // Both are now the canonical header slot. The parent is **Nutrition**, not Cookbook,
+  // because that is the realm the platform already assigns this route
+  // (`FloatingAssistant.tsx:90` maps `/foods` → "nutrition"); the old Back was the
+  // outlier. Back stays hierarchy-resolving rather than `window.history.back()`
+  // deliberately — PX1-W4.5 settled that for every Back in the product
+  // (`profile-page.tsx:281`, EXP §8 "hierarchy over history"), and a food page
+  // reachable from five rooms is exactly the case that rule exists for.
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-      <Link
-        href="/cookbook"
-        className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground/70 hover:text-foreground transition-colors mb-5"
-        data-testid="link-back"
-      >
-        <ArrowLeft className="h-3.5 w-3.5" />
-        Back
-      </Link>
-
+    <>
+    <WorkspaceHeader
+      title={data?.food?.name ?? "Food"}
+      realm="nutrition"
+      back={{ href: "/nutrition", label: "Nutrition" }}
+      titleTestId="text-food-detail-title"
+    />
+    <div className={`${pageContainerClass()} pb-8`}>
       {isLoading && (
         <div className="flex items-center justify-center py-24">
           <Loader2 className="h-6 w-6 animate-spin text-primary/50" />
         </div>
       )}
 
-      {!isLoading && (isError || !data?.food) && (
-        <div className="py-16 text-center" data-testid="food-not-found">
-          <Apple className="h-8 w-8 mx-auto text-muted-foreground/40 mb-3" />
-          <h1 className="text-lg font-semibold mb-1">We don't know this food yet</h1>
-          <p className="text-sm text-muted-foreground/70 max-w-md mx-auto">
-            There's nothing we can confidently tell you about it right now.
-          </p>
-        </div>
+      {!isLoading && isError && (error as Error)?.message === "load-failed" && (
+        <LoadError
+          what="this food"
+          onRetry={() => refetch()}
+          data-testid="food-load-error"
+        />
+      )}
+
+      {!isLoading && !((error as Error)?.message === "load-failed") && (isError || !data?.food) && (
+        <EmptyState
+          variant="empty"
+          icon={Apple}
+          title="We don't know this food yet"
+          description="There's nothing we can confidently tell you about it right now. Your Nutrition centre shows the foods your household is already eating."
+          action={
+            <Button asChild variant="outline" size="sm">
+              <Link href="/nutrition" data-testid="link-food-notfound-nutrition">
+                See your Nutrition centre
+              </Link>
+            </Button>
+          }
+          data-testid="food-not-found"
+        />
       )}
 
       {!isLoading && data?.food && (
         <FoodIntelligenceView data={data} />
       )}
     </div>
+    </>
   );
 }
 
@@ -398,13 +433,7 @@ function FoodIntelligenceView({ data }: { data: FoodIntelligence }) {
       {/* ── Simply Better Choices ── */}
       {upliftSuggestion && (
         <SimplyBetterChoiceCard
-          suggestion={
-            upliftSuggestion.action === "swap"
-              ? `Swap in ${upliftSuggestion.ingredient}`
-              : upliftSuggestion.action === "boost"
-                ? `Add more ${upliftSuggestion.ingredient}`
-                : `Add ${upliftSuggestion.ingredient}`
-          }
+          suggestion={upliftSuggestionText(upliftSuggestion)}
           why={upliftSuggestion.why}
           data-testid="food-simply-better"
         />

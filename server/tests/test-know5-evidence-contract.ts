@@ -276,7 +276,20 @@ async function run() {
 
     const signoff = readFileSync(resolve(REPO_ROOT, "server/seeds/signoff-knowledge-claims.ts"), "utf8");
     check("the sign-off gate refuses to run without --reviewer", /--reviewer is required/.test(signoff));
-    check("the sign-off gate covers the composition edge", /knowledgeFoodNutrients/.test(signoff));
+    // KNOW2 converged the writer: the CLI no longer issues its own UPDATE, it
+    // delegates to knowledge-claim-review-store (the single authorised writer of
+    // the review columns). This assertion previously matched `knowledgeFoodNutrients`
+    // in the CLI itself; it now checks the same property where it actually lives,
+    // at BOTH ends — the CLI must still cover the composition edge, and the store
+    // it delegates to must still write that table.
+    // The CLI signs off EVERY edge the store defines (CLAIM_EDGES), rather than
+    // carrying its own list that could silently fall behind by one edge.
+    check("the sign-off gate covers the composition edge", /CLAIM_EDGES/.test(signoff));
+    const claimStore = readFileSync(resolve(REPO_ROOT, "server/lib/knowledge-claim-review-store.ts"), "utf8");
+    check(
+      "the writer it delegates to signs off the composition edge",
+      /composition:\s*knowledgeFoodNutrients/.test(claimStore),
+    );
   }
 
   // ── 5. Reversible publish: deactivation, never deletion ────────────────────

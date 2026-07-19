@@ -1,6 +1,5 @@
 import type { VarietyScore } from "@shared/canonical/plant-classifier";
-import { computeMealVariety, isPlantIngredient } from "@shared/canonical/plant-classifier";
-import { normaliseForReuse } from "@/lib/ingredient-reuse";
+import { computeMealVariety } from "@shared/canonical/plant-classifier";
 import {
   Tooltip,
   TooltipContent,
@@ -282,40 +281,37 @@ export function DayVarietySummary({
 }
 
 // ── Weekly Plant Diversity Counter ────────────────────────────────────────────
-// Counts unique plant foods across all meals in the active planner week.
+// Renders the household's unique plant count for the active planner week.
 // Target of 30 plants/week is a widely-cited nutritional guideline.
-// Approximation is intentional — the goal is visibility, not scientific precision.
-
+//
+// NUTPLAN1 — this component RENDERS the count; it no longer DERIVES it.
+//
+// It previously deduped with `normaliseForReuse` on the raw ingredient line, which
+// is a rival to the canonical rule (dedup by diversity group — one group, one
+// plant, SoT Domain 4 / CPI1 S1-2) and over-counts against it: "red onion" and
+// "onion" scored as two plants, "red pepper" and "pepper" as two more. Its comment
+// claimed the key collapsed variants to one canonical form; measured, it did not.
+//
+// The count is now supplied by the one owner — the server's
+// `weeklyProgress.plantCount` — and this file derives no nutrition fact.
 
 interface WeeklyPlantDiversityCounterProps {
-  /** All ingredient arrays from meals in the active week */
-  weekIngredients: string[][];
+  /**
+   * The household's unique plant count for the week, from the server
+   * (`GET /api/planner/weeks/:weekId/intelligence` → `weeklyProgress.plantCount`).
+   * This component must never re-derive it.
+   */
+  plantCount: number;
   className?: string;
   /** If provided, the counter becomes interactive and triggers the Plant Diversity Explorer */
   onExplore?: () => void;
 }
 
 export function WeeklyPlantDiversityCounter({
-  weekIngredients,
+  plantCount: uniqueCount,
   className,
   onExplore,
 }: WeeklyPlantDiversityCounterProps) {
-  // Count unique plant items across all meals in the active week.
-  // Dedup key uses normaliseForReuse so "cherry tomatoes", "vine tomatoes", and
-  // "400g tinned tomatoes" all collapse to the same canonical key ("tomatoes").
-  // Plant classification uses isPlantIngredient which covers all plant food groups
-  // including legumes, seeds, nuts, and fermented foods.
-  const uniqueCount = (() => {
-    const seen = new Set<string>();
-    for (const ingredients of weekIngredients) {
-      for (const raw of ingredients) {
-        if (!raw.trim()) continue;
-        if (isPlantIngredient(raw)) seen.add(normaliseForReuse(raw));
-      }
-    }
-    return seen.size;
-  })();
-
   const pct = Math.min((uniqueCount / WEEKLY_PLANT_TARGET) * 100, 100);
   const isOnTrack = uniqueCount >= Math.round(WEEKLY_PLANT_TARGET * 0.6);
   const isComplete = uniqueCount >= WEEKLY_PLANT_TARGET;

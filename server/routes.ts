@@ -4,6 +4,12 @@ import { storage } from "./storage";
 import { setupAuth, hashPassword } from "./auth";
 import { api } from "@shared/routes";
 import { PERSONALITY_IDS } from "@shared/companion-personality";
+import {
+  withheldClause,
+  withheldNote,
+  nothingSuitableNote,
+  safetyUnavailableNote,
+} from "@shared/explanations/household-withholding";
 import { z } from "zod";
 import axios from "axios";
 import * as cheerio from "cheerio";
@@ -13,7 +19,6 @@ import { consolidateAndNormalize, normalizeIngredient, convertToGrams } from "./
 import { matchProductsForIngredient } from "./lib/product-matching-service";
 import { analyzeProduct } from "./lib/product-analysis";
 import { sendBasketToSupermarket, getSupportedSupermarkets } from "./lib/grocery-integration";
-import { rankMealsByPreferences } from "./lib/recommendation-service";
 import { analyzeProductUPF, buildTHAExplanation } from "./lib/upf-analysis-service";
 import { isWholeFoodIngredient } from "./lib/smp-rating-service";
 import {
@@ -157,7 +162,7 @@ import {
   listRestrictionIds,
 } from "../shared/restrictions/restriction-resolver.js";
 import { promoteSoftAllergies } from "../shared/onboarding-restrictions.js";
-import { plantDiversityGroup } from "../shared/canonical/plant-classifier.js";
+import { plantGroupsForIngredientLines } from "../shared/canonical/plant-classifier.js";
 import {
   resolveHouseholdSafetyContext,
   requireHardRestrictions,
@@ -540,6 +545,7 @@ function extractJsonLdImage(recipe: JsonLdRecipe): string | null {
 import { APP_VERSION } from "./app-version";
 import { registerTrustRoutes } from "./trust-routes";
 import { registerCommerceRoutes } from "./commerce-routes";
+import { upliftSuggestionText } from "@shared/nutrition/uplift-phrasing";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -4753,7 +4759,11 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       if (householdSafety.status === "unavailable") {
         console.error('[SmartSuggest] Household safety context unresolved — refusing to generate a plan');
         return res.status(503).json({
-          message: "We can't check meal suggestions against your household's dietary needs right now, so we're not going to guess. Please try again in a moment.",
+          message: safetyUnavailableNote({
+            subject: "meal suggestions",
+            consequence: "we're not going to guess",
+            retryable: true,
+          }),
           code: "HOUSEHOLD_SAFETY_UNAVAILABLE",
         });
       }
@@ -4931,7 +4941,21 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         );
         if (!result.compliant) {
           console.log(`[SmartApply] skipped non-compliant candidate "${externalCandidate.name}" (${result.reason})`);
-          return res.json({ skipped: true, reason: result.reason });
+          // PLAN2 — never present a withhold as a failure (PROD6). `reason` is
+          // MACHINE-readable by contract (`planner-compliance.ts:53` — "diet:Vegan",
+          // "household-hard-restriction"), so it is kept for callers that reason about
+          // it and a HUMAN note is composed here, beside it.
+          //
+          // The note is written on the SERVER because the client authors no prose about
+          // household data — the same seam `withheldNote` already uses for pairings and
+          // for ingredient suggestions. It deliberately does NOT name the restriction or
+          // the member who holds it: a toast is a broadcast surface, and whose allergy
+          // this is is not something to announce there.
+          return res.json({
+            skipped: true,
+            reason: result.reason,
+            withheldNote: withheldClause(1),
+          });
         }
       }
 
@@ -5093,24 +5117,23 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     }
   });
 
-  app.get("/api/meals/recommended", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    try {
-      const [meals, prefs] = await Promise.all([
-        storage.getMeals(req.user!.id),
-        storage.getUserPreferences(req.user!.id),
-      ]);
-      if (!prefs) {
-        res.json(meals.map(m => ({ meal: m, result: { compatible: true, score: 100, warnings: [], dietMatch: true, goalMatch: true } })));
-        return;
-      }
-      const ranked = rankMealsByPreferences(meals, prefs);
-      res.json(ranked);
-    } catch (err) {
-      console.error("Error getting recommendations:", err);
-      res.status(500).json({ message: "Failed to get recommendations" });
-    }
-  });
+  // NUTPLAN2 — GET /api/meals/recommended is RETIRED (Principle 8).
+  //
+  // It recommended meals to a household and reached NO dietary gate of any kind.
+  // Worse than ungated: when a household had no `user_preferences` row it returned
+  // every meal stamped `compatible: true, score: 100, warnings: []` — an explicit
+  // safety claim that nothing had checked, about people with real allergies.
+  //
+  // It had ZERO consumers: the only occurrence of the path in the repository was
+  // its own registration. So it was dead but LIVE — authenticated, reachable, and
+  // one wire-up away from shipping an ungated recommender.
+  //
+  // Deleted rather than gated, because gating it would have preserved a third
+  // diet engine THA does not need: `recommendation-service.ts` (deleted with it)
+  // carried its own DIET_EXCLUDED_KEYWORDS table naming 15 keywords for
+  // "vegetarian", behind the canonical restriction library's thirteen resolved
+  // restrictions (NUTPLAN1 finding D4). Retiring the route retires that rival
+  // vocabulary with it.
 
   app.get("/api/user/preferences", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
@@ -5426,7 +5449,10 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       const swapSafetyCtx = await resolveHouseholdSafetyContext(req.user!.id);
       if (swapSafetyCtx.status === "unavailable") {
         return res.status(503).json({
-          message: "We couldn't confirm your household's dietary needs, so we haven't suggested any swaps.",
+          message: safetyUnavailableNote({
+            subject: "these swaps",
+            consequence: "we haven't suggested any",
+          }),
           code: "HOUSEHOLD_SAFETY_UNAVAILABLE",
         });
       }
@@ -5463,7 +5489,10 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
           basketChanges: safeChanges.map((c) => `Replace "${c.original}" with "${c.replacement}"`),
           explanation:
             safeChanges.length === 0
-              ? "We couldn't suggest swaps for this recipe that suit your household's dietary needs."
+              ? nothingSuitableNote({
+                  attempt: "suggest swaps for this recipe",
+                  subjectIsPlural: true,
+                })
               : result.explanation,
         });
       }
@@ -5684,12 +5713,7 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       const upliftSuggestion = upliftMatch?.suggestions?.[0] ?? null;
       const simplyBetter = upliftSuggestion
         ? {
-            suggestion:
-              upliftSuggestion.action === "swap"
-                ? `Swap in ${upliftSuggestion.ingredient}`
-                : upliftSuggestion.action === "boost"
-                  ? `Add more ${upliftSuggestion.ingredient}`
-                  : `Add ${upliftSuggestion.ingredient}`,
+            suggestion: upliftSuggestionText(upliftSuggestion),
             why: upliftSuggestion.why,
           }
         : null;
@@ -5806,12 +5830,7 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       const upliftSuggestion = upliftMatch?.suggestions?.[0] ?? null;
       const simplyBetter = upliftSuggestion
         ? {
-            suggestion:
-              upliftSuggestion.action === "swap"
-                ? `Swap in ${upliftSuggestion.ingredient}`
-                : upliftSuggestion.action === "boost"
-                  ? `Add more ${upliftSuggestion.ingredient}`
-                  : `Add ${upliftSuggestion.ingredient}`,
+            suggestion: upliftSuggestionText(upliftSuggestion),
             why: upliftSuggestion.why,
           }
         : null;
@@ -8136,13 +8155,53 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
   });
 
   // ── Meal Pairings ─────────────────────────────────────────────────────────
+  // NUTPLAN2 — meal pairings reach the canonical Household Dietary Safety Gate.
+  //
+  // `getMealPairings` joins `meal_pairings.suggested_meal_id` to `meals` and
+  // returns FULL meal rows: THA choosing food and putting it in front of a
+  // household, immediately after they add a meal. It reached no gate at all.
+  //
+  // It was invisible to PROD6's coverage suite for two compounding reasons: the
+  // suite enumerated routes BY HAND, and its list held only `app.post`
+  // signatures, so no `app.get` route could ever have been checked even if
+  // somebody had added one. §1 of that suite is rebuilt in this workstream so a
+  // route like this is discovered rather than remembered.
   app.get("/api/meal-pairings/:mealId", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
       const mealId = parseInt(req.params.mealId);
       if (isNaN(mealId)) return res.status(400).json({ message: "Invalid mealId" });
       const results = await storage.getMealPairings(mealId);
-      res.json(results);
+
+      // Resolved server-side, never from the request (PROD5 §10.2).
+      const safety = await resolveHouseholdSafetyContext(req.user!.id);
+      if (safety.status === "unavailable") {
+        // Fails CLOSED. Returning an empty list instead would read to the
+        // household as "there are no pairings", which is a different and false
+        // statement from "we could not check".
+        return res.status(503).json({
+          code: "HOUSEHOLD_SAFETY_UNAVAILABLE",
+          message: safetyUnavailableNote({
+            subject: "this",
+            consequence: "we're not suggesting anything to go with it",
+          }),
+        });
+      }
+
+      const pairings = results.filter((r) => isMealSafeForHousehold(r.meal, safety).safe);
+      const withheldForSafety = results.length - pairings.length;
+
+      // Never present a filtered list as the whole answer (PROD6). Without this
+      // count, withholding every pairing is indistinguishable from there being
+      // none — the silent shortening the rule exists to prevent.
+      res.json({
+        pairings,
+        withheldForSafety,
+        withheldNote:
+          withheldForSafety > 0
+            ? withheldNote({ count: withheldForSafety, noun: "suggestion" })
+            : null,
+      });
     } catch (err) {
       console.error("[Pairings] GET error:", err);
       res.status(500).json({ message: "Failed to fetch pairings" });
@@ -8690,6 +8749,142 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     } catch (err: any) {
       console.error("[AdminKnowledgeReview] health GET error:", err);
       res.status(500).json({ message: "Failed to load knowledge health" });
+    }
+  });
+
+  // ── KNOW2 — Nutrition claim evidence review ────────────────────────────────
+  //
+  // The per-claim approve/reject surface for nutrition health claims. Distinct
+  // from the Knowledge Review Workbench above, which governs VOCABULARY ALIASES
+  // and never touches claim evidence — KNOW1 finding F6 records that the two
+  // lifecycles are easily mistaken for one, so they are kept on separate routes
+  // with separate stores.
+  //
+  // Every write goes through knowledge-claim-review-store, the single authorised
+  // writer of the review columns. These routes validate and attribute; they
+  // contain no publication logic of their own.
+
+  app.get("/api/admin/knowledge-claims/summary", assertAdmin, async (_req, res) => {
+    try {
+      const { claimReviewSummary } = await import("./lib/knowledge-claim-review-store");
+      res.json({ summary: await claimReviewSummary() });
+    } catch (err: any) {
+      console.error("[AdminKnowledgeClaims] summary GET error:", err);
+      res.status(500).json({ message: "Failed to load claim review summary" });
+    }
+  });
+
+  app.get("/api/admin/knowledge-claims", assertAdmin, async (req, res) => {
+    try {
+      const { listClaims, isClaimEdge, CLAIM_EDGE_LABELS, CLAIM_EDGE_MEANINGS } = await import(
+        "./lib/knowledge-claim-review-store"
+      );
+      const edgeParam = req.query.edge ? String(req.query.edge) : undefined;
+      if (edgeParam && !isClaimEdge(edgeParam)) return res.status(400).json({ message: "Unknown claim edge" });
+
+      const statusParam = req.query.status ? String(req.query.status) : undefined;
+      if (statusParam && !["pending", "approved", "rejected"].includes(statusParam)) {
+        return res.status(400).json({ message: "Unknown status" });
+      }
+
+      const claims = await listClaims({
+        edge: edgeParam as any,
+        status: statusParam as any,
+        citedOnly: req.query.citedOnly === "true",
+        limit: req.query.limit ? parseInt(String(req.query.limit), 10) : undefined,
+      });
+      res.json({ claims, labels: CLAIM_EDGE_LABELS, meanings: CLAIM_EDGE_MEANINGS });
+    } catch (err: any) {
+      console.error("[AdminKnowledgeClaims] list GET error:", err);
+      res.status(500).json({ message: "Failed to load claims" });
+    }
+  });
+
+  app.get("/api/admin/knowledge-claims/:edge/:id/history", assertAdmin, async (req, res) => {
+    try {
+      const { getClaim, getClaimHistory, isClaimEdge } = await import("./lib/knowledge-claim-review-store");
+      const edge = String(req.params.edge);
+      const id = parseInt(String(req.params.id), 10);
+      if (!isClaimEdge(edge)) return res.status(400).json({ message: "Unknown claim edge" });
+      if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ message: "Invalid id" });
+
+      const claim = await getClaim(edge, id);
+      if (!claim) return res.status(404).json({ message: "Claim not found" });
+      res.json({ claim, history: await getClaimHistory(edge, id) });
+    } catch (err: any) {
+      console.error("[AdminKnowledgeClaims] history GET error:", err);
+      res.status(500).json({ message: "Failed to load claim history" });
+    }
+  });
+
+  app.get("/api/admin/knowledge-claims/decisions", assertAdmin, async (req, res) => {
+    try {
+      const { listRecentClaimDecisions } = await import("./lib/knowledge-claim-review-store");
+      const limit = req.query.limit ? parseInt(String(req.query.limit), 10) : 100;
+      res.json({ decisions: await listRecentClaimDecisions(limit) });
+    } catch (err: any) {
+      console.error("[AdminKnowledgeClaims] decisions GET error:", err);
+      res.status(500).json({ message: "Failed to load decision log" });
+    }
+  });
+
+  /**
+   * Record ONE reviewer's decision on ONE claim.
+   *
+   * There is deliberately no bulk endpoint. Approve-all-valid still exists, but
+   * only behind `npm run knowledge:signoff` — where a reviewer must read a
+   * printed list and type a confirmation flag. A bulk button on a web page is
+   * the rubber stamp KNOW1 finding F5 warns about at import scale, and a health
+   * claim approved by a mis-click is exactly what this workflow exists to
+   * prevent.
+   *
+   * THE REVIEWER'S NAME IS TAKEN FROM THEIR SESSION, NEVER FROM THE REQUEST
+   * BODY. A client-supplied reviewer name would let one operator sign a health
+   * claim in a colleague's name, which would make the attribution KNOW5
+   * established worthless precisely when it mattered.
+   */
+  app.post("/api/admin/knowledge-claims/:edge/:id/decision", assertAdmin, async (req, res) => {
+    try {
+      const { recordClaimDecision, ClaimReviewError, isClaimEdge } = await import(
+        "./lib/knowledge-claim-review-store"
+      );
+      const edge = String(req.params.edge);
+      const id = parseInt(String(req.params.id), 10);
+      const action = String(req.body?.action ?? "");
+
+      if (!isClaimEdge(edge)) return res.status(400).json({ message: "Unknown claim edge" });
+      if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ message: "Invalid id" });
+      if (!["approve", "reject", "reopen"].includes(action)) {
+        return res.status(400).json({ message: "action must be approve, reject or reopen" });
+      }
+
+      const user = req.user as any;
+      const reviewer: string = user?.displayName?.trim() || user?.firstName?.trim() || user?.username?.trim() || "";
+      if (!reviewer) {
+        return res.status(400).json({
+          message:
+            "Your account has no name to attribute this decision to. A health claim decision must name its reviewer.",
+        });
+      }
+
+      try {
+        res.json(
+          await recordClaimDecision({
+            edge,
+            claimId: id,
+            action: action as any,
+            reviewer,
+            reviewerUserId: user?.id ?? null,
+            reason: typeof req.body?.reason === "string" ? req.body.reason : null,
+          }),
+        );
+      } catch (e: any) {
+        if (e instanceof ClaimReviewError) return res.status(e.status).json({ message: e.message });
+        throw e;
+      }
+    } catch (err: any) {
+      console.error("[AdminKnowledgeClaims] decision error:", err);
+      res.status(500).json({ message: err?.message || "Failed to record decision" });
     }
   });
 
@@ -10519,7 +10714,10 @@ Keep each string short and concrete. Return [] for any array with no entries.`;
         );
         return res.status(422).json({
           message: acceptVerdict.unavailable
-            ? "We couldn't confirm your household's dietary needs, so we haven't saved this version."
+            ? safetyUnavailableNote({
+                subject: "this version",
+                consequence: "we haven't saved it",
+              })
             : "This version still contains something your household can't eat, so we haven't saved it.",
           code: acceptVerdict.unavailable ? "HOUSEHOLD_SAFETY_UNAVAILABLE" : "ADAPTATION_VIOLATES_RESTRICTIONS",
           violations: acceptVerdict.violations,
@@ -11124,7 +11322,11 @@ Keep each string short and concrete. Return [] for any array with no entries.`;
     } catch (err) {
       console.error('[suggest-from-ingredients] Household safety context unresolved — refusing to suggest meals', err);
       return res.status(503).json({
-        message: "We can't check this against your household's dietary needs right now, so we're not going to guess. Please try again in a moment.",
+        message: safetyUnavailableNote({
+          subject: "this",
+          consequence: "we're not going to guess",
+          retryable: true,
+        }),
         code: "HOUSEHOLD_SAFETY_UNAVAILABLE",
       });
     }
@@ -11211,8 +11413,8 @@ Rules:
           withheldForSafety: withheld,
           withheldNote:
             suggestions.length === 0
-              ? "We couldn't suggest anything from these ingredients that suits your household's dietary needs."
-              : `We left out ${withheld} idea${withheld > 1 ? "s" : ""} that ${withheld > 1 ? "don't" : "doesn't"} suit your household's dietary needs.`,
+              ? nothingSuitableNote({ attempt: "suggest anything from these ingredients" })
+              : withheldNote({ count: withheld, noun: "idea" }),
         }),
       });
     } catch (err) {
@@ -11246,7 +11448,11 @@ Rules:
     } catch (err) {
       console.error('[generate-recipe-from-suggestion] Household safety context unresolved — refusing to generate a recipe', err);
       return res.status(503).json({
-        message: "We can't check this against your household's dietary needs right now, so we're not going to guess. Please try again in a moment.",
+        message: safetyUnavailableNote({
+          subject: "this",
+          consequence: "we're not going to guess",
+          retryable: true,
+        }),
         code: "HOUSEHOLD_SAFETY_UNAVAILABLE",
       });
     }
@@ -11318,7 +11524,10 @@ Generate a complete recipe using these as the foundation.`;
           genVerdict.violations.map((v) => `${v.field}: "${v.value}" → [${v.restrictionIds.join(", ") || "custom-restriction"}]`),
         );
         return res.status(422).json({
-          message: "We couldn't generate a version of this recipe that suits your household's dietary needs, so we haven't suggested one.",
+          message: nothingSuitableNote({
+            attempt: "generate a version of this recipe",
+            consequence: "so we haven't suggested one",
+          }),
           code: "ADAPTATION_VIOLATES_RESTRICTIONS",
         });
       }
@@ -11371,6 +11580,40 @@ Generate a complete recipe using these as the foundation.`;
       storage.getSystemMeals(),
     ]);
 
+    // NUTPLAN1 — THE CANONICAL SAFETY GATE.
+    //
+    // This route produces food a household is invited to cook, and until now it
+    // reached NO dietary gate at all: `rankMealsByIngredients` has no dietary
+    // awareness of any kind (see `smart-meal-creation-engine.ts` — it scores
+    // ingredient overlap and nothing else), and the only filter below was a
+    // hardcoded drink-name regex. A tree-nut household typing "flour, butter,
+    // sugar" was offered whatever the cookbook matched, allergens included.
+    //
+    // It is the same defect PROD6 closed on the sibling `/api/suggest-from-ingredients`
+    // 150 lines above, in a route that was simply never enumerated. No new rule and
+    // no second engine is introduced here — this adopts the gate the platform
+    // already has, exactly as `meal-service.ts` does for starter meals.
+    //
+    // `isMealSafeForHousehold` is the correct gate: these are EXISTING meals being
+    // recommended, not an adaptation inventing new ingredients (which is what
+    // `validateAdaptationSafety` exists for — see that function's header).
+    const safety = await resolveHouseholdSafetyContext(req.user!.id);
+
+    // FAIL CLOSED. `resolveHouseholdSafetyContext` never throws; it reports
+    // `unavailable`, which every consumer must read as "refuse", not "unrestricted".
+    // Refusing explicitly is better than letting the gate drop every meal and
+    // returning a silent empty list that reads as "we found nothing".
+    if (safety.status === "unavailable") {
+      return res.status(503).json({
+        message: safetyUnavailableNote({
+          subject: "these",
+          consequence: "we're not going to guess",
+          retryable: true,
+        }),
+        code: "HOUSEHOLD_SAFETY_UNAVAILABLE",
+      });
+    }
+
     const ranked = rankMealsByIngredients(
       [...userMeals, ...systemMeals],
       ingredients,
@@ -11381,15 +11624,38 @@ Generate a complete recipe using these as the foundation.`;
     const drinkPattern = new RegExp(`\\b(${DRINK_KEYWORDS.join('|')})\\b`, 'i');
     const filtered = ranked.filter(({ meal }) => !drinkPattern.test(meal.name));
 
-    res.json(
-      filtered.map(({ meal, score, primaryMatches, stapleMatches }) => ({
+    // The gate runs over name + ingredients, matching the planner gate exactly.
+    const safe = filtered.filter(({ meal }) => {
+      const verdict = isMealSafeForHousehold(
+        { name: meal.name, ingredients: meal.ingredients ?? [] },
+        safety,
+      );
+      if (!verdict.safe) {
+        console.error(
+          `[ADAPT_SAFETY] smart-create-from-ingredients withheld "${meal.name}" — ${verdict.reason}`,
+        );
+      }
+      return verdict.safe;
+    });
+
+    // Never present a filtered list as if it were the whole answer (PROD6).
+    const withheld = filtered.length - safe.length;
+    res.json({
+      meals: safe.map(({ meal, score, primaryMatches, stapleMatches }) => ({
         id: meal.id,
         name: meal.name,
         score,
         primaryMatches,
         stapleMatches,
-      }))
-    );
+      })),
+      ...(withheld > 0 && {
+        withheldForSafety: withheld,
+        withheldNote:
+          safe.length === 0
+            ? nothingSuitableNote({ attempt: "find anything from these ingredients" })
+            : withheldNote({ count: withheld, noun: "meal" }),
+      }),
+    });
   });
 
   // ── Ingredient Classifications — Admin Review System ──────────────────────
@@ -11563,7 +11829,10 @@ Generate a complete recipe using these as the foundation.`;
         } catch (err) {
           console.error('[uplift/batch] Household safety context unresolved — suppressing uplift suggestions', err);
           return res.status(503).json({
-            message: "We can't check ingredient suggestions against your household's dietary needs right now.",
+            message: safetyUnavailableNote({
+              subject: "ingredient suggestions",
+              consequence: "we haven't suggested any",
+            }),
             code: "HOUSEHOLD_SAFETY_UNAVAILABLE",
           });
         }
@@ -12031,8 +12300,9 @@ Generate a complete recipe using these as the foundation.`;
       if (plannerWeek.anchored) {
         const currentWeek = plannerWeek.week;
         const days = await storage.getPlannerDays(currentWeek.id);
-        // Deduped by DIVERSITY GROUP, not ingredient slug: kale and cavolo nero are
-        // one plant, as the canonical owner says (CPI1 S1-2).
+        // NUTPLAN2 — counted by the canonical owner. This loop and the one in
+        // /api/planner/weeks/:weekId/intelligence were written out identically;
+        // both now call `plantGroupsForIngredientLines`, so they cannot drift.
         const plantGroups = new Set<string>();
         let mealsPlanned = 0;
         let daysWithMeals = 0;
@@ -12046,11 +12316,8 @@ Generate a complete recipe using these as the foundation.`;
           for (const entry of entries) {
             const meal = await storage.getMeal(entry.mealId);
             if (!meal) continue;
-            for (const rawIng of meal.ingredients) {
-              const parsed = parseIngredientShared(rawIng);
-              const slug = singularizeIngredientKey(parsed.normalizedName);
-              const group = plantDiversityGroup(slug);
-              if (group) plantGroups.add(group);
+            for (const group of Array.from(plantGroupsForIngredientLines(meal.ingredients))) {
+              plantGroups.add(group);
             }
           }
         }
@@ -12112,8 +12379,7 @@ Generate a complete recipe using these as the foundation.`;
 
       // ── 1. Weekly progress — scoped to THIS week ────────────────────────────
       const days = await storage.getPlannerDays(weekId);
-      // Same counter, same key as /api/home/intelligence above: one diversity group,
-      // one plant (CPI1 S1-2).
+      // Same counter, same owner as /api/home/intelligence above (NUTPLAN2).
       const plantGroups = new Set<string>();
       let mealsPlanned = 0;
       let daysWithMeals = 0;
@@ -12127,11 +12393,8 @@ Generate a complete recipe using these as the foundation.`;
         for (const entry of entries) {
           const meal = await storage.getMeal(entry.mealId);
           if (!meal) continue;
-          for (const rawIng of meal.ingredients) {
-            const parsed = parseIngredientShared(rawIng);
-            const slug = singularizeIngredientKey(parsed.normalizedName);
-            const group = plantDiversityGroup(slug);
-            if (group) plantGroups.add(group);
+          for (const group of Array.from(plantGroupsForIngredientLines(meal.ingredients))) {
+            plantGroups.add(group);
           }
         }
       }

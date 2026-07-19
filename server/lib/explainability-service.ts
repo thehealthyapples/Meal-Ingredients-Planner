@@ -28,47 +28,36 @@ import {
   type PlannerWeekState,
 } from "./planner-explanation-context";
 
-/** The intelligence dimensions a planner recommendation can be explained by. */
-export type PlannerExplanationDimension =
-  | "diet-match"
-  | "household-suitability"
-  | "nutrition-goals"
-  | "pantry-usage"
-  | "seasonal-suitability"
-  | "plant-diversity"
-  | "week-opportunity"
-  | "household-history"
-  | "planner-balance"
-  | "shopping-impact"
-  | "processing-level"
-  | "budget-fit"
-  | "cuisine-preference"
-  | "overall-balance";
+// COMP3 — the SHAPE of an explanation is declared once, in
+// `shared/explanations/planner-explanation.ts`, because the client renders it
+// and previously re-declared it as a structural twin that could drift silently.
+// The shape moved; the OWNERSHIP did not. This file remains the single owner of
+// "why was this meal recommended?" — it is the only thing that authors these
+// sentences or decides which dimensions speak.
+export type {
+  PlannerExplanationDimension,
+  PlannerExplanationEvidence,
+  MealExplanation,
+} from "@shared/explanations/planner-explanation";
+
+import type {
+  PlannerExplanationDimension,
+  PlannerExplanationEvidence,
+  MealExplanation,
+} from "@shared/explanations/planner-explanation";
 
 /**
- * One explained fact. `source` names the canonical owner the fact was read from.
- * Rule E1, as used by the Food Intelligence engines: no citation, no card.
+ * What this service GUARANTEES, which is stronger than what the wire shape can
+ * promise: `evidence` is always present, because `reasons` is derived from it.
+ *
+ * The shared `MealExplanation` leaves `evidence` optional because a reader may
+ * legitimately find a pre-PLAN1 persisted session without one. That is true of
+ * readers and false of this producer, so the guarantee is restated here rather
+ * than weakened there.
  */
-export interface PlannerExplanationEvidence {
-  readonly dimension: PlannerExplanationDimension;
-  /** The existing owner this fact came from. Never a model, never a guess. */
-  readonly source: string;
-  /** The sentence shown to the user. */
-  readonly detail: string;
-}
-
-export interface MealExplanation {
-  title: string;
-  reasons: string[];
-  /** Every reason, with the owner it was read from. `reasons` is derived from this. */
+export type GeneratedMealExplanation = MealExplanation & {
   evidence: PlannerExplanationEvidence[];
-  scoreBreakdown: {
-    healthScore: number;
-    upfScore: number;
-    budgetScore: number;
-    preferenceMatch: number;
-  };
-}
+};
 
 /** Intelligence read once per suggestion run, plus the week as at this choice. */
 export interface PlannerExplanationInput {
@@ -141,7 +130,7 @@ export function generateMealExplanation(
   candidate: ScoredCandidate,
   prefs: UserPreferences | null,
   intel?: PlannerExplanationInput,
-): MealExplanation {
+): GeneratedMealExplanation {
   const evidence: PlannerExplanationEvidence[] = [];
   const bd = candidate.scoreBreakdown;
 

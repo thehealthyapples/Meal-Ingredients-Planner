@@ -195,16 +195,22 @@ const HOME_CATS = [
 type FoodCat = typeof FOOD_CATS[number]["value"];
 type HomeCat = typeof HOME_CATS[number]["value"];
 
-const FOOD_CAT_EMPTY: Record<FoodCat, string> = {
-  larder:  "No larder staples yet — try adding olive oil or pasta.",
-  fridge:  "No fridge staples yet — try adding milk or eggs.",
-  freezer: "No freezer items yet.",
-  fruit:   "No fruit yet — try adding apples or berries.",
+// HOUSE2: these were four bare sentences rendered as 12px grey italic text, two of
+// which ("No freezer items yet.", "No household items yet.") named no way forward at
+// all. They now render through the canonical EmptyState owner, and every category
+// suggests something concrete. There is deliberately no action button: the add input
+// sits immediately above this slot, so a button here would be a second control for
+// one job — the description points at the control that already exists.
+const FOOD_CAT_EMPTY: Record<FoodCat, { title: string; description: string }> = {
+  larder:  { title: "No larder staples yet",  description: "Add what you keep in — olive oil, pasta, tinned tomatoes — using the box above." },
+  fridge:  { title: "No fridge staples yet",  description: "Add what's in the fridge — milk, eggs, butter — using the box above." },
+  freezer: { title: "Nothing in the freezer yet", description: "Add what you've frozen — peas, bread, batch-cooked meals — using the box above." },
+  fruit:   { title: "No fruit yet",           description: "Add the fruit you have in — apples, berries, bananas — using the box above." },
 };
 
-const HOME_CAT_EMPTY: Record<HomeCat, string> = {
-  household: "No household items yet.",
-  pet:       "No pet food or care items yet.",
+const HOME_CAT_EMPTY: Record<HomeCat, { title: string; description: string }> = {
+  household: { title: "No household items yet", description: "Add the non-food things you restock — washing-up liquid, cleaning cloths — using the box above." },
+  pet:       { title: "No pet items yet",       description: "Add pet food and care items so they're counted when you shop." },
 };
 
 
@@ -582,9 +588,14 @@ function FoodPantrySection({
           style={{ background: "color-mix(in srgb, var(--realm-bg) 22%, white)" }}
         >
           {displayedItems.length === 0 ? (
-            <p className="text-xs text-muted-foreground italic px-4 py-5">
-              {FOOD_CAT_EMPTY[activeCategory]}
-            </p>
+            <EmptyState
+              variant="empty"
+              size="compact"
+              icon={FOOD_CATS.find(c => c.value === activeCategory)?.icon}
+              title={FOOD_CAT_EMPTY[activeCategory].title}
+              description={FOOD_CAT_EMPTY[activeCategory].description}
+              data-testid={`empty-pantry-${activeCategory}`}
+            />
           ) : (
             <div className="px-3 pt-1">
               <label htmlFor={`checkbox-select-all-${activeCategory}`} className="flex items-center gap-3 pb-2 mb-1 border-b border-border/40 cursor-pointer select-none min-h-[2.75rem]">
@@ -1035,9 +1046,14 @@ function HomePantrySection({
           style={{ background: "color-mix(in srgb, var(--realm-bg) 22%, white)" }}
         >
           {displayedItems.length === 0 ? (
-            <p className="text-xs text-muted-foreground italic px-4 py-5">
-              {HOME_CAT_EMPTY[activeCategory]}
-            </p>
+            <EmptyState
+              variant="empty"
+              size="compact"
+              icon={HOME_CATS.find(c => c.value === activeCategory)?.icon}
+              title={HOME_CAT_EMPTY[activeCategory].title}
+              description={HOME_CAT_EMPTY[activeCategory].description}
+              data-testid={`empty-pantry-${activeCategory}`}
+            />
           ) : (
             <div className="px-3 pt-1">
               <label htmlFor="checkbox-select-all-household" className="flex items-center gap-3 pb-2 border-b border-border/40 mb-1 cursor-pointer select-none min-h-[2.75rem]">

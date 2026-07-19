@@ -414,7 +414,14 @@ export function BrandBanner() {
       className="hidden md:flex items-center shrink-0 realm-header-bg border-b realm-header-border h-11 px-4"
       data-testid="brand-banner"
     >
-      <Link href="/dashboard" aria-label="Dashboard" className="flex items-center">
+      {/* HOUSE2: aligned with the two canonical logos in `workspace-header.tsx:249,387`,
+          which both target `/home`. Stated honestly: this component is **exported but
+          mounted nowhere** (verified — `BrandBanner` has no reference in the repo outside
+          this definition), so the change has no runtime effect today. It is corrected
+          rather than left wrong so the component is right if it is ever mounted.
+          Consequently this was NOT the live mechanism behind `fnd-home-dashboard-rivalry`,
+          as had been supposed — see the HOUSE2 report. */}
+      <Link href="/home" aria-label="Home" className="flex items-center">
         <img
           src="/logo-long.png"
           alt="The Healthy Apples"

@@ -10,16 +10,31 @@
 // Architecture:
 //   - Queries the SAME key as PlannerIntelligenceCompanion → zero extra requests
 //     (TanStack Query deduplicates via shared cache).
-//   - Plant count computed locally from weekIngredients (no API).
+//   - Plant count comes from the SERVER (see NUTPLAN1 note below).
 //   - Expansion state persisted in sessionStorage for the session.
 //   - No new API calls, no schema changes, no business logic.
+//
+// NUTPLAN1 — the weekly plant count has ONE owner, and it is the server.
+//
+// This component already received `weeklyProgress.plantCount` in its payload and
+// then ignored it, recomputing locally with a rival dedup rule
+// (`normaliseForReuse` on the raw line). The two rules do not agree: measured over
+// one week of ordinary lines the canonical rule counts 7 and the local rule 9,
+// because the local one treats "red onion"/"onion" and "red pepper"/"pepper" as
+// four different plants. The server dedups by DIVERSITY GROUP — one group, one
+// plant (SoT Domain 4 / CPI1 S1-2) — via the full canonical chain
+// (`parseIngredientShared` → `singularizeIngredientKey` → `plantDiversityGroup`).
+//
+// The local rule was therefore overstating a household's progress toward the
+// 30-plant target on the planner, which is the one number on that screen a
+// household is asked to act on. It is retired here rather than left beside the
+// owner (Principle 8), and its ironic comment — "so counts stay consistent across
+// the UI" — retired with it.
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Leaf, Sun } from "lucide-react";
-import { isPlantIngredient } from "@shared/canonical/plant-classifier";
-import { normaliseForReuse } from "@/lib/ingredient-reuse";
 import {
   WeeklyPlantDiversityCounter,
   PlannerVarietyLegend,
@@ -69,21 +84,6 @@ function writeExpanded(v: boolean) {
   } catch {}
 }
 
-// ── Plant count helper ────────────────────────────────────────────────────────
-// Same logic as WeeklyPlantDiversityCounter — counts unique plant foods using
-// the canonical plant classifier so counts stay consistent across the UI.
-
-function computePlantCount(weekIngredients: string[][]): number {
-  const seen = new Set<string>();
-  for (const ingredients of weekIngredients) {
-    for (const raw of ingredients) {
-      if (!raw.trim()) continue;
-      if (isPlantIngredient(raw)) seen.add(normaliseForReuse(raw));
-    }
-  }
-  return seen.size;
-}
-
 // ── Compact intelligence pill row ─────────────────────────────────────────────
 // Clips each item to keep the strip tight and scannable. Shortening is deliberate
 // — the full text is always available from the expanded panel below, and from the
@@ -127,7 +127,11 @@ export default function PlannerIntelligenceStrip({
     writeExpanded(next);
   };
 
-  const plantCount = computePlantCount(weekIngredients);
+  // The server's count, or nothing. `weeklyProgress` is null when the week holds
+  // no meals, and `data` is undefined until the query resolves — in both cases THA
+  // does not yet know the number, and says nothing rather than showing a 0 that
+  // reads as a measured result (Core Principle 6).
+  const plantCount = data?.weeklyProgress?.plantCount;
 
   // Build compact pill items from intelligence data (only show what exists).
   // Each pill keeps its full text so the shortened label can expose it on hover.
@@ -172,20 +176,22 @@ export default function PlannerIntelligenceStrip({
 
         <span className="text-border shrink-0 hidden sm:block">|</span>
 
-        {/* Plant count (inline, compact) */}
-        <button
-          type="button"
-          onClick={onNavigatePlantDiversity}
-          className="flex items-center gap-1 shrink-0 hover:opacity-70 transition-opacity"
-          data-testid="strip-plant-count"
-          title={`${plantCount} of 30 plant foods this week`}
-        >
-          <Leaf className="h-3 w-3 text-emerald-500/70 flex-shrink-0" />
-          <span className="text-xs">
-            <span className="font-semibold text-foreground/75">{plantCount}</span>
-            <span className="text-muted-foreground/45">/30</span>
-          </span>
-        </button>
+        {/* Plant count (inline, compact) — rendered only when the server knows it. */}
+        {plantCount !== undefined && (
+          <button
+            type="button"
+            onClick={onNavigatePlantDiversity}
+            className="flex items-center gap-1 shrink-0 hover:opacity-70 transition-opacity"
+            data-testid="strip-plant-count"
+            title={`${plantCount} of 30 plant foods this week`}
+          >
+            <Leaf className="h-3 w-3 text-emerald-500/70 flex-shrink-0" />
+            <span className="text-xs">
+              <span className="font-semibold text-foreground/75">{plantCount}</span>
+              <span className="text-muted-foreground/45">/30</span>
+            </span>
+          </button>
+        )}
 
         {/* Intelligence pills — horizontal scroll, no scrollbar */}
         {pills.length > 0 && (
@@ -241,10 +247,12 @@ export default function PlannerIntelligenceStrip({
             <div className="border-t border-border/30 px-3 pt-3 pb-3 space-y-3">
               {/* Full plant diversity counter + variety legend */}
               <div className="flex items-center justify-between flex-wrap gap-x-4 gap-y-2">
-                <WeeklyPlantDiversityCounter
-                  weekIngredients={weekIngredients}
-                  onExplore={onNavigatePlantDiversity}
-                />
+                {plantCount !== undefined && (
+                  <WeeklyPlantDiversityCounter
+                    plantCount={plantCount}
+                    onExplore={onNavigatePlantDiversity}
+                  />
+                )}
                 <PlannerVarietyLegend compact />
               </div>
 

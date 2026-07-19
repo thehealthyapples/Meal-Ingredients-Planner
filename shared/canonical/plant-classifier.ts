@@ -10,6 +10,8 @@
 // functions return the honest-gap result: false / null / 0.
 import { resolveCanonicalFood } from "./resolver";
 import { DIVERSITY_GROUP_SEED } from "./diversity-groups";
+import { parseIngredient } from "../parse-ingredient";
+import { singularizeIngredientKey } from "../normalize";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -232,6 +234,42 @@ export function plantDiversityGroup(ingredient: string): string | null {
   const r = resolveCanonicalFood(ingredient);
   if (!r.matched || !r.diversityGroupSlug) return null;
   return SINGLE_PLANT_SLUGS.has(r.diversityGroupSlug) ? r.diversityGroupSlug : null;
+}
+
+/**
+ * NUTPLAN2 — the distinct plant diversity groups in a list of RAW RECIPE LINES.
+ *
+ * This is the operation the weekly plant counter actually performs, and it was
+ * written out by hand, identically, in two route handlers
+ * (`/api/home/intelligence` and `/api/planner/weeks/:weekId/intelligence`). Both
+ * were correct; two correct copies of a rule are simply a drift that has not
+ * happened yet, and the counter they feed is the number a household is asked to
+ * act on.
+ *
+ * WHY THE PARSE STEP IS PART OF THE RULE, not the caller's business:
+ *
+ * `plantDiversityGroup` resolves an INGREDIENT, and a recipe line is not one —
+ * it is a quantity, a unit, a descriptor and a food ("400g tinned tomatoes").
+ * NUTPLAN1 §7.2 measured the consequence: asking the classifier about the raw
+ * line returns "not a plant" for exactly that string, while parsing it first
+ * resolves it to `tomato`. So a counter that skips the parse UNDER-counts, and
+ * the parse is not an optimisation — it is what makes the answer right.
+ *
+ * That is also why this function exists rather than a reuse of
+ * `mealPlantGroups` (`server/lib/planner-explanation-context.ts:162`), which
+ * asks about raw lines and therefore answers a slightly different question. The
+ * two are NOT interchangeable, and the difference is recorded in the NUTPLAN2
+ * report rather than silently smoothed over here.
+ */
+export function plantGroupsForIngredientLines(lines: readonly string[]): Set<string> {
+  const groups = new Set<string>();
+  for (const line of lines) {
+    if (!line) continue;
+    const slug = singularizeIngredientKey(parseIngredient(line).normalizedName);
+    const group = plantDiversityGroup(slug);
+    if (group) groups.add(group);
+  }
+  return groups;
 }
 
 /**

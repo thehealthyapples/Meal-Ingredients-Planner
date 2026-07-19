@@ -105,9 +105,16 @@ async function main(): Promise<void> {
   // -------------------------------------------------------------------------
   section("§1 Registry conformance — every registered domain reaches the household correctly");
 
+  // HNP2 — four became five. This assertion is not a formality: it is the governance
+  // gate the fifth member had to be argued past, and it fired at the type level the
+  // moment `nutrition` was added. The decision it records: the nutrition domain carries
+  // the ONE opportunity type that survived MAT1 §3.3's retirement of the household
+  // nutrition limb (`nutrition-balance-gap`), whose two siblings were retired precisely
+  // BECAUSE they duplicated observations `planner` already makes. Widening this number
+  // is how that argument is made in public rather than in a commit message.
   assert(
-    FOOD_OPPORTUNITY_DOMAINS.length === 4,
-    "the domain set is CLOSED at four members — a fifth is a governance decision, not an edit",
+    FOOD_OPPORTUNITY_DOMAINS.length === 5,
+    "the domain set is CLOSED at five members — a sixth is a governance decision, not an edit",
     FOOD_OPPORTUNITY_DOMAINS.join(","),
   );
 

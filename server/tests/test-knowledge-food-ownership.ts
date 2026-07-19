@@ -76,9 +76,67 @@ function sourceFiles(dir: string): string[] {
  * call itself counts.
  */
 const OWNER = "server/seeds/seed-knowledge-registry.ts";
-const SIGNOFF_GATE = "server/seeds/signoff-knowledge-claims.ts";
+// KNOW2 converged the review writer. This was `server/seeds/signoff-knowledge-claims.ts`
+// until the Admin review surface was added: a surface with its own UPDATE beside
+// the CLI's own UPDATE would have been two owners of the publication fact, so the
+// CLI now delegates and this store is the single authorised writer of every review
+// column. The rule this file enforces is unchanged — exactly two modules write
+// these tables, one for facts and one for sign-off — only the second module moved.
+const SIGNOFF_GATE = "server/lib/knowledge-claim-review-store.ts";
 const KNOWLEDGE_FOOD_TABLES = ["knowledgeFoods", "knowledgeFoodNutrients", "knowledgeFoodBenefits"];
 const WRITE_CALL = new RegExp(`\\.(insert|update)\\s*\\(\\s*(?:schema\\.)?(${KNOWLEDGE_FOOD_TABLES.join("|")})\\b`);
+
+/**
+ * KNOW2 — the indirect writer.
+ *
+ * `WRITE_CALL` only sees a table named at the call site. The KNOW2 review store
+ * maps the four claim tables into a lookup and writes `tx.update(table)`, because
+ * the four are one lifecycle over four shapes and a per-edge `switch` repeated
+ * across every operation is four chances to miss one. That write was invisible to
+ * this scan — which means the guard could be evaded, deliberately or accidentally,
+ * by any file that aliases a table into a variable first.
+ *
+ * So the scan additionally FOLLOWS THE ALIAS: it collects the identifiers a file
+ * binds to a knowledge food table — directly (`const t = knowledgeFoodNutrients`),
+ * or through a lookup object (`const TABLES = { … : knowledgeFoodNutrients }`
+ * then `const t = TABLES[edge]`) — and counts a write through any of them.
+ *
+ * It is deliberately not the looser "mentions a table and writes something":
+ * `server/lib/knowledge-review-store.ts` reads these tables for its health
+ * figures while writing only its own vocabulary tables, and calling that file a
+ * writer of knowledge food would be a false alarm that teaches the next person to
+ * ignore this check.
+ */
+function tableAliases(code: string): string[] {
+  const aliases = new Set<string>();
+  const tables = KNOWLEDGE_FOOD_TABLES.join("|");
+
+  // const t = knowledgeFoodNutrients   /   const t: any = schema.knowledgeFoods
+  for (const m of Array.from(code.matchAll(new RegExp(`\\b(?:const|let)\\s+(\\w+)\\s*(?::[^=]+)?=\\s*(?:schema\\.)?(?:${tables})\\b`, "g")))) {
+    aliases.add(m[1]);
+  }
+  // const TABLES = { … knowledgeFoodNutrients … }  → the map's own name
+  // `[^{}]*` rather than a lazy `[\s\S]*?`: a lazy body starting at an EARLIER
+  // declaration runs on until the first `} as const` anywhere below it, swallowing
+  // the map that actually holds the tables and attributing its contents to the
+  // wrong name. Claim-table maps are flat, so forbidding nested braces is both
+  // sufficient and unambiguous.
+  const maps = new Set<string>();
+  for (const m of Array.from(code.matchAll(/\b(?:const|let)\s+(\w+)\s*(?::[^=]+)?=\s*\{([^{}]*)\}/g))) {
+    if (new RegExp(`\\b(?:${tables})\\b`).test(m[2] ?? "")) maps.add(m[1]);
+  }
+  // const t = TABLES[edge]  → an alias one hop further out
+  for (const map of Array.from(maps)) {
+    for (const m of Array.from(code.matchAll(new RegExp(`\\b(?:const|let)\\s+(\\w+)\\s*(?::[^=]+)?=\\s*${map}\\s*\\[`, "g")))) {
+      aliases.add(m[1]);
+    }
+  }
+  return Array.from(aliases);
+}
+
+function writesThroughAlias(code: string): boolean {
+  return tableAliases(code).some((a) => new RegExp(`\\.(insert|update)\\s*\\(\\s*${a}\\b`).test(code));
+}
 
 /** Source with block and line comments stripped, so prose is never a writer. */
 function codeOf(file: string): string {
@@ -101,16 +159,33 @@ function writersOfKnowledgeFoods(): string[] {
   for (const file of [...sourceFiles("server"), ...sourceFiles("shared"), ...sourceFiles("scripts")]) {
     const path = file.replace(/\\/g, "/");
     if (path.startsWith(NOT_RUNTIME + "/")) continue;
-    if (WRITE_CALL.test(codeOf(file))) writers.push(path);
+    const code = codeOf(file);
+    if (WRITE_CALL.test(code) || writesThroughAlias(code)) writers.push(path);
   }
   return writers.sort();
 }
 
-/** The columns a `.set({ … })` call assigns, across a whole file. */
+/**
+ * The columns a file assigns in a Drizzle update.
+ *
+ * Two shapes count, because the two writers are shaped differently and the rule
+ * is about the COLUMNS, not the syntax. The seed assigns inline (`.set({ … })`).
+ * The KNOW2 review store builds a named `patch` object first — one literal per
+ * decision (approve / reject / reopen) — because the three decisions set the same
+ * columns to different values; matching only `.set({ … })` would read that file as
+ * assigning nothing at all and pass this check vacuously.
+ */
 function assignedColumns(file: string): Set<string> {
   const cols = new Set<string>();
-  for (const m of Array.from(codeOf(file).matchAll(/\.set\s*\(\s*\{([^}]*)\}/g))) {
+  const src = codeOf(file);
+  for (const m of Array.from(src.matchAll(/\.set\s*\(\s*\{([^}]*)\}/g))) {
     for (const c of Array.from(m[1].matchAll(/(\w+)\s*:/g))) cols.add(c[1]);
+  }
+  // `const patch = … { … } … ;` — every object literal in the patch expression.
+  for (const m of Array.from(src.matchAll(/const patch\s*=([\s\S]*?);\n/g))) {
+    for (const lit of Array.from(m[1].matchAll(/\{([^{}]*)\}/g))) {
+      for (const c of Array.from(lit[1].matchAll(/(\w+)\s*:/g))) cols.add(c[1]);
+    }
   }
   return cols;
 }
@@ -121,7 +196,11 @@ async function run() {
   const writers = writersOfKnowledgeFoods();
   check(
     "exactly two modules write the knowledge food tables: the seed runner and the sign-off gate",
-    writers.length === 2 && writers[0] === OWNER && writers[1] === SIGNOFF_GATE,
+    // Compared as a SET, not by index. The previous form assumed the sorted order
+    // put the seed first, which stopped being true when KNOW2 moved the review
+    // writer from server/seeds/ to server/lib/ — an alphabetical accident is not
+    // the property this check is about.
+    writers.length === 2 && writers.includes(OWNER) && writers.includes(SIGNOFF_GATE),
     `found: ${writers.join(", ") || "(none)"}`,
   );
   check("the fact writer is the declared seed runner (SoT Register Domain 1)", writers.includes(OWNER));
@@ -134,9 +213,13 @@ async function run() {
     !seedCols.has("reviewedAt") && !seedCols.has("reviewedBy"),
     `seed assigns: ${Array.from(seedCols).join(", ")}`,
   );
+  // KNOW2 added the rejection half of the lifecycle. These are still review
+  // columns and not facts: none of them changes what a claim SAYS, only whether a
+  // human has vouched for it.
+  const REVIEW_COLUMNS = new Set(["reviewedAt", "reviewedBy", "rejectedAt", "rejectedBy", "rejectionReason"]);
   check(
     "the sign-off gate writes ONLY the review columns — never a fact",
-    Array.from(gateCols).every((c) => c === "reviewedAt" || c === "reviewedBy"),
+    Array.from(gateCols).every((c) => REVIEW_COLUMNS.has(c)),
     `gate assigns: ${Array.from(gateCols).join(", ")}`,
   );
   check("the sign-off gate does set reviewedBy (no anonymous sign-off)", gateCols.has("reviewedBy"));

@@ -90,6 +90,7 @@ directly.
 | `/admin/observations` | AdminObservationWorkbenchPage (+ banner) | `client/src/pages/admin-observation-workbench-page.tsx` |
 | `/admin/behaviour` | AdminBehaviourWorkbenchPage (+ banner) | `client/src/pages/admin-behaviour-workbench-page.tsx` |
 | `/admin/knowledge-review` | AdminKnowledgeReviewPage *(no banner wrapper)* | `client/src/pages/admin-knowledge-review-page.tsx` |
+| `/admin/knowledge-claims` | AdminKnowledgeClaimsPage (+ banner) | `client/src/pages/admin-knowledge-claims-page.tsx` |
 
 ## Redirects
 

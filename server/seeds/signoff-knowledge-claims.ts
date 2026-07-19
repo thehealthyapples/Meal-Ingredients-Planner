@@ -1,5 +1,5 @@
 /**
- * PKC Phase 0 / KNOW5 — the human sign-off gate for sourced nutrition claims.
+ * PKC Phase 0 / KNOW5 / KNOW2 — the human sign-off gate for sourced nutrition claims.
  *
  * Rule KC9 (PLATFORM_KNOWLEDGE_COMPLETION_ARCHITECTURE.md §5): automation
  * authors candidates, never publishes them. Seeding attaches citations
@@ -13,136 +13,53 @@
  *   npm run knowledge:signoff -- --confirm REVIEWED --reviewer "Ada L"
  *   npm run knowledge:signoff -- --edge composition --confirm REVIEWED --reviewer "Ada L"
  *
- * KNOW5 changes two things.
+ * KNOW5 changed two things: SCOPE (it covers the composition edge as well as
+ * nutrient→benefit, because a chip requires both) and REVIEWER IDENTITY
+ * (`--reviewer` is mandatory — an anonymous reviewed_at records that *someone*
+ * approved a health claim without recording who).
  *
- * 1. SCOPE. It now covers the COMPOSITION edge (knowledge_food_nutrients) as
- *    well as knowledge_nutrient_benefits. A food-level benefit chip requires
- *    both, so signing off only the second published a cited conclusion on an
- *    unreviewed premise — the defect KNOW5 exists to close.
+ * KNOW2 changes a third: THIS SCRIPT NO LONGER WRITES.
  *
- * 2. REVIEWER IDENTITY. `--reviewer` is mandatory. An anonymous reviewed_at
- *    records that *someone* approved a health claim without recording who, so it
- *    can never be audited or withdrawn. Rows signed off before KNOW5 keep their
- *    NULL reviewed_by — they are not retroactively invalidated, and they are not
- *    re-signed here — but no new sign-off may be anonymous.
+ * It delegates every decision to `server/lib/knowledge-claim-review-store.ts`,
+ * which is now the single authorised writer of the review columns. The reason is
+ * ownership, not tidiness: KNOW2 adds an Admin review surface, and a surface with
+ * its own UPDATE beside this script's own UPDATE would be two owners of the
+ * publication fact (ARCHITECTURE_PRINCIPLES.md Principle 2). The script keeps its
+ * behaviour and gains two properties it could not have had alone — each claim now
+ * gets its own audit row, and each is approved individually rather than in one
+ * undifferentiated UPDATE ... WHERE id IN (...).
  *
- * STILL OUTSTANDING (KNOW5C, not this script): per-claim approve/reject with a
- * terminal `rejected` state and an audit row. This remains an approve-all-valid
- * gate over whatever is pending, which is honest at today's volume and becomes a
- * rubber stamp at import scale. It must be routed through the existing
- * knowledge_review_decisions state machine before any large import.
+ * Still approve-all-valid at this entry point (KNOW1 finding F5), and that is
+ * now a deliberate division rather than a gap: the Admin surface reviews claims
+ * ONE AT A TIME and offers no bulk button, while the bulk path lives here —
+ * behind a printed list, a typed confirmation flag and a typed reviewer name.
  */
-import { drizzle } from "drizzle-orm/node-postgres";
-import { and, eq, inArray, isNull, sql } from "drizzle-orm";
-import pg from "pg";
-import * as schema from "@shared/schema";
-import { validateSourceRef, type KnowledgeSourceRef } from "@shared/knowledge/evidence";
-
-const { Pool } = pg;
-
-if (!process.env.DATABASE_URL) {
-  console.error("DATABASE_URL is not set.");
-  process.exit(1);
-}
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const db = drizzle(pool, { schema });
-
-type Edge = "composition" | "nutrient-benefit" | "preparation-effect";
-
-const EDGES: readonly Edge[] = ["composition", "nutrient-benefit", "preparation-effect"];
-
-interface PendingClaim {
-  id: number;
-  label: string;
-  sourceRefs: KnowledgeSourceRef[];
-}
+import {
+  approveAllValid,
+  listClaims,
+  CLAIM_EDGES,
+  CLAIM_EDGE_LABELS,
+  isClaimEdge,
+  type ClaimEdge,
+} from "../lib/knowledge-claim-review-store";
+import { pool } from "../db";
 
 function flag(args: string[], name: string): string | undefined {
   const i = args.indexOf(name);
   return i !== -1 ? args[i + 1] : undefined;
 }
 
-async function pendingComposition(): Promise<PendingClaim[]> {
-  const rows = await db
-    .select()
-    .from(schema.knowledgeFoodNutrients)
-    .where(and(
-      isNull(schema.knowledgeFoodNutrients.reviewedAt),
-      eq(schema.knowledgeFoodNutrients.isActive, true),
-      sql`jsonb_array_length(${schema.knowledgeFoodNutrients.sourceRefs}) > 0`,
-    ));
-  return rows.map((r) => ({ id: r.id, label: `${r.foodSlug} → ${r.nutrientSlug}  (composition)`, sourceRefs: r.sourceRefs }));
-}
-
-async function pendingNutrientBenefit(): Promise<PendingClaim[]> {
-  const rows = await db
-    .select()
-    .from(schema.knowledgeNutrientBenefits)
-    .where(and(
-      isNull(schema.knowledgeNutrientBenefits.reviewedAt),
-      eq(schema.knowledgeNutrientBenefits.isActive, true),
-      sql`jsonb_array_length(${schema.knowledgeNutrientBenefits.sourceRefs}) > 0`,
-    ));
-  return rows.map((r) => ({ id: r.id, label: `${r.nutrientSlug} → ${r.benefitSlug}  (${r.evidenceStrength})`, sourceRefs: r.sourceRefs }));
-}
-
-/**
- * PHASE5A — the preparation-effect edge (WS5A).
- *
- * A preparation EXISTS freely and needs no sign-off; an EFFECT ("cooking this
- * changes its nutrition") is a claim, and passes through exactly this gate. The
- * printed label shows the approved wording, because the wording IS the claim —
- * a reviewer signing off "increases lycopene" without reading the sentence a
- * household will actually be shown has reviewed a database row, not a claim.
- */
-async function pendingPreparationEffect(): Promise<PendingClaim[]> {
-  const rows = await db
-    .select()
-    .from(schema.knowledgePreparationEffects)
-    .where(and(
-      isNull(schema.knowledgePreparationEffects.reviewedAt),
-      eq(schema.knowledgePreparationEffects.isActive, true),
-      sql`jsonb_array_length(${schema.knowledgePreparationEffects.sourceRefs}) > 0`,
-    ));
-  return rows.map((r) => ({
-    id: r.id,
-    label:
-      `${r.foodSlug} + ${r.preparationSlug} → ${r.direction} ${r.targetSlug ?? r.effectKind}\n` +
-      `         “${r.approvedWording}”` +
-      (r.uncertaintyNote ? `\n         hedge: ${r.uncertaintyNote}` : ""),
-    sourceRefs: r.sourceRefs,
-  }));
-}
-
-/** Print the claims, return the ids whose citations are structurally valid. */
-function review(edge: Edge, pending: PendingClaim[]): number[] {
-  console.log(`\n── ${edge} — ${pending.length} sourced claim(s) awaiting sign-off ──\n`);
-  const valid: number[] = [];
-  for (const row of pending) {
-    const problems = row.sourceRefs.flatMap((ref) => validateSourceRef(ref));
-    console.log(`  [${problems.length === 0 ? "OK " : "BAD"}] ${row.label}`);
-    for (const ref of row.sourceRefs) {
-      console.log(`         • ${ref.body}: ${ref.title}`);
-      console.log(`           ${ref.url}  (link checked ${ref.lastReviewed})`);
-    }
-    if (problems.length > 0) for (const p of problems) console.log(`         ✗ ${p}`);
-    else valid.push(row.id);
-  }
-  return valid;
-}
-
 async function run() {
   const args = process.argv.slice(2);
   const confirming = flag(args, "--confirm") === "REVIEWED";
   const reviewer = flag(args, "--reviewer")?.trim();
-  const edgeArg = flag(args, "--edge") as Edge | undefined;
+  const edgeArg = flag(args, "--edge");
 
-  if (edgeArg && !EDGES.includes(edgeArg)) {
-    console.error(`Unknown --edge "${edgeArg}". Use one of: ${EDGES.join(", ")}.`);
+  if (edgeArg && !isClaimEdge(edgeArg)) {
+    console.error(`Unknown --edge "${edgeArg}". Use one of: ${CLAIM_EDGES.join(", ")}.`);
     process.exit(1);
   }
-  const edges: Edge[] = edgeArg ? [edgeArg] : [...EDGES];
+  const edges: ClaimEdge[] = edgeArg && isClaimEdge(edgeArg) ? [edgeArg] : [...CLAIM_EDGES];
 
   // Reviewer identity is required BEFORE anything is written, not after.
   if (confirming && !reviewer) {
@@ -155,65 +72,66 @@ async function run() {
     process.exit(1);
   }
 
-  const pending: Record<Edge, PendingClaim[]> = {
-    composition: edges.includes("composition") ? await pendingComposition() : [],
-    "nutrient-benefit": edges.includes("nutrient-benefit") ? await pendingNutrientBenefit() : [],
-    "preparation-effect": edges.includes("preparation-effect") ? await pendingPreparationEffect() : [],
-  };
+  let total = 0;
+  let validTotal = 0;
 
-  const total = edges.reduce((n, e) => n + pending[e].length, 0);
+  for (const edge of edges) {
+    const pending = await listClaims({ edge, status: "pending", citedOnly: true, limit: 1000 });
+    total += pending.length;
+    if (pending.length === 0) continue;
+
+    console.log(`\n── ${edge} — ${pending.length} sourced claim(s) awaiting sign-off ──\n`);
+    for (const claim of pending) {
+      console.log(`  [${claim.canApprove ? "OK " : "BAD"}] ${claim.subject}`);
+      if (claim.approvedWording) console.log(`         “${claim.approvedWording}”`);
+      for (const ref of claim.sourceRefs) {
+        console.log(`         • ${ref.body}: ${ref.title}`);
+        console.log(`           ${ref.url}  (link checked ${ref.lastReviewed})`);
+      }
+      for (const problem of claim.citationProblems) console.log(`         ✗ ${problem}`);
+      if (claim.canApprove) validTotal++;
+    }
+  }
+
   if (total === 0) {
     console.log("No sourced claims awaiting sign-off.");
     await pool.end();
     return;
   }
 
-  const valid: Record<Edge, number[]> = { composition: [], "nutrient-benefit": [], "preparation-effect": [] };
-  for (const edge of edges) valid[edge] = review(edge, pending[edge]);
-
   if (!confirming) {
     console.log(
       "\nDry run — nothing signed off. Review each claim against its source, then run:" +
-        '\n  npm run knowledge:signoff -- --confirm REVIEWED --reviewer "Your Name"',
+        '\n  npm run knowledge:signoff -- --confirm REVIEWED --reviewer "Your Name"' +
+        "\n\nTo approve or REJECT claims one at a time, with a recorded reason and a full" +
+        "\ndecision history, use the Admin review surface at /admin/knowledge-claims.",
     );
     await pool.end();
     return;
   }
 
-  const validTotal = edges.reduce((n, e) => n + valid[e].length, 0);
   if (validTotal === 0) {
     console.log("\nNo structurally valid claims to sign off.");
     await pool.end();
     return;
   }
 
-  const reviewedAt = new Date();
   console.log("");
-  if (valid.composition.length > 0) {
-    await db
-      .update(schema.knowledgeFoodNutrients)
-      .set({ reviewedAt, reviewedBy: reviewer })
-      .where(inArray(schema.knowledgeFoodNutrients.id, valid.composition));
-    console.log(`Signed off ${valid.composition.length} composition claim(s) as "${reviewer}".`);
+  for (const edge of edges) {
+    const { approved, skipped } = await approveAllValid(edge, reviewer!);
+    if (approved > 0) {
+      console.log(`Signed off ${approved} ${CLAIM_EDGE_LABELS[edge]} claim(s) as "${reviewer}".`);
+    }
+    if (skipped > 0) {
+      console.log(`  (${skipped} skipped — citation not structurally valid.)`);
+    }
   }
-  if (valid["nutrient-benefit"].length > 0) {
-    await db
-      .update(schema.knowledgeNutrientBenefits)
-      .set({ reviewedAt, reviewedBy: reviewer })
-      .where(inArray(schema.knowledgeNutrientBenefits.id, valid["nutrient-benefit"]));
-    console.log(`Signed off ${valid["nutrient-benefit"].length} nutrient→benefit claim(s) as "${reviewer}".`);
-  }
-  if (valid["preparation-effect"].length > 0) {
-    await db
-      .update(schema.knowledgePreparationEffects)
-      .set({ reviewedAt, reviewedBy: reviewer })
-      .where(inArray(schema.knowledgePreparationEffects.id, valid["preparation-effect"]));
-    console.log(`Signed off ${valid["preparation-effect"].length} preparation-effect claim(s) as "${reviewer}".`);
-  }
+
   console.log("\nA benefit chip renders only where BOTH its composition premise and its");
   console.log("nutrient→benefit claim are now signed off. Everything else stays an honest gap.");
   console.log("A preparation note renders only where its own effect row is signed off; until");
   console.log("then the preparation is shown as existing, with no claim attached to it.");
+  console.log("\nEvery decision above is recorded in knowledge_review_audit and is permanent.");
 
   await pool.end();
 }
