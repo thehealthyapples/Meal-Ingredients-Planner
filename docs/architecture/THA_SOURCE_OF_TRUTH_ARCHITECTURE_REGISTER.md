@@ -711,7 +711,7 @@ The following domains have been identified by reading all TypeScript files under
 
 ### Domain 37: Community
 
-*(Added `COMM1`, 2026-07-19.)*
+*(Added `COMM1`, 2026-07-19. Surfaced `COMM2`, 2026-07-19 — the Orchard.)*
 
 > Which communities exist, which **households** belong to them, and who has been invited. **One entity, one kind** — a neighbourhood is a `kind` of community, not a table of its own.
 
@@ -721,16 +721,47 @@ The following domains have been identified by reading all TypeScript files under
 | Owning service | **`server/lib/community.ts`** — the only module that reads or writes these three tables. Owns membership and the role ladder; owns no household data |
 | Write layer | `createCommunity`, `inviteHousehold`, `acceptInvitation`, `declineInvitation`, `revokeInvitation`, `leaveCommunity` → `POST/DELETE /api/community/*` (authenticated) |
 | Read layer | `GET /api/community`, `/api/community/:id/members`, `/api/community/invitations`; AI-facing read via the `community` capability (read-only binding, COMM1) |
-| Consumers | Intelligence Platform capability `community` (`server/intelligence/bindings/community.ts`). **No client consumer** — COMM1's scope lock forbids building Community UI |
+| Consumers | Intelligence Platform capability `community` (`server/intelligence/bindings/community.ts`); **the Orchard** (`client/src/pages/orchard-page.tsx`, route `/orchard`) — added `COMM2`, the domain's first and only client consumer. It reads the existing routes and adds no server surface: still nine `/api/community/*` routes, still three tables, no migration |
 | **The membership grain** | **The HOUSEHOLD, never the user** (Rule CM1). A person reaches a community through their household's row in `household_members`, which remains the only user↔household relation. A user↔community table would be a second membership entity parallel to Domain 16's and could drift from it |
 | **The enforced invariant** | **Membership is not a read grant** (Rule CM2). Two households sharing a community learn that they share it, and nothing else. `getMemberHouseholds` returns ids and roles only; no method on the owner or the read port returns another household's name, eaters, restrictions, plans or lists |
 | **One owner of "who may join"** | `community_invitations` — targeted, expiring, revocable, single-use. `households.inviteCode`'s permanent-shared-code pattern is **deliberately not mirrored** here (Rule CM3): two mechanisms would give one fact two owners |
 | Survives erasure | **Yes, at household grain.** Membership belongs to the household, so erasing one member does not withdraw the household. A sole member's erasure erases the household, and `ON DELETE CASCADE` removes its memberships and invitations. Declared as `community-membership` in `server/privacy/personal-data-registry.ts` |
-| Status | **Authoritative — declared and built. No UI.** |
+| Status | **Authoritative — declared, built, and reachable by a household** (`COMM2`). |
+| **What the UI may disclose** | **Exactly what the port returns, which is `{ householdId, role }`** (Rule CM2, unchanged). The Orchard renders a neighbour as a *presence*, never a profile — there is no name to render because no method returns one — and states that boundary to the household on the surface itself rather than merely enforcing it |
+| **Companion** | Room `community` → `/orchard` (`COMPANION_ROOMS` + `DOMAIN_LANDING`, both amended by `COMM2`). The capability stays `supportedIntents: ["read"]`: it gained a destination, not a verb |
 
 > **Why this domain sits above Domain 16 and owns nothing it owns.** The Household domain owns who is in a home; Community owns which homes are in a neighbourhood. The temptation is to let Community answer "who's in my neighbourhood?" with names and faces, which would mean reading Domain 16's rows through a Domain 37 door — the exact shape of the `SEC1` defect one level up, where a read filtered on household alone and leaked a departed member's allergens. COMM1 forecloses it structurally: the owning service declares `COMMUNITY_READABLE_TABLES`, and its isolation test fails if this module ever imports outside that set.
 
+
 ---
+
+### Domain 38: Household Invitation & Referral
+
+*(Added `COMM1A`, 2026-07-19.)*
+
+> A link one household sends to an **email address**, inviting them to THA and optionally to one of its communities — and the record of who referred whom. **The mechanism the other two invitation systems structurally cannot be**, because its recipient may have no account at all.
+
+| Attribute | Value |
+|-----------|-------|
+| Authoritative Source | **`household_invitations`, `referral_attributions`** |
+| Owning services | **`server/lib/household-invitation.ts`** (the link) and **`server/lib/referral.ts`** (the attribution) — two facts, two owners |
+| Write layer | `createInvitation`, `redeemInvitation`, `revokeInvitation` → `POST/DELETE /api/invitations*`; `recordReferral`/`markVerified` called only from `server/auth.ts` (registration and email verification) |
+| Read layer | `GET /api/invitations`, `GET /api/invitations/:token/preview` (**the only public route**), `GET /api/referrals/summary` |
+| Consumers | `client/src/pages/invitation-page.tsx` (`/invitation`, public); the Orchard's Village invite form (`orchard-page.tsx`); `server/auth.ts` |
+| **THE THREE INVITATION MECHANISMS** | **`households.invite_code` (D16)** — a PERSON joins an EXISTING HOME. **`community_invitations` (D37)** — HOUSEHOLD → HOUSEHOLD, both of which already exist. **`household_invitations` (D38)** — HOUSEHOLD → SOMEONE WHO MAY HAVE NO ACCOUNT. Distinct questions, distinct owners; COMM1A adds no second way to do either of the first two |
+| **The addressing grain** | **An EMAIL ADDRESS, never a household id** (Rule HI1). An id is the one thing a household cannot honestly know about someone who is not here yet — and exposing one would defeat D37's probe resistance |
+| **The enforced invariant** | **The token alone is never sufficient** (Rule HI2). The accepting account's address must equal the invited address, so a forwarded link is inert. Single use is a conditional `UPDATE … WHERE status='pending'`, so concurrent redemptions cannot both win |
+| **Enumeration** | Creating an invitation returns the **same response** whether or not the address belongs to an existing household. "Not yours" and "does not exist" are byte-identical on every other route |
+| **Community boundary** | COMM1A **never writes `community_members` or `community_invitations`.** It calls Domain 37's owner, which issues an invitation the household must then **explicitly accept**. Clicking a link never joins a neighbourhood |
+| **Commercial boundary** | COMM1A owns **attribution only** — no amount, percentage, currency, term, discount or entitlement. `markEligible` exists as the seam the Commercial domain calls and is **unreachable from any route, capability or UI**. Rule C2 keeps the entitlement projection with Commercial; Rule C3 forbids a price claim without configured pricing, which fails closed platform-wide |
+| **The status ladder** | `recorded` → `verified` → `eligible` → `entitlement_processed`, one-way, each rung requiring the one below **enforced by a CHECK constraint in Postgres**. A referral cannot reach `eligible` without a `verified_at`. **A household is referred once, ever** — `referred_household_id` is UNIQUE |
+| Survives erasure | **Yes, at household grain.** Declared as `household-invitations-and-referrals` in `server/privacy/personal-data-registry.ts`; removed by the household cascade. The invited address is **redacted in place** the moment an invitation reaches a terminal state |
+| Status | **Authoritative — declared, built, and reachable by a household.** |
+
+> **Why referral attribution is a separate owner from the invitation.** An invitation is a *permission* and a referral is a *claim about provenance*. They have different lifetimes — the invitation dies the moment it is spent, the attribution outlives it and is the thing a future reward is computed from — and different audiences: the invitation is the recipient's, the attribution is the platform's. Folding them into one table would have made "who referred whom" a property of a row that is designed to be consumed and forgotten.
+
+> **Referrals are attributed on the registration path ONLY.** A household that already had a THA account and merely accepts a neighbourhood invitation is **not** a referral — it was not referred, it was already here. Attributing one would be a fabricated referral that a future reward would pay out on.
+
 
 > **The Support Hub finally has an inbound channel.** `SUP1`–`SUP3` and `ADMIN2` built the operator-facing "Support Hub" between them, and it had **no way in**: nothing a household did anywhere in the product created a row an operator could read as *"this person needs help"*. Domain 36 is that channel.
 ---

@@ -1,7 +1,7 @@
 {
   "$schema_note": "The Platform Experience Adoption Register (PX1-W5.1). THE single source of truth. ADOPTION_REGISTER.md is GENERATED from this file — never edit the .md by hand. Verified by scripts/ci/adoption-register-gate.ts, which fails CI when an owner loses its last consumer, a rival count rises, a retired predecessor returns, or a new orphan appears. Mandated by THA_UI_ARCHITECTURE.md §17; operational, not architectural — it creates no law.",
   "version": "1.0.0",
-  "updated": "2026-07-18",
+  "updated": "2026-07-19",
   "owner": "Colin Clapson",
   "governedBy": [
     "[THA_UI_ARCHITECTURE.md §17](../../architecture/THA_UI_ARCHITECTURE.md) (the mandate)",
@@ -27,6 +27,28 @@
           "retiredBy": "PX1-W4.7"
         }
       ]
+    },
+    {
+      "id": "app-shell",
+      "concern": "Application shell",
+      "owner": "components/layout/app-shell.tsx (AppShell)",
+      "ownerPath": "client/src/components/layout/app-shell.tsx",
+      "ownerKind": "module",
+      "owns": "The walls of the house: the banner region, the room content column, the contextual rail and the bottom nav, declared once for every authenticated page. NAV1 (2026-07-19) did not create the shell — it NAMED it. The structure was inline JSX inside `ProtectedRoute` in `App.tsx`, so the app's layout had no owner that could be imported, tested or pointed at; it is moved here rather than rewritten. What NAV1 genuinely adds is HEADER PERMANENCE. `WorkspaceHeader` portals into a slot, so a page only had a header if it chose to render one — measured: `/compare`, `/import-recipe` and all 13 `/admin/*` pages had none at all, and the slot was empty during every `isLoading` state, every lazy-chunk `Suspense` fallback and every caught render error, so walking between rooms transiently painted a headerless app. The shell now renders the canonical header by default and a page's own header REPLACES it, tracked by mount/unmount registration so there is exactly one header on screen and no page file had to change to gain one. It is deliberately not a second header component: the default is the SAME `WorkspaceHeader` (row 1) rendered with `role=\"shell\"`, one owner used two ways.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 1
+    },
+    {
+      "id": "shell-slots",
+      "concern": "Shell slots (contextual rail)",
+      "owner": "components/layout/shell-slots.tsx (RoomActions, useRegisterPageHeader)",
+      "ownerPath": "client/src/components/layout/shell-slots.tsx",
+      "ownerKind": "module",
+      "owns": "How a page talks to the shell: header presence registration, and `RoomActions` — the desktop contextual rail for THE ACTIONS OF THE ROOM YOU ARE STANDING IN. Separate module because `app-shell` imports `WorkspaceHeader` and `WorkspaceHeader` must register with the shell; a cycle between a component and the layout that mounts it works in dev and fails on a production build's hoisting order. ⚠️ **`RoomActions` is AUTHORED AND NOT YET ADOPTED, and that is recorded here rather than hidden (UIA §17).** No room renders it, so the rail never appears — the `<aside>` is not rendered at all while zero rooms have declared actions, so it costs a household nothing today. The shell's half of the contract is built; the rooms' half is not, because deciding what each room's contextual actions ARE is room content, which the NAV1 brief expressly placed out of bounds (\"do not redesign room content\"). This is a **declared gap, not an exemption**: it should be adopted or deleted by NAV2, and it must not sit here indefinitely looking live — that is precisely the `PageHeader.tsx` failure this register exists to end. UX1 is untouched: nothing in the rail is navigation, and `BottomNav` remains the sole primary navigation at every size (row 2).",
+      "status": "half-adopted",
+      "enforcement": "machine",
+      "adoptionFloor": 2
     },
     {
       "id": "navigation",
@@ -179,7 +201,7 @@
         {
           "what": "`<Loader2>` usages",
           "pattern": "<Loader2[\\s>]",
-          "ceiling": 181,
+          "ceiling": 175,
           "note": "Capped, not banned: 140 are the exempt inline pending mark above. The population may fall, never rise. BUS1 raised 179 → 181: two `<Loader2>` marks on Privacy Settings, both INSIDE a control (the data-download button and the account-deletion confirm button) while an indeterminate request is in flight. That is the usage this concern's own rule assigns to Loader2 rather than to Skeleton — 'Skeleton owns content arriving; Loader2 owns indeterminate work inside a control' — so the ceiling is raised rather than the marks replaced. Content-arriving states on that page use Skeleton, as the rule requires."
         }
       ],
@@ -232,7 +254,7 @@
         {
           "what": "Raw `useMutation` — feedback owned by the call site",
           "pattern": "\\buseMutation\\s*[(<]",
-          "ceiling": 133,
+          "ceiling": 132,
           "excludePaths": [
             "client/src/hooks/use-tracked-mutation.ts"
           ],
@@ -501,7 +523,7 @@
         {
           "what": "Raw `<button>` elements outside the design system",
           "pattern": "<button[\\s>]",
-          "ceiling": 524,
+          "ceiling": 454,
           "note": "Each reinvents press feedback and misses the touch floor. Capped: the population may fall, never rise."
         }
       ],
@@ -670,8 +692,8 @@
         {
           "what": "`dark:` utilities authored across the client",
           "pattern": "\\bdark:",
-          "asAt": 848,
-          "asAtDate": "2026-07-18"
+          "asAt": 737,
+          "asAtDate": "2026-07-19"
         }
       ],
       "openMigration": {

@@ -126,6 +126,9 @@ import { enrichRetailData, STORE_TAG_MAP, UK_RETAILER_STORE_TAGS } from "./lib/r
 import { getCanonicalProduct, isCompatibleSwap } from "./lib/productCanonicaliser";
 import { getHouseholdForUser } from "./lib/household";
 import * as community from "./lib/community";
+import * as householdInvitation from "./lib/household-invitation";
+import * as referral from "./lib/referral";
+import { sendHouseholdInvitationEmail } from "./email";
 // CONV1 P9 / BEH-5 — the one household-history owner. This file used to carry a private
 // copy of it (a closure inside registerRoutes), which is exactly the duplication the
 // module was extracted to prevent.
@@ -9413,6 +9416,177 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     } catch (error) {
       console.error("[COMM1] leave community failed:", error);
       res.status(500).json({ error: "Could not leave community" });
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // COMM1A — HOUSEHOLD INVITATION & REFERRAL (SoT Domain 38)
+  // ═══════════════════════════════════════════════════════════════════════
+  //
+  // Six routes. None of them accepts or returns a household id, and none of
+  // them returns an invitation token: the token exists only in the email sent
+  // to the invited address (see server/email/index.ts).
+  //
+  // Exactly one is public — the preview — because the person holding a link
+  // has no account yet, which is the entire problem COMM1A exists to solve.
+
+  /**
+   * Invite an email address to THA, and optionally to one of the caller's
+   * communities.
+   *
+   * ⚠️ THE RESPONSE IS IDENTICAL whether or not that address already belongs to
+   * a THA household. Anything else would turn this route into an oracle for
+   * "is this person a customer?", which is household enumeration wearing a
+   * different hat.
+   */
+  app.post("/api/invitations", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const email = typeof req.body?.email === "string" ? req.body.email : "";
+      const rawCommunity = req.body?.communityId;
+      const communityId =
+        rawCommunity === undefined || rawCommunity === null ? null : Number(rawCommunity);
+      if (communityId !== null && !Number.isInteger(communityId)) {
+        return res.status(400).json({ error: "Invalid request" });
+      }
+
+      const householdId = await getHouseholdForUser(req.user!.id);
+      const result = await householdInvitation.createInvitation({
+        invitedByHouseholdId: householdId,
+        inviterEmail: req.user!.username,
+        email,
+        communityId,
+      });
+
+      if (!result.ok) return res.status(400).json({ error: result.reason });
+
+      // The token leaves the building exactly once, addressed to the invited
+      // party. If SMTP is unconfigured the send fails soft (dev), and the
+      // invitation still exists — but the household is told plainly rather
+      // than being left to believe a link went out that did not.
+      const sent = await sendHouseholdInvitationEmail(email, result.token, {
+        communityName:
+          communityId !== null
+            ? (await community.getCommunityForMember(communityId, householdId))?.name ?? null
+            : null,
+      });
+
+      res.status(201).json({
+        id: result.invitation.id,
+        invitedEmail: result.invitation.invitedEmail,
+        kind: result.invitation.kind,
+        expiresAt: result.invitation.expiresAt,
+        delivered: sent.success,
+      });
+    } catch (error) {
+      console.error("[COMM1A] create invitation failed:", error);
+      res.status(500).json({ error: "Could not send that invitation" });
+    }
+  });
+
+  /** The caller's own sent invitations. No tokens. */
+  app.get("/api/invitations", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const householdId = await getHouseholdForUser(req.user!.id);
+      res.json(await householdInvitation.getInvitationsSent(householdId));
+    } catch (error) {
+      console.error("[COMM1A] list invitations failed:", error);
+      res.status(500).json({ error: "Could not load invitations" });
+    }
+  });
+
+  /**
+   * PUBLIC — what the holder of a link may see before they have an account.
+   *
+   * Returns 404 for invalid, expired, revoked, declined and already-spent
+   * alike: one answer, so this cannot be used as an oracle. The email is
+   * MASKED — enough to know which address to sign up with, not enough to be a
+   * contact harvested from a forwarded link.
+   */
+  app.get("/api/invitations/:token/preview", async (req, res) => {
+    try {
+      const preview = await householdInvitation.previewByToken(String(req.params.token));
+      if (!preview) return res.status(404).json({ error: "Not found" });
+      res.json(preview);
+    } catch (error) {
+      console.error("[COMM1A] preview invitation failed:", error);
+      res.status(500).json({ error: "Could not load that invitation" });
+    }
+  });
+
+  /**
+   * Accept as an ALREADY-EXISTING household.
+   *
+   * A household that was already here is NOT a referral — no attribution is
+   * recorded on this path. They were not referred; they were already using
+   * THA, and paying a reward for them later would be attribution THA invented.
+   *
+   * For a community invitation this returns the COMM1 token, which the Orchard
+   * then presents as its gate. Membership is completed by that explicit
+   * acceptance, never by this call.
+   */
+  app.post("/api/invitations/:token/accept", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const householdId = await getHouseholdForUser(req.user!.id);
+      const redeemed = await householdInvitation.redeemInvitation({
+        token: String(req.params.token),
+        acceptingHouseholdId: householdId,
+        acceptingEmail: req.user!.username,
+      });
+      if (!redeemed.ok) return res.status(403).json({ error: redeemed.reason });
+
+      if (redeemed.redeemed.kind === "community") {
+        const issued = await householdInvitation.issueCommunityInvitationFor(redeemed.redeemed, householdId);
+        if (!issued.ok) return res.status(409).json({ error: issued.reason });
+        return res.json({ kind: "community", communityToken: issued.communityToken });
+      }
+
+      res.json({ kind: "tha" });
+    } catch (error) {
+      console.error("[COMM1A] accept invitation failed:", error);
+      res.status(500).json({ error: "Could not accept that invitation" });
+    }
+  });
+
+  /** Withdraw one you sent. "Not yours" and "does not exist" answer alike. */
+  app.delete("/api/invitations/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const invitationId = Number(req.params.id);
+      if (!Number.isInteger(invitationId)) return res.status(400).json({ error: "Invalid invitation" });
+      const householdId = await getHouseholdForUser(req.user!.id);
+      const result = await householdInvitation.revokeInvitation(invitationId, householdId);
+      if (!result.ok) return res.status(403).json({ error: result.reason });
+      res.json({ ok: true });
+    } catch (error) {
+      console.error("[COMM1A] revoke invitation failed:", error);
+      res.status(500).json({ error: "Could not withdraw that invitation" });
+    }
+  });
+
+  /**
+   * The caller's own referral standing — COUNTS AND STATUSES ONLY.
+   *
+   * No referred household's id, name or address is returned, because a
+   * household learning that its invitations landed must not thereby gain a
+   * directory of the homes that accepted them.
+   *
+   * ⚠️ NO COMMERCIAL FIGURE APPEARS HERE. No amount, percentage, saving, term
+   * or discount — Commercial Rule C3 forbids a price claim without configured
+   * pricing, and pricing is unconfigured platform-wide. This route reports that
+   * a referral happened; it says nothing about what it is worth, because
+   * nothing in THA can currently answer that.
+   */
+  app.get("/api/referrals/summary", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const householdId = await getHouseholdForUser(req.user!.id);
+      res.json(await referral.getReferralSummary(householdId));
+    } catch (error) {
+      console.error("[COMM1A] referral summary failed:", error);
+      res.status(500).json({ error: "Could not load referrals" });
     }
   });
 

@@ -76,15 +76,20 @@ export default function AuthPage() {
   const resetTokenParam = params.get("reset_token");
   const trialExpired = params.get("trial") === "expired";
   const forceRegister = params.get("register") === "1";
+  // COMM1A — arriving from an invitation link. The token rides through signup so
+  // the invitation survives the email round-trip; `/invitation` sends people here
+  // with it already attached.
+  const invitationToken = params.get("invitation");
 
   useEffect(() => {
     if (resetTokenParam) {
       setResetToken(resetTokenParam);
       setMode("reset");
-    } else if (forceRegister) {
+    } else if (forceRegister || invitationToken) {
+      // An invited person is here to create an account, not to sign in.
       setMode("register");
     }
-  }, [resetTokenParam, forceRegister]);
+  }, [resetTokenParam, forceRegister, invitationToken]);
 
   const handleTrialStart = async () => {
     if (trialStarting) return;
@@ -576,7 +581,11 @@ export default function AuthPage() {
                     // AuthForm below), and the server refuses the request without
                     // this flag regardless. Two independent checks, because a
                     // client-side-only consent gate is not a consent gate.
-                    register({ ...data, acceptedAgreements: true });
+                    register({
+                      ...data,
+                      acceptedAgreements: true,
+                      ...(invitationToken ? { invitationToken } : {}),
+                    });
                   }}
                   submitLabel="Create Account"
                   isSubmitting={isRegistering}

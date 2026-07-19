@@ -13,7 +13,7 @@ import {
   LogOut, ShieldCheck,
   Search, ChevronLeft, ChevronRight,
   Microscope, BookOpen, ChefHat,
-  User, BarChart3, Home,
+  User, BarChart3, Home, Trees,
 } from "lucide-react";
 import { api } from "@shared/routes";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
@@ -52,6 +52,14 @@ export const NAV_ITEMS = [
   { href: "/nutrition", label: "Nutrition", icon: BarChart3, hasWorkspace: true },
   { href: "/my-diary", label: "Diary", icon: BookOpen, hasWorkspace: true },
   { href: "/analyser", label: "Analyser", icon: Microscope, hasWorkspace: true },
+  // COMM2 (2026-07-19) — the Orchard. ONE entry, deliberately: the Orchard
+  // overview, Neighbourhoods, the Village and the High Street are the experience
+  // INSIDE this room, not four destinations. Adding them as separate nav entries
+  // would fork this list into four owners of one place, and would admit three
+  // rooms to the map (Experience Blueprint § 5.1) where the governance admitted one.
+  // `hasWorkspace: false` — the Orchard has no workspace drawer; there is no
+  // bulk work to do in it, and there is deliberately nothing to compose.
+  { href: "/orchard", label: "Orchard", icon: Trees, hasWorkspace: false },
 ];
 
 export type NavItem = (typeof NAV_ITEMS)[number];
@@ -142,6 +150,20 @@ const REALM_STYLES: Record<string, { active: string; hover: string; inactive: st
     inactive:       "bg-[hsl(190,12%,94%)] text-[hsl(190,22%,42%)] dark:bg-[hsl(190,8%,12%)] dark:text-[hsl(190,14%,48%)]",
     mobileActive:   "bg-[hsl(190,30%,86%)] text-[hsl(190,42%,20%)] dark:bg-[hsl(190,18%,19%)] dark:text-[hsl(190,32%,72%)]",
     mobileInactive: "bg-[hsl(190,16%,92%)] text-[hsl(190,18%,44%)] dark:bg-[hsl(190,8%,14%)] dark:text-[hsl(190,12%,46%)]",
+  },
+  "/orchard": {
+    // COMM2 — warm terracotta; the brick and clay of a settled village, not a
+    // tenth green. The house already spends four hues on green (home 132, pantry
+    // 115, nutrition 145, analyser 74), and a fifth would make the Orchard
+    // unreadable as wayfinding at exactly the moment it is meant to say
+    // "somewhere else". Hue 20 sits clear of cookbook's wheat (38) and diary's
+    // rose (348). Realm tint is wayfinding only (UIA § 6) — this colour carries
+    // no status, no emphasis, and appears nowhere inside the room's content.
+    active:         "bg-[hsl(20,34%,89%)] text-[hsl(20,44%,22%)] dark:bg-[hsl(20,20%,18%)] dark:text-[hsl(20,32%,72%)]",
+    hover:          "hover:bg-[hsl(20,26%,93%)] hover:text-[hsl(20,38%,28%)] dark:hover:bg-[hsl(20,14%,15%)] dark:hover:text-[hsl(20,24%,60%)]",
+    inactive:       "bg-[hsl(20,14%,94%)] text-[hsl(20,24%,42%)] dark:bg-[hsl(20,9%,12%)] dark:text-[hsl(20,14%,47%)]",
+    mobileActive:   "bg-[hsl(20,34%,87%)] text-[hsl(20,44%,22%)] dark:bg-[hsl(20,20%,20%)] dark:text-[hsl(20,32%,72%)]",
+    mobileInactive: "bg-[hsl(20,16%,92%)] text-[hsl(20,22%,44%)] dark:bg-[hsl(20,9%,14%)] dark:text-[hsl(20,13%,45%)]",
   },
   "/shopping-list": {
     // soft sage - light, quick-capture feel
@@ -578,7 +600,19 @@ export function BottomNav() {
       data-testid="mobile-bottom-nav"
       aria-label="Primary"
     >
-      <div className="flex items-center justify-around md:justify-center md:gap-2 px-1 py-1 max-w-lg md:max-w-3xl mx-auto">
+      {/* COMM2 — `overflow-x-auto` added when the Orchard made this list nine.
+          The arithmetic, so nobody re-derives it: nine items at the 44px
+          touch-target floor need 396px, and the narrowest supported viewport is
+          390px. The row overflowed by ~14px and CLIPPED — "Orchard" rendered as
+          "Orchar" and the Cookbook/Shopping labels collided.
+          Labels cannot fix this: `min-w-[44px]` is the binding constraint, not
+          the text. Shrinking that floor was the other way out and is refused —
+          the accessibility floors are one of the shell constants § 5.2 says may
+          never vary per domain, and a tenth room would break it again anyway.
+          Scrolling costs a small horizontal nudge on the narrowest phones only;
+          every other viewport is byte-identical, and no room is unreachable.
+          `md:overflow-visible` keeps desktop exactly as it was. */}
+      <div className="flex items-center justify-around md:justify-center md:gap-2 px-1 py-1 max-w-lg md:max-w-3xl mx-auto overflow-x-auto md:overflow-visible [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {NAV_ITEMS.map((item) => {
           const base = item.href.split("?")[0];
           const isActive = isNavItemActive(base, location);

@@ -81,6 +81,10 @@ const ERASURE_ORDER: readonly string[] = [
   // every registered category — a category with no position makes the platform
   // refuse to erase at all, which is how this entry was caught.
   "community-membership",
+  // COMM1A — same position and same reasoning as community membership: both are
+  // household-grained and both are removed by the household cascade, so neither
+  // performs a delete of its own.
+  "household-invitations-and-referrals",
   "household-membership",
   "household",
   "account",

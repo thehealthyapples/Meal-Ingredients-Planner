@@ -117,6 +117,8 @@ import {
   communities,
   communityMembers,
   communityInvitations,
+  householdInvitations,
+  referralAttributions,
 } from "@shared/schema";
 
 /**
@@ -874,6 +876,52 @@ export const PERSONAL_DATA_REGISTRY: readonly PersonalDataEntry[] = [
     erase: null,
     erasureNote:
       "Your household's community memberships belong to the household, not to you alone — erasing your account does not withdraw the rest of your household from a neighbourhood. If you are the last person in your household, the household is erased and its memberships and invitations are removed with it.",
+  },
+  {
+    id: "household-invitations-and-referrals",
+    label: "Invitations your household sent, and how it arrived",
+    description:
+      "Invitation links your household sent to other people, and whether your household itself arrived through someone else's invitation.",
+    group: "household",
+    tables: ["household_invitations", "referral_attributions"],
+    collect: async (s) =>
+      s.householdId === null
+        ? null
+        : {
+            // Tokens are excluded for COMM1's reason, one domain along: an
+            // export is a document a household may store or forward, and a live
+            // invitation token inside it is a standing grant to join.
+            //
+            // The invited ADDRESS is included only while the invitation is still
+            // pending, because it is this household's own record of who they
+            // invited. Once an invitation is accepted or withdrawn the address is
+            // redacted in place at that moment, so a terminal row carries no
+            // third party's contact details to export.
+            invitationsSent: await db
+              .select({
+                id: householdInvitations.id,
+                invitedEmail: householdInvitations.invitedEmail,
+                kind: householdInvitations.kind,
+                status: householdInvitations.status,
+                expiresAt: householdInvitations.expiresAt,
+                createdAt: householdInvitations.createdAt,
+              })
+              .from(householdInvitations)
+              .where(eq(householdInvitations.invitedByHouseholdId, s.householdId)),
+            // Deliberately NOT included: which household referred this one, or
+            // which households this one referred. Those are other households'
+            // identifiers, and an export is not a door through which to obtain
+            // them. What is exported is the fact and its standing.
+            arrivedByReferral: (
+              await db
+                .select({ status: referralAttributions.status, recordedAt: referralAttributions.recordedAt })
+                .from(referralAttributions)
+                .where(eq(referralAttributions.referredHouseholdId, s.householdId))
+            )[0] ?? null,
+          },
+    erase: null,
+    erasureNote:
+      "Invitations your household sent belong to the household. If you are the last person in it, the household is erased and its invitations go with it; any invitation it had already sent stops working. A record that your household was referred by another is erased with the household too — no reward can outlive the home it belonged to.",
   },
 ] as const;
 

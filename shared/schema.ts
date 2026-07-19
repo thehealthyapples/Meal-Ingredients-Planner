@@ -3304,3 +3304,119 @@ export const insertCommunitySchema = createInsertSchema(communities).omit({
   updatedAt: true,
 });
 export type InsertCommunity = z.infer<typeof insertCommunitySchema>;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// COMM1A — HOUSEHOLD INVITATION & REFERRAL (SoT Domain 38)
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// THREE INVITATION MECHANISMS NOW EXIST, AND THEY ARE DELIBERATELY DISTINCT.
+// This comment is the map, because the fastest way to corrupt this area is to
+// assume two of them are the same thing:
+//
+//   1. `households.inviteCode` (Domain 16)  — A PERSON joins an EXISTING HOME.
+//      A permanent shared code. The people who live together. Untouched by
+//      COMM1A, which adds no second way to join a household.
+//
+//   2. `community_invitations` (Domain 37)  — HOUSEHOLD → HOUSEHOLD, both of
+//      which already exist. Targeted at a household id, expiring, single-use.
+//      Untouched by COMM1A, which never writes it — it calls COMM1's owner.
+//
+//   3. `household_invitations` (Domain 38, HERE) — HOUSEHOLD → SOMEONE WHO MAY
+//      HAVE NO ACCOUNT AT ALL. Addressed to an EMAIL, because an email is the
+//      only thing a household can honestly name about someone who is not yet
+//      here. This is the mechanism the other two structurally cannot be.
+//
+// WHY THIS COULD NOT BE A COLUMN ON `community_invitations`. That table's
+// `invited_household_id` is NOT NULL and foreign-keyed — its whole design
+// assumes the recipient exists. Making it nullable to admit a stranger would
+// change what every existing row means and would give one table two grains.
+// COMM1A instead sits BEFORE it in time: when a stranger becomes a household,
+// COMM1A asks COMM1 to issue a proper community invitation, and COMM1 remains
+// the only writer of community membership.
+
+/**
+ * A link a household sends to an email address, inviting them to THA and
+ * optionally to one of its communities.
+ *
+ * THE TOKEN IS NEVER RETURNED TO THE INVITER. It is minted here and delivered
+ * only to the invited address. `community_invitations` returns its token to the
+ * caller that created it (COMM1 § routes); this one deliberately does not,
+ * because the whole point is that the recipient — not the sender — is the party
+ * the link authorises, and a sender holding the token could accept on their
+ * behalf.
+ */
+export const householdInvitations = pgTable("household_invitations", {
+  id: serial("id").primaryKey(),
+  /** 32 random bytes, base64url. Same generator as `community_invitations`. */
+  token: text("token").notNull().unique(),
+  invitedByHouseholdId: integer("invited_by_household_id")
+    .notNull()
+    .references(() => households.id, { onDelete: "cascade" }),
+  /**
+   * Lower-cased, trimmed. Personal data — declared in the privacy registry, and
+   * redacted rather than retained once the invitation reaches a terminal state.
+   */
+  invitedEmail: text("invited_email").notNull(),
+  /** "tha" — an invitation to the product. "community" — and to a neighbourhood. */
+  kind: text("kind").notNull().default("tha"),
+  /** NOT NULL exactly when kind = 'community' — enforced by CHECK in the migration. */
+  communityId: integer("community_id").references(() => communities.id, { onDelete: "cascade" }),
+  status: text("status").notNull().default("pending"),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  respondedAt: timestamp("responded_at", { withTimezone: true }),
+  /** The household that consumed it. Set exactly when status = 'accepted'. */
+  acceptedByHouseholdId: integer("accepted_by_household_id")
+    .references(() => households.id, { onDelete: "set null" }),
+}, (table) => [
+  index("household_invitations_inviter_idx").on(table.invitedByHouseholdId),
+  index("household_invitations_email_idx").on(table.invitedEmail),
+]);
+
+/**
+ * Who referred whom — the fact a future commercial reward would be computed
+ * from, recorded now so that it is TRUE later rather than reconstructed.
+ *
+ * `referred_household_id` is UNIQUE: **a household is referred once, ever.** Two
+ * households cannot both claim the same referral, and a household cannot be
+ * re-referred by signing up again. This is the single most important constraint
+ * in the table, and it is in Postgres rather than in application code for the
+ * reason KNOW2 gave — TypeScript does not run inside the database.
+ *
+ * THE STATUS LADDER IS ONE-WAY and each rung records its own timestamp:
+ *
+ *   recorded  → the referred household exists (account created via the link)
+ *   verified  → that account verified its email address
+ *   eligible  → the COMMERCIAL layer has said so. NOTHING IN THIS DOMAIN MAY
+ *               SET THIS. It is unreachable today and that is correct — see
+ *               `server/lib/referral.ts` and COMM1A § 6.
+ *   entitlement_processed → a reward was applied by the commercial owner
+ *   void      → withdrawn (e.g. the referred household was erased)
+ *
+ * COMM1A OWNS ATTRIBUTION AND NOTHING ELSE. It stores no amount, no percentage,
+ * no currency, no term and no discount code, because Commercial Rule C3 makes
+ * those unpublishable without configured pricing, and Rule C2 makes the
+ * entitlement projection the commercial layer's to own.
+ */
+export const referralAttributions = pgTable("referral_attributions", {
+  id: serial("id").primaryKey(),
+  referrerHouseholdId: integer("referrer_household_id")
+    .notNull()
+    .references(() => households.id, { onDelete: "cascade" }),
+  /** UNIQUE — enforced in the migration. A household is referred once, ever. */
+  referredHouseholdId: integer("referred_household_id")
+    .notNull()
+    .references(() => households.id, { onDelete: "cascade" }),
+  invitationId: integer("invitation_id")
+    .references(() => householdInvitations.id, { onDelete: "set null" }),
+  status: text("status").notNull().default("recorded"),
+  recordedAt: timestamp("recorded_at", { withTimezone: true }).notNull().defaultNow(),
+  verifiedAt: timestamp("verified_at", { withTimezone: true }),
+  eligibleAt: timestamp("eligible_at", { withTimezone: true }),
+  entitlementProcessedAt: timestamp("entitlement_processed_at", { withTimezone: true }),
+}, (table) => [
+  index("referral_attributions_referrer_idx").on(table.referrerHouseholdId),
+]);
+
+export type HouseholdInvitation = typeof householdInvitations.$inferSelect;
+export type ReferralAttribution = typeof referralAttributions.$inferSelect;

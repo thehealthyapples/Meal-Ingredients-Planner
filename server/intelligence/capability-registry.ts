@@ -605,15 +605,22 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     capabilityClass: "read-only",
     aiAccess: "R",
     availability: "registered",
-    // PLATFORM, NOT A ROOM — and the type system is what established this.
-    // `COMPANION_ROOMS` are user DESTINATIONS that guidance may route to. COMM1's
-    // scope lock forbids building Community UI, so there is no page to land on:
-    // registering Community as a room would let a Next Step aim a household at a
-    // route that does not exist (types.ts:255-258). "platform" is attribution
-    // only, never a routing target — the honest declaration for a foundation
-    // whose UI is deliberately unbuilt. When Community gains a room, this becomes
-    // a room, and that is a governed change rather than an oversight.
-    companionDomain: COMPANION_PLATFORM,
+    // A ROOM — as of COMM2 (2026-07-19). This is the governed change COMM1's own
+    // comment named in advance, and it is recorded here rather than quietly made.
+    //
+    // COMM1 declared this `COMPANION_PLATFORM` for exactly one stated reason:
+    // "COMM1's scope lock forbids building Community UI, so there is no page to
+    // land on — registering Community as a room would let a Next Step aim a
+    // household at a route that does not exist (types.ts:255-258)." That reason
+    // was correct and is now spent: COMM2 built the page. `/orchard` exists, is
+    // routed in client/src/App.tsx, and is registered in `DOMAIN_LANDING`, so a
+    // Next Step aimed here lands somewhere real.
+    //
+    // What did NOT change: the capability is still `supportedIntents: ["read"]`
+    // and `capabilityClass: "read-only"`. Community gained a destination, not a
+    // verb. The Companion may now route a household TO the Orchard; it still
+    // cannot join, leave, invite, or read another household's anything.
+    companionDomain: "community",
   },
   {
     id: "templates",

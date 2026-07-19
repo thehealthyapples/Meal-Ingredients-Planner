@@ -1,0 +1,241 @@
+// NAV1 — The shared THA application shell.
+//
+// The walls of the house (Experience Blueprint § 5.2). Every authenticated page
+// stands inside this one shell and none of them draws it: the top header, the
+// room content, the contextual rail and the bottom nav are declared here, once.
+//
+// This file did not create the shell — it NAMES it. Before NAV1 the shell was
+// inline JSX inside `ProtectedRoute` in `App.tsx`, which meant the app's layout
+// had no owner you could import, test, or point at. The routing file now routes,
+// and the shell file now shells.
+//
+// What NAV1 genuinely ADDS is header permanence — see `ShellHeader` below.
+
+import { useCallback, useState, type ReactNode } from "react";
+import { useLocation } from "wouter";
+import { Loader2 } from "lucide-react";
+
+import { BottomNav, NAV_ITEMS, AppRealmContext } from "@/components/nav-bar";
+import { ErrorBoundary } from "@/components/error-boundary";
+import FloatingAssistant from "@/components/conversation/FloatingAssistant";
+import { CompanionContextProvider } from "@/components/conversation/companion-context";
+import {
+  WorkspaceHeader,
+  WorkspaceHeaderSlotContext,
+  type PageRealm,
+} from "@/components/workspace-header";
+import {
+  PageHeaderPresenceContext,
+  RoomActionsPresenceContext,
+  RoomActionsSlotContext,
+  type SlotPresence,
+} from "@/components/layout/shell-slots";
+import TrialBanner from "@/components/TrialBanner";
+import SiteBanner from "@/components/SiteBanner";
+
+/* ── The default header ───────────────────────────────────────────────────────
+ *
+ * THE DEFECT NAV1 CLOSES.
+ *
+ * `WorkspaceHeader` portals into a slot this shell provides, which means a page
+ * only had a header if it chose to render one. Measured before the change:
+ *
+ *   • `/compare` (food-comparison-page)   — no header at all
+ *   • `/import-recipe`                     — no header at all
+ *   • all 13 `/admin/*` pages              — no header at all
+ *   • every `isLoading` state, every lazy-chunk `Suspense` fallback, and every
+ *     caught render error — the slot is EMPTY, so walking between rooms
+ *     transiently painted a headerless app.
+ *
+ * The header is now the shell's, not the page's. The shell renders it by
+ * default; a page that renders its own REPLACES it rather than adding to it, so
+ * there is exactly one header on screen at all times and not one page file had
+ * to change to gain one.
+ *
+ * This is deliberately NOT a second header component. The default is the SAME
+ * `WorkspaceHeader` every room already uses, rendered with `role="shell"` so it
+ * does not register itself and cancel its own fallback. One owner of the banner
+ * (Adoption Register row 1), used two ways.
+ *
+ * Which room is this? — the question the Experience Test (Blueprint § 15.3)
+ * requires every screen to answer. The shell must be able to answer it even
+ * before the page has loaded.
+ *
+ * Room names are NOT redeclared here. `NAV_ITEMS` is the single source of truth
+ * for every navigation surface, and a second list of room names would be a
+ * second owner of every room's name (Adoption Register row 2). The shell reads
+ * the label from there and adds only what that list does not hold: the realm
+ * tint, and the names of the authenticated surfaces that are not rooms.
+ */
+const REALM_BY_HREF: Record<string, PageRealm> = {
+  "/home": "home",
+  "/planner": "planner",
+  "/cookbook": "cookbook",
+  "/shopping-workspace": "shopping",
+  "/pantry": "pantry",
+  "/nutrition": "nutrition",
+  "/my-diary": "diary",
+  "/analyser": "analyser",
+  "/orchard": "orchard",
+};
+
+/**
+ * Authenticated surfaces that are not rooms in `NAV_ITEMS` and so have no
+ * canonical label of their own. Only the HEADERLESS ones strictly need an entry
+ * — the rest replace this header the moment they render — but a page that has
+ * its own header still passes through here while its chunk loads, so the title
+ * is correct during the wait rather than blank and then correct.
+ */
+const NON_ROOM_TITLES: Array<[test: (path: string) => boolean, title: string, realm: PageRealm]> = [
+  [(p) => p.startsWith("/admin"), "Admin", "home"],
+  [(p) => p === "/compare", "Compare foods", "analyser"],
+  [(p) => p === "/import-recipe", "Import recipe", "cookbook"],
+  [(p) => p === "/quick-meal", "Quick meal", "cookbook"],
+  [(p) => p.startsWith("/meals/"), "Meal", "cookbook"],
+  [(p) => p.startsWith("/foods/"), "Food", "analyser"],
+  [(p) => p === "/dashboard", "Dashboard", "home"],
+  [(p) => p === "/profile", "Profile", "home"],
+  [(p) => p === "/supermarkets", "Supermarkets", "shopping"],
+  [(p) => p === "/privacy-settings", "Privacy", "home"],
+  [(p) => p === "/help", "Help", "home"],
+  [(p) => p === "/contact", "Contact", "home"],
+];
+
+/** Routes that render the same room as a canonical nav destination. */
+const ROOM_ALIASES: Record<string, string> = {
+  "/diary": "/my-diary",
+  "/meals": "/cookbook",
+  "/weekly-planner": "/planner",
+  "/products": "/analyser",
+};
+
+export function resolveShellRoom(path: string): { title: string; realm: PageRealm } {
+  const canonical = ROOM_ALIASES[path] ?? path;
+  const room = NAV_ITEMS.find((item) => item.href === canonical);
+  if (room) return { title: room.label, realm: REALM_BY_HREF[room.href] ?? "home" };
+
+  for (const [test, title, realm] of NON_ROOM_TITLES) {
+    if (test(path)) return { title, realm };
+  }
+  // An unknown authenticated path still gets the house's walls. The brand mark,
+  // the nav and the Companion are the household's way OUT of a page that has
+  // gone wrong — a nameless room is recoverable, a headerless one is not.
+  return { title: "", realm: "home" };
+}
+
+function ShellHeader() {
+  const [location] = useLocation();
+  const { title, realm } = resolveShellRoom(location);
+  return <WorkspaceHeader role="shell" title={title} realm={realm} />;
+}
+
+/* ── The shell ───────────────────────────────────────────────────────────────── */
+
+export function AppShell({
+  children,
+  isLoading = false,
+  showTrialBanner = false,
+}: {
+  children: ReactNode;
+  isLoading?: boolean;
+  showTrialBanner?: boolean;
+}) {
+  const [location] = useLocation();
+  const [headerSlot, setHeaderSlot] = useState<HTMLDivElement | null>(null);
+  const [railSlot, setRailSlot] = useState<HTMLDivElement | null>(null);
+  const [pageHeaders, setPageHeaders] = useState(0);
+  const [roomActions, setRoomActions] = useState(0);
+  const [activeRealm, setActiveRealm] = useState("home");
+
+  const registerPageHeader = useCallback(() => {
+    setPageHeaders((n) => n + 1);
+    return () => setPageHeaders((n) => n - 1);
+  }, []);
+  const registerRoomActions = useCallback(() => {
+    setRoomActions((n) => n + 1);
+    return () => setRoomActions((n) => n - 1);
+  }, []);
+
+  // Stable identities: a fresh object each render would re-fire every consumer's
+  // registration effect on every render, which is a mount/unmount loop.
+  const [headerPresence] = useState<SlotPresence>(() => ({ register: registerPageHeader }));
+  const [railPresence] = useState<SlotPresence>(() => ({ register: registerRoomActions }));
+  const realmContext = { realm: activeRealm, setRealm: setActiveRealm };
+
+  return (
+    <AppRealmContext.Provider value={realmContext}>
+      <WorkspaceHeaderSlotContext.Provider value={headerSlot}>
+        <PageHeaderPresenceContext.Provider value={headerPresence}>
+          <RoomActionsSlotContext.Provider value={railSlot}>
+            <RoomActionsPresenceContext.Provider value={railPresence}>
+              {/* PHASE5D — the Companion Context Channel wraps the routed page (which
+                  publishes the pointers on screen) and the one FloatingAssistant (which
+                  reads them). One channel, one assistant — never one per surface. */}
+              <CompanionContextProvider>
+                {/* CONV1 BEH-7 — no orchard backdrop stands behind the rooms. The
+                    Experience Blueprint § 6.1 forbids it by name ("the orchard is
+                    never wallpaper") and § 16 names wallpaper an anti-pattern.
+                    Rooms stand on the warm canvas, which is the Blueprint's own E1. */}
+                <div className="relative min-h-[100dvh]">
+                  <div className="relative z-10 flex flex-col h-[100dvh]">
+                    {showTrialBanner && <TrialBanner />}
+                    <SiteBanner />
+
+                    {/* The permanent top header. The slot is where a page's own
+                        header portals to; the default below it stands in whenever
+                        no page header is mounted — including while a chunk loads,
+                        while the session resolves, and after a caught error. */}
+                    <div ref={setHeaderSlot} className="shrink-0 w-full" data-testid="ws-header-slot" />
+                    {pageHeaders === 0 && <ShellHeader />}
+
+                    <div className="flex flex-1 overflow-hidden">
+                      {/* The contextual rail (UX1 unchanged: this is not navigation,
+                          and BottomNav remains the sole primary navigation at every
+                          size). `lg` and above only, and NOT RENDERED AT ALL until a
+                          room declares actions — an empty rail is dead furniture, and
+                          a `hidden` one is dead furniture you cannot see, which is
+                          worse. No room declares any today, so this costs a household
+                          nothing; see the NAV2 gap in the adoption register.
+
+                          The two-pass mount is deliberate and is why `RoomActions`
+                          registers as well as portals: on its first render the slot
+                          does not exist, so it registers and portals nothing; that
+                          registration mounts this aside, which sets the slot ref, which
+                          re-renders `RoomActions` with a target to portal into. */}
+                      {roomActions > 0 && (
+                        <aside
+                          className="hidden lg:flex w-[220px] shrink-0 flex-col overflow-y-auto border-r border-border px-3 py-4"
+                          aria-label="Room actions"
+                          data-testid="room-actions-rail"
+                        >
+                          <div ref={setRailSlot} className="flex flex-col gap-1" />
+                        </aside>
+                      )}
+
+                      <main className="flex-1 overflow-y-auto overflow-x-hidden main-safe flex flex-col">
+                        {isLoading ? (
+                          <div className="flex h-full items-center justify-center">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary/50" />
+                          </div>
+                        ) : (
+                          // PX1-W0 (fnd-px-error-renders-as-empty). The boundary sits
+                          // INSIDE the shell — the header and the bottom nav survive,
+                          // so a broken surface is never one the household cannot
+                          // leave. Keyed on the location so walking away unbreaks it.
+                          <ErrorBoundary resetKey={location}>{children}</ErrorBoundary>
+                        )}
+                      </main>
+                    </div>
+
+                    <BottomNav />
+                  </div>
+                </div>
+                <FloatingAssistant />
+              </CompanionContextProvider>
+            </RoomActionsPresenceContext.Provider>
+          </RoomActionsSlotContext.Provider>
+        </PageHeaderPresenceContext.Provider>
+      </WorkspaceHeaderSlotContext.Provider>
+    </AppRealmContext.Provider>
+  );
+}

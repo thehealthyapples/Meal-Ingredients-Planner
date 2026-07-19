@@ -193,10 +193,23 @@ async function main(): Promise<void> {
     cap?.capabilityClass === "read-only" && cap.executableIntents.every(v => v === "read"),
     "the capability is read-only — membership lifecycle is not reachable from the platform",
   );
-  // Community has no UI (scope lock), so it must not be a routable Companion room.
+  // ── UPDATED BY COMM2 (2026-07-19), DELIBERATELY AND LOUDLY ────────────────
+  //
+  // This assertion was COMM1's scope-lock tripwire, and it fired exactly as it
+  // was built to: it is the reason the Companion change could not be made
+  // quietly. It is changed, not deleted, and the reasoning is recorded because
+  // a scope lock edited in silence is a scope lock that has been defeated.
+  //
+  // COMM1 locked this to "platform" on ONE stated ground — "COMM1 builds no UI,
+  // so nothing may route to it." COMM2 built the UI. `/orchard` exists, is
+  // routed, and is registered in DOMAIN_LANDING, so the ground is spent and the
+  // lock moves with it. What the lock was really protecting — that nothing may
+  // route to a page that does not exist — is now asserted directly below, and
+  // the read-only assertion above is untouched: Community gained a destination,
+  // not a verb.
   assert(
-    cap?.companionDomain === "platform",
-    "companionDomain is 'platform', not a room — COMM1 builds no UI, so nothing may route to it",
+    cap?.companionDomain === "community",
+    "companionDomain is the 'community' room — COMM2 built /orchard, so routing to it lands somewhere real",
     String(cap?.companionDomain),
   );
 
@@ -480,8 +493,22 @@ async function main(): Promise<void> {
   );
 
   // One owner of "who may join": no second join mechanism.
+  //
+  // BOUNDED BY COMM1A (2026-07-19). This previously sliced from COMM1's
+  // migration to the END OF THE FILE, which was indistinguishable from correct
+  // while COMM1's was the last migration — and stopped being correct the moment
+  // anything was appended after it. COMM1A's migration carries a comment saying
+  // it is DISTINCT from `households.invite_code`, and this assertion read that
+  // comment as COMM1 having grown a join code. The claim being made is about
+  // COMM1's own migration, so the slice is now bounded to it.
+  const comm1MigrationStart = MIGRATION_SRC.indexOf("comm1_community_foundation");
+  const nextMigrationStart = MIGRATION_SRC.indexOf('id: "', comm1MigrationStart + 1);
+  const COMM1_MIGRATION_BLOCK = MIGRATION_SRC.slice(
+    comm1MigrationStart,
+    nextMigrationStart === -1 ? undefined : nextMigrationStart,
+  );
   assert(
-    !/inviteCode/.test(OWNER_SRC) && !/invite_code/.test(MIGRATION_SRC.slice(MIGRATION_SRC.indexOf("comm1_community_foundation"))),
+    !/inviteCode/.test(OWNER_SRC) && !/invite_code/.test(COMM1_MIGRATION_BLOCK),
     "COMM1 adds no shared join code — 'who may join' has exactly ONE owner",
   );
 

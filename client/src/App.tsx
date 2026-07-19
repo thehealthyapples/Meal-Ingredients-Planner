@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef } from "react";
 import { Switch, Route, Redirect, useLocation } from "wouter";
 import { MotionConfig } from "framer-motion";
 import { queryClient } from "./lib/queryClient";
@@ -8,15 +8,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useUser } from "@/hooks/use-user";
 import { Loader2 } from "lucide-react";
 
-import { BottomNav, AppRealmContext } from "@/components/nav-bar";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { AdminBanner } from "@/components/admin-banner";
-import FloatingAssistant from "@/components/conversation/FloatingAssistant";
-import { CompanionContextProvider } from "@/components/conversation/companion-context";
-import { WorkspaceHeaderSlotContext } from "@/components/workspace-header";
+import { AppShell } from "@/components/layout/app-shell";
 import OrchardShell from "@/components/layout/orchard-shell";
-import TrialBanner from "@/components/TrialBanner";
-import SiteBanner from "@/components/SiteBanner";
 import { PlannerProvider } from "@/contexts/PlannerContext";
 
 // PX1-W3 (fnd-px-no-route-splitting): every page is a lazy chunk. Before this,
@@ -49,7 +44,14 @@ const AdminKnowledgeReviewPage = lazy(() => import("@/pages/admin-knowledge-revi
 const AdminKnowledgeClaimsPage = lazy(() => import("@/pages/admin-knowledge-claims-page"));
 const AdminCanonicalPublicationIntegrityPage = lazy(() => import("@/pages/admin-canonical-publication-integrity-page"));
 const SharedPlanPage = lazy(() => import("@/pages/shared-plan-page"));
+// COMM1A — the doorstep. Public and bare, like /shared/:token: the person
+// holding an invitation link may have no account at all.
+const InvitationPage = lazy(() => import("@/pages/invitation-page"));
 const PantryPage = lazy(() => import("@/pages/pantry-page"));
+// COMM2 — the Orchard: Community as a place. ONE route for the whole room; the
+// Orchard overview, Neighbourhoods, the Village and the High Street are state
+// inside the page, never separate destinations.
+const OrchardPage = lazy(() => import("@/pages/orchard-page"));
 const PlantDiversityPage = lazy(() => import("@/pages/plant-diversity-page"));
 const FoodDiaryPage = lazy(() => import("@/pages/food-diary-page"));
 // PROD2: PartnersPage is deliberately not imported — the /partners route is
@@ -190,9 +192,6 @@ function HomeRoute() {
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, isLoading } = useUser();
-  const [location] = useLocation();
-  const [activeRealm, setActiveRealm] = useState("home");
-  const [headerSlot, setHeaderSlot] = useState<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!isLoading && user && !_contentRenderMeasured) {
@@ -208,67 +207,19 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
   if (!isLoading && !user) return <Redirect to="/auth" />;
   if (!isLoading && user && !user.onboardingCompleted) return <Redirect to="/onboarding" />;
 
+  // NAV1 — the shell is no longer drawn here. It was ~50 lines of inline JSX in
+  // this routing file, which meant the walls of the house had no owner you could
+  // import, test or point at; `AppShell` is that owner now. The structure it
+  // renders is this block, moved rather than rewritten.
   return (
-    <AppRealmContext.Provider value={{ realm: activeRealm, setRealm: setActiveRealm }}>
-      <WorkspaceHeaderSlotContext.Provider value={headerSlot}>
-        {/* PHASE5D — the Companion Context Channel wraps the routed page (which
-            publishes the pointers on screen) and the one FloatingAssistant (which
-            reads them). One channel, one assistant — never one per surface. */}
-        <CompanionContextProvider>
-          {/* CONV1 BEH-7 — the OrchardBackdrop was mounted here, behind every room:
-              a photographic orchard, fixed inset-0, objectFit cover, opacity 0.90.
-              THA_EXPERIENCE_BLUEPRINT.md § 6.1 forbids it by name — "The orchard is
-              never wallpaper. No room contains the orchard; every room is oriented
-              toward it. A backdrop applied uniformly behind everything is the
-              flattening the Place Principles forbid" — and § 16 names wallpaper an
-              anti-pattern. The canon was right and the render was wrong; no new
-              principle was needed or written (NORTH2's refusal).
-              Rooms now stand on the warm canvas, which is the Blueprint's own E1
-              ("the orchard as illumination and warmth, not image"). Home's E3 open
-              view and the E2 window are a DECLARED GAP, not a silent one — they are
-              a positive build that ships only through the path § 2.4 fixes (the
-              UIA § 4 amendment, tokens by admission). Arrival keeps its orchard:
-              /auth, /onboarding (orchard-shell.tsx) and the marketing landing are
-              not rooms, and § 6.2 rule 3 expressly permits arrival at E3. */}
-          <div className="relative min-h-[100dvh]">
-            <div className="relative z-10 flex flex-col h-[100dvh]">
-              {user?.isDemo && <TrialBanner />}
-              <SiteBanner />
-              {/* Slot target: WorkspaceHeader portals here so the brand banner spans full width */}
-              <div ref={setHeaderSlot} className="shrink-0 w-full" data-testid="ws-header-slot" />
-              {/* UX1 — the canonical BottomNav is the sole primary navigation on all
-                  screen sizes; the left DesktopSidebar is retired (dormant in nav-bar.tsx). */}
-              <div className="flex flex-1 overflow-hidden">
-                <main className="flex-1 overflow-y-auto overflow-x-hidden main-safe flex flex-col">
-                  {isLoading ? (
-                    <div className="flex h-full items-center justify-center">
-                      <Loader2 className="h-8 w-8 animate-spin text-primary/50" />
-                    </div>
-                  ) : (
-                    // PX1-W0 (fnd-px-error-renders-as-empty). No ErrorBoundary existed
-                    // anywhere in the client, so a render-time throw on any household
-                    // page took the whole app to a white screen. It sits INSIDE the
-                    // shell — the header and the bottom nav survive, so a broken
-                    // surface is never a surface the household cannot leave. Keyed on
-                    // the location so walking away from a broken page unbreaks it.
-                    <ErrorBoundary resetKey={location}>
-                      {/* PX1-W3: catches the routed page's lazy chunk inside the
-                          shell, so the header and nav stay painted while a page
-                          loads — navigation never blanks the whole app. */}
-                      <Suspense fallback={<RouteFallback />}>
-                        <Component />
-                      </Suspense>
-                    </ErrorBoundary>
-                  )}
-                </main>
-              </div>
-              <BottomNav />
-            </div>
-          </div>
-          <FloatingAssistant />
-        </CompanionContextProvider>
-      </WorkspaceHeaderSlotContext.Provider>
-    </AppRealmContext.Provider>
+    <AppShell isLoading={isLoading} showTrialBanner={!!user?.isDemo}>
+      {/* PX1-W3: catches the routed page's lazy chunk inside the shell, so the
+          header and nav stay painted while a page loads — navigation never
+          blanks the whole app. */}
+      <Suspense fallback={<RouteFallback />}>
+        <Component />
+      </Suspense>
+    </AppShell>
   );
 }
 
@@ -443,6 +394,9 @@ function Router() {
       <Route path="/admin/knowledge-claims" component={() => <ProtectedRoute component={AdminKnowledgeClaimsChrome} />} />
       <Route path="/admin/canonical-publication-integrity" component={() => <ProtectedRoute component={AdminCanonicalPublicationIntegrityChrome} />} />
       <Route path="/pantry" component={() => <ProtectedRoute component={PantryPage} />} />
+      {/* COMM2 — the Orchard. An invitation arrives as ?invitation=<token>;
+          the room answers it and clears the token from the URL once spent. */}
+      <Route path="/orchard" component={() => <ProtectedRoute component={OrchardPage} />} />
       {/* PROD4 — the room is called "Nutrition" in the one navigation list and
           was reachable only at /plant-diversity. Plant diversity is one TAB of
           this room (the other is Nutrients), so the path named a part after the
@@ -453,6 +407,11 @@ function Router() {
       <Route path="/diary" component={() => <ProtectedRoute component={FoodDiaryPage} />} />
       <Route path="/my-diary" component={() => <ProtectedRoute component={FoodDiaryPage} />} />
       <Route path="/shared/:token" component={SharedPlanPage} />
+      {/* COMM1A — rendered OUTSIDE ProtectedRoute on purpose. An invitation
+          reaches someone who is not signed in and may have no account; sending
+          them through the auth gate would lose the token they arrived with,
+          which is the exact defect /shared/:token still has (App.tsx above). */}
+      <Route path="/invitation" component={InvitationPage} />
       {/* PROD2: /partners is withdrawn — all 12 entries in data/partners.ts are
           invented businesses on example.com, marked isActive, and presented under
           a genuine affiliate-disclosure notice. A health-adjacent product must not

@@ -51,6 +51,7 @@ import {
   useCompanionWithheld,
   type CompanionSurfaceHints,
 } from "./companion-context";
+import { COMPANION_OPEN_EVENT } from "./companion-open";
 
 /**
  * PHASE5E — one turn's request. `askHints` are the pointers that belong to a single
@@ -77,6 +78,7 @@ type ConversationSurface =
   | "templates"
   | "partners"
   | "analyser"
+  | "orchard"
   | "voice";
 
 function useSurface(): ConversationSurface {
@@ -91,6 +93,8 @@ function useSurface(): ConversationSurface {
   if (/^\/(meals|cookbook)/.test(location)) return "meals";
   if (/^\/foods/.test(location)) return "nutrition";
   if (/^\/partners/.test(location)) return "partners";
+  // COMM2 — the Orchard.
+  if (/^\/orchard/.test(location)) return "orchard";
   return "floating";
 }
 
@@ -105,6 +109,7 @@ const SURFACE_LABEL: Record<ConversationSurface, string> = {
   templates: "Templates",
   partners: "Partners",
   analyser: "Analyser",
+  orchard: "Orchard",
   floating: "Apple",
   voice: "Voice",
 };
@@ -159,6 +164,15 @@ const QUICK_ACTIONS: Record<ConversationSurface, string[]> = {
     "What additives are in this product?",
     "What does NOVA classification mean?",
     "Is this ultra-processed?",
+  ],
+  // COMM2 — bounded by what the `community` capability can actually answer:
+  // three read scopes (communities · members · invitations) and nothing else.
+  // No question here asks about another household, because no method returns
+  // one — a quick action the capability must gap is a promise the room breaks.
+  orchard: [
+    "Which neighbourhoods do I belong to?",
+    "Is anything waiting for me?",
+    "What can my neighbours see about us?",
   ],
   floating: [
     "What's in my pantry?",
@@ -1229,6 +1243,16 @@ export default function FloatingAssistant() {
   const { ask, clearAsk } = usePendingAsk();
 
   const [isOpen, setIsOpen] = useState(false);
+
+  // NAV1 — the permanent header carries a Companion entry. It ASKS to open
+  // rather than owning the panel, so this state stays here, where it belongs:
+  // one assistant, one channel, one piece of open state (PHASE5D).
+  useEffect(() => {
+    const open = () => setIsOpen(true);
+    window.addEventListener(COMPANION_OPEN_EVENT, open);
+    return () => window.removeEventListener(COMPANION_OPEN_EVENT, open);
+  }, []);
+
   // PX1-W4.2: focus returns to the trigger on close. Radix would do this itself,
   // but the exit animation (AnimatePresence + forceMount) unmounts the dialog
   // content outside Radix's own close sequence, so the restore is made explicit.

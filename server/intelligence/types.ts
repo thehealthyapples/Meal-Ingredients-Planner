@@ -220,7 +220,7 @@ export interface CapabilityPermissions {
 // ---------------------------------------------------------------------------
 
 /**
- * The seven Companion Card rooms — THA's canonical *user destinations*.
+ * The eight Companion Card rooms — THA's canonical *user destinations*.
  *
  * This is native-discovery.ts's DISCOVERY_DOMAINS vocabulary, which is the owner
  * of the term set; it is named here (not re-derived) so a capability descriptor
@@ -229,6 +229,20 @@ export interface CapabilityPermissions {
  * A room is a destination because the Card's Next Steps route to it:
  * THA_COMPANION_CARD_EXPERIENCE_PRINCIPLE.md — "Next Steps — result-level actions
  * over the whole set (e.g. View All), routing to the domain's canonical landing page."
+ *
+ * COMM2 (2026-07-19) admitted `community` — the eighth room, and the first added
+ * since BEH-8 wrote this list. It is a governed change, not an oversight:
+ * COMM1 declared Community `platform` for one stated reason — "there is no page
+ * to land on" — and COMM2 built that page (`/orchard`). The condition the
+ * declaration rested on no longer holds, so the declaration moves with it.
+ * `DOMAIN_LANDING` in client/src/components/conversation/companion-card.ts gains
+ * the matching row in the same change; a room in this list without one there
+ * routes every Next Step silently to "/", which is the failure mode BEH-8 deleted
+ * the old CAPABILITY_DOMAIN table to prevent.
+ *
+ * Community is deliberately NOT added to native-discovery.ts's DISCOVERY_DOMAINS:
+ * a discovery domain is searchable, and Community exposes no searchable entity —
+ * only membership. A room may be a destination without being a search result.
  */
 export const COMPANION_ROOMS = [
   "meal",
@@ -238,6 +252,7 @@ export const COMPANION_ROOMS = [
   "diary",
   "nutrition",
   "household",
+  "community",
 ] as const;
 
 export type CompanionRoom = (typeof COMPANION_ROOMS)[number];

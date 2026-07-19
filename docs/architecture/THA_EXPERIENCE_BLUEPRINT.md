@@ -177,8 +177,49 @@ The canonical place identity of every domain. The analogies are **feelings to de
 | **Diary** | The window seat | **E2**, softly — quiet, never dim | A gathered pool of the same morning | Lap desk; the most air in the house | Yesterday's trace |
 | **Analyser** | The work bench | **E1** (E2 before first use) | The clearest task light in the house | The bench; the examined product as the object on it | Where you left off |
 | **Household / Profile** | The family record | **E1** | Even, honest, unshadowed | The record; anchored strata | The family, first-class |
+| **Orchard / Community** | The room that looks outward | **E2** (E3 when empty) | The same morning, arriving from further off | Ground plane; neighbours as presences on it | The neighbourhood is inhabited |
 | **Companion** | The friend at the counter — a presence, not a room (§ 13) | — (foreground) | The room it opens in | Floating, as today | Arrives a beat after you |
 | **Admin** | The study off the hall | **E0** | Task light; the warmth floor still applies | Solid working ground | None — deliberately |
+
+> **Amendment — `COMM2`, 2026-07-19. The Orchard admitted as a room.**
+>
+> Added under § 18 ("change enters by governance, never by shipping"), on an
+> owner ruling, and recorded here rather than assumed by the surface that needed it.
+>
+> **What was admitted: one room. Not three.** The Orchard *overview*,
+> *Neighbourhoods*, the *Village* and the *High Street* are the experience
+> **inside** this single room — page state, never routes, never nav entries,
+> never realms of their own. An earlier reading of the brief would have added
+> three places to this map; that reading was taken back to the owner before any
+> code was written, precisely because this section is what it would have
+> contradicted.
+>
+> **The naming tension, stated so it is not rediscovered.** § 6 fixes the
+> orchard as *the world outside every window* — "experienced through windows and
+> subtle connections, **never walked into**", with *the rendered world* and *the
+> theme park* named as anti-patterns in § 16. The room called **the Orchard is
+> not that orchard, and does not draw it.** It is the room whose *subject* is the
+> households the family lives near — the only room in the house that faces
+> outward rather than inward. It renders no orchard, no village, no street, no
+> map and no dwelling; its place-words are feelings to design toward, exactly as
+> the preamble to § 5.1 requires. § 6.1's laws are untouched: the canonical
+> orchard still has one owner, one season, and one asset, and this room mounts
+> none of it.
+>
+> **Exposure E2, opening to E3 when the household belongs nowhere** — rule 2 of
+> § 6.2 used as written ("one level, never two"). It is a reflective room, not a
+> dense working one.
+>
+> **Companion.** `community` joins `COMPANION_ROOMS` and `DOMAIN_LANDING`
+> (`/orchard`) in the same change. The capability remains **read-only**: it
+> gained a destination, not a verb.
+>
+> **What this does not admit.** No messaging, feed, recipe sharing, planner
+> sharing, Community Intelligence or inter-household data exchange. The
+> membership boundary set by `COMM1` (SoT Domain 37) is unchanged — two
+> households learn that they share a neighbourhood and nothing else — and
+> `LAUNCH1`'s recommendation against inter-household community remains recorded
+> and unresolved rather than overturned.
 
 ### 5.2 What keeps the rooms one house
 

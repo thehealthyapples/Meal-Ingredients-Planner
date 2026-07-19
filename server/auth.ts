@@ -24,6 +24,12 @@ import { entitlementsForPlan, limitFor } from "@shared/commerce";
 // every window, and the policy list; nothing here decides a number. It throws on an unknown route
 // rather than returning an empty chain, so a typo below cannot silently unguard an endpoint.
 import { authRateLimit } from "./lib/auth-rate-limit";
+// COMM1A — invitation redemption and referral attribution at registration and
+// at email verification. Both owners; this file calls them and writes neither
+// table itself.
+import * as householdInvitation from "./lib/household-invitation";
+import * as referral from "./lib/referral";
+import { getHouseholdForUser } from "./lib/household";
 
 declare global {
   namespace Express {
@@ -269,7 +275,9 @@ export function setupAuth(app: Express) {
       return res.status(403).json({ message: "Private beta — registration is currently closed. Request access to join." });
     }
 
-    const { username, password, timeZone, acceptedAgreements } = req.body;
+    // COMM1A — `invitationToken` is optional and never required to register.
+    // An invitation must not become a gate on signing up.
+    const { username, password, timeZone, acceptedAgreements, invitationToken } = req.body;
     if (!username || !password) {
       return res.status(400).json({ message: "Username and password are required." });
     }
@@ -331,6 +339,57 @@ export function setupAuth(app: Express) {
         context: consentContextFrom(req),
       });
 
+      // ── COMM1A — the invitation survives signup ────────────────────────────
+      //
+      // THIS IS THE WHOLE POINT OF THE WORKSTREAM, so it is worth stating why it
+      // is here and not somewhere more elegant. Registration does NOT establish
+      // a session (the account must verify its email and then log in), so an
+      // invitation cannot be carried in the session across the gap — there is no
+      // session to carry it in, and `saveUninitialized: false` means an
+      // anonymous visitor has no session row at all. The only thing that
+      // survives an email round-trip is a database row, so redemption happens
+      // here, at the one moment the new household provably exists.
+      //
+      // It is deliberately NON-FATAL. A bad, expired or mismatched token must
+      // never destroy an account somebody just created — they typed a real
+      // password and agreed to real terms, and losing that because a link went
+      // stale would be the product punishing them for someone else's timing.
+      // The account stands; the invitation simply is not redeemed.
+      if (typeof invitationToken === "string" && invitationToken.length > 0) {
+        try {
+          const newHouseholdId = await getHouseholdForUser(user.id);
+          const redeemed = await householdInvitation.redeemInvitation({
+            token: invitationToken,
+            acceptingHouseholdId: newHouseholdId,
+            acceptingEmail: username,
+          });
+
+          if (redeemed.ok) {
+            // REFERRAL IS RECORDED ONLY ON THIS PATH — the registration path —
+            // because only here is the referred household genuinely new. A
+            // household that already existed and merely accepts a neighbourhood
+            // invitation was never referred, and attributing one would be a
+            // fabricated referral that a future reward would pay out on.
+            await referral.recordReferral({
+              referrerHouseholdId: redeemed.redeemed.invitedByHouseholdId,
+              referredHouseholdId: newHouseholdId,
+              invitationId: redeemed.redeemed.invitationId,
+            });
+
+            // If the link named a neighbourhood, ask COMM1 to issue a proper
+            // community invitation. This creates NO membership — it creates an
+            // offer the household must explicitly accept in the Orchard.
+            if (redeemed.redeemed.kind === "community") {
+              await householdInvitation.issueCommunityInvitationFor(redeemed.redeemed, newHouseholdId);
+            }
+          } else {
+            console.warn("[Auth] Invitation not redeemed at registration:", redeemed.reason);
+          }
+        } catch (e: any) {
+          console.warn("[Auth] Invitation redemption failed, account unaffected:", e?.message);
+        }
+      }
+
       const token = randomBytes(32).toString("hex");
       const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
       await storage.setEmailVerificationToken(user.id, token, expires);
@@ -379,6 +438,23 @@ export function setupAuth(app: Express) {
       }
 
       await storage.markEmailVerified(user.id);
+
+      // COMM1A — a referral becomes VERIFIED here, and only here.
+      //
+      // `recorded` says an account was created through somebody's invitation.
+      // `verified` says the address on that account has been proven to belong to
+      // whoever controls it. The distinction is the whole anti-fraud position:
+      // an unverified account is a claim, and paying a reward on a claim is how
+      // referral fraud works. No reward can ever be computed from a `recorded`
+      // row — the status ladder in Postgres refuses to promote past `verified`
+      // without this timestamp.
+      //
+      // Fire-and-forget for the same reason as the welcome email: a referral
+      // bookkeeping failure must never turn a successful verification into an
+      // error a household sees.
+      getHouseholdForUser(user.id)
+        .then((householdId) => referral.markVerified(householdId))
+        .catch((e) => console.warn("[Auth] Referral verification bookkeeping failed:", e?.message));
 
       // BUS1 — the welcome email is sent HERE and not at registration, because
       // until this moment THA does not know the address belongs to the person

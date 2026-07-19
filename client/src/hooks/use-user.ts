@@ -74,7 +74,12 @@ export function useUser() {
     // explicit extra rather than folded into InsertUser because it is not a
     // property of a user: it is a fact about a moment, and the row it produces
     // lives in the consent ledger, not on the account.
-    mutationFn: async (credentials: InsertUser & { acceptedAgreements?: boolean }) => {
+    // COMM1A — `invitationToken` accompanies the credentials for the same
+    // reason `acceptedAgreements` does: it is not a property of a user, it is a
+    // fact about how they arrived. The server redeems it after the household
+    // exists, and treats a bad one as non-fatal — an invitation must never be
+    // able to destroy an account somebody just created.
+    mutationFn: async (credentials: InsertUser & { acceptedAgreements?: boolean; invitationToken?: string }) => {
       // CONV1 P5 / SCH-1: the device DETECTS the new household's time zone at
       // signup, and that is the whole of what the client may do with household
       // time (HT12 — the client renders household time and never derives it; the

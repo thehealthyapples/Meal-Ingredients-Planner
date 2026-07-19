@@ -3539,6 +3539,110 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-07-19_comm1a_invitation_and_referral",
+    statements: [
+      // ── household_invitations ────────────────────────────────────────────
+      // An invitation addressed to an EMAIL, so it can reach someone who has no
+      // account. Distinct from households.invite_code (a person joining a home)
+      // and from community_invitations (two households that both already exist).
+      `CREATE TABLE IF NOT EXISTS household_invitations (
+         id SERIAL PRIMARY KEY,
+         token TEXT NOT NULL,
+         invited_by_household_id INTEGER NOT NULL REFERENCES households(id) ON DELETE CASCADE,
+         invited_email TEXT NOT NULL,
+         kind TEXT NOT NULL DEFAULT 'tha',
+         community_id INTEGER REFERENCES communities(id) ON DELETE CASCADE,
+         status TEXT NOT NULL DEFAULT 'pending',
+         expires_at TIMESTAMPTZ NOT NULL,
+         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+         responded_at TIMESTAMPTZ,
+         accepted_by_household_id INTEGER REFERENCES households(id) ON DELETE SET NULL
+       )`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS household_invitations_token_key
+         ON household_invitations (token)`,
+      `ALTER TABLE household_invitations DROP CONSTRAINT IF EXISTS household_invitations_kind_check`,
+      `ALTER TABLE household_invitations ADD CONSTRAINT household_invitations_kind_check
+         CHECK (kind IN ('tha', 'community'))`,
+      `ALTER TABLE household_invitations DROP CONSTRAINT IF EXISTS household_invitations_status_check`,
+      `ALTER TABLE household_invitations ADD CONSTRAINT household_invitations_status_check
+         CHECK (status IN ('pending', 'accepted', 'declined', 'revoked', 'expired'))`,
+      // A community invitation names a community; a THA invitation must not.
+      // Without this, a 'tha' row could carry a community and acceptance would
+      // silently join a neighbourhood nobody was invited to.
+      `ALTER TABLE household_invitations DROP CONSTRAINT IF EXISTS household_invitations_community_check`,
+      `ALTER TABLE household_invitations ADD CONSTRAINT household_invitations_community_check
+         CHECK (
+           (kind = 'community' AND community_id IS NOT NULL)
+           OR (kind = 'tha' AND community_id IS NULL)
+         )`,
+      // A resolved invitation must record when it resolved (COMM1's rule, kept).
+      `ALTER TABLE household_invitations DROP CONSTRAINT IF EXISTS household_invitations_responded_check`,
+      `ALTER TABLE household_invitations ADD CONSTRAINT household_invitations_responded_check
+         CHECK (
+           (status = 'pending' AND responded_at IS NULL)
+           OR (status <> 'pending' AND responded_at IS NOT NULL)
+         )`,
+      // An accepted invitation must say who accepted it, and one that was not
+      // accepted must not claim anyone did.
+      `ALTER TABLE household_invitations DROP CONSTRAINT IF EXISTS household_invitations_accepted_by_check`,
+      `ALTER TABLE household_invitations ADD CONSTRAINT household_invitations_accepted_by_check
+         CHECK (
+           (status = 'accepted' AND accepted_by_household_id IS NOT NULL)
+           OR (status <> 'accepted' AND accepted_by_household_id IS NULL)
+         )`,
+      `CREATE INDEX IF NOT EXISTS household_invitations_inviter_idx
+         ON household_invitations (invited_by_household_id)`,
+      `CREATE INDEX IF NOT EXISTS household_invitations_email_idx
+         ON household_invitations (invited_email)`,
+      `CREATE INDEX IF NOT EXISTS household_invitations_pending_idx
+         ON household_invitations (invited_email, status) WHERE status = 'pending'`,
+
+      // ── referral_attributions ────────────────────────────────────────────
+      `CREATE TABLE IF NOT EXISTS referral_attributions (
+         id SERIAL PRIMARY KEY,
+         referrer_household_id INTEGER NOT NULL REFERENCES households(id) ON DELETE CASCADE,
+         referred_household_id INTEGER NOT NULL REFERENCES households(id) ON DELETE CASCADE,
+         invitation_id INTEGER REFERENCES household_invitations(id) ON DELETE SET NULL,
+         status TEXT NOT NULL DEFAULT 'recorded',
+         recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+         verified_at TIMESTAMPTZ,
+         eligible_at TIMESTAMPTZ,
+         entitlement_processed_at TIMESTAMPTZ
+       )`,
+      // THE LOAD-BEARING CONSTRAINT: a household is referred once, ever. Two
+      // households cannot both claim the same referral, and a household cannot
+      // be re-referred. In Postgres because this is the fact a future reward is
+      // computed from, and application code is the wrong place to guard money.
+      `CREATE UNIQUE INDEX IF NOT EXISTS referral_attributions_referred_key
+         ON referral_attributions (referred_household_id)`,
+      // A household cannot refer itself.
+      `ALTER TABLE referral_attributions DROP CONSTRAINT IF EXISTS referral_attributions_not_self_check`,
+      `ALTER TABLE referral_attributions ADD CONSTRAINT referral_attributions_not_self_check
+         CHECK (referrer_household_id <> referred_household_id)`,
+      `ALTER TABLE referral_attributions DROP CONSTRAINT IF EXISTS referral_attributions_status_check`,
+      `ALTER TABLE referral_attributions ADD CONSTRAINT referral_attributions_status_check
+         CHECK (status IN ('recorded', 'verified', 'eligible', 'entitlement_processed', 'void'))`,
+      // THE STATUS LADDER, ENFORCED. Each rung requires the rung below it to
+      // have happened, and to have recorded when. This is what makes "no reward
+      // before verified eligibility" a property of the database rather than a
+      // promise in a comment: a row cannot reach `eligible` without a
+      // `verified_at`, and cannot reach `entitlement_processed` without an
+      // `eligible_at` that the commercial owner had to set.
+      `ALTER TABLE referral_attributions DROP CONSTRAINT IF EXISTS referral_attributions_ladder_check`,
+      `ALTER TABLE referral_attributions ADD CONSTRAINT referral_attributions_ladder_check
+         CHECK (
+           (status = 'recorded' AND verified_at IS NULL AND eligible_at IS NULL AND entitlement_processed_at IS NULL)
+           OR (status = 'verified' AND verified_at IS NOT NULL AND eligible_at IS NULL AND entitlement_processed_at IS NULL)
+           OR (status = 'eligible' AND verified_at IS NOT NULL AND eligible_at IS NOT NULL AND entitlement_processed_at IS NULL)
+           OR (status = 'entitlement_processed' AND verified_at IS NOT NULL AND eligible_at IS NOT NULL AND entitlement_processed_at IS NOT NULL)
+           OR (status = 'void')
+         )`,
+      `CREATE INDEX IF NOT EXISTS referral_attributions_referrer_idx
+         ON referral_attributions (referrer_household_id)`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

@@ -211,3 +211,53 @@ export async function sendAccountDeletedEmail(to: string): Promise<{ success: bo
     },
   });
 }
+
+/**
+ * NEW in COMM1A. The invitation one household sends to another.
+ *
+ * THIS EMAIL IS THE ONLY PLACE THE TOKEN IS EVER DELIVERED. It is not returned
+ * by the route that creates the invitation, not shown to the sender, and not
+ * logged — because the link is what authorises acceptance, and the sender is
+ * not the party it authorises.
+ *
+ * THE SENDING HOUSEHOLD IS NOT NAMED, and that is deliberate rather than an
+ * omission. THA does not know that the recipient knows the sender, and putting
+ * one household's name in an unsolicited email to a stranger discloses a
+ * household to someone who has no relationship with THA at all. The person who
+ * sent it will have said so themselves; the product does not need to.
+ *
+ * No discount, percentage, saving or commercial term appears here. Commercial
+ * Rule C3 forbids a price claim without configured pricing, and pricing is
+ * unconfigured platform-wide — so an invitation that promised money off would
+ * be exactly the withdrawn `TrialBanner.tsx` copy, in a new envelope.
+ */
+export async function sendHouseholdInvitationEmail(
+  to: string,
+  token: string,
+  options: { communityName?: string | null } = {},
+): Promise<{ success: boolean }> {
+  const acceptUrl = `${APP_BASE_URL}/invitation?token=${encodeURIComponent(token)}`;
+  const toCommunity = !!options.communityName;
+
+  return send({
+    to,
+    kind: "household invitation",
+    subject: toCommunity
+      ? `You've been invited to ${options.communityName} — The Healthy Apples`
+      : "Someone has invited you to The Healthy Apples",
+    content: {
+      heading: toCommunity
+        ? `You've been invited to ${options.communityName}`
+        : "You've been invited to The Healthy Apples",
+      paragraphs: [
+        toCommunity
+          ? "A household already using The Healthy Apples has invited yours to their neighbourhood. Neighbourhoods are quiet: yours would share nothing about your plans, your food, or who eats with you — only that you are part of it."
+          : "A household already using The Healthy Apples thought you might like it too. It helps families plan what to eat, shop for it, and eat a little better without much effort.",
+        "You'll be asked to create an account first. Nothing is shared, and nothing is joined, until you say so.",
+      ],
+      action: { label: toCommunity ? "See the invitation" : "Accept the invitation", url: acceptUrl },
+      footnote:
+        `This invitation was sent to ${to} and only works for that address. It expires in 14 days, and whoever sent it can withdraw it at any time. If you weren't expecting it, you can ignore this email — nobody is told either way.`,
+    },
+  });
+}

@@ -9,8 +9,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  ShoppingCart, Search, User, ShieldCheck, LogOut, ArrowLeft,
+  ShoppingCart, Search, User, ShieldCheck, LogOut, ArrowLeft, Leaf,
 } from "lucide-react";
+import { useRegisterPageHeader } from "@/components/layout/shell-slots";
+import { openCompanion } from "@/components/conversation/companion-open";
 import { api } from "@shared/routes";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -34,7 +36,11 @@ export type PageRealm =
   | "list"
   | "home"
   | "nutrition"
-  | "shopping";
+  | "shopping"
+  // COMM2 — the Orchard, the room that looks outward. One realm, not four:
+  // the Orchard overview, Neighbourhoods, the Village and the High Street are
+  // the experience INSIDE this room, never separate realms or destinations.
+  | "orchard";
 
 interface WorkspaceSearchConfig {
   placeholder: string;
@@ -85,6 +91,20 @@ interface WorkspaceHeaderProps {
   wide?: boolean;
   titleTestId?: string;
   className?: string;
+  /**
+   * NAV1 — who is rendering this header.
+   *
+   * `"page"` (the default, and every existing call site) is a room drawing its
+   * own header: it registers its presence with the shell and portals into the
+   * shell's slot.
+   *
+   * `"shell"` is the application shell drawing the DEFAULT header for a page
+   * that did not draw one. It deliberately does not register — a header that
+   * registered its own presence would cancel the very fallback it is — and it
+   * renders in place rather than portalling, because the shell already renders
+   * it exactly where the slot is.
+   */
+  role?: "page" | "shell";
 }
 
 /* ── Profile / Apple Menu dropdown ──────────────────────────────────────────── */
@@ -156,12 +176,16 @@ export function WorkspaceHeader({
   wide = false,
   titleTestId,
   className,
+  role = "page",
 }: WorkspaceHeaderProps) {
   const { user, logout } = useUser();
   const [location, navigate] = useLocation();
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const { setRealm } = useAppRealm();
   useLayoutEffect(() => { setRealm(realm); }, [realm, setRealm]);
+  // NAV1 — tells the shell a page has drawn its own header, so the shell's
+  // default one stands down. Only a page registers; the shell's own does not.
+  useRegisterPageHeader(role === "page");
 
   const { data: shoppingListItems = [] } = useQuery<any[]>({
     queryKey: [api.shoppingList.list.path],
@@ -217,6 +241,36 @@ export function WorkspaceHeader({
         </Link>
       </TooltipTrigger>
       <TooltipContent>Shopping{itemCount > 0 ? ` (${itemCount})` : ""}</TooltipContent>
+    </Tooltip>
+  );
+
+  /*
+   * NAV1 — the Companion's entry in the permanent header.
+   *
+   * The Companion is "the friend at the counter — a presence, not a room"
+   * (Experience Blueprint § 9), which is exactly why this is a doorway and not
+   * a destination: it opens the one `FloatingAssistant` and appears in no
+   * navigation list. It ASKS rather than controls (see companion-open.ts), so
+   * the Companion keeps sole ownership of its own panel state.
+   *
+   * It sits beside the basket rather than replacing the floating trigger: the
+   * floating one follows the household down a long room, this one is where the
+   * house's fixed furniture lives. Both open the same single panel.
+   */
+  const companionButton = (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          onClick={openCompanion}
+          className="flex items-center justify-center h-9 w-9 rounded-lg transition-colors text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground"
+          aria-label="Ask the Companion"
+          data-testid="button-workspace-companion"
+        >
+          <Leaf className="h-4 w-4" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent>Ask the Companion</TooltipContent>
     </Tooltip>
   );
 
@@ -326,6 +380,7 @@ export function WorkspaceHeader({
                     {actions}
                   </div>
                 )}
+                {companionButton}
                 {basketIcon}
                 <ProfileMenu isAdmin={isAdmin} logout={logout} />
               </div>
@@ -373,6 +428,7 @@ export function WorkspaceHeader({
                     {actions}
                   </div>
                 )}
+                {companionButton}
                 {basketIcon}
                 <ProfileMenu isAdmin={isAdmin} logout={logout} />
               </div>
@@ -417,6 +473,8 @@ export function WorkspaceHeader({
                     <Search className="h-4 w-4" />
                   </button>
                 )}
+
+                {companionButton}
 
                 <Link
                   href="/shopping-workspace"
@@ -488,7 +546,13 @@ export function WorkspaceHeader({
     </div>
   );
 
-  return headerSlot ? createPortal(headerContent, headerSlot) : headerContent;
+  // A page's header portals up into the shell's slot so the banner spans the
+  // full viewport width. The shell's own default header is ALREADY rendered in
+  // that position, so it renders in place — portalling it into the slot it sits
+  // beside would be a no-op with a round trip.
+  return headerSlot && role === "page"
+    ? createPortal(headerContent, headerSlot)
+    : headerContent;
 }
 
 /* ── PageContainer ───────────────────────────────────────────────────────────── */

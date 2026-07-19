@@ -175,6 +175,12 @@ const DOMAIN_LANDING: Readonly<Record<string, string>> = {
   diary:     "/diary",
   nutrition: "/foods",
   household: "/profile",
+  // COMM2 — the Orchard. Added in the same change that admitted `community` to
+  // COMPANION_ROOMS (server/intelligence/types.ts). `domainLandingPath` falls back
+  // to "/" rather than throwing, so a room admitted there and forgotten here does
+  // not error — it silently routes every Next Step home. That silence is why these
+  // two lists move together or not at all.
+  community: "/orchard",
 };
 
 /**
