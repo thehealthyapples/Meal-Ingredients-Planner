@@ -324,6 +324,18 @@ LAUNCH1 §3.5 ranks this first and PROD2's own measurement is **worse than LAUNC
 
 Every change is presentation-layer, configuration, or deletion. **There is no data migration to unwind and no schema change to reverse.** Deleted files are recoverable from git history (`git rm`, not `rm`) and additionally snapshotted outside the repository at `<scratchpad>/pre-delete-snapshot/`.
 
+### 9.1 A concurrent session committed this work mid-flight — disclosed, not hidden
+
+During PROD2's verification phase, a **concurrent session** created commit `057102ec` — *"Pre-HOUSE_ACT1 checkpoint — capture in-flight programme work"* — which swept the working tree into a single commit. **PROD2's changes were committed by that session, before review, along with every other session's in-flight work.** The working tree went from 241 uncommitted entries to 41.
+
+This is recorded here for three reasons:
+
+1. **Rollback protection held.** The annotated tag still resolves to `24e37d20`, the pre-PROD2 commit, which is now the checkpoint's *parent*. `git reset --hard rollback/PROD2-product-completion-programme-20260718` therefore still unwinds PROD2 **and** the checkpoint. Every rollback step in the table above was re-verified after the commit and remains correct.
+2. **Nothing was lost or altered.** All nine of PROD2's substantive changes were re-verified on disk after the commit (target, pool handler, connection timeout, `list-page` removal, `TopBar` removal, OFF endpoint, User-Agent, partners route, orphan record).
+3. **It is the third instance of a pattern this repository has already recorded twice.** ENGPROG1's Audit Finding 2 named it exactly — *"`OPERATING_MANUAL` §9 forbids committing work you did not author, and one concern per commit"* — after `bc360ba5` committed 620 lines of MAT1's work unreported. PROD2 mentions it not as a complaint but because a checkpoint commit that captures four sessions at once makes `git log` a poor record of who changed what, and this report is the only place the boundary is now written down.
+
+**PROD2 authored no commit.** The files listed in §4 are its work; anything else inside `057102ec` belongs to other sessions and was neither touched nor reviewed here.
+
 ---
 
 ## 10. Scope Lock

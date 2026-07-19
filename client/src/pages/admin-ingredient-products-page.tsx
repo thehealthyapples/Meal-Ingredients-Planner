@@ -272,6 +272,7 @@ export default function AdminIngredientProductsPage() {
                         size="icon"
                         variant="ghost"
                         onClick={() => openEdit(pick)}
+                        aria-label={`Edit ${pick.productName ?? "this product"}`}
                         data-testid={`button-edit-${pick.id}`}
                       >
                         <Edit2 className="h-4 w-4" />
@@ -282,6 +283,7 @@ export default function AdminIngredientProductsPage() {
                           variant="ghost"
                           className="text-destructive hover:text-destructive"
                           onClick={() => setDeactivateItem(pick)}
+                          aria-label={`Deactivate ${pick.productName ?? "this product"}`}
                           data-testid={`button-deactivate-${pick.id}`}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -293,6 +295,7 @@ export default function AdminIngredientProductsPage() {
                           className="text-green-600 hover:text-green-700"
                           onClick={() => reactivateMutation.mutate(pick.id)}
                           disabled={reactivateMutation.isPending}
+                          aria-label={`Reactivate ${pick.productName ?? "this product"}`}
                           data-testid={`button-reactivate-${pick.id}`}
                         >
                           <RotateCcw className="h-4 w-4" />

@@ -3301,6 +3301,97 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  // ─── BUS2A — Commercial Platform Foundation ───────────────────────────────
+  //
+  // Creates the two tables of the commercial domain. Creates NOTHING ELSE: no
+  // column is added to `users`, no constraint is altered, and no existing row
+  // is touched or read. BUS2A activates no subscription and processes no
+  // payment, so both tables are created EMPTY and stay empty until BUS2B.
+  //
+  // `users.subscription_tier` — the pre-BUS2A owner of Domain 26 — is
+  // deliberately left exactly as it is, including its CHECK constraint at
+  // migration `2026-02-28_add_roles_and_subscriptions`. It remains the live
+  // owner and the entitlement resolver's last-resort input. Its retirement
+  // condition is stated in shared/commerce/entitlements.ts and belongs to
+  // BUS2B; dropping it here would take premium access away from every
+  // household that has it, in a change that ships no way to give it back.
+  {
+    id: "2026-07-18_bus2a_commercial_foundation",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS subscriptions (
+         id SERIAL PRIMARY KEY,
+         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+         household_id INTEGER REFERENCES households(id) ON DELETE SET NULL,
+         plan_id TEXT NOT NULL,
+         status TEXT NOT NULL,
+         billing_period TEXT,
+         trial_ends_at TIMESTAMPTZ,
+         current_period_end TIMESTAMPTZ,
+         cancel_at_period_end BOOLEAN NOT NULL DEFAULT FALSE,
+         pending_plan_id TEXT,
+         past_due_since TIMESTAMPTZ,
+         provider_customer_id TEXT,
+         provider_subscription_id TEXT,
+         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+       )`,
+
+      // The same closed vocabularies the shared/commerce/ types declare, held
+      // at the database too. A tier typo that reaches a gate is a household
+      // silently losing access, and TypeScript does not run inside Postgres.
+      `ALTER TABLE subscriptions DROP CONSTRAINT IF EXISTS subscriptions_plan_id_check`,
+      `ALTER TABLE subscriptions ADD CONSTRAINT subscriptions_plan_id_check
+         CHECK (plan_id IN ('free','premium','friends_family'))`,
+      `ALTER TABLE subscriptions DROP CONSTRAINT IF EXISTS subscriptions_pending_plan_id_check`,
+      `ALTER TABLE subscriptions ADD CONSTRAINT subscriptions_pending_plan_id_check
+         CHECK (pending_plan_id IS NULL OR pending_plan_id IN ('free','premium','friends_family'))`,
+      `ALTER TABLE subscriptions DROP CONSTRAINT IF EXISTS subscriptions_status_check`,
+      `ALTER TABLE subscriptions ADD CONSTRAINT subscriptions_status_check
+         CHECK (status IN ('trialing','active','past_due','cancelled','expired','incomplete'))`,
+      `ALTER TABLE subscriptions DROP CONSTRAINT IF EXISTS subscriptions_billing_period_check`,
+      `ALTER TABLE subscriptions ADD CONSTRAINT subscriptions_billing_period_check
+         CHECK (billing_period IS NULL OR billing_period IN ('monthly','annual'))`,
+
+      `CREATE INDEX IF NOT EXISTS subscriptions_user_id_idx ON subscriptions (user_id)`,
+      `CREATE INDEX IF NOT EXISTS subscriptions_household_id_idx ON subscriptions (household_id)`,
+      // Nullable and unique: Postgres permits many NULLs in a unique index, so
+      // this constrains real provider ids without requiring one to exist.
+      `CREATE UNIQUE INDEX IF NOT EXISTS subscriptions_provider_subscription_id_key
+         ON subscriptions (provider_subscription_id)`,
+
+      `CREATE TABLE IF NOT EXISTS billing_events (
+         id SERIAL PRIMARY KEY,
+         provider_event_id TEXT NOT NULL,
+         kind TEXT NOT NULL,
+         subscription_id INTEGER REFERENCES subscriptions(id) ON DELETE CASCADE,
+         occurred_at TIMESTAMPTZ NOT NULL,
+         received_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+         processed_at TIMESTAMPTZ,
+         payload JSONB
+       )`,
+
+      `ALTER TABLE billing_events DROP CONSTRAINT IF EXISTS billing_events_kind_check`,
+      `ALTER TABLE billing_events ADD CONSTRAINT billing_events_kind_check
+         CHECK (kind IN ('trial-started','activated','renewed','payment-failed',
+                         'payment-recovered','plan-changed','cancellation-scheduled',
+                         'cancellation-revoked','ended'))`,
+
+      // THE IDEMPOTENCY GUARANTEE, AND IT IS THIS LINE.
+      //
+      // Every payment provider redelivers webhooks — on timeout, on a non-2xx,
+      // and on their own retry schedule — so a duplicate is the normal case.
+      // Enforced here rather than in application code because application code
+      // cannot win a race between two concurrent deliveries of the same event,
+      // and the cost of losing it is a term extended for free or a paying
+      // household cut off. BUS2B's ingest relies on this constraint by design:
+      // it INSERTs and lets a conflict be the no-op.
+      `CREATE UNIQUE INDEX IF NOT EXISTS billing_events_provider_event_id_key
+         ON billing_events (provider_event_id)`,
+      `CREATE INDEX IF NOT EXISTS billing_events_subscription_id_idx ON billing_events (subscription_id)`,
+      `CREATE INDEX IF NOT EXISTS billing_events_occurred_at_idx ON billing_events (occurred_at)`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

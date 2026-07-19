@@ -2396,7 +2396,13 @@ export default function ShoppingWorkspacePage() {
               <div aria-hidden style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.80)", borderRadius: 20, pointerEvents: "none" }} />
 
               <div className="relative z-10 flex flex-col">
-                {/* Textarea */}
+                {/* Textarea.
+                    UX_REFINE1 (D2, accessibility) — the placeholder was
+                    `text-foreground/25`: 25% opacity over a near-white card on the
+                    orchard backdrop, which EXPERIENCE_VERIFY1 recorded as unreadable.
+                    `text-muted-foreground` is the design system's own secondary-text
+                    token, so this adopts a canonical value rather than inventing an
+                    opacity. */}
                 <div className="relative px-6 pt-6 pb-3">
                   <textarea
                     ref={addTextareaRef}
@@ -2404,7 +2410,7 @@ export default function ShoppingWorkspacePage() {
                     onChange={(e) => { setAddRawText(e.target.value); resizeAddTextarea(); }}
                     placeholder={"milk, eggs\noven chips\nbananas, yoghurt"}
                     rows={6}
-                    className="w-full resize-none bg-transparent text-[15px] leading-loose placeholder:text-foreground/25 placeholder:italic focus:outline-none text-foreground font-medium"
+                    className="w-full resize-none bg-transparent text-[15px] leading-loose placeholder:text-muted-foreground placeholder:italic focus:outline-none text-foreground font-medium"
                     style={{ minHeight: 140 }}
                     aria-label="Add items"
                     data-testid="textarea-add-items"
@@ -2861,7 +2867,10 @@ export default function ShoppingWorkspacePage() {
       ))}
 
       {/* ── Fallback footer ────────────────────────────────────────────── */}
-      <div className="flex items-center gap-2 text-xs text-muted-foreground/50 px-1">
+      {/* UX_REFINE1 (D2, accessibility) — was `text-muted-foreground/50`, i.e. a
+          half-opacity muted token, which compounds two dimmings. The token alone
+          is already the design system's secondary-text value. */}
+      <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
         <FlaskConical className="h-3.5 w-3.5 shrink-0" />
         <span>
           Full product database also available in{" "}

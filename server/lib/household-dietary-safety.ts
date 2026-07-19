@@ -81,7 +81,11 @@ import { users, userPreferences, householdMembers, householdEaters } from "@shar
 import { getHouseholdForUser } from "./household";
 import { candidateHardExcluded } from "./smart-suggest-service";
 import { shouldExcludeRecipe, dietPatternFromDietTypes } from "@shared/dietRules";
-import { resolveActiveRestrictions } from "@shared/restrictions/restriction-resolver.js";
+import {
+  resolveActiveRestrictions,
+  resolveIngredientRestrictions,
+  resolveTextRestrictions,
+} from "@shared/restrictions/restriction-resolver.js";
 import type { RestrictionDefinition } from "@shared/restrictions/restriction-types.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -368,6 +372,151 @@ export function isMealSafeForHousehold(
   }
 
   return { safe: true };
+}
+
+// ─── Adaptation safety (PROD6) ───────────────────────────────────────────────
+//
+// `isMealSafeForHousehold` answers "may this EXISTING meal be offered?" over a
+// meal's name + ingredients. It is the right gate for a recommendation and the
+// wrong one for an ADAPTATION, for two reasons PROD5 found the hard way:
+//
+//   1. An adaptation's danger is in the ingredients it INVENTS. A model told to
+//      substitute "using best culinary judgement" proposes tahini for a sesame
+//      household and almond flour for a tree-nut one. Those replacements are not
+//      yet on any meal, so nothing was checking them.
+//   2. An adaptation rewrites the METHOD, and `isMealSafeForHousehold` never reads
+//      instructions (see its step 1 — name + ingredients only). "Serve with warm
+//      flatbread and tahini" is invisible to it. That was PROD5 finding §10.5 LOW,
+//      and it is load-bearing here because the method is exactly what the AI path
+//      rewrites.
+//
+// This validator closes both. It defines NO keyword list and NO allergen: every
+// verdict comes from the same two engines the rest of this module delegates to —
+// `candidateHardExcluded()` (canonical library + the conservative substring
+// fallback for custom strings) for the verdict, and `resolveIngredientRestrictions`
+// / `resolveTextRestrictions` for attribution. There is no second rules engine
+// here, and adding one would defeat the purpose of the file.
+
+/** One proposed item that a household restriction rejects. */
+export interface AdaptationSafetyViolation {
+  /** Where it appeared, so a caller can say what to fix. */
+  field: "ingredient" | "instruction";
+  /** The offending text, verbatim. */
+  value: string;
+  /** Canonical restriction ids that matched. Empty when only the custom-string fallback fired. */
+  restrictionIds: string[];
+}
+
+export interface AdaptationSafetyVerdict {
+  safe: boolean;
+  violations: AdaptationSafetyViolation[];
+  /** True when the context could not be resolved — refuse, never present. */
+  unavailable?: boolean;
+}
+
+/**
+ * Validate a PROPOSED adaptation (ingredients a model or rule table invented, and
+ * the method text that accompanies them) against a household's hard restrictions.
+ *
+ * `hardRestrictions` is the raw declared list — pass the union of every eater who
+ * will eat this meal, INCLUDING entry guests, whose restrictions live on the
+ * planner entry rather than on the household and are therefore invisible to
+ * `resolveHouseholdSafetyContext`. Dropping them would narrow the gate.
+ *
+ * Fails CLOSED by construction: an empty `restrictions` list means the household
+ * declared none, which is a resolved fact. A caller that could not RESOLVE the
+ * household must pass `unavailable` via {@link refuseAdaptation} rather than an
+ * empty array — "we know of none" and "we could not find out" stay distinct here
+ * exactly as they do at the top of this file.
+ */
+export function validateAdaptationSafety(
+  proposal: {
+    ingredients?: Array<string | null | undefined>;
+    instructions?: Array<string | null | undefined>;
+  },
+  hardRestrictions: string[],
+): AdaptationSafetyVerdict {
+  const restrictions = dedupe(hardRestrictions);
+  if (restrictions.length === 0) return { safe: true, violations: [] };
+
+  const active = resolveActiveRestrictions(restrictions);
+  const violations: AdaptationSafetyViolation[] = [];
+
+  const check = (raw: string | null | undefined, field: "ingredient" | "instruction") => {
+    const value = (raw ?? "").trim();
+    if (!value) return;
+    // The authoritative verdict — the SAME matcher the meal gate uses, so an
+    // adaptation can never be admitted by a weaker bar than a recommendation.
+    if (!candidateHardExcluded(value, [value], restrictions)) return;
+    // Attribution only. An empty id list means the conservative substring fallback
+    // fired on a custom restriction with no canonical definition — still a refusal.
+    const matched =
+      field === "ingredient"
+        ? resolveIngredientRestrictions(value, active)
+        : resolveTextRestrictions(value, active);
+    violations.push({ field, value, restrictionIds: matched.map((m) => m.restriction.id) });
+  };
+
+  for (const ingredient of proposal.ingredients ?? []) check(ingredient, "ingredient");
+  for (const step of proposal.instructions ?? []) check(step, "instruction");
+
+  return { safe: violations.length === 0, violations };
+}
+
+/**
+ * Render the restriction reference an AI prompt shows the model, FROM the canonical
+ * library (PROD6).
+ *
+ * The planner adapt prompt previously carried a hand-written reference naming five
+ * restrictions — Vegetarian, Vegan, Dairy-Free, Gluten-Free, Nut-Free — while the
+ * canonical library carries thirteen. Sesame, soy, shellfish, eggs, mustard and coconut
+ * were simply absent, so a model instructed to "scan every ingredient against the
+ * household restrictions" was scanning against a list that never mentioned them.
+ *
+ * That hand-written block was a second rules engine living in a string, and it had
+ * already drifted. This renders the same block from `RestrictionDefinition`s, so the
+ * model is told about a restriction because the library defines it — and adding a
+ * restriction to the library updates every prompt that shows one.
+ *
+ * It carries `derivedIngredients` and `hiddenIngredients` deliberately: they are the
+ * names an allergen hides behind (tahini for sesame, casein for dairy), which is
+ * exactly what a model scanning ingredient text needs and what a bare label omits.
+ *
+ * This is a PROJECTION, never an authority. Nothing downstream may trust that the
+ * model read it — `validateAdaptationSafety` re-checks the answer regardless.
+ */
+export function renderRestrictionReferenceForPrompt(restrictions: string[]): string {
+  const active = resolveActiveRestrictions(dedupe(restrictions));
+  if (active.length === 0) return "  (no canonical restrictions declared)";
+  return active
+    .map((r) => {
+      const also = dedupe([...(r.derivedIngredients ?? []), ...(r.hiddenIngredients ?? [])]);
+      const hidden = also.length
+        ? ` Also appears as: ${also.slice(0, 18).join(", ")}${also.length > 18 ? ", …" : ""}.`
+        : "";
+      return `- ${r.displayName} (${r.tier === "major_allergen" ? "MAJOR ALLERGEN" : "restriction"}): every source must be substituted.${hidden}`;
+    })
+    .join("\n");
+}
+
+/** The refusal an unresolved context must produce. Never an empty violation list. */
+export function refuseAdaptation(): AdaptationSafetyVerdict {
+  return { safe: false, violations: [], unavailable: true };
+}
+
+/**
+ * The union of hard restrictions binding one meal: every household eater plus any
+ * entry-specific guests. One helper so no caller re-derives the union by hand and
+ * quietly forgets the guests.
+ */
+export function unionHardRestrictions(
+  ctx: HouseholdSafetyContext,
+  extraEaters: Array<{ hardRestrictions?: string[] | null }> = [],
+): string[] {
+  return dedupe([
+    ...ctx.hardRestrictions,
+    ...extraEaters.flatMap((e) => e.hardRestrictions ?? []),
+  ]);
 }
 
 /**

@@ -279,7 +279,7 @@ function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, 
             <Tooltip>
               <TooltipTrigger asChild>
                 <a href={sourceUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} data-testid={`link-recipe-${key}`}>
-                  <Button size="icon" variant="ghost" className="h-7 w-7" asChild><span><Globe className="h-4 w-4" /></span></Button>
+                  <Button size="icon" variant="ghost" className="h-7 w-7" aria-label="View the original recipe" asChild><span><Globe className="h-4 w-4" /></span></Button>
                 </a>
               </TooltipTrigger>
               <TooltipContent><p className="text-xs">View original recipe</p></TooltipContent>
@@ -289,7 +289,7 @@ function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, 
           {mealId && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => navigate(`/meals/${mealId}`)} data-testid={`button-edit-${key}`}>
+                <Button size="icon" variant="ghost" className="h-7 w-7" aria-label="View and edit this recipe" onClick={() => navigate(`/meals/${mealId}`)} data-testid={`button-edit-${key}`}>
                   <Pencil className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
@@ -300,7 +300,7 @@ function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, 
           {mealId && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => addToListMutation.mutate()} disabled={addToListMutation.isPending} data-testid={`button-basket-${key}`}>
+                <Button size="icon" variant="ghost" className="h-7 w-7" aria-label="Add to basket" onClick={() => addToListMutation.mutate()} disabled={addToListMutation.isPending} data-testid={`button-basket-${key}`}>
                   {addToListMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingBasket className="h-4 w-4" />}
                 </Button>
               </TooltipTrigger>
@@ -311,7 +311,7 @@ function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, 
           {mealId && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => analyzeMutation.mutate()} disabled={analyzeMutation.isPending} data-testid={`button-analyse-${key}`}>
+                <Button size="icon" variant="ghost" className="h-7 w-7" aria-label="Analyse nutrition" onClick={() => analyzeMutation.mutate()} disabled={analyzeMutation.isPending} data-testid={`button-analyse-${key}`}>
                   {analyzeMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Microscope className="h-4 w-4" />}
                 </Button>
               </TooltipTrigger>
@@ -322,7 +322,7 @@ function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, 
           {isFreezerEligible && mealId && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button size="icon" variant="ghost" className="h-7 w-7 text-blue-400" data-testid={`button-freeze-${key}`}>
+                <Button size="icon" variant="ghost" className="h-7 w-7 text-blue-400" aria-label="Add to freezer" data-testid={`button-freeze-${key}`}>
                   <Snowflake className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>

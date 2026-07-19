@@ -73,7 +73,9 @@ import { runBackfill } from "./lib/backfill-classifier";
 import { runCategoryNormalisation } from "./lib/normalise-categories";
 import { matchSubstitutionRules, collectProhibitedPhrases } from "@shared/substitution-rules";
 import { runAmbiguousCategoryBackfill } from "./lib/backfill-ambiguous-categories";
-import { isAdmin, hasPremiumAccess, assertAdmin } from "./lib/access";
+import { isAdmin, hasPremiumAccess, hasFeatureAccess, assertAdmin } from "./lib/access";
+import { entitlementsFromUser } from "./commerce/entitlement-service";
+import { limitFor } from "@shared/commerce";
 import {
   summarizeOverview,
   summarizeCapabilities,
@@ -160,6 +162,11 @@ import {
   requireHardRestrictions,
   isMealSafeForHousehold,
   HouseholdSafetyUnavailableError,
+  // PROD6 — the adaptation gate. Every food-producing route reaches these.
+  validateAdaptationSafety,
+  refuseAdaptation,
+  unionHardRestrictions,
+  renderRestrictionReferenceForPrompt,
 } from "./lib/household-dietary-safety.js";
 
 // Singleton index built once at startup — all rules are stateless
@@ -531,6 +538,7 @@ function extractJsonLdImage(recipe: JsonLdRecipe): string | null {
 
 import { APP_VERSION } from "./app-version";
 import { registerTrustRoutes } from "./trust-routes";
+import { registerCommerceRoutes } from "./commerce-routes";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -543,6 +551,12 @@ export async function registerRoutes(
   // the same way setupAuth registers the auth endpoints: a bounded domain owns
   // its own module rather than appending to this file.
   registerTrustRoutes(app);
+
+  // BUS2A — the commercial domain: the plan catalogue, the entitlement
+  // projection, and the billing webhook door. Takes no payments and activates
+  // no subscriptions; the provider boundary is server/commerce/billing-provider.ts
+  // and the registered provider is NoBillingProvider in every environment.
+  registerCommerceRoutes(app);
 
   app.get('/api/version', (_req, res) => {
     res.json({ version: APP_VERSION });
@@ -5391,12 +5405,67 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       const body = bodySchema.parse(req.body);
       const mealId = parseInt(req.params.id);
       const meal = await storage.getMeal(mealId);
-      if (!meal) return res.status(404).json({ message: "Meal not found" });
+      // TRUST1-S3A ownership idiom, matching this route's three siblings (:1251, :9983,
+      // :10420) and its immediate neighbour link-template above. 404 not 403 — "not
+      // yours" and "not there" must be indistinguishable from outside.
+      if (!meal || meal.userId !== req.user!.id) return res.status(404).json({ message: "Meal not found" });
+
+      // PROD6 — this route was restriction-blind by construction.
+      //
+      // Exclusions arrived as `req.body.memberExclusions`, i.e. the CLIENT decided what
+      // the household must avoid — and the live client (meal-detail-page.tsx) sends only
+      // `{ goal }`, so in practice the list was empty on every real call. Meanwhile the
+      // swap tables in recipe-swap-engine.ts propose smoked tofu (soy), soy sauce (soy +
+      // gluten) and almond flour (tree nut) with no reference to any restriction.
+      //
+      // The household is now resolved SERVER-SIDE from the canonical owner. The client's
+      // `memberExclusions` is still honoured, but only ADDITIVELY — it can narrow what is
+      // offered, never widen it. A safety input that the caller can set is not a safety
+      // input; it is a suggestion, and it is treated as one.
+      const swapSafetyCtx = await resolveHouseholdSafetyContext(req.user!.id);
+      if (swapSafetyCtx.status === "unavailable") {
+        return res.status(503).json({
+          message: "We couldn't confirm your household's dietary needs, so we haven't suggested any swaps.",
+          code: "HOUSEHOLD_SAFETY_UNAVAILABLE",
+        });
+      }
+      const swapRestrictions = swapSafetyCtx.hardRestrictions;
+
       const result = await applyRecipeSwaps(
         { name: meal.name, ingredients: meal.ingredients },
         body.goal,
-        { memberExclusions: body.memberExclusions }
+        {
+          // Server-resolved restrictions are unioned in, so the engine can no longer
+          // propose a replacement the household cannot eat.
+          hardRestrictions: swapRestrictions,
+          memberExclusions: [...(body.memberExclusions ?? []), ...swapRestrictions],
+        }
       );
+
+      // Belt and braces: whatever survived the engine's own filter is re-checked
+      // through the canonical gate before it is shown, so the engine's rule tables can
+      // never be the last word on safety.
+      const swapVerdict = validateAdaptationSafety(
+        { ingredients: result.changedIngredients.map((c) => c.replacement) },
+        swapRestrictions,
+      );
+      if (!swapVerdict.safe) {
+        console.error(
+          `[ADAPT_SAFETY] recipe-swap produced unsafe replacement(s) for meal ${mealId} —`,
+          swapVerdict.violations.map((v) => `"${v.value}" → [${v.restrictionIds.join(", ") || "custom-restriction"}]`),
+        );
+        const unsafe = new Set(swapVerdict.violations.map((v) => v.value));
+        const safeChanges = result.changedIngredients.filter((c) => !unsafe.has(c.replacement));
+        return res.json({
+          ...result,
+          changedIngredients: safeChanges,
+          basketChanges: safeChanges.map((c) => `Replace "${c.original}" with "${c.replacement}"`),
+          explanation:
+            safeChanges.length === 0
+              ? "We couldn't suggest swaps for this recipe that suit your household's dietary needs."
+              : result.explanation,
+        });
+      }
       res.json(result);
     } catch (err) {
       if (err instanceof z.ZodError) return res.status(400).json({ message: "Invalid goal", errors: err.errors });
@@ -7189,11 +7258,22 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
       const user = req.user!;
-      const MAX_FREE = parseInt(process.env.MAX_PRIVATE_TEMPLATES_FREE || "4");
-      if (!hasPremiumAccess(user)) {
+      // BUS2A — converged onto the plan catalogue. The ceiling was previously
+      // `process.env.MAX_PRIVATE_TEMPLATES_FREE || "4"`: the free plan's own
+      // limit was settable by an environment variable with no review, and was
+      // written down nowhere a person could read. Same number (4), one owner.
+      // The count is only fetched when a ceiling actually exists, so plans with
+      // no limit do not pay for a query that cannot change the answer.
+      const templateCeiling = limitFor(
+        entitlementsFromUser(user),
+        "max-private-plan-templates",
+      );
+      if (templateCeiling !== null) {
         const count = await storage.countUserPrivateTemplates(user.id);
-        if (count >= MAX_FREE) {
-          return res.status(403).json({ message: `Free plan limit is ${MAX_FREE} saved templates. Upgrade to Premium for unlimited.` });
+        if (count >= templateCeiling) {
+          return res.status(403).json({
+            message: `Free plan limit is ${templateCeiling} saved templates. Upgrade to Premium for unlimited.`,
+          });
         }
       }
       const { name, season, description } = z.object({
@@ -7281,7 +7361,10 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         if (template.status !== "published" && !isAdmin(user)) {
           return res.status(404).json({ message: "Template not found" });
         }
-        if (template.isPremium && !hasPremiumAccess(user) && !isAdmin(user)) {
+        // BUS2A — names the capability being protected rather than the tier.
+        // The explicit isAdmin bypass stays at the call site, visibly, because
+        // an operator bypass is a fact about a role and never about a plan.
+        if (template.isPremium && !hasFeatureAccess(user, "premium-meal-templates") && !isAdmin(user)) {
           return res.status(403).json({ message: "Premium required to import this plan" });
         }
       } else {
@@ -7316,15 +7399,20 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     const user = req.user!;
     const templateId = req.params.id;
     try {
-      const tier = user.subscriptionTier as string;
-      const hasPremium = tier === "premium" || tier === "friends_family";
-      if (!hasPremium) {
+      // BUS2A — converged. This block previously re-derived the tier by hand
+      // (`tier === "premium" || tier === "friends_family"`), a copy of
+      // server/lib/access.ts's rule living in a route handler, and compared
+      // against the integer literal 1. Both now come from the plan catalogue.
+      const shareCeiling = limitFor(entitlementsFromUser(user), "max-shared-plans");
+      if (shareCeiling !== null) {
         const sharedCount = await storage.countSharedTemplates(user.id);
         const templates = await storage.getUserPrivateTemplates(user.id);
         const thisTemplate = templates.find(t => t.id === templateId);
         const alreadyShared = thisTemplate?.visibility === "shared";
-        if (!alreadyShared && sharedCount >= 1) {
-          return res.status(403).json({ message: "Free accounts can share 1 plan at a time. Upgrade to Premium to share more." });
+        if (!alreadyShared && sharedCount >= shareCeiling) {
+          return res.status(403).json({
+            message: `Free accounts can share ${shareCeiling} plan at a time. Upgrade to Premium to share more.`,
+          });
         }
       }
       const token = await storage.sharePlanTemplate(templateId, user.id);
@@ -9711,12 +9799,12 @@ For ingredients NOT covered by a pre-determined substitution, you must still:
 - ALWAYS prefer substituting over removing
 - Only set replacement to null if there is genuinely no suitable substitute AND the ingredient violates a restriction${constraintBlock}
 
-HOUSEHOLD RESTRICTION REFERENCE (for ingredients not already handled above):
+DIET PATTERNS (owned by shared/dietRules.ts):
 - Vegetarian: ALL meat and fish must be substituted — beef, pork, chicken, lamb, turkey, bacon, ham, sausage, mince, lardons, anchovies, fish fillets, shellfish, and any meat/fish stock.
 - Vegan: same as Vegetarian PLUS all dairy and eggs must be substituted.
-- Dairy-Free: ALL dairy must be substituted — milk, cream, creme fraiche, double cream, single cream, butter, all cheeses, yoghurt, sour cream.
-- Gluten-Free: ALL gluten-containing ingredients must be substituted — wheat flour, pasta, lasagne sheets, noodles, bread, breadcrumbs, soy sauce (unless tamari), barley, rye.
-- Nut-Free: remove or substitute all tree nuts and peanuts.
+
+THIS HOUSEHOLD'S DECLARED RESTRICTIONS (rendered from the canonical restriction library — PROD6):
+${renderRestrictionReferenceForPrompt(allRestrictionKeywords)}
 
 CRITICAL — METHOD REWRITE:
 Think about what each SUBSTITUTE ingredient physically IS — never just rename the original inside its steps.
@@ -9774,6 +9862,44 @@ Keep each string short and concrete. Return [] for any array with no entries.`;
               allRestrictionKeywords,
               ruleProhibitedPhrases
             );
+            // PROD6 — THE SAFETY GATE ON AI OUTPUT.
+            //
+            // `detectImpossibleMethodPairings` above is a CULINARY-COHERENCE check
+            // (de-veining a substitute, shell references, animal stock). It was the
+            // only validation on this path, and it is not a safety check: it would
+            // pass "stir through the tahini" for a sesame household without comment.
+            //
+            // The model was told to substitute anything the rule engine missed
+            // "using best culinary judgement", against a prompt-embedded reference
+            // that names five restrictions while the canonical library carries thirteen.
+            // So every ingredient it INVENTS, and every method step it rewrites,
+            // is unvalidated free text until it passes through here.
+            //
+            // Restrictions are re-resolved from the CANONICAL owner rather than
+            // reused from the prompt-building profiles above — the prompt's job is
+            // to inform the model, and it must never also be the thing that decides
+            // whether the answer is safe.
+            const adaptSafetyCtx = await resolveHouseholdSafetyContext(req.user!.id);
+            const boundRestrictions = unionHardRestrictions(adaptSafetyCtx, guestEaters);
+            const safetyVerdict =
+              adaptSafetyCtx.status === "unavailable"
+                ? refuseAdaptation()
+                : validateAdaptationSafety(
+                    {
+                      // Everything the model proposes the household will EAT.
+                      ingredients: [
+                        ...hspParsed.ingredientChanges.map((c: any) => c?.replacement),
+                        ...(Array.isArray(hspParsed.householdExtraIngredients)
+                          ? hspParsed.householdExtraIngredients
+                          : []),
+                      ],
+                      // And everything it proposes they DO — where an allergen can
+                      // appear without ever being listed as an ingredient.
+                      instructions: updatedInstructions,
+                    },
+                    boundRestrictions,
+                  );
+
             const validationFailed = validationIssues.length > 0;
             if (validationFailed) {
               console.error(
@@ -9783,7 +9909,29 @@ Keep each string short and concrete. Return [] for any array with no entries.`;
                 JSON.stringify(updatedInstructions)
               );
             }
+            if (!safetyVerdict.safe) {
+              console.error(
+                "[ADAPT_SAFETY] REFUSED — AI adaptation violates household restrictions.",
+                safetyVerdict.unavailable
+                  ? "Safety context unavailable; refusing rather than guessing."
+                  : safetyVerdict.violations.map(
+                      (v) => `${v.field}: "${v.value}" → [${v.restrictionIds.join(", ") || "custom-restriction"}]`,
+                    ),
+              );
+            }
 
+            // A preview that fails the safety gate is NOT attached. There is no
+            // "show it with a warning" branch, deliberately: this object is the
+            // sole input to accept-household-safe-variant, so anything reachable
+            // here is one tap from being persisted as household-safe. Rule T0 —
+            // safety supersedes everything; an unsafe candidate is EXCLUDED
+            // outright, never merely flagged.
+            if (!safetyVerdict.safe) {
+              adaptationResult.householdSafePreview = undefined;
+              adaptationResult.householdSafeUnavailableReason = safetyVerdict.unavailable
+                ? "safety-context-unavailable"
+                : "adaptation-violates-restrictions";
+            } else {
             adaptationResult.householdSafePreview = {
               accommodates: hspParsed.accommodates,
               ingredientChanges: hspParsed.ingredientChanges,
@@ -9792,6 +9940,7 @@ Keep each string short and concrete. Return [] for any array with no entries.`;
               tradeoffs: hspParsed.tradeoffs,
               ...(validationFailed && { validationFailed: true, validationIssues }),
             };
+            }
             console.log(
               "[ADAPT_DIAG] 12c. household-safe preview attached, updatedInstructions =",
               updatedInstructions.length,
@@ -10171,6 +10320,45 @@ Keep each string short and concrete. Return [] for any array with no entries.`;
       // Build historical restriction snapshot with stable eater IDs
       const eaterRows = await storage.getHouseholdEaters(householdId);
       const guestEaters = (entry.guestEaters as import("@shared/household-eater").GuestEater[] | null) ?? [];
+
+      // PROD6 — THE PERSISTENCE GATE. Re-validated here, not trusted from the preview.
+      //
+      // The preview was gated when it was generated, and that is not sufficient on its
+      // own for three reasons: `userEditedInstructions` arrives from the client and was
+      // never gated at all; `isUpdate` applies changes against the VARIANT's current
+      // ingredients rather than the original, so the composed result differs from what
+      // was previewed; and the restriction set can change between preview and accept.
+      //
+      // What is written here is labelled `household-safe-variant` and carries a
+      // `householdSafeFor` snapshot — the row asserts a safety claim about real people.
+      // It must be true at the moment of the write, so the FINAL composed ingredients
+      // and instructions are what gets checked, not the diff that produced them.
+      const acceptSafetyCtx = await resolveHouseholdSafetyContext(req.user!.id);
+      const acceptRestrictions = unionHardRestrictions(acceptSafetyCtx, guestEaters);
+      const acceptVerdict =
+        acceptSafetyCtx.status === "unavailable"
+          ? refuseAdaptation()
+          : validateAdaptationSafety(
+              { ingredients: variantIngredients, instructions: variantInstructions },
+              acceptRestrictions,
+            );
+      if (!acceptVerdict.safe) {
+        console.error(
+          `[ADAPT_SAFETY] REFUSED PERSIST — entry ${entryId} variant violates household restrictions.`,
+          acceptVerdict.unavailable
+            ? "Safety context unavailable."
+            : acceptVerdict.violations.map(
+                (v) => `${v.field}: "${v.value}" → [${v.restrictionIds.join(", ") || "custom-restriction"}]`,
+              ),
+        );
+        return res.status(422).json({
+          message: acceptVerdict.unavailable
+            ? "We couldn't confirm your household's dietary needs, so we haven't saved this version."
+            : "This version still contains something your household can't eat, so we haven't saved it.",
+          code: acceptVerdict.unavailable ? "HOUSEHOLD_SAFETY_UNAVAILABLE" : "ADAPTATION_VIOLATES_RESTRICTIONS",
+          violations: acceptVerdict.violations,
+        });
+      }
 
       const householdSafeFor: import("@shared/meal-adaptation").HouseholdSafeForSnapshot = {
         eaters: [
@@ -10818,8 +11006,49 @@ Rules:
       });
       const raw = completion.choices[0]?.message?.content?.trim() ?? '{}';
       const parsed = JSON.parse(raw);
-      const suggestions = Array.isArray(parsed.suggestions) ? parsed.suggestions.slice(0, 3) : [];
-      res.json({ suggestions });
+      const rawSuggestions = Array.isArray(parsed.suggestions) ? parsed.suggestions.slice(0, 3) : [];
+
+      // PROD6 — VALIDATE THE ANSWER, not just the question.
+      //
+      // SURF1B made this route fail closed when the household could not be RESOLVED,
+      // and put the restrictions in the prompt. Neither checks what came back. A
+      // prompt is an instruction to a model, not a guarantee about its output — the
+      // same gap PROD5 found on the planner adapt path, in a route that also calls
+      // `new OpenAI()` directly.
+      //
+      // Each suggestion is checked on the text the household would act on: the dish
+      // title and the extras it says to buy. Unsafe ones are DROPPED rather than
+      // refusing the whole response — a tree-nut household asking what to cook should
+      // still get the two safe ideas, and must never see the third.
+      const suggestions = rawSuggestions.filter((s: any) => {
+        const verdict = validateAdaptationSafety(
+          {
+            ingredients: Array.isArray(s?.extraIngredients) ? s.extraIngredients : [],
+            instructions: [s?.title, s?.description],
+          },
+          hardRestrictions,
+        );
+        if (!verdict.safe) {
+          console.error(
+            `[ADAPT_SAFETY] suggest-from-ingredients dropped an unsafe suggestion "${s?.title}" —`,
+            verdict.violations.map((v) => `${v.field}: "${v.value}" → [${v.restrictionIds.join(", ") || "custom-restriction"}]`),
+          );
+        }
+        return verdict.safe;
+      });
+
+      // Never present a filtered list as if it were the whole answer.
+      const withheld = rawSuggestions.length - suggestions.length;
+      res.json({
+        suggestions,
+        ...(withheld > 0 && {
+          withheldForSafety: withheld,
+          withheldNote:
+            suggestions.length === 0
+              ? "We couldn't suggest anything from these ingredients that suits your household's dietary needs."
+              : `We left out ${withheld} idea${withheld > 1 ? "s" : ""} that ${withheld > 1 ? "don't" : "doesn't"} suit your household's dietary needs.`,
+        }),
+      });
     } catch (err) {
       console.error("[suggest-from-ingredients]", err);
       res.status(500).json({ message: "Failed to generate suggestions" });
@@ -10897,10 +11126,41 @@ Generate a complete recipe using these as the foundation.`;
       });
       const raw = completion.choices[0]?.message?.content?.trim() ?? '{}';
       const parsed = JSON.parse(raw);
+      const genIngredients = Array.isArray(parsed.ingredients) ? parsed.ingredients : [];
+      const genInstructions = Array.isArray(parsed.instructions) ? parsed.instructions : [];
+
+      // PROD6 — VALIDATE THE ANSWER, not just the question.
+      //
+      // This route returns a COMPLETE recipe card the household cooks from and can
+      // save. The restrictions were in the prompt; nothing checked whether the model
+      // honoured them. Both halves are checked, because an allergen can enter as an
+      // ingredient OR appear only in a step ("finish with a spoon of tahini") — the
+      // method-blindness PROD5 logged as §10.5 and the reason `isMealSafeForHousehold`
+      // is the wrong gate here.
+      //
+      // Refused whole rather than filtered: dropping one ingredient from a recipe
+      // leaves instructions that still reference it, which is a broken recipe
+      // presented as a safe one. A partially repaired recipe is the more dangerous
+      // artefact.
+      const genVerdict = validateAdaptationSafety(
+        { ingredients: genIngredients, instructions: genInstructions },
+        hardRestrictions,
+      );
+      if (!genVerdict.safe) {
+        console.error(
+          `[ADAPT_SAFETY] REFUSED — generated recipe "${title}" violates household restrictions.`,
+          genVerdict.violations.map((v) => `${v.field}: "${v.value}" → [${v.restrictionIds.join(", ") || "custom-restriction"}]`),
+        );
+        return res.status(422).json({
+          message: "We couldn't generate a version of this recipe that suits your household's dietary needs, so we haven't suggested one.",
+          code: "ADAPTATION_VIOLATES_RESTRICTIONS",
+        });
+      }
+
       res.json({
         title: typeof parsed.title === 'string' ? parsed.title : title,
-        ingredients: Array.isArray(parsed.ingredients) ? parsed.ingredients : [],
-        instructions: Array.isArray(parsed.instructions) ? parsed.instructions : [],
+        ingredients: genIngredients,
+        instructions: genInstructions,
         servings: typeof parsed.servings === 'number' && parsed.servings > 0 ? parsed.servings : 2,
         confidence: 'full',
       });

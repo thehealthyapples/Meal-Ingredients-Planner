@@ -237,9 +237,27 @@ const MEAL_INTENT: ResolvedIntent = { capability: "meal-discovery", verb: "searc
 const MEAL_OUTCOME: IntentOutcome = { status: "ok", capabilityId: "meal-discovery", verb: "search", message: "ok", result: MEAL_DISCOVERY_RESULT };
 
 {
+  // PROD3 — this block used user 1 and asserted that meal 42 arrives on the turn.
+  //
+  // User 1's household (44) is **Gluten-Free**, and meal 42 is "Pasta Bake Test"
+  // — `["300g pasta", …]`. The canonical gate refuses it:
+  //   isMealSafeForHousehold(42, ctx(user 1)) → { safe:false, reason:"household-hard-restriction" }
+  // Meal 100, the other fixture, is refused too (`diet:Keto`).
+  //
+  // So this assertion — passing, and inside `npm test` — was pinning the delivery
+  // of a gluten-bearing pasta bake to a gluten-free household as CORRECT. It was
+  // not testing safety and never claimed to; INT36's merge behaviour is what it
+  // is for, and it simply had no idea the household it borrowed had allergens.
+  //
+  // The merge behaviour is still right and is still tested — on an UNRESTRICTED
+  // household (user 2, `hardRestrictions: []`, no diet pattern), where the safety
+  // gate is inactive and the merge is therefore the only thing under test. The
+  // withholding behaviour for a restricted household is owned by
+  // `test-prod3-companion-restriction-safety.ts`, which asserts this exact
+  // fixture against user 1 and requires meal 42 to be absent.
   const llm = new StubLlm();
   const gw = makeGateway(new StubResolver([MEAL_INTENT]), llm, stubHandle({ "meal-discovery": MEAL_OUTCOME }));
-  const r = await gw.processUserTurn(1, "pasta meals", "floating", {}, ctx(1));
+  const r = await gw.processUserTurn(2, "pasta meals", "floating", {}, ctx(2));
   assert(llm.calls === 1, "LLM still writes the natural-language summary (existing behaviour preserved)");
   assert(r.text === "I found some pasta meals for you.", "turn text is the LLM summary");
   assert(r.discoveries.length === 1, "one native discovery response attached");

@@ -34,7 +34,7 @@ export default function PlantDiversityPage() {
 
   useEffect(() => {
     const handler = (e: Event) => {
-      if ((e as CustomEvent<{ href: string }>).detail?.href === "/plant-diversity") {
+      if ((e as CustomEvent<{ href: string }>).detail?.href === "/nutrition") {
         setMobileWorkspaceOpen(true);
       }
     };

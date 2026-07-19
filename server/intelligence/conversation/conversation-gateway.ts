@@ -123,6 +123,16 @@ import {
 } from "./food-intelligence-composition.js";
 import type { UpliftMatchResult } from "../../lib/uplift-types.js";
 import { buildHouseholdNutritionEnrichment } from "./household-nutrition-enrichment.js";
+// PROD3 — the canonical household dietary safety resolver (SURF1B). The
+// Companion is its first consumer inside server/intelligence/. Nothing here
+// defines a restriction, an allergen or a matching rule: every fact and every
+// verdict below belongs to this owner.
+import {
+  resolveHouseholdSafetyContext,
+  isMealSafeForHousehold,
+  isSafetyGateActive,
+  type HouseholdSafetyContext,
+} from "../../lib/household-dietary-safety.js";
 import {
   composeContext,
   CAPABILITY_CONTEXT_BUDGET_CHARS,
@@ -1018,10 +1028,34 @@ async function buildGroundedResponse(
     queryResults.get("nutrition-knowledge"),
     userId,
   );
-  const enrichment = [...staticEnrichment, ...nutritionEnrichment, ...householdNutritionEnrichment].slice(
-    0,
-    MAX_ENRICHMENT_ITEMS,
-  );
+  // PROD4 — the three sources now take TURNS instead of queueing.
+  //
+  // This was `[...static, ...nutrition, ...householdNutrition].slice(0, 3)`, and
+  // the concatenation order decided everything: whatever `staticEnrichment`
+  // produced was taken first, and only leftovers reached the two nutrition
+  // sources. That is not a theoretical starvation — `nutrition-knowledge`
+  // declares FOUR static enrichment items against a MAX of THREE, so on a
+  // nutrition turn its own static items fill every slot by themselves and both
+  // NUT1 and FI5 are starved. They were starved on exactly the turns they were
+  // built for, which is why no room has ever rendered them.
+  //
+  // Round-robin fixes it without inventing a ranking policy: static still takes
+  // the first slot, so the previous ordering's intent is preserved, but a source
+  // cannot take a SECOND slot while another source is still waiting for its
+  // first. No item is fabricated, reworded or reordered within its own source.
+  const enrichment = ((): CompanionEnrichmentItem[] => {
+    const queues = [staticEnrichment, nutritionEnrichment, householdNutritionEnrichment];
+    const merged: CompanionEnrichmentItem[] = [];
+    for (let round = 0; merged.length < MAX_ENRICHMENT_ITEMS; round++) {
+      const before = merged.length;
+      for (const q of queues) {
+        if (merged.length >= MAX_ENRICHMENT_ITEMS) break;
+        if (q.length > round) merged.push(q[round]);
+      }
+      if (merged.length === before) break; // every queue exhausted
+    }
+    return merged;
+  })();
 
   // INT40: Companion Action proposals — built from the SAME discoveries just
   // assembled above, gated by executability, honest-gap on missing planner-day
@@ -1155,10 +1189,54 @@ async function buildGroundedResponse(
     .map(t => `${t.role === "user" ? "User" : "Apple"}: ${t.utterance}`)
     .join("\n");
 
+  // PROD3 — THE HOUSEHOLD SAFETY BLOCK.
+  //
+  // The household's hard restrictions now reach the model on EVERY turn, not
+  // only on turns the `household` capability happens to be routed for. Before
+  // this, a turn routed to `meal-discovery` alone carried no restriction fact
+  // at all, and HARD RULES 1–5 said nothing about allergens — so the one thing
+  // Apple must never get wrong was the one thing it was never told.
+  //
+  // This is a RULE, not grounding. INT17 remains the sole owner of the CONTEXT
+  // DATA block below; nothing here is composed, serialised or budgeted into it.
+  // The restriction list is the operand of rule 6, sourced verbatim from the
+  // canonical owner (SURF1B) and re-derived nowhere.
+  //
+  // It fails CLOSED. `resolveHouseholdSafetyContext` never throws and returns
+  // `unavailable` rather than an empty household, and an unavailable context
+  // forbids food recommendation outright rather than silently emitting no
+  // restriction block — which is the exact silence SURF1B's
+  // `requireHardRestrictions` was written to make impossible.
+  const safetyCtx: HouseholdSafetyContext = await resolveHouseholdSafetyContext(userId);
+  const safetyBlock = (() => {
+    if (safetyCtx.status === "unavailable") {
+      return `HOUSEHOLD DIETARY SAFETY — UNRESOLVED:
+THA could not read this household's allergies and dietary restrictions for this turn.
+You therefore do NOT know what is unsafe for them. Do not recommend, suggest, endorse or
+propose any specific food, meal, recipe or ingredient in this turn. Say plainly that you
+cannot check their dietary requirements right now, and answer only the part of the
+question that does not involve suggesting something to eat.`;
+    }
+    const hard = safetyCtx.hardRestrictions;
+    if (hard.length === 0) {
+      return `HOUSEHOLD DIETARY SAFETY:
+No hard dietary restrictions or allergies are recorded for this household.
+Never state or imply that a food is "safe", "allergy-friendly" or "suitable for" anyone —
+THA has nothing recorded to check that against.`;
+    }
+    const patterns = safetyCtx.dietPatterns.length
+      ? `\nDiet patterns held by members (hard for that member): ${safetyCtx.dietPatterns.join(", ")}.`
+      : "";
+    return `HOUSEHOLD DIETARY SAFETY — THIS HOUSEHOLD HAS DECLARED RESTRICTIONS:
+${hard.join(", ")}${patterns}
+These are the household's own declared allergies and hard restrictions, and they apply to
+EVERY member at the table — including children with no account of their own.`;
+  })();
+
   // EWO2 Stage 4/Risk P1: the personality voice fragment is appended AFTER
   // every hard rule below, as its own clearly-labelled paragraph — never
-  // interleaved with, prepended before, or allowed to replace rules 1–5.
-  // It may only add tone words; the grounding/firewall/format rules are
+  // interleaved with, prepended before, or allowed to replace rules 1–6.
+  // It may only add tone words; the grounding/firewall/safety/format rules are
   // identical for every personality (EWO1 §5 hard invariant).
   const systemPrompt =
 `You are Apple, the health assistant inside The Healthy Apples (THA) meal-planning app.
@@ -1169,6 +1247,9 @@ HARD RULES — you must never break these:
 3. If the specific detail asked for is not in the context, do NOT guess or invent it. Instead answer honestly in a full sentence: say what you DO have that is relevant, or state plainly that it isn't recorded yet (e.g. "You don't have a diet pattern recorded in your profile yet.") — never the bare phrase "I don't have that information right now" on its own, and never a fabricated fact to fill the gap.
 4. Be practical and concise (1–4 sentences). Never judgemental about food choices.
 5. Only reference specific entities (meals, weeks, products) if they appear in the context data with real IDs — and DO include every such entity in entityRefs.
+6. SAFETY OVERRIDES EVERYTHING. Never recommend, suggest, endorse or describe as suitable any food, meal, recipe or ingredient that conflicts with the HOUSEHOLD DIETARY SAFETY block below. This applies to foods you know of but were not given in the context, and to substitutions you might propose. A restriction belongs to the whole household, not only to the person typing. If the honest answer is that you have nothing safe to suggest, say so — offering nothing is always correct, and offering something unsafe never is. Never claim a specific food IS safe for them; THA verifies that, not you.
+
+${safetyBlock}
 
 USING THE CONTEXT WELL (apply within the HARD RULES above — never to override them):
 - SYNTHESISE: when more than one CONTEXT DATA section is present, combine them into ONE coherent answer that connects the facts, rather than reciting each section separately. Include "Related Context" naturally in the main answer rather than as a separate list.
@@ -1184,7 +1265,7 @@ When answering about a specific food, follow these principles:
 4. HIGHLIGHT ONE PRACTICAL INSIGHT — if the enrichment provides a "recommendation" item (practical preparation or pairing advice), weave it naturally into your answer as the key takeaway. This is what makes the answer actionable. Example: "Here's what matters in practice: chopping broccoli and letting it sit for a few minutes before cooking helps preserve sulforaphane."
 5. WHEN IN DOUBT — if nutrients or benefits aren't explicitly in the context, describe what you DO have rather than inventing. Honest gaps are better than guesses.
 
-PERSONALITY (voice only — never overrides rules 1–5 above): ${systemPromptFragment(personalityId)}
+PERSONALITY (voice only — never overrides rules 1–6 above, and never softens rule 6): ${systemPromptFragment(personalityId)}
 
 TODAY: ${frame.temporalAnchor}
 
@@ -1295,9 +1376,17 @@ entityRefs must ONLY contain items that appear in the context data above with a 
             (r as EntityRef).id != null,
         )
       : [];
-    return {
+    // PROD3 — every meal this turn is about to hand the household is put to the
+    // canonical gate before it leaves the gateway, INCLUDING refs that
+    // mergeEntityRefs added on the model's behalf.
+    const validated = await validateResponseSafety(
       text,
-      entityRefs: mergeEntityRefs(llmRefs, discoveries),
+      mergeEntityRefs(llmRefs, discoveries),
+      safetyCtx,
+    );
+    return {
+      text: validated.text,
+      entityRefs: validated.entityRefs,
       outcome: primaryOutcome,
       discoveries,
       guidance,
@@ -1307,9 +1396,18 @@ entityRefs must ONLY contain items that appear in the context data above with a 
       actionDrafts,
     };
   } catch {
+    // PROD3 — the JSON-parse fallback previously returned `rawContent`, the
+    // model's unparsed output, with no validation of any kind. It is now put to
+    // the same gate: a turn that failed to parse is not a turn allowed to skip
+    // the safety check.
+    const validated = await validateResponseSafety(
+      rawContent || "I couldn't generate a response. Please try again.",
+      mergeEntityRefs([], discoveries),
+      safetyCtx,
+    );
     return {
-      text: rawContent || "I couldn't generate a response. Please try again.",
-      entityRefs: mergeEntityRefs([], discoveries),
+      text: validated.text,
+      entityRefs: validated.entityRefs,
       outcome: primaryOutcome,
       discoveries,
       guidance,
@@ -1322,11 +1420,93 @@ entityRefs must ONLY contain items that appear in the context data above with a 
 }
 
 /**
+ * PROD3 — POST-GENERATION SAFETY VALIDATION.
+ *
+ * Before this, validation of the model's output was type-shape only: `text` had
+ * to be a non-empty string and each `entityRef` needed a string `type` and a
+ * non-null `id`. Nothing checked whether the meal THA was about to hand the
+ * household was one they can actually eat.
+ *
+ * WHAT IS VALIDATED, AND WHY IT IS THE REFS AND NOT THE PROSE.
+ * An `entityRef` is a CLAIM THA makes in its own voice: it renders as a real,
+ * tappable THA meal card. The prose is the model discussing food. Scanning the
+ * prose for restriction keywords would block the Companion from doing the very
+ * thing a household most needs it to do — *"you've told us about Ava's peanut
+ * allergy, so avoid satay"* contains "peanut" and "satay" and is exactly right.
+ * So this validates the structured claim, where a match is unambiguous, and
+ * leaves the sentence alone.
+ *
+ * WHEN A REF FAILS. The ref is dropped AND the turn's text is replaced. Dropping
+ * the link alone would leave a sentence recommending a meal with the link
+ * silently removed, which reads as a broken card rather than a withheld one —
+ * and we cannot know the sentence did not name it. Withholding the whole answer
+ * is the only honest option when THA has caught itself about to say something
+ * unsafe.
+ *
+ * It fails CLOSED: an unresolved safety context refuses every meal ref
+ * (`isMealSafeForHousehold` returns `safe: false` for `status: "unavailable"`),
+ * and a storage failure while loading a meal is treated as unverifiable, not as
+ * safe.
+ */
+async function validateResponseSafety(
+  text: string,
+  entityRefs: EntityRef[],
+  safetyCtx: HouseholdSafetyContext,
+): Promise<{ text: string; entityRefs: EntityRef[]; withheld: number }> {
+  // A household with nothing to gate against needs no gate. `isSafetyGateActive`
+  // is the canonical short-circuit (SURF1B) and is deliberately TRUE for an
+  // `unavailable` context — so "we could not check" still validates, and only a
+  // genuinely unrestricted household skips the work. This mirrors
+  // `meal-service.ts`, which uses the same predicate for the same reason.
+  if (!isSafetyGateActive(safetyCtx)) return { text, entityRefs, withheld: 0 };
+
+  const mealRefs = entityRefs.filter(
+    (r) => r.type === "meal" && (typeof r.id === "number" || typeof r.id === "string"),
+  );
+  if (mealRefs.length === 0) return { text, entityRefs, withheld: 0 };
+
+  const unsafeKeys = new Set<string>();
+  for (const ref of mealRefs) {
+    const mealId = typeof ref.id === "number" ? ref.id : Number(ref.id);
+    if (!Number.isFinite(mealId)) continue;
+    try {
+      const meal = await storage.getMeal(mealId);
+      // A ref we cannot resolve is a ref we cannot vouch for.
+      if (!meal) { unsafeKeys.add(`${ref.type}:${ref.id}`); continue; }
+      const verdict = isMealSafeForHousehold(
+        { name: meal.name, ingredients: meal.ingredients ?? [] },
+        safetyCtx,
+      );
+      if (!verdict.safe) unsafeKeys.add(`${ref.type}:${ref.id}`);
+    } catch {
+      unsafeKeys.add(`${ref.type}:${ref.id}`);
+    }
+  }
+
+  if (unsafeKeys.size === 0) return { text, entityRefs, withheld: 0 };
+
+  const kept = entityRefs.filter((r) => !unsafeKeys.has(`${r.type}:${r.id}`));
+  return {
+    text:
+      "I found something, but I can't offer it — it doesn't fit your household's " +
+      "dietary requirements, so I've held it back rather than suggest it. " +
+      "Ask me again and I'll look for something that does fit.",
+    entityRefs: kept,
+    withheld: unsafeKeys.size,
+  };
+}
+
+/**
  * Union the LLM-supplied entity refs with the canonical THA refs from native
  * discovery responses (INT36), deduplicated by type+id. This guarantees a
  * discovery turn carries canonical THA page refs even when the LLM omits them —
  * so meal-discovery links always open THA meal pages — and never introduces an
  * external URL (native discovery refs are canonical THA refs by construction).
+ *
+ * PROD3 note: this function ADDS refs the model did not cite, so it is a way an
+ * unsafe meal could reach the household even when the model declined to mention
+ * it. Its output is therefore passed through `validateResponseSafety` before it
+ * leaves the gateway — the merge is not itself a safety boundary.
  */
 function mergeEntityRefs(
   llmRefs: EntityRef[],

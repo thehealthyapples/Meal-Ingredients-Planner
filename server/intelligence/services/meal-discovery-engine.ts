@@ -30,6 +30,10 @@
 import type { Meal, MealTemplate } from "@shared/schema";
 import type { DiscoveryItem, MealDiscoveryPort } from "../handlers/meal-discovery-port.js";
 import { templateToDiscoveryItem } from "../handlers/meal-discovery-port.js";
+import type {
+  HouseholdSafetyContext,
+  SafetyCheckableMeal,
+} from "../../lib/household-dietary-safety.js";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -50,6 +54,51 @@ export interface MealDiscoveryStorage {
   getMeals(userId: number): Promise<Meal[]>;
   getSystemMeals(): Promise<Meal[]>;
   getMealTemplates(): Promise<MealTemplate[]>;
+}
+
+// ---------------------------------------------------------------------------
+// The safety gate (PROD3)
+// ---------------------------------------------------------------------------
+
+/**
+ * The canonical safety surface this engine consumes. Injectable for the same
+ * reason `MealDiscoveryStorage` is: so an engine test can drive the gate without
+ * a database. Production passes the real SURF1B resolver.
+ *
+ * This engine defines NO restriction, NO allergen and NO matching rule. Every
+ * verdict below is `isMealSafeForHousehold()`'s, which is the same gate the
+ * planner, Smart Suggest and the starter cookbook already serve through.
+ */
+export interface MealDiscoverySafety {
+  resolveHouseholdSafetyContext(userId: number): Promise<HouseholdSafetyContext>;
+  isSafetyGateActive(ctx: HouseholdSafetyContext): boolean;
+  isMealSafeForHousehold(
+    meal: SafetyCheckableMeal,
+    ctx: HouseholdSafetyContext,
+  ): { safe: boolean; reason?: string };
+}
+
+/** The fields the canonical gate inspects. `meals` carries no cuisine or description. */
+function mealToSafetyCheckable(m: Meal): SafetyCheckableMeal {
+  return { name: m.name, ingredients: m.ingredients ?? [] };
+}
+
+/**
+ * A template's ingredient evidence is its SLOTS — it has no `ingredients` column.
+ *
+ * This is not a second ingredient model: the slots ARE what a template says it is
+ * built from, and they are the only ingredient facts the row carries. Anything not
+ * in a slot is not known to be in the meal.
+ */
+function templateIngredientEvidence(t: MealTemplate): string[] {
+  return [
+    ...(t.sharedBaseComponents ?? []),
+    ...(t.proteinSlots ?? []),
+    ...(t.carbSlots ?? []),
+    ...(t.vegSlots ?? []),
+    ...(t.toppingSlots ?? []),
+    ...(t.sauceSlots ?? []),
+  ].filter((s): s is string => !!s && s.trim().length > 0);
 }
 
 // ---------------------------------------------------------------------------
@@ -126,10 +175,35 @@ function buildSourcesQueried(
  * not involved at that level.
  */
 export class MealDiscoveryEngine implements MealDiscoveryPort {
-  constructor(private readonly storage: MealDiscoveryStorage) {}
+  constructor(
+    private readonly storage: MealDiscoveryStorage,
+    private readonly safety?: MealDiscoverySafety,
+  ) {}
+
+  /**
+   * Resolve the canonical safety module lazily, so importing this engine never
+   * pulls in the database layer at module load (the same reason the production
+   * port factory imports the engine dynamically).
+   */
+  private async resolveSafety(): Promise<MealDiscoverySafety> {
+    if (this.safety) return this.safety;
+    return await import("../../lib/household-dietary-safety.js");
+  }
 
   async discover(query: string, userId: number): Promise<DiscoveryItem[]> {
     const lowerQuery = query.toLowerCase();
+
+    // PROD3 — the safety gate is resolved BEFORE any candidate is admitted, and
+    // it fails closed: `resolveHouseholdSafetyContext` never throws, and an
+    // `unavailable` context makes `isSafetyGateActive` TRUE and every verdict
+    // unsafe. So a household whose restrictions could not be read receives
+    // nothing, never the unfiltered cookbook.
+    const safety = await this.resolveSafety();
+    const safetyCtx = await safety.resolveHouseholdSafetyContext(userId);
+    const gateActive = safety.isSafetyGateActive(safetyCtx);
+
+    const isSafe = (meal: SafetyCheckableMeal): boolean =>
+      !gateActive || safety.isMealSafeForHousehold(meal, safetyCtx).safe;
 
     const [personalResult, systemResult, templatesResult] = await Promise.allSettled([
       this.storage.getMeals(userId),
@@ -143,11 +217,16 @@ export class MealDiscoveryEngine implements MealDiscoveryPort {
 
     const items: DiscoveryItem[] = [];
     const seenNames = new Set<string>();
+    let excludedForSafety = 0;
 
     // 1. Personal library — always first (highest rank).
+    //    A household's OWN saved meal is gated too: saving a recipe is not a
+    //    declaration that everyone at the table can eat it, and the Companion
+    //    recommending it is a new act, not a replay of the household's own.
     if (personalOk) {
       for (const m of personalResult.value) {
         if (matchesMeal(m, lowerQuery)) {
+          if (!isSafe(mealToSafetyCheckable(m))) { excludedForSafety++; continue; }
           seenNames.add(m.name.toLowerCase().trim());
           items.push(mealToDiscoveryItem(m, "personal", "Your Cookbook"));
         }
@@ -159,6 +238,7 @@ export class MealDiscoveryEngine implements MealDiscoveryPort {
       for (const m of systemResult.value) {
         const key = m.name.toLowerCase().trim();
         if (!seenNames.has(key) && matchesMeal(m, lowerQuery)) {
+          if (!isSafe(mealToSafetyCheckable(m))) { excludedForSafety++; continue; }
           seenNames.add(key);
           items.push(mealToDiscoveryItem(m, "system", "THA Library"));
         }
@@ -170,6 +250,16 @@ export class MealDiscoveryEngine implements MealDiscoveryPort {
       for (const t of templatesResult.value) {
         if (!t.isActive) continue;
         if (matchesTemplate(t, lowerQuery)) {
+          const evidence = templateIngredientEvidence(t);
+          // A template with NO slot data carries no ingredient evidence at all.
+          // While the gate is active it is withheld: "we cannot see what is in
+          // this" is not "this is safe". Most templates are in exactly this
+          // state, which is a cookbook-data gap, not a reason to relax the gate.
+          if (gateActive && evidence.length === 0) { excludedForSafety++; continue; }
+          if (!isSafe({ name: t.title ?? t.name, ingredients: evidence, cuisine: t.cuisine, description: t.description })) {
+            excludedForSafety++;
+            continue;
+          }
           items.push(templateToDiscoveryItem(t));
         }
       }
@@ -181,6 +271,19 @@ export class MealDiscoveryEngine implements MealDiscoveryPort {
     // returns only DiscoveryItem[]. The handler builds the summary from the items.
     // We store it on the array as a non-enumerable property so it survives the return.
     const result = items.slice(0, DISCOVERY_MAX_RESULTS);
+    // PROD3 — how many candidates the gate refused, carried the same way
+    // `_sourcesQueried` is. A silent exclusion is indistinguishable from an
+    // empty cookbook; this lets the handler and the tests see the difference.
+    Object.defineProperty(result, "_excludedForSafety", {
+      value: excludedForSafety,
+      enumerable: false,
+      writable: false,
+    });
+    Object.defineProperty(result, "_safetyStatus", {
+      value: safetyCtx.status,
+      enumerable: false,
+      writable: false,
+    });
     Object.defineProperty(result, "_sourcesQueried", {
       value: buildSourcesQueried(personalOk, systemOk, templatesOk),
       enumerable: false,
@@ -199,4 +302,27 @@ export class MealDiscoveryEngine implements MealDiscoveryPort {
 export function getSourcesQueried(items: DiscoveryItem[]): string {
   const sq = (items as { _sourcesQueried?: string })._sourcesQueried;
   return typeof sq === "string" ? sq : "your cookbook, the THA library, and meal templates";
+}
+
+/**
+ * How many candidates the household safety gate refused for this query, and
+ * whether the safety context resolved at all (PROD3).
+ *
+ * `status: "unavailable"` with a non-zero exclusion count is the fail-closed
+ * path: THA could not read the household's restrictions, so it withheld
+ * everything. That is a very different sentence from "you have no meals", and
+ * the caller must be able to tell them apart.
+ */
+export function getSafetyExclusion(items: DiscoveryItem[]): {
+  excludedForSafety: number;
+  status: "resolved" | "unavailable" | "unknown";
+} {
+  const carrier = items as { _excludedForSafety?: number; _safetyStatus?: string };
+  return {
+    excludedForSafety: typeof carrier._excludedForSafety === "number" ? carrier._excludedForSafety : 0,
+    status:
+      carrier._safetyStatus === "resolved" || carrier._safetyStatus === "unavailable"
+        ? carrier._safetyStatus
+        : "unknown",
+  };
 }

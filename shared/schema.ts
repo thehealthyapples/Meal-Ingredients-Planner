@@ -3027,3 +3027,130 @@ export const insertPrivacyActivityLogSchema = createInsertSchema(privacyActivity
   occurredAt: true,
 });
 export type InsertPrivacyActivityLogEntry = z.infer<typeof insertPrivacyActivityLogSchema>;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BUS2A — THE COMMERCIAL DOMAIN (Source of Truth Register, Domain 26 extended)
+//
+// Two tables: the subscription (what a household holds) and the billing event
+// log (what a provider told THA). The rules that interpret both live in
+// shared/commerce/, which owns no data; these tables own no rules.
+//
+// NEITHER TABLE IS WRITTEN BY ANY LIVE PATH TODAY. BUS2A integrates no payment
+// provider, processes no payment and activates no subscription. They exist so
+// that BUS2B adds a provider translator rather than a domain.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * A household's subscription.
+ *
+ * SCOPED TO BOTH A USER AND A HOUSEHOLD, ON PURPOSE. The `user_id` is who is
+ * billed — a person, because a card belongs to a person. The `household_id` is
+ * who is entitled — a home, because THA's Household First Principle means a
+ * family sharing one plan, one list and one set of allergies cannot have four
+ * different answers to "may we keep this?".
+ *
+ * `household_id` is NULLABLE because a user may hold a subscription before
+ * joining any household, and because a household can be dissolved without the
+ * subscription ceasing to exist. A null household entitles only its own user.
+ *
+ * NO PROVIDER FIELD IS `NOT NULL`. Every provider-shaped column here is
+ * nullable and empty in every environment. That is the state BUS2A ships in,
+ * and it is what "the payment provider stays behind a boundary" looks like at
+ * the schema: THA's own domain is complete and correct with no provider at all.
+ */
+export const subscriptions = pgTable("subscriptions", {
+  id: serial("id").primaryKey(),
+  /** Who is billed. */
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  /** Who is entitled. Null = this user alone. */
+  householdId: integer("household_id").references(() => households.id, { onDelete: "set null" }),
+  /** A PlanId from shared/commerce/types.ts. */
+  planId: text("plan_id").notNull(),
+  /** A SubscriptionStatus. What HAPPENED — never a time-dependent claim. */
+  status: text("status").notNull(),
+  /** A BillingPeriod, or null for a plan that does not bill. */
+  billingPeriod: text("billing_period"),
+  trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
+  currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
+  cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
+  /** A downgrade deferred to period end. See classifyPlanChange(). */
+  pendingPlanId: text("pending_plan_id"),
+  /** When payment first failed. Starts the bounded recovery window. */
+  pastDueSince: timestamp("past_due_since", { withTimezone: true }),
+  /**
+   * The provider's identifiers. NULL EVERYWHERE TODAY — BUS2B fills them.
+   * These two columns are the entire footprint a payment provider has in THA's
+   * schema, which is the measure of how well the boundary holds.
+   */
+  providerCustomerId: text("provider_customer_id"),
+  providerSubscriptionId: text("provider_subscription_id"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  userIdx: index("subscriptions_user_id_idx").on(table.userId),
+  householdIdx: index("subscriptions_household_id_idx").on(table.householdId),
+  providerSubIdx: uniqueIndex("subscriptions_provider_subscription_id_key").on(table.providerSubscriptionId),
+}));
+
+export type Subscription = typeof subscriptions.$inferSelect;
+export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
+
+/**
+ * The billing event log. Append-only.
+ *
+ * IDEMPOTENCY IS A DATABASE CONSTRAINT, NOT AN IF-STATEMENT. `provider_event_id`
+ * is UNIQUE, so a redelivered webhook — which every payment provider sends, on
+ * timeout, on a non-2xx response, and on its own retry schedule — collides at
+ * the database and is a no-op. Enforcing it in application code instead leaves a
+ * race between two concurrent deliveries of the same event, and the cost of
+ * losing that race is a household's term extended for free or a paying
+ * household cut off.
+ *
+ * APPEND-ONLY FOR THE SAME REASON BUS1'S CONSENT LEDGER IS (§ TC, Art. 7(1)):
+ * a log you can overwrite is not evidence. If a household disputes a charge or
+ * a lapse, this is the record of what THA was told and when.
+ *
+ * `processed_at` records when the projection last folded this event in. It is
+ * NOT the idempotency mechanism — the unique constraint is — it is how an
+ * operator can see an event arrived but was never applied.
+ */
+export const billingEvents = pgTable("billing_events", {
+  id: serial("id").primaryKey(),
+  /** THE IDEMPOTENCY KEY. Unique. `tha:`-prefixed for THA-raised events. */
+  providerEventId: text("provider_event_id").notNull(),
+  /** A BillingEventKind from shared/commerce/billing-events.ts. */
+  kind: text("kind").notNull(),
+  /** The subscription this concerns. Null if it could not be matched. */
+  subscriptionId: integer("subscription_id").references(() => subscriptions.id, { onDelete: "cascade" }),
+  /** When it happened at the provider — never when it arrived here. */
+  occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
+  receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
+  processedAt: timestamp("processed_at", { withTimezone: true }),
+  /**
+   * The canonical event fields (planId, billingPeriod, dates), already
+   * translated out of provider vocabulary at the boundary.
+   *
+   * THE RAW PROVIDER PAYLOAD IS DELIBERATELY NOT STORED. It contains card
+   * metadata, billing addresses and customer records — personal data THA would
+   * then hold, have to declare in the personal data registry (BUS1 Domain 35),
+   * export under Art. 15 and erase under Art. 17, for no product benefit. THA
+   * keeps what it needs to project entitlement and nothing else.
+   */
+  payload: jsonb("payload").$type<Record<string, unknown>>(),
+}, (table) => ({
+  eventIdKey: uniqueIndex("billing_events_provider_event_id_key").on(table.providerEventId),
+  subscriptionIdx: index("billing_events_subscription_id_idx").on(table.subscriptionId),
+  occurredIdx: index("billing_events_occurred_at_idx").on(table.occurredAt),
+}));
+
+export type BillingEventRow = typeof billingEvents.$inferSelect;
+export const insertBillingEventSchema = createInsertSchema(billingEvents).omit({
+  id: true,
+  receivedAt: true,
+});
+export type InsertBillingEventRow = z.infer<typeof insertBillingEventSchema>;

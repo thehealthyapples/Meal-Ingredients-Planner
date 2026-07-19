@@ -1,5 +1,6 @@
 import { db } from "../db";
 import { ingredientSwaps } from "@shared/schema";
+import { validateAdaptationSafety } from "./household-dietary-safety";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -28,6 +29,20 @@ export interface SwapResult {
 export interface SwapOptions {
   memberExclusions?: string[];
   maxMinutes?: number;
+  /**
+   * PROD6 — the household's hard restrictions, resolved server-side by the caller
+   * from the canonical owner (`resolveHouseholdSafetyContext`).
+   *
+   * The rule tables below are culinary, not dietary: they will happily offer smoked
+   * tofu for bacon, soy sauce for fish sauce, and almond flour for flour. Those are
+   * correct swaps for the stated GOAL and canonical allergens for the wrong
+   * household. When this list is supplied, every proposed replacement is checked
+   * against it through the canonical gate and dropped if it conflicts.
+   *
+   * Omitted means "no restrictions were resolved", which is why the route resolves
+   * them rather than leaving it to a caller to remember.
+   */
+  hardRestrictions?: string[];
 }
 
 // ─── Goal-specific rule tables ────────────────────────────────────────────────
@@ -229,14 +244,34 @@ export async function applyRecipeSwaps(
     }
   }
 
-  const basketChanges = changed.map(
+  // PROD6 — drop any replacement the household cannot eat.
+  //
+  // Applied here rather than at each rule table so there is ONE filter over every
+  // path into `changed` (goal rules, DB swap rows, and the household-exclusion
+  // branch alike). The verdict comes from the canonical gate; this file defines no
+  // allergen and no keyword of its own, and must not start.
+  //
+  // A dropped swap is silent by design: the alternative is telling a household
+  // "we wanted to suggest almond flour but you're allergic", which surfaces the
+  // unsafe suggestion in the act of withholding it.
+  const safeChanged = (options.hardRestrictions ?? []).length
+    ? changed.filter(
+        (c) =>
+          validateAdaptationSafety({ ingredients: [c.replacement] }, options.hardRestrictions!)
+            .safe,
+      )
+    : changed;
+
+  const withheldForSafety = changed.length - safeChanged.length;
+
+  const basketChanges = safeChanged.map(
     (c) => `Replace "${c.original}" with "${c.replacement}"`
   );
 
-  const explanation = buildSwapExplanation(goal, changed, prepTimeDelta);
+  const explanation = buildSwapExplanation(goal, safeChanged, prepTimeDelta, withheldForSafety);
 
   return {
-    changedIngredients: changed,
+    changedIngredients: safeChanged,
     basketChanges,
     prepTimeChangeDelta: goal === "under-time" ? prepTimeDelta : null,
     costChange: GOAL_COST_DIRECTION[goal],
@@ -249,11 +284,21 @@ export async function applyRecipeSwaps(
 function buildSwapExplanation(
   goal: SwapGoal,
   changed: ChangedIngredient[],
-  prepTimeDelta: number
+  prepTimeDelta: number,
+  withheldForSafety = 0
 ): string {
   const n = changed.length;
 
   if (n === 0) {
+    // PROD6 — do not claim "already fine" when the truth is "we had a suggestion
+    // and withheld it". Saying a flour-heavy recipe is "already keto-friendly"
+    // because the only swap available was almond flour is a false statement about
+    // the recipe, made in order to avoid mentioning the household's allergy. THA
+    // states honest gaps instead (Core Principle 6): the household is told a
+    // suggestion existed and did not suit them, and is never shown what it was.
+    if (withheldForSafety > 0) {
+      return "We found a possible swap, but it doesn't suit your household's dietary needs — so we haven't suggested it.";
+    }
     const goalLabel: Record<SwapGoal, string> = {
       vegetarian:    "vegetarian",
       keto:          "keto-friendly",
@@ -263,6 +308,13 @@ function buildSwapExplanation(
       household:     "household-friendly",
     };
     return `No changes needed — this recipe is already ${goalLabel[goal]}.`;
+  }
+
+  // Some swaps survived and some did not — say so, rather than presenting a
+  // partial list as if it were the whole answer.
+  if (withheldForSafety > 0) {
+    const suffix = ` ${withheldForSafety} further swap${withheldForSafety > 1 ? "s were" : " was"} withheld — ${withheldForSafety > 1 ? "they don't" : "it doesn't"} suit your household's dietary needs.`;
+    return buildSwapExplanation(goal, changed, prepTimeDelta, 0) + suffix;
   }
 
   const prefix: Record<SwapGoal, string> = {

@@ -35,8 +35,18 @@
  * TRUST RULES ENFORCED HERE:
  *   Rule E1 (no citation, no card) — every recommendation is CONSTRUCTED from a
  *     Plane 1 citation (the food is a candidate only because the registry itself
- *     already links it to the requested benefit/nutrient); there is no code path
- *     that can produce an uncited recommendation.
+ *     already links it to the requested benefit/nutrient).
+ *     SCOPE LIMIT (KNOW1 finding F2) — this sentence previously ended "there is
+ *     no code path that can produce an uncited recommendation", which is true of
+ *     the BENEFIT scope and NOT of the nutrient one. getFoodsForBenefit()
+ *     (nutrition-knowledge-registry.ts:197) applies the full KNOW5 chain gate;
+ *     getFoodsForNutrient() (:181) filters on is_active alone, so a nutrient-scope
+ *     candidate may rest on a composition edge that is unreviewed, uncited, or
+ *     both. The citation such a card carries is the LINK'S EXISTENCE, not evidence
+ *     that cleared isEvidenceBackedClaim() — a weaker bar than this comment
+ *     claimed, and the gap is stated here rather than fixed because gating the
+ *     nutrient path while 0 of 1,988 composition rows are signed off would empty
+ *     every nutrient page. Correct order: publish the composition edge, then gate.
  *   Rule T0 (safety supersedes everything) — when a household resolves, any
  *     candidate that conflicts with an active hard restriction is EXCLUDED
  *     outright (never merely deprioritised, never shown with a warning).
@@ -150,6 +160,20 @@ export interface FoodIntelligenceRequest {
  */
 export interface HouseholdSignal {
   readonly resolved: boolean;
+  /**
+   * PROD3 — TRUE when a household exists but could NOT be read.
+   *
+   * `resolved: false` conflated two situations that must not share a verdict:
+   *   · there is no household (an anonymous caller, or no membership) — nothing
+   *     to protect, so Stage 1 static behaviour is correct and every candidate
+   *     is admitted;
+   *   · there IS a household and the read FAILED — in which case an empty
+   *     `restrictionDefs` is not "no restrictions", it is "we do not know", and
+   *     Rule T0 admitting everything is a silent safety failure.
+   *
+   * Only the second sets this flag, and it makes the safety filter refuse.
+   */
+  readonly resolutionFailed?: boolean;
   readonly restrictionDefs: readonly RestrictionDefinition[];
   readonly familiarAppearances: ReadonlyMap<string, number>;
   /** The caller's own resolved household id, present only when `resolved` is true. Additive (FI4) — reused by the Food Opportunity Engine so household resolution is never re-derived a second time. */
@@ -190,6 +214,11 @@ export function rankAndExplain(
 ): { recommendations: FoodIntelligenceRecommendation[]; excludedForSafety: number } {
   let excludedForSafety = 0;
   const safeCandidates = candidates.filter((food) => {
+    // PROD3 — fail CLOSED. A household we could not read is not a household
+    // without restrictions, so Rule T0 excludes everything rather than admitting
+    // everything. This is the one branch where an empty `restrictionDefs` must
+    // NOT be read as "nothing to check against".
+    if (household.resolutionFailed) { excludedForSafety++; return false; }
     if (household.restrictionDefs.length === 0) return true;
     const matches = resolveIngredientRestrictions(`${food.name} ${food.category}`, [...household.restrictionDefs]);
     if (matches.length > 0) {
@@ -278,9 +307,17 @@ export async function resolveHouseholdSignal(userId: number | undefined): Promis
 
     return { resolved: true, restrictionDefs, familiarAppearances, householdId };
   } catch {
-    // No active household membership, or a household read failed — an honest
-    // fallback to Stage 1, never a fabricated household context.
-    return NO_HOUSEHOLD_SIGNAL;
+    // PROD3 — a household read FAILED. Previously this returned
+    // NO_HOUSEHOLD_SIGNAL, which is indistinguishable from "this caller has no
+    // household", so Rule T0's filter saw an empty restriction list and admitted
+    // every candidate. A household whose allergens THA could not read was
+    // therefore treated exactly like a household with none.
+    //
+    // It now returns a signal that is explicitly UNKNOWN, and the safety filter
+    // refuses rather than guesses. The cost is honest: on a transient household
+    // read failure a restricted household gets no food recommendations, instead
+    // of possibly getting a dangerous one.
+    return { ...NO_HOUSEHOLD_SIGNAL, resolutionFailed: true };
   }
 }
 

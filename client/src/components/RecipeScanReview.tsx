@@ -467,6 +467,7 @@ export function RecipeScanReview({ open, onOpenChange, scanData, scanning = fals
                           variant="ghost"
                           size="icon"
                           className="h-9 w-9 shrink-0 self-start mt-1"
+                          aria-label="Remove this step"
                           onClick={() => removeStep(step.id)}
                         >
                           <X className="h-3.5 w-3.5" />

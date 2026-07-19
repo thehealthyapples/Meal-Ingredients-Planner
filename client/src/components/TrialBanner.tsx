@@ -1,3 +1,35 @@
+// The demo-session banner.
+//
+// ─── BUS2A WITHDREW A COMMERCIAL CLAIM FROM THIS FILE ────────────────────────
+//
+// It previously read "Save your progress & get 25% off your first 6 months",
+// and on submission "Got it! Your 25% discount code is on its way."
+//
+// Every part of that was untrue. THA had no subscription, no price, no payment
+// path, no six-month term, and no mechanism that generates or sends a discount
+// code — `POST /api/demo/save-email` writes `users.demo_claimed_email` and does
+// nothing else (server/auth.ts). It was a discount off an unstated price for a
+// product that could not be bought, and it contradicted THA's own published
+// Terms of Service in the same repository, which say: "The Healthy Apples does
+// not currently charge for anything, and does not process payments."
+//
+// BUS1 found it and recorded it as out of scope, belonging to BUS2
+// (BUS1_TRUST_AND_COMPLIANCE_FOUNDATION.md, Suggestion 1). This is BUS2A
+// discharging it. The copy now states exactly what the button does.
+//
+// It is NOT replaced with a configured-price offer, because there is no
+// approved pricing: `isPublishable()` in shared/commerce/plans.ts returns false
+// for the whole platform, and that gate — not this comment — is what stops the
+// next claim. Nothing may quote a price, saving or percentage until it passes.
+//
+// ─── THIS IS A DEMO SESSION, NOT A COMMERCIAL TRIAL ──────────────────────────
+//
+// Worth stating because the word "trial" now means two different things. This
+// banner counts down `users.demo_expires_at` — a 20-minute anonymous demo whose
+// data is discarded (server/storage.ts). BUS2A's `trialing` subscription status
+// is an unrelated commercial concept with its own duration and lifecycle. They
+// share no column, no code path and no vocabulary, and must not be merged.
+
 import { useEffect, useRef, useState } from "react";
 import { Clock, AlertTriangle, X, CheckCircle2, Loader2 } from "lucide-react";
 import { useUser } from "@/hooks/use-user";
@@ -86,11 +118,11 @@ export default function TrialBanner() {
           {submitState === "done" ? (
             <span className="flex items-center gap-1.5 font-semibold" data-testid="text-email-confirmed">
               <CheckCircle2 className="h-4 w-4 shrink-0" />
-              Got it! Your 25% discount code is on its way.
+              Thanks — we&apos;ve saved your email.
             </span>
           ) : (
             <>
-              <span className="opacity-90 whitespace-nowrap">- Save your progress &amp; get 25% off your first 6 months:</span>
+              <span className="opacity-90 whitespace-nowrap">- Save your progress:</span>
               <form onSubmit={handleSaveEmail} className="flex items-center gap-1.5">
                 <input
                   ref={inputRef}
@@ -112,7 +144,7 @@ export default function TrialBanner() {
                   {submitState === "loading" ? (
                     <Loader2 className="h-3 w-3 animate-spin" />
                   ) : (
-                    "Claim offer →"
+                    "Save →"
                   )}
                 </button>
                 {submitState === "error" && (

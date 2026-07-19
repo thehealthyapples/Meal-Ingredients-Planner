@@ -452,14 +452,24 @@ The following domains have been identified by reading all TypeScript files under
 
 ---
 
-### Domain 26: Membership / Subscription
+### Domain 26: Membership / Subscription / Entitlement
+
+*(Extended `BUS2A`, 2026-07-18 — Commercial Platform Foundation. The domain is **extended, not replaced**: no Domain 37 was created, because "what plan is this household on" is the fact this domain already owned.)*
 
 | Attribute | Value |
 |-----------|-------|
-| Authoritative Source | **DB: `users.subscriptionTier` column** |
-| Supporting columns | `users.subscriptionStatus`, `users.subscriptionExpiresAt` |
-| Access helper | `hasPremiumAccess(user)` in routes.ts |
-| Status | **Authoritative — declared** |
+| Authoritative Source | **DB `subscriptions`** (state) + **DB `users.subscription_tier`** (today's live tier), projected by **`server/commerce/entitlement-service.ts`** through the pure rules in **`shared/commerce/`**. The rows below name the owner of each distinct fact; this row names the domain's source of truth as a whole, because a domain whose answer is assembled from several owners still has exactly one place the answer comes from. |
+| Authoritative Source — **rules** | **`shared/commerce/`** — a pure, zero-I/O reference vocabulary beside the entity spine (Principle 5), owning what plans exist, what each grants, what a lifecycle status means, and how a billing event projects. Owns **no data**. |
+| Authoritative Source — **subscription state** | **DB `subscriptions`**, sole-owned by `server/commerce/subscription-store.ts`. **Empty in every environment** — BUS2A activates none. |
+| Authoritative Source — **what a provider said** | **DB `billing_events`** (append-only), same owner. Idempotency is a `UNIQUE` constraint on `provider_event_id`, not an if-statement. |
+| Authoritative Source — **tier, today** | **DB `users.subscription_tier`** — still the **live** owner, and read by the resolver as its last-resort input. ⚠️ **Two stores that cannot legitimately disagree, so one is redundant (Principle 2).** Retirement condition stated at `shared/commerce/entitlements.ts` and owned by `BUS2B`: the column is dropped when a billing provider is live **and** every non-free `users` row has been migrated to a `subscriptions` row. Until both hold, the column is the owner and the fallback is what keeps that honest rather than a bridge that hides it. **Not a Principle 7 sync bridge** — nothing writes either to match the other. |
+| Canonical projection | `resolveEntitlements()` (pure) via `server/commerce/entitlement-service.ts` (I/O). **Household-scoped**: a subscription is bought by a person and entitles a home; only `household_members.status = 'active'` counts. |
+| Access helper | **`server/lib/access.ts`** — unchanged signatures, now reading the one shared rule. **Remains the platform's sole authorisation authority** (BUS1 § 9); the entitlement projection *classifies* and never *authorises*, and `isAdmin` is deliberately not an input to it. |
+| Payment provider | **`server/commerce/billing-provider.ts`** — the only module permitted to know a provider exists. `NoBillingProvider` is registered in every environment. **No Stripe. No payments. No live subscription.** |
+| Client read path | **`client/src/hooks/use-entitlements.ts`** — the client's one reader, consuming `GET /api/commerce/entitlements`. **Fails closed** to the free plan while the answer is unknown. **Presentation only, never a security boundary**: it decides what is *drawn*, never what is *permitted*. |
+| Duplicate owners retired | **4 → 1.** The tier rule was independently re-derived at `server/lib/access.ts`, `server/routes.ts:7319`, `share-plan-dialog.tsx:47` and `templates-panel.tsx:211`. Two live plan limits were converged onto the catalogue from an **environment variable** (`MAX_PRIVATE_TEMPLATES_FREE`/`_PREMIUM`, now unread) and an **integer literal** — the free plan's own ceiling was previously settable by deployment config with no review. Values unchanged (4 and 1). ⚠️ **Corrected 2026-07-19:** this row previously recorded the convergence as complete when **two of the four sites had not converged** — `share-plan-dialog.tsx:47` still compared tier strings and a typed `1`, and `server/auth.ts` still served the template ceiling to the client from the environment while `routes.ts` enforced it from the catalogue (a limit *shown* that was not the limit *enforced*). Both are now converged, **and § 8 of `test:bus2a-commercial-foundation` proves it** — the register no longer records a convergence that only a test can keep true. |
+| Household Time | **MUST NOT CONSUME (HT10, § 8.1)** — a permanently-INSTANT domain. A trial is a duration, never a date in anybody's calendar. Enforced for `access.ts` by `publication-register.ts` (`ht-instant-domains-clean`, severity `fail`) and extended to every commerce module by `test:bus2a-commercial-foundation`. |
+| Status | **Authoritative — declared.** Governance: [`THA_COMMERCIAL_ARCHITECTURE.md`](./THA_COMMERCIAL_ARCHITECTURE.md) |
 
 ---
 

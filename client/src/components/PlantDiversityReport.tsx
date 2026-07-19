@@ -333,9 +333,23 @@ function computeAllRows(
       const section = getSectionForIngredient(raw);
 
       if (!rowMap.has(displayKey)) {
+        // UX_REFINE1 (R2) — the CATEGORY now comes from the canonical chain, the
+        // same one the count and the section already use.
+        //
+        // It was fed `displayKey`, which comes from `getDisplayKey` — a private
+        // normalisation that strips a different set of words and produces keys
+        // like "cucumber or finely". Those do not resolve, so the category fell
+        // through to the `?? "Vegetables"` default: chickpeas and lentils were
+        // counted as plants while **Legumes** stayed unticked, and anything the
+        // seed did not classify was silently filed as a vegetable.
+        //
+        // The `?? "Vegetables"` fallback is removed with it. A category THA does
+        // not know is now absent rather than guessed — `plantCategory` is
+        // already `PlantCategory | null` and every consumer handles null, so an
+        // unknown category simply is not claimed (Core Principle 6).
         const plantCategory =
           section === "plant-based"
-            ? (getPlantCategory(displayKey) ?? "Vegetables")
+            ? getPlantCategory(canonicalIngredientSlug(raw))
             : null;
         const knowledge = knowledgeMap[displayKey];
         rowMap.set(displayKey, {

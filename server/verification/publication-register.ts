@@ -2011,6 +2011,205 @@ export const CANONICAL_PUBLICATION_REGISTER: DomainDeclaration[] = [
       }),
     ],
   },
+
+  // ── 23. Nutrition Evidence — Publication (KNOW1) ───────────────────────────
+  //
+  // CANONICAL_PUBLICATION_ARCHITECTURE.md § "Three Domain Variants" defines the
+  // knowledge variant by exactly one property no other variant has:
+  //
+  //   "Verification: Published rows are reviewed (gate: isEvidenceBackedClaim()).
+  //    Empty renders for unreviewed claims. No fabrication."
+  //   "Knowledge is the only domain type where reviewedAt and reviewedBy are
+  //    mandatory for publication."
+  //
+  // That verification was declared and never built. The `food-knowledge` contract
+  // above verifies the ENTITY tables (counts, orphans, writers) and not one of its
+  // six checks reads `reviewed_at` or `source_refs` — so the publication step that
+  // defines the variant was the only one nothing watched. This is Rule KC8
+  // ("declared is not enforced") holding in the document that names the rule.
+  //
+  // The cost of the gap is measured, not theoretical. HOUSE_ACT3 hand-counted
+  // these tables, found "0 of 3,354 rows reviewed", and concluded the blocker was
+  // curation. Half of that was right. The other half is that a sourced, valid,
+  // publishable backlog was sitting in the database with nothing reporting it —
+  // so it read as one undifferentiated curation problem and no one ran the
+  // publication step that already existed. These checks separate the two failures
+  // that look identical from a row count and are not the same problem at all:
+  // a claim with no citation (curation — a human must find a source) versus a
+  // claim with a good citation and no sign-off (publication — a human must run
+  // one command). Only the second is engineering's to unblock.
+  //
+  // Nothing here writes, and nothing here relaxes: the gate is asserted intact
+  // (`ne-gate-intact`), never widened. This contract makes the publication state
+  // VISIBLE. It does not make it true — only a named human reviewer does that.
+  {
+    id: "nutrition-evidence",
+    name: "Nutrition Evidence (KNOW1)",
+    variant: "knowledge",
+    canonicalOwner:
+      "shared/knowledge/claim-sources.ts + composition-sources.ts (citations); a named human reviewer (the sign-off)",
+    authorisedWriters: ["server/seeds/signoff-knowledge-claims.ts (the ONLY writer of reviewed_at/reviewed_by)"],
+    publicationPath: 'npm run knowledge:signoff -- --confirm REVIEWED --reviewer "Name"',
+    runtimeReadPath: "server/services/nutrition-knowledge-registry.ts, gated by isEvidenceBackedClaim()",
+    sotRegisterRef: "D1",
+    knownGaps: [
+      "getFoodsForNutrient() (nutrition-knowledge-registry.ts:181) reads the composition edge with no evidence gate, while getFoodsForBenefit() applies the full chain. Gating it is correct but must follow the composition sign-off, not precede it — closing it first would darken every nutrient page rather than light one up (KNOW1 finding F2).",
+      "knowledge_food_benefits carries no citations at all (0 of 1,366) and the sign-off script has no food→benefit edge. That edge is optional corroboration in deriveEvidenceConfidence(), so it blocks no chip — but 'Established' confidence is currently unreachable platform-wide (KNOW1 finding F3).",
+      "The sign-off is approve-all-valid over whatever is pending, not per-claim approve/reject. Honest at 64 rows; a rubber stamp at import scale (signoff-knowledge-claims.ts:29-33, KNOW5C).",
+    ],
+    checks: [
+      sqlCheck({
+        id: "ne-signoff-backlog",
+        law: "no-stale-projections",
+        title: "No cited nutrition claim is stranded unpublished",
+        severity: "warn",
+        sql: `
+          SELECT 'composition' AS edge, count(*)::int AS pending
+            FROM knowledge_food_nutrients
+           WHERE is_active AND reviewed_at IS NULL
+             AND jsonb_array_length(COALESCE(source_refs, '[]'::jsonb)) > 0
+          UNION ALL
+          SELECT 'nutrient-benefit', count(*)::int
+            FROM knowledge_nutrient_benefits
+           WHERE is_active AND reviewed_at IS NULL
+             AND jsonb_array_length(COALESCE(source_refs, '[]'::jsonb)) > 0
+          UNION ALL
+          SELECT 'preparation-effect', count(*)::int
+            FROM knowledge_preparation_effects
+           WHERE is_active AND reviewed_at IS NULL
+             AND jsonb_array_length(COALESCE(source_refs, '[]'::jsonb)) > 0`,
+        evaluate: (rows) => {
+          const pending = rows.map((r) => ({ edge: String(r.edge), n: Number(r.pending ?? 0) }));
+          const total = pending.reduce((n, p) => n + p.n, 0);
+          if (total === 0) {
+            return { violated: false, detail: "No cited claim is awaiting sign-off — every citable claim has been published or has no citation yet." };
+          }
+          const breakdown = pending.filter((p) => p.n > 0).map((p) => `${p.n} ${p.edge}`).join(", ");
+          return {
+            violated: true,
+            detail:
+              `${total} claim(s) carry a Layer-1 valid citation and have never been signed off (${breakdown}). ` +
+              `These are PUBLISHABLE NOW and dark only because the publication step has not been run: ` +
+              `npm run knowledge:signoff -- --confirm REVIEWED --reviewer "Name". ` +
+              `This is a publication gap, not a curation gap — see ne-uncited-claims for the curation one.`,
+          };
+        },
+      }),
+      sqlCheck({
+        id: "ne-published-chain",
+        law: "approved-read-path",
+        title: "Nutrition evidence reaches a household through the full chain",
+        severity: "warn",
+        sql: `
+          SELECT count(*)::int AS chips, count(DISTINCT fn.food_slug)::int AS foods
+            FROM knowledge_food_nutrients fn
+            JOIN knowledge_nutrient_benefits nb
+              ON nb.nutrient_slug = fn.nutrient_slug AND nb.is_active
+           WHERE fn.is_active
+             AND fn.reviewed_at IS NOT NULL
+             AND nb.reviewed_at IS NOT NULL`,
+        evaluate: (rows) => {
+          const chips = Number(rows[0]?.chips ?? 0);
+          const foods = Number(rows[0]?.foods ?? 0);
+          // KNOW5: a benefit chip requires BOTH edges signed off. Reporting either
+          // edge alone reads as progress while the household still sees nothing —
+          // which is how a half-published chain stayed invisible for a fortnight.
+          return chips === 0
+            ? {
+                violated: true,
+                detail:
+                  "0 benefit chips render: no food→nutrient→benefit chain has both edges signed off, so " +
+                  '"why this food is good" is dark on every food page. Both edges are required (KNOW5) — ' +
+                  "signing off one edge alone changes nothing a household can see.",
+              }
+            : { violated: false, detail: `${chips} benefit chip(s) render across ${foods} food(s) through a fully signed-off chain.` };
+        },
+      }),
+      sqlCheck({
+        id: "ne-review-identity",
+        law: "authorised-writers",
+        title: "Every post-KNOW5 sign-off names the human who made it",
+        severity: "fail",
+        sql: `
+          SELECT 'composition' AS edge, count(*)::int AS anon
+            FROM knowledge_food_nutrients
+           WHERE reviewed_at >= '2026-07-09' AND reviewed_by IS NULL
+          UNION ALL
+          SELECT 'nutrient-benefit', count(*)::int
+            FROM knowledge_nutrient_benefits
+           WHERE reviewed_at >= '2026-07-09' AND reviewed_by IS NULL
+          UNION ALL
+          SELECT 'preparation-effect', count(*)::int
+            FROM knowledge_preparation_effects
+           WHERE reviewed_at >= '2026-07-09' AND reviewed_by IS NULL`,
+        evaluate: (rows) => {
+          // The 2026-07-09 boundary is KNOW5's date, and the grandfathering is
+          // deliberate, not lenient: validateReviewState() is enforced at the
+          // sign-off boundary and never at render, so pre-KNOW5 anonymous
+          // sign-offs stay valid and are not retroactively invalidated
+          // (shared/knowledge/evidence.ts:106-113). Every row signed off on or
+          // after that date went through a writer that refuses --reviewer-less
+          // runs, so an anonymous one can only mean a write that bypassed it.
+          const anon = rows.reduce((n, r) => n + Number(r.anon ?? 0), 0);
+          return anon > 0
+            ? {
+                violated: true,
+                detail:
+                  `${anon} claim(s) signed off on/after KNOW5 (2026-07-09) carry no reviewed_by. ` +
+                  "The sign-off writer refuses to run without --reviewer, so these were written by something else — " +
+                  "a health claim was approved and no one can be asked why, or told to withdraw it.",
+              }
+            : { violated: false, detail: "Every post-KNOW5 sign-off names its reviewer. (Pre-KNOW5 anonymous sign-offs are grandfathered by design and are not counted.)" };
+        },
+      }),
+      sqlCheck({
+        id: "ne-uncited-claims",
+        law: "no-publication-drift",
+        title: "Published claim rows can, in principle, be published",
+        severity: "warn",
+        sql: `
+          SELECT 'composition' AS edge, count(*)::int AS uncited
+            FROM knowledge_food_nutrients
+           WHERE is_active AND jsonb_array_length(COALESCE(source_refs, '[]'::jsonb)) = 0
+          UNION ALL
+          SELECT 'food-benefit', count(*)::int
+            FROM knowledge_food_benefits
+           WHERE is_active AND jsonb_array_length(COALESCE(source_refs, '[]'::jsonb)) = 0
+          UNION ALL
+          SELECT 'nutrient-benefit', count(*)::int
+            FROM knowledge_nutrient_benefits
+           WHERE is_active AND jsonb_array_length(COALESCE(source_refs, '[]'::jsonb)) = 0`,
+        evaluate: (rows) => {
+          const uncited = rows.map((r) => ({ edge: String(r.edge), n: Number(r.uncited ?? 0) }));
+          const total = uncited.reduce((n, u) => n + u.n, 0);
+          if (total === 0) return { violated: false, detail: "Every active claim row carries at least one citation." };
+          const breakdown = uncited.filter((u) => u.n > 0).map((u) => `${u.n} ${u.edge}`).join(", ");
+          return {
+            violated: true,
+            detail:
+              `${total} active claim row(s) carry no citation at all (${breakdown}) and can never clear the gate, ` +
+              "however many times sign-off is run. This is the CURATION gap: a human must find a Layer-1 source " +
+              "for each. It is reported separately from ne-signoff-backlog because a row count alone cannot tell " +
+              "the two apart, and conflating them is what made a publishable backlog look like a curation backlog.",
+          };
+        },
+      }),
+      sourceCheck({
+        id: "ne-gate-intact",
+        law: "approved-read-path",
+        title: "The Trust Gate still requires a human sign-off",
+        severity: "fail",
+        file: "shared/knowledge/evidence.ts",
+        pattern: /if\s*\(!row\.reviewedAt\)\s*return false;/,
+        expect: "present",
+        violationDetail:
+          "isEvidenceBackedClaim() no longer refuses a claim with no reviewedAt. The gate has been weakened, and " +
+          "unreviewed nutrition claims can now reach a household. The only sanctioned way to light up a claim is " +
+          "to sign it off — never to lower the bar it has to clear.",
+        passDetail: "isEvidenceBackedClaim() still refuses any claim without an explicit human sign-off.",
+      }),
+    ],
+  },
 ];
 
 // ── Cross-cutting checks (CPI1 §4 — belong to no single domain) ──────────────

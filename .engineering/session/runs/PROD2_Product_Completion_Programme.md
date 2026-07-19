@@ -93,6 +93,17 @@ wrong reaches an allergic child. Left fully open and handed over.
 predicted exactly this: *"Every item below is a deletion or a hiding, not a build"*).
 No schema, no migration, no write path, no route added, no `server/intelligence/**`.
 
+## Concurrent-session event (disclosed)
+Mid-verification, a concurrent session created `057102ec` — *"Pre-HOUSE_ACT1
+checkpoint — capture in-flight programme work"* — which **committed PROD2's work
+before review**, along with every other session's in-flight tree (241 → 41
+uncommitted entries). **Rollback protection HELD**: the tag still resolves to
+`24e37d20`, now the checkpoint's parent, so `git reset --hard` still unwinds both.
+All nine substantive changes re-verified on disk afterwards; nothing lost or
+altered. **PROD2 authored no commit.** Third instance of the pattern ENGPROG1
+Finding 2 named (`OPERATING_MANUAL` §9 — one concern per commit, never commit
+work you did not author).
+
 ## Next action
 Owner to review `docs/implementation/PROD2_PRODUCT_COMPLETION_PROGRAMME.md`.
 Top three recommendations, none implemented: (1) Companion allergen safety;

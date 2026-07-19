@@ -18,6 +18,7 @@ import { REQUIRED_CONSENTS_AT_REGISTRATION } from "@shared/privacy/consent";
 // copy in client/src/pages/profile-page.tsx; both are now this one file
 // (Principle 2). The environment overrides below are unchanged.
 import { COMPANY_PROFILE } from "@shared/legal";
+import { entitlementsForPlan, limitFor } from "@shared/commerce";
 // TRUST1-S5. `authRateLimit(route)` returns that route's middleware chain — per-IP, and per-account
 // where an account can be identified. server/lib/auth-rate-limit.ts is the ONE owner of every limit,
 // every window, and the policy list; nothing here decides a number. It throws on an unknown route
@@ -234,10 +235,22 @@ export function setupAuth(app: Express) {
     const familyPlanEnabled = process.env.FAMILY_PLAN_ENABLED !== "false";
     const premiumFeaturesEnabled = process.env.PREMIUM_FEATURES_ENABLED !== "false";
     const templatesEnabled = process.env.TEMPLATES_ENABLED !== "false";
-    const maxPrivateTemplatesFree = parseInt(process.env.MAX_PRIVATE_TEMPLATES_FREE || "4");
-    const maxPrivateTemplatesPremium = process.env.MAX_PRIVATE_TEMPLATES_PREMIUM
-      ? parseInt(process.env.MAX_PRIVATE_TEMPLATES_PREMIUM)
-      : null;
+    // BUS2A — served from the plan catalogue, which is the one owner of every
+    // plan limit. These two values were read from MAX_PRIVATE_TEMPLATES_FREE and
+    // MAX_PRIVATE_TEMPLATES_PREMIUM, making the environment a rival owner of a
+    // fact `shared/commerce/plans.ts` already held: the same ceiling was
+    // enforced by `routes.ts` from the catalogue and DESCRIBED to the client
+    // from the environment, so a deployment that set the variable would have
+    // shown households a limit the server did not enforce. Both variables are
+    // now unread — values unchanged (free 4, premium no ceiling).
+    const maxPrivateTemplatesFree = limitFor(
+      entitlementsForPlan("free"),
+      "max-private-plan-templates",
+    );
+    const maxPrivateTemplatesPremium = limitFor(
+      entitlementsForPlan("premium"),
+      "max-private-plan-templates",
+    );
     res.json({
       registrationEnabled: isProduction,
       environment: isProduction ? "production" : "beta",

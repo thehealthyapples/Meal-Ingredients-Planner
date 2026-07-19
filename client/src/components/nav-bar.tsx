@@ -49,7 +49,7 @@ export const NAV_ITEMS = [
   { href: "/cookbook", label: "Cookbook", icon: ChefHat, hasWorkspace: true },
   { href: "/shopping-workspace", label: "Shopping", icon: ShoppingCart, hasWorkspace: false },
   { href: "/pantry", label: "Pantry", icon: PantryIcon, hasWorkspace: true },
-  { href: "/plant-diversity", label: "Nutrition", icon: BarChart3, hasWorkspace: true },
+  { href: "/nutrition", label: "Nutrition", icon: BarChart3, hasWorkspace: true },
   { href: "/my-diary", label: "Diary", icon: BookOpen, hasWorkspace: true },
   { href: "/analyser", label: "Analyser", icon: Microscope, hasWorkspace: true },
 ];
@@ -88,7 +88,7 @@ const REALM_STYLES: Record<string, { active: string; hover: string; inactive: st
     mobileActive:   "bg-[hsl(42,45%,86%)] text-[hsl(42,58%,20%)] dark:bg-[hsl(42,22%,19%)] dark:text-[hsl(42,48%,72%)]",
     mobileInactive: "bg-[hsl(42,28%,92%)] text-[hsl(42,28%,44%)] dark:bg-[hsl(42,12%,14%)] dark:text-[hsl(42,16%,44%)]",
   },
-  "/plant-diversity": {
+  "/nutrition": {
     active:         "bg-[hsl(145,22%,88%)] text-[hsl(145,36%,20%)] dark:bg-[hsl(145,14%,17%)] dark:text-[hsl(145,26%,70%)]",
     hover:          "hover:bg-[hsl(145,16%,92%)] hover:text-[hsl(145,30%,26%)] dark:hover:bg-[hsl(145,10%,14%)] dark:hover:text-[hsl(145,20%,58%)]",
     inactive:       "bg-[hsl(145,10%,94%)] text-[hsl(145,20%,42%)] dark:bg-[hsl(145,8%,12%)] dark:text-[hsl(145,12%,46%)]",

@@ -237,6 +237,25 @@ export function WorkspaceHeader({
     </Button>
   ) : null;
 
+  /*
+   * The canonical desktop brand mark — ONE element, ONE size, rendered by both
+   * desktop header arms. Previously each arm declared its own <img>, so the logo
+   * silently shrank to 24px on any page that happened not to pass a contextBar
+   * (Home, the secondary pages, and every loading state). Logo scale is an
+   * identity concern, not a side-effect of a page's layout: UI Principle 4 gives
+   * every visual concern exactly one owning pattern.
+   */
+  const desktopLogo = (
+    <Link href="/home" aria-label="Home" className="flex-shrink-0">
+      <img
+        src="/logo-long.png"
+        alt="The Healthy Apples"
+        style={{ height: "68px" }}
+        className="w-auto object-contain opacity-90 hover:opacity-100 transition-opacity"
+      />
+    </Link>
+  );
+
   const headerContent = (
     <div
       className={`page-sticky-header${className ? ` ${className}` : ""}`}
@@ -253,7 +272,8 @@ export function WorkspaceHeader({
        *   Col 4 (auto)  — Row 1: actions + basket + profile
        *
        * When contextBar is absent, a simple single-row grid is used (Col 1 contains
-       * logo + divider as a flex row; logo stays at compact size).
+       * logo + divider as a flex row). Both arms render the same `desktopLogo`
+       * at the same size, so the brand mark does not change with the layout.
        */}
       <header className="realm-header-bg border-b realm-header-border w-full">
         <div className={`${maxW} mx-auto px-3 sm:px-6 lg:px-8`}>
@@ -269,14 +289,7 @@ export function WorkspaceHeader({
                 className="flex items-center gap-3 shrink-0"
                 style={{ gridRow: "1 / 3", gridColumn: "1" }}
               >
-                <Link href="/home" aria-label="Home" className="flex-shrink-0">
-                  <img
-                    src="/logo-long.png"
-                    alt="The Healthy Apples"
-                    style={{ height: "68px" }}
-                    className="w-auto object-contain opacity-90 hover:opacity-100 transition-opacity"
-                  />
-                </Link>
+                {desktopLogo}
                 <div className="w-px realm-header-border border-l self-stretch flex-shrink-0" />
               </div>
 
@@ -327,19 +340,13 @@ export function WorkspaceHeader({
           ) : (
             /* ── Desktop: single-row header (no workspace navigation) ── */
             <div
-              className="hidden md:grid items-center h-12 gap-x-3"
+              className="hidden md:grid items-center min-h-[76px] gap-x-3"
               style={{ gridTemplateColumns: "auto auto 1fr auto" }}
             >
-              {/* Col 1: Brand — logo + divider */}
-              <div className="flex items-center gap-3 shrink-0">
-                <Link href="/home" aria-label="Home" className="flex-shrink-0">
-                  <img
-                    src="/logo-long.png"
-                    alt="The Healthy Apples"
-                    className="max-h-6 h-auto w-auto object-contain opacity-90 hover:opacity-100 transition-opacity"
-                  />
-                </Link>
-                <div className="h-4 w-px realm-header-border border-l flex-shrink-0" />
+              {/* Col 1: Brand — logo + divider, identical to the two-row arm */}
+              <div className="flex items-center gap-3 shrink-0 self-stretch">
+                {desktopLogo}
+                <div className="w-px realm-header-border border-l self-stretch flex-shrink-0" />
               </div>
 
               {/* Col 2: Page title */}

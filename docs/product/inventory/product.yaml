@@ -176,9 +176,25 @@ entries:
     purpose: The policies THA publishes, what it holds about a household, the rights they can exercise over it, and how they reach a person when something is wrong.
     owner: Colin Clapson
     sources: [shared/legal/index.ts, shared/privacy/consent.ts, server/privacy/personal-data-registry.ts, server/trust-routes.ts, docs/architecture/THA_TRUST_AND_COMPLIANCE_ARCHITECTURE.md]
-    related: [page-legal, page-privacy-settings, page-help-centre, page-contact, set-privacy-and-data, hlp-help-centre]
+    related: [page-legal, page-privacy-settings, page-help-centre, page-contact, set-privacy-and-data, hlp-help-centre, dom-commerce]
     last_verified: 2026-07-18
     version: 1
+
+  - id: dom-commerce
+    name: Plans and Entitlements
+    section: domains
+    status: live
+    visibility: household
+    purpose: >-
+      What each plan includes, what a household is entitled to, and how a subscription would
+      begin, change and end. THA takes NO payments and activates NO subscriptions — the
+      commercial domain exists, the payment provider does not. Pricing is placeholder and is
+      never shown to a household until it is explicitly configured and approved.
+    owner: Colin Clapson
+    sources: [shared/commerce/index.ts, shared/commerce/plans.ts, shared/commerce/entitlements.ts, shared/commerce/subscription.ts, shared/commerce/billing-events.ts, server/commerce/entitlement-service.ts, server/commerce/subscription-store.ts, server/commerce/billing-provider.ts, server/commerce-routes.ts, server/lib/access.ts, client/src/hooks/use-entitlements.ts, server/tests/test-bus2a-commercial-foundation.ts, docs/architecture/THA_COMMERCIAL_ARCHITECTURE.md]
+    related: [dom-trust-and-compliance, api-surface, routes-map]
+    last_verified: 2026-07-19
+    version: 2
 
   # =========================================================================
   # SECTION 2 — PAGES (keyed by canonical route)
@@ -1491,11 +1507,11 @@ entries:
     visibility: developer
     purpose: The 340 endpoints THA answers, grouped by domain, and which of them require a household, an admin, or nobody at all.
     owner: Colin Clapson
-    sources: [server/routes.ts, server/auth.ts, server/trust-routes.ts, server/lib/access.ts]
-    related: [dev-capability-registry, dom-trust-and-compliance]
+    sources: [server/routes.ts, server/auth.ts, server/trust-routes.ts, server/commerce-routes.ts, server/lib/access.ts]
+    related: [dev-capability-registry, dom-trust-and-compliance, dom-commerce]
     known_defects: [fnd-unprotected-admin-endpoints, fnd-public-template-writes]
     last_verified: 2026-07-18
-    version: 2
+    version: 3
 
   # =========================================================================
   # SECTION 19 — PRODUCT SETTINGS

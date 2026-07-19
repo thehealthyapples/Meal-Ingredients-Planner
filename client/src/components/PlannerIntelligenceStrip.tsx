@@ -85,10 +85,20 @@ function computePlantCount(weekIngredients: string[][]): number {
 }
 
 // ── Compact intelligence pill row ─────────────────────────────────────────────
-// Clips each item to keep the strip tight and scannable.
+// Clips each item to keep the strip tight and scannable. Shortening is deliberate
+// — the full text is always available from the expanded panel below, and from the
+// pill's own title attribute — but the cut lands on a word boundary so a pill
+// reads as a shortened phrase rather than a broken one.
 
 function truncate(str: string, max = 36): string {
-  return str.length > max ? str.slice(0, max - 1) + "…" : str;
+  if (str.length <= max) return str;
+  const cut = str.slice(0, max - 1);
+  const lastSpace = cut.lastIndexOf(" ");
+  // Break on the last word boundary, unless that would discard over half the
+  // budget — a single very long word is better hard-cut than reduced to nothing.
+  const stem = lastSpace > Math.floor(max / 2) ? cut.slice(0, lastSpace) : cut;
+  // Drop trailing punctuation/dashes so the ellipsis doesn't follow a comma.
+  return stem.replace(/[\s,;:—–-]+$/, "") + "…";
 }
 
 // ── Main component ─────────────────────────────────────────────────────────────
@@ -119,20 +129,16 @@ export default function PlannerIntelligenceStrip({
 
   const plantCount = computePlantCount(weekIngredients);
 
-  // Build compact pill items from intelligence data (only show what exists)
-  const pills: string[] = [];
-  if (data?.celebration?.headline) {
-    pills.push(truncate(data.celebration.headline));
-  }
-  if (data?.seasonalHighlight?.headline) {
-    pills.push(truncate(data.seasonalHighlight.headline));
-  }
-  if (data?.householdInsight?.headline) {
-    pills.push(truncate(data.householdInsight.headline));
-  }
-  if (data?.opportunity?.text) {
-    pills.push(truncate(data.opportunity.text));
-  }
+  // Build compact pill items from intelligence data (only show what exists).
+  // Each pill keeps its full text so the shortened label can expose it on hover.
+  const pills: { label: string; full: string }[] = [];
+  const addPill = (full: string | undefined) => {
+    if (full) pills.push({ label: truncate(full), full });
+  };
+  addPill(data?.celebration?.headline);
+  addPill(data?.seasonalHighlight?.headline);
+  addPill(data?.householdInsight?.headline);
+  addPill(data?.opportunity?.text);
 
   const hasExpandableContent =
     weekIngredients.length > 0 ||
@@ -187,8 +193,11 @@ export default function PlannerIntelligenceStrip({
             {pills.map((pill, i) => (
               <span key={i} className="flex items-center gap-1.5 shrink-0">
                 <span className="text-muted-foreground/25">·</span>
-                <span className="text-xs text-muted-foreground/65 whitespace-nowrap">
-                  {pill}
+                <span
+                  className="text-xs text-muted-foreground/65 whitespace-nowrap"
+                  title={pill.full !== pill.label ? pill.full : undefined}
+                >
+                  {pill.label}
                 </span>
               </span>
             ))}

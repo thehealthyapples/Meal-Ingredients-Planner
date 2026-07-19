@@ -32,6 +32,13 @@ export interface AdaptationResult {
    * as a recipe, never overwrites the original.
    */
   householdSafePreview?: HouseholdSafePreview | null;
+  /**
+   * PROD6 — why no preview is present, when the reason is a safety refusal rather
+   * than an absence of conflicts. The preview is WITHHELD (never shown with a
+   * warning) when the AI's proposed ingredients or rewritten method violate a
+   * household restriction, or when the safety context could not be resolved.
+   */
+  householdSafeUnavailableReason?: "safety-context-unavailable" | "adaptation-violates-restrictions";
 }
 
 /** One ingredient change in the household-safe unified preview */

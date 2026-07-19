@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useUser } from "@/hooks/use-user";
+import { useEntitlements } from "@/hooks/use-entitlements";
 import { Copy, Check, Share2, Globe, Lock, AlertCircle, Loader2, Mail, MessageCircle } from "lucide-react";
 
 interface MyTemplate {
@@ -44,9 +45,18 @@ export function SharePlanDialog({ open, onOpenChange }: SharePlanDialogProps) {
   const selected = myTemplates.find(t => t.id === selectedId) ?? myTemplates[0] ?? null;
   const activeTemplate = selected;
 
-  const hasPremium = user?.subscriptionTier === "premium" || user?.subscriptionTier === "friends_family";
+  // BUS2A — resolved through the entitlement projection, not by comparing a
+  // tier string. This site previously matched the user's tier against the two
+  // paid plan names by hand, and compared sharedCount to a typed ceiling, which
+  // made this component a second owner of both the plan rule and the limit that
+  // plans.ts owns. within() answers both at once: on premium the ceiling is
+  // null, so it is always true — the same behaviour, from one source.
+  const entitlements = useEntitlements();
   const sharedCount = myTemplates.filter(t => t.visibility === "shared").length;
-  const isFreeLimitReached = !hasPremium && sharedCount >= 1 && activeTemplate?.visibility !== "shared";
+  const sharedCeiling = entitlements.ceiling("max-shared-plans");
+  const isFreeLimitReached =
+    !entitlements.within("max-shared-plans", sharedCount) &&
+    activeTemplate?.visibility !== "shared";
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -215,6 +225,7 @@ export function SharePlanDialog({ open, onOpenChange }: SharePlanDialogProps) {
                           size="icon"
                           variant="outline"
                           onClick={handleCopy}
+                          aria-label="Copy the share link"
                           data-testid="button-copy-link"
                         >
                           {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
@@ -276,9 +287,16 @@ export function SharePlanDialog({ open, onOpenChange }: SharePlanDialogProps) {
               </>
             )}
 
-            {!hasPremium && (
+            {/* BUS2A — the ceiling is COMPUTED from the plan catalogue, never
+                typed. This line used to state the number itself, beside a limit
+                plans.ts owns; a hand-written figure next to a rule that can
+                change is the same defect as a hand-written saving beside a price
+                (C3), only quieter. A null ceiling means no limit, so the line is
+                not rendered at all. No price, saving, discount or term appears
+                here, so C3's isPublishable gate is not engaged. */}
+            {sharedCeiling !== null && (
               <p className="text-xs text-muted-foreground text-center">
-                Free plan: 1 shared link · <a href="/profile" className="underline hover:text-primary">Upgrade to Premium</a> for unlimited
+                Free plan: {sharedCeiling} shared {sharedCeiling === 1 ? "link" : "links"} · <a href="/profile" className="underline hover:text-primary">Upgrade to Premium</a> for unlimited
               </p>
             )}
           </div>

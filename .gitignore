@@ -8,3 +8,23 @@ vite.config.ts.*
 *.zip
 .env
 build.claude/scheduled_tasks.lock
+
+# GIT1 (2026-07-19) — machine and tooling artefacts.
+#
+# These were previously excluded ONLY by a machine-level /etc/.gitignore on the
+# Replit host, not by the repository. That is not portable: on any other machine
+# — a laptop, a CI runner, a fresh clone — `.cache/` and friends are committable,
+# and a cache directory is exactly the kind of thing that gets swept up by a
+# broad `git add` at the end of a long session. Declaring them here makes the
+# exclusion a property of the repository rather than of one host.
+.env.*
+!.env.example
+.cache/
+.tmp/
+*.local
+coverage/
+playwright-report/
+test-results/
+.playwright/
+ms-playwright/
+*.log

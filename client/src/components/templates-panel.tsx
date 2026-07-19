@@ -584,6 +584,7 @@ export function TemplatesPanel({ open, onClose, user, inline }: TemplatePanelPro
               <div className="flex items-center gap-0.5 shrink-0">
                 <Button size="icon" variant="ghost" className="h-6 w-6"
                   onClick={() => { setEditingId(t.id); setEditName(t.name); setEditDescription(t.description ?? ""); }}
+                  aria-label={`Rename the plan template “${t.name}”`}
                   data-testid={`button-edit-template-${t.id}`}
                 >
                   <Pencil className="h-3 w-3" />
@@ -598,6 +599,7 @@ export function TemplatesPanel({ open, onClose, user, inline }: TemplatePanelPro
                 </Button>
                 <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive"
                   onClick={() => setDeleteConfirmId(t.id)}
+                  aria-label={`Delete the plan template “${t.name}”`}
                   data-testid={`button-delete-template-${t.id}`}
                 >
                   <Trash2 className="h-3 w-3" />

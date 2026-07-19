@@ -142,6 +142,7 @@ export function IngredientRow({
           variant="ghost"
           size="icon"
           onClick={onRemove}
+          aria-label="Remove this ingredient"
           className="shrink-0 h-9 w-9"
           data-testid={`button-remove-ingredient-${index}`}
         >

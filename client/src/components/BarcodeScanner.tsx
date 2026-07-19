@@ -256,6 +256,7 @@ export default function BarcodeScanner({
         size="icon"
         variant="ghost"
         onClick={onClose}
+        aria-label="Close the barcode scanner"
         className="absolute top-4 right-4 text-white"
         data-testid="button-close-scanner"
       >

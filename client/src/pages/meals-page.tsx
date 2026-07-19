@@ -518,6 +518,7 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
                     size="icon"
                     variant="ghost"
                     className="h-7 w-7 text-[11px] font-semibold realm-banner-btn"
+                    aria-label={`How many to cook: currently ${qty}. Change`}
                     data-testid={`button-qty-${mealId}`}
                   >
                     {qty}

@@ -15,6 +15,7 @@ import {
   Leaf, Sparkles, Snowflake,
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import FiveApplesLogo from "@/components/FiveApplesLogo";
 import {
   ONBOARDING_DIET_OPTIONS,
@@ -255,6 +256,7 @@ function StartAreaCard({
 export default function OnboardingPage() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState(1);
@@ -383,6 +385,20 @@ export default function OnboardingPage() {
       // Route to chosen area
       const chosen = START_AREAS.find((a) => a.key === startArea);
       setLocation(chosen ? chosen.route : "/");
+    },
+    // PROD5 — without this, a failed complete-onboarding call was a SILENT DEAD END,
+    // and the worst-placed one in the product: the button re-enabled, nothing was said,
+    // and `onboardingCompleted` stayed false — so every ProtectedRoute redirected the
+    // household straight back to step 12/12. The global queryClient sets `retry: false`
+    // (client/src/lib/queryClient.ts), so one dropped request on a phone was enough.
+    // A household could not reach the app at all, at the exact moment of acquisition.
+    onError: (err) => {
+      console.error("[onboarding:complete]", err);
+      toast({
+        title: "We couldn't finish setting up",
+        description: "Your answers are safe. Please tap Get started again.",
+        variant: "destructive",
+      });
     },
   });
 

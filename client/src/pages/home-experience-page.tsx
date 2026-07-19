@@ -863,7 +863,7 @@ export default function HomeExperiencePage() {
                         </p>
                       </div>
                     )}
-                    <ViewLink href="/plant-diversity" testId="link-home-view-plants">View plant diversity</ViewLink>
+                    <ViewLink href="/nutrition" testId="link-home-view-plants">View plant diversity</ViewLink>
                   </div>
                 </div>
               )}

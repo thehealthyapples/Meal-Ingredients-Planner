@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 // PROD1 — the canonical error presentation, adopted beside the Skeleton PX1
 // already brought to this room. Loading had an owner here; failure did not.
 import { LoadError } from "@/components/ui/load-error";
-import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback, Fragment } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingBasket, Copy, Calendar, CalendarDays, UtensilsCrossed, Snowflake, Baby, PersonStanding, Wine, LayoutGrid, Share2, LayoutList, Flame, Pencil, ExternalLink, AlertTriangle, ShoppingCart, ChevronLeft, ChevronRight, Trash2, Sparkles, Lock, DollarSign, Shield, Fish, Beef, Salad, HelpCircle, ChevronDown, ChevronUp, RefreshCw, Microscope, Wheat, Droplets, Droplet, Globe, Package, Store, Users, Wand2, Camera, BookOpen, MoreHorizontal, Check, GripVertical } from "lucide-react";
+import { X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingBasket, Copy, Calendar, CalendarDays, UtensilsCrossed, Snowflake, Baby, PersonStanding, Wine, LayoutGrid, Share2, LayoutList, Flame, Pencil, ExternalLink, AlertTriangle, ShoppingCart, ChevronLeft, ChevronRight, Trash2, Sparkles, Lock, DollarSign, Shield, ShieldAlert, Fish, Beef, Salad, HelpCircle, ChevronDown, ChevronUp, RefreshCw, Microscope, Wheat, Droplets, Droplet, Globe, Package, Store, Users, Wand2, Camera, BookOpen, MoreHorizontal, Check, GripVertical } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
@@ -2013,7 +2013,7 @@ export default function WeeklyPlannerPage() {
         <PlannerIntelligenceStrip
           weekId={activeWeekId}
           weekIngredients={weekIngredients}
-          onNavigatePlantDiversity={() => navigate("/plant-diversity")}
+          onNavigatePlantDiversity={() => navigate("/nutrition")}
         />
 
         {/* PHASE5C — the planner's own ambient intelligence, from the Decision
@@ -2364,8 +2364,12 @@ export default function WeeklyPlannerPage() {
                     {visibleRows.map((row, rowIdx) => {
                       const isLastRow = rowIdx === visibleRows.length - 1;
                       const RowIcon = row.icon;
+                      // UX_REFINE1 — this fragment was keyless, which is the React warning
+                      // EXPERIENCE_VERIFY1 recorded as D1 and could not locate statically.
+                      // `row.id` is the same key the sibling mobile map already uses on its
+                      // own `visibleRows.map`, so this adopts the file's own convention.
                       return (
-                        <>
+                        <Fragment key={row.id}>
                           {/* Row label - sticky left */}
                           <div
                             key={row.id + "-label"}
@@ -2658,7 +2662,7 @@ export default function WeeklyPlannerPage() {
                               </DroppablePlannerCell>
                             );
                           })}
-                        </>
+                        </Fragment>
                       );
                     })}
 
@@ -3475,6 +3479,29 @@ export default function WeeklyPlannerPage() {
                             {/* ── Household-safe unified preview ── */}
                             {(() => {
                               const preview = result.householdSafePreview;
+                              // PROD6 — the server WITHHELD a household-safe version because the
+                              // AI's proposal violated a household restriction, or because the
+                              // household could not be resolved. Say so. Rendering nothing here
+                              // is safe but silent, and a household that asked for a safe version
+                              // and got no answer is owed the reason (Core Principle 6 — honest
+                              // gaps). What was proposed is never shown: surfacing the unsafe
+                              // suggestion in the act of withholding it defeats the gate.
+                              if (!preview && result.householdSafeUnavailableReason) {
+                                const unresolved =
+                                  result.householdSafeUnavailableReason === "safety-context-unavailable";
+                                return (
+                                  <div className="mt-1 border-t border-border/40 pt-3">
+                                    <p className="text-xs text-muted-foreground flex items-start gap-1.5">
+                                      <ShieldAlert className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
+                                      <span>
+                                        {unresolved
+                                          ? "We couldn't confirm your household's dietary needs, so we haven't suggested a household-safe version."
+                                          : "We couldn't find a household-safe version of this meal that suits everyone eating it, so we haven't suggested one."}
+                                      </span>
+                                    </p>
+                                  </div>
+                                );
+                              }
                               if (!preview) return null;
                               return (
                                 <div className="mt-1 border-t border-border/40 pt-3 space-y-3">

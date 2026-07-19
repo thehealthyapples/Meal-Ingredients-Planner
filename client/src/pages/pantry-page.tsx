@@ -586,7 +586,7 @@ function FoodPantrySection({
               {FOOD_CAT_EMPTY[activeCategory]}
             </p>
           ) : (
-            <div className="px-3 pt-1 pb-2">
+            <div className="px-3 pt-1">
               <label htmlFor={`checkbox-select-all-${activeCategory}`} className="flex items-center gap-3 pb-2 mb-1 border-b border-border/40 cursor-pointer select-none min-h-[2.75rem]">
                 <Checkbox
                   id={`checkbox-select-all-${activeCategory}`}
@@ -602,7 +602,12 @@ function FoodPantrySection({
                 )}
               </label>
 
-              <div className="max-h-72 overflow-y-auto">
+              {/*
+                Bottom padding sits INSIDE the scroller, so the clip edge is the
+                card edge: a part-visible row then reads as "more below" rather
+                than a sliced row stranded above dead card background (D6).
+              */}
+              <div className="max-h-72 overflow-y-auto pb-2">
                 {([
                   ...(showGroupHeaders ? [{ group: "need" as const, groupItems: needItems }] : []),
                   { group: "inPantry" as const, groupItems: showGroupHeaders ? inPantryItems : displayedItems },
@@ -1034,7 +1039,7 @@ function HomePantrySection({
               {HOME_CAT_EMPTY[activeCategory]}
             </p>
           ) : (
-            <div className="px-3 pt-1 pb-2">
+            <div className="px-3 pt-1">
               <label htmlFor="checkbox-select-all-household" className="flex items-center gap-3 pb-2 border-b border-border/40 mb-1 cursor-pointer select-none min-h-[2.75rem]">
                 <Checkbox
                   id="checkbox-select-all-household"
@@ -1049,7 +1054,12 @@ function HomePantrySection({
                   </Badge>
                 )}
               </label>
-              <div className="max-h-72 overflow-y-auto">
+              {/*
+                Bottom padding sits INSIDE the scroller, so the clip edge is the
+                card edge: a part-visible row then reads as "more below" rather
+                than a sliced row stranded above dead card background (D6).
+              */}
+              <div className="max-h-72 overflow-y-auto pb-2">
                 {([
                   ...(homeShowGroupHeaders ? [{ group: "need" as const, groupItems: homeNeedItems }] : []),
                   { group: "inPantry" as const, groupItems: homeShowGroupHeaders ? homeInPantryItems : displayedItems },
