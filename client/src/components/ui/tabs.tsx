@@ -12,7 +12,15 @@ const TabsList = React.forwardRef<
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      "inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground",
+      // INTARCH2 — the support tier's first consumer. A tab list is the one
+      // thing in the product that is literally NORTH2's description: a panel
+      // routed into the counter, holding tiles that sit in it. It was `bg-muted`
+      // — a flat grey tray, a second surface authority beside the material
+      // system — and is now `.surface-support`: the counter's own material, one
+      // whisper deeper, defined by the etch of light along its lip rather than
+      // by a drawn frame (index.css; Blueprint § 8.2, "supporting surfaces are
+      // lower and quieter").
+      "inline-flex h-10 items-center justify-center surface-support p-1 text-muted-foreground",
       className
     )}
     {...props}
@@ -27,7 +35,7 @@ const TabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm",
+      "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-[var(--surface-primary)] data-[state=active]:text-foreground data-[state=active]:shadow-sm",
       className
     )}
     {...props}

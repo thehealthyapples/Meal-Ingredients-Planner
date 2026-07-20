@@ -751,6 +751,99 @@
    written here, because writing one would be a second definition of a value
    that already has an owner. */
 
+/* ── INTARCH2 — THE SURFACES STANDING ON THE GROUND ───────────────────────────
+ *
+ * INTARCH1 gave every room a FLOOR and said, in its own § 7, what it had not
+ * done: "the things standing on it are still the scaffold's cards with their own
+ * borders." This is that sentence closed.
+ *
+ * THE DEFECT, STATED AS A NUMBER. The probe walked eleven rooms at two widths
+ * before this change and counted 73 card surfaces in the house. The number of
+ * them made of --surface-primary was ZERO, in every room, at both widths. The
+ * eight-token count INTARCH1 published for the ground applied here unchanged:
+ * --surface-primary, --surface-primary-border, --surface-support,
+ * --surface-support-border, --surface-support-hover, --shadow-primary,
+ * --shadow-support and --radius-primary were valued in BOTH modes, documented at
+ * length directly above, and read by nothing.
+ *
+ * WHAT STOOD THERE INSTEAD. `ui/card.tsx` — the one card surface, 200 uses
+ * across 46 files, in every room in the house:
+ *
+ *     rounded-xl border bg-card/82 backdrop-blur-md border-border shadow-none
+ *
+ * Read that as material rather than as CSS and it is a sheet of tinted glass
+ * with a line drawn round it. `shadow-none` means it casts nothing, so it is not
+ * standing on the floor INTARCH1 laid — it is printed on it. `border-border` is
+ * a ring on all four sides, which is the exact thing --surface-primary-border's
+ * own comment condemns forty lines above this one: "an outlined rectangle is a
+ * card, whatever colour it is." And `bg-card/82` over a ground plane that is
+ * itself 0.82 translucent is two sheets of the same glass, which is why the
+ * before-captures of the Profile and the Nutrition room show furniture that
+ * reads as LINES DRAWN ON THE FLOOR rather than as objects resting on it.
+ *
+ * THE TWO MATERIALS, AND WHY A ROOM NEEDS BOTH. Blueprint § 8.2: "Solidity
+ * follows importance. The primary surface is solid and lit; supporting surfaces
+ * are lower and quieter." NORTH2 built both materials and named them: PRIMARY is
+ * PLASTER — it faces the light, it is the warmest and brightest thing in the
+ * room, and it is SOLID because it carries type and type gets ground without
+ * negotiation. SUPPORT is the counter's own stone, ROUTED — a groove cut into
+ * the surface rather than a tile laid on it, defined by the etch of light along
+ * its lip and not by a drawn frame.
+ *
+ * WHY THE PLASTER IS OPAQUE AND THE OLD CARD WAS NOT. Translucency was doing a
+ * job before there was a floor: it let the warm canvas through so the card did
+ * not read as a slab. INTARCH1 put a ground under it, and the job disappeared —
+ * a thing standing ON a counter does not show you the counter through itself.
+ * Making it solid is what lets the SHADOW do the separating, which is the honest
+ * mechanism (depth before shadows, light before colour — TRANSLATION1 § 5), and
+ * it is why the border can now fall to a whisper instead of a ring.
+ *
+ * WHAT IS DELIBERATELY NOT HERE: the hand. --shadow-support-hover and
+ * --shadow-support-press describe a door rising to meet the hand and seating
+ * under it, and they are NOT adopted, because the hand already has an owner —
+ * `.hover-elevate` / `.active-elevate-2`, live on every Button in the product.
+ * Blueprint § 8.2 fixes that "the hand answers physically, IDENTICALLY
+ * everywhere" and GEA18 fixes one owner per experience concern; adopting a
+ * second interaction physics beside a live one would be the defect, not the fix.
+ * Those two tokens stay at zero consumers and are reported as such.
+ */
+@layer components {
+  /* PLASTER. The thing a household's content stands on top of.
+     Every property reads a token and sets no value of its own, so UIA § 16's
+     "values live in exactly one implementation source" holds and dark mode is
+     INHERITED rather than re-declared: at night --surface-primary resolves to
+     hsl(var(--card)), --shadow-primary to `none`, and the border to a softer
+     tint — because a warm shadow at midnight is a lie about where the light
+     comes from, which the .dark block above already decided for the whole house.
+
+     Declared in @layer components, NOT as a bare rule, and that is load-bearing:
+     Tailwind sorts components before utilities, so the ~200 call sites that pass
+     their own `bg-…`, `border-…` or `rounded-…` override still win exactly as
+     they did yesterday. Adopting the material must not silently seize a hundred
+     local decisions it was never asked about. */
+  .surface-primary {
+    background: var(--surface-primary);
+    border: 1px solid var(--surface-primary-border);
+    border-radius: var(--radius-primary);
+    box-shadow: var(--shadow-primary);
+  }
+
+  /* THE GROOVE. Support is the counter, cut — never a different substance
+     inserted into it. The fill is nearly a no-op on purpose (0.34 alpha: what
+     you actually see inside it is the plane it was cut from) and the ETCH
+     carries the definition: a warm inset along the top lip where the morning is
+     held off, and a single lit rim along the lower inner lip, which is the one
+     edge of a real groove that faces the sun. That lower rim is the whole
+     difference between "routed into oak" and "greyed out", and a disabled
+     control never has it. */
+  .surface-support {
+    background: var(--surface-support);
+    border: 1px solid var(--surface-support-border);
+    border-radius: var(--radius-support);
+    box-shadow: var(--shadow-support);
+  }
+}
+
 /* ── UX2 — THE PERMANENT HEADER: ONE HOUSE, ONE HEADER ────────────────────────
  *
  * THE DEFECT THIS CLOSES. The header rendered `realm-header-bg` — so the top of
@@ -1784,13 +1877,28 @@ a:hover > .brand-mark .bm-face { opacity: 0.86; }
   [data-companion-state="listening"] .companion-light { opacity: .72; transform: scale(1); }
 }
 
-/* Cards and panels inside modals sit on top of the orchard background,
-   so they must be fully opaque to remain readable */
-[role="dialog"] .shadcn-card {
-  background-color: hsl(var(--card));
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
+/* INTARCH2 — RETIRED, because the condition it patched no longer exists.
+ *
+ * This rule read:
+ *
+ *     [role="dialog"] .shadcn-card {
+ *       background-color: hsl(var(--card));
+ *       backdrop-filter: none; -webkit-backdrop-filter: none;
+ *     }
+ *
+ * with the note "cards and panels inside modals sit on top of the orchard
+ * background, so they must be fully opaque to remain readable". That was true of
+ * a card made of `bg-card/82 backdrop-blur-md`, and it was a local exception
+ * repairing a global material choice — the card was translucent everywhere and
+ * had to be un-translucent in the one place translucency actually broke.
+ *
+ * The card is now `.surface-primary`, which is opaque in both modes and carries
+ * no backdrop filter, so both declarations are dead: --surface-primary resolves
+ * to hsl(42 46% 98%) in light and hsl(var(--card)) in dark, and --card is
+ * `42 46% 98%` — the SAME VALUE this rule was setting. It is deleted rather than
+ * left standing, because a dead rule that happens to agree with its successor is
+ * a second authority waiting for one of the two values to move (GEA18; UI
+ * Principle 5, retire on introduction). Nothing a household sees changes. */
 
 /* ── Global print protection ─────────────────────────────────────────────── */
 @media print {

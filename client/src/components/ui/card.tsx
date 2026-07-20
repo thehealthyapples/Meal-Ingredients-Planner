@@ -2,6 +2,22 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
+// INTARCH2 — THE CARD IS MADE OF THE HOUSE.
+//
+// This was `rounded-xl border bg-card/82 backdrop-blur-md border-border
+// shadow-none`: tinted glass with a line drawn round it, casting nothing. It was
+// the correct shape while rooms had no floor. INTARCH1 gave them one, and a
+// surface that casts no shadow onto a floor it is standing on is a surface that
+// is printed on the floor rather than resting on it.
+//
+// It is now PLASTER — the primary tier of the one material system, solid and lit
+// (Blueprint § 8.2, "solidity follows importance"; the values are NORTH2's, in
+// index.css). The four literals are gone and `.surface-primary` reads the tokens
+// instead, so the radius law, the shadow definition and dark mode each have
+// exactly one owner (UIA § 16) and this file states none of them.
+//
+// `shadcn-card` is retained: it is the adoption register's machine hook and the
+// probe's, and it is how the house can still find every card it owns.
 const Card = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
@@ -9,7 +25,7 @@ const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "shadcn-card rounded-xl border bg-card/82 backdrop-blur-md border-border text-card-foreground shadow-none",
+      "shadcn-card surface-primary text-card-foreground",
       className
     )}
     {...props}
