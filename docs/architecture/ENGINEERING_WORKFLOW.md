@@ -439,10 +439,13 @@ For every AI-related implementation confirm:
 
 **Adopted under `ARCH-VERIFY1` (2026-07-11), closing a governance gap.** This section applies to **every user-facing implementation** — anything a person sees, reads, hears, or does — in addition to the general Architecture Compliance Checklist above.
 
-Four governing documents own the user-facing layer, and each holds its own full checklist. **This workflow does not restate them** (that would create a second owner of the same law, which drifts); it makes them mandatory and names the precedence between them:
+**Extended under `EXPGOV1` (2026-07-20)** with the Experience Constitution, which is read **first** and whose check runs **before design begins**.
+
+Five governing documents own the user-facing layer, and each holds its own full checklist. **This workflow does not restate them** (that would create a second owner of the same law, which drifts); it makes them mandatory and names the precedence between them:
 
 | Document | Owns | Its checklist |
 |---|---|---|
+| [`GOVERNING_EXPERIENCE_ARCHITECTURE.md`](./GOVERNING_EXPERIENCE_ARCHITECTURE.md) (EXPGOV1) — **the Experience Constitution; mandatory first read** | **Why** the experience exists — the philosophy, the twenty principles (GEA1–GEA20), the household outcome, the three-layer model (Constitution → Architecture → Implementation), the ownership map and the verification map. It states principles and never mechanisms, restates no rule of the four below, and is **corrected** wherever it conflicts with one of them | **Experience Constitution Check** — its § 18.2, answered **before design begins** |
 | [`THA_EXPERIENCE_ARCHITECTURE.md`](./THA_EXPERIENCE_ARCHITECTURE.md) (EXP1, + EXP2 Premium Experience Principles) | How THA **behaves and feels** — Home, progressive disclosure, calm before capability, one primary action, journeys, companion conduct, trust, language, errors, notifications, accessibility, and the premium standard of craft | **UX Governance Checklist** — its § 18, *including the Premium Standard block* |
 | [`THA_EXPERIENCE_LANGUAGE.md`](./THA_EXPERIENCE_LANGUAGE.md) (EXPLANG1) | How THA must **feel** — the emotional target the other two produce: calm, welcoming, effortless, intelligent, reassuring, premium, quietly memorable; the thirteen Principles of Feeling, the six-beat Experience Rhythm, and the Anti-Patterns THA must never adopt | **Experience Review Questions** — its § 6 |
 | [`THA_UI_ARCHITECTURE.md`](./THA_UI_ARCHITECTURE.md) (UIA2) | How THA **looks** — the Calm Orchard visual language, visual hierarchy, layout, colour, typography, spacing, motion, brand identity, state presentation, Visual Trust, design tokens, and one-owner-per-visual-concern | **UI Governance Checklist** — its § 18 |
@@ -455,6 +458,13 @@ EXPERIENCE & UI GOVERNANCE COMPLIANCE
 
 For every user-facing implementation confirm:
 
+✓ FIRST, AND BEFORE DESIGN BEGAN: the Experience Constitution Check
+    (GOVERNING_EXPERIENCE_ARCHITECTURE.md § 18.2) was answered in full —
+    hospitality (§ 3.1) · outcome (§ 3.5, naming which of the four this
+    produces) · weight (GEA2) · voice (GEA8/GEA9 — rooms report, the Companion
+    advises) · restraint (GEA11/GEA13/GEA15) · layer (GEA20 — this change names
+    the principle above it and the Architecture owner beside it, and originates
+    no law at the implementation layer)
 ✓ The UX Governance Checklist (THA_EXPERIENCE_ARCHITECTURE.md § 18) has been
     completed IN FULL — including the Premium Standard block (§ 17)
 ✓ The UI Governance Checklist (THA_UI_ARCHITECTURE.md § 18) has been
@@ -475,7 +485,9 @@ For every user-facing implementation confirm:
     favour — Experience governs behaviour, the Experience Language governs the
     feeling that behaviour and presentation produce, UI governs presentation,
     and the Experience Architecture prevails (EXPERIENCE § 2.1, EXPLANG § 2.1,
-    UI § 2)
+    UI § 2). Where the Experience Constitution conflicts with any of them on a
+    question of RULE, the rule's owner prevails and the Constitution is
+    corrected in this same change (EXPGOV1 § 2.3)
 ✓ Nothing in this change owns a fact, an entity, or a decision at the
     presentation layer — every value shown is read from its single owner, and
     gaps render as honest absence, never invented content (Core Principle 6)
