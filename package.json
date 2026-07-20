@@ -96,6 +96,7 @@
     "verify:prod": "tsx scripts/verify-prod.ts",
     "seed:cookbook": "tsx scripts/import-tha-founding-cookbook-500.ts",
     "seed:cookbook:dry-run": "tsx scripts/import-tha-founding-cookbook-500.ts --dry-run",
+    "seed:family-plan": "tsx script/seed-family-plan.ts",
     "verify:branch-protection": "tsx scripts/ci/verify-branch-protection.ts",
     "db:push": "tsx scripts/db/schema-push-guard.ts",
     "verify:schema-coverage": "tsx scripts/ci/verify-schema-migration-coverage.ts",
