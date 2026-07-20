@@ -3,7 +3,7 @@
 **Session ID:** `PLANNER_MEALS1_Default_Meal_Curation`
 **Objective:** Curate the meals in the default Planner experience so a household would happily cook every dinner in a default week.
 **Rollback ID:** `rollback/PLANNER_MEALS1-default-meal-curation-20260720` → `13fbe61a`
-**Stage:** Complete — committed, pushed; awaiting owner review
+**Stage:** Complete — committed (`58613eab`), pushed; awaiting owner review
 **Started & completed:** 2026-07-20
 
 ---
