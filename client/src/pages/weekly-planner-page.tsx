@@ -1612,15 +1612,17 @@ export default function WeeklyPlannerPage() {
     return rows;
   }, [plannerSettings]);
 
+  // PRESENCE1: `total` is gone. It existed only to be the denominator of
+  // "14/28 meals planned", and with that retired there is no consumer for a
+  // number describing how full a household's week ought to be.
   const weekStats = useMemo(() => {
-    if (!sortedDays.length) return { filled: 0, total: sortedDays.length * MEAL_TYPES.length };
     let filled = 0;
     for (const day of sortedDays) {
       for (const slot of MEAL_TYPES) {
         if (findEntry(day.entries, slot.key, "adult")) filled++;
       }
     }
-    return { filled, total: sortedDays.length * MEAL_TYPES.length };
+    return { filled };
   }, [sortedDays]);
 
   const selectedDay = useMemo(() => {
@@ -1864,9 +1866,19 @@ export default function WeeklyPlannerPage() {
               <span className="font-medium">{placeholderItems.length}</span>
             </button>
           )}
-          <span className="hidden lg:inline text-[11px] text-muted-foreground/70 ml-auto shrink-0" data-testid="text-week-progress">
-            {weekStats.filled}/{weekStats.total} meals planned
-          </span>
+          {/* PRESENCE1: this read "14/28 meals planned" — a completion state
+              against a denominator (7 days × 4 slots) that no household ever
+              chose, counting a family's dinners. A completion state has a
+              below, and this one sat permanently in the planner's header
+              telling a family they were behind on a target they had not set
+              (GEA13). The count of meals a household HAS planned is a fact
+              they asked for and it stays; the target it was measured against
+              does not. */}
+          {weekStats.filled > 0 && (
+            <span className="hidden lg:inline text-[11px] text-muted-foreground/70 ml-auto shrink-0" data-testid="text-week-progress">
+              {weekStats.filled} meal{weekStats.filled === 1 ? "" : "s"} planned
+            </span>
+          )}
         </div>
       }
       actions={

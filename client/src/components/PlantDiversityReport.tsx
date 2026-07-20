@@ -19,7 +19,10 @@ import { Card } from "@/components/ui/card";
 // MAT1 — imported, not redeclared. This file held its own `= 30`; so did two other
 // client surfaces and the shared core, so the platform's single most user-visible
 // number was declared four times. One owner, one source of truth.
-import { WEEKLY_PLANT_TARGET } from "@shared/nutrition/household-nutrition";
+// PRESENCE1: this room no longer imports WEEKLY_PLANT_TARGET. It has nothing to
+// compare a household against. The constant remains the single owner of the
+// target for the consumers that legitimately reason about it; the Nutrition
+// room is simply no longer one of them.
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface WeekMealEntry {
@@ -76,17 +79,13 @@ const CATEGORY_ORDER: PlantCategory[] = [
   "Fermented Foods",
 ];
 
-const CATEGORY_SUGGESTIONS: Record<PlantCategory, string[]> = {
-  Vegetables:        ["Spinach", "Kale"],
-  Fruits:            ["Avocado", "Blueberries"],
-  Legumes:           ["Chickpeas", "Lentils"],
-  "Whole Grains":    ["Oats", "Brown Rice"],
-  Seeds:             ["Pumpkin Seeds", "Chia Seeds"],
-  Nuts:              ["Walnuts", "Almonds"],
-  "Herbs & Spices":  ["Basil", "Coriander"],
-  "Olive Oil":       ["Extra Virgin Olive Oil"],
-  "Fermented Foods": ["Sauerkraut", "Kimchi"],
-};
+// PRESENCE1: CATEGORY_SUGGESTIONS and the BroadenYourWeek panel it fed are
+// retired here. The panel took the categories a household had NOT eaten and
+// advised them, in the room's own voice, what to add — authored advice, written
+// before this household existed, that could never detect it had become wrong
+// (GEA8, GEA9). Suggesting is the Companion's, which composes from the same
+// facts at the moment it speaks. Retired in the same change under GEA18 rather
+// than left unadopted beside its replacement.
 
 const DAY_ORDER = [
   "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday",
@@ -497,99 +496,37 @@ function sortRows(rows: IngredientRow[], sortKey: SortKey): IngredientRow[] {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
+// PRESENCE1: this was a nine-row coverage checklist — ticks against what the
+// household ate and empty circles against what they did not. The empty circles
+// were the deficit: they named, every week, exactly what a family had failed to
+// put on the table, and a checklist with unticked rows is a score with the
+// number removed. GEA13's test settles it — three unticked circles labelled
+// Seeds, Nuts and Fermented Foods do not measure food, they grade a week.
+//
+// What the household is shown now is what their week actually contained. The
+// absent categories are still known to the platform and still reach the
+// household — through the Companion, which may notice and suggest, because it
+// is the one voice permitted to (GEA8).
 function CategoryGrid({ categoriesFound }: { categoriesFound: Set<PlantCategory> }) {
+  const present = CATEGORY_ORDER.filter((cat) => categoriesFound.has(cat));
+  if (present.length === 0) return null;
+
   return (
     <div className="px-5 py-4 border-b border-border/50">
       <p className="text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wide mb-3">
-        Categories Covered
+        In Your Week
       </p>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2">
-        {CATEGORY_ORDER.map((cat) => {
-          const covered = categoriesFound.has(cat);
-          return (
-            <div
-              key={cat}
-              className={`flex items-center gap-2 text-xs ${
-                covered ? "text-foreground/80" : "text-muted-foreground/35"
-              }`}
-            >
-              {covered ? (
-                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500/15 flex-shrink-0">
-                  <Check className="h-2.5 w-2.5 text-emerald-600 dark:text-emerald-400" />
-                </span>
-              ) : (
-                <span className="h-4 w-4 rounded-full border border-muted-foreground/20 flex-shrink-0" />
-              )}
-              {cat}
-            </div>
-          );
-        })}
+        {present.map((cat) => (
+          <div key={cat} className="flex items-center gap-2 text-xs text-foreground/80">
+            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500/15 flex-shrink-0">
+              <Check className="h-2.5 w-2.5 text-emerald-600 dark:text-emerald-400" />
+            </span>
+            {cat}
+          </div>
+        ))}
       </div>
     </div>
-  );
-}
-
-function BroadenYourWeek({
-  categoriesFound,
-  knowledgeMap,
-}: {
-  categoriesFound: Set<PlantCategory>;
-  knowledgeMap: Record<string, IngredientKnowledge>;
-}) {
-  const missingCategories = CATEGORY_ORDER.filter((cat) => !categoriesFound.has(cat));
-  if (missingCategories.length === 0) return null;
-
-  return (
-    <Card className="overflow-hidden">
-      <div className="px-5 py-4 border-b border-border/50">
-        <div className="flex items-center gap-2">
-          <span className="text-base" aria-hidden="true">🌿</span>
-          <h3 className="text-sm font-semibold">Ideas to Broaden Your Week</h3>
-        </div>
-        <p className="text-xs text-muted-foreground/55 mt-0.5">
-          Small additions that bring new plant categories into your week.
-        </p>
-      </div>
-      <div className="px-5 py-4 space-y-4">
-        {missingCategories.map((cat) => {
-          const suggestions = CATEGORY_SUGGESTIONS[cat];
-          return (
-            <div key={cat}>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-[11px] font-medium text-muted-foreground/50 uppercase tracking-wide">
-                  {cat}
-                </p>
-                <Link
-                  href="/pantry?mode=explore"
-                  className="text-[10px] font-medium text-emerald-700/70 dark:text-emerald-400/70 hover:underline"
-                  data-testid={`link-explore-category-${cat}`}
-                >
-                  Explore in Pantry →
-                </Link>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {suggestions.map((name) => {
-                  const knowledge = knowledgeMap[normaliseForReuse(name)];
-                  return (
-                    <div
-                      key={name}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-muted/30 border border-border/40"
-                    >
-                      <span className="text-xs font-medium text-foreground/80">{name}</span>
-                      {knowledge && knowledge.nutrients.length > 0 && (
-                        <span className="text-[11px] text-emerald-700/60 dark:text-emerald-400/60 font-medium">
-                          {knowledge.nutrients.slice(0, 2).join(" · ")}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </Card>
   );
 }
 
@@ -944,59 +881,36 @@ function ThirtyPlantsTracker({
   plantCount: number;
   categoriesFound: Set<PlantCategory>;
 }) {
-  const pct = Math.min((plantCount / WEEKLY_PLANT_TARGET) * 100, 100);
-  const isComplete = plantCount >= WEEKLY_PLANT_TARGET;
-  const isOnTrack = plantCount >= Math.round(WEEKLY_PLANT_TARGET * 0.6);
-
-  const barColor = isComplete
-    ? "bg-emerald-500"
-    : isOnTrack
-      ? "bg-teal-500"
-      : "bg-amber-400";
-
-  const statusMessage = isComplete
-    ? "You've hit 30 plants this week — brilliant variety."
-    : isOnTrack
-      ? `${WEEKLY_PLANT_TARGET - plantCount} more plants to reach 30 this week.`
-      : `${WEEKLY_PLANT_TARGET - plantCount} plants still to go. Every meal is a chance to add more.`;
-
+  // PRESENCE1: this was a target (30) the household never set, a progress bar
+  // toward it, a colour ramp grading how close they were, and a sentence that
+  // either praised them or told them what they were short of. All four are
+  // forbidden by GEA13, and the sentence additionally spoke in a voice no room
+  // owns (GEA8). What remains is the count itself, which is the only part the
+  // household actually asked for.
   return (
     <>
-      {/* 30 Plants progress */}
+      {/* Plants in this week — a count, not a score */}
       <div className="px-5 pt-4 pb-3 border-b border-border/50">
         <div className="flex items-center gap-2 mb-2">
           <Leaf className="h-3.5 w-3.5 text-emerald-600/70 dark:text-emerald-400/70 flex-shrink-0" />
           <p className="text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wide">
-            30 Plants This Week
+            Different Plants This Week
           </p>
         </div>
-        <div className="flex items-baseline gap-1.5 mb-2">
+        <div className="flex items-baseline gap-1.5">
           <span
-            className={`text-3xl font-bold tabular-nums ${
-              isComplete ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"
-            }`}
+            className="text-3xl font-bold tabular-nums text-foreground"
             data-testid="text-plant-count"
           >
             {plantCount}
           </span>
-          <span className="text-lg text-muted-foreground/60 font-medium">
-            / {WEEKLY_PLANT_TARGET}
+          <span className="text-sm text-muted-foreground/50 ml-1">
+            plant{plantCount === 1 ? "" : "s"}
           </span>
-          <span className="text-sm text-muted-foreground/50 ml-1">plants</span>
         </div>
-        <div className="h-2 w-full bg-muted/40 rounded-full overflow-hidden mb-2">
-          <div
-            className={`h-full rounded-full transition-all duration-500 ${barColor}`}
-            style={{ width: `${pct}%` }}
-            role="progressbar"
-            aria-valuenow={plantCount}
-            aria-valuemax={WEEKLY_PLANT_TARGET}
-          />
-        </div>
-        <p className="text-xs text-muted-foreground/60 leading-relaxed">{statusMessage}</p>
       </div>
 
-      {/* Categories covered */}
+      {/* The plants the week actually contained */}
       <CategoryGrid categoriesFound={categoriesFound} />
     </>
   );
@@ -1013,9 +927,10 @@ function ReportSummary({
   totalIngredients: number;
   categoriesFound: Set<PlantCategory>;
 }) {
-  const isComplete = plantCount >= WEEKLY_PLANT_TARGET;
-  const pct = Math.min((plantCount / WEEKLY_PLANT_TARGET) * 100, 100);
-
+  // PRESENCE1: three counts, stated plainly. No denominator, no bar, no colour
+  // that grades the number. A household asked what is in their week; this
+  // answers that and stops (GEA13 — the permitted case is "reporting a quantity
+  // a household asked for"; GEA8 — the room reports, it does not appraise).
   return (
     <Card className="overflow-hidden">
       <div className="px-5 py-4 grid grid-cols-3 divide-x divide-border/40">
@@ -1023,24 +938,8 @@ function ReportSummary({
           <p className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide mb-1">
             Plants
           </p>
-          <p
-            className={`text-xl font-bold tabular-nums ${
-              isComplete ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"
-            }`}
-          >
-            {plantCount}
-            <span className="text-sm font-normal text-muted-foreground/50 ml-1">
-              / {WEEKLY_PLANT_TARGET}
-            </span>
-          </p>
-          <div className="h-1 w-full bg-muted/40 rounded-full overflow-hidden mt-1.5">
-            <div
-              className={`h-full rounded-full transition-all ${
-                isComplete ? "bg-emerald-500" : pct >= 60 ? "bg-teal-500" : "bg-amber-400"
-              }`}
-              style={{ width: `${pct}%` }}
-            />
-          </div>
+          <p className="text-xl font-bold tabular-nums text-foreground">{plantCount}</p>
+          <p className="text-[11px] text-muted-foreground/45 mt-1">this week</p>
         </div>
         <div className="px-4">
           <p className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide mb-1">
@@ -1053,13 +952,8 @@ function ReportSummary({
           <p className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide mb-1">
             Plant Categories
           </p>
-          <p className="text-xl font-bold tabular-nums">
-            {categoriesFound.size}
-            <span className="text-sm font-normal text-muted-foreground/50 ml-1">
-              / {CATEGORY_ORDER.length}
-            </span>
-          </p>
-          <p className="text-[11px] text-muted-foreground/45 mt-1">covered</p>
+          <p className="text-xl font-bold tabular-nums">{categoriesFound.size}</p>
+          <p className="text-[11px] text-muted-foreground/45 mt-1">this week</p>
         </div>
       </div>
     </Card>
@@ -1080,12 +974,6 @@ export function PlantDiversityReport({ weekMeals }: PlantDiversityReportProps) {
       for (const raw of meal.ingredients) {
         if (!raw.trim()) continue;
         const key = getDisplayKey(raw);
-        if (key) keys.add(key);
-      }
-    }
-    for (const suggestions of Object.values(CATEGORY_SUGGESTIONS)) {
-      for (const name of suggestions) {
-        const key = normaliseForReuse(name);
         if (key) keys.add(key);
       }
     }
@@ -1245,7 +1133,6 @@ export function PlantDiversityReport({ weekMeals }: PlantDiversityReportProps) {
       )}
 
       {/* Broaden Your Week — at the end (Stage 7) */}
-      <BroadenYourWeek categoriesFound={categoriesFound} knowledgeMap={ingredientKnowledge} />
 
       {/* Cross-link to Pantry */}
       <Card className="px-5 py-4">

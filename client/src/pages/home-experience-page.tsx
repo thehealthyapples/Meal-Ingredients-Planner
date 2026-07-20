@@ -92,10 +92,10 @@ import { MealCard } from "@/components/MealCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LoadError } from "@/components/ui/load-error";
-// MAT1 — imported, not redeclared. This file held its own `= 30`; so did two other
-// client surfaces and the shared core, so the platform's single most user-visible
-// number was declared four times. One owner, one source of truth.
-import { WEEKLY_PLANT_TARGET } from "@shared/nutrition/household-nutrition";
+// MAT1 converged this file's private `= 30` onto the shared owner. PRESENCE1 went
+// one step further and removed the import entirely: Home no longer needs the target,
+// because it no longer measures anybody against it. `WEEKLY_PLANT_TARGET` remains the
+// single owner of the fact for the consumers that still legitimately reason about it.
 import {
   CalendarDays, ShoppingCart, Leaf, ArrowRight, ChevronRight,
 } from "lucide-react";
@@ -250,40 +250,40 @@ function ViewLink({ href, children, testId }: { href: string; children: React.Re
 }
 
 /**
- * The week's variety, as a ring.
+ * The week's variety, as a quiet mark.
  *
- * The North Star's one instrument, and it is kept because it is the one element of the
- * render that was already data-borne: it draws a number a canonical owner produced, and
- * it draws nothing when that owner has no picture yet. It is STILL — no sweep, no count
- * up, no draw-on (UIA §11; Blueprint §6.1's "place survives total stillness"). Motion
- * here would be the ring performing the household's diet back at them.
+ * Still data-borne: it accompanies a number a canonical owner produced, and it is not
+ * drawn at all when that owner has no picture yet. It is STILL — no sweep, no count up,
+ * no draw-on (UIA §11; Blueprint §6.1's "place survives total stillness").
+ *
+ * PRESENCE1 removed its ARC. The docblock used to defend the ring's stillness on the
+ * grounds that motion "would be the ring performing the household's diet back at them"
+ * — which was the right instinct aimed at the wrong half of the problem. A still arc
+ * filling toward a target the household never chose performs their diet back at them
+ * just as surely as a moving one; it simply does it quietly (GEA13).
  */
-function PlantRing({ pct, count }: { pct: number; count: number }) {
+// PRESENCE1: this was a progress ring — an arc filling toward WEEKLY_PLANT_TARGET,
+// on Home, on arrival. A ring that is mostly empty is a progress bar bent into a
+// circle, and it graded a household's week against a number they never set
+// (GEA13, which forbids "progress bars toward a target the household did not
+// set" by name). The careful no-arc-at-zero reasoning below was right about the
+// dot and is preserved in spirit: an honest nothing is still nothing.
+//
+// What remains is a quiet mark holding the count — the same fact, with the
+// verdict taken off it.
+function PlantRing({ count }: { count: number }) {
   const R = 34;
-  const C = 2 * Math.PI * R;
   return (
     <div className="relative shrink-0" style={{ width: 88, height: 88 }}>
       <svg width="88" height="88" viewBox="0 0 88 88" aria-hidden>
         <circle cx="44" cy="44" r={R} fill="none" stroke="hsl(var(--accent))" strokeWidth="7" />
-        {/* No arc at zero. A round cap on a zero-length dash draws a DOT — so a
-            household who has planted nothing this week was shown a small mark on the
-            ring, which is a claim of progress that has not happened. An honest nothing
-            is nothing. */}
-        {pct > 0 && (
-          <circle
-            cx="44" cy="44" r={R} fill="none"
-            stroke="var(--primary-border)"
-            strokeWidth="7"
-            strokeLinecap="round"
-            strokeDasharray={`${(pct / 100) * C} ${C}`}
-            transform="rotate(-90 44 44)"
-          />
-        )}
       </svg>
       <span className="absolute inset-0 flex items-center justify-center">
         <Leaf style={{ width: 22, height: 22, color: "var(--primary-border)" }} />
       </span>
-      <span className="sr-only">{count} of {WEEKLY_PLANT_TARGET} plants this week</span>
+      <span className="sr-only">
+        {count} different plant{count === 1 ? "" : "s"} this week
+      </span>
     </div>
   );
 }
@@ -379,10 +379,10 @@ export default function HomeExperiencePage() {
   // nothing is known is fabrication. Absence gets its own calm state below.
   const weeklyProgress = homeIntel?.weeklyProgress ?? null;
   const plantCount = weeklyProgress?.plantCount ?? null;
-  const plantPct =
-    plantCount === null
-      ? 0
-      : Math.min(100, Math.round((plantCount / WEEKLY_PLANT_TARGET) * 100));
+  // PRESENCE1: plantPct is gone with the progress ring it drove. Home no longer
+  // computes how far along a household is, because it no longer has anywhere to
+  // say it. The import of WEEKLY_PLANT_TARGET goes with it — Home holds no
+  // target to measure a family against.
 
   // EXPCOMP2 FAIL 4 — the Companion is invited, not intrusive: it arrives a beat
   // after the household, once the room has settled. The mechanism (and its
@@ -419,8 +419,20 @@ export default function HomeExperiencePage() {
       // "Today is open." and "Today is planned." are both CLAIMS ABOUT TODAY, and THA
       // cannot make either about a week it cannot name. Saying "Today is open" to a
       // household who planned every day of it is the fabrication this phase retires.
+      // PRESENCE1: this said "Your planner isn't linked to the calendar yet."
+      // — as the FIRST sentence under "Today at a glance", on the emotional
+      // centre of the house, on a household's first morning. The statement is
+      // true and the honesty behind it is right; what was wrong was its
+      // PLACEMENT. It made a technical fact about THA's own bookkeeping into
+      // the room's greeting, and handed a guest a worry they did not arrive
+      // with ("what is a calendar link, and have I done something wrong?") —
+      // the exact inverse of outcome 1, less on their mind (§ 3.5).
+      //
+      // Home now says nothing here. Silence is the default and speech the
+      // exception (GEA15), and the Meals card still explains the situation in
+      // the one place where it actually bears on what the household sees.
       : plannerUnanchored
-        ? "Your planner isn't linked to the calendar yet."
+        ? null
         : todaysMeals.length === 0
           ? "Today is open."
           : "Today is planned.";
@@ -742,9 +754,18 @@ export default function HomeExperiencePage() {
                          This is the expected first-run experience until an anchor
                          exists (the governing decision of 2026-07-17). */
                       <div className="flex flex-col gap-2" data-testid="empty-home-planner-unanchored">
+                        {/* PRESENCE1: the words are the household's now, not the
+                            system's. "Weeks aren't linked to calendar dates" and
+                            "THA can't tell which one is this week" describe THA's
+                            internal bookkeeping — the plumbing on the outside of
+                            the wall (§ 16.1). The honest fact underneath is
+                            unchanged and is still stated plainly: THA does not
+                            know which week you are in, and nothing of yours is
+                            lost. The second sentence was already excellent and is
+                            kept exactly as written. */}
                         <p className="text-sm text-muted-foreground">
-                          Your planner's weeks aren't linked to calendar dates yet, so THA
-                          can't tell which one is this week. Your plan is all still there.
+                          Your weeks aren't tied to dates yet, so THA can't tell which
+                          one you're in. Your plan is all still there.
                         </p>
                         <Link
                           href="/planner"
@@ -774,7 +795,15 @@ export default function HomeExperiencePage() {
                         ))}
                       </ul>
                     )}
-                    <ViewLink href="/planner" testId="link-home-view-planner">View planner</ViewLink>
+                    {/* PRESENCE1: this rendered unconditionally, so in the
+                        unanchored state — which is the ORDINARY state for 192 of
+                        195 households — "Open the planner ›" and "View planner ›"
+                        stood stacked six pixels apart, two doors to one room, on
+                        the most looked-at card in the product. One door now
+                        (GEA18). */}
+                    {!plannerUnanchored && (
+                      <ViewLink href="/planner" testId="link-home-view-planner">View planner</ViewLink>
+                    )}
                   </div>
 
                   {/* ── Shopping ── */}
@@ -859,13 +888,14 @@ export default function HomeExperiencePage() {
                       </p>
                     ) : (
                       <div className="flex items-center gap-4">
-                        <PlantRing pct={plantPct} count={plantCount} />
+                        <PlantRing count={plantCount} />
                         <p className="text-sm text-muted-foreground" data-testid="text-home-plant-summary">
+                          {/* PRESENCE1: the "/ 30" denominator is gone with the ring's
+                              arc. The count is the fact; the target was the judgement. */}
                           <span className="block text-2xl font-semibold text-foreground">
                             {plantCount}
-                            <span className="text-base font-normal text-muted-foreground"> / {WEEKLY_PLANT_TARGET}</span>
                           </span>
-                          plants this week
+                          different plant{plantCount === 1 ? "" : "s"} this week
                         </p>
                       </div>
                     )}

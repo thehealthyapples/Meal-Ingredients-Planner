@@ -42,7 +42,19 @@ export function DayNutrientSummary({ nutrients }: { nutrients: NutrientTag[] }) 
   );
 }
 
-// ── "I want to support…" widget - optional, dismissible ──────────────────────
+// ── Nutrient support widget — invited, dismissible ──────────────────────────
+//
+// PRESENCE1: the collapsed trigger read "I want to support…" — a bare ellipsised
+// fragment at 35% opacity, floating unattached at the bottom of the diary,
+// resting on nothing. It looked like a string that had been cut off rather than
+// a door somebody had put there, which is the machine showing through (§ 16.1).
+// It is now a complete sentence that says what happens if you press it.
+//
+// The mechanism itself is left standing: it is opened BY the household, it can
+// be closed, and it states plainly that its contents are suggestions and not a
+// recommendation — so it is not the room volunteering advice at a family. Whether
+// invited suggestion belongs in a room at all, or should be handed to the
+// Companion, is recorded as an owner decision in the PRESENCE1 report.
 
 export function NutrientSupportWidget() {
   const [open, setOpen] = useState(false);
@@ -56,7 +68,7 @@ export function NutrientSupportWidget() {
         className="text-[10px] text-muted-foreground/35 hover:text-muted-foreground/55 transition-colors"
         data-testid="button-want-to-support"
       >
-        I want to support…
+        Foods that support a nutrient
       </button>
     );
   }
@@ -74,7 +86,7 @@ export function NutrientSupportWidget() {
       >
         <div className="flex items-center gap-1.5">
           <span className="text-[10px] text-muted-foreground/60 font-medium">
-            {selected.label} - try adding
+            {selected.label} — foods that contain it
           </span>
           <button
             type="button"
@@ -109,7 +121,7 @@ export function NutrientSupportWidget() {
     >
       <div className="flex items-center gap-1.5">
         <span className="text-[10px] text-muted-foreground/50 font-medium">
-          I want to support…
+          Pick a nutrient
         </span>
         <button
           type="button"

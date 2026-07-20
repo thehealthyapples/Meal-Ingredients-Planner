@@ -1133,6 +1133,12 @@
         "loc": 596,
         "disposition": "Orphaned DELIBERATELY by PROD2, and the only entry here that is a withdrawal rather than a discovery. All 12 partners in `client/src/data/partners.ts` are invented businesses on `example.com`, every one `isActive: true`, rendered under a genuine affiliate-disclosure notice — so THA recommended health and nutrition practitioners that do not exist, from two live menus. The route and both nav entries were withdrawn and the lazy import removed, so the page and its fabricated data no longer reach the bundle (verified: `Calm Orchard Yoga` absent from `dist/`). The page, its data file and its types are intact on disk. This is NOT the PageHeader failure mode — it is not a rival owner of anything, and nothing should adopt it while its data is invented.",
         "owner": "Colin Clapson — restore the route when real partners exist, or delete the page and its data"
+      },
+      {
+        "path": "client/src/components/icons/ThaAppleIcon.tsx",
+        "loc": 20,
+        "disposition": "Orphaned BY PRESENCE1, deliberately and with its cause recorded. Its only two consumers were the diary's and the dashboard's five-apple Mood/Energy pickers — THA's own mark used as the unit in which a household rated how they felt that day (GEA12; identity borrowed to lend authority to a number, GOVERNING_EXPERIENCE_ARCHITECTURE.md § 11.2). Both were replaced by HowYouFeltScale, which is unbranded. The mark's two sanctioned uses are unaffected and neither goes through this component: product ratings via AppleRating, and identity positions via the tha-apple.png asset directly. So this component has no legitimate consumer left. Recorded as a DEFECT, not an exemption, per this section's own doctrine — PRESENCE1 did not delete it because retiring a brand-mark component is an owner's call, not an implementation's.",
+        "owner": "Colin Clapson — delete, or adopt for identity positions (PRESENCE1 owner decision 3)"
       }
     ]
   }

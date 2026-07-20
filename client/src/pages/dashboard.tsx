@@ -31,7 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 import AppleRating from "@/components/AppleRating";
 import { MealCard } from "@/components/MealCard";
 import { canShowScoreForItem } from "@/lib/basket-item-classifier";
-import ThaAppleIcon from "@/components/icons/ThaAppleIcon";
+import { HowYouFeltScale } from "./food-diary-page";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   PieChart, Pie,
@@ -794,39 +794,28 @@ export default function Dashboard() {
               />
             </div>
 
-            {/* Mood + Energy */}
+            {/* Mood + Energy — PRESENCE1: this was a second, inline copy of the
+                diary's five-apple mood scale, with the same defect (the mark
+                scoring a person's day, § 11.2 / GEA12). It now uses the one
+                owner, HowYouFeltScale, exported from the diary — GEA18: the
+                duplicate is retired, not left beside its replacement. Stored
+                values are untouched. */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs text-muted-foreground mb-1.5 block">Mood</Label>
-                <div className="flex gap-0.5">
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <button
-                      key={n}
-                      type="button"
-                      onClick={() => setSignal("moodApples", n)}
-                      aria-label={`Set mood to ${n} of 5`}
-                      className={`transition-all ${signalsForm.moodApples !== null && n <= signalsForm.moodApples ? "opacity-100 scale-100" : "opacity-20 hover:opacity-50 hover:scale-105"}`}
-                    >
-                      <ThaAppleIcon size={20} />
-                    </button>
-                  ))}
-                </div>
+                <HowYouFeltScale
+                  value={signalsForm.moodApples}
+                  onChange={(n) => setSignal("moodApples", n)}
+                  testId="picker-dashboard-mood"
+                />
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground mb-1.5 block">Energy</Label>
-                <div className="flex gap-0.5">
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <button
-                      key={n}
-                      type="button"
-                      onClick={() => setSignal("energyApples", n)}
-                      aria-label={`Set energy to ${n} of 5`}
-                      className={`transition-all ${signalsForm.energyApples !== null && n <= signalsForm.energyApples ? "opacity-100 scale-100" : "opacity-20 hover:opacity-50 hover:scale-105"}`}
-                    >
-                      <ThaAppleIcon size={20} />
-                    </button>
-                  ))}
-                </div>
+                <HowYouFeltScale
+                  value={signalsForm.energyApples}
+                  onChange={(n) => setSignal("energyApples", n)}
+                  testId="picker-dashboard-energy"
+                />
               </div>
             </div>
 

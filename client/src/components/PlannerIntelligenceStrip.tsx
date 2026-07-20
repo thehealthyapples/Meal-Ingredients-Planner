@@ -78,22 +78,18 @@ function writeExpanded(v: boolean) {
   } catch {}
 }
 
-// ── Compact intelligence pill row ─────────────────────────────────────────────
-// Clips each item to keep the strip tight and scannable. Shortening is deliberate
-// — the full text is always available from the expanded panel below, and from the
-// pill's own title attribute — but the cut lands on a word boundary so a pill
-// reads as a shortened phrase rather than a broken one.
-
-function truncate(str: string, max = 36): string {
-  if (str.length <= max) return str;
-  const cut = str.slice(0, max - 1);
-  const lastSpace = cut.lastIndexOf(" ");
-  // Break on the last word boundary, unless that would discard over half the
-  // budget — a single very long word is better hard-cut than reduced to nothing.
-  const stem = lastSpace > Math.floor(max / 2) ? cut.slice(0, lastSpace) : cut;
-  // Drop trailing punctuation/dashes so the ellipsis doesn't follow a comma.
-  return stem.replace(/[\s,;:—–-]+$/, "") + "…";
-}
+// PRESENCE1: truncate() is retired with the pill row it served.
+//
+// The justification above was that the full text stayed available from the
+// expanded panel — and UX3 subsequently removed the interpretation grid from
+// that panel (see the note further down), which quietly made the justification
+// false. What was left was a row of advisory sentences cut at 36 characters
+// with no full text anywhere: "Looking ahead to autumn, you may…", "At its best
+// in the UK summer — a…". A household could not finish reading advice they had
+// not asked for, from a speaker the room does not have.
+//
+// UX3 ruled that the Companion owns the coaching; it retired this voice from the
+// expanded panel and missed the compact row. PRESENCE1 finishes that change.
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
@@ -127,25 +123,11 @@ export default function PlannerIntelligenceStrip({
   // reads as a measured result (Core Principle 6).
   const plantCount = data?.weeklyProgress?.plantCount;
 
-  // Build compact pill items from intelligence data (only show what exists).
-  // Each pill keeps its full text so the shortened label can expose it on hover.
-  const pills: { label: string; full: string }[] = [];
-  const addPill = (full: string | undefined) => {
-    if (full) pills.push({ label: truncate(full), full });
-  };
-  addPill(data?.celebration?.headline);
-  addPill(data?.seasonalHighlight?.headline);
-  addPill(data?.householdInsight?.headline);
-  addPill(data?.opportunity?.text);
-
-  const hasExpandableContent =
-    weekIngredients.length > 0 ||
-    !!(
-      data?.celebration ||
-      data?.seasonalHighlight ||
-      data?.opportunity ||
-      data?.householdInsight
-    );
+  // PRESENCE1: this used to open when any of the four companion fields existed —
+  // but UX3 removed those from the expanded panel, so a household could press
+  // "Insights" and be shown an empty drawer. The affordance now names only what
+  // the panel actually contains.
+  const hasExpandableContent = weekIngredients.length > 0 || plantCount !== undefined;
 
   return (
     <div
@@ -171,35 +153,22 @@ export default function PlannerIntelligenceStrip({
             onClick={onNavigatePlantDiversity}
             className="flex items-center gap-1 shrink-0 hover:opacity-70 transition-opacity"
             data-testid="strip-plant-count"
-            title={`${plantCount} of 30 plant foods this week`}
+            title={`${plantCount} different plant food${plantCount === 1 ? "" : "s"} this week`}
           >
             <Leaf className="h-3 w-3 text-emerald-500/70 flex-shrink-0" />
             <span className="text-xs">
+              {/* PRESENCE1: the hardcoded "/30" denominator is gone. It was a
+                  target the household never set, and — because this strip never
+                  read WEEKLY_PLANT_TARGET and never clamped — it was also how
+                  "39/30" reached a household as the house's opinion of them. */}
               <span className="font-semibold text-foreground/75">{plantCount}</span>
-              <span className="text-muted-foreground/45">/30</span>
             </span>
           </button>
         )}
 
-        {/* Intelligence pills — horizontal scroll, no scrollbar */}
-        {pills.length > 0 && (
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide flex-1 min-w-0">
-            {pills.map((pill, i) => (
-              <span key={i} className="flex items-center gap-1.5 shrink-0">
-                <span className="text-muted-foreground/25">·</span>
-                <span
-                  className="text-xs text-muted-foreground/65 whitespace-nowrap"
-                  title={pill.full !== pill.label ? pill.full : undefined}
-                >
-                  {pill.label}
-                </span>
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Spacer when no pills */}
-        {pills.length === 0 && <div className="flex-1" />}
+        {/* PRESENCE1: the advisory pill row stood here. The strip now reports the
+            week's own numbers and nothing else. */}
+        <div className="flex-1" />
 
         {/* Expand / collapse button */}
         {hasExpandableContent && (

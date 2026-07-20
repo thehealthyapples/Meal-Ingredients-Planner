@@ -36,7 +36,6 @@ import {
   // BUS1 — Help Centre, Contact and Privacy Settings doors.
   LifeBuoy, ShieldCheck, ChevronRight,
 } from "lucide-react";
-import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import { cn } from "@/lib/utils";
 import { normalizeIngredientKey } from "@shared/normalize";
 // CP2 — the ONE closed personality set, shared verbatim with the server's
@@ -52,6 +51,7 @@ import LearningSignalsPanel from "@/components/LearningSignalsPanel";
 import { apiRequest, queryClient as qc } from "@/lib/queryClient";
 import { DIET_PATTERNS, DIET_RESTRICTIONS, EATING_SCHEDULES, ONBOARDING_DIET_OPTIONS, ALLERGY_OPTIONS, DIET_PATTERN_OPTIONS, ALLERGY_INTOLERANCE_OPTIONS, formatDietLabel } from "@/lib/diets";
 import { GOAL_OPTIONS, STORE_OPTIONS, UPF_OPTIONS, BUDGET_OPTIONS, deriveGoalType } from "@/lib/shared-options";
+import { UPFInfoModal } from "@/components/upf-info-modal";
 import type { HouseholdEater } from "@shared/household-eater";
 
 export interface ProfileData {
@@ -553,15 +553,14 @@ function ProfileHeader({ profile, onSave }: { profile: ProfileData; onSave: (fie
           </p>
         </div>
 
-        {/* Single THA apple mark */}
-        <div className="shrink-0 flex flex-col items-center gap-1" data-testid="display-apple-mark">
-          <img
-            src={thaAppleSrc}
-            alt="The Healthy Apples"
-            className="h-10 w-10 object-contain opacity-75"
-          />
-          <p className="text-[10px] text-muted-foreground/50 leading-tight text-center">THA</p>
-        </div>
+        {/* PRESENCE1: THA's mark and the letters "THA" sat here, in the trailing
+            slot of the card about the household, doing nothing. That is the
+            product decorating with itself on the one page whose whole subject is
+            the family — GEA12 (marks are placed by the architecture, never
+            applied for reinforcement) and § 3.4 (the household is the subject,
+            not the product). It also announced "The Healthy Apples" to a screen
+            reader inside a person's own identity card. The room keeps the space
+            as air (GEA11); a room that wants warmth wants light, not a logo. */}
       </div>
     </Card>
   );
@@ -570,15 +569,31 @@ function ProfileHeader({ profile, onSave }: { profile: ProfileData; onSave: (fie
 export function HealthSnapshot({ profile }: { profile: ProfileData }) {
   const { bmi, bmiCategory, dailyCalories, activityLevel } = profile.health;
 
-  const bmiColor = !bmi ? "text-muted-foreground" :
-    bmiCategory === "Healthy" ? "text-green-600 dark:text-green-400" :
-    bmiCategory === "Underweight" || bmiCategory === "Overweight" ? "text-amber-600 dark:text-amber-400" :
-    "text-red-600 dark:text-red-400";
-
-  const activityLabel = activityLevel === "high" ? "High" : activityLevel === "low" ? "Low" : "Moderate";
-  const activityColor = activityLevel === "moderate" || activityLevel === "high"
-    ? "text-green-600 dark:text-green-400"
-    : "text-amber-600 dark:text-amber-400";
+  // PRESENCE1: four separate judgements were removed from this card.
+  //
+  //  1. A traffic light on BMI — green for "Healthy", amber, then RED. A red
+  //     number is the house's verdict on a person's body (GEA10: light and
+  //     colour express atmosphere, never performance).
+  //  2. "Target aligned" under kcal, rendered green UNCONDITIONALLY whenever a
+  //     calorie figure existed — so it was never a finding, only reassurance
+  //     that looked like one. A verdict that cannot come out the other way is
+  //     not information (Core Principle 6).
+  //  3. "Optimal" / "Could improve" under Activity — the second is plain
+  //     deficit language about a household, in a room that does not have the
+  //     standing to say it (GEA8, GEA13).
+  //  4. A fabricated default: activityLevel fell through to "Moderate" when it
+  //     was UNSET, so the card stated an activity level for households who had
+  //     never given one (GEA17 — the presentation layer owns no fact; where the
+  //     owner has nothing, the room shows honest absence).
+  //
+  // The measurements themselves are kept and shown plainly. BMI's category is a
+  // published clinical classification of a number the household entered, not
+  // THA's opinion of them, so it stays — uncoloured.
+  const activityLabel =
+    activityLevel === "high" ? "High" :
+    activityLevel === "low" ? "Low" :
+    activityLevel === "moderate" ? "Moderate" :
+    null;
 
   return (
     <Card className="p-4 sm:p-5" data-testid="card-health-snapshot">
@@ -589,24 +604,26 @@ export function HealthSnapshot({ profile }: { profile: ProfileData }) {
 
       <div className="grid grid-cols-3 gap-3 text-center">
         <div data-testid="metric-bmi">
-          <p className={`text-2xl font-semibold ${bmiColor}`}>{bmi ?? "-"}</p>
+          <p className="text-2xl font-semibold text-foreground">{bmi ?? "-"}</p>
           <p className="text-xs text-muted-foreground mt-0.5">BMI</p>
-          <p className={`text-xs font-medium ${bmiColor}`}>{bmiCategory || "Not set"}</p>
+          <p className="text-xs font-medium text-muted-foreground">
+            {bmiCategory || "Not set"}
+          </p>
         </div>
         <div data-testid="metric-calories">
           <p className="text-2xl font-semibold text-foreground">
             {dailyCalories ? dailyCalories.toLocaleString() : "-"}
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">kcal / day</p>
-          <p className="text-xs font-medium text-green-600 dark:text-green-400">
-            {dailyCalories ? "Target aligned" : "Not set"}
+          <p className="text-xs font-medium text-muted-foreground">
+            {dailyCalories ? "Your setting" : "Not set"}
           </p>
         </div>
         <div data-testid="metric-activity">
-          <p className={`text-2xl font-semibold ${activityColor}`}>{activityLabel}</p>
+          <p className="text-2xl font-semibold text-foreground">{activityLabel ?? "-"}</p>
           <p className="text-xs text-muted-foreground mt-0.5">Activity</p>
-          <p className={`text-xs font-medium ${activityColor}`}>
-            {activityLevel === "moderate" || activityLevel === "high" ? "Optimal" : "Could improve"}
+          <p className="text-xs font-medium text-muted-foreground">
+            {activityLabel ? "Your setting" : "Not set"}
           </p>
         </div>
       </div>
@@ -1709,6 +1726,23 @@ function ShoppingPreferences({ prefs, onSave }: { prefs: any; onSave: (prefs: an
         </SettingRow>
 
         <SettingRow label="UPF Preference" summary={upfSummary} testId="row-upf">
+          {/* PRESENCE1: THA's approach to processed food used to be pushed at the
+              household from a banner on their food diary. It now waits here,
+              inside the row where somebody has already opened the question
+              themselves. Same explanation, opposite posture: pulled, not pushed,
+              and it retires no household's evening to say it. */}
+          <div className="pt-2">
+            <UPFInfoModal
+              trigger={
+                <span
+                  className="text-xs text-muted-foreground underline underline-offset-2 cursor-pointer hover:text-foreground transition-colors"
+                  data-testid="link-upf-approach"
+                >
+                  How THA thinks about processed food
+                </span>
+              }
+            />
+          </div>
           <div className="pt-2 grid grid-cols-3 gap-2">
             {UPF_OPTIONS.map((u) => {
               const Icon = u.icon;

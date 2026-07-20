@@ -12,7 +12,6 @@ import {
 // branch at all, so a failed load was indistinguishable from an unlogged day.
 import { LoadError } from "@/components/ui/load-error";
 import { ImportDiaryModal } from "@/components/import-diary-modal";
-import { UPFInfoModal } from "@/components/upf-info-modal";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTrackedMutation } from "@/hooks/use-tracked-mutation";
 import { useUser } from "@/hooks/use-user";
@@ -45,8 +44,6 @@ import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/component
 import { HealthSnapshot, GoalsPreferences, CalorieSettings, ProfileData } from "./profile-page";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import ThaAppleIcon from "@/components/icons/ThaAppleIcon";
-import AppleRating from "@/components/AppleRating";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
 import { usePublishCompanionContext } from "@/components/conversation/companion-context";
@@ -166,9 +163,26 @@ function getInsightText(trends: DiaryMetrics[], range: ProgressRange): string {
   return "You're just getting started. A few more entries will reveal useful patterns.";
 }
 
-// ── THA Apple Score Picker ──────────────────────────────────────────────────
+// ── How-you-felt scale ──────────────────────────────────────────────────────
+//
+// PRESENCE1: this was ThaAppleScorePicker, and it rendered THA's own mark — the
+// apple on the door — five times, as the unit in which a household rated how
+// they felt today. That is the mark carrying a second meaning (GEA12) and, more
+// seriously, identity borrowed to lend authority to a number (§ 11.2): the same
+// glyph rates a jar of sauce, and a household reading its own mood in it is
+// being told, in the product's own emblem, what kind of day they had.
+//
+// The household's record of their own day is theirs and is untouched — the
+// stored value, its 1–5 range and the moodApples/energyApples fields are all
+// unchanged. Only the instrument changed: an unbranded, unranked row of marks
+// that reads as a note a person made, not as a grade the house awarded.
+//
+// The labels are words rather than numbers for the same reason. "3 of 5" is a
+// score; "some days are just fine" is a day.
 
-function ThaAppleScorePicker({
+const FELT_LABELS = ["Low", "Quiet", "Steady", "Good", "Bright"] as const;
+
+export function HowYouFeltScale({
   value,
   onChange,
   max = 5,
@@ -182,29 +196,44 @@ function ThaAppleScorePicker({
   size?: number;
 }) {
   return (
-    <div className="flex gap-0.5" data-testid={testId}>
-      {Array.from({ length: max }, (_, i) => i + 1).map((n) => (
-        <button
-          key={n}
-          type="button"
-          onClick={() => onChange(n)}
-          title={`${n} / ${max}`}
-          aria-label={`${n} of ${max}`}
-          className={`transition-all ${value !== null && n <= value ? "opacity-100 scale-100" : "opacity-20 hover:opacity-50 hover:scale-105"}`}
-          data-testid={`${testId}-${n}`}
-        >
-          <ThaAppleIcon size={size} />
-        </button>
-      ))}
+    <div className="flex gap-1" data-testid={testId} role="group">
+      {Array.from({ length: max }, (_, i) => i + 1).map((n) => {
+        const marked = value !== null && n <= value;
+        return (
+          <button
+            key={n}
+            type="button"
+            onClick={() => onChange(n)}
+            title={FELT_LABELS[n - 1] ?? `${n}`}
+            aria-label={FELT_LABELS[n - 1] ?? `${n}`}
+            aria-pressed={value === n}
+            className={`rounded-full transition-all ${
+              marked
+                ? "bg-primary/70"
+                : "bg-muted-foreground/15 hover:bg-muted-foreground/30"
+            }`}
+            style={{ width: size * 0.6, height: size * 0.6 }}
+            data-testid={`${testId}-${n}`}
+          />
+        );
+      })}
     </div>
   );
 }
 
-// ── THA Apple Score Display ─────────────────────────────────────────────────
+// ── How-you-felt read-back ──────────────────────────────────────────────────
+//
+// PRESENCE1: this delegated to AppleRating, whose accessible name is
+// "THA Score: N out of 5" — so a screen reader announced a household's MOOD as
+// a THA food-processing score. It now reads back the household's own word.
 
-function ThaAppleScoreDisplay({ value }: { value: number | null; max?: number }) {
+function HowYouFeltDisplay({ value }: { value: number | null; max?: number }) {
   if (value === null) return <span className="text-muted-foreground text-xs">-</span>;
-  return <AppleRating rating={value} sizePx={52} showTooltip={false} animate={false} />;
+  return (
+    <span className="text-sm text-foreground/80">
+      {FELT_LABELS[value - 1] ?? value}
+    </span>
+  );
 }
 
 // ── Metric stat card ────────────────────────────────────────────────────────
@@ -738,7 +767,13 @@ function DailySignalsPanel({
                 onClick={onCsvClick}
                 data-testid="button-import-csv"
               >
-                + CSV
+                {/* PRESENCE1: this read "+ CSV" in a family's diary — the file
+                    format on the outside of the wall (§ 16.1), and mislabelled:
+                    the "+" reads as export/add and the button opens the IMPORT
+                    dialog. The same action is called "Import CSV" in two other
+                    places in this file; three labels for one action is the
+                    machine showing through. */}
+                Import
               </Button>
             )}
           </div>
@@ -772,7 +807,7 @@ function DailySignalsPanel({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs text-muted-foreground mb-1.5 block">Mood</Label>
-              <ThaAppleScorePicker
+              <HowYouFeltScale
                 value={form.moodApples}
                 onChange={(v) => set("moodApples", v)}
                 testId="picker-mood"
@@ -781,7 +816,7 @@ function DailySignalsPanel({
             </div>
             <div>
               <Label className="text-xs text-muted-foreground mb-1.5 block">Energy</Label>
-              <ThaAppleScorePicker
+              <HowYouFeltScale
                 value={form.energyApples}
                 onChange={(v) => set("energyApples", v)}
                 testId="picker-energy"
@@ -1258,7 +1293,6 @@ export default function FoodDiaryPage() {
   // Modals
   const [copyModalOpen, setCopyModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
-  const [upfDismissed, setUpfDismissed] = useState(false);
   const [diarySettingsOpen, setDiarySettingsOpen] = useState(false);
 
   // Mobile workspace drawer
@@ -1706,26 +1740,22 @@ export default function FoodDiaryPage() {
       />
       <div className={pageContainerClass(true)} data-realm="diary">
 
-        {/* UPF awareness banner */}
-        {!upfDismissed && (
-          <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 mb-3">
-            <img src={thaAppleSrc} alt="" className="h-5 w-5 object-contain shrink-0" />
-            <div className="flex-1 min-w-0">
-              <span className="text-xs text-foreground/80">
-                <strong className="font-medium">Want to eat less processed food?</strong>{" "}
-                Awareness beats restriction.{" "}
-                <UPFInfoModal trigger={<span className="underline underline-offset-2 cursor-pointer text-primary hover:text-primary/80 transition-colors">Learn our approach →</span>} />
-              </span>
-            </div>
-            <button
-              className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
-              onClick={() => setUpfDismissed(true)}
-              aria-label="Dismiss"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        )}
+        {/* PRESENCE1: a dismissible banner stood here — "Want to eat less
+            processed food? Awareness beats restriction. Learn our approach →"
+            — on the page where a household records what they fed their
+            children. It was well meant and gently phrased, and it was still a
+            stranger's opinion opening a family's diary, in a room that has no
+            speaker (GEA8, GEA9). It also asked a question the household had not
+            asked, on their most exposed surface, and its dismissal was never
+            persisted, so it returned on every reload — the household could not
+            actually decline it.
+
+            The approach it linked to is not lost, but nor was it left orphaned:
+            removing this banner left UPFInfoModal with no consumer anywhere in
+            the client, so PRESENCE1 rehomed it to the Profile's "UPF Preference"
+            row — the place a household opens when they are already asking the
+            question. Pulled, not pushed (GEA18: the predecessor is retired in
+            the same change, not left unadopted). */}
 
       {/* ── Daily Log ────────────────────────────────────────────── */}
       {activeTab === "diary" && (
@@ -1788,9 +1818,15 @@ export default function FoodDiaryPage() {
                               <Badge variant="secondary" className="ml-1 text-[10px] h-4 px-1.5 shrink-0" data-testid={`badge-count-${key}`}>
                                 {slotEntries.length}
                               </Badge>
-                            ) : (
-                              <span className="text-xs text-muted-foreground/35 ml-1" data-testid={`text-empty-${key}`}>Empty</span>
-                            )}
+                            ) : null}
+                            {/* PRESENCE1: an "Empty" label stood here. With five
+                                meal slots, a household opening their diary was
+                                told five times, before they had done anything,
+                                that they had not filled the form in. The row is
+                                simply quiet now — the Add button already says
+                                what can be done, and a quiet row reads as a room
+                                at rest rather than a form with gaps in it
+                                (§ 15.1: restraint, not absence). */}
                             <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/40 ml-auto mr-0.5 transition-transform duration-150 ${isExpanded ? "rotate-180" : ""}`} />
                           </button>
                           <Button
@@ -1806,7 +1842,7 @@ export default function FoodDiaryPage() {
                         {isExpanded && (
                           <div className="px-3 pb-2.5 pt-1.5 bg-muted/10 space-y-1 border-t border-border/40">
                             {slotEntries.length === 0 && (
-                              <p className="text-xs text-muted-foreground/50 py-0.5">Nothing added yet - tap Add to log something.</p>
+                              <p className="text-xs text-muted-foreground/50 py-0.5">Nothing here yet.</p>
                             )}
                             {slotEntries.map((entry) => {
                               const isEditing = editingEntry?.id === entry.id;
@@ -1928,13 +1964,13 @@ export default function FoodDiaryPage() {
                   {latestMetrics.moodApples != null && (
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-muted-foreground">Latest Mood</span>
-                      <ThaAppleScoreDisplay value={latestMetrics.moodApples} />
+                      <HowYouFeltDisplay value={latestMetrics.moodApples} />
                     </div>
                   )}
                   {latestMetrics.energyApples != null && (
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-muted-foreground">Latest Energy</span>
-                      <ThaAppleScoreDisplay value={latestMetrics.energyApples} />
+                      <HowYouFeltDisplay value={latestMetrics.energyApples} />
                     </div>
                   )}
                 </div>

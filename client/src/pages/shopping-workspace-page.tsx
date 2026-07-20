@@ -3423,9 +3423,17 @@ export default function ShoppingWorkspacePage() {
               product database actually lives. The old target was the retired
               Shopping duplicate, whose own browse panel was a third copy of
               this same capability. */}
-          Full product database also available in{" "}
+          {/* PRESENCE1: this read "Full product database also available in the
+              Analyser." — the only sentence in the calmest room in the house,
+              and it was written in the builders' language, not the household's.
+              "Product database" belongs to the people who made this; a family
+              writing "bananas, yoghurt" on a note does not have one. It is the
+              plumbing on the outside of the wall (§ 16.1), stranded alone under
+              the note. The door it opens is genuinely useful and is kept — it
+              now says what a person would say. */}
+          Want to check a label?{" "}
           <Link href="/analyser" className="hover:text-muted-foreground hover:underline">
-            the Analyser
+            Look it up in the Analyser
           </Link>
           .
         </span>

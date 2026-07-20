@@ -1226,7 +1226,15 @@ export default function ProductsPage() {
             variant="empty"
             icon={ScanLine}
             title="Analyse anything with a label"
-            description="Search a product by name, or scan its barcode with the button in the header. You'll get its ingredients, additives, NOVA group and THA rating — and less processed alternatives where they exist."
+            /* PRESENCE1: this described what a household would get using the term
+               "NOVA group" — unglossed, on the household's literal first screen
+               in this room, where somebody may be standing in an aisle holding a
+               packet. The term is explained far below, on a results view they
+               have not reached yet. Naming a classification a family has never
+               heard of, at first contact, is the machine describing itself
+               (§ 16.1). The fact is kept and said in words: NOVA is a measure of
+               how processed a food is, so that is what it now says. */
+            description="Search a product by name, or scan its barcode with the button in the header. You'll get its ingredients, its additives, how processed it is, and THA's rating — plus less processed alternatives where they exist."
             data-testid="empty-analyser-first-run"
           />
         )}
