@@ -138,7 +138,13 @@ const REALM_STYLES: Record<string, { active: string; hover: string; inactive: st
     active:         "bg-[hsl(115,22%,88%)] text-[hsl(115,30%,22%)] dark:bg-[hsl(115,15%,17%)] dark:text-[hsl(115,26%,70%)]",
     hover:          "hover:bg-[hsl(115,16%,92%)] hover:text-[hsl(115,26%,28%)] dark:hover:bg-[hsl(115,10%,14%)] dark:hover:text-[hsl(115,20%,58%)]",
     inactive:       "bg-[hsl(115,10%,94%)] text-[hsl(115,20%,40%)] dark:bg-[hsl(115,8%,12%)] dark:text-[hsl(115,14%,46%)]",
-    hue:            115,
+    // EXPADOPT1 — 115 → 118, corrected TO `index.css`'s `[data-realm="pantry"]`,
+    // which is the canonical owner of a realm's hue (UIA § 16). This shelf lit
+    // the Pantry at 115 while the room's own header titled it at 118: one room,
+    // two colours, which EXPGOV1 § C2 measured as the first arrival of the drift
+    // a second colour authority always produces. The token was not moved to meet
+    // the nav; the nav was moved to meet the token.
+    hue:            118,
   },
   "/analyser": {
     // warm olive - shifted toward golden-olive for clear separation from pantry

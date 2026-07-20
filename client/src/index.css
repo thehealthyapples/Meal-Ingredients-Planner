@@ -475,6 +475,18 @@
   --realm-text    primary text colour (titles)
   --realm-bg      softly shaded header background
   --realm-border  header bottom border
+
+  EXPADOPT1 (2026-07-20) — THIS FILE IS THE CANONICAL OWNER OF A REALM'S HUE
+  (UIA § 16: a token's values "live in exactly one implementation source").
+  `nav-bar.tsx`'s `REALM_STYLES.hue` is a projection of these blocks and must
+  match them; it had already drifted — the navigation shelf lit the Pantry at
+  hue 115 while this file titled it at 118. The same room in two colours is the
+  failure UIA § 7 ("one meaning per colour, one colour per meaning") exists to
+  prevent, and it is the drift EXPGOV1 § C2 measured. The nav is corrected TO
+  this file, never the reverse.
+
+  Realm tint is WAYFINDING ONLY (UIA § 4, § 7) — never emphasis, never status,
+  and never a second palette inside a room's content.
 */
 
 /* Light mode */
@@ -538,6 +550,23 @@
   --realm-bg:     hsl(190,28%,90%);
   --realm-border: hsl(190,22%,81%);
 }
+/* EXPADOPT1 — the Orchard, added. `orchard` has been a declared `PageRealm`
+   since COMM2 admitted the room (workspace-header.tsx), and the navigation
+   shelf has lit it at hue 20 since that change — but this file had no block for
+   it, so the ONE room in the house that faces outward had no light of its own:
+   its header title and ground inherited whatever the previous realm left behind.
+   Blueprint § 5 differentiates a room by purpose, LIGHT, material and one sign
+   of life; the Orchard had three of the four. Hue 20 is COMM2's governed
+   terracotta, not a new decision — the reasoning is recorded at its owner
+   (nav-bar.tsx `REALM_STYLES["/orchard"]`): the house already spends four hues
+   on green, and a fifth would make the room unreadable as wayfinding at exactly
+   the moment it is meant to say "somewhere else". */
+[data-realm="orchard"] {
+  --realm-accent: hsl(20,40%,40%);
+  --realm-text:   hsl(20,44%,20%);
+  --realm-bg:     hsl(20,30%,91%);
+  --realm-border: hsl(20,24%,82%);
+}
 
 /* Dark mode */
 .dark [data-realm="cookbook"] {
@@ -599,6 +628,14 @@
   --realm-text:   hsl(190,30%,76%);
   --realm-bg:     hsl(190,14%,13%);
   --realm-border: hsl(190,12%,20%);
+}
+/* EXPADOPT1 — the Orchard's dark resolution. UIA § 7: a mode is offered
+   completely or not at all, so the room added above is resolved in both. */
+.dark [data-realm="orchard"] {
+  --realm-accent: hsl(20,32%,58%);
+  --realm-text:   hsl(20,32%,76%);
+  --realm-bg:     hsl(20,16%,13%);
+  --realm-border: hsl(20,14%,20%);
 }
 
 /* Realm title colour */

@@ -2,15 +2,22 @@
  * The orchard environment asset — the image itself, and its one canonical owner
  * (Blueprint §6.1, adoption register `orchard-environment`).
  *
- * This file owns the ASSET. It exposes exactly two shapes, because THA admits the
- * orchard in exactly two places, at the two exposures Blueprint §6.2 permits:
+ * This file owns the ASSET. It exposes exactly three shapes, one per exposure
+ * level Blueprint §6.2 draws the orchard at:
  *
- *   • <OrchardBackdrop />  — ARRIVAL, at E3. /auth and /onboarding (via
+ *   • <OrchardBackdrop />   — ARRIVAL, at E3. /auth and /onboarding (via
  *     orchard-shell.tsx) and the unauthenticated landing (home-page.tsx).
  *     §6.2 rule 3 permits arrival to stand at E3 for its beat.
- *   • <OrchardOpenView /> — HOME, at E3. §6.2 gives Home, and only Home, "the open
+ *   • <OrchardWindow />     — HOME, at E3. §6.2 gives Home, and only Home, "the open
  *     view: the orchard visible as itself, generously; sparse content on its ground;
- *     the view IS part of the room's purpose."
+ *     the view IS part of the room's purpose." Real joinery — see its own header.
+ *   • <OrchardRoomWindow /> — THE E2 ROOMS, at E2, and NOTHING at E1/E0. Added by
+ *     EXPADOPT1; see its header for why a window is not the wallpaper BEH-7 retired.
+ *
+ * EXPADOPT1 corrected this list. It read "exactly two shapes" and named
+ * `<OrchardOpenView />` as Home's — a shape UX2 had already superseded with
+ * `OrchardWindow` and which had no consumers at all. The count was wrong in both
+ * directions at once: it named a dead shape and omitted a live one.
  *
  * NORTH1 (2026-07-17) added the second shape. Until then this file said "a ROOM may
  * never mount this component", and that sentence was right about the SHAPE and wrong
@@ -165,179 +172,129 @@ export default function OrchardBackdrop() {
   );
 }
 
-// The two masks that make the view a VIEW rather than a backdrop.
-//
-// Blueprint §6.2 asks for the orchard "framed by composition, never by a drawn frame",
-// and §6.1 forbids it carrying text. Both are the same instruction here: the orchard
-// occupies a region, and it dissolves — it never meets an edge, and it never reaches
-// the ground the greeting and the counter stand on.
-//
-// They are applied to two NESTED elements rather than composited on one. `mask-composite`
-// is the direct way to intersect two masks and is the less portable one; nesting composes
-// them by construction, in every engine, with no vendor branch.
-//
-// HORIZONTAL — the room's own wall. Solid at the right, gone entirely before the
-// greeting. This is what leaves the household's name standing on the warm canvas rather
-// than on the landscape, and it is the whole of §6.1's compliance.
-//
-// The fade itself. Where it STARTS is the load-bearing part, and it is set in
-// `OrchardOpenView` by the window's left edge rather than here — see the note there.
-const MASK_H =
-  "linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.38) 9%, rgba(0,0,0,0.85) 17%, #000 26%, #000 100%)";
+/**
+ * EXPADOPT1 (2026-07-20) — THE E2 WINDOW, and the retirement of `OrchardOpenView`.
+ *
+ * TWO THINGS HAPPENED HERE, and they are the same thing.
+ *
+ * ── What was retired ──
+ * `OrchardOpenView` and its three mask constants (`MASK_H`, `MASK_V`,
+ * `MASK_BAND`) are DELETED. UX2 superseded that shape with `OrchardWindow` — the
+ * real joinery Home renders today — and left the predecessor standing. It had
+ * **zero consumers**: nothing in `client/src` imported it, and two of the three
+ * live-looking reads of `--orchard-exposure-e3` were inside it, which made the
+ * exposure scale look better adopted than it was. UI Principle 5 and GEA18 both
+ * say the successor retires the predecessor in the same change; this is that
+ * change, late.
+ *
+ * ── What was built ──
+ * `OrchardRoomWindow` — the first consumer `--orchard-exposure-e2` has ever had.
+ *
+ * Blueprint § 5.1 assigns **E2 — the window** to five rooms: Cookbook, Pantry,
+ * Nutrition, Diary and the Orchard. The implementation had all five at E1. So
+ * the scale that Blueprint § 6.2 calls a "governed constant" was, in practice,
+ * two levels wide — E3 at Home and arrival, nothing anywhere else — and
+ * EXPGOV1 § I2 named the consequence exactly: the orchard was "reducible to a
+ * few lines on the home page, which means it is not yet a fact of the site."
+ *
+ * GEA6 is the principle this discharges: *the orchard is a permanent fact of the
+ * site, not a feature of a room. A room at E0 is shuttered, not relocated.* A
+ * house where only one room has ever had a window is not a house with shutters.
+ *
+ * ── Why this is a window and NOT the wallpaper CONV1 BEH-7 retired ──
+ * The distinction is precise and it is the whole of § 6.1's compliance:
+ *
+ *   • WALLPAPER is `fixed inset-0`, behind every room, uniformly, at one
+ *     strength. That is what BEH-7 removed and what § 16 names an anti-pattern —
+ *     "everywhere at once is nowhere in particular."
+ *   • A WINDOW is a committed region, at the room's OWN governed exposure,
+ *     absent entirely from the rooms whose exposure is E1 or E0.
+ *
+ * This renders nothing at all at E0/E1 — no element, no image, no request. Only
+ * the five E2 rooms mount it, at 0.55 rather than E3's 0.90, in a band at the
+ * top of the room that the content begins beneath. The exposure is a per-domain
+ * constant (§ 6.2 rule 1) resolved from the token, never a per-surface choice.
+ *
+ * ── The laws it holds ──
+ *   • ONE orchard (§ 6.1): the same `/orchard.webp` Home's window shows. This
+ *     change does NOT converge arrival's pale `/orchard-bg.webp` — that
+ *     two-asset split is reported as a remaining gap rather than quietly picked.
+ *   • NEVER carries text (§ 6.1): the band is `absolute` at the top of the room
+ *     with the content flowing beneath it on solid ground. No type sits on it.
+ *   • NEVER animates (§ 6.1): still. No drift, no parallax, no ambience.
+ *   • FRAMED BY COMPOSITION, never by a drawn frame (§ 6.2): it dissolves
+ *     downward into the room rather than meeting an edge. The arch is Home's
+ *     alone (§ 6.2 rule 4) and is not borrowed here.
+ */
 
-// The band's fade, for rooms too narrow to hold a window beside the greeting. Vertical
-// only: the band spans the full width and the content begins beneath it, so no type is
-// ever beside it to protect.
-const MASK_BAND =
-  "linear-gradient(180deg, #000 0%, #000 54%, rgba(0,0,0,0.5) 78%, transparent 100%)";
-
-// VERTICAL — the sill, and the depth.
-//
-// The fade is long and low on purpose. A view that stops on a line is a picture hanging
-// on a wall, and the orchard is not a picture (§6.2, "framed by composition, never by a
-// drawn frame"). It also runs deliberately PAST the top of the counter, at a few percent,
-// so the counter has a world behind it — the three grounds of Blueprint §8.1 (world
-// behind · room in the middle · what floats), which is the whole reason the middle ground
-// reads as a plane at all. A translucent counter over nothing is not a counter; it is the
-// same cream, and it disappears.
-//
-// It is spent before the room tiles, and the only thing standing on it in that band is
-// the glance — which is SOLID (--surface-primary). No type on this page ever has the
-// image behind it (§6.1, without negotiation); what has the image behind it is the
-// counter, and the counter carries no words.
-const MASK_V =
-  "linear-gradient(180deg, #000 0%, #000 46%, rgba(0,0,0,0.45) 72%, rgba(0,0,0,0.12) 88%, transparent 100%)";
+// The E2 band's fade. Vertical only: the band spans the room's width and the
+// content begins beneath it, so no type is ever beside it to protect. It
+// dissolves rather than stopping on a line — a view that stops on a line is a
+// picture hanging on a wall, and the orchard is not a picture.
+const MASK_E2 =
+  "linear-gradient(180deg, #000 0%, #000 46%, rgba(0,0,0,0.42) 74%, transparent 100%)";
 
 /**
- * HOME's orchard — E3, the open view.
+ * HOME's orchard is `OrchardWindow` above. This is every OTHER room's — the
+ * framed, partial presence of Blueprint § 6.2's E2, in one committed region the
+ * content deliberately does not cover.
  *
- * Composed, not applied: it occupies the upper right of the room and dissolves toward
- * the left, where the household's name stands in the light, and toward the bottom,
- * where the counter begins. The morning is the asset's own — its sun sits left of
- * centre, which is why the view is positioned to keep it: cropped to the right, the
- * open view would be all trees and no light, and the room's one sun (Blueprint §7,
- * "the morning sun sits upper-left, forever") would be missing from the window it
- * comes through.
+ * Renders `null` below E2, so E1 and E0 rooms cost a household nothing: no
+ * element, no image request, no paint. "Shuttered, not relocated" (GEA6) is
+ * expressed as the absence of the window, in the same house, from the same one
+ * asset — not as a different room.
  *
- * Absolutely positioned inside the room, never `fixed`: the view belongs to Home and
- * scrolls with it. Fixed would make it wallpaper again, and it would also be the
- * parallax UIA §4 forbids outright.
+ * ⚠️ IT WAS `absolute` FIRST, AND THE PICTURE IS WHAT CAUGHT IT.
  *
- * It is STILL. No drift, no sway, no ambience (§6.1: "the orchard never animates";
- * "place survives total stillness").
+ * The first build laid the band `absolute inset-x-0 top-0 z-0` BEHIND the room's
+ * content. Every measurement passed — the five E2 rooms reported `window=true`,
+ * the E1 rooms `false`, the token resolved 0.55. The screenshot showed the
+ * Cookbook's section label, "WHOLEFOOD SUGGESTIONS · 500", sitting directly on
+ * the orchard with nothing beneath it.
+ *
+ * That is a straight violation of Blueprint § 6.1 — *"The orchard never carries
+ * text. Any surface where type must sit legibly gets ground plane under that
+ * type, without negotiation."* — and it is the same defect ODL2 § 3.5 rejected
+ * EXP4's Studies B and C for. It was invisible to the probe because "is the
+ * element present" and "is type sitting on it" are different questions, and only
+ * the second one is the law.
+ *
+ * § 6.2's own words are the fix: E2 is *"a framed, partial presence in ONE
+ * COMMITTED REGION THE CONTENT DELIBERATELY DOES NOT COVER."* Content that flows
+ * over the band is content covering it. So the band is IN FLOW — a real block at
+ * the top of `main` that occupies its own height and that the room begins
+ * beneath. The region is committed because the layout commits it, not because a
+ * z-index asked politely.
  */
-export function OrchardOpenView() {
+export function OrchardRoomWindow({ exposure }: { exposure: "e0" | "e1" | "e2" }) {
+  if (exposure !== "e2") return null;
   return (
-    <>
-      {/* ── THE BAND ── below `lg`. A phone has no wall to put a window beside the
-          greeting on: at 390px there is no "beside". Split there, the orchard either
-          becomes a stripe too thin to read as a place, or it runs under the household's
-          name — and it did exactly that before this was measured.
-
-          So the narrow room takes its view over the counter instead of across it: the
-          band spans the wall, the room begins beneath it, and the household looks out
-          before they look down. Same asset, same E3, same one morning — a different
-          wall. The exposure is a constant (§6.2 rule 1) and it is unchanged here; what
-          adapts is the aperture's shape, which is composition, and composition is what a
-          room does with the wall it has.
-
-          This is deliberately NOT the render's answer. The North Star's own phone plate
-          drops the orchard entirely and shows cream — which would leave Home at E1 on the
-          device most households actually arrive on (PX1), and make E3 a thing only a
-          desktop ever sees. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 z-0 overflow-hidden
-                   h-[clamp(190px,26vh,260px)] lg:hidden"
-      >
-        {/* The band's crop is its own, and it has to be: a window and a band are
-            different shapes, and one crop cannot serve both. `cover` resolves the
-            SHORTER dimension, so the wider and shorter the band gets, the harder it
-            crops vertically — at 820×260 the window's 168% zoom left nothing in frame
-            but magnified hillside, an abstract green wash with no horizon, no trees and
-            nothing to recognise as a place. A phone's band is nearly square by
-            comparison and holds the whole scene at that zoom, which is why it looked
-            right and the tablet did not.
-            So: the phone keeps the zoom and the sun just out of frame; from `sm` up the
-            band unzooms to hold the whole width — sky, sun, hills and trees — because a
-            long low band has room for the horizon and needs it. */}
-        <img
-          src="/orchard-bg.webp"
-          alt=""
-          className="absolute inset-y-0 right-0 h-full max-w-none object-cover
-                     w-[168%] [object-position:100%_82%]
-                     sm:w-full sm:[object-position:50%_72%]"
-          style={{
-            opacity: "var(--orchard-exposure-e3)",
-            WebkitMaskImage: MASK_BAND,
-            maskImage: MASK_BAND,
-          }}
-        />
-      </div>
-
-      {/* ── THE WINDOW ── `lg` and up, where there is a wall beside the greeting. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 z-0 hidden overflow-hidden
-                   lg:block lg:h-[clamp(460px,76vh,760px)]"
-      >
-      {/* The window's left edge, and the one number in this file that has to be RIGHT
-          rather than merely nice.
-
-          `max(700px, 44%)` is what makes §6.1 provable instead of lucky. The greeting is
-          capped by `max-w-xl` (36rem = 576px) plus the container's padding (32px), so
-          the longest household name in the world cannot push it past 608px. The image
-          therefore begins at 700px — 92px of clear canvas past the worst case — at EVERY
-          width from `lg` up, because the fixed term wins whenever the percentage would
-          creep left. Above ~1590px the 44% takes over and the window simply grows, which
-          is what a bigger wall should do with a view (HOUSE1 §19.3: the extra width of a
-          large screen becomes air and view, never more widgets).
-
-          The first attempt was a percentage alone — a 34% fade on a 72% window. It was
-          correct at 1440, where it was designed and screenshotted, and at 768 it laid the
-          orchard straight through the middle of "Welcome home,". Every gate was green.
-          A percentage cannot express "clear of the words" because it does not know where
-          the words end; `max()` does. */}
-      <div
-        className="absolute inset-y-0 right-0"
-        style={{ left: "max(700px, 44%)", WebkitMaskImage: MASK_H, maskImage: MASK_H }}
-      >
-        <img
-          src="/orchard-bg.webp"
-          alt=""
-          // Wider than the window and anchored to its right edge — so the window shows
-          // the asset's right two-thirds, and the SUN falls just outside the frame.
-          //
-          // Two findings, both made by looking, neither visible to any gate:
-          //
-          // Anchored HIGH, the view was all sky: a warm haze with nothing in it, which
-          // is the wallpaper §6.1 forbids arriving by the back door. So the band is
-          // anchored low, where the asset keeps what makes an orchard an orchard — the
-          // hills, the trees, the path between them. The orchard is LIFE (Experience
-          // Language §3A.3), and the life in this asset is below its horizon.
-          //
-          // Centred, the sun sat in the middle of the window and blew it out: the room
-          // was brightest where it was emptiest, and the eye went to a white patch
-          // instead of to the household's name. Sliding it out of frame keeps the
-          // morning — the sky still glows, the hills are still lit from the left, every
-          // shadow in the room still agrees with it (§7) — and gives the light somewhere
-          // to come FROM. You do not put the sun in the window. You put the orchard in
-          // the window, and the sun is why you can see it.
-          className="absolute inset-y-0 right-0 h-full max-w-none"
-          style={{
-            width: "168%",
-            objectFit: "cover",
-            // Low: the window sits at the eye line and holds the hills, the trees and
-            // the path — not the sky above them. Sky is what a window has when there is
-            // nothing to see out of it.
-            objectPosition: "100% 82%",
-            opacity: "var(--orchard-exposure-e3)",
-            WebkitMaskImage: MASK_V,
-            maskImage: MASK_V,
-          }}
-        />
-      </div>
-      </div>
-    </>
+    <div
+      aria-hidden
+      data-testid="room-orchard-window"
+      data-orchard-exposure="e2"
+      className="pointer-events-none relative shrink-0 w-full overflow-hidden
+                 h-[clamp(96px,13vh,168px)]"
+    >
+      <img
+        src="/orchard.webp"
+        alt=""
+        className="absolute inset-0 h-full w-full max-w-none object-cover
+                   [object-position:50%_64%]"
+        style={{
+          opacity: "var(--orchard-exposure-e2)",
+          WebkitMaskImage: MASK_E2,
+          maskImage: MASK_E2,
+        }}
+      />
+    </div>
   );
 }
+
+
+/* `OrchardOpenView`, `MASK_H`, `MASK_BAND` and `MASK_V` stood here until
+ * EXPADOPT1 (2026-07-20) retired them — 176 lines with zero consumers, left
+ * standing when UX2 superseded the shape with `OrchardWindow` above. See the
+ * `OrchardRoomWindow` header for the reasoning. Recovery, if it is ever wanted:
+ * `git show rollback/expadopt1-experience-constitution-adoption-20260720:client/src/components/layout/orchard-backdrop.tsx`
+ */

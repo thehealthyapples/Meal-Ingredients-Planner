@@ -678,7 +678,10 @@ export default function MealDetailPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 2xl:grid-cols-4 gap-4 mb-6">
+      {/* EXPADOPT1 (GEA11) — the `2xl:grid-cols-4` step is retired. Past the point
+          where the measure is formed, surplus width becomes air, never a fourth
+          column. */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="md:col-span-1">
           {meal.imageUrl ? (
             <img

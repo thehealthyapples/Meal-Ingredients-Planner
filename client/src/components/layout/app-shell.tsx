@@ -17,6 +17,7 @@ import { Loader2 } from "lucide-react";
 
 import { BottomNav, NAV_ITEMS, AppRealmContext } from "@/components/nav-bar";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { OrchardRoomWindow } from "@/components/layout/orchard-backdrop";
 import FloatingAssistant from "@/components/conversation/FloatingAssistant";
 import { CompanionContextProvider } from "@/components/conversation/companion-context";
 import {
@@ -101,6 +102,49 @@ const NON_ROOM_TITLES: Array<[test: (path: string) => boolean, title: string, re
   [(p) => p === "/contact", "Contact", "home"],
 ];
 
+/**
+ * EXPADOPT1 (2026-07-20) — THE ORCHARD EXPOSURE OF EVERY ROOM.
+ *
+ * Blueprint § 5.1 is the canonical map and this is its projection, nothing more.
+ * Every value below is READ OFF that table; not one is a judgement made here.
+ *
+ *   Home       E3   drawn by the room itself (`OrchardWindow`) — not by this map
+ *   Cookbook   E2   Pantry E2 · Nutrition E2 · Diary E2 · Orchard E2
+ *   Planner    E1   Shopping E1 · Analyser E1 · Household/Profile E1
+ *   Admin      E0   dialogs and overlays E0
+ *
+ * Exposure is a PER-DOMAIN CONSTANT (§ 6.2 rule 1) — "never a per-surface or
+ * per-component choice, never adjusted for taste mid-feature." Declaring it here,
+ * beside the realm resolution the shell already owns, is what makes that true by
+ * construction: a room cannot choose its own exposure because a room is never
+ * asked. GEA6 — "the orchard is a permanent fact of the site, not a feature of a
+ * room" — is the principle, and one shell-level mount is its mechanism.
+ *
+ * E1 and E0 differ from each other in the canon (light-only vs lit-from-the-hall)
+ * but not in what is DRAWN: § 6.2 gives both "no orchard image", and ODL2 valued
+ * both tokens at 0 for exactly that reason. Both render nothing here. They are
+ * distinguished so the map stays readable against § 5.1, not to produce two
+ * pictures.
+ *
+ * NOT a default. An unmapped path falls to "e1" — the safe direction, because a
+ * room that should have had a window and has none is quiet, whereas a dense
+ * working surface that wrongly gained one is the "all view, no room" anti-pattern
+ * (§ 16). Absence is the recoverable error.
+ */
+const ROOM_EXPOSURE: Record<string, "e0" | "e1" | "e2"> = {
+  cookbook: "e2",
+  pantry: "e2",
+  nutrition: "e2",
+  diary: "e2",
+  orchard: "e2",
+  planner: "e1",
+  shopping: "e1",
+  analyser: "e1",
+  basket: "e1",
+  list: "e1",
+  home: "e1", // Home draws its OWN E3 window; the shell must not draw a second.
+};
+
 /** Routes that render the same room as a canonical nav destination. */
 const ROOM_ALIASES: Record<string, string> = {
   "/diary": "/my-diary",
@@ -141,6 +185,11 @@ export function AppShell({
   showTrialBanner?: boolean;
 }) {
   const [location] = useLocation();
+  // The room's governed exposure, resolved once, from the map above. Admin and
+  // every unmapped authenticated surface resolve to E1/E0 and draw nothing.
+  const shellExposure = location.startsWith("/admin")
+    ? "e0"
+    : ROOM_EXPOSURE[resolveShellRoom(location).realm] ?? "e1";
   const [headerSlot, setHeaderSlot] = useState<HTMLDivElement | null>(null);
   const [railSlot, setRailSlot] = useState<HTMLDivElement | null>(null);
   const [pageHeaders, setPageHeaders] = useState(0);
@@ -172,10 +221,24 @@ export function AppShell({
                   publishes the pointers on screen) and the one FloatingAssistant (which
                   reads them). One channel, one assistant — never one per surface. */}
               <CompanionContextProvider>
-                {/* CONV1 BEH-7 — no orchard backdrop stands behind the rooms. The
-                    Experience Blueprint § 6.1 forbids it by name ("the orchard is
-                    never wallpaper") and § 16 names wallpaper an anti-pattern.
-                    Rooms stand on the warm canvas, which is the Blueprint's own E1. */}
+                {/* CONV1 BEH-7 — no orchard WALLPAPER stands behind the rooms, and
+                    none ever will: the Experience Blueprint § 6.1 forbids it by name
+                    ("the orchard is never wallpaper") and § 16 names it an
+                    anti-pattern. E1 and E0 rooms stand on the warm canvas and draw
+                    no image at all.
+
+                    EXPADOPT1 amends only what that sentence had come to mean in
+                    practice. BEH-7 correctly retired `fixed inset-0` behind every
+                    room at one strength; what it left behind was a house in which
+                    the ONLY room with a window was Home — so `--orchard-exposure-e2`
+                    sat valued and consumed by nothing, and five rooms the governing
+                    map (§ 5.1) puts at E2 stood at E1. EXPGOV1 § I2 named the
+                    consequence: an orchard "reducible to a few lines on the home
+                    page" is "an image on one screen", not a fact of the site (GEA6).
+
+                    The window below is the opposite of wallpaper by construction —
+                    a committed region, at the room's own governed constant, rendered
+                    for five rooms and for no others. */}
                 <div className="relative min-h-[100dvh]">
                   <div className="relative z-10 flex flex-col h-[100dvh]">
                     {showTrialBanner && <TrialBanner />}
@@ -212,7 +275,16 @@ export function AppShell({
                         </aside>
                       )}
 
-                      <main className="flex-1 overflow-y-auto overflow-x-hidden main-safe flex flex-col">
+                      <main className="relative flex-1 overflow-y-auto overflow-x-hidden main-safe flex flex-col">
+                        {/* The room's window. Inside `main` and IN FLOW, so it
+                            belongs to the room, scrolls away with it, and occupies
+                            "one committed region the content deliberately does not
+                            cover" (§ 6.2). `fixed` would make it wallpaper again and
+                            would also be the parallax UIA § 4 forbids outright;
+                            `absolute` would put the room's type on the view, which
+                            § 6.1 forbids without negotiation — see the component's
+                            header for the screenshot that caught exactly that. */}
+                        <OrchardRoomWindow exposure={shellExposure} />
                         {isLoading ? (
                           <div className="flex h-full items-center justify-center">
                             <Loader2 className="h-8 w-8 animate-spin text-primary/50" />
