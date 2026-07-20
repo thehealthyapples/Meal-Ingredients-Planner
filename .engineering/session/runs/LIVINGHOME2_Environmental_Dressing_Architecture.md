@@ -5,8 +5,8 @@
 | **Session ID** | `LIVINGHOME2_Environmental_Dressing_Architecture` |
 | **Rollback ID** | `rollback/LIVINGHOME2-environmental-dressing-20260720` (annotated tag) → `d45c3f55` |
 | **Start time** | 2026-07-20 UTC |
-| **Current stage** | Rollback Complete |
-| **Commit** | (pending) |
+| **Current stage** | Waiting for User |
+| **Commit** | `917e1293` (pushed to `int1-intelligence-platform`; rollback tag pushed) |
 
 ## Objective
 Define (do not implement) the governing architecture for the **Environmental Dressing** layer of the Living Home — the missing third layer between the House (constant architecture) and Household Life (truthfully data-driven): dressing that belongs to the home itself, is not personalised, not data-driven, and exists to express warmth, hospitality and the quiet passage of the year while preserving the permanent identity of the house. Deliverable: `docs/architecture/LIVING_HOME_ENVIRONMENTAL_DRESSING_ARCHITECTURE.md` with ownership, principles, belongs/never-belongs, relationships to House Architecture / Household Life / Household Traditions, implementation boundaries, examples, anti-patterns, and all compliance sections. Index in `docs/architecture/README.md`. Commit, push, report the rollback identifier.
