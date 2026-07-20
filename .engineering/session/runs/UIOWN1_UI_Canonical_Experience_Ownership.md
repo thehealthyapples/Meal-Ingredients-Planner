@@ -5,8 +5,8 @@
 | **Session ID** | `UIOWN1_UI_Canonical_Experience_Ownership` |
 | **Rollback ID** | `rollback/UIOWN1-ui-canonical-experience-ownership-20260720` (annotated tag) → `5c9ddb5d` |
 | **Start time** | 2026-07-20 UTC |
-| **Current stage** | Planning |
-| **Commit** | (pending) |
+| **Current stage** | Waiting for User |
+| **Commit** | `9b44b0d7` (pushed to `int1-intelligence-platform`; rollback tag pushed) |
 
 ## Objective
 Create the governing architecture for **Canonical UI Experience Ownership** — `docs/architecture/UI_CANONICAL_EXPERIENCE_OWNERSHIP.md` — so every visible element in THA has exactly one authoritative owner before UI implementation continues. UI renders published state and never owns business state; owners publish, experiences compose. Define canonical owners for 15 experiences (Living Home · Household · Companion · Planner · Cookbook · Pantry · Shopping · Nutrition · Canonical Food Platform · Diary · Community · Profile · Administration · Notifications · Seasonal/Environmental Dressing), each with Responsibilities / Owns / Does Not Own / Primary Consumers; UI composition rules; an ownership decision matrix; Architecture + AI Architecture Compliance; explicit governance-only impact. Cross-check against Living Home, Companion, Intelligence and Community architecture; resolve ownership conflicts; produce `docs/implementation/UI_CANONICAL_EXPERIENCE_OWNERSHIP_IMPLEMENTATION.md`. No application code.
