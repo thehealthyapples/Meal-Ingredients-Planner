@@ -83,7 +83,6 @@ import {
 import { sortableKeyboardCoordinates, SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { DroppablePlannerCell, SortablePlannerEntry, MobileSortableMealEntry, MobileDayDropTarget, DroppableProvisioning, type DragItemData, type DropZoneData } from "@/components/PlannerDragDrop";
 import { PlannerMealCardContent } from "@/components/PlannerMealCard";
-import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import { invalidateMealLibrary } from "@/hooks/use-meals";
 
 interface MatrixRow {
@@ -1877,12 +1876,22 @@ export default function WeeklyPlannerPage() {
       actions={
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
+            {/* UX2 — THE THIRD APPLE IS RETIRED, for the same reason as the second.
+                This overflow menu rendered the canonical THA apple at 34px, so the
+                Planner's header carried the mark TWICE: once as the house's own
+                signature and once, larger and in full colour, as "more planner
+                actions". BRAND1's finding is that the apple IS the house — spending
+                it on an overflow menu makes a dropdown the loudest brand statement
+                on the page and leaves the real mark competing with a copy of itself.
+                One apple, one meaning. An overflow menu takes an overflow glyph, in
+                the same quiet weight as the basket and account beside it — and this
+                file already uses `MoreHorizontal` for exactly that, twice. */}
             <button
-              className="flex items-center justify-center h-9 w-9 rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+              className="flex items-center justify-center h-9 w-9 rounded-lg transition-colors text-muted-foreground hover:bg-accent hover:text-foreground"
               aria-label="Planner workspace"
               data-testid="button-planner-workspace-menu"
             >
-              <img src={thaAppleSrc} alt="" className="h-[34px] w-[34px] object-contain" aria-hidden="true" />
+              <MoreHorizontal className="h-4 w-4" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-52">

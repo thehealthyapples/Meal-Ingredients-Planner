@@ -6,7 +6,7 @@
 | **Session ID** | `UX2_Experience_Language_Completion` |
 | **Rollback ID** | `rollback/UX2-experience-language-completion-20260719` |
 | **Start time** | 2026-07-19T22:23:39Z UTC |
-| **Current stage** | Implementation |
+| **Current stage** | Waiting for User |
 
 ## Objective
 Review the complete THA experience against the agreed Orchard North Star and implement the remaining UX refinements so the product feels like one coherent home.
@@ -35,19 +35,34 @@ Review the complete THA experience against the agreed Orchard North Star and imp
 - [x] Home rebuilt to Concept B — arch and oak console retired
 - [x] Companion emblem + presence light (aware / speaking / listening)
 - [x] `SiteBanner` / `TrialBanner` moved off unowned Tailwind colours
-- [ ] Platform primary swap 132 → 74 (owner decision now received)
-- [ ] Remaining legacy colour sweep across the authenticated experience
-- [ ] Companion ownership of reminders/coaching — duplicated page alerts removed
-- [ ] Verification, commit, push, report
+- [x] Platform primary swap 132 → 74, both modes, values re-derived per surface
+- [x] ARRIVAL1's Home-scoped green override DELETED (not merely matched)
+- [x] `--primary-tint` / `--primary-ink` added; intelligence greens moved onto them
+- [x] Basket glyph quietened at rest; third duplicate apple (Planner) retired
+- [x] **Defect found by picture:** `/tha-apple.png` unpublished — all three reliefs
+      were rendering as nothing. Asset published; verifier asserts content-type.
+- [x] **Defect found by picture:** wall apple laid across the Companion's sentences.
+      Re-anchored to the floor, width derived from the margin it must fit.
+- [x] `scripts/ux2-verify-experience-language.ts` — 29 assertions, all passing
+- [x] Before/after captures — 12 each, six rooms × two viewports
+- [x] Report: `UX2_EXPERIENCE_LANGUAGE_COMPLETION.md`
+- [x] Committed and pushed
+- [ ] **Owner decision needed** — Companion ownership of reminders/coaching
+- [ ] **Owner decision needed** — Home's room hue (132 vs 74, collides with Analyser)
 
-**Last checkpoint:** Companion presence language built; owner decisions received.
+**Last checkpoint:** Report written, work committed and pushed. Stopped for two
+genuine owner decisions.
 
 ## Next action
-Swap the platform primary from hue 132 to hue 74 in both modes, then sweep the
-remaining hard-coded legacy colours.
+Await the owner's ruling on (1) whether the Companion is the sole voice of
+coaching — this governs 8 `AmbientIntelligence` surfaces, a 9-card intelligence
+family, 5 per-surface panels and 6 "Tip:" banners, all of which are OWNERSHIP
+changes the brief forbade taking unilaterally — and (2) Home's room hue.
 
 ## Blockers
-None.
+None blocking. Two owner decisions outstanding; neither prevents shipping what is
+committed. Three pre-existing gate failures (coherence 2, adoption 9,
+typecheck-gate 16) were confirmed present at HEAD and are NOT claimed to pass.
 
 ---
 _Stages: Planning → Rollback Complete → Implementation → Testing → Verification → Documentation → Waiting for User → Complete (or Blocked)._
