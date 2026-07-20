@@ -6,7 +6,7 @@
 | **Rollback ID** | `rollback/LIVINGHOME1-living-home-architecture-20260720` (annotated tag) → `1fe5e62c` |
 | **Start time** | 2026-07-20 UTC |
 | **Current stage** | Waiting for User |
-| **Commit** | (recorded below after push) |
+| **Commit** | `83afde51c77b14bf88614bcdfb9fc64efd857370` (pushed to `int1-intelligence-platform`; rollback tag pushed) |
 
 ## Objective
 Define the governing Living Home architecture: extend the approved North Star experience into one canonical home and one canonical orchard with room viewpoints, seasonal evolution, time-of-day atmosphere, household-defined traditions & celebrations, future Household → Traditions & Celebrations settings, Companion integration, and asset ownership/governance. Document only — no implementation. Deliverable: `docs/architecture/LIVING_HOME_EXPERIENCE_ARCHITECTURE.md` with Architecture Compliance, AI Architecture Compliance, Definition of Done, Data Impact, Trust Check, Rollback Plan, Scope Lock, Manual Verification, and User Acceptance Evidence sections.
@@ -27,9 +27,9 @@ Define the governing Living Home architecture: extend the approved North Star ex
 - [x] LIVING_HOME_EXPERIENCE_ARCHITECTURE.md authored — Living Home Principle ("the house holds still; the life moves"), rooms-as-viewpoints, seasonal/time-of-day evolution assembled by citation (no owned rule restated), new Traditions & Celebrations domain DECLARED NOT BUILT with rules LH1–LH11 + 3-rung participation ladder + declared data shape, future settings surface governed, Companion integration via GEA21–23/CPA1/Notice Engine/INT17, asset governance synthesis, 5-phase roadmap, all nine mandated compliance/evidence sections completed.
 - [x] README.md indexed (Experience Governance table row + Bootstrap blurb paragraph).
 - [x] repo-structure-verify run: "every architecture document indexed" PASS; 2 loose-file FAILs pre-existing (also recorded at EXP1) — none introduced by this change.
-- [ ] Committed and pushed
+- [x] Committed `83afde51` (4 files, docs + session only) and pushed, with the rollback tag pushed to origin.
 
-**Last checkpoint:** Document authored, indexed, structure-verified; ready to commit.
+**Last checkpoint:** Committed and pushed; session complete pending owner review.
 
 ## Next action
 Owner to review docs/architecture/LIVING_HOME_EXPERIENCE_ARCHITECTURE.md — in particular the User Acceptance Evidence section's explicit decision: seasonal evolution and time-of-day atmosphere are delivered as the household's life (data, words, doors), never the house's light or calendar. If the owner instead intends the house itself to change visually, that is a Blueprint § 6.1/§ 7 amendment (reversal of the one-morning/one-season laws) which this document records as a STOP and does not propose. Then Phase 1 (Register domain declaration) may be commissioned as a separate governed act.
