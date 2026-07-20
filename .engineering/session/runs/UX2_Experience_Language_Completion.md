@@ -45,7 +45,9 @@ Review the complete THA experience against the agreed Orchard North Star and imp
       Re-anchored to the floor, width derived from the margin it must fit.
 - [x] `scripts/ux2-verify-experience-language.ts` — 29 assertions, all passing
 - [x] Before/after captures — 12 each, six rooms × two viewports
-- [x] Report: `UX2_EXPERIENCE_LANGUAGE_COMPLETION.md`
+- [x] Report: `docs/implementation/UX2_EXPERIENCE_LANGUAGE_COMPLETION.md`
+      (beside its lineage — `UX_NAV1_ORCHARD_NAVIGATION_REFINEMENT.md`,
+      `UX_REFINE1_HOUSEHOLD_EXPERIENCE_REFINEMENT.md`, `NAV1_APPLICATION_SHELL_IMPLEMENTATION.md`)
 - [x] Committed and pushed
 - [ ] **Owner decision needed** — Companion ownership of reminders/coaching
 - [ ] **Owner decision needed** — Home's room hue (132 vs 74, collides with Analyser)
