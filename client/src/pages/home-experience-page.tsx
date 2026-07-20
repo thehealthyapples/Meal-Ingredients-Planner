@@ -90,7 +90,7 @@ import { useWithholdCompanion } from "@/components/conversation/companion-contex
 import { prefersReducedMotion } from "@/lib/companion-delight";
 import { WorkspaceHeader, PageContainer } from "@/components/workspace-header";
 import { roomsByHref } from "@/components/nav-bar";
-import { OrchardArch } from "@/components/layout/orchard-backdrop";
+import { OrchardWindow } from "@/components/layout/orchard-backdrop";
 import { MealCard } from "@/components/MealCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -122,17 +122,15 @@ import {
 // inside a var() — and silently emits `--tw-shadow-color`, leaving the surface flat
 // while the build, the typecheck and the gate all stay green. ODL2 §6.3 found this by
 // looking at a picture, which is the only way it can be found.
-// ARRIVAL1 — the room's surfaces are now the orchard's own materials, defined once
-// in index.css (the .home-arrival block) and named here as classes:
-//   • .home-arch / .home-arch__view / .home-arch__light — the plaster aperture
-//     (owned by orchard-backdrop.tsx's OrchardArch shape).
-//   • .home-console — the bounded oak furniture the day rests on (wall visible
-//     left and right; a light-pool from the arch; a shadow onto the wall behind and
-//     a contact shadow onto the floor). Never full-width, never a colour band.
-//   • .home-object — an ivory surface resting ON the console: a thing left on the
-//     wood, each with its own contact shadow, not a cell in a grid.
-//   • .home-door — a quiet handle at the floor line, in the penumbra.
-//   • .home-floor — the near stone ground.
+// UX2 — the room's surfaces are the orchard's own materials, defined once in
+// index.css (the `.home-room` block) and named here as classes:
+//   • .home-window / .home-mullion — the glass and the timber holding it up
+//     (owned by orchard-backdrop.tsx's OrchardWindow shape).
+//   • .home-sill — the oak boundary. Everything the household reads is BELOW it.
+//   • .wall-apple — the pressed apple, THA's sole brand mark in this room.
+//   • .home-object — an ivory surface resting on the plaster: a thing left out,
+//     with its own contact shadow, not a cell in a grid.
+//   • .home-doors / .home-door — the low run along the floor, in the penumbra.
 // The counter/ground/support material chips (--ground-plane etc.) are the other
 // rooms' surfaces and are untouched; Home no longer consumes them.
 const M = {
@@ -522,35 +520,51 @@ export default function HomeExperiencePage() {
       <WorkspaceHeader realm="home" title="Home" wide titleTestId="text-home-title" />
 
       {/* ── THE ROOM ──────────────────────────────────────────────────────────
-             ARRIVAL1 — NORTH5's definitive Home. One continuous plaster wall (the
-             .home-arrival background), a stone floor at its base, a plaster archway
-             onto the orchard, and a bounded oak console the day rests on. The law
-             is wall → furniture → floor (NORTH5 §4): cover the console and the wall
-             is continuous behind it; the orchard is an opening in that wall, not a
-             banner above a dashboard. `isolate` keeps the light and the arch in
-             their own stacking context. */}
-      <div className="home-arrival relative isolate flex-1" data-testid="home-room">
-        {/* THE FLOOR — the near stone ground the room stands on, behind the content.
-             Its soft top edge is the floor line where the wall turns into the floor. */}
-        <div className="home-floor" aria-hidden data-testid="home-floor" />
+             UX2 — Concept B, as locked (HOME_ARRIVAL_PRODUCTION_LOCK § 2). Glass
+             above · oak sill between · plaster room below · doors along the floor.
+             The wall, its one grain, and the light falling from the window to the
+             floor are the `.home-room` CSS; this file places what stands in it.
 
-        <PageContainer className="relative z-10 pt-4 sm:pt-6 lg:pt-6 pb-28">
-          {/* ── THE ARCH — the emotional focal point ─────────────────────────────
-                 A plaster aperture cut into the wall, the orchard genuinely behind it
-                 (Blueprint §6.2 rule 4, amended ARRIVAL1). The morning enters here and
-                 here only; the shape, reveal, depth and petal-light are the CSS, the
-                 asset and its crop are OrchardArch's. It carries no type and never
-                 animates (§6.1). The orchard continues beyond it. */}
-          <div className="flex justify-center">
-            <OrchardArch />
-          </div>
+             The composition law is unchanged from ARRIVAL1 — wall → furniture →
+             floor — but the aperture is no longer an arch. The arch was set down
+             (HOME_ARRIVAL_REIMAGINED § 1) because it is a DRAWN FRAME, which
+             Blueprint § 6 forbids at Home's own exposure level, and because a
+             rounded opening over a heavy oak slab reads as the cottage rather than
+             as the modern home in the ancient orchard (Blueprint § 1.4).
 
+             `isolate` keeps the window's light and the wall's grain in their own
+             stacking context. */}
+      <div className="home-room relative isolate flex-1" data-testid="home-room">
+        {/* ── THE GLASS AND THE SILL ────────────────────────────────────────
+               Deliberately OUTSIDE the page container: a window is cut into the
+               wall, edge to edge, and a wall does not observe a content gutter.
+               The sill is the absolute boundary — everything the household reads
+               sits below this line and nothing is ever laid on the glass. That is
+               the R2 defence (NORTH4), and it is what stops Home ever being
+               "tidied" back into a hero banner with type on a photograph. */}
+        <OrchardWindow />
+        <div className="home-sill" aria-hidden data-testid="home-sill" />
+
+        {/* ── THE PRESSED APPLE — the sole brand identity, in the plaster ────
+               BRAND2 § 6, built from the room's own light model rather than placed
+               as an image (the production lock's § 6.1 instruction). Tone-on-tone,
+               holding no pigment: it IS the wall. Decorative and silent to
+               assistive technology — the house's name is carried in words by the
+               header's mark, never by this relief. */}
+        <div className="wall-apple" aria-hidden data-testid="home-pressed-apple">
+          <i className="wa-occ" />
+          <i className="wa-rim-up" />
+          <i className="wa-rim-lo" />
+          <i className="wa-face" />
+        </div>
+
+        <PageContainer className="relative z-10 pt-8 sm:pt-10 lg:pt-12 pb-28">
           {/* ── THE ARRIVAL ────────────────────────────────────────────────────
                  The household's name in THA's own hand — the house's one ornament at
                  Home, data-borne (Blueprint §12.1). It stands on the plaster wall, in
-                 the light spilling from the arch above — never on the orchard (§6.1).
-                 The Companion's card is propped on the wall beside it. */}
-          <div className="mt-6 sm:mt-7 lg:mt-8 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-12">
+                 the light falling from the window above — never on the orchard (§6.1).
+                 The Companion's line rests on the wall beside it. */}
+          <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-12">
             <header className="max-w-xl">
               <h1 data-testid="text-home-greeting" className="text-foreground">
                 {name ? (
@@ -607,31 +621,43 @@ export default function HomeExperiencePage() {
               </p>
             </header>
 
-            {/* The Companion's card — the friend at the counter, resting against the
-                view. Solid, because it stands where the orchard is: type gets ground
-                without negotiation (Blueprint §6.1), and a translucent panel over an
-                image has contingent contrast, which cannot be measured once (UIA §15;
-                NORTH1 §5.6 — this is why the render's frosted glass is refused and this
-                panel is warm and opaque).
+            {/* ── THE COMPANION'S VOICE — dissolved into the wall ─────────────
+                   UX2. This was a bordered, shadowed `home-object` card headed
+                   "Companion". The production lock § 3.4 fixes it as *"a line
+                   resting on the wall"* instead, and the reason is the whole of
+                   this brief: a boxed panel that lists notices is a PAGE speaking
+                   in the Companion's name. Dissolving the box does not take a
+                   sentence away — every word is still the Behaviour Engine's,
+                   verbatim, in the household's chosen personality — it stops Home
+                   impersonating the friend at the counter and lets the friend
+                   speak for itself.
 
-                The sentences are the Behaviour Engine's, verbatim. Absent in silence. */}
+                   No border, no fill, no shadow: type on plaster. It needs none of
+                   them, because it stands on the wall and not on the orchard —
+                   contrast here is fixed and measurable, which is exactly why
+                   NORTH1 § 5.6 refused a translucent panel over the image.
+
+                   Absent in silence. The Notice Engine's Silence Rules already
+                   chose which notices and how many; this renders what it was
+                   handed and never re-sorts, re-slices or pads it. */}
             {reminders.length > 0 && (
               <aside
-                className="home-object rounded-[var(--radius-primary)] p-5 animate-in fade-in duration-700 motion-reduce:animate-none"
+                className="animate-in fade-in duration-700 motion-reduce:animate-none"
                 data-testid="card-home-companion"
                 aria-labelledby="home-companion-heading"
               >
-                <div className="flex items-center gap-2 mb-3">
-                  <Leaf style={{ width: 15, height: 15, color: "var(--primary-border)" }} />
-                  <h2 id="home-companion-heading" className="title-card text-foreground">
-                    Companion
-                  </h2>
-                </div>
-                <ul className="space-y-2.5" data-testid="list-home-reminders">
+                <h2
+                  id="home-companion-heading"
+                  className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.15em] text-muted-foreground mb-2.5"
+                >
+                  <Leaf style={{ width: 11, height: 11, color: "var(--primary-border)" }} />
+                  From your Companion
+                </h2>
+                <ul className="space-y-3" data-testid="list-home-reminders">
                   {reminders.map((o, i) => (
                     <li
                       key={o.id}
-                      className="text-sm text-foreground/80 leading-relaxed"
+                      className="text-[17px] leading-relaxed text-foreground/85"
                       data-testid={`home-reminder-${i}`}
                     >
                       {/* The Behaviour Engine's sentence, rendered verbatim. Never reworded here. */}
@@ -643,18 +669,24 @@ export default function HomeExperiencePage() {
             )}
           </div>
 
-          {/* ── THE CONSOLE — the oak furniture the day rests on ────────────────────
-                 The day's information is gently placed on a bounded oak console: wall
-                 visible left and right, a light-pool from the arch, a shadow onto the
-                 wall behind and a contact shadow onto the floor. It is FURNITURE inside
-                 the room, not a coloured lower band and not the counter's full-width
-                 ground (NORTH5 §4 — the hand test). The three facts rest on it as ivory
-                 objects, each with its own contact shadow: things left on the wood.
+          {/* ── THE DAY, ON THE WALL ───────────────────────────────────────────────
+                 UX2 — THE OAK CONSOLE IS RETIRED, and it went with the arch.
 
-                 It stands back from the greeting so the arrival speaks first (the
-                 NORTH2 pause), but the whole composition is shorter than the old
-                 open-view room, so the one lit action never falls behind the nav. */}
-          <section className="mt-7 sm:mt-8" aria-labelledby="home-today-heading">
+                 It was ARRIVAL1's furniture: a bounded oak plank, grained, lit by
+                 the arch's morning, casting a shadow onto the wall behind it. In
+                 Concept B the room below the sill is PLASTER, and the sill is now
+                 the only oak in the composition — a second oak slab three inches
+                 under it read as two pieces of furniture arguing about which one
+                 was the boundary, which is precisely the "hero banner over a
+                 dashboard" shape the sill exists to prevent.
+
+                 So the day's three facts rest on the wall directly, as ivory
+                 objects with their own contact shadows — things left on a surface,
+                 never cells in a grid. Nothing was removed from them: every state,
+                 every honest absence and every error path is unchanged. The
+                 interface simply recedes, which is The Kept House's whole
+                 instruction (technology becomes quieter as it becomes better). */}
+          <section className="mt-10 sm:mt-12" aria-labelledby="home-today-heading">
             <div className="mb-4 px-1 max-w-4xl mx-auto">
               <h2
                 id="home-today-heading"
@@ -670,9 +702,9 @@ export default function HomeExperiencePage() {
               )}
             </div>
 
-            {/* The console: the bounded oak surface. `max-w-4xl mx-auto` keeps the wall
-                visible on both sides — furniture in the room, never edge to edge. */}
-            <div className="home-console mx-auto max-w-4xl p-4 sm:p-6" data-testid="ground-home">
+            {/* `max-w-4xl mx-auto` keeps the wall visible on both sides — the room
+                is wider than what stands in it, which is what makes it a room. */}
+            <div className="mx-auto max-w-4xl" data-testid="ground-home">
               {/* The glance — THA's real three, each a separate ivory object resting on
                   the oak (oak shows between them). Family and Pantry are the render's
                   other two and Home has no validated data for either; not invented. */}
@@ -891,31 +923,38 @@ export default function HomeExperiencePage() {
                  stands them on the floor. Bounded to the console's width so the wall
                  shows past them too. */}
           <nav
-            className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4 max-w-4xl mx-auto"
+            className="home-doors mt-12 grid grid-cols-2 sm:grid-cols-4 max-w-4xl mx-auto rounded-[var(--radius-primary)] overflow-hidden"
             aria-label="The rooms of your home"
             data-testid="home-doors"
           >
-            {doors.map((room) => {
+            {doors.map((room, i) => {
               const Icon = room.icon;
               return (
                 <Link
                   key={room.href}
                   href={room.href}
-                  className={`${M.focus} block ${M.radius}`}
+                  className={`${M.focus} block`}
                   data-testid={`door-home-${room.label.toLowerCase()}`}
                 >
-                  <div className={`home-door group/door ${M.radius} py-3 pl-4 pr-3 flex items-center gap-3`}>
-                    <Icon className="h-[18px] w-[18px] shrink-0" style={{ color: "var(--primary-border)" }} />
-                    <h3 className="title-card text-foreground min-w-0 truncate">{room.label}</h3>
-                    {/* The handle — the house's accent, quiet until the hand arrives:
-                        a door handle catches the light when you reach for it. */}
-                    <span
-                      className="ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent
-                                 transition-colors duration-200 ease-out motion-reduce:transition-none"
-                      style={{ color: "var(--primary-border)" }}
-                    >
-                      <ChevronRight className="h-3.5 w-3.5 transition-transform duration-200 ease-out group-hover/door:translate-x-0.5 motion-reduce:transition-none" />
+                  {/* A NAME and a HANDLE. UX2 quietens these to the lock's low run:
+                      the boxed card with its filled accent disc became a line along
+                      the floor with a small brass point at the end of it. A door in
+                      a house is not a tile — and these must stay visibly subordinate
+                      to the one lit action above, which a row of four filled discs
+                      was not. Hairlines between them, never around them. */}
+                  <div
+                    className={`home-door h-[62px] px-5 sm:px-6 flex items-center justify-between gap-3
+                                ${i > 0 ? "border-l border-[hsl(38_24%_82%/0.7)]" : ""}
+                                ${i > 1 ? "sm:border-l border-t sm:border-t-0 border-[hsl(38_24%_82%/0.7)]" : ""}`}
+                  >
+                    <span className="flex items-center gap-2.5 min-w-0">
+                      <Icon
+                        className="h-[17px] w-[17px] shrink-0 opacity-70"
+                        style={{ color: "var(--primary-border)" }}
+                      />
+                      <h3 className="text-sm text-foreground/90 min-w-0 truncate">{room.label}</h3>
                     </span>
+                    <span className="home-door-handle shrink-0" aria-hidden />
                   </div>
                 </Link>
               );

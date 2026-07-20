@@ -30,6 +30,12 @@ export default {
           DEFAULT: "hsl(var(--primary) / <alpha-value>)",
           foreground: "hsl(var(--primary-foreground) / <alpha-value>)",
           border: "var(--primary-border)",
+          // UX2 — the house green as a SURFACE and as INK ON that surface, each
+          // resolved per mode in index.css. These exist so intelligence tints stop
+          // reaching for Tailwind's `green-*`, which was a second platform green
+          // answering to nothing. Not a severity scale and not a status colour.
+          tint: "hsl(var(--primary-tint) / <alpha-value>)",
+          ink: "hsl(var(--primary-ink) / <alpha-value>)",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary) / <alpha-value>)",

@@ -55,7 +55,31 @@
   --popover:             42 46% 98%;
   --popover-foreground:  120 14% 14%;
 
-  --primary:             132 14% 44%;
+  /* ── UX2 — THE ONE GREEN. Orchard, hue 74. ─────────────────────────────────
+   *
+   * ADOPTED 2026-07-20 by Colin Clapson: *Orchard green (hue 74) is the canonical
+   * platform primary colour.* This is NORTH4 D1, and it is the decision every run
+   * since ARRIVAL1 has explicitly declined to take on the owner's behalf — the
+   * Home block below still carries the comment "the platform-wide green swap is
+   * the owner's decision, out of this Home-scoped change". It has now been taken,
+   * so that scoped override is deleted rather than merely matched: Home stops
+   * being a room with its own green and becomes a room in a house that has one.
+   *
+   * WHAT WAS WRONG WITH 132. It was the scaffold's green — a cool, slightly blue
+   * mid-green chosen before there was an orchard to answer to. Hue 74 is sampled
+   * from the canonical ORCHARD.png: leaf-in-shade, the colour of the actual trees
+   * the product is named for. The governing rule is NORTH4 § 3's — *hues are law,
+   * saturations re-derived per surface* — so the hue is fixed and each token below
+   * re-derives its own saturation and lightness for the surface it lands on. It is
+   * NOT a find-and-replace of one triplet.
+   *
+   * CONTRAST. `--primary-foreground` stays white and the fill got DARKER
+   * (44 % → 34 % lightness), so every white-on-primary pairing in the product
+   * improves rather than regresses. Hue 74 is more luminous than hue 132 at equal
+   * HSL lightness — it sits nearer yellow — which is exactly why the lightness had
+   * to be re-derived down and not carried across.
+   */
+  --primary:             74 30% 34%;
   --primary-foreground:  0 0% 100%;
 
   --secondary:           42 89% 61%;
@@ -64,7 +88,9 @@
   --muted:               40 33% 97%;
   --muted-foreground:    120 5% 34%;
 
-  --accent:              118 19% 94%;
+  /* the soft green wash — the orchard's own leaf, re-derived to a near-white
+     plaster tint. Was hue 118, a third green that answered to nothing. */
+  --accent:              74 24% 93%;
   --accent-foreground:   120 14% 14%;
 
   --destructive:         0 84% 60%;
@@ -72,7 +98,7 @@
 
   --border:              33 22% 87%;
   --input:               33 22% 87%;
-  --ring:                132 14% 44%;
+  --ring:                74 30% 34%;
 
   --radius:              0.75rem;
 
@@ -104,10 +130,10 @@
   --sidebar:             42 46% 98%;
   --sidebar-foreground:  120 14% 14%;
   --sidebar-border:      33 22% 87%;
-  --sidebar-ring:        132 14% 44%;
-  --sidebar-primary:     132 14% 44%;
+  --sidebar-ring:        74 30% 34%;
+  --sidebar-primary:     74 30% 34%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent:      118 19% 94%;
+  --sidebar-accent:      74 24% 93%;
   --sidebar-accent-foreground: 120 14% 14%;
 
   --space-1: 4px;
@@ -270,8 +296,21 @@
      ui/badge.tsx have consumed since the scaffold, previously never defined.
      Filled buttons carry a border one step darker than their fill; outline
      controls carry a foreground-tinted border that reads on any surface. */
-  --primary-border:       hsl(132 14% 37%);
+  --primary-border:       hsl(74 32% 26%);
   --secondary-border:     hsl(42 74% 49%);
+
+  /* UX2 — THE GREEN AS A TINT AND AS INK, resolved per mode.
+     `intelligence-tokens.ts` reached for Tailwind's `green-50/800/950/300` every
+     time a piece of intelligence needed to say "this is good" — a SECOND platform
+     green, chosen by the palette rather than by the house. Now that the house has
+     one green, the tint and the ink it takes on a surface need names, because a
+     component may not write a raw colour (UIA § 7) and `bg-primary/10` alone
+     cannot carry a light-on-dark inversion.
+     Contrast is measured, not assumed: ink-on-tint is ≈10:1 by day and ≈8:1 at
+     night, comfortably past the 4.5:1 § 15 requires for the small text that
+     actually lands on these chips. */
+  --primary-tint:         74 40% 95%;
+  --primary-ink:          74 38% 24%;
   --destructive-border:   hsl(0 74% 52%);
   --button-outline:       hsl(120 14% 14% / 0.16);
   --badge-outline:        hsl(120 14% 14% / 0.16);
@@ -304,7 +343,11 @@
   --popover:             120 14% 11%;
   --popover-foreground:  40 20% 93%;
 
-  --primary:             132 14% 52%;
+  /* UX2 — the one green, in the dark house. Re-derived, not carried across: at
+     equal HSL lightness hue 74 is the more luminous of the two, so 52 % became
+     46 % to hold white-on-primary at the contrast it had before the swap rather
+     than quietly spending it. */
+  --primary:             74 26% 46%;
   --primary-foreground:  0 0% 100%;
 
   --secondary:           42 89% 55%;
@@ -321,15 +364,15 @@
 
   --border:              120 10% 20%;
   --input:               120 10% 20%;
-  --ring:                132 14% 52%;
+  --ring:                74 26% 46%;
 
   --row-alt:             120 10% 14%;
 
   --sidebar:             120 14% 11%;
   --sidebar-foreground:  40 20% 93%;
   --sidebar-border:      120 10% 20%;
-  --sidebar-ring:        132 14% 52%;
-  --sidebar-primary:     132 14% 52%;
+  --sidebar-ring:        74 26% 46%;
+  --sidebar-primary:     74 26% 46%;
   --sidebar-primary-foreground: 0 0% 100%;
   --sidebar-accent:      120 10% 16%;
   --sidebar-accent-foreground: 40 20% 93%;
@@ -388,7 +431,13 @@
   --basket-realm-subtle:  26 17% 52%;
 
   /* PX1-W1 (fnd-px-dead-elevation) — dark-mode counterparts */
-  --primary-border:       hsl(132 14% 44%);
+  --primary-border:       hsl(74 28% 36%);
+
+  /* UX2 — the tint darkens and the ink lightens: the same two roles, inverted,
+     which is exactly the swap a per-mode token exists to make and a bare
+     `bg-primary/10` cannot. */
+  --primary-tint:         74 22% 14%;
+  --primary-ink:          74 34% 70%;
   --secondary-border:     hsl(42 89% 47%);
   --destructive-border:   hsl(0 62% 24%);
   --button-outline:       hsl(40 20% 93% / 0.20);
@@ -555,9 +604,142 @@
 /* Realm title colour */
 .realm-title { color: var(--realm-text); }
 
-/* Realm header shaded zone */
+/* Realm header shaded zone.
+   ⚠️ RETAINED FOR THE CONTEXT BAR AND THE BANNER BUTTONS ONLY — the permanent
+   header no longer consumes `.realm-header-bg` (see `.shell-header` below). */
 .realm-header-bg     { background-color: var(--realm-bg); }
 .realm-header-border { border-color: var(--realm-border); }
+
+/* ── UX2 — THE PERMANENT HEADER: ONE HOUSE, ONE HEADER ────────────────────────
+ *
+ * THE DEFECT THIS CLOSES. The header rendered `realm-header-bg` — so the top of
+ * the application was a DIFFERENT COLOUR IN EVERY ROOM: teal in the Planner,
+ * green in the Pantry, olive in the Analyser, rose in the Diary, nine in all.
+ * Walking from the Cookbook to the Shopping list repainted the roof of the house.
+ * That is what made THA read as nine applications wearing one navigation, and it
+ * is the single largest reason the product did not feel like one home.
+ *
+ * It is exactly the defect UX_NAV1 already fixed one level down. The nav shelf was
+ * nine coloured pills and became ONE continuous surface, with the room you are in
+ * shown by LIGHT — a soft glow and a thin light-line, "the under-cabinet light
+ * above that room's door". The header is the same furniture problem with the same
+ * answer, applied where it matters more: nothing about the house is nine of
+ * anything, and the ceiling least of all.
+ *
+ * So the header is now ONE material in every room — warm plaster catching the
+ * morning from above, the same wall the rooms stand against — and the room is
+ * named three ways that cost the house nothing:
+ *   • the TITLE, in the room's own ink (`.realm-title`, unchanged);
+ *   • a soft light-line along the header's lower edge in the room's hue;
+ *   • the lit room on the shelf below (UX_NAV1, unchanged).
+ *
+ * Wayfinding (UIA § 6) is therefore preserved in meaning and quieter in form —
+ * the same move, and the same justification, as the shelf. No realm changed hue.
+ * `REALM_STYLES` in nav-bar.tsx still hard-codes each hue a third time; that is a
+ * convergence with an ownership question attached and it is reported, not taken.
+ */
+.shell-header {
+  position: relative;
+  background:
+    radial-gradient(120% 140% at 50% 0%, var(--light-rim-soft) 0%, transparent 72%),
+    hsl(var(--card));
+  border-bottom: 1px solid hsl(var(--border) / 0.8);
+}
+
+/* The room's light, along the sill of the header. Pure decoration, behind the
+   content, and it can intercept nothing. Deliberately faint: it should be felt
+   as a change of light on walking into a room, never read as a coloured rule. */
+.shell-header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--realm-accent) 46%, transparent) 22%,
+    color-mix(in srgb, var(--realm-accent) 46%, transparent) 78%,
+    transparent 100%
+  );
+}
+
+.dark .shell-header {
+  background:
+    radial-gradient(120% 140% at 50% 0%, hsl(48 20% 70% / 0.06) 0%, transparent 72%),
+    hsl(var(--card));
+}
+.dark .shell-header::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--realm-accent) 38%, transparent) 22%,
+    color-mix(in srgb, var(--realm-accent) 38%, transparent) 78%,
+    transparent 100%
+  );
+}
+
+/* ── UX2 — THE HEADER'S BRAND MARK: THE QUIET APPLE ───────────────────────────
+ *
+ * BRAND1 § 4 (C+D) and § 7, locked by HOME_ARRIVAL_PRODUCTION_LOCK § 2: *"the
+ * prominent band mark is RETIRED"*, the band dissolves into the plaster, and what
+ * stands where the logo was is a single quiet apple. The 68 px full-colour
+ * `logo-long.png` — apple, wordmark and tagline, in a 76 px header, so the LOGO
+ * WAS THE HEADER — is the "least THA place the brand can live" that BRAND1 names.
+ *
+ * The mark here is pressed into the plaster the same way the wall's apple is
+ * (BRAND2 § 6, § 2 physics: dark rim up, lit rim down, tone-on-tone, no pigment)
+ * — one signature at two scales, so the house carries the same mark in its wall
+ * and at its door. It is smaller, quieter, and it is not a picture of a logo: it
+ * is the surface it sits on, displaced.
+ *
+ * Accessibility: the relief is decorative, and the LINK carries the accessible
+ * name ("The Healthy Apples, home"). The wordmark's removal takes no information
+ * from a screen reader — it never had it as text in the first place; it was
+ * `alt` on a raster.
+ */
+.brand-mark {
+  position: relative;
+  display: block;
+  width: 30px;
+  height: 30px;
+  flex: none;
+}
+.brand-mark i {
+  position: absolute;
+  inset: 0;
+  display: block;
+  -webkit-mask: url("/tha-apple.png") center / contain no-repeat;
+          mask: url("/tha-apple.png") center / contain no-repeat;
+}
+.brand-mark .bm-occ {
+  background: hsl(38 20% 62%);
+  filter: blur(1.5px);
+  transform: scale(1.06) translateY(1px);
+  opacity: 0.36;
+}
+.brand-mark .bm-rim-up { background: hsl(42 26% 46%); transform: translateY(-1px); opacity: 0.62; }
+.brand-mark .bm-rim-lo { background: hsl(44 62% 95%); transform: translateY(1px);  opacity: 0.72; }
+.brand-mark .bm-face {
+  background: linear-gradient(to bottom, hsl(35 18% 74%) 0%, hsl(38 26% 85%) 52%, hsl(41 48% 92%) 100%);
+}
+/* The mark warms very slightly under the hand — the one affordance a pressed
+   relief can honestly offer, since it cannot lift off the wall. */
+.brand-mark .bm-face { transition: opacity .2s ease-out; }
+a:hover > .brand-mark .bm-face { opacity: 0.86; }
+@media (prefers-reduced-motion: reduce) { .brand-mark .bm-face { transition: none; } }
+
+/* In the dark house the plaster is dark, so the relief inverts its own values —
+   the press is still lit from above, but out of a dark wall rather than a light
+   one. Without this the mark would read as a bright sticker stuck on the dark. */
+.dark .brand-mark .bm-occ    { background: hsl(120 10% 6%); opacity: 0.5; }
+.dark .brand-mark .bm-rim-up { background: hsl(120 8% 10%); opacity: 0.8; }
+.dark .brand-mark .bm-rim-lo { background: hsl(44 22% 62%); opacity: 0.42; }
+.dark .brand-mark .bm-face {
+  background: linear-gradient(to bottom, hsl(120 8% 17%) 0%, hsl(110 7% 24%) 52%, hsl(80 10% 34%) 100%);
+}
 
 /* ── UX_NAV1 — the navigation shelf ───────────────────────────────────────────
  *
@@ -588,8 +770,10 @@
 .nav-shelf-item {
   position: relative;
   /* Fallback only — every item sets its own. A room with no declared hue lights
-     in the house's own green rather than failing to light at all. */
-  --nav-hue: 132;
+     in the house's own green rather than failing to light at all. UX2 moved that
+     green from 132 to the orchard's 74, so the fallback follows it: the sentence
+     this comment makes is the reason the number changed. */
+  --nav-hue: 74;
 }
 
 /* The lit room: glow beneath, light-line above. Both are pure decoration and
@@ -953,185 +1137,485 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   ARRIVAL1 (2026-07-17) — THE DEFINITIVE HOME.
+   UX2 (2026-07-19) — HOME, AS LOCKED. Concept B · The Kept House.
 
-   NORTH5's chosen arrival, built: the archway · one continuous plaster wall ·
-   a bounded oak console · a visible stone floor. Composition law — wall →
-   furniture → floor (NORTH5 §4), never a banner over a dashboard. Blend: V2's
-   orchard connection · V1's calm restraint · V3's oak materiality.
+   This block REPLACES the ARRIVAL1 archway. Nothing here is a new design: it is
+   `HOME_ARRIVAL_PRODUCTION_LOCK` § 2 built into the product — the locked, rendered,
+   collision-checked composition that has been waiting on its "gated implementation
+   step" since 2026-07-17.
 
-   The orchard MATERIAL palette (NORTH4 §3, sampled from ORCHARD.png; the governing
-   rule "hues are law, saturations re-derived per surface") is scoped HERE — every
-   token below is consumed only under .home-arrival, so NO other room changes. The
-   one green and the accent are overridden in-scope too, so Home speaks the
-   orchard's own green (hue 74, leaf-in-shade) while the global --primary (hue 132)
-   is left byte-untouched: the platform-wide green swap (NORTH4 D1) is the owner's
-   decision, out of this Home-scoped change (no unrelated refactoring).
+   WHY THE ARCH WENT. ARRIVAL1 built NORTH5's archway: a rounded plaster aperture,
+   a bounded oak console, a stone floor. NORTH4 Concept B superseded it and the
+   production lock fixed that supersession as final — *glass above · oak sill ·
+   plaster room below · doors along the floor*. The arch is the ancient form; the
+   house is the MODERN home in the ancient orchard (Experience Blueprint § 1.4), and
+   a rounded aperture with a heavy oak slab under it reads as the cottage, not as
+   the clean architecture and full glazing the Orchard House Design Blueprint states
+   as the house's character. So the aperture becomes real joinery — a head reveal
+   with wall thickness above the glass, jambs returning down each side, timber
+   mullions holding three bays, and an oak sill as the absolute boundary.
+
+   THE SILL IS LOAD-BEARING IN PERPETUITY (NORTH4's R2 defence). Everything the
+   household reads sits BELOW it; nothing is ever laid on the glass. That is what
+   stops a future hand "tidying" Home back into a hero banner with text on a photo.
+
+   The interior is The Kept House: age, never objects. The oak is darkened the way
+   timber darkens after years of the same morning; the plaster carries one faint
+   hand-troweled grain; the sill's lip is worn lighter where hands and cups have
+   rested. No prop was added — only time was let pass over the room. The feeling
+   comes from *time*, which is the one interior quality that cannot be staged.
+
+   Scope: every token below is consumed only under `.home-room`, so NO other room
+   changes. The Home-scoped orchard green (hue 74) is kept exactly as ARRIVAL1 set
+   it — the platform-wide green swap (NORTH4 D1) remains the owner's decision and is
+   not taken here.
    ═══════════════════════════════════════════════════════════════════════════ */
-.home-arrival {
-  /* materials — number triplets, consumed via hsl(var(--x)) */
-  --wall:        36 46% 94%;
-  --wall-shadow: 34 34% 88%;
-  --wall-lit:    38 62% 96%;
-  --floor:       33 27% 84%;
-  --floor-near:  32 22% 79%;
-  --oak:         41 36% 58%;
-  --oak-lit:     42 43% 66%;
-  --oak-body:    41 38% 47%;
-  --oak-edge:    44 42% 28%;
+.home-room {
+  /* materials — The Kept House, warmed by The Warm Hour, matte per The Linen Calm */
+  --wall:        36 30% 91%;   /* chalky matte plaster */
+  --wall-sill:   42 78% 96%;   /* the wall just under the window — warmed */
+  --wall-mid:    40 58% 93%;
+  --wall-floor:  33 22% 81%;
+  --oak-lip:     41 40% 68%;   /* timber darkened by years of the same morning */
+  --oak-body:    42 42% 36%;
+  --oak-edge:    44 46% 20%;
   --ivory:       39 64% 97%;
   --ivory-edge:  38 32% 90%;
-  --reveal:      36 44% 92%;
   --olive:       56 40% 9%;
 
-  /* the one green + accent, the orchard's own, SCOPED to Home only */
-  --primary:        74 30% 34%;
-  --ring:           74 30% 34%;
+  /* UX2 — THE HOME-SCOPED GREEN IS GONE, AND THAT IS THE POINT.
+     ARRIVAL1 overrode `--primary`, `--ring` and `--primary-border` to hue 74 HERE
+     because the platform-wide swap was the owner's to make and had not been made.
+     It has now been made (`:root`, above), so Home inherits the house's green
+     instead of declaring its own. Deleting these lines is the actual completion of
+     NORTH4 D1: while they stood, Home was still the one room that knew a different
+     green, which is exactly the "nine applications wearing one navigation" shape
+     this whole brief exists to close.
+
+     `--accent` alone remains scoped, and for a different reason: at Home it is the
+     warm plaster the room is built from (hue 41), not the platform's soft green
+     wash. That is a MATERIAL, not a brand colour. */
   --accent:         41 46% 90%;
-  --primary-border: hsl(74 32% 26%);
+
+  /* The window's own height. The lock's `--sill-y` is an absolute boundary in a
+     full-viewport composition; in the product the room SCROLLS, so the same
+     boundary is expressed as the glass's height in normal flow. The architecture
+     is identical — glass, then sill, then room — and it survives a long page,
+     which a viewport-pinned sill does not. */
+  --glass-h: clamp(208px, 32vh, 372px);
+  --sill-h:  30px;
 
   position: relative;
-  /* THE WALL — one continuous plaster surface, warm, washed by the arch's morning
-     at the top and settling a touch darker at the edges so the eye is drawn in.
-     This is the single background behind BOTH the arch and the console — cover the
-     furniture and the wall is continuous behind it (the hand test, NORTH5 §4). */
+  /* THE ROOM LIT BY ITS OWN WINDOW — warmed a half-step at the sill (The Warm Hour),
+     falling to the floor. A wash on plaster, NEVER a second sun (Blueprint § 16).
+     The room RECEIVES the morning; no light is ever added to the orchard. */
   background:
-    radial-gradient(132% 54% at 50% -8%, hsl(var(--wall-lit)) 0%, hsl(var(--wall-lit) / 0) 62%),
-    radial-gradient(80% 62% at 0% 26%, hsl(var(--wall-shadow) / 0.45) 0%, hsl(var(--wall-shadow) / 0) 55%),
-    radial-gradient(80% 62% at 100% 26%, hsl(var(--wall-shadow) / 0.45) 0%, hsl(var(--wall-shadow) / 0) 55%),
-    hsl(var(--wall));
+    linear-gradient(to bottom,
+      hsl(var(--wall-sill)) 0,
+      hsl(var(--wall-sill)) calc(var(--glass-h) + var(--sill-h)),
+      hsl(var(--wall-mid))  calc(var(--glass-h) + var(--sill-h) + 190px),
+      hsl(var(--wall-floor)) 100%);
 }
 
-/* THE FLOOR — the near stone ground the room stands on. Stone (hue 33) sits close
-   to the plaster (hue 36), so it reads as a receding ground and never as a colour
-   band. Pinned to the room's base, behind the content; its top edge is a soft
-   floor line where the wall turns into the floor. */
-.home-floor {
-  position: absolute;
-  inset-inline: 0;
-  bottom: 0;
-  height: clamp(200px, 26vh, 320px);
-  z-index: 0;
-  pointer-events: none;
-  background:
-    linear-gradient(180deg,
-      hsl(var(--wall) / 0) 0%,
-      hsl(var(--floor) / 0.5) 24%,
-      hsl(var(--floor)) 52%,
-      hsl(var(--floor-near)) 100%);
-}
-.home-floor::before {
+/* PLASTER TEXTURE — a hand-troweled wall, not a flat fill. The one grain of The
+   Linen Calm: matte, chalky, real material (TRANSLATION1 § 5, materials before
+   effects). Faint enough to be felt and not seen. */
+.home-room::after {
   content: "";
   position: absolute;
-  inset-inline: 0;
-  top: clamp(28px, 6vh, 66px);
-  height: 22px;
-  background: linear-gradient(180deg, hsl(var(--olive) / 0.06), hsl(var(--olive) / 0));
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.06;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-/* THE ARCH — a plaster aperture cut into the wall (Blueprint §6.2 rule 4, amended
-   ARRIVAL1). Rounded top, straight reveals, the orchard genuinely BEHIND it, seen
-   THROUGH the architecture rather than hung on it. The reveal is plaster turning
-   into the opening — a warm rim plus an inner shadow give the wall its thickness;
-   there is no hard drawn edge. It carries no type and never animates (§6.1). */
-.home-arch {
+/* ── THE GLASS — the orchard, full bleed, seen through real joinery ──────────
+   The same view every morning, from the same place: the Arrival viewpoint is
+   permanent (NORTH4 § 2). Only how much of it is opened ever changes. It carries
+   no type and never animates (Blueprint § 6.1). */
+.home-window {
   position: relative;
-  width: clamp(252px, 28vw, 384px);
-  height: clamp(280px, 34vh, 432px);
-  border-radius: 50% 50% 0 0 / 42% 42% 0 0;
-  padding: clamp(7px, 0.9vw, 12px);
-  background: hsl(var(--reveal));
-  box-shadow:
-    inset 0 2px 6px hsl(var(--olive) / 0.14),
-    0 24px 60px -18px hsl(var(--olive) / 0.28),
-    0 4px 12px -6px hsl(var(--olive) / 0.16);
-}
-.home-arch__view {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  border-radius: 50% 50% 0 0 / 42% 42% 0 0;
+  z-index: 1;
+  height: var(--glass-h);
   overflow: hidden;
-  box-shadow: inset 0 0 0 1px hsl(var(--olive) / 0.08), inset 0 7px 22px hsl(var(--olive) / 0.20);
 }
-.home-arch__view img {
-  position: absolute;
-  inset: 0;
+.home-window img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: 45% 26%;
+  object-position: 50% 22%;
+  display: block;
 }
-/* THE PETAL LIGHT — the orchard's morning spilling from the opening onto the
-   plaster around it: warm, soft, atmosphere softening inside/outside (NORTH5 §3.8),
-   without a decorative cut-out branch, which would be fabricated content. */
-.home-arch__light {
+/* the HEAD of the window: the wall has real thickness above the glass — a reveal,
+   not an edge. This is what makes it an opening cut INTO a wall rather than a
+   hero banner, and it is the difference the whole concept rests on. */
+.home-window::before {
+  content: "";
   position: absolute;
-  inset: -16% -24% -26% -24%;
-  z-index: -1;
+  z-index: 3;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 22px;
+  background: linear-gradient(to bottom, hsl(45 42% 20% / 0.42), hsl(45 42% 20% / 0));
+}
+/* the JAMBS: the reveal returns down each side. */
+.home-window::after {
+  content: "";
+  position: absolute;
+  z-index: 3;
+  inset: 0;
   pointer-events: none;
-  background: radial-gradient(58% 52% at 50% 32%, hsl(43 72% 82% / 0.55) 0%, hsl(43 72% 82% / 0) 70%);
+  box-shadow:
+    inset  26px 0 34px -26px hsl(45 42% 20% / 0.36),
+    inset -26px 0 34px -26px hsl(45 42% 20% / 0.36);
 }
 
-/* THE CONSOLE — the oak furniture the day rests on. Bounded (wall visible left and
-   right — never full-width), a lit oak surface with a light-pool where the arch's
-   morning falls, casting a soft shadow onto the wall behind and a contact shadow
-   onto the floor below. This is the "furniture, not a coloured rectangle" of the
-   brief. */
-.home-console {
-  position: relative;
-  border-radius: var(--radius-primary);
-  background:
-    radial-gradient(120% 82% at 50% -12%, hsl(var(--oak-lit)) 0%, hsl(var(--oak-lit) / 0) 62%),
-    linear-gradient(178deg, hsl(var(--oak)) 0%, hsl(var(--oak-body)) 100%);
-  border: 1px solid hsl(var(--oak-edge) / 0.5);
-  box-shadow:
-    inset 0 1px 0 hsl(44 60% 86% / 0.55),
-    0 2px 4px hsl(var(--olive) / 0.10),
-    0 26px 52px -24px hsl(var(--olive) / 0.45);
+/* ── THE MULLIONS — structure holding glass, not lines drawn on a photo ──────
+   A lit inner edge and a cast shadow, so they read as timber HOLDING the glass
+   up. Load-bearing in perpetuity: this is the R2 defence NORTH4 named. */
+.home-mullion {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  background: linear-gradient(to right,
+    hsl(45 42% 18% / 0.58), hsl(var(--oak-body)) 38%, hsl(var(--oak-lip)) 52%, hsl(45 42% 18% / 0.58));
+  box-shadow: 0 0 14px hsl(var(--olive) / 0.24), inset 0 0 0 0.5px hsl(45 30% 80% / 0.32);
 }
-.home-console::before {
+.home-mullion--one { left: 33.333%; }
+.home-mullion--two { left: 66.666%; }
+
+/* ── THE SILL — the boundary, absolute. A real oak object with thickness ─────
+   The Kept House's worn lip: a band lighter where hands and cups have rested for
+   years. Patina is the one thing a printed logo can never fake. */
+.home-sill {
+  position: relative;
+  z-index: 4;
+  height: var(--sill-h);
+  background: linear-gradient(to bottom,
+    hsl(var(--oak-lip)) 0px, hsl(43 42% 52%) 5px, hsl(var(--oak-body)) 60%, hsl(var(--oak-edge)) 100%);
+  box-shadow: 0 16px 30px -12px hsl(56 45% 9% / 0.32);
+}
+.home-sill::before {
   content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  background: hsl(44 60% 86% / 0.78);
+}
+.home-sill::after {
+  content: "";
+  position: absolute;
+  left: 8%;
+  right: 46%;
+  top: 3px;
+  height: 5px;
+  border-radius: 3px;
+  background: radial-gradient(ellipse at center, hsl(44 54% 82% / 0.7), transparent 72%);
+}
+
+/* ── THE PRESSED APPLE — the sole brand identity, in the plaster wall ────────
+   BRAND2 § 6 "The Pressed Apple", built as the production lock § 6.1 requires:
+   from the room's own light model rather than as a placed image. A three-layer
+   intaglio masked by the canonical THA apple —
+
+     · contact shadow — the apple sits SUNK in the material, not printed on it
+     · recess face    — an interior gradient, dark at the shadowed top, the light
+                        pooling toward the lit lower lip
+     · two-rim relief — dark rim UP, lit rim DOWN, lit by the room's one morning
+
+   It holds NO pigment. It is tone-on-tone: it IS the wall, not an image on it.
+   Discovered the moment the eye leaves the orchard; after six months of mornings
+   it is no longer a brand at all but a detail of *their* wall. Never a mark the
+   light must switch on — always faintly present (T12 was refused). */
+.wall-apple {
+  position: absolute;
+  z-index: 3;
+  pointer-events: none;
+  aspect-ratio: 1 / 1;
+  /* ⚠️ PLACED BY MEASUREMENT, NOT BY EYE — and the first attempt was WRONG.
+     It was `top: calc(glass-h + sill-h + 92px); right: 7.5%`, reasoned as "open
+     plaster at eye height". Photographed, that lands squarely ON the Companion's
+     sentences, which occupy the right-hand column (`lg:grid-cols-[1fr_22rem]`)
+     starting immediately under the sill. BRAND2 § 4.7 forbids exactly this — the
+     mark presses into CLEAR wall or it does not press at all — and no test could
+     have caught it, because a mask over text is valid CSS and passing markup.
+     ODL2 § 6.3's rule again: this class of defect is found by looking at a picture.
+
+     So the mark is anchored to the BOTTOM of the room instead of the top. Content
+     in this room stacks downward from the sill and varies in height with how much
+     the household's day actually contains; the floor does not move. Low and right
+     is also where a maker's mark belongs — in the penumbra near the floor line,
+     discovered rather than presented.
+
+     The WIDTH is derived from the margin it must fit inside: the room's content is
+     `max-w-4xl` (56rem) centred, so the open wall each side is `(100vw - 56rem)/2`,
+     less a 2.5rem breathing gap. The mark can therefore never grow into the column
+     beside it at any viewport — the collision above is closed by arithmetic rather
+     than by a hand-tuned percentage that the next layout change would silently
+     invalidate. */
+  width: clamp(96px, calc((100vw - 56rem) / 2 - 2.5rem), 150px);
+  top: auto;
+  bottom: 132px;
+  right: 1.5rem;
+}
+/* ⚠️ THE MASK URL IS A PUBLIC-ROOT PATH, AND IT HAS TO BE.
+   All three reliefs in this file — the wall press, the header's `.brand-mark` and
+   the Companion's `.companion-emblem` — mask themselves with `/tha-apple.png`. A
+   CSS `url()` in this stylesheet is NOT resolved through the bundler's asset graph
+   the way `import thaAppleSrc from "@/assets/icons/tha-apple.png"` is, so the
+   canonical apple is PUBLISHED at `client/public/tha-apple.png` for these three to
+   reach.
+
+   This bit first, and it failed SILENTLY: build green, typecheck green, every gate
+   green, and all three marks invisible, because a mask whose image 404s does not
+   error — it masks everything away. The dev server made it worse by answering the
+   404 with the SPA's index.html, so the request even returned 200. Caught only by
+   opening the screenshot. If the asset is ever moved, these three go blank again
+   and nothing will tell you: check the picture. */
+.wall-apple i {
   position: absolute;
   inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  opacity: 0.045;
-  background: repeating-linear-gradient(93deg, hsl(var(--oak-edge)) 0 1px, transparent 1px 7px);
+  display: block;
+  -webkit-mask: url("/tha-apple.png") center / contain no-repeat;
+          mask: url("/tha-apple.png") center / contain no-repeat;
 }
-.home-console::after {
-  content: "";
-  position: absolute;
-  inset-inline: 7%;
-  bottom: -20px;
-  height: 28px;
-  z-index: -1;
-  background: radial-gradient(50% 100% at 50% 0%, hsl(var(--olive) / 0.20) 0%, hsl(var(--olive) / 0) 72%);
+/* Layer order (back → front). The morning is lit from the top-left, so a shape
+   pressed INTO plaster shows a DARK rim at its top and a LIT rim at its bottom
+   (BRAND2 § 2). The rims sit behind and peek past the face's edge; the face,
+   drawn last, carries the recessed interior. Medium-shallow: it reads on an
+   ordinary screen and stays a whisper. */
+.wall-apple .wa-occ {
+  background: hsl(38 20% 64%);
+  filter: blur(2.5px);
+  transform: scale(1.05) translateY(1.5px);
+  opacity: 0.42;
+}
+.wall-apple .wa-rim-up {
+  background: hsl(42 26% 44%);
+  transform: translateY(-2.5px);
+  opacity: 0.78;
+}
+.wall-apple .wa-rim-lo {
+  background: hsl(44 62% 93%);
+  transform: translateY(2.5px);
+  opacity: 0.6;
+}
+.wall-apple .wa-face {
+  background: linear-gradient(to bottom,
+    hsl(35 16% 71%) 0%, hsl(37 24% 82%) 50%, hsl(41 46% 90%) 100%);
 }
 
-/* an ivory object resting on the oak — what today's facts are printed on. Warm
-   ivory (never #fff — the brightest honest white in the orchard is hue 39), each
-   with its own small contact shadow on the wood, so it reads as a thing left on a
-   surface rather than a cell in a grid. */
+/* ── THE ROOM BELOW ──────────────────────────────────────────────────────────
+   The interface recedes (The Kept House). What survives from ARRIVAL1 is the
+   ivory object — a thing left on a surface, with its own contact shadow, never a
+   cell in a grid. What does NOT survive is the oak console slab it used to rest
+   on: a full oak plank under the day's facts was the arch-era furniture, and in
+   Concept B the room below the sill is plaster. The facts now rest on the wall
+   itself, with air around them. */
 .home-object {
   background: hsl(var(--ivory));
   border: 1px solid hsl(var(--ivory-edge));
   box-shadow: 0 1px 2px hsl(var(--olive) / 0.10), 0 7px 16px -9px hsl(var(--olive) / 0.22);
 }
 
-/* a door of the house — a quiet handle at the floor line. On the stone floor, in
-   the penumbra, subordinate to the one lit action on the console above. */
+/* ── THE DOORS — a low, quiet run along the floor of the room ────────────────
+   Not feature cards and not a second navigation: BottomNav remains the sole
+   primary navigation at every size (UX1; Blueprint § 14). These are the four
+   rooms a household cooks out of, set down at the floor line in the penumbra,
+   visibly subordinate to the one lit action above. A NAME and a HANDLE — the
+   handle a small brass point that catches the morning, nothing more. */
+.home-doors {
+  border-top: 1px solid hsl(38 22% 80% / 0.7);
+  background: linear-gradient(to bottom, hsl(36 30% 88% / 0.4), hsl(34 26% 84% / 0.82));
+}
 .home-door {
-  background: hsl(var(--ivory) / 0.55);
-  border: 1px solid hsl(var(--ivory-edge) / 0.7);
-  box-shadow: 0 1px 2px hsl(var(--olive) / 0.07);
-  transition: transform .2s ease-out, background-color .2s ease-out, box-shadow .2s ease-out;
+  position: relative;
+  transition: background-color .2s ease-out;
 }
-.home-door:hover {
-  background: hsl(var(--ivory) / 0.85);
-  box-shadow: 0 8px 18px -10px hsl(var(--olive) / 0.28);
-}
+.home-door:hover { background: hsl(var(--ivory) / 0.5); }
 @media (prefers-reduced-motion: reduce) { .home-door { transition: none; } }
+.home-door-handle {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: hsl(43 62% 47%);
+  opacity: 0.7;
+  box-shadow: 0 0 0 3px hsl(43 62% 47% / 0.1);
+}
+
+/* Tablet — the window keeps its bays; the room grows. Two bays are honest here. */
+@media (max-width: 900px) {
+  .home-mullion--two { display: none; }
+  .home-mullion--one { left: 50%; }
+}
+
+/* ── WHERE THERE IS NO OPEN WALL, THERE IS NO PRESSED MARK ───────────────────
+   Below ~1100px the room's content reaches the full width of the window and the
+   plaster margin the mark presses into stops existing. The honest answer is to
+   omit it, not to shrink it until it fits somewhere it does not belong: a relief
+   laid over the household's own sentences is not a quieter brand, it is a louder
+   one, and BRAND2 § 4.7 refuses it at any size.
+
+   Nothing is lost by this. The house is still signed at every viewport — the
+   header's `.brand-mark` is the same relief at the same physics, and it is the
+   one that carries the accessible name. The wall press is the SECOND, ambient
+   signature; a phone simply has no spare wall to put it on. */
+@media (max-width: 1100px) {
+  .wall-apple { display: none; }
+}
+
+/* Mobile — the window stands taller and portrait: the orchard stays the hero and
+   never becomes a letterbox. One bay; the sill is still the boundary. */
+@media (max-width: 520px) {
+  .home-room { --glass-h: clamp(196px, 30vh, 260px); --sill-h: 20px; }
+  .home-mullion { width: 6px; }
+  .home-window img { object-position: 50% 26%; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   UX2 (2026-07-19) — THE COMPANION, CARVED. COMP1 § 4, built.
+
+   WHAT THIS RETIRES. The launcher was a 48 px `bg-primary` circle with a
+   `MessageSquare` chat bubble in it and a `shadow-lg` — which is, precisely,
+   "another AI chat widget": the generic signifier COMP1 decision 2 rejects by
+   name. The assistant is called Apple throughout the product, and the apple was
+   on the account button instead.
+
+   THE SAGE IS THE HOUSE'S GREEN. Every value below was hue 132 when this block was
+   first written; the owner's 2026-07-20 adoption of hue 74 moved it, because the
+   Companion's ceramic is the platform green rendered as a material and not a
+   colour of its own. If it had stayed at 132 the Companion would have become the
+   last object in the product still speaking the scaffold's green.
+
+   WHAT IT IS NOW. The canonical THA apple pressed deep into a soft sage ceramic
+   disc, so THE BUTTON *IS* THE MARK rather than a green disc carrying an icon
+   (COMP1 § 4.5.1). The same emboss physics as the wall's Pressed Apple and the
+   header's brand mark — dark rim up, lit rim down, lit by the house's one morning
+   — at the third and smallest of the mark's scales: the arch you walk toward, the
+   mark in the wall, the button you reach for.
+
+   THE LIGHT — presence, never urgency (COMP1 § 7's intensity law, obeyed here):
+   nothing moves faster than a breath; opacity never exceeds 0.9; scale never
+   changes by more than 6 %; the light stays in the warm-morning/sage family and
+   never enters a status colour; and there is no bounce, spin, flash or shake. If
+   a motion would make a person look up from what they are doing, it is too much.
+
+   ⚠️ GOVERNANCE. The `aware` light is a SECOND Companion presence signal, and
+   Experience Blueprint § 320 currently reads "the proven beat; no other presence
+   signal, ever". COMP1 § 10 drafts the smallest amendment — naming the arrival
+   beat and the aware light as the two sanctioned signals, and no third. That
+   amendment is an owner/governance act and is NOT taken here; it is reported.
+   The `aware` state's DATA wiring is likewise a behaviour change that COMP1 § 11
+   and HOME_ARRIVAL_PRODUCTION_LOCK § 6.2 both scope out of a visual change, so
+   this block defines the state completely and nothing sets it yet.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.companion-emblem {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  /* the sage ceramic — a soft top-lit surface, the way the oak is lit from above */
+  background: radial-gradient(120% 90% at 50% 8%, hsl(74 16% 54%), hsl(74 14% 44%) 70%);
+  box-shadow:
+    inset 0 1px 0 hsl(74 20% 72% / 0.7),    /* lit top rim — the material has a lip */
+    inset 0 -2px 3px hsl(74 24% 26% / 0.5),  /* shaded lower body */
+    0 6px 16px -4px hsl(56 45% 9% / 0.34);    /* it sits on the wall: furniture, not a sticker */
+}
+.dark .companion-emblem {
+  background: radial-gradient(120% 90% at 50% 8%, hsl(74 18% 60%), hsl(74 14% 52%) 70%);
+}
+
+/* the apple, carved as a recess into the sage — ~80 % of the disc, so the mark
+   owns the object (COMP1 § 4.5.2) */
+.companion-emblem i {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 80%;
+  height: 80%;
+  display: block;
+  -webkit-mask: url("/tha-apple.png") center / contain no-repeat;
+          mask: url("/tha-apple.png") center / contain no-repeat;
+}
+.companion-emblem .c-occ    { background: hsl(74 28% 26%); filter: blur(1px); transform: scale(1.04) translateY(1px); opacity: .7; }
+.companion-emblem .c-rim-up { background: hsl(74 30% 28%); transform: translateY(-1.5px); opacity: .9; }
+.companion-emblem .c-rim-lo { background: hsl(74 42% 72%); transform: translateY(1.5px);  opacity: .95; }
+.companion-emblem .c-face   { background: linear-gradient(to bottom, hsl(74 22% 34%) 0%, hsl(74 17% 44%) 52%, hsl(74 24% 56%) 100%); }
+
+/* THE LIGHT. Apple-shaped and blooming from WITHIN the carved apple, spilling
+   softly past the disc's edge — it escapes the emblem rather than ringing the
+   outside of it (COMP1 § 4.5.5). Contained to a ~20 px bleed so it never clips
+   the screen edge or reaches under the nav (COMP1 § 6). Behind the emblem, and
+   it can intercept nothing. */
+.companion-light {
+  position: absolute;
+  inset: -20px;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  -webkit-mask: url("/tha-apple.png") center / 62% no-repeat;
+          mask: url("/tha-apple.png") center / 62% no-repeat;
+  background: radial-gradient(circle at 50% 46%, hsl(43 74% 80%) 0%, hsl(43 74% 80% / 0) 68%);
+  filter: blur(7px);
+}
+
+/* AWARE — it holds something meaningful to say. The house's own morning, breathing
+   below the threshold of attention: you notice it only if you look. No number, no
+   dot, no ring of urgency. It says "I'm here when you want me", never "look now". */
+[data-companion-state="aware"] .companion-light {
+  animation: companion-breathe 4.2s ease-in-out infinite;
+}
+@keyframes companion-breathe {
+  0%, 100% { opacity: .40; transform: scale(.94); }
+  50%      { opacity: .82; transform: scale(1.06); }
+}
+
+/* SPEAKING — the light has drawn inward and a reply is forming. Slower and
+   smaller than the aware breath: a friend talking, unhurried, never a machine
+   "processing". */
+[data-companion-state="speaking"] .companion-light {
+  animation: companion-speak 3.4s ease-in-out infinite;
+}
+@keyframes companion-speak {
+  0%, 100% { opacity: .32; transform: scale(.46); }
+  50%      { opacity: .60; transform: scale(.58); }
+}
+
+/* LISTENING — it is attending to you. Cooler and steadier than the warm aware
+   halo, in the Companion's own sage, sitting close around the disc. The visual of
+   being heard, with no waveform, equaliser or theatrics. */
+[data-companion-state="listening"] .companion-light {
+  background: radial-gradient(circle at 50% 50%, hsl(74 34% 66%) 0%, hsl(74 34% 66% / 0) 66%);
+  animation: companion-listen 2.6s ease-in-out infinite;
+}
+@keyframes companion-listen {
+  0%, 100% { opacity: .55; transform: scale(.97); }
+  50%      { opacity: .90; transform: scale(1.03); }
+}
+
+/* REDUCED MOTION IS A GUARANTEE, NOT AN ENHANCEMENT (UI Architecture § 231).
+   Every meaning the light carries keeps a STILL equivalent, so no information and
+   no capability is lost — only the movement. The fact "there is something to
+   share" is additionally carried in WORDS on the button's accessible name, because
+   presence conveyed by light alone would fail WCAG 1.4.1 and 1.3.3 (COMP1 § 8). */
+@media (prefers-reduced-motion: reduce) {
+  [data-companion-state="aware"] .companion-light,
+  [data-companion-state="speaking"] .companion-light,
+  [data-companion-state="listening"] .companion-light {
+    animation: none;
+  }
+  [data-companion-state="aware"]     .companion-light { opacity: .62; transform: scale(1); }
+  [data-companion-state="speaking"]  .companion-light { opacity: .46; transform: scale(.52); }
+  [data-companion-state="listening"] .companion-light { opacity: .72; transform: scale(1); }
+}
 
 /* Cards and panels inside modals sit on top of the orchard background,
    so they must be fully opaque to remain readable */

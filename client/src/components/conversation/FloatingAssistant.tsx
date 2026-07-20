@@ -19,7 +19,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  MessageSquare, X, Send, Leaf, Loader2,
+  X, Send, Leaf, Loader2,
   BookOpen, CalendarPlus, ShoppingBasket, ArrowRight, Star, Users, Clock, UtensilsCrossed,
   Sparkles, ThumbsUp, ThumbsDown, CheckCircle2, XCircle, Wand2, Lightbulb,
 } from "lucide-react";
@@ -1149,9 +1149,15 @@ interface AssistantInputProps {
   onChange: (v: string) => void;
   onSubmit: () => void;
   isPending: boolean;
+  /**
+   * UX2 — reports whether the household is currently addressing the Companion,
+   * so the emblem can show its `listening` light (COMP1 § 4.4). Presentation
+   * state only: it changes nothing about what is sent, when, or to whom.
+   */
+  onFocusChange?: (focused: boolean) => void;
 }
 
-function AssistantInput({ value, onChange, onSubmit, isPending }: AssistantInputProps) {
+function AssistantInput({ value, onChange, onSubmit, isPending, onFocusChange }: AssistantInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-resize textarea
@@ -1180,6 +1186,8 @@ function AssistantInput({ value, onChange, onSubmit, isPending }: AssistantInput
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
+          onFocus={() => onFocusChange?.(true)}
+          onBlur={() => onFocusChange?.(false)}
           placeholder="Ask Apple anything…"
           aria-label="Ask Apple anything"
           rows={1}
@@ -1239,6 +1247,9 @@ export default function FloatingAssistant() {
   // does not appear over content that is still settling. `false` everywhere else in
   // the product, which is every surface's behaviour today.
   const withheld = useCompanionWithheld();
+  // UX2 — is the household addressing the Companion right now? Drives the
+  // `listening` light on the emblem (COMP1 § 4.4) and nothing else.
+  const [inputFocused, setInputFocused] = useState(false);
   // PHASE5E — a question a surface is asking on the household's behalf, if any.
   const { ask, clearAsk } = usePendingAsk();
 
@@ -1482,6 +1493,20 @@ export default function FloatingAssistant() {
         // could not. Its entrance is quiet, not partial.
         aria-hidden={withheld || undefined}
         tabIndex={withheld ? -1 : undefined}
+        // UX2 — the Companion's visual state, per COMP1 § 4. The CSS in index.css
+        // owns what each state LOOKS like; this attribute owns which one is true.
+        //
+        // `speaking` is the Companion composing a reply, and it deliberately
+        // replaces a spinner: a friend thinking, not a machine processing.
+        // `listening` is the household addressing it — the input has focus.
+        // `aware` (it holds something meaningful to say) is fully defined in CSS
+        // and is NOT set here: it needs the `useCompanionNotices` read, which
+        // COMP1 § 11 and HOME_ARRIVAL_PRODUCTION_LOCK § 6.2 both scope as a
+        // BEHAVIOUR change — mounting that query in the shell would add a fetch to
+        // every authenticated page, which a visual refinement may not do silently.
+        data-companion-state={
+          isPending ? "speaking" : inputFocused && isOpen ? "listening" : "idle"
+        }
         className={cn(
           // PX1-W1 (fnd-px-fab-covers-nav): the FAB sat at bottom-6 z-50 — the
           // same z as the BottomNav, painted later, covering the last nav item
@@ -1489,12 +1514,13 @@ export default function FloatingAssistant() {
           // reserved zone (.main-safe: safe-area + 80px) and yields z to it.
           "fixed right-6 z-40 bottom-[calc(env(safe-area-inset-bottom,0px)+5rem)]",
           "w-12 h-12 rounded-full",
-          "bg-primary text-primary-foreground shadow-lg shadow-primary/20",
+          // UX2 — `bg-primary shadow-lg` is gone: the disc is now a MATERIAL
+          // (.companion-emblem), lit and shadowed from the house's one morning,
+          // rather than a flat fill under a generic elevation shadow.
           "flex items-center justify-center",
-          "hover:bg-primary/90 active:scale-95",
+          "active:scale-[.97]",
           "transition-all duration-200",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-          isOpen && "rotate-0",
           // UXHOME1 — the withheld entrance. It rides the `transition-all duration-200`
           // already on this button, so the Companion arrives on the same easing it has
           // always used: it simply arrives later. Reduced motion is honoured by the
@@ -1504,29 +1530,20 @@ export default function FloatingAssistant() {
         )}
         data-testid="button-open-assistant"
       >
-        <AnimatePresence mode="wait" initial={false}>
-          {isOpen ? (
-            <motion.span
-              key="close"
-              initial={{ rotate: -90, opacity: 0 }}
-              animate={{ rotate: 0, opacity: 1 }}
-              exit={{ rotate: 90, opacity: 0 }}
-              transition={{ duration: 0.15 }}
-            >
-              <X className="h-5 w-5" />
-            </motion.span>
-          ) : (
-            <motion.span
-              key="open"
-              initial={{ rotate: 90, opacity: 0 }}
-              animate={{ rotate: 0, opacity: 1 }}
-              exit={{ rotate: -90, opacity: 0 }}
-              transition={{ duration: 0.15 }}
-            >
-              <MessageSquare className="h-5 w-5" />
-            </motion.span>
-          )}
-        </AnimatePresence>
+        {/* The light sits BEHIND the emblem and outside it, so it can bloom past
+            the disc's edge without ever covering the mark or catching a tap. */}
+        <span className="companion-light" aria-hidden />
+        {/* THE EMBLEM — the canonical THA apple carved into sage ceramic. It is
+            decorative; the button carries the accessible name. The apple does not
+            swap to an X on open: the mark is the Companion's identity and an
+            identity does not change because a panel is showing. Closing is the
+            same button, the scrim, or Escape (Radix owns all three). */}
+        <span className="companion-emblem" aria-hidden data-testid="companion-emblem">
+          <i className="c-occ" />
+          <i className="c-rim-up" />
+          <i className="c-rim-lo" />
+          <i className="c-face" />
+        </span>
       </button>
 
       {/* ── Drawer panel ─────────────────────────────────────────────────
@@ -1673,6 +1690,7 @@ export default function FloatingAssistant() {
                 onChange={setInputValue}
                 onSubmit={handleSubmit}
                 isPending={isPending}
+                onFocusChange={setInputFocused}
               />
                 </motion.div>
               </DialogPrimitive.Content>

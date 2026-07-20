@@ -16,7 +16,6 @@ import { openCompanion } from "@/components/conversation/companion-open";
 import { api } from "@shared/routes";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import { useAppRealm } from "@/components/nav-bar";
 
 /**
@@ -118,12 +117,21 @@ function ProfileMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
+        {/* UX2 — THE SECOND APPLE IS RETIRED.
+            This button rendered the canonical THA apple at 38 px, so the header
+            carried the apple TWICE: once as the company's mark and once, larger,
+            as "your account". BRAND1's whole finding is that the apple IS the
+            house — spending it on a settings menu makes the household's own
+            account the loudest brand statement on screen, and leaves the real
+            mark competing with a copy of itself.
+            One apple, one meaning. The account is a person, so it takes a person's
+            glyph, in the same quiet weight as the Companion and basket beside it. */}
         <button
-          className="flex items-center justify-center h-9 w-9 rounded-lg transition-colors text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground"
+          className="flex items-center justify-center h-9 w-9 rounded-lg transition-colors text-muted-foreground hover:bg-accent hover:text-foreground"
           aria-label="Menu"
           data-testid="button-workspace-profile-menu"
         >
-          <img src={thaAppleSrc} alt="Menu" className="h-[38px] w-[38px] object-contain" />
+          <User className="h-4 w-4" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
@@ -224,10 +232,23 @@ export function WorkspaceHeader({
       <TooltipTrigger asChild>
         <Link
           href="/shopping-workspace"
+          // UX2 — THE BASKET IS QUIET UNTIL YOU ARE IN IT.
+          // At rest this glyph was a saturated `hsl(190,38%,44%)` cyan sitting
+          // between the Companion's leaf and the account glyph, both of which are
+          // `text-muted-foreground`. Photographed rather than reasoned about, it
+          // was the loudest thing in the header and it read as a NOTIFICATION —
+          // "something is wrong with your basket" — rather than as a door.
+          // This is UX_NAV1's move, applied to the one door that never made it onto
+          // the shelf: the room's hue is spent on the LIT state, not on the resting
+          // one. Wayfinding is preserved exactly — the basket still turns its own
+          // shopping cyan when you are standing in Shopping — and the header goes
+          // back to being one material with three quiet glyphs on it.
+          // The unread-count badge is untouched: a number a household must act on
+          // is not resting state, and it keeps its `--primary` fill.
           className={`relative flex items-center justify-center h-9 w-9 rounded-lg transition-colors ${
             isBasketActive
               ? "bg-[hsl(190,30%,86%)] text-[hsl(190,42%,20%)] dark:bg-[hsl(190,18%,17%)] dark:text-[hsl(190,32%,72%)]"
-              : "text-[hsl(190,38%,44%)] hover:bg-[hsl(190,22%,92%)] hover:text-[hsl(190,42%,28%)] dark:text-[hsl(190,28%,58%)] dark:hover:bg-[hsl(190,12%,18%)] dark:hover:text-[hsl(190,28%,68%)]"
+              : "text-muted-foreground hover:bg-accent hover:text-foreground"
           }`}
           aria-label="Shopping"
           data-testid="button-workspace-basket"
@@ -263,7 +284,7 @@ export function WorkspaceHeader({
         <button
           type="button"
           onClick={openCompanion}
-          className="flex items-center justify-center h-9 w-9 rounded-lg transition-colors text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground"
+          className="flex items-center justify-center h-9 w-9 rounded-lg transition-colors text-muted-foreground hover:bg-accent hover:text-foreground"
           aria-label="Ask the Companion"
           data-testid="button-workspace-companion"
         >
@@ -293,21 +314,37 @@ export function WorkspaceHeader({
   ) : null;
 
   /*
-   * The canonical desktop brand mark — ONE element, ONE size, rendered by both
-   * desktop header arms. Previously each arm declared its own <img>, so the logo
-   * silently shrank to 24px on any page that happened not to pass a contextBar
-   * (Home, the secondary pages, and every loading state). Logo scale is an
-   * identity concern, not a side-effect of a page's layout: UI Principle 4 gives
-   * every visual concern exactly one owning pattern.
+   * THE BRAND MARK — one element, one size, every arm (UX2).
+   *
+   * This replaces the 68 px `logo-long.png`. UX_REFINE1 D4 unified that raster at
+   * 68 px everywhere, and that was the right fix to the WRONG ARTEFACT: it gave
+   * one owner to a mark the branding line had already retired. BRAND1 § 7 and § 4
+   * (C+D), BRAND2 § 6 and HOME_ARRIVAL_PRODUCTION_LOCK § 2 all agree — the
+   * prominent band mark goes, and a single quiet apple stands where the logo was.
+   *
+   * What actually changed for the household: the top of every room stopped
+   * shouting the company's name at them. A person who has signed in knows whose
+   * software this is; a wordmark and a tagline above their own kitchen is the
+   * brochure, indoors. The apple stays because a house may be signed — quietly,
+   * in its own plaster, at the size of a maker's mark rather than a hoarding.
+   *
+   * The relief is decorative; the LINK carries the name. Same size in both desktop
+   * arms and on mobile, because logo scale is an identity concern and not a
+   * side-effect of a page's layout (UI Principle 4).
    */
-  const desktopLogo = (
-    <Link href="/home" aria-label="Home" className="flex-shrink-0">
-      <img
-        src="/logo-long.png"
-        alt="The Healthy Apples"
-        style={{ height: "68px" }}
-        className="w-auto object-contain opacity-90 hover:opacity-100 transition-opacity"
-      />
+  const brandMark = (
+    <Link
+      href="/home"
+      aria-label="The Healthy Apples, home"
+      className="flex-shrink-0 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      data-testid="link-workspace-brand"
+    >
+      <span className="brand-mark" aria-hidden>
+        <i className="bm-occ" />
+        <i className="bm-rim-up" />
+        <i className="bm-rim-lo" />
+        <i className="bm-face" />
+      </span>
     </Link>
   );
 
@@ -330,21 +367,21 @@ export function WorkspaceHeader({
        * logo + divider as a flex row). Both arms render the same `desktopLogo`
        * at the same size, so the brand mark does not change with the layout.
        */}
-      <header className="realm-header-bg border-b realm-header-border w-full">
+      <header className="shell-header w-full">
         <div className={`${maxW} mx-auto px-3 sm:px-6 lg:px-8`}>
 
           {contextBar ? (
             /* ── Desktop: unified two-row banner ── */
             <div
               className="hidden md:grid gap-x-3"
-              style={{ gridTemplateColumns: "auto auto 1fr auto", gridTemplateRows: "48px auto" }}
+              style={{ gridTemplateColumns: "auto auto 1fr auto", gridTemplateRows: "52px auto" }}
             >
               {/* Logo — spans both rows; divider self-stretches to full banner height */}
               <div
                 className="flex items-center gap-3 shrink-0"
                 style={{ gridRow: "1 / 3", gridColumn: "1" }}
               >
-                {desktopLogo}
+                {brandMark}
                 <div className="w-px realm-header-border border-l self-stretch flex-shrink-0" />
               </div>
 
@@ -396,12 +433,12 @@ export function WorkspaceHeader({
           ) : (
             /* ── Desktop: single-row header (no workspace navigation) ── */
             <div
-              className="hidden md:grid items-center min-h-[76px] gap-x-3"
+              className="hidden md:grid items-center min-h-[60px] gap-x-3"
               style={{ gridTemplateColumns: "auto auto 1fr auto" }}
             >
               {/* Col 1: Brand — logo + divider, identical to the two-row arm */}
               <div className="flex items-center gap-3 shrink-0 self-stretch">
-                {desktopLogo}
+                {brandMark}
                 <div className="w-px realm-header-border border-l self-stretch flex-shrink-0" />
               </div>
 
@@ -441,15 +478,15 @@ export function WorkspaceHeader({
             <div className="flex items-center justify-between h-14">
               <div className="flex items-center gap-2 min-w-0">
                 {backButton}
-                <Link href="/home" aria-label="Home" className="flex-shrink-0">
-                  <img
-                    src="/logo-long.png"
-                    alt="The Healthy Apples"
-                    className="h-auto max-h-[28px] w-auto max-w-[120px] object-contain opacity-90"
-                  />
-                </Link>
+                {/* UX2 — the phone gets the SAME mark, not a smaller wordmark.
+                    UX_REFINE1 § R6 recorded that the mobile arm kept its own
+                    `max-h-[28px]` logo and was never re-verified; the mark has one
+                    owner now, so there is no second size to drift. On a 390 px
+                    header the retired wordmark also cost up to 120 px of width
+                    that the room's own name now uses. */}
+                {brandMark}
                 <h1
-                  className="realm-title text-[16px] font-semibold tracking-tight leading-none truncate max-w-[160px]"
+                  className="realm-title text-[16px] font-semibold tracking-tight leading-none truncate max-w-[190px]"
                   data-testid={titleTestId}
                 >
                   {title}
@@ -465,7 +502,7 @@ export function WorkspaceHeader({
 
                 {search && (
                   <button
-                    className="flex items-center justify-center h-9 w-9 rounded-lg text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                    className="flex items-center justify-center h-9 w-9 rounded-lg text-muted-foreground hover:bg-accent transition-colors"
                     onClick={() => setMobileSearchOpen((v) => !v)}
                     aria-label="Search"
                     data-testid="button-workspace-mobile-search"
@@ -480,8 +517,12 @@ export function WorkspaceHeader({
                   href="/shopping-workspace"
                   className={`relative flex items-center justify-center h-9 w-9 rounded-lg transition-colors ${
                     isBasketActive
+                      // UX2 — the phone arm takes the same rest state as the desktop
+                      // one, for the same reason and in the same words. Two layout
+                      // branches rendering one door must not disagree about how loud
+                      // it is (UI Principle 4 — one owning pattern per concern).
                       ? "bg-[hsl(190,28%,86%)] text-[hsl(190,42%,20%)] dark:bg-[hsl(190,18%,19%)] dark:text-[hsl(190,32%,72%)]"
-                      : "text-[hsl(190,38%,44%)] hover:bg-[hsl(190,22%,92%)] dark:text-[hsl(190,28%,58%)] dark:hover:bg-[hsl(190,12%,20%)]"
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
                   }`}
                   aria-label="Shopping"
                   data-testid="button-workspace-basket"

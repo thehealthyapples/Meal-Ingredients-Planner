@@ -93,7 +93,7 @@ export default function TrialBanner() {
     <div
       className={`w-full px-4 py-2.5 flex items-center gap-3 text-sm font-medium transition-colors z-50 ${
         isWarning
-          ? "bg-amber-500 text-amber-950"
+          ? "bg-secondary text-secondary-foreground"
           : "bg-primary text-primary-foreground"
       }`}
       data-testid="banner-trial-mode"
@@ -132,13 +132,13 @@ export default function TrialBanner() {
                   onChange={e => setEmail(e.target.value)}
                   placeholder="your@email.com"
                   disabled={submitState === "loading"}
-                  className="h-7 px-2.5 rounded text-sm bg-white/90 text-gray-900 placeholder-gray-400 border-0 outline-none focus:ring-2 focus:ring-amber-800/40 disabled:opacity-60 w-44"
+                  className="h-7 px-2.5 rounded text-sm bg-background text-foreground placeholder:text-muted-foreground border border-border outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-60 w-44"
                   data-testid="input-trial-email"
                 />
                 <button
                   type="submit"
                   disabled={submitState === "loading" || !email.trim()}
-                  className="h-7 px-3 rounded bg-amber-800 text-amber-50 text-xs font-semibold hover:bg-amber-900 disabled:opacity-50 transition-colors flex items-center gap-1"
+                  className="h-7 px-3 rounded bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 disabled:opacity-50 transition-colors flex items-center gap-1"
                   data-testid="button-trial-claim"
                 >
                   {submitState === "loading" ? (
@@ -148,7 +148,7 @@ export default function TrialBanner() {
                   )}
                 </button>
                 {submitState === "error" && (
-                  <span className="text-xs text-red-800">Try again</span>
+                  <span className="text-xs text-destructive">Try again</span>
                 )}
               </form>
             </>

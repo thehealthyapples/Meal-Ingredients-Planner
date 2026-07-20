@@ -297,7 +297,10 @@ assert(
   "exposure is E2, opening to E3 when empty — one level, never two (Blueprint § 6.2 rule 2)",
 );
 assert(
-  !/orchard-bg\.webp|OrchardBackdrop|OrchardOpenView|OrchardArch/.test(ORCHARD_SRC),
+  // UX2 — `OrchardArch` was retired with the arch; `OrchardWindow` is the shape
+  // that replaced it. Named here so the guard keeps naming every shape the
+  // canonical owner exposes, rather than silently ageing into a test of nothing.
+  !/orchard-bg\.webp|OrchardBackdrop|OrchardOpenView|OrchardWindow/.test(ORCHARD_SRC),
   "the room mounts no orchard image — it does not become a sixth bypass of the canonical owner",
 );
 for (const drawn of ["<svg", "background-image", "backgroundImage"]) {

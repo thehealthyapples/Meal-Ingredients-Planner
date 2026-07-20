@@ -78,9 +78,16 @@ export const chipKindStyles: Record<IntelligenceChipKind, string> = {
   // Nutrients — neutral, trustworthy primary tint.
   nutrient:
     "bg-primary/5 text-foreground/70 border-border/60",
-  // Health benefits — green, the "good for you" hue.
+  // Health benefits — the HOUSE's green, the "good for you" hue.
+  //
+  // UX2: this was `green-50/800/200` + a four-class dark override — Tailwind's
+  // green, not THA's. With the orchard green (hue 74) adopted as the canonical
+  // platform primary, a benefit chip rendered in a *different* green was the
+  // clearest remaining case of the product owning two greens and meaning the same
+  // thing by both. `primary-tint` / `primary-ink` resolve per mode in index.css,
+  // so the dark variants are gone rather than restated: one pairing, two hours.
   benefit:
-    "bg-green-50 text-green-800 border-green-200 dark:bg-green-950/30 dark:text-green-300 dark:border-green-800/50",
+    "bg-primary-tint text-primary-ink border-primary/20 dark:border-primary/30",
   // Seasonality — warm amber.
   seasonal:
     "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800/60",
@@ -136,16 +143,20 @@ export const semanticSurface: Record<SemanticTone, string> = {
   // Neutral, factual context: a comparison, an explanation, an alternative.
   info:
     "bg-blue-50/50 border-blue-200/60 dark:bg-blue-950/20 dark:border-blue-800/40",
-  // A good thing that has happened, or a food that scores well.
+  // A good thing that has happened, or a food that scores well. UX2 — the house's
+  // green, for the same reason as the `benefit` chip above: "good" is the one tone
+  // in this palette that speaks with the platform's own voice, so it must speak in
+  // the platform's own colour. `notice`, `info` and the chip hues are untouched —
+  // they are wayfinding tints keyed to meanings the primary does not own.
   positive:
-    "bg-green-50/60 border-green-200/60 dark:bg-green-950/20 dark:border-green-800/40",
+    "bg-primary-tint/60 border-primary/20 dark:bg-primary-tint/40 dark:border-primary/30",
 };
 
 /** Foreground for a value or label sitting on the matching surface. */
 export const semanticText: Record<SemanticTone, string> = {
   notice: "text-amber-700 dark:text-amber-400",
   info: "text-blue-700 dark:text-blue-400",
-  positive: "text-green-800 dark:text-green-300",
+  positive: "text-primary-ink",
 };
 
 /** Pill/chip built from a tone, for the pill groups that used raw palette classes. */
