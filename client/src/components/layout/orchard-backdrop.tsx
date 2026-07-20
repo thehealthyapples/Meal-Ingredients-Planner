@@ -231,8 +231,11 @@ export default function OrchardBackdrop() {
 // content begins beneath it, so no type is ever beside it to protect. It
 // dissolves rather than stopping on a line — a view that stops on a line is a
 // picture hanging on a wall, and the orchard is not a picture.
+// EXP1 — the fade starts lower and holds more of the view: the approved North
+// Star gives the room a real morning at its threshold, not a haze. The band
+// still dissolves into the room rather than stopping on a line.
 const MASK_E2 =
-  "linear-gradient(180deg, #000 0%, #000 46%, rgba(0,0,0,0.42) 74%, transparent 100%)";
+  "linear-gradient(180deg, #000 0%, #000 54%, rgba(0,0,0,0.5) 80%, transparent 100%)";
 
 /**
  * HOME's orchard is `OrchardWindow` above. This is every OTHER room's — the
@@ -273,8 +276,11 @@ export function OrchardRoomWindow({ exposure }: { exposure: "e0" | "e1" | "e2" }
       aria-hidden
       data-testid="room-orchard-window"
       data-orchard-exposure="e2"
+      // EXP1 — the room now BEGINS at this band (nothing stands above it), so
+      // the committed region grew to the North Star's proportion. Still in
+      // flow, still one region the content deliberately does not cover.
       className="pointer-events-none relative shrink-0 w-full overflow-hidden
-                 h-[clamp(96px,13vh,168px)]"
+                 h-[clamp(180px,26vh,300px)]"
     >
       <img
         src="/orchard.webp"

@@ -21,6 +21,7 @@ import {
   // "there is genuinely nothing here". The icon carries the difference too, so the
   // two absences are never mistaken for each other at a glance.
   Filter,
+  MoreVertical,
 } from "lucide-react";
 import { api, buildUrl } from "@shared/routes";
 import { apiRequest } from "@/lib/queryClient";
@@ -48,7 +49,6 @@ import { EmptyState } from "@/components/ui/empty-state";
 // well-designed lie about the household's own data.
 import { LoadError } from "@/components/ui/load-error";
 import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
-import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -2499,7 +2499,7 @@ export default function ShoppingWorkspacePage() {
           className="inline-flex items-center justify-center p-1 rounded-md transition-colors hover:bg-accent/40"
           data-testid="button-workspace-menu"
         >
-          <img src={thaAppleSrc} alt="Menu" className="h-9 w-9 object-contain" />
+          <MoreVertical className="h-4 w-4 text-muted-foreground" aria-label="Menu" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">

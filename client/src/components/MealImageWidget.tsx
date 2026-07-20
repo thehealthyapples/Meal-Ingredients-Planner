@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
-import { Loader2, Camera, Wand2, ImageOff, MoreHorizontal, Images, Upload, UtensilsCrossed } from "lucide-react";
+import { Loader2, Camera, Wand2, ImageOff, MoreHorizontal, Images, Upload } from "lucide-react";
+import { AppleStencil } from "@/components/icons/apple-stencil";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
@@ -415,7 +416,10 @@ export function MealImageWidget({
             <MealWatermark type="child" size="lg" className="relative" />
           ) : (
             <>
-              <UtensilsCrossed className="h-7 w-7 text-muted-foreground/15 relative z-10" aria-hidden="true" />
+              {/* EXP1 — the quiet plate takes the house's own stencil apple (the
+                  approved North Star draws un-photographed recipes this way):
+                  identity in outline, saying nothing, claiming nothing. */}
+              <AppleStencil className="h-16 w-16 text-primary/20 relative z-10" />
               {!isSystemMeal && (
                 <MealWatermark type="adult" size="lg" className="inset-0 m-auto absolute" />
               )}

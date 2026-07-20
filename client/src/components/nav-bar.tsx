@@ -13,7 +13,7 @@ import {
   LogOut, ShieldCheck,
   Search, ChevronLeft, ChevronRight,
   Microscope, BookOpen, ChefHat,
-  User, BarChart3, Home, Trees,
+  User, Users, BarChart3, Home, Trees,
 } from "lucide-react";
 import { api } from "@shared/routes";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
@@ -60,6 +60,15 @@ export const NAV_ITEMS = [
   // `hasWorkspace: false` — the Orchard has no workspace drawer; there is no
   // bulk work to do in it, and there is deliberately nothing to compose.
   { href: "/orchard", label: "Orchard", icon: Trees, hasWorkspace: false },
+  // EXP1 (2026-07-20) — the North Star names Household a room of the house, and
+  // the header's top-right utility cluster is retired: global actions belong to
+  // the navigation, not floating above the environment. Household is the family
+  // record (the former profile door); Admin is the study off the hall, shown
+  // only to the people who hold its key — the same `role === "admin"` fact the
+  // retired profile menu read. Display only: `server/lib/access.ts` remains the
+  // sole authorisation authority, exactly as before.
+  { href: "/profile", label: "Household", icon: Users, hasWorkspace: false },
+  { href: "/admin", label: "Admin", icon: ShieldCheck, hasWorkspace: false, adminOnly: true },
 ];
 
 export type NavItem = (typeof NAV_ITEMS)[number];
@@ -186,6 +195,21 @@ const REALM_STYLES: Record<string, { active: string; hover: string; inactive: st
     hover:          "hover:bg-[hsl(95,16%,92%)] hover:text-[hsl(95,26%,28%)] dark:hover:bg-[hsl(95,10%,14%)] dark:hover:text-[hsl(95,18%,58%)]",
     inactive:       "bg-[hsl(95,10%,94%)] text-[hsl(95,20%,42%)] dark:bg-[hsl(95,6%,12%)] dark:text-[hsl(95,12%,46%)]",
     hue:            95,
+  },
+  "/profile": {
+    // EXP1 — Household: warm oak, the family record's own material. Sits clear
+    // of cookbook's wheat (38) and orchard's terracotta (20). Wayfinding only.
+    active:         "bg-[hsl(30,32%,88%)] text-[hsl(30,44%,22%)] dark:bg-[hsl(30,18%,17%)] dark:text-[hsl(30,32%,72%)]",
+    hover:          "hover:bg-[hsl(30,24%,92%)] hover:text-[hsl(30,38%,28%)] dark:hover:bg-[hsl(30,14%,14%)] dark:hover:text-[hsl(30,24%,60%)]",
+    inactive:       "bg-[hsl(30,14%,94%)] text-[hsl(30,24%,42%)] dark:bg-[hsl(30,9%,12%)] dark:text-[hsl(30,14%,47%)]",
+    hue:            30,
+  },
+  "/admin": {
+    // EXP1 — Admin: cool slate, the one working door that is not a family room.
+    active:         "bg-[hsl(220,16%,88%)] text-[hsl(220,26%,24%)] dark:bg-[hsl(220,12%,18%)] dark:text-[hsl(220,20%,72%)]",
+    hover:          "hover:bg-[hsl(220,12%,92%)] hover:text-[hsl(220,22%,30%)] dark:hover:bg-[hsl(220,10%,15%)] dark:hover:text-[hsl(220,16%,60%)]",
+    inactive:       "bg-[hsl(220,8%,94%)] text-[hsl(220,16%,44%)] dark:bg-[hsl(220,6%,12%)] dark:text-[hsl(220,10%,48%)]",
+    hue:            220,
   },
 };
 
@@ -550,6 +574,8 @@ const NAV_ACTIVE_ALIASES: Record<string, string[]> = {
 
 function isNavItemActive(basePath: string, location: string): boolean {
   if (location === basePath) return true;
+  // EXP1 — the Admin door lights for every admin subpage: /admin/* is one room.
+  if (basePath === "/admin" && location.startsWith("/admin/")) return true;
   return NAV_ACTIVE_ALIASES[basePath]?.includes(location) ?? false;
 }
 
@@ -561,6 +587,7 @@ function BottomNavItem({
   isActive,
   realm,
   hasWorkspace = false,
+  badge,
 }: {
   href: string;
   label: string;
@@ -568,6 +595,9 @@ function BottomNavItem({
   isActive: boolean;
   realm: (typeof REALM_STYLES)[string] | undefined;
   hasWorkspace?: boolean;
+  /** EXP1 — a live count a household must act on (the shopping list's), moved
+      here from the retired header basket. Absent everywhere else. */
+  badge?: number;
 }) {
   const [, navigate] = useLocation();
   const basePath = href.split("?")[0];
@@ -603,7 +633,14 @@ function BottomNavItem({
           hand-drawn `PantryIcon` at 1.75 — three weights on one shelf, and a
           thickening glyph as you walked between rooms. The room is now told by
           light; the furniture does not change shape underneath it. */}
-      <Icon className="h-[18px] w-[18px] stroke-[1.75]" />
+      <span className="relative">
+        <Icon className="h-[18px] w-[18px] stroke-[1.75]" />
+        {typeof badge === "number" && badge > 0 && (
+          <span className="absolute -top-1.5 -right-2 bg-primary text-primary-foreground text-[9px] font-semibold rounded-full min-w-[14px] h-[14px] flex items-center justify-center px-0.5 leading-none pointer-events-none">
+            {badge > 99 ? "99+" : badge}
+          </span>
+        )}
+      </span>
       <span className={`text-[10px] md:text-[11px] leading-tight tracking-[0.01em] ${isActive ? "font-medium" : "font-normal"}`}>
         {label}
       </span>
@@ -615,6 +652,16 @@ function BottomNavItem({
 export function BottomNav() {
   const [location] = useLocation();
   const { user } = useUser();
+
+  // EXP1 — the shopping list's count, moved from the retired header basket to
+  // the one Shopping door. A number a household must act on is not resting
+  // state; it keeps its `--primary` fill, in its room's own doorway.
+  const { data: shoppingListItems = [] } = useQuery<any[]>({
+    queryKey: [api.shoppingList.list.path],
+    enabled: !!user,
+  });
+  const shoppingCount = shoppingListItems.length;
+  const isAdmin = (user as any)?.role === "admin";
 
   if (!user) return null;
 
@@ -666,7 +713,7 @@ export function BottomNav() {
           is unchanged, `px-1.5` is unchanged, and mobile adds no gap — so nine
           rooms still need the same ~396px and still scroll, exactly as before. */}
       <div className="flex items-center justify-around md:justify-center md:gap-1 px-1 py-1.5 max-w-lg md:max-w-3xl mx-auto overflow-x-auto md:overflow-visible [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {NAV_ITEMS.map((item) => {
+        {NAV_ITEMS.filter((item) => !(item as any).adminOnly || isAdmin).map((item) => {
           const base = item.href.split("?")[0];
           const isActive = isNavItemActive(base, location);
           const realm = REALM_STYLES[base];
@@ -679,6 +726,7 @@ export function BottomNav() {
               isActive={isActive}
               realm={realm}
               hasWorkspace={!!(item as any).hasWorkspace}
+              badge={base === "/shopping-workspace" ? shoppingCount : undefined}
             />
           );
         })}

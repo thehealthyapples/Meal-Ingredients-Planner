@@ -1586,11 +1586,15 @@ export default function FloatingAssistant() {
                 : "idle"
         }
         className={cn(
-          // PX1-W1 (fnd-px-fab-covers-nav): the FAB sat at bottom-6 z-50 — the
-          // same z as the BottomNav, painted later, covering the last nav item
-          // (Analyser) and meal-detail's floating Save. It now clears the nav's
-          // reserved zone (.main-safe: safe-area + 80px) and yields z to it.
-          "fixed right-6 z-40 bottom-[calc(env(safe-area-inset-bottom,0px)+5rem)]",
+          // EXP1 — THE ONE DOOR, AT THE TOP RIGHT. The North Star gives the
+          // Companion a single entry point: this embossed button, standing at
+          // the top right of every page, over the room's threshold — the
+          // primary branded element on every page. The bottom-right float and
+          // the header's leaf glyph are retired as positions in the same
+          // change (one owner, one door). z-50: it stands above the sticky
+          // header strip, which reserves it a gutter (.ws-door-gutter).
+          // PX1-W1's finding stands: it still never covers the BottomNav.
+          "fixed right-3 sm:right-5 z-50 top-[calc(env(safe-area-inset-top,0px)+0.75rem)]",
           "w-12 h-12 rounded-full",
           // UX2 — `bg-primary shadow-lg` is gone: the disc is now a MATERIAL
           // (.companion-emblem), lit and shadowed from the house's one morning,

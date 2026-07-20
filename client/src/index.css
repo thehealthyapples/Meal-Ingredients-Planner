@@ -172,7 +172,13 @@
      live, which is why both resolve to zero image rather than to a new token. */
   --orchard-exposure-e0: 0;
   --orchard-exposure-e1: 0;
-  --orchard-exposure-e2: 0.55;
+  /* EXP1 (2026-07-20) — E2 revalued 0.55 → 0.82 at its one owner, under the
+     approved North Star ("NorthStar Final"). The shipped band read as a haze —
+     the "gloomy, misty" orchard §3A forbids — where the approved reference is
+     vivid: the orchard is LIFE. The committed region, the mask and the
+     never-carries-text law are untouched; only the presence value changed,
+     here, once. Dark-mode values unchanged. */
+  --orchard-exposure-e2: 0.82;
   --orchard-exposure-e3: 0.90;
 
   /* One light — upper-left, a perpetual bright morning. The rim is the light
@@ -1113,12 +1119,109 @@ a:hover > .brand-mark .bm-face { opacity: 0.86; }
   background-color: color-mix(in srgb, var(--realm-bg) 5%, var(--realm-border)) !important;
 }
 
-/* ── Shared sticky page header ───────────────────────────────────────────── */
-
+/* ── Shared page header ──────────────────────────────────────────────────────
+ *
+ * EXP1 — stickiness moved UP to the shell's header zone (`ws-header-zone` in
+ * app-shell.tsx). The header itself no longer decides to stick: the room does,
+ * once, for every page — which is what lets the environment band stand ABOVE
+ * the header at the very top of the browser and scroll away with the room.
+ * The class name is kept for the print stylesheet's sake.
+ */
 .page-sticky-header {
-  position: sticky;
-  top: 0;
-  z-index: 40;
+  position: relative;
+}
+
+/* ── EXP1 — THE ROOM THRESHOLD ────────────────────────────────────────────────
+ *
+ * The top of every room (North Star): the environment first, the room's name
+ * and purpose at the threshold, the workspace beginning beneath. The image (at
+ * E2/E3) or the morning light (at E1) is drawn by the shell at the room's
+ * governed exposure; E0 renders nothing. The identity type NEVER sits on the
+ * view — it sits on the scrim below, which is ground plane under the type,
+ * exactly as Blueprint §6.1 requires "without negotiation".
+ */
+.room-threshold {
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* E1 — the orchard as illumination and warmth, not image (§6.2). A short wash
+   of the house's one morning, falling from the upper-left, onto the canvas. */
+.room-threshold-light {
+  height: clamp(112px, 14vh, 168px);
+  background:
+    radial-gradient(130% 170% at 16% 0%, var(--light-rim-soft) 0%, transparent 62%),
+    linear-gradient(180deg, hsl(42 38% 89% / 0.9) 0%, hsl(42 30% 91% / 0.45) 55%, transparent 100%);
+}
+.dark .room-threshold-light {
+  background: linear-gradient(180deg, hsl(48 14% 12% / 0.8) 0%, transparent 100%);
+}
+
+/* Ground plane under the threshold type. Carries no text of its own, so under
+   UIA §15 it declares a ceiling: type on it is measured against --background
+   at the scrim's weakest point, which the .92 floor below guarantees. */
+.room-threshold-scrim {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 78%;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    hsl(var(--background) / 0.52) 46%,
+    hsl(var(--background) / 0.92) 100%
+  );
+}
+
+.room-threshold-identity {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 0 0 clamp(10px, 1.6vh, 18px);
+}
+.room-threshold-title {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  font-size: clamp(26px, 2.6vw, 34px);
+  line-height: 1.1;
+}
+.room-threshold-purpose {
+  margin-top: 2px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: hsl(var(--muted-foreground));
+  max-width: 44ch;
+}
+
+/* ── EXP1 — THE WORKSPACE PILL ────────────────────────────────────────────────
+ *
+ * At rest: a floating pill at the fade boundary — the room's one search, its
+ * workspace sections, its actions. Stuck (scrolled): the pill compresses to a
+ * single quiet strip on the header material, gaining the room's name so
+ * orientation survives the scroll. Compression is household-caused (scroll),
+ * brief, and collapses to a still equivalent under reduced motion.
+ */
+.workspace-pill {
+  background: hsl(var(--card) / 0.92);
+  border: 1px solid hsl(var(--border) / 0.6);
+  border-radius: var(--radius-primary);
+  box-shadow: 0 10px 26px -18px hsl(28 30% 25% / 0.5);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.dark .workspace-pill {
+  background: hsl(var(--card) / 0.88);
+  border-color: hsl(var(--border) / 0.5);
+  box-shadow: 0 10px 26px -18px hsl(0 0% 0% / 0.7);
+}
+
+/* The Companion door's gutter: below this width the fixed door overlaps the
+   header strip's right end, so the strip leaves it room. Above it, the door
+   stands in the margin beside the content column and no room is needed. */
+@media (max-width: 1820px) {
+  .ws-door-gutter {
+    padding-right: 3.9rem;
+  }
 }
 
 @layer utilities {

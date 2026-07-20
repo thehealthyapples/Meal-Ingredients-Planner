@@ -439,10 +439,10 @@ export default function AnalyserDetailV2({
       {/* ── Card 3: THA editorial review ─────────────────────────────── */}
       <Card className="border-border shadow-none" data-testid="card-tha-review">
         <CardContent className="p-5 space-y-4">
-          <div className="flex items-center gap-2">
-            <img src={thaAppleSrc} alt="" className="h-4 w-4 object-contain opacity-80" />
-            <p className={SECTION_LABEL}>THA Review</p>
-          </div>
+          {/* EXP1 — the apple is retired from beside the review: identity is
+              not evidence, and a mark beside a claim becomes a truth claim
+              (UIA §10 corollary). The words carry the voice. */}
+          <p className={SECTION_LABEL}>THA Review</p>
           <p className="text-[15px] text-foreground leading-relaxed" data-testid="text-v2-review">
             {vm.thaReview}
           </p>

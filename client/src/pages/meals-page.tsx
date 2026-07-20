@@ -10,7 +10,7 @@ import {
   parseCivilDate,
 } from "@shared/time/household-time";
 import { Skeleton } from "@/components/ui/skeleton";
-import thaAppleLogo from "@/assets/icons/tha-apple.png";
+import { AppleStencil } from "@/components/icons/apple-stencil";
 import { useMeals, invalidateMealLibrary } from "@/hooks/use-meals";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -3564,7 +3564,11 @@ export default function MealsPage() {
                 aria-label="Cookbook workspace"
                 data-testid="button-cookbook-workspace-menu"
               >
-                <img src={thaAppleLogo} alt="" className="h-[34px] w-[34px] object-contain" aria-hidden="true" />
+                {/* EXP1 — the coloured apple is retired here and NOT replaced
+                    by the stencil: a menu trigger is a tool, and the apple
+                    never carries a second meaning (GEA12). A tool gets a
+                    tool's glyph. */}
+                <MoreVertical className="h-4 w-4 text-muted-foreground" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
@@ -4065,11 +4069,11 @@ export default function MealsPage() {
                           ) : meal.isDrink ? (
                             <MealWatermark type="drink" size="lg" className="inset-0 m-auto flex items-center justify-center" />
                           ) : null}
-                          <UtensilsCrossed className="h-8 w-8 relative z-10 text-muted-foreground/30" />
+                          <AppleStencil className="h-16 w-16 relative z-10 text-primary/20" />
                         </div>
                       ) : meal.mealFormat === "grouped" && !meal.imageUrl ? (
                         <div className="w-full h-full flex items-center justify-center bg-primary/5 relative" data-testid={`placeholder-grouped-${meal.id}`}>
-                          <img src={thaAppleLogo} alt="" aria-hidden="true" className="h-20 w-20 object-contain opacity-80" />
+                          <AppleStencil className="h-20 w-20 text-primary/30" />
                         </div>
                       ) : (
                         <MealImageWidget
@@ -4175,7 +4179,7 @@ export default function MealsPage() {
                           ) : meal.isDrink ? (
                             <MealWatermark type="drink" size="sm" className="inset-0 m-auto flex items-center justify-center" />
                           ) : null}
-                          <UtensilsCrossed className="h-6 w-6 relative z-10 text-muted-foreground/40" />
+                          <AppleStencil className="h-12 w-12 relative z-10 text-primary/20" />
                           <span className="text-[10px] uppercase tracking-[0.12em] relative z-10 text-muted-foreground/70">
                             {meal.audience === 'baby' ? 'Baby Meal' : meal.audience === 'child' ? 'Kids Meal' : 'Ready Meal'}
                           </span>
@@ -4186,7 +4190,7 @@ export default function MealsPage() {
                         </div>
                       ) : meal.mealFormat === "grouped" && !meal.imageUrl ? (
                         <div className="w-24 sm:w-28 shrink-0 overflow-hidden rounded-l-md flex flex-col items-center justify-center bg-primary/5" data-testid={`placeholder-grouped-list-${meal.id}`}>
-                          <img src={thaAppleLogo} alt="THA" className="h-24 w-24 object-contain" />
+                          <AppleStencil className="h-20 w-20 text-primary/30" />
                         </div>
                       ) : (
                         <div className="w-24 sm:w-28 shrink-0 overflow-hidden rounded-l-md relative">

@@ -35,6 +35,7 @@ import {
   Sun, Coffee, UtensilsCrossed, Droplets, Sparkles, ChefHat,
   ChevronDown, Heart, Flame, Target, Activity, Droplet,
   Gift, ClipboardCheck, PiggyBank, Search, FileDown, Settings, SlidersHorizontal,
+  MoreVertical,
 } from "lucide-react";
 import { computeMealVariety } from "@shared/canonical/plant-classifier";
 import { DayVarietySummary } from "@/components/nutrition-variety-chips";
@@ -44,7 +45,6 @@ import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/component
 import { HealthSnapshot, GoalsPreferences, CalorieSettings, ProfileData } from "./profile-page";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
 import { usePublishCompanionContext } from "@/components/conversation/companion-context";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -1125,7 +1125,7 @@ function DiarySettingsPanel({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <img src={thaAppleSrc} alt="" className="h-5 w-5 object-contain" />
+            <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
             Diary Settings
           </DialogTitle>
         </DialogHeader>
@@ -1717,7 +1717,7 @@ export default function FoodDiaryPage() {
                 aria-label="Diary workspace"
                 data-testid="button-diary-workspace-menu"
               >
-                <img src={thaAppleSrc} alt="" className="h-[34px] w-[34px] object-contain" aria-hidden="true" />
+                <MoreVertical className="h-4 w-4 text-muted-foreground" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">

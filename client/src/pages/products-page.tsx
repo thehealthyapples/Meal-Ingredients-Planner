@@ -24,6 +24,7 @@ import {
   ScanLine,
   Award, Zap, History, Trash2,
   ChefHat, Check, Sparkles, Store, Clock, Microscope,
+  MoreVertical,
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -1098,7 +1099,7 @@ export default function ProductsPage() {
                 aria-label="Analyser workspace"
                 data-testid="button-analyser-workspace-menu"
               >
-                <img src={thaAppleSrc} alt="" className="h-[34px] w-[34px] object-contain" aria-hidden="true" />
+                <MoreVertical className="h-4 w-4 text-muted-foreground" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">

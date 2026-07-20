@@ -284,10 +284,10 @@ function ProfilePageContent() {
   // the TanStack cache — falling back to `window.history.back()`; its
   // `profileReturnPath` sessionStorage read had no writer anywhere in the client.
   // The unsaved-changes guard (PX1-W0) still runs before every leave.
-  const back = {
-    href: "/home",
-    beforeNavigate: (proceed: () => void) => unsaved.guard(proceed),
-  };
+  // EXP1 — Back is retired from this header: Household is a canonical room on
+  // the shelf now, and realms in the nav do not carry Back (EXP §8). The
+  // unsaved-changes guard (PX1-W0) still runs where it always genuinely ran —
+  // on the section leave paths below; the shelf navigations were never guarded.
 
   const unsavedDialog = (
     <AlertDialog open={unsaved.isPrompting} onOpenChange={(open) => { if (!open) unsaved.stay(); }}>
@@ -315,7 +315,7 @@ function ProfilePageContent() {
   if (isPending) {
     return (
       <>
-      <WorkspaceHeader realm="diary" title="Profile" wide back={back} />
+      <WorkspaceHeader realm="home" title="Household" wide />
       <div className={`${pageContainerClass(true)} space-y-4`}>
         <Skeleton className="h-36 w-full rounded-xl" />
         <Skeleton className="h-32 w-full rounded-xl" />
@@ -329,7 +329,7 @@ function ProfilePageContent() {
   if (isError || !profile) {
     return (
       <>
-      <WorkspaceHeader realm="diary" title="Profile" wide back={back} />
+      <WorkspaceHeader realm="home" title="Household" wide />
       {/* PX1-W0: "Unable to load profile." said nothing about what it meant or what to
           do next. The canonical LoadError does both, and offers the way forward. */}
       <div className="mx-auto w-full max-w-2xl px-4 py-10">
@@ -344,11 +344,14 @@ function ProfilePageContent() {
   return (
     <>
     {unsavedDialog}
+    {/* EXP1 — Household is a room on the shelf now, and one surface may not
+        carry two realms: the shell's table already assigned this page `home`,
+        so the recorded inconsistency settles in the shell's favour. The name
+        follows the nav's one label (NAV_ITEMS owns every room's name). */}
     <WorkspaceHeader
-      realm="diary"
-      title="Profile"
+      realm="home"
+      title="Household"
       wide
-      back={back}
       contextBar={
         <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
           <div className="flex items-center gap-0.5 rounded-lg bg-muted/50 p-1 border border-border/40">

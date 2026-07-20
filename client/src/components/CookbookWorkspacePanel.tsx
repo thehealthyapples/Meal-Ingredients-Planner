@@ -1,8 +1,7 @@
 import { type ReactNode, useRef, useState, useEffect } from "react";
-import { Wand2, Camera, X, ChevronLeft, ChevronDown, Upload, Plus, LayoutGrid, List, Sliders, BookOpen, Search, Loader2, ChefHat, Globe, Snowflake, Package } from "lucide-react";
+import { Wand2, Camera, X, ChevronLeft, ChevronDown, Upload, Plus, LayoutGrid, List, Sliders, BookOpen, ChefHat, Globe, Snowflake, Package } from "lucide-react";
 import { CreateMealContent } from "@/components/create-meal-modal";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
-import { Input } from "@/components/ui/input";
 
 export type CookbookWorkspaceMode = "build" | "scan" | "filter" | null;
 
@@ -89,29 +88,13 @@ function WorkspaceIdleContent({
   return (
     <div data-testid="cookbook-workspace-idle">
       <p className="text-[11px] text-muted-foreground/60 pb-2 leading-snug">
-        Search the web or scan a recipe to grow your cookbook.
+        Scan or build a recipe to grow your cookbook.
       </p>
-      {/* Search */}
-      <div className="pb-3">
-        <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider py-2">
-          Search
-        </p>
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-          <Input
-            placeholder="Search cookbook..."
-            className="pl-8 pr-8 h-9 w-full text-sm"
-            value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
-            data-testid="input-search-meals"
-          />
-          {isSearching && (
-            <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
-              <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-            </div>
-          )}
-        </div>
-      </div>
+      {/* EXP1 — the panel's search is RETIRED. The Cookbook has one search —
+          the workspace pill's — and this was a second door to the same shelf
+          (North Star: "one global search only; remove duplicate page search").
+          The `searchTerm`/`onSearchChange` props stay on the contract: the
+          pill's search still drives this panel's `isSearching` affordances. */}
 
       <div className="w-full h-px bg-border/50 mb-1" />
 
