@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Loader2, Camera, Wand2, ImageOff, MoreHorizontal, Images, Upload } from "lucide-react";
+import { Loader2, Camera, Wand2, ImageOff, MoreHorizontal, Images, Upload, UtensilsCrossed } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
@@ -18,6 +18,15 @@ interface MealImageWidgetProps {
   audience?: string | null;
   isSystemMeal?: boolean;
   canEdit: boolean;
+  /**
+   * COOKBOOK1 — whether the placeholder draws the meal's name.
+   *
+   * Default true, which is what every existing caller expects. The Cookbook
+   * grid passes false: its card now carries the name beneath the photograph in
+   * the house's own card type, and a placeholder that also drew it printed
+   * every recipe's name twice on the same card.
+   */
+  showNameInPlaceholder?: boolean;
   onImageChange: (mealId: number, newImageUrl: string | null) => void;
 }
 
@@ -87,6 +96,7 @@ export function MealImageWidget({
   audience,
   isSystemMeal,
   canEdit,
+  showNameInPlaceholder = true,
   onImageChange,
 }: MealImageWidgetProps) {
   const { toast } = useToast();
@@ -220,7 +230,7 @@ export function MealImageWidget({
       }
       const updated = await res.json();
       onImageChange(mealId, updated.imageUrl ?? null);
-      toast({ title: "AI image generated" });
+      toast({ title: "Illustration added" });
     } catch (err: any) {
       toast({
         variant: "destructive",
@@ -293,7 +303,7 @@ export function MealImageWidget({
         data-testid={`button-image-regenerate-${mealId}`}
       >
         <Wand2 className="h-3.5 w-3.5 mr-2" />
-        {imageUrl ? "Regenerate AI image" : "Generate AI image"}
+        {imageUrl ? "Illustrate it again" : "Illustrate this recipe"}
       </Button>
       {imageUrl && (
         <Button
@@ -386,21 +396,36 @@ export function MealImageWidget({
           className="w-full h-full flex flex-col items-center justify-center gap-2 px-3 bg-accent/30"
           data-testid={`placeholder-meal-${mealId}`}
         >
+          {/* COOKBOOK1 — the absence of a photograph is no longer drawn as a
+              magic wand.
+
+              `Wand2` was the default placeholder for every un-photographed
+              recipe in the house, which meant the most common thing a household
+              saw where a picture of dinner should be was an AI icon. That is the
+              wiring on the outside of the wall (GEA16 — intelligence is
+              experienced as a better answer, never as a visible mechanism), and
+              it announced "generated" on precisely the recipes that most needed
+              to look authored.
+
+              An honest gap is a feature of a trustworthy product (GEA15 § 15.3):
+              a quiet plate, in the room's own materials, saying nothing. */}
           {audience === "baby" ? (
             <MealWatermark type="baby" size="lg" className="relative" />
           ) : audience === "child" ? (
             <MealWatermark type="child" size="lg" className="relative" />
           ) : (
             <>
-              <Wand2 className="h-8 w-8 text-muted-foreground/30 relative z-10" />
+              <UtensilsCrossed className="h-7 w-7 text-muted-foreground/15 relative z-10" aria-hidden="true" />
               {!isSystemMeal && (
                 <MealWatermark type="adult" size="lg" className="inset-0 m-auto absolute" />
               )}
             </>
           )}
-          <span className="text-sm font-semibold text-center leading-tight relative z-10 text-foreground line-clamp-2 px-1">
-            {mealName}
-          </span>
+          {showNameInPlaceholder && (
+            <span className="text-sm font-semibold text-center leading-tight relative z-10 text-foreground line-clamp-2 px-1">
+              {mealName}
+            </span>
+          )}
           {canEdit && (
             <>
               {/* Mobile: single Add photo button → opens action sheet */}
@@ -443,7 +468,7 @@ export function MealImageWidget({
                   ) : (
                     <Wand2 className="h-3 w-3" />
                   )}
-                  {loading === "generate" ? "Generating…" : "Generate"}
+                  {loading === "generate" ? "Illustrating…" : "Illustrate"}
                 </Button>
               </div>
             </>
@@ -487,7 +512,7 @@ export function MealImageWidget({
             data-testid={`button-sheet-generate-${mealId}`}
           >
             <Wand2 className="h-4 w-4 text-primary/70 shrink-0" />
-            Generate image
+            Illustrate this recipe
           </button>
           <button
             className="flex items-center gap-3 px-4 py-3.5 text-sm text-left hover:bg-accent/40 active:bg-accent/60 transition-colors"

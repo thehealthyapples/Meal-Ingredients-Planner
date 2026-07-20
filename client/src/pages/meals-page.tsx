@@ -62,10 +62,20 @@ import { Switch } from "@/components/ui/switch";
 import { shouldExcludeRecipe, type RecipeFields } from "@shared/dietRules";
 import { useUser } from "@/hooks/use-user";
 import { scoreMealSearch } from "@shared/food-synonyms";
+// COOKBOOK1 — the Cookbook no longer decides for itself what belongs on its
+// shelf. `shared/cookbook/curation.ts` is the single owner of that question
+// (GEA17: the presentation layer owns no fact), and it retired this page's
+// private `getMealDisplayCategory` / `SECTION_LABELS` / `MEAL_CATEGORY_ORDER`
+// in the same change (GEA18: the successor retires the predecessor).
+import {
+  shelfForMeal,
+  SHELF_ORDER,
+  SHELF_LABELS,
+  type CookbookShelf,
+} from "@shared/cookbook/curation";
 import { writePendingIngredients, appendPendingIngredient } from "@/lib/quick-list";
 import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
 import { CookbookWorkspacePanel, type CookbookWorkspaceMode } from "@/components/CookbookWorkspacePanel";
-import { CookbookMealIntelligenceStrip } from "@/components/CookbookMealIntelligenceStrip";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { compressImage, inferMimeFromFilename } from "@/lib/image-utils";
 
@@ -835,7 +845,7 @@ function CardActionsMenu({
       if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error((e as any).message || "Generation failed"); }
       const updated = await res.json();
       onImageChange(meal.id, updated.imageUrl ?? null);
-      toast({ title: "AI image generated" });
+      toast({ title: "Illustration added" });
     } catch (err: any) {
       toast({ variant: "destructive", title: "Image generation failed", description: err?.message || "Please try again." });
     } finally {
@@ -925,7 +935,7 @@ function CardActionsMenu({
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={handleGenerate} disabled={imageLoading !== null}>
                   <Wand2 className="h-4 w-4 shrink-0" />
-                  {meal.imageUrl ? "Regenerate AI image" : "Generate AI image"}
+                  {meal.imageUrl ? "Illustrate it again" : "Illustrate this recipe"}
                 </DropdownMenuItem>
                 {meal.imageUrl && (
                   <DropdownMenuItem onSelect={handleRemove} disabled={imageLoading !== null} className="text-destructive focus:text-destructive">
@@ -1103,7 +1113,7 @@ function MobileMealActionSheet({
       if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error((e as any).message || "Generation failed"); }
       const updated = await res.json();
       onImageChange(meal.id, updated.imageUrl ?? null);
-      toast({ title: "AI image generated" });
+      toast({ title: "Illustration added" });
       onClose();
     } catch (err: any) {
       toast({ variant: "destructive", title: "Image generation failed", description: err?.message || "Please try again." });
@@ -1304,7 +1314,7 @@ function MobileMealActionSheet({
                   data-testid={`sheet-action-photo-generate-${meal.id}`}
                 >
                   {imageLoading === "generate" ? <Loader2 className="h-4 w-4 animate-spin shrink-0 text-muted-foreground" /> : <Wand2 className="h-4 w-4 text-muted-foreground shrink-0" />}
-                  <span className="text-sm text-muted-foreground">{meal.imageUrl ? "Regenerate AI Image" : "Generate AI Image"}</span>
+                  <span className="text-sm text-muted-foreground">{meal.imageUrl ? "Illustrate it again" : "Illustrate this recipe"}</span>
                 </button>
                 {meal.imageUrl && (
                   <button
@@ -2506,14 +2516,19 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
   );
 }
 
-const MEAL_CATEGORY_ORDER = ["user_meals", "from_web", "tha_meals", "drinks", "ready_meals"] as const;
-const SECTION_LABELS: Record<string, string> = {
-  user_meals: "My Recipes",
-  from_web: "Recipes from the Web",
-  tha_meals: "Wholefood Suggestions",
-  ready_meals: "Packaged & Processed",
-  drinks: "Drinks",
-};
+/**
+ * COOKBOOK1 — RETIRED: `MEAL_CATEGORY_ORDER` and `SECTION_LABELS`.
+ *
+ * Both were private to this page, which meant the Cookbook was the owner of
+ * "what kind of recipe is this?" — a fact about a meal, owned by a component
+ * that renders it. Their successor is `@shared/cookbook/curation`
+ * (`SHELF_ORDER`, `SHELF_LABELS`, `shelfForMeal`), imported at the top of this
+ * file. Nothing here decides shelving any more.
+ *
+ * The label "Wholefood Suggestions" died with them. It sat above five hundred
+ * template-generated recipes and was wrong twice over: a room does not suggest
+ * (GEA21), and what sat beneath it was a library, not a set of suggestions.
+ */
 const CATEGORY_DROPDOWN_ORDER = ["Drink", "Smoothie", "Baby Meal", "Kids Meal", "Frozen Meal"];
 
 /**
@@ -2535,14 +2550,14 @@ function displayCivilDate(text: string | null): string {
   return new Date(date.year, date.month - 1, date.day).toLocaleDateString();
 }
 
-function getMealDisplayCategory(meal: Meal): string {
-  if (meal.isDrink || meal.mealFormat === "drink") return "drinks";
-  if (meal.isReadyMeal || meal.mealFormat === "ready-meal") return "ready_meals";
-  if (meal.mealSourceType === "openfoodfacts") return "ready_meals";
-  if (meal.isSystemMeal) return "tha_meals";
-  if (meal.sourceUrl) return "from_web";
-  return "user_meals";
-}
+/**
+ * COOKBOOK1 — RETIRED: `getMealDisplayCategory`.
+ *
+ * Replaced by `shelfForMeal` from `@shared/cookbook/curation`. The old function
+ * could not tell an authored THA recipe from a template-generated one — it
+ * returned `"tha_meals"` for all five hundred — which is precisely why the room
+ * presented a generator's output as a cookbook.
+ */
 
 export default function MealsPage() {
   const { meals, isLoading, isError: mealsError, refetch: refetchMeals, deleteMeal, createMeal } = useMeals();
@@ -2596,6 +2611,17 @@ export default function MealsPage() {
   const scanFileRef = useRef<HTMLInputElement>(null);
   const scanCancelledRef = useRef(false);
   const [visibleCount, setVisibleCount] = useState(48);
+  /**
+   * COOKBOOK1 — the wider library is opened, never scrolled into.
+   *
+   * The 490 template-generated recipes of the founding import are not deleted,
+   * not hidden from search, and not withheld from the planner. They are simply
+   * not part of what a household *browses*, because browsing 490 permutations
+   * of three vegetables is the experience EXPREVIEW1 § 6 identified as the one
+   * that stops a household believing the house. A household who wants them asks
+   * once, and then has them.
+   */
+  const [libraryOpen, setLibraryOpen] = useState(false);
   const [webImportingIds, setWebImportingIds] = useState<Set<string>>(new Set());
   const [webImportCategoryMap, setWebImportCategoryMap] = useState<Record<string, number | undefined>>({});
   const [recentlyImportedIds, setRecentlyImportedIds] = useState<Set<string>>(new Set());
@@ -2664,7 +2690,14 @@ export default function MealsPage() {
   const householdZone = householdForClock?.timeZone ?? DECLARED_DEFAULT_ZONE;
   const [addToFreezerMealId, setAddToFreezerMealId] = useState<number | null>(null);
   const [expandedMealId, setExpandedMealId] = useState<number | string | null>(null);
-  const [cardInfoTabs, setCardInfoTabs] = useState<Map<number, 'ingredients' | 'nutrition' | 'intelligence'>>(new Map());
+  /**
+   * COOKBOOK1 — RETIRED: `cardInfoTabs`.
+   *
+   * Per-card Ingredients / Nutrition / "Why Good" tab state, for a tab strip
+   * that no longer exists. `CookbookMealIntelligenceStrip` itself is untouched
+   * and still owned by the planner (weekly-planner-page.tsx) — only the
+   * Cookbook's copy of it came down.
+   */
 
   // Three-dot action sheet state (mobile cookbook cards)
   const [actionSheetMeal, setActionSheetMeal] = useState<Meal | null>(null);
@@ -3320,19 +3353,23 @@ export default function MealsPage() {
       // Demo mode: never show drinks
       if (user?.isDemo && (meal.isDrink || meal.mealFormat === "drink")) return false;
       // "Recipes" source: hide user-created meals so only web/system meals show
-      if (activeSearch && searchSource === "recipes" && getMealDisplayCategory(meal) === "user_meals") return false;
+      if (activeSearch && searchSource === "recipes" && shelfForMeal(meal) === "household") return false;
+      // COOKBOOK1 — the wider library is reachable, but never browsed into. A
+      // household meets it when they search for something in it, or when they
+      // have asked for it by name. It is never part of the default shelf.
+      if (shelfForMeal(meal) === "library" && !activeSearch && !libraryOpen) return false;
       // Fuzzy + synonym search
       const matchesSearch = !activeSearch || scoreMealSearch({ name: meal.name, ingredients: meal.ingredients }, q) > 0;
       const matchesCategory = categoryFilter === "all" ||
         (allCategories.find(c => c.name === categoryFilter)?.id === meal.categoryId);
-      const cat = getMealDisplayCategory(meal);
+      const shelf = shelfForMeal(meal);
       let matchesGroup = true;
-      if (cat === "user_meals") matchesGroup = activeGroups.has("cookbook");
+      if (shelf === "household") matchesGroup = activeGroups.has("cookbook");
       // user-imported web recipes are part of the user's cookbook AND show under "Recipes"
-      else if (cat === "from_web") matchesGroup = activeGroups.has("cookbook") || activeGroups.has("recipes");
-      else if (cat === "tha_meals") matchesGroup = activeGroups.has("recipes");
-      else if (cat === "ready_meals") matchesGroup = activeGroups.has("packaged");
-      else if (cat === "drinks") matchesGroup = activeGroups.has("cookbook") || activeGroups.has("recipes");
+      else if (shelf === "web") matchesGroup = activeGroups.has("cookbook") || activeGroups.has("recipes");
+      else if (shelf === "kitchen" || shelf === "library") matchesGroup = activeGroups.has("recipes");
+      else if (shelf === "packaged") matchesGroup = activeGroups.has("packaged");
+      else if (shelf === "drinks") matchesGroup = activeGroups.has("cookbook") || activeGroups.has("recipes");
       const eff = activeAudiences.size === 0 ? new Set(["adult"]) : activeAudiences;
       let matchesAudience = false;
       if (meal.isDrink) {
@@ -3370,44 +3407,56 @@ export default function MealsPage() {
         const diff = (scoreCache.get(b.id) ?? 0) - (scoreCache.get(a.id) ?? 0);
         if (diff !== 0) return diff;
       }
-      const catA = getMealDisplayCategory(a);
-      const catB = getMealDisplayCategory(b);
-      const idxA = MEAL_CATEGORY_ORDER.indexOf(catA as typeof MEAL_CATEGORY_ORDER[number]);
-      const idxB = MEAL_CATEGORY_ORDER.indexOf(catB as typeof MEAL_CATEGORY_ORDER[number]);
-      const orderA = idxA === -1 ? MEAL_CATEGORY_ORDER.length : idxA;
-      const orderB = idxB === -1 ? MEAL_CATEGORY_ORDER.length : idxB;
-      if (catA === "ready_meals" && catB === "ready_meals") {
+      const shelfA = shelfForMeal(a);
+      const shelfB = shelfForMeal(b);
+      const idxA = SHELF_ORDER.indexOf(shelfA);
+      const idxB = SHELF_ORDER.indexOf(shelfB);
+      const orderA = idxA === -1 ? SHELF_ORDER.length : idxA;
+      const orderB = idxB === -1 ? SHELF_ORDER.length : idxB;
+      if (shelfA === "packaged" && shelfB === "packaged") {
         const ingA = a.ingredients?.length ?? 999;
         const ingB = b.ingredients?.length ?? 999;
         return ingA - ingB || a.name.localeCompare(b.name);
       }
-      const catOrder = orderA - orderB;
-      if (catOrder !== 0) return catOrder;
-      // No active search: within the same category, meals with images come first
-      if (!activeSearch) {
-        const imgA = a.imageUrl ? 0 : 1;
-        const imgB = b.imageUrl ? 0 : 1;
-        if (imgA !== imgB) return imgA - imgB;
-      }
+      const shelfOrder = orderA - orderB;
+      if (shelfOrder !== 0) return shelfOrder;
+      // COOKBOOK1 — RETIRED: the images-first tiebreak.
+      //
+      // It sorted photographed meals above unphotographed ones within each
+      // shelf, which split every shelf into a photographed top and an icon-wall
+      // bottom — the room visibly degrading as you scrolled. That is a room
+      // reorganising itself around its content, which is a page's behaviour and
+      // not a room's (GEA7). A shelf now reads in one order, alphabetically,
+      // whether or not the food has had its picture taken.
       return a.name.localeCompare(b.name);
     });
   }, [meals, mealSearchText, deferredSearchTerm, categoryFilter, allCategories, activeGroups, activeAudiences, mealsDietPattern, mealsDietRestrictions, mealsUpfFilter, searchSource, user]);
 
   const visibleMeals = useMemo(() => filteredMeals?.slice(0, visibleCount), [filteredMeals, visibleCount]);
 
-  const sectionCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    filteredMeals?.forEach(m => {
-      const cat = getMealDisplayCategory(m);
-      counts.set(cat, (counts.get(cat) ?? 0) + 1);
-    });
-    return counts;
-  }, [filteredMeals]);
+  /**
+   * COOKBOOK1 — RETIRED: `sectionCounts`.
+   *
+   * It rendered "· 500" beside "Wholefood Suggestions" and a count beside every
+   * other section header. A count above a shelf tells a household nothing they
+   * can use and one thing they cannot un-see: that this was produced in bulk.
+   * EXPREVIEW1 § 6 quotes the header verbatim as the moment the room announces
+   * itself as machine output, and § 8: *"it trades a large number for a small
+   * one, and 500 looks like more product than 20. It is not."*
+   *
+   * A shelf in a family cookbook is not labelled with its inventory.
+   */
+
+  /** How many recipes sit in the wider library behind the current filters. */
+  const libraryCount = useMemo(
+    () => (meals ?? []).filter(m => shelfForMeal(m) === "library").length,
+    [meals],
+  );
 
   const showSectionHeaders = useMemo(() => {
     if (!filteredMeals?.length) return false;
-    const cats = new Set(filteredMeals.map(getMealDisplayCategory));
-    return cats.size > 1;
+    const shelves = new Set(filteredMeals.map(shelfForMeal));
+    return shelves.size > 1;
   }, [filteredMeals]);
 
   const allMealIds = useMemo(() => (visibleMeals || []).map(m => m.id), [visibleMeals]);
@@ -3966,21 +4015,20 @@ export default function MealsPage() {
           {viewMode === 'grid' ? (
             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
               {visibleMeals?.map((meal, index) => {
-                const cat = getMealDisplayCategory(meal);
-                const prevCat = index > 0 ? getMealDisplayCategory(visibleMeals[index - 1]) : null;
-                const isNewSection = showSectionHeaders && cat !== prevCat;
-                const infoTab = cardInfoTabs.get(meal.id) ?? 'ingredients';
-                const cardNutrition = nutritionMap.get(meal.id);
+                const shelf = shelfForMeal(meal);
+                const prevShelf = index > 0 ? shelfForMeal(visibleMeals[index - 1]) : null;
+                const isNewSection = showSectionHeaders && shelf !== prevShelf;
                 return (
                   <Fragment key={meal.id}>
                     {isNewSection && (
                       <div
-                        className={`col-span-full flex items-center gap-2 ${index > 0 ? "mt-4 pt-4 border-t border-border/50" : ""}`}
-                        data-testid={`section-header-${cat}`}
+                        className={`col-span-full flex items-baseline gap-2 ${index > 0 ? "mt-8 pt-5" : ""}`}
+                        data-testid={`section-header-${shelf}`}
                       >
-                        <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">{SECTION_LABELS[cat]}</span>
-                        {cat === "ready_meals" && <span className="text-xs text-muted-foreground/40 italic">Convenience options</span>}
-                        <span className="text-xs text-muted-foreground/35">· {sectionCounts.get(cat) ?? 0}</span>
+                        {/* COOKBOOK1 — a shelf is named, not counted, and not ruled
+                            off. The border-top and the "· N" both came down: air
+                            separates shelves now (GEA11). */}
+                        <span className="title-section text-foreground/80">{SHELF_LABELS[shelf]}</span>
                       </div>
                     )}
                     <motion.div
@@ -4000,9 +4048,16 @@ export default function MealsPage() {
                     }}
                     data-testid={`card-meal-${meal.id}`}
                   >
-                    <div className="relative w-full h-24 sm:h-32 overflow-hidden rounded-t-md">
+                    {/* COOKBOOK1 — the food is the hero.
+                        The image was a 96–128px letterbox carrying a black
+                        name-pill, a serves badge and a frozen badge on top of it.
+                        It is now a 4:3 plate with nothing written across it: the
+                        recipe's name sits beneath the photograph, in the house's
+                        own card type, where a name belongs. EXPREVIEW1 § 8:
+                        "You cannot pick up a card that has no face." */}
+                    <div className="relative w-full aspect-[4/3] overflow-hidden">
                       {meal.isReadyMeal && !meal.imageUrl ? (
-                        <div className="w-full h-full flex flex-col items-center justify-center gap-2 px-4 relative bg-accent/30" data-testid={`placeholder-ready-meal-${meal.id}`}>
+                        <div className="w-full h-full flex items-center justify-center relative bg-accent/30" data-testid={`placeholder-ready-meal-${meal.id}`}>
                           {meal.audience === 'baby' ? (
                             <MealWatermark type="baby" size="lg" className="inset-0 m-auto flex items-center justify-center" />
                           ) : meal.audience === 'child' ? (
@@ -4010,17 +4065,11 @@ export default function MealsPage() {
                           ) : meal.isDrink ? (
                             <MealWatermark type="drink" size="lg" className="inset-0 m-auto flex items-center justify-center" />
                           ) : null}
-                          <UtensilsCrossed className="h-10 w-10 relative z-10 text-muted-foreground/40" />
-                          <span className="text-sm font-semibold text-center leading-tight relative z-10 text-foreground">{meal.name}</span>
-                          <span className="text-[10px] uppercase tracking-[0.12em] relative z-10 text-muted-foreground/70">
-                            {meal.isDrink ? 'Drink' : meal.audience === 'baby' ? 'Baby Meal' : meal.audience === 'child' ? 'Kids Meal' : 'Ready Meal'}
-                          </span>
+                          <UtensilsCrossed className="h-8 w-8 relative z-10 text-muted-foreground/30" />
                         </div>
                       ) : meal.mealFormat === "grouped" && !meal.imageUrl ? (
-                        <div className="w-full h-full flex flex-col items-center justify-center bg-primary/5 relative" data-testid={`placeholder-grouped-${meal.id}`}>
-                          <img src={thaAppleLogo} alt="THA" className="h-40 w-40 object-contain" />
-                          <span className="text-sm font-semibold text-center px-3 mt-1 leading-tight text-foreground">{meal.name}</span>
-                          <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70 mt-0.5">Grouped Meal</span>
+                        <div className="w-full h-full flex items-center justify-center bg-primary/5 relative" data-testid={`placeholder-grouped-${meal.id}`}>
+                          <img src={thaAppleLogo} alt="" aria-hidden="true" className="h-20 w-20 object-contain opacity-80" />
                         </div>
                       ) : (
                         <MealImageWidget
@@ -4030,32 +4079,21 @@ export default function MealsPage() {
                           audience={meal.audience}
                           isSystemMeal={!!meal.isSystemMeal}
                           canEdit={false}
+                          showNameInPlaceholder={false}
                           onImageChange={handleMealImageChange}
                         />
                       )}
-                      {!meal.isReadyMeal && meal.imageUrl && (
-                        <div className="absolute bottom-1.5 left-1.5 z-10 flex items-center gap-1.5" data-testid={`name-overlay-meal-${meal.id}`}>
-                          <span className="bg-black/65 backdrop-blur-sm text-white text-xs font-medium px-2 py-1 rounded-md leading-tight inline-block">
-                            {meal.name}
-                          </span>
-                        </div>
-                      )}
+                      {/* The freezer portion count stays: it is a fact about the
+                          household's own freezer, not a property of the recipe,
+                          and it is the one thing that changes what they cook
+                          tonight. The serves badge came down — it is recipe
+                          metadata, and it lives on the recipe. */}
                       {freezerMeals.some(f => f.mealId === meal.id && f.remainingPortions > 0) && (
                         <div className="absolute top-1.5 left-1.5 z-10" data-testid={`badge-frozen-${meal.id}`}>
                           <Badge variant="secondary" className="bg-primary/90 text-white border-0 text-[10px]">
                             <Snowflake className="h-3 w-3 mr-1" />
                             {freezerMeals.filter(f => f.mealId === meal.id).reduce((s, f) => s + f.remainingPortions, 0)} frozen
                           </Badge>
-                        </div>
-                      )}
-                      {/* Serves badge — recipe metadata, non-interactive, top-right of image */}
-                      {meal.servings != null && meal.servings >= 1 && (
-                        <div
-                          className="absolute top-1.5 right-1.5 z-10 flex items-center gap-0.5 bg-black/45 backdrop-blur-sm text-white text-[10px] px-1.5 py-0.5 rounded-md leading-none"
-                          data-testid={`badge-serves-${meal.id}`}
-                        >
-                          <UtensilsCrossed className="h-2.5 w-2.5 shrink-0" />
-                          <span>{meal.servings}</span>
                         </div>
                       )}
                       {/* Recipe actions: desktop → compact dropdown, mobile → bottom sheet */}
@@ -4067,105 +4105,30 @@ export default function MealsPage() {
                         onMobileClick={() => setActionSheetMeal(meal)}
                       />
                     </div>
-                    {/* Permanent info strip — ingredients/nutrition/intelligence tabs */}
-                    <div className="border-t border-border/50 px-2 pt-1.5 pb-2" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex justify-center gap-0.5 mb-1">
-                        <button
-                          className={`text-[11px] font-medium px-2 py-0.5 rounded transition-colors ${infoTab === 'ingredients' ? 'text-foreground bg-muted' : 'text-muted-foreground hover:text-foreground'}`}
-                          onClick={() => setCardInfoTabs(prev => new Map(prev).set(meal.id, 'ingredients'))}
-                          data-testid={`tab-strip-ingredients-${meal.id}`}
-                        >
-                          Ingredients
-                        </button>
-                        <button
-                          className={`text-[11px] font-medium px-2 py-0.5 rounded transition-colors ${infoTab === 'nutrition' ? 'text-foreground bg-muted' : 'text-muted-foreground hover:text-foreground'}`}
-                          onClick={() => setCardInfoTabs(prev => new Map(prev).set(meal.id, 'nutrition'))}
-                          data-testid={`tab-strip-nutrition-${meal.id}`}
-                        >
-                          Nutrition
-                        </button>
-                        <button
-                          className={`text-[11px] font-medium px-2 py-0.5 rounded transition-colors ${infoTab === 'intelligence' ? 'text-foreground bg-muted' : 'text-muted-foreground hover:text-foreground'}`}
-                          onClick={() => setCardInfoTabs(prev => new Map(prev).set(meal.id, 'intelligence'))}
-                          data-testid={`tab-strip-intelligence-${meal.id}`}
-                        >
-                          Why Good
-                        </button>
-                      </div>
-                      <div className="min-h-[70px]">
-                        {infoTab === 'ingredients' ? (
-                          meal.ingredients.length > 0 ? (
-                            <>
-                              {/* Desktop: 2-column, 4 rows (8 slots) — 7 names + "+N more" in slot 8 */}
-                              <div className="hidden sm:grid grid-cols-2 gap-x-2 gap-y-0.5" data-testid={`strip-ingredients-desktop-${meal.id}`}>
-                                {meal.ingredients.slice(0, meal.ingredients.length > 8 ? 7 : meal.ingredients.length).map((ing, i) => (
-                                  <span key={i} className="text-[11px] text-foreground truncate leading-4">{parseIngredient(ing).name}</span>
-                                ))}
-                                {meal.ingredients.length > 8 && (
-                                  <span className="text-[11px] text-muted-foreground leading-4">+{meal.ingredients.length - 7} more</span>
-                                )}
-                              </div>
-                              {/* Mobile: single column, 3 names + overflow */}
-                              <div className="sm:hidden space-y-0.5" data-testid={`strip-ingredients-mobile-${meal.id}`}>
-                                {meal.ingredients.slice(0, 3).map((ing, i) => (
-                                  <div key={i} className="text-[11px] text-foreground truncate leading-4">{parseIngredient(ing).name}</div>
-                                ))}
-                                {meal.ingredients.length > 3 && (
-                                  <div className="text-[11px] text-muted-foreground leading-4">+{meal.ingredients.length - 3} more</div>
-                                )}
-                              </div>
-                            </>
-                          ) : (
-                            <p className="text-[11px] text-muted-foreground" data-testid={`strip-no-ingredients-${meal.id}`}>No ingredients listed</p>
-                          )
-                        ) : infoTab === 'nutrition' ? (
-                          cardNutrition && (cardNutrition.calories || cardNutrition.protein || cardNutrition.fat || cardNutrition.carbs) ? (
-                            <>
-                              {/* Desktop: 2-column, consistent height with ingredient view */}
-                              <div className="hidden sm:grid grid-cols-2 gap-x-2 gap-y-0.5" data-testid={`strip-nutrition-desktop-${meal.id}`}>
-                                {cardNutrition.calories && <span className="text-[11px] text-foreground leading-4">{cardNutrition.calories} kcal</span>}
-                                {cardNutrition.protein && <span className="text-[11px] text-foreground leading-4">{cardNutrition.protein} protein</span>}
-                                {cardNutrition.fat && <span className="text-[11px] text-foreground leading-4">{cardNutrition.fat} fat</span>}
-                                {cardNutrition.carbs && <span className="text-[11px] text-foreground leading-4">{cardNutrition.carbs} carbs</span>}
-                              </div>
-                              {/* Mobile: single column */}
-                              <div className="sm:hidden space-y-0.5" data-testid={`strip-nutrition-mobile-${meal.id}`}>
-                                {cardNutrition.calories && <div className="text-[11px] text-foreground leading-4">{cardNutrition.calories} kcal</div>}
-                                {cardNutrition.protein && <div className="text-[11px] text-foreground leading-4">{cardNutrition.protein} protein</div>}
-                                {cardNutrition.fat && <div className="text-[11px] text-foreground leading-4">{cardNutrition.fat} fat</div>}
-                                {cardNutrition.carbs && <div className="text-[11px] text-foreground leading-4">{cardNutrition.carbs} carbs</div>}
-                              </div>
-                            </>
-                          ) : (
-                            <p className="text-[11px] text-muted-foreground" data-testid={`strip-no-nutrition-${meal.id}`}>Nutrition not yet analysed</p>
-                          )
-                        ) : (
-                          <CookbookMealIntelligenceStrip
-                            mealId={meal.id}
-                            active={infoTab === 'intelligence'}
-                          />
-                        )}
-                      </div>
+                    {/* COOKBOOK1 — RETIRED: the in-card tab strip and the
+                        six-icon action bar.
+
+                        The strip put Ingredients / Nutrition / "Why Good" tabs
+                        INSIDE every card, and the footer put six unlabelled icon
+                        buttons beneath them — Qty, Quick List, Freeze, Planner,
+                        Analyse, Basket. EXPREVIEW1 § 6 counted the cost exactly:
+                        "six unlabelled icon buttons... Multiply by twelve and the
+                        room contains seventy-two unlabelled controls."
+
+                        Every one of those six actions already existed in
+                        `CardActionsMenu` on the image above — View recipe, Add to
+                        planner, Add to basket, Analyse, Freeze — so the bar was a
+                        duplicate owner of the card's actions, not a second way to
+                        reach them (GEA18). Removing it costs no capability at all.
+
+                        Ingredients and nutrition belong to the recipe, and the
+                        recipe is one tap away. A shelf shows you the food and its
+                        name; you pick a book up to read it. */}
+                    <div className="px-3 py-2.5">
+                      <span className="title-card text-foreground line-clamp-2" data-testid={`text-meal-name-${meal.id}`}>
+                        {meal.name}
+                      </span>
                     </div>
-                    {/* CardFooter: hidden on mobile — actions accessible via action sheet or meal detail page */}
-                    <CardFooter className="hidden sm:flex py-2 px-3" onClick={(e) => e.stopPropagation()}>
-                      <MealActionBar
-                        mealId={meal.id}
-                        mealName={meal.name}
-                        ingredients={meal.ingredients}
-                        isReadyMeal={!!meal.isReadyMeal}
-                        isDrink={!!meal.isDrink}
-                        audience={meal.audience || "adult"}
-                        isFreezerEligible={!!meal.isFreezerEligible}
-                        onFreezeClick={() => setAddToFreezerMealId(meal.id)}
-                        servings={meal.servings}
-                        sourceUrl={meal.sourceUrl}
-                        mealFormat={meal.mealFormat}
-                        instructions={meal.instructions}
-                        showListButton
-                        onAddToQuickList={handleAddToListFromCookbook}
-                      />
-                    </CardFooter>
                   </Card>
                 </motion.div>
                   </Fragment>
@@ -4175,19 +4138,17 @@ export default function MealsPage() {
           ) : (
             <div className="flex flex-col gap-2">
               {visibleMeals?.map((meal, index) => {
-                const cat = getMealDisplayCategory(meal);
-                const prevCat = index > 0 ? getMealDisplayCategory(visibleMeals[index - 1]) : null;
-                const isNewSection = showSectionHeaders && cat !== prevCat;
+                const shelf = shelfForMeal(meal);
+                const prevShelf = index > 0 ? shelfForMeal(visibleMeals[index - 1]) : null;
+                const isNewSection = showSectionHeaders && shelf !== prevShelf;
                 return (
                   <Fragment key={meal.id}>
                     {isNewSection && (
                       <div
-                        className={`flex items-center gap-2 ${index > 0 ? "mt-4 pt-4 border-t border-border/50" : ""}`}
-                        data-testid={`section-header-list-${cat}`}
+                        className={`flex items-baseline gap-2 ${index > 0 ? "mt-8 pt-5" : ""}`}
+                        data-testid={`section-header-list-${shelf}`}
                       >
-                        <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">{SECTION_LABELS[cat]}</span>
-                        {cat === "ready_meals" && <span className="text-xs text-muted-foreground/40 italic">Convenience options</span>}
-                        <span className="text-xs text-muted-foreground/35">· {sectionCounts.get(cat) ?? 0}</span>
+                        <span className="title-section text-foreground/80">{SHELF_LABELS[shelf]}</span>
                       </div>
                     )}
                     <motion.div
@@ -4607,6 +4568,10 @@ export default function MealsPage() {
         </div>
       )}
 
+      {/* COOKBOOK1 — "Show more (836 remaining)" is gone.
+          A number that large, attached to a button, is the room telling a
+          household how much machine output is stacked behind the part they can
+          see. The button now says what it does and nothing else. */}
       {!isLoading && filteredMeals && visibleCount < filteredMeals.length && (
         <div className="flex flex-col items-center gap-1 py-6">
           <Button
@@ -4615,7 +4580,29 @@ export default function MealsPage() {
             onClick={() => setVisibleCount(c => c + 48)}
             data-testid="button-load-more-meals"
           >
-            Show more ({filteredMeals.length - visibleCount} remaining)
+            More recipes
+          </Button>
+        </div>
+      )}
+
+      {/* COOKBOOK1 — the door to the wider library.
+          Shown only when a household is browsing (not searching — a search
+          already reaches into the library), only when there is a library to
+          open, and only while it is still shut. It states a fact and offers a
+          choice; it does not recommend, and it does not decide (GEA21, GEA23). */}
+      {!isLoading && !mealsError && !libraryOpen && libraryCount > 0 && deferredSearchTerm.trim().length < 2 && (
+        <div className="flex flex-col items-center gap-2 py-8 text-center">
+          <p className="text-sm text-muted-foreground max-w-md">
+            There is a wider library of recipe variations behind the cookbook.
+            Searching already looks inside it.
+          </p>
+          <Button
+            variant="ghost"
+            className="realm-banner-btn"
+            onClick={() => setLibraryOpen(true)}
+            data-testid="button-open-wider-library"
+          >
+            Open the wider library
           </Button>
         </div>
       )}
@@ -6041,7 +6028,7 @@ function ImportRecipeDialog({ externalOpen, onExternalOpenChange }: { externalOp
               </Button>
               {!failureMsg && (
                 <p className="text-xs text-muted-foreground">
-                  AI will extract the title, ingredients, and steps. You review before saving.
+                  The title, ingredients and steps are read off the page. You review them before anything is saved.
                 </p>
               )}
             </TabsContent>

@@ -434,7 +434,7 @@ Wholegrain bulgur, chickpeas, carrots, herbs and seeds make a sturdy whole-food 
 
 ---
 
-## THA-011 — Pakistani-Style Feta, Parsnip & Cauliflower Egg Skillet
+## THA-011 — Pakistani-style Feta, Parsnip & Cauliflower Egg Skillet
 **Category:** breakfast  
 **Cuisine inspiration:** Pakistani-inspired  
 **Serves:** 4  
@@ -471,7 +471,7 @@ Feta, parsnip, cauliflower and oats create a filling plant-forward meal built fr
 
 ---
 
-## THA-012 — Malaysian-Style Cottage Cheese, Asparagus & Peas Breakfast Wrap
+## THA-012 — Malaysian-style Cottage Cheese, Asparagus & Peas Breakfast Wrap
 **Category:** breakfast  
 **Cuisine inspiration:** Malaysian-inspired  
 **Serves:** 4  
@@ -508,7 +508,7 @@ Cottage Cheese, asparagus, peas and wholewheat noodles create a filling plant-fo
 
 ---
 
-## THA-013 — North African-Style Lentil, Celery & Mushroom Toast Plate
+## THA-013 — North African-style Lentil, Celery & Mushroom Toast Plate
 **Category:** breakfast  
 **Cuisine inspiration:** North African-inspired  
 **Serves:** 4  
@@ -545,7 +545,7 @@ Lentil, celery, mushroom and sweet potato create a filling plant-forward meal bu
 
 ---
 
-## THA-014 — Californian-Style Split Pea, Broccoli & Fennel Breakfast Hash
+## THA-014 — Californian-style Split Pea, Broccoli & Fennel Breakfast Hash
 **Category:** breakfast  
 **Cuisine inspiration:** Californian-inspired  
 **Serves:** 4  
@@ -582,7 +582,7 @@ Split Pea, broccoli, fennel and oats create a filling plant-forward meal built f
 
 ---
 
-## THA-015 — French country-Style Cod, Red Pepper & Pumpkin Egg Skillet
+## THA-015 — French Country-style Cod, Red Pepper & Pumpkin Egg Skillet
 **Category:** breakfast  
 **Cuisine inspiration:** French country-inspired  
 **Serves:** 4  
@@ -619,7 +619,7 @@ Quality cod is paired with red pepper, pumpkin and pearl barley for a whole-food
 
 ---
 
-## THA-016 — Pakistani-Style Feta, Tomato & Green Bean Breakfast Wrap
+## THA-016 — Pakistani-style Feta, Tomato & Green Bean Breakfast Wrap
 **Category:** breakfast  
 **Cuisine inspiration:** Pakistani-inspired  
 **Serves:** 4  
@@ -656,7 +656,7 @@ Feta, tomato, green bean and wholemeal flatbread create a filling plant-forward 
 
 ---
 
-## THA-017 — Malaysian-Style Cottage Cheese, Peas & Pumpkin Toast Plate
+## THA-017 — Malaysian-style Cottage Cheese, Peas & Pumpkin Toast Plate
 **Category:** breakfast  
 **Cuisine inspiration:** Malaysian-inspired  
 **Serves:** 4  
@@ -693,7 +693,7 @@ Cottage Cheese, peas, pumpkin and oats create a filling plant-forward meal built
 
 ---
 
-## THA-018 — North African-Style Edamame, Cabbage & Celery Breakfast Hash
+## THA-018 — North African-style Edamame, Cabbage & Celery Breakfast Hash
 **Category:** breakfast  
 **Cuisine inspiration:** North African-inspired  
 **Serves:** 4  
@@ -730,7 +730,7 @@ Edamame, cabbage, celery and wholewheat pasta create a filling plant-forward mea
 
 ---
 
-## THA-019 — Californian-Style Cannellini Bean, Radish & Aubergine Egg Skillet
+## THA-019 — Californian-style Cannellini Bean, Radish & Aubergine Egg Skillet
 **Category:** breakfast  
 **Cuisine inspiration:** Californian-inspired  
 **Serves:** 4  
@@ -767,7 +767,7 @@ Cannellini Bean, radish, aubergine and quinoa create a filling plant-forward mea
 
 ---
 
-## THA-020 — French country-Style Tuna, Butternut Squash & Red Cabbage Breakfast Wrap
+## THA-020 — French Country-style Tuna, Butternut Squash & Red Cabbage Breakfast Wrap
 **Category:** breakfast  
 **Cuisine inspiration:** French country-inspired  
 **Serves:** 4  
@@ -804,7 +804,7 @@ Quality tuna is paired with butternut squash, red cabbage and oats for a whole-f
 
 ---
 
-## THA-021 — Pakistani-Style Feta, Parsnip & Fennel Toast Plate
+## THA-021 — Pakistani-style Feta, Parsnip & Fennel Toast Plate
 **Category:** breakfast  
 **Cuisine inspiration:** Pakistani-inspired  
 **Serves:** 4  
@@ -841,7 +841,7 @@ Feta, parsnip, fennel and wholegrain bread create a filling plant-forward meal b
 
 ---
 
-## THA-022 — Malaysian-Style Cottage Cheese, Asparagus & Spinach Breakfast Hash
+## THA-022 — Malaysian-style Cottage Cheese, Asparagus & Spinach Breakfast Hash
 **Category:** breakfast  
 **Cuisine inspiration:** Malaysian-inspired  
 **Serves:** 4  
@@ -878,7 +878,7 @@ Cottage Cheese, asparagus, spinach and wholewheat couscous create a filling plan
 
 ---
 
-## THA-023 — North African-Style Haricot Bean, Celery & Cherry Tomato Egg Skillet
+## THA-023 — North African-style Haricot Bean, Celery & Cherry Tomato Egg Skillet
 **Category:** breakfast  
 **Cuisine inspiration:** North African-inspired  
 **Serves:** 4  
@@ -915,7 +915,7 @@ Haricot Bean, celery, cherry tomato and oats create a filling plant-forward meal
 
 ---
 
-## THA-024 — Californian-Style Lentil, Broccoli & Radish Breakfast Wrap
+## THA-024 — Californian-style Lentil, Broccoli & Radish Breakfast Wrap
 **Category:** breakfast  
 **Cuisine inspiration:** Californian-inspired  
 **Serves:** 4  
@@ -952,7 +952,7 @@ Lentil, broccoli, radish and potato create a filling plant-forward meal built fr
 
 ---
 
-## THA-025 — French country-Style Sardine, Red Pepper & Pak Choi Toast Plate
+## THA-025 — French Country-style Sardine, Red Pepper & Pak Choi Toast Plate
 **Category:** breakfast  
 **Cuisine inspiration:** French country-inspired  
 **Serves:** 4  
@@ -989,7 +989,7 @@ Quality sardine is paired with red pepper, pak choi and brown basmati rice for a
 
 ---
 
-## THA-026 — Pakistani-Style Feta, Tomato & Cauliflower Breakfast Hash
+## THA-026 — Pakistani-style Feta, Tomato & Cauliflower Breakfast Hash
 **Category:** breakfast  
 **Cuisine inspiration:** Pakistani-inspired  
 **Serves:** 4  
@@ -1026,7 +1026,7 @@ Feta, tomato, cauliflower and oats create a filling plant-forward meal built fro
 
 ---
 
-## THA-027 — Malaysian-Style Cottage Cheese, Peas & Cauliflower Egg Skillet
+## THA-027 — Malaysian-style Cottage Cheese, Peas & Cauliflower Egg Skillet
 **Category:** breakfast  
 **Cuisine inspiration:** Malaysian-inspired  
 **Serves:** 4  
@@ -1063,7 +1063,7 @@ Cottage Cheese, peas, cauliflower and wholewheat noodles create a filling plant-
 
 ---
 
-## THA-028 — North African-Style Black Bean, Cabbage & Mushroom Breakfast Wrap
+## THA-028 — North African-style Black Bean, Cabbage & Mushroom Breakfast Wrap
 **Category:** breakfast  
 **Cuisine inspiration:** North African-inspired  
 **Serves:** 4  
@@ -1100,7 +1100,7 @@ Black Bean, cabbage, mushroom and sweet potato create a filling plant-forward me
 
 ---
 
-## THA-029 — Californian-Style Edamame, Radish & Fennel Toast Plate
+## THA-029 — Californian-style Edamame, Radish & Fennel Toast Plate
 **Category:** breakfast  
 **Cuisine inspiration:** Californian-inspired  
 **Serves:** 4  
@@ -1137,7 +1137,7 @@ Edamame, radish, fennel and oats create a filling plant-forward meal built from 
 
 ---
 
-## THA-030 — French country-Style Mackerel, Butternut Squash & Red Pepper Breakfast Hash
+## THA-030 — French Country-style Mackerel, Butternut Squash & Red Pepper Breakfast Hash
 **Category:** breakfast  
 **Cuisine inspiration:** French country-inspired  
 **Serves:** 4  
@@ -1174,7 +1174,7 @@ Quality mackerel is paired with butternut squash, red pepper and pearl barley fo
 
 ---
 
-## THA-031 — Pakistani-Style Feta, Parsnip & Green Bean Egg Skillet
+## THA-031 — Pakistani-style Feta, Parsnip & Green Bean Egg Skillet
 **Category:** breakfast  
 **Cuisine inspiration:** Pakistani-inspired  
 **Serves:** 4  
@@ -1211,7 +1211,7 @@ Feta, parsnip, green bean and wholemeal flatbread create a filling plant-forward
 
 ---
 
-## THA-032 — Malaysian-Style Cottage Cheese, Asparagus & Pumpkin Breakfast Wrap
+## THA-032 — Malaysian-style Cottage Cheese, Asparagus & Pumpkin Breakfast Wrap
 **Category:** breakfast  
 **Cuisine inspiration:** Malaysian-inspired  
 **Serves:** 4  
@@ -1248,7 +1248,7 @@ Cottage Cheese, asparagus, pumpkin and oats create a filling plant-forward meal 
 
 ---
 
-## THA-033 — North African-Style Chickpea, Celery & Cherry Tomato Toast Plate
+## THA-033 — North African-style Chickpea, Celery & Cherry Tomato Toast Plate
 **Category:** breakfast  
 **Cuisine inspiration:** North African-inspired  
 **Serves:** 4  
@@ -1285,7 +1285,7 @@ Chickpea, celery, cherry tomato and wholewheat pasta create a filling plant-forw
 
 ---
 
-## THA-034 — Californian-Style Haricot Bean, Broccoli & Aubergine Breakfast Hash
+## THA-034 — Californian-style Haricot Bean, Broccoli & Aubergine Breakfast Hash
 **Category:** breakfast  
 **Cuisine inspiration:** Californian-inspired  
 **Serves:** 4  
@@ -1322,7 +1322,7 @@ Haricot Bean, broccoli, aubergine and quinoa create a filling plant-forward meal
 
 ---
 
-## THA-035 — French country-Style Cod, Red Pepper & Red Cabbage Egg Skillet
+## THA-035 — French Country-style Cod, Red Pepper & Red Cabbage Egg Skillet
 **Category:** breakfast  
 **Cuisine inspiration:** French country-inspired  
 **Serves:** 4  
@@ -1359,7 +1359,7 @@ Quality cod is paired with red pepper, red cabbage and oats for a whole-food mea
 
 ---
 
-## THA-036 — Pakistani-Style Feta, Tomato & Parsnip Breakfast Wrap
+## THA-036 — Pakistani-style Feta, Tomato & Parsnip Breakfast Wrap
 **Category:** breakfast  
 **Cuisine inspiration:** Pakistani-inspired  
 **Serves:** 4  
@@ -1396,7 +1396,7 @@ Feta, tomato, parsnip and wholegrain bread create a filling plant-forward meal b
 
 ---
 
-## THA-037 — Malaysian-Style Cottage Cheese, Peas & Spinach Toast Plate
+## THA-037 — Malaysian-style Cottage Cheese, Peas & Spinach Toast Plate
 **Category:** breakfast  
 **Cuisine inspiration:** Malaysian-inspired  
 **Serves:** 4  
@@ -1433,7 +1433,7 @@ Cottage Cheese, peas, spinach and wholewheat couscous create a filling plant-for
 
 ---
 
-## THA-038 — North African-Style Tofu, Cabbage & Cherry Tomato Breakfast Hash
+## THA-038 — North African-style Tofu, Cabbage & Cherry Tomato Breakfast Hash
 **Category:** breakfast  
 **Cuisine inspiration:** North African-inspired  
 **Serves:** 4  
@@ -1470,7 +1470,7 @@ Tofu, cabbage, cherry tomato and oats create a filling plant-forward meal built 
 
 ---
 
-## THA-039 — Californian-Style Black Bean, Radish & Red Cabbage Egg Skillet
+## THA-039 — Californian-style Black Bean, Radish & Red Cabbage Egg Skillet
 **Category:** breakfast  
 **Cuisine inspiration:** Californian-inspired  
 **Serves:** 4  
@@ -1507,7 +1507,7 @@ Black Bean, radish, red cabbage and potato create a filling plant-forward meal b
 
 ---
 
-## THA-040 — French country-Style Tuna, Butternut Squash & Pak Choi Breakfast Wrap
+## THA-040 — French Country-style Tuna, Butternut Squash & Pak Choi Breakfast Wrap
 **Category:** breakfast  
 **Cuisine inspiration:** French country-inspired  
 **Serves:** 4  
@@ -1544,7 +1544,7 @@ Quality tuna is paired with butternut squash, pak choi and brown basmati rice fo
 
 ---
 
-## THA-041 — Pakistani-Style Feta, Parsnip & Cauliflower Toast Plate
+## THA-041 — Pakistani-style Feta, Parsnip & Cauliflower Toast Plate
 **Category:** breakfast  
 **Cuisine inspiration:** Pakistani-inspired  
 **Serves:** 4  
@@ -1581,7 +1581,7 @@ Feta, parsnip, cauliflower and oats create a filling plant-forward meal built fr
 
 ---
 
-## THA-042 — Malaysian-Style Cottage Cheese, Asparagus & Peas Breakfast Hash
+## THA-042 — Malaysian-style Cottage Cheese, Asparagus & Peas Breakfast Hash
 **Category:** breakfast  
 **Cuisine inspiration:** Malaysian-inspired  
 **Serves:** 4  
@@ -1618,7 +1618,7 @@ Cottage Cheese, asparagus, peas and wholewheat noodles create a filling plant-fo
 
 ---
 
-## THA-043 — North African-Style Kidney Bean, Celery & Mushroom Egg Skillet
+## THA-043 — North African-style Kidney Bean, Celery & Mushroom Egg Skillet
 **Category:** breakfast  
 **Cuisine inspiration:** North African-inspired  
 **Serves:** 4  
@@ -1655,7 +1655,7 @@ Kidney Bean, celery, mushroom and sweet potato create a filling plant-forward me
 
 ---
 
-## THA-044 — Californian-Style Chickpea, Broccoli & Fennel Breakfast Wrap
+## THA-044 — Californian-style Chickpea, Broccoli & Fennel Breakfast Wrap
 **Category:** breakfast  
 **Cuisine inspiration:** Californian-inspired  
 **Serves:** 4  
@@ -1692,7 +1692,7 @@ Chickpea, broccoli, fennel and oats create a filling plant-forward meal built fr
 
 ---
 
-## THA-045 — French country-Style Sardine, Red Pepper & Pumpkin Toast Plate
+## THA-045 — French Country-style Sardine, Red Pepper & Pumpkin Toast Plate
 **Category:** breakfast  
 **Cuisine inspiration:** French country-inspired  
 **Serves:** 4  
@@ -1729,7 +1729,7 @@ Quality sardine is paired with red pepper, pumpkin and pearl barley for a whole-
 
 ---
 
-## THA-046 — Pakistani-Style Feta, Tomato & Green Bean Breakfast Hash
+## THA-046 — Pakistani-style Feta, Tomato & Green Bean Breakfast Hash
 **Category:** breakfast  
 **Cuisine inspiration:** Pakistani-inspired  
 **Serves:** 4  
@@ -1766,7 +1766,7 @@ Feta, tomato, green bean and wholemeal flatbread create a filling plant-forward 
 
 ---
 
-## THA-047 — Malaysian-Style Cottage Cheese, Peas & Pumpkin Egg Skillet
+## THA-047 — Malaysian-style Cottage Cheese, Peas & Pumpkin Egg Skillet
 **Category:** breakfast  
 **Cuisine inspiration:** Malaysian-inspired  
 **Serves:** 4  
@@ -1803,7 +1803,7 @@ Cottage Cheese, peas, pumpkin and oats create a filling plant-forward meal built
 
 ---
 
-## THA-048 — North African-Style Butter Bean, Cabbage & Celery Breakfast Wrap
+## THA-048 — North African-style Butter Bean, Cabbage & Celery Breakfast Wrap
 **Category:** breakfast  
 **Cuisine inspiration:** North African-inspired  
 **Serves:** 4  
@@ -1840,7 +1840,7 @@ Butter Bean, cabbage, celery and wholewheat pasta create a filling plant-forward
 
 ---
 
-## THA-049 — Californian-Style Tofu, Radish & Aubergine Toast Plate
+## THA-049 — Californian-style Tofu, Radish & Aubergine Toast Plate
 **Category:** breakfast  
 **Cuisine inspiration:** Californian-inspired  
 **Serves:** 4  
@@ -1877,7 +1877,7 @@ Tofu, radish, aubergine and quinoa create a filling plant-forward meal built fro
 
 ---
 
-## THA-050 — French country-Style Mackerel, Butternut Squash & Red Cabbage Breakfast Hash
+## THA-050 — French Country-style Mackerel, Butternut Squash & Red Cabbage Breakfast Hash
 **Category:** breakfast  
 **Cuisine inspiration:** French country-inspired  
 **Serves:** 4  
@@ -1914,7 +1914,7 @@ Quality mackerel is paired with butternut squash, red cabbage and oats for a who
 
 ---
 
-## THA-051 — Pakistani-Style Feta, Parsnip & Fennel Egg Skillet
+## THA-051 — Pakistani-style Feta, Parsnip & Fennel Egg Skillet
 **Category:** breakfast  
 **Cuisine inspiration:** Pakistani-inspired  
 **Serves:** 4  
@@ -1951,7 +1951,7 @@ Feta, parsnip, fennel and wholegrain bread create a filling plant-forward meal b
 
 ---
 
-## THA-052 — Malaysian-Style Cottage Cheese, Asparagus & Spinach Breakfast Wrap
+## THA-052 — Malaysian-style Cottage Cheese, Asparagus & Spinach Breakfast Wrap
 **Category:** breakfast  
 **Cuisine inspiration:** Malaysian-inspired  
 **Serves:** 4  
@@ -1988,7 +1988,7 @@ Cottage Cheese, asparagus, spinach and wholewheat couscous create a filling plan
 
 ---
 
-## THA-053 — North African-Style Green Pea, Celery & Cherry Tomato Toast Plate
+## THA-053 — North African-style Green Pea, Celery & Cherry Tomato Toast Plate
 **Category:** breakfast  
 **Cuisine inspiration:** North African-inspired  
 **Serves:** 4  
@@ -2025,7 +2025,7 @@ Green Pea, celery, cherry tomato and oats create a filling plant-forward meal bu
 
 ---
 
-## THA-054 — Californian-Style Kidney Bean, Broccoli & Radish Breakfast Hash
+## THA-054 — Californian-style Kidney Bean, Broccoli & Radish Breakfast Hash
 **Category:** breakfast  
 **Cuisine inspiration:** Californian-inspired  
 **Serves:** 4  
@@ -2062,7 +2062,7 @@ Kidney Bean, broccoli, radish and potato create a filling plant-forward meal bui
 
 ---
 
-## THA-055 — French country-Style Cod, Red Pepper & Pak Choi Egg Skillet
+## THA-055 — French Country-style Cod, Red Pepper & Pak Choi Egg Skillet
 **Category:** breakfast  
 **Cuisine inspiration:** French country-inspired  
 **Serves:** 4  
@@ -2099,7 +2099,7 @@ Quality cod is paired with red pepper, pak choi and brown basmati rice for a who
 
 ---
 
-## THA-056 — Pakistani-Style Feta, Tomato & Cauliflower Breakfast Wrap
+## THA-056 — Pakistani-style Feta, Tomato & Cauliflower Breakfast Wrap
 **Category:** breakfast  
 **Cuisine inspiration:** Pakistani-inspired  
 **Serves:** 4  
@@ -2136,7 +2136,7 @@ Feta, tomato, cauliflower and oats create a filling plant-forward meal built fro
 
 ---
 
-## THA-057 — Malaysian-Style Cottage Cheese, Peas & Cauliflower Toast Plate
+## THA-057 — Malaysian-style Cottage Cheese, Peas & Cauliflower Toast Plate
 **Category:** breakfast  
 **Cuisine inspiration:** Malaysian-inspired  
 **Serves:** 4  
@@ -2173,7 +2173,7 @@ Cottage Cheese, peas, cauliflower and wholewheat noodles create a filling plant-
 
 ---
 
-## THA-058 — North African-Style Split Pea, Cabbage & Mushroom Breakfast Hash
+## THA-058 — North African-style Split Pea, Cabbage & Mushroom Breakfast Hash
 **Category:** breakfast  
 **Cuisine inspiration:** North African-inspired  
 **Serves:** 4  
@@ -2210,7 +2210,7 @@ Split Pea, cabbage, mushroom and sweet potato create a filling plant-forward mea
 
 ---
 
-## THA-059 — Californian-Style Butter Bean, Radish & Fennel Egg Skillet
+## THA-059 — Californian-style Butter Bean, Radish & Fennel Egg Skillet
 **Category:** breakfast  
 **Cuisine inspiration:** Californian-inspired  
 **Serves:** 4  
@@ -2247,7 +2247,7 @@ Butter Bean, radish, fennel and oats create a filling plant-forward meal built f
 
 ---
 
-## THA-060 — French country-Style Tuna, Butternut Squash & Red Pepper Breakfast Wrap
+## THA-060 — French Country-style Tuna, Butternut Squash & Red Pepper Breakfast Wrap
 **Category:** breakfast  
 **Cuisine inspiration:** French country-inspired  
 **Serves:** 4  
@@ -2284,7 +2284,7 @@ Quality tuna is paired with butternut squash, red pepper and pearl barley for a 
 
 ---
 
-## THA-061 — Pakistani-Style Feta, Parsnip & Green Bean Toast Plate
+## THA-061 — Pakistani-style Feta, Parsnip & Green Bean Toast Plate
 **Category:** breakfast  
 **Cuisine inspiration:** Pakistani-inspired  
 **Serves:** 4  
@@ -2321,7 +2321,7 @@ Feta, parsnip, green bean and wholemeal flatbread create a filling plant-forward
 
 ---
 
-## THA-062 — Malaysian-Style Cottage Cheese, Asparagus & Pumpkin Breakfast Hash
+## THA-062 — Malaysian-style Cottage Cheese, Asparagus & Pumpkin Breakfast Hash
 **Category:** breakfast  
 **Cuisine inspiration:** Malaysian-inspired  
 **Serves:** 4  
@@ -2358,7 +2358,7 @@ Cottage Cheese, asparagus, pumpkin and oats create a filling plant-forward meal 
 
 ---
 
-## THA-063 — North African-Style Cannellini Bean, Celery & Cherry Tomato Egg Skillet
+## THA-063 — North African-style Cannellini Bean, Celery & Cherry Tomato Egg Skillet
 **Category:** breakfast  
 **Cuisine inspiration:** North African-inspired  
 **Serves:** 4  
@@ -2395,7 +2395,7 @@ Cannellini Bean, celery, cherry tomato and wholewheat pasta create a filling pla
 
 ---
 
-## THA-064 — Californian-Style Green Pea, Broccoli & Aubergine Breakfast Wrap
+## THA-064 — Californian-style Green Pea, Broccoli & Aubergine Breakfast Wrap
 **Category:** breakfast  
 **Cuisine inspiration:** Californian-inspired  
 **Serves:** 4  
@@ -2432,7 +2432,7 @@ Green Pea, broccoli, aubergine and quinoa create a filling plant-forward meal bu
 
 ---
 
-## THA-065 — French country-Style Sardine, Red Pepper & Red Cabbage Toast Plate
+## THA-065 — French Country-style Sardine, Red Pepper & Red Cabbage Toast Plate
 **Category:** breakfast  
 **Cuisine inspiration:** French country-inspired  
 **Serves:** 4  
@@ -2469,7 +2469,7 @@ Quality sardine is paired with red pepper, red cabbage and oats for a whole-food
 
 ---
 
-## THA-066 — Pakistani-Style Feta, Tomato & Parsnip Breakfast Hash
+## THA-066 — Pakistani-style Feta, Tomato & Parsnip Breakfast Hash
 **Category:** breakfast  
 **Cuisine inspiration:** Pakistani-inspired  
 **Serves:** 4  
@@ -2506,7 +2506,7 @@ Feta, tomato, parsnip and wholegrain bread create a filling plant-forward meal b
 
 ---
 
-## THA-067 — Malaysian-Style Cottage Cheese, Peas & Spinach Egg Skillet
+## THA-067 — Malaysian-style Cottage Cheese, Peas & Spinach Egg Skillet
 **Category:** breakfast  
 **Cuisine inspiration:** Malaysian-inspired  
 **Serves:** 4  
@@ -2543,7 +2543,7 @@ Cottage Cheese, peas, spinach and wholewheat couscous create a filling plant-for
 
 ---
 
-## THA-068 — North African-Style Lentil, Cabbage & Cherry Tomato Breakfast Wrap
+## THA-068 — North African-style Lentil, Cabbage & Cherry Tomato Breakfast Wrap
 **Category:** breakfast  
 **Cuisine inspiration:** North African-inspired  
 **Serves:** 4  
@@ -2580,7 +2580,7 @@ Lentil, cabbage, cherry tomato and oats create a filling plant-forward meal buil
 
 ---
 
-## THA-069 — Californian-Style Split Pea, Radish & Red Cabbage Toast Plate
+## THA-069 — Californian-style Split Pea, Radish & Red Cabbage Toast Plate
 **Category:** breakfast  
 **Cuisine inspiration:** Californian-inspired  
 **Serves:** 4  
@@ -2617,7 +2617,7 @@ Split Pea, radish, red cabbage and potato create a filling plant-forward meal bu
 
 ---
 
-## THA-070 — French country-Style Mackerel, Butternut Squash & Pak Choi Breakfast Hash
+## THA-070 — French Country-style Mackerel, Butternut Squash & Pak Choi Breakfast Hash
 **Category:** breakfast  
 **Cuisine inspiration:** French country-inspired  
 **Serves:** 4  
@@ -2654,7 +2654,7 @@ Quality mackerel is paired with butternut squash, pak choi and brown basmati ric
 
 ---
 
-## THA-071 — Pakistani-Style Feta, Parsnip & Cauliflower Egg Skillet 2
+## THA-071 — Pakistani-style Feta, Parsnip & Cauliflower Egg Skillet 2
 **Category:** breakfast  
 **Cuisine inspiration:** Pakistani-inspired  
 **Serves:** 4  
@@ -2691,7 +2691,7 @@ Feta, parsnip, cauliflower and oats create a filling plant-forward meal built fr
 
 ---
 
-## THA-072 — Malaysian-Style Cottage Cheese, Asparagus & Peas Breakfast Wrap 2
+## THA-072 — Malaysian-style Cottage Cheese, Asparagus & Peas Breakfast Wrap 2
 **Category:** breakfast  
 **Cuisine inspiration:** Malaysian-inspired  
 **Serves:** 4  
@@ -2728,7 +2728,7 @@ Cottage Cheese, asparagus, peas and wholewheat noodles create a filling plant-fo
 
 ---
 
-## THA-073 — North African-Style Edamame, Celery & Mushroom Toast Plate
+## THA-073 — North African-style Edamame, Celery & Mushroom Toast Plate
 **Category:** breakfast  
 **Cuisine inspiration:** North African-inspired  
 **Serves:** 4  
@@ -2765,7 +2765,7 @@ Edamame, celery, mushroom and sweet potato create a filling plant-forward meal b
 
 ---
 
-## THA-074 — Californian-Style Cannellini Bean, Broccoli & Fennel Breakfast Hash
+## THA-074 — Californian-style Cannellini Bean, Broccoli & Fennel Breakfast Hash
 **Category:** breakfast  
 **Cuisine inspiration:** Californian-inspired  
 **Serves:** 4  
@@ -2802,7 +2802,7 @@ Cannellini Bean, broccoli, fennel and oats create a filling plant-forward meal b
 
 ---
 
-## THA-075 — French country-Style Cod, Red Pepper & Pumpkin Egg Skillet 2
+## THA-075 — French Country-style Cod, Red Pepper & Pumpkin Egg Skillet 2
 **Category:** breakfast  
 **Cuisine inspiration:** French country-inspired  
 **Serves:** 4  
@@ -2839,7 +2839,7 @@ Quality cod is paired with red pepper, pumpkin and pearl barley for a whole-food
 
 ---
 
-## THA-076 — Pakistani-Style Feta, Tomato & Green Bean Breakfast Wrap 2
+## THA-076 — Pakistani-style Feta, Tomato & Green Bean Breakfast Wrap 2
 **Category:** breakfast  
 **Cuisine inspiration:** Pakistani-inspired  
 **Serves:** 4  
@@ -2876,7 +2876,7 @@ Feta, tomato, green bean and wholemeal flatbread create a filling plant-forward 
 
 ---
 
-## THA-077 — Malaysian-Style Cottage Cheese, Peas & Pumpkin Toast Plate 2
+## THA-077 — Malaysian-style Cottage Cheese, Peas & Pumpkin Toast Plate 2
 **Category:** breakfast  
 **Cuisine inspiration:** Malaysian-inspired  
 **Serves:** 4  
@@ -2913,7 +2913,7 @@ Cottage Cheese, peas, pumpkin and oats create a filling plant-forward meal built
 
 ---
 
-## THA-078 — North African-Style Haricot Bean, Cabbage & Celery Breakfast Hash
+## THA-078 — North African-style Haricot Bean, Cabbage & Celery Breakfast Hash
 **Category:** breakfast  
 **Cuisine inspiration:** North African-inspired  
 **Serves:** 4  
@@ -2950,7 +2950,7 @@ Haricot Bean, cabbage, celery and wholewheat pasta create a filling plant-forwar
 
 ---
 
-## THA-079 — Californian-Style Lentil, Radish & Aubergine Egg Skillet
+## THA-079 — Californian-style Lentil, Radish & Aubergine Egg Skillet
 **Category:** breakfast  
 **Cuisine inspiration:** Californian-inspired  
 **Serves:** 4  
@@ -2987,7 +2987,7 @@ Lentil, radish, aubergine and quinoa create a filling plant-forward meal built f
 
 ---
 
-## THA-080 — French country-Style Tuna, Butternut Squash & Red Cabbage Breakfast Wrap 2
+## THA-080 — French Country-style Tuna, Butternut Squash & Red Cabbage Breakfast Wrap 2
 **Category:** breakfast  
 **Cuisine inspiration:** French country-inspired  
 **Serves:** 4  
@@ -3024,7 +3024,7 @@ Quality tuna is paired with butternut squash, red cabbage and oats for a whole-f
 
 ---
 
-## THA-081 — Pakistani-Style Feta, Parsnip & Fennel Toast Plate 2
+## THA-081 — Pakistani-style Feta, Parsnip & Fennel Toast Plate 2
 **Category:** breakfast  
 **Cuisine inspiration:** Pakistani-inspired  
 **Serves:** 4  
@@ -3061,7 +3061,7 @@ Feta, parsnip, fennel and wholegrain bread create a filling plant-forward meal b
 
 ---
 
-## THA-082 — Malaysian-Style Cottage Cheese, Asparagus & Spinach Breakfast Hash 2
+## THA-082 — Malaysian-style Cottage Cheese, Asparagus & Spinach Breakfast Hash 2
 **Category:** breakfast  
 **Cuisine inspiration:** Malaysian-inspired  
 **Serves:** 4  
@@ -3098,7 +3098,7 @@ Cottage Cheese, asparagus, spinach and wholewheat couscous create a filling plan
 
 ---
 
-## THA-083 — North African-Style Black Bean, Celery & Cherry Tomato Egg Skillet
+## THA-083 — North African-style Black Bean, Celery & Cherry Tomato Egg Skillet
 **Category:** breakfast  
 **Cuisine inspiration:** North African-inspired  
 **Serves:** 4  
@@ -3135,7 +3135,7 @@ Black Bean, celery, cherry tomato and oats create a filling plant-forward meal b
 
 ---
 
-## THA-084 — Californian-Style Edamame, Broccoli & Radish Breakfast Wrap
+## THA-084 — Californian-style Edamame, Broccoli & Radish Breakfast Wrap
 **Category:** breakfast  
 **Cuisine inspiration:** Californian-inspired  
 **Serves:** 4  
@@ -3172,7 +3172,7 @@ Edamame, broccoli, radish and potato create a filling plant-forward meal built f
 
 ---
 
-## THA-085 — Moroccan-Style Butter Bean, Pumpkin & Green Bean Jacket Potato
+## THA-085 — Moroccan-style Butter Bean, Pumpkin & Green Bean Jacket Potato
 **Category:** lunch  
 **Cuisine inspiration:** Moroccan-inspired  
 **Serves:** 4  
@@ -3216,7 +3216,7 @@ Butter Bean, pumpkin, green bean and brown rice create a filling plant-forward m
 
 ---
 
-## THA-086 — Thai-Style Sardine, Kale & Pumpkin Frittata
+## THA-086 — Thai-style Sardine, Kale & Pumpkin Frittata
 **Category:** lunch  
 **Cuisine inspiration:** Thai-inspired  
 **Serves:** 4  
@@ -3261,7 +3261,7 @@ Quality sardine is paired with kale, pumpkin and pearl barley for a whole-food m
 
 ---
 
-## THA-087 — Peruvian-Style Halloumi, Fennel & Celery Lunch Bowl
+## THA-087 — Peruvian-style Halloumi, Fennel & Celery Lunch Bowl
 **Category:** lunch  
 **Cuisine inspiration:** Peruvian-inspired  
 **Serves:** 4  
@@ -3349,7 +3349,7 @@ Edamame, onion, aubergine and oats create a filling plant-forward meal built fro
 
 ---
 
-## THA-089 — Mediterranean-Style Tuna, Cauliflower & Red Cabbage Jacket Potato
+## THA-089 — Mediterranean-style Tuna, Cauliflower & Red Cabbage Jacket Potato
 **Category:** lunch  
 **Cuisine inspiration:** Mediterranean-inspired  
 **Serves:** 4  
@@ -3393,7 +3393,7 @@ Quality tuna is paired with cauliflower, red cabbage and wholewheat pasta for a 
 
 ---
 
-## THA-090 — Moroccan-Style Egg, Courgette & Parsnip Frittata
+## THA-090 — Moroccan-style Egg, Courgette & Parsnip Frittata
 **Category:** lunch  
 **Cuisine inspiration:** Moroccan-inspired  
 **Serves:** 4  
@@ -3437,7 +3437,7 @@ Egg, courgette, parsnip and quinoa create a filling plant-forward meal built fro
 
 ---
 
-## THA-091 — Thai-Style Kidney Bean, Cherry Tomato & Spinach Lunch Bowl
+## THA-091 — Thai-style Kidney Bean, Cherry Tomato & Spinach Lunch Bowl
 **Category:** lunch  
 **Cuisine inspiration:** Thai-inspired  
 **Serves:** 4  
@@ -3482,7 +3482,7 @@ Kidney Bean, cherry tomato, spinach and wholegrain wrap create a filling plant-f
 
 ---
 
-## THA-092 — Peruvian-Style Cod, Sweetcorn & Cherry Tomato Stuffed Pitta
+## THA-092 — Peruvian-style Cod, Sweetcorn & Cherry Tomato Stuffed Pitta
 **Category:** lunch  
 **Cuisine inspiration:** Peruvian-inspired  
 **Serves:** 4  
@@ -3570,7 +3570,7 @@ Feta, red cabbage, radish and wholewheat couscous create a filling plant-forward
 
 ---
 
-## THA-094 — Mediterranean-Style Lentil, Cucumber & Pak Choi Frittata
+## THA-094 — Mediterranean-style Lentil, Cucumber & Pak Choi Frittata
 **Category:** lunch  
 **Cuisine inspiration:** Mediterranean-inspired  
 **Serves:** 4  
@@ -3614,7 +3614,7 @@ Lentil, cucumber, pak choi and buckwheat create a filling plant-forward meal bui
 
 ---
 
-## THA-095 — Moroccan-Style Mackerel, Pumpkin & Cauliflower Lunch Bowl
+## THA-095 — Moroccan-style Mackerel, Pumpkin & Cauliflower Lunch Bowl
 **Category:** lunch  
 **Cuisine inspiration:** Moroccan-inspired  
 **Serves:** 4  
@@ -3658,7 +3658,7 @@ Quality mackerel is paired with pumpkin, cauliflower and potato for a whole-food
 
 ---
 
-## THA-096 — Thai-Style Greek Yoghurt, Kale & Peas Stuffed Pitta
+## THA-096 — Thai-style Greek Yoghurt, Kale & Peas Stuffed Pitta
 **Category:** lunch  
 **Cuisine inspiration:** Thai-inspired  
 **Serves:** 4  
@@ -3703,7 +3703,7 @@ Greek Yoghurt, kale, peas and brown basmati rice create a filling plant-forward 
 
 ---
 
-## THA-097 — Peruvian-Style Tofu, Fennel & Mushroom Jacket Potato
+## THA-097 — Peruvian-style Tofu, Fennel & Mushroom Jacket Potato
 **Category:** lunch  
 **Cuisine inspiration:** Peruvian-inspired  
 **Serves:** 4  
@@ -3791,7 +3791,7 @@ Quality sardine is paired with onion, fennel and wholewheat noodles for a whole-
 
 ---
 
-## THA-099 — Mediterranean-Style Cottage Cheese, Cauliflower & Red Pepper Lunch Bowl
+## THA-099 — Mediterranean-style Cottage Cheese, Cauliflower & Red Pepper Lunch Bowl
 **Category:** lunch  
 **Cuisine inspiration:** Mediterranean-inspired  
 **Serves:** 4  
@@ -3835,7 +3835,7 @@ Cottage Cheese, cauliflower, red pepper and sweet potato create a filling plant-
 
 ---
 
-## THA-100 — Moroccan-Style Cannellini Bean, Courgette & Green Bean Stuffed Pitta
+## THA-100 — Moroccan-style Cannellini Bean, Courgette & Green Bean Stuffed Pitta
 **Category:** lunch  
 **Cuisine inspiration:** Moroccan-inspired  
 **Serves:** 4  
@@ -3879,7 +3879,7 @@ Cannellini Bean, courgette, green bean and brown rice create a filling plant-for
 
 ---
 
-## THA-101 — Thai-Style Tuna, Cherry Tomato & Pumpkin Jacket Potato
+## THA-101 — Thai-style Tuna, Cherry Tomato & Pumpkin Jacket Potato
 **Category:** lunch  
 **Cuisine inspiration:** Thai-inspired  
 **Serves:** 4  
@@ -3924,7 +3924,7 @@ Quality tuna is paired with cherry tomato, pumpkin and pearl barley for a whole-
 
 ---
 
-## THA-102 — Peruvian-Style Halloumi, Sweetcorn & Celery Frittata
+## THA-102 — Peruvian-style Halloumi, Sweetcorn & Celery Frittata
 **Category:** lunch  
 **Cuisine inspiration:** Peruvian-inspired  
 **Serves:** 4  
@@ -4012,7 +4012,7 @@ Chickpea, red cabbage, aubergine and oats create a filling plant-forward meal bu
 
 ---
 
-## THA-104 — Mediterranean-Style Cod, Cucumber & Red Cabbage Stuffed Pitta
+## THA-104 — Mediterranean-style Cod, Cucumber & Red Cabbage Stuffed Pitta
 **Category:** lunch  
 **Cuisine inspiration:** Mediterranean-inspired  
 **Serves:** 4  
@@ -4056,7 +4056,7 @@ Quality cod is paired with cucumber, red cabbage and wholewheat pasta for a whol
 
 ---
 
-## THA-105 — Moroccan-Style Egg, Pumpkin & Parsnip Jacket Potato
+## THA-105 — Moroccan-style Egg, Pumpkin & Parsnip Jacket Potato
 **Category:** lunch  
 **Cuisine inspiration:** Moroccan-inspired  
 **Serves:** 4  
@@ -4100,7 +4100,7 @@ Egg, pumpkin, parsnip and quinoa create a filling plant-forward meal built from 
 
 ---
 
-## THA-106 — Thai-Style Split Pea, Kale & Spinach Frittata
+## THA-106 — Thai-style Split Pea, Kale & Spinach Frittata
 **Category:** lunch  
 **Cuisine inspiration:** Thai-inspired  
 **Serves:** 4  
@@ -4145,7 +4145,7 @@ Split Pea, kale, spinach and wholegrain wrap create a filling plant-forward meal
 
 ---
 
-## THA-107 — Peruvian-Style Mackerel, Fennel & Cherry Tomato Lunch Bowl
+## THA-107 — Peruvian-style Mackerel, Fennel & Cherry Tomato Lunch Bowl
 **Category:** lunch  
 **Cuisine inspiration:** Peruvian-inspired  
 **Serves:** 4  
@@ -4233,7 +4233,7 @@ Feta, onion, radish and wholewheat couscous create a filling plant-forward meal 
 
 ---
 
-## THA-109 — Mediterranean-Style Black Bean, Cauliflower & Pak Choi Jacket Potato
+## THA-109 — Mediterranean-style Black Bean, Cauliflower & Pak Choi Jacket Potato
 **Category:** lunch  
 **Cuisine inspiration:** Mediterranean-inspired  
 **Serves:** 4  
@@ -4277,7 +4277,7 @@ Black Bean, cauliflower, pak choi and buckwheat create a filling plant-forward m
 
 ---
 
-## THA-110 — Moroccan-Style Sardine, Courgette & Cauliflower Frittata
+## THA-110 — Moroccan-style Sardine, Courgette & Cauliflower Frittata
 **Category:** lunch  
 **Cuisine inspiration:** Moroccan-inspired  
 **Serves:** 4  
@@ -4321,7 +4321,7 @@ Quality sardine is paired with courgette, cauliflower and potato for a whole-foo
 
 ---
 
-## THA-111 — Thai-Style Greek Yoghurt, Cherry Tomato & Peas Lunch Bowl
+## THA-111 — Thai-style Greek Yoghurt, Cherry Tomato & Peas Lunch Bowl
 **Category:** lunch  
 **Cuisine inspiration:** Thai-inspired  
 **Serves:** 4  
@@ -4366,7 +4366,7 @@ Greek Yoghurt, cherry tomato, peas and brown basmati rice create a filling plant
 
 ---
 
-## THA-112 — Peruvian-Style Green Pea, Sweetcorn & Mushroom Stuffed Pitta
+## THA-112 — Peruvian-style Green Pea, Sweetcorn & Mushroom Stuffed Pitta
 **Category:** lunch  
 **Cuisine inspiration:** Peruvian-inspired  
 **Serves:** 4  
@@ -4454,7 +4454,7 @@ Quality tuna is paired with red cabbage, fennel and wholewheat noodles for a who
 
 ---
 
-## THA-114 — Mediterranean-Style Cottage Cheese, Cucumber & Red Pepper Frittata
+## THA-114 — Mediterranean-style Cottage Cheese, Cucumber & Red Pepper Frittata
 **Category:** lunch  
 **Cuisine inspiration:** Mediterranean-inspired  
 **Serves:** 4  
@@ -4498,7 +4498,7 @@ Cottage Cheese, cucumber, red pepper and sweet potato create a filling plant-for
 
 ---
 
-## THA-115 — Moroccan-Style Haricot Bean, Pumpkin & Green Bean Lunch Bowl
+## THA-115 — Moroccan-style Haricot Bean, Pumpkin & Green Bean Lunch Bowl
 **Category:** lunch  
 **Cuisine inspiration:** Moroccan-inspired  
 **Serves:** 4  
@@ -4542,7 +4542,7 @@ Haricot Bean, pumpkin, green bean and brown rice create a filling plant-forward 
 
 ---
 
-## THA-116 — Thai-Style Cod, Kale & Pumpkin Stuffed Pitta
+## THA-116 — Thai-style Cod, Kale & Pumpkin Stuffed Pitta
 **Category:** lunch  
 **Cuisine inspiration:** Thai-inspired  
 **Serves:** 4  
@@ -4587,7 +4587,7 @@ Quality cod is paired with kale, pumpkin and pearl barley for a whole-food meal 
 
 ---
 
-## THA-117 — Peruvian-Style Halloumi, Fennel & Celery Jacket Potato
+## THA-117 — Peruvian-style Halloumi, Fennel & Celery Jacket Potato
 **Category:** lunch  
 **Cuisine inspiration:** Peruvian-inspired  
 **Serves:** 4  
@@ -4675,7 +4675,7 @@ Butter Bean, onion, aubergine and oats create a filling plant-forward meal built
 
 ---
 
-## THA-119 — Mediterranean-Style Mackerel, Cauliflower & Red Cabbage Lunch Bowl
+## THA-119 — Mediterranean-style Mackerel, Cauliflower & Red Cabbage Lunch Bowl
 **Category:** lunch  
 **Cuisine inspiration:** Mediterranean-inspired  
 **Serves:** 4  
@@ -4719,7 +4719,7 @@ Quality mackerel is paired with cauliflower, red cabbage and wholewheat pasta fo
 
 ---
 
-## THA-120 — Moroccan-Style Egg, Courgette & Parsnip Stuffed Pitta
+## THA-120 — Moroccan-style Egg, Courgette & Parsnip Stuffed Pitta
 **Category:** lunch  
 **Cuisine inspiration:** Moroccan-inspired  
 **Serves:** 4  
@@ -4763,7 +4763,7 @@ Egg, courgette, parsnip and quinoa create a filling plant-forward meal built fro
 
 ---
 
-## THA-121 — Thai-Style Edamame, Cherry Tomato & Spinach Jacket Potato
+## THA-121 — Thai-style Edamame, Cherry Tomato & Spinach Jacket Potato
 **Category:** lunch  
 **Cuisine inspiration:** Thai-inspired  
 **Serves:** 4  
@@ -4808,7 +4808,7 @@ Edamame, cherry tomato, spinach and wholegrain wrap create a filling plant-forwa
 
 ---
 
-## THA-122 — Peruvian-Style Sardine, Sweetcorn & Cherry Tomato Frittata
+## THA-122 — Peruvian-style Sardine, Sweetcorn & Cherry Tomato Frittata
 **Category:** lunch  
 **Cuisine inspiration:** Peruvian-inspired  
 **Serves:** 4  
@@ -4896,7 +4896,7 @@ Feta, red cabbage, radish and wholewheat couscous create a filling plant-forward
 
 ---
 
-## THA-124 — Mediterranean-Style Kidney Bean, Cucumber & Pak Choi Stuffed Pitta
+## THA-124 — Mediterranean-style Kidney Bean, Cucumber & Pak Choi Stuffed Pitta
 **Category:** lunch  
 **Cuisine inspiration:** Mediterranean-inspired  
 **Serves:** 4  
@@ -4940,7 +4940,7 @@ Kidney Bean, cucumber, pak choi and buckwheat create a filling plant-forward mea
 
 ---
 
-## THA-125 — Moroccan-Style Tuna, Pumpkin & Cauliflower Jacket Potato
+## THA-125 — Moroccan-style Tuna, Pumpkin & Cauliflower Jacket Potato
 **Category:** lunch  
 **Cuisine inspiration:** Moroccan-inspired  
 **Serves:** 4  
@@ -4984,7 +4984,7 @@ Quality tuna is paired with pumpkin, cauliflower and potato for a whole-food mea
 
 ---
 
-## THA-126 — Thai-Style Greek Yoghurt, Kale & Peas Frittata
+## THA-126 — Thai-style Greek Yoghurt, Kale & Peas Frittata
 **Category:** lunch  
 **Cuisine inspiration:** Thai-inspired  
 **Serves:** 4  
@@ -5029,7 +5029,7 @@ Greek Yoghurt, kale, peas and brown basmati rice create a filling plant-forward 
 
 ---
 
-## THA-127 — Peruvian-Style Lentil, Fennel & Mushroom Lunch Bowl
+## THA-127 — Peruvian-style Lentil, Fennel & Mushroom Lunch Bowl
 **Category:** lunch  
 **Cuisine inspiration:** Peruvian-inspired  
 **Serves:** 4  
@@ -5117,7 +5117,7 @@ Quality cod is paired with onion, fennel and wholewheat noodles for a whole-food
 
 ---
 
-## THA-129 — Mediterranean-Style Cottage Cheese, Cauliflower & Red Pepper Jacket Potato
+## THA-129 — Mediterranean-style Cottage Cheese, Cauliflower & Red Pepper Jacket Potato
 **Category:** lunch  
 **Cuisine inspiration:** Mediterranean-inspired  
 **Serves:** 4  
@@ -5161,7 +5161,7 @@ Cottage Cheese, cauliflower, red pepper and sweet potato create a filling plant-
 
 ---
 
-## THA-130 — Moroccan-Style Tofu, Courgette & Green Bean Frittata
+## THA-130 — Moroccan-style Tofu, Courgette & Green Bean Frittata
 **Category:** lunch  
 **Cuisine inspiration:** Moroccan-inspired  
 **Serves:** 4  
@@ -5205,7 +5205,7 @@ Tofu, courgette, green bean and brown rice create a filling plant-forward meal b
 
 ---
 
-## THA-131 — Thai-Style Mackerel, Cherry Tomato & Pumpkin Lunch Bowl
+## THA-131 — Thai-style Mackerel, Cherry Tomato & Pumpkin Lunch Bowl
 **Category:** lunch  
 **Cuisine inspiration:** Thai-inspired  
 **Serves:** 4  
@@ -5250,7 +5250,7 @@ Quality mackerel is paired with cherry tomato, pumpkin and pearl barley for a wh
 
 ---
 
-## THA-132 — Peruvian-Style Halloumi, Sweetcorn & Celery Stuffed Pitta
+## THA-132 — Peruvian-style Halloumi, Sweetcorn & Celery Stuffed Pitta
 **Category:** lunch  
 **Cuisine inspiration:** Peruvian-inspired  
 **Serves:** 4  
@@ -5338,7 +5338,7 @@ Cannellini Bean, red cabbage, aubergine and oats create a filling plant-forward 
 
 ---
 
-## THA-134 — Mediterranean-Style Sardine, Cucumber & Red Cabbage Frittata
+## THA-134 — Mediterranean-style Sardine, Cucumber & Red Cabbage Frittata
 **Category:** lunch  
 **Cuisine inspiration:** Mediterranean-inspired  
 **Serves:** 4  
@@ -5382,7 +5382,7 @@ Quality sardine is paired with cucumber, red cabbage and wholewheat pasta for a 
 
 ---
 
-## THA-135 — Moroccan-Style Egg, Pumpkin & Parsnip Lunch Bowl
+## THA-135 — Moroccan-style Egg, Pumpkin & Parsnip Lunch Bowl
 **Category:** lunch  
 **Cuisine inspiration:** Moroccan-inspired  
 **Serves:** 4  
@@ -5426,7 +5426,7 @@ Egg, pumpkin, parsnip and quinoa create a filling plant-forward meal built from 
 
 ---
 
-## THA-136 — Thai-Style Chickpea, Kale & Spinach Stuffed Pitta
+## THA-136 — Thai-style Chickpea, Kale & Spinach Stuffed Pitta
 **Category:** lunch  
 **Cuisine inspiration:** Thai-inspired  
 **Serves:** 4  
@@ -5471,7 +5471,7 @@ Chickpea, kale, spinach and wholegrain wrap create a filling plant-forward meal 
 
 ---
 
-## THA-137 — Peruvian-Style Tuna, Fennel & Cherry Tomato Jacket Potato
+## THA-137 — Peruvian-style Tuna, Fennel & Cherry Tomato Jacket Potato
 **Category:** lunch  
 **Cuisine inspiration:** Peruvian-inspired  
 **Serves:** 4  
@@ -5559,7 +5559,7 @@ Feta, onion, radish and wholewheat couscous create a filling plant-forward meal 
 
 ---
 
-## THA-139 — Mediterranean-Style Split Pea, Cauliflower & Pak Choi Lunch Bowl
+## THA-139 — Mediterranean-style Split Pea, Cauliflower & Pak Choi Lunch Bowl
 **Category:** lunch  
 **Cuisine inspiration:** Mediterranean-inspired  
 **Serves:** 4  
@@ -5603,7 +5603,7 @@ Split Pea, cauliflower, pak choi and buckwheat create a filling plant-forward me
 
 ---
 
-## THA-140 — Moroccan-Style Cod, Courgette & Cauliflower Stuffed Pitta
+## THA-140 — Moroccan-style Cod, Courgette & Cauliflower Stuffed Pitta
 **Category:** lunch  
 **Cuisine inspiration:** Moroccan-inspired  
 **Serves:** 4  
@@ -5647,7 +5647,7 @@ Quality cod is paired with courgette, cauliflower and potato for a whole-food me
 
 ---
 
-## THA-141 — Thai-Style Greek Yoghurt, Cherry Tomato & Peas Jacket Potato
+## THA-141 — Thai-style Greek Yoghurt, Cherry Tomato & Peas Jacket Potato
 **Category:** lunch  
 **Cuisine inspiration:** Thai-inspired  
 **Serves:** 4  
@@ -5692,7 +5692,7 @@ Greek Yoghurt, cherry tomato, peas and brown basmati rice create a filling plant
 
 ---
 
-## THA-142 — Peruvian-Style Black Bean, Sweetcorn & Mushroom Frittata
+## THA-142 — Peruvian-style Black Bean, Sweetcorn & Mushroom Frittata
 **Category:** lunch  
 **Cuisine inspiration:** Peruvian-inspired  
 **Serves:** 4  
@@ -5780,7 +5780,7 @@ Quality mackerel is paired with red cabbage, fennel and wholewheat noodles for a
 
 ---
 
-## THA-144 — Mediterranean-Style Cottage Cheese, Cucumber & Red Pepper Stuffed Pitta
+## THA-144 — Mediterranean-style Cottage Cheese, Cucumber & Red Pepper Stuffed Pitta
 **Category:** lunch  
 **Cuisine inspiration:** Mediterranean-inspired  
 **Serves:** 4  
@@ -5824,7 +5824,7 @@ Cottage Cheese, cucumber, red pepper and sweet potato create a filling plant-for
 
 ---
 
-## THA-145 — Moroccan-Style Green Pea, Pumpkin & Green Bean Jacket Potato
+## THA-145 — Moroccan-style Green Pea, Pumpkin & Green Bean Jacket Potato
 **Category:** lunch  
 **Cuisine inspiration:** Moroccan-inspired  
 **Serves:** 4  
@@ -5868,7 +5868,7 @@ Green Pea, pumpkin, green bean and brown rice create a filling plant-forward mea
 
 ---
 
-## THA-146 — Thai-Style Sardine, Kale & Pumpkin Frittata 2
+## THA-146 — Thai-style Sardine, Kale & Pumpkin Frittata 2
 **Category:** lunch  
 **Cuisine inspiration:** Thai-inspired  
 **Serves:** 4  
@@ -5913,7 +5913,7 @@ Quality sardine is paired with kale, pumpkin and pearl barley for a whole-food m
 
 ---
 
-## THA-147 — Peruvian-Style Halloumi, Fennel & Celery Lunch Bowl 2
+## THA-147 — Peruvian-style Halloumi, Fennel & Celery Lunch Bowl 2
 **Category:** lunch  
 **Cuisine inspiration:** Peruvian-inspired  
 **Serves:** 4  
@@ -6001,7 +6001,7 @@ Haricot Bean, onion, aubergine and oats create a filling plant-forward meal buil
 
 ---
 
-## THA-149 — Mediterranean-Style Tuna, Cauliflower & Red Cabbage Jacket Potato 2
+## THA-149 — Mediterranean-style Tuna, Cauliflower & Red Cabbage Jacket Potato 2
 **Category:** lunch  
 **Cuisine inspiration:** Mediterranean-inspired  
 **Serves:** 4  
@@ -6045,7 +6045,7 @@ Quality tuna is paired with cauliflower, red cabbage and wholewheat pasta for a 
 
 ---
 
-## THA-150 — Moroccan-Style Egg, Courgette & Parsnip Frittata 2
+## THA-150 — Moroccan-style Egg, Courgette & Parsnip Frittata 2
 **Category:** lunch  
 **Cuisine inspiration:** Moroccan-inspired  
 **Serves:** 4  
@@ -6089,7 +6089,7 @@ Egg, courgette, parsnip and quinoa create a filling plant-forward meal built fro
 
 ---
 
-## THA-151 — Thai-Style Butter Bean, Cherry Tomato & Spinach Lunch Bowl
+## THA-151 — Thai-style Butter Bean, Cherry Tomato & Spinach Lunch Bowl
 **Category:** lunch  
 **Cuisine inspiration:** Thai-inspired  
 **Serves:** 4  
@@ -6134,7 +6134,7 @@ Butter Bean, cherry tomato, spinach and wholegrain wrap create a filling plant-f
 
 ---
 
-## THA-152 — Peruvian-Style Cod, Sweetcorn & Cherry Tomato Stuffed Pitta 2
+## THA-152 — Peruvian-style Cod, Sweetcorn & Cherry Tomato Stuffed Pitta 2
 **Category:** lunch  
 **Cuisine inspiration:** Peruvian-inspired  
 **Serves:** 4  
@@ -6222,7 +6222,7 @@ Feta, red cabbage, radish and wholewheat couscous create a filling plant-forward
 
 ---
 
-## THA-154 — Mediterranean-Style Edamame, Cucumber & Pak Choi Frittata
+## THA-154 — Mediterranean-style Edamame, Cucumber & Pak Choi Frittata
 **Category:** lunch  
 **Cuisine inspiration:** Mediterranean-inspired  
 **Serves:** 4  
@@ -6266,7 +6266,7 @@ Edamame, cucumber, pak choi and buckwheat create a filling plant-forward meal bu
 
 ---
 
-## THA-155 — Moroccan-Style Mackerel, Pumpkin & Cauliflower Lunch Bowl 2
+## THA-155 — Moroccan-style Mackerel, Pumpkin & Cauliflower Lunch Bowl 2
 **Category:** lunch  
 **Cuisine inspiration:** Moroccan-inspired  
 **Serves:** 4  
@@ -6310,7 +6310,7 @@ Quality mackerel is paired with pumpkin, cauliflower and potato for a whole-food
 
 ---
 
-## THA-156 — Thai-Style Greek Yoghurt, Kale & Peas Stuffed Pitta 2
+## THA-156 — Thai-style Greek Yoghurt, Kale & Peas Stuffed Pitta 2
 **Category:** lunch  
 **Cuisine inspiration:** Thai-inspired  
 **Serves:** 4  
@@ -6355,7 +6355,7 @@ Greek Yoghurt, kale, peas and brown basmati rice create a filling plant-forward 
 
 ---
 
-## THA-157 — Peruvian-Style Kidney Bean, Fennel & Mushroom Jacket Potato
+## THA-157 — Peruvian-style Kidney Bean, Fennel & Mushroom Jacket Potato
 **Category:** lunch  
 **Cuisine inspiration:** Peruvian-inspired  
 **Serves:** 4  
@@ -6443,7 +6443,7 @@ Quality sardine is paired with onion, fennel and wholewheat noodles for a whole-
 
 ---
 
-## THA-159 — Mediterranean-Style Cottage Cheese, Cauliflower & Red Pepper Lunch Bowl 2
+## THA-159 — Mediterranean-style Cottage Cheese, Cauliflower & Red Pepper Lunch Bowl 2
 **Category:** lunch  
 **Cuisine inspiration:** Mediterranean-inspired  
 **Serves:** 4  
@@ -6487,7 +6487,7 @@ Cottage Cheese, cauliflower, red pepper and sweet potato create a filling plant-
 
 ---
 
-## THA-160 — Moroccan-Style Lentil, Courgette & Green Bean Stuffed Pitta
+## THA-160 — Moroccan-style Lentil, Courgette & Green Bean Stuffed Pitta
 **Category:** lunch  
 **Cuisine inspiration:** Moroccan-inspired  
 **Serves:** 4  
@@ -6531,7 +6531,7 @@ Lentil, courgette, green bean and brown rice create a filling plant-forward meal
 
 ---
 
-## THA-161 — Thai-Style Tuna, Cherry Tomato & Pumpkin Jacket Potato 2
+## THA-161 — Thai-style Tuna, Cherry Tomato & Pumpkin Jacket Potato 2
 **Category:** lunch  
 **Cuisine inspiration:** Thai-inspired  
 **Serves:** 4  
@@ -6576,7 +6576,7 @@ Quality tuna is paired with cherry tomato, pumpkin and pearl barley for a whole-
 
 ---
 
-## THA-162 — Peruvian-Style Halloumi, Sweetcorn & Celery Frittata 2
+## THA-162 — Peruvian-style Halloumi, Sweetcorn & Celery Frittata 2
 **Category:** lunch  
 **Cuisine inspiration:** Peruvian-inspired  
 **Serves:** 4  
@@ -6664,7 +6664,7 @@ Tofu, red cabbage, aubergine and oats create a filling plant-forward meal built 
 
 ---
 
-## THA-164 — Mediterranean-Style Cod, Cucumber & Red Cabbage Stuffed Pitta 2
+## THA-164 — Mediterranean-style Cod, Cucumber & Red Cabbage Stuffed Pitta 2
 **Category:** lunch  
 **Cuisine inspiration:** Mediterranean-inspired  
 **Serves:** 4  
@@ -6708,7 +6708,7 @@ Quality cod is paired with cucumber, red cabbage and wholewheat pasta for a whol
 
 ---
 
-## THA-165 — Moroccan-Style Egg, Pumpkin & Parsnip Jacket Potato 2
+## THA-165 — Moroccan-style Egg, Pumpkin & Parsnip Jacket Potato 2
 **Category:** lunch  
 **Cuisine inspiration:** Moroccan-inspired  
 **Serves:** 4  
@@ -6752,7 +6752,7 @@ Egg, pumpkin, parsnip and quinoa create a filling plant-forward meal built from 
 
 ---
 
-## THA-166 — Thai-Style Cannellini Bean, Kale & Spinach Frittata
+## THA-166 — Thai-style Cannellini Bean, Kale & Spinach Frittata
 **Category:** lunch  
 **Cuisine inspiration:** Thai-inspired  
 **Serves:** 4  
@@ -6797,7 +6797,7 @@ Cannellini Bean, kale, spinach and wholegrain wrap create a filling plant-forwar
 
 ---
 
-## THA-167 — Peruvian-Style Mackerel, Fennel & Cherry Tomato Lunch Bowl 2
+## THA-167 — Peruvian-style Mackerel, Fennel & Cherry Tomato Lunch Bowl 2
 **Category:** lunch  
 **Cuisine inspiration:** Peruvian-inspired  
 **Serves:** 4  
@@ -6885,7 +6885,7 @@ Feta, onion, radish and wholewheat couscous create a filling plant-forward meal 
 
 ---
 
-## THA-169 — Mediterranean-Style Chickpea, Cauliflower & Pak Choi Jacket Potato
+## THA-169 — Mediterranean-style Chickpea, Cauliflower & Pak Choi Jacket Potato
 **Category:** lunch  
 **Cuisine inspiration:** Mediterranean-inspired  
 **Serves:** 4  
@@ -6929,7 +6929,7 @@ Chickpea, cauliflower, pak choi and buckwheat create a filling plant-forward mea
 
 ---
 
-## THA-170 — Moroccan-Style Sardine, Courgette & Cauliflower Frittata 2
+## THA-170 — Moroccan-style Sardine, Courgette & Cauliflower Frittata 2
 **Category:** lunch  
 **Cuisine inspiration:** Moroccan-inspired  
 **Serves:** 4  
@@ -6973,7 +6973,7 @@ Quality sardine is paired with courgette, cauliflower and potato for a whole-foo
 
 ---
 
-## THA-171 — Thai-Style Greek Yoghurt, Cherry Tomato & Peas Lunch Bowl 2
+## THA-171 — Thai-style Greek Yoghurt, Cherry Tomato & Peas Lunch Bowl 2
 **Category:** lunch  
 **Cuisine inspiration:** Thai-inspired  
 **Serves:** 4  
@@ -7018,7 +7018,7 @@ Greek Yoghurt, cherry tomato, peas and brown basmati rice create a filling plant
 
 ---
 
-## THA-172 — Peruvian-Style Split Pea, Sweetcorn & Mushroom Stuffed Pitta
+## THA-172 — Peruvian-style Split Pea, Sweetcorn & Mushroom Stuffed Pitta
 **Category:** lunch  
 **Cuisine inspiration:** Peruvian-inspired  
 **Serves:** 4  
@@ -7106,7 +7106,7 @@ Quality tuna is paired with red cabbage, fennel and wholewheat noodles for a who
 
 ---
 
-## THA-174 — Mediterranean-Style Cottage Cheese, Cucumber & Red Pepper Frittata 2
+## THA-174 — Mediterranean-style Cottage Cheese, Cucumber & Red Pepper Frittata 2
 **Category:** lunch  
 **Cuisine inspiration:** Mediterranean-inspired  
 **Serves:** 4  
@@ -7150,7 +7150,7 @@ Cottage Cheese, cucumber, red pepper and sweet potato create a filling plant-for
 
 ---
 
-## THA-175 — Moroccan-Style Black Bean, Pumpkin & Green Bean Lunch Bowl
+## THA-175 — Moroccan-style Black Bean, Pumpkin & Green Bean Lunch Bowl
 **Category:** lunch  
 **Cuisine inspiration:** Moroccan-inspired  
 **Serves:** 4  
@@ -7194,7 +7194,7 @@ Black Bean, pumpkin, green bean and brown rice create a filling plant-forward me
 
 ---
 
-## THA-176 — Thai-Style Cod, Kale & Pumpkin Stuffed Pitta 2
+## THA-176 — Thai-style Cod, Kale & Pumpkin Stuffed Pitta 2
 **Category:** lunch  
 **Cuisine inspiration:** Thai-inspired  
 **Serves:** 4  
@@ -7239,7 +7239,7 @@ Quality cod is paired with kale, pumpkin and pearl barley for a whole-food meal 
 
 ---
 
-## THA-177 — Peruvian-Style Halloumi, Fennel & Celery Jacket Potato 2
+## THA-177 — Peruvian-style Halloumi, Fennel & Celery Jacket Potato 2
 **Category:** lunch  
 **Cuisine inspiration:** Peruvian-inspired  
 **Serves:** 4  
@@ -7327,7 +7327,7 @@ Green Pea, onion, aubergine and oats create a filling plant-forward meal built f
 
 ---
 
-## THA-179 — Mediterranean-Style Mackerel, Cauliflower & Red Cabbage Lunch Bowl 2
+## THA-179 — Mediterranean-style Mackerel, Cauliflower & Red Cabbage Lunch Bowl 2
 **Category:** lunch  
 **Cuisine inspiration:** Mediterranean-inspired  
 **Serves:** 4  
@@ -7371,7 +7371,7 @@ Quality mackerel is paired with cauliflower, red cabbage and wholewheat pasta fo
 
 ---
 
-## THA-180 — Moroccan-Style Egg, Courgette & Parsnip Stuffed Pitta 2
+## THA-180 — Moroccan-style Egg, Courgette & Parsnip Stuffed Pitta 2
 **Category:** lunch  
 **Cuisine inspiration:** Moroccan-inspired  
 **Serves:** 4  
@@ -7415,7 +7415,7 @@ Egg, courgette, parsnip and quinoa create a filling plant-forward meal built fro
 
 ---
 
-## THA-181 — Thai-Style Haricot Bean, Cherry Tomato & Spinach Jacket Potato
+## THA-181 — Thai-style Haricot Bean, Cherry Tomato & Spinach Jacket Potato
 **Category:** lunch  
 **Cuisine inspiration:** Thai-inspired  
 **Serves:** 4  
@@ -7460,7 +7460,7 @@ Haricot Bean, cherry tomato, spinach and wholegrain wrap create a filling plant-
 
 ---
 
-## THA-182 — Peruvian-Style Sardine, Sweetcorn & Cherry Tomato Frittata 2
+## THA-182 — Peruvian-style Sardine, Sweetcorn & Cherry Tomato Frittata 2
 **Category:** lunch  
 **Cuisine inspiration:** Peruvian-inspired  
 **Serves:** 4  
@@ -7548,7 +7548,7 @@ Feta, red cabbage, radish and wholewheat couscous create a filling plant-forward
 
 ---
 
-## THA-184 — Mediterranean-Style Butter Bean, Cucumber & Pak Choi Stuffed Pitta
+## THA-184 — Mediterranean-style Butter Bean, Cucumber & Pak Choi Stuffed Pitta
 **Category:** lunch  
 **Cuisine inspiration:** Mediterranean-inspired  
 **Serves:** 4  
@@ -7592,7 +7592,7 @@ Butter Bean, cucumber, pak choi and buckwheat create a filling plant-forward mea
 
 ---
 
-## THA-185 — Moroccan-Style Tuna, Pumpkin & Cauliflower Jacket Potato 2
+## THA-185 — Moroccan-style Tuna, Pumpkin & Cauliflower Jacket Potato 2
 **Category:** lunch  
 **Cuisine inspiration:** Moroccan-inspired  
 **Serves:** 4  
@@ -7636,7 +7636,7 @@ Quality tuna is paired with pumpkin, cauliflower and potato for a whole-food mea
 
 ---
 
-## THA-186 — Thai-Style Greek Yoghurt, Kale & Peas Frittata 2
+## THA-186 — Thai-style Greek Yoghurt, Kale & Peas Frittata 2
 **Category:** lunch  
 **Cuisine inspiration:** Thai-inspired  
 **Serves:** 4  
@@ -7681,7 +7681,7 @@ Greek Yoghurt, kale, peas and brown basmati rice create a filling plant-forward 
 
 ---
 
-## THA-187 — Peruvian-Style Edamame, Fennel & Mushroom Lunch Bowl
+## THA-187 — Peruvian-style Edamame, Fennel & Mushroom Lunch Bowl
 **Category:** lunch  
 **Cuisine inspiration:** Peruvian-inspired  
 **Serves:** 4  
@@ -7769,7 +7769,7 @@ Quality cod is paired with onion, fennel and wholewheat noodles for a whole-food
 
 ---
 
-## THA-189 — Mediterranean-Style Cottage Cheese, Cauliflower & Red Pepper Jacket Potato 2
+## THA-189 — Mediterranean-style Cottage Cheese, Cauliflower & Red Pepper Jacket Potato 2
 **Category:** lunch  
 **Cuisine inspiration:** Mediterranean-inspired  
 **Serves:** 4  
@@ -7813,7 +7813,7 @@ Cottage Cheese, cauliflower, red pepper and sweet potato create a filling plant-
 
 ---
 
-## THA-190 — Moroccan-Style Kidney Bean, Courgette & Green Bean Frittata
+## THA-190 — Moroccan-style Kidney Bean, Courgette & Green Bean Frittata
 **Category:** lunch  
 **Cuisine inspiration:** Moroccan-inspired  
 **Serves:** 4  
@@ -7857,7 +7857,7 @@ Kidney Bean, courgette, green bean and brown rice create a filling plant-forward
 
 ---
 
-## THA-191 — Thai-Style Mackerel, Cherry Tomato & Pumpkin Lunch Bowl 2
+## THA-191 — Thai-style Mackerel, Cherry Tomato & Pumpkin Lunch Bowl 2
 **Category:** lunch  
 **Cuisine inspiration:** Thai-inspired  
 **Serves:** 4  
@@ -7902,7 +7902,7 @@ Quality mackerel is paired with cherry tomato, pumpkin and pearl barley for a wh
 
 ---
 
-## THA-192 — Peruvian-Style Halloumi, Sweetcorn & Celery Stuffed Pitta 2
+## THA-192 — Peruvian-style Halloumi, Sweetcorn & Celery Stuffed Pitta 2
 **Category:** lunch  
 **Cuisine inspiration:** Peruvian-inspired  
 **Serves:** 4  
@@ -7990,7 +7990,7 @@ Lentil, red cabbage, aubergine and oats create a filling plant-forward meal buil
 
 ---
 
-## THA-194 — Australian cafe-Style Green Pea, Celery & Cucumber Rice Bowl
+## THA-194 — Australian Cafe-style Green Pea, Celery & Cucumber Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -8033,7 +8033,7 @@ Green Pea, celery, cucumber and oats create a filling plant-forward meal built f
 
 ---
 
-## THA-195 — Spanish-Style Chicken Thigh, Broccoli & Asparagus Noodle Bowl
+## THA-195 — Spanish-style Chicken Thigh, Broccoli & Asparagus Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -8076,7 +8076,7 @@ A modest amount of quality chicken thigh supports a plate led by broccoli, aspar
 
 ---
 
-## THA-196 — Indian-Style Chickpea, Red Pepper & Carrot Skillet
+## THA-196 — Indian-style Chickpea, Red Pepper & Carrot Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -8119,7 +8119,7 @@ Chickpea, red pepper, carrot and quinoa create a filling plant-forward meal buil
 
 ---
 
-## THA-197 — Indonesian-Style Haricot Bean, Tomato & Sweetcorn One-Pot
+## THA-197 — Indonesian-style Haricot Bean, Tomato & Sweetcorn One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -8166,7 +8166,7 @@ Haricot Bean, tomato, sweetcorn and wholegrain wrap create a filling plant-forwa
 
 ---
 
-## THA-198 — Ethiopian-Style Chicken Thigh, Peas & Butternut Squash Stew
+## THA-198 — Ethiopian-style Chicken Thigh, Peas & Butternut Squash Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -8214,7 +8214,7 @@ A modest amount of quality chicken thigh supports a plate led by peas, butternut
 
 ---
 
-## THA-199 — Australian cafe-Style Split Pea, Cabbage & Beetroot Rice Bowl
+## THA-199 — Australian Cafe-style Split Pea, Cabbage & Beetroot Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -8257,7 +8257,7 @@ Split Pea, cabbage, beetroot and wholewheat couscous create a filling plant-forw
 
 ---
 
-## THA-200 — Spanish-Style Butter Bean, Radish & Courgette Noodle Bowl
+## THA-200 — Spanish-style Butter Bean, Radish & Courgette Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -8300,7 +8300,7 @@ Butter Bean, radish, courgette and buckwheat create a filling plant-forward meal
 
 ---
 
-## THA-201 — Indian-Style Chicken Thigh, Butternut Squash & Cabbage Skillet
+## THA-201 — Indian-style Chicken Thigh, Butternut Squash & Cabbage Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -8343,7 +8343,7 @@ A modest amount of quality chicken thigh supports a plate led by butternut squas
 
 ---
 
-## THA-202 — Indonesian-Style Black Bean, Parsnip & Swede One-Pot
+## THA-202 — Indonesian-style Black Bean, Parsnip & Swede One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -8390,7 +8390,7 @@ Black Bean, parsnip, swede and brown basmati rice create a filling plant-forward
 
 ---
 
-## THA-203 — Ethiopian-Style Edamame, Asparagus & Onion Stew
+## THA-203 — Ethiopian-style Edamame, Asparagus & Onion Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -8438,7 +8438,7 @@ Edamame, asparagus, onion and bulgur wheat create a filling plant-forward meal b
 
 ---
 
-## THA-204 — Australian cafe-Style Chicken Thigh, Celery & Tomato Rice Bowl
+## THA-204 — Australian Cafe-style Chicken Thigh, Celery & Tomato Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -8481,7 +8481,7 @@ A modest amount of quality chicken thigh supports a plate led by celery, tomato 
 
 ---
 
-## THA-205 — Spanish-Style Green Pea, Broccoli & Spring Onion Noodle Bowl
+## THA-205 — Spanish-style Green Pea, Broccoli & Spring Onion Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -8524,7 +8524,7 @@ Green Pea, broccoli, spring onion and sweet potato create a filling plant-forwar
 
 ---
 
-## THA-206 — Indian-Style Kidney Bean, Red Pepper & Kale Skillet
+## THA-206 — Indian-style Kidney Bean, Red Pepper & Kale Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -8567,7 +8567,7 @@ Kidney Bean, red pepper, kale and brown rice create a filling plant-forward meal
 
 ---
 
-## THA-207 — Indonesian-Style Chicken Thigh, Tomato & Broccoli One-Pot
+## THA-207 — Indonesian-style Chicken Thigh, Tomato & Broccoli One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -8614,7 +8614,7 @@ A modest amount of quality chicken thigh supports a plate led by tomato, broccol
 
 ---
 
-## THA-208 — Ethiopian-Style Haricot Bean, Peas & Leek Stew
+## THA-208 — Ethiopian-style Haricot Bean, Peas & Leek Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -8662,7 +8662,7 @@ Haricot Bean, peas, leek and wholemeal flatbread create a filling plant-forward 
 
 ---
 
-## THA-209 — Australian cafe-Style Lentil, Cabbage & Cucumber Rice Bowl
+## THA-209 — Australian Cafe-style Lentil, Cabbage & Cucumber Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -8705,7 +8705,7 @@ Lentil, cabbage, cucumber and oats create a filling plant-forward meal built fro
 
 ---
 
-## THA-210 — Spanish-Style Chicken Thigh, Radish & Asparagus Noodle Bowl
+## THA-210 — Spanish-style Chicken Thigh, Radish & Asparagus Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -8748,7 +8748,7 @@ A modest amount of quality chicken thigh supports a plate led by radish, asparag
 
 ---
 
-## THA-211 — Indian-Style Butter Bean, Butternut Squash & Carrot Skillet
+## THA-211 — Indian-style Butter Bean, Butternut Squash & Carrot Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -8791,7 +8791,7 @@ Butter Bean, butternut squash, carrot and quinoa create a filling plant-forward 
 
 ---
 
-## THA-212 — Indonesian-Style Tofu, Parsnip & Sweetcorn One-Pot
+## THA-212 — Indonesian-style Tofu, Parsnip & Sweetcorn One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -8838,7 +8838,7 @@ Tofu, parsnip, sweetcorn and wholegrain wrap create a filling plant-forward meal
 
 ---
 
-## THA-213 — Ethiopian-Style Chicken Thigh, Asparagus & Butternut Squash Stew
+## THA-213 — Ethiopian-style Chicken Thigh, Asparagus & Butternut Squash Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -8886,7 +8886,7 @@ A modest amount of quality chicken thigh supports a plate led by asparagus, butt
 
 ---
 
-## THA-214 — Australian cafe-Style Edamame, Celery & Beetroot Rice Bowl
+## THA-214 — Australian Cafe-style Edamame, Celery & Beetroot Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -8929,7 +8929,7 @@ Edamame, celery, beetroot and wholewheat couscous create a filling plant-forward
 
 ---
 
-## THA-215 — Spanish-Style Cannellini Bean, Broccoli & Courgette Noodle Bowl
+## THA-215 — Spanish-style Cannellini Bean, Broccoli & Courgette Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -8972,7 +8972,7 @@ Cannellini Bean, broccoli, courgette and buckwheat create a filling plant-forwar
 
 ---
 
-## THA-216 — Indian-Style Chicken Thigh, Red Pepper & Cabbage Skillet
+## THA-216 — Indian-style Chicken Thigh, Red Pepper & Cabbage Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -9015,7 +9015,7 @@ A modest amount of quality chicken thigh supports a plate led by red pepper, cab
 
 ---
 
-## THA-217 — Indonesian-Style Kidney Bean, Tomato & Swede One-Pot
+## THA-217 — Indonesian-style Kidney Bean, Tomato & Swede One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -9062,7 +9062,7 @@ Kidney Bean, tomato, swede and brown basmati rice create a filling plant-forward
 
 ---
 
-## THA-218 — Ethiopian-Style Chickpea, Peas & Onion Stew
+## THA-218 — Ethiopian-style Chickpea, Peas & Onion Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -9110,7 +9110,7 @@ Chickpea, peas, onion and bulgur wheat create a filling plant-forward meal built
 
 ---
 
-## THA-219 — Australian cafe-Style Chicken Thigh, Cabbage & Tomato Rice Bowl
+## THA-219 — Australian Cafe-style Chicken Thigh, Cabbage & Tomato Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -9153,7 +9153,7 @@ A modest amount of quality chicken thigh supports a plate led by cabbage, tomato
 
 ---
 
-## THA-220 — Spanish-Style Lentil, Radish & Spring Onion Noodle Bowl
+## THA-220 — Spanish-style Lentil, Radish & Spring Onion Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -9196,7 +9196,7 @@ Lentil, radish, spring onion and sweet potato create a filling plant-forward mea
 
 ---
 
-## THA-221 — Indian-Style Split Pea, Butternut Squash & Kale Skillet
+## THA-221 — Indian-style Split Pea, Butternut Squash & Kale Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -9239,7 +9239,7 @@ Split Pea, butternut squash, kale and brown rice create a filling plant-forward 
 
 ---
 
-## THA-222 — Indonesian-Style Chicken Thigh, Parsnip & Broccoli One-Pot
+## THA-222 — Indonesian-style Chicken Thigh, Parsnip & Broccoli One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -9286,7 +9286,7 @@ A modest amount of quality chicken thigh supports a plate led by parsnip, brocco
 
 ---
 
-## THA-223 — Ethiopian-Style Tofu, Asparagus & Leek Stew
+## THA-223 — Ethiopian-style Tofu, Asparagus & Leek Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -9334,7 +9334,7 @@ Tofu, asparagus, leek and wholemeal flatbread create a filling plant-forward mea
 
 ---
 
-## THA-224 — Australian cafe-Style Black Bean, Celery & Cucumber Rice Bowl
+## THA-224 — Australian Cafe-style Black Bean, Celery & Cucumber Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -9377,7 +9377,7 @@ Black Bean, celery, cucumber and oats create a filling plant-forward meal built 
 
 ---
 
-## THA-225 — Spanish-Style Chicken Thigh, Broccoli & Asparagus Noodle Bowl 2
+## THA-225 — Spanish-style Chicken Thigh, Broccoli & Asparagus Noodle Bowl 2
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -9420,7 +9420,7 @@ A modest amount of quality chicken thigh supports a plate led by broccoli, aspar
 
 ---
 
-## THA-226 — Indian-Style Cannellini Bean, Red Pepper & Carrot Skillet
+## THA-226 — Indian-style Cannellini Bean, Red Pepper & Carrot Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -9463,7 +9463,7 @@ Cannellini Bean, red pepper, carrot and quinoa create a filling plant-forward me
 
 ---
 
-## THA-227 — Indonesian-Style Green Pea, Tomato & Sweetcorn One-Pot
+## THA-227 — Indonesian-style Green Pea, Tomato & Sweetcorn One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -9510,7 +9510,7 @@ Green Pea, tomato, sweetcorn and wholegrain wrap create a filling plant-forward 
 
 ---
 
-## THA-228 — Ethiopian-Style Chicken Thigh, Peas & Butternut Squash Stew 2
+## THA-228 — Ethiopian-style Chicken Thigh, Peas & Butternut Squash Stew 2
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -9558,7 +9558,7 @@ A modest amount of quality chicken thigh supports a plate led by peas, butternut
 
 ---
 
-## THA-229 — Australian cafe-Style Chickpea, Cabbage & Beetroot Rice Bowl
+## THA-229 — Australian Cafe-style Chickpea, Cabbage & Beetroot Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -9601,7 +9601,7 @@ Chickpea, cabbage, beetroot and wholewheat couscous create a filling plant-forwa
 
 ---
 
-## THA-230 — Spanish-Style Haricot Bean, Radish & Courgette Noodle Bowl
+## THA-230 — Spanish-style Haricot Bean, Radish & Courgette Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -9644,7 +9644,7 @@ Haricot Bean, radish, courgette and buckwheat create a filling plant-forward mea
 
 ---
 
-## THA-231 — Indian-Style Chicken Thigh, Butternut Squash & Cabbage Skillet 2
+## THA-231 — Indian-style Chicken Thigh, Butternut Squash & Cabbage Skillet 2
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -9687,7 +9687,7 @@ A modest amount of quality chicken thigh supports a plate led by butternut squas
 
 ---
 
-## THA-232 — Indonesian-Style Split Pea, Parsnip & Swede One-Pot
+## THA-232 — Indonesian-style Split Pea, Parsnip & Swede One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -9734,7 +9734,7 @@ Split Pea, parsnip, swede and brown basmati rice create a filling plant-forward 
 
 ---
 
-## THA-233 — Ethiopian-Style Butter Bean, Asparagus & Onion Stew
+## THA-233 — Ethiopian-style Butter Bean, Asparagus & Onion Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -9782,7 +9782,7 @@ Butter Bean, asparagus, onion and bulgur wheat create a filling plant-forward me
 
 ---
 
-## THA-234 — Australian cafe-Style Chicken Thigh, Celery & Tomato Rice Bowl 2
+## THA-234 — Australian Cafe-style Chicken Thigh, Celery & Tomato Rice Bowl 2
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -9825,7 +9825,7 @@ A modest amount of quality chicken thigh supports a plate led by celery, tomato 
 
 ---
 
-## THA-235 — Spanish-Style Black Bean, Broccoli & Spring Onion Noodle Bowl
+## THA-235 — Spanish-style Black Bean, Broccoli & Spring Onion Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -9868,7 +9868,7 @@ Black Bean, broccoli, spring onion and sweet potato create a filling plant-forwa
 
 ---
 
-## THA-236 — Indian-Style Edamame, Red Pepper & Kale Skillet
+## THA-236 — Indian-style Edamame, Red Pepper & Kale Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -9911,7 +9911,7 @@ Edamame, red pepper, kale and brown rice create a filling plant-forward meal bui
 
 ---
 
-## THA-237 — Indonesian-Style Chicken Thigh, Tomato & Broccoli One-Pot 2
+## THA-237 — Indonesian-style Chicken Thigh, Tomato & Broccoli One-Pot 2
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -9958,7 +9958,7 @@ A modest amount of quality chicken thigh supports a plate led by tomato, broccol
 
 ---
 
-## THA-238 — Ethiopian-Style Green Pea, Peas & Leek Stew
+## THA-238 — Ethiopian-style Green Pea, Peas & Leek Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -10006,7 +10006,7 @@ Green Pea, peas, leek and wholemeal flatbread create a filling plant-forward mea
 
 ---
 
-## THA-239 — Australian cafe-Style Kidney Bean, Cabbage & Cucumber Rice Bowl
+## THA-239 — Australian Cafe-style Kidney Bean, Cabbage & Cucumber Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -10049,7 +10049,7 @@ Kidney Bean, cabbage, cucumber and oats create a filling plant-forward meal buil
 
 ---
 
-## THA-240 — Spanish-Style Chicken Thigh, Radish & Asparagus Noodle Bowl 2
+## THA-240 — Spanish-style Chicken Thigh, Radish & Asparagus Noodle Bowl 2
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -10092,7 +10092,7 @@ A modest amount of quality chicken thigh supports a plate led by radish, asparag
 
 ---
 
-## THA-241 — Indian-Style Haricot Bean, Butternut Squash & Carrot Skillet
+## THA-241 — Indian-style Haricot Bean, Butternut Squash & Carrot Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -10135,7 +10135,7 @@ Haricot Bean, butternut squash, carrot and quinoa create a filling plant-forward
 
 ---
 
-## THA-242 — Indonesian-Style Lentil, Parsnip & Sweetcorn One-Pot
+## THA-242 — Indonesian-style Lentil, Parsnip & Sweetcorn One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -10182,7 +10182,7 @@ Lentil, parsnip, sweetcorn and wholegrain wrap create a filling plant-forward me
 
 ---
 
-## THA-243 — Ethiopian-Style Chicken Thigh, Asparagus & Butternut Squash Stew 2
+## THA-243 — Ethiopian-style Chicken Thigh, Asparagus & Butternut Squash Stew 2
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -10230,7 +10230,7 @@ A modest amount of quality chicken thigh supports a plate led by asparagus, butt
 
 ---
 
-## THA-244 — Australian cafe-Style Butter Bean, Celery & Beetroot Rice Bowl
+## THA-244 — Australian Cafe-style Butter Bean, Celery & Beetroot Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -10273,7 +10273,7 @@ Butter Bean, celery, beetroot and wholewheat couscous create a filling plant-for
 
 ---
 
-## THA-245 — Spanish-Style Tofu, Broccoli & Courgette Noodle Bowl
+## THA-245 — Spanish-style Tofu, Broccoli & Courgette Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -10316,7 +10316,7 @@ Tofu, broccoli, courgette and buckwheat create a filling plant-forward meal buil
 
 ---
 
-## THA-246 — Indian-Style Chicken Thigh, Red Pepper & Cabbage Skillet 2
+## THA-246 — Indian-style Chicken Thigh, Red Pepper & Cabbage Skillet 2
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -10359,7 +10359,7 @@ A modest amount of quality chicken thigh supports a plate led by red pepper, cab
 
 ---
 
-## THA-247 — Indonesian-Style Edamame, Tomato & Swede One-Pot
+## THA-247 — Indonesian-style Edamame, Tomato & Swede One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -10406,7 +10406,7 @@ Edamame, tomato, swede and brown basmati rice create a filling plant-forward mea
 
 ---
 
-## THA-248 — Ethiopian-Style Cannellini Bean, Peas & Onion Stew
+## THA-248 — Ethiopian-style Cannellini Bean, Peas & Onion Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -10454,7 +10454,7 @@ Cannellini Bean, peas, onion and bulgur wheat create a filling plant-forward mea
 
 ---
 
-## THA-249 — Australian cafe-Style Chicken Thigh, Cabbage & Tomato Rice Bowl 2
+## THA-249 — Australian Cafe-style Chicken Thigh, Cabbage & Tomato Rice Bowl 2
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -10497,7 +10497,7 @@ A modest amount of quality chicken thigh supports a plate led by cabbage, tomato
 
 ---
 
-## THA-250 — Spanish-Style Kidney Bean, Radish & Spring Onion Noodle Bowl
+## THA-250 — Spanish-style Kidney Bean, Radish & Spring Onion Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -10540,7 +10540,7 @@ Kidney Bean, radish, spring onion and sweet potato create a filling plant-forwar
 
 ---
 
-## THA-251 — Indian-Style Chickpea, Butternut Squash & Kale Skillet
+## THA-251 — Indian-style Chickpea, Butternut Squash & Kale Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -10583,7 +10583,7 @@ Chickpea, butternut squash, kale and brown rice create a filling plant-forward m
 
 ---
 
-## THA-252 — Indonesian-Style Chicken Thigh, Parsnip & Broccoli One-Pot 2
+## THA-252 — Indonesian-style Chicken Thigh, Parsnip & Broccoli One-Pot 2
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -10630,7 +10630,7 @@ A modest amount of quality chicken thigh supports a plate led by parsnip, brocco
 
 ---
 
-## THA-253 — Ethiopian-Style Lentil, Asparagus & Leek Stew
+## THA-253 — Ethiopian-style Lentil, Asparagus & Leek Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -10678,7 +10678,7 @@ Lentil, asparagus, leek and wholemeal flatbread create a filling plant-forward m
 
 ---
 
-## THA-254 — Australian cafe-Style Split Pea, Celery & Cucumber Rice Bowl
+## THA-254 — Australian Cafe-style Split Pea, Celery & Cucumber Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -10721,7 +10721,7 @@ Split Pea, celery, cucumber and oats create a filling plant-forward meal built f
 
 ---
 
-## THA-255 — Spanish-Style Chicken Thigh, Broccoli & Asparagus Noodle Bowl 3
+## THA-255 — Spanish-style Chicken Thigh, Broccoli & Asparagus Noodle Bowl 3
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -10764,7 +10764,7 @@ A modest amount of quality chicken thigh supports a plate led by broccoli, aspar
 
 ---
 
-## THA-256 — Indian-Style Tofu, Red Pepper & Carrot Skillet
+## THA-256 — Indian-style Tofu, Red Pepper & Carrot Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -10807,7 +10807,7 @@ Tofu, red pepper, carrot and quinoa create a filling plant-forward meal built fr
 
 ---
 
-## THA-257 — Indonesian-Style Black Bean, Tomato & Sweetcorn One-Pot
+## THA-257 — Indonesian-style Black Bean, Tomato & Sweetcorn One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -10854,7 +10854,7 @@ Black Bean, tomato, sweetcorn and wholegrain wrap create a filling plant-forward
 
 ---
 
-## THA-258 — Ethiopian-Style Chicken Thigh, Peas & Butternut Squash Stew 3
+## THA-258 — Ethiopian-style Chicken Thigh, Peas & Butternut Squash Stew 3
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -10902,7 +10902,7 @@ A modest amount of quality chicken thigh supports a plate led by peas, butternut
 
 ---
 
-## THA-259 — Australian cafe-Style Cannellini Bean, Cabbage & Beetroot Rice Bowl
+## THA-259 — Australian Cafe-style Cannellini Bean, Cabbage & Beetroot Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -10945,7 +10945,7 @@ Cannellini Bean, cabbage, beetroot and wholewheat couscous create a filling plan
 
 ---
 
-## THA-260 — Spanish-Style Green Pea, Radish & Courgette Noodle Bowl
+## THA-260 — Spanish-style Green Pea, Radish & Courgette Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -10988,7 +10988,7 @@ Green Pea, radish, courgette and buckwheat create a filling plant-forward meal b
 
 ---
 
-## THA-261 — Indian-Style Chicken Thigh, Butternut Squash & Cabbage Skillet 3
+## THA-261 — Indian-style Chicken Thigh, Butternut Squash & Cabbage Skillet 3
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -11031,7 +11031,7 @@ A modest amount of quality chicken thigh supports a plate led by butternut squas
 
 ---
 
-## THA-262 — Indonesian-Style Chickpea, Parsnip & Swede One-Pot
+## THA-262 — Indonesian-style Chickpea, Parsnip & Swede One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -11078,7 +11078,7 @@ Chickpea, parsnip, swede and brown basmati rice create a filling plant-forward m
 
 ---
 
-## THA-263 — Ethiopian-Style Haricot Bean, Asparagus & Onion Stew
+## THA-263 — Ethiopian-style Haricot Bean, Asparagus & Onion Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -11126,7 +11126,7 @@ Haricot Bean, asparagus, onion and bulgur wheat create a filling plant-forward m
 
 ---
 
-## THA-264 — Australian cafe-Style Chicken Thigh, Celery & Tomato Rice Bowl 3
+## THA-264 — Australian Cafe-style Chicken Thigh, Celery & Tomato Rice Bowl 3
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -11169,7 +11169,7 @@ A modest amount of quality chicken thigh supports a plate led by celery, tomato 
 
 ---
 
-## THA-265 — Spanish-Style Split Pea, Broccoli & Spring Onion Noodle Bowl
+## THA-265 — Spanish-style Split Pea, Broccoli & Spring Onion Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -11212,7 +11212,7 @@ Split Pea, broccoli, spring onion and sweet potato create a filling plant-forwar
 
 ---
 
-## THA-266 — Indian-Style Butter Bean, Red Pepper & Kale Skillet
+## THA-266 — Indian-style Butter Bean, Red Pepper & Kale Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -11255,7 +11255,7 @@ Butter Bean, red pepper, kale and brown rice create a filling plant-forward meal
 
 ---
 
-## THA-267 — Indonesian-Style Chicken Thigh, Tomato & Broccoli One-Pot 3
+## THA-267 — Indonesian-style Chicken Thigh, Tomato & Broccoli One-Pot 3
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -11302,7 +11302,7 @@ A modest amount of quality chicken thigh supports a plate led by tomato, broccol
 
 ---
 
-## THA-268 — Ethiopian-Style Black Bean, Peas & Leek Stew
+## THA-268 — Ethiopian-style Black Bean, Peas & Leek Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -11350,7 +11350,7 @@ Black Bean, peas, leek and wholemeal flatbread create a filling plant-forward me
 
 ---
 
-## THA-269 — Australian cafe-Style Edamame, Cabbage & Cucumber Rice Bowl
+## THA-269 — Australian Cafe-style Edamame, Cabbage & Cucumber Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -11393,7 +11393,7 @@ Edamame, cabbage, cucumber and oats create a filling plant-forward meal built fr
 
 ---
 
-## THA-270 — Spanish-Style Chicken Thigh, Radish & Asparagus Noodle Bowl 3
+## THA-270 — Spanish-style Chicken Thigh, Radish & Asparagus Noodle Bowl 3
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -11436,7 +11436,7 @@ A modest amount of quality chicken thigh supports a plate led by radish, asparag
 
 ---
 
-## THA-271 — Indian-Style Green Pea, Butternut Squash & Carrot Skillet
+## THA-271 — Indian-style Green Pea, Butternut Squash & Carrot Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -11479,7 +11479,7 @@ Green Pea, butternut squash, carrot and quinoa create a filling plant-forward me
 
 ---
 
-## THA-272 — Indonesian-Style Kidney Bean, Parsnip & Sweetcorn One-Pot
+## THA-272 — Indonesian-style Kidney Bean, Parsnip & Sweetcorn One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -11526,7 +11526,7 @@ Kidney Bean, parsnip, sweetcorn and wholegrain wrap create a filling plant-forwa
 
 ---
 
-## THA-273 — Ethiopian-Style Chicken Thigh, Asparagus & Butternut Squash Stew 3
+## THA-273 — Ethiopian-style Chicken Thigh, Asparagus & Butternut Squash Stew 3
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -11574,7 +11574,7 @@ A modest amount of quality chicken thigh supports a plate led by asparagus, butt
 
 ---
 
-## THA-274 — Australian cafe-Style Haricot Bean, Celery & Beetroot Rice Bowl
+## THA-274 — Australian Cafe-style Haricot Bean, Celery & Beetroot Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -11617,7 +11617,7 @@ Haricot Bean, celery, beetroot and wholewheat couscous create a filling plant-fo
 
 ---
 
-## THA-275 — Spanish-Style Lentil, Broccoli & Courgette Noodle Bowl
+## THA-275 — Spanish-style Lentil, Broccoli & Courgette Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -11660,7 +11660,7 @@ Lentil, broccoli, courgette and buckwheat create a filling plant-forward meal bu
 
 ---
 
-## THA-276 — Indian-Style Chicken Thigh, Red Pepper & Cabbage Skillet 3
+## THA-276 — Indian-style Chicken Thigh, Red Pepper & Cabbage Skillet 3
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -11703,7 +11703,7 @@ A modest amount of quality chicken thigh supports a plate led by red pepper, cab
 
 ---
 
-## THA-277 — Indonesian-Style Butter Bean, Tomato & Swede One-Pot
+## THA-277 — Indonesian-style Butter Bean, Tomato & Swede One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -11750,7 +11750,7 @@ Butter Bean, tomato, swede and brown basmati rice create a filling plant-forward
 
 ---
 
-## THA-278 — Ethiopian-Style Tofu, Peas & Onion Stew
+## THA-278 — Ethiopian-style Tofu, Peas & Onion Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -11798,7 +11798,7 @@ Tofu, peas, onion and bulgur wheat create a filling plant-forward meal built fro
 
 ---
 
-## THA-279 — Australian cafe-Style Chicken Thigh, Cabbage & Tomato Rice Bowl 3
+## THA-279 — Australian Cafe-style Chicken Thigh, Cabbage & Tomato Rice Bowl 3
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -11841,7 +11841,7 @@ A modest amount of quality chicken thigh supports a plate led by cabbage, tomato
 
 ---
 
-## THA-280 — Spanish-Style Edamame, Radish & Spring Onion Noodle Bowl
+## THA-280 — Spanish-style Edamame, Radish & Spring Onion Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -11884,7 +11884,7 @@ Edamame, radish, spring onion and sweet potato create a filling plant-forward me
 
 ---
 
-## THA-281 — Indian-Style Cannellini Bean, Butternut Squash & Kale Skillet
+## THA-281 — Indian-style Cannellini Bean, Butternut Squash & Kale Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -11927,7 +11927,7 @@ Cannellini Bean, butternut squash, kale and brown rice create a filling plant-fo
 
 ---
 
-## THA-282 — Indonesian-Style Chicken Thigh, Parsnip & Broccoli One-Pot 3
+## THA-282 — Indonesian-style Chicken Thigh, Parsnip & Broccoli One-Pot 3
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -11974,7 +11974,7 @@ A modest amount of quality chicken thigh supports a plate led by parsnip, brocco
 
 ---
 
-## THA-283 — Ethiopian-Style Kidney Bean, Asparagus & Leek Stew
+## THA-283 — Ethiopian-style Kidney Bean, Asparagus & Leek Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -12022,7 +12022,7 @@ Kidney Bean, asparagus, leek and wholemeal flatbread create a filling plant-forw
 
 ---
 
-## THA-284 — Australian cafe-Style Chickpea, Celery & Cucumber Rice Bowl
+## THA-284 — Australian Cafe-style Chickpea, Celery & Cucumber Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -12065,7 +12065,7 @@ Chickpea, celery, cucumber and oats create a filling plant-forward meal built fr
 
 ---
 
-## THA-285 — Spanish-Style Chicken Thigh, Broccoli & Asparagus Noodle Bowl 4
+## THA-285 — Spanish-style Chicken Thigh, Broccoli & Asparagus Noodle Bowl 4
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -12108,7 +12108,7 @@ A modest amount of quality chicken thigh supports a plate led by broccoli, aspar
 
 ---
 
-## THA-286 — Indian-Style Lentil, Red Pepper & Carrot Skillet
+## THA-286 — Indian-style Lentil, Red Pepper & Carrot Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -12151,7 +12151,7 @@ Lentil, red pepper, carrot and quinoa create a filling plant-forward meal built 
 
 ---
 
-## THA-287 — Indonesian-Style Split Pea, Tomato & Sweetcorn One-Pot
+## THA-287 — Indonesian-style Split Pea, Tomato & Sweetcorn One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -12198,7 +12198,7 @@ Split Pea, tomato, sweetcorn and wholegrain wrap create a filling plant-forward 
 
 ---
 
-## THA-288 — Ethiopian-Style Chicken Thigh, Peas & Butternut Squash Stew 4
+## THA-288 — Ethiopian-style Chicken Thigh, Peas & Butternut Squash Stew 4
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -12246,7 +12246,7 @@ A modest amount of quality chicken thigh supports a plate led by peas, butternut
 
 ---
 
-## THA-289 — Australian cafe-Style Tofu, Cabbage & Beetroot Rice Bowl
+## THA-289 — Australian Cafe-style Tofu, Cabbage & Beetroot Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -12289,7 +12289,7 @@ Tofu, cabbage, beetroot and wholewheat couscous create a filling plant-forward m
 
 ---
 
-## THA-290 — Spanish-Style Black Bean, Radish & Courgette Noodle Bowl
+## THA-290 — Spanish-style Black Bean, Radish & Courgette Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -12332,7 +12332,7 @@ Black Bean, radish, courgette and buckwheat create a filling plant-forward meal 
 
 ---
 
-## THA-291 — Indian-Style Chicken Thigh, Butternut Squash & Cabbage Skillet 4
+## THA-291 — Indian-style Chicken Thigh, Butternut Squash & Cabbage Skillet 4
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -12375,7 +12375,7 @@ A modest amount of quality chicken thigh supports a plate led by butternut squas
 
 ---
 
-## THA-292 — Indonesian-Style Cannellini Bean, Parsnip & Swede One-Pot
+## THA-292 — Indonesian-style Cannellini Bean, Parsnip & Swede One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -12422,7 +12422,7 @@ Cannellini Bean, parsnip, swede and brown basmati rice create a filling plant-fo
 
 ---
 
-## THA-293 — Ethiopian-Style Green Pea, Asparagus & Onion Stew
+## THA-293 — Ethiopian-style Green Pea, Asparagus & Onion Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -12470,7 +12470,7 @@ Green Pea, asparagus, onion and bulgur wheat create a filling plant-forward meal
 
 ---
 
-## THA-294 — Australian cafe-Style Chicken Thigh, Celery & Tomato Rice Bowl 4
+## THA-294 — Australian Cafe-style Chicken Thigh, Celery & Tomato Rice Bowl 4
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -12513,7 +12513,7 @@ A modest amount of quality chicken thigh supports a plate led by celery, tomato 
 
 ---
 
-## THA-295 — Spanish-Style Chickpea, Broccoli & Spring Onion Noodle Bowl
+## THA-295 — Spanish-style Chickpea, Broccoli & Spring Onion Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -12556,7 +12556,7 @@ Chickpea, broccoli, spring onion and sweet potato create a filling plant-forward
 
 ---
 
-## THA-296 — Indian-Style Haricot Bean, Red Pepper & Kale Skillet
+## THA-296 — Indian-style Haricot Bean, Red Pepper & Kale Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -12599,7 +12599,7 @@ Haricot Bean, red pepper, kale and brown rice create a filling plant-forward mea
 
 ---
 
-## THA-297 — Indonesian-Style Chicken Thigh, Tomato & Broccoli One-Pot 4
+## THA-297 — Indonesian-style Chicken Thigh, Tomato & Broccoli One-Pot 4
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -12646,7 +12646,7 @@ A modest amount of quality chicken thigh supports a plate led by tomato, broccol
 
 ---
 
-## THA-298 — Ethiopian-Style Split Pea, Peas & Leek Stew
+## THA-298 — Ethiopian-style Split Pea, Peas & Leek Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -12694,7 +12694,7 @@ Split Pea, peas, leek and wholemeal flatbread create a filling plant-forward mea
 
 ---
 
-## THA-299 — Australian cafe-Style Butter Bean, Cabbage & Cucumber Rice Bowl
+## THA-299 — Australian Cafe-style Butter Bean, Cabbage & Cucumber Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -12737,7 +12737,7 @@ Butter Bean, cabbage, cucumber and oats create a filling plant-forward meal buil
 
 ---
 
-## THA-300 — Spanish-Style Chicken Thigh, Radish & Asparagus Noodle Bowl 4
+## THA-300 — Spanish-style Chicken Thigh, Radish & Asparagus Noodle Bowl 4
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -12780,7 +12780,7 @@ A modest amount of quality chicken thigh supports a plate led by radish, asparag
 
 ---
 
-## THA-301 — Indian-Style Black Bean, Butternut Squash & Carrot Skillet
+## THA-301 — Indian-style Black Bean, Butternut Squash & Carrot Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -12823,7 +12823,7 @@ Black Bean, butternut squash, carrot and quinoa create a filling plant-forward m
 
 ---
 
-## THA-302 — Indonesian-Style Edamame, Parsnip & Sweetcorn One-Pot
+## THA-302 — Indonesian-style Edamame, Parsnip & Sweetcorn One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -12870,7 +12870,7 @@ Edamame, parsnip, sweetcorn and wholegrain wrap create a filling plant-forward m
 
 ---
 
-## THA-303 — Ethiopian-Style Chicken Thigh, Asparagus & Butternut Squash Stew 4
+## THA-303 — Ethiopian-style Chicken Thigh, Asparagus & Butternut Squash Stew 4
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -12918,7 +12918,7 @@ A modest amount of quality chicken thigh supports a plate led by asparagus, butt
 
 ---
 
-## THA-304 — Australian cafe-Style Green Pea, Celery & Beetroot Rice Bowl
+## THA-304 — Australian Cafe-style Green Pea, Celery & Beetroot Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -12961,7 +12961,7 @@ Green Pea, celery, beetroot and wholewheat couscous create a filling plant-forwa
 
 ---
 
-## THA-305 — Spanish-Style Kidney Bean, Broccoli & Courgette Noodle Bowl
+## THA-305 — Spanish-style Kidney Bean, Broccoli & Courgette Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -13004,7 +13004,7 @@ Kidney Bean, broccoli, courgette and buckwheat create a filling plant-forward me
 
 ---
 
-## THA-306 — Indian-Style Chicken Thigh, Red Pepper & Cabbage Skillet 4
+## THA-306 — Indian-style Chicken Thigh, Red Pepper & Cabbage Skillet 4
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -13047,7 +13047,7 @@ A modest amount of quality chicken thigh supports a plate led by red pepper, cab
 
 ---
 
-## THA-307 — Indonesian-Style Haricot Bean, Tomato & Swede One-Pot
+## THA-307 — Indonesian-style Haricot Bean, Tomato & Swede One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -13094,7 +13094,7 @@ Haricot Bean, tomato, swede and brown basmati rice create a filling plant-forwar
 
 ---
 
-## THA-308 — Ethiopian-Style Lentil, Peas & Onion Stew
+## THA-308 — Ethiopian-style Lentil, Peas & Onion Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -13142,7 +13142,7 @@ Lentil, peas, onion and bulgur wheat create a filling plant-forward meal built f
 
 ---
 
-## THA-309 — Australian cafe-Style Chicken Thigh, Cabbage & Tomato Rice Bowl 4
+## THA-309 — Australian Cafe-style Chicken Thigh, Cabbage & Tomato Rice Bowl 4
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -13185,7 +13185,7 @@ A modest amount of quality chicken thigh supports a plate led by cabbage, tomato
 
 ---
 
-## THA-310 — Spanish-Style Butter Bean, Radish & Spring Onion Noodle Bowl
+## THA-310 — Spanish-style Butter Bean, Radish & Spring Onion Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -13228,7 +13228,7 @@ Butter Bean, radish, spring onion and sweet potato create a filling plant-forwar
 
 ---
 
-## THA-311 — Indian-Style Tofu, Butternut Squash & Kale Skillet
+## THA-311 — Indian-style Tofu, Butternut Squash & Kale Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -13271,7 +13271,7 @@ Tofu, butternut squash, kale and brown rice create a filling plant-forward meal 
 
 ---
 
-## THA-312 — Indonesian-Style Chicken Thigh, Parsnip & Broccoli One-Pot 4
+## THA-312 — Indonesian-style Chicken Thigh, Parsnip & Broccoli One-Pot 4
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -13318,7 +13318,7 @@ A modest amount of quality chicken thigh supports a plate led by parsnip, brocco
 
 ---
 
-## THA-313 — Ethiopian-Style Edamame, Asparagus & Leek Stew
+## THA-313 — Ethiopian-style Edamame, Asparagus & Leek Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -13366,7 +13366,7 @@ Edamame, asparagus, leek and wholemeal flatbread create a filling plant-forward 
 
 ---
 
-## THA-314 — Australian cafe-Style Cannellini Bean, Celery & Cucumber Rice Bowl
+## THA-314 — Australian Cafe-style Cannellini Bean, Celery & Cucumber Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -13409,7 +13409,7 @@ Cannellini Bean, celery, cucumber and oats create a filling plant-forward meal b
 
 ---
 
-## THA-315 — Spanish-Style Chicken Thigh, Broccoli & Asparagus Noodle Bowl 5
+## THA-315 — Spanish-style Chicken Thigh, Broccoli & Asparagus Noodle Bowl 5
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -13452,7 +13452,7 @@ A modest amount of quality chicken thigh supports a plate led by broccoli, aspar
 
 ---
 
-## THA-316 — Indian-Style Kidney Bean, Red Pepper & Carrot Skillet
+## THA-316 — Indian-style Kidney Bean, Red Pepper & Carrot Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -13495,7 +13495,7 @@ Kidney Bean, red pepper, carrot and quinoa create a filling plant-forward meal b
 
 ---
 
-## THA-317 — Indonesian-Style Chickpea, Tomato & Sweetcorn One-Pot
+## THA-317 — Indonesian-style Chickpea, Tomato & Sweetcorn One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -13542,7 +13542,7 @@ Chickpea, tomato, sweetcorn and wholegrain wrap create a filling plant-forward m
 
 ---
 
-## THA-318 — Ethiopian-Style Chicken Thigh, Peas & Butternut Squash Stew 5
+## THA-318 — Ethiopian-style Chicken Thigh, Peas & Butternut Squash Stew 5
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -13590,7 +13590,7 @@ A modest amount of quality chicken thigh supports a plate led by peas, butternut
 
 ---
 
-## THA-319 — Australian cafe-Style Lentil, Cabbage & Beetroot Rice Bowl
+## THA-319 — Australian Cafe-style Lentil, Cabbage & Beetroot Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -13633,7 +13633,7 @@ Lentil, cabbage, beetroot and wholewheat couscous create a filling plant-forward
 
 ---
 
-## THA-320 — Spanish-Style Split Pea, Radish & Courgette Noodle Bowl
+## THA-320 — Spanish-style Split Pea, Radish & Courgette Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -13676,7 +13676,7 @@ Split Pea, radish, courgette and buckwheat create a filling plant-forward meal b
 
 ---
 
-## THA-321 — Indian-Style Chicken Thigh, Butternut Squash & Cabbage Skillet 5
+## THA-321 — Indian-style Chicken Thigh, Butternut Squash & Cabbage Skillet 5
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -13719,7 +13719,7 @@ A modest amount of quality chicken thigh supports a plate led by butternut squas
 
 ---
 
-## THA-322 — Indonesian-Style Tofu, Parsnip & Swede One-Pot
+## THA-322 — Indonesian-style Tofu, Parsnip & Swede One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -13766,7 +13766,7 @@ Tofu, parsnip, swede and brown basmati rice create a filling plant-forward meal 
 
 ---
 
-## THA-323 — Ethiopian-Style Black Bean, Asparagus & Onion Stew
+## THA-323 — Ethiopian-style Black Bean, Asparagus & Onion Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -13814,7 +13814,7 @@ Black Bean, asparagus, onion and bulgur wheat create a filling plant-forward mea
 
 ---
 
-## THA-324 — Australian cafe-Style Chicken Thigh, Celery & Tomato Rice Bowl 5
+## THA-324 — Australian Cafe-style Chicken Thigh, Celery & Tomato Rice Bowl 5
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -13857,7 +13857,7 @@ A modest amount of quality chicken thigh supports a plate led by celery, tomato 
 
 ---
 
-## THA-325 — Spanish-Style Cannellini Bean, Broccoli & Spring Onion Noodle Bowl
+## THA-325 — Spanish-style Cannellini Bean, Broccoli & Spring Onion Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -13900,7 +13900,7 @@ Cannellini Bean, broccoli, spring onion and sweet potato create a filling plant-
 
 ---
 
-## THA-326 — Indian-Style Green Pea, Red Pepper & Kale Skillet
+## THA-326 — Indian-style Green Pea, Red Pepper & Kale Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -13943,7 +13943,7 @@ Green Pea, red pepper, kale and brown rice create a filling plant-forward meal b
 
 ---
 
-## THA-327 — Indonesian-Style Chicken Thigh, Tomato & Broccoli One-Pot 5
+## THA-327 — Indonesian-style Chicken Thigh, Tomato & Broccoli One-Pot 5
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -13990,7 +13990,7 @@ A modest amount of quality chicken thigh supports a plate led by tomato, broccol
 
 ---
 
-## THA-328 — Ethiopian-Style Chickpea, Peas & Leek Stew
+## THA-328 — Ethiopian-style Chickpea, Peas & Leek Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -14038,7 +14038,7 @@ Chickpea, peas, leek and wholemeal flatbread create a filling plant-forward meal
 
 ---
 
-## THA-329 — Australian cafe-Style Haricot Bean, Cabbage & Cucumber Rice Bowl
+## THA-329 — Australian Cafe-style Haricot Bean, Cabbage & Cucumber Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -14081,7 +14081,7 @@ Haricot Bean, cabbage, cucumber and oats create a filling plant-forward meal bui
 
 ---
 
-## THA-330 — Spanish-Style Chicken Thigh, Radish & Asparagus Noodle Bowl 5
+## THA-330 — Spanish-style Chicken Thigh, Radish & Asparagus Noodle Bowl 5
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -14124,7 +14124,7 @@ A modest amount of quality chicken thigh supports a plate led by radish, asparag
 
 ---
 
-## THA-331 — Indian-Style Split Pea, Butternut Squash & Carrot Skillet
+## THA-331 — Indian-style Split Pea, Butternut Squash & Carrot Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -14167,7 +14167,7 @@ Split Pea, butternut squash, carrot and quinoa create a filling plant-forward me
 
 ---
 
-## THA-332 — Indonesian-Style Butter Bean, Parsnip & Sweetcorn One-Pot
+## THA-332 — Indonesian-style Butter Bean, Parsnip & Sweetcorn One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -14214,7 +14214,7 @@ Butter Bean, parsnip, sweetcorn and wholegrain wrap create a filling plant-forwa
 
 ---
 
-## THA-333 — Ethiopian-Style Chicken Thigh, Asparagus & Butternut Squash Stew 5
+## THA-333 — Ethiopian-style Chicken Thigh, Asparagus & Butternut Squash Stew 5
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -14262,7 +14262,7 @@ A modest amount of quality chicken thigh supports a plate led by asparagus, butt
 
 ---
 
-## THA-334 — Australian cafe-Style Black Bean, Celery & Beetroot Rice Bowl
+## THA-334 — Australian Cafe-style Black Bean, Celery & Beetroot Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -14305,7 +14305,7 @@ Black Bean, celery, beetroot and wholewheat couscous create a filling plant-forw
 
 ---
 
-## THA-335 — Spanish-Style Edamame, Broccoli & Courgette Noodle Bowl
+## THA-335 — Spanish-style Edamame, Broccoli & Courgette Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -14348,7 +14348,7 @@ Edamame, broccoli, courgette and buckwheat create a filling plant-forward meal b
 
 ---
 
-## THA-336 — Indian-Style Chicken Thigh, Red Pepper & Cabbage Skillet 5
+## THA-336 — Indian-style Chicken Thigh, Red Pepper & Cabbage Skillet 5
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -14391,7 +14391,7 @@ A modest amount of quality chicken thigh supports a plate led by red pepper, cab
 
 ---
 
-## THA-337 — Indonesian-Style Green Pea, Tomato & Swede One-Pot
+## THA-337 — Indonesian-style Green Pea, Tomato & Swede One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -14438,7 +14438,7 @@ Green Pea, tomato, swede and brown basmati rice create a filling plant-forward m
 
 ---
 
-## THA-338 — Ethiopian-Style Kidney Bean, Peas & Onion Stew
+## THA-338 — Ethiopian-style Kidney Bean, Peas & Onion Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -14486,7 +14486,7 @@ Kidney Bean, peas, onion and bulgur wheat create a filling plant-forward meal bu
 
 ---
 
-## THA-339 — Australian cafe-Style Chicken Thigh, Cabbage & Tomato Rice Bowl 5
+## THA-339 — Australian Cafe-style Chicken Thigh, Cabbage & Tomato Rice Bowl 5
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -14529,7 +14529,7 @@ A modest amount of quality chicken thigh supports a plate led by cabbage, tomato
 
 ---
 
-## THA-340 — Spanish-Style Haricot Bean, Radish & Spring Onion Noodle Bowl
+## THA-340 — Spanish-style Haricot Bean, Radish & Spring Onion Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -14572,7 +14572,7 @@ Haricot Bean, radish, spring onion and sweet potato create a filling plant-forwa
 
 ---
 
-## THA-341 — Indian-Style Lentil, Butternut Squash & Kale Skillet
+## THA-341 — Indian-style Lentil, Butternut Squash & Kale Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -14615,7 +14615,7 @@ Lentil, butternut squash, kale and brown rice create a filling plant-forward mea
 
 ---
 
-## THA-342 — Indonesian-Style Chicken Thigh, Parsnip & Broccoli One-Pot 5
+## THA-342 — Indonesian-style Chicken Thigh, Parsnip & Broccoli One-Pot 5
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -14662,7 +14662,7 @@ A modest amount of quality chicken thigh supports a plate led by parsnip, brocco
 
 ---
 
-## THA-343 — Ethiopian-Style Butter Bean, Asparagus & Leek Stew
+## THA-343 — Ethiopian-style Butter Bean, Asparagus & Leek Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -14710,7 +14710,7 @@ Butter Bean, asparagus, leek and wholemeal flatbread create a filling plant-forw
 
 ---
 
-## THA-344 — Australian cafe-Style Tofu, Celery & Cucumber Rice Bowl
+## THA-344 — Australian Cafe-style Tofu, Celery & Cucumber Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -14753,7 +14753,7 @@ Tofu, celery, cucumber and oats create a filling plant-forward meal built from r
 
 ---
 
-## THA-345 — Spanish-Style Chicken Thigh, Broccoli & Asparagus Noodle Bowl 6
+## THA-345 — Spanish-style Chicken Thigh, Broccoli & Asparagus Noodle Bowl 6
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -14796,7 +14796,7 @@ A modest amount of quality chicken thigh supports a plate led by broccoli, aspar
 
 ---
 
-## THA-346 — Indian-Style Edamame, Red Pepper & Carrot Skillet
+## THA-346 — Indian-style Edamame, Red Pepper & Carrot Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -14839,7 +14839,7 @@ Edamame, red pepper, carrot and quinoa create a filling plant-forward meal built
 
 ---
 
-## THA-347 — Indonesian-Style Cannellini Bean, Tomato & Sweetcorn One-Pot
+## THA-347 — Indonesian-style Cannellini Bean, Tomato & Sweetcorn One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -14886,7 +14886,7 @@ Cannellini Bean, tomato, sweetcorn and wholegrain wrap create a filling plant-fo
 
 ---
 
-## THA-348 — Ethiopian-Style Chicken Thigh, Peas & Butternut Squash Stew 6
+## THA-348 — Ethiopian-style Chicken Thigh, Peas & Butternut Squash Stew 6
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -14934,7 +14934,7 @@ A modest amount of quality chicken thigh supports a plate led by peas, butternut
 
 ---
 
-## THA-349 — Australian cafe-Style Kidney Bean, Cabbage & Beetroot Rice Bowl
+## THA-349 — Australian Cafe-style Kidney Bean, Cabbage & Beetroot Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -14977,7 +14977,7 @@ Kidney Bean, cabbage, beetroot and wholewheat couscous create a filling plant-fo
 
 ---
 
-## THA-350 — Spanish-Style Chickpea, Radish & Courgette Noodle Bowl
+## THA-350 — Spanish-style Chickpea, Radish & Courgette Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -15020,7 +15020,7 @@ Chickpea, radish, courgette and buckwheat create a filling plant-forward meal bu
 
 ---
 
-## THA-351 — Indian-Style Chicken Thigh, Butternut Squash & Cabbage Skillet 6
+## THA-351 — Indian-style Chicken Thigh, Butternut Squash & Cabbage Skillet 6
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -15063,7 +15063,7 @@ A modest amount of quality chicken thigh supports a plate led by butternut squas
 
 ---
 
-## THA-352 — Indonesian-Style Lentil, Parsnip & Swede One-Pot
+## THA-352 — Indonesian-style Lentil, Parsnip & Swede One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -15110,7 +15110,7 @@ Lentil, parsnip, swede and brown basmati rice create a filling plant-forward mea
 
 ---
 
-## THA-353 — Ethiopian-Style Split Pea, Asparagus & Onion Stew
+## THA-353 — Ethiopian-style Split Pea, Asparagus & Onion Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -15158,7 +15158,7 @@ Split Pea, asparagus, onion and bulgur wheat create a filling plant-forward meal
 
 ---
 
-## THA-354 — Australian cafe-Style Chicken Thigh, Celery & Tomato Rice Bowl 6
+## THA-354 — Australian Cafe-style Chicken Thigh, Celery & Tomato Rice Bowl 6
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -15201,7 +15201,7 @@ A modest amount of quality chicken thigh supports a plate led by celery, tomato 
 
 ---
 
-## THA-355 — Spanish-Style Tofu, Broccoli & Spring Onion Noodle Bowl
+## THA-355 — Spanish-style Tofu, Broccoli & Spring Onion Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -15244,7 +15244,7 @@ Tofu, broccoli, spring onion and sweet potato create a filling plant-forward mea
 
 ---
 
-## THA-356 — Indian-Style Black Bean, Red Pepper & Kale Skillet
+## THA-356 — Indian-style Black Bean, Red Pepper & Kale Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -15287,7 +15287,7 @@ Black Bean, red pepper, kale and brown rice create a filling plant-forward meal 
 
 ---
 
-## THA-357 — Indonesian-Style Chicken Thigh, Tomato & Broccoli One-Pot 6
+## THA-357 — Indonesian-style Chicken Thigh, Tomato & Broccoli One-Pot 6
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -15334,7 +15334,7 @@ A modest amount of quality chicken thigh supports a plate led by tomato, broccol
 
 ---
 
-## THA-358 — Ethiopian-Style Cannellini Bean, Peas & Leek Stew
+## THA-358 — Ethiopian-style Cannellini Bean, Peas & Leek Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -15382,7 +15382,7 @@ Cannellini Bean, peas, leek and wholemeal flatbread create a filling plant-forwa
 
 ---
 
-## THA-359 — Australian cafe-Style Green Pea, Cabbage & Cucumber Rice Bowl
+## THA-359 — Australian Cafe-style Green Pea, Cabbage & Cucumber Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -15425,7 +15425,7 @@ Green Pea, cabbage, cucumber and oats create a filling plant-forward meal built 
 
 ---
 
-## THA-360 — Spanish-Style Chicken Thigh, Radish & Asparagus Noodle Bowl 6
+## THA-360 — Spanish-style Chicken Thigh, Radish & Asparagus Noodle Bowl 6
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -15468,7 +15468,7 @@ A modest amount of quality chicken thigh supports a plate led by radish, asparag
 
 ---
 
-## THA-361 — Indian-Style Chickpea, Butternut Squash & Carrot Skillet
+## THA-361 — Indian-style Chickpea, Butternut Squash & Carrot Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -15511,7 +15511,7 @@ Chickpea, butternut squash, carrot and quinoa create a filling plant-forward mea
 
 ---
 
-## THA-362 — Indonesian-Style Haricot Bean, Parsnip & Sweetcorn One-Pot
+## THA-362 — Indonesian-style Haricot Bean, Parsnip & Sweetcorn One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -15558,7 +15558,7 @@ Haricot Bean, parsnip, sweetcorn and wholegrain wrap create a filling plant-forw
 
 ---
 
-## THA-363 — Ethiopian-Style Chicken Thigh, Asparagus & Butternut Squash Stew 6
+## THA-363 — Ethiopian-style Chicken Thigh, Asparagus & Butternut Squash Stew 6
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -15606,7 +15606,7 @@ A modest amount of quality chicken thigh supports a plate led by asparagus, butt
 
 ---
 
-## THA-364 — Australian cafe-Style Split Pea, Celery & Beetroot Rice Bowl
+## THA-364 — Australian Cafe-style Split Pea, Celery & Beetroot Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -15649,7 +15649,7 @@ Split Pea, celery, beetroot and wholewheat couscous create a filling plant-forwa
 
 ---
 
-## THA-365 — Spanish-Style Butter Bean, Broccoli & Courgette Noodle Bowl
+## THA-365 — Spanish-style Butter Bean, Broccoli & Courgette Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -15692,7 +15692,7 @@ Butter Bean, broccoli, courgette and buckwheat create a filling plant-forward me
 
 ---
 
-## THA-366 — Indian-Style Chicken Thigh, Red Pepper & Cabbage Skillet 6
+## THA-366 — Indian-style Chicken Thigh, Red Pepper & Cabbage Skillet 6
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -15735,7 +15735,7 @@ A modest amount of quality chicken thigh supports a plate led by red pepper, cab
 
 ---
 
-## THA-367 — Indonesian-Style Black Bean, Tomato & Swede One-Pot
+## THA-367 — Indonesian-style Black Bean, Tomato & Swede One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -15782,7 +15782,7 @@ Black Bean, tomato, swede and brown basmati rice create a filling plant-forward 
 
 ---
 
-## THA-368 — Ethiopian-Style Edamame, Peas & Onion Stew
+## THA-368 — Ethiopian-style Edamame, Peas & Onion Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -15830,7 +15830,7 @@ Edamame, peas, onion and bulgur wheat create a filling plant-forward meal built 
 
 ---
 
-## THA-369 — Australian cafe-Style Chicken Thigh, Cabbage & Tomato Rice Bowl 6
+## THA-369 — Australian Cafe-style Chicken Thigh, Cabbage & Tomato Rice Bowl 6
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -15873,7 +15873,7 @@ A modest amount of quality chicken thigh supports a plate led by cabbage, tomato
 
 ---
 
-## THA-370 — Spanish-Style Green Pea, Radish & Spring Onion Noodle Bowl
+## THA-370 — Spanish-style Green Pea, Radish & Spring Onion Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -15916,7 +15916,7 @@ Green Pea, radish, spring onion and sweet potato create a filling plant-forward 
 
 ---
 
-## THA-371 — Indian-Style Kidney Bean, Butternut Squash & Kale Skillet
+## THA-371 — Indian-style Kidney Bean, Butternut Squash & Kale Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -15959,7 +15959,7 @@ Kidney Bean, butternut squash, kale and brown rice create a filling plant-forwar
 
 ---
 
-## THA-372 — Indonesian-Style Chicken Thigh, Parsnip & Broccoli One-Pot 6
+## THA-372 — Indonesian-style Chicken Thigh, Parsnip & Broccoli One-Pot 6
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -16006,7 +16006,7 @@ A modest amount of quality chicken thigh supports a plate led by parsnip, brocco
 
 ---
 
-## THA-373 — Ethiopian-Style Haricot Bean, Asparagus & Leek Stew
+## THA-373 — Ethiopian-style Haricot Bean, Asparagus & Leek Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -16054,7 +16054,7 @@ Haricot Bean, asparagus, leek and wholemeal flatbread create a filling plant-for
 
 ---
 
-## THA-374 — Australian cafe-Style Lentil, Celery & Cucumber Rice Bowl
+## THA-374 — Australian Cafe-style Lentil, Celery & Cucumber Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -16097,7 +16097,7 @@ Lentil, celery, cucumber and oats create a filling plant-forward meal built from
 
 ---
 
-## THA-375 — Spanish-Style Chicken Thigh, Broccoli & Asparagus Noodle Bowl 7
+## THA-375 — Spanish-style Chicken Thigh, Broccoli & Asparagus Noodle Bowl 7
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -16140,7 +16140,7 @@ A modest amount of quality chicken thigh supports a plate led by broccoli, aspar
 
 ---
 
-## THA-376 — Indian-Style Butter Bean, Red Pepper & Carrot Skillet
+## THA-376 — Indian-style Butter Bean, Red Pepper & Carrot Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -16183,7 +16183,7 @@ Butter Bean, red pepper, carrot and quinoa create a filling plant-forward meal b
 
 ---
 
-## THA-377 — Indonesian-Style Tofu, Tomato & Sweetcorn One-Pot
+## THA-377 — Indonesian-style Tofu, Tomato & Sweetcorn One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -16230,7 +16230,7 @@ Tofu, tomato, sweetcorn and wholegrain wrap create a filling plant-forward meal 
 
 ---
 
-## THA-378 — Ethiopian-Style Chicken Thigh, Peas & Butternut Squash Stew 7
+## THA-378 — Ethiopian-style Chicken Thigh, Peas & Butternut Squash Stew 7
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -16278,7 +16278,7 @@ A modest amount of quality chicken thigh supports a plate led by peas, butternut
 
 ---
 
-## THA-379 — Australian cafe-Style Edamame, Cabbage & Beetroot Rice Bowl
+## THA-379 — Australian Cafe-style Edamame, Cabbage & Beetroot Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -16321,7 +16321,7 @@ Edamame, cabbage, beetroot and wholewheat couscous create a filling plant-forwar
 
 ---
 
-## THA-380 — Spanish-Style Cannellini Bean, Radish & Courgette Noodle Bowl
+## THA-380 — Spanish-style Cannellini Bean, Radish & Courgette Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -16364,7 +16364,7 @@ Cannellini Bean, radish, courgette and buckwheat create a filling plant-forward 
 
 ---
 
-## THA-381 — Indian-Style Chicken Thigh, Butternut Squash & Cabbage Skillet 7
+## THA-381 — Indian-style Chicken Thigh, Butternut Squash & Cabbage Skillet 7
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -16407,7 +16407,7 @@ A modest amount of quality chicken thigh supports a plate led by butternut squas
 
 ---
 
-## THA-382 — Indonesian-Style Kidney Bean, Parsnip & Swede One-Pot
+## THA-382 — Indonesian-style Kidney Bean, Parsnip & Swede One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -16454,7 +16454,7 @@ Kidney Bean, parsnip, swede and brown basmati rice create a filling plant-forwar
 
 ---
 
-## THA-383 — Ethiopian-Style Chickpea, Asparagus & Onion Stew
+## THA-383 — Ethiopian-style Chickpea, Asparagus & Onion Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -16502,7 +16502,7 @@ Chickpea, asparagus, onion and bulgur wheat create a filling plant-forward meal 
 
 ---
 
-## THA-384 — Australian cafe-Style Chicken Thigh, Celery & Tomato Rice Bowl 7
+## THA-384 — Australian Cafe-style Chicken Thigh, Celery & Tomato Rice Bowl 7
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -16545,7 +16545,7 @@ A modest amount of quality chicken thigh supports a plate led by celery, tomato 
 
 ---
 
-## THA-385 — Spanish-Style Lentil, Broccoli & Spring Onion Noodle Bowl
+## THA-385 — Spanish-style Lentil, Broccoli & Spring Onion Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -16588,7 +16588,7 @@ Lentil, broccoli, spring onion and sweet potato create a filling plant-forward m
 
 ---
 
-## THA-386 — Indian-Style Split Pea, Red Pepper & Kale Skillet
+## THA-386 — Indian-style Split Pea, Red Pepper & Kale Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -16631,7 +16631,7 @@ Split Pea, red pepper, kale and brown rice create a filling plant-forward meal b
 
 ---
 
-## THA-387 — Indonesian-Style Chicken Thigh, Tomato & Broccoli One-Pot 7
+## THA-387 — Indonesian-style Chicken Thigh, Tomato & Broccoli One-Pot 7
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -16678,7 +16678,7 @@ A modest amount of quality chicken thigh supports a plate led by tomato, broccol
 
 ---
 
-## THA-388 — Ethiopian-Style Tofu, Peas & Leek Stew
+## THA-388 — Ethiopian-style Tofu, Peas & Leek Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -16726,7 +16726,7 @@ Tofu, peas, leek and wholemeal flatbread create a filling plant-forward meal bui
 
 ---
 
-## THA-389 — Australian cafe-Style Black Bean, Cabbage & Cucumber Rice Bowl
+## THA-389 — Australian Cafe-style Black Bean, Cabbage & Cucumber Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -16769,7 +16769,7 @@ Black Bean, cabbage, cucumber and oats create a filling plant-forward meal built
 
 ---
 
-## THA-390 — Spanish-Style Chicken Thigh, Radish & Asparagus Noodle Bowl 7
+## THA-390 — Spanish-style Chicken Thigh, Radish & Asparagus Noodle Bowl 7
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -16812,7 +16812,7 @@ A modest amount of quality chicken thigh supports a plate led by radish, asparag
 
 ---
 
-## THA-391 — Indian-Style Cannellini Bean, Butternut Squash & Carrot Skillet
+## THA-391 — Indian-style Cannellini Bean, Butternut Squash & Carrot Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -16855,7 +16855,7 @@ Cannellini Bean, butternut squash, carrot and quinoa create a filling plant-forw
 
 ---
 
-## THA-392 — Indonesian-Style Green Pea, Parsnip & Sweetcorn One-Pot
+## THA-392 — Indonesian-style Green Pea, Parsnip & Sweetcorn One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -16902,7 +16902,7 @@ Green Pea, parsnip, sweetcorn and wholegrain wrap create a filling plant-forward
 
 ---
 
-## THA-393 — Ethiopian-Style Chicken Thigh, Asparagus & Butternut Squash Stew 7
+## THA-393 — Ethiopian-style Chicken Thigh, Asparagus & Butternut Squash Stew 7
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -16950,7 +16950,7 @@ A modest amount of quality chicken thigh supports a plate led by asparagus, butt
 
 ---
 
-## THA-394 — Australian cafe-Style Chickpea, Celery & Beetroot Rice Bowl
+## THA-394 — Australian Cafe-style Chickpea, Celery & Beetroot Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -16993,7 +16993,7 @@ Chickpea, celery, beetroot and wholewheat couscous create a filling plant-forwar
 
 ---
 
-## THA-395 — Spanish-Style Haricot Bean, Broccoli & Courgette Noodle Bowl
+## THA-395 — Spanish-style Haricot Bean, Broccoli & Courgette Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -17036,7 +17036,7 @@ Haricot Bean, broccoli, courgette and buckwheat create a filling plant-forward m
 
 ---
 
-## THA-396 — Indian-Style Chicken Thigh, Red Pepper & Cabbage Skillet 7
+## THA-396 — Indian-style Chicken Thigh, Red Pepper & Cabbage Skillet 7
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -17079,7 +17079,7 @@ A modest amount of quality chicken thigh supports a plate led by red pepper, cab
 
 ---
 
-## THA-397 — Indonesian-Style Split Pea, Tomato & Swede One-Pot
+## THA-397 — Indonesian-style Split Pea, Tomato & Swede One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -17126,7 +17126,7 @@ Split Pea, tomato, swede and brown basmati rice create a filling plant-forward m
 
 ---
 
-## THA-398 — Ethiopian-Style Butter Bean, Peas & Onion Stew
+## THA-398 — Ethiopian-style Butter Bean, Peas & Onion Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -17174,7 +17174,7 @@ Butter Bean, peas, onion and bulgur wheat create a filling plant-forward meal bu
 
 ---
 
-## THA-399 — Australian cafe-Style Chicken Thigh, Cabbage & Tomato Rice Bowl 7
+## THA-399 — Australian Cafe-style Chicken Thigh, Cabbage & Tomato Rice Bowl 7
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -17217,7 +17217,7 @@ A modest amount of quality chicken thigh supports a plate led by cabbage, tomato
 
 ---
 
-## THA-400 — Spanish-Style Black Bean, Radish & Spring Onion Noodle Bowl
+## THA-400 — Spanish-style Black Bean, Radish & Spring Onion Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -17260,7 +17260,7 @@ Black Bean, radish, spring onion and sweet potato create a filling plant-forward
 
 ---
 
-## THA-401 — Indian-Style Edamame, Butternut Squash & Kale Skillet
+## THA-401 — Indian-style Edamame, Butternut Squash & Kale Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -17303,7 +17303,7 @@ Edamame, butternut squash, kale and brown rice create a filling plant-forward me
 
 ---
 
-## THA-402 — Indonesian-Style Chicken Thigh, Parsnip & Broccoli One-Pot 7
+## THA-402 — Indonesian-style Chicken Thigh, Parsnip & Broccoli One-Pot 7
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -17350,7 +17350,7 @@ A modest amount of quality chicken thigh supports a plate led by parsnip, brocco
 
 ---
 
-## THA-403 — Ethiopian-Style Green Pea, Asparagus & Leek Stew
+## THA-403 — Ethiopian-style Green Pea, Asparagus & Leek Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -17398,7 +17398,7 @@ Green Pea, asparagus, leek and wholemeal flatbread create a filling plant-forwar
 
 ---
 
-## THA-404 — Australian cafe-Style Kidney Bean, Celery & Cucumber Rice Bowl
+## THA-404 — Australian Cafe-style Kidney Bean, Celery & Cucumber Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -17441,7 +17441,7 @@ Kidney Bean, celery, cucumber and oats create a filling plant-forward meal built
 
 ---
 
-## THA-405 — Spanish-Style Chicken Thigh, Broccoli & Asparagus Noodle Bowl 8
+## THA-405 — Spanish-style Chicken Thigh, Broccoli & Asparagus Noodle Bowl 8
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -17484,7 +17484,7 @@ A modest amount of quality chicken thigh supports a plate led by broccoli, aspar
 
 ---
 
-## THA-406 — Indian-Style Haricot Bean, Red Pepper & Carrot Skillet
+## THA-406 — Indian-style Haricot Bean, Red Pepper & Carrot Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -17527,7 +17527,7 @@ Haricot Bean, red pepper, carrot and quinoa create a filling plant-forward meal 
 
 ---
 
-## THA-407 — Indonesian-Style Lentil, Tomato & Sweetcorn One-Pot
+## THA-407 — Indonesian-style Lentil, Tomato & Sweetcorn One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -17574,7 +17574,7 @@ Lentil, tomato, sweetcorn and wholegrain wrap create a filling plant-forward mea
 
 ---
 
-## THA-408 — Ethiopian-Style Chicken Thigh, Peas & Butternut Squash Stew 8
+## THA-408 — Ethiopian-style Chicken Thigh, Peas & Butternut Squash Stew 8
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -17622,7 +17622,7 @@ A modest amount of quality chicken thigh supports a plate led by peas, butternut
 
 ---
 
-## THA-409 — Australian cafe-Style Butter Bean, Cabbage & Beetroot Rice Bowl
+## THA-409 — Australian Cafe-style Butter Bean, Cabbage & Beetroot Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -17665,7 +17665,7 @@ Butter Bean, cabbage, beetroot and wholewheat couscous create a filling plant-fo
 
 ---
 
-## THA-410 — Spanish-Style Tofu, Radish & Courgette Noodle Bowl
+## THA-410 — Spanish-style Tofu, Radish & Courgette Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -17708,7 +17708,7 @@ Tofu, radish, courgette and buckwheat create a filling plant-forward meal built 
 
 ---
 
-## THA-411 — Indian-Style Chicken Thigh, Butternut Squash & Cabbage Skillet 8
+## THA-411 — Indian-style Chicken Thigh, Butternut Squash & Cabbage Skillet 8
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -17751,7 +17751,7 @@ A modest amount of quality chicken thigh supports a plate led by butternut squas
 
 ---
 
-## THA-412 — Indonesian-Style Edamame, Parsnip & Swede One-Pot
+## THA-412 — Indonesian-style Edamame, Parsnip & Swede One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -17798,7 +17798,7 @@ Edamame, parsnip, swede and brown basmati rice create a filling plant-forward me
 
 ---
 
-## THA-413 — Ethiopian-Style Cannellini Bean, Asparagus & Onion Stew
+## THA-413 — Ethiopian-style Cannellini Bean, Asparagus & Onion Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -17846,7 +17846,7 @@ Cannellini Bean, asparagus, onion and bulgur wheat create a filling plant-forwar
 
 ---
 
-## THA-414 — Australian cafe-Style Chicken Thigh, Celery & Tomato Rice Bowl 8
+## THA-414 — Australian Cafe-style Chicken Thigh, Celery & Tomato Rice Bowl 8
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -17889,7 +17889,7 @@ A modest amount of quality chicken thigh supports a plate led by celery, tomato 
 
 ---
 
-## THA-415 — Spanish-Style Kidney Bean, Broccoli & Spring Onion Noodle Bowl
+## THA-415 — Spanish-style Kidney Bean, Broccoli & Spring Onion Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -17932,7 +17932,7 @@ Kidney Bean, broccoli, spring onion and sweet potato create a filling plant-forw
 
 ---
 
-## THA-416 — Indian-Style Chickpea, Red Pepper & Kale Skillet
+## THA-416 — Indian-style Chickpea, Red Pepper & Kale Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -17975,7 +17975,7 @@ Chickpea, red pepper, kale and brown rice create a filling plant-forward meal bu
 
 ---
 
-## THA-417 — Indonesian-Style Chicken Thigh, Tomato & Broccoli One-Pot 8
+## THA-417 — Indonesian-style Chicken Thigh, Tomato & Broccoli One-Pot 8
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -18022,7 +18022,7 @@ A modest amount of quality chicken thigh supports a plate led by tomato, broccol
 
 ---
 
-## THA-418 — Ethiopian-Style Lentil, Peas & Leek Stew
+## THA-418 — Ethiopian-style Lentil, Peas & Leek Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -18070,7 +18070,7 @@ Lentil, peas, leek and wholemeal flatbread create a filling plant-forward meal b
 
 ---
 
-## THA-419 — Australian cafe-Style Split Pea, Cabbage & Cucumber Rice Bowl
+## THA-419 — Australian Cafe-style Split Pea, Cabbage & Cucumber Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -18113,7 +18113,7 @@ Split Pea, cabbage, cucumber and oats create a filling plant-forward meal built 
 
 ---
 
-## THA-420 — Spanish-Style Chicken Thigh, Radish & Asparagus Noodle Bowl 8
+## THA-420 — Spanish-style Chicken Thigh, Radish & Asparagus Noodle Bowl 8
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -18156,7 +18156,7 @@ A modest amount of quality chicken thigh supports a plate led by radish, asparag
 
 ---
 
-## THA-421 — Indian-Style Tofu, Butternut Squash & Carrot Skillet
+## THA-421 — Indian-style Tofu, Butternut Squash & Carrot Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -18199,7 +18199,7 @@ Tofu, butternut squash, carrot and quinoa create a filling plant-forward meal bu
 
 ---
 
-## THA-422 — Indonesian-Style Black Bean, Parsnip & Sweetcorn One-Pot
+## THA-422 — Indonesian-style Black Bean, Parsnip & Sweetcorn One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -18246,7 +18246,7 @@ Black Bean, parsnip, sweetcorn and wholegrain wrap create a filling plant-forwar
 
 ---
 
-## THA-423 — Ethiopian-Style Chicken Thigh, Asparagus & Butternut Squash Stew 8
+## THA-423 — Ethiopian-style Chicken Thigh, Asparagus & Butternut Squash Stew 8
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -18294,7 +18294,7 @@ A modest amount of quality chicken thigh supports a plate led by asparagus, butt
 
 ---
 
-## THA-424 — Australian cafe-Style Cannellini Bean, Celery & Beetroot Rice Bowl
+## THA-424 — Australian Cafe-style Cannellini Bean, Celery & Beetroot Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -18337,7 +18337,7 @@ Cannellini Bean, celery, beetroot and wholewheat couscous create a filling plant
 
 ---
 
-## THA-425 — Spanish-Style Green Pea, Broccoli & Courgette Noodle Bowl
+## THA-425 — Spanish-style Green Pea, Broccoli & Courgette Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -18380,7 +18380,7 @@ Green Pea, broccoli, courgette and buckwheat create a filling plant-forward meal
 
 ---
 
-## THA-426 — Indian-Style Chicken Thigh, Red Pepper & Cabbage Skillet 8
+## THA-426 — Indian-style Chicken Thigh, Red Pepper & Cabbage Skillet 8
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -18423,7 +18423,7 @@ A modest amount of quality chicken thigh supports a plate led by red pepper, cab
 
 ---
 
-## THA-427 — Indonesian-Style Chickpea, Tomato & Swede One-Pot
+## THA-427 — Indonesian-style Chickpea, Tomato & Swede One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -18470,7 +18470,7 @@ Chickpea, tomato, swede and brown basmati rice create a filling plant-forward me
 
 ---
 
-## THA-428 — Ethiopian-Style Haricot Bean, Peas & Onion Stew
+## THA-428 — Ethiopian-style Haricot Bean, Peas & Onion Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -18518,7 +18518,7 @@ Haricot Bean, peas, onion and bulgur wheat create a filling plant-forward meal b
 
 ---
 
-## THA-429 — Australian cafe-Style Chicken Thigh, Cabbage & Tomato Rice Bowl 8
+## THA-429 — Australian Cafe-style Chicken Thigh, Cabbage & Tomato Rice Bowl 8
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -18561,7 +18561,7 @@ A modest amount of quality chicken thigh supports a plate led by cabbage, tomato
 
 ---
 
-## THA-430 — Spanish-Style Split Pea, Radish & Spring Onion Noodle Bowl
+## THA-430 — Spanish-style Split Pea, Radish & Spring Onion Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -18604,7 +18604,7 @@ Split Pea, radish, spring onion and sweet potato create a filling plant-forward 
 
 ---
 
-## THA-431 — Indian-Style Butter Bean, Butternut Squash & Kale Skillet
+## THA-431 — Indian-style Butter Bean, Butternut Squash & Kale Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -18647,7 +18647,7 @@ Butter Bean, butternut squash, kale and brown rice create a filling plant-forwar
 
 ---
 
-## THA-432 — Indonesian-Style Chicken Thigh, Parsnip & Broccoli One-Pot 8
+## THA-432 — Indonesian-style Chicken Thigh, Parsnip & Broccoli One-Pot 8
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -18694,7 +18694,7 @@ A modest amount of quality chicken thigh supports a plate led by parsnip, brocco
 
 ---
 
-## THA-433 — Ethiopian-Style Black Bean, Asparagus & Leek Stew
+## THA-433 — Ethiopian-style Black Bean, Asparagus & Leek Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -18742,7 +18742,7 @@ Black Bean, asparagus, leek and wholemeal flatbread create a filling plant-forwa
 
 ---
 
-## THA-434 — Australian cafe-Style Edamame, Celery & Cucumber Rice Bowl
+## THA-434 — Australian Cafe-style Edamame, Celery & Cucumber Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -18785,7 +18785,7 @@ Edamame, celery, cucumber and oats create a filling plant-forward meal built fro
 
 ---
 
-## THA-435 — Spanish-Style Chicken Thigh, Broccoli & Asparagus Noodle Bowl 9
+## THA-435 — Spanish-style Chicken Thigh, Broccoli & Asparagus Noodle Bowl 9
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -18828,7 +18828,7 @@ A modest amount of quality chicken thigh supports a plate led by broccoli, aspar
 
 ---
 
-## THA-436 — Indian-Style Green Pea, Red Pepper & Carrot Skillet
+## THA-436 — Indian-style Green Pea, Red Pepper & Carrot Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -18871,7 +18871,7 @@ Green Pea, red pepper, carrot and quinoa create a filling plant-forward meal bui
 
 ---
 
-## THA-437 — Indonesian-Style Kidney Bean, Tomato & Sweetcorn One-Pot
+## THA-437 — Indonesian-style Kidney Bean, Tomato & Sweetcorn One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -18918,7 +18918,7 @@ Kidney Bean, tomato, sweetcorn and wholegrain wrap create a filling plant-forwar
 
 ---
 
-## THA-438 — Ethiopian-Style Chicken Thigh, Peas & Butternut Squash Stew 9
+## THA-438 — Ethiopian-style Chicken Thigh, Peas & Butternut Squash Stew 9
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -18966,7 +18966,7 @@ A modest amount of quality chicken thigh supports a plate led by peas, butternut
 
 ---
 
-## THA-439 — Australian cafe-Style Haricot Bean, Cabbage & Beetroot Rice Bowl
+## THA-439 — Australian Cafe-style Haricot Bean, Cabbage & Beetroot Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -19009,7 +19009,7 @@ Haricot Bean, cabbage, beetroot and wholewheat couscous create a filling plant-f
 
 ---
 
-## THA-440 — Spanish-Style Lentil, Radish & Courgette Noodle Bowl
+## THA-440 — Spanish-style Lentil, Radish & Courgette Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -19052,7 +19052,7 @@ Lentil, radish, courgette and buckwheat create a filling plant-forward meal buil
 
 ---
 
-## THA-441 — Indian-Style Chicken Thigh, Butternut Squash & Cabbage Skillet 9
+## THA-441 — Indian-style Chicken Thigh, Butternut Squash & Cabbage Skillet 9
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -19095,7 +19095,7 @@ A modest amount of quality chicken thigh supports a plate led by butternut squas
 
 ---
 
-## THA-442 — Indonesian-Style Butter Bean, Parsnip & Swede One-Pot
+## THA-442 — Indonesian-style Butter Bean, Parsnip & Swede One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -19142,7 +19142,7 @@ Butter Bean, parsnip, swede and brown basmati rice create a filling plant-forwar
 
 ---
 
-## THA-443 — Ethiopian-Style Tofu, Asparagus & Onion Stew
+## THA-443 — Ethiopian-style Tofu, Asparagus & Onion Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -19190,7 +19190,7 @@ Tofu, asparagus, onion and bulgur wheat create a filling plant-forward meal buil
 
 ---
 
-## THA-444 — Australian cafe-Style Chicken Thigh, Celery & Tomato Rice Bowl 9
+## THA-444 — Australian Cafe-style Chicken Thigh, Celery & Tomato Rice Bowl 9
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -19233,7 +19233,7 @@ A modest amount of quality chicken thigh supports a plate led by celery, tomato 
 
 ---
 
-## THA-445 — Spanish-Style Edamame, Broccoli & Spring Onion Noodle Bowl
+## THA-445 — Spanish-style Edamame, Broccoli & Spring Onion Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -19276,7 +19276,7 @@ Edamame, broccoli, spring onion and sweet potato create a filling plant-forward 
 
 ---
 
-## THA-446 — Indian-Style Cannellini Bean, Red Pepper & Kale Skillet
+## THA-446 — Indian-style Cannellini Bean, Red Pepper & Kale Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -19319,7 +19319,7 @@ Cannellini Bean, red pepper, kale and brown rice create a filling plant-forward 
 
 ---
 
-## THA-447 — Indonesian-Style Chicken Thigh, Tomato & Broccoli One-Pot 9
+## THA-447 — Indonesian-style Chicken Thigh, Tomato & Broccoli One-Pot 9
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -19366,7 +19366,7 @@ A modest amount of quality chicken thigh supports a plate led by tomato, broccol
 
 ---
 
-## THA-448 — Ethiopian-Style Kidney Bean, Peas & Leek Stew
+## THA-448 — Ethiopian-style Kidney Bean, Peas & Leek Stew
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -19414,7 +19414,7 @@ Kidney Bean, peas, leek and wholemeal flatbread create a filling plant-forward m
 
 ---
 
-## THA-449 — Australian cafe-Style Chickpea, Cabbage & Cucumber Rice Bowl
+## THA-449 — Australian Cafe-style Chickpea, Cabbage & Cucumber Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -19457,7 +19457,7 @@ Chickpea, cabbage, cucumber and oats create a filling plant-forward meal built f
 
 ---
 
-## THA-450 — Spanish-Style Chicken Thigh, Radish & Asparagus Noodle Bowl 9
+## THA-450 — Spanish-style Chicken Thigh, Radish & Asparagus Noodle Bowl 9
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -19500,7 +19500,7 @@ A modest amount of quality chicken thigh supports a plate led by radish, asparag
 
 ---
 
-## THA-451 — Indian-Style Lentil, Butternut Squash & Carrot Skillet
+## THA-451 — Indian-style Lentil, Butternut Squash & Carrot Skillet
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -19543,7 +19543,7 @@ Lentil, butternut squash, carrot and quinoa create a filling plant-forward meal 
 
 ---
 
-## THA-452 — Indonesian-Style Split Pea, Parsnip & Sweetcorn One-Pot
+## THA-452 — Indonesian-style Split Pea, Parsnip & Sweetcorn One-Pot
 **Category:** dinner  
 **Cuisine inspiration:** Indonesian-inspired  
 **Serves:** 4  
@@ -19590,7 +19590,7 @@ Split Pea, parsnip, sweetcorn and wholegrain wrap create a filling plant-forward
 
 ---
 
-## THA-453 — Ethiopian-Style Chicken Thigh, Asparagus & Butternut Squash Stew 9
+## THA-453 — Ethiopian-style Chicken Thigh, Asparagus & Butternut Squash Stew 9
 **Category:** dinner  
 **Cuisine inspiration:** Ethiopian-inspired  
 **Serves:** 4  
@@ -19638,7 +19638,7 @@ A modest amount of quality chicken thigh supports a plate led by asparagus, butt
 
 ---
 
-## THA-454 — Australian cafe-Style Tofu, Celery & Beetroot Rice Bowl
+## THA-454 — Australian Cafe-style Tofu, Celery & Beetroot Rice Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Australian cafe-inspired  
 **Serves:** 4  
@@ -19681,7 +19681,7 @@ Tofu, celery, beetroot and wholewheat couscous create a filling plant-forward me
 
 ---
 
-## THA-455 — Spanish-Style Black Bean, Broccoli & Courgette Noodle Bowl
+## THA-455 — Spanish-style Black Bean, Broccoli & Courgette Noodle Bowl
 **Category:** dinner  
 **Cuisine inspiration:** Spanish-inspired  
 **Serves:** 4  
@@ -19724,7 +19724,7 @@ Black Bean, broccoli, courgette and buckwheat create a filling plant-forward mea
 
 ---
 
-## THA-456 — Indian-Style Chicken Thigh, Red Pepper & Cabbage Skillet 9
+## THA-456 — Indian-style Chicken Thigh, Red Pepper & Cabbage Skillet 9
 **Category:** dinner  
 **Cuisine inspiration:** Indian-inspired  
 **Serves:** 4  
@@ -19767,7 +19767,7 @@ A modest amount of quality chicken thigh supports a plate led by red pepper, cab
 
 ---
 
-## THA-457 — Chinese-Style Red Cabbage, Green Bean & Split Pea Roasted Veg
+## THA-457 — Chinese-style Red Cabbage, Green Bean & Split Pea Roasted Veg
 **Category:** side  
 **Cuisine inspiration:** Chinese-inspired  
 **Serves:** 4  
@@ -19807,7 +19807,7 @@ Split Pea, red cabbage, green bean and buckwheat create a filling plant-forward 
 
 ---
 
-## THA-458 — West African-Style Cucumber, Pumpkin & Cod Herb Potatoes
+## THA-458 — West African-style Cucumber, Pumpkin & Cod Herb Potatoes
 **Category:** side  
 **Cuisine inspiration:** West African-inspired  
 **Serves:** 4  
@@ -19847,7 +19847,7 @@ Quality cod is paired with cucumber, pumpkin and potato for a whole-food meal wh
 
 ---
 
-## THA-459 — Georgian-Style Pumpkin, Celery & Feta Slaw
+## THA-459 — Georgian-style Pumpkin, Celery & Feta Slaw
 **Category:** side  
 **Cuisine inspiration:** Georgian-inspired  
 **Serves:** 4  
@@ -19887,7 +19887,7 @@ Feta, pumpkin, celery and brown basmati rice create a filling plant-forward meal
 
 ---
 
-## THA-460 — Greek-Style Kale, Aubergine & Black Bean Bean Salad
+## THA-460 — Greek-style Kale, Aubergine & Black Bean Bean Salad
 **Category:** side  
 **Cuisine inspiration:** Greek-inspired  
 **Serves:** 4  
@@ -19927,7 +19927,7 @@ Black Bean, kale, aubergine and bulgur wheat create a filling plant-forward meal
 
 ---
 
-## THA-461 — Persian-Style Fennel, Red Cabbage & Mackerel Grain Salad
+## THA-461 — Persian-style Fennel, Red Cabbage & Mackerel Grain Salad
 **Category:** side  
 **Cuisine inspiration:** Persian-inspired  
 **Serves:** 4  
@@ -19967,7 +19967,7 @@ Quality mackerel is paired with fennel, red cabbage and wholewheat noodles for a
 
 ---
 
-## THA-462 — Chinese-Style Onion, Parsnip & Greek Yoghurt Roasted Veg
+## THA-462 — Chinese-style Onion, Parsnip & Greek Yoghurt Roasted Veg
 **Category:** side  
 **Cuisine inspiration:** Chinese-inspired  
 **Serves:** 4  
@@ -20007,7 +20007,7 @@ Greek Yoghurt, onion, parsnip and sweet potato create a filling plant-forward me
 
 ---
 
-## THA-463 — West African-Style Cauliflower, Spinach & Green Pea Herb Potatoes
+## THA-463 — West African-style Cauliflower, Spinach & Green Pea Herb Potatoes
 **Category:** side  
 **Cuisine inspiration:** West African-inspired  
 **Serves:** 4  
@@ -20047,7 +20047,7 @@ Green Pea, cauliflower, spinach and brown rice create a filling plant-forward me
 
 ---
 
-## THA-464 — Georgian-Style Courgette, Cherry Tomato & Sardine Slaw
+## THA-464 — Georgian-style Courgette, Cherry Tomato & Sardine Slaw
 **Category:** side  
 **Cuisine inspiration:** Georgian-inspired  
 **Serves:** 4  
@@ -20087,7 +20087,7 @@ Quality sardine is paired with courgette, cherry tomato and pearl barley for a w
 
 ---
 
-## THA-465 — Greek-Style Cherry Tomato, Radish & Cottage Cheese Bean Salad
+## THA-465 — Greek-style Cherry Tomato, Radish & Cottage Cheese Bean Salad
 **Category:** side  
 **Cuisine inspiration:** Greek-inspired  
 **Serves:** 4  
@@ -20127,7 +20127,7 @@ Cottage Cheese, cherry tomato, radish and wholemeal flatbread create a filling p
 
 ---
 
-## THA-466 — Persian-Style Sweetcorn, Pak Choi & Haricot Bean Grain Salad
+## THA-466 — Persian-style Sweetcorn, Pak Choi & Haricot Bean Grain Salad
 **Category:** side  
 **Cuisine inspiration:** Persian-inspired  
 **Serves:** 4  
@@ -20167,7 +20167,7 @@ Haricot Bean, sweetcorn, pak choi and oats create a filling plant-forward meal b
 
 ---
 
-## THA-467 — Chinese-Style Red Cabbage, Cauliflower & Tuna Roasted Veg
+## THA-467 — Chinese-style Red Cabbage, Cauliflower & Tuna Roasted Veg
 **Category:** side  
 **Cuisine inspiration:** Chinese-inspired  
 **Serves:** 4  
@@ -20207,7 +20207,7 @@ Quality tuna is paired with red cabbage, cauliflower and wholewheat pasta for a 
 
 ---
 
-## THA-468 — West African-Style Cucumber, Peas & Halloumi Herb Potatoes
+## THA-468 — West African-style Cucumber, Peas & Halloumi Herb Potatoes
 **Category:** side  
 **Cuisine inspiration:** West African-inspired  
 **Serves:** 4  
@@ -20247,7 +20247,7 @@ Halloumi, cucumber, peas and quinoa create a filling plant-forward meal built fr
 
 ---
 
-## THA-469 — Georgian-Style Pumpkin, Mushroom & Butter Bean Slaw
+## THA-469 — Georgian-style Pumpkin, Mushroom & Butter Bean Slaw
 **Category:** side  
 **Cuisine inspiration:** Georgian-inspired  
 **Serves:** 4  
@@ -20287,7 +20287,7 @@ Butter Bean, pumpkin, mushroom and wholegrain wrap create a filling plant-forwar
 
 ---
 
-## THA-470 — Greek-Style Kale, Fennel & Cod Bean Salad
+## THA-470 — Greek-style Kale, Fennel & Cod Bean Salad
 **Category:** side  
 **Cuisine inspiration:** Greek-inspired  
 **Serves:** 4  
@@ -20327,7 +20327,7 @@ Quality cod is paired with kale, fennel and wholegrain bread for a whole-food me
 
 ---
 
-## THA-471 — Persian-Style Fennel, Red Pepper & Egg Grain Salad
+## THA-471 — Persian-style Fennel, Red Pepper & Egg Grain Salad
 **Category:** side  
 **Cuisine inspiration:** Persian-inspired  
 **Serves:** 4  
@@ -20367,7 +20367,7 @@ Egg, fennel, red pepper and wholewheat couscous create a filling plant-forward m
 
 ---
 
-## THA-472 — Chinese-Style Onion, Green Bean & Edamame Roasted Veg
+## THA-472 — Chinese-style Onion, Green Bean & Edamame Roasted Veg
 **Category:** side  
 **Cuisine inspiration:** Chinese-inspired  
 **Serves:** 4  
@@ -20407,7 +20407,7 @@ Edamame, onion, green bean and buckwheat create a filling plant-forward meal bui
 
 ---
 
-## THA-473 — West African-Style Cauliflower, Pumpkin & Mackerel Herb Potatoes
+## THA-473 — West African-style Cauliflower, Pumpkin & Mackerel Herb Potatoes
 **Category:** side  
 **Cuisine inspiration:** West African-inspired  
 **Serves:** 4  
@@ -20447,7 +20447,7 @@ Quality mackerel is paired with cauliflower, pumpkin and potato for a whole-food
 
 ---
 
-## THA-474 — Georgian-Style Courgette, Celery & Feta Slaw
+## THA-474 — Georgian-style Courgette, Celery & Feta Slaw
 **Category:** side  
 **Cuisine inspiration:** Georgian-inspired  
 **Serves:** 4  
@@ -20487,7 +20487,7 @@ Feta, courgette, celery and brown basmati rice create a filling plant-forward me
 
 ---
 
-## THA-475 — Greek-Style Cherry Tomato, Aubergine & Kidney Bean Bean Salad
+## THA-475 — Greek-style Cherry Tomato, Aubergine & Kidney Bean Bean Salad
 **Category:** side  
 **Cuisine inspiration:** Greek-inspired  
 **Serves:** 4  
@@ -20527,7 +20527,7 @@ Kidney Bean, cherry tomato, aubergine and bulgur wheat create a filling plant-fo
 
 ---
 
-## THA-476 — Persian-Style Sweetcorn, Red Cabbage & Sardine Grain Salad
+## THA-476 — Persian-style Sweetcorn, Red Cabbage & Sardine Grain Salad
 **Category:** side  
 **Cuisine inspiration:** Persian-inspired  
 **Serves:** 4  
@@ -20567,7 +20567,7 @@ Quality sardine is paired with sweetcorn, red cabbage and wholewheat noodles for
 
 ---
 
-## THA-477 — Chinese-Style Red Cabbage, Parsnip & Greek Yoghurt Roasted Veg
+## THA-477 — Chinese-style Red Cabbage, Parsnip & Greek Yoghurt Roasted Veg
 **Category:** side  
 **Cuisine inspiration:** Chinese-inspired  
 **Serves:** 4  
@@ -20607,7 +20607,7 @@ Greek Yoghurt, red cabbage, parsnip and sweet potato create a filling plant-forw
 
 ---
 
-## THA-478 — West African-Style Cucumber, Spinach & Lentil Herb Potatoes
+## THA-478 — West African-style Cucumber, Spinach & Lentil Herb Potatoes
 **Category:** side  
 **Cuisine inspiration:** West African-inspired  
 **Serves:** 4  
@@ -20647,7 +20647,7 @@ Lentil, cucumber, spinach and brown rice create a filling plant-forward meal bui
 
 ---
 
-## THA-479 — Georgian-Style Pumpkin, Cherry Tomato & Tuna Slaw
+## THA-479 — Georgian-style Pumpkin, Cherry Tomato & Tuna Slaw
 **Category:** side  
 **Cuisine inspiration:** Georgian-inspired  
 **Serves:** 4  
@@ -20687,7 +20687,7 @@ Quality tuna is paired with pumpkin, cherry tomato and pearl barley for a whole-
 
 ---
 
-## THA-480 — Greek-Style Kale, Radish & Cottage Cheese Bean Salad
+## THA-480 — Greek-style Kale, Radish & Cottage Cheese Bean Salad
 **Category:** side  
 **Cuisine inspiration:** Greek-inspired  
 **Serves:** 4  
@@ -20727,7 +20727,7 @@ Cottage Cheese, kale, radish and wholemeal flatbread create a filling plant-forw
 
 ---
 
-## THA-481 — Greek-Style Cauliflower, Green Bean & Butter Bean Oat Bars
+## THA-481 — Greek-style Cauliflower, Green Bean & Butter Bean Oat Bars
 **Category:** snack  
 **Cuisine inspiration:** Greek-inspired  
 **Serves:** 8  
@@ -20765,7 +20765,7 @@ Butter Bean, cauliflower, green bean and bulgur wheat create a filling plant-for
 
 ---
 
-## THA-482 — Persian-Style Courgette, Pumpkin & Tofu Seeded Muffins
+## THA-482 — Persian-style Courgette, Pumpkin & Tofu Seeded Muffins
 **Category:** snack  
 **Cuisine inspiration:** Persian-inspired  
 **Serves:** 8  
@@ -20803,7 +20803,7 @@ Tofu, courgette, pumpkin and wholewheat noodles create a filling plant-forward m
 
 ---
 
-## THA-483 — Chinese-Style Cherry Tomato, Celery & Egg Snack Bites
+## THA-483 — Chinese-style Cherry Tomato, Celery & Egg Snack Bites
 **Category:** snack  
 **Cuisine inspiration:** Chinese-inspired  
 **Serves:** 8  
@@ -20841,7 +20841,7 @@ Egg, cherry tomato, celery and sweet potato create a filling plant-forward meal 
 
 ---
 
-## THA-484 — West African-Style Sweetcorn, Aubergine & Edamame Dip Plate
+## THA-484 — West African-style Sweetcorn, Aubergine & Edamame Dip Plate
 **Category:** snack  
 **Cuisine inspiration:** West African-inspired  
 **Serves:** 8  
@@ -20879,7 +20879,7 @@ Edamame, sweetcorn, aubergine and brown rice create a filling plant-forward meal
 
 ---
 
-## THA-485 — Georgian-Style Red Cabbage, Spinach & Cannellini Bean Fruit Pot
+## THA-485 — Georgian-style Red Cabbage, Spinach & Cannellini Bean Fruit Pot
 **Category:** snack  
 **Cuisine inspiration:** Georgian-inspired  
 **Serves:** 8  
@@ -20917,7 +20917,7 @@ Cannellini Bean, red cabbage, spinach and pearl barley create a filling plant-fo
 
 ---
 
-## THA-486 — Greek-Style Cucumber, Parsnip & Feta Oat Bars
+## THA-486 — Greek-style Cucumber, Parsnip & Feta Oat Bars
 **Category:** snack  
 **Cuisine inspiration:** Greek-inspired  
 **Serves:** 8  
@@ -20955,7 +20955,7 @@ Feta, cucumber, parsnip and wholemeal flatbread create a filling plant-forward m
 
 ---
 
-## THA-487 — Persian-Style Pumpkin, Spinach & Kidney Bean Seeded Muffins
+## THA-487 — Persian-style Pumpkin, Spinach & Kidney Bean Seeded Muffins
 **Category:** snack  
 **Cuisine inspiration:** Persian-inspired  
 **Serves:** 8  
@@ -20993,7 +20993,7 @@ Kidney Bean, pumpkin, spinach and oats create a filling plant-forward meal built
 
 ---
 
-## THA-488 — Chinese-Style Kale, Cherry Tomato & Chickpea Snack Bites
+## THA-488 — Chinese-style Kale, Cherry Tomato & Chickpea Snack Bites
 **Category:** snack  
 **Cuisine inspiration:** Chinese-inspired  
 **Serves:** 8  
@@ -21031,7 +21031,7 @@ Chickpea, kale, cherry tomato and wholewheat pasta create a filling plant-forwar
 
 ---
 
-## THA-489 — West African-Style Fennel, Radish & Greek Yoghurt Dip Plate
+## THA-489 — West African-style Fennel, Radish & Greek Yoghurt Dip Plate
 **Category:** snack  
 **Cuisine inspiration:** West African-inspired  
 **Serves:** 8  
@@ -21069,7 +21069,7 @@ Greek Yoghurt, fennel, radish and quinoa create a filling plant-forward meal bui
 
 ---
 
-## THA-490 — Georgian-Style Onion, Pak Choi & Lentil Fruit Pot
+## THA-490 — Georgian-style Onion, Pak Choi & Lentil Fruit Pot
 **Category:** snack  
 **Cuisine inspiration:** Georgian-inspired  
 **Serves:** 8  
@@ -21107,7 +21107,7 @@ Lentil, onion, pak choi and wholegrain wrap create a filling plant-forward meal 
 
 ---
 
-## THA-491 — Greek-Style Cauliflower, Aubergine & Split Pea Oat Bars
+## THA-491 — Greek-style Cauliflower, Aubergine & Split Pea Oat Bars
 **Category:** snack  
 **Cuisine inspiration:** Greek-inspired  
 **Serves:** 8  
@@ -21145,7 +21145,7 @@ Split Pea, cauliflower, aubergine and wholegrain bread create a filling plant-fo
 
 ---
 
-## THA-492 — Persian-Style Courgette, Peas & Cottage Cheese Seeded Muffins
+## THA-492 — Persian-style Courgette, Peas & Cottage Cheese Seeded Muffins
 **Category:** snack  
 **Cuisine inspiration:** Persian-inspired  
 **Serves:** 8  
@@ -21183,7 +21183,7 @@ Cottage Cheese, courgette, peas and wholewheat couscous create a filling plant-f
 
 ---
 
-## THA-493 — Chinese-Style Cherry Tomato, Mushroom & Tofu Snack Bites
+## THA-493 — Chinese-style Cherry Tomato, Mushroom & Tofu Snack Bites
 **Category:** snack  
 **Cuisine inspiration:** Chinese-inspired  
 **Serves:** 8  
@@ -21221,7 +21221,7 @@ Tofu, cherry tomato, mushroom and buckwheat create a filling plant-forward meal 
 
 ---
 
-## THA-494 — West African-Style Sweetcorn, Fennel & Black Bean Dip Plate
+## THA-494 — West African-style Sweetcorn, Fennel & Black Bean Dip Plate
 **Category:** snack  
 **Cuisine inspiration:** West African-inspired  
 **Serves:** 8  
@@ -21259,7 +21259,7 @@ Black Bean, sweetcorn, fennel and potato create a filling plant-forward meal bui
 
 ---
 
-## THA-495 — Georgian-Style Red Cabbage, Red Pepper & Halloumi Fruit Pot
+## THA-495 — Georgian-style Red Cabbage, Red Pepper & Halloumi Fruit Pot
 **Category:** snack  
 **Cuisine inspiration:** Georgian-inspired  
 **Serves:** 8  
@@ -21297,7 +21297,7 @@ Halloumi, red cabbage, red pepper and brown basmati rice create a filling plant-
 
 ---
 
-## THA-496 — Greek-Style Cucumber, Green Bean & Cannellini Bean Oat Bars
+## THA-496 — Greek-style Cucumber, Green Bean & Cannellini Bean Oat Bars
 **Category:** snack  
 **Cuisine inspiration:** Greek-inspired  
 **Serves:** 8  
@@ -21335,7 +21335,7 @@ Cannellini Bean, cucumber, green bean and bulgur wheat create a filling plant-fo
 
 ---
 
-## THA-497 — Persian-Style Pumpkin, Green Bean & Green Pea Seeded Muffins
+## THA-497 — Persian-style Pumpkin, Green Bean & Green Pea Seeded Muffins
 **Category:** snack  
 **Cuisine inspiration:** Persian-inspired  
 **Serves:** 8  
@@ -21373,7 +21373,7 @@ Green Pea, pumpkin, green bean and wholewheat noodles create a filling plant-for
 
 ---
 
-## THA-498 — Chinese-Style Kale, Celery & Egg Snack Bites
+## THA-498 — Chinese-style Kale, Celery & Egg Snack Bites
 **Category:** snack  
 **Cuisine inspiration:** Chinese-inspired  
 **Serves:** 8  
@@ -21411,7 +21411,7 @@ Egg, kale, celery and sweet potato create a filling plant-forward meal built fro
 
 ---
 
-## THA-499 — West African-Style Fennel, Aubergine & Chickpea Dip Plate
+## THA-499 — West African-style Fennel, Aubergine & Chickpea Dip Plate
 **Category:** snack  
 **Cuisine inspiration:** West African-inspired  
 **Serves:** 8  
@@ -21449,7 +21449,7 @@ Chickpea, fennel, aubergine and brown rice create a filling plant-forward meal b
 
 ---
 
-## THA-500 — Georgian-Style Onion, Red Cabbage & Haricot Bean Fruit Pot
+## THA-500 — Georgian-style Onion, Red Cabbage & Haricot Bean Fruit Pot
 **Category:** snack  
 **Cuisine inspiration:** Georgian-inspired  
 **Serves:** 8  
