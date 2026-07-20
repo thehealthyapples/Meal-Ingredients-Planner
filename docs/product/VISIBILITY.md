@@ -4,7 +4,7 @@ _The disclosure surface (PKR §18, added by PKR2). "What can a household be told
 
 **This document classifies; it never authorises.** It declares what tier a fact belongs to. It never decides what tier a *user* belongs to — identity and role are resolved exclusively by `server/lib/access.ts` (Rule PKR25). A missing or invalid label fails closed to `developer` and is served to no one (Rule PKR22).
 
-_Generated from `docs/product/inventory/product.yaml` by PDA1 — do not hand-edit. 161 entries: 28 public, 76 household, 51 admin, 6 developer._
+_Generated from `docs/product/inventory/product.yaml` by PDA1 — do not hand-edit. 165 entries: 28 public, 78 household, 53 admin, 6 developer._
 
 ### public — 28 entries
 
@@ -41,7 +41,7 @@ Anyone, signed in or not. The Companion answers households most from this tier a
 | `page-not-found` | Not Found | pages |
 | `page-shared-plan` | Shared Plan | pages |
 
-### household — 76 entries
+### household — 78 entries
 
 Any signed-in household. Everything public, plus the household-facing product itself.
 
@@ -61,6 +61,7 @@ Any signed-in household. Everything public, plus the household-facing product it
 | `cap-shopping` | Shopping capability | intelligence-capabilities |
 | `dlg-bad-apple` | Highly Ultra-Processed warning | dialogs |
 | `dom-analyser` | Analyser | domains |
+| `dom-commerce` | Plans and Entitlements | domains |
 | `dom-companion` | Apple | domains |
 | `dom-cookbook` | Cookbook | domains |
 | `dom-diary` | Diary | domains |
@@ -85,6 +86,7 @@ Any signed-in household. Everything public, plus the household-facing product it
 | `jrn-track-eaten` | Track what we ate | journeys |
 | `jrn-understand-nutrition` | Understand our nutrition | journeys |
 | `ntf-diversity-milestone` | Plant diversity milestone notice | notifications |
+| `ntf-household-story` | Household observation notice | notifications |
 | `ntf-nutrition-trend` | Nutrition trend notice | notifications |
 | `ntf-pantry-opportunity` | Pantry opportunity notice | notifications |
 | `ntf-planner-gap` | Planner gap notice | notifications |
@@ -124,7 +126,7 @@ Any signed-in household. Everything public, plus the household-facing product it
 | `wiz-meal-completion` | Meal completion wizard | wizards |
 | `wiz-onboarding` | Onboarding wizard | wizards |
 
-### admin — 51 entries
+### admin — 53 entries
 
 Operators. Everything above, plus admin surfaces, hidden experiences, and positioning. Default tier for Hidden Experiences (Rule PKR29) and Competitive Advantages.
 
@@ -137,6 +139,7 @@ Operators. Everything above, plus admin surfaces, hidden experiences, and positi
 | `adm-home` | Admin Hub | admin-experiences |
 | `adm-ingredient-products` | THA Picks Curation | admin-experiences |
 | `adm-intelligence` | Intelligence Benchmarks | admin-experiences |
+| `adm-knowledge-claims` | Nutrition Claim Review | admin-experiences |
 | `adm-knowledge-review` | Knowledge Review Workbench | admin-experiences |
 | `adm-observations` | Observation Workbench | admin-experiences |
 | `adm-recipe-sources` | Recipe Source Governance | admin-experiences |
@@ -155,7 +158,7 @@ Operators. Everything above, plus admin surfaces, hidden experiences, and positi
 | `hid-dormant-chrome` | Dormant navigation and header components | hidden-experiences |
 | `hid-import-recipe` | Import Recipe (bounce stub) | hidden-experiences |
 | `hid-list-page` | Quick List page (dead file) | hidden-experiences |
-| `hid-notice-engine` | Companion Notice Engine (built, unreachable) | hidden-experiences |
+| `hid-notice-engine` | Companion Notice Engine (reachable since PHASE5E) | hidden-experiences |
 | `hid-quick-meal` | Build a Meal (unlinked) | hidden-experiences |
 | `hid-routing-telemetry` | Dormant intent-routing engine | hidden-experiences |
 | `hid-scan-confirm-dialog` | Scan Confirm dialog (orphaned) | hidden-experiences |
@@ -176,6 +179,7 @@ Operators. Everything above, plus admin surfaces, hidden experiences, and positi
 | `page-admin-home` | Admin Hub | pages |
 | `page-admin-ingredient-products` | Admin — THA Picks | pages |
 | `page-admin-intelligence` | Admin — Intelligence | pages |
+| `page-admin-knowledge-claims` | Admin — Nutrition Claim Review | pages |
 | `page-admin-knowledge-review` | Admin — Knowledge Review | pages |
 | `page-admin-observations` | Admin — Observation Workbench | pages |
 | `page-admin-recipe-sources` | Admin — Recipe Sources | pages |

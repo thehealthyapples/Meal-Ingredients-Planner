@@ -194,7 +194,24 @@ export function buildGreeting(personalityId: PersonalityId, seed = 0): string {
   return stablePick(getPersonality(personalityId).experience.greetings, seed);
 }
 
-/** A plain celebration line, with `{detail}` replaced by a caller-supplied, already-verified string (never fabricated). */
+/**
+ * A plain celebration line, with `{detail}` replaced by a caller-supplied,
+ * already-verified string (never fabricated).
+ *
+ * PRESENCE2 — THIS FUNCTION NOW HAS NO PRODUCTION CALLER, deliberately and
+ * visibly. Its only two were `phraseNotice`'s `streak` and `diversity` arms, both
+ * retired under GEA13 ("THA never scores, ranks, streaks, or rewards a
+ * household" — and "celebration effects for ordinary use" is named in the same
+ * sentence). It is kept rather than deleted for the reason PRESENCE1 kept
+ * `ThaAppleIcon.tsx`: retiring a Personality Registry primitive, and with it the
+ * `celebrations` field on all six voices, is an owner's call and not an
+ * implementation's. It is recorded as an owner decision, not hidden as an
+ * exemption.
+ *
+ * If it is ever wired again, the thing to check first is what it would be
+ * celebrating. A household reaching a number is not an occasion. A household
+ * telling THA something about themselves might be.
+ */
 export function buildCelebration(personalityId: PersonalityId, detail: string, seed = 0): string {
   const template = stablePick(getPersonality(personalityId).experience.celebrations, seed);
   return template.replace("{detail}", detail);
@@ -203,6 +220,18 @@ export function buildCelebration(personalityId: PersonalityId, detail: string, s
 /** The one-line invitation shown beneath the greeting. States what may be ASKED — never what is known. */
 export function buildInvitation(personalityId: PersonalityId): string {
   return getPersonality(personalityId).experience.invitation;
+}
+
+/**
+ * PRESENCE2 — the Companion's introduction of itself, in the household's chosen
+ * voice. Static by construction: it says why the Companion exists and claims
+ * nothing about this household (see `ExperienceProfile.introduction`).
+ *
+ * Unlike `buildGreeting` it takes no seed and does not rotate. An introduction
+ * that varied between showings would not be an introduction.
+ */
+export function buildIntroduction(personalityId: PersonalityId): string {
+  return getPersonality(personalityId).experience.introduction;
 }
 
 /**
@@ -220,6 +249,14 @@ export interface CompanionExperience {
   readonly personalityName: string;
   readonly greeting: string;
   readonly invitation: string;
+  /**
+   * PRESENCE2 — shown INSTEAD of the greeting on a first meeting (the panel is
+   * open and this household has never spoken to the Companion). The client
+   * chooses which of the two to render from state it already has; both are sent
+   * because which one applies is a question about the conversation, and the
+   * conversation is not this route's fact.
+   */
+  readonly introduction: string;
   readonly transportError: string;
 }
 
@@ -230,6 +267,7 @@ export function buildCompanionExperience(personalityId: PersonalityId, seed = 0)
     personalityName: p.displayName,
     greeting: buildGreeting(personalityId, seed),
     invitation: buildInvitation(personalityId),
+    introduction: buildIntroduction(personalityId),
     transportError: voiceFallback("internal-error", personalityId, { suggestionExamples: "" }),
   };
 }
@@ -260,10 +298,23 @@ export function phraseNotice(notice: Notice, personalityId: PersonalityId): stri
   switch (fact.kind) {
     case "growth":
       return phraseGrowth(toGrowthPhraseInputs(fact.signal), personalityId);
-    case "streak":
-      return buildCelebration(personalityId, `a ${fact.currentStreak}-day elite streak`);
-    case "diversity":
-      return buildCelebration(personalityId, `${fact.plantCount} different plants tried`);
+    // PRESENCE2 — an observation about the household's own eating, VERBATIM.
+    //
+    // This is the one notice kind that takes NO prefix, and the omission is the
+    // point. `voiceGuidanceLabel` exists to mark a sentence as a suggestion; a
+    // story headline is not a suggestion, and wrapping it in one would convert
+    // "Lentils quietly appeared in more and more meals." into a recommendation
+    // the household never asked for and the Story Engine never made. The
+    // Companion favours observations over recommendations, and decides only
+    // AFTER noticing whether anything further is appropriate — so the noticing
+    // itself must arrive unadorned.
+    //
+    // It also means the voice cannot vary this sentence at all, which is correct:
+    // the personality may change how THA sounds, never what it claims is true
+    // (CPA1 §0). A headline that six voices could each re-word is a headline six
+    // voices could each get wrong.
+    case "story":
+      return fact.headline;
     case "opportunity":
       return voiceGuidanceLabel(fact.suggestedAction, personalityId);
     case "seasonal":

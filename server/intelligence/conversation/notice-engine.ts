@@ -17,10 +17,12 @@
  * EVERY fact a Notice carries traces to an existing owner:
  *   - nutrition-trend      → companion-growth.ts's `computeGrowthSignal`
  *                            (EWO2 Stage 7 — reads `storage.getUserHealthTrends`)
- *   - streak-milestone     → `storage.getUserStreak` (existing table, INT/streak
- *                            feature — read-only here, never written)
- *   - diversity-milestone  → `assembleNutritionCentre`'s `plantDiversity`
- *                            (WX8 — existing, all-time, household-owned count)
+ *   - household-story      → the Story Engine (`shared/stories/engine.ts`, WS10),
+ *                            read through `deriveHouseholdCompanionFields`
+ *                            (PHASE5B) — the SAME owner and the SAME derivation
+ *                            Home and the Planner strip already use. PRESENCE2
+ *                            adds no engine and duplicates no observation logic;
+ *                            it gives an existing derivation a reader.
  *   - planner-gap / pantry-opportunity / shopping-opportunity
  *                          → the `opportunity-delivery` capability (OD1/FI4),
  *                            called through the SAME `intelligencePlatform.
@@ -55,15 +57,19 @@
  * underlying data is cumulative/all-time (diversity), the Notice is
  * phrased as a present-state fact, never as "you just achieved this".
  *
+ * PRESENCE2 — WHAT THIS MODULE MAY NO LONGER DO. Two producers were retired
+ * here, not disabled: `noticeStreak` and `noticeDiversity`. Their whole content
+ * was a number about a household presented as an achievement, which GEA13 forbids
+ * by name. With them go the only two notices that ever reached
+ * `buildCelebration`, and therefore the only two occasions on which THA
+ * congratulated a family for ordinary use of a food app. What replaced them is
+ * not a gentler score: it is `household-story`, which states a fact about what
+ * this family eats and passes no verdict on it at all.
+ *
  * SILENCE RULES (Stage 6) live here too — `applySilenceRules` is a pure,
  * stateless filter (no new persisted state, no new table) that:
  *   - drops any notice whose underlying signal was thin/absent (never
  *     surfaces a guess)
- *   - only lets a milestone-shaped notice (streak/diversity) through
- *     when the number is a "notable" round figure — a stateless, honest
- *     heuristic for "worth mentioning", not a fabricated "you just crossed
- *     this" claim (this module cannot know exactly when a threshold was
- *     crossed without new persisted state — see SUGGESTIONS in the EWX1 doc)
  *   - caps the total number of notices returned per gather, so the
  *     Companion never reads as a notification feed
  *   - de-duplicates by id
@@ -71,7 +77,7 @@
  * Run tests: npx tsx server/tests/test-intelligence-notice-engine.ts
  */
 
-import type { UserHealthTrend, UserStreak } from "../../../shared/schema.js";
+import type { UserHealthTrend } from "../../../shared/schema.js";
 // ATTN1 — the one canonical Attention vocabulary. shared/attention is PURE and
 // zero-I/O, so this import keeps the adapter's zero-dependency footprint on the
 // platform's I/O modules intact (the rationale that used to justify a local
@@ -104,8 +110,23 @@ import type { GrowthPhraseInputs } from "./personality-registry.js";
  */
 export type NoticeCategory =
   | "nutrition-trend"
-  | "streak-milestone"
-  | "diversity-milestone"
+  // PRESENCE2 — `streak-milestone` and `diversity-milestone` are RETIRED here.
+  //
+  // They were the last two scoring surfaces in the platform, and they were in the
+  // Companion's own mouth. GEA13 forbids, by name, "streaks and consecutive-day
+  // counts" and "tiers or ranks"; `noticeStreak` fired on every 7th day of
+  // `currentEliteStreak` and was voiced through `buildCelebration`, which in the
+  // coach voice reads "Target hit — a 7-day elite streak." `noticeDiversity` did
+  // the same for a round plant count. PRESENCE1 removed nineteen judgements from
+  // eight rooms on the principle that the Companion owns interpretation; this is
+  // that principle applied to the Companion itself, which is the only place it was
+  // still unapplied. A Companion that streaks a household cannot be the voice the
+  // rooms were made quiet for.
+  //
+  // Both underlying owners are UNTOUCHED — `user_streaks` and the nutrition
+  // centre's `plantDiversity` still exist and still hold what they held. Only
+  // these consumers are retired, exactly as PRESENCE1 removed consumers of
+  // `WEEKLY_PLANT_TARGET` without touching the constant.
   | "planner-gap"
   | "pantry-opportunity"
   | "shopping-opportunity"
@@ -146,7 +167,28 @@ export type NoticeCategory =
   // actionable, cited, dismissible, learnable card with a delivery lifecycle. Mapping the
   // nutrition domain onto `nutrition-trend` would have given one category two owners and
   // two meanings — and would have made a household's dismissal of one silence the other.
-  | "nutrition-opportunity";
+  | "nutrition-opportunity"
+  // PRESENCE2 — the eleventh category, and the one this programme exists for:
+  // something true THA has noticed about how this household actually eats.
+  //
+  // §9's condition on any new category — "any new notice category without a
+  // registered owner behind it — stop" — is satisfied the same way
+  // `seasonal-highlight` satisfies it: the owner is the ALREADY-EXISTING Story
+  // Engine (`shared/stories/engine.ts`, WS10), read through the ALREADY-EXISTING
+  // `deriveHouseholdCompanionFields` (PHASE5B). No engine is created, no
+  // observation logic is duplicated, no threshold is invented, and no producer is
+  // enrolled in `OPPORTUNITY_SOURCES`. A story notice competes for the existing
+  // `MAX_NOTICES_PER_MOMENT`; it does not raise it.
+  //
+  // WHY IT WAS NEEDED. `deriveHouseholdCompanionFields` has been computing these
+  // headlines on every Home and Planner load since PHASE5B, and both routes have
+  // been shipping them over the wire. `UX3` then removed the grid that rendered
+  // them, correctly — a room may not speak about a household in that register
+  // (GEA8) — and gave them to nobody. So THA has been deriving true, date-gated,
+  // trust-gated observations about a family's own eating, serialising them, and
+  // discarding them at the client. This category is the Companion collecting what
+  // the rooms were right to put down.
+  | "household-story";
 
 
 /**
@@ -177,8 +219,24 @@ export interface Notice {
    */
   readonly fact:
     | { readonly kind: "growth"; readonly signal: GrowthSignal }
-    | { readonly kind: "streak"; readonly currentStreak: number; readonly bestStreak: number }
-    | { readonly kind: "diversity"; readonly plantCount: number }
+    /**
+     * PRESENCE2 — an observation about how this household actually eats, as the
+     * Story Engine wrote it.
+     *
+     * `headline` crosses this seam VERBATIM and is never prefixed, reworded, or
+     * wrapped in a guidance label. It is already a complete English sentence
+     * ("Lentils quietly appeared in more and more meals."), already filtered by
+     * WS10's trust ban list, and already refused where the household's planner
+     * weeks carry no date anchor. Prefixing it with "You could try…" would turn
+     * an observation into advice, which is the one conversion this programme
+     * exists to prevent: the Companion favours noticing over recommending, and
+     * only decides afterwards whether anything further is appropriate.
+     *
+     * `section` is the Story Engine's own section type, carried so the Companion
+     * can answer "why did you notice that?" from the producer's own structure
+     * rather than from a guess.
+     */
+    | { readonly kind: "story"; readonly headline: string; readonly section: string }
     | {
         readonly kind: "opportunity";
         readonly explanation: string;
@@ -218,10 +276,15 @@ export interface Notice {
  */
 export const NOTICE_SOURCE = {
   healthTrends: "user_health_trends",
-  streak: "user_streaks",
-  nutritionCentre: "nutrition-centre",
   opportunityDelivery: "opportunity-delivery",
   seasonalStories: "seasonal-stories",
+  /**
+   * PRESENCE2 — the Story Engine (`shared/stories/engine.ts`, WS10), read through
+   * `deriveHouseholdCompanionFields`. The same owner Home and the Planner strip
+   * have been reading since PHASE5B, so "which owner said this?" answers
+   * identically wherever a household observation appears.
+   */
+  householdStories: "household-stories",
   /**
    * PHASE5E (NTC-P4) — the `evidence-learning` capability (EL1). The SAME source string
    * OD1's `withLearningEvidence` already cites when household learning moves an
@@ -254,44 +317,38 @@ export function noticeNutritionTrend(trends: readonly UserHealthTrend[], now: Da
 }
 
 /**
- * A streak is "notable" (worth mentioning) only at a round multiple — a
- * stateless heuristic for what deserves a moment, not a persisted
- * "just crossed" detector (see module header). Zero/undefined streak is
- * silence, not a fabricated "starting from zero" notice.
+ * PRESENCE2 — one already-derived Story Engine headline, shaped into a Notice.
+ *
+ * This is a PURE PASS-THROUGH, and deliberately the exact shape of
+ * `noticeSeasonal` below: the CALLER derives the headline (from
+ * `deriveHouseholdCompanionFields`, which owns that derivation for the whole
+ * platform), and this function only shapes it. It counts nothing, ranks nothing,
+ * dates nothing and concludes nothing.
+ *
+ * `null` is the honest no-op — a household whose planner weeks carry no date
+ * anchor produces no stories at all (WS10's date gate, `CONV1 BEH-5`), and 192 of
+ * THA's 195 households are in exactly that state. For them this producer returns
+ * silence, permanently, and that is the correct answer rather than a defect: THA
+ * cannot honestly say when this family ate what, so it says nothing about it.
+ *
+ * Priority is `low`, always. An observation is never a demand for attention. That
+ * also means it can never displace an actionable gap or a safety signal from the
+ * attention budget — `orderByAttention` puts it last, by construction.
  */
-const STREAK_NOTABLE_MULTIPLE = 7;
-
-export function noticeStreak(streak: UserStreak | undefined): Notice[] {
-  if (!streak || streak.currentEliteStreak <= 0) return [];
-  if (streak.currentEliteStreak % STREAK_NOTABLE_MULTIPLE !== 0) return [];
+export function noticeHouseholdStory(
+  headline: string | null,
+  section: string,
+  id: string,
+): Notice[] {
+  const text = headline?.trim() ?? "";
+  if (text.length === 0) return [];
   return [
     {
-      id: "streak-milestone",
-      category: "streak-milestone",
-      priority: "medium",
-      source: NOTICE_SOURCE.streak,
-      fact: {
-        kind: "streak",
-        currentStreak: streak.currentEliteStreak,
-        bestStreak: streak.bestEliteStreak,
-      },
-    },
-  ];
-}
-
-/** Same "notable round number" discipline as noticeStreak, applied to the household's all-time plant count. */
-const DIVERSITY_NOTABLE_MULTIPLE = 10;
-
-export function noticeDiversity(plantDiversity: number): Notice[] {
-  if (plantDiversity <= 0) return [];
-  if (plantDiversity % DIVERSITY_NOTABLE_MULTIPLE !== 0) return [];
-  return [
-    {
-      id: "diversity-milestone",
-      category: "diversity-milestone",
+      id: `household-story:${id}`,
+      category: "household-story",
       priority: "low",
-      source: NOTICE_SOURCE.nutritionCentre,
-      fact: { kind: "diversity", plantCount: plantDiversity },
+      source: NOTICE_SOURCE.householdStories,
+      fact: { kind: "story", headline: text, section },
     },
   ];
 }

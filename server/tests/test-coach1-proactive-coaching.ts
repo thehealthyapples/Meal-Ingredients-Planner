@@ -44,8 +44,7 @@ import { InMemoryOpportunityDeliveryStore } from "../intelligence/opportunity-de
 import type { ConfirmedUnderstanding } from "../intelligence/evidence-learning/household-observation.js";
 import {
   noticeOpportunities,
-  noticeDiversity,
-  noticeStreak,
+  noticeHouseholdStory,
   noticeSeasonal,
   applySilenceRules,
   MAX_NOTICES_PER_MOMENT,
@@ -369,11 +368,13 @@ async function main(): Promise<void> {
   );
 
   // Every producer names an existing owner.
-  assert(noticeDiversity(20)[0]?.source === NOTICE_SOURCE.nutritionCentre, "the plant-diversity notice names the nutrition centre as its owner");
   assert(noticeSeasonal("Autumn brings pumpkin.")[0]?.source === NOTICE_SOURCE.seasonalStories, "the seasonal notice names the seasonal stories engine");
+  // PRESENCE2 — the streak and plant-diversity producers are retired (GEA13); the
+  // household-story producer replaces them, and names the Story Engine.
   assert(
-    noticeStreak({ currentEliteStreak: 14, bestEliteStreak: 20 } as never)[0]?.source === NOTICE_SOURCE.streak,
-    "the streak notice names the streak table",
+    noticeHouseholdStory("Lentils quietly appeared in more and more meals.", "favourite", "f")[0]?.source
+      === NOTICE_SOURCE.householdStories,
+    "the household-story notice names the Story Engine as its owner",
   );
 
   // -------------------------------------------------------------------------
@@ -382,8 +383,14 @@ async function main(): Promise<void> {
   section("§7 The Silence Rules — COACH1 moved no threshold and raised no cap");
 
   assert(MAX_NOTICES_PER_MOMENT === 2, "the attention budget is still 2 notices per moment");
-  assert(noticeDiversity(7).length === 0 && noticeDiversity(20).length === 1, "the diversity notability gate (×10) is unchanged");
-  assert(noticeDiversity(0).length === 0, "zero plant diversity is silence, not a notice");
+  // PRESENCE2 — the two notability gates this section used to assert belonged to
+  // `noticeDiversity` and `noticeStreak`, both retired under GEA13. The cap they
+  // sat beneath is unchanged, which is the claim that still matters here: adding a
+  // notice category did not buy the Companion more of a household's attention.
+  assert(
+    noticeHouseholdStory(null, "favourite", "f").length === 0,
+    "an absent observation is silence, not a padded notice",
+  );
 
   {
     const cited = [{ source: "planner-week", detail: "d" }];
@@ -434,8 +441,15 @@ async function main(): Promise<void> {
   );
 
   // COACH1 added no threshold, no ranking, no score to the engine.
-  assert(noticeCode.includes("STREAK_NOTABLE_MULTIPLE = 7"), "the streak notability gate is still 7");
-  assert(noticeCode.includes("DIVERSITY_NOTABLE_MULTIPLE = 10"), "the diversity notability gate is still 10");
+  // PRESENCE2 — these two assertions are INVERTED. They used to read "the streak
+  // notability gate is still 7" / "…diversity gate is still 10", guarding COACH1's
+  // promise to move no threshold. Both gates are now GONE, because both producers
+  // are: GEA13 forbids streaks, tiers and rewards outright, so the honest guard is
+  // no longer "the threshold did not move" but "the threshold does not exist". A
+  // gate cannot be tuned back into place if there is nothing to tune.
+  assert(!noticeCode.includes("STREAK_NOTABLE_MULTIPLE"), "the streak notability gate is GONE — the producer is retired (GEA13)");
+  assert(!noticeCode.includes("DIVERSITY_NOTABLE_MULTIPLE"), "the diversity notability gate is GONE — the producer is retired (GEA13)");
+  assert(!noticeCode.includes("buildCelebration"), "no notice reaches buildCelebration — THA congratulates no household for ordinary use");
   assert(noticeCode.includes("MAX_NOTICES_PER_MOMENT = 2"), "the per-moment cap was not raised as a fix");
 
   // OD1 authors exactly ONE evidence source, and it is not a producer's.

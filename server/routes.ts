@@ -110,10 +110,12 @@ import {
 // docs/architecture/THA_COMPANION_NOTICE_ENGINE_ARCHITECTURE.md §7 as missing.
 import {
   noticeNutritionTrend,
-  noticeStreak,
-  noticeDiversity,
   noticeOpportunities,
   noticeSeasonal,
+  // PRESENCE2 — the household's own eating, from the Story Engine via PHASE5B's
+  // one derivation. Replaces `noticeStreak` and `noticeDiversity`, retired under
+  // GEA13 (see the notices route below).
+  noticeHouseholdStory,
   // PHASE5E (NTC-P4) — confirmed household learning as the eighth notice source.
   noticeLearning,
   applySilenceRules,
@@ -12667,50 +12669,64 @@ Generate a complete recipe using these as the foundation.`;
       console.error("[COACH1] health trends unavailable:", err);
     }
 
-    // 3. Streak milestone.
-    try {
-      const streak = await storage.getUserStreak(userId);
-      gathered.push(...noticeStreak(streak));
-      sources.push("user_streaks");
-    } catch (err) {
-      console.error("[COACH1] streak unavailable:", err);
-    }
-
-    // 4. Plant diversity — read from the existing household owner
-    //    (`assembleNutritionCentre`), never recounted here. Plant diversity is a
-    //    CONTESTED domain (ARCHITECTURE_PRINCIPLES.md); a second count computed in
-    //    this route would be a third owner and would move convergence backwards.
-    try {
-      const householdId = await getHouseholdForUser(userId);
-      if (householdId != null) {
-        const centre = await assembleNutritionCentre(householdId);
-        // `overview` is null for a household with no planner history — that owner's
-        // own honest gap. A gap is silence here, never a fabricated `plantDiversity: 0`.
-        if (centre.available && centre.overview) {
-          gathered.push(...noticeDiversity(centre.overview.plantDiversity));
-          sources.push("nutrition-centre");
-        }
-      }
-    } catch (err) {
-      console.error("[COACH1] nutrition centre unavailable:", err);
-    }
-
-    // 5. Seasonal highlight — the caller derives the one headline and the engine only
-    //    shapes it, exactly as notice-engine.ts's header requires and as
-    //    /api/home/intelligence already does.
+    // 3. PRESENCE2 — WHAT THIS HOUSEHOLD'S OWN EATING LOOKS LIKE, plus the seasonal
+    //    highlight, from ONE derivation.
+    //
+    //    This block replaces three things at once, and each replacement is a
+    //    convergence rather than an addition:
+    //
+    //    (a) THE TWO SCORING GATHERS ARE GONE. Steps 3 and 4 used to read
+    //        `storage.getUserStreak` and `assembleNutritionCentre().plantDiversity`
+    //        and hand them to `noticeStreak`/`noticeDiversity`, which the Behaviour
+    //        Engine voiced through `buildCelebration` — so the Companion told a
+    //        family "Target hit — a 7-day elite streak." GEA13 forbids streaks,
+    //        tiers and celebration effects for ordinary use by name. PRESENCE1
+    //        removed nineteen judgements from eight rooms; these were the last two,
+    //        and they were the Companion's own. Both underlying owners are
+    //        untouched — only these consumers are retired.
+    //
+    //    (b) A THIRD COPY OF THE SEASONAL DERIVATION IS RETIRED. The block below
+    //        used to re-implement `deriveHouseholdCompanionFields`'s
+    //        "looking_ahead ?? discoveries" selection byte-for-byte. PHASE5B exists
+    //        precisely because two routes each carried that copy; this route
+    //        quietly became the third. It now reads the one owner (Principle 2).
+    //
+    //    (c) THE HOUSEHOLD OBSERVATIONS FINALLY REACH SOMEBODY. The same call has
+    //        been computing `celebration` and `householdInsight` — real, date-gated,
+    //        trust-gated Story Engine headlines about how this family actually eats
+    //        — on every Home and Planner load since PHASE5B. `UX3` removed the grid
+    //        that rendered them, correctly (a room may not speak about a household
+    //        in that register — GEA8), and gave them to no one. They have been
+    //        derived, serialised and discarded ever since. The Companion is the
+    //        owner GEA8 names, and this is where it collects them.
+    //
+    //    The caller derives; the engine only shapes. Same discipline as before.
     try {
       const history = await buildHouseholdHistory(userId);
       if (history.entries.length > 0) {
-        const enjoys = Array.from(new Set(history.entries.map((e) => e.food)));
-        const seasonal = seasonalStories({ household: history, enjoys, limitPerBlock: 3 });
-        const block =
-          seasonal.blocks.find((b) => b.type === "looking_ahead") ??
-          seasonal.blocks.find((b) => b.type === "discoveries");
-        gathered.push(...noticeSeasonal(block?.cards[0]?.headline ?? null));
+        const fields = deriveHouseholdCompanionFields(history);
+
+        gathered.push(...noticeSeasonal(fields.seasonalHighlight?.headline ?? null));
         sources.push("seasonal-stories");
+
+        // Two observations at most, and both `low` priority — so they can never
+        // displace a safety signal or an actionable gap from the attention budget
+        // (`orderByAttention` ranks them last, by construction). The Silence Rules
+        // below remain the only place volume is decided; this route does not cap.
+        //
+        // `celebration` is the Story Engine's field NAME, not its content: it holds
+        // a headline like "Tomatoes became a household favourite." — a statement
+        // about what this family eats, carrying no praise and no verdict. It is
+        // surfaced here as an observation, which is what it always was.
+        const before = gathered.length;
+        gathered.push(
+          ...noticeHouseholdStory(fields.celebration?.headline ?? null, "favourite", "favourite"),
+          ...noticeHouseholdStory(fields.householdInsight?.headline ?? null, "pattern", "pattern"),
+        );
+        if (gathered.length > before) sources.push("household-stories");
       }
     } catch (err) {
-      console.error("[COACH1] seasonal stories unavailable:", err);
+      console.error("[PRESENCE2] household stories unavailable:", err);
     }
 
     // 6. PHASE5E (NTC-P4) — what the household has CONFIRMED about itself.

@@ -8,7 +8,7 @@
  *
  * Coverage:
  *   §1  noticeNutritionTrend — honest null passthrough vs real signal
- *   §2  noticeStreak / noticeDiversity — notability gate
+ *   §2  noticeHouseholdStory — verbatim pass-through, honest null
  *   §3  noticeOpportunities — verbatim content, unmapped domain filtered
  *   §4  applySilenceRules — cap, de-dup, priority ordering
  *   §5  phraseNotice — personality voicing per fact kind
@@ -18,8 +18,7 @@
 
 import {
   noticeNutritionTrend,
-  noticeStreak,
-  noticeDiversity,
+  noticeHouseholdStory,
   noticeOpportunities,
   noticeSeasonal,
   noticeLearning,
@@ -100,20 +99,50 @@ assert(noticeNutritionTrend([]).length === 0, "no trend rows → no notice (hone
 }
 
 // ---------------------------------------------------------------------------
-// §2 noticeStreak / noticeDiversity — notability gate
+// §2 noticeHouseholdStory — PRESENCE2
+//
+// This section replaces the former "noticeStreak / noticeDiversity notability
+// gate". Both producers were RETIRED under GEA13 ("THA never scores, ranks,
+// streaks, or rewards a household"), so there is no notability gate left to test:
+// the thing the gate made tolerable is gone rather than tuned. §2.1 below asserts
+// the retirement itself, so it cannot be undone silently.
 // ---------------------------------------------------------------------------
 
-console.log("\n── §2 noticeStreak / noticeDiversity — stateless notability gate ─────────────");
+console.log("\n── §2 noticeHouseholdStory — verbatim pass-through, honest null ───────────────");
 
-assert(noticeStreak(undefined).length === 0, "no streak row → silence");
-assert(noticeStreak(streak(0, 0)).length === 0, "zero streak → silence");
-assert(noticeStreak(streak(3, 10)).length === 0, "non-round streak (3) → silence");
-assert(noticeStreak(streak(7, 10)).length === 1, "round streak (7) → one notice");
-assert(noticeStreak(streak(14, 14)).length === 1, "round streak (14) → one notice");
+assert(noticeHouseholdStory(null, "favourite", "f").length === 0, "no headline → silence");
+assert(noticeHouseholdStory("", "favourite", "f").length === 0, "empty headline → silence");
+assert(noticeHouseholdStory("   ", "favourite", "f").length === 0, "whitespace headline → silence");
 
-assert(noticeDiversity(0).length === 0, "zero plant diversity → silence");
-assert(noticeDiversity(7).length === 0, "non-round diversity (7) → silence");
-assert(noticeDiversity(20).length === 1, "round diversity (20) → one notice");
+{
+  const headline = "Lentils quietly appeared in more and more meals.";
+  const out = noticeHouseholdStory(headline, "favourite", "f");
+  assert(out.length === 1, "a real headline → one notice");
+  assert(out[0].fact.kind === "story", "the fact kind is `story`");
+  assert(
+    out[0].fact.kind === "story" && out[0].fact.headline === headline,
+    "the Story Engine's headline crosses VERBATIM — never reworded, never truncated",
+  );
+  assert(out[0].priority === "low", "an observation is always `low` — it never demands attention");
+  assert(out[0].category === "household-story", "category is household-story");
+}
+
+console.log("\n── §2.1 PRESENCE2 — the scoring producers are retired, not disabled ──────────");
+
+{
+  const engine = await import("../intelligence/conversation/notice-engine.js");
+  assert(!("noticeStreak" in engine), "noticeStreak no longer exists (GEA13 — streaks)");
+  assert(!("noticeDiversity" in engine), "noticeDiversity no longer exists (GEA13 — rewards)");
+  // The categories are gone from the closed taxonomy too, so a future caller
+  // cannot reintroduce the notice merely by constructing the object by hand.
+  const cats: readonly string[] = [
+    "nutrition-trend", "planner-gap", "pantry-opportunity", "shopping-opportunity",
+    "seasonal-highlight", "household-learning", "cookbook-opportunity",
+    "nutrition-opportunity", "household-story",
+  ];
+  assert(!cats.includes("streak-milestone"), "streak-milestone is not a category");
+  assert(!cats.includes("diversity-milestone"), "diversity-milestone is not a category");
+}
 
 // ---------------------------------------------------------------------------
 // §3 noticeOpportunities — verbatim content, unmapped domain filtered
@@ -199,12 +228,17 @@ console.log("\n── §4 applySilenceRules — cap, de-dup, priority ordering �
 console.log("\n── §5 phraseNotice — voices every fact kind for all 6 personalities ───────");
 
 {
-  const streakObs: Notice = {
-    id: "streak-milestone",
-    category: "streak-milestone",
-    priority: "medium",
-    source: "user_streaks",
-    fact: { kind: "streak", currentStreak: 14, bestStreak: 20 },
+  // PRESENCE2 — was a `streak` notice. A story notice replaces it, and the
+  // assertion below is deliberately the OPPOSITE of the one it replaces: a streak
+  // had to be voiced differently per personality, whereas an observation must be
+  // voiced IDENTICALLY, because the voice may change how THA sounds and never what
+  // it claims is true.
+  const storyObs: Notice = {
+    id: "household-story:favourite",
+    category: "household-story",
+    priority: "low",
+    source: "household-stories",
+    fact: { kind: "story", headline: "Lentils quietly appeared in more and more meals.", section: "favourite" },
   };
   const oppObs: Notice = {
     id: "opportunity:x",
@@ -227,8 +261,12 @@ console.log("\n── §5 phraseNotice — voices every fact kind for all 6 pers
   };
   const texts = new Set<string>();
   for (const id of PERSONALITY_IDS) {
-    const text = phraseNotice(streakObs, id);
-    assert(typeof text === "string" && text.length > 0, `${id}: streak notice produces non-empty text`);
+    const text = phraseNotice(storyObs, id);
+    assert(typeof text === "string" && text.length > 0, `${id}: story notice produces non-empty text`);
+    assert(
+      text === "Lentils quietly appeared in more and more meals.",
+      `${id}: an observation crosses the voice seam VERBATIM — no prefix, no rewording`,
+    );
     texts.add(text);
 
     const oppText = phraseNotice(oppObs, id);
@@ -237,7 +275,12 @@ console.log("\n── §5 phraseNotice — voices every fact kind for all 6 pers
     const seasonalText = phraseNotice(seasonalObs, id);
     assert(seasonalText.includes("Looking ahead to autumn, you may enjoy pumpkin."), `${id}: seasonal notice preserves the verbatim headline`);
   }
-  assert(texts.size > 1, "at least two personalities voice the same streak fact differently");
+  // PRESENCE2 — this assertion is INVERTED from the one it replaces, deliberately.
+  // It used to read "at least two personalities voice the same streak fact
+  // differently". A streak was a THA opinion, so it was the voice's to colour. An
+  // observation is the household's own fact, so it is not: all six voices must say
+  // it identically, or the personality has become a source of truth.
+  assert(texts.size === 1, "all six personalities voice an observation IDENTICALLY — voice may not vary a fact");
 }
 
 // -----------------------------------------------------------------------------

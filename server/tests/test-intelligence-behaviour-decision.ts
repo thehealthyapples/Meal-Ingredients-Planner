@@ -584,20 +584,29 @@ async function main(): Promise<void> {
       "PHASE5E (NTC-P1): the notice voice seam is live, so it claims its surface",
     );
 
-    // ONE surface covers all THREE phrasers, and that is not an oversight.
-    // `phraseGrowth` and `buildCelebration` are unreachable except THROUGH
-    // `phraseNotice` (growth → phraseGrowth; streak/diversity → buildCelebration), so
-    // they are not three seams — they are three branches of one. A second or third
-    // surface would promise transforms that no route invokes independently.
+    // ONE surface covers the phrasers that remain, and that is not an oversight.
+    // `phraseGrowth` is unreachable except THROUGH `phraseNotice` (growth →
+    // phraseGrowth), so they are not two seams — they are two branches of one. A
+    // second surface would promise a transform no route invokes independently.
+    //
+    // PRESENCE2 — `buildCelebration` was the third branch (streak/diversity →
+    // buildCelebration) and is no longer reached at all: both notice kinds that
+    // reached it are retired under GEA13. It is asserted ORPHANED here rather than
+    // deleted, because retiring a Personality Registry primitive (and with it the
+    // `celebrations` field on all six voices) is an owner's call. Recording it as a
+    // checked fact is what stops it being quietly rewired.
     const here = dirname(fileURLToPath(import.meta.url));
     const noticeEngine = readFileSync(resolve(here, "../intelligence/conversation/behaviour-engine.ts"), "utf8");
     const phraseNoticeBody = noticeEngine.slice(noticeEngine.indexOf("export function phraseNotice"));
-    for (const phraser of ["phraseGrowth(", "buildCelebration("]) {
-      assert(
-        phraseNoticeBody.slice(0, phraseNoticeBody.indexOf("\n}\n")).includes(phraser),
-        `${phraser.slice(0, -1)} is reached THROUGH phraseNotice — which is why one surface covers all three`,
-      );
-    }
+    const phraseNoticeOnly = phraseNoticeBody.slice(0, phraseNoticeBody.indexOf("\n}\n"));
+    assert(
+      phraseNoticeOnly.includes("phraseGrowth("),
+      "phraseGrowth is reached THROUGH phraseNotice — which is why one surface covers both",
+    );
+    assert(
+      !phraseNoticeOnly.includes("buildCelebration("),
+      "PRESENCE2: buildCelebration is reached by NO notice — THA celebrates no household for ordinary use (GEA13)",
+    );
 
     // The promise itself: the route the surface names must actually run the transform.
     // Before PHASE5E this route returned raw Notice objects — a fact with no sentence.

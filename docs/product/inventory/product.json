@@ -4,7 +4,7 @@
   "generated_by": "scripts/build-product-inventory.ts",
   "populated_by": "PDA1_PLATFORM_DISCOVERY_AND_EXPERIENCE_AUDIT",
   "populated_on": "2026-07-11",
-  "entry_count": 164,
+  "entry_count": 165,
   "entries": [
     {
       "id": "dom-home",
@@ -351,11 +351,10 @@
         "page-dashboard"
       ],
       "known_defects": [
-        "fnd-dead-reminders",
         "fnd-derived-today"
       ],
-      "last_verified": "2026-07-11",
-      "version": 1
+      "last_verified": "2026-07-20",
+      "version": 2
     },
     {
       "id": "page-dashboard",
@@ -1777,29 +1776,27 @@
     },
     {
       "id": "hid-notice-engine",
-      "name": "Companion Notice Engine (built, unreachable)",
+      "name": "Companion Notice Engine (reachable since PHASE5E)",
       "section": "hidden-experiences",
-      "status": "hidden",
+      "status": "internal",
       "visibility": "admin",
-      "purpose": "Seven kinds of proactive notice — the whole reason Home has a Reminders section — served by an endpoint the client never calls.",
+      "purpose": "The engine that produces the Companion's proactive notices from facts existing owners already computed, capped by the Silence Rules and voiced per personality.",
       "owner": "Colin Clapson",
       "sources": [
         "server/intelligence/conversation/notice-engine.ts",
-        "server/routes.ts#L11540",
-        "client/src/hooks/use-companion-observations.ts#L27"
+        "server/routes.ts",
+        "client/src/hooks/use-companion-notices.ts",
+        "client/src/components/conversation/FloatingAssistant.tsx"
       ],
       "related": [
         "ntf-nutrition-trend",
-        "ntf-streak-milestone",
-        "ntf-diversity-milestone",
+        "ntf-household-story",
+        "cap-companion",
         "page-home"
       ],
-      "known_defects": [
-        "fnd-dead-reminders"
-      ],
-      "evidence": "The client fetches /api/intelligence/companion/observations; the server only serves /api/intelligence/companion/notices. Every fetch 404s and Reminders silently renders empty.",
-      "last_verified": "2026-07-11",
-      "version": 1
+      "evidence": "Corrected 2026-07-20 (PRESENCE2). Version 1 described the engine as unreachable via a client/server endpoint mismatch; PHASE5E fixed it and this entry was never corrected. Nine live categories, not seven. Home's Reminders section was removed by UX3 and the read moved to the Companion.",
+      "last_verified": "2026-07-20",
+      "version": 2
     },
     {
       "id": "hid-devworld-prod",
@@ -1899,7 +1896,7 @@
       "id": "ntf-nutrition-trend",
       "name": "Nutrition trend notice",
       "section": "notifications",
-      "status": "hidden",
+      "status": "live",
       "visibility": "household",
       "purpose": "A quiet note when the household's eating has genuinely moved in a direction worth mentioning.",
       "owner": "Colin Clapson",
@@ -1907,52 +1904,69 @@
         "server/intelligence/conversation/notice-engine.ts#L176"
       ],
       "related": [
-        "hid-notice-engine",
+        "cap-companion",
         "page-home"
       ],
-      "last_verified": "2026-07-11",
-      "version": 1
+      "last_verified": "2026-07-20",
+      "version": 2
     },
     {
       "id": "ntf-streak-milestone",
       "name": "Streak milestone notice",
       "section": "notifications",
-      "status": "hidden",
+      "status": "retired",
       "visibility": "household",
-      "purpose": "A quiet acknowledgement each seventh day of an unbroken streak.",
+      "purpose": "RETIRED (PRESENCE2, 2026-07-20). Acknowledged each seventh day of an unbroken streak. Retired under GEA13, which forbids streaks and consecutive-day counts by name. The producer is deleted, not disabled; `user_streaks` is untouched and keeps its other consumers.",
       "owner": "Colin Clapson",
-      "sources": [
-        "server/intelligence/conversation/notice-engine.ts#L198"
-      ],
+      "sources": [],
       "related": [
-        "hid-notice-engine"
+        "ntf-household-story"
       ],
-      "last_verified": "2026-07-11",
-      "version": 1
+      "last_verified": "2026-07-20",
+      "version": 2
     },
     {
       "id": "ntf-diversity-milestone",
       "name": "Plant diversity milestone notice",
       "section": "notifications",
-      "status": "hidden",
+      "status": "retired",
       "visibility": "household",
-      "purpose": "A quiet acknowledgement each tenth different plant the household has eaten.",
+      "purpose": "RETIRED (PRESENCE2, 2026-07-20). Acknowledged each tenth different plant the household had eaten. Retired under GEA13, which forbids rewards and celebration effects for ordinary use. The producer is deleted, not disabled; the nutrition centre's plantDiversity count is untouched.",
       "owner": "Colin Clapson",
-      "sources": [
-        "server/intelligence/conversation/notice-engine.ts#L219"
-      ],
+      "sources": [],
       "related": [
-        "hid-notice-engine",
+        "ntf-household-story",
         "gls-plant-diversity"
       ],
-      "last_verified": "2026-07-11",
+      "last_verified": "2026-07-20",
+      "version": 2
+    },
+    {
+      "id": "ntf-household-story",
+      "name": "Household observation notice",
+      "section": "notifications",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "Something true THA has noticed about how this household actually eats, in the Story Engine's own words and passing no verdict on it.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/intelligence/conversation/notice-engine.ts",
+        "shared/stories/engine.ts",
+        "server/lib/household-companion-fields.ts"
+      ],
+      "related": [
+        "ntf-seasonal-highlight",
+        "cap-companion"
+      ],
+      "evidence": "Surfaced by PRESENCE2 from the existing Story Engine via deriveHouseholdCompanionFields — the same derivation Home and the Planner strip have computed since PHASE5B and discarded unrendered since UX3. No observation logic was created. Silent for households whose planner weeks carry no date anchor (WS10's date gate), which is most of them.",
+      "last_verified": "2026-07-20",
       "version": 1
     },
     {
       "id": "ntf-planner-gap",
       "name": "Planner gap notice",
       "section": "notifications",
-      "status": "hidden",
+      "status": "live",
       "visibility": "household",
       "purpose": "A note that part of the week has nothing planned, raised only when there is evidence to cite.",
       "owner": "Colin Clapson",
@@ -1960,17 +1974,17 @@
         "server/intelligence/conversation/notice-engine.ts#L283"
       ],
       "related": [
-        "hid-notice-engine",
+        "cap-companion",
         "dom-planner"
       ],
-      "last_verified": "2026-07-11",
-      "version": 1
+      "last_verified": "2026-07-20",
+      "version": 2
     },
     {
       "id": "ntf-pantry-opportunity",
       "name": "Pantry opportunity notice",
       "section": "notifications",
-      "status": "hidden",
+      "status": "live",
       "visibility": "household",
       "purpose": "A note that something in the pantry could be used, raised only with cited evidence.",
       "owner": "Colin Clapson",
@@ -1978,17 +1992,17 @@
         "server/intelligence/conversation/notice-engine.ts#L283"
       ],
       "related": [
-        "hid-notice-engine",
+        "cap-companion",
         "dom-pantry"
       ],
-      "last_verified": "2026-07-11",
-      "version": 1
+      "last_verified": "2026-07-20",
+      "version": 2
     },
     {
       "id": "ntf-shopping-opportunity",
       "name": "Shopping opportunity notice",
       "section": "notifications",
-      "status": "hidden",
+      "status": "live",
       "visibility": "household",
       "purpose": "A note about the shopping list — including the one critical case, an item that conflicts with a household member's hard restriction.",
       "owner": "Colin Clapson",
@@ -1997,17 +2011,17 @@
         "server/intelligence/food-intelligence/opportunity-engine.ts#L256"
       ],
       "related": [
-        "hid-notice-engine",
+        "cap-companion",
         "dom-shopping"
       ],
-      "last_verified": "2026-07-11",
-      "version": 1
+      "last_verified": "2026-07-20",
+      "version": 2
     },
     {
       "id": "ntf-seasonal-highlight",
       "name": "Seasonal highlight notice",
       "section": "notifications",
-      "status": "hidden",
+      "status": "live",
       "visibility": "household",
       "purpose": "A note about what is in season and worth trying now.",
       "owner": "Colin Clapson",
@@ -2015,10 +2029,10 @@
         "server/intelligence/conversation/notice-engine.ts#L317"
       ],
       "related": [
-        "hid-notice-engine"
+        "cap-companion"
       ],
-      "last_verified": "2026-07-11",
-      "version": 1
+      "last_verified": "2026-07-20",
+      "version": 2
     },
     {
       "id": "ntf-email-verification",

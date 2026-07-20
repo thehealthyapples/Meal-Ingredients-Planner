@@ -169,6 +169,28 @@ export interface ExperienceProfile {
    * that retired FloatingAssistant.tsx's hardcoded copy).
    */
   readonly invitation: string;
+  /**
+   * PRESENCE2 — how the Companion introduces itself, the first time a household
+   * opens it and has never spoken to it.
+   *
+   * WHY IT LIVES HERE. Every word the Companion says comes from this registry
+   * (CP2); the client stores none of them. An introduction hardcoded in
+   * `FloatingAssistant.tsx` would be the seventh voice nobody chose, and would be
+   * the one sentence in the product where THA speaks in a register the household
+   * did not pick.
+   *
+   * WHAT IT MAY AND MAY NOT CONTAIN. It states WHY the Companion exists and what
+   * it will and will not do. It makes NO claim about this household: no name, no
+   * count, no observation, no "I've noticed…" — it cannot, because it is a static
+   * string, and a static string that reads as personal knowledge is exactly the
+   * fabrication GEA9 describes as having a long fuse. Anything true about this
+   * particular family arrives beneath it, from the Notice Engine, derived at the
+   * moment it is shown. That ordering is the whole design: THA says what it is
+   * for, then demonstrates it, and only then invites a question.
+   *
+   * It never asks the household for anything.
+   */
+  readonly introduction: string;
   /** Plain celebration templates, {detail} interpolation only — filled from real data or omitted. */
   readonly celebrations: readonly string[];
   /** Optional seasonal greeting override, keyed by a lowercase month name (future use — not read anywhere yet). */
@@ -340,6 +362,8 @@ export const PERSONALITY_REGISTRY: Readonly<Record<PersonalityId, PersonalityDef
       colorTheme: "leaf-green",
       greetings: ["Hi, good to see you.", "Welcome back — how can I help today?"],
       invitation: "Ask me anything about your food and plans.",
+      introduction:
+        "I'm Apple. I keep an eye on your food and plans, so you don't have to hold all of it in your head. I'll mention something when it's worth mentioning, and stay quiet when it isn't.",
       celebrations: ["Nice progress — {detail}."],
     },
   },
@@ -380,6 +404,8 @@ export const PERSONALITY_REGISTRY: Readonly<Record<PersonalityId, PersonalityDef
       colorTheme: "warm-amber",
       greetings: ["Hey, great to see you!", "Hiya — what are we up to today?"],
       invitation: "Ask me anything about your food and plans — no question's too small.",
+      introduction:
+        "I'm Apple. I pay attention to your food and plans in the background, so there's less for you to keep track of. If I spot something worth saying, I'll say it — otherwise I'll leave you be.",
       celebrations: ["Love this — {detail}!"],
     },
   },
@@ -420,6 +446,8 @@ export const PERSONALITY_REGISTRY: Readonly<Record<PersonalityId, PersonalityDef
       colorTheme: "focus-blue",
       greetings: ["Ready to make progress today?", "Let's see where we can move the needle."],
       invitation: "Ask me about your food, your plans, or where you're heading.",
+      introduction:
+        "I'm Apple. I follow your food and plans so the details don't fall to you. I'll flag what's worth your attention, and nothing that isn't.",
       celebrations: ["Target hit — {detail}."],
     },
   },
@@ -460,6 +488,8 @@ export const PERSONALITY_REGISTRY: Readonly<Record<PersonalityId, PersonalityDef
       colorTheme: "harvest-orange",
       greetings: ["What are we cooking up today?", "Good to see you back in the kitchen."],
       invitation: "Ask me about any ingredient, meal or plan you have in mind.",
+      introduction:
+        "I'm Apple. I keep track of what you cook and what you're planning, so you don't have to carry it all. When something's worth a mention I'll mention it; the rest of the time I'll stay out of the way.",
       celebrations: ["Delicious result — {detail}."],
     },
   },
@@ -500,6 +530,8 @@ export const PERSONALITY_REGISTRY: Readonly<Record<PersonalityId, PersonalityDef
       colorTheme: "calm-teal",
       greetings: ["Hello — what would you like to understand today?", "Welcome back. Anything you'd like explained?"],
       invitation: "Ask me about your food or plans, and I'll explain the reasoning too.",
+      introduction:
+        "I'm Apple. I watch how your food and plans come together, so that knowledge sits somewhere other than your memory. When I mention something I'll tell you what it's based on — and when there's nothing worth saying, I'll say nothing.",
       celebrations: ["Well understood — {detail}."],
     },
   },
@@ -538,6 +570,8 @@ export const PERSONALITY_REGISTRY: Readonly<Record<PersonalityId, PersonalityDef
       colorTheme: "steel-grey",
       greetings: ["Ready. What's the task?", "Status check — what do you need?"],
       invitation: "State your question. Food, plans, pantry — anything on record.",
+      introduction:
+        "I'm Apple. I track your food and plans so you don't have to. I report what's worth reporting and stay silent otherwise.",
       celebrations: ["Objective met — {detail}."],
     },
   },

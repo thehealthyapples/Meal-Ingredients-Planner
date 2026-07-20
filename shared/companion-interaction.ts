@@ -42,8 +42,17 @@ export function isInteractionKind(value: unknown): value is InteractionKind {
  */
 export const OBSERVATION_CATEGORY_INTERACTION_KIND = {
   "nutrition-trend": "reflection",
-  "streak-milestone": "milestone",
-  "diversity-milestone": "milestone",
+  // PRESENCE2 — `streak-milestone` and `diversity-milestone` are retired (GEA13);
+  // their rows go with them. `milestone` remains in INTERACTION_KINDS as an
+  // available shape with no current mapping, which is the honest state: the
+  // vocabulary is not the thing that was wrong.
+  //
+  // `household-story` is `reflection`, NOT `celebration` — and the choice is the
+  // programme in one line. An observation about how a family eats is something to
+  // sit with, not something to be congratulated for. `celebration` would have
+  // given it `celebrationPop` in the Delight Framework, which is a room applauding
+  // a household for existing.
+  "household-story": "reflection",
   "planner-gap": "reminder",
   "pantry-opportunity": "discovery",
   "shopping-opportunity": "reminder",

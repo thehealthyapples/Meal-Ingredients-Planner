@@ -2,7 +2,7 @@
 
 _One table. Every registry entry and the single named human accountable for it (Rule PKR12: not a team, not a workstream, not "the platform"). Anyone may correct an entry; this person is accountable for it being true (Rule PKR16)._
 
-_Generated from `docs/product/inventory/product.yaml` by PDA1 — do not hand-edit. 161 entries._
+_Generated from `docs/product/inventory/product.yaml` by PDA1 — do not hand-edit. 165 entries._
 
 | id | name | section | owner |
 |---|---|---|---|
@@ -13,6 +13,7 @@ _Generated from `docs/product/inventory/product.yaml` by PDA1 — do not hand-ed
 | `adm-home` | Admin Hub | admin-experiences | Colin Clapson |
 | `adm-ingredient-products` | THA Picks Curation | admin-experiences | Colin Clapson |
 | `adm-intelligence` | Intelligence Benchmarks | admin-experiences | Colin Clapson |
+| `adm-knowledge-claims` | Nutrition Claim Review | admin-experiences | Colin Clapson |
 | `adm-knowledge-review` | Knowledge Review Workbench | admin-experiences | Colin Clapson |
 | `adm-observations` | Observation Workbench | admin-experiences | Colin Clapson |
 | `adm-recipe-sources` | Recipe Source Governance | admin-experiences | Colin Clapson |
@@ -34,6 +35,7 @@ _Generated from `docs/product/inventory/product.yaml` by PDA1 — do not hand-ed
 | `dlg-inventory` | Dialog, drawer and sheet inventory | dialogs | Colin Clapson |
 | `dom-admin` | Admin | domains | Colin Clapson |
 | `dom-analyser` | Analyser | domains | Colin Clapson |
+| `dom-commerce` | Plans and Entitlements | domains | Colin Clapson |
 | `dom-companion` | Apple | domains | Colin Clapson |
 | `dom-cookbook` | Cookbook | domains | Colin Clapson |
 | `dom-diary` | Diary | domains | Colin Clapson |
@@ -64,7 +66,7 @@ _Generated from `docs/product/inventory/product.yaml` by PDA1 — do not hand-ed
 | `hid-dormant-chrome` | Dormant navigation and header components | hidden-experiences | Colin Clapson |
 | `hid-import-recipe` | Import Recipe (bounce stub) | hidden-experiences | Colin Clapson |
 | `hid-list-page` | Quick List page (dead file) | hidden-experiences | Colin Clapson |
-| `hid-notice-engine` | Companion Notice Engine (built, unreachable) | hidden-experiences | Colin Clapson |
+| `hid-notice-engine` | Companion Notice Engine (reachable since PHASE5E) | hidden-experiences | Colin Clapson |
 | `hid-quick-meal` | Build a Meal (unlinked) | hidden-experiences | Colin Clapson |
 | `hid-routing-telemetry` | Dormant intent-routing engine | hidden-experiences | Colin Clapson |
 | `hid-scan-confirm-dialog` | Scan Confirm dialog (orphaned) | hidden-experiences | Colin Clapson |
@@ -111,6 +113,7 @@ _Generated from `docs/product/inventory/product.yaml` by PDA1 — do not hand-ed
 | `ntf-diversity-milestone` | Plant diversity milestone notice | notifications | Colin Clapson |
 | `ntf-email-password-reset` | Password reset email | notifications | Colin Clapson |
 | `ntf-email-verification` | Verification email | notifications | Colin Clapson |
+| `ntf-household-story` | Household observation notice | notifications | Colin Clapson |
 | `ntf-nutrition-trend` | Nutrition trend notice | notifications | Colin Clapson |
 | `ntf-pantry-opportunity` | Pantry opportunity notice | notifications | Colin Clapson |
 | `ntf-planner-gap` | Planner gap notice | notifications | Colin Clapson |
@@ -127,6 +130,7 @@ _Generated from `docs/product/inventory/product.yaml` by PDA1 — do not hand-ed
 | `page-admin-home` | Admin Hub | pages | Colin Clapson |
 | `page-admin-ingredient-products` | Admin — THA Picks | pages | Colin Clapson |
 | `page-admin-intelligence` | Admin — Intelligence | pages | Colin Clapson |
+| `page-admin-knowledge-claims` | Admin — Nutrition Claim Review | pages | Colin Clapson |
 | `page-admin-knowledge-review` | Admin — Knowledge Review | pages | Colin Clapson |
 | `page-admin-observations` | Admin — Observation Workbench | pages | Colin Clapson |
 | `page-admin-recipe-sources` | Admin — Recipe Sources | pages | Colin Clapson |

@@ -251,6 +251,18 @@ interface CompanionExperience {
   greeting: string;
   invitation: string;
   /**
+   * PRESENCE2 — what the Companion says the first time a household opens it and
+   * has never spoken to it. Registry content, like everything else here.
+   *
+   * It REPLACES `greeting` in that state, and the replacement is a correction
+   * rather than a preference: the empty-state greeting has always been the
+   * *returning* line, so a household meeting the Companion for the very first
+   * time has been told "Welcome back — how can I help today?" by something that
+   * had never introduced itself. `greeting` remains in the payload and is
+   * currently rendered nowhere — recorded as an owner decision, not hidden.
+   */
+  introduction: string;
+  /**
    * INT35B: shown when the request never reaches the server — the one
    * unsuccessful path INT35's server-side states cannot classify. It IS the
    * `internal-error` disclosure, voiced; not a seventh phrasing of one fact.
@@ -1486,6 +1498,30 @@ export default function FloatingAssistant() {
     [isPending, sendTurn],
   );
 
+  /**
+   * PRESENCE2 — the household asks the Companion why it mentioned something.
+   *
+   * GEA16: intelligence is never a visible mechanism, and where a household wants
+   * to know why, "the answer is available on request, in the Companion's voice".
+   * Both halves are honoured here — nothing is narrated unasked, and the answer
+   * comes back through the ordinary gateway rather than from a panel that reads
+   * out a `source` string. Rendering the provenance inline would be showing the
+   * household the machinery instead of answering the question.
+   *
+   * It uses the SAME path `handleQuickAction` and PHASE5E's "Why this?" already
+   * use: an ordinary user turn, no second response path, no privileged answer, no
+   * new capability and no new surface. The notice's sentence is quoted into the
+   * question so the gateway knows which claim is being asked about; the owners it
+   * came from are re-read server-side, exactly as every other turn's are.
+   */
+  const handleExplainNotice = useCallback(
+    (noticeText: string) => {
+      if (isPending) return;
+      sendTurn({ utterance: `Why did you mention this: "${noticeText}"` });
+    },
+    [isPending, sendTurn],
+  );
+
   // PHASE5E — a surface asked the Companion a question ("Why this?" on an ambient
   // opportunity card). Open, ask it, and clear it.
   //
@@ -1680,6 +1716,67 @@ export default function FloatingAssistant() {
                 </DialogPrimitive.Close>
               </div>
 
+              {/* ── WHAT THE COMPANION HAD TO SAY ──────────────────────────
+                  PRESENCE2 — hoisted OUT of the empty state, where UX3 left it.
+
+                  THE DEFECT IT FIXES. The emblem's `aware` light is set from
+                  `notices.length > 0` alone, in every room; this list rendered
+                  only in the `!hasHistory` branch. So the moment a household sent
+                  a single message — ever — the Companion went on lighting up to
+                  say it was holding something, and opening it showed them their
+                  old conversation instead. `aware` was a promise the panel could
+                  not keep, for every household that had ever spoken to it.
+
+                  It is placed ABOVE the thread rather than inside it because a
+                  notice is not a turn: nobody said it to anybody, and threading
+                  it would make the Companion appear to have spoken unprompted.
+
+                  Nothing here is authored by this component. Every sentence is
+                  the Behaviour Engine's, verbatim, in the household's chosen
+                  personality, and the Silence Rules already chose which ones and
+                  how many (at most two). This surface never re-sorts, re-slices,
+                  re-words or pads that list — doing so would be a second
+                  attention budget, which the Notice Engine Architecture § 9
+                  forbids.
+
+                  Absent in silence, with no empty state of its own: a Companion
+                  with nothing to say simply says nothing, which is the honest
+                  outcome rather than a padded one. */}
+              {notices.length > 0 && (
+                <ul
+                  className="px-4 pt-4 pb-1 space-y-3 shrink-0"
+                  data-testid="list-companion-notices"
+                >
+                  {notices.map((n, i) => (
+                    <li
+                      key={n.id}
+                      className="text-[15px] leading-relaxed text-foreground/85"
+                      data-testid={`companion-notice-${i}`}
+                    >
+                      {n.text}
+                      {/* PRESENCE2 — "why did you notice that?", per GEA16: the
+                          reasoning is available ON REQUEST, in the Companion's
+                          voice, and is never narrated unasked. It creates no
+                          surface and no capability: pressing it sends an ordinary
+                          turn down the one conversation channel, which the
+                          gateway grounds from the same owners the notice came
+                          from. The notice's own `fact` is carried alongside the
+                          sentence for exactly this reason — a notice must never
+                          become a claim whose supporting data was discarded. */}
+                      <button
+                        type="button"
+                        onClick={() => handleExplainNotice(n.text)}
+                        disabled={isPending}
+                        className="ml-2 align-baseline text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground disabled:opacity-50"
+                        data-testid={`companion-notice-why-${i}`}
+                      >
+                        Why?
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
               {/* Thread or quick actions */}
               {hasHistory || isPending ? (
                 <ConversationThread
@@ -1697,9 +1794,33 @@ export default function FloatingAssistant() {
                 <div className="flex-1 overflow-y-auto flex flex-col justify-end">
                   {!isTurnsLoading && (
                     <>
-                      {/* CP2 — empty-state greeting, in the user's chosen voice.
+                      {/* CP2 — empty-state text, in the user's chosen voice.
                           Rendered only once the registry text has arrived: an
-                          empty panel is honest, an invented greeting is not. */}
+                          empty panel is honest, an invented greeting is not.
+
+                          PRESENCE2 — THE COMPANION INTRODUCES ITSELF HERE.
+
+                          This slot is reached only when the household has never
+                          spoken to the Companion, so it is the first meeting, and
+                          it was showing them `experience.greeting` — which in
+                          four of the six voices is the RETURNING line ("Welcome
+                          back — how can I help today?"). A thing that had never
+                          said a word was greeting them as an old acquaintance.
+
+                          It now says why it exists instead, and — because the
+                          notices block above renders first — it does so with
+                          whatever true thing THA has actually noticed about this
+                          family already on screen. That ordering is deliberate
+                          and is the whole brief: the Companion demonstrates
+                          before it invites, and invites before it asks. It asks
+                          for nothing at all.
+
+                          The introduction claims NOTHING about this household. It
+                          cannot: it is a static registry string, and a static
+                          string that reads as personal knowledge is the
+                          fabrication GEA9 describes. Everything personal on this
+                          screen came from the Notice Engine, derived at the
+                          moment it was shown. */}
                       {experience && (
                         <div className="px-4 pt-6 pb-2 text-center">
                           <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
@@ -1708,9 +1829,9 @@ export default function FloatingAssistant() {
                           <p
                             className="text-sm font-medium text-foreground"
                             style={{ fontFamily: "var(--font-display)" }}
-                            data-testid="text-assistant-greeting"
+                            data-testid="text-assistant-introduction"
                           >
-                            {experience.greeting}
+                            {experience.introduction}
                           </p>
                           <p
                             className="text-xs text-muted-foreground mt-1"
@@ -1720,36 +1841,10 @@ export default function FloatingAssistant() {
                           </p>
                         </div>
                       )}
-                      {/* ── UX3 — WHAT THE COMPANION HAD TO SAY ────────────────
-                          The other half of `aware`. The emblem says the Companion
-                          is holding something; opening it is how the household
-                          asks what. Nothing here is authored by this component:
-                          every sentence is the Behaviour Engine's, verbatim, in
-                          the household's chosen personality, and the Silence Rules
-                          already chose which ones and how many (at most two).
-                          This surface never re-sorts, re-slices, re-words or pads
-                          that list — doing so would be a second attention budget,
-                          which the Notice Engine Architecture § 9 forbids.
-
-                          Absent in silence, with no empty state of its own: a
-                          Companion with nothing to say simply greets you, which is
-                          the honest outcome rather than a padded one. */}
-                      {notices.length > 0 && (
-                        <ul
-                          className="px-4 pb-1 space-y-3"
-                          data-testid="list-companion-notices"
-                        >
-                          {notices.map((n, i) => (
-                            <li
-                              key={n.id}
-                              className="text-[15px] leading-relaxed text-foreground/85"
-                              data-testid={`companion-notice-${i}`}
-                            >
-                              {n.text}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
+                      {/* PRESENCE2 — the notices list that stood here is hoisted
+                          above the thread/empty-state branch, so it is reachable
+                          in BOTH. See the comment at its new site for the `aware`
+                          promise it was silently failing to keep. */}
                       <QuickActions
                         surface={surface}
                         onSelect={handleQuickAction}

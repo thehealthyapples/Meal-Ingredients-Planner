@@ -382,7 +382,11 @@ async function main(): Promise<void> {
   section("§2 GOLDEN IDENTITY — Notice Engine applySilenceRules ≡ its frozen pre-DEC1 oracle");
   let noticeIdentical = 0;
   let noticeCases = 0;
-  const CATEGORIES: readonly Notice["category"][] = ["planner-gap", "pantry-opportunity", "shopping-opportunity", "streak-milestone"];
+  // PRESENCE2 — "streak-milestone" retired under GEA13; "household-story" takes its
+  // place in the generator. The golden-identity claim is about applySilenceRules'
+  // ordering mechanics, which are category-blind, so the substitution changes
+  // nothing this section is asserting.
+  const CATEGORIES: readonly Notice["category"][] = ["planner-gap", "pantry-opportunity", "shopping-opportunity", "household-story"];
   for (let round = 0; round < 120; round += 1) {
     const size = Math.floor(rng() * 12);
     const notices: Notice[] = Array.from({ length: size }, (_, i) => ({
