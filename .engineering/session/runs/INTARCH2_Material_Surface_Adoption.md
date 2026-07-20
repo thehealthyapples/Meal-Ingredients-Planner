@@ -4,6 +4,7 @@
 **Opened:** 2026-07-20
 **Type:** Interior Architecture programme. Visual only.
 **Rollback:** `rollback/INTARCH2-material-surface-adoption-20260720` → `73765ff1`
+**Commit:** `ff4fbd68` (pushed)
 **Report:** `docs/implementation/INTARCH2_MATERIAL_SURFACE_ADOPTION.md`
 **Evidence:** `docs/ui-audit/intarch2-material-surfaces/` (44 room captures + 1 dialog)
 
