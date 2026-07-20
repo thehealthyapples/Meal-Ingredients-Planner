@@ -6,7 +6,7 @@
 | **Rollback ID** | `rollback/EXP3-living-home-asset-system-20260720` (branch) → `81934cdf` |
 | **Start time** | 2026-07-20 UTC |
 | **Current stage** | Waiting for User |
-| **Commit** | — (recorded after commit) |
+| **Commit** | `71af98a1ef19a609f13582604621b3470a5271b1` (pushed to `int1-intelligence-platform`; rollback branch pushed) |
 
 ## Objective
 Design (do not build) the implementation architecture for the Living Home visual asset system that realises `docs/architecture/LIVING_HOME_EXPERIENCE_ARCHITECTURE.md` (LIVINGHOME1): one canonical house and one canonical orchard held architecturally constant, with the life within the home (flowers, books, mugs, seasonal produce, recipes, textiles and other authentic household objects) evolving naturally as data-borne Living Details reflecting seasons, household rhythm and declared celebrations — never changing the canonical architecture. Deliverable: `docs/implementation/EXP3_LIVING_HOME_ASSET_SYSTEM.md` covering shared architectural assets, room-specific foreground compositions, reusable asset layers, Living Details composition system, seasonal living details, responsive behaviour, performance, accessibility, future artwork pipeline, and implementation phases. Commit and push; report the rollback identifier.
