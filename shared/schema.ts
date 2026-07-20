@@ -137,6 +137,31 @@ export const meals = pgTable("meals", {
   licenceRef: text("licence_ref"),
   /** Attribution line to render wherever this recipe is displayed. Null = no attribution duty. */
   attributionText: text("attribution_text"),
+  // ── FOUNDATION_MEALS3 editorial retirement (additive; the meal row stays the one owner) ──
+  /**
+   * When this meal was retired from the collection. Null = live.
+   *
+   * Retirement is an EDITORIAL verdict — "this dish is wrong and cannot be
+   * edited into rightness" — and it is deliberately not a deletion. The row,
+   * its id, its provenance and every reference to it survive untouched, so a
+   * planner entry, shopping list or diary record that already names this meal
+   * keeps resolving. What changes is that the meal stops being offered:
+   * `shelfForMeal` returns the `retired` shelf and the collection-level reads
+   * in `server/storage.ts` filter it out.
+   *
+   * This column is the single owner of the retirement fact. It is NOT
+   * provenance — `acquisition_*` records how the row was acquired and is never
+   * rewritten by a retirement — and it is NOT shelving: `shared/cookbook/
+   * curation.ts` still owns which shelf a live meal sits on, and merely reads
+   * this field to answer "is it on a shelf at all?".
+   */
+  retiredAt: timestamp("retired_at", { withTimezone: true }),
+  /**
+   * Why it was retired, as an auditable machine-readable reason. Null unless
+   * `retiredAt` is set. FOUNDATION_MEALS3 Phase 1 writes one of three values:
+   * `salad_vegetable_stewed`, `oats_as_savoury_starch`, `uncookable_instruction`.
+   */
+  retiredReason: text("retired_reason"),
 });
 
 export const nutrition = pgTable("nutrition", {

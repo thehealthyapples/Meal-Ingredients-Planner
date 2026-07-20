@@ -3643,6 +3643,54 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  // ── FOUNDATION_MEALS3 Phase 1 — editorial retirement, not deletion ──────────
+  //
+  // FOUNDATION_MEALS2 § 2.1 classified 76 of the founding 500 as RETIRE: meals
+  // whose DISH is wrong rather than whose text is wrong — salad vegetables
+  // simmered until tender, rolled oats used as a savoury stew starch, and an
+  // instruction that cannot be followed ("cook the wholegrain bread according
+  // to the packet instructions"). No amount of editing rescues them; they would
+  // have to be re-conceived, which means writing a new meal.
+  //
+  // The architecture had no way to say that. `meals` could hold a recipe or not
+  // hold it, and `shared/cookbook/curation.ts` could shelve it or leave it on
+  // the `library` shelf — but the library shelf is a browsing decision, and it
+  // is enforced client-side, so a household could still reach an uncookable
+  // recipe by searching for it. Deleting the rows was the other option and it
+  // is the wrong one: eleven tables carry a bare `meal_id` with no foreign key,
+  // so a delete orphans planner entries, basket items, freezer meals and
+  // ingredient sources, and destroys the audit trail of what was withdrawn.
+  //
+  // So: two additive nullable columns, no backfill, no data destroyed. A
+  // retired meal keeps its id, its provenance, its content and every reference
+  // to it. What it loses is the right to be OFFERED — the collection-level
+  // reads in `server/storage.ts` filter it out, and `shelfForMeal` returns the
+  // `retired` shelf. `getMeal(id)` still resolves it, so a planner entry made
+  // last week still renders.
+  //
+  // The CHECK is the load-bearing part: a reason without a retirement, or a
+  // retirement without a reason, is an unauditable half-state. Phase 1 writes
+  // one of three reasons and the constraint holds the pairing in Postgres
+  // rather than in a comment.
+  {
+    id: "2026-07-20_foundation_meals3_editorial_retirement",
+    statements: [
+      `ALTER TABLE meals ADD COLUMN IF NOT EXISTS retired_at TIMESTAMPTZ`,
+      `ALTER TABLE meals ADD COLUMN IF NOT EXISTS retired_reason TEXT`,
+      // Null together or set together — never one without the other.
+      `ALTER TABLE meals DROP CONSTRAINT IF EXISTS meals_retirement_check`,
+      `ALTER TABLE meals ADD CONSTRAINT meals_retirement_check
+         CHECK (
+           (retired_at IS NULL AND retired_reason IS NULL)
+           OR (retired_at IS NOT NULL AND retired_reason IS NOT NULL)
+         )`,
+      // Every collection-level read filters on `retired_at IS NULL`. A partial
+      // index on the live rows keeps that filter free — and it is the common
+      // case by a wide margin (76 retired against 3,207 rows today).
+      `CREATE INDEX IF NOT EXISTS meals_live_idx ON meals (id) WHERE retired_at IS NULL`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

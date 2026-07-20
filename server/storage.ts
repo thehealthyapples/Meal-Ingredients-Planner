@@ -496,10 +496,42 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async getMeals(userId: number): Promise<Meal[]> {
-    return await db.select().from(meals).where(eq(meals.userId, userId));
+  /**
+   * FOUNDATION_MEALS3 — the one filter that expresses "this meal may still be
+   * OFFERED to a household".
+   *
+   * It is deliberately a predicate rather than a rewrite of every query, and it
+   * is deliberately applied only to the COLLECTION-LEVEL reads: the ones that
+   * answer "what could this household cook?" — browsing, search, nutrition
+   * matching, starter meals. It is NOT applied to `getMeal(id)`, to the admin
+   * export, or to any read that resolves a meal a household has already chosen.
+   *
+   * That asymmetry is the whole mechanism. A retired meal stops being offered;
+   * it does not stop existing. A planner entry, basket item, freezer record or
+   * diary line written before the retirement names a meal id, and that id must
+   * keep resolving or Phase 1 breaks the very surfaces it was meant to protect.
+   */
+  private live() {
+    return isNull(meals.retiredAt);
   }
 
+  async getMeals(userId: number): Promise<Meal[]> {
+    // A household's OWN meals are never retired by this mechanism — Phase 1
+    // retires system rows only — but the filter belongs here anyway: this is a
+    // collection read, and the rule should not depend on who happens to be
+    // retiring what.
+    return await db.select().from(meals).where(and(eq(meals.userId, userId), this.live()));
+  }
+
+  /**
+   * Resolves ANY meal by id, retired or live, and must continue to.
+   *
+   * See `live()`: this is the read that keeps referential integrity honest.
+   * Every existing reference to a retired meal — planner entries, shopping
+   * ingredient sources, freezer meals, basket items, diary records — arrives
+   * here, and a household looking at last week's plan is entitled to see what
+   * they cooked.
+   */
   async getMeal(id: number): Promise<Meal | undefined> {
     const [meal] = await db.select().from(meals).where(eq(meals.id, id));
     return meal;
@@ -669,8 +701,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getMealsByNutritionFilter(userId: number): Promise<Array<{ meal: Meal; nutrition: Nutrition | null; isSystem: boolean }>> {
-    const personalMeals = await db.select().from(meals).where(eq(meals.userId, userId));
-    const systemMeals = await db.select().from(meals).where(eq(meals.isSystemMeal, true));
+    const personalMeals = await db.select().from(meals).where(and(eq(meals.userId, userId), this.live()));
+    const systemMeals = await db.select().from(meals).where(and(eq(meals.isSystemMeal, true), this.live()));
     const allRows: Array<{ meal: Meal; isSystem: boolean }> = [
       ...personalMeals.map(m => ({ meal: m, isSystem: false })),
       ...systemMeals.map(m => ({ meal: m, isSystem: true })),
@@ -1172,7 +1204,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSystemMeals(): Promise<Meal[]> {
-    return await db.select().from(meals).where(eq(meals.isSystemMeal, true));
+    return await db.select().from(meals).where(and(eq(meals.isSystemMeal, true), this.live()));
   }
 
   private summaryFields() {
@@ -1212,20 +1244,27 @@ export class DatabaseStorage implements IStorage {
       acquisitionSourceKey: meals.acquisitionSourceKey,
       licenceRef: meals.licenceRef,
       attributionText: meals.attributionText,
+      // Projected so the client's `shelfForMeal` agrees with the server filter
+      // rather than merely being unable to disagree with it. Every summary read
+      // already excludes retired rows, so this is null on everything the client
+      // sees today — it is here so that a retired row reaching a surface by some
+      // future path is shelved as `retired` instead of silently as `library`.
+      retiredAt: meals.retiredAt,
+      retiredReason: meals.retiredReason,
       ingredientCount: sql<number>`coalesce(array_length(${meals.ingredients}, 1), 0)`.mapWith(Number),
     };
   }
 
   async getMealsSummary(userId: number): Promise<MealSummary[]> {
-    return await db.select(this.summaryFields()).from(meals).where(eq(meals.userId, userId));
+    return await db.select(this.summaryFields()).from(meals).where(and(eq(meals.userId, userId), this.live()));
   }
 
   async getSystemMealsSummary(): Promise<MealSummary[]> {
-    return await db.select(this.summaryFields()).from(meals).where(eq(meals.isSystemMeal, true));
+    return await db.select(this.summaryFields()).from(meals).where(and(eq(meals.isSystemMeal, true), this.live()));
   }
 
   async getSystemMealByName(name: string): Promise<Meal | undefined> {
-    const [meal] = await db.select().from(meals).where(and(eq(meals.isSystemMeal, true), eq(meals.name, name)));
+    const [meal] = await db.select().from(meals).where(and(eq(meals.isSystemMeal, true), eq(meals.name, name), this.live()));
     return meal;
   }
 
@@ -1657,9 +1696,16 @@ export class DatabaseStorage implements IStorage {
       source_url: string | null;
       created_at: Date;
     }>(
+      // FOUNDATION_MEALS3 — search is the path that made retirement necessary.
+      // The `library` shelf already kept the generated 500 out of browsing, but
+      // it is a client-side rule and it explicitly steps aside when a search is
+      // active (`meals-page.tsx`), so a household searching "rice bowl" was
+      // still handed recipes that cannot be cooked from their own ingredients.
+      // Retired meals are not searchable; they remain resolvable by id.
       `SELECT id, name, meal_source_type, source_url, created_at
        FROM meals
        WHERE name ILIKE $1
+         AND retired_at IS NULL
        ORDER BY
          CASE WHEN lower(name) = lower($2) THEN 0 ELSE 1 END,
          id DESC

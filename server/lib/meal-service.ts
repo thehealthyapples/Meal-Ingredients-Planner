@@ -43,7 +43,7 @@
  */
 import { db } from "../db";
 import { meals, userPreferences, users } from "@shared/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, isNull } from "drizzle-orm";
 import type { Meal } from "@shared/schema";
 import {
   resolveHouseholdSafetyContext,
@@ -159,6 +159,10 @@ export async function getStarterMeals(userId: number): Promise<{
     .where(
       and(
         eq(meals.isSystemMeal, true),
+        // FOUNDATION_MEALS3 — a starter meal is THA handing a household a recipe
+        // unprompted, which makes this the worst place of all to offer a dish
+        // that cannot be cooked. Retired meals are never candidates.
+        isNull(meals.retiredAt),
         inArray(meals.categoryId, [
           BREAKFAST_CATEGORY_ID,
           LUNCH_CATEGORY_ID,

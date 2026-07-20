@@ -85,12 +85,34 @@ export type CookbookShelf =
   /** Packaged products. Information, not cooking. */
   | "packaged"
   /** Drinks. */
-  | "drinks";
+  | "drinks"
+  /**
+   * Withdrawn from the collection by an editorial verdict. Not a shelf a
+   * household ever reads — it is the absence of a shelf, named.
+   *
+   * FOUNDATION_MEALS3 Phase 1 put the first 76 meals here: the ones
+   * FOUNDATION_MEALS2 § 2.3 found to be broken in the DISH rather than in the
+   * text. The `library` shelf above was not enough for them. Library means
+   * "true, but not worth meeting while browsing"; these are not true, and a
+   * household that searched for one would still have been handed a recipe that
+   * cannot be cooked from the ingredients it lists.
+   *
+   * A retired meal is not deleted and is not hidden from itself: the row keeps
+   * its id, its content and its provenance, `getMeal(id)` still resolves it, and
+   * a planner entry or diary record made before the retirement still renders.
+   * The fact lives on `meals.retiredAt` (schema.ts) — this module reads it and
+   * stores nothing, exactly as it reads every other field here.
+   */
+  | "retired";
 
 /**
  * Reading order. The household's own food comes first, always — `EXPGOV1`
  * § 12.2: *"life comes from the household, not from decoration. The fix for a
  * lifeless room is more of the household, not more of THA."*
+ *
+ * `retired` is absent, and its absence is the point: a shelf that appears in
+ * this list is a shelf the room can render a heading for. There is no heading
+ * for withdrawn food.
  */
 export const SHELF_ORDER: readonly CookbookShelf[] = [
   "household",
@@ -115,6 +137,10 @@ export const SHELF_LABELS: Record<CookbookShelf, string> = {
   packaged: "Packaged & processed",
   drinks: "Drinks",
   library: "The wider library",
+  // Never rendered — `retired` is not in SHELF_ORDER, so the room never asks
+  // for this label. It exists so the map stays total over CookbookShelf and a
+  // future admin or audit surface has an honest word to use.
+  retired: "Withdrawn",
 };
 
 /**
@@ -200,7 +226,18 @@ export function repairCuisineCapitalisation(name: string): string {
 export function shelfForMeal(meal: Pick<
   Meal,
   "name" | "isDrink" | "mealFormat" | "isReadyMeal" | "mealSourceType" | "isSystemMeal" | "sourceUrl"
->): CookbookShelf {
+> & { retiredAt?: Date | string | null }): CookbookShelf {
+  // FIRST, and before any other classification. A retired drink is not a drink
+  // on the drinks shelf — it is withdrawn. Retirement is a statement about
+  // whether the meal may be offered at all, so it outranks every question about
+  // what KIND of thing it is.
+  //
+  // `retiredAt` is optional on the parameter type so that the existing callers
+  // — which pass a full `Meal` — need no change, and so a projection that has
+  // not selected the column is treated as live rather than throwing. The server
+  // reads in `server/storage.ts` are the load-bearing filter; this is the
+  // presentation-side agreement with them.
+  if (meal.retiredAt != null) return "retired";
   if (meal.isDrink || meal.mealFormat === "drink") return "drinks";
   if (meal.isReadyMeal || meal.mealFormat === "ready-meal") return "packaged";
   if (meal.mealSourceType === "openfoodfacts") return "packaged";
