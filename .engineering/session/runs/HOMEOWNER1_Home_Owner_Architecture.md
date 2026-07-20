@@ -5,8 +5,8 @@
 | **Session ID** | `HOMEOWNER1_Home_Owner_Architecture` |
 | **Rollback ID** | `rollback/HOMEOWNER1-home-owner-architecture-20260720` (annotated tag) → `f36dfece` |
 | **Start time** | 2026-07-20 UTC |
-| **Current stage** | Rollback Complete |
-| **Commit** | (pending) |
+| **Current stage** | Waiting for User |
+| **Commit** | `bd9a9be4` (pushed to `int1-intelligence-platform`; rollback tag pushed) |
 
 ## Objective
 Create `docs/architecture/HOME_OWNER_ARCHITECTURE.md` — the governing Home Owner architecture: the single creative authority for THA's emotional, aesthetic and hospitality character. Governs feeling, not functionality; no business logic, intelligence, data, permissions. Sections: Philosophy · Governing Principles · Owns · Does Not Own · Relationship with Existing Architecture · Decision Framework · Design Authority · Architecture Compliance · AI Architecture Compliance · Impact (governance only). Cross-reference from UI_CANONICAL_EXPERIENCE_OWNERSHIP.md; produce docs/implementation/HOME_OWNER_ARCHITECTURE_IMPLEMENTATION.md. No application code.
