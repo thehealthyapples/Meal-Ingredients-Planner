@@ -445,7 +445,7 @@ Five governing documents own the user-facing layer, and each holds its own full 
 
 | Document | Owns | Its checklist |
 |---|---|---|
-| [`GOVERNING_EXPERIENCE_ARCHITECTURE.md`](./GOVERNING_EXPERIENCE_ARCHITECTURE.md) (EXPGOV1) — **the Experience Constitution; mandatory first read** | **Why** the experience exists — the philosophy, the twenty principles (GEA1–GEA20), the household outcome, the three-layer model (Constitution → Architecture → Implementation), the ownership map and the verification map. It states principles and never mechanisms, restates no rule of the four below, and is **corrected** wherever it conflicts with one of them | **Experience Constitution Check** — its § 18.2, answered **before design begins** |
+| [`GOVERNING_EXPERIENCE_ARCHITECTURE.md`](./GOVERNING_EXPERIENCE_ARCHITECTURE.md) (EXPGOV1) — **the Experience Constitution; mandatory first read** | **Why** the experience exists — the philosophy, the twenty-three principles (GEA1–GEA23), the household outcome, the division of experience ownership (*the rooms observe · the Companion understands · the household decides*, § 7.4), the three-layer model (Constitution → Architecture → Implementation), the ownership map and the verification map. It states principles and never mechanisms, restates no rule of the four below, and is **corrected** wherever it conflicts with one of them | **Experience Constitution Check** — its § 18.2, answered **before design begins** |
 | [`THA_EXPERIENCE_ARCHITECTURE.md`](./THA_EXPERIENCE_ARCHITECTURE.md) (EXP1, + EXP2 Premium Experience Principles) | How THA **behaves and feels** — Home, progressive disclosure, calm before capability, one primary action, journeys, companion conduct, trust, language, errors, notifications, accessibility, and the premium standard of craft | **UX Governance Checklist** — its § 18, *including the Premium Standard block* |
 | [`THA_EXPERIENCE_LANGUAGE.md`](./THA_EXPERIENCE_LANGUAGE.md) (EXPLANG1) | How THA must **feel** — the emotional target the other two produce: calm, welcoming, effortless, intelligent, reassuring, premium, quietly memorable; the thirteen Principles of Feeling, the six-beat Experience Rhythm, and the Anti-Patterns THA must never adopt | **Experience Review Questions** — its § 6 |
 | [`THA_UI_ARCHITECTURE.md`](./THA_UI_ARCHITECTURE.md) (UIA2) | How THA **looks** — the Calm Orchard visual language, visual hierarchy, layout, colour, typography, spacing, motion, brand identity, state presentation, Visual Trust, design tokens, and one-owner-per-visual-concern | **UI Governance Checklist** — its § 18 |
@@ -462,7 +462,11 @@ For every user-facing implementation confirm:
     (GOVERNING_EXPERIENCE_ARCHITECTURE.md § 18.2) was answered in full —
     hospitality (§ 3.1) · outcome (§ 3.5, naming which of the four this
     produces) · weight (GEA2) · voice (GEA8/GEA9 — rooms report, the Companion
-    advises) · restraint (GEA11/GEA13/GEA15) · layer (GEA20 — this change names
+    advises) · ownership (§ 7.4, GEA21/GEA22 — the rooms observe, the Companion
+    understands; every statement added is named as a room's fact or the
+    Companion's interpretation) · agency (GEA23 — the household decides; this
+    takes no decision, priority, value or pace of change away from them) ·
+    restraint (GEA11/GEA13/GEA15) · layer (GEA20 — this change names
     the principle above it and the Architecture owner beside it, and originates
     no law at the implementation layer)
 ✓ The UX Governance Checklist (THA_EXPERIENCE_ARCHITECTURE.md § 18) has been

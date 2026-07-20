@@ -1,6 +1,6 @@
 # THA Governing Experience Architecture
 
-**Status:** Governing architecture. `EXPGOV1` (2026-07-20).
+**Status:** Governing architecture. `EXPGOV1` (2026-07-20). **Amended by `EXPGOV2` (2026-07-20)** — § 7.4, which promotes *The Rooms Observe · The Companion Understands · The Household Decides* to a permanent constitutional principle (**GEA21–GEA23**).
 **Scope:** The **Experience Constitution** of The Healthy Apples — the principles, intent, philosophy, ownership model and verification model by which every UX, UI, frontend and visual decision is made.
 **Required reading before any user-facing implementation.** It is the *first* of the Experience Governance documents to be read, and the one that tells you which of the others binds you.
 **Layer:** Constitution. It states principles and never mechanisms; the existing architecture documents remain the authoritative owners of their domains (§ 2.1, § 17.1).
@@ -15,10 +15,10 @@ Between them they say, in remarkable detail, **what the rules are**. What none o
 
 That gap is not academic. A rule whose reasoning is unrecorded survives exactly as long as the people who remember why it was made. The next person inherits a constraint with no argument attached, and a constraint with no argument is indistinguishable from an arbitrary preference — so it is negotiated away, politely, one reasonable exception at a time. This document exists so that in five years someone can read not only *that* THA holds its measure on a wide screen, but *why*, and can therefore tell the difference between a change that serves the household and a change that merely serves the screen.
 
-**Experience Architecture is therefore the layer that holds the reasoning, the principles, and the map.** Its three jobs:
+**Experience Architecture is therefore the layer that holds the reasoning, the principles, and the map.** Its four jobs:
 
 1. **State the principles** from which the existing rules follow — so that a decision the rules do not cover can still be made correctly.
-2. **Own the questions no other document owns** — hospitality, presence, joy, silence, space as architecture, identity as detail, and the household outcome.
+2. **Own the questions no other document owns** — hospitality, presence, joy, silence, space as architecture, identity as detail, the household outcome, and **who owns which kind of statement** (§ 7.4).
 3. **Hold the map** — one place that names every experience owner and every experience gate, so that "which document binds me here?" has an answer that takes seconds rather than an afternoon.
 
 4. **Name the layers** — Constitution, Architecture, Implementation — and fix the direction work flows between them (§ 2.1), so that a statement written at the wrong altitude is a recognisable defect rather than a matter of taste.
@@ -111,7 +111,7 @@ THA's experience canon holds a rule its documents apply to themselves: **one rul
 
 This document is bound by that clause twice over, because a constitution is the document most tempted to restate everything beneath it.
 
-**It therefore owns exactly seven things, and nothing else:**
+**It therefore owns exactly eight things, and nothing else:**
 
 | # | What this document owns | Why no one else could |
 |---|---|---|
@@ -119,9 +119,10 @@ This document is bound by that clause twice over, because a constitution is the 
 | 2 | **Hospitality before productivity** and **Presence over engagement** as named principles (§ 3.1, § 3.4) | Their consequences are owned in several places. The principles themselves were unstated. |
 | 3 | **Joy** as a positive principle (§ 13) | The word appears nowhere in the canon. Delight exists only as a constraint — rationed, earned, capped. Nothing said THA should *produce* it. |
 | 4 | **Silence** as a named principle (§ 15) | It exists as a notification default and as one clause inside a principle about space. Nothing has silence as its subject. |
-| 5 | **Surplus space becomes air and view** as *governing* law (§ 9.2, **GEA5**) | The rule existed only in `THA_KEPT_ROOM_TRANSLATION.md` § 4.1 and § 6, both citing `HOUSE1` § 19.3 — a document explicitly marked *"DESIGN SPECIFICATION — Not governing architecture"*. THA's most quotable spatial principle rested on a non-governing single-room spec. § 9.2 promotes it. |
+| 5 | **Surplus space becomes air and view** as *governing* law (§ 9.2, **GEA11**) | The rule existed only in `THA_KEPT_ROOM_TRANSLATION.md` § 4.1 and § 6, both citing `HOUSE1` § 19.3 — a document explicitly marked *"DESIGN SPECIFICATION — Not governing architecture"*. THA's most quotable spatial principle rested on a non-governing single-room spec. § 9.2 promotes it. |
 | 6 | The **experience ownership map** (§ 17) and the **experience verification map** (§ 18) | Each owner names its own gate. Nothing named them all together, so no one could see the whole gate. |
 | 7 | The **three-layer model** and its direction of flow (§ 2.1, **GEA20**) | Each document declares its own precedence relative to its neighbours. Nothing declared the *altitudes* — which meant no one could say whether a given statement was written at the wrong one. |
+| 8 | **The Rooms Observe · The Companion Understands · The Household Decides** — the division of experience ownership between the three parties (§ 7.4, **GEA21–GEA23**) | Two of the three halves had owners: room conduct is `THA_EXPERIENCE_ARCHITECTURE.md`, Companion conduct and authority are its own documents. Nothing owned the *division between them*, and nothing named the household as a party that owns anything at all — so the one boundary most often crossed was the one no document was responsible for. |
 
 Everything else in this document is a **citation**. Where a section below appears to state a rule, read the owner named beside it: that is where the rule lives, and that is the text that binds.
 
@@ -200,7 +201,7 @@ There is no neutral third option. A food product occupying the deliberation mome
 | 1 | **Less on their mind** than when they arrived | answered a question they were carrying, or made it not need answering |
 | 2 | **More confidence** in a decision already made | showed them their own life clearly, rather than grading it |
 | 3 | **Less guilt** than the same facts would produce elsewhere | reports without judging, and never manufactures a deficit |
-| 4 | **A small, true, unearned pleasure** | noticed something real about their household and said it plainly (§ 13) |
+| 4 | **A small, true, unearned pleasure** | the Companion noticed something real about their household and said it plainly (§ 13; § 7.4, **GEA22**) |
 
 Note what is absent: achievement, streaks, scores, and praise. Those produce a *spike* that is indistinguishable from happiness at the moment of delivery and is a debt afterwards, because each one raises the floor for the next. THA's version compounds in the other direction — a household that trusts the product carries less every time they open it.
 
@@ -306,9 +307,11 @@ One clarification, because it is the most common way the room framing is misappl
 
 **Owner of the rule:** `THA_EXPERIENCE_ARCHITECTURE.md` § 11 owns Companion behaviour (invited not intrusive; discovers and refers; honest about its nature and limits; suggests, the person decides; serves the household's goals, not engagement). Its **place in the house** — one presence, one fixed chair, in the rooms and never a room — is `THA_EXPERIENCE_BLUEPRINT.md` § 13. Its **voice, persona and tone** are `THA_AI_EXPERIENCE_AND_CONVERSATION_ARCHITECTURE.md` (TIP3) § 11–12; its **per-moment word-craft** is `THA_INTELLIGENCE_LANGUAGE_GUIDE.md`; its **authority** is `COMP_AUTH1_COMPANION_AUTHORITY_MODEL.md`; its **imagery** is `THA_UI_ARCHITECTURE.md` § 10.
 
+**What this section owns** is the *division* between the three parties — which kind of statement belongs to a room, which to the Companion, and which decisions belong permanently to the household. That division is stated whole in **§ 7.4**.
+
 ### 7.1 Why the Companion is the sole conversational and coaching voice
 
-THA speaks to households in two registers, and only two.
+THA speaks to households in two registers, and only two. There are three *parties* — the rooms, the Companion, and the household — but only the first two speak; the third is the one that decides, and § 7.4 states all three together.
 
 **Rooms report.** A room states what is true — what is planned, what is in, what was eaten, what is missing. This is factual, impersonal, and owned by the surface displaying it. A room saying *"three meals planned this week"* is not speaking; it is showing.
 
@@ -345,6 +348,80 @@ The boundary is workable in practice: *would a household attribute this sentence
 ### 7.3 Presence
 
 The Companion's presence is governed by one idea from which its manners follow: **it is a person in the house, not a feature of the interface.** A friend at the counter does not follow you room to room, does not speak into every silence, does not perform attentiveness, and does not simulate feelings it lacks — and equally, is not absent, not hidden behind a menu, and not different in each room. `THA_ORCHARD_HOUSE_DESIGN_BLUEPRINT.md` § 13.8 lists what this rules out (a face, a pulse, typing theatrics, simulated mood, a stage), and `THA_EXPERIENCE_BLUEPRINT.md` § 13 owns its one permitted sign of life.
+
+### 7.4 The three owners, stated whole
+
+Everything in § 7.1–§ 7.3 divides one question — *who is speaking, and with what standing?* — and the division has, until now, been stated only in halves: rooms report, the Companion advises. That is two of the three parties. The third is the one the product exists for, and leaving it unnamed is what allows a well-intentioned change to take a decision away from a household while satisfying every rule about voice.
+
+Stated whole, and permanently:
+
+> ## The Rooms Observe.
+> ## The Companion Understands.
+> ## The Household Decides.
+
+This is a **constitutional principle, not an implementation guideline.** The difference is not emphasis, it is enforceability. A guideline describes how work is usually done and is negotiable by anyone with a reasonable case; a constitutional principle names *who owns a kind of statement*, so that a proposal which puts the wrong owner behind a sentence is wrong **structurally** — wrong before anyone examines whether the sentence is good, well-written, well-placed, or well-intentioned. Most of the surfaces `EXPGOV1` § 3 (C1) and `PRESENCE1` removed were individually defensible. They were not defensible as a question of ownership, and that is the only question this principle asks.
+
+#### 7.4.1 What each party owns
+
+| | **Rooms own** | **Rooms must never own** |
+|---|---|---|
+| | facts | coaching |
+| | household state | encouragement |
+| | workflow | congratulations |
+| | controls | persuasion |
+| | truthful reporting | behavioural interpretation |
+| | | emotional judgement |
+
+A room's whole duty is to be **true and legible**. It shows what is planned, what is in, what was eaten, what is missing, and it gives the household the controls to change any of it. It states no opinion about what those facts *mean*, and no opinion at all about the people they describe.
+
+| | **The Companion owns** | **The Companion must always** |
+|---|---|---|
+| | interpretation | ground every statement in evidence |
+| | observations | never invent an observation |
+| | coaching | prefer silence over weak guidance |
+| | encouragement | explain its reasoning when asked |
+| | reassurance | respect household agency |
+| | explanation | |
+| | recommendations | |
+
+The five duties are not new law and are not stated here as new law. Grounding and non-invention are `ARCHITECTURE_PRINCIPLES.md` Principle 6 (non-fabrication) reaching the presentation layer, composed through `THA_CONTEXT_COMPOSITION_ENGINE_ARCHITECTURE.md`, which owns every byte the model reads. Silence over weak guidance is **GEA15** applied to the one voice permitted to speak. Explanation on request and the limits of what the Companion may assert are `COMP_AUTH1_COMPANION_AUTHORITY_MODEL.md`. Agency is `THA_EXPERIENCE_ARCHITECTURE.md` § 11 — *it suggests, the person decides*. They are collected here because **a sole owner of interpretation is only safe for as long as it is held to the standard it was given the monopoly under**, and that standard had never been written next to the monopoly. `PRESENCE2` found the cost of the gap directly: the last two scoring surfaces in the platform were the Companion's own.
+
+| | **The household always owns** |
+|---|---|
+| | decisions |
+| | priorities |
+| | values |
+| | pace of change |
+
+**The Companion never takes a decision away from the household** — not by making it, not by pre-making it and presenting the result as a default, and not by narrowing the options presented until only one remains available. A recommendation the household cannot decline is not a recommendation.
+
+#### 7.4.2 The two senses of *observe*, resolved
+
+The principle says the rooms observe, and § 7.4.1 gives observations to the Companion. That is not a contradiction, and the distinction is load-bearing enough that it is fixed here rather than left to be re-derived.
+
+**A room observes the way a window observes.** It faces the household's life and shows it accurately. It has no view about what it is showing.
+
+**The Companion observes the way a person observes.** It notices something across time, understands what it means, and says so.
+
+So the rule is: **the rooms observe without speaking about what they see, and the Companion is the only party that may say what it noticed.** *"Lentils appeared in eleven meals this month"* rendered as a fact of the household's data is a room observing. The same sentence said as a noticing — *"lentils have quietly become a habit here"* — is the Companion. The room may hold the fact; only the Companion may make anything of it.
+
+#### 7.4.3 The principles
+
+> **GEA21 — The rooms observe.** A room owns facts, household state, workflow, controls, and truthful reporting of all four. It may never own coaching, encouragement, congratulation, persuasion, behavioural interpretation, or emotional judgement. A room may show what is true and refer to the Companion; it may not tell a household what it means (§ 7.1, **GEA8**; honest absence, **GEA17**).
+>
+> **GEA22 — The Companion understands.** Interpretation, observation, coaching, encouragement, reassurance, explanation and recommendation have exactly one owner in THA, and it is the Companion. It holds that ownership on five permanent conditions: every statement is grounded in evidence; no observation is ever invented; silence is preferred to weak guidance; the reasoning is explained on request; and household agency is respected. A sole voice that is not held to these is worse than the many voices it replaced, because it is trusted more.
+>
+> **GEA23 — The household decides.** Decisions, priorities, values and the pace of change belong permanently to the household, and no surface, notice, default or recommendation may take one of them. THA may make a decision easier, better informed, or unnecessary. It may never make it on the household's behalf and present the result as settled.
+
+#### 7.4.4 Why this is permanent
+
+The three owners are not a division of labour that a future architecture might reasonably re-cut. Each of the three is a party that cannot be substituted:
+
+- A room that interprets is a speaker with no memory, no evidence path, no way to be declined, and no way to detect that it has become false (§ 7.1).
+- An interpretation with no single owner is an interpretation with no standard, because a standard applied to one of five voices is a standard applied to none.
+- A household that does not decide is not being kept house for. It is being managed — which is the precise thing `THA_BRAND_CONSTITUTION.md` says THA must never become, and which **GEA3** and **GEA13** each forbid one face of.
+
+The principle therefore states a permanent property of what THA *is*, not a preference about how it is currently built, and it is amended only by § 19.
 
 ---
 
@@ -446,7 +523,7 @@ There is a further reason specific to THA. The house is built on restraint — t
 
 ### 11.2 The corollary: identity is not evidence
 
-One misuse worth naming, because it is subtle and appears trustworthy. A mark placed beside a claim reads as endorsement — *THA says this is good* — which converts an identity element into a **truth claim**, and a truth claim has a completely different owner (`THA_UI_ARCHITECTURE.md` § 14, Visual Trust; `ARCHITECTURE_PRINCIPLES.md` Principle 6). Where THA rates, recommends, or scores, the presentation is owned by the rating's owner and must be legible as a rating with a stated basis. Identity may not be borrowed to lend authority to a number.
+One misuse worth naming, because it is subtle and appears trustworthy. A mark placed beside a claim reads as endorsement — *THA says this is good* — which converts an identity element into a **truth claim**, and a truth claim has a completely different owner (`THA_UI_ARCHITECTURE.md` § 14, Visual Trust; `ARCHITECTURE_PRINCIPLES.md` Principle 6). Where THA rates or scores a **product**, the presentation is owned by the rating's owner and must be legible as a rating with a stated basis. **Recommendation** is not a presentation question at all — it belongs to the Companion, and to nothing else (§ 7.4, **GEA22**). Identity may not be borrowed to lend authority to a number.
 
 ---
 
@@ -482,7 +559,9 @@ Nothing in THA's canon has ever asked the product to produce joy. Delight appear
 
 **THA's joy is the pleasure of being noticed accurately.**
 
-Not celebrated. Not rewarded. *Noticed* — the small, specific, slightly surprising pleasure of a product observing something true about your household that you had not put into words, and mentioning it plainly, without making anything of it. *You have cooked with lentils eleven times this year.* *Everyone in the house eats this one.* *This is the third spring you have planted the same thing.*
+Not celebrated. Not rewarded. *Noticed* — the small, specific, slightly surprising pleasure of a product observing something true about your household that you had not put into words, and **the Companion** mentioning it plainly, without making anything of it. *You have cooked with lentils eleven times this year.* *Everyone in the house eats this one.* *This is the third spring you have planted the same thing.*
+
+The speaker is not incidental to the mechanism, and § 7.4 fixes it: a room may **hold** any of those three facts, and only the Companion may **say what it noticed** (**GEA21**, **GEA22**; the two senses of *observe* are separated at § 7.4.2). A room that mentions one of these in its own voice has not produced this pleasure — it has produced the generic encouragement the next paragraph explains cannot work.
 
 The pleasure has a precise source, and understanding it is what keeps the mechanism honest. It is not the fact itself, which is trivial. It is the evidence the fact carries: **that something has been paying attention to your household, over time, and got it right.** That is why it cannot be manufactured — a generic encouragement produces nothing, because it demonstrates no attention. The joy is a *by-product of accuracy*, which means it can only be produced by actually knowing the household, and can never be produced by the copy layer.
 
@@ -600,6 +679,7 @@ It is organised by the three layers of § 2.1, because the layer is usually the 
 |---|---|
 | Why THA exists; enduring identity; the Household First Principle; the Trust Test; the One Question | `THA_BRAND_CONSTITUTION.md` |
 | **Why the rules are the rules**; hospitality; presence; joy; silence; space as architecture; identity as detail; the household outcome; the layer model; this map | **This document** |
+| **Who owns which kind of statement** — the rooms observe, the Companion understands, the household decides (§ 7.4) | **This document** |
 
 **Layer 2 — Experience Architecture** *(behaviour · feeling · look · place · character · translation)*
 
@@ -664,7 +744,7 @@ Gates 1–8 are made mandatory by the **EXPERIENCE & UI GOVERNANCE COMPLIANCE** 
 
 ### 18.2 The Experience Constitution Check
 
-Five questions. Answered **before** design begins, not at review — a checklist run at the end can only verify that a thing was built well, never that it was the right thing.
+Eight questions. Answered **before** design begins, not at review — a checklist run at the end can only verify that a thing was built well, never that it was the right thing.
 
 ```
 ----------------------------------------
@@ -687,6 +767,18 @@ For every UX, UI, frontend or visual change confirm:
 ✓ VOICE (§ 7, GEA8/GEA9) — Nothing here coaches, interprets, encourages or
     suggests in its own voice. Rooms report; the Companion advises. Any
     adaptive sentence is composed at the moment it is said, never authored.
+
+✓ OWNERSHIP (§ 7.4, GEA21/GEA22) — THE ROOMS OBSERVE · THE COMPANION
+    UNDERSTANDS · THE HOUSEHOLD DECIDES. Every statement this change adds is
+    named as one of: a fact a room owns, or an interpretation the Companion
+    owns. Nothing in a room congratulates, persuades, or judges the household.
+    Anything the Companion says is grounded in evidence, invents no
+    observation, and stays silent rather than guess.
+
+✓ AGENCY (§ 7.4, GEA23) — This takes no decision, priority, value, or pace of
+    change away from the household. Nothing here decides on their behalf and
+    presents the result as settled, and nothing narrows the options until only
+    one remains.
 
 ✓ RESTRAINT (§ 9 / § 13 / § 15) — Surplus space became air and view, not more
     interface (GEA11). Nothing scores, streaks, ranks or rewards the household
@@ -717,7 +809,7 @@ This document is amended the way every governing document in this directory is a
 Three specific obligations:
 
 1. **A conflict of rule is resolved against this document.** If a section here contradicts an owner named in § 17, the owner is right and this document is corrected in the change that discovers it (§ 2.3).
-2. **A concern that outgrows this document yields.** If one of the six things owned here (§ 2.4) grows enough to deserve a fuller home, ownership moves and this document keeps a citation — the same yield clause the Blueprint, the Design Blueprint and the Translation each apply to themselves.
+2. **A concern that outgrows this document yields.** If one of the eight things owned here (§ 2.4) grows enough to deserve a fuller home, ownership moves and this document keeps a citation — the same yield clause the Blueprint, the Design Blueprint and the Translation each apply to themselves.
 3. **A new principle enters here, once.** If experience work discovers a durable principle that no document owns, it is added here rather than left in the implementation report that found it. *Discovery is not ownership* (`PLATFORM_KNOWLEDGE_COMPLETION_ARCHITECTURE.md` § 9.3): a finding that stays inside the document that found it will be rediscovered from scratch by whoever asks next, and THA has repeated that failure often enough to have written it down.
 
 ---
@@ -748,6 +840,9 @@ For quotation in review.
 | **GEA18** | One owner per experience concern; the successor retires the predecessor in the same change. |
 | **GEA19** | A room may not fork the house. |
 | **GEA20** | Experience work flows Constitution → Architecture → Implementation, and never upward. |
+| **GEA21** | The rooms observe. A room owns facts, state, workflow, controls and truthful reporting — never coaching, encouragement, congratulation, persuasion, behavioural interpretation or emotional judgement. |
+| **GEA22** | The Companion understands. Interpretation, observation, coaching, encouragement, reassurance, explanation and recommendation have one owner, held to evidence, non-invention, silence over weak guidance, explanation on request, and household agency. |
+| **GEA23** | The household decides. Decisions, priorities, values and the pace of change are permanently theirs, and nothing may take one of them. |
 
 ---
 
