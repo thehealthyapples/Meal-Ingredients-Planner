@@ -10,7 +10,7 @@
 
 ## Stage
 
-**Complete — committed, pushed; awaiting owner review.**
+**Complete — committed (`8a994478`), pushed; awaiting owner review.**
 
 ## Next action
 
