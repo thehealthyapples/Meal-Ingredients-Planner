@@ -1,5 +1,6 @@
 # COOKBOOK1 — Family Cookbook Transformation
 
+**Commit:** `e3cd4a8e` (pushed to `int1-intelligence-platform`)
 **Rollback identifier:** `rollback/COOKBOOK1-family-cookbook-transformation-20260720` → `d03e77ff`
 **Tree state at tag time:** one tracked file modified (`.engineering/session/CURRENT.md`, the automated Stop-hook heartbeat line). The tag does not cover it. No other uncommitted work existed.
 **Report:** `docs/implementation/COOKBOOK1_FAMILY_COOKBOOK_TRANSFORMATION.md`
