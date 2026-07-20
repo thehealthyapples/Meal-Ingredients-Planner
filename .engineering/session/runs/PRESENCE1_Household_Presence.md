@@ -4,7 +4,7 @@
 **Opened:** 2026-07-20
 **Type:** Presence programme. Presentation layer only.
 **Rollback:** `rollback/PRESENCE1-household-presence-20260720` → `3d5500c2`
-**Commit:** _(recorded below on commit)_
+**Commit:** `dea9d513` (pushed)
 **Report:** `docs/implementation/PRESENCE1_HOUSEHOLD_PRESENCE.md`
 **Source:** `docs/investigations/EXPREVIEW1_FIRST_TIME_HOUSEHOLD_EXPERIENCE.md`
 
