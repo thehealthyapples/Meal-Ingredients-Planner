@@ -5,7 +5,7 @@
 | **Session ID** | `EXPADOPT1_Experience_Constitution_Adoption` |
 | **Rollback ID** | `rollback/expadopt1-experience-constitution-adoption-20260720` → `b0cfffc8` |
 | **Start time** | 2026-07-20T07:10:00Z UTC |
-| **Current stage** | Documentation |
+| **Current stage** | Complete — committed (`ea9b5e2f`), pushed; awaiting owner review |
 
 ## Objective
 Adopt the Experience Constitution (`GOVERNING_EXPERIENCE_ARCHITECTURE.md`) into the live
@@ -49,15 +49,20 @@ no permissions, no routes, no canonical ownership, no AI architecture.
 - [x] Before/after screenshots — 32 captures, 8 rooms × 2 widths × 2 states
 - [x] Gates: adoption 99·0·9 = byte-identical baseline; client typecheck clean; build clean
 - [x] Report written — `docs/implementation/EXPADOPT1_EXPERIENCE_CONSTITUTION_ADOPTION.md`
-- [ ] Committed and pushed
+- [x] Committed (`ea9b5e2f`) and pushed to `origin/int1-intelligence-platform`
 
 **Last checkpoint:** after-capture verified by eye; the `absolute` → in-flow correction
 (type was sitting on the orchard, Blueprint § 6.1) was caught by the screenshot, not by
 the probe, and is recorded in `orchard-backdrop.tsx`'s header.
 
 ## Next action
-Write `docs/implementation/EXPADOPT1_EXPERIENCE_CONSTITUTION_ADOPTION.md`, commit, push,
-report rollback ID and remaining constitutional gaps.
+Owner to review `docs/implementation/EXPADOPT1_EXPERIENCE_CONSTITUTION_ADOPTION.md` § 5
+(remaining gaps) and § 3 Priority 6 (the grid cap is a recorded JUDGEMENT — capped at
+xl:grid-cols-4 rather than frozen at lg:grid-cols-3; overrule with eyes open if wanted).
+Two rulings are wanted and were deliberately not taken here: which of the two orchard
+assets is the one orchard (§ 6.1), and the `docs/implementation/` filing precedent
+(EXPGOV1 § E5). Cheapest next workstream is C4's streak retirement — unrendered, so
+removal is user-invisible.
 
 ## Blockers
 none
