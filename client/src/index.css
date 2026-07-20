@@ -647,6 +647,110 @@
 .realm-header-bg     { background-color: var(--realm-bg); }
 .realm-header-border { border-color: var(--realm-border); }
 
+/* ── INTARCH1 — THE GROUND PLANE GETS ITS FIRST CONSUMER ──────────────────────
+ *
+ * THE DEFECT THIS CLOSES, stated as a count. `--ground-plane`,
+ * `--ground-plane-border` and `--ground-blur` were valued here in both modes,
+ * documented at length, and read by NOTHING — not by a component, not by
+ * Tailwind, not even by another rule in this file. The same was true of
+ * `--surface-primary`, `--surface-support`, `--shadow-support` and
+ * `--radius-ground`: nine material tokens between them, and two `var()` uses in
+ * the whole client. EXPADOPT1 § 5 reported the ground plane as "read only from
+ * inside index.css"; the honest number was zero.
+ *
+ * The consequence is what the pictures show. Blueprint § 5 differentiates a room
+ * by purpose, LIGHT, MATERIAL and one sign of life. EXPADOPT1 gave five rooms
+ * light — a window. What stood beneath those windows was still a page: cards on
+ * a flat canvas, each outlined, resting on nothing. A window onto an orchard
+ * above a spreadsheet is not a room; it is a page with a view attached.
+ *
+ * WHY A PLANE AND NOT A PANEL. This is the whole of the design decision, and it
+ * is the difference between adopting the material and adding weight (GEA2 — new
+ * capability must not increase the felt weight of the room it lands in).
+ *
+ * A closed rounded rectangle around a room's content is a PANEL. It has four
+ * edges, so the eye reads it as an object placed in the room, and the room now
+ * contains one more thing than it did. That is the opposite of the instruction.
+ *
+ * A GROUND is open at the bottom. It rises from beneath the room, meets the
+ * light at a soft top edge, and runs off the foot of the viewport — because you
+ * are standing at it. A counter has no visible bottom edge; a table you are
+ * sitting at has no far side you can see. This single property is what makes the
+ * material read as architecture rather than as furniture, and it is why the
+ * radius is applied to the top corners only.
+ *
+ * It also does the thing the brief asked for: content stops floating above the
+ * house and starts standing IN it. Nothing was added to the room — a surface was
+ * put under what was already there.
+ *
+ * ONE MATERIAL SYSTEM, DIFFERENT PROPORTIONS PER ROOM (Blueprint § 8.2, in
+ * terms: "one radius law, one shadow definition, different proportions and
+ * density per room"). Everything below is fixed for every room in the house —
+ * the material, the radius, the shadow, the blur. The ONLY thing a room varies
+ * is how much air it holds around the plane, which is the "ground posture"
+ * column of the map at Blueprint § 5.1. A room is never asked what it wants; the
+ * posture is a per-domain governed constant resolved in app-shell.tsx, exactly
+ * as the exposure is.
+ *
+ * The material is translucent (0.82) and blurred, so the warm canvas and the
+ * room's own light still come through it. That is what makes it a MIDDLE ground
+ * (Blueprint § 8.1) rather than a second background: the world behind it
+ * breathes, and it never becomes wallpaper.
+ *
+ * NEVER NESTED (§ 8.2, "one ground per workspace"). Home is deliberately absent
+ * from the posture map: it already owns a ground — the plaster wall below its
+ * sill, `.home-room` — and a second plane inside it would be the nesting the law
+ * forbids. Home's absence here is an architectural fact, not an omission.
+ */
+.room-ground {
+  background: var(--ground-plane);
+  backdrop-filter: blur(var(--ground-blur));
+  -webkit-backdrop-filter: blur(var(--ground-blur));
+  /* The joint where the plane meets the wall behind it — a top edge only. A ring
+     drawn on all four sides is the outline that makes a card a card, whatever
+     colour it is (see --surface-primary-border above, same reasoning). */
+  border-top: 1px solid var(--ground-plane-border);
+  /* Top corners only. The plane runs off the foot of the room; see above. */
+  border-radius: var(--radius-ground) var(--radius-ground) 0 0;
+  box-shadow: var(--shadow-ground);
+}
+
+/* The posture: how much air the room holds around its ground. The three values
+   are a projection of Blueprint § 5.1's ground-posture column and carry no
+   judgement of their own — the mapping from room to posture lives beside the
+   exposure map in app-shell.tsx, where it can be read against § 5.1 line by
+   line. Air is a material (§ 8.2), so this is the room's proportion, not its
+   padding.
+ *
+ * THE AIR IS DRAWN FROM THE SURPLUS, NEVER FROM THE MEASURE. This is the whole
+ * of the arithmetic below and it was got wrong first, in a way only the picture
+ * caught. The first build used `clamp(0px, 2vw, 2rem)`, which takes its air at
+ * EVERY width — so at 1440, where the room has no surplus at all, the plane
+ * narrowed the room by 58px and the Cookbook's recipe titles began truncating
+ * again. That is the exact defect EXPADOPT1 § 3 had just fixed by capping the
+ * grid, re-introduced from underneath by a margin. A ground narrower than the
+ * things standing on it is also simply wrong as furniture: a counter is not
+ * smaller than what is on it.
+ *
+ * `1536px` is the content column's own cap (`max-w-screen-2xl`, owned by
+ * `pageContainerClass` in workspace-header.tsx). Below it there is no surplus to
+ * spend, so `100vw - 1536px` is negative, the clamp floors at zero, and the
+ * plane meets the walls in every posture — the room is never made smaller to
+ * produce air that was not there. Above it the surplus opens as air, at the rate
+ * the room's posture asks for, to a ceiling. That is GEA11 stated in CSS:
+ * surplus becomes air, and a room becomes calmer on a larger screen rather than
+ * fuller. It is also why no breakpoint override is needed for phones — at any
+ * width below the cap every posture already resolves to zero. */
+.room-ground--full { margin-inline: 0; }
+.room-ground--room { margin-inline: clamp(0px, calc((100vw - 1536px) * 0.25), 3rem); }
+.room-ground--air  { margin-inline: clamp(0px, calc((100vw - 1536px) * 0.5), 8rem); }
+
+/* Dark mode inherits the material honestly: --ground-plane resolves to
+   `hsl(var(--card) / 0.4)` and --shadow-ground to `none` (depth is expressed by
+   value at night, not by shadow — see the .dark block above). No override is
+   written here, because writing one would be a second definition of a value
+   that already has an owner. */
+
 /* ── UX2 — THE PERMANENT HEADER: ONE HOUSE, ONE HEADER ────────────────────────
  *
  * THE DEFECT THIS CLOSES. The header rendered `realm-header-bg` — so the top of

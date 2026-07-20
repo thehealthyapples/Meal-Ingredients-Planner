@@ -145,6 +145,56 @@ const ROOM_EXPOSURE: Record<string, "e0" | "e1" | "e2"> = {
   home: "e1", // Home draws its OWN E3 window; the shell must not draw a second.
 };
 
+/*
+ * INTARCH1 — THE GROUND POSTURE OF EVERY ROOM.
+ *
+ * A straight projection of the "Ground posture" column of the map at
+ * `THA_EXPERIENCE_BLUEPRINT.md` § 5.1. No value here is a judgement made in this
+ * file; each row is the § 5.1 posture reduced to the one thing the material
+ * system permits a room to vary — how much air it holds around its ground plane
+ * (§ 8.2: "one radius law, one shadow definition, different proportions and
+ * density per room"). The material, radius, shadow and blur are identical in
+ * every room and are owned by `.room-ground` in index.css.
+ *
+ *   § 5.1 posture                            → posture here
+ *   ─────────────────────────────────────────────────────────
+ *   Planner   "one solid table holding the week"   → full
+ *   Analyser  "the bench"                          → full
+ *   Admin     "solid working ground"               → full
+ *   Cookbook  "shelf; recipe cards as objects"     → room
+ *   Pantry    "shelf strata"                       → room
+ *   Nutrition "noticeboard tier over a solid tier" → room
+ *   Orchard   "ground plane; neighbours on it"     → room
+ *   Diary     "lap desk; the MOST AIR in the house"→ air
+ *   Shopping  "one note sized to its list"         → air
+ *   Profile   "the record; anchored strata"        → air
+ *
+ * HOME IS DELIBERATELY ABSENT, and this is the load-bearing omission. § 8.2
+ * fixes "one ground per workspace, NEVER NESTED", and Home already has one: the
+ * plaster wall beneath its sill (`.home-room`), which is the compact counter
+ * § 5.1 gives it. Laying a second plane inside that wall is precisely the
+ * nesting the law forbids, so Home resolves to `none` and draws nothing —
+ * exactly as it resolves to E1 in ROOM_EXPOSURE above while drawing its own E3.
+ *
+ * NOT A DEFAULT. An unmapped path falls to "none" and draws nothing, which is
+ * the recoverable direction: a room that should have had a ground and has none
+ * looks as it did yesterday, whereas a surface that wrongly gained one has a
+ * plane under content that was never composed for it.
+ */
+const ROOM_GROUND: Record<string, "full" | "room" | "air" | "none"> = {
+  planner: "full",
+  analyser: "full",
+  cookbook: "room",
+  pantry: "room",
+  nutrition: "room",
+  orchard: "room",
+  diary: "air",
+  shopping: "air",
+  basket: "air",
+  list: "air",
+  home: "none", // Home owns its own ground (`.home-room`); never nest a second.
+};
+
 /** Routes that render the same room as a canonical nav destination. */
 const ROOM_ALIASES: Record<string, string> = {
   "/diary": "/my-diary",
@@ -165,6 +215,44 @@ export function resolveShellRoom(path: string): { title: string; realm: PageReal
   // the nav and the Companion are the household's way OUT of a page that has
   // gone wrong — a nameless room is recoverable, a headerless one is not.
   return { title: "", realm: "home" };
+}
+
+/*
+ * INTARCH1 — resolving a room's ground.
+ *
+ * Two rooms the map at § 5.1 names cannot be reached through their realm, and
+ * both would silently draw no ground if this resolved on realm alone. They are
+ * handled by PATH here, in the open, rather than by editing NON_ROOM_TITLES —
+ * because that table's realm also drives the header's ink and the room's orchard
+ * exposure, and re-pointing it to fix a floor would change two other things a
+ * household can see. The narrow fix is the honest one.
+ *
+ *   /admin/*   § 5.1 "Admin — solid working ground" → full. Every admin route
+ *              resolves to realm `home`, and Home is the ONE room that must not
+ *              be grounded (it has its own), so without this line the study off
+ *              the hall would be the only working room in the house with no floor.
+ *
+ *   /profile   § 5.1 "Household / Profile — the family record; anchored strata"
+ *              → air. It resolves to realm `home` for the same reason, with the
+ *              same consequence.
+ *
+ * WHAT IS DELIBERATELY NOT LISTED: /dashboard, /privacy-settings, /help,
+ * /contact, /supermarkets, /compare and the two detail routes. § 5.1 does not
+ * name any of them as a room, so none is given a ground here. Inventing a
+ * posture for a surface the governing map does not describe is exactly the
+ * upward flow GEA20 forbids — the map is amended by governance, never by a
+ * shell that needed a row. They stand on the warm canvas, as they did.
+ *
+ * A LIVE INCONSISTENCY THIS DOES NOT RESOLVE, and must not: `/profile`,
+ * `/privacy-settings`, `/help` and `/contact` each pass `realm="diary"` to their
+ * own WorkspaceHeader while this table assigns them `home`. One surface, two
+ * realms. That is a wayfinding question with an owner, and it is reported rather
+ * than quietly settled here.
+ */
+function resolveShellGround(path: string): "full" | "room" | "air" | "none" {
+  if (path.startsWith("/admin")) return "full";
+  if (path === "/profile") return "air";
+  return ROOM_GROUND[resolveShellRoom(path).realm] ?? "none";
 }
 
 function ShellHeader() {
@@ -190,6 +278,7 @@ export function AppShell({
   const shellExposure = location.startsWith("/admin")
     ? "e0"
     : ROOM_EXPOSURE[resolveShellRoom(location).realm] ?? "e1";
+  const shellGround = resolveShellGround(location);
   const [headerSlot, setHeaderSlot] = useState<HTMLDivElement | null>(null);
   const [railSlot, setRailSlot] = useState<HTMLDivElement | null>(null);
   const [pageHeaders, setPageHeaders] = useState(0);
@@ -285,16 +374,41 @@ export function AppShell({
                             § 6.1 forbids without negotiation — see the component's
                             header for the screenshot that caught exactly that. */}
                         <OrchardRoomWindow exposure={shellExposure} />
+                        {/* INTARCH1 — the room's ground plane. Mounted ONCE, here,
+                            for the same reason the window is: Blueprint § 8.1 makes
+                            the middle ground "the only layer that varies by domain",
+                            and a layer that varies by domain is a property of the
+                            house, not a decision each room makes for itself
+                            (GEA19 — a room may not fork the house).
+
+                            It sits BELOW the window in the DOM and therefore below
+                            it on the wall, which is the honest arrangement: the
+                            window is glazing in the wall, the ground is the surface
+                            beneath it, and the room's content stands on the ground.
+                            Wrapping the children rather than sitting beside them is
+                            what makes it a ground rather than a backdrop — the
+                            content is ON it, not in front of it.
+
+                            `none` renders no wrapper at all, so Home and every
+                            unmapped surface cost a household no element and no
+                            paint, exactly as E1/E0 rooms cost them no window. */}
                         {isLoading ? (
                           <div className="flex h-full items-center justify-center">
                             <Loader2 className="h-8 w-8 animate-spin text-primary/50" />
                           </div>
-                        ) : (
+                        ) : shellGround === "none" ? (
                           // PX1-W0 (fnd-px-error-renders-as-empty). The boundary sits
                           // INSIDE the shell — the header and the bottom nav survive,
                           // so a broken surface is never one the household cannot
                           // leave. Keyed on the location so walking away unbreaks it.
                           <ErrorBoundary resetKey={location}>{children}</ErrorBoundary>
+                        ) : (
+                          <div
+                            className={`room-ground room-ground--${shellGround} flex-1 flex flex-col min-h-0`}
+                            data-room-ground={shellGround}
+                          >
+                            <ErrorBoundary resetKey={location}>{children}</ErrorBoundary>
+                          </div>
                         )}
                       </main>
                     </div>
