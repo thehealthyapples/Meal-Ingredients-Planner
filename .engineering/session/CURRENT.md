@@ -151,4 +151,4 @@ When a session reaches **Complete**, move its row out of this table and add a
 line to [INDEX.md](./INDEX.md) — `.engineering/scripts/session-complete.sh` does
 both. If no active sessions remain, set the top marker to `ESR:IDLE`.
 
-_Last automatic heartbeat (Stop hook): 2026-07-20T09:05:05Z UTC_
+_Last automatic heartbeat (Stop hook): 2026-07-20T09:21:09Z UTC_

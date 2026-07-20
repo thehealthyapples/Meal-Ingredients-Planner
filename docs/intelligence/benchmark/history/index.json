@@ -1,5 +1,21 @@
 [
   {
+    "runId": "2026-07-20T06-49-27Z__ef59ea3",
+    "mode": "quick",
+    "status": "scored",
+    "executedAt": "2026-07-20T06:49:11.027Z",
+    "commit": "ef59ea3fba3172818a1f106109a46a8dd0d0a100",
+    "branch": "int1-intelligence-platform",
+    "bundleVersion": "v1.0.0 (mixed)",
+    "rubricVersion": "v2.0.0",
+    "headlineScore": 78,
+    "honestGapRate": 1,
+    "gatesFired": 0,
+    "routingGatesFired": 0,
+    "intentResolutionAccuracy": 1,
+    "verdict": "PARTIAL"
+  },
+  {
     "runId": "2026-07-10T10-48-57Z__8e10ea3",
     "mode": "full",
     "status": "scored",
