@@ -6,7 +6,7 @@
 | **Session ID** | `UX3_Complete_Experience_Convergence` |
 | **Rollback ID** | `rollback/UX3-complete-experience-convergence-20260720` |
 | **Start time** | 2026-07-20T07:31:30Z UTC |
-| **Current stage** | Verification |
+| **Current stage** | Waiting for User |
 
 ## Objective
 Complete the emotional, visual and spatial experience of THA — the Experience Convergence Programme
@@ -40,17 +40,19 @@ architecture or business-logic change.
 - [x] Verification — typecheck 88/0 client · build clean · UX3 21/21 · UX2 28/28 · comm2 80/80 · home2 47/47
 - [x] Screenshots — 40 before / 40 after across 5 viewports
 - [x] Implementation report written
-- [ ] Commit + push
+- [x] Adoption register — 82·1·9 → 99·0·9, remaining 9 diffed IDENTICAL to baseline
+- [x] Commit `7a5b48cf` + pushed to origin/int1-intelligence-platform
 
-**Last checkpoint:** Report written. Adoption register update delegated and running.
+**Last checkpoint:** Committed `7a5b48cf` and pushed. Report at docs/implementation/UX3_COMPLETE_EXPERIENCE_CONVERGENCE.md
 
 ## Next action
-Await the adoption-register update, confirm `npm run adoption:check` is at or better
-than the 82/1/9 baseline, then commit and push.
+Nothing — the work is delivered, committed and pushed. Awaiting the owner on the
+seven decisions listed in § 7 of the report.
 
 ## Blockers
-None. Two owner decisions deferred and to be listed in the report rather than taken:
-Home's realm hue (132), and the 390px nine-room bottom nav (COMM2 § 11.4).
+None. Seven owner decisions are listed in § 7 of the report rather than taken —
+notably `opportunity-delivery:explain` now having no surface that can reach it, and
+the four E2 rooms having no orchard at all.
 
 ---
 _Stages: Planning → Rollback Complete → Implementation → Testing → Verification → Documentation → Waiting for User → Complete (or Blocked)._
