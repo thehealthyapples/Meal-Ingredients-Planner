@@ -192,7 +192,22 @@ async function main() {
       .locator('[data-testid="button-open-assistant"]')
       .getAttribute("data-companion-state");
     check(state !== null, "the emblem declares a presence state", `got ${state}`);
-    check(state === "idle", "at rest it is idle — presence, never urgency (COMP1 § 7)", `got ${state}`);
+    // UX3 AMENDED THIS ASSERTION, and the amendment is the point rather than a
+    // convenience. It read `state === "idle"`, which was correct on the day it was
+    // written for a reason that has since stopped being true: UX2 defined `aware`
+    // in CSS and deliberately never set it, so "at rest" could only ever mean idle.
+    //
+    // UX3 wired `aware` to the Notice Engine on an owner ruling, so a Companion
+    // holding something to say is now a REST state too — and the assertion's real
+    // subject was never the string. It was COMP1 § 7: at rest the Companion shows
+    // PRESENCE, never urgency. Both resting states satisfy that; `speaking` and
+    // `listening` are the two that must not appear unprompted, so they are what
+    // this now excludes by name.
+    check(
+      state === "idle" || state === "aware",
+      "at rest it is idle or aware — presence, never urgency (COMP1 § 7)",
+      `got ${state}`,
+    );
     // COMP1 § 6: the light must not reach under the nav or clip the screen edge.
     const light = await page.locator(".companion-light").first().boundingBox();
     const vp = page.viewportSize()!;

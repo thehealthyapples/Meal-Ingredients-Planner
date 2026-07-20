@@ -34,7 +34,6 @@ import { Button } from "@/components/ui/button";
 import {
   IntelligenceCard,
   IntelligenceChipGroup,
-  SimplyBetterChoiceCard,
 } from "@/components/intelligence";
 
 // ── Server projection (mirrors server/lib/nutrition-centre-assembler.ts) ───────
@@ -86,7 +85,6 @@ interface NutritionCentre {
     notUsedRecently: FoodRef[];
     suggested: DiscoverySuggestion[];
   } | null;
-  simplyBetter: { suggestion: string; why: string }[];
 }
 
 interface BenefitDetail {
@@ -313,7 +311,7 @@ export function HouseholdNutritionCentre() {
     );
   }
 
-  const { overview, journey, categories, benefits, trends, discovery, simplyBetter } = data;
+  const { overview, journey, categories, benefits, trends, discovery } = data;
 
   const headline =
     overview.plantDiversity > 0
@@ -418,15 +416,8 @@ export function HouseholdNutritionCentre() {
           </IntelligenceCard>
         )}
 
-      {/* Simply Better Choices — guide second, gently (one or two) */}
-      {simplyBetter.map((s, i) => (
-        <SimplyBetterChoiceCard
-          key={`${s.suggestion}-${i}`}
-          suggestion={s.suggestion}
-          why={s.why}
-          data-testid={`centre-simply-better-${i}`}
-        />
-      ))}
+      {/* UX3 — the "simply better" guidance is the Companion's; the Centre reports
+          what the household has actually eaten. */}
     </div>
   );
 }

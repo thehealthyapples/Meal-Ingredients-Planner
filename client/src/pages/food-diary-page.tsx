@@ -13,7 +13,6 @@ import {
 import { LoadError } from "@/components/ui/load-error";
 import { ImportDiaryModal } from "@/components/import-diary-modal";
 import { UPFInfoModal } from "@/components/upf-info-modal";
-import { FirstVisitHint } from "@/components/first-visit-hint";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTrackedMutation } from "@/hooks/use-tracked-mutation";
 import { useUser } from "@/hooks/use-user";
@@ -1764,11 +1763,6 @@ export default function FoodDiaryPage() {
             <div className="lg:gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_280px_220px]">
               {/* ── Left: meal slots ──────────────────────────────── */}
               <div className="space-y-3">
-                <FirstVisitHint
-                  areaKey="diary"
-                  message="Log what you eat each day. Tap Add on any meal slot to record food - your entries build a clearer picture of your habits over time."
-                />
-
                 {(diary?.entries?.length ?? 0) > 0 && (
                   <p className="text-xs text-muted-foreground/60 px-0.5">
                     Better choices today, stronger health over time.

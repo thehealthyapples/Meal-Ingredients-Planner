@@ -41,15 +41,26 @@ const DialogContent = React.forwardRef<
         // PX1-W1 (fnd-px-dialog-no-max-height): a centre-translated fixed element
         // sits outside every scroll container, so without a max-h + overflow the
         // submit button of a tall dialog is off-screen and unreachable on a phone.
-        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border border-border/60 p-6 shadow-none duration-200 max-h-[calc(100dvh-2rem)] overflow-y-auto data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
+        // UX3 — E0: A DIALOG DOES NOT LOOK OUT OF A WINDOW.
+        //
+        // Every dialog in the product used to mount `/orchard-bg.webp` directly,
+        // bypassing the canonical owner (`layout/orchard-backdrop.tsx`) — so the
+        // machine check on that owner passed while the concern was violated, which
+        // the adoption register names as its own sharpest failure.
+        //
+        // The Experience Blueprint § 6.2 puts dialogs and overlays at **E0 — lit
+        // from the hall**: no orchard image, the same warm canvas and light
+        // temperature, still unmistakably in the house. A dialog is a thing held
+        // up in front of you in the room you are already standing in; it does not
+        // get its own view, and a landscape behind working text also broke § 6.1
+        // ("the orchard never carries text").
+        //
+        // `bg-popover` IS that warm canvas, and the dialog now floats the way the
+        // foreground layer is supposed to (UIA § 4: elevation reserved for what
+        // genuinely floats) rather than being pinned flat by `shadow-none`.
+        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border border-border/60 bg-popover p-6 shadow-[0_24px_48px_-24px_hsl(28_30%_25%/0.45)] duration-200 max-h-[calc(100dvh-2rem)] overflow-y-auto data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
         className
       )}
-      style={{
-        backgroundImage: "url('/orchard-bg.webp')",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundAttachment: "fixed",
-      }}
       {...props}
     >
       {children}

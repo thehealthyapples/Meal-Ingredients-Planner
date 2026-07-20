@@ -10,10 +10,9 @@
 //                       PX1-W3 — names and thumbnails only, never the full rows)
 //   • Shopping        → /api/shopping-list      (Shopping state)
 //   • Plant diversity → /api/home/intelligence  (weeklyProgress.plantCount)
-//   • Reminders       → useCompanionNotices (the Notice Engine, voiced by the Behaviour
-//                       Engine). Live since PHASE5E repointed it at the real route;
-//                       silence remains a first-class outcome, never padded.
 //   • The rooms       → NAV_ITEMS via roomsByHref (UX1's one navigation list)
+// Reminders are NOT read here any more (UX3): the Notice Engine's mouth is the
+// Companion, in every room, not this one page speaking in its name.
 // No new store, no duplicate state, no second assistant. Honest gaps: a section
 // that has no validated data renders as a calm empty state, never fabricated.
 //
@@ -76,7 +75,6 @@ import type { FullWeek } from "@/lib/planner-types";
 import { api } from "@shared/routes";
 import { useUser } from "@/hooks/use-user";
 import { useMealsSummary } from "@/hooks/use-meals-summary";
-import { useCompanionNotices } from "@/hooks/use-companion-notices";
 // CONV1 P8 / READ-3, OWN-6, BEH-3 — the one client answer to "which planner week is this
 // household living in?", and the day that goes with it. Home used to answer both itself.
 import { useCurrentPlannerWeek } from "@/hooks/use-current-planner-week";
@@ -85,7 +83,6 @@ import { useCurrentPlannerWeek } from "@/hooks/use-current-planner-week";
 // instead. This is its first consumer.
 import { resolveHomePrimaryAction } from "@shared/home/home-primary-action";
 import { useFoodOpportunities } from "@/hooks/use-food-opportunities";
-import AmbientIntelligence from "@/components/intelligence/AmbientIntelligence";
 import { useWithholdCompanion } from "@/components/conversation/companion-context";
 import { prefersReducedMotion } from "@/lib/companion-delight";
 import { WorkspaceHeader, PageContainer } from "@/components/workspace-header";
@@ -186,9 +183,11 @@ const DOOR_HREFS = ["/planner", "/cookbook", "/pantry", "/shopping-workspace"] a
 // a household fact. OWN-6 is about Home reading it as THE CURRENT WEEK. That reading is
 // gone.
 
-// Weekly progress aggregate — the same payload the Dashboard's
-// HomeIntelligenceCompanion reads. Same query key → shared cache, no duplicate
-// fetch. We only consume weeklyProgress here.
+// Weekly progress aggregate. We consume only `weeklyProgress` — the plant count,
+// which is household DATA and stays here under the owner's UX3 split (the room
+// keeps today, orientation and context; the Companion takes the coaching).
+// The Dashboard's second reader of this payload was `HomeIntelligenceCompanion`,
+// retired by UX3, so this is now the route's one client consumer.
 interface HomeIntelligenceData {
   weeklyProgress: {
     plantCount: number;
@@ -330,7 +329,6 @@ export default function HomeExperiencePage() {
   const mealsWaiting = plannerQuery.isLoading || mealsQuery.isLoading;
   const mealsBroken = plannerQuery.isError || mealsQuery.isError;
   const retryTodaysMeals = () => { plannerQuery.refetch(); mealsQuery.refetch(); };
-  const { data: noticesData } = useCompanionNotices(!!user);
   // CONV1 P8 / BEH-9 — DEC1's governed output, so the resolver's Tier 0 (safety) can
   // fire. Home had no access to it before, because Home had no resolver.
   const { data: opportunitiesData } = useFoodOpportunities(!!user);
@@ -393,19 +391,6 @@ export default function HomeExperiencePage() {
     mealsWaiting || shoppingQuery.isLoading || homeIntelQuery.isLoading;
   useWithholdCompanion(settling);
 
-  // Reminders — the Notice Engine's Silence Rules already chose WHICH notices and HOW
-  // MANY (at most two per moment), and the Behaviour Engine already voiced each one in
-  // the household's chosen personality. Both happened server-side, once.
-  //
-  // PHASE5E removed a `.slice(0, 3)` that used to sit here. It never bit (the server's
-  // cap is two), but it was a SECOND attention budget on the client — and "callers must
-  // never re-sort or re-slice a gathered list themselves" is precisely what the Notice
-  // Engine owns and its §9 forbids. The North Star moved this list to the Companion's
-  // card against the view; it did NOT re-slice it to fit the new shape, which would have
-  // reintroduced from the design side exactly what PHASE5E removed from the code side.
-  //
-  // No notices → the card is absent. Silence is a first-class outcome, never padded.
-  const reminders = noticesData?.notices ?? [];
 
   const name = firstNameOf(user);
 
@@ -640,33 +625,22 @@ export default function HomeExperiencePage() {
                    Absent in silence. The Notice Engine's Silence Rules already
                    chose which notices and how many; this renders what it was
                    handed and never re-sorts, re-slices or pads it. */}
-            {reminders.length > 0 && (
-              <aside
-                className="animate-in fade-in duration-700 motion-reduce:animate-none"
-                data-testid="card-home-companion"
-                aria-labelledby="home-companion-heading"
-              >
-                <h2
-                  id="home-companion-heading"
-                  className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.15em] text-muted-foreground mb-2.5"
-                >
-                  <Leaf style={{ width: 11, height: 11, color: "var(--primary-border)" }} />
-                  From your Companion
-                </h2>
-                <ul className="space-y-3" data-testid="list-home-reminders">
-                  {reminders.map((o, i) => (
-                    <li
-                      key={o.id}
-                      className="text-[17px] leading-relaxed text-foreground/85"
-                      data-testid={`home-reminder-${i}`}
-                    >
-                      {/* The Behaviour Engine's sentence, rendered verbatim. Never reworded here. */}
-                      {o.text}
-                    </li>
-                  ))}
-                </ul>
-              </aside>
-            )}
+            {/* ── UX3 — THE COMPANION SPEAKS FOR ITSELF NOW ──────────────────
+                UX2 dissolved this block's box and named the defect exactly right:
+                *"a boxed panel that lists notices is a PAGE speaking in the
+                Companion's name."* Dissolving the box did not fix that — it only
+                made the impersonation quieter. The heading still read "From your
+                Companion", and the friend at the counter was still being quoted
+                by the wall rather than allowed to speak.
+
+                The owner's UX3 ruling gives the Companion the sentence: reminders,
+                coaching and encouragement are its capability, and the dashboard
+                keeps today, orientation, household overview and context. The Notice
+                Engine read moved to `FloatingAssistant`, where it lights the
+                emblem's `aware` state in EVERY room instead of speaking in one —
+                so the household gains this rather than losing it. Nothing about
+                the Notice Engine, the Silence Rules or the Behaviour Engine's
+                voicing changed; only the mouth did. */}
           </div>
 
           {/* ── THE DAY, ON THE WALL ───────────────────────────────────────────────
@@ -961,31 +935,16 @@ export default function HomeExperiencePage() {
             })}
           </nav>
 
-          {/* ── The room's ambient intelligence ──────────────────────────────────
-                 INT19 — Home gains the ONE ambient surface, so the arrival room
-                 becomes THA's primary ambient intelligence experience (its mission,
-                 §1/§5). It is a MOUNT, not a new channel: it composes the same
-                 `useFoodOpportunities` bundle this page ALREADY fetches (line ~337,
-                 until now read only to aim the door's safety tier), so TanStack
-                 dedupes it — no new request, no new endpoint, no new ownership.
+          {/* ── UX3 — "Things you could do" IS THE COMPANION'S SENTENCE ────
+                 This was the ambient opportunity surface, mounted here and on
+                 seven other rooms. The owner's ruling gives every piece of
+                 coaching, interpretation, recommendation and encouragement to the
+                 Companion, and Home keeps today, orientation and context — so the
+                 room no longer offers advice beside the friend who owns it.
 
-                 It sits BELOW the doors deliberately. Home's job is arrive → orient →
-                 one door, and the counter's primary action must never fall behind the
-                 nav (the NORTH2/NORTH3 collision). A collapsed row here changes no
-                 layout above it. For the 192/195 unanchored households it renders
-                 NOTHING (`isPending || items.length === 0` → null), so the quiet day
-                 stays quiet. A `critical` — the restriction conflict, THA's one safety
-                 signal — auto-opens the surface itself.
-
-                 Home is the ONE sanctioned aggregate view alongside the dashboard, so
-                 no `domains` filter: every domain's opportunities, ranked by the
-                 Decision Engine, rendered in its order verbatim. This mirrors the exact
-                 pairing the dashboard already ships (HomeIntelligenceCompanion beside
-                 AmbientIntelligence): the Companion card above speaks the phrased
-                 notice; this surface carries the resolvable card with its evidence. */}
-          <div className="mt-10 max-w-4xl mx-auto">
-            <AmbientIntelligence surfaceKey="home" title="Things you could do" />
-          </div>
+                 The Decision Engine, the Attention model and the opportunity
+                 bundle are untouched; Home still reads that bundle to tier its
+                 doors by safety. What went is the second, ungoverned mouth. */}
 
           {/* ── Quiet way back to the full dashboard ── */}
           <div className="mt-8 flex justify-center">

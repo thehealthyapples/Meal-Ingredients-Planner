@@ -464,15 +464,15 @@ export default function OnboardingPage() {
         />
 
         <div className="mt-8">
-          <Card
-            className="shadow-none border-border/60 overflow-hidden"
-            style={{
-              backgroundImage: "url('/orchard-bg.webp')",
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-              backgroundAttachment: "fixed",
-            }}
-          >
+          {/* UX3 — the card is GROUND, not a second window.
+              `OrchardShell` already mounts the canonical orchard behind this page
+              (that is the arrival's E3 view, and it has one owner). This card
+              mounted the same asset a second time and then set the onboarding
+              questions on top of it — which is the one thing Experience Blueprint
+              § 6.1 refuses without negotiation: "the orchard never carries text;
+              any surface where type must sit legibly gets ground plane under that
+              type." The view stays behind; the questions now sit on the counter. */}
+          <Card className="border-border/60 overflow-hidden bg-card shadow-[0_18px_36px_-24px_hsl(28_30%_25%/0.4)]">
             <CardContent className="p-5 sm:p-6">
               <div className="overflow-hidden relative" style={{ minHeight: CARD_CONTENT_MIN_HEIGHT }}>
                 <AnimatePresence mode="wait" custom={direction}>

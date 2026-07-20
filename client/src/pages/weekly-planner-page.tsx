@@ -45,12 +45,9 @@ import { emitStageProposal } from "@/lib/planner-staging-bus";
 // `nutrition-variety-chips` the chips). Completing them here would have put a second
 // per-meal nutrition render on the page that already delegates it.
 import PlannerIntelligenceStrip from "@/components/PlannerIntelligenceStrip";
-import { AmbientIntelligence } from "@/components/intelligence";
-import LearningSignalsPanel from "@/components/LearningSignalsPanel";
 import { CookbookMealIntelligenceStrip } from "@/components/CookbookMealIntelligenceStrip";
 import { useUser } from "@/hooks/use-user";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { FirstVisitHint } from "@/components/first-visit-hint";
 import { MealUpliftPanel, UpliftCardIndicator, SHOPPING_LIST_KEYS, selectVisibleBoosts } from "@/components/MealUpliftPanel";
 import type { UpliftMatchResult } from "@/components/MealUpliftPanel";
 import { buildWeeklyReuseMap } from "@/lib/ingredient-reuse";
@@ -1528,9 +1525,8 @@ export default function WeeklyPlannerPage() {
 
   // HOUSE2: the Planner had a loading branch (PX1-W4.8) and a failed-load branch
   // (PROD1) but no *empty* branch — so a household with no meals planned saw seven
-  // blank columns and no words. The only orientation was the dismissible
-  // FirstVisitHint; once dismissed, the room was permanently silent. This is the
-  // room Home's primary CTA sends a new household to first.
+  // blank columns and no words. This is the room Home's primary CTA sends a new
+  // household to first.
   const activeWeekIsEmpty =
     !!activeWeekData && sortedDays.every((d) => d.entries.length === 0);
 
@@ -1941,18 +1937,8 @@ export default function WeeklyPlannerPage() {
       >
       <div className="flex gap-3 items-start">
       <div className="flex-1 min-w-0">
-      {/* HOUSE2: suppressed while the empty-week state below is showing. Both told a
-          household with nothing planned to "tap Plan to get suggestions", stacked one
-          above the other — two prompts for one action. The empty state is the stronger
-          of the two (persistent rather than dismiss-once, and it carries the control
-          itself), so the hint yields to it and returns once the week has meals in it,
-          where it still earns its place explaining templates and send-to-basket. */}
-      {!activeWeekIsEmpty && (
-        <FirstVisitHint
-          areaKey="planner"
-          message="Plan your meals for the week ahead. Add meals to each day, use templates to get started fast, or tap Plan to get suggestions - then send the whole week to your basket."
-        />
-      )}
+      {/* UX3 — the first-visit tip is gone: orientation is the Companion's, and
+          the empty-week state below already carries the one next action. */}
 
       {/* The grid below stays rendered — its cells ARE the affordance, so replacing
           them with a card would remove the very thing to act on. This names the
@@ -2077,51 +2063,15 @@ export default function WeeklyPlannerPage() {
           onNavigatePlantDiversity={() => navigate("/nutrition")}
         />
 
-        {/* PHASE5C — the planner's own ambient intelligence, from the Decision
-            Engine's opportunity bundle. The `planner` domain's canonical page:
-            the empty day each opportunity names is on this very screen. Distinct
-            from the strip above, which is the week's nutrition/diversity picture. */}
-        {/* PLAN2 — `nutrition` joins `planner` on this ONE mount.
-
-            HNP2 made the household's weekly balance gap an opportunity in the
-            `nutrition` domain, but mounted it only on the nutrition page. Its claim
-            is about THIS WEEK'S PLAN ("no whole grains are planned"), and the plan is
-            on this screen — the household reads the gap in the room where they can
-            act on it, rather than in the room that reports on it afterwards.
-
-            One mount, not two: `AmbientIntelligence` takes a domain LIST and filters
-            the SAME shared bundle client-side, so adding a domain here costs no extra
-            request and no second attention budget. A second component would have
-            re-fetched and re-budgeted the bundle beside the one already here. */}
-        <AmbientIntelligence
-          surfaceKey="planner"
-          domains={["planner", "nutrition"]}
-          title="Gaps in your week"
-          className="mt-3"
-        />
-
-        {/* HOUSE_ACT2 Door 1 — the Patterns THA has learned from how this
-            household actually plans, shown where the planning happens. Profile
-            keeps the household-wide view; this is the planner's own share of it.
-            Same shared query as every other mount, filtered client-side. */}
-        <LearningSignalsPanel
-          domains={["planner"]}
-          limit={2}
-          eyebrow="What we've noticed about your planning"
-          className="mt-3"
-          data-testid="learning-signals-planner"
-        />
+        {/* UX3 — the week's gaps and the noticed-patterns panel spoke about the
+            household, not about the week. Both are the Companion's now; the strip
+            above stays because it is the week's own data. */}
 
         {fullPlanner.map((week) => (
           <TabsContent key={week.id} value={String(week.weekNumber)} className="mt-0">
 
             {/* ── Mobile: single-day view (hidden on sm+) ── */}
             <div className="sm:hidden mb-6">
-              <FirstVisitHint
-                areaKey="planner-long-press"
-                message="Tip: Long press a meal for quick actions — duplicate, repeat, freeze or remove."
-                className="mb-3"
-              />
               {/* Horizontal day row — also droppable for cross-day drag */}
               <div className="mb-3">
                 <div className="flex items-center gap-1">
@@ -3837,12 +3787,10 @@ export default function WeeklyPlannerPage() {
                   {/* WX3 — Reused Meal Intelligence (Supports / Introduces /
                       seasonal / household). Fetches only while the meal-detail
                       dialog is open (active), so there is no N+1 across cards.
-                      showUplift=false: the actionable uplift is already shown by
-                      MealUpliftPanel above. Hidden entirely when empty. */}
+                      Hidden entirely when empty. */}
                   <CookbookMealIntelligenceStrip
                     mealId={meal.id}
                     active={!!mealDetail}
-                    showUplift={false}
                   />
 
                   {/* Two-column layout: Ingredients + Instructions */}

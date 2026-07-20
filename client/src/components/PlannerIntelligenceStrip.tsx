@@ -34,17 +34,11 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Leaf, Sun } from "lucide-react";
+import { ChevronDown, Leaf } from "lucide-react";
 import {
   WeeklyPlantDiversityCounter,
   PlannerVarietyLegend,
 } from "@/components/nutrition-variety-chips";
-import {
-  CelebrationCard,
-  OpportunityCard,
-  HouseholdInsightCard,
-  IntelligenceCard,
-} from "@/components/intelligence";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -153,12 +147,6 @@ export default function PlannerIntelligenceStrip({
       data?.householdInsight
     );
 
-  const hasCards =
-    data?.celebration ||
-    data?.seasonalHighlight ||
-    data?.opportunity ||
-    data?.householdInsight;
-
   return (
     <div
       className="mb-3 rounded-lg border border-border/30 bg-muted/20"
@@ -256,37 +244,8 @@ export default function PlannerIntelligenceStrip({
                 <PlannerVarietyLegend compact />
               </div>
 
-              {/* Intelligence cards */}
-              {hasCards && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {data?.celebration && (
-                    <CelebrationCard
-                      headline={data.celebration.headline}
-                      data-testid="planner-intelligence-celebration"
-                    />
-                  )}
-                  {data?.opportunity && (
-                    <OpportunityCard
-                      text={data.opportunity.text}
-                      data-testid="planner-intelligence-opportunity"
-                    />
-                  )}
-                  {data?.seasonalHighlight && (
-                    <IntelligenceCard
-                      icon={<Sun className="h-4 w-4" />}
-                      eyebrow="In season"
-                      body={data.seasonalHighlight.headline}
-                      data-testid="planner-intelligence-seasonal"
-                    />
-                  )}
-                  {data?.householdInsight && (
-                    <HouseholdInsightCard
-                      headline={data.householdInsight.headline}
-                      data-testid="planner-intelligence-household-insight"
-                    />
-                  )}
-                </div>
-              )}
+              {/* UX3 — the celebration/opportunity/seasonal/insight grid was a second
+                  voice interpreting the week. The week's own numbers stay above. */}
             </div>
           </motion.div>
         )}

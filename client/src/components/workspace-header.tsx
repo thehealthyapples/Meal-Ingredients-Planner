@@ -376,13 +376,14 @@ export function WorkspaceHeader({
               className="hidden md:grid gap-x-3"
               style={{ gridTemplateColumns: "auto auto 1fr auto", gridTemplateRows: "52px auto" }}
             >
-              {/* Logo — spans both rows; divider self-stretches to full banner height */}
+              {/* Brand — spans both rows. UX3: the ruled divider is retired; the
+                  mark is separated from the title by air, which is what separates
+                  things in this house (Blueprint § 8.2, "air is a material"). */}
               <div
-                className="flex items-center gap-3 shrink-0"
+                className="flex items-center pr-5 shrink-0"
                 style={{ gridRow: "1 / 3", gridColumn: "1" }}
               >
                 {brandMark}
-                <div className="w-px realm-header-border border-l self-stretch flex-shrink-0" />
               </div>
 
               {/* Row 1, Col 2: Page title */}
@@ -436,10 +437,9 @@ export function WorkspaceHeader({
               className="hidden md:grid items-center min-h-[60px] gap-x-3"
               style={{ gridTemplateColumns: "auto auto 1fr auto" }}
             >
-              {/* Col 1: Brand — logo + divider, identical to the two-row arm */}
-              <div className="flex items-center gap-3 shrink-0 self-stretch">
+              {/* Col 1: Brand — identical to the two-row arm; divider retired (UX3) */}
+              <div className="flex items-center pr-5 shrink-0 self-stretch">
                 {brandMark}
-                <div className="w-px realm-header-border border-l self-stretch flex-shrink-0" />
               </div>
 
               {/* Col 2: Page title */}
@@ -611,11 +611,32 @@ export function WorkspaceHeader({
  * conditionally (Shop mode's fullscreen escape) and cannot mount a component —
  * the string still has exactly one owner.
  */
-const WIDE_MAXW = "max-w-screen-2xl 3xl:max-w-[1920px]";
-const NARROW_MAXW = "max-w-screen-xl 2xl:max-w-screen-2xl 3xl:max-w-[1920px]";
+/*
+ * UX3 — THE ROOM STOPS GETTING WIDER.
+ *
+ * These two strings used to end `3xl:max-w-[1920px]`, so on a large monitor the
+ * content column grew to 1920 pixels and on an ultrawide it stayed there — the
+ * house's answer to more space was simply more width. UIA § 6 says the opposite,
+ * in terms: *"Content never stretches to fill whatever width exists; the column
+ * serves reading, not the viewport."* A 1920-pixel measure does not serve reading
+ * by any standard; it is a wall of text with the margins removed.
+ *
+ * The 1920 rung is retired. The column now settles at a calm reading width and
+ * everything beyond it becomes MARGIN — which is not empty space, it is the air
+ * that makes a large room feel composed instead of stretched. This is what the
+ * `spacious` density (use-adaptive-density.tsx) is spending its surplus on too:
+ * both halves of the answer say the same thing, that a bigger room earns better
+ * proportion rather than bigger contents.
+ *
+ * The practical result the brief asks for: a 13-inch laptop, a 24-inch monitor, a
+ * 32-inch monitor and a 49-inch ultrawide now differ in how much air surrounds the
+ * work, and not in how far the work is stretched across the glass.
+ */
+const WIDE_MAXW = "max-w-screen-2xl";
+const NARROW_MAXW = "max-w-screen-xl 2xl:max-w-screen-2xl";
 
 export function pageContainerClass(wide = false): string {
-  return `${wide ? WIDE_MAXW : NARROW_MAXW} mx-auto w-full px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6`;
+  return `${wide ? WIDE_MAXW : NARROW_MAXW} mx-auto w-full px-4 sm:px-6 lg:px-8 3xl:px-12 pt-4 sm:pt-6`;
 }
 
 interface PageContainerProps extends HTMLAttributes<HTMLDivElement> {

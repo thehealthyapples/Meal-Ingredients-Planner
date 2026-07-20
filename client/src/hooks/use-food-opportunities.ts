@@ -1,6 +1,6 @@
 // FI5 — Food Intelligence UI Activation.
 //
-// The ONE client-side owner of the Food Opportunity read + resolve calls
+// The ONE client-side owner of the Food Opportunity read
 // against the platform's already-registered `opportunity-delivery` capability
 // (OD1). Every consuming surface (Dashboard, Planner, Cookbook, Pantry) shares
 // this hook and its query key, so TanStack Query dedupes the fetch across
@@ -12,9 +12,7 @@
 // projection of what GET /api/intelligence/food-opportunities already
 // returned (which is itself a verbatim projection of OD1's own bundle).
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { useTrackedMutation } from "@/hooks/use-tracked-mutation";
+import { useQuery } from "@tanstack/react-query";
 import type { AttentionLevel } from "@shared/attention/index";
 
 export interface FoodOpportunityEvidence {
@@ -56,8 +54,6 @@ export interface FoodOpportunitiesData {
   readonly message?: string;
 }
 
-export type FoodOpportunityResolution = "acknowledge" | "accept" | "dismiss";
-
 const QUERY_KEY = ["/api/intelligence/food-opportunities"] as const;
 
 async function fetchFoodOpportunities(): Promise<FoodOpportunitiesData> {
@@ -74,32 +70,11 @@ async function fetchFoodOpportunities(): Promise<FoodOpportunitiesData> {
   return res.json();
 }
 
-/**
- * Removes one opportunity from an already-cached bundle (both the flat list
- * and its domain group) — used after a successful accept/dismiss so the UI
- * reflects the resolution immediately, without waiting on a second network
- * round trip. This only ever reflects a resolution the server has already
- * confirmed (the mutation's own `onSuccess`), never an optimistic guess.
- */
-function withoutOpportunity(
-  data: FoodOpportunitiesData | undefined,
-  opportunityId: string,
-): FoodOpportunitiesData | undefined {
-  if (!data) return data;
-  const grouped: Record<string, readonly FoodOpportunity[]> = {};
-  for (const [domain, items] of Object.entries(data.grouped)) {
-    grouped[domain] = items.filter((o) => o.id !== opportunityId);
-  }
-  return {
-    ...data,
-    opportunities: data.opportunities.filter((o) => o.id !== opportunityId),
-    grouped,
-  };
-}
-
+// UX3 — read-only. The accept/dismiss/acknowledge resolve mutation existed for
+// the ambient cards, which no longer exist: the household answers the Decision
+// Engine through the Companion now. The bundle is still read, because Home still
+// phrases from it.
 export function useFoodOpportunities(enabled = true) {
-  const queryClient = useQueryClient();
-
   const query = useQuery<FoodOpportunitiesData>({
     queryKey: QUERY_KEY,
     queryFn: fetchFoodOpportunities,
@@ -107,53 +82,8 @@ export function useFoodOpportunities(enabled = true) {
     staleTime: 5 * 60 * 1000,
   });
 
-  // PX1-W0 (fnd-px-silent-mutations): this had no failure path. Accepting or dismissing
-  // an opportunity is the household answering the Decision Engine — and when the write
-  // failed, the card stayed exactly where it was with nothing said, so the household's
-  // answer was silently discarded and the same suggestion came back tomorrow.
-  const resolve = useTrackedMutation({
-    mutationFn: async ({
-      opportunity,
-      action,
-    }: {
-      opportunity: FoodOpportunity;
-      action: FoodOpportunityResolution;
-    }) => {
-      const res = await apiRequest(
-        "POST",
-        `/api/intelligence/food-opportunities/${encodeURIComponent(opportunity.id)}/${action}`,
-        { domain: opportunity.domain, type: opportunity.type },
-      );
-      return res.json() as Promise<{ resolved: boolean }>;
-    },
-    onSuccess: (result, { opportunity, action }) => {
-      // "Acknowledge" is non-terminal (still delivered on future reports) —
-      // only accept/dismiss remove it from the visible bundle immediately.
-      if (result.resolved && (action === "accept" || action === "dismiss")) {
-        queryClient.setQueryData<FoodOpportunitiesData>(QUERY_KEY, (prev) =>
-          withoutOpportunity(prev, opportunity.id),
-        );
-      }
-    },
-    feedback: {
-      // No success title: accept and dismiss visibly remove the card. "Acknowledge" is
-      // non-terminal by design and changes nothing on screen — so it is the one action
-      // here whose FAILURE is the only thing worth saying about it.
-      failure: ({ action }) =>
-        action === "dismiss" ? "Couldn't dismiss that suggestion" : "Couldn't save that",
-      failureDescription: "We haven't recorded your answer. Please try again.",
-    },
-  });
-
   return {
     data: query.data,
     isPending: query.isPending,
-    isResolving: resolve.isPending,
-    acknowledge: (o: FoodOpportunity) =>
-      resolve.mutate({ opportunity: o, action: "acknowledge" }),
-    accept: (o: FoodOpportunity) =>
-      resolve.mutate({ opportunity: o, action: "accept" }),
-    dismiss: (o: FoodOpportunity) =>
-      resolve.mutate({ opportunity: o, action: "dismiss" }),
   };
 }

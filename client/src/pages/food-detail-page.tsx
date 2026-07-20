@@ -16,7 +16,6 @@ import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-head
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadError } from "@/components/ui/load-error";
 import { Button } from "@/components/ui/button";
-import { upliftSuggestionText } from "@shared/nutrition/uplift-phrasing";
 import {
   Apple,
   Leaf,
@@ -33,7 +32,6 @@ import {
   IntelligenceChipGroup,
   SeasonalCard,
   HouseholdInsightCard,
-  SimplyBetterChoiceCard,
   ConnectedFoodPanel,
   FoodPreparationList,
   type FoodPreparation,
@@ -195,8 +193,6 @@ function FoodIntelligenceView({ data }: { data: FoodIntelligence }) {
 
   const hasWhy =
     data.healthBenefits.length > 0 || data.nutritionContext.length > 0;
-  const upliftMatch = data.nutritionEnhancement?.matches[0] ?? null;
-  const upliftSuggestion = upliftMatch?.suggestions[0] ?? null;
 
   // WX5: the lateral `similar` and `cook_with` relationships are now presented as
   // first-class, labelled sections in the Connected Food Panel below. Drop them
@@ -430,14 +426,8 @@ function FoodIntelligenceView({ data }: { data: FoodIntelligence }) {
         </IntelligenceCard>
       )}
 
-      {/* ── Simply Better Choices ── */}
-      {upliftSuggestion && (
-        <SimplyBetterChoiceCard
-          suggestion={upliftSuggestionText(upliftSuggestion)}
-          why={upliftSuggestion.why}
-          data-testid="food-simply-better"
-        />
-      )}
+      {/* UX3 — the "simply better" swap was advice about the food, not the food.
+          The Companion carries it. */}
     </div>
   );
 }

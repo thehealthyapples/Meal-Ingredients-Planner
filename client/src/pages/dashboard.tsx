@@ -6,8 +6,6 @@ import { DECLARED_DEFAULT_ZONE, MONDAY_FIRST_ORDER } from "@shared/time/househol
 import { useCurrentPlannerWeek } from "@/hooks/use-current-planner-week";
 import { useUser } from "@/hooks/use-user";
 import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
-import HomeIntelligenceCompanion from "@/components/HomeIntelligenceCompanion";
-import { AmbientIntelligence } from "@/components/intelligence";
 import { useMealsSummary } from "@/hooks/use-meals-summary";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -325,20 +323,9 @@ export default function Dashboard() {
       <div className={`${pageContainerClass(true)} pb-3 space-y-4`}>
         <motion.div variants={container} initial="hidden" animate="show" className="space-y-4">
 
-          {/* ── Home Intelligence Companion ── */}
-          <motion.div variants={item}>
-            <HomeIntelligenceCompanion />
-          </motion.div>
-
-          {/* PHASE5C — the Decision Engine's own opportunities, aggregated across
-              every domain. The Dashboard is the ONE sanctioned aggregate view
-              (Home stays the calm landing and keeps the Notice Engine's silence-
-              ruled reminders — Home unharmed). Unlike the companion above, these
-              carry their evidence ("Why") and are resolvable, which is what feeds
-              Evidence back into Household Learning. */}
-          <motion.div variants={item}>
-            <AmbientIntelligence surfaceKey="dashboard" title="Things you could do" />
-          </motion.div>
+          {/* UX3 — the greeting companion and the aggregate opportunity strip both
+              spoke over the Companion. Interpretation and encouragement belong to
+              one voice; the Dashboard keeps its own numbers and its own meals. */}
 
           {/* ── Recent Meals — conversational first, before numbers ── */}
           <motion.div variants={item}>

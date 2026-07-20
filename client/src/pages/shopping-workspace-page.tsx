@@ -48,8 +48,6 @@ import { EmptyState } from "@/components/ui/empty-state";
 // well-designed lie about the household's own data.
 import { LoadError } from "@/components/ui/load-error";
 import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
-import { AmbientIntelligence } from "@/components/intelligence";
-import LearningSignalsPanel from "@/components/LearningSignalsPanel";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -2710,30 +2708,8 @@ export default function ShoppingWorkspacePage() {
           row clears the fixed BottomNav instead of sitting under it. */}
       <div className={isFullscreen ? "flex-1 overflow-auto px-4 pt-4 sm:px-6 sm:pt-6 main-safe" : ""}>
 
-      {/* PHASE5C — the shopping list's own ambient intelligence, and the reason
-          this workstream exists. The `shopping` domain owns THA's only
-          safety-relevant signal: `shopping-restriction-conflict`, the sole member
-          of the closed `critical` allowlist, raised when a product on this list
-          conflicts with a named household member's stored hard restriction.
-          Before PHASE5C it could reach a household only as one of at most two
-          Notice Engine reminders on Home — never here, on the list holding the
-          product it is about. A critical card opens this surface itself. */}
-      <AmbientIntelligence
-        surfaceKey="shopping"
-        domains={["shopping"]}
-        title="Worth a look before you shop"
-        className="mb-4"
-      />
-
-      {/* HOUSE_ACT2 Door 1 — Patterns learned from how this household actually
-          shops, shown on the list they were learned from. */}
-      <LearningSignalsPanel
-        domains={["shopping"]}
-        limit={2}
-        eyebrow="What we've noticed about your shopping"
-        className="mb-4"
-        data-testid="learning-signals-shopping"
-      />
+      {/* UX3 — the ambient strip and the noticed-patterns panel are the
+          Companion's now. The list keeps the list. */}
 
       {/* PROD1 — the failed load is announced ACROSS EVERY MODE, not inside one.
           This was caught by the acceptance capture rather than by reading the
@@ -2766,19 +2742,23 @@ export default function ShoppingWorkspacePage() {
           <div className="flex-1 min-w-0 space-y-4">
 
             {/* Writing surface */}
+            {/* UX3 — E1: THE LIST BY THE DOOR HAS NO WINDOW OVER IT.
+                This surface mounted the orchard directly, washed it out under an
+                80%-white sheet, and then set the writing area on top — so the
+                product was paying to load a landscape in order to hide it, and
+                still breaking § 6.1 ("the orchard never carries text"). Shopping
+                is **E1 — light only** (Blueprint § 5.1/§ 6.2): a working room is
+                bright *because* the orchard is outside, and you do not see it
+                while working. The wash is now simply the warm surface it was
+                imitating, and the two black shadows are one warm one (UIA § 4:
+                a shadow's hue comes from the room, never from black). */}
             <div
-              className="w-full flex flex-col relative overflow-hidden"
+              className="w-full flex flex-col relative overflow-hidden bg-card"
               style={{
-                backgroundImage: "url('/orchard-bg.webp')",
-                backgroundSize: "cover",
-                backgroundPosition: "center",
                 borderRadius: 20,
-                boxShadow: "0 4px 32px rgba(0,0,0,0.09), 0 1px 6px rgba(0,0,0,0.05)",
+                boxShadow: "0 4px 32px -12px hsl(28 30% 25% / 0.22), 0 1px 3px hsl(28 25% 28% / 0.05)",
               }}
             >
-              {/* Soft orchard tint overlay */}
-              <div aria-hidden style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.80)", borderRadius: 20, pointerEvents: "none" }} />
-
               <div className="relative z-10 flex flex-col">
                 {/* Textarea.
                     UX_REFINE1 (D2, accessibility) — the placeholder was

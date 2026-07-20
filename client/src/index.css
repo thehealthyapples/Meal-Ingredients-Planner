@@ -638,12 +638,33 @@
  * `REALM_STYLES` in nav-bar.tsx still hard-codes each hue a third time; that is a
  * convergence with an ownership question attached and it is reported, not taken.
  */
+/* ── UX3 — THE HEADER STOPS BEING CHROME ──────────────────────────────────────
+ *
+ * UX2 made the header ONE material in every room. What it left standing was the
+ * 1px rule beneath it — and a full-width hairline across the top of every screen
+ * is the most recognisable piece of BROWSER CHROME there is. It says "toolbar",
+ * and a toolbar is software; the brief asks the header to quietly FRAME the
+ * experience instead.
+ *
+ * A wall does not meet a room at a drawn line. It meets it at a change of light.
+ * So the rule is retired and replaced by the only thing that was ever doing its
+ * job honestly: a warm shadow describing a real distance — the header sits a
+ * little above the room, and says so — in a hue drawn from the room's own warm
+ * foreground rather than from black (UIA § 4, "warm shadow: distance made
+ * visible"; never grey, never black).
+ *
+ * This also RECOVERS the room's light-line below. While a hard border sat on the
+ * same edge, the faint coloured light had to compete with a rule that meant
+ * nothing; now it is the only mark at the sill, so the one thing that glows there
+ * is the one thing that carries meaning ("everything that glows should
+ * communicate purpose").
+ */
 .shell-header {
   position: relative;
   background:
     radial-gradient(120% 140% at 50% 0%, var(--light-rim-soft) 0%, transparent 72%),
     hsl(var(--card));
-  border-bottom: 1px solid hsl(var(--border) / 0.8);
+  box-shadow: 0 8px 20px -16px hsl(28 30% 25% / 0.55);
 }
 
 /* The room's light, along the sill of the header. Pure decoration, behind the
@@ -654,7 +675,7 @@
   position: absolute;
   left: 0;
   right: 0;
-  bottom: -1px;
+  bottom: 0;
   height: 2px;
   pointer-events: none;
   background: linear-gradient(
@@ -666,10 +687,15 @@
   );
 }
 
+/* In the dark house there is no warm falloff to cast, so the header separates
+   the way a dark wall does — by being fractionally lighter than the room, not by
+   a rule. (Dark mode remains authored-but-unadopted platform-wide; this keeps the
+   block complete rather than leaving the one odd entry out.) */
 .dark .shell-header {
   background:
     radial-gradient(120% 140% at 50% 0%, hsl(48 20% 70% / 0.06) 0%, transparent 72%),
     hsl(var(--card));
+  box-shadow: 0 8px 20px -18px hsl(0 0% 0% / 0.7);
 }
 .dark .shell-header::after {
   background: linear-gradient(

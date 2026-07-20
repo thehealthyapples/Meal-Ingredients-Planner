@@ -26,11 +26,12 @@ export {
 } from "./IntelligenceCard";
 
 // Specific, trust-enforcing cards.
-export { CelebrationCard } from "./CelebrationCard";
-export { OpportunityCard } from "./OpportunityCard";
+//
+// UX3 — the coaching cards (Celebration, Opportunity, SimplyBetterChoice) no
+// longer live here. Encouragement, advice and recommendation reach the household
+// through the Companion, in one voice; the rooms keep only what is theirs.
 export { SeasonalCard } from "./SeasonalCard";
 export { HouseholdInsightCard } from "./HouseholdInsightCard";
-export { SimplyBetterChoiceCard } from "./SimplyBetterChoiceCard";
 
 // WX5 — Connected Food Panel (Food Page relationship web).
 export { ConnectedFoodPanel } from "./ConnectedFoodPanel";
@@ -45,10 +46,4 @@ export {
   type PreparationSourceRef,
 } from "./FoodPreparationList";
 
-// PHASE5C — the ONE ambient surface. Every page that surfaces the Decision
-// Engine's opportunity bundle mounts this and nothing else. It supersedes
-// FoodOpportunitiesPanel (deleted in the same change — UI Principle 5, retire on
-// introduction).
-export { default as AmbientIntelligence } from "./AmbientIntelligence";
-export { FoodOpportunityCard } from "./FoodOpportunityCard";
 export { LearningSignalCard } from "./LearningSignalCard";

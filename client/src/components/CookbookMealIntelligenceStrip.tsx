@@ -10,8 +10,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { type UpliftMatchResult } from "@/components/MealUpliftPanel";
-import { Leaf, Sparkles, CalendarDays, Repeat2, Utensils } from "lucide-react";
+import { Leaf, CalendarDays, Repeat2, Utensils } from "lucide-react";
 
 // ── Types (mirror server MealIntelligence) ────────────────────────────────────
 
@@ -26,15 +25,6 @@ interface MealIntelligence {
   household: {
     plannerAppearanceCount: number;
     lastPlannerWeekNumber: number | null;
-  } | null;
-  // HOUSE_ACT3 — typed to the canonical UpliftMatchResult rather than a local
-  // structural subset. The assembler already returns exactly this type
-  // (meal-intelligence-assembler.ts:196), and meal-detail-page now feeds these
-  // matches straight into SimplyBetterChoicesPanel, whose prop is
-  // `UpliftMatchResult[]`. A narrower local shape here would have made the one
-  // real consumer impossible to type without a cast.
-  nutritionEnhancement: {
-    matches: UpliftMatchResult[];
   } | null;
   /** Ingredient-resolution confidence ONLY — never a household or quality judgement. */
   trust: {
@@ -69,19 +59,11 @@ interface Props {
   mealId: number;
   /** Pass true only when the user has opened the Intelligence tab — avoids N+1 fetches. */
   active: boolean;
-  /**
-   * Whether to show the nutrition-uplift line. Defaults to true. Surfaces that
-   * already render an actionable uplift panel (e.g. the planner meal-detail
-   * dialog with MealUpliftPanel) pass false to avoid showing the same
-   * suggestion twice.
-   */
-  showUplift?: boolean;
 }
 
 export function CookbookMealIntelligenceStrip({
   mealId,
   active,
-  showUplift = true,
 }: Props) {
   const { data, isPending: isLoading } = useCookbookMealIntelligence(mealId, active);
 
@@ -101,15 +83,13 @@ export function CookbookMealIntelligenceStrip({
   const benefits = data.healthBenefits.slice(0, 4);
   const seasonalItems = data.seasonality?.seasonalIngredients ?? [];
   const cookedCount = data.household?.plannerAppearanceCount ?? 0;
-  const upliftSuggestion = data.nutritionEnhancement?.matches[0] ?? null;
   const canonicalFoods = data.foods.slice(0, 4);
 
   const hasBenefits = benefits.length > 0;
   const hasSeasonal = seasonalItems.length > 0;
   const hasHousehold = cookedCount > 0;
-  const hasUplift = showUplift && !!upliftSuggestion;
   const hasFoods = canonicalFoods.length > 0;
-  const hasAnything = hasBenefits || hasSeasonal || hasHousehold || hasUplift || hasFoods;
+  const hasAnything = hasBenefits || hasSeasonal || hasHousehold || hasFoods;
 
   if (!hasAnything) return null;
 
@@ -198,17 +178,8 @@ export function CookbookMealIntelligenceStrip({
         </div>
       )}
 
-      {hasUplift && upliftSuggestion.suggestions[0] && (
-        <div
-          className="flex items-start gap-1.5"
-          data-testid={`intelligence-uplift-${mealId}`}
-        >
-          <Sparkles className="h-3 w-3 text-primary/60 shrink-0 mt-0.5" />
-          <p className="text-[11px] text-muted-foreground leading-tight">
-            {upliftSuggestion.suggestions[0].why}
-          </p>
-        </div>
-      )}
+      {/* UX3 — the uplift "why" line advised; the strip states. Supports,
+          Introduces, seasonality and cook count are the meal's own facts. */}
     </div>
   );
 }

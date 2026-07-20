@@ -1,7 +1,7 @@
 {
   "$schema_note": "The Platform Experience Adoption Register (PX1-W5.1). THE single source of truth. ADOPTION_REGISTER.md is GENERATED from this file — never edit the .md by hand. Verified by scripts/ci/adoption-register-gate.ts, which fails CI when an owner loses its last consumer, a rival count rises, a retired predecessor returns, or a new orphan appears. Mandated by THA_UI_ARCHITECTURE.md §17; operational, not architectural — it creates no law.",
   "version": "1.0.0",
-  "updated": "2026-07-19",
+  "updated": "2026-07-20",
   "owner": "Colin Clapson",
   "governedBy": [
     "[THA_UI_ARCHITECTURE.md §17](../../architecture/THA_UI_ARCHITECTURE.md) (the mandate)",
@@ -285,16 +285,99 @@
       "owner": "components/intelligence/IntelligenceCard.tsx",
       "ownerPath": "client/src/components/intelligence/IntelligenceCard.tsx",
       "ownerKind": "module",
-      "owns": "The intelligence panel shell: header, loading, empty, progressive disclosure. It composes `ui/card` rather than rivalling it (PX1-W4.4).",
+      "owns": "The intelligence panel shell: header, loading, empty, progressive disclosure. It composes `ui/card` rather than rivalling it (PX1-W4.4).\n\n**UX3 (2026-07-20) — THE COACHING SURFACES ARE GONE, AND THE FLOOR CAME DOWN WITH THEM.** The owner ruled that **the Companion is the single owner of coaching, interpretation, recommendation, reminders and encouragement**; a room keeps its contextual content, its room data and its workflow controls, and nothing else. Eight surfaces were duplicate mouths for that one job and were deleted in one change — they are listed in § 4 below so the gate keeps them dead. Six of them consumed this owner, which is why `adoptionFloor` moves **8 → 5**. **This is the register's own rule being followed rather than dodged**: the floor was right when six coaching cards mounted the shell, and it is wrong the moment the duplication is removed. Re-adding a consumer to satisfy a number would be authoring a surface to make a gate green — the exact inversion this register exists to prevent — so the floor is lowered and the reason is written down instead. Five is now the honest number: `SeasonalCard`, `HouseholdInsightCard`, `LearningSignalCard`, `ConnectedFoodPanel` and the system's own `index.ts` barrel. The shell itself is **untouched and still canonical**: what died is the duplicated *voice*, never the container it happened to be poured into.",
       "status": "half-adopted",
       "enforcement": "review",
-      "adoptionFloor": 8,
+      "adoptionFloor": 5,
+      "retired": [
+        {
+          "name": "`intelligence/AmbientIntelligence` — the ambient coaching strip mounted per room (a second voice interpreting the household in every room the Companion already speaks in)",
+          "pattern": "@/components/intelligence/AmbientIntelligence|<AmbientIntelligence[\\s>]",
+          "retiredBy": "UX3"
+        },
+        {
+          "name": "`intelligence/FoodOpportunityCard` — a food recommendation card outside the Companion",
+          "pattern": "@/components/intelligence/FoodOpportunityCard|<FoodOpportunityCard[\\s>]",
+          "retiredBy": "UX3"
+        },
+        {
+          "name": "`intelligence/OpportunityCard` — the generic \"here is what you could do\" card; advice is the Companion's",
+          "pattern": "@/components/intelligence/OpportunityCard|<OpportunityCard[\\s>]",
+          "retiredBy": "UX3"
+        },
+        {
+          "name": "`intelligence/SimplyBetterChoiceCard` — a recommendation card, in a room, in its own voice",
+          "pattern": "@/components/intelligence/SimplyBetterChoiceCard|<SimplyBetterChoiceCard[\\s>]",
+          "retiredBy": "UX3"
+        },
+        {
+          "name": "`intelligence/CelebrationCard` — encouragement rendered by a room rather than said by the Companion",
+          "pattern": "@/components/intelligence/CelebrationCard|<CelebrationCard[\\s>]",
+          "retiredBy": "UX3"
+        },
+        {
+          "name": "`HomeIntelligenceCompanion` — a SECOND companion on Home, with its own greeting, its own coaching and its own reminders",
+          "pattern": "@/components/HomeIntelligenceCompanion|<HomeIntelligenceCompanion[\\s>]",
+          "retiredBy": "UX3"
+        },
+        {
+          "name": "`meal-detail/SimplyBetterChoicesPanel` — the hand-rolled recommendation panel this row's own § 5 migration had been waiting to converge; UX3 deleted the concern instead of the markup",
+          "pattern": "@/components/meal-detail/SimplyBetterChoicesPanel|<SimplyBetterChoicesPanel[\\s>]",
+          "retiredBy": "UX3"
+        },
+        {
+          "name": "`first-visit-hint` — an unprompted nudge on first arrival; a hint is coaching, and coaching has one owner",
+          "pattern": "@/components/first-visit-hint|<FirstVisitHint[\\s>]",
+          "retiredBy": "UX3"
+        },
+        {
+          "name": "AmbientIntelligence — the ambient opportunity surface, mounted on 8 rooms",
+          "pattern": "AmbientIntelligence",
+          "retiredBy": "UX3"
+        },
+        {
+          "name": "FoodOpportunityCard — the coaching card AmbientIntelligence rendered",
+          "pattern": "FoodOpportunityCard",
+          "retiredBy": "UX3"
+        },
+        {
+          "name": "OpportunityCard — the \"You could\" coaching eyebrow",
+          "pattern": "OpportunityCard",
+          "retiredBy": "UX3"
+        },
+        {
+          "name": "SimplyBetterChoiceCard — the \"Simply better\" recommendation eyebrow",
+          "pattern": "SimplyBetterChoiceCard",
+          "retiredBy": "UX3"
+        },
+        {
+          "name": "CelebrationCard — unprompted encouragement",
+          "pattern": "CelebrationCard",
+          "retiredBy": "UX3"
+        },
+        {
+          "name": "HomeIntelligenceCompanion — the dashboard's rival Companion, a direct namespace collision with FloatingAssistant",
+          "pattern": "HomeIntelligenceCompanion",
+          "retiredBy": "UX3"
+        },
+        {
+          "name": "SimplyBetterChoicesPanel — meal-detail's duplicate recommendation panel (its +Add/-Remove buttons had no onClick)",
+          "pattern": "SimplyBetterChoicesPanel",
+          "retiredBy": "UX3"
+        },
+        {
+          "name": "FirstVisitHint — the six first-visit coaching banners",
+          "pattern": "FirstVisitHint",
+          "retiredBy": "UX3"
+        }
+      ],
       "openMigration": {
         "finding": "fnd-px-panel-shell-half-adopted",
-        "remaining": "6 panels still hand-roll a shell: `PlannerAssistantPanel` (1,946 LOC) · `templates-panel` (835) · `MealUpliftPanel` (580) · `SmartReviewPanelContent` (558) · `CookbookMealIntelligenceStrip` (204) · `meal-detail/SimplyBetterChoicesPanel` (125)",
+        "remaining": "5 panels still hand-roll a shell: `PlannerAssistantPanel` (1,946 LOC) · `templates-panel` (835) · `MealUpliftPanel` (580) · `SmartReviewPanelContent` (558) · `CookbookMealIntelligenceStrip` (204). **UX3 removed the sixth** — `meal-detail/SimplyBetterChoicesPanel` (125) — not by adopting this owner but by deleting the surface, because its content was recommendation and recommendation is the Companion's. A migration can close by the concern disappearing; it may not close by anyone forgetting.",
         "owner": "Colin Clapson — with the next substantive change to each panel",
         "why": "Since `IntelligenceCard` now composes `Card`, adopting it is strictly a simplification for each — but a 1,946-line panel is not refactored safely as a side-effect of a governance workstream. Enforcement is `review`, not `machine`, because no grep can honestly detect \"a hand-rolled shell\"; claiming otherwise would be the declared-vs-enforced gap this register exists to close (PKCA Rule KC8)."
-      }
+      },
+      "floorReason": "UX3 retired five duplicate coaching surfaces that composed this shell (AmbientIntelligence, FoodOpportunityCard, OpportunityCard, SimplyBetterChoiceCard, CelebrationCard). The floor fell because the DUPLICATION went, not because adoption slipped — re-adding a consumer to satisfy a number would rebuild the thing the owner ruled out."
     },
     {
       "id": "rating-mark",
@@ -454,14 +537,15 @@
       "owns": "The adaptive-density class ladder for meal-detail surfaces. Class strings are complete literals — the file forbids interpolating fragments, which is the exact mechanism that produced `space-y-gap-2` seven times.",
       "status": "governed",
       "enforcement": "machine",
-      "adoptionFloor": 4,
+      "adoptionFloor": 3,
       "retired": [
         {
           "name": "The four copy-pasted density ladders and their seven dead `space-y-${gapClass}` interpolations",
           "pattern": "space-y-\\$\\{",
           "retiredBy": "PX1-W1.6"
         }
-      ]
+      ],
+      "floorReason": "UX3 deleted meal-detail/SimplyBetterChoicesPanel, one of the four consumers. The ladder itself GREW in the same change (a fourth rung, `spacious`, for viewports >= 1920); only the consumer count fell."
     },
     {
       "id": "meal-library-invalidation",
@@ -523,7 +607,7 @@
         {
           "what": "Raw `<button>` elements outside the design system",
           "pattern": "<button[\\s>]",
-          "ceiling": 454,
+          "ceiling": 449,
           "note": "Each reinvents press feedback and misses the touch floor. Capped: the population may fall, never rise."
         }
       ],
@@ -605,17 +689,18 @@
       "owner": "components/intelligence/intelligence-tokens.ts (semanticSurface / semanticText)",
       "ownerPath": "client/src/components/intelligence/intelligence-tokens.ts",
       "ownerKind": "module",
-      "owns": "What colour a *meaning* is: `notice` · `info` · `positive` — keyed by meaning, never by hue. **`destructive` is deliberately absent**: alarm is reserved for a safety event, and there is no way to reach for it through this owner.",
+      "owns": "What colour a *meaning* is: `notice` · `info` · `positive` — keyed by meaning, never by hue. **`destructive` is deliberately absent**: alarm is reserved for a safety event, and there is no way to reach for it through this owner.\n\n**UX3 (2026-07-20) — floor 8 → 7, because a consumer was DELETED, not because adoption slipped.** One of the eight importers was a coaching card retired under `panel-shell` § 4 (the Companion is now the single owner of coaching). The tokens are unchanged and every surviving surface still reaches its meaning through this owner; there is simply one fewer surface. Lowering the floor is the honest record. Re-tinting something to get back to eight would be colouring a meaning that nothing means.",
       "status": "governed",
       "enforcement": "machine",
-      "adoptionFloor": 8,
+      "adoptionFloor": 7,
       "retired": [
         {
           "name": "The Dashboard's hard-coded light-mode-only border literal",
           "pattern": "hsl\\(132,\\s*14%,\\s*87%\\)",
           "retiredBy": "PX1-W4b.4"
         }
-      ]
+      ],
+      "floorReason": "UX3 retired one consumer with the coaching surfaces. `presentationFor` and the AttentionPresentation table were removed from this owner in the same change — they had no consumers left once AmbientIntelligence and FoodOpportunityCard went."
     },
     {
       "id": "tone",
@@ -692,8 +777,8 @@
         {
           "what": "`dark:` utilities authored across the client",
           "pattern": "\\bdark:",
-          "asAt": 693,
-          "asAtDate": "2026-07-19"
+          "asAt": 679,
+          "asAtDate": "2026-07-20"
         }
       ],
       "openMigration": {
@@ -882,7 +967,7 @@
       "owns": "The one time-of-day greeting: the household's phase (via shared/time/household-time.ts householdPhase) mapped to the greeting word. It owns the CLOCK, not the VOICE — the three strings are grandfathered debt owned by INT21 and scheduled as CP3 (THA_BEHAVIOUR_ENGINE_ARCHITECTURE.md §9).",
       "status": "governed",
       "enforcement": "machine",
-      "adoptionFloor": 4,
+      "adoptionFloor": 3,
       "definedIn": "client/src/lib/greeting.ts",
       "definedSymbols": [
         "householdGreeting"
@@ -911,8 +996,8 @@
         {
           "what": "Surfaces consuming the one greeting owner (`householdGreeting`)",
           "pattern": "householdGreeting\\(",
-          "asAt": 5,
-          "asAtDate": "2026-07-17"
+          "asAt": 4,
+          "asAtDate": "2026-07-20"
         }
       ],
       "openMigration": {
@@ -920,7 +1005,8 @@
         "remaining": "The greeting's WORDS are still client-side strings outside the Personality Registry. CONV1 P6 converged the CLOCK and collapsed four copies to one site; the voice is untouched and byte-identical to what shipped before.",
         "owner": "INT21 (the Behaviour Engine) — THA_BEHAVIOUR_ENGINE_ARCHITECTURE.md § 9, scheduled as CP3",
         "why": "CP3 is a separately gated workstream and § 9 states plainly that 'nothing below is authorised by this document'. P6 may not do it. The next change to client/src/lib/greeting.ts should be its deletion, by CP3 — which now has one site to retire instead of four."
-      }
+      },
+      "floorReason": "UX3 deleted HomeIntelligenceCompanion, one of the four consumers of the one household greeting. Note this floor is already scheduled to fall to 2 by the signature-typography row's required change; this drop is a different cause and does not discharge that one."
     },
     {
       "id": "household-planner-week",
@@ -988,7 +1074,8 @@
       "owns": "How a household meets a Pattern THA has learned about it (EL1 `evidence-learning`, `search` verb). Owns the room-scoping (`domains`), the cap, the eyebrow and the honest-absence rule: nothing learned yet renders nothing, never an empty-state placeholder implying something is missing. HOUSE_ACT2 Door 1 moved it from one household-wide mount on Profile to five — Profile keeps the unfiltered view; Planner, Pantry, Shopping and Cookbook each show only the Patterns learned from behaviour in that room. Filtering is client-side over the ONE shared query, mirroring AmbientIntelligence: a per-room server query would fragment a cache the hook already holds in full.",
       "status": "governed",
       "enforcement": "machine",
-      "adoptionFloor": 4
+      "adoptionFloor": 1,
+      "floorReason": "UX3 removed this panel's four ROOM mounts (cookbook, pantry, planner, shopping) as duplicate coaching surfaces, on the owner's ruling. The Profile mount is deliberately KEPT and is the floor: it is the only door through which a Pattern becomes Confirmed Understanding, so it is the capability rather than a copy of one."
     },
     {
       "id": "legal-document-presentation",

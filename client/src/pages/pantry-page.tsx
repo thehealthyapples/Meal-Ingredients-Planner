@@ -17,18 +17,6 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { FirstVisitHint } from "@/components/first-visit-hint";
-const MICRO_INSIGHTS = [
-  "Different plant foods feed different gut bacteria.",
-  "A mix of colours often brings a wider range of nutrients.",
-  "Herbs and spices add both flavour and nutrition.",
-  "Whole grains tend to keep you fuller for longer.",
-  "Cold-pressed oils preserve more of their natural qualities.",
-  "Fermented foods like yogurt and kefir support gut diversity.",
-  "Leafy greens are one of the easiest ways to add variety to any meal.",
-  "Oily fish a couple of times a week is one of the most widely supported dietary habits.",
-  "Seeds like chia and flaxseed are small but surprisingly rich in plant-based omega-3.",
-];
 import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import {
@@ -37,8 +25,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { PantryKnowledgeHub } from "@/components/PantryKnowledgeHub";
 import PantryIntelligencePanel from "@/components/PantryIntelligencePanel";
-import { AmbientIntelligence } from "@/components/intelligence";
-import LearningSignalsPanel from "@/components/LearningSignalsPanel";
 import { usePublishCompanionContext } from "@/components/conversation/companion-context";
 
 /**
@@ -1183,7 +1169,6 @@ export default function PantryPage() {
     return () => window.removeEventListener("tha:open-workspace", handler);
   }, []);
 
-  const microInsight = MICRO_INSIGHTS[new Date().getDate() % MICRO_INSIGHTS.length];
   const [pantrySearch, setPantrySearch] = useState("");
 
   return (
@@ -1242,32 +1227,9 @@ export default function PantryPage() {
         data-realm="pantry"
         className={`${pageContainerClass(true)} space-y-3`}
       >
-        <p className="text-xs text-muted-foreground/50 italic" data-testid="text-pantry-micro-insight">
-          {microInsight}
-        </p>
-
-        {/* PHASE5C — the pantry's own ambient intelligence. The `pantry` domain's
-            canonical page: the item each opportunity names lives right here. */}
-        <AmbientIntelligence
-          surfaceKey="pantry"
-          domains={["pantry"]}
-          title="Ways to use what you have"
-        />
-
-        {/* HOUSE_ACT2 Door 1 — Patterns learned from how this household actually
-            keeps its pantry, shown on the shelves they describe. */}
-        <LearningSignalsPanel
-          domains={["pantry"]}
-          limit={2}
-          eyebrow="What we've noticed about your pantry"
-          className="mt-3"
-          data-testid="learning-signals-pantry"
-        />
-
-        <FirstVisitHint
-          areaKey="pantry"
-          message="Add the ingredients you have at home - fridge, freezer, and larder. Your pantry helps tailor meal suggestions and avoids duplicates when you shop."
-        />
+        {/* UX3 — this strip held a rotating aphorism, an opportunity list, a
+            patterns panel and a first-visit tip: four voices interpreting the
+            pantry above the pantry itself. All four are the Companion's now. */}
 
         {mode === "explore" ? (
           <div className="pb-8">

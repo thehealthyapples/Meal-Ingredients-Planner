@@ -23,7 +23,7 @@ import { semanticText } from "@/components/intelligence/intelligence-tokens";
 // Red is THA's alarm token and EXP §14 reserves alarm for genuine data loss or
 // safety; a food's processing score is information, not a safety event. The one
 // signal that IS a safety event — a restriction conflict for a named household
-// member — keeps red, and keeps it alone (`attentionPresentation.critical`).
+// member — keeps red, and keeps it alone.
 
 interface UltraProcessedNoticeModalProps {
   open: boolean;

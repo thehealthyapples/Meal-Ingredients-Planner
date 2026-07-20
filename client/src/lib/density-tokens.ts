@@ -43,6 +43,26 @@ const DENSITY_CLASSES: Record<AdaptiveDensity, DensityClasses> = {
     title: "text-lg lg:text-xl",
     text: "text-sm lg:text-base",
   },
+  // UX3 — the fourth rung, for genuinely large desktops (≥ 1920, the one `3xl`
+  // breakpoint truth). NOTE WHAT IS AND IS NOT DIFFERENT FROM `expanded`:
+  //
+  //   padding  ↑   more air around the content
+  //   stack    ↑   more room between things
+  //   title    =   IDENTICAL
+  //   text     =   IDENTICAL
+  //
+  // The type scale is deliberately untouched, and that is the whole idea. A 32-inch
+  // monitor does not mean the household's eyes moved further away, so growing the
+  // type would be the room "simply becoming bigger" — the failure the brief names.
+  // What a large room actually earns is BREATHING SPACE: the same well-proportioned
+  // furniture, with more air around it. Reading comfort improves because the measure
+  // stays calm and the surroundings quieten, never because the words got larger.
+  spacious: {
+    padding: "p-6 3xl:p-8",
+    stack: "space-y-4 3xl:space-y-6",
+    title: "text-lg lg:text-xl",
+    text: "text-sm lg:text-base",
+  },
 };
 
 export function densityClasses(density: AdaptiveDensity): DensityClasses {

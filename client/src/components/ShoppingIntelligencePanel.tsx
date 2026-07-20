@@ -22,7 +22,6 @@ import {
   IntelligenceCard,
   SeasonalCard,
   HouseholdInsightCard,
-  SimplyBetterChoiceCard,
 } from "@/components/intelligence";
 
 // ── Types (mirror the server projection) ──────────────────────────────────────
@@ -38,7 +37,6 @@ interface ShoppingIntelligence {
     meals: Array<{ mealId: number; name: string }>;
   } | null;
   household?: { headline: string; isNewDiscovery: boolean } | null;
-  simplyBetter?: { suggestion: string; why: string } | null;
   connectedFoods?: {
     title: string;
     items: Array<{ slug: string; name: string; linkable: boolean }>;
@@ -83,7 +81,6 @@ export default function ShoppingIntelligencePanel({ name, ...rest }: Props) {
     data.seasonal ||
     data.mealSupport ||
     data.household ||
-    data.simplyBetter ||
     data.connectedFoods;
 
   if (!hasAnySection) return null;
@@ -186,14 +183,8 @@ export default function ShoppingIntelligencePanel({ name, ...rest }: Props) {
         />
       )}
 
-      {/* ── Simply Better (the one opportunity) ── */}
-      {data.simplyBetter && (
-        <SimplyBetterChoiceCard
-          suggestion={data.simplyBetter.suggestion}
-          why={data.simplyBetter.why}
-          data-testid="shopping-intelligence-simply-better"
-        />
-      )}
+      {/* UX3 — the "simply better" upgrade was a recommendation; the Companion
+          makes recommendations. This panel keeps what is true of the product. */}
     </div>
   );
 }

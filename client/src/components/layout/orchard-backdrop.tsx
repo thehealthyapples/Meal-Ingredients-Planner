@@ -49,14 +49,21 @@
  * ⚠️ IT WAS A CSS `filter:` FIRST, AND THAT WAS A LATENT SECOND ORCHARD.
  * The filter was applied here, to the three shapes this file owns, under a comment
  * asserting that one constant on every shape kept Blueprint §6.1's ONE orchard intact.
- * That assertion was false, and the picture is what proved it. **Five surfaces mount
+ * That assertion was false, and the picture is what proved it. **Five surfaces mounted
  * this asset WITHOUT this owner**, straight from `url('/orchard-bg.webp')`:
  *
- *     client/src/components/ui/dialog.tsx:48
- *     client/src/pages/list-page.tsx:417
- *     client/src/pages/shopping-list-page.tsx:3014
- *     client/src/pages/onboarding-page.tsx:454
- *     client/src/pages/shopping-workspace-page.tsx:2328
+ *     client/src/components/ui/dialog.tsx:48            ✅ CLOSED — UX3 (E0)
+ *     client/src/pages/list-page.tsx:417                ✅ CLOSED — page deleted
+ *     client/src/pages/shopping-list-page.tsx:3014      ✅ CLOSED — page deleted
+ *     client/src/pages/onboarding-page.tsx:454          ✅ CLOSED — UX3 (ground, not a 2nd window)
+ *     client/src/pages/shopping-workspace-page.tsx:2328 ✅ CLOSED — UX3 (E1)
+ *
+ * ✅ **ALL FIVE ARE NOW CLOSED, and this file is once again the only mounter of the
+ * asset.** Two went when their pages were deleted; UX3 closed the remaining three
+ * against the Blueprint's exposure scale rather than by deleting the picture and
+ * hoping — a dialog is E0, Shopping is E1, and onboarding's card is the GROUND that
+ * § 6.1 requires under type while the arrival's view stays behind it, owned here.
+ * `grep -rn "orchard-bg.webp" client/src` now returns this file and comments only.
  *
  * A filter here would have graded arrival and Home and left those five ungraded — two
  * different orchards seen from one house, which is the same defect as two suns (§16)
@@ -68,14 +75,15 @@
  * The asset got SMALLER doing it — 56,986 → 51,722 bytes — so PX1-W3's performance
  * budget ("Make the Product Feel Instant") is improved, not spent.
  *
- * 🔴 THOSE FIVE BYPASSES ARE A REAL DEFECT AND NORTH2 DID NOT FIX THEM. This file's
+ * 🔴 THOSE FIVE BYPASSES WERE A REAL DEFECT AND NORTH2 DID NOT FIX THEM. This file's
  * header says "One asset, one owner, two governed shapes", and the adoption register's
  * `orchard-environment` row says "two permitted surfaces (arrival, and /home) ·
- * nothing else." **Both sentences are false today** and were false before NORTH2: there
- * are five more, one of which (`dialog.tsx`) puts the orchard behind EVERY dialog in
- * the product. Fixing them is architecture, not art direction, and this change was
- * scoped to craft — so they are reported in docs/implementation/NORTH2_HOME_REFINEMENT.md
- * §6 rather than quietly corrected or quietly ignored.
+ * nothing else." **Both sentences were false** from before NORTH2 until UX3: there
+ * were five more, one of which (`dialog.tsx`) put the orchard behind EVERY dialog in
+ * the product. Fixing them is architecture, not art direction, and NORTH2 was scoped
+ * to craft — so it reported them in docs/implementation/NORTH2_HOME_REFINEMENT.md §6
+ * rather than quietly correcting or quietly ignoring them. **UX3 closed them**, and
+ * both sentences are true for the first time.
  *
  * ⚠️ THE GRADE IS A CEILING, NOT A FIX. This asset is a pale watercolour of a MEADOW:
  * rolling hills, a path, a few generic horizon trees. No apple trees, no rows, no

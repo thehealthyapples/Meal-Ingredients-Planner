@@ -43,7 +43,6 @@ import BarcodeScanner from "@/components/BarcodeScanner";
 import { getWholeFoodAlternative, effortLabel, effortColor, formatTime } from "@/lib/whole-food-alternatives";
 import { rankChoices, buildWhyBetter } from "@/lib/analyser-choice";
 import { useSoundEffects } from "@/hooks/use-sound-effects";
-import { FirstVisitHint } from "@/components/first-visit-hint";
 import AnalyserDetailV2 from "@/components/analyser/AnalyserDetailV2";
 import { WholeFoodAnalysisCard } from "@/components/analyser/WholeFoodAnalysisCard";
 import { AddToWeekModal } from "@/components/AddToWeekModal";
@@ -1170,11 +1169,6 @@ export default function ProductsPage() {
     />
     <div className={pageContainerClass(true)} data-realm="analyser">
       <div className="space-y-6">
-        <FirstVisitHint
-          areaKey="analyser"
-          message="Search any packaged food to see its ingredients, additives, and health rating. Spot ultra-processed products and find less processed alternatives before you buy."
-        />
-
         {hasSearched && retailerFilter && filteredResults.length === 0 && searchResults.length > 0 && !isSearching && (
           <div className="text-center py-8 text-muted-foreground">
             <Store className="h-10 w-10 mx-auto mb-3 opacity-30" />
@@ -1225,10 +1219,8 @@ export default function ProductsPage() {
         {/* HOUSE2: the Analyser had no first-run state. Every branch above is gated on
             `hasSearched`, and the history card below on having history — so a household
             that has never analysed anything fell through all of them and met a search
-            box above an empty page. The dismissible FirstVisitHint was the only
-            orientation, and once dismissed the room said nothing at all. This names the
-            two ways in; both controls live in the header, so it points rather than
-            duplicating them. */}
+            box above an empty page. This names the two ways in; both controls live in
+            the header, so it points rather than duplicating them. */}
         {!hasSearched && !isSearching && !barcodeLoading && (!productHistoryData || productHistoryData.length === 0) && (
           <EmptyState
             variant="empty"

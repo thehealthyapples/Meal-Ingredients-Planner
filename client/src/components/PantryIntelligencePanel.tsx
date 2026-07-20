@@ -26,8 +26,6 @@ import {
   IntelligenceCard,
   SeasonalCard,
   HouseholdInsightCard,
-  SimplyBetterChoiceCard,
-  OpportunityCard,
 } from "@/components/intelligence";
 
 // ── Types (mirror the server projection) ──────────────────────────────────────
@@ -49,7 +47,6 @@ interface PantryIntelligence {
     meals: Array<{ mealId: number; name: string }>;
   } | null;
   household?: { headline: string; isNewDiscovery: boolean } | null;
-  simplyBetter?: { suggestion: string; why: string } | null;
   oftenEnjoyedWith?: ConnectedRow | null;
   similarFoods?: ConnectedRow | null;
   discovery?: {
@@ -58,11 +55,6 @@ interface PantryIntelligence {
     name: string;
     reason: string;
     linkable: boolean;
-  } | null;
-  opportunity?: {
-    ingredient: string;
-    mealCount: number;
-    meals: string[];
   } | null;
 }
 
@@ -140,17 +132,6 @@ export default function PantryIntelligencePanel({ name, ...rest }: Props) {
       : data.mealSupport.atCap
         ? `In ${mealCount}+ of your Cookbook meals`
         : `In ${mealCount} ${mealCount === 1 ? "meal" : "meals"} in your Cookbook`;
-
-  const opp = data.opportunity;
-  const oppText = opp
-    ? `Adding ${opp.ingredient} would unlock ${opp.mealCount} ${
-        opp.mealCount === 1 ? "meal" : "meals"
-      } you already have the rest of.`
-    : null;
-  const oppWhy =
-    opp && opp.meals.length > 0
-      ? `Such as ${opp.meals.join(", ")}.`
-      : null;
 
   return (
     <div
@@ -234,23 +215,9 @@ export default function PantryIntelligencePanel({ name, ...rest }: Props) {
         />
       )}
 
-      {/* ── Pantry Opportunities (assembled: Meals + Pantry) ── */}
-      {oppText && (
-        <OpportunityCard
-          text={oppText}
-          why={oppWhy}
-          data-testid="pantry-intelligence-opportunity"
-        />
-      )}
-
-      {/* ── Simply Better (the one easy upgrade) ── */}
-      {data.simplyBetter && (
-        <SimplyBetterChoiceCard
-          suggestion={data.simplyBetter.suggestion}
-          why={data.simplyBetter.why}
-          data-testid="pantry-intelligence-simply-better"
-        />
-      )}
+      {/* UX3 — the "you could" opportunity and the "simply better" upgrade were
+          advice, not shelf facts. The Companion gives them; this panel keeps what
+          the household's own data says about this food. */}
 
       {/* ── Discovery: one thoughtful next step ── */}
       {data.discovery && (

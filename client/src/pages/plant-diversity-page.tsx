@@ -3,7 +3,6 @@ import { BarChart3, Salad, X } from "lucide-react";
 import { useWeekMealEntries } from "@/hooks/use-week-meal-entries";
 import { PlantDiversityReport } from "@/components/PlantDiversityReport";
 import { HouseholdNutritionCentre } from "@/components/HouseholdNutritionCentre";
-import { AmbientIntelligence } from "@/components/intelligence";
 import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -99,24 +98,9 @@ export default function PlantDiversityPage() {
                 ))}
               </div>
             ) : (
-              <>
-                {/* HNP2 — the Nutrition domain's ambient surface, and the fourth of the
-                    four registries a domain must appear in. The other three route the
-                    opportunity; without a mount, nothing renders it and the card would
-                    reach the household only through the Companion.
-
-                    It sits with the weekly plant view deliberately: the balance gap is a
-                    claim about THIS WEEK's composition ("no whole grains are planned"),
-                    so it belongs beside the week it describes rather than beside the
-                    all-time Nutrition Centre on the Nutrients tab. */}
-                <AmbientIntelligence
-                  surfaceKey="nutrition"
-                  domains={["nutrition"]}
-                  title="This week's balance"
-                  data-testid="ambient-nutrition"
-                />
-                <PlantDiversityReport weekMeals={weekMeals} />
-              </>
+              // UX3 — the week's own plant data, and nothing interpreting it: the
+              // balance gap now reaches the household through the Companion.
+              <PlantDiversityReport weekMeals={weekMeals} />
             )}
           </>
         )}

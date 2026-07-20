@@ -52,6 +52,8 @@ import {
   type CompanionSurfaceHints,
 } from "./companion-context";
 import { COMPANION_OPEN_EVENT } from "./companion-open";
+import { useCompanionNotices } from "@/hooks/use-companion-notices";
+import { useUser } from "@/hooks/use-user";
 
 /**
  * PHASE5E — one turn's request. `askHints` are the pointers that belong to a single
@@ -1177,7 +1179,7 @@ function AssistantInput({ value, onChange, onSubmit, isPending, onFocusChange }:
 
   return (
     <div
-      className="border-t border-border/20 px-3 py-3 bg-background/80 backdrop-blur-sm"
+      className="border-t border-border/20 px-3 py-3 bg-popover"
       data-testid="assistant-input-area"
     >
       <div className="flex items-end gap-2">
@@ -1254,6 +1256,31 @@ export default function FloatingAssistant() {
   const { ask, clearAsk } = usePendingAsk();
 
   const [isOpen, setIsOpen] = useState(false);
+
+  // ── UX3 — THE COMPANION BECOMES THE MOUTH OF THE NOTICE ENGINE ──────────────
+  //
+  // The Notice Engine has always been the canonical owner of THA's proactive
+  // reminders, warnings and encouragement: it applies the Silence Rules (at most
+  // two per moment, ranked by attention, deduped) and the Behaviour Engine voices
+  // each sentence in the household's chosen personality — all server-side, once.
+  //
+  // What it did NOT have was a mouth. Its only consumer was `/home`, under a
+  // heading reading "From your Companion" — so the one room in the house was
+  // speaking in the Companion's name while the Companion itself, present in every
+  // room, had nothing to say. UX2 named that defect and half-closed it (it
+  // dissolved the box); the owner's UX3 ruling closes it: coaching, reminders and
+  // encouragement belong to the Companion, and the dashboard keeps today,
+  // orientation and context.
+  //
+  // The read moves here rather than being added here. React Query dedupes on the
+  // key, so Home costs no extra fetch; the other rooms gain one lightweight query
+  // per session, which is the price of the Companion actually being present in
+  // them. This is the BEHAVIOUR change COMP1 § 11 scoped and a visual refinement
+  // was right to refuse — it is made deliberately, by an owner ruling, not
+  // silently.
+  const { user } = useUser();
+  const { data: noticesData } = useCompanionNotices(!!user);
+  const notices = noticesData?.notices ?? [];
 
   // NAV1 — the permanent header carries a Companion entry. It ASKS to open
   // rather than owning the panel, so this state stays here, where it belongs:
@@ -1499,13 +1526,28 @@ export default function FloatingAssistant() {
         // `speaking` is the Companion composing a reply, and it deliberately
         // replaces a spinner: a friend thinking, not a machine processing.
         // `listening` is the household addressing it — the input has focus.
-        // `aware` (it holds something meaningful to say) is fully defined in CSS
-        // and is NOT set here: it needs the `useCompanionNotices` read, which
-        // COMP1 § 11 and HOME_ARRIVAL_PRODUCTION_LOCK § 6.2 both scope as a
-        // BEHAVIOUR change — mounting that query in the shell would add a fetch to
-        // every authenticated page, which a visual refinement may not do silently.
+        //
+        // UX3 — `aware` IS NOW LIVE. It was fully defined in CSS by UX2 and
+        // deliberately never set, because it needed the `useCompanionNotices` read
+        // that COMP1 § 11 scoped as a behaviour change. That read now lives in this
+        // component, so the state finally means what it was drawn to mean: the
+        // Companion holds something the Notice Engine judged worth saying.
+        //
+        // It is the LOWEST-priority state, and that ordering is the whole ethic of
+        // this brief. Awareness never interrupts speaking or listening; it is what
+        // the Companion looks like at REST when it has something to offer — a light
+        // on in the next room, not a hand on your shoulder. It carries a badge, a
+        // count and a colour precisely nowhere: no number, no red dot, no bounce
+        // (HOUSE1 § 24, "no red badges, unread counts, or notification pile"). If
+        // the household never looks, nothing has been lost and nothing was demanded.
         data-companion-state={
-          isPending ? "speaking" : inputFocused && isOpen ? "listening" : "idle"
+          isPending
+            ? "speaking"
+            : inputFocused && isOpen
+              ? "listening"
+              : !isOpen && notices.length > 0
+                ? "aware"
+                : "idle"
         }
         className={cn(
           // PX1-W1 (fnd-px-fab-covers-nav): the FAB sat at bottom-6 z-50 — the
@@ -1582,7 +1624,23 @@ export default function FloatingAssistant() {
                     "fixed right-0 top-0 bottom-0 z-50",
                     "w-full sm:w-[380px]",
                     "flex flex-col",
-                    "bg-background/97 backdrop-blur-md",
+                    // UX3 — THE COMPANION IS FURNITURE, NOT GLASS.
+                    //
+                    // This was `bg-background/97 backdrop-blur-md`, and opening the
+                    // panel on Home is what exposed it: the orchard behind the room
+                    // smeared straight through the surface, so the Companion's own
+                    // name sat on a blurred photograph of a hillside.
+                    //
+                    // Three rules said no, and the picture said it louder. Blueprint
+                    // § 6.2 puts overlays at E0 — no orchard image. § 6.1 says the
+                    // orchard never carries text, "without negotiation". And UX_NAV1
+                    // retired backdrop-blur from the nav shelf for exactly this
+                    // reason: frosted glass is a technology signature (Blueprint
+                    // § 1.5), and furniture in this house is opaque.
+                    //
+                    // The friend at the counter is a presence in the room, not a pane
+                    // of glass held up in front of the view.
+                    "bg-popover",
                     "border-l border-border/30",
                     "shadow-2xl",
                   )}
@@ -1661,6 +1719,36 @@ export default function FloatingAssistant() {
                             {experience.invitation}
                           </p>
                         </div>
+                      )}
+                      {/* ── UX3 — WHAT THE COMPANION HAD TO SAY ────────────────
+                          The other half of `aware`. The emblem says the Companion
+                          is holding something; opening it is how the household
+                          asks what. Nothing here is authored by this component:
+                          every sentence is the Behaviour Engine's, verbatim, in
+                          the household's chosen personality, and the Silence Rules
+                          already chose which ones and how many (at most two).
+                          This surface never re-sorts, re-slices, re-words or pads
+                          that list — doing so would be a second attention budget,
+                          which the Notice Engine Architecture § 9 forbids.
+
+                          Absent in silence, with no empty state of its own: a
+                          Companion with nothing to say simply greets you, which is
+                          the honest outcome rather than a padded one. */}
+                      {notices.length > 0 && (
+                        <ul
+                          className="px-4 pb-1 space-y-3"
+                          data-testid="list-companion-notices"
+                        >
+                          {notices.map((n, i) => (
+                            <li
+                              key={n.id}
+                              className="text-[15px] leading-relaxed text-foreground/85"
+                              data-testid={`companion-notice-${i}`}
+                            >
+                              {n.text}
+                            </li>
+                          ))}
+                        </ul>
                       )}
                       <QuickActions
                         surface={surface}
