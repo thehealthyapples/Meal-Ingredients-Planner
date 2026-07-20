@@ -6,7 +6,8 @@
 | **Session ID** | `EXP1_North_Star_Experience_Architecture` |
 | **Rollback ID** | `rollback/EXP1-north-star-experience-architecture-20260720` |
 | **Start time** | 2026-07-20T18:51:52Z UTC |
-| **Current stage** | Implementation |
+| **Current stage** | Waiting for User |
+| **Commit** | `4fab18fbd8b8bb508b97410be424b592383ca9ba` (pushed to `int1-intelligence-platform`) |
 
 ## Objective
 Establish the approved North Star experience architecture (NorthStar Final image) across every THA room: one reusable workspace framework, environment headers, single global search, one Companion entry, stencil branding
@@ -30,12 +31,12 @@ Establish the approved North Star experience architecture (NorthStar Final image
 - [x] Second sweep retired remaining decorative coloured apples (shopping/diary/analyser menu triggers, diary settings icon, analyser "THA Review" mark, UPF modal bullets); rating-apple score contexts deliberately kept (UIA §10 — the apple is the face of scores)
 - [x] Gates: client typecheck 0 · adoption:check — own page-shell failure fixed via pageContainerClass, remaining 9 fails verified pre-existing at tag · repo-structure-verify 2 loose-file fails pre-existing
 - [x] Doc evidence + manual verification sections finalised; tmp scripts deleted
-- [ ] Commit, push, record SHA
+- [x] Committed `4fab18fb` (51 files) and pushed
 
-**Last checkpoint:** All verification complete; committing.
+**Last checkpoint:** Committed and pushed; session complete pending owner review.
 
 ## Next action
-Commit the change set, push, record the commit SHA below, move stage to Waiting for User (owner review of docs/implementation/EXP1_NORTH_STAR_EXPERIENCE_ARCHITECTURE.md and the evidence set).
+Owner to review docs/implementation/EXP1_NORTH_STAR_EXPERIENCE_ARCHITECTURE.md and the before/after evidence at attached_assets/design/north_star/v3/evidence/ against the approved North Star image. Remaining refinements are listed in the doc's §8 rollout plan (per-room environment assets by governed admission; two-orchard asset convergence; true cross-room search; Shopping control-bar compression pass; AdminBanner fold-in; /dashboard's future).
 
 ## Blockers
 none
