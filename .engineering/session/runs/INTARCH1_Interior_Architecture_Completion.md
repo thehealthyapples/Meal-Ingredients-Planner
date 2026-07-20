@@ -5,7 +5,7 @@
 | **Session ID** | `INTARCH1_Interior_Architecture_Completion` |
 | **Rollback ID** | `rollback/INTARCH1-interior-architecture-completion-20260720` → `7aa63d76` |
 | **Start time** | 2026-07-20T09:05:00Z UTC |
-| **Current stage** | Complete — committed, pushed; awaiting owner review |
+| **Current stage** | Complete — committed (`0580ff81`), pushed; awaiting owner review |
 
 ## Objective
 Complete the Interior Architecture of the house: every room to feel like part of one
