@@ -22,6 +22,7 @@ This document exists to make that checkable **per experience**. The canon alread
 - **Canonical owner of exactly two things:** (1) the **per-experience ownership map** (§ Canonical Experience Owners) — the assembled experience→owner binding, every cell of which cites the owner it binds; (2) the **UI Composition Rules** as an assembled statement (each rule cited to its owner where one exists).
 - **Restate-no-rule** (`ARCHITECTURE_PRINCIPLES.md` Principle 2): every statement of already-owned law here is a citation. Where this document and an owner disagree, this document is wrong.
 - **This document names owners; it never creates them.** Where the canon has no owner for something (noted honestly below), this document records the absence and the path to an owner — it does not fill the gap by fiat.
+- **Facts are one axis; feeling is the other.** This document binds every visible element to the owner of its *fact*. The authority over its *feeling* — final aesthetic and emotional approval, exercised through the Experience canon's gates — is the **Home Owner** (`HOME_OWNER_ARCHITECTURE.md`, `HOMEOWNER1`). Neither touches the other's axis: the Home Owner cannot rebind a fact, and no fact-owner's publication makes a surface belong in the house. A surface is done when both are satisfied. *(Cross-reference added under `HOMEOWNER1`, 2026-07-20.)*
 
 ---
 
