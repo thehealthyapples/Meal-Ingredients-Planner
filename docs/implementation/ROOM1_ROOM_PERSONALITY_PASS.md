@@ -2,8 +2,9 @@
 
 **Document ID:** `ROOM1`
 **Date:** 2026-07-21
-**Status:** Implemented (code) · **Waiting for User** (Home Owner review of the seven rooms)
+**Status:** Implemented (code) · committed `adee7d91` + pushed to `int1-intelligence-platform` · **Waiting for User** (Home Owner review of the seven rooms) · **NOT deployed** (production is a separate human-gated act)
 **Rollback identifier:** `rollback/ROOM1-room-personality-pass-20260721` → `4c65d496cac031e8101a6d166a04d4bbe84e11bc`
+**Commit:** `adee7d91`
 **Author of record:** Colin Clapson (owner / Home Owner) · implemented by Claude under the Engineering Workflow
 **Session run file:** [`.engineering/session/runs/ROOM1_Room_Personality_Pass.md`](../../.engineering/session/runs/ROOM1_Room_Personality_Pass.md)
 **Governing parents:** `THA_EXPERIENCE_BLUEPRINT.md` § 5 / § 8 (One Home, Many Places; the ground plane) · `GOVERNING_EXPERIENCE_ARCHITECTURE.md` (GEA19 "a room may not fork the house", GEA11) · `THA_KEPT_ROOM_TRANSLATION.md` § 4 (Rooms) · `LIVING_HOME_EXPERIENCE_ARCHITECTURE.md` · the Experience Governance canon
