@@ -95,7 +95,7 @@ jobs:
         run: echo "SESSION_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
 
       - name: Install dependencies from the lockfile
-        run: npm ci
+      run: npm ci --include=dev
 
       # COH-4 — the cheapest gate in this job: pure filesystem reads. No database, no secret, no
       # build. It runs FIRST for exactly that reason — a governing document that no longer
