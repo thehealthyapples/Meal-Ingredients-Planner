@@ -5,7 +5,7 @@
 | **Session ID** | `HOSP1_Hospitality_Pass_1` |
 | **Rollback ID** | `rollback/HOSP1-hospitality-pass-ee624d9a` → `ee624d9ae337d40e509dba48d19431e576092f72` |
 | **Start time** | 2026-07-21 |
-| **Current stage** | Waiting for User (Home Owner review) — implemented + verified, committed + pushed |
+| **Current stage** | Waiting for User (Home Owner review) — committed `6c878c69` + pushed to `int1-intelligence-platform` |
 
 ## Objective
 Hospitality Pass 1 — bring warmth to the Living Home through hospitality, not
