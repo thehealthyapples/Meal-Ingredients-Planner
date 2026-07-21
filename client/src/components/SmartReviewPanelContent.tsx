@@ -77,7 +77,7 @@ function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, 
       return res.json();
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['/api/shopping-list'] }); toast({ title: "Added to basket" }); },
-    onError: () => toast({ title: "Failed to add", variant: "destructive" }),
+    onError: () => toast({ title: "Couldn't add that", description: "Try again in a moment.", variant: "destructive" }),
   });
 
   const analyzeMutation = useMutation({

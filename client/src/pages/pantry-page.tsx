@@ -467,7 +467,7 @@ function FoodPantrySection({
       setSendQty(1);
       qclient.invalidateQueries({ queryKey: ["/api/shopping-list"] });
     } catch {
-      toast({ title: "Failed to add to basket", variant: "destructive" });
+      toast({ title: "Couldn't add that to your basket", description: "Try again in a moment.", variant: "destructive" });
     } finally {
       setSending(false);
     }
@@ -921,7 +921,7 @@ function HomePantrySection({
       setSendQty(1);
       qclient.invalidateQueries({ queryKey: ["/api/shopping-list"] });
     } catch {
-      toast({ title: "Failed to add to basket", variant: "destructive" });
+      toast({ title: "Couldn't add that to your basket", description: "Try again in a moment.", variant: "destructive" });
     } finally {
       setSending(false);
     }

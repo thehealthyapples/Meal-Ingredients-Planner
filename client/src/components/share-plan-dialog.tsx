@@ -90,7 +90,7 @@ export function SharePlanDialog({ open, onOpenChange }: SharePlanDialogProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/plan-templates/library"] });
     },
     onError: () => {
-      toast({ title: "Couldn't generate share link", description: "Something went wrong - try again", variant: "destructive" });
+      toast({ title: "Couldn't create a share link", description: "Try again in a moment.", variant: "destructive" });
     },
   });
 
@@ -101,7 +101,7 @@ export function SharePlanDialog({ open, onOpenChange }: SharePlanDialogProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/plan-templates/library"] });
       toast({ title: "Sharing stopped" });
     },
-    onError: () => toast({ title: "Couldn't stop sharing", description: "Something went wrong - try again", variant: "destructive" }),
+    onError: () => toast({ title: "Couldn't stop sharing", description: "Try again in a moment.", variant: "destructive" }),
   });
 
   function handleCopy() {

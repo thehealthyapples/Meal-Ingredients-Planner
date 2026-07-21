@@ -98,7 +98,7 @@ export function PlannerBulkAssignPanel({
       onClose();
     },
     onError: () => {
-      toast({ title: "Failed to assign meals", variant: "destructive" });
+      toast({ title: "Couldn't assign the meals", description: "Try again in a moment.", variant: "destructive" });
     },
   });
 

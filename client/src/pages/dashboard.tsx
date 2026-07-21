@@ -139,7 +139,7 @@ export default function Dashboard() {
       setWeightOpen(false);
       setWeightInput("");
     },
-    onError: () => toast({ title: "Failed to save weight", variant: "destructive" }),
+    onError: () => toast({ title: "Couldn't save your weight", description: "Nothing has been lost — try again.", variant: "destructive" }),
   });
 
   const today = new Date().toISOString().slice(0, 10);
@@ -174,7 +174,7 @@ export default function Dashboard() {
       setSignalsOpen(false);
       resetSignalsForm();
     },
-    onError: () => toast({ title: "Failed to save", variant: "destructive" }),
+    onError: () => toast({ title: "Couldn't save your changes", description: "Nothing has been lost — try again.", variant: "destructive" }),
   });
 
   const submitSignals = () => {

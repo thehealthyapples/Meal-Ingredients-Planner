@@ -213,7 +213,7 @@ export default function BarcodeScanner({
         setIsInitializing(false);
       }
     } catch (err) {
-      let errorMessage = "Failed to access camera";
+      let errorMessage = "We couldn't reach your camera.";
       if (err instanceof Error) {
         if (
           err.name === "NotAllowedError" ||

@@ -151,7 +151,7 @@ function SlotSection({
       onPlannerInvalidate();
     },
     onError: () => {
-      toast({ title: "Failed to add meal", variant: "destructive" });
+      toast({ title: "Couldn't add the meal", description: "Try again in a moment.", variant: "destructive" });
     },
   });
 
@@ -163,7 +163,7 @@ function SlotSection({
       onPlannerInvalidate();
     },
     onError: () => {
-      toast({ title: "Failed to remove meal", variant: "destructive" });
+      toast({ title: "Couldn't remove the meal", description: "Try again in a moment.", variant: "destructive" });
     },
   });
 
@@ -177,7 +177,7 @@ function SlotSection({
       await apiRequest("PATCH", `/api/planner/entries/${entryA.id}`, { position: posB });
       onPlannerInvalidate();
     } catch {
-      toast({ title: "Failed to reorder meals", variant: "destructive" });
+      toast({ title: "Couldn't reorder the meals", description: "Try again in a moment.", variant: "destructive" });
     } finally {
       setSwapping(false);
     }

@@ -1532,7 +1532,7 @@ export default function ShoppingWorkspacePage() {
       fetch("/api/events/track", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
         body: JSON.stringify({ eventType: "quicklist_sent_to_cyc", metadata: { itemCount: addedCount, source: "shopping_workspace_add" } }) }).catch(() => {});
     } catch (err: any) {
-      toast({ title: "Failed to process list", description: err?.message ?? "Please try again.", variant: "destructive" });
+      toast({ title: "Couldn't read that list", description: err?.message ?? "Try again in a moment.", variant: "destructive" });
     } finally {
       setIsAddProcessing(false);
     }
@@ -1719,7 +1719,7 @@ export default function ShoppingWorkspacePage() {
       toast({ title: "Shopping list cleared" });
       setClearDialogOpen(false);
     },
-    onError: () => toast({ title: "Failed to clear list", variant: "destructive" }),
+    onError: () => toast({ title: "Couldn't clear the list", description: "Try again in a moment.", variant: "destructive" }),
   });
 
   // ── SHOP3: price data ──────────────────────────────────────────────────
@@ -2010,7 +2010,7 @@ export default function ShoppingWorkspacePage() {
       ));
       toast({ title: source === "quick_list" ? "Quick list cleared" : "Planned items cleared" });
     } catch {
-      toast({ title: "Failed to clear items", variant: "destructive" });
+      toast({ title: "Couldn't clear those items", description: "Try again in a moment.", variant: "destructive" });
     } finally {
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.prices.path] });

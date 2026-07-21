@@ -264,7 +264,7 @@ export function TemplatesPanel({ open, onClose, user, inline }: TemplatePanelPro
       });
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.message || "Import failed");
+        throw new Error(err.message || "We couldn't import this plan.");
       }
       return res.json();
     },
@@ -334,7 +334,7 @@ export function TemplatesPanel({ open, onClose, user, inline }: TemplatePanelPro
       setEditingId(null);
       toast({ title: "Template updated" });
     },
-    onError: () => toast({ title: "Failed to update", variant: "destructive" }),
+    onError: () => toast({ title: "Couldn't update the template", description: "Try again in a moment.", variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
@@ -347,7 +347,7 @@ export function TemplatesPanel({ open, onClose, user, inline }: TemplatePanelPro
       setDeleteConfirmId(null);
       toast({ title: "Template deleted" });
     },
-    onError: () => toast({ title: "Failed to delete", variant: "destructive" }),
+    onError: () => toast({ title: "Couldn't delete the template", description: "It's still here — try again.", variant: "destructive" }),
   });
 
   const reSnapshotMutation = useMutation({
@@ -383,7 +383,7 @@ export function TemplatesPanel({ open, onClose, user, inline }: TemplatePanelPro
       setAdminNewDesc("");
       toast({ title: "Template created as draft" });
     },
-    onError: () => toast({ title: "Failed to create", variant: "destructive" }),
+    onError: () => toast({ title: "Couldn't create the template", description: "Try again in a moment.", variant: "destructive" }),
   });
 
   const adminSnapshotMutation = useMutation({
@@ -414,7 +414,7 @@ export function TemplatesPanel({ open, onClose, user, inline }: TemplatePanelPro
       qc.invalidateQueries({ queryKey: ["/api/plan-templates/library"] });
       toast({ title: "Template updated" });
     },
-    onError: () => toast({ title: "Couldn't update template", description: "Something went wrong - try again", variant: "destructive" }),
+    onError: () => toast({ title: "Couldn't update the template", description: "Try again in a moment.", variant: "destructive" }),
   });
 
   const renderGlobalTemplateCard = (t: MealPlanTemplate) => {

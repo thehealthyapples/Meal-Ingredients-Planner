@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Store, ExternalLink, ShoppingCart, Globe } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
 import { motion, AnimatePresence } from "framer-motion";
@@ -217,11 +218,13 @@ export default function SupermarketsPage() {
             ))}
 
             {filteredSupermarkets.length === 0 && (
-              <div className="text-center py-16">
-                <Store className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold" data-testid="text-no-results">No supermarkets found</h3>
-                <p className="text-muted-foreground">Try selecting a different country filter.</p>
-              </div>
+              <EmptyState
+                variant="filtered"
+                icon={Store}
+                title="No shops for this country yet"
+                description="Try another country, and we'll show what's nearby."
+                data-testid="text-no-results"
+              />
             )}
           </motion.div>
         </AnimatePresence>

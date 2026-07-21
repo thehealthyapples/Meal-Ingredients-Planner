@@ -449,7 +449,7 @@ export default function WeeklyPlannerPage() {
       qc.invalidateQueries({ queryKey: ["/api/user/planner-settings"] });
     },
     onError: () => {
-      toast({ title: "Failed to update settings", variant: "destructive" });
+      toast({ title: "Couldn't update your settings", description: "Try again in a moment.", variant: "destructive" });
     },
   });
 
@@ -720,7 +720,7 @@ export default function WeeklyPlannerPage() {
       qc.invalidateQueries({ queryKey: ["/api/planner/entries", mealDetail?.entry.id, "eaters"] });
     },
     onError: () => {
-      toast({ title: "Failed to update eaters", variant: "destructive" });
+      toast({ title: "Couldn't update who's eating", description: "Try again in a moment.", variant: "destructive" });
     },
   });
 
@@ -760,7 +760,7 @@ export default function WeeklyPlannerPage() {
       }
     },
     onError: () => {
-      toast({ title: "Failed to remove boost", variant: "destructive" });
+      toast({ title: "Couldn't remove the boost", description: "Try again in a moment.", variant: "destructive" });
     },
   });
 
@@ -797,7 +797,7 @@ export default function WeeklyPlannerPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/api/planner/weeks", activeWeekId, "provisioning"] });
     },
-    onError: () => toast({ title: "Failed to remove item", variant: "destructive" }),
+    onError: () => toast({ title: "Couldn't remove that item", description: "Try again in a moment.", variant: "destructive" }),
   });
 
   const addProvisioningFromDragMutation = useMutation({
@@ -827,7 +827,7 @@ export default function WeeklyPlannerPage() {
       if (!res.ok) throw new Error("Failed to save override");
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/planner/weeks", activeWeekId, "eater-overrides"] }),
-    onError: () => toast({ title: "Failed to save diet override", variant: "destructive" }),
+    onError: () => toast({ title: "Couldn't save the diet change", description: "Try again in a moment.", variant: "destructive" }),
   });
 
   const deleteOverrideMutation = useMutation({
@@ -836,7 +836,7 @@ export default function WeeklyPlannerPage() {
       if (!res.ok) throw new Error("Failed to remove override");
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/planner/weeks", activeWeekId, "eater-overrides"] }),
-    onError: () => toast({ title: "Failed to remove diet override", variant: "destructive" }),
+    onError: () => toast({ title: "Couldn't remove the diet change", description: "Try again in a moment.", variant: "destructive" }),
   });
 
   // ── Meal adaptation (Phase 3) ────────────────────────────────────────────────
@@ -902,7 +902,7 @@ export default function WeeklyPlannerPage() {
       setGuestRestrictions([]);
       setAddGuestOpen(false);
     },
-    onError: () => toast({ title: "Failed to add guest", variant: "destructive" }),
+    onError: () => toast({ title: "Couldn't add the guest", description: "Try again in a moment.", variant: "destructive" }),
   });
 
   const removeGuestMutation = useMutation({
@@ -913,7 +913,7 @@ export default function WeeklyPlannerPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/api/planner/entries", mealDetail?.entry.id, "guests"] });
     },
-    onError: () => toast({ title: "Failed to remove guest", variant: "destructive" }),
+    onError: () => toast({ title: "Couldn't remove the guest", description: "Try again in a moment.", variant: "destructive" }),
   });
 
   const { data: myWeekTemplates = [] } = useQuery<any[]>({
@@ -981,7 +981,7 @@ export default function WeeklyPlannerPage() {
       setRenameValue("");
     },
     onError: () => {
-      toast({ title: "Failed to rename week", variant: "destructive" });
+      toast({ title: "Couldn't rename the week", description: "Try again in a moment.", variant: "destructive" });
     },
   });
 
@@ -1402,7 +1402,7 @@ export default function WeeklyPlannerPage() {
       },
       onError: () => {
         setResolveSession(prev => prev ? { ...prev, pendingRecipeLink: null } : null);
-        toast({ title: "Failed to link recipe", variant: "destructive" });
+        toast({ title: "Couldn't link the recipe", description: "Try again in a moment.", variant: "destructive" });
       },
     });
   };
@@ -2923,7 +2923,7 @@ export default function WeeklyPlannerPage() {
                         toast({ title: "Linked to planner", description: `${ctx.mealName} resolved.` });
                       },
                       onError: () => {
-                        toast({ title: "Failed to link recipe", variant: "destructive" });
+                        toast({ title: "Couldn't link the recipe", description: "Try again in a moment.", variant: "destructive" });
                       },
                     });
                   }}

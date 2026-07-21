@@ -841,19 +841,19 @@ function HouseholdManagementSection({ currentUserId }: { currentUserId: number }
   const leaveMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/household/leave"),
     onSuccess: () => { toast({ title: "Left household" }); setShowLeaveConfirm(false); invalidate(); },
-    onError: (err: any) => toast({ variant: "destructive", title: "Could not leave", description: err?.message || "Failed to leave household." }),
+    onError: (err: any) => toast({ variant: "destructive", title: "Couldn't leave the household", description: err?.message || "Nothing has changed — try again in a moment." }),
   });
 
   const renameMutation = useMutation({
     mutationFn: (name: string) => apiRequest("PATCH", "/api/household", { name }),
     onSuccess: () => { toast({ title: "Household renamed" }); setEditingName(false); invalidate(); },
-    onError: (err: any) => toast({ variant: "destructive", title: "Could not rename", description: err?.message || "Failed to rename household." }),
+    onError: (err: any) => toast({ variant: "destructive", title: "Couldn't rename the household", description: err?.message || "Nothing has changed — try again in a moment." }),
   });
 
   const removeMemberMutation = useMutation({
     mutationFn: (userId: number) => apiRequest("DELETE", `/api/household/members/${userId}`),
     onSuccess: () => { toast({ title: "Member removed" }); invalidate(); },
-    onError: (err: any) => toast({ variant: "destructive", title: "Could not remove member", description: err?.message || "Failed to remove member." }),
+    onError: (err: any) => toast({ variant: "destructive", title: "Couldn't remove that member", description: err?.message || "Nothing has changed — try again in a moment." }),
   });
 
   const copyInviteCode = () => {
@@ -1901,7 +1901,7 @@ function MealPlanSection() {
       if (!defaultRes.ok) throw new Error("No default template found");
       const { id } = await defaultRes.json();
       const applyRes = await fetch(`/api/plan-templates/${id}/apply?mode=replace`, { method: "POST" });
-      if (!applyRes.ok) throw new Error("Failed to apply template");
+      if (!applyRes.ok) throw new Error("We couldn't apply that template.");
       const data = await applyRes.json();
       toast({
         title: "Plan loaded!",
@@ -2078,7 +2078,7 @@ function AccountSettings({ profile }: { profile: ProfileData }) {
       });
       const data = await res.json();
       if (!res.ok) {
-        setPwError(data.message || "Something went wrong.");
+        setPwError(data.message || "That didn't go through — please try again.");
         setPwState("error");
       } else {
         setPwState("success");
@@ -2089,7 +2089,7 @@ function AccountSettings({ profile }: { profile: ProfileData }) {
         toast({ title: "Password changed" });
       }
     } catch {
-      setPwError("Something went wrong. Please try again.");
+      setPwError("That didn't go through — please try again.");
       setPwState("error");
     }
   };

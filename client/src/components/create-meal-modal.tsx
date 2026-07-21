@@ -124,7 +124,7 @@ export function CreateMealContent({ initialTitle, prefill, onSaved, onCancel }: 
       toast({ title: "Meal created", description: meal.name });
       onSaved(meal.id);
     } catch {
-      toast({ title: "Failed to create meal", variant: "destructive" });
+      toast({ title: "Couldn't create the meal", description: "Try again in a moment.", variant: "destructive" });
     }
   };
 

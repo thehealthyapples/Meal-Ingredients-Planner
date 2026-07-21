@@ -186,7 +186,7 @@ export function MealCompletionDialog({ open, onClose, meal }: MealCompletionDial
       onClose();
     },
     onError: () => {
-      toast({ title: "Failed to add to planner", variant: "destructive" });
+      toast({ title: "Couldn't add that to your planner", description: "Try again in a moment.", variant: "destructive" });
     },
   });
 

@@ -185,7 +185,7 @@ export default function AuthPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setResetError(data.message || "Something went wrong.");
+        setResetError(data.message || "That didn't go through — please try again.");
         setResetState("error");
       } else {
         setResetState("success");
@@ -197,7 +197,7 @@ export default function AuthPage() {
         }, 2000);
       }
     } catch {
-      setResetError("Something went wrong. Please try again.");
+      setResetError("That didn't go through — please try again.");
       setResetState("error");
     }
   };
@@ -310,7 +310,7 @@ export default function AuthPage() {
                   ? "Verification link has expired. Please register again."
                   : verifyError === "invalid"
                   ? "Invalid verification link. Please check your email or register again."
-                  : "Something went wrong. Please try again."}
+                  : "That didn't go through — please try again."}
               </p>
             </div>
           )}

@@ -722,7 +722,7 @@ export default function ProductsPage() {
         } else if (scanStatus === 'timeout' || res.status === 504) {
           toast({ title: "Timeout", description: "The lookup timed out. Please try again.", variant: "destructive" });
         } else {
-          toast({ title: "Scan Error", description: "Something went wrong during barcode lookup.", variant: "destructive" });
+          toast({ title: "Couldn't read that barcode", description: "Give it another scan in a moment.", variant: "destructive" });
         }
         return;
       }
@@ -762,7 +762,7 @@ export default function ProductsPage() {
         toast({ title: "Not Found", description: `No product found for barcode ${barcode}`, variant: "destructive" });
       }
     } catch {
-      toast({ title: "Scan Error", description: "Something went wrong during barcode lookup.", variant: "destructive" });
+      toast({ title: "Couldn't read that barcode", description: "Give it another scan in a moment.", variant: "destructive" });
     } finally {
       setBarcodeLoading(false);
     }
@@ -915,7 +915,7 @@ export default function ProductsPage() {
       toast({ title: "Added to basket", description: "Product added" });
     },
     onError: () => {
-      toast({ title: "Couldn't add product", description: "Something went wrong - try again", variant: "destructive" });
+      toast({ title: "Couldn't add that product", description: "Try again in a moment.", variant: "destructive" });
     },
   });
 
@@ -1798,14 +1798,14 @@ export default function ProductsPage() {
                 </thead>
                 <tbody>
                   <CompareRow label="THA Score" products={compareProducts} render={(p) => {
-                    if (!p.upfAnalysis) return <span className="text-muted-foreground">N/A</span>;
+                    if (!p.upfAnalysis) return <span className="text-muted-foreground" title="Not yet known">—</span>;
                     return <AppleRating rating={p.upfAnalysis.thaRating} sizePx={20} showTooltip={false} animate={false} />;
                   }} highlightBest={(products) => {
                     const ratings = products.map(p => p.upfAnalysis?.thaRating ?? -1);
                     return ratings.indexOf(Math.max(...ratings));
                   }} />
                   <CompareRow label="UPF Score" products={compareProducts} render={(p) => {
-                    if (!p.upfAnalysis) return <span className="text-muted-foreground">N/A</span>;
+                    if (!p.upfAnalysis) return <span className="text-muted-foreground" title="Not yet known">—</span>;
                     return <span className={p.upfAnalysis.upfScore >= 60 ? 'text-red-600 font-semibold' : p.upfAnalysis.upfScore >= 30 ? 'text-orange-600 font-semibold' : 'text-green-600 font-semibold'}>{p.upfAnalysis.upfScore}/100</span>;
                   }} highlightBest={(products) => {
                     const scores = products.map(p => p.upfAnalysis?.upfScore ?? Infinity);
@@ -1813,10 +1813,10 @@ export default function ProductsPage() {
                   }} />
                   <CompareRow label="NOVA Group" products={compareProducts} render={(p) => {
                     const nova = p.nova_group || p.analysis?.novaGroup;
-                    return nova ? <NovaGroupBadge group={nova} /> : <span className="text-muted-foreground">N/A</span>;
+                    return nova ? <NovaGroupBadge group={nova} /> : <span className="text-muted-foreground" title="Not yet known">—</span>;
                   }} />
                   <CompareRow label="Additives" products={compareProducts} render={(p) => {
-                    if (!p.upfAnalysis) return <span className="text-muted-foreground">N/A</span>;
+                    if (!p.upfAnalysis) return <span className="text-muted-foreground" title="Not yet known">—</span>;
                     const highRisk = p.upfAnalysis.additiveMatches.filter(a => a.riskLevel === 'high');
                     return (
                       <div className="space-y-0.5">
@@ -1833,7 +1833,7 @@ export default function ProductsPage() {
                     return counts.indexOf(Math.min(...counts));
                   }} />
                   <CompareRow label="Ultra-Processed?" products={compareProducts} render={(p) => {
-                    if (!p.analysis) return <span className="text-muted-foreground">N/A</span>;
+                    if (!p.analysis) return <span className="text-muted-foreground" title="Not yet known">—</span>;
                     return p.analysis.isUltraProcessed
                       ? <Badge variant="outline" className="text-xs border-red-300 text-red-600">Yes</Badge>
                       : <Badge variant="outline" className="text-xs border-green-300 text-green-600">No</Badge>;

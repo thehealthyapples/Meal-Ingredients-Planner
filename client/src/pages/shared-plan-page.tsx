@@ -121,7 +121,7 @@ export default function SharedPlanPage() {
       toast({ title: "Plan imported" });
       window.location.href = "/planner";
     },
-    onError: () => toast({ title: "Import failed", description: "Something went wrong.", variant: "destructive" }),
+    onError: () => toast({ title: "Couldn't import that plan", description: "Try again in a moment.", variant: "destructive" }),
   });
 
   if (isLoading) {

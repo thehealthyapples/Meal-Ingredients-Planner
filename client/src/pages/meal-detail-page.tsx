@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Loader2, ChefHat, Pencil, Trash2, ShoppingBasket, AlertTriangle, RefreshCw, Plus, X, Save, Minus, Flame, Beef, Wheat, Droplets, Cookie, Droplet, Users, Leaf, Zap, TrendingDown, Sprout, Clock, AlarmClock, ListPlus, Wand2, Check, ChevronDown } from "lucide-react";
 import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
+import { EmptyState } from "@/components/ui/empty-state";
 import { appendPendingIngredient } from "@/lib/quick-list";
 import { getCategoryIcon, getCategoryColor } from "@/lib/category-utils";
 import { useToast } from "@/hooks/use-toast";
@@ -270,7 +271,7 @@ export default function MealDetailPage() {
       navigate(`/meals/${newMeal.id}?edit=1`);
     },
     onError: () => {
-      toast({ title: "Failed to create copy", variant: "destructive" });
+      toast({ title: "Couldn't create an editable copy", description: "Your original recipe is untouched — try again.", variant: "destructive" });
     },
   });
 
@@ -293,7 +294,7 @@ export default function MealDetailPage() {
       toast({ title: "Recipe saved" });
     },
     onError: () => {
-      toast({ title: "Failed to save", variant: "destructive" });
+      toast({ title: "Couldn't save your changes", description: "Nothing has been lost — try again.", variant: "destructive" });
     },
   });
 
@@ -313,7 +314,7 @@ export default function MealDetailPage() {
       navigate(`/meals/${newMeal.id}`);
     },
     onError: () => {
-      toast({ title: "Failed to save as new recipe", variant: "destructive" });
+      toast({ title: "Couldn't save it as a new recipe", description: "Try again in a moment.", variant: "destructive" });
     },
   });
 
@@ -327,7 +328,7 @@ export default function MealDetailPage() {
       navigate("/cookbook");
     },
     onError: () => {
-      toast({ title: "Failed to delete meal", variant: "destructive" });
+      toast({ title: "Couldn't delete the meal", description: "It's still in your cookbook — try again.", variant: "destructive" });
     },
   });
 
@@ -346,7 +347,7 @@ export default function MealDetailPage() {
       toast({ title: "Added to basket" });
     },
     onError: () => {
-      toast({ title: "Failed to add to basket", variant: "destructive" });
+      toast({ title: "Couldn't add that to your basket", description: "Try again in a moment.", variant: "destructive" });
     },
   });
 
@@ -363,7 +364,7 @@ export default function MealDetailPage() {
       toast({ title: "Added to basket", description: meal!.name });
     },
     onError: () => {
-      toast({ title: "Couldn't add to basket", description: "Something went wrong - try again", variant: "destructive" });
+      toast({ title: "Couldn't add that to your basket", description: "Try again in a moment.", variant: "destructive" });
     },
   });
 
@@ -380,7 +381,7 @@ export default function MealDetailPage() {
       setReimportUrl("");
     },
     onError: () => {
-      toast({ title: "Failed to import instructions", description: "Could not find instructions on that page. Please check the URL.", variant: "destructive" });
+      toast({ title: "Couldn't import the instructions", description: "We couldn't find instructions on that page — have a look at the link and try again.", variant: "destructive" });
     },
   });
 
@@ -462,10 +463,17 @@ export default function MealDetailPage() {
   if (!meal) {
     return (
       <div className={`${pageContainerClass(true)} pb-8`} data-testid="meal-not-found">
-        <p className="text-muted-foreground text-center">Meal not found.</p>
-        <Button variant="outline" className="mx-auto mt-4 block" onClick={() => navigate("/cookbook")} data-testid="button-back-to-meals">
-          Back to Meals
-        </Button>
+        <EmptyState
+          variant="unavailable"
+          icon={ChefHat}
+          title="This recipe isn't here"
+          description="It may have been removed, or the link may be out of date. Your cookbook is waiting whenever you are."
+          action={
+            <Button variant="outline" onClick={() => navigate("/cookbook")} data-testid="button-back-to-meals">
+              Back to your cookbook
+            </Button>
+          }
+        />
       </div>
     );
   }

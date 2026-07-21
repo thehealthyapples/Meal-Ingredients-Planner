@@ -159,7 +159,7 @@ export function ImportDiaryModal({
         setColumnMap(autoMap(data.headers));
         setStep("preview");
       } catch {
-        setFileError("Failed to parse the file. Please check the format.");
+        setFileError("We couldn't read that file — have a look at the format and try again.");
       }
     };
     reader.readAsText(file);

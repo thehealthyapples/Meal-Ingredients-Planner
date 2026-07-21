@@ -191,7 +191,7 @@ export default function QuickMealPage() {
         sourceName: recipe.source,
       });
     } catch {
-      toast({ title: "Failed to save recipe", variant: "destructive" });
+      toast({ title: "Couldn't save the recipe", description: "Try again in a moment.", variant: "destructive" });
       updatePartSource(partId, {
         type: "web",
         url: recipe.url ?? undefined,
@@ -353,7 +353,7 @@ export default function QuickMealPage() {
       navigate("/shopping-workspace");
     },
     onError: () => {
-      toast({ title: "Failed to create basket list", variant: "destructive" });
+      toast({ title: "Couldn't create the basket list", description: "Try again in a moment.", variant: "destructive" });
     },
   });
 
@@ -370,7 +370,7 @@ export default function QuickMealPage() {
       });
     },
     onError: () => {
-      toast({ title: "Failed to save meal", variant: "destructive" });
+      toast({ title: "Couldn't save the meal", description: "Try again in a moment.", variant: "destructive" });
     },
   });
 

@@ -186,7 +186,7 @@ export function AddToWeekModal({ open, onClose, product }: Props) {
 
       handleClose();
     } catch {
-      toast({ title: "Failed to add to week", variant: "destructive" });
+      toast({ title: "Couldn't add that to your week", description: "Try again in a moment.", variant: "destructive" });
     } finally {
       setSaving(false);
     }

@@ -468,7 +468,7 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
       toast({ title: "Added to basket", description: qty > 1 ? `${qty} × ${mealName}` : mealName });
     },
     onError: () => {
-      toast({ title: "Failed to add", description: "Could not add to shopping list.", variant: "destructive" });
+      toast({ title: "Couldn't add that to your basket", description: "Try again in a moment.", variant: "destructive" });
     },
   });
 
@@ -504,7 +504,7 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
       toast({ title: "Added to basket", description: mealName });
     },
     onError: () => {
-      toast({ title: "Couldn't add product", description: "Something went wrong - try again", variant: "destructive" });
+      toast({ title: "Couldn't add that product", description: "Try again in a moment.", variant: "destructive" });
     },
   });
 
@@ -770,7 +770,7 @@ function CardActionsMenu({
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.totalCost.path] });
       toast({ title: "Added to shopping", description: meal.name });
     },
-    onError: () => toast({ title: "Failed to add to shopping", variant: "destructive" }),
+    onError: () => toast({ title: "Couldn't add that to your basket", description: "Try again in a moment.", variant: "destructive" }),
   });
 
   const addProductMutation = useMutation({
@@ -1034,7 +1034,7 @@ function MobileMealActionSheet({
       toast({ title: "Added to shopping", description: qty > 1 ? `${qty} × ${meal?.name}` : meal?.name });
       onClose();
     },
-    onError: () => toast({ title: "Failed to add to shopping", variant: "destructive" }),
+    onError: () => toast({ title: "Couldn't add that to your basket", description: "Try again in a moment.", variant: "destructive" }),
   });
 
   const addProductMutation = useMutation({
@@ -1542,7 +1542,7 @@ function AddToPlannerDialog({ mealId, mealName, isDrink, audience: mealAudience,
       toast({ title: "Added to planner", description: `"${mealName}" added to ${assignments.length} slot${assignments.length !== 1 ? 's' : ''}.` });
     },
     onError: () => {
-      toast({ title: "Failed to add to planner", variant: "destructive" });
+      toast({ title: "Couldn't add that to your planner", description: "Try again in a moment.", variant: "destructive" });
     },
   });
 
@@ -2302,7 +2302,7 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
       invalidateMealLibrary(queryClient);
       navigate(`/meals/${newMeal.id}`);
     } catch {
-      toast({ title: "Failed to create editable copy", variant: "destructive" });
+      toast({ title: "Couldn't create an editable copy", description: "Your original recipe is untouched — try again.", variant: "destructive" });
     }
     setPendingAction(null);
   };
@@ -2926,7 +2926,7 @@ export default function MealsPage() {
       toast({ title: "Import complete", description: `Imported ${total} meals from OpenFoodFacts.` });
     },
     onError: () => {
-      toast({ title: "Import failed", description: "Could not import meals from OpenFoodFacts.", variant: "destructive" });
+      toast({ title: "Couldn't import those meals", description: "Try again in a moment.", variant: "destructive" });
     },
   });
 
@@ -3192,7 +3192,7 @@ export default function MealsPage() {
       toast({ title: "Added to basket" });
     },
     onError: () => {
-      toast({ title: "Couldn't add product", description: "Something went wrong - try again", variant: "destructive" });
+      toast({ title: "Couldn't add that product", description: "Try again in a moment.", variant: "destructive" });
     },
   });
 
@@ -3209,7 +3209,7 @@ export default function MealsPage() {
         } else if (res.status === 404) {
           toast({ title: "Not found", description: "This barcode wasn't found in Open Food Facts.", variant: "destructive" });
         } else {
-          toast({ title: "Scan error", description: "Something went wrong during barcode lookup.", variant: "destructive" });
+          toast({ title: "Couldn't read that barcode", description: "Give it another scan in a moment.", variant: "destructive" });
         }
         return;
       }
@@ -3221,7 +3221,7 @@ export default function MealsPage() {
         toast({ title: "Not found", description: "This barcode wasn't found in Open Food Facts.", variant: "destructive" });
       }
     } catch {
-      toast({ title: "Scan error", description: "Something went wrong during barcode lookup.", variant: "destructive" });
+      toast({ title: "Couldn't read that barcode", description: "Give it another scan in a moment.", variant: "destructive" });
     } finally {
       setBarcodeFetching(false);
     }
@@ -3276,7 +3276,7 @@ export default function MealsPage() {
         });
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
-          throw new Error(errData?.message || 'Import failed');
+          throw new Error(errData?.message || "We couldn't import this recipe.");
         }
         const imported = await res.json();
         result = await createMeal.mutateAsync({
@@ -3306,7 +3306,7 @@ export default function MealsPage() {
       toast({ title: "Recipe saved", description: recipe.name });
       return result?.id ?? null;
     } catch (err: any) {
-      toast({ title: "Import failed", description: err?.message || "Could not import this recipe.", variant: "destructive" });
+      toast({ title: "Couldn't import this recipe", description: err?.message || "Try again in a moment.", variant: "destructive" });
       return null;
     } finally {
       setWebImportingIds(prev => {
