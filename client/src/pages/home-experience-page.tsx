@@ -560,8 +560,21 @@ export default function HomeExperiencePage() {
                  The household's name in THA's own hand — the house's one ornament at
                  Home, data-borne (Blueprint §12.1). It stands on the plaster wall, in
                  the light falling from the window above — never on the orchard (§6.1).
-                 The Companion's line rests on the wall beside it. */}
-          <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-12">
+
+                 HOMEROOM1 (2026-07-21) — THE RESERVED COMPANION COLUMN IS RETIRED.
+                 The arrival was a two-column grid, `minmax(0,1fr)_22rem`, whose right
+                 bay held the Companion's card "resting against the view". UX3 gave the
+                 Companion its own mouth — the global FloatingAssistant (app-shell.tsx),
+                 present in EVERY room — and removed the inline card; but the 22rem bay it
+                 stood in was left reserved, holding nothing. On a wide wall that stranded
+                 the greeting ~190px to the left of the glance and doors below it (both on
+                 the `max-w-4xl` spine), so the room read as two compositions that did not
+                 share an edge. The empty bay is now air and view (GEA11 — "surplus space
+                 becomes air and view"): the arrival joins the SAME `max-w-4xl` spine as
+                 everything beneath it, one left edge down the whole room, the wall showing
+                 on both sides. Re-adding an inline Companion card here is forbidden — it is
+                 the "page speaking in the Companion's name" defect UX2/UX3 retired. */}
+          <div className="mx-auto max-w-4xl">
             <header className="max-w-xl">
               <h1 data-testid="text-home-greeting" className="text-foreground">
                 {name ? (
@@ -618,41 +631,16 @@ export default function HomeExperiencePage() {
               </p>
             </header>
 
-            {/* ── THE COMPANION'S VOICE — dissolved into the wall ─────────────
-                   UX2. This was a bordered, shadowed `home-object` card headed
-                   "Companion". The production lock § 3.4 fixes it as *"a line
-                   resting on the wall"* instead, and the reason is the whole of
-                   this brief: a boxed panel that lists notices is a PAGE speaking
-                   in the Companion's name. Dissolving the box does not take a
-                   sentence away — every word is still the Behaviour Engine's,
-                   verbatim, in the household's chosen personality — it stops Home
-                   impersonating the friend at the counter and lets the friend
-                   speak for itself.
-
-                   No border, no fill, no shadow: type on plaster. It needs none of
-                   them, because it stands on the wall and not on the orchard —
-                   contrast here is fixed and measurable, which is exactly why
-                   NORTH1 § 5.6 refused a translucent panel over the image.
-
-                   Absent in silence. The Notice Engine's Silence Rules already
-                   chose which notices and how many; this renders what it was
-                   handed and never re-sorts, re-slices or pads it. */}
-            {/* ── UX3 — THE COMPANION SPEAKS FOR ITSELF NOW ──────────────────
-                UX2 dissolved this block's box and named the defect exactly right:
-                *"a boxed panel that lists notices is a PAGE speaking in the
-                Companion's name."* Dissolving the box did not fix that — it only
-                made the impersonation quieter. The heading still read "From your
-                Companion", and the friend at the counter was still being quoted
-                by the wall rather than allowed to speak.
-
-                The owner's UX3 ruling gives the Companion the sentence: reminders,
-                coaching and encouragement are its capability, and the dashboard
-                keeps today, orientation, household overview and context. The Notice
-                Engine read moved to `FloatingAssistant`, where it lights the
-                emblem's `aware` state in EVERY room instead of speaking in one —
-                so the household gains this rather than losing it. Nothing about
-                the Notice Engine, the Silence Rules or the Behaviour Engine's
-                voicing changed; only the mouth did. */}
+            {/* THE COMPANION IS NOT IN THIS COLUMN, BY DESIGN.
+                UX2 dissolved Home's boxed "From your Companion" panel — *"a boxed
+                panel that lists notices is a PAGE speaking in the Companion's
+                name"* — and UX3 gave the Companion its own mouth: the global
+                FloatingAssistant (app-shell.tsx), which lights the emblem's `aware`
+                state in EVERY room rather than letting one page quote the friend at
+                the counter. The Notice Engine, its Silence Rules and the Behaviour
+                Engine's voicing are untouched; only the mouth moved. Home therefore
+                renders NO Companion surface of its own, and none may be re-added
+                here (the impersonation defect UX2/UX3 retired). */}
           </div>
 
           {/* ── THE DAY, ON THE WALL ───────────────────────────────────────────────
@@ -845,8 +833,16 @@ export default function HomeExperiencePage() {
                       // The list's own first items, in the list's own order. Never
                       // re-sorted, never re-ranked: Shopping owns what matters most.
                       <ul className="flex flex-col gap-1.5 text-sm text-foreground/85" data-testid="list-home-shopping">
+                        {/* HOMEROOM1 (2026-07-21) — compose the Shopping owner's ACTUAL field.
+                            This read `i.name ?? i.itemName`; the canonical shopping_list row
+                            carries neither, so every preview line rendered BLANK — three empty
+                            rows above "and N more", which read as broken, not calm. The owner
+                            (shopping-workspace-page.tsx) stores and renders `productName`
+                            (Title-cased at source), so Home now shows the same names the
+                            Shopping room does. Presentation-only; no field added, no data
+                            changed — Home simply reads the published field it always should have. */}
                         {openItems.slice(0, 3).map((i: any) => (
-                          <li key={i.id} className="truncate">{i.name ?? i.itemName}</li>
+                          <li key={i.id} className="truncate">{i.productName}</li>
                         ))}
                         {openShoppingCount > 3 && (
                           <li className="text-muted-foreground">
