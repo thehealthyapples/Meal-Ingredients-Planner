@@ -5,7 +5,7 @@
 | **Session ID** | `ROOM1_Room_Personality_Pass` |
 | **Rollback ID** | `rollback/ROOM1-room-personality-pass-20260721` → `4c65d496cac031e8101a6d166a04d4bbe84e11bc` |
 | **Start time** | 2026-07-21T22:23:28Z |
-| **Current stage** | Waiting for User (Home Owner review) — committed `adee7d91` + pushed to `int1-intelligence-platform` |
+| **Current stage** | Waiting for User (Home Owner review) — committed `97d8dbc9` + pushed to `int1-intelligence-platform` |
 
 ## Objective
 Refine each core room (Cookbook, Planner, Pantry, Shopping, Diary, Nutrition,
@@ -49,9 +49,9 @@ no duplicate components, no new features, no Environmental Dressing. This is the
       client typecheck 0 client errors (88 pre-existing server) · adoption 100·0·9
       (baseline, 0 introduced) · production build exit 0.
 - [x] Implementation report → docs/implementation/ROOM1_ROOM_PERSONALITY_PASS.md
-- [x] Commit + push — committed `adee7d91` on `int1-intelligence-platform`, pushed.
+- [x] Commit + push — committed `97d8dbc9` on `int1-intelligence-platform`, pushed.
 
-**Last checkpoint:** Committed `adee7d91` + pushed; commit hash recorded in report,
+**Last checkpoint:** Committed `97d8dbc9` + pushed; commit hash recorded in report,
 dashboard and this file.
 
 ## Next action
