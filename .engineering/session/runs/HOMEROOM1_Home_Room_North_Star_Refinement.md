@@ -5,7 +5,7 @@
 | **Session ID** | `HOMEROOM1_Home_Room_North_Star_Refinement` |
 | **Rollback ID** | `rollback/HOMEROOM1-home-room-north-star-20260721` → `f0446693e236b859345093918d481467db4aa528` |
 | **Start time** | 2026-07-21T00:00:00Z |
-| **Current stage** | Waiting for User (Home Owner review) |
+| **Current stage** | Committed + pushed (Home Owner approved) — commit `b9094640`, branch `int1-intelligence-platform` |
 
 ## Objective
 Complete the Home ROOM (`client/src/pages/home-experience-page.tsx`, route `/home` — the
@@ -52,10 +52,12 @@ Restore per-file: `git checkout rollback/HOMEROOM1-home-room-north-star-20260721
 **Last checkpoint:** Both refinements implemented + visually verified + typecheck/adoption/build green; report updated.
 
 ## Next action
-WAITING FOR USER (Home Owner). Implemented and verified but NOT committed — awaiting owner
-review of the report and the arrival-composition refinement. If approved: commit on this branch
-and push per COMMIT_PUSH_DEPLOY_PROTOCOL. Do NOT deploy without owner approval. Continuous
-refinement backlog (Principle 11) recorded in the report's Scope Lock.
+DONE. Home Owner approved (2026-07-21); re-verified in the resumed session (client typecheck
+0 errors, adoption:check 100·0·9 unchanged, production build exit 0), then committed as
+`b9094640` and pushed to `int1-intelligence-platform`. NOT deployed (production is a separate
+human-gated act). Continuous refinement backlog (Principle 11) recorded in the report's Scope
+Lock: todayLabel() Household-Time convergence (CONV1), INT21 greeting-word ownership,
+owner-directed spacing-rhythm pass.
 
 ## Blockers
 None.

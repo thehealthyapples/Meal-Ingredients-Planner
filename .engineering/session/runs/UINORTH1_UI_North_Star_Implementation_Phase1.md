@@ -5,7 +5,7 @@
 | **Session ID** | `UINORTH1_UI_North_Star_Implementation_Phase1` |
 | **Rollback ID** | `rollback/UINORTH1-ui-north-star-phase1-20260720` → `be381a894b99b2e87935f7d3a18c7d3f38617e0f` |
 | **Start time** | 2026-07-20T22:10:00Z |
-| **Current stage** | Waiting for User (Home Owner review) |
+| **Current stage** | Committed + pushed (Home Owner approved) — commit `885ca444`, branch `int1-intelligence-platform` |
 
 ## Objective
 Begin the North Star UI implementation programme: (1) a governance refinement to
@@ -37,11 +37,12 @@ room feels like part of one house — without redesigning any room independently
 **Last checkpoint:** Phase 1 implemented + verified (typecheck, adoption gate, production build); report written
 
 ## Next action
-WAITING FOR USER (Home Owner). This phase is implemented and verified but NOT committed —
-awaiting owner review of the report and the Principle 11 refinement. If approved: commit on a
-branch and (per COMMIT_PUSH_DEPLOY_PROTOCOL) push; then Phase 2 = the staged backlog in the
-report § 11 (inline micro-empties, spacing/section rhythm, desktop scaling, per-room polish),
-each as its own measured, visually-verified increment. Do NOT deploy without owner approval.
+DONE for Phase 1. Home Owner approved (2026-07-21); re-verified in the resumed session
+(client typecheck 0 errors, adoption:check 100·0·9 unchanged, production build exit 0), then
+committed as `885ca444` and pushed to `int1-intelligence-platform`. NOT deployed (production
+is a separate human-gated act). Phase 2 = the staged backlog in report § 11 (inline
+micro-empties, the 3 meals-page "Searching…" blocks, spacing/section rhythm, desktop scaling,
+per-room polish), each as its own measured, visually-verified increment.
 
 ## Blockers
 None.
