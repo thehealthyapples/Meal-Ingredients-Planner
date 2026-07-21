@@ -140,9 +140,9 @@ without explicit ownership"* is true rather than hoped for.
 | Dialog | `<DrawerContent>` — a second overlay container chosen per-file | 11 | Capped. New overlays use `Overlay`, which decides sheet-vs-dialog by viewport. |
 | Dialog | `<SheetContent>` — a third | 3 | Capped. `Sheet` is retired as a *choice*; it survives only as Overlay's mobile implementation. |
 | Loading state | Hand-rolled `animate-pulse` loading surfaces | 9 | The owner carries the class internally; these are the copies outside it. PX1-W4.8 retired the 12 verbatim Skeleton clones. |
-| Loading state | `<Loader2>` usages | 175 | Capped, not banned: 140 are the exempt inline pending mark above. The population may fall, never rise. BUS1 raised 179 → 181: two `<Loader2>` marks on Privacy Settings, both INSIDE a control (the data-download button and the account-deletion confirm button) while an indeterminate request is in flight. That is the usage this concern's own rule assigns to Loader2 rather than to Skeleton — 'Skeleton owns content arriving; Loader2 owns indeterminate work inside a control' — so the ceiling is raised rather than the marks replaced. Content-arriving states on that page use Skeleton, as the rule requires. |
+| Loading state | `<Loader2>` usages | 169 | Capped, not banned: 140 are the exempt inline pending mark above. The population may fall, never rise. BUS1 raised 179 → 181: two `<Loader2>` marks on Privacy Settings, both INSIDE a control (the data-download button and the account-deletion confirm button) while an indeterminate request is in flight. That is the usage this concern's own rule assigns to Loader2 rather than to Skeleton — 'Skeleton owns content arriving; Loader2 owns indeterminate work inside a control' — so the ceiling is raised rather than the marks replaced. Content-arriving states on that page use Skeleton, as the rule requires. |
 | Mutation feedback | Raw `useMutation` — feedback owned by the call site | 132 | Not all are defects: a mutation with no household-visible outcome owes no toast. Capped so the population cannot grow. |
-| Button / primary action | Raw `<button>` elements outside the design system | 449 | Each reinvents press feedback and misses the touch floor. Capped: the population may fall, never rise. |
+| Button / primary action | Raw `<button>` elements outside the design system | 442 | Each reinvents press feedback and misses the touch floor. Capped: the population may fall, never rise. |
 | Time-of-day greeting | An ambient hour read reaching a greeting word — the shape all four retired copies shared | 0 | Zero, and it stays zero. THA_HOUSEHOLD_TIME_ARCHITECTURE.md §16 names this gate by name: 'the gate that matters is the one that fails when someone writes a sixth getGreeting()'. Also ratcheted in the publication register (household-time / ht-no-rival-greeting), mutation-tested. |
 
 ## 3. Exemptions — explicit, with a reason
@@ -230,7 +230,7 @@ self-describing record, currency *is* the evidence standard, and it needs a name
 
 | Concern | Fact | Count | As at |
 |---|---|---|---|
-| Theme / colour mode | `dark:` utilities authored across the client | 679 | 2026-07-20 |
+| Theme / colour mode | `dark:` utilities authored across the client | 677 | 2026-07-20 |
 | Undo | `<ToastAction>` usages (the mechanism exists) | 1 | 2026-07-13 |
 | Time-of-day greeting | Surfaces consuming the one greeting owner (`householdGreeting`) | 4 | 2026-07-20 |
 | The household's current planner week | Rival client-side "current week" implementations (`plannerFull[0]` — the Dashboard's) | 0 | 2026-07-17 |

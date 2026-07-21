@@ -661,7 +661,7 @@ function FoodDetailView({
     staleTime: 5 * 60 * 1000,
   });
 
-  if (isLoading) return <DetailShell onBack={onBack} onHome={onHome} title="Loading…"><HubLoading /></DetailShell>;
+  if (isLoading) return <DetailShell onBack={onBack} onHome={onHome} title={<Skeleton className="h-6 w-40" />}><HubLoading /></DetailShell>;
   if (!data) return <DetailShell onBack={onBack} onHome={onHome} title="Not found"><EmptyState variant="unavailable" size="compact" icon={Sparkles} title="This food isn't in the library." /></DetailShell>;
 
   const { food, benefits, nutrients, preparations } = data;
@@ -865,7 +865,7 @@ function FoodDetailView({
 // ── Nutrient detail ────────────────────────────────────────────────────────────────
 function NutrientDetailView({ slug, onBack, onHome, onPush }: DetailProps) {
   const { data, isPending: isLoading } = useQuery<NutrientDetail>({ queryKey: ["/api/knowledge/nutrients", slug] });
-  if (isLoading) return <DetailShell onBack={onBack} onHome={onHome} title="Loading…"><HubLoading /></DetailShell>;
+  if (isLoading) return <DetailShell onBack={onBack} onHome={onHome} title={<Skeleton className="h-6 w-40" />}><HubLoading /></DetailShell>;
   if (!data) return <DetailShell onBack={onBack} onHome={onHome} title="Not found"><EmptyState variant="unavailable" size="compact" icon={Sparkles} title="This nutrient isn't in the library." /></DetailShell>;
 
   const { nutrient, foods, benefits } = data;
@@ -898,7 +898,7 @@ function NutrientDetailView({ slug, onBack, onHome, onPush }: DetailProps) {
 // ── Benefit detail ─────────────────────────────────────────────────────────────────
 function BenefitDetailView({ slug, onBack, onHome, onPush }: DetailProps) {
   const { data, isPending: isLoading } = useQuery<BenefitDetail>({ queryKey: ["/api/knowledge/benefits", slug] });
-  if (isLoading) return <DetailShell onBack={onBack} onHome={onHome} title="Loading…"><HubLoading /></DetailShell>;
+  if (isLoading) return <DetailShell onBack={onBack} onHome={onHome} title={<Skeleton className="h-6 w-40" />}><HubLoading /></DetailShell>;
   if (!data) return <DetailShell onBack={onBack} onHome={onHome} title="Not found"><EmptyState variant="unavailable" size="compact" icon={Sparkles} title="This benefit isn't in the library." /></DetailShell>;
 
   const { benefit, foods } = data;
@@ -924,7 +924,10 @@ interface DetailProps { slug: string; onBack: () => void; onHome: () => void; on
 function DetailShell({
   title, subtitle, emoji, icon, onBack, onHome, children,
 }: {
-  title: string; subtitle?: string; emoji?: string; icon?: React.ReactNode;
+  // UINORTH1 — widened string → ReactNode (a safe widening: string is a ReactNode)
+  // so a loading detail can show a Skeleton title (UIA §12 "shape before spin")
+  // instead of the literal "Loading…" text §12 retires.
+  title: React.ReactNode; subtitle?: string; emoji?: string; icon?: React.ReactNode;
   onBack: () => void; onHome: () => void; children: React.ReactNode;
 }) {
   return (

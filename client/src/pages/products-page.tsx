@@ -1171,11 +1171,16 @@ export default function ProductsPage() {
     <div className={pageContainerClass(true)} data-realm="analyser">
       <div className="space-y-6">
         {hasSearched && retailerFilter && filteredResults.length === 0 && searchResults.length > 0 && !isSearching && (
-          <div className="text-center py-8 text-muted-foreground">
-            <Store className="h-10 w-10 mx-auto mb-3 opacity-30" />
-            <p className="text-sm">No products confirmed at {retailerFilter} in these results.</p>
-            <p className="text-xs mt-1">Try a different retailer or clear the filter to see all results.</p>
-          </div>
+          /* UINORTH1 — the canonical empty-state owner (UIA §17), variant "filtered":
+             products exist, the retailer filter hides them. Was a hand-rolled
+             centred block; the owner renders the same quiet one-line treatment. */
+          <EmptyState
+            variant="filtered"
+            icon={Store}
+            title={`No products confirmed at ${retailerFilter} in these results.`}
+            description="Try a different retailer or clear the filter to see all results."
+            data-testid="empty-retailer-filter"
+          />
         )}
 
         {/* Whole Food Analysis — shown when the search query is recognised as a whole
@@ -1875,9 +1880,14 @@ export default function ProductsPage() {
               </table>
             </div>
           ) : (
-            <p className="text-center text-muted-foreground py-8">
-              No products selected for comparison. Click the compare button on product cards to add them.
-            </p>
+            /* UINORTH1 — the canonical empty-state owner (UIA §17), variant "empty":
+               nothing chosen to compare yet. Was a hand-rolled centred paragraph. */
+            <EmptyState
+              variant="empty"
+              title="No products selected for comparison"
+              description="Use the compare button on product cards to add them here."
+              data-testid="empty-comparison"
+            />
           )}
         </DialogContent>
       </Dialog>

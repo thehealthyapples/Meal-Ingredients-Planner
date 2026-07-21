@@ -6,7 +6,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { getDialogWidthClass } from "@/components/ui/dialog-foundation";
-import { Loader2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { FoodKnowledge } from "@shared/schema";
 
 interface Props {
@@ -38,12 +38,20 @@ export default function FoodKnowledgeModal({ slug, onClose }: Props) {
       <DialogContent className={getDialogWidthClass("comfortable")}>
         <DialogHeader>
           <DialogTitle className="text-base">
-            {isLoading ? "Loading…" : (data?.title ?? slug)}
+            {data?.title ?? slug}
           </DialogTitle>
         </DialogHeader>
         {isLoading ? (
-          <div className="flex justify-center py-6">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          /* UINORTH1 — the canonical loading owner (UIA §12 "shape before spin",
+             §17): section-shaped placeholders mirror the knowledge that is
+             arriving, in place of a centred spinner and a literal "Loading…". */
+          <div className="space-y-4 py-1" aria-busy="true" aria-label="Loading this food">
+            {SECTION_LABELS.map(({ key }) => (
+              <div key={key}>
+                <Skeleton className="h-3 w-24 mb-1.5" />
+                <Skeleton className="h-4 w-full" />
+              </div>
+            ))}
           </div>
         ) : !data ? (
           <p className="text-sm text-muted-foreground py-4">No information available for this item yet.</p>

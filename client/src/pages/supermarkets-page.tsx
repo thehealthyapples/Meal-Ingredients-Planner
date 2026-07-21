@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Store, ExternalLink, ShoppingCart, Globe, Loader2 } from "lucide-react";
+import { Store, ExternalLink, ShoppingCart, Globe } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -118,8 +119,16 @@ export default function SupermarketsPage() {
       )}
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        /* UINORTH1 — the canonical loading owner (UIA §12 "shape before spin",
+           §17): a header-and-card-grid skeleton mirrors the store list that is
+           arriving, in place of a centred spinner. */
+        <div className="space-y-4" aria-busy="true" aria-label="Loading supermarkets">
+          <Skeleton className="h-6 w-40" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-32 w-full rounded-xl" />
+            ))}
+          </div>
         </div>
       ) : (
         <AnimatePresence mode="wait">

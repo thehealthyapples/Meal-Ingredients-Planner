@@ -13,7 +13,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearch } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Scale, Plus, X, Loader2 } from "lucide-react";
+import { ArrowLeft, Scale, Plus, X } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -190,9 +191,12 @@ export default function FoodComparisonPage() {
       </Card>
 
       {/* ── Result ── */}
+      {/* UINORTH1 — the canonical loading owner (UIA §12 "shape before spin",
+          §17), in place of a centred spinner: a card-shaped placeholder tells the
+          household a comparison is arriving; a spinner only says "wait". */}
       {enabled && isPending && (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="h-6 w-6 animate-spin text-primary/50" />
+        <div className="py-4" aria-busy="true" aria-label="Comparing those foods">
+          <Skeleton className="h-72 w-full rounded-xl" />
         </div>
       )}
 

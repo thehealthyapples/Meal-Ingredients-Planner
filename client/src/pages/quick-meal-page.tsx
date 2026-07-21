@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, X, ShoppingBasket, Loader2, ChefHat, Leaf, Save, Globe, UtensilsCrossed, Snowflake, Check, ChevronDown, ChevronUp, Utensils, ImageOff, Camera, Store } from "lucide-react";
 import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
 import { useToast } from "@/hooks/use-toast";
@@ -386,8 +387,17 @@ export default function QuickMealPage() {
     <div className={pageContainerClass(true)}>
 
       {isLoadingMeal ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        /* UINORTH1 — the canonical loading owner (UIA §12 "shape before spin",
+           §17): a skeleton mirroring the builder/preview columns, in place of a
+           centred spinner. */
+        <div className="lg:grid lg:grid-cols-12 lg:gap-6 lg:items-start" aria-busy="true" aria-label="Loading this meal">
+          <div className="lg:col-span-7 space-y-4">
+            <Skeleton className="h-40 w-full rounded-xl" />
+            <Skeleton className="h-40 w-full rounded-xl" />
+          </div>
+          <div className="lg:col-span-5 mt-4 lg:mt-0">
+            <Skeleton className="h-64 w-full rounded-xl" />
+          </div>
         </div>
       ) : (
         <div className="lg:grid lg:grid-cols-12 lg:gap-6 lg:items-start">

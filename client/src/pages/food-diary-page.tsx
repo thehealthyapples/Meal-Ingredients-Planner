@@ -11,6 +11,8 @@ import {
 // PROD1 — the canonical error presentation (PX1-W0). This room had no error
 // branch at all, so a failed load was indistinguishable from an unlogged day.
 import { LoadError } from "@/components/ui/load-error";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { ImportDiaryModal } from "@/components/import-diary-modal";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTrackedMutation } from "@/hooks/use-tracked-mutation";
@@ -1760,8 +1762,13 @@ export default function FoodDiaryPage() {
       {/* ── Daily Log ────────────────────────────────────────────── */}
       {activeTab === "diary" && (
         isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          /* UINORTH1 — the canonical loading owner (UIA §12 "shape before spin",
+             §17): row-shaped placeholders mirror the day's log slots that are
+             arriving, in place of a centred spinner. */
+          <div className="space-y-3 py-2" aria-busy="true" aria-label="Loading your diary for this day">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-20 w-full rounded-xl" />
+            ))}
           </div>
         ) : diaryError ? (
           // PROD1 — tested BEFORE the slots render, for the same load-bearing
@@ -1936,11 +1943,16 @@ export default function FoodDiaryPage() {
       {activeTab === "progress" && (
         <div className="space-y-5">
           {trends.length < 2 ? (
-            <div className="text-center py-16 space-y-2" data-testid="text-empty-trends">
-              <TrendingUp className="h-10 w-10 mx-auto text-muted-foreground/30" />
-              <p className="text-sm font-medium text-muted-foreground">When things drift, we help you find your way back - simply.</p>
-              <p className="text-xs text-muted-foreground/60">Record a few days to start seeing useful patterns emerge.</p>
-            </div>
+            /* UINORTH1 — the canonical empty-state owner (UIA §17), variant "empty".
+               Copy preserved verbatim (PRESENCE1); only the container is re-homed
+               onto the house's one empty treatment. */
+            <EmptyState
+              variant="empty"
+              icon={TrendingUp}
+              title="When things drift, we help you find your way back - simply."
+              description="Record a few days to start seeing useful patterns emerge."
+              data-testid="text-empty-trends"
+            />
           ) : (
             <>
               <div className="flex items-start gap-2 px-3 py-2.5 rounded-md bg-primary/5 border border-primary/15" data-testid="text-insight">

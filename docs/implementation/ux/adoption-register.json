@@ -201,7 +201,7 @@
         {
           "what": "`<Loader2>` usages",
           "pattern": "<Loader2[\\s>]",
-          "ceiling": 175,
+          "ceiling": 169,
           "note": "Capped, not banned: 140 are the exempt inline pending mark above. The population may fall, never rise. BUS1 raised 179 → 181: two `<Loader2>` marks on Privacy Settings, both INSIDE a control (the data-download button and the account-deletion confirm button) while an indeterminate request is in flight. That is the usage this concern's own rule assigns to Loader2 rather than to Skeleton — 'Skeleton owns content arriving; Loader2 owns indeterminate work inside a control' — so the ceiling is raised rather than the marks replaced. Content-arriving states on that page use Skeleton, as the rule requires."
         }
       ],
@@ -607,7 +607,7 @@
         {
           "what": "Raw `<button>` elements outside the design system",
           "pattern": "<button[\\s>]",
-          "ceiling": 449,
+          "ceiling": 442,
           "note": "Each reinvents press feedback and misses the touch floor. Capped: the population may fall, never rise."
         }
       ],
@@ -777,7 +777,7 @@
         {
           "what": "`dark:` utilities authored across the client",
           "pattern": "\\bdark:",
-          "asAt": 679,
+          "asAt": 677,
           "asAtDate": "2026-07-20"
         }
       ],
