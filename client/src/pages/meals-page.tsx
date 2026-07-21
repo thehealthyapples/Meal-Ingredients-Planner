@@ -3753,7 +3753,7 @@ export default function MealsPage() {
 
           {webSearchResults.length > 0 && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                 <AnimatePresence mode="popLayout">
                   {webSearchResults.map((recipe) => {
                     const isImporting = webImportingIds.has(recipe.id);
@@ -4009,7 +4009,7 @@ export default function MealsPage() {
       )}
 
       {isLoading ? (
-        <div className={viewMode === 'grid' ? "grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2" : "flex flex-col gap-2"}>
+        <div className={viewMode === 'grid' ? "grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3" : "flex flex-col gap-2"}>
           {[1, 2, 3, 4].map(i => (
             <Skeleton key={i} className={viewMode === 'grid' ? 'h-28' : 'h-16'} />
           ))}
@@ -4017,7 +4017,7 @@ export default function MealsPage() {
       ) : (
         <AnimatePresence>
           {viewMode === 'grid' ? (
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {visibleMeals?.map((meal, index) => {
                 const shelf = shelfForMeal(meal);
                 const prevShelf = index > 0 ? shelfForMeal(visibleMeals[index - 1]) : null;
@@ -4304,7 +4304,7 @@ export default function MealsPage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {householdVariants.map(variant => {
                 const originalName = variant.householdSafeFor?.originalMealName ?? null;
                 return (
@@ -4423,7 +4423,7 @@ export default function MealsPage() {
               </div>
             </Card>
           ) : (
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {freezerMeals.map((frozen, index) => {
                 const meal = meals?.find(m => m.id === frozen.mealId);
                 const portionPercent = frozen.totalPortions > 0 ? (frozen.remainingPortions / frozen.totalPortions) * 100 : 0;
@@ -4674,7 +4674,7 @@ export default function MealsPage() {
 
           {productResults.length > 0 && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                 <AnimatePresence mode="popLayout">
                   {productResults.map((product) => {
                     const productKey = product.barcode || product.product_name;

@@ -78,7 +78,7 @@ export default function PlantDiversityPage() {
           item of <main>, this container's min-width:auto let the report table
           grow it past the viewport, where overflow-x-hidden clipped the columns
           instead of letting the table's own scroller work. */}
-      <div className={`min-w-0 ${pageContainerClass(true)} pb-4 sm:pb-5`}>
+      <div className={`min-w-0 ${pageContainerClass(true)} pb-4 sm:pb-5`} data-realm="nutrition">
 
         {activeTab === "foods" && (
           <>

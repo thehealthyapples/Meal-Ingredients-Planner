@@ -2680,7 +2680,9 @@ export default function ShoppingWorkspacePage() {
           actions={menuDropdown}
         />
       )}
-      <div className={isFullscreen
+      <div
+        data-realm="shopping"
+        className={isFullscreen
         ? "fixed inset-0 z-50 bg-background overflow-auto flex flex-col"
         : pageContainerClass(true)}
       >
