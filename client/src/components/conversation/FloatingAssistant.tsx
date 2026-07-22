@@ -1046,15 +1046,13 @@ function LoadingBubble() {
       </div>
       <div className="px-3.5 py-3 bg-muted rounded-2xl rounded-tl-sm border border-border/30">
         {/* NSR1 Phase 2 (Companion): the three bouncing dots were the stock chat "typing"
-            indicator — and a bounce the emblem's light law bans by name. A soft opacity
-            pulse reads as a friend thinking, not a machine processing (CRAFT1 §3; GEA16). */}
+            indicator — and a bounce the emblem's light law bans by name. Now a STILL mark:
+            stillness is the default (CRAFT1 §3; Blueprint §6.1 "place survives total
+            stillness"), and the answer arriving is the confirmation, not an animation.
+            (Still also avoids adding a hand-rolled animate-pulse loading rival — UIA §17.) */}
         <div className="flex gap-1 items-center h-4" aria-label="Thinking">
           {[0, 1, 2].map((i) => (
-            <span
-              key={i}
-              className="w-1.5 h-1.5 rounded-full bg-primary/40 animate-pulse motion-reduce:animate-none"
-              style={{ animationDelay: `${i * 0.2}s` }}
-            />
+            <span key={i} className="w-1.5 h-1.5 rounded-full bg-primary/30" />
           ))}
         </div>
       </div>
