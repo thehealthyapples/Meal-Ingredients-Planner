@@ -162,11 +162,13 @@ export function FoodReport({ canonicalSlug, eatenVarietyLabels }: FoodReportProp
         </div>
       )}
 
-      {/* Broaden Your Variety */}
+      {/* Other varieties. NSR1 Phase 2 (Nutrition): "Broaden Your Variety" was an
+          imperative — the room telling the household to do something (GEA8/21). It is a
+          neutral label for varieties not yet cooked; suggesting is the Companion's. */}
       {broadenVarieties.length > 0 && (
         <div data-testid={`variety-broaden-${canonicalSlug}`}>
           <p className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide mb-1.5">
-            Broaden Your Variety
+            Other varieties
           </p>
           <div className="flex flex-wrap gap-1.5">
             {broadenVarieties.map((v) => (

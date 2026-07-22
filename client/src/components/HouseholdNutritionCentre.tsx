@@ -225,28 +225,22 @@ function CategoryProgressBlock({ categories }: { categories: CategoryProgress[] 
       title="Food categories"
       data-testid="centre-categories"
     >
-      <div className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
-        {visible.map((c) => {
-          const pct = Math.min((c.enjoyed / c.total) * 100, 100);
-          return (
-            <div key={c.category}>
-              <div className="mb-1 flex items-baseline justify-between gap-2">
-                <span className="text-xs font-medium text-foreground/80">{c.category}</span>
-                <span className="text-[11px] tabular-nums text-muted-foreground/55">
-                  {c.enjoyed}/{c.total}
-                </span>
-              </div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/40">
-                <div
-                  className={`h-full rounded-full transition-all ${
-                    c.enjoyed > 0 ? "bg-emerald-500/80" : "bg-transparent"
-                  }`}
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
-            </div>
-          );
-        })}
+      {/* NSR1 Phase 2 (Nutrition): this was a progress bar per category — an emerald fill
+          toward `enjoyed/total`, i.e. a bar filling toward a total the household never set.
+          GEA13 forbids exactly this ("progress bars toward a target the household did not
+          set"), and PRESENCE1 already removed it from the Foods tab next door; it survived
+          here. The count is the fact; the `/total` denominator and the fill were the
+          judgement. The room now reports how many kinds in each category the household has
+          had, and grades nothing. */}
+      <div className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
+        {visible.map((c) => (
+          <div key={c.category} className="flex items-baseline justify-between gap-2">
+            <span className="text-xs font-medium text-foreground/80">{c.category}</span>
+            <span className="text-[11px] tabular-nums text-muted-foreground/70">
+              {c.enjoyed} {c.enjoyed === 1 ? "kind" : "kinds"}
+            </span>
+          </div>
+        ))}
       </div>
     </IntelligenceCard>
   );
@@ -320,7 +314,9 @@ export function HouseholdNutritionCentre() {
 
   return (
     <div className="space-y-4" data-testid="household-nutrition-centre">
-      {/* Household overview — celebrate first */}
+      {/* Household overview. NSR1 Phase 2 (Nutrition): appraisal framing neutralised — a
+          room reports facts, it does not "celebrate" them or narrate a "journey" (GEA21;
+          CRAFT1 §5 — a count is reported, never celebrated). */}
       <IntelligenceCard
         icon={<Sparkles className="h-4 w-4" />}
         eyebrow="Your household"
@@ -328,7 +324,7 @@ export function HouseholdNutritionCentre() {
         data-testid="centre-overview"
       >
         <div className="grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-3 lg:grid-cols-5">
-          <Stat value={overview.plantDiversity} label="Plants enjoyed" />
+          <Stat value={overview.plantDiversity} label="Different plants" />
           <Stat value={overview.foodDiversity} label="Foods in your kitchen" />
           <Stat value={overview.mealsCooked} label="Meals cooked" />
           <Stat value={overview.foodsDiscovered} label="Foods discovered" />
@@ -343,7 +339,7 @@ export function HouseholdNutritionCentre() {
       {journey && (
         <IntelligenceCard
           icon={<Activity className="h-4 w-4" />}
-          eyebrow="Your nutrition journey"
+          eyebrow="Nutrients"
           title="What your foods bring to the table"
           data-testid="centre-journey"
         >
@@ -377,41 +373,23 @@ export function HouseholdNutritionCentre() {
         </IntelligenceCard>
       )}
 
-      {/* Discovery journey */}
+      {/* Discovery — evidence only. NSR1 Phase 2 (Nutrition): the "You might enjoy"
+          suggestions block is removed — suggesting a food is the Companion's, not the
+          room's (GEA8/22; UIOWN1 §8 — the room reports variety, it never recommends).
+          What remains is truthful reporting: what the household recently cooked, and what
+          they have not cooked lately. */}
       {discovery &&
         (discovery.recentlyDiscovered.length > 0 ||
-          discovery.notUsedRecently.length > 0 ||
-          discovery.suggested.length > 0) && (
+          discovery.notUsedRecently.length > 0) && (
           <IntelligenceCard
             icon={<Compass className="h-4 w-4" />}
             eyebrow="Discovery"
-            title="Your discovery journey"
+            title="Recently in your kitchen"
             data-testid="centre-discovery"
           >
             <div className="space-y-3">
               <FoodLinkRow foods={discovery.recentlyDiscovered} label="Recently discovered" />
               <FoodLinkRow foods={discovery.notUsedRecently} label="Not cooked recently" />
-              {discovery.suggested.length > 0 && (
-                <div>
-                  <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/50">
-                    You might enjoy
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {discovery.suggested.map((s) =>
-                      s.linkable ? (
-                        <FoodLink key={s.slug} food={s} />
-                      ) : (
-                        <span
-                          key={s.slug}
-                          className="inline-flex items-center rounded-full border border-border/40 bg-muted/30 px-2.5 py-1 text-xs font-medium text-foreground/70"
-                        >
-                          {s.name}
-                        </span>
-                      ),
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
           </IntelligenceCard>
         )}

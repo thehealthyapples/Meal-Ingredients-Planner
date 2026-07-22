@@ -82,9 +82,11 @@ export default function PlantDiversityPage() {
 
         {activeTab === "foods" && (
           <>
+            {/* NSR1 Phase 2 (Nutrition): imperative advice removed — "discover ingredients
+                to try next" is the Companion's counsel, not the room's (GEA8/21). The room
+                describes what it shows, as fact. */}
             <p className="text-sm text-muted-foreground/60 leading-relaxed max-w-2xl mb-6">
-              Understand what your household eats, how it supports your health, and
-              discover ingredients to try next.
+              What your household eats, and the variety already on your table.
             </p>
             {isLoading ? (
               /* PROD2: adopts the canonical loading owner (UIA §17) in place of a
