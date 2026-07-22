@@ -5,7 +5,7 @@
 | **Session ID** | `LHXP1_Living_Home_Experience_Pass1_Composition_And_Balance` |
 | **Rollback ID** | `rollback/LIVING-HOME-PASS1-20260722` → `df44399b` (annotated tag; created before any change; covers committed state only — tree was clean apart from this dashboard's heartbeat) |
 | **Start time** | 2026-07-22 |
-| **Current stage** | Documentation → committing |
+| **Current stage** | Complete — committed `a79362a7` on `int1-intelligence-platform`; awaiting Home Owner walk-through |
 
 ## Objective
 Living Home Experience Pass 1 — a consistent Composition & Balance refinement across the household rooms to move each closer to **Level 3 — Hospitable** (LHC1 Maturity Model), without touching architecture, ownership, navigation, Environmental Dressing, Living Behaviour, Companion capabilities, business logic, APIs, schemas, data models, permissions, or the Intelligence Platform. Refine, do not redesign.
@@ -29,9 +29,9 @@ Living Home Experience Pass 1 — a consistent Composition & Balance refinement 
 - [x] Resolved LHC1 Owner Decision D: the Planner flame is plain daily calories, GEA13-safe, kept.
 - [x] Verified: typecheck 88 (baseline; 0 client; 0 edited-file); build exit 0; adoption 100·0·9 (baseline).
 - [x] Wrote the deliverable with all 9 required sections + Maturity-Model validation.
-- [ ] Commit on `int1-intelligence-platform`; record commit hash here + dashboard.
+- [x] Committed `a79362a7` on `int1-intelligence-platform`; commit hash recorded here + dashboard.
 
-**Last checkpoint:** verified baseline-clean; deliverable written; committing.
+**Last checkpoint:** committed `a79362a7`; awaiting Home Owner walk-through. NOT deployed.
 
 ## Next action
 Commit all changes on `int1-intelligence-platform`; record the commit hash in this file and the dashboard. Then: Home Owner walk-through of the eight refined rooms at 1440/1280/390 is the acceptance gate; the staged Level-3 gaps (report §4) direct the next pass. NOT deployed — production is a separate human-gated act.
