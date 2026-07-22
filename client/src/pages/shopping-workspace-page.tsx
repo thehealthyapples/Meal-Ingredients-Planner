@@ -3016,7 +3016,7 @@ export default function ShoppingWorkspacePage() {
       ) : (
         <>
 
-        <div className="rounded-xl border border-border/50 bg-card/60 overflow-hidden mb-6">
+        <div className="max-w-4xl mx-auto rounded-xl border border-border/50 bg-card/60 overflow-hidden mb-6">
 
           {/* ── Review mode: flat list ─────────────────────────────── */}
           {mode === "review" && (
@@ -3258,7 +3258,7 @@ export default function ShoppingWorkspacePage() {
 
         {/* ── SHOP3: price comparison across shops and tiers ───────────── */}
         {hasPrices && selectedRetailers.length > 0 && (
-          <div className="rounded-xl border border-border/50 bg-card/60 px-4 py-4 mb-6" data-testid="section-comparison-strip">
+          <div className="max-w-4xl mx-auto rounded-xl border border-border/50 bg-card/60 px-4 py-4 mb-6" data-testid="section-comparison-strip">
             <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
               <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">Price comparison</p>
               {hasAnyEstimateInTotal && (
@@ -3341,7 +3341,7 @@ export default function ShoppingWorkspacePage() {
           readable only from the retired surface, so these rows were
           stranded off-nav (DCA1). */}
       {mode !== "add" && !isLoading && !isError && (
-        <div className="rounded-xl border border-border/50 bg-card/60 px-4 py-4 mb-6" data-testid="section-always-in-basket">
+        <div className="max-w-4xl mx-auto rounded-xl border border-border/50 bg-card/60 px-4 py-4 mb-6" data-testid="section-always-in-basket">
           <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70 mb-3">Always in basket</p>
           {shoppingExtras.length === 0 ? (
             <p className="text-xs text-muted-foreground mb-3">

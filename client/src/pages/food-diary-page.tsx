@@ -1806,7 +1806,7 @@ export default function FoodDiaryPage() {
                   </p>
                 )}
 
-                <div className="border border-border rounded-lg overflow-hidden divide-y divide-border">
+                <div className="border border-border/70 rounded-lg overflow-hidden divide-y divide-border/60">
                   {SLOTS.map(({ key, label, icon: Icon }) => {
                     const slotEntries = entriesBySlot[key];
                     const isExpanded = expandedSlots.has(key);

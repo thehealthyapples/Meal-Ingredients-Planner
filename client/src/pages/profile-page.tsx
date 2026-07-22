@@ -551,8 +551,14 @@ function ProfileHeader({ profile, onSave }: { profile: ProfileData; onSave: (fie
             </div>
           )}
           {/* Username / email - tiny, faded, always rendered so layout doesn't shift */}
+          {/* LIVING HOME PASS 1 \u2014 the household room is a warm portrait, not an
+              account form. A raw machine email under the name reads as admin
+              chrome (HOMEOWNER1: reduce administrative appearance); the friendly
+              @handle still shows, but a login email is suppressed here and stays
+              available in its proper place, the Account section. The line is kept
+              (as nbsp) so the layout never shifts. */}
           <p className="text-xs text-muted-foreground/45 truncate mt-0.5 leading-tight" data-testid="text-username">
-            {editing ? "\u00A0" : subtitleText}
+            {editing || isEmailUsername ? "\u00A0" : subtitleText}
           </p>
         </div>
 

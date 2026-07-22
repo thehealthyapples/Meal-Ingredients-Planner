@@ -1237,7 +1237,7 @@ export default function PantryPage() {
           </div>
         ) : (
           /* Two-column layout: Food (dominant, 2/3) | Home (narrower, 1/3) */
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 pb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-8">
             <div className="lg:col-span-2">
               <FoodPantrySection
                 items={items}

@@ -2498,7 +2498,7 @@ export default function WeeklyPlannerPage() {
                       return (
                         <div
                           key={day.id}
-                          className={`relative bg-muted/40 border-b-2 border-l border-border px-2 py-2.5 text-center transition-colors group/day-hdr ${
+                          className={`relative bg-muted/40 border-b-2 border-l border-border/60 px-2 py-2.5 text-center transition-colors group/day-hdr ${
                             isSelected ? "bg-primary/10" : "hover:bg-accent/30"
                           }`}
                         >
@@ -2537,7 +2537,7 @@ export default function WeeklyPlannerPage() {
                           {/* Row label - sticky left */}
                           <div
                             key={row.id + "-label"}
-                            className={`flex flex-col justify-center px-2 py-1.5 border-r border-border sticky left-0 z-10 group ${!isLastRow ? "border-b border-border" : ""}`}
+                            className={`flex flex-col justify-center px-2 py-1.5 border-r border-border/60 sticky left-0 z-10 group ${!isLastRow ? "border-b border-border/60" : ""}`}
                             style={{ backgroundColor: "hsl(var(--background))" }}
                           >
                             <div className="flex items-center gap-1">
@@ -2575,7 +2575,7 @@ export default function WeeklyPlannerPage() {
                                 mealType={row.mealType ?? row.addMealType}
                                 audience={row.audience}
                                 isDrink={row.isDrink}
-                                className={`relative p-2 min-h-[68px] flex flex-col gap-0.5 border-l border-border ${!isLastRow ? "border-b border-border" : ""}`}
+                                className={`relative p-2 min-h-[68px] flex flex-col gap-0.5 border-l border-border/60 ${!isLastRow ? "border-b border-border/60" : ""}`}
                                 data-testid={`cell-${row.id}-${day.dayOfWeek}`}
                               >
                                 {/* Meal name pills — each slot is its own sortable context for within-slot reorder */}
@@ -2852,7 +2852,7 @@ export default function WeeklyPlannerPage() {
                           return (
                             <div
                               key={day.id}
-                              className="bg-muted/30 border-t-2 border-l border-border px-2 py-2.5 text-center"
+                              className="bg-muted/30 border-t-2 border-l border-border/60 px-2 py-2.5 text-center"
                               data-testid={`summary-day-${day.dayOfWeek}`}
                             >
                               {dayCalories > 0 ? (

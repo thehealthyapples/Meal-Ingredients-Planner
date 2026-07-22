@@ -1795,7 +1795,7 @@ export default function FloatingAssistant() {
                   onNavigate={handleNavigate}
                 />
               ) : (
-                <div className="flex-1 overflow-y-auto flex flex-col justify-end">
+                <div className="flex-1 overflow-y-auto flex flex-col justify-center">
                   {!isTurnsLoading && (
                     <>
                       {/* CP2 — empty-state text, in the user's chosen voice.

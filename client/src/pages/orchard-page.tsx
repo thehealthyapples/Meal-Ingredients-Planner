@@ -389,7 +389,7 @@ function OrchardWaiting() {
 function EmptyOrchard() {
   return (
     <div
-      className="flex min-h-[60vh] flex-col justify-center py-12"
+      className="flex min-h-[60vh] flex-col items-center justify-center py-12 text-center"
       data-testid="orchard-empty"
     >
       <div className="max-w-xl space-y-4">
