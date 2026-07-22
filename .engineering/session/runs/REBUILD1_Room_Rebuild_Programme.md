@@ -46,14 +46,31 @@ intelligence and canonical ownership are preserved unless the governing architec
       - Owner-gated gaps left to their owners with reasons: `/dashboard` retirement (Home Owner decision),
         device clock (Household Time / CONV1 debt), greeting + action labels (INT21 / CP3).
       - Report: docs/implementation/rebuild/REBUILD1_ROOM01_WELCOME_HOME.md
-- [ ] Room 2 — Larder (`/pantry` → pantry-page.tsx) against LARDER1 North Star
+- [x] Room 2 — Larder audited: verdict NEEDS-GROUND-UP-REBUILD (inventory-list software vs LARDER1's
+      physical larder). Ground-truthed: `defaultHave` boolean EXISTS (binary availability surfaceable);
+      "running low" 3rd state has no fact; `needQuantityValue`/`needUnit` wired into 10+ server consumers.
+      Implementation PAUSED pending consolidated map + build decisions.
+- [x] AUDIT-ALL-FIRST complete: all 13 rooms audited (parallel). Consolidated map written:
+      docs/implementation/rebuild/REBUILD1_CONSOLIDATED_AUDIT_MAP.md
+      - AT-STANDARD: Home (built), Community. GROUND-UP: Larder, Partners. Refine: other 9.
+      - 4 cross-cutting patterns: (A) GEA13 score/grade surfaces; (B) GEA8/21 room-voice coaching;
+        (C) cross-domain surfaces in wrong room; (D) reads-as-SaaS chrome.
+      - SAFETY finding: Profile allergy has two edit surfaces → possible silently-dropped restriction.
+      - In-scope craft wave (no decisions) defined; owner-decision batch defined.
+- [ ] Await Home Owner build green-light (which streams); then execute.
 
-**Last checkpoint:** Room 1 (Welcome Home) refined, verified, reported. Outstanding for Room 1:
-live visual review (env limitation) + `/dashboard` Home-Owner decision (both documented in report §7/§8).
+**PROGRAMME DECISION (Home Owner, 2026-07-22):**
+- Scope authority = **CASE-BY-CASE**: presentation-only by default; PAUSE and ask before any
+  backend/data change that would materially complete a room. No unilateral business-behaviour change.
+- Priority = **AUDIT ALL 13 FIRST**: deliver one consolidated gap map, then owner picks what to build.
+
+**Last checkpoint:** Room 1 done+committed (f2b11ac7). Room 2 audited (rebuild needed, backend-entangled).
+Pivoted to audit-all-first per Home Owner decision.
 
 ## Next action
-Room 2 (Larder): architecture-first design brief + gap audit of `pantry-page.tsx` against the
-LARDER1 North Star, then refine what falls short; verify; report; commit.
+Launch parallel architecture-first audits for the 11 remaining rooms (Cookbook, Planner, Shopping,
+Nutrition, Diary, Companion, Profile, Community, Partners, Support, Administration); synthesise a
+single consolidated map (verdict · gaps · in-scope-vs-backend · effort per room); present to Home Owner.
 
 ## Blockers
 none — scope is large (13 rooms); programme is paced room-by-room and kept resumable via this file.
