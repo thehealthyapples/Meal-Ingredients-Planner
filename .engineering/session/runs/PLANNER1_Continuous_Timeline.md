@@ -6,7 +6,8 @@
 | **Session ID** | `PLANNER1_Continuous_Timeline` |
 | **Rollback ID** | `rollback/PLANNER-continuous-timeline-20260722` |
 | **Start time** | 2026-07-22T08:22:26Z UTC |
-| **Current stage** | Documentation |
+| **Current stage** | Complete |
+| **Commit** | `72aa04b90ee3bd1b50ce089dd0c35a1d5e638955` (`72aa04b9`) |
 
 ## Objective
 Replace the Planner's fixed six-week rota with a continuous, dated, unbounded timeline; extend `planner_weeks` (single owner — no second timeline); preserve all history and existing planner APIs, meal assignments and household planning; governed amendment to TIME3.
@@ -49,12 +50,12 @@ Replace the Planner's fixed six-week rota with a continuous, dated, unbounded ti
 - [x] New suite `test-planner-continuous-timeline` 27/27; time3 (73/51/60/34) + planner suites green
 - [x] Client: date labels (`formatWeekRange`) + current-week landing + unbounded prev/next nav; design-system `Button` + direct apiRequest (adoption back to baseline 100/9)
 - [x] Client typecheck clean; full build (vite + server) succeeds
-- [ ] Commit + record hash in report § 12
+- [x] Committed `72aa04b9`; hash recorded in report § 12 and here
 
-**Last checkpoint:** All implementation + tests + docs complete; adoption/coherence/publication/typecheck all byte-neutral vs baseline; client builds.
+**Last checkpoint:** Committed `72aa04b9`. Implementation complete; all gates byte-neutral vs baseline.
 
 ## Next action
-Commit the change (planner timeline + governed TIME3 amendment + report) and record the commit hash in `docs/implementation/PLANNER_CONTINUOUS_TIMELINE.md` § 12 and here.
+Complete — nothing outstanding. (Documentation-only follow-up amendment for the hash is committed separately.)
 
 ## Blockers
 None.

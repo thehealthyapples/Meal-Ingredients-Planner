@@ -178,4 +178,16 @@ evidence stands in its place and is reproducible:
 
 ## 12. Commit
 
-_(commit hash + files changed — to be completed)_
+- **Commit hash:** `72aa04b90ee3bd1b50ce089dd0c35a1d5e638955` (`72aa04b9`)
+- **Branch:** `int1-intelligence-platform`
+- **Files changed:**
+  - `shared/schema.ts` — `weekNumber` redefined as unbounded ordinal; `(household_id, week_start_date)` index
+  - `server/migrations/runner.ts` — additive timeline index migration (`2026-07-22_planner1_continuous_timeline_index`)
+  - `server/storage.ts` — `ensureDatedPlannerWeek`, `getCurrentDatedPlannerWeek`, `getPlannerWeekByStartDate`, `getPlannerDaysByWeekIds`
+  - `server/routes.ts` — `/api/planner/timeline/current`, `/api/planner/timeline/week`; batched `/full`
+  - `server/tests/test-planner-continuous-timeline.ts` — new suite (27 assertions)
+  - `package.json` — registered + wired the suite into `npm test`
+  - `client/src/pages/weekly-planner-page.tsx` — date labels, current-week landing, unbounded prev/next navigation
+  - `docs/architecture/THA_HOUSEHOLD_TIME_ARCHITECTURE.md` — governed amendment (migration principle 3; window-expired resolved)
+  - `docs/implementation/PLANNER_CONTINUOUS_TIMELINE.md` — this report
+  - `.engineering/session/runs/PLANNER1_Continuous_Timeline.md`, `.engineering/session/CURRENT.md` — session record
