@@ -23,7 +23,7 @@ The Constitution is **the design-language face of `LIVINGHOME2`**, exactly as `O
 - [x] Commit; record hash here + dashboard.
 
 ## Result
-_Work commit: `<recorded after commit below>`._
+_Work commit: `e1759926` on `int1-intelligence-platform`._
 Created the Environmental Dressing Design Constitution as the design-language face of `LIVINGHOME2`. One canonical design language; one Home Owner approval authority (`HOMEOWNER1`, cited); one admission standard (§ 21, eleven-item evidence); no duplicate aesthetic governance (every palette/token/material/feeling a citation). Admits no object; builds no asset/renderer/seasonal state/schema/UI/token; the `ED2` register stays empty. `EXP3` Verdict 3 (the medium question) deliberately NOT resolved — quality standard stated, verdict routed to the Home Owner at first admission.
 
 ## Next action
