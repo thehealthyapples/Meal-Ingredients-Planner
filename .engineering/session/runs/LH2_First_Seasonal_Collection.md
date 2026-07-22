@@ -33,7 +33,7 @@ Added `onlyRooms` (per-object room allow-list) + `resolveRoomDressing` (at most 
 - [x] Commit; record hash here + dashboard.
 
 ## Result
-_Work commit: `__LH2_COMMIT__`._
+_Work commit: `dc26fc3a`._
 Committed on `int1-intelligence-platform`. Five season-keyed objects render one-per-sill in the browsing rooms across the year; the wreath deferred to Phase 5; Stage 1's bowl of apples remains the year-round base. Claim-free, still, wordless, beneath words. No household data; no schema; no governing rule changed.
 
 ## Next action
