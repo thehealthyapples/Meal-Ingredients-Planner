@@ -5,7 +5,7 @@
 | **Session ID** | `ED1_Environmental_Dressing_Foundation` |
 | **Rollback ID** | `rollback/ED1-environmental-dressing-foundation-20260722` → `94edc39a` (annotated tag; created before any change; covers committed state only — tree clean apart from the CURRENT.md heartbeat) |
 | **Start time** | 2026-07-22 |
-| **Current stage** | Complete — committed on `int1-intelligence-platform`; awaiting owner acceptance |
+| **Current stage** | Complete — committed `a9440761` on `int1-intelligence-platform`; awaiting owner acceptance |
 
 ## Objective
 Establish the canonical **Environmental Dressing Platform** that governs all future Living Home environmental dressing — ownership, registration, placement rules, rendering architecture only — **without introducing any visible dressing anywhere.**
@@ -20,7 +20,7 @@ The brief, read literally ("implement the Registry + interfaces as artifacts"), 
 - [x] Landed the four § 10.2 owner amendments (8 edits), each a citation-based annotation preserving the original rule verbatim.
 - [x] Wrote `docs/implementation/ED1_ENVIRONMENTAL_DRESSING_FOUNDATION.md` — full platform spec (owner · registry · placement · rendering · lifecycle · seasonal · visibility · eligibility · registration · extension points) DECLARED-NOT-BUILT, with all 9 required sections.
 - [x] Verified diff is docs/session only — no code path.
-- [ ] Commit; record commit hash here + dashboard.
+- [x] Commit (`a9440761`); record commit hash here + dashboard.
 
 ## The four Phase-1 amendments landed (governance only)
 1. **Blueprint § 12.1 item 2** — prop = *claim without data*; registered dressing = *claim-free hospitality object*. Ban's purpose untouched.
