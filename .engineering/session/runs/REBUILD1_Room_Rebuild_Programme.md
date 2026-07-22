@@ -57,7 +57,29 @@ intelligence and canonical ownership are preserved unless the governing architec
         (C) cross-domain surfaces in wrong room; (D) reads-as-SaaS chrome.
       - SAFETY finding: Profile allergy has two edit surfaces → possible silently-dropped restriction.
       - In-scope craft wave (no decisions) defined; owner-decision batch defined.
-- [ ] Await Home Owner build green-light (which streams); then execute.
+- [x] Consolidated map committed (e16117d5). Home Owner directive received: execute 3 phases.
+- [ ] NSR1 continuation (new rollback `rollback/NSR1-north-star-reconstruction-20260722` → e16117d5):
+      - PHASE 1: Profile allergy safety (investigate; one canonical owner; no silent fails;
+        if backend change required → STOP + present owner decision). Report + commit.
+      - PHASE 2: North Star craft wave (presentation-only) — Cookbook, Nutrition, Shopping, Diary,
+        Planner, Partners, Companion presentation. One report per room. Commit each.
+      - PHASE 3: Larder ground-up rebuild (if backend/arch decision needed → STOP + present). Report + commit.
+      - Final: whole-house coherence review + report (rollback ids, commits, reports, remaining decisions).
+
+**NSR1 rollback:** `rollback/NSR1-north-star-reconstruction-20260722` (annotated → e16117d5).
+
+## NSR1 progress
+- PHASE 1 ✅ committed ce2ba349 — Profile allergy: no DB drop (one canonical owner already); fixed the
+  stale cross-cache display; presented remaining owner decisions (single editor / write-path). Report done.
+- PHASE 2 ✅ complete — craft wave, 7 rooms, each committed + reported under docs/implementation/rebuild/:
+  Cookbook 85f2d0f1 · Nutrition f57f4ed3 · Shopping 03e64cfe · Diary 88e78671 · Planner 7eaefc0a ·
+  Partners 836b3dbe · Companion 2b6df9be. Removed GEA13 scores + GEA8 room-voice; flagged owner items.
+- PHASE 3 ⏳ Larder ground-up rebuild — IN PROGRESS.
+
+## Next action
+PHASE 3 — read LARDER1 North Star; design the Larder as-if-new; where presentation alone cannot satisfy
+the North Star (running-low availability fact; removing quantity mechanic touches 10+ server consumers),
+STOP and present per Phase 3 rule (conflict, owner, minimum change, why). Write LARDER_GROUND_UP_REBUILD.md.
 
 **PROGRAMME DECISION (Home Owner, 2026-07-22):**
 - Scope authority = **CASE-BY-CASE**: presentation-only by default; PAUSE and ask before any
