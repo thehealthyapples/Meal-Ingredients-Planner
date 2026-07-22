@@ -12,6 +12,59 @@
 
 ---
 
+## What is a Living Home?
+
+*A constitutional definition, added by `LHC1`. It is a **synthesis of law already owned** — it restates no rule (each idea cites its owner, per LIVINGHOME1 §2.3 restate-no-rule) and creates **no runtime behaviour, ownership, capability, token, route, or gate**. It exists so that "complete the house" has one shared meaning a decade of contributors can check a room against.*
+
+A Living Home is not an application that happens to be organised into pages. It is **software that quietly cares for a household** — a place a family arrives in and moves through, kept by someone whose care the home simply shows (HOMEOWNER1: *"Someone cares for it… in a real home that person has no job title; the home simply shows their care"*, cited).
+
+Its constitutional purpose rests on six commitments, each owned elsewhere and assembled here:
+
+- **It cares for a household, quietly.** The home's job is to leave the household with *less to carry*, not more to attend to — *"a warm, lived-in home where someone has already thought about dinner"* (Experience Blueprint, cited). Care is felt, not announced.
+- **Hospitality before productivity.** Where welcome and efficiency conflict, welcome wins (**GEA1**, cited). The home is measured first by how it feels to be in, and only then by what it lets a household get done.
+- **Rooms represent places, not features.** Each room is a viewpoint into one house — differentiated by purpose, light and material, never by its own architecture (LIVINGHOME1 §4 *"Rooms are viewpoints, not environments"*; Blueprint *One Home, Many Places*, cited). A room is somewhere you *are*, not a screen you are *on*.
+- **Intelligence supports rather than directs.** The Companion enriches; it never takes the decisions that are the household's. The rooms observe, the Companion understands, the household decides (**GEA21–GEA23**, cited); intelligence is felt as *a better answer, never a visible mechanism* (**GEA16**, cited).
+- **Technology becomes quieter as trust grows.** A more capable THA is a *quieter* THA (**GEA2**, cited), and the house is never engineered to be returned to more often (**GEA3**, cited). As a household comes to trust the home, the technology recedes and the household stays present (Blueprint Technology Principle, cited).
+- **The home should feel cared for even when nothing new has happened.** Calm must never become lifeless (Experience Language §3A.4, cited); the still house is worth returning to precisely because it is *kept* — *"the care that keeps the still house worth returning to never finishes"* (HOMEOWNER1 Principle 11, cited). An empty day in a Living Home still feels tended, not vacant.
+
+The founding distinction holds beneath all six: **the house holds still; the life moves** (LIVINGHOME1 §3, cited). A Living Home is the constant place, quietly kept, in which a household's own changing life is shown truthfully — and nothing else.
+
+---
+
+## Living Home Maturity Model
+
+*A governing evaluation model, added by `LHC1`. It is a **lens for assessing the experience quality of a room**, not a mechanism: it introduces **no new runtime behaviour**, no schema, no ownership, and no gate that duplicates an existing gate. It ranks nothing about a **household** (GEA13) — it assesses the **house's** care for the household, which is the Home Owner's proper subject (HOMEOWNER1). It exists so that "done" is legible: a room is not finished when it works; it is finished when it feels like home.*
+
+Every room sits at one of four architectural maturity levels. The levels are **cumulative** — a room reaches a level only by holding every level beneath it.
+
+**Level 1 — Constructed.** *The house has walls and doors.*
+- The room exists (a route, a page).
+- Navigation reaches it (`NAV_ITEMS`).
+- Ownership exists (its facts have a canonical owner).
+
+**Level 2 — Functional.** *The room works.*
+- The room fulfils its purpose (its `ROOM_PURPOSE`).
+- Canonical ownership is complete (no fact re-owned by the UI — GEA17 / UIOWN1).
+- Business workflows are complete.
+
+**Level 3 — Hospitable.** *The room is a pleasure to be in.*
+- **Calm** — nothing engineered to hurry or to grade (GEA3 / GEA13).
+- **Balanced** — surplus space becomes air and view, never absence (GEA11).
+- **Warm** — the house's materials and voice, not a cold or clinical form (Experience Language §3A).
+- **Inviting** — the threshold welcomes; controls read as offers, not chores.
+- **Comfortable to spend time in** — no anxiety, no clutter, no clinical note.
+
+**Level 4 — Living.** *The room is alive.*
+- **Quiet environmental life** — the home's own hospitality layer, present without claiming (Environmental Dressing, LIVINGHOME2 — *gated*).
+- **Seasonal presence** — the year turns through the household's life, never the house's light (LIVINGHOME1).
+- **Household awareness** — the room shows what is true of *this* household, or nothing.
+- **Feels cared for** — tended even when nothing new has happened.
+- **Feels like a real home rather than software.**
+
+**How this programme reads against the model.** Most THA rooms today hold **Level 2** solidly and reach into **Level 3**: identity, ownership and workflows are complete, and the atmosphere frame — window, ground, light, voice — is built (§1). What HOMEOWNER2 circled is largely the **Level 2 → 3 finish** (composition, balance, honest content, trust in the numbers) — the §6 roadmap. **Level 4** is deliberately gated: its environmental life is the declared-not-built Environmental Dressing layer (§2, §4), which no instruction may ship around (HOMEOWNER1). This model changes none of that governance; it only names where each room stands and what "up" means.
+
+---
+
 ## 0 · What this programme is, and what it is not
 
 The Living Home has reached the point where **room identity is a core product capability, not a future enhancement.** This programme completes the house: it makes the Living Home the **governing source for room identity and atmosphere**, and it defines *done* for every room.
@@ -353,3 +406,20 @@ Recorded here because *an unrecorded approval is not an approval* (HOMEOWNER1), 
 ---
 
 *Programme `LHC1`. Governance + one lawful presentation fix. The house's identity and atmosphere are governed and largely built; the finish is staged, and the one unbuilt layer stays lawfully gated.*
+
+---
+
+## North Star
+
+The Living Home is complete when opening The Healthy Apples no longer feels like opening an application.
+
+- A household **enters a beautifully kept home**, not a set of screens — the arrival is a threshold, and someone has evidently been here caring for the place before them.
+- **Every room feels distinct yet belongs to one house** — each with its own purpose, light and material, none with its own architecture; a household always knows which room it is in, and never doubts it is still home.
+- **Intelligence quietly supports the household** — the Companion notices, offers and reassures, then gets out of the way; the household keeps every decision that is theirs.
+- **Trust grows while technology becomes less visible** — the more the home earns a household's confidence, the quieter it becomes; capability is spent on removing weight, never on adding surface.
+- **Success is measured by households feeling at home**, not by households being impressed by technology — the home that succeeds is the one a family stops noticing, because it has become the calm, dependable place they simply live in.
+
+This is the standard every future room, feature and refinement is checked against — the Home Owner's two questions, asked of the whole house: *does this feel welcoming, and does it belong here?* (HOMEOWNER1, cited). Completion is a release milestone; the care that keeps the house worth returning to is continuous (HOMEOWNER1 Principle 11, cited).
+
+> **"The highest compliment The Healthy Apples can receive is:**
+> **'It simply feels like home.'"**
