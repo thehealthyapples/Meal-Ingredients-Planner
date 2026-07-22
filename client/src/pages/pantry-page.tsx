@@ -718,7 +718,7 @@ function FoodPantrySection({
                                 </>
                               )}
                               {!isLoadingKnowledge && !knowledge && (
-                                <p className="text-xs text-muted-foreground/50 italic pt-2.5">No additional info available yet.</p>
+                                <p className="text-xs text-muted-foreground/50 italic pt-2.5">Nothing more to add here just yet.</p>
                               )}
                               {/* WX7 — Household Food Library: your household's relationship with this food. */}
                               <PantryIntelligencePanel

@@ -3153,7 +3153,7 @@ export default function ShoppingWorkspacePage() {
                     <div className="px-4 py-4 text-center">
                       <CheckCircle2 className="h-6 w-6 text-emerald-500 mx-auto mb-1.5" />
                       <p className="text-sm font-medium text-foreground">
-                        All items accounted for
+                        That's everything
                       </p>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         Great shop — nothing left to find

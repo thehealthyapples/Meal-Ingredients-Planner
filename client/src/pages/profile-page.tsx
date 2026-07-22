@@ -156,7 +156,7 @@ function SettingRow({
         aria-expanded={open}
       >
         <span className="flex-1 text-sm text-left">{label}</span>
-        <span className="text-sm text-muted-foreground shrink-0 truncate max-w-[45%] text-right">{summary || "Not set"}</span>
+        <span className="text-sm text-muted-foreground shrink-0 truncate max-w-[45%] text-right">{summary || "Add yours"}</span>
         <ChevronDown
           className={`h-4 w-4 text-muted-foreground/40 shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
         />
@@ -613,26 +613,26 @@ export function HealthSnapshot({ profile }: { profile: ProfileData }) {
 
       <div className="grid grid-cols-3 gap-3 text-center">
         <div data-testid="metric-bmi">
-          <p className="text-2xl font-semibold text-foreground">{bmi ?? "-"}</p>
+          <p className="text-2xl font-semibold text-foreground">{bmi ?? " "}</p>
           <p className="text-xs text-muted-foreground mt-0.5">BMI</p>
           <p className="text-xs font-medium text-muted-foreground">
-            {bmiCategory || "Not set"}
+            {bmiCategory || "Add yours"}
           </p>
         </div>
         <div data-testid="metric-calories">
           <p className="text-2xl font-semibold text-foreground">
-            {dailyCalories ? dailyCalories.toLocaleString() : "-"}
+            {dailyCalories ? dailyCalories.toLocaleString() : " "}
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">kcal / day</p>
           <p className="text-xs font-medium text-muted-foreground">
-            {dailyCalories ? "Your setting" : "Not set"}
+            {dailyCalories ? "Your setting" : "Add yours"}
           </p>
         </div>
         <div data-testid="metric-activity">
-          <p className="text-2xl font-semibold text-foreground">{activityLabel ?? "-"}</p>
+          <p className="text-2xl font-semibold text-foreground">{activityLabel ?? " "}</p>
           <p className="text-xs text-muted-foreground mt-0.5">Activity</p>
           <p className="text-xs font-medium text-muted-foreground">
-            {activityLabel ? "Your setting" : "Not set"}
+            {activityLabel ? "Your setting" : "Add yours"}
           </p>
         </div>
       </div>
@@ -1467,15 +1467,15 @@ export function GoalsPreferences({ profile, onSave, showDiet = true }: { profile
   // Summary text for each setting row
   const cuisineSummary = dietPattern
     ? (DIET_PATTERNS.find(d => d.value === dietPattern)?.label ?? dietPattern)
-    : "No preference";
-  const allergiesSummary = dietRestrictions.length > 0 ? dietRestrictions.join(", ") : "None";
+    : "Add yours";
+  const allergiesSummary = dietRestrictions.length > 0 ? dietRestrictions.join(", ") : "Nothing noted";
   const scheduleSummary = (eatingSchedule && eatingSchedule !== "None")
     ? (EATING_SCHEDULES.find(s => s.value === eatingSchedule)?.label ?? eatingSchedule)
-    : "No preference";
+    : "Add yours";
   const activitySummary = activity === "high" ? "High" : activity === "low" ? "Low" : "Moderate";
   const goalsSummary = healthGoals.length > 0
     ? healthGoals.map(id => GOAL_OPTIONS.find(g => g.id === id)?.label).filter(Boolean).join(", ")
-    : "None set";
+    : "Add yours";
 
   return (
     <Card className="p-4 sm:p-5" data-testid="card-goals">
@@ -1670,7 +1670,7 @@ function ShoppingPreferences({ prefs, onSave }: { prefs: any; onSave: (prefs: an
   const budgetSummary = BUDGET_OPTIONS.find(b => b.id === budget)?.label ?? "Balanced";
   const storesSummary = stores.length > 0
     ? stores.map(id => STORE_OPTIONS.find(s => s.id === id)?.label).filter(Boolean).join(", ")
-    : "No preference";
+    : "Add yours";
   const upfSummary = UPF_OPTIONS.find(u => u.id === upf)?.label ?? "Moderate";
 
   return (

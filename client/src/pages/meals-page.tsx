@@ -215,7 +215,7 @@ function NutritionBadges({ mealId, nutrition }: { mealId: number; nutrition?: Nu
         {items.map(({ label, value, icon: Icon, color }) => (
           <div key={label} className="flex items-center gap-1 rounded-md bg-muted/50 px-1.5 py-0.5" data-testid={`text-nutrition-widget-${label.toLowerCase()}-${mealId}`}>
             <Icon className={`h-3 w-3 flex-shrink-0 ${color}`} />
-            <span className="text-xs font-medium truncate">{value || 'N/A'}</span>
+            <span className="text-xs font-medium truncate">{value || '—'}</span>
           </div>
         ))}
       </div>
@@ -246,7 +246,7 @@ function AnalysisResultContent({ analysis }: { analysis: AnalysisResult }) {
                 <Icon className={`h-4 w-4 ${color}`} />
                 <div>
                   <p className="text-xs text-muted-foreground">{label}</p>
-                  <p className="text-sm font-medium" data-testid={`text-nutrition-${label.toLowerCase()}`}>{value || 'N/A'}</p>
+                  <p className="text-sm font-medium" data-testid={`text-nutrition-${label.toLowerCase()}`}>{value || '—'}</p>
                 </div>
               </div>
             ))}

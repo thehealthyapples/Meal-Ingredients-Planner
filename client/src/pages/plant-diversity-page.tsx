@@ -108,7 +108,7 @@ export default function PlantDiversityPage() {
         {activeTab === "nutrients" && (
           <>
             <p className="text-sm text-muted-foreground/60 leading-relaxed max-w-2xl mb-6">
-              Track your household's nutrient intake over time and identify gaps in your diet.
+              See the nutrients your household's meals bring to the table, week by week.
             </p>
             <HouseholdNutritionCentre />
           </>

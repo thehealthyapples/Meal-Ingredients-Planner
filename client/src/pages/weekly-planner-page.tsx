@@ -2893,7 +2893,7 @@ export default function WeeklyPlannerPage() {
                   data-testid="button-toggle-provisioning"
                 >
                   <ShoppingCart className="h-4 w-4 text-emerald-600 shrink-0" />
-                  <span className="text-sm font-medium text-foreground flex-1">Weekly Provisioning</span>
+                  <span className="text-sm font-medium text-foreground flex-1">The week's provisions</span>
                   {provisioningItems.length > 0 && (
                     <span className="text-xs text-muted-foreground/70 mr-1">{provisioningItems.length} item{provisioningItems.length !== 1 ? "s" : ""}</span>
                   )}
@@ -2905,11 +2905,11 @@ export default function WeeklyPlannerPage() {
                 {provisioningOpen && (
                   <div className="mt-1 px-3 py-2.5 rounded-lg border border-border bg-card/50 space-y-2" data-testid="section-provisioning-items">
                     <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
-                      Household items needed this week — not tied to a specific day. These inform shopping and availability.
+                      Things the household needs this week, not tied to any one day.
                     </p>
                     {provisioningItems.length === 0 ? (
                       <p className="text-xs text-muted-foreground/50 py-1">
-                        No provisioning items yet. Use <span className="font-medium">Add to Week</span> from the Analyser to add household items here.
+                        Anything you add for the whole week — rather than a single day — gathers here.
                       </p>
                     ) : (
                       <div className="space-y-1">

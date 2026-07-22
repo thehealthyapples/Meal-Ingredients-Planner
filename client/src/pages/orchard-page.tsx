@@ -623,7 +623,7 @@ function VillageView({
 
         {invitations.length === 0 ? (
           <p className="text-sm text-muted-foreground" data-testid="orchard-no-invitations">
-            Nothing is waiting.
+            No invitations waiting just now.
           </p>
         ) : (
           <ul className="space-y-3" data-testid="orchard-invitations">
@@ -662,7 +662,7 @@ function VillageView({
       <div className="space-y-3">
         <h3 className="title-card">Where you're known</h3>
         {communities.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nowhere yet.</p>
+          <p className="text-sm text-muted-foreground">No neighbourhoods yet.</p>
         ) : (
           <ul className="space-y-2" data-testid="orchard-standing">
             {communities.map((c) => (

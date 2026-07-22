@@ -707,12 +707,12 @@ export default function HomeExperiencePage() {
                           /* CONV1 P8 / BEH-3 — "Nothing planned" is a claim about TODAY,
                              and THA has no today in the planner to make it about. */
                           <p className="text-sm text-muted-foreground" data-testid="text-home-meals-unanchored-count">
-                            Not linked to dates
+                            Not tied to a week yet
                           </p>
                         ) : (
                           <p className="text-sm font-medium" style={{ color: "var(--primary-border)" }} data-testid="text-home-meals-count">
                             {todaysMeals.length === 0
-                              ? "Nothing planned"
+                              ? "An open day"
                               : `${todaysMeals.length} planned`}
                           </p>
                         )}

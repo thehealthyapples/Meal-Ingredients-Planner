@@ -865,7 +865,7 @@ function SectionBlock({
         />
       ) : (
         <div className="px-5 py-8 text-center text-sm text-muted-foreground/45">
-          No {getSectionLabel(section).toLowerCase()} ingredients this week.
+          No {getSectionLabel(section).toLowerCase()} ingredients on the table this week yet.
         </div>
       )}
     </Card>
@@ -1045,7 +1045,7 @@ export function PlantDiversityReport({ weekMeals }: PlantDiversityReportProps) {
       <Card className="overflow-hidden">
         <div className="px-5 py-16 text-center">
           <p className="text-sm text-muted-foreground/50">
-            Your Nutrition Report will appear here once meals are added to your week.
+            Once your week has a few meals, the variety on your table will show here.
           </p>
         </div>
       </Card>
@@ -1083,7 +1083,7 @@ export function PlantDiversityReport({ weekMeals }: PlantDiversityReportProps) {
         />
         {sortedPlantRows.length === 0 && (
           <div className="px-5 py-6 text-center text-sm text-muted-foreground/45 border-b border-border/30">
-            No plant-based ingredients found this week.
+            No plant-based ingredients on the table this week yet.
           </div>
         )}
       </SectionBlock>
