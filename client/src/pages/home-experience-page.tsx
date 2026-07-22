@@ -249,49 +249,18 @@ function ViewLink({ href, children, testId }: { href: string; children: React.Re
   );
 }
 
-/**
- * The week's variety, as a quiet mark.
- *
- * Still data-borne: it accompanies a number a canonical owner produced, and it is not
- * drawn at all when that owner has no picture yet. It is STILL — no sweep, no count up,
- * no draw-on (UIA §11; Blueprint §6.1's "place survives total stillness").
- *
- * PRESENCE1 removed its ARC. The docblock used to defend the ring's stillness on the
- * grounds that motion "would be the ring performing the household's diet back at them"
- * — which was the right instinct aimed at the wrong half of the problem. A still arc
- * filling toward a target the household never chose performs their diet back at them
- * just as surely as a moving one; it simply does it quietly (GEA13).
- */
-// PRESENCE1: this was a progress ring — an arc filling toward WEEKLY_PLANT_TARGET,
-// on Home, on arrival. A ring that is mostly empty is a progress bar bent into a
-// circle, and it graded a household's week against a number they never set
-// (GEA13, which forbids "progress bars toward a target the household did not
-// set" by name). The careful no-arc-at-zero reasoning below was right about the
-// dot and is preserved in spirit: an honest nothing is still nothing.
+// REBUILD1 (Room 1, 2026-07-22) — THE PLANT RING IS RETIRED.
 //
-// What remains is a quiet mark holding the count — the same fact, with the
-// verdict taken off it.
-function PlantRing() {
-  const R = 34;
-  return (
-    <div className="relative shrink-0" style={{ width: 88, height: 88 }}>
-      <svg width="88" height="88" viewBox="0 0 88 88" aria-hidden>
-        <circle cx="44" cy="44" r={R} fill="none" stroke="hsl(var(--accent))" strokeWidth="7" />
-      </svg>
-      <span className="absolute inset-0 flex items-center justify-center">
-        <Leaf style={{ width: 22, height: 22, color: "var(--primary-border)" }} />
-      </span>
-      {/* LHXP5 (Living Craftsmanship): the ring is purely decorative (its SVG is
-          aria-hidden) and is only ever rendered beside the visible "{count}
-          different plants this week" caption, which carries the accessible name.
-          A screen-reader-only copy here made assistive tech announce the same
-          count twice; removed so it is spoken once. Would anyone notice it gone?
-          No — the visible text is fully accessible (item 9). The ring no longer
-          needs the count (it draws the same decorative mark at any value), so the
-          prop was dropped with it. */}
-    </div>
-  );
-}
+// PRESENCE1 removed the ring's arc (the progress meter that graded a household's
+// week against a target they never set — GEA13) but left the ring itself: an
+// `--accent`-stroked circle around a leaf, drawn at 88px beside the count. With the
+// arc gone it encoded NOTHING — plaster-on-ivory, near-invisible — and its only
+// remaining effect was a dashboard-meter silhouette on the calmest room in the
+// house. So it goes, by the room's own values: *delete before adding* and *never
+// decorative for its own sake* (CRAFT1 §5–§6; the with-and-without test, LHDC1 §18 —
+// removing it loses nothing and quietens the frame). The count is the fact and now
+// stands as the one quiet mark; the card's header already carries the leaf that
+// names it. No data, owner, or state path changed — a decorative SVG left the room.
 
 export default function HomeExperiencePage() {
   const { user } = useUser();
@@ -667,12 +636,19 @@ export default function HomeExperiencePage() {
                  instruction (technology becomes quieter as it becomes better). */}
           <section className="mt-10 sm:mt-12" aria-labelledby="home-today-heading">
             <div className="mb-4 px-1 max-w-4xl mx-auto">
+              {/* REBUILD1 (Room 1): "Today at a glance" → "Today". "at a glance" is
+                  dashboard grammar — the report-summary phrasing a home does not use
+                  about its own day (EXPLANG §4A-G "Home is not the dashboard"; CRAFT1
+                  §2 a place, not a page). The word "Today" alone names the section
+                  warmly; the state sentence below still says what today holds. The
+                  grid and its material chips are left as considered work — the fix is
+                  the framing, not a recomposition of owner-approved craft. */}
               <h2
                 id="home-today-heading"
                 className="title-section text-foreground"
                 data-testid="text-home-today-heading"
               >
-                Today at a glance
+                Today
               </h2>
               {stateSentence && (
                 <p className="mt-1 text-base text-muted-foreground" data-testid="text-home-state">
@@ -888,17 +864,16 @@ export default function HomeExperiencePage() {
                         Your week's variety will appear here as meals are planned.
                       </p>
                     ) : (
-                      <div className="flex items-center gap-4">
-                        <PlantRing />
-                        <p className="text-sm text-muted-foreground" data-testid="text-home-plant-summary">
-                          {/* PRESENCE1: the "/ 30" denominator is gone with the ring's
-                              arc. The count is the fact; the target was the judgement. */}
-                          <span className="block text-2xl font-semibold text-foreground">
-                            {plantCount}
-                          </span>
-                          different plant{plantCount === 1 ? "" : "s"} this week
-                        </p>
-                      </div>
+                      <p className="text-sm text-muted-foreground" data-testid="text-home-plant-summary">
+                        {/* PRESENCE1: the "/ 30" denominator is gone — the count is the
+                            fact; the target was the judgement. REBUILD1: the ring is gone
+                            too (see the retirement note above); the count stands alone as
+                            the room's quiet mark, the header's leaf already naming it. */}
+                        <span className="block text-2xl font-semibold text-foreground">
+                          {plantCount}
+                        </span>
+                        different plant{plantCount === 1 ? "" : "s"} this week
+                      </p>
                     )}
                     <ViewLink href="/nutrition" testId="link-home-view-plants">View plant diversity</ViewLink>
                   </div>
@@ -949,8 +924,8 @@ export default function HomeExperiencePage() {
                       was not. Hairlines between them, never around them. */}
                   <div
                     className={`home-door h-[62px] px-5 sm:px-6 flex items-center justify-between gap-3
-                                ${i > 0 ? "border-l border-[hsl(38_24%_82%/0.7)]" : ""}
-                                ${i > 1 ? "sm:border-l border-t sm:border-t-0 border-[hsl(38_24%_82%/0.7)]" : ""}`}
+                                ${i > 0 ? "border-l border-[color:hsl(var(--home-hairline))]" : ""}
+                                ${i > 1 ? "sm:border-l border-t sm:border-t-0 border-[color:hsl(var(--home-hairline))]" : ""}`}
                   >
                     <span className="flex items-center gap-2.5 min-w-0">
                       <Icon

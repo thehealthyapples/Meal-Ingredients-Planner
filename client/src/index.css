@@ -1558,6 +1558,14 @@ a:hover > .brand-mark .bm-face { opacity: 0.86; }
   --ivory:       39 64% 97%;
   --ivory-edge:  38 32% 90%;
   --olive:       56 40% 9%;
+  /* REBUILD1 (Room 1, 2026-07-22): ONE hairline for the whole room — the door-run's
+     top border and the dividers between the doors. It was two near-identical raw
+     HSLs authored in two places: this file's `.home-doors` border-top (38 22% 80%)
+     and the page's inline `border-[hsl(38 24% 82%/0.7)]` door dividers — one
+     conceptual line, two values, and a colour named in JSX against this room's own
+     "this page names no number, it names the token" rule (UIA §4; CRAFT1 §3). Named
+     once here, consumed by both the CSS below and the door-divider classes. */
+  --home-hairline: 38 22% 80% / 0.7;
 
   /* UX2 — THE HOME-SCOPED GREEN IS GONE, AND THAT IS THE POINT.
      ARRIVAL1 overrode `--primary`, `--ring` and `--primary-border` to hue 74 HERE
@@ -1808,7 +1816,7 @@ a:hover > .brand-mark .bm-face { opacity: 0.86; }
    visibly subordinate to the one lit action above. A NAME and a HANDLE — the
    handle a small brass point that catches the morning, nothing more. */
 .home-doors {
-  border-top: 1px solid hsl(38 22% 80% / 0.7);
+  border-top: 1px solid hsl(var(--home-hairline));
   background: linear-gradient(to bottom, hsl(36 30% 88% / 0.4), hsl(34 26% 84% / 0.82));
 }
 .home-door {
