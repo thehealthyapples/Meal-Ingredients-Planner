@@ -165,6 +165,11 @@ const ROOM_ALIASES: Record<string, string> = {
   "/meals": "/cookbook",
   "/weekly-planner": "/planner",
   "/products": "/analyser",
+  // LARDER Pass 1 — the empty Living Larder room renders at /larder while it is
+  // built (furniture-first, across passes). It IS the Larder room, so the shell
+  // draws it the same threshold, identity and ground as the nav "Larder"
+  // (/pantry): one owner of the room's identity (EXP1), never a second.
+  "/larder": "/pantry",
 };
 
 /**

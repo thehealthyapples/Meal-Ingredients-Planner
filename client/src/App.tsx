@@ -48,6 +48,11 @@ const SharedPlanPage = lazy(() => import("@/pages/shared-plan-page"));
 // holding an invitation link may have no account at all.
 const InvitationPage = lazy(() => import("@/pages/invitation-page"));
 const PantryPage = lazy(() => import("@/pages/pantry-page"));
+// LARDER Pass 1 — the Living Larder as a physical room, built furniture-first and
+// complete while EMPTY (LARDER4 § 8, Pass 1). Its own future home under LARDER1's
+// Pantry→Larder rename; /pantry remains the reference reconstruction until the
+// later passes (data, interactions, motion) grow the room into this route.
+const LarderRoomPage = lazy(() => import("@/pages/larder-room"));
 // COMM2 — the Orchard: Community as a place. ONE route for the whole room; the
 // Orchard overview, Neighbourhoods, the Village and the High Street are state
 // inside the page, never separate destinations.
@@ -394,6 +399,9 @@ function Router() {
       <Route path="/admin/knowledge-claims" component={() => <ProtectedRoute component={AdminKnowledgeClaimsChrome} />} />
       <Route path="/admin/canonical-publication-integrity" component={() => <ProtectedRoute component={AdminCanonicalPublicationIntegrityChrome} />} />
       <Route path="/pantry" component={() => <ProtectedRoute component={PantryPage} />} />
+      {/* LARDER Pass 1 — the empty Living Larder room (furniture only; no data,
+          no interactions). See docs/implementation/LARDER_PASS1_ROOM_STRUCTURE.md. */}
+      <Route path="/larder" component={() => <ProtectedRoute component={LarderRoomPage} />} />
       {/* COMM2 — the Orchard. An invitation arrives as ?invitation=<token>;
           the room answers it and clears the token from the URL once spent. */}
       <Route path="/orchard" component={() => <ProtectedRoute component={OrchardPage} />} />
