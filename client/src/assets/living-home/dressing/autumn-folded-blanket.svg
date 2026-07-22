@@ -1,0 +1,28 @@
+<svg width="220" height="176" viewBox="0 0 220 176" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <!--
+    Environmental Dressing · LH2 (Autumn) — a folded blanket.
+    Claim-free seasonal object (LIVINGHOME2 § 5, § 8 "a folded blanket — comfort named,
+    ED8"; ED1–ED12); admitted against LHDC1. A wool/linen throw, folded and set on the
+    window seat — comfort as the year cools. Calm Orchard palette (warm oatmeal/oak wool),
+    matte, still, wordless, a real weave felt at a glance (never a printed pattern —
+    materials before effects, TRANSLATION1 § 5). One-morning light upper-left.
+  -->
+  <ellipse cx="110" cy="138" rx="80" ry="11" fill="hsl(34 18% 40%)" opacity="0.13"/>
+  <!-- the folded blanket: a soft stack of two folds, warm wool -->
+  <g>
+    <!-- lower fold -->
+    <path d="M40 118c0 -6 4 -10 10 -11l112 -8c7 -1 12 4 12 11v6c0 6 -5 11 -11 11l-112 2c-6 0 -11 -5 -11 -11z" fill="hsl(33 24% 66%)"/>
+    <!-- upper fold, catching the morning -->
+    <path d="M46 100c0 -6 4 -11 10 -12l108 -10c7 -1 13 4 13 11v6c0 6 -5 11 -11 12l-109 5c-6 0 -11 -5 -11 -11z" fill="hsl(35 26% 74%)"/>
+    <!-- the rolled edge nearest the light -->
+    <path d="M46 96c0 -6 5 -11 11 -12l106 -10c7 -1 13 5 13 12 0 6 -5 11 -12 12l-106 9c-6 1 -12 -4 -12 -11z" fill="hsl(37 28% 79%)"/>
+  </g>
+  <!-- the weave, felt not printed: a few soft warp lines and one woven stripe -->
+  <g stroke-linecap="round" opacity="0.35">
+    <path d="M60 92l104 -9" stroke="hsl(33 20% 60%)" stroke-width="1.2"/>
+    <path d="M60 108l108 -6" stroke="hsl(33 20% 58%)" stroke-width="1.2"/>
+    <path d="M58 124l112 -3" stroke="hsl(33 20% 58%)" stroke-width="1.2"/>
+  </g>
+  <path d="M150 84c0 20 0 34 0 44" stroke="hsl(24 30% 52%)" stroke-width="3" opacity="0.3" stroke-linecap="round"/>
+  <ellipse cx="72" cy="88" rx="12" ry="4" fill="hsl(40 40% 88%)" opacity="0.4"/>
+</svg>

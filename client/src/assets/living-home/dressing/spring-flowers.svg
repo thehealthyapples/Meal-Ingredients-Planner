@@ -1,0 +1,40 @@
+<svg width="220" height="176" viewBox="0 0 220 176" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <!--
+    Environmental Dressing · LH2 (Spring) — spring flowers.
+    Claim-free seasonal object (LIVINGHOME2 § 5; ED1–ED12); admitted against LHDC1.
+    A hand-thrown ceramic jug of simple spring flowers, in Calm Orchard's owned palette:
+    warm oatmeal ceramic (oak/linen family), the orchard's living greens on the stems,
+    soft muted blooms — bright but never garish (LHDC1 § 10). Matte, still, wordless,
+    lit by the one morning, upper-left. Drawn in the same hand as the bowl of apples.
+  -->
+  <ellipse cx="112" cy="152" rx="58" ry="10" fill="hsl(38 18% 42%)" opacity="0.12"/>
+  <!-- stems + leaves — the orchard's living green -->
+  <g stroke-linecap="round" fill="none">
+    <path d="M96 96c-6 -18 -10 -30 -18 -42" stroke="hsl(88 24% 42%)" stroke-width="3"/>
+    <path d="M112 92c0 -22 1 -38 2 -54" stroke="hsl(84 26% 40%)" stroke-width="3"/>
+    <path d="M128 96c6 -18 12 -30 20 -40" stroke="hsl(88 24% 42%)" stroke-width="3"/>
+    <path d="M104 84c-8 -4 -14 -12 -16 -22" stroke="hsl(84 24% 44%)" stroke-width="3"/>
+    <path d="M120 84c8 -4 14 -12 16 -20" stroke="hsl(84 24% 44%)" stroke-width="3"/>
+  </g>
+  <g fill="hsl(80 26% 46%)" opacity="0.85">
+    <path d="M90 66c-10 -2 -18 -8 -20 -16 10 0 18 6 20 16z"/>
+    <path d="M132 68c10 -2 18 -8 20 -14 -10 0 -18 4 -20 14z"/>
+  </g>
+  <!-- blooms — soft, muted, low-saturation (never candy-bright) -->
+  <g>
+    <circle cx="78" cy="52" r="12" fill="hsl(44 46% 80%)"/>
+    <circle cx="78" cy="52" r="4.5" fill="hsl(38 40% 62%)"/>
+    <circle cx="116" cy="36" r="14" fill="hsl(18 40% 78%)"/>
+    <circle cx="116" cy="36" r="5" fill="hsl(14 34% 60%)"/>
+    <circle cx="150" cy="54" r="11" fill="hsl(268 18% 76%)"/>
+    <circle cx="150" cy="54" r="4" fill="hsl(266 16% 58%)"/>
+    <circle cx="98" cy="60" r="9" fill="hsl(44 44% 84%)"/>
+    <circle cx="134" cy="62" r="9" fill="hsl(20 38% 82%)"/>
+    <!-- upper-left morning catches the near petals -->
+    <circle cx="112" cy="31" r="4" fill="hsl(44 50% 90%)" opacity="0.5"/>
+  </g>
+  <!-- the ceramic jug, matte oatmeal -->
+  <path d="M84 96c-2 6 -2 30 4 40 4 6 12 10 24 10s20 -4 24 -10c6 -10 6 -34 4 -40 -8 4 -18 6 -28 6s-20 -2 -28 -6z" fill="hsl(35 22% 74%)"/>
+  <path d="M84 96c8 5 18 7 28 7s20 -2 28 -7" stroke="hsl(38 26% 84%)" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.8"/>
+  <path d="M92 128c12 4 32 4 44 0" stroke="hsl(32 16% 55%)" stroke-width="1.5" stroke-linecap="round" fill="none" opacity="0.3"/>
+</svg>

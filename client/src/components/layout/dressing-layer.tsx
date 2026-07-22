@@ -26,8 +26,13 @@
 import { seasonOfLocalDate } from "@shared/seasonal/season-rule";
 
 import bowlOfApples from "@/assets/living-home/dressing/standing-welcome-bowl-of-apples.svg?url";
+import springFlowers from "@/assets/living-home/dressing/spring-flowers.svg?url";
+import summerFruit from "@/assets/living-home/dressing/summer-fruit.svg?url";
+import autumnPumpkins from "@/assets/living-home/dressing/autumn-pumpkins.svg?url";
+import autumnFoldedBlanket from "@/assets/living-home/dressing/autumn-folded-blanket.svg?url";
+import winterEvergreens from "@/assets/living-home/dressing/winter-evergreens.svg?url";
 import {
-  resolveDressing,
+  resolveRoomDressing,
   toRenderPlan,
   type RoomId,
   type SeasonKey,
@@ -40,6 +45,11 @@ import {
  */
 const DRESSING_ASSETS: Record<string, string> = {
   "standing-welcome-bowl-of-apples": bowlOfApples,
+  "spring-flowers": springFlowers,
+  "summer-fruit": summerFruit,
+  "autumn-pumpkins": autumnPumpkins,
+  "autumn-folded-blanket": autumnFoldedBlanket,
+  "winter-evergreens": winterEvergreens,
 };
 
 /**
@@ -75,29 +85,24 @@ export function DressingLayer({
   //  wire when a seasonal item first depends on it.)
   const season: SeasonKey = seasonOfLocalDate(new Date());
 
-  const items = resolveDressing({ room, season });
-  const plan = toRenderPlan(items);
-  if (plan.descriptors.length === 0) return null;
+  // At most ONE object on a room's sill (ED7 restraint): a season-specific item takes it
+  // when the season has one, else the year-round standing welcome remains.
+  const item = resolveRoomDressing({ room, season });
+  if (!item) return null;
+  const [d] = toRenderPlan([item]).descriptors;
+  const src = d && DRESSING_ASSETS[d.assetId];
+  if (!d || !src) return null; // honest absence — never a broken image
+  const regionClass = REGION_CLASS[d.region] ?? REGION_CLASS["room-threshold-sill"];
 
   return (
-    <>
-      {plan.descriptors.map((d, i) => {
-        const src = DRESSING_ASSETS[d.assetId];
-        if (!src) return null; // honest absence — never a broken image
-        const regionClass = REGION_CLASS[d.region] ?? REGION_CLASS["room-threshold-sill"];
-        return (
-          <img
-            key={`${d.assetId}-${i}`}
-            src={src}
-            alt=""
-            aria-hidden
-            data-testid={`dressing-${d.assetId}`}
-            className={`pointer-events-none ${regionClass}`}
-            style={{ opacity: `var(${d.strengthToken})` }}
-          />
-        );
-      })}
-    </>
+    <img
+      src={src}
+      alt=""
+      aria-hidden
+      data-testid={`dressing-${d.assetId}`}
+      className={`pointer-events-none ${regionClass}`}
+      style={{ opacity: `var(${d.strengthToken})` }}
+    />
   );
 }
 

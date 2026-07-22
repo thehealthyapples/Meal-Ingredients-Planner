@@ -37,12 +37,15 @@ import {
   loadDressingRegister,
   canonicalizeItems,
   resolveDressing,
+  resolveRoomDressing,
   toRenderPlan,
   validatePlacement,
   assertAdmissible,
+  isPlacementRefused,
   FORBIDDEN_DRESSING_KEYS,
   PLACEMENT_EXCLUSIONS,
   type SeasonKey,
+  type RoomId,
 } from "../../client/src/lib/living-home/dressing-register";
 
 const ROOT = resolve(process.cwd());
@@ -381,6 +384,8 @@ function dressingChecks() {
     }
   } else {
     const runtimeProblems: string[] = [];
+    const allRooms: RoomId[] = ["home", "cookbook", "pantry", "larder", "nutrition", "diary", "orchard", "planner", "shopping", "analyser", "household"];
+    const allSeasons: SeasonKey[] = ["spring", "summer", "autumn", "winter"];
     for (const item of items) {
       const probeSeason: SeasonKey = item.season === "year-round" ? "spring" : item.season;
       // Refused where its placement refuses it (§ 5.1) — must NOT resolve there.
@@ -390,12 +395,12 @@ function dressingChecks() {
           runtimeProblems.push(`${item.id}: resolves in "${refused}", which its placement refuses (§ 5.1).`);
         }
       }
-      // Present in at least one room it does NOT refuse, painting exactly one descriptor.
-      const allowed = ["home", "cookbook", "diary", "orchard", "planner", "shopping"].find(
-        (r) => !item.placement.refusedRooms.includes(r),
-      );
+      // Present in a room it does NOT refuse (respecting any onlyRooms allow-list),
+      // painting exactly one descriptor there.
+      const candidateRooms = item.placement.onlyRooms ?? ["home", "cookbook", "diary", "orchard", "planner", "shopping"];
+      const allowed = candidateRooms.find((r) => !isPlacementRefused(item, r));
       if (!allowed) {
-        runtimeProblems.push(`${item.id}: refuses every candidate room — it could never render.`);
+        runtimeProblems.push(`${item.id}: refuses every room it may appear in — it could never render.`);
       } else {
         const there = resolveDressing({ room: allowed, season: probeSeason });
         if (!there.some((r) => r.id === item.id)) {
@@ -406,14 +411,40 @@ function dressingChecks() {
           runtimeProblems.push(`${item.id}: expected 1 still descriptor in "${allowed}", got ${painted}.`);
         }
       }
+      // Every admitted item must WIN a sill somewhere (resolveRoomDressing) — no item is
+      // authored yet shadowed to death by another sharing its room + season.
+      let winsSomewhere = false;
+      for (const room of allRooms) {
+        for (const season of allSeasons) {
+          if (resolveRoomDressing({ room, season })?.id === item.id) { winsSomewhere = true; break; }
+        }
+        if (winsSomewhere) break;
+      }
+      if (!winsSomewhere) {
+        runtimeProblems.push(`${item.id}: admitted but never the one object on any room's sill (shadowed) — a home never shows it (ED10/ED7).`);
+      }
+    }
+    // Belt-and-braces: no room + season may yield more than one object on its sill.
+    for (const room of allRooms) {
+      for (const season of allSeasons) {
+        const one = resolveRoomDressing({ room, season });
+        const all = resolveDressing({ room, season });
+        if (one && all.length > 1) {
+          // Legal only if exactly one is season-specific (the winner) and the rest are the year-round base.
+          const seasonal = all.filter((i) => i.season !== "year-round");
+          if (seasonal.length > 1) {
+            runtimeProblems.push(`${room}/${season}: ${seasonal.length} season-specific objects contend for one sill (${seasonal.map((i) => i.id).join(", ")}) — a sill holds one object (ED7).`);
+          }
+        }
+      }
     }
     if (runtimeProblems.length) {
-      record("Every dressing item resolves & renders correctly", "fail", runtimeProblems.join("  |  "));
+      record("Every dressing item resolves & renders correctly", "fail", [...new Set(runtimeProblems)].join("  |  "));
     } else {
       record(
         "Every dressing item resolves & renders correctly (runtime guarantee)",
         "pass",
-        `${items.length} item(s): each resolves in an allowed room, is refused where § 5.1 requires, and paints one still descriptor (${seasons.length}×${rooms.length} sweep: ${totalResolved} resolved / ${totalRendered} rendered).`,
+        `${items.length} item(s): each resolves where it should, is refused where § 5.1/onlyRooms requires, wins one sill somewhere, and no sill ever holds two season-specific objects (${seasons.length}×${rooms.length} sweep: ${totalResolved} resolved / ${totalRendered} rendered).`,
       );
     }
   }

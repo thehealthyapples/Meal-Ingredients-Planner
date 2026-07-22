@@ -101,6 +101,14 @@ export interface PlacementSpec {
   readonly region: CommittedRegion;
   /** Rooms where THIS item's context would make it read as the room's data (§ 5.1). */
   readonly refusedRooms: ReadonlyArray<RoomId>;
+  /**
+   * The rooms this item may appear in (an allow-list). When present, the item renders
+   * ONLY in these rooms — how the seasonal collection (LH2) keeps each object to the room
+   * where it belongs (pumpkins in the outward Orchard window, a blanket on the Diary's
+   * window seat), so a room's sill holds one object, never a heap (ED7 restraint). When
+   * absent, the item may appear in any room a `refusedRooms`/§ 5.1 rule does not refuse.
+   */
+  readonly onlyRooms?: ReadonlyArray<RoomId>;
 }
 
 /** How a dressing item is painted: a still asset at a declared strength. Nothing else. */
@@ -154,7 +162,16 @@ export interface DressingRegistry {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// § 3 · The register itself — the first admitted item (LH1)
+// § 3 · The register itself — the standing welcome (LH1) + the first seasonal
+//        collection (LH2). Each E2 browsing room's sill holds ONE object, chosen by
+//        season: a season-specific item takes the sill when it has one, else the
+//        year-round bowl of apples remains (resolveRoomDressing). Placements are
+//        authored so no two objects ever contend for one room in one season.
+//
+//        The year on the browsing sills (Cookbook · Diary · Orchard):
+//          spring → flowers            · summer → the season's fruit
+//          autumn → apples (Cookbook), a folded blanket (Diary), pumpkins (Orchard)
+//          winter → evergreens         · otherwise → the standing welcome (apples)
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
@@ -200,6 +217,7 @@ export const STANDING_WELCOME_BOWL_OF_APPLES: DressingItem = {
   placement: {
     region: "room-threshold-sill",
     refusedRooms: ["pantry", "larder", "nutrition"],
+    onlyRooms: ["cookbook", "diary", "orchard"],
   },
   render: {
     assetId: "standing-welcome-bowl-of-apples",
@@ -211,6 +229,106 @@ export const STANDING_WELCOME_BOWL_OF_APPLES: DressingItem = {
   checksum: "d3e66b7514971aee71567f3e348ce72c08de73c1aa118975105cf408b4ee4243",
 };
 
+// ── LH2 — The First Seasonal Collection ─────────────────────────────────────────
+// Season-keyed objects (Domain 11), admitted one at a time against LHDC1, each with its
+// own admission document. The year turns on the sills; the house, its light, and its
+// orchard do not (ED5 — the year enters through the door as objects, never as weather).
+
+/** LH2 · SPRING — simple flowers (LIVINGHOME2 § 5). A ceramic jug of the season's first,
+ *  muted blooms on the browsing sills — the home in bloom. */
+export const SPRING_FLOWERS: DressingItem = {
+  id: "spring-flowers",
+  admissionDocId: "docs/implementation/assets/dressing/spring-flowers.admission.md",
+  hospitalityPurpose:
+    "Spring's welcome: a jug of the season's first flowers set out on the sill, so the " +
+    "home feels the year turning green before the household says a word — offered to " +
+    "everyone alike, claiming nothing about anyone.",
+  season: "spring",
+  placement: {
+    region: "room-threshold-sill",
+    refusedRooms: [],
+    onlyRooms: ["cookbook", "diary", "orchard"],
+  },
+  render: { assetId: "spring-flowers", strengthToken: "--dressing-strength" },
+  checksum: "d85f00fba9254ac682e4dfc02176d0868f6092b5cb1fbabe4a919826468ac405",
+};
+
+/** LH2 · SUMMER — subtle seasonal fruit (LIVINGHOME2 § 5 "the year's turns"). A shallow
+ *  dish of the house's own small summer fruit; produce, so refused where apples are. */
+export const SUMMER_FRUIT: DressingItem = {
+  id: "summer-fruit",
+  admissionDocId: "docs/implementation/assets/dressing/summer-fruit.admission.md",
+  hospitalityPurpose:
+    "Summer's welcome: a shallow dish of the house's own small summer fruit, the year's " +
+    "abundance quietly offered — the same for every household, in season, asserting " +
+    "nothing about any of them.",
+  season: "summer",
+  placement: {
+    region: "room-threshold-sill",
+    refusedRooms: ["pantry", "larder", "nutrition"],
+    onlyRooms: ["cookbook", "diary", "orchard"],
+  },
+  render: { assetId: "summer-fruit", strengthToken: "--dressing-strength" },
+  checksum: "dc4d9d6226aa9d116e0ccac7ca0e360c93f9021e9e6f6d64f369a7c4f0e96742",
+};
+
+/** LH2 · AUTUMN — small pumpkins (LIVINGHOME2 § 5, § 8 "pumpkins during harvest — the
+ *  year's turn, through the door"). Set on the outward Orchard window; produce. */
+export const AUTUMN_PUMPKINS: DressingItem = {
+  id: "autumn-pumpkins",
+  admissionDocId: "docs/implementation/assets/dressing/autumn-pumpkins.admission.md",
+  hospitalityPurpose:
+    "Autumn's welcome: two small pumpkins set on the sill of the outward window — the " +
+    "harvest brought in, the year's turn through the door, never on the orchard as weather.",
+  season: "autumn",
+  placement: {
+    region: "room-threshold-sill",
+    refusedRooms: ["pantry", "larder", "nutrition"],
+    onlyRooms: ["orchard"],
+  },
+  render: { assetId: "autumn-pumpkins", strengthToken: "--dressing-strength" },
+  checksum: "6895561fd238da8c33b66454a6da33f25cab13a60f9610f2bea10b68e80a165e",
+};
+
+/** LH2 · AUTUMN — a folded blanket (LIVINGHOME2 § 5, § 8 "comfort named, ED8"). Set on
+ *  the Diary's window seat as the year cools; not produce, no § 5.1 kind. */
+export const AUTUMN_FOLDED_BLANKET: DressingItem = {
+  id: "autumn-folded-blanket",
+  admissionDocId: "docs/implementation/assets/dressing/autumn-folded-blanket.admission.md",
+  hospitalityPurpose:
+    "Autumn's comfort: a wool blanket folded on the window seat as the year cools — care " +
+    "set out for a household who has not asked for it, meaning only that they are looked after.",
+  season: "autumn",
+  placement: {
+    region: "room-threshold-sill",
+    refusedRooms: [],
+    onlyRooms: ["diary"],
+  },
+  render: { assetId: "autumn-folded-blanket", strengthToken: "--dressing-strength" },
+  checksum: "7c983de466800e3ab5eea8ddec24d9371ecc755c65d0252064421031a03df116",
+};
+
+/** LH2 · WINTER — winter evergreens (LIVINGHOME2 § 5 "deep-winter comfort").
+ *  DELIBERATELY NOT A WREATH: a wreath is § 7.2 celebration dressing (ED9), gated to
+ *  Phase 5 behind declared traditions + the dressing-permission mechanism (neither built),
+ *  and § 6 refuses any occasion marker shown without the household's declaration. This is
+ *  seasonal foliage — the green that endures midwinter — carrying no occasion. */
+export const WINTER_EVERGREENS: DressingItem = {
+  id: "winter-evergreens",
+  admissionDocId: "docs/implementation/assets/dressing/winter-evergreens.admission.md",
+  hospitalityPurpose:
+    "Deep-winter comfort: a few evergreen sprigs gathered in a jug — the green that " +
+    "endures the cold, brought indoors — carrying no occasion, offered to everyone alike.",
+  season: "winter",
+  placement: {
+    region: "room-threshold-sill",
+    refusedRooms: [],
+    onlyRooms: ["cookbook", "diary", "orchard"],
+  },
+  render: { assetId: "winter-evergreens", strengthToken: "--dressing-strength" },
+  checksum: "e4e8c6501f3bf83edf30460e2560a515a0b02d7b1d1092959efe98dad2823bac",
+};
+
 /**
  * sha256 over `canonicalizeItems(items)` — the whole register's constancy proof.
  * Recomputed IN THE SAME COMMIT that changes the items (EXP3 § 4.4), enforced by
@@ -218,14 +336,23 @@ export const STANDING_WELCOME_BOWL_OF_APPLES: DressingItem = {
  * 4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945 = sha256("[]"),
  * kept here for traceability of the byte the register turned from.)
  */
-export const DRESSING_REGISTER_CHECKSUM = "75aef6f8d8f9f140747bf2127c51fe0e0a9040d6a5ce102ab2560dc54f17c1fc";
+export const DRESSING_REGISTER_CHECKSUM = "359ea7802ca58b738d09f189c65f4f42bc05a63393d93d08719d0d0a5b506c17";
 
 /**
- * THE REGISTER — one admitted item at LH1: the Standing Welcome. The year turns by
- * admitting further items one at a time (LH2, § 5), never as a batch (ED10).
+ * THE REGISTER — the standing welcome (LH1) and the first seasonal collection (LH2):
+ * six admitted objects, each admitted one at a time against LHDC1 (never a batch — ED10).
+ * The order is the deterministic tiebreak for `resolveRoomDressing`, though placements are
+ * authored so no two contend for one room in one season.
  */
 export const dressingRegister: DressingRegistry = {
-  items: [STANDING_WELCOME_BOWL_OF_APPLES],
+  items: [
+    STANDING_WELCOME_BOWL_OF_APPLES,
+    SPRING_FLOWERS,
+    SUMMER_FRUIT,
+    AUTUMN_PUMPKINS,
+    AUTUMN_FOLDED_BLANKET,
+    WINTER_EVERGREENS,
+  ],
   checksum: DRESSING_REGISTER_CHECKSUM,
 };
 
@@ -266,9 +393,14 @@ export const PLACEMENT_EXCLUSIONS: Readonly<Record<string, ReadonlyArray<RoomId>
   meal: ["planner"],
 });
 
-/** True if this item is refused in this room by its own placement spec (§ 5.1). */
+/**
+ * True if this item may NOT appear in this room — either the room is refused (§ 5.1) or
+ * the item declares an `onlyRooms` allow-list this room is not on.
+ */
 export function isPlacementRefused(item: DressingItem, room: RoomId): boolean {
-  return item.placement.refusedRooms.includes(room);
+  if (item.placement.refusedRooms.includes(room)) return true;
+  if (item.placement.onlyRooms && !item.placement.onlyRooms.includes(room)) return true;
+  return false;
 }
 
 /**
@@ -319,6 +451,26 @@ export function resolveDressing(input: DressingResolveInput): DressingItem[] {
     if (!item.celebration) return true; // standing / seasonal — no permission needed
     return permitted.has(item.celebration.occasionRef); // celebration — fail-closed
   });
+}
+
+/**
+ * The one object a room's sill holds for a given season — at most ONE (ED7 restraint:
+ * a sill is not a shelf of stuff, and two images on one region would overlap). Of the
+ * items `resolveDressing` returns for this room+season, a **season-specific** item wins
+ * over the **year-round** standing welcome (the season takes the sill when it has
+ * something to set out; otherwise the standing welcome remains); among equally-specific
+ * items, the FIRST in registration order wins — deterministic, never sampled. Returns
+ * `null` when the room shows nothing.
+ *
+ * This is the mouth's resolver. The register is authored so that, by placement, no two
+ * season-specific items ever contend for the same room in the same season; this rule is
+ * the belt-and-braces that keeps a sill to one object even if a future admission errs.
+ */
+export function resolveRoomDressing(input: DressingResolveInput): DressingItem | null {
+  const present = resolveDressing(input);
+  if (present.length === 0) return null;
+  const seasonal = present.filter((item) => item.season !== "year-round");
+  return (seasonal[0] ?? present[0]) ?? null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

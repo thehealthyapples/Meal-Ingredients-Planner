@@ -1,0 +1,27 @@
+<svg width="220" height="176" viewBox="0 0 220 176" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <!--
+    Environmental Dressing · LH2 (Autumn) — small pumpkins.
+    Claim-free seasonal object (LIVINGHOME2 § 5, § 8 "pumpkins during harvest — the year's
+    turn, through the door"; ED1–ED12); admitted against LHDC1. Two small pumpkins set on
+    the sill — the harvest brought in, never on the orchard as weather (ED5). Calm Orchard
+    palette (muted ochre/terracotta, never candy-orange — LHDC1 § 10), matte, still,
+    wordless, one-morning light upper-left. Same hand as the bowl of apples.
+  -->
+  <ellipse cx="110" cy="140" rx="80" ry="12" fill="hsl(34 18% 40%)" opacity="0.14"/>
+  <!-- back pumpkin (smaller, muted ochre) -->
+  <g>
+    <path d="M150 118c-3 -8 -10 -12 -17 -12 -3 0 -5 1 -7 2 -2 -1 -4 -2 -7 -2 -7 0 -14 4 -17 12 -4 10 0 20 8 24 2 1 4 1 6 1h22c2 0 4 0 6 -1 8 -4 12 -14 6 -24z" fill="hsl(30 40% 52%)"/>
+    <path d="M141 106c1 -6 -1 -12 -4 -15" stroke="hsl(84 22% 34%)" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    <path d="M128 108c0 12 0 24 0 34" stroke="hsl(28 38% 44%)" stroke-width="2" opacity="0.4"/>
+    <path d="M142 108c0 12 0 24 0 34" stroke="hsl(28 38% 44%)" stroke-width="2" opacity="0.4"/>
+  </g>
+  <!-- front pumpkin (larger, warm terracotta, nearest) -->
+  <g>
+    <path d="M108 130c-4 -12 -14 -18 -25 -18 -4 0 -8 1 -11 3 -3 -2 -7 -3 -11 -3 -11 0 -21 6 -25 18 -6 15 0 30 12 36 3 2 6 2 9 2h30c3 0 6 0 9 -2 12 -6 18 -21 12 -36z" fill="hsl(26 44% 55%)"/>
+    <path d="M96 114c2 -8 -1 -16 -5 -20" stroke="hsl(84 24% 34%)" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M80 116c0 16 0 34 0 50" stroke="hsl(24 40% 46%)" stroke-width="2.5" opacity="0.4"/>
+    <path d="M96 115c0 17 0 36 0 52" stroke="hsl(24 40% 46%)" stroke-width="2.5" opacity="0.4"/>
+    <path d="M64 118c0 16 2 32 4 46" stroke="hsl(24 40% 46%)" stroke-width="2.5" opacity="0.35"/>
+    <ellipse cx="74" cy="128" rx="9" ry="7" fill="hsl(32 46% 72%)" opacity="0.34"/>
+  </g>
+</svg>
