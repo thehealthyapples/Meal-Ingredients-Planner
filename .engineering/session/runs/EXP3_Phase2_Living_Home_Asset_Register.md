@@ -5,7 +5,7 @@
 | **Session ID** | `EXP3_Phase2_Living_Home_Asset_Register` |
 | **Rollback ID** | `rollback/EXP3-PHASE2-living-home-asset-register-20260722` → `d5e91dde` (annotated tag; created before any change; covers committed state only — tree clean apart from the CURRENT.md heartbeat) |
 | **Start time** | 2026-07-22 |
-| **Current stage** | Complete — committed on `int1-intelligence-platform`; awaiting owner acceptance |
+| **Current stage** | Complete — committed `be7b8301` on `int1-intelligence-platform`; awaiting owner acceptance |
 
 ## Objective
 Build EXP3 § 13 **Phase 2** — the canonical Living Home asset infrastructure the Environmental Dressing Register is gated behind: House Register (byte-locked) + Household Life Register (empty manifest) + `verify:living-home-assets`. **Infrastructure/tooling only. No Environmental Dressing assets. No visible product change. No owner component.**
@@ -23,7 +23,7 @@ EXP3 Phase 2's gate reads "Phase 1; the verifier green on the real tree." **Phas
 - [x] Adoption: empty manifest tripped the orphan gate (0 client importers, by design); recorded it in adoption-register.json as a KNOWN, owned, pending-Phase-3-adoption module (gate's sanctioned remedy); ran adoption:record to regenerate the .md.
 - [x] Verified: typecheck 88 (0 client, 0 new-file); build exit 0; adoption 101·0·9 (9 failed = baseline set unchanged; +1 passing known entry).
 - [x] Wrote deliverable with all 9 required sections.
-- [ ] Commit; record commit hash here + dashboard.
+- [x] Commit (`be7b8301`); record commit hash here + dashboard.
 
 ## What shipped
 - **House Register** (JSON): orchard.webp `a6da6a31…` + orchard-bg.webp `c0405f55…`, both owned by orchard-backdrop.tsx, cited (Blueprint § 6.1 / EXP1 § 8.2 / NORTH2 grade), pre-convergence noted. `extensionPoints.dressingRegister` marks the third register as a separate future artefact.
