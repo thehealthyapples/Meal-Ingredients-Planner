@@ -5,7 +5,7 @@
 | **Session ID** | `REBUILD1_Room_Rebuild_Programme` |
 | **Rollback ID** | `rollback/REBUILD1-room-rebuild-programme-20260722` → annotated tag `b17819b0`, target commit `6799bf84` |
 | **Start time** | 2026-07-22T18:24:10Z UTC |
-| **Current stage** | Rollback Complete → Implementation |
+| **Current stage** | NSR1 Phases 1–3 delivered → Waiting for User (owner decisions + Larder build greenlight) |
 
 ## Objective
 Rebuild every core THA room from first principles per the Craftsmanship Constitution (`CRAFT1`):
@@ -76,10 +76,16 @@ intelligence and canonical ownership are preserved unless the governing architec
   Partners 836b3dbe · Companion 2b6df9be. Removed GEA13 scores + GEA8 room-voice; flagged owner items.
 - PHASE 3 ⏳ Larder ground-up rebuild — IN PROGRESS.
 
+- PHASE 3 ✅ committed 29085596 — Larder design + VERIFIED presentation-only (no backend needed:
+  availability=defaultHave+visual; mark-needed=quantity-nullable POST /api/shopping-list; remove=soft-delete).
+  STOP condition NOT met (no necessary backend change). Recommends a visually-verified build (CRAFT1 §8).
+- Companion loader adoption fix a2e2e191 (still, not animate-pulse). Adoption back to 9 failed (pre-existing).
+- Final completion report: docs/implementation/rebuild/NSR1_COMPLETION_REPORT.md
+
 ## Next action
-PHASE 3 — read LARDER1 North Star; design the Larder as-if-new; where presentation alone cannot satisfy
-the North Star (running-low availability fact; removing quantity mechanic touches 10+ server consumers),
-STOP and present per Phase 3 rule (conflict, owner, minimum change, why). Write LARDER_GROUND_UP_REBUILD.md.
+Await Home Owner decisions (NSR1_COMPLETION_REPORT §6): greenlight the visually-verified Larder build;
+rule on cross-domain relocations / health-scoring scope / character recompositions. 0 client TS errors;
+server byte-untouched; adoption 9 failed (all pre-existing). Programme paused for owner review.
 
 **PROGRAMME DECISION (Home Owner, 2026-07-22):**
 - Scope authority = **CASE-BY-CASE**: presentation-only by default; PAUSE and ask before any
