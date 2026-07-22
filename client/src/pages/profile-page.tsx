@@ -970,7 +970,7 @@ function HouseholdManagementSection({ currentUserId }: { currentUserId: number }
           <ul className="text-muted-foreground space-y-0.5">
             <li>Planner</li>
             <li>Shopping basket</li>
-            <li>Pantry</li>
+            <li>Larder</li>
             <li>Freezer meals</li>
           </ul>
         </div>

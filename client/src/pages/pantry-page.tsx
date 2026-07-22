@@ -167,7 +167,7 @@ function PantryIcon({ className }: { className?: string }) {
 // ── Category definitions ──────────────────────────────────────────────────────
 
 const FOOD_CATS = [
-  { value: "larder"  as const, label: "Larder",  icon: Archive      },
+  { value: "larder"  as const, label: "Cupboard", icon: Archive      },
   { value: "fridge"  as const, label: "Fridge",  icon: Refrigerator },
   { value: "freezer" as const, label: "Freezer", icon: Layers       },
   { value: "fruit"   as const, label: "Fruit",   icon: Apple        },
@@ -188,7 +188,7 @@ type HomeCat = typeof HOME_CATS[number]["value"];
 // sits immediately above this slot, so a button here would be a second control for
 // one job — the description points at the control that already exists.
 const FOOD_CAT_EMPTY: Record<FoodCat, { title: string; description: string }> = {
-  larder:  { title: "No larder staples yet",  description: "Add what you keep in — olive oil, pasta, tinned tomatoes — using the box above." },
+  larder:  { title: "No cupboard staples yet", description: "Add what you keep in — olive oil, pasta, tinned tomatoes — using the box above." },
   fridge:  { title: "No fridge staples yet",  description: "Add what's in the fridge — milk, eggs, butter — using the box above." },
   freezer: { title: "Nothing in the freezer yet", description: "Add what you've frozen — peas, bread, batch-cooked meals — using the box above." },
   fruit:   { title: "No fruit yet",           description: "Add the fruit you have in — apples, berries, bananas — using the box above." },
@@ -332,10 +332,10 @@ function FoodPantrySection({
       // No success title: the food appears in the pantry — the list is its own confirmation.
       satisfied: (err) =>
         isAlreadyExists(err) && {
-          title: "Already in pantry",
+          title: "Already in larder",
           description: "This ingredient is already listed.",
         },
-      failure: "Couldn't add that to your pantry",
+      failure: "Couldn't add that to your larder",
       failureDescription: "It hasn't been saved. Please try again.",
     },
   });
@@ -616,7 +616,7 @@ function FoodPantrySection({
                           ? "text-amber-600/80 dark:text-amber-400/70"
                           : "text-muted-foreground/40 mt-1"
                       }`}>
-                        {group === "need" ? "Need" : "In Pantry"}
+                        {group === "need" ? "Need" : "In Larder"}
                       </p>
                     )}
                     {groupItems.map(item => {
@@ -1073,7 +1073,7 @@ function HomePantrySection({
                           ? "text-amber-600/80 dark:text-amber-400/70"
                           : "text-muted-foreground/40 mt-1"
                       }`}>
-                        {group === "need" ? "Need" : "In Pantry"}
+                        {group === "need" ? "Need" : "In Larder"}
                       </p>
                     )}
                     {groupItems.map(item => (
@@ -1174,12 +1174,12 @@ export default function PantryPage() {
   return (
     <>
       <WorkspaceHeader
-        title="My Pantry"
+        title="My Larder"
         realm="pantry"
         wide
         titleTestId="text-pantry-title"
         search={{
-          placeholder: "Search pantry...",
+          placeholder: "Search larder...",
           value: pantrySearch,
           onChange: setPantrySearch,
           onSubmit: () => {},

@@ -306,7 +306,7 @@ const STORE_CATEGORY_DISPLAY: Record<string, string> = {
   fish:       "Fish & Seafood",
   bakery:     "Bakery",
   grains:     "Grains & Cereals",
-  pantry:     "Pantry Staples",
+  pantry:     "Larder Staples",
   tinned:     "Tinned & Canned",
   condiments: "Condiments & Sauces",
   herbs:      "Herbs & Spices",

@@ -1142,7 +1142,7 @@ export function PlantDiversityReport({ weekMeals }: PlantDiversityReportProps) {
           data-testid="link-explore-pantry"
         >
           <Compass className="h-3.5 w-3.5" />
-          Explore health benefits, nutrients and foods in your Pantry
+          Explore health benefits, nutrients and foods in your Larder
         </Link>
       </Card>
 

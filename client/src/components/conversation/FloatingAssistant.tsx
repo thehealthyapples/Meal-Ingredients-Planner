@@ -105,7 +105,7 @@ const SURFACE_LABEL: Record<ConversationSurface, string> = {
   shopping: "Shopping",
   nutrition: "Nutrition",
   household: "Household",
-  pantry: "Pantry",
+  pantry: "Larder",
   diary: "Diary",
   meals: "Cookbook",
   templates: "Templates",

@@ -178,7 +178,7 @@ const ROOM_PURPOSE: Record<string, string> = {
   "/planner": "The week's meals, planned around your household.",
   "/cookbook": "Discover, create and cook meals your household will love.",
   "/shopping-workspace": "One list, ready for the shop.",
-  "/pantry": "What the house already has.",
+  "/pantry": "See what you keep.",
   "/nutrition": "The variety on the household's table.",
   "/my-diary": "A quiet record of the household's days.",
   "/analyser": "A closer look at packaged food.",

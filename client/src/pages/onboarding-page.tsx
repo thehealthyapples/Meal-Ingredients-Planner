@@ -80,7 +80,7 @@ const START_AREAS = [
     key: "pantry",
     route: "/pantry",
     icon: ShoppingBasket,
-    title: "Pantry",
+    title: "Larder",
     label: "Build your go-to foods",
     hint: "Add foods you use often - we'll help you make better choices.",
   },
