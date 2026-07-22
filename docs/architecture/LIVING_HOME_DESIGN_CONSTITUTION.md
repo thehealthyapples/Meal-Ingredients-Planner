@@ -1,11 +1,13 @@
-# THA Environmental Dressing Design Constitution
+# THA Living Home Design Constitution
 
-**Document ID:** `EDDC1` (referenced by the implementation workstream as `ED3`)
-**Date:** 2026-07-22
-**Status:** GOVERNING — the visual and material admission standard for the Environmental Dressing layer · **no asset admitted, none built** · every future dressing object is admitted against this document or refused
-**Rollback identifier:** `rollback/ED3-environmental-dressing-design-constitution-20260722` → `4dc22eb4`
+**Document ID:** `LHDC1` — the Living Home Design Constitution. **Legacy identifiers (preserved for traceability):** `EDDC1` (the former *Environmental Dressing Design Constitution*) · established by the `ED3` implementation workstream. Renamed by `LIVING_HOME_DESIGN_CONSTITUTION_RENAME.md` (2026-07-22); **substance and ownership unchanged by the rename.**
+**Date:** 2026-07-22 · renamed 2026-07-22 (`ENVIRONMENTAL_DRESSING_DESIGN_CONSTITUTION.md` → `LIVING_HOME_DESIGN_CONSTITUTION.md`)
+**Status:** GOVERNING — the visual and material admission standard for the **Living Home**, including its **Environmental Dressing** layer · **no asset admitted, none built** · every future dressing object is admitted against this document or refused
+**Rollback identifier (creation):** `rollback/ED3-environmental-dressing-design-constitution-20260722` → `4dc22eb4` · **rollback identifier (rename):** `rollback/LHDC-rename-living-home-design-constitution-20260722` → `a362e01b`
 **Author of record:** Colin Clapson (Home Owner) · drafted by Claude under the Engineering Workflow
 **Governing parent:** `LIVING_HOME_ENVIRONMENTAL_DRESSING_ARCHITECTURE.md` (`LIVINGHOME2`) — *the layer at which the home quietly lives*; ED1–ED12, the § 4.3 classification test, the § 5.1 placement law, the § 7.2 celebration gate. **Cited, never restated.**
+
+> **On the name (2026-07-22).** This document was created as the *Environmental Dressing Design Constitution* (`EDDC1` / `ED3`) and renamed the **Living Home Design Constitution** (`LHDC1`). The rename **broadens the name, not the ownership.** It remains the Living Home's constitution for the **design of admitted objects** — the object-level visual and material admission standard — and it governs the **Environmental Dressing** layer today (and any future admitted-object layer of the Living Home) by the same standard. Every colour, token, material, light value, feeling, room behaviour, and the Home Owner approval seat remains with its existing owner (§ 1); this document still owns **only** the object-level admission standard, exactly as before. No approved rule was altered or expanded to fit the new name.
 
 ---
 
@@ -17,7 +19,7 @@
 
 This document closes that gap **as a standard, not as an approval.** It defines the one coherent visual and material language against which every future dressing object — the first bowl of apples, and everything admitted after it — must be judged before it is admitted. A dressing object that is lawful under ED1–ED12 but does not meet this Constitution is **refused**; a dressing object cannot be admitted on the strength of its behaviour alone.
 
-> **The Environmental Dressing Design Constitution is the design-language face of `LIVINGHOME2`** — exactly as the Orchard House Design Blueprint (`OHDB1`) is the design-language face of the Experience Blueprint. `LIVINGHOME2` says what the layer *is and may do*; this document says what an object in it must *look and feel like* to belong in this house.
+> **The Living Home Design Constitution is the design-language face of `LIVINGHOME2`** — exactly as the Orchard House Design Blueprint (`OHDB1`) is the design-language face of the Experience Blueprint. `LIVINGHOME2` says what the layer *is and may do*; this document says what an object in it must *look and feel like* to belong in this house.
 
 It exists so that a designer admitting the tenth dressing object a decade from now builds the **same house** as the one who admits the first — and so the pressure that always returns ("make it warmer", "make it richer", "make it pop") meets a written standard instead of taste.
 
@@ -356,7 +358,7 @@ LOOK; it says nothing the model reads and adds no capability.
 
 ### Definition of Done
 
-- **Success looks like:** this document exists at `docs/architecture/ENVIRONMENTAL_DRESSING_DESIGN_CONSTITUTION.md`, is indexed in `docs/architecture/README.md`, and defines the object-level visual admission standard for Environmental Dressing — hospitality purpose, restraint, material palette, texture, craftsmanship, realism/illustration treatment, scale, colour relationship, patina, lighting, composition/transparency, seasonal continuity and transition, accessibility, room-placement compatibility, with-and-without review, rejection criteria, Home Owner approval authority, and per-object admission evidence — as a standard that **admits no object and creates no value of its own**, with the implementation report and rollback identifier recorded.
+- **Success looks like:** this document exists at `docs/architecture/LIVING_HOME_DESIGN_CONSTITUTION.md`, is indexed in `docs/architecture/README.md`, and defines the object-level visual admission standard for Environmental Dressing — hospitality purpose, restraint, material palette, texture, craftsmanship, realism/illustration treatment, scale, colour relationship, patina, lighting, composition/transparency, seasonal continuity and transition, accessibility, room-placement compatibility, with-and-without review, rejection criteria, Home Owner approval authority, and per-object admission evidence — as a standard that **admits no object and creates no value of its own**, with the implementation report and rollback identifier recorded.
 - **What must not break:** nothing runtime — documentation and session files only. Every cited owner (UIA, `EXPLANG`, Blueprint, `OHDB1`, `TRANSLATION1`, `LIVINGHOME2`, `HOMEOWNER1`, `EXP3`) is **byte-untouched**; no palette, token, asset, schema, or register changes.
 - **Manual test steps:** `git diff --stat <rollback-tag>..HEAD` shows only `docs/` and `.engineering/session/` paths; the README index entry resolves to this file; no `.ts/.tsx/.json/.css`/migration path in the diff.
 - **Product Registry impact:** none now; each future object (ED4 onward) carries its own Product Registry Impact when it first becomes visible.

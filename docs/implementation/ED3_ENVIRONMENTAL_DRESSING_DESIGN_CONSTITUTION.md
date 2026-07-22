@@ -1,8 +1,10 @@
 # ED3 — Environmental Dressing Design Constitution
 
+> **Renamed (2026-07-22).** The governing document this report created was renamed from `docs/architecture/ENVIRONMENTAL_DRESSING_DESIGN_CONSTITUTION.md` (**`EDDC1`**, *Environmental Dressing Design Constitution*) to `docs/architecture/LIVING_HOME_DESIGN_CONSTITUTION.md` (**`LHDC1`**, *Living Home Design Constitution*) by [`LIVING_HOME_DESIGN_CONSTITUTION_RENAME.md`](./LIVING_HOME_DESIGN_CONSTITUTION_RENAME.md). This report keeps its `ED3` filename and workstream id as the historical record; the architecture-doc path references below are updated to the current canonical filename. **The rename changed the name only — substance and ownership are unchanged.**
+
 | Field | Value |
 |---|---|
-| **Implementation ID** | `ED3` (Environmental Dressing Design Constitution) |
+| **Implementation ID** | `ED3` (Environmental Dressing Design Constitution — the governing document is now the *Living Home Design Constitution*, `LHDC1`; `EDDC1`/`ED3` preserved as legacy identifiers) |
 | **Date** | 2026-07-22 |
 | **Branch** | `int1-intelligence-platform` |
 | **Rollback ID** | `rollback/ED3-environmental-dressing-design-constitution-20260722` → `4dc22eb4` (annotated tag, created **before any change**; covers committed state only — the working tree held one uncommitted `.engineering/session/CURRENT.md` heartbeat, not covered) |
@@ -16,7 +18,7 @@
 
 **Objective.** Create the **Environmental Dressing Design Constitution** — the single, permanent visual and material language against which **every future dressing object must be admitted** before one byte of visible dressing is ever shown. It is architecture and design governance only.
 
-**What it is.** A new governing **Layer-2 Experience Architecture document** at `docs/architecture/ENVIRONMENTAL_DRESSING_DESIGN_CONSTITUTION.md`, plus this report and the README index entry. The Constitution is **the design-language face of `LIVINGHOME2`** — the exact relationship `OHDB1` holds to the Experience Blueprint: `LIVINGHOME2` owns *what the dressing layer is and may do* (ED1–ED12); the Constitution owns *how an object in it must look and feel to belong in this house*. It closes the visual gap `LIVINGHOME2` § 11 recorded in one line — *"the rendering medium of dressing items … inherits `EXP3` Verdict 3's open illustration question unchanged and adds no position to it"* — but closes it **as a standard, not as an approval**.
+**What it is.** A new governing **Layer-2 Experience Architecture document** at `docs/architecture/LIVING_HOME_DESIGN_CONSTITUTION.md` (created as `ENVIRONMENTAL_DRESSING_DESIGN_CONSTITUTION.md`; renamed 2026-07-22), plus this report and the README index entry. The Constitution is **the design-language face of `LIVINGHOME2`** — the exact relationship `OHDB1` holds to the Experience Blueprint: `LIVINGHOME2` owns *what the dressing layer is and may do* (ED1–ED12); the Constitution owns *how an object in it must look and feel to belong in this house*. It closes the visual gap `LIVINGHOME2` § 11 recorded in one line — *"the rendering medium of dressing items … inherits `EXP3` Verdict 3's open illustration question unchanged and adds no position to it"* — but closes it **as a standard, not as an approval**.
 
 **What it is not.** It is **not** an asset, and not the bowl of apples. It admits **no** object; it builds no renderer, seasonal state, schema, persistence, UI, or token. It creates **no** palette, colour, material, feeling, or design rule of its own — every such value stays with its existing owner and is cited. It does **not** resolve `EXP3` Verdict 3 (the medium question); that verdict stays the Home Owner's, and the Constitution supplies only the standard it is judged against.
 
@@ -48,7 +50,7 @@ The Constitution is a **non-overriding sibling** of the visual-governance canon 
 
 | # | Deliverable | Where | Shape |
 |---|---|---|---|
-| 1 | **The Design Constitution** | `docs/architecture/ENVIRONMENTAL_DRESSING_DESIGN_CONSTITUTION.md` | 22 governing sections: the single standard (§ 2); hospitality purpose (§ 3); visual restraint (§ 4); material palette (§ 5); texture/surface (§ 6); craftsmanship (§ 7); realism/illustration (§ 8); scale/proportion (§ 9); colour relationship (§ 10); ageing/patina (§ 11); lighting (§ 12); composition/transparency (§ 13); seasonal continuity (§ 14); seasonal transition (§ 15); accessibility/legibility (§ 16); room-placement compatibility (§ 17); with-and-without review (§ 18); rejection criteria (§ 19); Home Owner approval authority (§ 20); per-object admission evidence (§ 21); scope disclaimer (§ 22); compliance (§ 23). |
+| 1 | **The Design Constitution** | `docs/architecture/LIVING_HOME_DESIGN_CONSTITUTION.md` | 22 governing sections: the single standard (§ 2); hospitality purpose (§ 3); visual restraint (§ 4); material palette (§ 5); texture/surface (§ 6); craftsmanship (§ 7); realism/illustration (§ 8); scale/proportion (§ 9); colour relationship (§ 10); ageing/patina (§ 11); lighting (§ 12); composition/transparency (§ 13); seasonal continuity (§ 14); seasonal transition (§ 15); accessibility/legibility (§ 16); room-placement compatibility (§ 17); with-and-without review (§ 18); rejection criteria (§ 19); Home Owner approval authority (§ 20); per-object admission evidence (§ 21); scope disclaimer (§ 22); compliance (§ 23). |
 | 2 | **This implementation report** | `docs/implementation/ED3_ENVIRONMENTAL_DRESSING_DESIGN_CONSTITUTION.md` | The record of the act, all required sections. |
 | 3 | **README index entry** | `docs/architecture/README.md` (Experience Governance) | One table row + one prose blockquote in doc-ID order, per the section's convention. |
 | 4 | **Session record + dashboard row** | `.engineering/session/runs/ED3_*.md` · `.engineering/session/CURRENT.md` | The recovery-protocol record, rollback ID identical in all three places. |
@@ -182,7 +184,7 @@ AI ARCHITECTURE COMPLIANCE
 
 ## Definition of Done
 
-- **Success looks like:** `docs/architecture/ENVIRONMENTAL_DRESSING_DESIGN_CONSTITUTION.md` exists, is indexed in `docs/architecture/README.md` (Experience Governance), and defines the object-level visual admission standard across all mandated facets (§ 3); it admits no object and creates no value of its own (every value a citation, § 1); `HOMEOWNER1` is confirmed as the single approval authority (§ 20); the per-object admission evidence is fixed (§ 21); this report and the rollback identifier are recorded; committed.
+- **Success looks like:** `docs/architecture/LIVING_HOME_DESIGN_CONSTITUTION.md` exists, is indexed in `docs/architecture/README.md` (Experience Governance), and defines the object-level visual admission standard across all mandated facets (§ 3); it admits no object and creates no value of its own (every value a citation, § 1); `HOMEOWNER1` is confirmed as the single approval authority (§ 20); the per-object admission evidence is fixed (§ 21); this report and the rollback identifier are recorded; committed.
 - **What must not break:** nothing runtime — documentation and session files only. Every cited owner is byte-untouched; the `ED2` register stays empty and renders nothing; no palette, token, asset, schema, or register changes.
 - **Manual test steps:** `git diff --stat <rollback-tag>..HEAD` shows only `docs/` and `.engineering/session/` paths; the README table row and blockquote resolve to the new file; `repo-structure-verify.sh` reports no new failure attributable to these paths (every architecture doc indexed).
 - **Product Registry impact:** none now (no user-facing surface ships); each future object (ED4 onward) carries its own Product Registry Impact when it first becomes visible.
@@ -207,7 +209,7 @@ AI ARCHITECTURE COMPLIANCE
 ## Rollback Plan
 
 - **Rollback identifier:** `rollback/ED3-environmental-dressing-design-constitution-20260722` → `4dc22eb4` (annotated tag, created **before any change**; the uncommitted `CURRENT.md` heartbeat is not covered).
-- **Files modified:** `docs/architecture/ENVIRONMENTAL_DRESSING_DESIGN_CONSTITUTION.md` (new) · `docs/implementation/ED3_ENVIRONMENTAL_DRESSING_DESIGN_CONSTITUTION.md` (new) · `docs/architecture/README.md` (index entry) · `.engineering/session/CURRENT.md` (dashboard row) · `.engineering/session/runs/ED3_Environmental_Dressing_Design_Constitution.md` (session record).
+- **Files modified:** `docs/architecture/LIVING_HOME_DESIGN_CONSTITUTION.md` (new; created as `ENVIRONMENTAL_DRESSING_DESIGN_CONSTITUTION.md`, renamed 2026-07-22) · `docs/implementation/ED3_ENVIRONMENTAL_DRESSING_DESIGN_CONSTITUTION.md` (new) · `docs/architecture/README.md` (index entry) · `.engineering/session/CURRENT.md` (dashboard row) · `.engineering/session/runs/ED3_Environmental_Dressing_Design_Constitution.md` (session record).
 - **To revert:** `git revert` the ED3 commit, or `git checkout rollback/ED3-environmental-dressing-design-constitution-20260722 -- docs/architecture/README.md .engineering/session/CURRENT.md` and `git rm` the two new documents + this session record. No runtime surface exists to restore — nothing visible ever changed.
 - **Verification after rollback:** `git diff rollback/ED3-environmental-dressing-design-constitution-20260722 -- docs/ .engineering/` is empty; the README returns to its prior index; no runtime surface existed to verify.
 
