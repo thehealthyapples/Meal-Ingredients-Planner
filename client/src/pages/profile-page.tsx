@@ -1815,7 +1815,7 @@ function ContactSection() {
       <div className="space-y-2">
         <Link
           href="/help"
-          className="flex items-center justify-between gap-3 rounded-md py-2 text-sm hover:text-primary"
+          className="flex items-center justify-between gap-3 rounded-md py-2 text-sm transition-colors hover:text-primary"
           data-testid="link-help-centre"
         >
           <span>Help Centre</span>
@@ -1824,7 +1824,7 @@ function ContactSection() {
         <Separator />
         <Link
           href="/contact"
-          className="flex items-center justify-between gap-3 rounded-md py-2 text-sm hover:text-primary"
+          className="flex items-center justify-between gap-3 rounded-md py-2 text-sm transition-colors hover:text-primary"
           data-testid="link-contact-us"
         >
           <span>Contact us, report a problem, or suggest an idea</span>
@@ -1883,7 +1883,7 @@ function PrivacySection() {
       <div className="space-y-2">
         <Link
           href="/privacy-settings"
-          className="flex items-center justify-between gap-3 rounded-md py-2 text-sm hover:text-primary"
+          className="flex items-center justify-between gap-3 rounded-md py-2 text-sm transition-colors hover:text-primary"
           data-testid="link-privacy-settings"
         >
           <span>Download your data, correct it, or delete your account</span>
@@ -1892,7 +1892,7 @@ function PrivacySection() {
         <Separator />
         <Link
           href="/legal"
-          className="flex items-center justify-between gap-3 rounded-md py-2 text-sm hover:text-primary"
+          className="flex items-center justify-between gap-3 rounded-md py-2 text-sm transition-colors hover:text-primary"
           data-testid="link-legal-policies"
         >
           <span>Privacy Policy, Terms and Cookies</span>

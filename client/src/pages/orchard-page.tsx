@@ -359,9 +359,13 @@ function PartTab({
       aria-current={isActive ? "true" : undefined}
       data-testid={`orchard-part-${id}`}
       className={
+        // LHXP5 (Living Craftsmanship): `transition-colors` so the hover fill and
+        // the active-state change ease rather than snap — matching every other
+        // tab/segmented control in the house (Larder, Nutrition), which already
+        // transition. Presentation only; the outlier here was the abrupt snap.
         isActive
-          ? "rounded-[--radius-support] bg-[hsl(20,34%,89%)] px-4 py-2 text-sm font-medium text-[hsl(20,44%,22%)] dark:bg-[hsl(20,20%,18%)] dark:text-[hsl(20,32%,72%)]"
-          : "rounded-[--radius-support] px-4 py-2 text-sm text-muted-foreground hover:bg-muted"
+          ? "rounded-[--radius-support] bg-[hsl(20,34%,89%)] px-4 py-2 text-sm font-medium text-[hsl(20,44%,22%)] transition-colors dark:bg-[hsl(20,20%,18%)] dark:text-[hsl(20,32%,72%)]"
+          : "rounded-[--radius-support] px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted"
       }
     >
       {label}

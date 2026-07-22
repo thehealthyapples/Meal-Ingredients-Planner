@@ -271,7 +271,7 @@ function ViewLink({ href, children, testId }: { href: string; children: React.Re
 //
 // What remains is a quiet mark holding the count — the same fact, with the
 // verdict taken off it.
-function PlantRing({ count }: { count: number }) {
+function PlantRing() {
   const R = 34;
   return (
     <div className="relative shrink-0" style={{ width: 88, height: 88 }}>
@@ -281,9 +281,14 @@ function PlantRing({ count }: { count: number }) {
       <span className="absolute inset-0 flex items-center justify-center">
         <Leaf style={{ width: 22, height: 22, color: "var(--primary-border)" }} />
       </span>
-      <span className="sr-only">
-        {count} different plant{count === 1 ? "" : "s"} this week
-      </span>
+      {/* LHXP5 (Living Craftsmanship): the ring is purely decorative (its SVG is
+          aria-hidden) and is only ever rendered beside the visible "{count}
+          different plants this week" caption, which carries the accessible name.
+          A screen-reader-only copy here made assistive tech announce the same
+          count twice; removed so it is spoken once. Would anyone notice it gone?
+          No — the visible text is fully accessible (item 9). The ring no longer
+          needs the count (it draws the same decorative mark at any value), so the
+          prop was dropped with it. */}
     </div>
   );
 }
@@ -884,7 +889,7 @@ export default function HomeExperiencePage() {
                       </p>
                     ) : (
                       <div className="flex items-center gap-4">
-                        <PlantRing count={plantCount} />
+                        <PlantRing />
                         <p className="text-sm text-muted-foreground" data-testid="text-home-plant-summary">
                           {/* PRESENCE1: the "/ 30" denominator is gone with the ring's
                               arc. The count is the fact; the target was the judgement. */}
