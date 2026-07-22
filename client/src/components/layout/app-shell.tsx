@@ -24,6 +24,7 @@ import { Loader2 } from "lucide-react";
 import { BottomNav, NAV_ITEMS, AppRealmContext } from "@/components/nav-bar";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { OrchardRoomWindow } from "@/components/layout/orchard-backdrop";
+import { DressingLayer } from "@/components/layout/dressing-layer";
 import FloatingAssistant from "@/components/conversation/FloatingAssistant";
 import { CompanionContextProvider } from "@/components/conversation/companion-context";
 import {
@@ -249,7 +250,13 @@ function RoomThreshold({ path }: { path: string }) {
   return (
     <div className="room-threshold" data-exposure={exposure} data-testid="room-threshold">
       {exposure === "e2" ? (
-        <OrchardRoomWindow exposure="e2" />
+        <>
+          <OrchardRoomWindow exposure="e2" />
+          {/* Environmental Dressing (LH1): the home's standing welcome, on the sill
+              of the committed E2 window band. Renders nothing where refused (§ 5.1)
+              or where there is no view. The one mouth: dressing-layer.tsx. */}
+          <DressingLayer room={realm} exposure="e2" />
+        </>
       ) : (
         <div className="room-threshold-light" aria-hidden />
       )}

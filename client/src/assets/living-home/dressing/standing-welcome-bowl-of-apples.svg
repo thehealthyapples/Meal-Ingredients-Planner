@@ -1,0 +1,77 @@
+<svg width="220" height="176" viewBox="0 0 220 176" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <!--
+    Environmental Dressing · LH1 — the Standing Welcome (a bowl of apples).
+    A claim-free object of the home's own hospitality (LIVINGHOME2 ED1–ED12),
+    admitted against the Living Home Design Constitution (LHDC1).
+
+    Drawn by the house's own hand, in Calm Orchard's owned palette (colour values
+    baked into the asset in the NORTH2 manner — a byte-locked, checksummed asset,
+    not raw colour in a surface): warm oatmeal ceramic (oak/linen family), the
+    orchard's living red-green on the fruit — bright but never garish (LHDC1 §10).
+    Matte, low-sheen, lived-with. One morning light, upper-left (Blueprint §7):
+    every highlight sits upper-left, the one soft contact shadow falls short to the
+    lower-right, agreeing with every other shadow in the house. Still — no motion,
+    no gloss, no specular dot, no dramatic shadow (LHDC1 §6, §12). Wordless: no
+    <title>/<desc>; the mouth renders it aria-hidden with empty alt (ED7).
+  -->
+  <defs>
+    <!-- Gentle, low-contrast form-shading — roundness from light and material,
+         never a wet highlight (LHDC1 §6 "depth from light and material"). -->
+    <radialGradient id="appleRed" cx="38%" cy="34%" r="72%">
+      <stop offset="0%" stop-color="hsl(12 40% 62%)"/>
+      <stop offset="62%" stop-color="hsl(7 38% 55%)"/>
+      <stop offset="100%" stop-color="hsl(5 34% 47%)"/>
+    </radialGradient>
+    <radialGradient id="appleGreen" cx="38%" cy="34%" r="72%">
+      <stop offset="0%" stop-color="hsl(80 30% 56%)"/>
+      <stop offset="62%" stop-color="hsl(78 27% 48%)"/>
+      <stop offset="100%" stop-color="hsl(80 25% 40%)"/>
+    </radialGradient>
+    <radialGradient id="appleBlush" cx="40%" cy="36%" r="70%">
+      <stop offset="0%" stop-color="hsl(15 44% 64%)"/>
+      <stop offset="58%" stop-color="hsl(58 26% 60%)"/>
+      <stop offset="100%" stop-color="hsl(74 26% 46%)"/>
+    </radialGradient>
+    <linearGradient id="bowlBody" x1="20%" y1="18%" x2="78%" y2="100%">
+      <stop offset="0%" stop-color="hsl(36 24% 78%)"/>
+      <stop offset="55%" stop-color="hsl(34 20% 70%)"/>
+      <stop offset="100%" stop-color="hsl(32 17% 60%)"/>
+    </linearGradient>
+  </defs>
+
+  <!-- The one soft contact shadow: short, warm, low-opacity, falling to the
+       lower-right of the one upper-left morning. Not a drop-shadow trick. -->
+  <ellipse cx="116" cy="150" rx="82" ry="12" fill="hsl(38 18% 42%)" opacity="0.13"/>
+
+  <!-- The fruit, gathered in the bowl. Domestic, believable scale; a handful,
+       not a heap (LHDC1 §4 restraint, §9 scale). -->
+  <!-- back apple (green) -->
+  <g>
+    <path d="M70 92c-11 0-19 8-19 20 0 13 9 24 19 24 4 0 6-1 9-1s5 1 9 1c10 0 19-11 19-24 0-12-8-20-19-20-4 0-6 1-9 1s-5-1-9-1z" fill="url(#appleGreen)"/>
+    <path d="M79 74c2 5 1 11-3 15" stroke="hsl(40 30% 30%)" stroke-width="3" stroke-linecap="round" fill="none"/>
+    <path d="M79 78c6-4 14-3 18 2-5 4-13 4-18-2z" fill="hsl(90 22% 38%)"/>
+    <ellipse cx="69" cy="104" rx="9" ry="7" fill="hsl(64 30% 74%)" opacity="0.35"/>
+  </g>
+  <!-- right apple (red) -->
+  <g>
+    <path d="M150 96c-12 0-21 9-21 22 0 14 10 26 21 26 4 0 7-1 10-1s6 1 10 1c11 0 21-12 21-26 0-13-9-22-21-22-4 0-7 1-10 1s-6-1-10-1z" fill="url(#appleRed)"/>
+    <path d="M160 78c1 5 0 11-4 14" stroke="hsl(40 30% 30%)" stroke-width="3" stroke-linecap="round" fill="none"/>
+    <ellipse cx="149" cy="110" rx="10" ry="8" fill="hsl(24 44% 82%)" opacity="0.34"/>
+  </g>
+  <!-- front apple (red-green blush), sitting lowest and nearest -->
+  <g>
+    <path d="M104 104c-13 0-23 10-23 24 0 15 11 28 23 28 4 0 7-1 11-1s7 1 11 1c12 0 23-13 23-28 0-14-10-24-23-24-4 0-7 1-11 1s-7-1-11-1z" fill="url(#appleBlush)"/>
+    <path d="M115 86c1 5 0 11-4 14" stroke="hsl(40 30% 30%)" stroke-width="3" stroke-linecap="round" fill="none"/>
+    <path d="M115 90c6-4 14-3 18 2-5 4-13 4-18-2z" fill="hsl(90 22% 38%)"/>
+    <ellipse cx="102" cy="120" rx="11" ry="9" fill="hsl(30 44% 84%)" opacity="0.32"/>
+  </g>
+
+  <!-- The hand-thrown ceramic bowl, matte oatmeal. The fruit rests IN it: the
+       bowl's near wall crosses in front of the fruit's base. -->
+  <path d="M44 120c0 20 32 33 72 33s72-13 72-33c0-4-3-6-7-5-13 5-38 10-65 10s-52-5-65-10c-4-1-7 1-7 5z" fill="url(#bowlBody)"/>
+  <!-- rim: the throw-line catching the upper-left morning -->
+  <path d="M44 120c9 8 36 15 72 15s63-7 72-15" stroke="hsl(38 26% 84%)" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.8"/>
+  <path d="M50 126c8 6 33 12 66 12s58-6 66-12" stroke="hsl(32 16% 52%)" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.5"/>
+  <!-- one quiet throw-mark, evidence of the hand (LHDC1 §7 craftsmanship) -->
+  <path d="M70 140c15 4 61 4 92-2" stroke="hsl(32 16% 55%)" stroke-width="1.5" stroke-linecap="round" fill="none" opacity="0.3"/>
+</svg>

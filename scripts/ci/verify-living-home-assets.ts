@@ -18,13 +18,14 @@
  * Exit codes: 0 — all checks pass · 1 — any check fails or a fatal error.
  * Run with: npm run verify:living-home-assets
  *
- * Third register (ED2 · LIVINGHOME2 § 10.3): `dressingChecks()` below now verifies the
+ * Third register (ED2 · LIVINGHOME2 § 10.3): `dressingChecks()` below verifies the
  * Environmental Dressing Register — checksum match; NO household-data binding (or any
  * forbidden field) reachable; celebration items gated by the § 7.2 permission; the § 5.1
- * placement exclusions encoded; every item's admission doc present; and the runtime
- * guarantee that the EMPTY register resolves and renders to nothing. The register is
- * empty by design, so its content checks hold vacuously — each becomes a live gate the
- * moment ED3 admits the first item (the seam ED1 § 2 Amendment 4 declared, now built).
+ * placement exclusions encoded; every item's admission doc present; the runtime guarantee
+ * that each item resolves in an allowed room and is refused where § 5.1 requires; that
+ * only the one mouth imports the dressing assets; and that every item's still asset is
+ * byte-locked to its checksum. At LH1 the register holds ONE admitted item (the Standing
+ * Welcome — a bowl of apples); these checks are live gates over it.
  */
 
 import { createHash } from "node:crypto";
@@ -49,8 +50,11 @@ const HOUSE_REGISTER = "docs/implementation/assets/house-asset-register.json";
 const LIFE_ASSET_DIR = "client/src/assets/living-home";
 const LIFE_OWNER_COMPONENT = "client/src/components/layout/living-details.tsx";
 const CLIENT_SRC = "client/src";
-// ED2 — the Dressing Register runtime + its future DOM mouth (declared, lands at ED3).
+// ED2/LH1 — the Dressing Register runtime + its DOM mouth (built at LH1).
 const DRESSING_ASSET_DIR = "client/src/assets/living-home/dressing";
+// The import needle (alias-agnostic): both `@/assets/...` and `client/src/assets/...`
+// forms contain this substring, so the one-mouth check catches either.
+const DRESSING_ASSET_IMPORT = "assets/living-home/dressing";
 const DRESSING_OWNER_COMPONENT = "client/src/components/layout/dressing-layer.tsx";
 
 const ICON = { pass: "✓", fail: "✗", skip: "○" } as const;
@@ -179,9 +183,13 @@ function checkSingleMouth() {
   const offenders: string[] = [];
   for (const file of walk(clientAbs)) {
     if (!/\.(ts|tsx)$/.test(file)) continue;
-    if (file === LIFE_OWNER_COMPONENT) continue; // the one lawful mouth (lands Phase 3)
+    if (file === LIFE_OWNER_COMPONENT) continue; // the one lawful Life mouth (lands Phase 3)
+    // The Dressing mouth lawfully imports the assets/living-home/dressing/ subdir; that
+    // subdir is a different register with its own single-mouth gate (D7 below), so it is
+    // not a Life-asset violation.
+    if (file === DRESSING_OWNER_COMPONENT) continue;
     const src = readFileSync(resolve(ROOT, file), "utf8");
-    if (importsAssetPath(src, "assets/living-home")) {
+    if (importsAssetPath(src, "assets/living-home") && !importsAssetPath(src, DRESSING_ASSET_IMPORT)) {
       offenders.push(`${file} imports from assets/living-home/ — only ${LIFE_OWNER_COMPONENT} may (EXP3 § 6/§ 7.1).`);
     }
   }
@@ -193,7 +201,14 @@ function checkSingleMouth() {
 function checkNoOrphans() {
   const dirAbs = resolve(ROOT, LIFE_ASSET_DIR);
   const onDisk = existsSync(dirAbs)
-    ? walk(dirAbs).filter((f) => /\.(webp|avif|png|svg|jpg|jpeg)$/i.test(f))
+    ? walk(dirAbs).filter(
+        (f) =>
+          /\.(webp|avif|png|svg|jpg|jpeg)$/i.test(f) &&
+          // The dressing/ subdir is the third register (Dressing), not Life — it has its
+          // own single-mouth (D7) and byte-lock (D8) gates and is not referenced by the
+          // Life manifest, so it must not be judged an orphan Life asset.
+          !f.startsWith(`${DRESSING_ASSET_DIR}/`),
+      )
     : [];
 
   const referencedIds = new Set<string>();
@@ -335,8 +350,10 @@ function dressingChecks() {
     );
   }
 
-  // D6 — the runtime GUARANTEE: the empty register resolves and renders to NOTHING,
-  // in every room and every season. This is ED2's whole demonstration, run in CI.
+  // D6 — the runtime GUARANTEE. For the EMPTY register: resolves and renders to
+  // NOTHING in every room and season. For a NON-EMPTY register: every admitted item
+  // resolves in a room it does not refuse, is ABSENT in each room its placement refuses
+  // (§ 5.1), and each resolved item paints exactly one still descriptor.
   const seasons: SeasonKey[] = ["spring", "summer", "autumn", "winter", "year-round"];
   const rooms = ["home", "cookbook", "pantry", "planner", "orchard"];
   let totalResolved = 0;
@@ -348,19 +365,57 @@ function dressingChecks() {
       totalRendered += toRenderPlan(resolved).descriptors.length;
     }
   }
-  const expectVisible = items.length > 0;
-  if (!expectVisible && (totalResolved !== 0 || totalRendered !== 0)) {
-    record(
-      "Empty register resolves & renders to nothing",
-      "fail",
-      `Expected zero output from the empty register, got ${totalResolved} resolved / ${totalRendered} rendered. No dressing may appear.`,
-    );
+  if (items.length === 0) {
+    if (totalResolved !== 0 || totalRendered !== 0) {
+      record(
+        "Empty register resolves & renders to nothing",
+        "fail",
+        `Expected zero output from the empty register, got ${totalResolved} resolved / ${totalRendered} rendered. No dressing may appear.`,
+      );
+    } else {
+      record(
+        "Empty register resolves & renders to nothing (runtime guarantee)",
+        "pass",
+        `${seasons.length} season(s) × ${rooms.length} room(s): 0 resolved, 0 rendered.`,
+      );
+    }
   } else {
-    record(
-      "Empty register resolves & renders to nothing (runtime guarantee)",
-      "pass",
-      `${seasons.length} season(s) × ${rooms.length} room(s): ${totalResolved} item(s) resolved, ${totalRendered} descriptor(s) rendered — the renderer produces no visible output.`,
-    );
+    const runtimeProblems: string[] = [];
+    for (const item of items) {
+      const probeSeason: SeasonKey = item.season === "year-round" ? "spring" : item.season;
+      // Refused where its placement refuses it (§ 5.1) — must NOT resolve there.
+      for (const refused of item.placement.refusedRooms) {
+        const there = resolveDressing({ room: refused, season: probeSeason });
+        if (there.some((r) => r.id === item.id)) {
+          runtimeProblems.push(`${item.id}: resolves in "${refused}", which its placement refuses (§ 5.1).`);
+        }
+      }
+      // Present in at least one room it does NOT refuse, painting exactly one descriptor.
+      const allowed = ["home", "cookbook", "diary", "orchard", "planner", "shopping"].find(
+        (r) => !item.placement.refusedRooms.includes(r),
+      );
+      if (!allowed) {
+        runtimeProblems.push(`${item.id}: refuses every candidate room — it could never render.`);
+      } else {
+        const there = resolveDressing({ room: allowed, season: probeSeason });
+        if (!there.some((r) => r.id === item.id)) {
+          runtimeProblems.push(`${item.id}: does not resolve in the allowed room "${allowed}".`);
+        }
+        const painted = toRenderPlan(there.filter((r) => r.id === item.id)).descriptors.length;
+        if (painted !== 1) {
+          runtimeProblems.push(`${item.id}: expected 1 still descriptor in "${allowed}", got ${painted}.`);
+        }
+      }
+    }
+    if (runtimeProblems.length) {
+      record("Every dressing item resolves & renders correctly", "fail", runtimeProblems.join("  |  "));
+    } else {
+      record(
+        "Every dressing item resolves & renders correctly (runtime guarantee)",
+        "pass",
+        `${items.length} item(s): each resolves in an allowed room, is refused where § 5.1 requires, and paints one still descriptor (${seasons.length}×${rooms.length} sweep: ${totalResolved} resolved / ${totalRendered} rendered).`,
+      );
+    }
   }
 
   // D7 — one mouth: only the (future, declared) dressing owner component may import the
@@ -370,14 +425,41 @@ function dressingChecks() {
     const offenders: string[] = [];
     for (const file of walk(clientAbs)) {
       if (!/\.(ts|tsx)$/.test(file)) continue;
-      if (file === DRESSING_OWNER_COMPONENT) continue; // the one lawful mouth (lands ED3)
+      if (file === DRESSING_OWNER_COMPONENT) continue; // the one lawful mouth (LH1)
       const src = readFileSync(resolve(ROOT, file), "utf8");
-      if (importsAssetPath(src, DRESSING_ASSET_DIR)) {
+      if (importsAssetPath(src, DRESSING_ASSET_IMPORT)) {
         offenders.push(`${file} imports from ${DRESSING_ASSET_DIR}/ — only ${DRESSING_OWNER_COMPONENT} may (one mouth — LIVINGHOME2 § 10.3).`);
       }
     }
     if (offenders.length) record("Only the owner component imports Dressing assets", "fail", offenders.join("  |  "));
-    else record("Only the owner component imports Dressing assets", "pass", `No unauthorised import of ${DRESSING_ASSET_DIR}/ (the dir is unbuilt; the mouth lands with its first item at ED3).`);
+    else record("Only the owner component imports Dressing assets", "pass", `No unauthorised import of ${DRESSING_ASSET_DIR}/ — only ${DRESSING_OWNER_COMPONENT} (the one mouth) may.`);
+  }
+
+  // D8 — every dressing item's still asset exists and its bytes hash to the item's
+  // checksum (EXP3 § 4.4 manner, for the third register): the rendered object cannot
+  // drift without the item checksum AND the register checksum changing in the same commit.
+  if (items.length === 0) {
+    record("Every dressing asset byte-locked to its item checksum", "pass", "Empty register — no asset to lock (holds vacuously).");
+  } else {
+    const assetProblems: string[] = [];
+    const EXTS = ["svg", "webp", "avif", "png"];
+    for (const item of items) {
+      const found = EXTS
+        .map((e) => resolve(ROOT, DRESSING_ASSET_DIR, `${item.render.assetId}.${e}`))
+        .find(existsSync);
+      if (!found) {
+        assetProblems.push(`${item.id}: no still asset for assetId "${item.render.assetId}" under ${DRESSING_ASSET_DIR}/.`);
+        continue;
+      }
+      const actual = sha256(found);
+      if (actual !== item.checksum) {
+        assetProblems.push(
+          `${item.id}: asset drifted (item checksum ${item.checksum.slice(0, 12)}…, actual ${actual.slice(0, 12)}…). Recompute the item checksum AND the register checksum in the SAME commit (EXP3 § 4.4).`,
+        );
+      }
+    }
+    if (assetProblems.length) record("Every dressing asset byte-locked to its item checksum", "fail", assetProblems.join("  |  "));
+    else record("Every dressing asset byte-locked to its item checksum", "pass", `${items.length} still asset(s) match their registered item checksum.`);
   }
 }
 
@@ -408,7 +490,7 @@ function main() {
     console.error(`\nRESULT: FAIL — ${failed} check(s) failed. The Living Home must not drift.`);
     process.exitCode = 1;
   } else {
-    console.log("\nRESULT: PASS — the house is byte-locked; the Life register is honest and empty; the Dressing register is empty and renders nothing.");
+    console.log("\nRESULT: PASS — the house is byte-locked; the Life register is honest and empty; the Dressing register is byte-locked and every admitted item is claim-free, still, and lawfully placed.");
   }
 }
 

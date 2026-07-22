@@ -1,7 +1,7 @@
 {
   "$schema_note": "The Platform Experience Adoption Register (PX1-W5.1). THE single source of truth. ADOPTION_REGISTER.md is GENERATED from this file — never edit the .md by hand. Verified by scripts/ci/adoption-register-gate.ts, which fails CI when an owner loses its last consumer, a rival count rises, a retired predecessor returns, or a new orphan appears. Mandated by THA_UI_ARCHITECTURE.md §17; operational, not architectural — it creates no law.",
   "version": "1.0.0",
-  "updated": "2026-07-20",
+  "updated": "2026-07-22",
   "owner": "Colin Clapson",
   "governedBy": [
     "[THA_UI_ARCHITECTURE.md §17](../../architecture/THA_UI_ARCHITECTURE.md) (the mandate)",
@@ -1098,6 +1098,29 @@
           "why": "The sub-processor list is not a clause of the document — it is generated from shared/legal/subprocessors.ts, which is read out of the code, and it renders as cards rather than as prose blocks. Putting it through the block renderer would have required a fifth block kind that exactly one document uses."
         }
       ]
+    },
+    {
+      "id": "environmental-dressing",
+      "concern": "Environmental Dressing (the render mouth)",
+      "owner": "components/layout/dressing-layer.tsx",
+      "ownerPath": "client/src/components/layout/dressing-layer.tsx",
+      "ownerKind": "module",
+      "owns": "The ONE mouth that paints admitted Environmental Dressing items (LIVINGHOME2 ED1–ED12). It consumes the ED2 runtime (`client/src/lib/living-home/dressing-register.ts`) and is the single lawful importer of `client/src/assets/living-home/dressing/` (one mouth — LIVINGHOME2 § 10.3; verify:living-home-assets D7). Still, wordless, `aria-hidden`, `pointer-events-none` (ED7); renders only at E2 (zero-byte where there is no view). **LH1** built and mounted it — the shell's `RoomThreshold` adopts it for the E2 rooms — admitting the first item (the Standing Welcome, a bowl of apples). This adoption retired the `dressing-register.ts` known-orphan (it now has a client consumer). Governed by `verify:living-home-assets` (dressingChecks) and the Living Home Design Constitution (LHDC1).",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 1
+    },
+    {
+      "id": "dressing-strength",
+      "concern": "Environmental Dressing strength ceiling",
+      "owner": "index.css (--dressing-strength)",
+      "ownerKind": "css",
+      "definedSymbols": [
+        "--dressing-strength"
+      ],
+      "owns": "The ED7 / LHDC1 § 4 opacity ceiling a dressing object may render at — one declared strength, never tuned per surface (UIA § 15/§ 16), resolved by the dressing mouth alone. Defined completely in both modes (light 0.92, dark 0.78 — § 16 forbids a partial mode). Admitted at **LH1** with its first consumer (`dressing-layer.tsx`).",
+      "status": "governed",
+      "enforcement": "machine"
     }
   ],
   "orphans": {
@@ -1145,12 +1168,6 @@
         "loc": 96,
         "disposition": "NOT a defect and NOT the PageHeader failure mode — the one deliberate, governed entry here. It is EXP3 Phase 2's Life Register: the empty Living Details manifest (types + `export const livingDetailsManifest = {}`), which EXP3 § 13 Phase 2 mandates ship NOW while EXP3 § 7.1 mandates its consumer — the composition mouth `living-details.tsx` — land ONLY with the first admitted detail (the Cookbook pilot, EXP3 Phase 3). It is a pure declarative data/types module with no React, no asset import, and no rendering, so it is inert (nothing imports it in the client tree; `scripts/ci/verify-living-home-assets.ts` reads it, but a script importer is not a client consumer). It is recorded here — the gate's sanctioned third remedy — precisely so this 0-importer state is KNOWN and owned rather than hidden, and so a genuinely NEW unexpected orphan still fails. It leaves this list the moment EXP3 Phase 3 mounts the mouth that imports it.",
         "owner": "Colin Clapson — adopt at EXP3 Phase 3 (the Cookbook pilot mounts `living-details.tsx`, which imports this manifest), per EXP3 § 7.1"
-      },
-      {
-        "path": "client/src/lib/living-home/dressing-register.ts",
-        "loc": 320,
-        "disposition": "NOT a defect — the second deliberate, governed entry, the exact sibling of `living-details-manifest.ts` above. It is ED2's Environmental Dressing Runtime: the EMPTY Dressing Register plus its loader, placement resolver, runtime resolver, renderer interface + shell, placement validation, and admission hook (LIVINGHOME2 § 10.3, built to the ED1 § 5–§ 7 contract). LIVINGHOME2 § 10.4 Phase 2 mandates the register ship NOW (empty), while EXP3 § 7.1 / UIA § 17 mandate its DOM mouth — `client/src/components/layout/dressing-layer.tsx` — land ONLY with the first admitted item (the Standing Welcome, ED3). It is a pure data/logic module with no React, no asset import, and no rendering, so it is inert: nothing in the client tree imports it (`scripts/ci/verify-living-home-assets.ts` reads it, but a script importer is not a client consumer). Recorded here so this 0-importer state is KNOWN and owned, and a genuinely NEW orphan still fails. It leaves this list the moment ED3 mounts the mouth that imports it.",
-        "owner": "Colin Clapson — adopt at ED3 (the Standing Welcome mounts `dressing-layer.tsx`, which imports this runtime), per EXP3 § 7.1 / UIA § 17"
       }
     ]
   }

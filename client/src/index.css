@@ -181,6 +181,15 @@
   --orchard-exposure-e2: 0.82;
   --orchard-exposure-e3: 0.90;
 
+  /* LH1 — Environmental Dressing strength ceiling (ED7 · LHDC1 §4). The one
+     declared opacity ceiling a dressing object may render at, so a home's quiet
+     welcome stays below the emphasis budget and is never the loudest thing in a
+     room (LHDC1 §4). It is a CEILING, never tuned per surface (UIA §15/§16): the
+     mouth (dressing-layer.tsx) resolves this token and no other. A bowl of apples
+     is a real object on the sill, so it reads solid — but settled into the one
+     morning, not competing with the household's own work. */
+  --dressing-strength: 0.92;
+
   /* One light — upper-left, a perpetual bright morning. The rim is the light
      caught along a surface's top edge; the ambient is the pool it casts.
      The ambient carries no text, so under §15 it declares a CEILING (the
@@ -406,6 +415,10 @@
   --orchard-exposure-e1: 0;
   --orchard-exposure-e2: 0.12;
   --orchard-exposure-e3: 0.18;
+
+  /* LH1 — dressing strength, dark value set (UIA §16 forbids a partial mode).
+     The bowl settles a little further into the night room, quieter than by day. */
+  --dressing-strength: 0.78;
 
   --light-rim:             transparent;
   --light-rim-soft:        transparent;

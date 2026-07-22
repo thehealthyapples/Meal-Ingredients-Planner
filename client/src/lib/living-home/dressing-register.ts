@@ -10,23 +10,24 @@
  *   Life   = the household's true data, data-borne or dead  (living-details-manifest.ts)
  *   ▶ Dressing = the home quietly lives — the narrow middle THIS module owns.
  *
- * ── ED2 status: DELIBERATELY EMPTY. ─────────────────────────────────────────────
- * The register ships ZERO admitted items and stays that way. This module is the
- * *runtime and the shape* — one register, one loader, one placement resolver, one
- * runtime resolver, one renderer interface + shell, placement validation, and the
- * admission hook — built to the ED1 § 5–§ 7 contract so that when the first item is
- * admitted (ED3 — the Standing Welcome, LIVINGHOME2 Phase 3) there is exactly one
- * governed place that decides it. Today it decides nothing, because there is nothing
- * to decide, and that is lawful and correct.
+ * ── LH1 status: ONE admitted item — the Standing Welcome. ───────────────────────
+ * The register was DELIBERATELY EMPTY through ED2. LH1 (LIVINGHOME2 Phase 3) admits
+ * the FIRST item — a bowl of apples (§ 3, `STANDING_WELCOME_BOWL_OF_APPLES`) — through
+ * the full admission pipeline (LHDC1 § 21) with its Home Owner approval recorded. This
+ * module remains the *runtime and the shape* — one register, one loader, one placement
+ * resolver, one runtime resolver, one renderer interface + shell, placement validation,
+ * and the admission hook, built to the ED1 § 5–§ 7 contract — and is now also the one
+ * governed place that decides the one admitted item. Further items are admitted one at
+ * a time (LH2, § 5), never as a batch (ED10).
  *
- * ── No visible output, by construction. ─────────────────────────────────────────
+ * ── The visible mouth. ──────────────────────────────────────────────────────────
  * This is a PURE data + logic module: no React, no asset import, no DOM. The
- * DOM-painting mouth (`client/src/components/layout/dressing-layer.tsx`) is
- * DECLARED-NOT-BUILT and lands with the first admitted item (EXP3 § 7.1 / UIA § 17 —
- * an authored-but-unadopted mount is the failure those laws exist to end). Nothing
- * in the client tree imports this module today; `scripts/ci/verify-living-home-assets.ts`
- * reads it (a script importer is not a client consumer), so it renders nothing and
- * changes no UI.
+ * DOM-painting mouth (`client/src/components/layout/dressing-layer.tsx`) consumes this
+ * module and is the ONE surface that imports the still asset and paints it — mounted by
+ * the shell's room threshold into the committed E2 window band (EXP3 § 7.1 / UIA § 17:
+ * the mouth lands WITH its first consumer, which it now has). The renderer is still,
+ * wordless, aria-hidden, pointer-events-none (ED7). `scripts/ci/verify-living-home-assets.ts`
+ * also reads this module (a script importer is not a client consumer).
  *
  * ── The forbidden things are inexpressible, not merely discouraged. ──────────────
  * A `DressingItem` has NO field for a data binding, text, a count, a door, an
@@ -153,33 +154,78 @@ export interface DressingRegistry {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// § 3 · The register itself — EMPTY, by design
+// § 3 · The register itself — the first admitted item (LH1)
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * The canonical, deterministic serialisation the checksum is taken over. Exported so
  * the verifier hashes the EXACT same bytes — one definition, no drift (one-owner-per-fact).
- * For the empty register this is the string "[]".
  */
 export function canonicalizeItems(items: ReadonlyArray<DressingItem>): string {
   return JSON.stringify(items);
 }
 
 /**
- * sha256 of the empty register's canonical form (`sha256("[]")`). When the first item
- * is admitted (ED3), this constant is recomputed IN THE SAME COMMIT that adds the item
- * — the deliberate act EXP3 § 4.4 requires, enforced by `dressingChecks()`.
+ * LH1 — THE STANDING WELCOME. The first admitted Environmental Dressing object
+ * (LIVINGHOME2 Phase 3 / § 5): **a bowl of apples**, the home's quiet signature and
+ * the house's own fruit, set out year-round. It claims nothing about any household
+ * (ED3) — it is the same bowl on every household's sill, offered to a family who has
+ * not yet unpacked (§ 7.3). Admitted against the Living Home Design Constitution
+ * (LHDC1): warm, matte, hand-thrown ceramic, the orchard's living red-green, lit by
+ * the one morning, still and wordless.
+ *
+ * Admission evidence: `docs/implementation/assets/dressing/standing-welcome-bowl-of-apples.admission.md`
+ * (LHDC1 § 21 — Home Owner approval recorded there, § 20).
+ *
+ * Placement (§ 5.1 · LHDC1 § 17): it renders on the sill of the committed E2 window
+ * band, in the browsing/reflective rooms where a bowl on the windowsill reads
+ * unmistakably as the home's warmth. It is REFUSED in:
+ *   • pantry / larder — § 5.1 produce law (a bowl of apples there reads as YOUR stock);
+ *   • nutrition — LHDC1 § 17 per-placement legibility (in the diet room a bowl of fruit
+ *     could be read as dietary advice — a claim/coaching the layer must never make, ED3).
+ * The no-view rooms (planner, shopping, analyser, household, admin) never render it
+ * because the mouth only composes where the house commits an E2 region — an exposure
+ * fact the mouth owns, kept separate from these legibility refusals.
  */
-export const DRESSING_REGISTER_CHECKSUM =
-  "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945";
+export const STANDING_WELCOME_BOWL_OF_APPLES: DressingItem = {
+  id: "standing-welcome-bowl-of-apples",
+  admissionDocId:
+    "docs/implementation/assets/dressing/standing-welcome-bowl-of-apples.admission.md",
+  hospitalityPurpose:
+    "The home's standing welcome: a bowl of the house's own apples set out on the " +
+    "windowsill, so a household arriving tired at the end of a day finds the home " +
+    "already warm — offered to everyone alike, in every season, asking and claiming " +
+    "nothing about anyone.",
+  season: "year-round",
+  placement: {
+    region: "room-threshold-sill",
+    refusedRooms: ["pantry", "larder", "nutrition"],
+  },
+  render: {
+    assetId: "standing-welcome-bowl-of-apples",
+    strengthToken: "--dressing-strength",
+  },
+  // sha256 of the still asset's bytes (standing-welcome-bowl-of-apples.svg) — the
+  // object's constancy proof (EXP3 § 4.4 manner). Recomputed in the SAME commit that
+  // changes the asset; the verifier hashes the file and compares (dressingChecks D8).
+  checksum: "d3e66b7514971aee71567f3e348ce72c08de73c1aa118975105cf408b4ee4243",
+};
 
 /**
- * THE REGISTER — zero admitted items at ED2 by design (LIVINGHOME2 § 10.4 Phase 2).
- * The first entry is admitted at ED3 (the Standing Welcome — candidate: the bowl of
- * apples), through the full admission pipeline, never before.
+ * sha256 over `canonicalizeItems(items)` — the whole register's constancy proof.
+ * Recomputed IN THE SAME COMMIT that changes the items (EXP3 § 4.4), enforced by
+ * `dressingChecks()` D1. (Empty-register value was
+ * 4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945 = sha256("[]"),
+ * kept here for traceability of the byte the register turned from.)
+ */
+export const DRESSING_REGISTER_CHECKSUM = "75aef6f8d8f9f140747bf2127c51fe0e0a9040d6a5ce102ab2560dc54f17c1fc";
+
+/**
+ * THE REGISTER — one admitted item at LH1: the Standing Welcome. The year turns by
+ * admitting further items one at a time (LH2, § 5), never as a batch (ED10).
  */
 export const dressingRegister: DressingRegistry = {
-  items: [],
+  items: [STANDING_WELCOME_BOWL_OF_APPLES],
   checksum: DRESSING_REGISTER_CHECKSUM,
 };
 
