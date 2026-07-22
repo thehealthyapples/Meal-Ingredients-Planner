@@ -5,7 +5,7 @@
 | **Session ID** | `LARDER_NS1_Larder_NorthStar_Atmosphere_Implementation` |
 | **Rollback ID** | `rollback/LARDER-northstar-impl-20260722` → `dedb5396` (annotated tag) |
 | **Start time** | 2026-07-22T00:00:00Z UTC |
-| **Current stage** | Implementation |
+| **Current stage** | Complete — committed `14c4e272` + pushed to `int1-intelligence-platform`; awaiting Home Owner review |
 
 ## Objective
 Implement the THA Larder using the approved North Star atmosphere image, preserving the
@@ -33,16 +33,16 @@ architecture, capture atmosphere"). Atmosphere captured via OWNED mechanisms onl
 - [x] View reference image; map current Larder code + owned atmosphere mechanisms.
 - [x] Make lawful edits (rename + purpose + collision fix + household-facing consistency). 9 files.
 - [x] Verify: client typecheck 0 errors (88 server pre-existing); build exit 0; adoption 100·0·9 (baseline).
-- [ ] Write report `docs/implementation/LARDER_NORTHSTAR_IMPLEMENTATION.md`.
-- [ ] Commit + push.
+- [x] Write report `docs/implementation/LARDER_NORTHSTAR_IMPLEMENTATION.md`.
+- [x] Commit (`14c4e272`) + push to `origin/int1-intelligence-platform`.
 
-**Last checkpoint:** All edits applied and verified (typecheck/build/adoption). Room renamed
-Pantry→Larder at NAV_ITEMS (one owner), threshold voice warmed, Larder tab→Cupboard collision
-resolved, household-facing labels consistent. Dressing/side-nav/Companion-pill/stock deliberately
-NOT built (governance + brief).
+**Last checkpoint:** Committed `14c4e272` and pushed. (Push used `gh auth setup-git` — the
+HTTPS token had failed; gh CLI is authenticated as `thehealthyapples` with `repo` scope.)
 
 ## Next action
-Write the report, commit all work, push to origin.
+None — implementation complete, committed and pushed. Owner (Home Owner) to walk `/pantry` on
+desktop. Open owner decision (report § 7): whether to initiate the Blueprint / LIVINGHOME2
+amendment path toward the fully-dressed room the reference image depicts.
 
 ## Blockers
 none — literal-image conflict surfaced and handled via the brief's pre-authorised lawful path.
