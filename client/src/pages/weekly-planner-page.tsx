@@ -149,18 +149,10 @@ function getCellEntries(entries: PlannerEntry[], row: MatrixRow): PlannerEntry[]
     .sort((a, b) => a.position !== b.position ? a.position - b.position : a.id - b.id);
 }
 
-function getUPFColorFn(score?: number) {
-  if (!score) return "text-muted-foreground";
-  if (score <= 20) return "text-green-600 dark:text-green-400";
-  if (score <= 50) return "text-yellow-600 dark:text-yellow-400";
-  return "text-red-600 dark:text-red-400";
-}
-function getUPFLabelFn(score?: number) {
-  if (!score) return "Unknown";
-  if (score <= 20) return "Minimal";
-  if (score <= 50) return "Moderate";
-  return "High";
-}
+// NSR1 Phase 2 (Planner): getUPFColorFn/getUPFLabelFn deleted — a green/yellow/red
+// "Minimal/Moderate/High" traffic-light grade with ZERO call sites in this page (dead
+// code; SmartReviewPanelContent holds its own copies). CRAFT1 §6 (delete before adding;
+// components survive only if they strengthen) and GEA18 (no duplicate ownership).
 
 // Use pointer coordinates to detect day-nav drops (so finger-over-day triggers reliably),
 // then fall back to closestCenter for slot/entry targets.
@@ -1600,18 +1592,8 @@ export default function WeeklyPlannerPage() {
     }
   };
 
-  const getUPFColor = (score?: number) => {
-    if (!score) return "text-muted-foreground";
-    if (score <= 20) return "text-green-600 dark:text-green-400";
-    if (score <= 50) return "text-yellow-600 dark:text-yellow-400";
-    return "text-red-600 dark:text-red-400";
-  };
-  const getUPFLabel = (score?: number) => {
-    if (!score) return "Unknown";
-    if (score <= 20) return "Minimal";
-    if (score <= 50) return "Moderate";
-    return "High";
-  };
+  // NSR1 Phase 2 (Planner): the second dead copy of the UPF traffic-light grade
+  // (getUPFColor/getUPFLabel) is deleted — no call site here either (CRAFT1 §6, GEA18).
 
   const sortedDays = activeWeekData?.days?.slice().sort((a, b) => {
     const aIdx = MONDAY_FIRST_ORDER.indexOf(a.dayOfWeek);
@@ -2093,8 +2075,8 @@ export default function WeeklyPlannerPage() {
           variant="empty"
           size="compact"
           icon={Sparkles}
-          title="Nothing planned for this week yet"
-          description="Tap a day to add a meal you already cook, or let THA suggest a week built around your household."
+          title="Nothing planned for this week"
+          description="Tap a day to add a meal you already cook, or let THA suggest a week to start from."
           action={
             <Button
               size="sm"

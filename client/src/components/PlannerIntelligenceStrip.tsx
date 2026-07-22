@@ -162,6 +162,10 @@ export default function PlannerIntelligenceStrip({
                   read WEEKLY_PLANT_TARGET and never clamped — it was also how
                   "39/30" reached a household as the house's opinion of them. */}
               <span className="font-semibold text-foreground/75">{plantCount}</span>
+              {/* NSR1 Phase 2 (Planner): the count carried no visible unit — a bare Leaf +
+                  number read as cryptic, the word "plants" living only in the title tooltip.
+                  Named inline now (CRAFT1 §4 — immediately understandable). */}
+              <span className="text-muted-foreground/70"> plant{plantCount === 1 ? "" : "s"}</span>
             </span>
           </button>
         )}
