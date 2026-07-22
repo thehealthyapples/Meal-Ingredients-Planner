@@ -1145,6 +1145,12 @@
         "loc": 96,
         "disposition": "NOT a defect and NOT the PageHeader failure mode — the one deliberate, governed entry here. It is EXP3 Phase 2's Life Register: the empty Living Details manifest (types + `export const livingDetailsManifest = {}`), which EXP3 § 13 Phase 2 mandates ship NOW while EXP3 § 7.1 mandates its consumer — the composition mouth `living-details.tsx` — land ONLY with the first admitted detail (the Cookbook pilot, EXP3 Phase 3). It is a pure declarative data/types module with no React, no asset import, and no rendering, so it is inert (nothing imports it in the client tree; `scripts/ci/verify-living-home-assets.ts` reads it, but a script importer is not a client consumer). It is recorded here — the gate's sanctioned third remedy — precisely so this 0-importer state is KNOWN and owned rather than hidden, and so a genuinely NEW unexpected orphan still fails. It leaves this list the moment EXP3 Phase 3 mounts the mouth that imports it.",
         "owner": "Colin Clapson — adopt at EXP3 Phase 3 (the Cookbook pilot mounts `living-details.tsx`, which imports this manifest), per EXP3 § 7.1"
+      },
+      {
+        "path": "client/src/lib/living-home/dressing-register.ts",
+        "loc": 320,
+        "disposition": "NOT a defect — the second deliberate, governed entry, the exact sibling of `living-details-manifest.ts` above. It is ED2's Environmental Dressing Runtime: the EMPTY Dressing Register plus its loader, placement resolver, runtime resolver, renderer interface + shell, placement validation, and admission hook (LIVINGHOME2 § 10.3, built to the ED1 § 5–§ 7 contract). LIVINGHOME2 § 10.4 Phase 2 mandates the register ship NOW (empty), while EXP3 § 7.1 / UIA § 17 mandate its DOM mouth — `client/src/components/layout/dressing-layer.tsx` — land ONLY with the first admitted item (the Standing Welcome, ED3). It is a pure data/logic module with no React, no asset import, and no rendering, so it is inert: nothing in the client tree imports it (`scripts/ci/verify-living-home-assets.ts` reads it, but a script importer is not a client consumer). Recorded here so this 0-importer state is KNOWN and owned, and a genuinely NEW orphan still fails. It leaves this list the moment ED3 mounts the mouth that imports it.",
+        "owner": "Colin Clapson — adopt at ED3 (the Standing Welcome mounts `dressing-layer.tsx`, which imports this runtime), per EXP3 § 7.1 / UIA § 17"
       }
     ]
   }

@@ -18,10 +18,13 @@
  * Exit codes: 0 — all checks pass · 1 — any check fails or a fatal error.
  * Run with: npm run verify:living-home-assets
  *
- * Extension point (declared, not built): when the Environmental Dressing Register
- * exists (ED2+, LIVINGHOME2 § 10.3 — gated behind the § 10.2 amendments landed by
- * ED1 and this Phase 2), its third-register checks are added in `dressingChecks()`
- * below. They are NOT part of this Phase 2 (ED1 § 2 Amendment 4).
+ * Third register (ED2 · LIVINGHOME2 § 10.3): `dressingChecks()` below now verifies the
+ * Environmental Dressing Register — checksum match; NO household-data binding (or any
+ * forbidden field) reachable; celebration items gated by the § 7.2 permission; the § 5.1
+ * placement exclusions encoded; every item's admission doc present; and the runtime
+ * guarantee that the EMPTY register resolves and renders to nothing. The register is
+ * empty by design, so its content checks hold vacuously — each becomes a live gate the
+ * moment ED3 admits the first item (the seam ED1 § 2 Amendment 4 declared, now built).
  */
 
 import { createHash } from "node:crypto";
@@ -29,12 +32,26 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 
 import { livingDetailsManifest } from "../../client/src/components/layout/living-details-manifest";
+import {
+  loadDressingRegister,
+  canonicalizeItems,
+  resolveDressing,
+  toRenderPlan,
+  validatePlacement,
+  assertAdmissible,
+  FORBIDDEN_DRESSING_KEYS,
+  PLACEMENT_EXCLUSIONS,
+  type SeasonKey,
+} from "../../client/src/lib/living-home/dressing-register";
 
 const ROOT = resolve(process.cwd());
 const HOUSE_REGISTER = "docs/implementation/assets/house-asset-register.json";
 const LIFE_ASSET_DIR = "client/src/assets/living-home";
 const LIFE_OWNER_COMPONENT = "client/src/components/layout/living-details.tsx";
 const CLIENT_SRC = "client/src";
+// ED2 — the Dressing Register runtime + its future DOM mouth (declared, lands at ED3).
+const DRESSING_ASSET_DIR = "client/src/assets/living-home/dressing";
+const DRESSING_OWNER_COMPONENT = "client/src/components/layout/dressing-layer.tsx";
 
 const ICON = { pass: "✓", fail: "✗", skip: "○" } as const;
 
@@ -51,6 +68,17 @@ function record(title: string, outcome: CheckResult["outcome"], detail: string) 
 
 function sha256(absPath: string): string {
   return createHash("sha256").update(readFileSync(absPath)).digest("hex");
+}
+
+/**
+ * True if `src` actually IMPORTS (or url()-references) a path containing `needle` —
+ * i.e. the needle appears inside a quoted string, as every import/url must. A bare
+ * mention in a comment (no quotes) is deliberately NOT a match: the "one mouth" law is
+ * about importing the asset, not naming its directory in prose.
+ */
+function importsAssetPath(src: string, needle: string): boolean {
+  const re = new RegExp(`['"\`][^'"\`\\n]*${needle.replace(/[/]/g, "\\/")}[^'"\`\\n]*['"\`]`);
+  return re.test(src);
 }
 
 /** Walk a directory returning every file path relative to ROOT. */
@@ -153,7 +181,7 @@ function checkSingleMouth() {
     if (!/\.(ts|tsx)$/.test(file)) continue;
     if (file === LIFE_OWNER_COMPONENT) continue; // the one lawful mouth (lands Phase 3)
     const src = readFileSync(resolve(ROOT, file), "utf8");
-    if (src.includes("assets/living-home")) {
+    if (importsAssetPath(src, "assets/living-home")) {
       offenders.push(`${file} imports from assets/living-home/ — only ${LIFE_OWNER_COMPONENT} may (EXP3 § 6/§ 7.1).`);
     }
   }
@@ -197,13 +225,160 @@ function checkNoOrphans() {
   }
 }
 
-// ── Extension point: Dressing Register (DECLARED-NOT-BUILT — LIVINGHOME2 § 10.3) ──
+// ── Dressing Register — third-register checks (ED2 · LIVINGHOME2 § 10.3) ──────────
+// Built by ED2 to the seam ED1 § 2 Amendment 4 declared. The register is EMPTY by
+// design (LIVINGHOME2 § 10.4 Phase 2), so several checks hold vacuously — honestly
+// labelled as such; each is a REAL gate the moment ED3 admits the first item.
+
+function stringSha256(s: string): string {
+  return createHash("sha256").update(s, "utf8").digest("hex");
+}
+
 function dressingChecks() {
-  // Intentionally empty. When ED2 builds the empty Dressing Register, its checks land
-  // here (ED1 § 2 Amendment 4): register checksums; NO household-data binding reachable
-  // from the dressing mouth (a `binding` field is the § 9.10 forgery); celebration items
-  // unreachable without the § 7.2 per-tradition permission; placement exclusions
-  // (LIVINGHOME2 § 5.1) enforced; every dressing item's admission doc exists.
+  const registry = loadDressingRegister();
+  const items = registry.items;
+
+  // D1 — the register loads and its checksum matches its canonical bytes (EXP3 § 4.4).
+  if (!Array.isArray(items)) {
+    record("Dressing register loads", "fail", "loadDressingRegister() did not return an items array.");
+  } else {
+    const recomputed = stringSha256(canonicalizeItems(items));
+    if (recomputed !== registry.checksum) {
+      record(
+        "Dressing register checksum matches",
+        "fail",
+        `Registered ${registry.checksum.slice(0, 12)}…, actual ${recomputed.slice(0, 12)}…. Recompute DRESSING_REGISTER_CHECKSUM in the SAME commit that changes the items (EXP3 § 4.4).`,
+      );
+    } else {
+      record(
+        "Dressing register loads & checksum matches",
+        "pass",
+        `${items.length} dressing item(s) — register byte-locked (${items.length === 0 ? "empty, as ED2 mandates" : "constant within its season states"}).`,
+      );
+    }
+  }
+
+  // D2 — claim-free by construction: NO forbidden field reachable over the whole
+  // register (a `binding` is the § 9.10 forgery; text/count/href/motion/hour/campaign/
+  // householdId carry information, interaction, an hour, a channel, or a household).
+  const serialised = JSON.stringify(items).toLowerCase();
+  const forbiddenHits = FORBIDDEN_DRESSING_KEYS.filter((k) => serialised.includes(`"${k.toLowerCase()}"`));
+  if (forbiddenHits.length) {
+    record(
+      "No forbidden field reachable from the Dressing register",
+      "fail",
+      `Forbidden key(s) present: ${forbiddenHits.join(", ")}. Dressing is claim-free, still, wordless, and never a channel (ED1 § 5 — a binding defines the Life register, not this one).`,
+    );
+  } else {
+    record(
+      "No forbidden field reachable from the Dressing register (claim-free by type)",
+      "pass",
+      "No household-data binding, text, count, door, motion, hour, campaign, or household id anywhere in the register.",
+    );
+  }
+
+  // D3 — every item is admissible (ED8/ED10), and celebration items are gated (§ 7.2).
+  const admissionProblems: string[] = [];
+  for (const item of items) admissionProblems.push(...assertAdmissible(item));
+  if (admissionProblems.length) {
+    record("Every dressing item is admissible", "fail", admissionProblems.join("  |  "));
+  } else {
+    record(
+      "Every dressing item is admissible & celebration-gated",
+      "pass",
+      items.length === 0
+        ? "Empty register — admission (ED8/ED10) and § 7.2 celebration gating hold vacuously."
+        : `${items.length} item(s), each with a named purpose, admission doc, valid season, and fail-closed celebration gating.`,
+    );
+  }
+
+  // D4 — placement exclusions encoded (§ 5.1) and every item lawful for its kind.
+  const encodesLaw =
+    (PLACEMENT_EXCLUSIONS.produce ?? []).includes("pantry") &&
+    (PLACEMENT_EXCLUSIONS.book ?? []).includes("cookbook") &&
+    (PLACEMENT_EXCLUSIONS.meal ?? []).includes("planner");
+  const placementProblems: string[] = [];
+  for (const item of items) {
+    // The kind is an admission-time fact, not stored on the item; the verifier cannot
+    // infer it for an already-admitted item, so it re-checks the encoded law holds and
+    // that each item's declared refusedRooms is internally consistent (non-empty regions).
+    placementProblems.push(...validatePlacement(item));
+    if (!item.placement || typeof item.placement.region !== "string" || !item.placement.region) {
+      placementProblems.push(`${item.id}: placement.region must name a committed house region (§ 5.1 · EXP3 § 5).`);
+    }
+  }
+  if (!encodesLaw) {
+    record("Placement exclusions enforced (§ 5.1)", "fail", "PLACEMENT_EXCLUSIONS no longer encodes the pantry/cookbook/planner room-subject law.");
+  } else if (placementProblems.length) {
+    record("Placement exclusions enforced (§ 5.1)", "fail", placementProblems.join("  |  "));
+  } else {
+    record(
+      "Placement exclusions enforced (§ 5.1 — no produce in Pantry, no book in Cookbook, no meal in Planner)",
+      "pass",
+      "The room-subject law is encoded; every registered item's placement is lawful.",
+    );
+  }
+
+  // D5 — every dressing item's admission document exists on disk (ED10).
+  const missingDocs: string[] = [];
+  for (const item of items) {
+    const docAbs = resolve(ROOT, item.admissionDocId);
+    if (!existsSync(docAbs)) missingDocs.push(`${item.id}: admission doc "${item.admissionDocId}" not found.`);
+  }
+  if (missingDocs.length) {
+    record("Every dressing item's admission doc exists", "fail", missingDocs.join("  |  "));
+  } else {
+    record(
+      "Every dressing item's admission doc exists",
+      "pass",
+      items.length === 0 ? "Empty register — nothing to cite (holds vacuously)." : `${items.length} admission doc(s) present.`,
+    );
+  }
+
+  // D6 — the runtime GUARANTEE: the empty register resolves and renders to NOTHING,
+  // in every room and every season. This is ED2's whole demonstration, run in CI.
+  const seasons: SeasonKey[] = ["spring", "summer", "autumn", "winter", "year-round"];
+  const rooms = ["home", "cookbook", "pantry", "planner", "orchard"];
+  let totalResolved = 0;
+  let totalRendered = 0;
+  for (const season of seasons) {
+    for (const room of rooms) {
+      const resolved = resolveDressing({ room, season });
+      totalResolved += resolved.length;
+      totalRendered += toRenderPlan(resolved).descriptors.length;
+    }
+  }
+  const expectVisible = items.length > 0;
+  if (!expectVisible && (totalResolved !== 0 || totalRendered !== 0)) {
+    record(
+      "Empty register resolves & renders to nothing",
+      "fail",
+      `Expected zero output from the empty register, got ${totalResolved} resolved / ${totalRendered} rendered. No dressing may appear.`,
+    );
+  } else {
+    record(
+      "Empty register resolves & renders to nothing (runtime guarantee)",
+      "pass",
+      `${seasons.length} season(s) × ${rooms.length} room(s): ${totalResolved} item(s) resolved, ${totalRendered} descriptor(s) rendered — the renderer produces no visible output.`,
+    );
+  }
+
+  // D7 — one mouth: only the (future, declared) dressing owner component may import the
+  // dressing asset dir. The dir is unbuilt at ED2; any importer of it fails here.
+  const clientAbs = resolve(ROOT, CLIENT_SRC);
+  if (existsSync(clientAbs)) {
+    const offenders: string[] = [];
+    for (const file of walk(clientAbs)) {
+      if (!/\.(ts|tsx)$/.test(file)) continue;
+      if (file === DRESSING_OWNER_COMPONENT) continue; // the one lawful mouth (lands ED3)
+      const src = readFileSync(resolve(ROOT, file), "utf8");
+      if (importsAssetPath(src, DRESSING_ASSET_DIR)) {
+        offenders.push(`${file} imports from ${DRESSING_ASSET_DIR}/ — only ${DRESSING_OWNER_COMPONENT} may (one mouth — LIVINGHOME2 § 10.3).`);
+      }
+    }
+    if (offenders.length) record("Only the owner component imports Dressing assets", "fail", offenders.join("  |  "));
+    else record("Only the owner component imports Dressing assets", "pass", `No unauthorised import of ${DRESSING_ASSET_DIR}/ (the dir is unbuilt; the mouth lands with its first item at ED3).`);
+  }
 }
 
 function main() {
@@ -233,7 +408,7 @@ function main() {
     console.error(`\nRESULT: FAIL — ${failed} check(s) failed. The Living Home must not drift.`);
     process.exitCode = 1;
   } else {
-    console.log("\nRESULT: PASS — the house is byte-locked; the Life register is honest and empty.");
+    console.log("\nRESULT: PASS — the house is byte-locked; the Life register is honest and empty; the Dressing register is empty and renders nothing.");
   }
 }
 
