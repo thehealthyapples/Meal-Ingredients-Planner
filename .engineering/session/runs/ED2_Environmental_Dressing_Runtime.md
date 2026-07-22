@@ -27,7 +27,8 @@ Build the canonical **Environmental Dressing Runtime** (`LIVINGHOME2` Phase 2) a
 - [x] Commit; record hash here + dashboard.
 
 ## Result
-Committed `<HASH>` on `int1-intelligence-platform`. Register EMPTY; renderer yields no output; no visible dressing; no UI regression possible (0 client importers). Runtime has one owner, one register, one renderer, one resolver, one verification path.
+_Work commit: `8d5039cd`._
+Committed `8d5039cd` on `int1-intelligence-platform`. Register EMPTY; renderer yields no output; no visible dressing; no UI regression possible (0 client importers). Runtime has one owner, one register, one renderer, one resolver, one verification path.
 
 ## Next action
 Home Owner acceptance of the runtime + the § 0.2 decision (DOM mouth deferred to ED3). Then **ED3 — Standing Welcome**: the DOM mouth `dressing-layer.tsx` + one still asset + full ED10 admission + § 5.1 placement + checksum-recompute-in-same-commit + Home Owner approval — the first visible item (the bowl of apples).
