@@ -103,6 +103,7 @@
     "verify:schema-coverage": "tsx scripts/ci/verify-schema-migration-coverage.ts",
     "verify:publication": "tsx scripts/ci/verify-canonical-publication.ts",
     "verify:coherence": "tsx scripts/ci/verify-governing-coherence.ts",
+    "verify:living-home-assets": "tsx scripts/ci/verify-living-home-assets.ts",
     "seed:additives": "tsx server/seeds/run-additives-seed.ts",
     "seed:knowledge": "tsx server/seeds/seed-knowledge-registry.ts",
     "knowledge:signoff": "tsx server/seeds/signoff-knowledge-claims.ts",

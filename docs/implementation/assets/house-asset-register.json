@@ -1,0 +1,39 @@
+{
+  "$comment": "EXP3 Phase 2 — the House Register (EXP3 § 4.4). The single machine-readable list of every House-Register raster/vector asset, each locked to its content hash so the house cannot drift. A House asset's bytes may change ONLY in the same commit that updates its row here, citing the governing amendment. Verified by `npm run verify:living-home-assets` (scripts/ci/verify-living-home-assets.ts). Life assets are deliberately NOT listed here — their nature is that what appears is decided by data at read time, not by their bytes (EXP3 § 4.4). Brand marks (apple/logo/favicon) are owned by THA_UI_ARCHITECTURE.md § 10 / the Adoption Register and are deliberately NOT re-owned here (one owner per asset).",
+  "register": "house",
+  "version": 1,
+  "governingDocuments": [
+    "docs/implementation/EXP3_LIVING_HOME_ASSET_SYSTEM.md",
+    "docs/architecture/LIVING_HOME_EXPERIENCE_ARCHITECTURE.md",
+    "docs/architecture/LIVING_HOME_ENVIRONMENTAL_DRESSING_ARCHITECTURE.md",
+    "docs/architecture/THA_EXPERIENCE_BLUEPRINT.md"
+  ],
+  "hashAlgorithm": "sha256",
+  "assets": [
+    {
+      "id": "orchard-environment-rooms",
+      "path": "client/public/orchard.webp",
+      "layer": 1,
+      "ownerComponent": "client/src/components/layout/orchard-backdrop.tsx",
+      "sha256": "a6da6a3139840922ab0f6fd1456361cad7c0a782d5a354582f8f94005c2f1d8a",
+      "citation": "Blueprint § 6.1 (the one orchard) · EXP1 § 8.2 · Adoption Register row 40 (orchard-environment)",
+      "note": "The rooms/Home orchard environment image (E2/E3). PRE-CONVERGENCE: EXP3 § 4.2 Phase 1 will replace this and orchard-bg.webp with one graded responsive family; until that governed act ships, this row locks the current bytes so nothing drifts silently. Retire-on-introduction (UIA § 17) applies at convergence."
+    },
+    {
+      "id": "orchard-environment-arrival-graded",
+      "path": "client/public/orchard-bg.webp",
+      "layer": 1,
+      "ownerComponent": "client/src/components/layout/orchard-backdrop.tsx",
+      "sha256": "c0405f55272b4ceccb6ae751dcba9d4f77c46a9462c75aa7b546eaa505f46ef3",
+      "citation": "Blueprint § 6.1 · NORTH2 (2026-07-17) bake-time grade (saturation 1.28, contrast 1.06 at 1536×1024) · Adoption Register row 40",
+      "note": "The arrival/graded orchard environment image (E3). PRE-CONVERGENCE sibling of orchard.webp; see EXP3 § 4.2. The five recorded orchard-bg.webp bypasses (register row 40) are resolved at Phase 1 convergence, not here."
+    }
+  ],
+  "extensionPoints": {
+    "dressingRegister": {
+      "status": "declared-not-built",
+      "owner": "docs/architecture/LIVING_HOME_ENVIRONMENTAL_DRESSING_ARCHITECTURE.md § 10.3 (LIVINGHOME2)",
+      "note": "The third (Dressing) register and its checksums are a SEPARATE future artefact (ED2+), gated behind the LIVINGHOME2 § 10.2 owner amendments (landed by ED1) AND this Phase 2. It is NOT part of this file and MUST NOT be added here — it gets its own register and its own checks in verify-living-home-assets.ts."
+    }
+  }
+}
