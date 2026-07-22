@@ -2866,6 +2866,12 @@ export default function WeeklyPlannerPage() {
                                       ? `${(dayCalories / 1000).toFixed(1)}k`
                                       : dayCalories}
                                   </span>
+                                  {/* Trust & Clarity (LHXP3): name the unit. The bare
+                                      figure beside a flame, in a cell headed "Summary",
+                                      could read as a grade; the meal dialog already
+                                      labels the same number "kcal". This says plainly
+                                      it is the food's energy, not a verdict (GEA13). */}
+                                  <span className="text-[9px] text-muted-foreground/60 ml-0.5">kcal</span>
                                 </div>
                               ) : (
                                 <div className="h-4" />

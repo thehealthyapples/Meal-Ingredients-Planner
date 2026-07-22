@@ -908,6 +908,14 @@ function ThirtyPlantsTracker({
             plant{plantCount === 1 ? "" : "s"}
           </span>
         </div>
+        {/* Trust & Clarity (LHXP3): the count is an approximation resolved from
+            ingredient names, not a measured value — so the provenance travels
+            with the prominent number, not only in the page-foot disclaimer.
+            Distinguishes estimated from known at the point of display (GEA17;
+            Core Principle 6 — no number shown without its source). */}
+        <p className="text-[11px] text-muted-foreground/45 mt-1.5">
+          Approximate — counted from ingredient names
+        </p>
       </div>
 
       {/* The plants the week actually contained */}

@@ -186,9 +186,16 @@ function ProfileSummary({ profile }: { profile: ProfileData }) {
   const householdLine = hParts.length > 0 ? hParts.join(" • ") : null;
 
   const activityLevel = prefs.activityLevel || profile.health.activityLevel;
+  // Trust & Clarity (LHXP3): mirror HealthSnapshot's honest-absence policy
+  // (PRESENCE1, same file) — do not fabricate an activity level for a household
+  // that has set none. Only the three real values map to a chip; anything unset
+  // resolves to null and is dropped by the Boolean filter below, never a
+  // catch-all "Moderately Active" that asserts a fact the household never gave
+  // (GEA17 — the presentation layer owns no fact; Core Principle 6).
   const activityLabel = activityLevel === "high" ? "Highly Active"
     : activityLevel === "low" ? "Low Activity"
-    : "Moderately Active";
+    : activityLevel === "moderate" ? "Moderately Active"
+    : null;
 
   const lines = [cuisine, allergies, householdLine, activityLabel].filter(Boolean) as string[];
 

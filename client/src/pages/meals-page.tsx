@@ -5374,6 +5374,10 @@ export default function MealsPage() {
                       className="h-7 text-xs"
                       onClick={() => { setMatchMyProfile(false); setMealsUpfFilter(prev => !prev); }}
                       data-testid="toggle-meals-upf-filter"
+                      /* Trust & Clarity (LHXP3): expand the bare acronym on hover.
+                         "UPF" is explained in Profile (UPFInfoModal) but shown raw
+                         here — an unexplained abbreviation the household may not know. */
+                      title="UPF means ultra-processed food"
                     >
                       <Leaf className={`h-3 w-3 mr-1 ${mealsUpfFilter ? "text-primary" : ""}`} />
                       Hide High-UPF
