@@ -5,7 +5,7 @@
 | **Session ID** | `LHXP3_Living_Home_Experience_Pass3_Trust_And_Clarity` |
 | **Rollback ID** | `rollback/LIVING-HOME-PASS3-20260722` → `e4182317` (annotated tag, object `977575ba`; created before any change; covers committed state only — tree clean apart from the CURRENT.md heartbeat) |
 | **Start time** | 2026-07-22 |
-| **Current stage** | Complete — committing on `int1-intelligence-platform`; awaiting Home Owner walk-through |
+| **Current stage** | Complete — committed `12020e00` on `int1-intelligence-platform`; awaiting Home Owner walk-through |
 
 ## Objective
 Living Home Experience Pass 3 — Trust & Clarity. Make every room answer three questions immediately: *What am I looking at? Why should I trust it? What happens next?* A copy/clarity + provenance-label pass: distinguish known / calculated / estimated / unavailable; reconcile or make-legible on-screen counts (understanding source first — never blind-edit a number); remove ambiguous wording, unexplained numbers, inconsistent terminology, unexplained abbreviations. Holds every forbidden-list boundary (item 12) and the rooms-report-not-counsel line (GEA8/21).
