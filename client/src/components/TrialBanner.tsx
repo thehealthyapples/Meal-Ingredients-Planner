@@ -155,18 +155,19 @@ export default function TrialBanner() {
           )}
         </div>
       ) : (
+        // LHC1 — the calm arrival state opens with no ticking clock (GEA3: nothing
+        // engineered to inject urgency; Experience Language anti-pattern: anxiety
+        // at the threshold of the one room built to feel welcoming). The honest
+        // "changes are temporary" line stays (Core Principle 6). The countdown is
+        // kept only for the <2-minute warning below, where an honest heads-up
+        // before unsaved preview data is discarded is hospitality, not pressure —
+        // and the timer effect (expiry → /auth) is untouched, so functionality is
+        // unchanged. See docs/implementation/LIVING_HOME_COMPLETION_PROGRAMME.md.
         <span className="flex-1 min-w-0">
-          <span className="font-semibold">Time trial</span>
+          <span className="font-semibold">Preview</span>
           {" - "}
           <span className="opacity-90">
             You have full access to The Healthy Apples. Changes are temporary.
-          </span>
-          {" "}
-          <span
-            className="font-mono font-bold"
-            data-testid="text-trial-countdown"
-          >
-            Trial expires in {isExpired ? "0:00" : formatCountdown(msLeft)}.
           </span>
         </span>
       )}
