@@ -52,7 +52,7 @@ All prerequisite gates cleared before this stage:
 - [x] Commit; record hash here + dashboard.
 
 ## Result
-_Work commit: `__LH1_COMMIT__`._
+_Work commit: `a3392699`._
 Committed on `int1-intelligence-platform`. One admitted Environmental Dressing object — the Standing Welcome (a bowl of apples), year-round — renders on the sill of the E2 window band in Cookbook, Diary and the Orchard room; refused in Pantry/Larder and Nutrition and everywhere with no view. The register is byte-locked (item + register checksums); the mouth is the one lawful importer of the dressing assets; the object is claim-free, still, wordless, and beneath words. No household data read; no schema/migration; no governing rule changed.
 
 ## Next action
