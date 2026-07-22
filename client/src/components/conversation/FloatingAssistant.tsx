@@ -495,9 +495,17 @@ function EnrichmentBlock({ enrichment }: EnrichmentBlockProps) {
   return (
     <div className="mt-2 space-y-1.5" data-testid="companion-enrichment-block">
       {enrichment.map((item, i) => (
+        // LHXP4 (Companion Presence): an enrichment item is a quiet aside the
+        // Companion offers — an insight or a suggestion, with nothing to tap.
+        // Its old chrome (a fully-rounded border + accent fill) rhymed with the
+        // tappable action chips below, so it read as a withheld button. It now
+        // reads as a passive margin note — a soft left rule, no pill border —
+        // clearly distinct from the action chips (which stay bordered pills with
+        // active:scale). Presentation only: no onClick added (there is none),
+        // no kind label or content word changed.
         <div
           key={`${item.sourceCapabilityId}-${i}`}
-          className="flex items-start gap-1.5 rounded-lg border border-border/30 bg-accent/30 px-2.5 py-2"
+          className="flex items-start gap-2 rounded-r-md border-l-2 border-primary/20 bg-muted/25 py-1.5 pl-2.5 pr-2"
           data-testid={`companion-enrichment-item-${item.sourceCapabilityId}-${i}`}
         >
           <Lightbulb className="h-3.5 w-3.5 text-primary/70 flex-shrink-0 mt-0.5" />
@@ -1701,7 +1709,17 @@ export default function FloatingAssistant() {
                         Apple
                       </p>
                     </DialogPrimitive.Title>
-                    <PersonaLabel surface={surface} />
+                    {/* LHXP4 (Companion Presence): the badge names WHICH ROOM's
+                        context the Companion is answering in — useful on every
+                        room surface ("Planner", "Larder", …). On the floating
+                        surface it resolves to "Apple", merely repeating the
+                        title above it — a stacked duplicate. Suppress it there
+                        so the header reads once, cleanly; PersonaLabel still
+                        renders on all 11 room surfaces (no dead code). Presentation
+                        only — no label string or title word changed. */}
+                    {SURFACE_LABEL[surface] !== "Apple" && (
+                      <PersonaLabel surface={surface} />
+                    )}
                   </div>
                 </div>
                 <DialogPrimitive.Close asChild>
