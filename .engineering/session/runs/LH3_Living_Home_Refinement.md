@@ -36,7 +36,7 @@ LHDC1 (§2 two lists, §4 restraint strengthened, §18/§19/§21 hold) · Experi
 - [x] Commit; record hash here + dashboard.
 
 ## Result
-_Work commit: `__LH3_COMMIT__`._
+_Work commit: `8bcdc416`._
 Committed on `int1-intelligence-platform`. The complete Living Home reviewed and refined toward restraint; each browsing room now has its own quiet seasonal character over the bowl of apples that is always present. No object added or removed; the layer verified against all four constitutions. Claim-free, still, wordless, beneath words.
 
 ## Next action
