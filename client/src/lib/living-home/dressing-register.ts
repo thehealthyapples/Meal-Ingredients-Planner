@@ -168,10 +168,16 @@ export interface DressingRegistry {
 //        year-round bowl of apples remains (resolveRoomDressing). Placements are
 //        authored so no two objects ever contend for one room in one season.
 //
-//        The year on the browsing sills (Cookbook · Diary · Orchard):
-//          spring → flowers            · summer → the season's fruit
-//          autumn → apples (Cookbook), a folded blanket (Diary), pumpkins (Orchard)
-//          winter → evergreens         · otherwise → the standing welcome (apples)
+//        Each browsing room has its OWN seasonal character (LH3 refinement — one
+//        signature per room, never the same object on every sill), over the bowl of
+//        apples that is always the base:
+//                    Cookbook          Diary             Orchard
+//          spring    apples            flowers           apples
+//          summer    summer fruit      apples            apples
+//          autumn    apples            folded blanket    small pumpkins
+//          winter    apples            apples            evergreens
+//        The apples (year-round) are the still point; each season adds one quiet touch
+//        to the room it belongs in — the home turns gently, room by room, not all at once.
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
@@ -245,9 +251,12 @@ export const SPRING_FLOWERS: DressingItem = {
     "everyone alike, claiming nothing about anyone.",
   season: "spring",
   placement: {
+    // LH3 refinement: one signature room, not three. The reflective window seat greets
+    // spring — a single, considered touch rather than the same jug on every sill (ED7
+    // restraint; the year turns quietly, room by room, not all at once).
     region: "room-threshold-sill",
     refusedRooms: [],
-    onlyRooms: ["cookbook", "diary", "orchard"],
+    onlyRooms: ["diary"],
   },
   render: { assetId: "spring-flowers", strengthToken: "--dressing-strength" },
   checksum: "d85f00fba9254ac682e4dfc02176d0868f6092b5cb1fbabe4a919826468ac405",
@@ -264,9 +273,11 @@ export const SUMMER_FRUIT: DressingItem = {
     "nothing about any of them.",
   season: "summer",
   placement: {
+    // LH3 refinement: one signature room. The kitchen's own fruit bowl turns to the
+    // season's fruit in high summer, in the recipe room by the window — the Cookbook.
     region: "room-threshold-sill",
     refusedRooms: ["pantry", "larder", "nutrition"],
-    onlyRooms: ["cookbook", "diary", "orchard"],
+    onlyRooms: ["cookbook"],
   },
   render: { assetId: "summer-fruit", strengthToken: "--dressing-strength" },
   checksum: "dc4d9d6226aa9d116e0ccac7ca0e360c93f9021e9e6f6d64f369a7c4f0e96742",
@@ -321,9 +332,12 @@ export const WINTER_EVERGREENS: DressingItem = {
     "endures the cold, brought indoors — carrying no occasion, offered to everyone alike.",
   season: "winter",
   placement: {
+    // LH3 refinement: one signature room. The outward window that follows the land holds
+    // the winter green — the Orchard/Community room, which showed the harvest pumpkins in
+    // autumn and now the enduring evergreen through the cold (a coherent per-room story).
     region: "room-threshold-sill",
     refusedRooms: [],
-    onlyRooms: ["cookbook", "diary", "orchard"],
+    onlyRooms: ["orchard"],
   },
   render: { assetId: "winter-evergreens", strengthToken: "--dressing-strength" },
   checksum: "e4e8c6501f3bf83edf30460e2560a515a0b02d7b1d1092959efe98dad2823bac",
@@ -336,7 +350,7 @@ export const WINTER_EVERGREENS: DressingItem = {
  * 4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945 = sha256("[]"),
  * kept here for traceability of the byte the register turned from.)
  */
-export const DRESSING_REGISTER_CHECKSUM = "359ea7802ca58b738d09f189c65f4f42bc05a63393d93d08719d0d0a5b506c17";
+export const DRESSING_REGISTER_CHECKSUM = "a73130f68a398d8969562c2add4d0acb247fa59c701da1214f374ea8b9ef0181";
 
 /**
  * THE REGISTER — the standing welcome (LH1) and the first seasonal collection (LH2):
