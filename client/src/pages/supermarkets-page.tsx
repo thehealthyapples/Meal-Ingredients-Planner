@@ -221,8 +221,8 @@ export default function SupermarketsPage() {
               <EmptyState
                 variant="filtered"
                 icon={Store}
-                title="No shops for this country yet"
-                description="Try another country, and we'll show what's nearby."
+                title="No shops for this country"
+                description="Try another country to see the shops available there."
                 data-testid="text-no-results"
               />
             )}
