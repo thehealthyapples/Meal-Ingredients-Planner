@@ -153,17 +153,10 @@ function formatDisplayDate(dateStr: string): string {
   return d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 }
 
-function getInsightText(trends: DiaryMetrics[], range: ProgressRange): string {
-  if (trends.length === 0) return "";
-  const daysWithData = trends.length;
-  const rangeDays = RANGE_DAYS[range];
-  const consistency = daysWithData / rangeDays;
-
-  if (consistency >= 0.8) return "Focus on what matters, not just what's measurable. You're building a useful picture over time.";
-  if (consistency >= 0.5) return "Small steps add up. Better choices today, stronger health over time.";
-  if (daysWithData >= 3) return "Every entry helps - your trends will become clearer as you go.";
-  return "You're just getting started. A few more entries will reveal useful patterns.";
-}
+// NSR1 Phase 2 (Diary): getInsightText is retired. It returned authored coaching keyed to
+// logging *consistency* — "Small steps add up. Better choices today…", "Every entry helps" —
+// which is advice the room does not own (interpretation is the Companion's, GEA8/9/22) and
+// which rewards logging frequency (engagement, GEA3). The diary reports; it does not counsel.
 
 // ── How-you-felt scale ──────────────────────────────────────────────────────
 //
@@ -782,10 +775,8 @@ function DailySignalsPanel({
         </CardHeader>
 
         <CardContent className="px-4 pb-3 pt-0 space-y-2" data-testid="metrics-form">
-          {/* Microcopy - supportive context at the top */}
-          <p className="text-[11px] text-muted-foreground/55 leading-relaxed">
-            Your numbers don't define you - they simply help you understand your habits.
-          </p>
+          {/* NSR1 Phase 2 (Diary): reassurance microcopy removed — the room does not
+              editorialise the household's own numbers (GEA8/21); the fields speak plainly. */}
 
           {/* Weight */}
           <div>
@@ -1028,7 +1019,7 @@ function LookingForwardWidget({ zone }: { zone: string }) {
       <CardContent className="px-4 pb-4 pt-0 space-y-2">
         {items.length === 0 && !adding && (
           <p className="text-xs text-muted-foreground/50">
-            Add something to look forward to - it helps.
+            Add something to look forward to.
           </p>
         )}
 
@@ -1500,7 +1491,10 @@ export default function FoodDiaryPage() {
     },
     feedback: {
       success: "Logged",
-      successDescription: "Nice - that likely saved about £10 vs takeaway.",
+      // NSR1 Phase 2 (Diary): the fabricated "likely saved ~£10 vs takeaway" praise is
+      // gone — an invented number and a congratulation on every log (Core Principle 6;
+      // GEA13/8). A plain confirmation; the row is its own receipt.
+      successDescription: "Added to your diary.",
       failure: "Couldn't log that",
       failureDescription: "It hasn't been added to your diary. Please try again.",
     },
@@ -1522,8 +1516,9 @@ export default function FoodDiaryPage() {
     },
     feedback: {
       success: "Meal logged",
+      // NSR1 Phase 2 (Diary): fabricated savings praise removed (see above) — a plain count.
       successDescription: (data) =>
-        `${data.logged.length} item${data.logged.length !== 1 ? "s" : ""} added - likely saved about £10 vs takeaway.`,
+        `${data.logged.length} item${data.logged.length !== 1 ? "s" : ""} added to your diary.`,
       failure: "Couldn't log that meal",
       failureDescription: "It hasn't been added to your diary. Please try again.",
     },
@@ -1800,11 +1795,9 @@ export default function FoodDiaryPage() {
             <div className="lg:gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_280px_220px]">
               {/* ── Left: meal slots ──────────────────────────────── */}
               <div className="space-y-3">
-                {(diary?.entries?.length ?? 0) > 0 && (
-                  <p className="text-xs text-muted-foreground/60 px-0.5">
-                    Better choices today, stronger health over time.
-                  </p>
-                )}
+                {/* NSR1 Phase 2 (Diary): "Better choices today, stronger health over time."
+                    removed — room-voice coaching over a family's food (GEA8/21). The diary
+                    records the day; it does not counsel about it. */}
 
                 <div className="border border-border/70 rounded-lg overflow-hidden divide-y divide-border/60">
                   {SLOTS.map(({ key, label, icon: Icon }) => {
@@ -1949,16 +1942,16 @@ export default function FoodDiaryPage() {
             <EmptyState
               variant="empty"
               icon={TrendingUp}
-              title="When things drift, we help you find your way back - simply."
+              title="Not enough recorded yet"
               description="Record a few days to start seeing useful patterns emerge."
               data-testid="text-empty-trends"
             />
           ) : (
             <>
-              <div className="flex items-start gap-2 px-3 py-2.5 rounded-md bg-primary/5 border border-primary/15" data-testid="text-insight">
-                <Sparkles className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-foreground/80">{getInsightText(trends, progressRange)}</p>
-              </div>
+              {/* NSR1 Phase 2 (Diary): the authored "insight" line is removed — coaching keyed
+                  to logging consistency (advice is the Companion's, GEA8/9/22; rewarding logging
+                  frequency is engagement, GEA3). The progress view reports the household's own
+                  metrics and interprets none of them. */}
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2" data-testid="progress-stats">
                 <MetricStatCard label="Current Weight" value={latestMetrics?.weightKg ?? null} unit="kg" />
