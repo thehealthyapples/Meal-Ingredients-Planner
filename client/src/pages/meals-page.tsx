@@ -136,28 +136,13 @@ interface AnalysisResult {
   swaps: { ingredient: string; original: string; healthier: string }[];
 }
 
-function HealthScoreRing({ score }: { score: number }) {
-  const radius = 32;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (score / 100) * circumference;
-  const color = score >= 70 ? 'text-green-500' : score >= 40 ? 'text-amber-500' : 'text-red-500';
-  const strokeColor = score >= 70 ? '#22c55e' : score >= 40 ? '#f59e0b' : '#ef4444';
-
-  return (
-    <div className="flex flex-col items-center gap-1">
-      <div className="relative w-20 h-20">
-        <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
-          <circle cx="40" cy="40" r={radius} fill="none" stroke="currentColor" strokeWidth="6" className="text-muted/30" />
-          <circle cx="40" cy="40" r={radius} fill="none" stroke={strokeColor} strokeWidth="6" strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" className="transition-all duration-700" />
-        </svg>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className={`text-lg font-semibold ${color}`} data-testid="text-health-score">{score}</span>
-        </div>
-      </div>
-      <span className="text-xs text-muted-foreground font-medium">Health Score</span>
-    </div>
-  );
-}
+// NSR1 Phase 2 (Cookbook, 2026-07-22) — THE HEALTH SCORE RING IS RETIRED.
+// It rendered a 0–100 grade with a red/amber/green traffic light (its own #22c55e/
+// #f59e0b/#ef4444, outside the house palette) — a verdict on a meal, which is exactly
+// what GEA13 forbids ("THA never scores, ranks or grades"; the test: *does this measure
+// the food, or grade the household?* — a 0–100 ring reads as a grade). UIOWN1 §5 records
+// that the Cookbook owns no nutrition verdict. The nutrition facts now stand alone; any
+// reading of them is the Companion's, not this room's (GEA8/9/16).
 
 function DietBadges({ mealId }: { mealId: number }) {
   const { data: mealDiets = [] } = useQuery<MealDiet[]>({
@@ -196,13 +181,16 @@ function DietBadges({ mealId }: { mealId: number }) {
 function NutritionBadges({ mealId, nutrition }: { mealId: number; nutrition?: Nutrition | null }) {
   if (!nutrition) return null;
 
+  // NSR1 Phase 2 (Cookbook): icon colours muted to the house's one calm register — a
+  // six-colour nutrient rainbow (orange/red/amber/yellow/pink/blue) reads as a dashboard,
+  // not a page in a warm recipe book (CRAFT1 §3 — one coherent hand; UIA §10).
   const items = [
-    { label: 'Calories', value: nutrition.calories, icon: Flame, color: 'text-orange-500' },
-    { label: 'Protein', value: nutrition.protein, icon: Beef, color: 'text-red-500' },
-    { label: 'Carbs', value: nutrition.carbs, icon: Wheat, color: 'text-amber-600' },
-    { label: 'Fat', value: nutrition.fat, icon: Droplets, color: 'text-yellow-500' },
-    { label: 'Sugar', value: nutrition.sugar, icon: Cookie, color: 'text-pink-500' },
-    { label: 'Salt', value: nutrition.salt, icon: Droplet, color: 'text-blue-500' },
+    { label: 'Calories', value: nutrition.calories, icon: Flame },
+    { label: 'Protein', value: nutrition.protein, icon: Beef },
+    { label: 'Carbs', value: nutrition.carbs, icon: Wheat },
+    { label: 'Fat', value: nutrition.fat, icon: Droplets },
+    { label: 'Sugar', value: nutrition.sugar, icon: Cookie },
+    { label: 'Salt', value: nutrition.salt, icon: Droplet },
   ];
 
   const hasAny = items.some(i => i.value);
@@ -212,9 +200,9 @@ function NutritionBadges({ mealId, nutrition }: { mealId: number; nutrition?: Nu
     <div className="mt-3 space-y-1.5">
       <h4 className="text-xs font-semibold text-muted-foreground" data-testid={`text-nutrition-widget-header-${mealId}`}>Nutrition (per serving)</h4>
       <div className="grid grid-cols-3 gap-1.5">
-        {items.map(({ label, value, icon: Icon, color }) => (
+        {items.map(({ label, value, icon: Icon }) => (
           <div key={label} className="flex items-center gap-1 rounded-md bg-muted/50 px-1.5 py-0.5" data-testid={`text-nutrition-widget-${label.toLowerCase()}-${mealId}`}>
-            <Icon className={`h-3 w-3 flex-shrink-0 ${color}`} />
+            <Icon className="h-3 w-3 flex-shrink-0 text-muted-foreground" />
             <span className="text-xs font-medium truncate">{value || '—'}</span>
           </div>
         ))}
@@ -229,28 +217,28 @@ function NutritionBadges({ mealId, nutrition }: { mealId: number; nutrition?: Nu
 function AnalysisResultContent({ analysis }: { analysis: AnalysisResult }) {
   return (
     <div className="space-y-6">
-      <div className="flex items-start gap-6">
-        <HealthScoreRing score={analysis.healthScore} />
-        <div className="flex-1 space-y-3">
-          <h4 className="text-sm font-semibold text-foreground" data-testid="text-per-serving-header">Nutrition (per serving)</h4>
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              { label: 'Calories', value: analysis.nutrition.calories, icon: Flame, color: 'text-orange-500' },
-              { label: 'Protein', value: analysis.nutrition.protein, icon: Beef, color: 'text-red-500' },
-              { label: 'Carbs', value: analysis.nutrition.carbs, icon: Wheat, color: 'text-amber-600' },
-              { label: 'Fat', value: analysis.nutrition.fat, icon: Droplets, color: 'text-yellow-500' },
-              { label: 'Sugar', value: analysis.nutrition.sugar, icon: Cookie, color: 'text-pink-500' },
-              { label: 'Salt', value: analysis.nutrition.salt, icon: Droplet, color: 'text-blue-500' },
-            ].map(({ label, value, icon: Icon, color }) => (
-              <div key={label} className="flex items-center gap-2 p-2 rounded-md bg-muted/50">
-                <Icon className={`h-4 w-4 ${color}`} />
-                <div>
-                  <p className="text-xs text-muted-foreground">{label}</p>
-                  <p className="text-sm font-medium" data-testid={`text-nutrition-${label.toLowerCase()}`}>{value || '—'}</p>
-                </div>
+      {/* NSR1 Phase 2 (Cookbook): the Health Score ring that stood here is retired (see the
+          retirement note above). The nutrition facts stand on their own, icon colours muted
+          to the house register (CRAFT1 §3). */}
+      <div className="space-y-3">
+        <h4 className="text-sm font-semibold text-foreground" data-testid="text-per-serving-header">Nutrition (per serving)</h4>
+        <div className="grid grid-cols-2 gap-2">
+          {[
+            { label: 'Calories', value: analysis.nutrition.calories, icon: Flame },
+            { label: 'Protein', value: analysis.nutrition.protein, icon: Beef },
+            { label: 'Carbs', value: analysis.nutrition.carbs, icon: Wheat },
+            { label: 'Fat', value: analysis.nutrition.fat, icon: Droplets },
+            { label: 'Sugar', value: analysis.nutrition.sugar, icon: Cookie },
+            { label: 'Salt', value: analysis.nutrition.salt, icon: Droplet },
+          ].map(({ label, value, icon: Icon }) => (
+            <div key={label} className="flex items-center gap-2 p-2 rounded-md bg-muted/50">
+              <Icon className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-xs text-muted-foreground">{label}</p>
+                <p className="text-sm font-medium" data-testid={`text-nutrition-${label.toLowerCase()}`}>{value || '—'}</p>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -272,32 +260,15 @@ function AnalysisResultContent({ analysis }: { analysis: AnalysisResult }) {
         </div>
       )}
 
-      {analysis.swaps.length > 0 && (
-        <div className="space-y-2">
-          <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
-            <ArrowRight className="h-4 w-4 text-primary" />
-            Healthier Alternatives
-          </h4>
-          <div className="space-y-2">
-            {analysis.swaps.map((swap, i) => (
-              <div key={i} className="flex items-center gap-2 p-2 rounded-md bg-accent/20 border border-border" data-testid={`swap-suggestion-${i}`}>
-                <Badge variant="secondary" className="text-xs">{swap.original}</Badge>
-                <ArrowRight className="h-3 w-3 text-primary shrink-0" />
-                <Badge variant="outline" className="text-xs border-primary/30 text-primary">{swap.healthier}</Badge>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
+      {/* NSR1 Phase 2 (Cookbook): the "Healthier Alternatives" swaps surface and the
+          "this meal already uses great ingredients" line are retired. Healthier-ingredient
+          advice, and any verdict on a meal, are the Companion's to give (GEA8/9/21 — rooms
+          report, the Companion counsels); UIOWN1 §5 records the Cookbook owns no nutrition
+          knowledge (Domain 1). The room reports what a meal *is* — nutrition and allergens —
+          and neither advises nor congratulates. */}
       {analysis.allergens.length === 0 && (
         <p className="text-sm text-muted-foreground flex items-center gap-2" data-testid="text-no-allergens">
           No common allergens detected in this meal.
-        </p>
-      )}
-      {analysis.swaps.length === 0 && (
-        <p className="text-sm text-muted-foreground">
-          No healthier ingredient swaps found. This meal already uses great ingredients.
         </p>
       )}
     </div>
@@ -4039,7 +4010,7 @@ export default function MealsPage() {
                       initial={{ opacity: 0, y: 12 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 12 }}
-                      transition={{ duration: 0.2, delay: index * 0.03 }}
+                      transition={{ duration: 0.2 }}
                     >
                   <Card
                     className="h-full flex flex-col group cursor-pointer overflow-hidden hover-elevate transition-all duration-200"
@@ -4159,7 +4130,7 @@ export default function MealsPage() {
                       initial={{ opacity: 0, x: -12 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -12 }}
-                      transition={{ duration: 0.15, delay: index * 0.02 }}
+                      transition={{ duration: 0.15 }}
                     >
                   <Card
                     className="group cursor-pointer"
@@ -4446,7 +4417,7 @@ export default function MealsPage() {
                     key={frozen.id}
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.2, delay: index * 0.03 }}
+                    transition={{ duration: 0.2 }}
                   >
                     <Card className={`h-full flex flex-col overflow-hidden ${isExpired ? 'border-red-400/50' : 'border-border'}`} data-testid={`card-freezer-${frozen.id}`}>
                       <div className="relative w-full h-28 overflow-hidden rounded-t-md bg-accent/30">
