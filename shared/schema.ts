@@ -450,9 +450,17 @@ export const plannerWeeks = pgTable("planner_weeks", {
   userId: integer("user_id").notNull(),
   householdId: integer("household_id"),
   /**
-   * A slot label in a fixed six-slot rota — NOT a time coordinate (TIME1 § 3.1).
-   * All six exist from first touch; the number never advances and never rolls over.
-   * Bounded 1–6. Declared, never renumbered (HT8 / CONV1 R9).
+   * A stable, unbounded, per-household ORDINAL — NOT a time coordinate (TIME1 § 3.1).
+   * The week's calendar coordinate is `weekStartDate`, never this number.
+   *
+   * AMENDED BY PLANNER1 (2026-07-22 — the Continuous Timeline). This was a fixed 1–6 slot
+   * label in a rota that "never advances and never rolls over". It is now an unbounded
+   * ordinal: the first six weeks are still created eagerly (Week 1–6), and further weeks are
+   * created ON DEMAND as the household navigates the dated timeline, taking `MAX(week_number)
+   * + 1`. Still `UNIQUE(user_id, week_number)`, and still NEVER RENUMBERED (HT8 / CONV1 R9):
+   * an existing week keeps its number for life — renumbering silently rotates its consumers.
+   * Governance: THA_HOUSEHOLD_TIME_ARCHITECTURE.md § 13 (migration principle 3, as amended);
+   * docs/implementation/PLANNER_CONTINUOUS_TIMELINE.md.
    */
   weekNumber: integer("week_number").notNull(),
   weekName: text("week_name").notNull(),
@@ -481,6 +489,10 @@ export const plannerWeeks = pgTable("planner_weeks", {
   weekStartDate: text("week_start_date"),
 }, (table) => [
   unique("planner_weeks_user_week_unique").on(table.userId, table.weekNumber),
+  // PLANNER1 (2026-07-22): the continuous timeline navigates and orders by the calendar
+  // coordinate. This index keeps dated range/lookup access efficient as a household's weeks
+  // accrue indefinitely (no history is ever pruned), so unbounded growth is not a regression.
+  index("planner_weeks_household_start_date_idx").on(table.householdId, table.weekStartDate),
 ]);
 
 export const plannerDays = pgTable("planner_days", {

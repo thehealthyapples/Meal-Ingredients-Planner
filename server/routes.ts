@@ -139,7 +139,7 @@ import { buildHouseholdHistory } from "./lib/household-history";
 // This route used to compute its own (max(weekNumber) ≡ 6, the constant wearing the costume
 // of a computation). It asks the owner now.
 import { resolveHouseholdPlannerWeek } from "./lib/household-planner-week";
-import { householdDayOfWeek } from "@shared/time/household-time";
+import { householdDayOfWeek, householdWeekOf, parseCivilDate, formatCivilDate } from "@shared/time/household-time";
 import { assembleNutritionCentre } from "./lib/nutrition-centre-assembler";
 import { pool } from "./db";
 import { db } from "./db";
@@ -6161,6 +6161,60 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     }
   });
 
+  // ── The Continuous Timeline — PLANNER1 (2026-07-22) ─────────────────────────
+  //
+  // Governing architecture: THA_HOUSEHOLD_TIME_ARCHITECTURE.md § 13 (migration principle 3,
+  // as amended); docs/implementation/PLANNER_CONTINUOUS_TIMELINE.md.
+  //
+  // `/timeline/current` is the Planner's LANDING view: the household's real current dated
+  // week, CREATED on demand if it does not yet exist. It is distinct from `/current-week`
+  // above — that one answers "which week is the household living in, honestly?" and may say
+  // `anchored: false`; this one guarantees a dated week to plan in, by creating the present
+  // one (an observation of NOW, never a back-fill of the past — HT7). The Monday it creates
+  // comes from the owner's civil-week arithmetic, so it is not a rival "current week"
+  // derivation (HT1); it is the ensure/declare write path.
+  app.get("/api/planner/timeline/current", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const week = await storage.getCurrentDatedPlannerWeek(req.user!.id);
+      res.json({
+        weekId: week.id,
+        weekNumber: week.weekNumber,
+        weekName: week.weekName,
+        weekStartDate: week.weekStartDate,
+      });
+    } catch (err) {
+      console.error("[Planner] timeline/current error:", err);
+      res.status(500).json({ message: "Failed to resolve the current planner week" });
+    }
+  });
+
+  // `/timeline/week` — navigate the dated timeline to a specific Monday, creating that week
+  // on demand (the household DECLARING that week — TIME1 § 6.2). Unbounded in both directions:
+  // any real Monday is a valid target. The input is normalised to its week's Monday so the
+  // anchor convention holds, and the anchor is INSERTed, never a back-fill of an existing row.
+  app.post("/api/planner/timeline/week", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const parsed = parseCivilDate((req.body ?? {}).weekStartDate);
+      if (parsed === null) {
+        return res.status(400).json({ message: "weekStartDate must be a civil date (YYYY-MM-DD)" });
+      }
+      // Normalise any date to the Monday that opens its household week (the anchor convention).
+      const monday = formatCivilDate(householdWeekOf(parsed).start);
+      const week = await storage.ensureDatedPlannerWeek(req.user!.id, monday);
+      res.json({
+        weekId: week.id,
+        weekNumber: week.weekNumber,
+        weekName: week.weekName,
+        weekStartDate: week.weekStartDate,
+      });
+    } catch (err) {
+      console.error("[Planner] timeline/week error:", err);
+      res.status(500).json({ message: "Failed to open the requested planner week" });
+    }
+  });
+
   app.get("/api/planner/weeks/:weekId/days", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
@@ -6612,21 +6666,43 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
   app.get("/api/planner/full", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
-      let weeks = await storage.getPlannerWeeks(req.user!.id);
+      const userId = req.user!.id;
+      let weeks = await storage.getPlannerWeeks(userId);
       if (weeks.length === 0) {
-        weeks = await storage.createPlannerWeeks(req.user!.id);
+        weeks = await storage.createPlannerWeeks(userId);
       }
-      const result = await Promise.all(
-        weeks.map(async (week) => {
-          const days = await storage.getPlannerDays(week.id);
-          const entries = await storage.getPlannerEntriesForWeek(week.id);
-          const daysWithEntries = days.map(day => ({
-            ...day,
-            entries: entries.filter(e => e.dayId === day.id),
-          }));
-          return { ...week, days: daysWithEntries };
-        })
-      );
+      // PLANNER1 — guarantee the household's real current dated week exists, so the timeline
+      // always has a present to land on and the six-slot window can never silently expire
+      // (created on demand, an observation of now — never a back-fill; HT7). Idempotent: a
+      // household whose current week already exists gets it back unchanged.
+      await storage.getCurrentDatedPlannerWeek(userId);
+      weeks = await storage.getPlannerWeeks(userId);
+
+      // PLANNER1 — batched, not one-query-per-week. A household's weeks now accrue
+      // indefinitely (no history is pruned), so days + entries are fetched in two queries
+      // total and stitched in memory, keeping `/full` flat regardless of timeline depth.
+      const weekIds = weeks.map((w) => w.id);
+      const allDays = await storage.getPlannerDaysByWeekIds(weekIds);
+      const allEntries = await storage.getPlannerEntriesByDayIds(allDays.map((d) => d.id));
+      const daysByWeek = new Map<number, typeof allDays>();
+      for (const day of allDays) {
+        const list = daysByWeek.get(day.weekId) ?? [];
+        list.push(day);
+        daysByWeek.set(day.weekId, list);
+      }
+      const entriesByDay = new Map<number, typeof allEntries>();
+      for (const entry of allEntries) {
+        const list = entriesByDay.get(entry.dayId) ?? [];
+        list.push(entry);
+        entriesByDay.set(entry.dayId, list);
+      }
+      const result = weeks.map((week) => ({
+        ...week,
+        days: (daysByWeek.get(week.id) ?? []).map((day) => ({
+          ...day,
+          entries: entriesByDay.get(day.id) ?? [],
+        })),
+      }));
       res.json(result);
     } catch (err) {
       console.error("Error fetching full planner:", err);

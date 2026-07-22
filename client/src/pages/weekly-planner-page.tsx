@@ -280,6 +280,53 @@ function saveActiveWeek(value: string | null): void {
   } catch {}
 }
 
+// ── PLANNER1 — the continuous timeline's calendar labels ─────────────────────
+// A week is anchored to a civil Monday (`weekStartDate`, "YYYY-MM-DD"); it runs Monday→
+// Sunday. These render that anchor as a real date range ("20–26 July 2026"). Civil dates
+// are zone-less, so the arithmetic is UTC to avoid device-timezone drift. A week with no
+// anchor (a legacy week THA cannot date — HT7) has no range, and the caller shows its
+// name instead. No date is ever invented here — an absent anchor stays absent.
+const PLANNER_MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+function parseIsoDate(value: string | null | undefined): { y: number; m: number; d: number } | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value ?? "");
+  if (!match) return null;
+  return { y: Number(match[1]), m: Number(match[2]), d: Number(match[3]) };
+}
+
+/** Shift a civil "YYYY-MM-DD" by whole days (UTC-based, so it never drifts by zone). */
+function shiftIsoDays(value: string, deltaDays: number): string {
+  const p = parseIsoDate(value);
+  if (!p) return value;
+  const dt = new Date(Date.UTC(p.y, p.m - 1, p.d));
+  dt.setUTCDate(dt.getUTCDate() + deltaDays);
+  const yy = dt.getUTCFullYear();
+  const mm = String(dt.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(dt.getUTCDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}`;
+}
+
+/** "20–26 July 2026" · "29 June – 5 July 2026" · "28 Dec 2026 – 3 Jan 2027" · null if undated. */
+function formatWeekRange(weekStartDate: string | null | undefined): string | null {
+  const start = parseIsoDate(weekStartDate);
+  if (!start) return null;
+  const end = parseIsoDate(shiftIsoDays(weekStartDate as string, 6));
+  if (!end) return null;
+  const sM = PLANNER_MONTH_NAMES[start.m - 1];
+  const eM = PLANNER_MONTH_NAMES[end.m - 1];
+  if (start.y === end.y && start.m === end.m) return `${start.d}–${end.d} ${sM} ${start.y}`;
+  if (start.y === end.y) return `${start.d} ${sM} – ${end.d} ${eM} ${start.y}`;
+  return `${start.d} ${sM} ${start.y} – ${end.d} ${eM} ${end.y}`;
+}
+
+/** The short chip label for a week: its date range when anchored, else its name. */
+function weekLabel(week: { weekStartDate: string | null; weekName: string }): string {
+  return formatWeekRange(week.weekStartDate) ?? week.weekName;
+}
+
 // Phase 1 execution lifecycle: cooked-state helpers (localStorage, no schema migration needed)
 const COOKED_ENTRIES_KEY = "planner:cooked-entries";
 
@@ -373,6 +420,8 @@ export default function WeeklyPlannerPage() {
   const resolveTargetValidatedRef = useRef(false);
   // Active-week restore: guard so invalid-week correction only runs once after first load
   const activeWeekValidatedRef = useRef(false);
+  // PLANNER1 — land on the current week once per mount (the default landing view).
+  const plannerLandedRef = useRef(false);
   const { user } = useUser();
   const [, navigate] = useLocation();
 
@@ -491,6 +540,14 @@ export default function WeeklyPlannerPage() {
     queryKey: ["/api/planner/full"],
   });
 
+  // PLANNER1 — the household's real current dated week (created on demand server-side). The
+  // Planner LANDS on this: it is the present, resolved from the household's own clock, never
+  // from a device default. It is a concrete dated week (the six-slot window can no longer
+  // expire), so the landing never has to "pick" a week (BEH-3) — the server made the present.
+  const { data: currentWeek } = useQuery<{ weekId: number; weekNumber: number; weekName: string; weekStartDate: string | null }>({
+    queryKey: ["/api/planner/timeline/current"],
+  });
+
   const { data: meals = [] } = useQuery<Meal[]>({
     queryKey: ["/api/meals"],
   });
@@ -568,6 +625,45 @@ export default function WeeklyPlannerPage() {
       setActiveWeek("1");
     }
   }, [fullPlanner, activeWeek]);
+
+  // PLANNER1 — land on the household's current dated week once it and the timeline are
+  // known. This is the default landing view; navigation afterwards is the user's and is
+  // remembered within the session. We never "pick" a week — the server resolved the present
+  // from the household's own clock and created it, so the current week is always concrete.
+  useEffect(() => {
+    if (plannerLandedRef.current) return;
+    if (!currentWeek || !fullPlanner.length) return;
+    if (!fullPlanner.some(w => w.weekNumber === currentWeek.weekNumber)) return;
+    plannerLandedRef.current = true;
+    setActiveWeek(String(currentWeek.weekNumber));
+  }, [currentWeek, fullPlanner]);
+
+  // PLANNER1 — step the continuous timeline by one week in either direction, without limit.
+  // The target Monday is the active week's own anchor ±7 days. An existing dated week is
+  // selected; otherwise the server CREATES it (the household declaring that week — TIME1
+  // §6.2) and we land on it. Undated legacy weeks carry no anchor to step from, so date
+  // navigation is offered only when the active week is anchored — legacy weeks stay
+  // reachable through the selector.
+  const [navigatingWeek, setNavigatingWeek] = useState(false);
+  const goToAdjacentWeek = useCallback(async (direction: -1 | 1) => {
+    const anchor = activeWeekData?.weekStartDate;
+    if (!anchor || navigatingWeek) return; // an undated legacy week has no calendar step; use the selector
+    const targetMonday = shiftIsoDays(anchor, direction * 7);
+    const existing = fullPlanner.find(w => w.weekStartDate === targetMonday);
+    if (existing) {
+      setActiveWeek(String(existing.weekNumber));
+      return;
+    }
+    setNavigatingWeek(true);
+    try {
+      const res = await apiRequest("POST", "/api/planner/timeline/week", { weekStartDate: targetMonday });
+      const week = (await res.json()) as { weekNumber: number };
+      await qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
+      setActiveWeek(String(week.weekNumber));
+    } finally {
+      setNavigatingWeek(false);
+    }
+  }, [activeWeekData, fullPlanner, navigatingWeek, qc]);
 
   // ── Smart Suggest domain ──────────────────────────────────────────────────
   const {
@@ -1807,21 +1903,54 @@ export default function WeeklyPlannerPage() {
               data-testid="input-rename-week"
             />
           ) : (
-            <Select value={activeWeek} onValueChange={setActiveWeek}>
-              <SelectTrigger className="w-24 sm:w-28 h-7 text-xs" aria-label="Select week" data-testid="tabs-weeks">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {fullPlanner
-                  .slice()
-                  .sort((a, b) => a.weekNumber - b.weekNumber)
-                  .map((week) => (
-                    <SelectItem key={week.id} value={String(week.weekNumber)} data-testid={`tab-week-${week.weekNumber}`}>
-                      {week.weekName}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
+            <>
+              {/* PLANNER1 — step back one week on the continuous timeline (unbounded). Shown
+                  only when the active week is anchored; undated legacy weeks use the selector. */}
+              {activeWeekData?.weekStartDate && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground/60 hover:text-foreground"
+                  onClick={() => goToAdjacentWeek(-1)}
+                  disabled={navigatingWeek}
+                  title="Previous week"
+                  aria-label="Previous week"
+                  data-testid="button-prev-week"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              )}
+              <Select value={activeWeek} onValueChange={setActiveWeek}>
+                <SelectTrigger className="w-36 sm:w-48 h-7 text-xs" aria-label="Select week" data-testid="tabs-weeks">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {fullPlanner
+                    .slice()
+                    .sort((a, b) => (a.weekStartDate ?? "").localeCompare(b.weekStartDate ?? "") || a.weekNumber - b.weekNumber)
+                    .map((week) => (
+                      <SelectItem key={week.id} value={String(week.weekNumber)} data-testid={`tab-week-${week.weekNumber}`}>
+                        {weekLabel(week)}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              {/* PLANNER1 — step forward one week (unbounded; creates the week on demand). */}
+              {activeWeekData?.weekStartDate && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground/60 hover:text-foreground"
+                  onClick={() => goToAdjacentWeek(1)}
+                  disabled={navigatingWeek}
+                  title="Next week"
+                  aria-label="Next week"
+                  data-testid="button-next-week"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              )}
+            </>
           )}
           {!renameWeekId && activeWeekData && (
             <button

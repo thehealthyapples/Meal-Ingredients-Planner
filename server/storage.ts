@@ -160,6 +160,10 @@ export interface IStorage {
   getPlannerWeeks(userId: number): Promise<PlannerWeek[]>;
   getPlannerWeek(id: number): Promise<PlannerWeek | undefined>;
   createPlannerWeeks(userId: number): Promise<PlannerWeek[]>;
+  getPlannerWeekByStartDate(userId: number, weekStartDate: string): Promise<PlannerWeek | undefined>;
+  ensureDatedPlannerWeek(userId: number, weekStartDate: string): Promise<PlannerWeek>;
+  getCurrentDatedPlannerWeek(userId: number, now?: Date): Promise<PlannerWeek>;
+  getPlannerDaysByWeekIds(weekIds: number[]): Promise<PlannerDay[]>;
   renamePlannerWeek(id: number, weekName: string): Promise<PlannerWeek | undefined>;
   deletePlannerWeeks(userId: number): Promise<void>;
   getPlannerDays(weekId: number): Promise<PlannerDay[]>;
@@ -1372,6 +1376,105 @@ export class DatabaseStorage implements IStorage {
       }
       throw err;
     }
+  }
+
+  /**
+   * PLANNER1 — the household's week for a specific real Monday, if it exists.
+   * A pure lookup over the calendar coordinate (`weekStartDate`), household-scoped.
+   */
+  async getPlannerWeekByStartDate(userId: number, weekStartDate: string): Promise<PlannerWeek | undefined> {
+    const householdId = await getHouseholdForUser(userId);
+    const [result] = await db
+      .select()
+      .from(plannerWeeks)
+      .where(and(eq(plannerWeeks.householdId, householdId), eq(plannerWeeks.weekStartDate, weekStartDate)))
+      .limit(1);
+    return result;
+  }
+
+  /**
+   * PLANNER1 — FIND-OR-CREATE the dated week for a real Monday. The continuous timeline's
+   * only new write funnel, and the extension of `createPlannerWeeks` beyond the initial six.
+   *
+   * HT7 — THE ANCHOR IS AN OBSERVATION OF THE PRESENT, NEVER A BACK-FILL.
+   * -------------------------------------------------------------------
+   * `weekStartDate` is written HERE only ever by INSERT, and only for a Monday the household
+   * is currently living in or has navigated TO on the dated timeline — which is the household
+   * DECLARING that week (TIME1 § 6.2), the one legitimate route to anchoring a week. It never
+   * UPDATEs an existing row's anchor, so the 192/195 households' NULL weeks stay NULL forever
+   * and the gate `ht-anchor-is-never-back-filled` is satisfied by construction.
+   *
+   * `weekNumber` is assigned in SQL as `MAX(week_number) + 1` — NOT via a JS `max(weekNumber)`
+   * idiom, which the `ht-one-planner-week-owner` gate (rightly) treats as a rival "current
+   * week" derivation. This function does not decide which week is CURRENT — it creates the row
+   * for a Monday the caller already resolved from the owner (`householdWeekOf`). It is an id
+   * allocator, not a clock.
+   */
+  async ensureDatedPlannerWeek(userId: number, weekStartDate: string): Promise<PlannerWeek> {
+    const existing = await this.getPlannerWeekByStartDate(userId, weekStartDate);
+    if (existing) return existing;
+
+    const householdId = await getHouseholdForUser(userId);
+    try {
+      return await db.transaction(async (tx) => {
+        // MAX(week_number)+1 in SQL: the next stable ordinal, allocated by the database so
+        // no JS clock/max idiom can be mistaken for a rival "which week is current" (HT1).
+        const nextResult = await tx.execute<{ next: number }>(
+          sql`SELECT COALESCE(MAX(week_number), 0) + 1 AS next FROM planner_weeks WHERE user_id = ${userId}`,
+        );
+        const weekNumber = Number(nextResult.rows?.[0]?.next ?? 1);
+        const [week] = await tx.insert(plannerWeeks).values({
+          userId,
+          householdId,
+          weekNumber,
+          weekName: `Week ${weekNumber}`,
+          weekStartDate, // INSERT-only. Never revised, never back-filled (HT7).
+        }).returning();
+        for (let d = 0; d < 7; d++) {
+          await tx.insert(plannerDays).values({ weekId: week.id, dayOfWeek: d });
+        }
+        return week;
+      });
+    } catch (err: any) {
+      // Concurrent create for the same household — either the same date (unique-ish by our
+      // own lookup) or a colliding week_number (23505 on planner_weeks_user_week_unique).
+      // Re-read: the winning transaction has produced the row we wanted.
+      if (err?.code === '23505') {
+        const again = await this.getPlannerWeekByStartDate(userId, weekStartDate);
+        if (again) return again;
+        // The collision was on week_number, not date — retry once with a fresh MAX.
+        return this.ensureDatedPlannerWeek(userId, weekStartDate);
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * PLANNER1 — the household's CURRENT dated week: the landing view of the continuous timeline.
+   *
+   * The Monday comes from the OWNER (`householdWeekOf(householdToday(now, zone))`), so this is
+   * not a new "which week is current" derivation — it is the same civil-week arithmetic every
+   * Household Time consumer uses (HT1/HT11). Because the current week is CREATED on demand, the
+   * six-slot window can never silently expire (TIME1 § 6.3/§ 15.1, resolved): every household —
+   * including the 192/195 whose legacy weeks are undated — has a real, dated current week to
+   * land on, and their undated legacy weeks are preserved alongside it.
+   */
+  async getCurrentDatedPlannerWeek(userId: number, now: Date = new Date()): Promise<PlannerWeek> {
+    const householdId = await getHouseholdForUser(userId);
+    const household = await db.query.households.findFirst({ where: eq(households.id, householdId) });
+    const zone = household?.timeZone ?? DECLARED_DEFAULT_ZONE;
+    const thisMonday = formatCivilDate(householdWeekOf(householdToday(now, zone)).start);
+    return this.ensureDatedPlannerWeek(userId, thisMonday);
+  }
+
+  /**
+   * PLANNER1 — batched day fetch for a set of weeks. Lets `/api/planner/full` load the whole
+   * (now unbounded) timeline in a constant number of queries instead of one-per-week, so a
+   * household accruing weeks indefinitely is not a performance regression.
+   */
+  async getPlannerDaysByWeekIds(weekIds: number[]): Promise<PlannerDay[]> {
+    if (weekIds.length === 0) return [];
+    return await db.select().from(plannerDays).where(inArray(plannerDays.weekId, weekIds)).orderBy(plannerDays.dayOfWeek);
   }
 
   async renamePlannerWeek(id: number, weekName: string): Promise<PlannerWeek | undefined> {

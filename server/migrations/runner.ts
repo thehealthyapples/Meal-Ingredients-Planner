@@ -3691,6 +3691,28 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  // ─── PLANNER1 — Continuous Timeline ────────────────────────────────────────
+  //
+  // Governing architecture: THA_HOUSEHOLD_TIME_ARCHITECTURE.md § 13 (migration
+  // principle 3, as amended 2026-07-22); docs/implementation/PLANNER_CONTINUOUS_TIMELINE.md.
+  //
+  // The Planner's fixed six-week rota becomes a continuous, dated, unbounded timeline.
+  // `week_number` is now an unbounded per-household ordinal; the calendar coordinate is
+  // `week_start_date`. Weeks accrue indefinitely and are NEVER pruned, so dated range and
+  // lookup access must stay efficient — this index is that guarantee.
+  //
+  // ADDITIVE AND HT7-SAFE. It adds NO column, NO default, and UPDATEs no row: it does not
+  // touch `week_start_date`'s values at all, only indexes them. The no-back-fill gate
+  // (`ht-anchor-is-never-back-filled`) fires on `ADD COLUMN … week_start_date … DEFAULT` and
+  // on `UPDATE planner_weeks … week_start_date`; a `CREATE INDEX` matches neither, by design.
+  {
+    id: "2026-07-22_planner1_continuous_timeline_index",
+    statements: [
+      `CREATE INDEX IF NOT EXISTS planner_weeks_household_start_date_idx
+         ON planner_weeks (household_id, week_start_date)`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 
