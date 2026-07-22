@@ -21,7 +21,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   X, Send, Leaf, Loader2,
   BookOpen, CalendarPlus, ShoppingBasket, ArrowRight, Star, Users, Clock, UtensilsCrossed,
-  Sparkles, ThumbsUp, ThumbsDown, CheckCircle2, XCircle, Wand2, Lightbulb,
+  ThumbsUp, ThumbsDown, CheckCircle2, XCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
@@ -508,7 +508,9 @@ function EnrichmentBlock({ enrichment }: EnrichmentBlockProps) {
           className="flex items-start gap-2 rounded-r-md border-l-2 border-primary/20 bg-muted/25 py-1.5 pl-2.5 pr-2"
           data-testid={`companion-enrichment-item-${item.sourceCapabilityId}-${i}`}
         >
-          <Lightbulb className="h-3.5 w-3.5 text-primary/70 flex-shrink-0 mt-0.5" />
+          {/* NSR1 Phase 2 (Companion): Lightbulb removed — "AI-magic" iconography labels the
+              Companion's cleverness, which GEA16 forbids (intelligence is a better answer,
+              never a visible mechanism). The left border + kind label carry the item. */}
           <div className="min-w-0">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
               {ENRICHMENT_KIND_LABEL[item.kind]}
@@ -575,7 +577,7 @@ function GuidanceBlock({ guidance, guidanceKind, assistantTurnId, onNavigate }: 
             )}
             data-testid={`companion-guidance-action-${action.domain}`}
           >
-            <Sparkles className="h-3.5 w-3.5" />
+            {/* NSR1 Phase 2 (Companion): Sparkles removed — no AI-magic mark (GEA16). */}
             {action.label}
           </button>
         ))}
@@ -683,7 +685,7 @@ function CompanionActionRow({ action, isRunning, disabled, onConfirm, onCancel }
         )}
         data-testid={`button-confirm-action-${action.id}`}
       >
-        <Wand2 className="h-3.5 w-3.5" />
+        {/* NSR1 Phase 2 (Companion): Wand2 removed — no AI-magic mark (GEA16). */}
         {action.label}
       </button>
       <button
@@ -1043,12 +1045,15 @@ function LoadingBubble() {
         <Leaf className="h-3.5 w-3.5 text-primary" />
       </div>
       <div className="px-3.5 py-3 bg-muted rounded-2xl rounded-tl-sm border border-border/30">
-        <div className="flex gap-1 items-center h-4">
+        {/* NSR1 Phase 2 (Companion): the three bouncing dots were the stock chat "typing"
+            indicator — and a bounce the emblem's light law bans by name. A soft opacity
+            pulse reads as a friend thinking, not a machine processing (CRAFT1 §3; GEA16). */}
+        <div className="flex gap-1 items-center h-4" aria-label="Thinking">
           {[0, 1, 2].map((i) => (
             <span
               key={i}
-              className="w-1.5 h-1.5 rounded-full bg-primary/50 animate-bounce"
-              style={{ animationDelay: `${i * 0.15}s` }}
+              className="w-1.5 h-1.5 rounded-full bg-primary/40 animate-pulse motion-reduce:animate-none"
+              style={{ animationDelay: `${i * 0.2}s` }}
             />
           ))}
         </div>
