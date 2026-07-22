@@ -5,7 +5,7 @@
 | **Session ID** | `LHXP5_Living_Home_Experience_Pass5_Living_Craftsmanship` |
 | **Rollback ID** | `rollback/LIVING-HOME-PASS5-20260722` → `87d5797e` (annotated tag, object `fa5f86a5`; created before any change; covers committed state only — tree clean apart from the CURRENT.md heartbeat) |
 | **Start time** | 2026-07-22 |
-| **Current stage** | Complete — committed `PENDING` on `int1-intelligence-platform`; awaiting Home Owner walk-through |
+| **Current stage** | Complete — committed `28e97e35` on `int1-intelligence-platform`; awaiting Home Owner walk-through |
 
 ## Objective
 Living Home Experience Pass 5 — Living Craftsmanship. The arc's final pass: make every interaction feel intentionally crafted, remove every remaining rough edge, let the household stop noticing software. A **presentation-only restraint pass** run through one filter (item 9): *"would anyone notice if this was missing? if not, remove it."* No feature, behaviour, capability, Environmental Dressing, logic, API, schema, navigation, or ownership change (item 11).
