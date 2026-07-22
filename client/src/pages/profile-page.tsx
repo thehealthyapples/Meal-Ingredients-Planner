@@ -262,6 +262,15 @@ function ProfilePageContent() {
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["/api/profile"], data);
+      // NSR1 Phase 1 (allergy safety): a person's `dietRestrictions` persist to their
+      // canonical eater row — PUT /api/profile → updatePersonDiet →
+      // household_eaters.hardRestrictions — the SAME row the eater card edits and the
+      // SAME column the safety filter reads (household-dietary-safety.ts,
+      // planner-compliance.ts). The record was always correct; what could go stale was
+      // the OTHER surface's cached display. For allergy data a stale, divergent display
+      // is a silent failure, so invalidate the eaters cache here (and the profile cache
+      // on the eater side) — one edit, one canonical value, shown identically everywhere.
+      queryClient.invalidateQueries({ queryKey: ["/api/household/eaters"] });
     },
     onError: (err: Error) => {
       console.error("[profile] save failed", err);
@@ -1136,6 +1145,10 @@ function HouseholdEatersSection() {
     onSuccess: () => {
       toast({ title: "Eater updated" });
       queryClient.invalidateQueries({ queryKey: ["/api/household/eaters"] });
+      // NSR1 Phase 1 (allergy safety): editing an eater can be the account holder's own
+      // row, whose restrictions the Personal "Allergies & Intolerances" surface reads
+      // from /api/profile. Invalidate it too so the two allergy surfaces never diverge.
+      queryClient.invalidateQueries({ queryKey: ["/api/profile"] });
       setEditingEater(null);
     },
     onError: (err: any) => toast({ variant: "destructive", title: "Could not update eater", description: err?.message || "Please try again." }),
