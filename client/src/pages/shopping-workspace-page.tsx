@@ -412,7 +412,7 @@ function getOperationalHint(
     if (prepState?.pantryDecision === "need_to_buy") {
       return null;
     }
-    return { text: "Have you run out of this?", tone: "amber" };
+    return { text: "May already be in your larder", tone: "amber" };
   }
 
   if (prepState?.quantityDecision === "accepted") {
@@ -1807,15 +1807,9 @@ export default function ShoppingWorkspacePage() {
     return anyContribution ? total : null;
   }, [hasPrices, items, allPriceMatches, selectedRetailers, getEffectiveTier, estimatedExtra, hasAnyEstimateInTotal]);
 
-  // Average Apple Score across items that actually carry one. An unrated item
-  // is excluded rather than counted as zero.
-  const avgThaRating = useMemo(() => {
-    const rated = items.filter((i) =>
-      canShowScoreForItem(i) && i.thaRating != null && (i.thaRating as number) > 0,
-    );
-    if (rated.length === 0) return null;
-    return rated.reduce((sum, i) => sum + (i.thaRating as number), 0) / rated.length;
-  }, [items]);
+  // NSR1 Phase 2 (Shopping): the basket-average Apple Score computation is removed with
+  // the footer mark it fed (GEA13 — a basket-level average grades the household's choices,
+  // where a per-item rating merely informs). Dead code deleted (CRAFT1 §6 delete before adding).
 
   // Retailer × tier matrix behind the comparison strip.
   const comparisonMatrix = useMemo(() => {
@@ -2874,7 +2868,7 @@ export default function ShoppingWorkspacePage() {
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-primary leading-tight">Add to shopping list</p>
                           <p className="text-[11px] text-muted-foreground mt-0.5">
-                            {parsedAddItems.length} item{parsedAddItems.length !== 1 ? "s" : ""} — THA will organise and score them
+                            {parsedAddItems.length} item{parsedAddItems.length !== 1 ? "s" : ""} to add
                           </p>
                         </div>
                       </button>
@@ -3152,11 +3146,11 @@ export default function ShoppingWorkspacePage() {
                   {shopGroups.need.length === 0 && filteredItems.length > 0 && (
                     <div className="px-4 py-4 text-center">
                       <CheckCircle2 className="h-6 w-6 text-emerald-500 mx-auto mb-1.5" />
+                      {/* NSR1 Phase 2 (Shopping): "That's everything" is the fact and stays;
+                          the "Great shop —" subline is retired — a room reports, it does not
+                          congratulate the household on their shop (GEA21). */}
                       <p className="text-sm font-medium text-foreground">
                         That's everything
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Great shop — nothing left to find
                       </p>
                     </div>
                   )}
@@ -3246,11 +3240,10 @@ export default function ShoppingWorkspacePage() {
                   ? `£${clientBestTotal.toFixed(2)}`
                   : <span className="text-muted-foreground font-normal">-</span>}
               </span>
-              <div data-testid="text-basket-avg-smp">
-                {avgThaRating !== null
-                  ? <AppleRating rating={avgThaRating} sizePx={18} showTooltip={false} animate={false} />
-                  : null}
-              </div>
+              {/* NSR1 Phase 2 (Shopping): the basket AVERAGE Apple rating is removed. A
+                  per-item rating is information ("a rating on a jar" — GEA13's own allowance);
+                  averaged into one mark over the whole basket it becomes a verdict on the
+                  household's choices, which GEA13 forbids. Per-item ratings remain on items. */}
             </div>
           </div>
 
