@@ -8116,18 +8116,53 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ message: "Invalid id" });
+      // LARDER1 §4 — the same PATCH now also moves a staple's storage location
+      // (`category`). Every field is optional so the existing need-quantity
+      // contract is preserved verbatim, and a category-only move never touches
+      // the need fields (and vice versa). The category set matches the POST enum
+      // and the DB CHECK constraint.
       const schema = z.object({
-        needQuantityValue: z.number().positive().finite().nullable(),
-        needUnit: z.string().max(32).nullable(),
+        needQuantityValue: z.number().positive().finite().nullable().optional(),
+        needUnit: z.string().max(32).nullable().optional(),
+        category: z.enum(["larder", "fridge", "freezer", "household", "fruit", "pet"]).optional(),
       });
-      const { needQuantityValue, needUnit } = schema.parse(req.body);
-      const updated = await storage.updatePantryItemQuantity(req.user!.id, id, needQuantityValue, needUnit);
+      const body = schema.parse(req.body);
+      let updated: Awaited<ReturnType<typeof storage.updatePantryItemQuantity>> = null;
+      if (body.category !== undefined) {
+        updated = await storage.updatePantryItemCategory(req.user!.id, id, body.category);
+      }
+      if (body.needQuantityValue !== undefined || body.needUnit !== undefined) {
+        updated = await storage.updatePantryItemQuantity(req.user!.id, id, body.needQuantityValue ?? null, body.needUnit ?? null);
+      }
       if (!updated) return res.status(404).json({ message: "Item not found" });
       res.json(updated);
     } catch (err) {
       if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
       console.error("[Pantry] PATCH error:", err);
       res.status(500).json({ message: "Failed to update pantry item" });
+    }
+  });
+
+  // LARDER1 §4.3 — put a staple back after it was taken out of the Larder (Undo
+  // of the Bin gesture). Restores the SAME canonical record via the Domain 30
+  // owner; a rare unique clash (an identically-keyed active staple already
+  // exists) is surfaced as `already_exists` — the staple is already back — never
+  // as a failure.
+  app.post("/api/pantry/:id/restore", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid id" });
+      const restored = await storage.restorePantryItem(req.user!.id, id);
+      if (!restored) return res.status(404).json({ message: "Item not found" });
+      res.json(restored);
+    } catch (err) {
+      const msg = String((err as any)?.message ?? "");
+      if (msg.includes("unique") || msg.includes("duplicate") || msg.includes("UNIQUE")) {
+        return res.status(409).json({ error: "already_exists" });
+      }
+      console.error("[Pantry] RESTORE error:", err);
+      res.status(500).json({ message: "Failed to restore pantry item" });
     }
   });
 

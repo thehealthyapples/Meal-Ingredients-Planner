@@ -2159,3 +2159,292 @@ a:hover > .brand-mark .bm-face { opacity: 0.86; }
     margin: 0 !important;
   }
 }
+
+/* ── LARDER — the physical room (LARDER1) ─────────────────────────────────────
+ *
+ * A real household larder built from separate, directly-manipulable storage
+ * objects: shelving, a fridge and freezer that open, baskets, a cupboard and a
+ * drawer, holding the household's REAL Domain 30 staples as physical objects
+ * (jars, tins, bottles, packets, boxes, baskets, tubs). Warm, sunlit, beautifully
+ * real — never a flat photo with hotspots. Presentation only; no token owner or
+ * business fact is touched here (CRAFT1 §1). Class prefix `.lardr-`.
+ */
+:root {
+  --lardr-cream: 246, 240, 226;
+  --lardr-ink: 58, 44, 28;
+  --lardr-glass: #eef1ec;
+  --lardr-edge: rgba(58, 44, 28, 0.28);
+  --lardr-lid: #b79b6a;
+  --lardr-label: #f4ecd8;
+  --lardr-metal: #cdd2d6;
+  --lardr-metal-top: #e4e8ea;
+  --lardr-basket: #b07f42;
+  --lardr-basket-rim: #96692f;
+  --lardr-pot: #b5763f;
+  --lardr-fill: #cdae72;
+  --lardr-low-fill: #ddc9a0;
+  --lardr-wood: #a9793f;
+  --lardr-wood-dark: #8a6132;
+}
+.dark .lardr-room {
+  --lardr-glass: #3a4038;
+  --lardr-label: #4a4030;
+  --lardr-metal: #6b7076;
+  --lardr-metal-top: #868c92;
+  --lardr-edge: rgba(230, 216, 190, 0.24);
+}
+
+.lardr-room {
+  position: relative;
+  min-height: 100%;
+  padding-bottom: 6.5rem;
+  background: linear-gradient(160deg, rgb(var(--lardr-cream)) 0%, #efe6d2 60%, #e7dcc4 100%);
+}
+.dark .lardr-room { background: linear-gradient(160deg, hsl(34 16% 13%), hsl(32 14% 10%)); }
+
+/* Warm sunlit wall behind the constructed furniture — light, not interaction. */
+.lardr-wall {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(120% 80% at 92% 0%, rgba(255, 244, 214, 0.85), rgba(255, 244, 214, 0) 55%),
+    radial-gradient(90% 60% at 8% 4%, rgba(255, 250, 236, 0.6), rgba(255, 250, 236, 0) 60%);
+}
+
+.lardr-inner {
+  position: relative; z-index: 1;
+  max-width: 900px; margin: 0 auto;
+  padding: 1.1rem 1rem 1.5rem;
+  display: flex; flex-direction: column; gap: 1rem;
+}
+@media (min-width: 768px) { .lardr-inner { padding: 1.6rem 1.5rem 2rem; gap: 1.15rem; } }
+
+.lardr-tagline {
+  font-size: 0.95rem; line-height: 1.4; color: rgba(var(--lardr-ink), 0.72); font-weight: 500;
+}
+.lardr-tagline span { display: block; color: rgba(var(--lardr-ink), 0.5); font-weight: 400; font-size: 0.85rem; }
+.dark .lardr-tagline { color: hsl(38 24% 74%); }
+.dark .lardr-tagline span { color: hsl(38 16% 58%); }
+
+/* Availability chips — read by looking, and always carried in text (LARDER1 §10). */
+.lardr-status { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.lardr-chip {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.35rem 0.7rem; border-radius: 999px; font-size: 0.8rem; font-weight: 600;
+  border: 1px solid transparent;
+}
+.lardr-chip::before { content: ""; width: 8px; height: 8px; border-radius: 50%; }
+.lardr-chip.is-stocked { background: rgba(111, 125, 62, 0.14); color: #566126; }
+.lardr-chip.is-stocked::before { background: #6f7d3e; }
+.lardr-chip.is-low { background: rgba(194, 146, 58, 0.16); color: #8a6417; }
+.lardr-chip.is-low::before { background: #c2923a; }
+.lardr-chip.is-empty { background: rgba(176, 80, 63, 0.14); color: #8a3d2f; }
+.lardr-chip.is-empty::before { background: #b0503f; }
+.dark .lardr-chip.is-stocked { color: #b5c47f; }
+.dark .lardr-chip.is-low { color: #e0b56a; }
+.dark .lardr-chip.is-empty { color: #d68b78; }
+
+.lardr-loading, .lardr-furniture-stack { display: flex; flex-direction: column; gap: 1rem; }
+
+/* ── A piece of storage furniture ─────────────────────────────────────────── */
+.lardr-furniture {
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 253, 247, 0.86), rgba(250, 244, 231, 0.8));
+  border: 1px solid rgba(var(--lardr-ink), 0.1);
+  box-shadow: 0 2px 8px rgba(var(--lardr-ink), 0.06);
+  overflow: hidden;
+  transition: box-shadow 0.15s ease, outline-color 0.15s ease;
+  outline: 2px solid transparent; outline-offset: -2px;
+}
+.dark .lardr-furniture { background: hsl(34 16% 16% / 0.82); border-color: hsl(38 18% 40% / 0.24); }
+.lardr-furniture.is-over { outline-color: #7c8a41; box-shadow: 0 6px 18px rgba(124, 138, 65, 0.2); }
+
+.lardr-furniture-head {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.7rem 0.9rem 0.5rem; color: rgba(var(--lardr-ink), 0.85);
+}
+.dark .lardr-furniture-head { color: hsl(38 24% 80%); }
+.lardr-furniture-head h2 { font-size: 0.92rem; font-weight: 700; margin: 0; }
+.lardr-furniture-count { margin-left: auto; font-size: 0.75rem; color: rgba(var(--lardr-ink), 0.5); font-weight: 600; }
+.dark .lardr-furniture-count { color: hsl(38 16% 58%); }
+
+.lardr-furniture-body { padding: 0 0.6rem 0.5rem; }
+
+/* A shelf board: items stand on the plank. */
+.lardr-board { position: relative; padding: 0.2rem 0.3rem 0.9rem; }
+.lardr-board-plank {
+  position: absolute; left: 0.3rem; right: 0.3rem; bottom: 0.35rem; height: 8px; border-radius: 3px;
+  background: linear-gradient(180deg, var(--lardr-wood), var(--lardr-wood-dark));
+  box-shadow: 0 4px 6px rgba(58, 44, 28, 0.18);
+}
+.lardr-board-plank.is-cold { background: linear-gradient(180deg, #cfd6db, #aeb7be); }
+
+.lardr-shelf-row {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.35rem 0.5rem;
+  min-height: 60px;
+}
+.lardr-shelf-empty {
+  font-size: 0.8rem; color: rgba(var(--lardr-ink), 0.5); font-style: italic;
+  padding: 0.6rem 0.4rem 1rem;
+}
+.dark .lardr-shelf-empty { color: hsl(38 14% 58%); }
+
+/* ── A product object standing on the shelf ───────────────────────────────── */
+.lardr-product {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  width: 62px; padding: 2px 2px 4px; border: 0; background: transparent;
+  cursor: grab; border-radius: 10px;
+  transition: transform 0.12s ease, filter 0.12s ease;
+  touch-action: none;
+}
+.lardr-product:hover { transform: translateY(-3px); filter: drop-shadow(0 6px 6px rgba(58, 44, 28, 0.18)); }
+.lardr-product:focus-visible { outline: 2px solid #7c8a41; outline-offset: 2px; }
+.lardr-product:active { cursor: grabbing; }
+.lardr-product.is-dragging { opacity: 0.35; }
+@media (prefers-reduced-motion: reduce) { .lardr-product { transition: none; } .lardr-product:hover { transform: none; } }
+.lardr-glyph { width: 40px; height: 54px; display: block; }
+.lardr-product-name {
+  font-size: 0.66rem; line-height: 1.15; text-align: center; font-weight: 600;
+  color: rgba(var(--lardr-ink), 0.82); max-width: 62px;
+  overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.dark .lardr-product-name { color: hsl(38 22% 78%); }
+.lardr-product-flag {
+  position: absolute; top: -2px; right: 2px;
+  font-size: 0.55rem; font-weight: 700; letter-spacing: 0.02em;
+  padding: 0 4px; border-radius: 6px; background: #c2923a; color: #fff;
+}
+
+/* ── The item action menu (non-drag equivalent) ───────────────────────────── */
+.lardr-menu { width: 244px; padding: 0; overflow: hidden; }
+.lardr-menu-head { padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border); background: var(--muted); }
+.lardr-menu-title { display: block; font-weight: 700; font-size: 0.9rem; }
+.lardr-menu-sub { display: block; font-size: 0.72rem; color: var(--muted-foreground); margin-top: 1px; }
+.lardr-menu-actions { display: flex; flex-direction: column; padding: 0.3rem; }
+.lardr-menu-btn {
+  display: flex; align-items: center; gap: 0.55rem;
+  padding: 0.5rem 0.55rem; border-radius: 8px; font-size: 0.85rem; text-align: left;
+  color: var(--foreground); background: transparent; border: 0; cursor: pointer; width: 100%;
+}
+.lardr-menu-btn:hover:not(:disabled) { background: var(--muted); }
+.lardr-menu-btn:disabled { opacity: 0.5; cursor: default; }
+.lardr-menu-btn.is-danger { color: #b0503f; }
+.lardr-menu-btn.is-danger:hover:not(:disabled) { background: rgba(176, 80, 63, 0.1); }
+.lardr-menu-back {
+  font-size: 0.78rem; color: var(--muted-foreground); background: transparent; border: 0;
+  padding: 0.4rem 0.55rem; text-align: left; cursor: pointer; border-radius: 8px;
+}
+.lardr-menu-back:hover { background: var(--muted); }
+.lardr-menu-about { padding: 0.4rem 0.55rem 0.6rem; max-height: 320px; overflow-y: auto; }
+
+/* ── Fridge / freezer appliance ───────────────────────────────────────────── */
+.lardr-appliance-door {
+  display: flex; align-items: center; gap: 0.75rem; width: 100%;
+  padding: 0.9rem 0.9rem; background: linear-gradient(180deg, #e9eef1, #d7dee3); border: 0; cursor: pointer;
+  border-bottom: 1px solid rgba(58, 44, 28, 0.12);
+}
+.lardr-freezer .lardr-appliance-door { background: linear-gradient(180deg, #e6eef4, #cfdde8); }
+.dark .lardr-appliance-door { background: linear-gradient(180deg, hsl(210 12% 26%), hsl(210 12% 20%)); }
+.lardr-appliance-handle {
+  width: 6px; height: 34px; border-radius: 4px; background: linear-gradient(180deg, #b9c2c9, #8f9aa2); flex-shrink: 0;
+}
+.lardr-appliance-label { display: flex; align-items: center; gap: 0.6rem; flex: 1; text-align: left; color: rgba(var(--lardr-ink), 0.9); }
+.dark .lardr-appliance-label { color: hsl(210 16% 84%); }
+.lardr-appliance-label b { display: block; font-size: 0.92rem; }
+.lardr-appliance-label small { display: block; font-size: 0.72rem; opacity: 0.7; }
+.lardr-appliance-chev { transition: transform 0.2s ease; color: rgba(var(--lardr-ink), 0.5); }
+.lardr-appliance-chev.is-open { transform: rotate(180deg); }
+.lardr-appliance-inside {
+  padding: 0.4rem 0.6rem 0.7rem;
+  background: linear-gradient(180deg, rgba(236, 242, 246, 0.7), rgba(224, 233, 239, 0.6));
+}
+.dark .lardr-appliance-inside { background: hsl(210 12% 17% / 0.7); }
+.lardr-freezer .lardr-appliance-inside { background: linear-gradient(180deg, rgba(226, 239, 248, 0.75), rgba(208, 227, 240, 0.6)); }
+.lardr-compartment { position: relative; padding: 0.2rem 0.3rem 0.9rem; }
+.lardr-compartment-label {
+  display: block; font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
+  color: rgba(var(--lardr-ink), 0.42); padding: 0.2rem 0.2rem 0;
+}
+.dark .lardr-compartment-label { color: hsl(210 12% 62%); }
+
+/* ── The sticky dock: Shopping + Bin drop destinations ────────────────────── */
+.lardr-dock {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+  z-index: 30; display: flex; gap: 0.6rem;
+  padding: 0.4rem; border-radius: 999px;
+  background: rgba(255, 253, 248, 0.94); backdrop-filter: blur(8px);
+  border: 1px solid rgba(var(--lardr-ink), 0.12); box-shadow: 0 6px 20px rgba(58, 44, 28, 0.16);
+  opacity: 0.55; transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.lardr-dock.is-dragging { opacity: 1; transform: translateX(-50%) scale(1.04); }
+.dark .lardr-dock { background: hsl(34 16% 16% / 0.94); border-color: hsl(38 18% 40% / 0.3); }
+.lardr-dock-target {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.5rem 1rem; border-radius: 999px; font-size: 0.82rem; font-weight: 700;
+  border: 1.5px dashed transparent; background: transparent; cursor: pointer; color: rgba(var(--lardr-ink), 0.8);
+}
+.dark .lardr-dock-target { color: hsl(38 22% 80%); }
+.lardr-dock-target.is-shop { color: #566126; }
+.lardr-dock-target.is-bin { color: #8a3d2f; }
+.lardr-dock-target.is-over.is-shop { border-color: #6f7d3e; background: rgba(111, 125, 62, 0.14); }
+.lardr-dock-target.is-over.is-bin { border-color: #b0503f; background: rgba(176, 80, 63, 0.14); }
+
+/* ── Add, suggestions, links, drag overlay, panel ─────────────────────────── */
+.lardr-add {
+  border-radius: 16px; padding: 0.7rem; background: rgba(255, 253, 248, 0.85);
+  border: 1px solid rgba(var(--lardr-ink), 0.1);
+}
+.dark .lardr-add { background: hsl(34 16% 16% / 0.8); border-color: hsl(38 18% 40% / 0.24); }
+.lardr-add-row { position: relative; display: flex; align-items: center; gap: 0.5rem; }
+.lardr-add-search { position: absolute; left: 0.65rem; color: rgba(var(--lardr-ink), 0.4); pointer-events: none; }
+.lardr-add-input {
+  flex: 1; min-width: 0; padding: 0.55rem 0.65rem 0.55rem 2rem; font-size: 0.9rem;
+  border-radius: 10px; border: 1px solid rgba(var(--lardr-ink), 0.14); background: var(--background); color: var(--foreground);
+}
+.lardr-add-input:focus { outline: none; box-shadow: 0 0 0 2px rgba(124, 138, 65, 0.3); }
+.lardr-add-clear { position: absolute; right: 5.2rem; color: rgba(var(--lardr-ink), 0.4); background: transparent; border: 0; cursor: pointer; }
+.lardr-add-btn {
+  display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.55rem 0.9rem;
+  border-radius: 10px; font-size: 0.85rem; font-weight: 700; border: 0; cursor: pointer;
+  background: linear-gradient(150deg, #7c8a41, #6a7735); color: #fff;
+}
+.lardr-add-btn:disabled { opacity: 0.5; cursor: default; }
+.lardr-add-where { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.55rem; }
+.lardr-add-chip {
+  display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.6rem;
+  border-radius: 999px; font-size: 0.75rem; font-weight: 600; cursor: pointer;
+  border: 1px solid rgba(var(--lardr-ink), 0.14); background: transparent; color: rgba(var(--lardr-ink), 0.7);
+}
+.lardr-add-chip.is-active { background: #6a7735; color: #fff; border-color: #6a7735; }
+.dark .lardr-add-chip { color: hsl(38 20% 74%); }
+
+.lardr-suggest {
+  display: flex; align-items: center; gap: 0.75rem; width: 100%; text-align: left;
+  padding: 0.85rem 0.9rem; border-radius: 16px; cursor: pointer;
+  background: linear-gradient(150deg, rgba(233, 220, 190, 0.85), rgba(214, 196, 156, 0.7));
+  border: 1px solid rgba(var(--lardr-ink), 0.1); color: rgba(var(--lardr-ink), 0.9);
+}
+.dark .lardr-suggest { background: hsl(36 18% 22%); color: hsl(38 24% 80%); border-color: hsl(38 18% 40% / 0.24); }
+.lardr-suggest b { display: block; font-size: 0.92rem; }
+.lardr-suggest small { display: block; font-size: 0.78rem; opacity: 0.72; }
+.lardr-suggest span { flex: 1; }
+
+.lardr-link {
+  align-self: flex-start; font-size: 0.85rem; font-weight: 600; color: rgba(var(--lardr-ink), 0.6);
+  background: transparent; border: 0; cursor: pointer; padding: 0.2rem 0;
+}
+.lardr-link:hover { color: rgba(var(--lardr-ink), 0.95); }
+.dark .lardr-link { color: hsl(38 18% 64%); }
+
+.lardr-drag-overlay {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; width: 66px;
+  filter: drop-shadow(0 10px 12px rgba(58, 44, 28, 0.3)); pointer-events: none;
+}
+.lardr-drag-overlay span { font-size: 0.66rem; font-weight: 700; color: rgba(var(--lardr-ink), 0.9); text-align: center; }
+
+.lardr-panel {
+  padding: 1rem; border-radius: 18px; background: rgba(255, 253, 248, 0.9);
+  border: 1px solid rgba(var(--lardr-ink), 0.09);
+}
+.dark .lardr-panel { background: hsl(34 18% 15% / 0.78); border-color: hsl(38 20% 40% / 0.22); }

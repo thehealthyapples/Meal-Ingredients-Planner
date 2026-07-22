@@ -1,41 +1,51 @@
-import { useState, useMemo, useRef, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTrackedMutation } from "@/hooks/use-tracked-mutation";
 import { useLocation, useSearch } from "wouter";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { EmptyState } from "@/components/ui/empty-state";
-// PROD1 — this room adopted EmptyState but never its pair. An absence owner
-// without an error owner is how a stocked pantry reads as an empty one.
-import { LoadError } from "@/components/ui/load-error";
 import {
-  Trash2, Plus, Loader2, Home, Refrigerator, Archive, Layers,
-  ShoppingBasket, ChevronDown, PawPrint, Apple, Search, X,
+  DndContext, DragOverlay, PointerSensor, TouchSensor, useSensor, useSensors,
+  useDraggable, useDroppable, type DragStartEvent, type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  Refrigerator, Archive, Layers, Home, PawPrint, Apple, Search, X, Plus,
+  Loader2, ChevronRight, ChevronDown, Trash2, ShoppingCart, Sparkles,
+  ArrowRightLeft, CircleDot, Info,
 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { LoadError } from "@/components/ui/load-error";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ToastAction } from "@/components/ui/toast";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
-import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { pageContainerClass } from "@/components/workspace-header";
 import { PantryKnowledgeHub } from "@/components/PantryKnowledgeHub";
 import PantryIntelligencePanel from "@/components/PantryIntelligencePanel";
 import { usePublishCompanionContext } from "@/components/conversation/companion-context";
+import { openCompanion } from "@/components/conversation/companion-open";
+import { deriveForm, variantOf, type PhysicalForm } from "@/lib/larder-forms";
 
 /**
- * PX1-W4b (fnd-px-success-silent-error-loud).
+ * The Larder — a physical, interactive room (LARDER1).
  *
- * The server answers a duplicate add with `409 {"error":"already_exists"}`, and
- * `queryClient.ts` turns that into `new Error("409: {\"error\":\"already_exists\"}")`
- * — the whole body, in the MESSAGE, and nothing else on the object. Reading it here
- * is the honest way to recognise the one outcome the household would not call a
- * failure.
+ * This is a REBUILD, not a restyle: the room is constructed from separate,
+ * directly-manipulable storage objects — shelving, cupboards, a fridge and a
+ * freezer that open, baskets and drawers — with the household's REAL Domain 30
+ * staples rendered as physical objects (jars, tins, bottles, packets, boxes,
+ * baskets, tubs) that sit on real shelves. It replaces the card → modal →
+ * CRUD-list room entirely.
+ *
+ * Ownership is unchanged (LARDER1 §2). Every action routes through an existing
+ * owner:
+ *   • staples  → Domain 30 (`/api/pantry`, `server/storage.ts` the sole writer)
+ *   • shopping → Domain 15 (`/api/shopping-list`)
+ *   • identity → Domain 2 (canonical resolution, server-side, on add)
+ * The physical *form* of each object is a deterministic PRESENTATION reading of
+ * data the owner already holds (LARDER1 §3) — it is never stored and never a
+ * claim. The load-bearing rule holds: sending to Shopping never removes the
+ * staple (LARDER1 §8); only the explicit Bin gesture takes it out, reversibly
+ * (LARDER1 §4.2/§4.3).
  */
+
 function isAlreadyExists(err: unknown): boolean {
   return /already_exists/.test(String((err as Error)?.message ?? ""));
 }
@@ -53,1245 +63,701 @@ interface PantryItem {
   needUnit: string | null;
 }
 
-// ── Need Quantity inline control ──────────────────────────────────────────────
+const nameOf = (i: PantryItem) => i.displayName || i.ingredientKey;
 
-function NeedQuantityControl({
-  item,
-  onPatch,
-}: {
-  item: PantryItem;
-  onPatch: (id: number, qty: number | null, unit: string | null) => void;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [val, setVal] = useState("");
-  const [unit, setUnit] = useState("");
-  const containerRef = useRef<HTMLDivElement>(null);
+// ── The household's own storage places (LARDER1 §3) ───────────────────────────
+// A `category` becomes a place in the room — a real piece of furniture — never a
+// tab. The room reads the column that already exists; it owns no new categorisation.
+type Furniture = "shelving" | "baskets" | "appliance" | "cupboard" | "drawer";
 
-  const hasNeed = item.needQuantityValue !== null;
+interface Area {
+  cat: string;
+  label: string;        // the furniture's name, as the household would say it
+  short: string;
+  furniture: Furniture;
+  icon: React.ComponentType<{ className?: string }>;
+  opensClosed?: boolean; // fridge / freezer — a door that opens
+}
 
-  const save = () => {
-    const n = parseFloat(val);
-    if (isNaN(n) || n <= 0) {
-      setEditing(false);
-      return;
+const AREAS: Area[] = [
+  { cat: "larder",    label: "Larder shelves",     short: "Larder",    furniture: "shelving",  icon: Archive },
+  { cat: "fruit",     label: "Fruit & veg baskets", short: "Fruit & veg", furniture: "baskets", icon: Apple },
+  { cat: "fridge",    label: "Fridge",             short: "Fridge",    furniture: "appliance", icon: Refrigerator, opensClosed: true },
+  { cat: "freezer",   label: "Freezer",            short: "Freezer",   furniture: "appliance", icon: Layers, opensClosed: true },
+  { cat: "household", label: "Household cupboard", short: "Household", furniture: "cupboard",  icon: Home },
+  { cat: "pet",       label: "Pet corner",         short: "Pet",       furniture: "drawer",    icon: PawPrint },
+];
+const areaOf = (cat: string) => AREAS.find(a => a.cat === cat) ?? AREAS[0];
+
+// ── A product, drawn as the physical object it lives as ───────────────────────
+// A deterministic reading of the record (LARDER1 §3). The label is always the
+// household's real name; the shape is only how the room shows what they keep.
+// Availability is approximate and read by looking — a fuller vs a lower object,
+// never a number (LARDER1 §3/§14) — and it is ALSO carried in text/shape (the
+// "low" tag), so it is never conveyed by fill or colour alone (LARDER1 §10).
+function ProductGlyph({ form, low, id }: { form: PhysicalForm; low: boolean; id: number }) {
+  // Fill: stocked reads fuller, running-low reads lower. Approximate, not a measure.
+  const fill = low ? 0.42 : 0.82;
+  const v = variantOf(id, 3); // deterministic per-item variation so a shelf isn't clones
+  const tint = ["#d9c7a1", "#cbb488", "#e0d2b0"][v];
+  const contents = low ? "var(--lardr-low-fill)" : "var(--lardr-fill)";
+
+  switch (form) {
+    case "bottle":
+      return (
+        <svg viewBox="0 0 40 56" className="lardr-glyph" aria-hidden>
+          <rect x="17" y="3" width="6" height="7" rx="1.5" fill="var(--lardr-lid)" />
+          <path d="M15 10 h10 v6 l3 5 v29 a3 3 0 0 1-3 3 H15 a3 3 0 0 1-3-3 V21 l3-5 z" fill="var(--lardr-glass)" stroke="var(--lardr-edge)" strokeWidth="1" />
+          <path d="M13 30 h14 v20 a3 3 0 0 1-3 3 H16 a3 3 0 0 1-3-3 z" fill={contents} opacity="0.85" />
+          <rect x="14" y="34" width="12" height="9" rx="1.5" fill="var(--lardr-label)" opacity="0.9" />
+        </svg>
+      );
+    case "tin":
+      return (
+        <svg viewBox="0 0 40 56" className="lardr-glyph" aria-hidden>
+          <rect x="9" y="12" width="22" height="38" rx="3" fill="var(--lardr-metal)" stroke="var(--lardr-edge)" strokeWidth="1" />
+          <ellipse cx="20" cy="12" rx="11" ry="3.4" fill="var(--lardr-metal-top)" />
+          <rect x="9" y="22" width="22" height="18" fill="var(--lardr-label)" opacity="0.92" />
+          <rect x="9" y="22" width="22" height="18" fill={contents} opacity="0.18" />
+        </svg>
+      );
+    case "packet":
+      return (
+        <svg viewBox="0 0 40 56" className="lardr-glyph" aria-hidden>
+          <path d="M10 12 l20 0 l-2 4 l2 4 l-2 4 l2 26 a2 2 0 0 1-2 2 H12 a2 2 0 0 1-2-2 l2-26 l-2-4 l2-4 l-2-4 z" fill={tint} stroke="var(--lardr-edge)" strokeWidth="1" />
+          <rect x="12" y="26" width="16" height="16" rx="1" fill="var(--lardr-label)" opacity="0.88" />
+          <rect x="12" y="26" width="16" height={16 * fill} rx="1" fill={contents} opacity="0.25" />
+        </svg>
+      );
+    case "box":
+      return (
+        <svg viewBox="0 0 40 56" className="lardr-glyph" aria-hidden>
+          <rect x="9" y="9" width="22" height="43" rx="2" fill={tint} stroke="var(--lardr-edge)" strokeWidth="1" />
+          <rect x="9" y="9" width="22" height="8" fill="var(--lardr-lid)" opacity="0.55" />
+          <rect x="12" y="22" width="16" height="24" rx="1" fill="var(--lardr-label)" opacity="0.9" />
+          <rect x="12" y={22 + 24 * (1 - fill)} width="16" height={24 * fill} rx="1" fill={contents} opacity="0.22" />
+        </svg>
+      );
+    case "tub":
+      return (
+        <svg viewBox="0 0 40 56" className="lardr-glyph" aria-hidden>
+          <rect x="8" y="20" width="24" height="30" rx="3" fill="var(--lardr-glass)" stroke="var(--lardr-edge)" strokeWidth="1" />
+          <ellipse cx="20" cy="20" rx="13" ry="4" fill="var(--lardr-lid)" />
+          <rect x="8" y="30" width="24" height="20" fill={contents} opacity="0.5" />
+          <rect x="11" y="33" width="18" height="10" rx="1.5" fill="var(--lardr-label)" opacity="0.9" />
+        </svg>
+      );
+    case "basket":
+      return (
+        <svg viewBox="0 0 40 56" className="lardr-glyph" aria-hidden>
+          <circle cx="14" cy="24" r="6.5" fill={low ? "#c7b27e" : "#b7863f"} />
+          <circle cx="24" cy="22" r="7" fill={low ? "#cdbb86" : "#c78a3c"} />
+          <circle cx="20" cy="27" r="6" fill={low ? "#c1ad7a" : "#a9762f"} />
+          <path d="M6 26 h28 l-3 20 a3 3 0 0 1-3 3 H12 a3 3 0 0 1-3-3 z" fill="var(--lardr-basket)" stroke="var(--lardr-edge)" strokeWidth="1" />
+          <path d="M6 26 h28 l-1 6 H7 z" fill="var(--lardr-basket-rim)" />
+        </svg>
+      );
+    case "herbs":
+      return (
+        <svg viewBox="0 0 40 56" className="lardr-glyph" aria-hidden>
+          <path d="M20 8 c-5 2-8 8-7 16 M20 8 c5 2 8 8 7 16 M20 6 v22" stroke={low ? "#8a9b5f" : "#5f7d34"} strokeWidth="2.4" fill="none" strokeLinecap="round" />
+          <circle cx="13" cy="18" r="3" fill={low ? "#93a76a" : "#6f8f3e"} />
+          <circle cx="27" cy="18" r="3" fill={low ? "#93a76a" : "#6f8f3e"} />
+          <path d="M11 30 h18 l-2 18 a3 3 0 0 1-3 3 H16 a3 3 0 0 1-3-3 z" fill="var(--lardr-pot)" stroke="var(--lardr-edge)" strokeWidth="1" />
+        </svg>
+      );
+    case "generic":
+      return (
+        <svg viewBox="0 0 40 56" className="lardr-glyph" aria-hidden>
+          <path d="M12 14 h16 a2 2 0 0 1 2 2 v34 a2 2 0 0 1-2 2 H12 a2 2 0 0 1-2-2 V16 a2 2 0 0 1 2-2 z" fill={tint} stroke="var(--lardr-edge)" strokeWidth="1" strokeDasharray="0" />
+          <path d="M12 14 c2-4 14-4 16 0" fill="none" stroke="var(--lardr-edge)" strokeWidth="1" />
+          <rect x="13" y="30" width="14" height="14" rx="1" fill="var(--lardr-label)" opacity="0.85" />
+        </svg>
+      );
+    case "large-jar":
+    case "jar":
+    default: {
+      const tall = form === "large-jar";
+      const top = tall ? 8 : 12;
+      return (
+        <svg viewBox="0 0 40 56" className="lardr-glyph" aria-hidden>
+          <rect x="12" y={top - 4} width="16" height="5" rx="1.5" fill="var(--lardr-lid)" />
+          <rect x="10" y={top} width="20" height={50 - top} rx="4" fill="var(--lardr-glass)" stroke="var(--lardr-edge)" strokeWidth="1" />
+          <rect x="10" y={top + (50 - top) * (1 - fill)} width="20" height={(50 - top) * fill} rx="3" fill={contents} opacity="0.9" />
+          <rect x="13" y={30} width="14" height="12" rx="1.5" fill="var(--lardr-label)" />
+        </svg>
+      );
     }
-    onPatch(item.id, n, unit.trim() || null);
-    setEditing(false);
-  };
-
-  const handleFocusOut = (e: React.FocusEvent<HTMLDivElement>) => {
-    if (!containerRef.current?.contains(e.relatedTarget as Node)) save();
-  };
-
-  if (editing) {
-    return (
-      <div
-        ref={containerRef}
-        className="flex items-center gap-1 shrink-0"
-        onBlur={handleFocusOut}
-      >
-        <input
-          autoFocus
-          type="number"
-          min={0.1}
-          step={0.5}
-          value={val}
-          onChange={e => setVal(e.target.value)}
-          onKeyDown={e => { if (e.key === "Enter") save(); if (e.key === "Escape") setEditing(false); }}
-          aria-label="Quantity needed"
-          className="w-12 h-6 text-xs px-1.5 rounded border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary/30 tabular-nums text-center"
-          data-testid={`input-need-qty-${item.id}`}
-        />
-        <input
-          type="text"
-          placeholder="unit"
-          aria-label="Unit"
-          value={unit}
-          onChange={e => setUnit(e.target.value)}
-          onKeyDown={e => { if (e.key === "Enter") save(); if (e.key === "Escape") setEditing(false); }}
-          className="w-12 h-6 text-xs px-1.5 rounded border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary/30"
-          data-testid={`input-need-unit-${item.id}`}
-        />
-      </div>
-    );
   }
+}
 
-  if (hasNeed) {
-    return (
-      <div className="flex items-center gap-0.5 shrink-0">
-        <button
-          onClick={() => { setVal(item.needQuantityValue!.toString()); setUnit(item.needUnit ?? ""); setEditing(true); }}
-          className="text-[11px] px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200/70 text-amber-700 hover:bg-amber-100 transition-colors dark:bg-amber-950/20 dark:border-amber-800/50 dark:text-amber-400"
-          data-testid={`button-need-qty-edit-${item.id}`}
-        >
-          Need {item.needQuantityValue}{item.needUnit ? ` ${item.needUnit}` : ""}
-        </button>
-        <button
-          onClick={() => onPatch(item.id, null, null)}
-          className="p-1 text-muted-foreground/30 hover:text-destructive transition-colors"
-          title="Clear need quantity"
-          aria-label="Clear need quantity"
-          data-testid={`button-need-qty-clear-${item.id}`}
-        >
-          <X className="h-3 w-3" />
-        </button>
-      </div>
-    );
-  }
+// ── Item action menu (the non-drag equivalent for EVERY drag outcome) ──────────
+// LARDER1 §10: "Drag is an enhancement, never the only way." Selecting a product
+// (click / tap / keyboard Enter) opens this menu; every move a drag can make is
+// here as a button, so keyboard, switch and touch users reach identical outcomes.
+interface ItemActions {
+  toShopping: (i: PantryItem) => void;
+  toBin: (i: PantryItem) => void;
+  moveTo: (i: PantryItem, cat: string) => void;
+  toggleLow: (i: PantryItem) => void;
+  busy: boolean;
+}
+
+function ProductObject({
+  item, actions, dragDisabled,
+}: { item: PantryItem; actions: ItemActions; dragDisabled: boolean }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [showMove, setShowMove] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
+  const form = deriveForm({ name: nameOf(item), category: item.category });
+  const low = item.needQuantityValue !== null;
+
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `item-${item.id}`,
+    data: { itemId: item.id },
+    disabled: dragDisabled,
+  });
+
+  // A drag must never leave a menu hanging open behind the drag overlay.
+  useEffect(() => { if (isDragging) { setMenuOpen(false); } }, [isDragging]);
+
+  const otherAreas = AREAS.filter(a => a.cat !== item.category);
 
   return (
-    <button
-      onClick={() => { setVal("1"); setUnit(""); setEditing(true); }}
-      className="shrink-0 text-[11px] px-2 py-0.5 rounded-full border border-dashed border-muted-foreground/25 text-muted-foreground/40 hover:text-muted-foreground/70 hover:border-muted-foreground/40 transition-colors"
-      data-testid={`button-need-qty-add-${item.id}`}
-    >
-      + Need
-    </button>
+    <Popover open={menuOpen} onOpenChange={(o) => { setMenuOpen(o); if (!o) { setShowMove(false); setShowAbout(false); } }}>
+      <PopoverTrigger asChild>
+        <button
+          ref={setNodeRef}
+          type="button"
+          {...listeners}
+          {...attributes}
+          className={`lardr-product${low ? " is-low" : ""}${isDragging ? " is-dragging" : ""}`}
+          aria-label={`${nameOf(item)}${low ? ", running low" : ", in stock"} — open actions`}
+          data-testid={`lardr-product-${item.id}`}
+        >
+          <ProductGlyph form={form} low={low} id={item.id} />
+          <span className="lardr-product-name">{nameOf(item)}</span>
+          {low && <span className="lardr-product-flag" data-testid={`lardr-low-${item.id}`}>Low</span>}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="lardr-menu" align="center" side="top" data-testid={`lardr-menu-${item.id}`}>
+        <div className="lardr-menu-head">
+          <span className="lardr-menu-title">{nameOf(item)}</span>
+          <span className="lardr-menu-sub">{areaOf(item.category).label} · {low ? "running low" : "in stock"}</span>
+        </div>
+
+        {!showMove && !showAbout && (
+          <div className="lardr-menu-actions">
+            <button className="lardr-menu-btn" onClick={() => { actions.toShopping(item); setMenuOpen(false); }} disabled={actions.busy} data-testid={`lardr-act-shop-${item.id}`}>
+              <ShoppingCart className="h-4 w-4" /> Add to shopping
+            </button>
+            <button className="lardr-menu-btn" onClick={() => { actions.toggleLow(item); setMenuOpen(false); }} disabled={actions.busy} data-testid={`lardr-act-low-${item.id}`}>
+              <CircleDot className="h-4 w-4" /> {low ? "Mark as stocked" : "Mark as running low"}
+            </button>
+            <button className="lardr-menu-btn" onClick={() => setShowMove(true)} disabled={actions.busy} data-testid={`lardr-act-move-${item.id}`}>
+              <ArrowRightLeft className="h-4 w-4" /> Move to…
+            </button>
+            <button className="lardr-menu-btn" onClick={() => setShowAbout(true)} data-testid={`lardr-act-about-${item.id}`}>
+              <Info className="h-4 w-4" /> About this
+            </button>
+            <button className="lardr-menu-btn is-danger" onClick={() => { actions.toBin(item); setMenuOpen(false); }} disabled={actions.busy} data-testid={`lardr-act-bin-${item.id}`}>
+              <Trash2 className="h-4 w-4" /> Take out of larder
+            </button>
+          </div>
+        )}
+
+        {showMove && (
+          <div className="lardr-menu-actions">
+            <button className="lardr-menu-back" onClick={() => setShowMove(false)}>← Back</button>
+            {otherAreas.map(a => (
+              <button key={a.cat} className="lardr-menu-btn" onClick={() => { actions.moveTo(item, a.cat); setMenuOpen(false); }} disabled={actions.busy} data-testid={`lardr-move-${item.id}-${a.cat}`}>
+                <a.icon className="h-4 w-4" /> {a.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {showAbout && (
+          <div className="lardr-menu-about">
+            <button className="lardr-menu-back" onClick={() => setShowAbout(false)}>← Back</button>
+            <PantryIntelligencePanel name={nameOf(item)} data-testid={`lardr-about-${item.id}`} />
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }
 
-function PantryIcon({ className }: { className?: string }) {
+// ── A real shelf / drop surface (LARDER1 §4: "genuine placement and drop surfaces") ─
+function ShelfSurface({
+  items, actions, dragDisabled, emptyHint,
+}: { items: PantryItem[]; actions: ItemActions; dragDisabled: boolean; emptyHint: string }) {
+  if (items.length === 0) {
+    return <p className="lardr-shelf-empty">{emptyHint}</p>;
+  }
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <line x1="1" y1="20" x2="23" y2="20" />
-      <rect x="1.5" y="14" width="5" height="6" rx="1" />
-      <rect x="2.5" y="12.5" width="3" height="2" rx="0.5" />
-      <rect x="9.5" y="11" width="5" height="9" rx="1" />
-      <rect x="10.5" y="9.5" width="3" height="2" rx="0.5" />
-      <rect x="17" y="13" width="5.5" height="7" rx="1" />
-      <rect x="18" y="11.5" width="3" height="2" rx="0.5" />
-    </svg>
-  );
-}
-
-// ── Category definitions ──────────────────────────────────────────────────────
-
-const FOOD_CATS = [
-  { value: "larder"  as const, label: "Cupboard", icon: Archive      },
-  { value: "fridge"  as const, label: "Fridge",  icon: Refrigerator },
-  { value: "freezer" as const, label: "Freezer", icon: Layers       },
-  { value: "fruit"   as const, label: "Fruit",   icon: Apple        },
-];
-
-const HOME_CATS = [
-  { value: "household" as const, label: "Household",       icon: Home     },
-  { value: "pet"       as const, label: "Pet Food & Care", icon: PawPrint },
-];
-
-type FoodCat = typeof FOOD_CATS[number]["value"];
-type HomeCat = typeof HOME_CATS[number]["value"];
-
-// HOUSE2: these were four bare sentences rendered as 12px grey italic text, two of
-// which ("No freezer items yet.", "No household items yet.") named no way forward at
-// all. They now render through the canonical EmptyState owner, and every category
-// suggests something concrete. There is deliberately no action button: the add input
-// sits immediately above this slot, so a button here would be a second control for
-// one job — the description points at the control that already exists.
-const FOOD_CAT_EMPTY: Record<FoodCat, { title: string; description: string }> = {
-  larder:  { title: "No cupboard staples yet", description: "Add what you keep in — olive oil, pasta, tinned tomatoes — using the box above." },
-  fridge:  { title: "No fridge staples yet",  description: "Add what's in the fridge — milk, eggs, butter — using the box above." },
-  freezer: { title: "Nothing in the freezer yet", description: "Add what you've frozen — peas, bread, batch-cooked meals — using the box above." },
-  fruit:   { title: "No fruit yet",           description: "Add the fruit you have in — apples, berries, bananas — using the box above." },
-};
-
-const HOME_CAT_EMPTY: Record<HomeCat, { title: string; description: string }> = {
-  household: { title: "No household items yet", description: "Add the non-food things you restock — washing-up liquid, cleaning cloths — using the box above." },
-  pet:       { title: "No pet items yet",       description: "Add pet food and care items so they're counted when you shop." },
-};
-
-
-// ── Category tab buttons ──────────────────────────────────────────────────────
-// Used in the WorkspaceHeader contextBar and not inside cards.
-// Selected = realm-bg/realm-text; unselected = muted foreground.
-
-function CategoryTabs<T extends string>({
-  categories,
-  active,
-  onChange,
-  className,
-}: {
-  categories: Array<{ value: T; label: string; icon: React.ComponentType<{ className?: string }> }>;
-  active: T;
-  onChange: (v: T) => void;
-  className?: string;
-}) {
-  return (
-    <div
-      className={className ?? "flex items-center gap-1 rounded-lg bg-muted/40 p-1"}
-      role="tablist"
-    >
-      {categories.map(({ value, label, icon: Icon }) => (
-        <button
-          key={value}
-          role="tab"
-          aria-selected={active === value}
-          onClick={() => onChange(value)}
-          className={`flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap ${
-            active === value
-              ? "shadow-sm realm-banner-btn"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-          data-testid={`button-pantry-cat-${value}`}
-        >
-          <Icon className="h-3.5 w-3.5 shrink-0" />
-          <span className="hidden sm:inline">{label}</span>
-          <span className="sm:hidden">{label.split(" ")[0]}</span>
-        </button>
+    <div className="lardr-shelf-row">
+      {items.map(i => (
+        <ProductObject key={i.id} item={i} actions={actions} dragDisabled={dragDisabled} />
       ))}
     </div>
   );
 }
 
-// ── Food Pantry Section ───────────────────────────────────────────────────────
-// Tabs are rendered in the page banner — not inside this card.
+// A piece of open storage furniture (larder shelving, baskets, cupboard, drawer).
+// The whole interior is a droppable — dropping a product here MOVES it here.
+function StorageFurniture({
+  area, items, actions, dragDisabled,
+}: { area: Area; items: PantryItem[]; actions: ItemActions; dragDisabled: boolean }) {
+  const { setNodeRef, isOver } = useDroppable({ id: `area-${area.cat}`, data: { kind: "move", category: area.cat } });
+  const Icon = area.icon;
+  // Split into two shelf boards for the larder so it reads as real shelving.
+  const boards = area.furniture === "shelving" && items.length > 5
+    ? [items.slice(0, Math.ceil(items.length / 2)), items.slice(Math.ceil(items.length / 2))]
+    : [items];
 
-function FoodPantrySection({
-  items,
-  isLoading,
-  // PROD1 — threaded in beside `isLoading`, which this section already accepted.
-  // Without them a failed `/api/pantry` renders this room's per-category empty
-  // copy — e.g. "No larder staples yet — try adding olive oil or pasta." — to a
-  // household whose larder is fully stocked, inviting them to re-add food they
-  // already own. The absence copy is good; it was simply being shown for the
-  // wrong reason.
-  isError,
-  onRetry,
-  activeCategory,
-  onCategoryChange,
-  searchFilter,
+  return (
+    <section
+      ref={setNodeRef}
+      className={`lardr-furniture lardr-${area.furniture}${isOver ? " is-over" : ""}`}
+      data-testid={`lardr-area-${area.cat}`}
+      aria-label={area.label}
+    >
+      <header className="lardr-furniture-head">
+        <Icon className="h-4 w-4" />
+        <h2>{area.label}</h2>
+        <span className="lardr-furniture-count">{items.length} {items.length === 1 ? "item" : "items"}</span>
+      </header>
+      <div className="lardr-furniture-body">
+        {boards.map((board, bi) => (
+          <div className="lardr-board" key={bi}>
+            <ShelfSurface items={board} actions={actions} dragDisabled={dragDisabled}
+              emptyHint={`Nothing kept in the ${area.short.toLowerCase()} yet — add something with search below.`} />
+            <div className="lardr-board-plank" aria-hidden />
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// The fridge / freezer: a real appliance with a door that OPENS to reveal the
+// actual inventory inside constructed racks, shelves and drawers/compartments
+// (LARDER1 §3 — categories are places; the door reveals the `fridge`/`freezer`
+// category's real items).
+function ApplianceFurniture({
+  area, items, actions, dragDisabled, open, onToggle,
 }: {
-  items: PantryItem[];
-  isLoading: boolean;
-  isError: boolean;
-  onRetry: () => void;
-  activeCategory: FoodCat;
-  onCategoryChange: (c: FoodCat) => void;
-  searchFilter?: string;
+  area: Area; items: PantryItem[]; actions: ItemActions; dragDisabled: boolean;
+  open: boolean; onToggle: () => void;
 }) {
+  const { setNodeRef, isOver } = useDroppable({ id: `area-${area.cat}`, data: { kind: "move", category: area.cat } });
+  const Icon = area.icon;
+  const isFreezer = area.cat === "freezer";
+  // Three constructed compartments: rack (top), shelf (middle), drawer (bottom).
+  const compartments = isFreezer
+    ? ["Top compartment", "Middle compartment", "Bottom drawer"]
+    : ["Top rack", "Middle shelf", "Salad drawer"];
+  const groups = compartments.map((_, gi) => items.filter((_, idx) => idx % 3 === gi));
+
+  return (
+    <section
+      ref={setNodeRef}
+      className={`lardr-furniture lardr-appliance${open ? " is-open" : ""}${isOver ? " is-over" : ""}${isFreezer ? " is-freezer" : ""}`}
+      data-testid={`lardr-area-${area.cat}`}
+      aria-label={area.label}
+    >
+      <button
+        type="button"
+        className="lardr-appliance-door"
+        onClick={onToggle}
+        aria-expanded={open}
+        aria-controls={`lardr-appliance-inside-${area.cat}`}
+        data-testid={`lardr-appliance-toggle-${area.cat}`}
+      >
+        <span className="lardr-appliance-handle" aria-hidden />
+        <span className="lardr-appliance-label">
+          <Icon className="h-5 w-5" />
+          <span>
+            <b>{area.label}</b>
+            <small>{items.length} {items.length === 1 ? "item" : "items"} inside · {open ? "tap to close" : "tap to open"}</small>
+          </span>
+        </span>
+        <ChevronDown className={`h-5 w-5 lardr-appliance-chev${open ? " is-open" : ""}`} aria-hidden />
+      </button>
+
+      {open && (
+        <div className="lardr-appliance-inside" id={`lardr-appliance-inside-${area.cat}`}>
+          {items.length === 0 ? (
+            <p className="lardr-shelf-empty">
+              The {area.short.toLowerCase()} is empty — add something with search below.
+            </p>
+          ) : (
+            compartments.map((name, gi) => (
+              <div className="lardr-compartment" key={name} data-testid={`lardr-compartment-${area.cat}-${gi}`}>
+                <span className="lardr-compartment-label">{name}</span>
+                <ShelfSurface items={groups[gi]} actions={actions} dragDisabled={dragDisabled}
+                  emptyHint="" />
+                <div className="lardr-board-plank is-cold" aria-hidden />
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// The two always-visible drop destinations: Shopping (keeps the staple) and the
+// Bin (takes it out, reversibly). A sticky dock so they are reachable throughout
+// a drag, and each is a genuine droppable.
+function Dock({ onOpenShopping, dragging }: { onOpenShopping: () => void; dragging: boolean }) {
+  const shopping = useDroppable({ id: "shopping", data: { kind: "shopping" } });
+  const bin = useDroppable({ id: "bin", data: { kind: "bin" } });
+  return (
+    <div className={`lardr-dock${dragging ? " is-dragging" : ""}`} role="group" aria-label="Drop here">
+      <button
+        ref={shopping.setNodeRef}
+        type="button"
+        onClick={onOpenShopping}
+        className={`lardr-dock-target is-shop${shopping.isOver ? " is-over" : ""}`}
+        data-testid="lardr-dock-shopping"
+        aria-label="Shopping — drop a product here to add it to your shopping list"
+      >
+        <ShoppingCart className="h-5 w-5" />
+        <span>Shopping</span>
+      </button>
+      <div
+        ref={bin.setNodeRef}
+        className={`lardr-dock-target is-bin${bin.isOver ? " is-over" : ""}`}
+        data-testid="lardr-dock-bin"
+        aria-label="Bin — drop a product here to take it out of your larder"
+      >
+        <Trash2 className="h-5 w-5" />
+        <span>Bin</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+export default function PantryPage() {
+  const { data: items = [], isPending: isLoading, isError, refetch } =
+    useQuery<PantryItem[]>({ queryKey: ["/api/pantry"] });
   const { toast } = useToast();
   const qclient = useQueryClient();
+  const invalidatePantry = useCallback(() => qclient.invalidateQueries({ queryKey: ["/api/pantry"] }), [qclient]);
 
-  // Single query state drives both live filtering and new-item add
-  const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [sending, setSending] = useState(false);
-  const [sendQty, setSendQty] = useState(1);
-  // PX1-W2 (fnd-px-invisible-destructive-controls): deleting fired straight from
-  // the row's onClick — and it is the only delete path, so a pantry item could
-  // only ever be removed by accident. The canonical AlertDialog asks first.
-  const [confirmDelete, setConfirmDelete] = useState<{ id: number; name: string } | null>(null);
-  const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
-  const [serverKnowledge, setServerKnowledge] = useState<Map<string, "loading" | null | {
-    supports: string[];
-    highlights?: string[];
-    whyItMatters: string;
-    goodToKnow?: string;
-    howToChoose?: string[];
-    tags: string[];
-  }>>(new Map());
+  const [openAppliance, setOpenAppliance] = useState<Record<string, boolean>>({});
+  const [addQuery, setAddQuery] = useState("");
+  const [addCat, setAddCat] = useState<string>("larder");
+  const [activeId, setActiveId] = useState<number | null>(null);
 
-  // WX7 — canonical search index: maps each pantry item to its canonical TERMS
-  // (benefits, nutrients, attributes, seasonality) so search matches by meaning,
-  // not just by name. Reuses canonical knowledge; never a second search engine.
-  const { data: searchIndexData } = useQuery<{ index: Array<{ ingredientKey: string; terms: string[] }> }>({
-    queryKey: ["/api/pantry/search-index"],
-    staleTime: 5 * 60 * 1000,
+  // ── Mutations: every write goes through an existing Domain 30 / 15 owner ────
+
+  // Domain 15 — add to shopping. NEVER removes the staple (LARDER1 §8).
+  const shoppingMutation = useTrackedMutation({
+    mutationFn: (item: PantryItem) => apiRequest("POST", "/api/shopping-list", {
+      productName: nameOf(item),
+      quantityValue: item.needQuantityValue ?? 1,
+      unit: item.needUnit || "unit",
+      category: item.category,
+      source: item.category === "household" ? "household" : "pantry",
+    }),
+    onSuccess: () => qclient.invalidateQueries({ queryKey: ["/api/shopping-list"] }),
+    feedback: {
+      success: (_d, item: PantryItem) => `${nameOf(item)} added to shopping`,
+      successDescription: "It's still in your larder — we've just noted you need to buy more.",
+      failure: "Couldn't add that to your shopping",
+      failureDescription: "Nothing changed in your larder. Please try again.",
+    },
   });
-  const searchTerms = useMemo(() => {
-    const m = new Map<string, string[]>();
-    for (const row of searchIndexData?.index ?? []) m.set(row.ingredientKey, row.terms);
-    return m;
-  }, [searchIndexData]);
 
-  // PX1-W0 (fnd-px-silent-mutations): a failed add told the household "Failed to add
-  // item" and nothing else — not whether the food had been saved, not what to do next
-  // (EXP §14 asks for all three). The words now belong to the mutation.
-  //
-  // PX1-W4b (fnd-px-success-silent-error-loud): "already in the pantry" is not a
-  // failure — it is the pantry agreeing with them — and it was being raised in red,
-  // as a destructive alarm, in the voice THA uses for lost data. It is now a
-  // `satisfied` outcome and speaks calmly. The ref this used to travel on is gone
-  // with it: it existed only because TOAST_LIMIT was 1, so a toast raised here would
-  // have been destroyed by the hook's (fnd-px-toast-limit-one, fixed in this change).
-  //
-  // The recogniser reads the error's MESSAGE, because that is the error contract THA
-  // actually has: `queryClient.ts` throws `new Error(`${status}: ${rawBody}`)` and
-  // attaches nothing else. The predecessor here tested `err.body?.error`, a property
-  // that has never existed on it — so the branch never fired, and a household adding
-  // a food they already had was told "It hasn't been saved" about a food that WAS
-  // saved. The alarm was the reported defect; the lie underneath it was found by
-  // driving the flow in a browser, which is the only reason it is fixed here.
-  const addMutation = useTrackedMutation({
-    mutationFn: (data: { ingredient: string; displayName: string; category: string }) =>
-      apiRequest("POST", "/api/pantry", data),
-    onSuccess: () => {
-      qclient.invalidateQueries({ queryKey: ["/api/pantry"] });
-      setQuery("");
+  // Domain 30 — restore (Undo of the Bin). Its own writer, added under LARDER1 §4.3.
+  const restoreMutation = useTrackedMutation({
+    mutationFn: (id: number) => apiRequest("POST", `/api/pantry/${id}/restore`),
+    onSuccess: invalidatePantry,
+    feedback: {
+      satisfied: (err) => isAlreadyExists(err) && { title: "Already back in your larder" },
+      failure: "Couldn't put that back",
+      failureDescription: "Please try again from your larder.",
+    },
+  });
+
+  // Domain 30 — take out of the larder (soft-delete). Reversible via restore.
+  const binMutation = useTrackedMutation({
+    mutationFn: (item: PantryItem) => apiRequest("DELETE", `/api/pantry/${item.id}`),
+    onSuccess: (_res, item: PantryItem) => {
+      invalidatePantry();
+      // Undo is offered on the SAME record — restore brings back exactly this item.
+      toast({
+        title: `${nameOf(item)} taken out of your larder`,
+        description: "It no longer counts as something you keep.",
+        action: (
+          <ToastAction altText="Undo" onClick={() => restoreMutation.mutate(item.id)} data-testid="lardr-undo-bin">
+            Undo
+          </ToastAction>
+        ),
+      });
     },
     feedback: {
-      // No success title: the food appears in the pantry — the list is its own confirmation.
-      satisfied: (err) =>
-        isAlreadyExists(err) && {
-          title: "Already in larder",
-          description: "This ingredient is already listed.",
-        },
+      // On a FAILED write the record was never removed — the query refetch below
+      // restores the object on screen (LARDER1 §4: never destructive without recovery).
+      failure: "Couldn't take that out",
+      failureDescription: "It's still in your larder. Please try again.",
+    },
+    onError: invalidatePantry,
+  });
+
+  // Domain 30 — move to a different storage location (its `category`). Writes the
+  // SAME canonical record; no duplicate is ever created (LARDER1 §4).
+  const moveMutation = useTrackedMutation({
+    mutationFn: ({ item, cat }: { item: PantryItem; cat: string }) =>
+      apiRequest("PATCH", `/api/pantry/${item.id}`, { category: cat }),
+    onSuccess: invalidatePantry,
+    feedback: {
+      success: (_d, { item, cat }: { item: PantryItem; cat: string }) => `${nameOf(item)} moved to ${areaOf(cat).label}`,
+      failure: "Couldn't move that",
+      failureDescription: "It's still where it was. Please try again.",
+    },
+  });
+
+  // Domain 30 — approximate availability toggle (running low / stocked). Reads and
+  // writes the existing `needQuantityValue` flag; surfaces NO number (LARDER1 §16).
+  const lowMutation = useTrackedMutation({
+    mutationFn: ({ item, low }: { item: PantryItem; low: boolean }) =>
+      apiRequest("PATCH", `/api/pantry/${item.id}`, { needQuantityValue: low ? 1 : null, needUnit: null }),
+    onSuccess: invalidatePantry,
+    feedback: {
+      failure: "Couldn't update that",
+      failureDescription: "Your larder still shows what it did before. Please try again.",
+    },
+  });
+
+  // Domain 30 — add a new staple. Resolves identity against Domain 2 server-side.
+  const addMutation = useTrackedMutation({
+    mutationFn: ({ name, cat }: { name: string; cat: string }) =>
+      apiRequest("POST", "/api/pantry", { ingredient: name, displayName: name, category: cat }),
+    onSuccess: () => { invalidatePantry(); setAddQuery(""); },
+    feedback: {
+      satisfied: (err) => isAlreadyExists(err) && { title: "Already in your larder", description: "This is already something you keep." },
       failure: "Couldn't add that to your larder",
       failureDescription: "It hasn't been saved. Please try again.",
     },
   });
 
-  // PX1-W0 (fnd-px-silent-mutations): a failed removal said "Failed to remove item".
-  // The row stayed on screen and the household was left to guess whether the food was
-  // still in their pantry — so the description now says plainly that it is.
-  const deleteMutation = useTrackedMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/pantry/${id}`),
-    onSuccess: (_, id) => {
-      setSelected(prev => { const next = new Set(prev); next.delete(id); return next; });
-      qclient.invalidateQueries({ queryKey: ["/api/pantry"] });
-    },
-    feedback: {
-      // No success title: the row leaves the pantry — the list is its own confirmation.
-      failure: "Couldn't remove that from your pantry",
-      failureDescription: "It's still in your pantry. Please try again.",
-    },
-  });
+  const busy = shoppingMutation.isPending || binMutation.isPending || moveMutation.isPending || lowMutation.isPending;
 
-  // PX1-W0 (fnd-px-silent-mutations): a failed quantity change said "Failed to update
-  // need quantity" — product language, and silent about the fact that the amount on
-  // screen was no longer the amount that had been saved.
-  const patchQuantityMutation = useTrackedMutation({
-    mutationFn: ({ id, needQuantityValue, needUnit }: { id: number; needQuantityValue: number | null; needUnit: string | null }) =>
-      apiRequest("PATCH", `/api/pantry/${id}`, { needQuantityValue, needUnit }),
-    onSuccess: () => qclient.invalidateQueries({ queryKey: ["/api/pantry"] }),
-    feedback: {
-      // No success title: the amount on the row updates — the row is its own confirmation.
-      failure: "Couldn't update how much you need",
-      failureDescription: "Your pantry still shows the amount it had before. Please try again.",
-    },
-  });
+  const actions: ItemActions = useMemo(() => ({
+    toShopping: (i) => shoppingMutation.mutate(i),
+    toBin: (i) => binMutation.mutate(i),
+    moveTo: (i, cat) => { if (cat !== i.category) moveMutation.mutate({ item: i, cat }); },
+    toggleLow: (i) => lowMutation.mutate({ item: i, low: i.needQuantityValue === null }),
+    busy,
+  }), [shoppingMutation, binMutation, moveMutation, lowMutation, busy]);
 
-  const handlePatchQuantity = (id: number, qty: number | null, unit: string | null) => {
-    patchQuantityMutation.mutate({ id, needQuantityValue: qty, needUnit: unit });
-  };
+  // ── Companion context — the area a product was last selected/opened in ──────
+  usePublishCompanionContext({ selectedPantryCategory: addCat });
 
-  const foodCatValues = FOOD_CATS.map(c => c.value as string);
-  const allFoodItems = items.filter(i => foodCatValues.includes(i.category));
-  const activeItems = allFoodItems.filter(i => i.category === activeCategory);
-
-  // searchFilter (from WorkspaceHeader) takes priority over internal query for filtering
-  const activeFilter = (searchFilter ?? "").trim() || query.trim();
-
-  const displayedItems = useMemo(() => {
-    if (!activeFilter) return activeItems;
-    const ql = activeFilter.toLowerCase();
-    return activeItems.filter(item => {
-      if ((item.displayName || item.ingredientKey).toLowerCase().includes(ql)) return true;
-      // WX7 — match canonical terms (benefits, nutrients, attributes, seasonality).
-      const terms = searchTerms.get(item.ingredientKey);
-      if (terms && terms.some(t => t.includes(ql))) return true;
-      const know = serverKnowledge.get(item.ingredientKey);
-      if (!know || know === "loading") return false;
-      return know.tags.some(t => t.toLowerCase().includes(ql)) ||
-        know.supports.some(s => s.toLowerCase().includes(ql));
-    });
-  }, [activeItems, activeFilter, serverKnowledge, searchTerms]);
-
-  // Called when banner tab changes
-  const handleCategoryChange = (cat: FoodCat) => {
-    onCategoryChange(cat);
-    setSelected(new Set());
-    setQuery("");
-  };
-
-  const handleAdd = () => {
-    if (!query.trim()) return;
-    addMutation.mutate({ ingredient: query.trim(), displayName: query.trim(), category: activeCategory });
-  };
-
-  const toggleItem = (id: number) => {
-    setSelected(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  };
-
-  const toggleAll = () => {
-    const ids = displayedItems.map(i => i.id);
-    const allSelected = ids.every(id => selected.has(id));
-    setSelected(prev => {
-      const next = new Set(prev);
-      if (allSelected) ids.forEach(id => next.delete(id));
-      else ids.forEach(id => next.add(id));
-      return next;
-    });
-  };
-
-  const toggleExpanded = (id: number, ingredientKey: string) => {
-    setExpandedItems(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-        if (!serverKnowledge.has(ingredientKey)) {
-          setServerKnowledge(m => new Map(m).set(ingredientKey, "loading"));
-          fetch(`/api/pantry/knowledge/${encodeURIComponent(ingredientKey)}`)
-            .then(r => r.json())
-            .then(data => setServerKnowledge(m => new Map(m).set(ingredientKey, data)))
-            .catch(() => setServerKnowledge(m => new Map(m).set(ingredientKey, null)));
-        }
-      }
-      return next;
-    });
-  };
-
-  const sendToBasket = async () => {
-    if (selected.size === 0) return;
-    setSending(true);
-    const toSend = allFoodItems.filter(i => selected.has(i.id));
-    try {
-      await Promise.all(
-        toSend.map(item =>
-          apiRequest("POST", "/api/shopping-list", {
-            productName: item.displayName || item.ingredientKey,
-            quantityValue: sendQty,
-            unit: "unit",
-            category: item.category,
-            source: "pantry",
-          })
-        )
-      );
-      toast({ title: `Added ${toSend.length} item${toSend.length > 1 ? "s" : ""} to basket` });
-      setSelected(new Set());
-      setSendQty(1);
-      qclient.invalidateQueries({ queryKey: ["/api/shopping-list"] });
-    } catch {
-      toast({ title: "Couldn't add that to your basket", description: "Try again in a moment.", variant: "destructive" });
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const needItems = displayedItems.filter(i => i.needQuantityValue !== null);
-  const inPantryItems = displayedItems.filter(i => i.needQuantityValue === null);
-  const showGroupHeaders = needItems.length > 0;
-
-  const selectedInActive = displayedItems.filter(i => selected.has(i.id)).length;
-  const allActiveSelected = displayedItems.length > 0 && displayedItems.every(i => selected.has(i.id));
-  const catLabel = FOOD_CATS.find(c => c.value === activeCategory)?.label.toLowerCase() ?? "pantry";
-
-  return (
-    <Card className="p-4 sm:p-5">
-      {/* Section header row */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <PantryIcon className="h-4 w-4 text-primary" />
-          <h2 className="text-base font-semibold">Food</h2>
-        </div>
-        {selected.size > 0 && (
-          <div className="flex items-center gap-1.5">
-            <input
-              type="number"
-              min={1}
-              value={sendQty}
-              onChange={e => setSendQty(Math.max(1, parseInt(e.target.value) || 1))}
-              className="w-12 h-8 text-[13px] px-2 rounded-md border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary/30 tabular-nums text-center"
-              aria-label="Quantity to send"
-              data-testid="input-food-send-qty"
-            />
-            <Button variant="default"
-              size="sm"
-              className="realm-banner-btn"
-              onClick={sendToBasket}
-              disabled={sending}
-              data-testid="button-food-send-to-basket"
-            >
-              {sending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <ShoppingBasket className="h-3 w-3 mr-1" />}
-              Send {selected.size}
-            </Button>
-          </div>
-        )}
-      </div>
-
-      {/* Add ingredient — search lives in the Workspace Header */}
-      <div className="flex gap-2 mb-3">
-        <div className="relative flex-1 min-w-0">
-          <input
-            type="text"
-            placeholder={`Add to ${catLabel}…`}
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && handleAdd()}
-            aria-label={`Add to ${catLabel}`}
-            className="w-full pl-3 pr-8 py-2 text-sm rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-ring"
-            data-testid="input-food-pantry-ingredient"
-          />
-          {query && (
-            <button
-              type="button"
-              onClick={() => setQuery("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
-              aria-label="Clear"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
-        <Button variant="default"
-          size="sm"
-          className="realm-banner-btn"
-          onClick={handleAdd}
-          disabled={!query.trim() || addMutation.isPending}
-          data-testid="button-food-pantry-add"
-        >
-          {addMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-          <span className="ml-1">Add</span>
-        </Button>
-      </div>
-
-      {/* Items list */}
-      {isLoading ? (
-        <div className="space-y-2">
-          <Skeleton className="h-6 w-full" />
-          <Skeleton className="h-6 w-3/4" />
-        </div>
-      ) : isError ? (
-        // Before the filtered and empty branches, for the same load-bearing reason
-        // as every other room: on error the item list is empty, so an absence
-        // branch tested first would win and misdescribe the failure.
-        <LoadError
-          what="your pantry"
-          onRetry={onRetry}
-          description="Nothing has been lost — what's in your pantry is safe. This is a problem at our end."
-          data-testid="error-pantry"
-        />
-      ) : activeFilter && displayedItems.length === 0 ? (
-        <EmptyState variant="filtered" title={`No items matched "${activeFilter}"`} data-testid="empty-pantry-filter" />
-      ) : (
-        <div
-          className="rounded-lg border border-border/40 overflow-hidden"
-          style={{ background: "color-mix(in srgb, var(--realm-bg) 22%, white)" }}
-        >
-          {displayedItems.length === 0 ? (
-            <EmptyState
-              variant="empty"
-              size="compact"
-              icon={FOOD_CATS.find(c => c.value === activeCategory)?.icon}
-              title={FOOD_CAT_EMPTY[activeCategory].title}
-              description={FOOD_CAT_EMPTY[activeCategory].description}
-              data-testid={`empty-pantry-${activeCategory}`}
-            />
-          ) : (
-            <div className="px-3 pt-1">
-              <label htmlFor={`checkbox-select-all-${activeCategory}`} className="flex items-center gap-3 pb-2 mb-1 border-b border-border/40 cursor-pointer select-none min-h-[2.75rem]">
-                <Checkbox
-                  id={`checkbox-select-all-${activeCategory}`}
-                  checked={allActiveSelected}
-                  onCheckedChange={toggleAll}
-                  data-testid={`checkbox-select-all-${activeCategory}`}
-                />
-                <span className="text-xs text-muted-foreground">Select all</span>
-                {selectedInActive > 0 && (
-                  <Badge variant="default" className="text-[10px] h-4 px-1.5 ml-auto">
-                    {selectedInActive} selected
-                  </Badge>
-                )}
-              </label>
-
-              {/*
-                Bottom padding sits INSIDE the scroller, so the clip edge is the
-                card edge: a part-visible row then reads as "more below" rather
-                than a sliced row stranded above dead card background (D6).
-              */}
-              <div className="max-h-72 overflow-y-auto pb-2">
-                {([
-                  ...(showGroupHeaders ? [{ group: "need" as const, groupItems: needItems }] : []),
-                  { group: "inPantry" as const, groupItems: showGroupHeaders ? inPantryItems : displayedItems },
-                ]).map(({ group, groupItems }) => (
-                  <div key={group}>
-                    {showGroupHeaders && (
-                      <p className={`text-[10px] uppercase tracking-[0.08em] font-semibold px-0.5 pt-1.5 pb-0.5 ${
-                        group === "need"
-                          ? "text-amber-600/80 dark:text-amber-400/70"
-                          : "text-muted-foreground/40 mt-1"
-                      }`}>
-                        {group === "need" ? "Need" : "In Larder"}
-                      </p>
-                    )}
-                    {groupItems.map(item => {
-                      const serverKnow = serverKnowledge.get(item.ingredientKey);
-                      const isExpanded = expandedItems.has(item.id);
-                      const isLoadingKnowledge = serverKnow === "loading";
-                      const knowledge = !isLoadingKnowledge && serverKnow != null ? serverKnow : null;
-
-                      return (
-                        <div key={item.id} className="group" data-testid={`row-food-pantry-item-${item.id}`}>
-                          <div className="flex items-center gap-1">
-                            <label
-                              htmlFor={`checkbox-food-${item.id}`}
-                              className="flex items-center gap-3 flex-1 min-w-0 py-2.5 cursor-pointer select-none min-h-[2.75rem]"
-                              data-testid={`label-food-${item.id}`}
-                            >
-                              <Checkbox
-                                id={`checkbox-food-${item.id}`}
-                                checked={selected.has(item.id)}
-                                onCheckedChange={() => toggleItem(item.id)}
-                                data-testid={`checkbox-food-${item.id}`}
-                              />
-                              <span className="text-sm flex-1 min-w-0 truncate">{item.displayName || item.ingredientKey}</span>
-                            </label>
-                            <NeedQuantityControl item={item} onPatch={handlePatchQuantity} />
-                            <button
-                              type="button"
-                              onClick={() => toggleExpanded(item.id, item.ingredientKey)}
-                              className="p-2 text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors shrink-0"
-                              title={isExpanded ? "Hide details" : "Learn about this ingredient"}
-                              aria-label={isExpanded ? "Hide details" : "Learn about this ingredient"}
-                              data-testid={`button-food-pantry-expand-${item.id}`}
-                            >
-                              <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-150 ${isExpanded ? "rotate-180" : ""}`} />
-                            </button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-9 w-9 text-muted-foreground hover:text-destructive hover-reveal group-hover:opacity-100 transition-opacity shrink-0"
-                              onClick={() => setConfirmDelete({ id: item.id, name: item.displayName || item.ingredientKey })}
-                              disabled={deleteMutation.isPending}
-                              aria-label={`Remove ${item.displayName || item.ingredientKey} from your pantry`}
-                              data-testid={`button-food-pantry-delete-${item.id}`}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-
-                          {isExpanded && (
-                            <div className="pl-9 pr-3 pb-3 space-y-2.5 border-t border-border/30 mt-0.5">
-                              {isLoadingKnowledge && (
-                                <p className="text-xs text-muted-foreground/50 italic pt-2.5">Loading ingredient info…</p>
-                              )}
-                              {!isLoadingKnowledge && knowledge && (
-                                <>
-                                  {knowledge.supports.length > 0 && (
-                                    <div className="pt-2.5">
-                                      <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/50 font-medium mb-1.5">Supports</p>
-                                      <div className="flex flex-wrap gap-1">
-                                        {knowledge.supports.map(s => (
-                                          <span key={s} className="text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border/60">{s}</span>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-                                  {knowledge.highlights && knowledge.highlights.length > 0 && (
-                                    <div className={knowledge.supports.length === 0 ? "pt-2.5" : ""}>
-                                      <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/50 font-medium mb-1.5">Highlights</p>
-                                      <div className="flex flex-wrap gap-1">
-                                        {knowledge.highlights.map(h => (
-                                          <span key={h} className="text-[11px] px-2 py-0.5 rounded-full bg-accent/40 text-muted-foreground border border-border/40">{h}</span>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-                                  <div>
-                                    <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/50 font-medium mb-0.5">Why it matters</p>
-                                    <p className="text-xs text-muted-foreground/80 leading-relaxed">{knowledge.whyItMatters}</p>
-                                  </div>
-                                  {knowledge.goodToKnow && (
-                                    <div>
-                                      <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/50 font-medium mb-0.5">Good to know</p>
-                                      <p className="text-xs text-muted-foreground/80 leading-relaxed">{knowledge.goodToKnow}</p>
-                                    </div>
-                                  )}
-                                  {knowledge.howToChoose && knowledge.howToChoose.length > 0 && (
-                                    <div>
-                                      <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/50 font-medium mb-1">How to choose</p>
-                                      <ul className="space-y-0.5">
-                                        {knowledge.howToChoose.map((tip, i) => (
-                                          <li key={i} className="text-xs text-muted-foreground/80 flex items-start gap-1.5">
-                                            <span className="text-muted-foreground/40 mt-0.5 shrink-0">·</span>
-                                            {tip}
-                                          </li>
-                                        ))}
-                                      </ul>
-                                    </div>
-                                  )}
-                                </>
-                              )}
-                              {!isLoadingKnowledge && !knowledge && (
-                                <p className="text-xs text-muted-foreground/50 italic pt-2.5">Nothing more to add here just yet.</p>
-                              )}
-                              {/* WX7 — Household Food Library: your household's relationship with this food. */}
-                              <PantryIntelligencePanel
-                                name={item.displayName || item.ingredientKey}
-                                data-testid={`pantry-intelligence-${item.id}`}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      <AlertDialog open={confirmDelete !== null} onOpenChange={(open) => { if (!open) setConfirmDelete(null); }}>
-        <AlertDialogContent data-testid="dialog-food-pantry-delete">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove {confirmDelete?.name} from your pantry?</AlertDialogTitle>
-            <AlertDialogDescription>
-              It will no longer count as something you have in. You can add it back any time.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel data-testid="button-food-pantry-delete-cancel">Keep it</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => { if (confirmDelete) deleteMutation.mutate(confirmDelete.id); setConfirmDelete(null); }}
-              data-testid="button-food-pantry-delete-confirm"
-            >
-              Remove
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </Card>
+  // ── Drag orchestration (pointer + touch; keyboard is served by the menu) ────
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 220, tolerance: 6 } }),
   );
-}
 
-// ── Home Pantry Section ───────────────────────────────────────────────────────
-// Tabs are rendered in the page banner — not inside this card.
-// Unified query field drives both live filtering and new-item add (same pattern as Food).
+  const itemsById = useMemo(() => new Map(items.map(i => [i.id, i])), [items]);
 
-function HomePantrySection({
-  items,
-  isLoading,
-  // PROD1 — the SECOND half of this room. Both sections read the SAME
-  // `/api/pantry` query, so fixing only the food list left the household section
-  // still answering a failed load with "No household items yet." The screenshot
-  // evidence showed exactly that: an honest error card above, and a confident
-  // false absence directly below it in the same failure. A room is not fixed
-  // until every section fed by the failed read stops claiming an absence.
-  isError,
-  onRetry,
-  activeCategory,
-  onCategoryChange,
-}: {
-  items: PantryItem[];
-  isLoading: boolean;
-  isError: boolean;
-  onRetry: () => void;
-  activeCategory: HomeCat;
-  onCategoryChange: (c: HomeCat) => void;
-}) {
-  const { toast } = useToast();
-  const qclient = useQueryClient();
-
-  // Single query state drives both live filtering and new-item add
-  const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [sending, setSending] = useState(false);
-  const [sendQty, setSendQty] = useState(1);
-  // PX1-W2 (fnd-px-invisible-destructive-controls): same unguarded delete as the
-  // food list above — the second copy of the pantry mutations gets the same ask.
-  const [confirmDelete, setConfirmDelete] = useState<{ id: number; name: string } | null>(null);
-
-  const homeCatValues = HOME_CATS.map(c => c.value as string);
-  const allHomeItems = items.filter(i => homeCatValues.includes(i.category));
-  const activeItems = allHomeItems.filter(i => i.category === activeCategory);
-
-  const displayedItems = useMemo(() => {
-    if (!query.trim()) return activeItems;
-    const q = query.toLowerCase();
-    return activeItems.filter(item =>
-      (item.displayName || item.ingredientKey).toLowerCase().includes(q)
-    );
-  }, [activeItems, query]);
-
-  // PX1-W0 (fnd-px-silent-mutations): this is the SECOND copy of the pantry mutations
-  // (the household-items list). It failed exactly as silently as the food list above —
-  // "Failed to add item", with no word on the household's data and no way forward. The
-  // duplication itself is a later workstream; both copies get an honest failure path now.
-  //
-  // PX1-W4b (fnd-px-success-silent-error-loud): as above — "already in the list" is a
-  // satisfied state, not a red alarm, and the TOAST_LIMIT ref it travelled on is gone.
-  const addMutation = useTrackedMutation({
-    mutationFn: ({ name, cat }: { name: string; cat: string }) =>
-      apiRequest("POST", "/api/pantry", { ingredient: name, displayName: name, category: cat }),
-    onSuccess: () => {
-      qclient.invalidateQueries({ queryKey: ["/api/pantry"] });
-      setQuery("");
-    },
-    feedback: {
-      // No success title: the item appears in the list — the list is its own confirmation.
-      satisfied: (err) =>
-        isAlreadyExists(err) && {
-          title: "Already in list",
-          description: "This item is already there.",
-        },
-      failure: "Couldn't add that to your list",
-      failureDescription: "It hasn't been saved. Please try again.",
-    },
-  });
-
-  // PX1-W0 (fnd-px-silent-mutations): a failed removal said "Failed to remove item" and
-  // left the row on screen, saying nothing about whether the item was still on the list.
-  const deleteMutation = useTrackedMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/pantry/${id}`),
-    onSuccess: (_, id) => {
-      setSelected(prev => { const next = new Set(prev); next.delete(id); return next; });
-      qclient.invalidateQueries({ queryKey: ["/api/pantry"] });
-    },
-    feedback: {
-      // No success title: the row leaves the list — the list is its own confirmation.
-      failure: "Couldn't remove that from your list",
-      failureDescription: "It's still on your list. Please try again.",
-    },
-  });
-
-  // PX1-W0 (fnd-px-silent-mutations): a failed quantity change said "Failed to update
-  // need quantity" — product language, and silent about the amount on screen no longer
-  // being the amount that had been saved.
-  const patchQuantityMutation = useTrackedMutation({
-    mutationFn: ({ id, needQuantityValue, needUnit }: { id: number; needQuantityValue: number | null; needUnit: string | null }) =>
-      apiRequest("PATCH", `/api/pantry/${id}`, { needQuantityValue, needUnit }),
-    onSuccess: () => qclient.invalidateQueries({ queryKey: ["/api/pantry"] }),
-    feedback: {
-      // No success title: the amount on the row updates — the row is its own confirmation.
-      failure: "Couldn't update how much you need",
-      failureDescription: "Your list still shows the amount it had before. Please try again.",
-    },
-  });
-
-  const handlePatchQuantity = (id: number, qty: number | null, unit: string | null) => {
-    patchQuantityMutation.mutate({ id, needQuantityValue: qty, needUnit: unit });
+  const onDragStart = (e: DragStartEvent) => {
+    const id = e.active.data.current?.itemId as number | undefined;
+    setActiveId(id ?? null);
+  };
+  const onDragEnd = (e: DragEndEvent) => {
+    const id = e.active.data.current?.itemId as number | undefined;
+    setActiveId(null);
+    const over = e.over?.data.current as { kind: string; category?: string } | undefined;
+    if (id == null || !over) return;
+    const item = itemsById.get(id);
+    if (!item) return;
+    if (over.kind === "shopping") actions.toShopping(item);
+    else if (over.kind === "bin") actions.toBin(item);
+    else if (over.kind === "move" && over.category && over.category !== item.category) actions.moveTo(item, over.category);
   };
 
-  const handleAdd = () => {
-    if (!query.trim()) return;
-    // Pass category explicitly to avoid stale closure
-    addMutation.mutate({ name: query.trim(), cat: activeCategory });
-  };
+  const activeItem = activeId != null ? itemsById.get(activeId) ?? null : null;
 
-  const toggleSelect = (id: number) => {
-    setSelected(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  };
+  // ── Availability at a glance — three honest readings, never a quantity ──────
+  const byArea = useMemo(() => {
+    const m = new Map<string, PantryItem[]>();
+    for (const a of AREAS) m.set(a.cat, []);
+    for (const i of items) { const arr = m.get(i.category); if (arr) arr.push(i); }
+    return m;
+  }, [items]);
+  const lowCount = useMemo(() => items.filter(i => i.needQuantityValue !== null).length, [items]);
+  const emptyAreas = AREAS.filter(a => (byArea.get(a.cat)?.length ?? 0) === 0).length;
 
-  const toggleAll = () => {
-    const ids = displayedItems.map(i => i.id);
-    const allSel = ids.every(id => selected.has(id));
-    setSelected(prev => {
-      const next = new Set(prev);
-      if (allSel) ids.forEach(id => next.delete(id));
-      else ids.forEach(id => next.add(id));
-      return next;
-    });
-  };
-
-  const handleCategoryChange = (cat: HomeCat) => {
-    onCategoryChange(cat);
-    setSelected(new Set());
-    setQuery("");
-  };
-
-  const sendToBasket = async () => {
-    if (selected.size === 0) return;
-    setSending(true);
-    const toSend = allHomeItems.filter(i => selected.has(i.id));
-    try {
-      await Promise.all(
-        toSend.map(item =>
-          apiRequest("POST", "/api/shopping-list", {
-            productName: item.displayName || item.ingredientKey,
-            quantityValue: sendQty,
-            unit: "unit",
-            category: item.category,
-            source: item.category === "pet" ? "pantry" : "household",
-          })
-        )
-      );
-      toast({ title: `Added ${toSend.length} item${toSend.length > 1 ? "s" : ""} to basket` });
-      setSelected(new Set());
-      setSendQty(1);
-      qclient.invalidateQueries({ queryKey: ["/api/shopping-list"] });
-    } catch {
-      toast({ title: "Couldn't add that to your basket", description: "Try again in a moment.", variant: "destructive" });
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const homeNeedItems = displayedItems.filter(i => i.needQuantityValue !== null);
-  const homeInPantryItems = displayedItems.filter(i => i.needQuantityValue === null);
-  const homeShowGroupHeaders = homeNeedItems.length > 0;
-
-  const allActiveSelected = displayedItems.length > 0 && displayedItems.every(i => selected.has(i.id));
-  const catLabel = HOME_CATS.find(c => c.value === activeCategory)?.label.toLowerCase() ?? "item";
-
-  return (
-    <Card className="p-4 sm:p-5">
-      {/* Section header row */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <Home className="h-4 w-4 text-primary" />
-          <h2 className="text-base font-semibold">Home</h2>
-          <CategoryTabs
-            categories={HOME_CATS}
-            active={activeCategory}
-            onChange={handleCategoryChange}
-            className="flex items-center gap-1 rounded-lg bg-muted/40 p-0.5 ml-1"
-          />
-        </div>
-        {selected.size > 0 && (
-          <div className="flex items-center gap-1.5">
-            <input
-              type="number"
-              min={1}
-              value={sendQty}
-              onChange={e => setSendQty(Math.max(1, parseInt(e.target.value) || 1))}
-              className="w-12 h-8 text-[13px] px-2 rounded-md border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary/30 tabular-nums text-center"
-              aria-label="Quantity to send"
-              data-testid="input-household-send-qty"
-            />
-            <Button variant="default"
-              size="sm"
-              className="realm-banner-btn"
-              onClick={sendToBasket}
-              disabled={sending}
-              data-testid="button-send-to-basket"
-            >
-              {sending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <ShoppingBasket className="h-3 w-3 mr-1" />}
-              Send {selected.size}
-            </Button>
-          </div>
-        )}
-      </div>
-
-      {/* Unified search + add — same pattern as Food panel */}
-      <div className="flex gap-2 mb-3">
-        <div className="relative flex-1 min-w-0">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40 pointer-events-none" />
-          <input
-            type="text"
-            placeholder={`Search ${catLabel} or add item…`}
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && handleAdd()}
-            aria-label={`Search ${catLabel} or add item`}
-            className="w-full pl-8 pr-8 py-2 text-sm rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-ring"
-            data-testid="input-household-item"
-          />
-          {query && (
-            <button
-              type="button"
-              onClick={() => setQuery("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
-              aria-label="Clear"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
-        <Button variant="default"
-          size="sm"
-          className="realm-banner-btn"
-          onClick={handleAdd}
-          disabled={!query.trim() || addMutation.isPending}
-          data-testid="button-household-add"
-        >
-          {addMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-          <span className="ml-1">Add</span>
-        </Button>
-      </div>
-
-      {/* Items list */}
-      {isLoading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-10 w-full" />
-          ))}
-        </div>
-      ) : isError ? (
-        <LoadError
-          what="your household items"
-          onRetry={onRetry}
-          description="Nothing has been lost — what's in your home is safe. This is a problem at our end."
-          data-testid="error-pantry-home"
-        />
-      ) : query.trim() && displayedItems.length === 0 ? (
-        <EmptyState variant="filtered" title={`No items matched "${query}"`} data-testid="empty-home-filter" />
-      ) : (
-        <div
-          className="rounded-lg border border-border/40 overflow-hidden"
-          style={{ background: "color-mix(in srgb, var(--realm-bg) 22%, white)" }}
-        >
-          {displayedItems.length === 0 ? (
-            <EmptyState
-              variant="empty"
-              size="compact"
-              icon={HOME_CATS.find(c => c.value === activeCategory)?.icon}
-              title={HOME_CAT_EMPTY[activeCategory].title}
-              description={HOME_CAT_EMPTY[activeCategory].description}
-              data-testid={`empty-pantry-${activeCategory}`}
-            />
-          ) : (
-            <div className="px-3 pt-1">
-              <label htmlFor="checkbox-select-all-household" className="flex items-center gap-3 pb-2 border-b border-border/40 mb-1 cursor-pointer select-none min-h-[2.75rem]">
-                <Checkbox
-                  id="checkbox-select-all-household"
-                  checked={allActiveSelected}
-                  onCheckedChange={toggleAll}
-                  data-testid="checkbox-select-all-household"
-                />
-                <span className="text-xs text-muted-foreground">Select all</span>
-                {selected.size > 0 && (
-                  <Badge variant="default" className="text-[10px] h-4 px-1.5 ml-auto">
-                    {selected.size} selected
-                  </Badge>
-                )}
-              </label>
-              {/*
-                Bottom padding sits INSIDE the scroller, so the clip edge is the
-                card edge: a part-visible row then reads as "more below" rather
-                than a sliced row stranded above dead card background (D6).
-              */}
-              <div className="max-h-72 overflow-y-auto pb-2">
-                {([
-                  ...(homeShowGroupHeaders ? [{ group: "need" as const, groupItems: homeNeedItems }] : []),
-                  { group: "inPantry" as const, groupItems: homeShowGroupHeaders ? homeInPantryItems : displayedItems },
-                ]).map(({ group, groupItems }) => (
-                  <div key={group}>
-                    {homeShowGroupHeaders && (
-                      <p className={`text-[10px] uppercase tracking-[0.08em] font-semibold px-0.5 pt-1.5 pb-0.5 ${
-                        group === "need"
-                          ? "text-amber-600/80 dark:text-amber-400/70"
-                          : "text-muted-foreground/40 mt-1"
-                      }`}>
-                        {group === "need" ? "Need" : "In Larder"}
-                      </p>
-                    )}
-                    {groupItems.map(item => (
-                      <div key={item.id} className="flex items-center gap-1 group" data-testid={`row-household-item-${item.id}`}>
-                        <label
-                          htmlFor={`checkbox-household-${item.id}`}
-                          className="flex items-center gap-3 flex-1 min-w-0 py-2.5 cursor-pointer select-none min-h-[2.75rem]"
-                          data-testid={`label-household-${item.id}`}
-                        >
-                          <Checkbox
-                            id={`checkbox-household-${item.id}`}
-                            checked={selected.has(item.id)}
-                            onCheckedChange={() => toggleSelect(item.id)}
-                            data-testid={`checkbox-household-${item.id}`}
-                          />
-                          <span className="flex-1 text-sm truncate">{item.displayName || item.ingredientKey}</span>
-                        </label>
-                        <NeedQuantityControl item={item} onPatch={handlePatchQuantity} />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9 text-muted-foreground hover:text-destructive hover-reveal group-hover:opacity-100 transition-opacity shrink-0"
-                          onClick={() => setConfirmDelete({ id: item.id, name: item.displayName || item.ingredientKey })}
-                          disabled={deleteMutation.isPending}
-                          aria-label={`Remove ${item.displayName || item.ingredientKey} from your list`}
-                          data-testid={`button-household-delete-${item.id}`}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-    </Card>
-  );
-}
-
-// ── Page ──────────────────────────────────────────────────────────────────────
-
-export default function PantryPage() {
-  const { data: items = [], isPending: isLoading, isError, refetch } = useQuery<PantryItem[]>({
-    queryKey: ["/api/pantry"],
-  });
-
-  const [activeFood, setActiveFood] = useState<FoodCat>("larder");
-  const [activeHome, setActiveHome] = useState<HomeCat>("household");
-  const [mobileHomeOpen, setMobileHomeOpen] = useState(false);
-
-  // ── COMP_ACT2 — which category the household actually CHOSE ───────────────
-  //
-  // `activeFood`/`activeHome` are always a concrete category, but their initial
-  // values are RENDER DEFAULTS, not decisions: a household that has just landed
-  // here has not told us anything about where a food belongs. Publishing "larder"
-  // on arrival would let the Companion offer to file someone's olive oil into a
-  // cupboard they never picked — the category is required by the pantry handler,
-  // so a wrong one is not a cosmetic error, it is a wrong shelf.
-  //
-  // So the pointer is published only once a tab has genuinely been changed. Before
-  // that, Pantry Add is an honest gap. No new selection UI — this reads the tabs
-  // that already exist.
-  // The Food and Home sections can both be on screen at once, so "the active
-  // category" is genuinely ambiguous — but "the last category tab the household
-  // picked" is not, and it is the honest answer to "where would this go?".
-  const [chosenCategory, setChosenCategory] = useState<FoodCat | HomeCat | null>(null);
-  const chooseFood = (c: FoodCat) => { setActiveFood(c); setChosenCategory(c); };
-  const chooseHome = (c: HomeCat) => { setActiveHome(c); setChosenCategory(c); };
-
-  // Published only once a tab has genuinely been picked — before that it is null,
-  // and Pantry Add is an honest gap.
-  usePublishCompanionContext({ selectedPantryCategory: chosenCategory ?? undefined });
-
-  // ── Inventory / Explore mode (URL-driven so it is deep-linkable) ──────────
+  // ── Explore mode (the wider knowledge larder) — preserved, deep-linkable ────
   const [, navigate] = useLocation();
   const search = useSearch();
-  const mode: "inventory" | "explore" =
-    new URLSearchParams(search).get("mode") === "explore" ? "explore" : "inventory";
-  const setMode = (m: "inventory" | "explore") =>
+  const mode: "room" | "explore" =
+    new URLSearchParams(search).get("mode") === "explore" ? "explore" : "room";
+  const setMode = (m: "room" | "explore") =>
     navigate(m === "explore" ? "/pantry?mode=explore" : "/pantry");
 
-  // Repeat-tap nav: open Home drawer when mobile nav fires tha:open-workspace for this page
-  useEffect(() => {
-    const handler = (e: Event) => {
-      if ((e as CustomEvent<{ href: string }>).detail?.href === "/pantry") {
-        setMobileHomeOpen(true);
-      }
-    };
-    window.addEventListener("tha:open-workspace", handler);
-    return () => window.removeEventListener("tha:open-workspace", handler);
-  }, []);
+  if (mode === "explore") {
+    return (
+      <div data-realm="pantry" className={`${pageContainerClass(true)} space-y-3`}>
+        <button onClick={() => setMode("room")} className="lardr-link" data-testid="button-larder-back">
+          ← Back to the larder
+        </button>
+        <div className="pb-8"><PantryKnowledgeHub /></div>
+      </div>
+    );
+  }
 
-  const [pantrySearch, setPantrySearch] = useState("");
+  const handleAdd = () => {
+    const q = addQuery.trim();
+    if (!q) return;
+    addMutation.mutate({ name: q, cat: addCat });
+  };
+
+  const dragging = activeItem !== null;
 
   return (
-    <>
-      <WorkspaceHeader
-        title="My Larder"
-        realm="pantry"
-        wide
-        titleTestId="text-pantry-title"
-        search={{
-          placeholder: "Search larder...",
-          value: pantrySearch,
-          onChange: setPantrySearch,
-          onSubmit: () => {},
-        }}
-        contextBar={
-          <div className="flex items-center gap-2 w-full">
-            <div className="flex items-center gap-1 rounded-lg bg-muted/40 p-1" role="tablist">
-              <button
-                role="tab"
-                aria-selected={mode === "inventory"}
-                onClick={() => setMode("inventory")}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all whitespace-nowrap ${
-                  mode === "inventory" ? "shadow-sm realm-banner-btn" : "text-muted-foreground hover:text-foreground"
-                }`}
-                data-testid="button-pantry-mode-inventory"
-              >
-                Inventory
-              </button>
-              <button
-                role="tab"
-                aria-selected={mode === "explore"}
-                onClick={() => setMode("explore")}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all whitespace-nowrap ${
-                  mode === "explore" ? "shadow-sm realm-banner-btn" : "text-muted-foreground hover:text-foreground"
-                }`}
-                data-testid="button-pantry-mode-explore"
-              >
-                Explore
-              </button>
-            </div>
-            {mode === "inventory" && (
-              <CategoryTabs
-                categories={FOOD_CATS}
-                active={activeFood}
-                onChange={chooseFood}
-                className="flex items-center gap-1 rounded-lg bg-muted/40 p-1 overflow-x-auto scrollbar-hide"
-              />
-            )}
-          </div>
-        }
-      />
+    <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setActiveId(null)}>
+      <div data-realm="pantry" className="lardr-room" data-testid="larder-room">
+        {/* The room's living materials — a warm, sunlit larder wall. Presentation
+            only; carries no data and makes no claim (LARDER1 §15). The real,
+            interactive storage furniture is constructed below, in front of it. */}
+        <div className="lardr-wall" aria-hidden />
 
-      {/* data-realm propagates CSS custom properties so tabs use var(--realm-bg/text) */}
-      <div
-        data-realm="pantry"
-        className={`${pageContainerClass(true)} space-y-3`}
-      >
-        {/* UX3 — this strip held a rotating aphorism, an opportunity list, a
-            patterns panel and a first-visit tip: four voices interpreting the
-            pantry above the pantry itself. All four are the Companion's now. */}
+        <div className="lardr-inner">
+          <p className="lardr-tagline" data-testid="larder-tagline">
+            Our pantry, organised and ready.<span>Good food. Less waste. More time.</span>
+          </p>
 
-        {mode === "explore" ? (
-          <div className="pb-8">
-            <PantryKnowledgeHub />
-          </div>
-        ) : (
-          /* Two-column layout: Food (dominant, 2/3) | Home (narrower, 1/3) */
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-8">
-            <div className="lg:col-span-2">
-              <FoodPantrySection
-                items={items}
-                isLoading={isLoading}
-                isError={isError}
+          {isError ? (
+            <div className="lardr-panel">
+              <LoadError
+                what="your larder"
                 onRetry={() => refetch()}
-                activeCategory={activeFood}
-                onCategoryChange={chooseFood}
-                searchFilter={pantrySearch}
+                description="Nothing has been lost — what's in your larder is safe. This is a problem at our end."
+                data-testid="error-larder"
               />
             </div>
-            <div className="lg:col-span-1">
-              <HomePantrySection
-                items={items}
-                isLoading={isLoading}
-                isError={isError}
-                onRetry={() => refetch()}
-                activeCategory={activeHome}
-                onCategoryChange={chooseHome}
-              />
-            </div>
-          </div>
-        )}
+          ) : (
+            <>
+              {/* Availability at a glance — read by looking, never a quantity. */}
+              <div className="lardr-status" role="group" aria-label="What your larder needs">
+                <span className="lardr-chip is-stocked">Well stocked</span>
+                <span className="lardr-chip is-low" data-testid="lardr-status-low">{lowCount} running low</span>
+                <span className="lardr-chip is-empty" data-testid="lardr-status-empty">{emptyAreas} {emptyAreas === 1 ? "place" : "places"} to fill</span>
+              </div>
+
+              {/* The constructed storage furniture, each holding the real items. */}
+              {isLoading ? (
+                <div className="lardr-loading">
+                  {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-40 rounded-2xl" />)}
+                </div>
+              ) : (
+                <div className="lardr-furniture-stack">
+                  {AREAS.map(area => (
+                    area.opensClosed ? (
+                      <ApplianceFurniture
+                        key={area.cat}
+                        area={area}
+                        items={byArea.get(area.cat) ?? []}
+                        actions={actions}
+                        dragDisabled={busy}
+                        open={!!openAppliance[area.cat]}
+                        onToggle={() => setOpenAppliance(s => ({ ...s, [area.cat]: !s[area.cat] }))}
+                      />
+                    ) : (
+                      <StorageFurniture
+                        key={area.cat}
+                        area={area}
+                        items={byArea.get(area.cat) ?? []}
+                        actions={actions}
+                        dragDisabled={busy}
+                      />
+                    )
+                  ))}
+                </div>
+              )}
+
+              {/* Search — the single add-item gesture (LARDER1 §6). Resolves
+                  identity against Canonical Food (Domain 2) server-side. */}
+              <div className="lardr-add">
+                <div className="lardr-add-row">
+                  <Search className="lardr-add-search h-4 w-4" aria-hidden />
+                  <input
+                    type="text"
+                    value={addQuery}
+                    onChange={e => setAddQuery(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && handleAdd()}
+                    placeholder="Add something you keep…"
+                    aria-label="Add something you keep to your larder"
+                    className="lardr-add-input"
+                    data-testid="lardr-add-input"
+                  />
+                  {addQuery && (
+                    <button type="button" onClick={() => setAddQuery("")} className="lardr-add-clear" aria-label="Clear">
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                  <button type="button" className="lardr-add-btn" onClick={handleAdd} disabled={!addQuery.trim() || addMutation.isPending} data-testid="lardr-add-btn">
+                    {addMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                    <span>Add</span>
+                  </button>
+                </div>
+                <div className="lardr-add-where" role="group" aria-label="Where does it go?">
+                  {AREAS.map(a => (
+                    <button
+                      key={a.cat}
+                      type="button"
+                      className={`lardr-add-chip${addCat === a.cat ? " is-active" : ""}`}
+                      onClick={() => setAddCat(a.cat)}
+                      aria-pressed={addCat === a.cat}
+                      data-testid={`lardr-add-where-${a.cat}`}
+                    >
+                      <a.icon className="h-3.5 w-3.5" /> {a.short}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Smart suggestions — advice is the Companion's (GEA8; LARDER1 §9). */}
+              <button type="button" className="lardr-suggest" onClick={() => openCompanion()} data-testid="button-larder-suggestions">
+                <Sparkles className="h-5 w-5" />
+                <span>
+                  <b>Smart suggestions</b>
+                  <small>Ask Apple what you can make from what you keep</small>
+                </span>
+                <ChevronRight className="h-5 w-5" aria-hidden />
+              </button>
+
+              <button onClick={() => setMode("explore")} className="lardr-link" data-testid="button-larder-explore">
+                Explore the wider larder →
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* Always-present drop destinations. */}
+        <Dock dragging={dragging} onOpenShopping={() => navigate("/shopping-workspace")} />
       </div>
 
-      <Drawer open={mobileHomeOpen} onOpenChange={setMobileHomeOpen} shouldScaleBackground={false}>
-        <DrawerContent className="flex flex-col max-h-[85vh]" data-testid="drawer-household" data-realm="pantry">
-          <div className="flex items-center justify-between px-4 pt-1 pb-3 shrink-0 realm-header-bg">
-            <DrawerTitle className="text-sm font-semibold flex items-center gap-2">
-              <Home className="h-4 w-4" style={{ color: "var(--realm-accent)" }} />
-              Home
-            </DrawerTitle>
-            <button
-              onClick={() => setMobileHomeOpen(false)}
-              className="rounded-md p-1 hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground transition-colors"
-              aria-label="Close"
-              data-testid="button-household-drawer-close"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-          <div className="w-full h-px shrink-0 bg-[var(--realm-border)]" />
-          <div
-            className="flex-1 overflow-y-auto min-h-0 px-4 pt-3"
-            style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom, 0px))" }}
-          >
-            <CategoryTabs
-              categories={HOME_CATS}
-              active={activeHome}
-              onChange={(v) => { chooseHome(v); setMobileHomeOpen(false); }}
+      <DragOverlay dropAnimation={null}>
+        {activeItem ? (
+          <div className="lardr-drag-overlay">
+            <ProductGlyph
+              form={deriveForm({ name: nameOf(activeItem), category: activeItem.category })}
+              low={activeItem.needQuantityValue !== null}
+              id={activeItem.id}
             />
+            <span>{nameOf(activeItem)}</span>
           </div>
-        </DrawerContent>
-      </Drawer>
-    </>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   );
 }

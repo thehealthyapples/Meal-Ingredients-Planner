@@ -248,6 +248,12 @@ export interface IStorage {
   getPantryItems(userId: number): Promise<UserPantryItem[]>;
   addPantryItem(userId: number, ingredient: string, category: string, notes?: string, displayName?: string, isDefault?: boolean, needQuantityValue?: number | null, needUnit?: string | null): Promise<UserPantryItem>;
   updatePantryItemQuantity(userId: number, id: number, needQuantityValue: number | null, needUnit: string | null): Promise<UserPantryItem | null>;
+  // LARDER1 §4 — canonical Domain 30 writers for the physical Larder room.
+  // Owner-approved extensions of the existing Pantry owner (not new entities,
+  // not new ownership): move a staple's storage location, and the soft-delete /
+  // restore pair that makes the Bin gesture reversible (LARDER1 §4.2/§4.3).
+  updatePantryItemCategory(userId: number, id: number, category: string): Promise<UserPantryItem | null>;
+  restorePantryItem(userId: number, id: number): Promise<UserPantryItem | null>;
   deletePantryItem(userId: number, id: number): Promise<void>;
   seedDefaultHouseholdItems(userId: number): Promise<void>;
   seedDefaultFoodPantryItems(userId: number): Promise<void>;
@@ -2411,22 +2417,51 @@ export class DatabaseStorage implements IStorage {
     return updated ?? null;
   }
 
+  // LARDER1 §4 — move a staple to a different storage location (its physical
+  // place in the room). Writes only the `category` field of the SAME canonical
+  // record — no delete, no re-insert, so the record's id, history and need-state
+  // are preserved and no duplicate is ever created. The six-value category set is
+  // validated at the route (Zod) and enforced by the DB CHECK constraint.
+  async updatePantryItemCategory(userId: number, id: number, category: string): Promise<UserPantryItem | null> {
+    const householdId = await getHouseholdForUser(userId);
+    const [updated] = await db
+      .update(userPantryItems)
+      .set({ category })
+      .where(and(eq(userPantryItems.id, id), eq(userPantryItems.householdId, householdId), eq(userPantryItems.isDeleted, false)))
+      .returning();
+    return updated ?? null;
+  }
+
+  // LARDER1 §4.3 — put a staple back after it was taken out of the Larder.
+  // Clears the soft-delete flag on the SAME record, so Undo restores exactly the
+  // item that was binned (not a fresh copy). The partial unique index
+  // (…_active_unique, WHERE is_deleted = FALSE) means a restore can, in the rare
+  // case where an identically-keyed active staple already exists, raise a unique
+  // violation; the route surfaces that as `already_exists` (the staple is already
+  // back), never as data loss.
+  async restorePantryItem(userId: number, id: number): Promise<UserPantryItem | null> {
+    const householdId = await getHouseholdForUser(userId);
+    const [updated] = await db
+      .update(userPantryItems)
+      .set({ isDeleted: false })
+      .where(and(eq(userPantryItems.id, id), eq(userPantryItems.householdId, householdId)))
+      .returning();
+    return updated ?? null;
+  }
+
+  // LARDER1 §4.2 — take a staple out of the Larder. A soft-delete for EVERY
+  // staple (default or household-authored), never a hard delete: "removing a
+  // staple is a soft-delete, and the household can put it back" (LARDER1 §4).
+  // The row is hidden from getPantryItems (which filters is_deleted = false) and
+  // restored by restorePantryItem, so the explicit Bin gesture is always
+  // reversible. Previously household-authored items were destroyed here, which
+  // made Undo impossible for exactly the items the household cares most about.
   async deletePantryItem(userId: number, id: number): Promise<void> {
     const householdId = await getHouseholdForUser(userId);
-    const [existing] = await db
-      .select()
-      .from(userPantryItems)
-      .where(and(eq(userPantryItems.id, id), eq(userPantryItems.householdId, householdId)))
-      .limit(1);
-    if (!existing) return;
-    if (existing.isDefault) {
-      await db
-        .update(userPantryItems)
-        .set({ isDeleted: true })
-        .where(eq(userPantryItems.id, id));
-    } else {
-      await db.delete(userPantryItems).where(eq(userPantryItems.id, id));
-    }
+    await db
+      .update(userPantryItems)
+      .set({ isDeleted: true })
+      .where(and(eq(userPantryItems.id, id), eq(userPantryItems.householdId, householdId)));
   }
 
   async seedDefaultHouseholdItems(userId: number): Promise<void> {
