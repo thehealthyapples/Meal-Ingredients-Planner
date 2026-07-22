@@ -35,6 +35,8 @@ The whole design reduces to one instrument, stated once and enforced mechanicall
 >
 > Every asset in the Living Home belongs to exactly one of two registers. The **House Register** holds the architecture — the one orchard, Home's window joinery, the tokens of light and ground. Its contents are byte-constant: they never vary by season, hour, household, or occasion, and changing one is an *architecture change*, made deliberately through governed amendment. The **Life Register** holds the living details — and nothing enters it without a **data binding**: a named canonical owner whose true facts decide, at read time, whether the asset appears at all. Life assets are *absent by default*; the house is complete without every one of them (Blueprint § 12.1.3, cited).
 
+*(Extended by `ED1` / `LIVINGHOME2`, 2026-07-22 — a **third register** is declared between these two: the **Dressing Register** (`LIVING_HOME_ENVIRONMENTAL_DRESSING_ARCHITECTURE.md` § 10.3), holding **Environmental Dressing** — claim-free objects of the home's own hospitality that turn only with the year (Domain 11, HT17), identical for every household, carrying **no data binding**. The two-register instrument above is unchanged: **House** = never changes; **Life** = changes only with the household's own data. Dressing is the narrow middle — it changes only **with the year, between registered states, for everyone alike**, and asserts nothing about any household. Its full register requirements are `LIVINGHOME2` § 10.3; it is **DECLARED-NOT-BUILT**, and its code — `LIVINGHOME2` Phase 2 — is **hard-blocked** until the § 10.2 owner amendments land and this system's own Phase 2 (registers/verifier, § 13) ships first. The one-instrument line below gains its single governed exception here: **because Dressing is claim-free, it is the only thing that may both change and not be data.**)*
+
 This is `LIVINGHOME1` § 3's principle made checkable at the asset layer. "Changing the home" becomes a reviewable diff in a checksum register (§ 4.4); "changing the life" becomes no diff at all — it is runtime data doing what data does. A pull request can now be told apart *mechanically*: one that touches the house must cite its amendment; one that adds life must show its binding.
 
 ### 1.1 What this document is, and is not
@@ -223,6 +225,8 @@ A verify script in the platform's existing gate manner (`verify:publication` pre
 4. any file outside the owner component imports from `assets/living-home/`;
 5. an asset exists in `assets/living-home/` with no manifest reference (authored-but-unadopted, UIA § 17), or a manifest object id resolves to no asset.
 
+*(Extended by `ED1` / `LIVINGHOME2`, 2026-07-22 — when the Dressing Register is built (`LIVINGHOME2` Phase 2, hard-blocked today) the verifier gains its **third-register checks**: Dressing register bytes match their checksums; **no household-data read is reachable from the dressing mouth** (a `binding` field on a dressing item is the § 9.10 forgery — a build failure, because a binding is precisely what defines the *Life* register); celebration items are unreachable without the § 7.2 per-tradition dressing permission; the **placement exclusions** (`LIVINGHOME2` § 5.1 — no produce dressing in the Pantry room, no book dressing in the Cookbook room, no meal-shaped dressing in the Planner) are enforced; and every dressing item's admission document exists. These checks are **declared here and built with the register, not now.**)*
+
 ---
 
 ## 8. Seasonal living details
@@ -235,6 +239,8 @@ A verify script in the platform's existing gate manner (`verify:publication` pre
 
 An empty house therefore shows an empty sill, in every season — which is the honest answer, and the proof the system is showing the life and not dressing the house.
 
+*(Scoped by `ED1` / `LIVINGHOME2`, 2026-07-22 — the double key / empty-house test is the **Life register's** gate and is **unchanged for it**: a Life asset must vanish when its household fact is absent. It does **not** bind the **Dressing register** (`LIVING_HOME_ENVIRONMENTAL_DRESSING_ARCHITECTURE.md`): a claim-free dressing item is *permitted* to be present for an empty household, because it asserts nothing about them — that presence is the warmth a real home shows a family who has not yet unpacked (`LIVINGHOME2` § 7.3). Classification stays mechanical: **a data binding present → Life** (empty-house test applies in full); **no binding → Dressing or House.** Dressing may **never** be positioned to cover honest absence (`LIVINGHOME2` § 6) — an empty pantry stays honestly empty; the home is warm *around* the household's honest state, never *instead of* it.)*
+
 ### 8.2 The household's rhythm and celebrations — transitive only
 
 - **Rhythm** reaches the visual layer through usage facts already owned: cook counts (the open book), pantry contents (the season's shelf), plan state. No new observation, no new store — bindings read what exists.
@@ -243,6 +249,8 @@ An empty house therefore shows an empty sill, in every season — which is the h
 ### 8.3 Permanent refusals (recorded so no phase re-asks)
 
 Season-keyed house dressing (autumn leaves, snow, blossom — `EXP5` § 5.3/OHDB § 11 standing refusal); hour-keyed anything (NORTH2 § 3.5; HT13); occasion-keyed anything (LH3); weather; a "seasonal theme" toggle; any asset whose predicate is satisfiable by an empty household.
+
+*(Annotated by `ED1` / `LIVINGHOME2`, 2026-07-22 — these refusals stand **in full** for the House and Life registers. Season-keyed **house** dressing (leaves, snow, blossom), hour-keyed anything, weather, and a "seasonal theme" toggle remain **refused permanently, for every register** (ED5/ED6). The single narrow thing now lawful is a **registered Environmental Dressing object** — season-keyed via Domain 11, claim-free, still, wordless, admitted one at a time — which is **none of the refused items**: it never touches the house, never keys on the hour, carries no weather, and is not a theme or mode (`LIVINGHOME2` § 6, § 9). Note the line "any asset whose predicate is satisfiable by an empty household" is the **Life** register's refusal and does **not** reach Dressing, whose whole nature is to be lawfully present for an empty household while claiming nothing (§ 8.1 scoping note above). **DECLARED-NOT-BUILT.**)*
 
 ---
 
