@@ -40,10 +40,12 @@ architecture (`LIVINGHOME2`) into governing Living Home architecture where appro
 - [x] Implement lawful/owned change: `TrialBanner.tsx` — remove the ticking countdown from the calm
       arrival state (GEA3; HOMEOWNER2 #1), keep honest line + <2min warning + expiry redirect.
 - [x] Verify: typecheck 88 pre-existing (0 client / 0 TrialBanner); build exit 0; adoption 100·0·9 (baseline).
-- [ ] Commit + push; record commit hash in run file + dashboard.
+- [x] Commit (`84892ecc`) + push to `origin/int1-intelligence-platform`; hash recorded here + dashboard.
+
+**Last checkpoint:** Committed `84892ecc` and pushed to `origin/int1-intelligence-platform`.
 
 ## Next action
-Commit and push; record the commit hash here and on the dashboard. Then: Home Owner to walk `/home`
+Home Owner to walk `/home`
 on desktop (demo session) and confirm the arrival no longer opens with a ticking clock; review the
 §3 room definitions and §7 owner decisions (A–D) — the four open owner decisions are the acceptance gate.
 
