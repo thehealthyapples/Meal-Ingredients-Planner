@@ -5,7 +5,7 @@
 | **Session ID** | `LHXP4_Living_Home_Experience_Pass4_Companion_Presence` |
 | **Rollback ID** | `rollback/LIVING-HOME-PASS4-20260722` → `ed2a3cc3` (annotated tag, object `340abde6`; created before any change; covers committed state only — tree clean apart from the CURRENT.md heartbeat) |
 | **Start time** | 2026-07-22 |
-| **Current stage** | Complete — committed `PENDING` on `int1-intelligence-platform`; awaiting Home Owner walk-through |
+| **Current stage** | Complete — committed `43f2b714` on `int1-intelligence-platform`; awaiting Home Owner walk-through |
 
 ## Objective
 Living Home Experience Pass 4 — Companion Presence. Make the Companion feel like a calm, trusted member of the household — quietly present when needed, respectfully absent when not. A **presentation-only** pass on the Companion UI (`FloatingAssistant.tsx`): validated against *"does this feel like someone quietly helping?"* and the five nevers (interrupt / demand attention / dominate / chatbot / compete with the room). No AI behaviour, prompt, capability, conversation flow, or owned word touched — the Companion Constitution's § 0 invariant held.
