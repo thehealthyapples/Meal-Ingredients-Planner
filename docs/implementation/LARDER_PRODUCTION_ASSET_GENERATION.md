@@ -4,7 +4,7 @@
 **Date:** 2026-07-23
 **Rollback identifier:** `rollback/larder-production-asset-generation-20260723` → `03578305`
 **Report location:** `docs/implementation/LARDER_PRODUCTION_ASSET_GENERATION.md`
-**Commit hash:** recorded in the follow-up hash-recording commit (repo precedent: `a8b22162`)
+**Commit hash:** `7915a181` (implementation); hash recorded in this follow-up commit per repo precedent (`a8b22162`)
 
 ## 1. What was produced
 
