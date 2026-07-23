@@ -1,5 +1,10 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   THE LIVING LARDER — Pass 1: the empty room (LARDER4 § 8, Pass 1).
+   THE LIVING LARDER — Pass 2: interior composition.
+
+   Pass 1 built the furniture. This pass composes it into one room: a wall and a
+   floor for every wing, furniture grouped into runs that touch, a proportion
+   system so the pieces sit at believable heights beside one another, and a
+   rhythm down the room so the eye travels instead of reading a column.
 
    Materials and light are the house's own (Kept Room Translation § 4.1/§ 4.2;
    Blueprint § 7/§ 8), mirroring `.home-room` so the Larder is the SAME house:
@@ -17,6 +22,12 @@
   --lr-plaster:      38 34% 92%;   /* chalky matte wall */
   --lr-plaster-lit:  44 66% 95%;   /* the wall where the morning falls, upper-left */
   --lr-plaster-low:  34 22% 84%;   /* the wall as it falls away to the floor */
+
+  /* the ground — not a second material, but the shade a floor gathers where the
+     furniture stands on it. Stated as shadow rather than as a band of stone, so
+     the room reads as one continuous space and never as terraces down a page. */
+  --lr-ground-soft: hsl(30 26% 34% / 0.07);
+  --lr-ground-core: hsl(30 26% 28% / 0.19);
 
   --lr-oak:          38 40% 52%;   /* timber, warmed */
   --lr-oak-lip:      40 46% 62%;   /* the lit front edge of a plank (top-left) */
@@ -43,7 +54,15 @@
 
   /* light from the upper-left → shade falls to the lower-right */
   --lr-cast:  6px 8px 18px -8px hsl(30 30% 30% / 0.32);
-  --lr-lift:  -1px -1px 0 hsl(var(--lr-oak-lip) / 0.55);
+
+  /* ── Proportion ─────────────────────────────────────────────────────────────
+     One scale for the whole room, so every piece keeps its true size relative to
+     every other at any width: a counter is waist-high, a cold door is head-high,
+     the dresser is the tallest thing in the room. Furniture heights below are
+     stated in these units and never adjusted piecemeal. */
+  --s:  1;
+  --sp: calc(1px * var(--s));
+  --lr-floor: calc(46 * var(--sp));   /* how far the floor recedes below the wall */
 
   position: relative;
   min-height: 100vh;
@@ -70,69 +89,123 @@
 
 .lr-inner {
   position: relative;
-  max-width: 1080px;
+  max-width: 1160px;
   margin: 0 auto;
-  padding: clamp(1.5rem, 4vw, 3rem) clamp(1.1rem, 4vw, 3rem) 5rem;
+  padding: clamp(1.5rem, 4vw, 3rem) clamp(1.1rem, 4vw, 2.5rem) clamp(2rem, 5vw, 3.5rem);
 }
 
-/* ── The rooms (wings), laid out in the order a household moves through a kitchen
-      (LARDER2 § I.3) — the heart first, then the rest, with air between them. ── */
+/* ── The wings, in the order a household moves through a kitchen (LARDER2 § I.3).
+      The spacing is not uniform: the heart is given more air after it than the
+      quieter wings are, so the room has a rhythm rather than a metre. ── */
 .lr-rooms {
   display: flex;
   flex-direction: column;
-  gap: clamp(2.25rem, 5vw, 4rem);
+  gap: clamp(2.25rem, 5vw, 3.5rem);
 }
+.lr-wing.is-spanning + .lr-wing { margin-top: clamp(0.5rem, 1.6vw, 1.25rem); }
 
-/* ── A wing — a warm area of the room ──────────────────────────────────────── */
-.lr-wing {
-  position: relative;
-}
+/* ── A wing — quiet signage, then the wall it names ────────────────────────── */
+.lr-wing { position: relative; }
+
 .lr-wing-head {
-  margin-bottom: clamp(1rem, 2.4vw, 1.6rem);
-  padding-bottom: 0.7rem;
-  border-bottom: 1px solid hsl(var(--lr-hair));
+  margin-bottom: clamp(0.7rem, 1.6vw, 1.1rem);
+  /* the signage sits with its own furniture, not in a column of its own */
+  padding-inline: clamp(0.25rem, 1vw, 0.75rem);
 }
+.lr-wing.is-left  .lr-wing-head { padding-inline-start: clamp(0.5rem, 6vw, 5rem); }
+.lr-wing.is-right .lr-wing-head { text-align: right; padding-inline-end: clamp(0.5rem, 5vw, 4rem); }
+.lr-wing.is-centre .lr-wing-head { text-align: center; }
+
 .lr-wing-name {
   margin: 0;
-  font-size: clamp(1.1rem, 2vw, 1.4rem);
+  font-size: clamp(1.02rem, 1.7vw, 1.24rem);
   font-weight: 600;
   color: hsl(var(--lr-ink));
   letter-spacing: -0.005em;
 }
 .lr-wing-sense {
-  margin: 0.25rem 0 0;
-  font-size: clamp(0.85rem, 1.4vw, 0.98rem);
-  color: hsl(var(--lr-ink-soft));
-  max-width: 52ch;
-  line-height: 1.5;
+  margin: 0.2rem 0 0;
+  font-size: clamp(0.82rem, 1.3vw, 0.93rem);
+  color: hsl(var(--lr-ink-soft) / 0.88);
+  max-width: 48ch;
+  line-height: 1.55;
 }
+.lr-wing.is-right .lr-wing-sense  { margin-left: auto; }
+.lr-wing.is-centre .lr-wing-sense { margin-inline: auto; }
 
-/* The furniture of a wing sits in a warm, breathing arrangement — not a grid of
-   cards; pieces of different sizes, each given room, wrapping gently. */
-.lr-wing-body {
+/* ═══════════════════════════════════════════════════════════════════════════
+   THE ELEVATION — a wall, and a floor beneath it.
+
+   This is the pass's load-bearing move. Furniture no longer floats on the page:
+   it stands on a floor against a wall, and the space around it is *room*, not
+   emptiness. Wall-hung pieces hang; floor-standing pieces stand; the junction
+   between the two carries the shadow a real room casts there.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.lr-elevation {
+  position: relative;
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: clamp(1.1rem, 2.6vw, 2rem);
+  align-items: flex-end;           /* everything stands on the same floor */
+  gap: clamp(1rem, 3.2vw, 3rem);
+  padding: clamp(1.75rem, 4vw, 3rem) clamp(0.5rem, 2vw, 1.5rem) var(--lr-floor);
+  isolation: isolate;
 }
 
-/* ── A piece of furniture + its quiet nameplate ────────────────────────────── */
-.lr-piece {
+/* The ground the furniture stands on: the shade a floor gathers at the foot of a
+   wall, soft on both sides of the line and fading away entirely below it.
+   The WALL is the room's own plaster — the page itself — so nothing here draws a
+   panel, a band, or a card. It runs to the edges of the room, not to the edges
+   of a rectangle. */
+.lr-elevation::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(50% - 50vw);
+  right: calc(50% - 50vw);
+  z-index: 0;
+  background:
+    linear-gradient(180deg,
+      transparent calc(100% - var(--lr-floor) - 30px),
+      var(--lr-ground-soft) calc(100% - var(--lr-floor) - 6px),
+      var(--lr-ground-core) calc(100% - var(--lr-floor) + 2px),
+      var(--lr-ground-soft) calc(100% - var(--lr-floor) + 20px),
+      transparent 100%);
+}
+
+/* Where a wing sits on its wall. The heart spans it; the quieter wings sit to one
+   side, leaving the rest of the wall as the room's air (GEA11). */
+.lr-wing.is-spanning .lr-elevation { justify-content: space-between; }
+.lr-wing.is-left     .lr-elevation { justify-content: flex-start; padding-inline-start: clamp(1rem, 7vw, 6rem); }
+.lr-wing.is-right    .lr-elevation { justify-content: flex-end;   padding-inline-end:   clamp(1rem, 6vw, 5rem); }
+.lr-wing.is-centre   .lr-elevation { justify-content: center; }
+
+/* ── A run — the furniture that belongs together, and stands together ──────── */
+.lr-run {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+}
+
+/* The shadow a standing run drops onto the floor at its feet. */
+.lr-run::after {
+  content: "";
+  position: absolute;
+  left: 1%;
+  right: 1%;
+  bottom: calc(-6 * var(--sp));
+  height: calc(20 * var(--sp));
+  z-index: -1;
+  background: radial-gradient(52% 62% at 50% 0%, hsl(30 30% 22% / 0.34), transparent 74%);
+}
+
+/* ── A bay — one piece on the floor, another hung on the wall above it ─────── */
+.lr-bay {
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
-  flex: 0 1 auto;
-}
-.lr-piece-furniture {
-  display: flex;
-  align-items: flex-end;
-}
-.lr-piece-name {
-  font-size: 0.78rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: hsl(var(--lr-ink-soft) / 0.9);
-  font-weight: 500;
+  align-items: center;             /* the hung piece centres over the piece below */
+  justify-content: flex-end;
+  gap: calc(42 * var(--sp));       /* the breathing wall between them */
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -143,19 +216,16 @@
 /* Open shelving — boards of warm timber holding air and light. Legible because
    they breathe (LARDER2 § I.4). */
 .lr-shelving {
-  width: clamp(200px, 30vw, 300px);
   display: flex;
   flex-direction: column;
   border-radius: 6px;
-  padding: 6px;
+  padding: calc(6 * var(--sp));
   background:
     linear-gradient(150deg, hsl(var(--lr-oak-lip)) 0%, hsl(var(--lr-oak-body)) 60%, hsl(var(--lr-oak-edge)) 100%);
   box-shadow: var(--lr-cast);
 }
-.lr-shelving.is-tall .lr-shelf-space { height: 46px; }
 .lr-shelf { display: flex; flex-direction: column; }
 .lr-shelf-space {
-  height: 38px;
   border-radius: 3px 3px 0 0;
   /* the warm air inside the shelf — light falling onto the back board */
   background:
@@ -166,26 +236,37 @@
   box-shadow: inset 0 6px 10px -6px hsl(30 30% 20% / 0.45);
 }
 .lr-plank {
-  height: 9px;
+  height: calc(10 * var(--sp));
   border-radius: 2px;
   background:
     linear-gradient(180deg, hsl(var(--lr-oak-lip)) 0%, hsl(var(--lr-oak-body)) 55%, hsl(var(--lr-oak-edge)) 100%);
   box-shadow: 0 3px 5px -2px hsl(30 34% 22% / 0.4);
 }
-.lr-plank.is-slim { height: 7px; }
+.lr-plank.is-slim { height: calc(7 * var(--sp)); }
+
+/* the dresser of the Dry Store — the tallest thing in the room, and the first
+   thing the morning reaches */
+.lr-shelving.is-tall { width: calc(300 * var(--sp)); }
+.lr-shelving.is-tall .lr-shelf-space { height: calc(60 * var(--sp)); }
+/* a long, low run — the seasonal shelf */
+.lr-shelving.is-long { width: calc(330 * var(--sp)); }
+.lr-shelving.is-long .lr-shelf-space { height: calc(52 * var(--sp)); }
+/* hung on the wall above a base unit — the breakfast shelf */
+.lr-shelving.is-wall { width: calc(258 * var(--sp)); }
+.lr-shelving.is-wall .lr-shelf-space { height: calc(48 * var(--sp)); }
 
 /* A cupboard — closed timber doors with turned handles, at rest. */
 .lr-cupboard {
-  width: clamp(150px, 22vw, 220px);
-  height: 168px;
   display: flex;
-  gap: 5px;
-  padding: 7px;
+  gap: calc(5 * var(--sp));
+  padding: calc(7 * var(--sp));
   border-radius: 6px;
   background:
     linear-gradient(150deg, hsl(var(--lr-oak-lip)) 0%, hsl(var(--lr-oak-edge)) 100%);
   box-shadow: var(--lr-cast);
 }
+.lr-cupboard.is-tall { width: calc(210 * var(--sp)); height: calc(262 * var(--sp)); }
+.lr-cupboard.is-base { width: calc(258 * var(--sp)); height: calc(134 * var(--sp)); }
 .lr-door {
   position: relative;
   flex: 1;
@@ -197,7 +278,7 @@
 }
 .lr-door-panel {
   position: absolute;
-  inset: 12px;
+  inset: calc(12 * var(--sp));
   border-radius: 2px;
   border: 1px solid hsl(var(--lr-oak-deep) / 0.4);
   box-shadow: inset 1px 1px 0 hsl(var(--lr-oak-lip) / 0.4);
@@ -205,30 +286,58 @@
 .lr-handle {
   position: absolute;
   top: 50%;
-  width: 5px;
-  height: 22px;
+  width: calc(5 * var(--sp));
+  height: calc(22 * var(--sp));
   border-radius: 3px;
   background: linear-gradient(180deg, hsl(var(--lr-metal)) 0%, hsl(34 18% 52%) 100%);
   transform: translateY(-50%);
 }
-.lr-door:first-child .lr-handle { right: 8px; }
-.lr-door:last-child  .lr-handle { left: 8px; }
-.lr-door:only-child  .lr-handle { right: 10px; left: auto; }
+.lr-door:first-child .lr-handle { right: calc(8 * var(--sp)); }
+.lr-door:last-child  .lr-handle { left:  calc(8 * var(--sp)); }
+.lr-door:only-child  .lr-handle { right: calc(10 * var(--sp)); left: auto; }
+
+/* The working surface, with its deep drawers beneath — one piece of joinery, and
+   the still point of the room. The top oversails the base, as a worked surface
+   does; the timber is the lightest in the room, because this is where the
+   morning lands and where the household stands (LARDER2 § I.4). */
+.lr-counter {
+  width: calc(320 * var(--sp));
+  border-radius: 5px;
+  box-shadow: var(--lr-cast);
+}
+.lr-counter-top {
+  height: calc(20 * var(--sp));
+  margin-inline: calc(-5 * var(--sp));
+  border-radius: 3px;
+  background:
+    linear-gradient(180deg, hsl(42 52% 78%) 0%, hsl(var(--lr-oak-lip)) 100%);
+  box-shadow: inset 0 2px 0 hsl(44 62% 88% / 0.75),
+              0 3px 6px -3px hsl(30 34% 22% / 0.45);
+}
+.lr-counter-base {
+  display: flex;
+  flex-direction: column;
+  gap: calc(5 * var(--sp));
+  padding: calc(6 * var(--sp)) calc(7 * var(--sp)) calc(7 * var(--sp));
+  border-radius: 0 0 5px 5px;
+  background: linear-gradient(150deg, hsl(var(--lr-oak-lip)) 0%, hsl(var(--lr-oak-edge)) 100%);
+}
+.lr-counter-base .lr-drawer { height: calc(44 * var(--sp)); }
 
 /* Deep drawers — flush timber faces with rail handles, closed. */
 .lr-drawers {
-  width: clamp(150px, 22vw, 220px);
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  padding: 7px;
+  gap: calc(5 * var(--sp));
+  padding: calc(7 * var(--sp));
   border-radius: 6px;
   background: linear-gradient(150deg, hsl(var(--lr-oak-lip)) 0%, hsl(var(--lr-oak-edge)) 100%);
   box-shadow: var(--lr-cast);
 }
+.lr-drawers.is-low { width: calc(164 * var(--sp)); }
+.lr-drawers.is-low .lr-drawer { height: calc(62 * var(--sp)); }
 .lr-drawer {
   position: relative;
-  height: 40px;
   border-radius: 3px;
   background: linear-gradient(180deg, hsl(var(--lr-oak-body)) 0%, hsl(var(--lr-oak-edge)) 100%);
   box-shadow: inset 1px 1px 0 hsl(var(--lr-oak-lip) / 0.45),
@@ -237,18 +346,19 @@
 .lr-drawer-rail {
   position: absolute;
   left: 50%;
-  bottom: 9px;
-  width: 46px;
-  height: 5px;
+  bottom: calc(9 * var(--sp));
+  width: calc(46 * var(--sp));
+  height: calc(5 * var(--sp));
   border-radius: 3px;
   background: linear-gradient(180deg, hsl(var(--lr-metal)) 0%, hsl(34 18% 52%) 100%);
   transform: translateX(-50%);
 }
 
-/* A shallow spice rack — small niches at eye level, found by sight. */
+/* A shallow spice rack — small niches at eye level, found by sight. Narrower than
+   the surface it hangs above, so it reads as belonging to it. */
 .lr-spice-rack {
-  width: clamp(160px, 22vw, 224px);
-  padding: 6px 6px 0;
+  width: calc(238 * var(--sp));
+  padding: calc(6 * var(--sp)) calc(6 * var(--sp)) 0;
   border-radius: 5px;
   background: linear-gradient(150deg, hsl(var(--lr-oak-lip)) 0%, hsl(var(--lr-oak-body)) 100%);
   box-shadow: var(--lr-cast);
@@ -256,68 +366,43 @@
 .lr-spice-row {
   display: grid;
   grid-template-columns: repeat(8, 1fr);
-  gap: 4px;
-  margin-bottom: 6px;
+  gap: calc(4 * var(--sp));
+  margin-bottom: calc(6 * var(--sp));
 }
 .lr-niche {
-  height: 30px;
+  height: calc(32 * var(--sp));
   border-radius: 2px;
   background:
     linear-gradient(180deg, hsl(var(--lr-recess-low)) 0%, hsl(var(--lr-recess)) 60%, hsl(var(--lr-recess-lit)) 100%);
   box-shadow: inset 0 4px 6px -4px hsl(30 30% 20% / 0.5);
 }
 
-/* A narrow pull-out run for bottles — tall, slim slots, standing empty. */
+/* A narrow pull-out run for bottles — tall, slim slots, standing empty, tucked
+   against the working surface where the everyday oil is never behind anything. */
 .lr-bottle-run {
-  width: clamp(96px, 14vw, 132px);
-  height: 176px;
   display: flex;
-  gap: 5px;
-  padding: 8px;
+  gap: calc(5 * var(--sp));
+  padding: calc(8 * var(--sp));
   border-radius: 6px;
   background: linear-gradient(150deg, hsl(var(--lr-oak-lip)) 0%, hsl(var(--lr-oak-edge)) 100%);
   box-shadow: var(--lr-cast);
 }
+.lr-bottle-run.is-tall  { width: calc(88 * var(--sp)); height: calc(214 * var(--sp)); }
+.lr-bottle-run.is-short { width: calc(84 * var(--sp)); height: calc(186 * var(--sp)); }
 .lr-bottle-slot {
   flex: 1;
   border-radius: 3px;
+  /* a shaded slot with one gleam partway down — a recess, never a lightbox */
   background:
-    linear-gradient(180deg, hsl(var(--lr-recess-lit)) 0%, hsl(var(--lr-recess)) 50%, hsl(var(--lr-recess-low)) 100%);
-  box-shadow: inset 1px 0 4px -1px hsl(30 30% 20% / 0.4);
+    linear-gradient(180deg, hsl(var(--lr-recess-low)) 0%, hsl(var(--lr-recess)) 44%, hsl(var(--lr-recess-low)) 100%);
+  box-shadow: inset 1px 0 5px -1px hsl(30 30% 18% / 0.5);
 }
 
-/* The working surface — warm oak, clear and calm; the still point of the room. */
-.lr-counter {
-  width: clamp(220px, 34vw, 340px);
-  border-radius: 5px;
-  overflow: hidden;
-  box-shadow: var(--lr-cast);
-}
-.lr-counter-top {
-  height: 20px;
-  background:
-    linear-gradient(180deg, hsl(42 50% 74%) 0%, hsl(var(--lr-oak-lip)) 100%);
-  box-shadow: inset 0 2px 0 hsl(44 60% 84% / 0.7);
-}
-.lr-counter-front {
-  height: 120px;
-  background:
-    repeating-linear-gradient(90deg,
-      hsl(var(--lr-oak-body)) 0, hsl(var(--lr-oak-body)) 26px,
-      hsl(var(--lr-oak-edge) / 0.6) 26px, hsl(var(--lr-oak-edge) / 0.6) 27px),
-    linear-gradient(180deg, hsl(var(--lr-oak-body)) 0%, hsl(var(--lr-oak-edge)) 100%);
-}
-
-/* Woven produce baskets — willow, open, honest; empty and settled, waiting. */
-.lr-baskets {
-  display: flex;
-  align-items: flex-end;
-  gap: 12px;
-}
+/* Woven produce baskets — willow, open, honest; gathered on the floor, nested and
+   overlapping the way baskets actually sit, never lined up in a row. */
+.lr-baskets { display: flex; align-items: flex-end; }
 .lr-basket {
   position: relative;
-  width: 78px;
-  height: 62px;
   border-radius: 8px 8px 14px 14px;
   background:
     repeating-linear-gradient(90deg,
@@ -326,69 +411,66 @@
     linear-gradient(180deg, hsl(var(--lr-willow)) 0%, hsl(var(--lr-willow-edge)) 100%);
   box-shadow: var(--lr-cast), inset 0 8px 12px -8px hsl(30 30% 20% / 0.5);
 }
-.lr-basket:nth-child(2) { width: 92px; height: 70px; }
-.lr-basket:nth-child(3) { width: 70px; height: 56px; }
+.lr-basket + .lr-basket { margin-left: calc(-16 * var(--sp)); }
+.lr-basket:nth-child(1) { width: calc(104 * var(--sp)); height: calc(70 * var(--sp)); z-index: 1; }
+.lr-basket:nth-child(2) { width: calc(126 * var(--sp)); height: calc(84 * var(--sp)); z-index: 0; }
+.lr-basket:nth-child(3) { width: calc( 88 * var(--sp)); height: calc(60 * var(--sp)); z-index: 2; }
 .lr-basket-rim {
   position: absolute;
-  top: -4px; left: -3px; right: -3px;
-  height: 12px;
+  top: calc(-4 * var(--sp)); left: calc(-3 * var(--sp)); right: calc(-3 * var(--sp));
+  height: calc(12 * var(--sp));
   border-radius: 8px;
   background: linear-gradient(180deg, hsl(38 46% 64%) 0%, hsl(var(--lr-willow-edge)) 100%);
   box-shadow: 0 2px 4px -1px hsl(30 34% 24% / 0.4);
 }
 .lr-basket-weave {
   position: absolute;
-  inset: 8px 6px 6px;
+  inset: calc(8 * var(--sp)) calc(6 * var(--sp)) calc(6 * var(--sp));
   border-radius: 6px;
   /* the warm shadow of an empty basket's inside */
   background: radial-gradient(120% 90% at 30% 0%, hsl(34 30% 52% / 0.5), hsl(30 26% 34% / 0.55));
 }
 
-/* The fridge — a warm cream door onto cold keeping (never steel, never clinical). */
+/* The cold doors — warm cream faces onto cold keeping (never steel, never
+   clinical), standing side by side as one run of joinery. */
 .lr-appliance {
   border-radius: 8px;
   box-shadow: var(--lr-cast);
-}
-.lr-fridge {
-  position: relative;
-  width: clamp(112px, 16vw, 148px);
-  height: 210px;
+  width: calc(150 * var(--sp));
+  height: calc(316 * var(--sp));
   background: linear-gradient(150deg, hsl(var(--lr-ceramic)) 0%, hsl(var(--lr-ceramic-edge)) 100%);
   border: 1px solid hsl(var(--lr-ceramic-edge));
 }
+.lr-run-cold .lr-fridge  { border-radius: 8px 2px 2px 8px; }
+.lr-run-cold .lr-freezer { border-radius: 2px 8px 8px 2px; margin-left: calc(4 * var(--sp)); }
+.lr-fridge { position: relative; }
 .lr-appliance-door {
   position: absolute;
-  inset: 6px;
+  inset: calc(6 * var(--sp));
   border-radius: 5px;
   background: linear-gradient(150deg, hsl(var(--lr-ceramic-lit)) 0%, hsl(var(--lr-ceramic-edge)) 100%);
   box-shadow: inset 1px 1px 0 hsl(var(--lr-sheen));
 }
 .lr-appliance-seam {
   position: absolute;
-  left: 8px; right: 8px;
+  left: calc(8 * var(--sp)); right: calc(8 * var(--sp));
   top: 38%;
   height: 1px;
   background: hsl(var(--lr-ceramic-edge));
 }
 .lr-appliance-handle {
   position: absolute;
-  left: 12px;
-  top: 14px; bottom: 14px;
-  width: 6px;
+  left: calc(12 * var(--sp));
+  top: calc(14 * var(--sp)); bottom: calc(14 * var(--sp));
+  width: calc(6 * var(--sp));
   border-radius: 4px;
   background: linear-gradient(180deg, hsl(var(--lr-metal)) 0%, hsl(34 16% 58%) 100%);
 }
-
-/* The freezer — stacked cold drawers, closed; the deep reserve. */
 .lr-freezer {
-  width: clamp(112px, 16vw, 148px);
-  height: 210px;
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  padding: 6px;
-  background: linear-gradient(150deg, hsl(var(--lr-ceramic)) 0%, hsl(var(--lr-ceramic-edge)) 100%);
-  border: 1px solid hsl(var(--lr-ceramic-edge));
+  gap: calc(5 * var(--sp));
+  padding: calc(6 * var(--sp));
 }
 .lr-freezer-drawer {
   position: relative;
@@ -399,65 +481,122 @@
 }
 .lr-freezer-rail {
   position: absolute;
-  left: 14px; right: 14px;
-  top: 12px;
-  height: 5px;
+  left: calc(14 * var(--sp)); right: calc(14 * var(--sp));
+  top: calc(12 * var(--sp));
+  height: calc(5 * var(--sp));
   border-radius: 3px;
   background: linear-gradient(180deg, hsl(var(--lr-metal)) 0%, hsl(34 16% 58%) 100%);
 }
 
 /* A reserved bay — composed emptiness, warm and intended; the room's room to grow.
-   A touch softer and lighter than the working shelves: space held open, on purpose. */
+   It continues the seasonal shelf's own planks, a touch softer and lighter: the
+   same run of shelving, with room left in it. */
 .lr-reserved {
-  width: clamp(180px, 26vw, 260px);
   display: flex;
   flex-direction: column;
+  width: calc(244 * var(--sp));
   border-radius: 6px;
-  padding: 6px;
+  padding: calc(6 * var(--sp));
   background:
-    linear-gradient(150deg, hsl(var(--lr-oak-lip) / 0.85) 0%, hsl(var(--lr-oak-body) / 0.85) 100%);
+    linear-gradient(150deg, hsl(var(--lr-oak-lip)) 0%, hsl(var(--lr-oak-body)) 60%, hsl(var(--lr-oak-edge)) 100%);
   box-shadow: var(--lr-cast);
 }
 .lr-reserved-space {
-  height: 44px;
+  height: calc(52 * var(--sp));
   border-radius: 3px 3px 0 0;
+  /* the same shelf, holding a little more light and a little less shadow */
   background:
     linear-gradient(180deg,
-      hsl(var(--lr-recess) / 0.7) 0%,
-      hsl(var(--lr-recess-lit) / 0.85) 100%);
-  box-shadow: inset 0 6px 10px -7px hsl(30 30% 24% / 0.35);
+      hsl(var(--lr-recess) / 0.82) 0%,
+      hsl(var(--lr-recess) / 0.9) 40%,
+      hsl(var(--lr-recess-lit)) 100%);
+  box-shadow: inset 0 6px 10px -7px hsl(30 30% 24% / 0.3);
 }
 
-/* ── The far end of the room — a quiet close, not a footer of controls ─────── */
-.lr-foot {
-  margin-top: clamp(2.5rem, 6vw, 4.5rem);
-  display: flex;
-  justify-content: center;
-}
-.lr-foot-mark {
-  width: 44px;
-  height: 4px;
-  border-radius: 2px;
-  background: hsl(var(--lr-oak-lip) / 0.6);
+/* ═══════════════════════════════════════════════════════════════════════════
+   THE RELATIONSHIPS — how pieces sit against one another.
+   Within a run, furniture touches, tucks, or overlaps. This is the difference
+   between a room and a row of objects.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* The bottle pull-out is tucked against the working surface, not parked beside it —
+   standing just in front of the worktop's edge, the way a pull-out actually does. */
+.lr-run-working .lr-bottle-run { position: relative; z-index: 2; margin-left: calc(-6 * var(--sp)); }
+
+/* The drinks stand against the hospitality cupboard, sharing its side. */
+.lr-run-guests .lr-bottle-run { margin-left: calc(-3 * var(--sp)); }
+
+/* The pet corner sits low at the foot of the household cupboard. */
+.lr-run-household .lr-drawers { margin-left: calc(-4 * var(--sp)); }
+
+/* The cool larder sits just short of the cold store — near it, never crowding it. */
+.lr-run-produce { margin-right: clamp(0.75rem, 2.5vw, 2rem); }
+
+/* The seasonal shelf runs straight on into the reserved bay — one length of
+   shelving, part of it kept in hand (LARDER2 § I.9). */
+.lr-run-growing .lr-shelving { border-radius: 6px 0 0 6px; }
+.lr-run-growing .lr-reserved { border-radius: 0 6px 6px 0; margin-left: calc(-3 * var(--sp)); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOBILE — the same room, the same composition, arranged for a narrow, tall
+   screen (LARDER1 § 5; LARDER2 § I.3). The wings keep their order and their
+   groups; the runs stack down the wall instead of across it, each still standing
+   on the floor. Nothing is dropped, and nothing becomes a list.
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 1080px) { .larder-room { --s: 0.86; } }
+@media (max-width: 880px)  { .larder-room { --s: 0.78; } }
+
+@media (max-width: 760px) {
+  .larder-room { --s: 0.8; }
+
+  .lr-elevation {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    padding: 0;
+  }
+  /* on a narrow wall the runs stack down it, and each keeps its own stretch of
+     floor — so nothing floats, and the wall still runs to the room's edges */
+  .lr-elevation::before { display: none; }
+  .lr-run {
+    width: 100%;
+    padding: clamp(1.25rem, 5vw, 2rem) clamp(0.5rem, 3vw, 1.25rem) var(--lr-floor);
+  }
+  .lr-run::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(50% - 50vw);
+    right: calc(50% - 50vw);
+    z-index: -1;
+    background:
+      linear-gradient(180deg,
+        transparent calc(100% - var(--lr-floor) - 26px),
+        var(--lr-ground-soft) calc(100% - var(--lr-floor) - 6px),
+        var(--lr-ground-core) calc(100% - var(--lr-floor) + 2px),
+        var(--lr-ground-soft) calc(100% - var(--lr-floor) + 18px),
+        transparent 100%);
+  }
+  .lr-run::after { display: none; }
+  /* the wings keep their sides on a narrow wall, gently */
+  .lr-wing.is-left .lr-elevation  { padding-inline: 0; }
+  .lr-wing.is-right .lr-elevation { padding-inline: 0; }
+  .lr-wing.is-right .lr-run  { justify-content: flex-end; }
+  .lr-wing.is-centre .lr-run { justify-content: center; }
+  .lr-wing.is-right .lr-wing-head,
+  .lr-wing.is-centre .lr-wing-head { text-align: left; padding-inline: clamp(0.75rem, 3vw, 1.25rem); }
+  .lr-wing.is-left .lr-wing-head { padding-inline-start: clamp(0.75rem, 3vw, 1.25rem); }
+  .lr-wing.is-right .lr-wing-sense,
+  .lr-wing.is-centre .lr-wing-sense { margin-inline: 0; }
 }
 
-/* ── Layout: the heart is given the width of a wall; the rest breathe beside it. ── */
-@media (min-width: 760px) {
-  .lr-wing.is-wide .lr-wing-body { align-items: flex-end; }
+@media (max-width: 560px) {
+  .larder-room { --s: 0.66; }
 }
 
-/* ── Mobile: the same room, arranged for a narrow, tall screen (LARDER2 § I.3;
-      LARDER1 § 5). The wings stack in the same order; furniture wraps gently. ── */
-@media (max-width: 620px) {
-  .lr-wing-body { gap: 1.25rem; }
-  .lr-shelving,
-  .lr-cupboard,
-  .lr-drawers,
-  .lr-spice-rack,
-  .lr-reserved { width: 100%; }
-  .lr-counter { width: 100%; }
-  .lr-piece { flex: 1 1 100%; }
-  .lr-piece.has-narrow { flex: 0 1 auto; }
+@media (max-width: 400px) {
+  .larder-room { --s: 0.52; }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -469,6 +608,9 @@
   --lr-plaster:      30 16% 15%;
   --lr-plaster-lit:  36 30% 22%;
   --lr-plaster-low:  28 14% 10%;
+
+  --lr-ground-soft: hsl(24 26% 4% / 0.26);
+  --lr-ground-core: hsl(24 28% 3% / 0.52);
 
   --lr-oak:          34 30% 34%;
   --lr-oak-lip:      38 34% 44%;
@@ -482,9 +624,9 @@
 
   --lr-willow:       34 28% 38%;
   --lr-willow-edge:  30 26% 26%;
-  --lr-ceramic:      34 14% 30%;   /* the cold door, warm-dark — never steel at night */
-  --lr-ceramic-lit:  36 16% 36%;
-  --lr-ceramic-edge: 30 12% 22%;
+  --lr-ceramic:      32 20% 28%;   /* the cold door, warm-dark — never steel at night */
+  --lr-ceramic-lit:  34 22% 35%;
+  --lr-ceramic-edge: 28 16% 21%;
   --lr-metal:        36 12% 52%;
   --lr-sheen:        40 24% 62% / 0.14;  /* a faint warm gleam, not a white edge */
 
@@ -503,10 +645,15 @@
   background:
     radial-gradient(46% 42% at 6% -4%, hsl(40 50% 60% / 0.28), transparent 70%);
 }
+.dark .lr-counter-top {
+  background: linear-gradient(180deg, hsl(38 32% 46%) 0%, hsl(var(--lr-oak-lip)) 100%);
+  box-shadow: inset 0 2px 0 hsl(40 34% 54% / 0.6),
+              0 3px 6px -3px hsl(28 30% 8% / 0.6);
+}
 
 /* Stillness is the default; the room does not move (Kept Room Translation § 4.2).
-   Pass 1 introduces no motion at all — this only affirms it against any inherited
-   transition, and honours reduced-motion regardless. */
+   This pass introduces no motion at all — this only affirms it against any
+   inherited transition, and honours reduced-motion regardless. */
 @media (prefers-reduced-motion: reduce) {
   .larder-room * { transition: none !important; animation: none !important; }
 }

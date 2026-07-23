@@ -1,29 +1,38 @@
 import "./larder-room.css";
 
 /**
- * The Living Larder — Pass 1: the empty room (LARDER4 § 8, Pass 1 "Room structure").
+ * The Living Larder — Pass 2: interior composition (LARDER4 § 8, Pass 2 "Furniture").
  *
- * This is the PERMANENT ARCHITECTURE of the room, built furniture-first and
- * complete while empty (LARDER4 § 4; LARDER2 § I.4). It renders the six wings of
- * the interior architecture (LARDER2 § I.3/§ I.5) and their permanent furniture —
- * shelving, cupboards, drawers, a fridge, a freezer, a working surface, baskets,
- * and reserved growth areas — and NOTHING ELSE.
+ * Pass 1 built the PERMANENT ARCHITECTURE of the room — every furniture element
+ * required by LARDER2 § I.4, honestly empty. Pass 2 changes nothing about what
+ * the room contains and everything about how it is COMPOSED: the same furniture,
+ * now standing in one room rather than floating as separate objects.
  *
- * SCOPE LOCK (Pass 1 only):
+ * The composition, wing by wing (LARDER2 § I.3/§ I.5):
+ *   • Every wing is an ELEVATION — a wall of plaster with a floor beneath it.
+ *     Furniture stands ON the floor and hangs ON the wall; nothing floats.
+ *   • Furniture is grouped into RUNS of things that belong together and touch:
+ *     the spice rack above the working surface, the deep drawers beneath it, the
+ *     bottle pull-out tucked beside it (LARDER2 § I.4 — "narrow, tall runs beside
+ *     the working surfaces"); the fridge and freezer as one cold pair; the
+ *     breakfast shelf above the tea & coffee cupboard; the seasonal shelf running
+ *     straight on into the reserved bay.
+ *   • The wings sit differently on their walls — the heart spans the room, the
+ *     smaller wings sit to one side or the other — so the eye travels rather than
+ *     reading down a left-hand column.
+ *
+ * SCOPE LOCK (Pass 2 — composition only):
  *   • No products. No placeholders pretending to be products.
  *   • No pantry data is read or bound (no query, no Domain 30/15/2 read).
  *   • No interactions: no drag/drop, no search, no shopping, no CRUD, no
  *     item menus, no controls. The room is a place, not a tool, at this pass.
- *   • The prepared photographic assets under client/src/assets/larder are NOT
- *     used: they depict invented products/produce, which LARDER2 § II.12 / ED3
- *     forbid the room from dressing itself with ("if the room put it there, it
- *     is refused"). The room is built from honest materials instead.
+ *   • No motion. The room is still (Kept Room Translation § 4.2).
+ *   • No architectural change: the six wings, their order, and every furniture
+ *     element of LARDER2 § I.4 are exactly as Pass 1 built them.
  *
- * The empty room is a DESIGNED state: composed emptiness, never bare emptiness
- * (LARDER2 § I.8; Kept Room Translation § 4.3). Empty shelves are warm air and
- * light — an open invitation to keep something — never a blank, an error, or a
- * prompt to fill. If every pantry item disappeared, this is what remains, and it
- * is already a room a household would happily spend time in (CRAFT1 § 8).
+ * The empty room remains a DESIGNED state: composed emptiness, never bare
+ * emptiness (LARDER2 § I.8; Kept Room Translation § 4.3). Surplus wall is the
+ * room's air and light (GEA11), never a gap waiting to be filled.
  *
  * The room is lit by ONE morning sun, upper-left, exactly as every room of the
  * house is lit (Kept Room Translation § 4.1; Blueprint § 7) — a wash on plaster,
@@ -33,13 +42,18 @@ import "./larder-room.css";
 
 // ── Furniture — each a permanent element, its own unit, owning no fact ─────────
 // Every piece below exists whether or not anything is ever kept in it. None reads
-// data; none is interactive. They are the room's bones (LARDER2 § I.4).
+// data; none is interactive. They are the room's bones (LARDER2 § I.4). Each is
+// named for assistive technology as the physical thing it is (LARDER1 § 10).
 
 /** Open shelving — the ordered strata, legible because they breathe (LARDER2 § I.4).
- *  `tiers` boards of warm timber, each holding light and air. */
-function Shelving({ tiers = 3, tall = false }: { tiers?: number; tall?: boolean }) {
+ *  `tiers` boards of warm timber, each holding light and air.
+ *  Variants: `tall` (the dresser of the Dry Store) · `long` (a low, wide run) ·
+ *  `wall` (hung above a base unit). */
+function Shelving({
+  tiers = 3, variant = "tall", label,
+}: { tiers?: number; variant?: "tall" | "long" | "wall"; label: string }) {
   return (
-    <div className={`lr-shelving${tall ? " is-tall" : ""}`} aria-hidden="true">
+    <div className={`lr-shelving is-${variant}`} role="img" aria-label={label}>
       {Array.from({ length: tiers }).map((_, i) => (
         <div className="lr-shelf" key={i}>
           <div className="lr-shelf-space" />
@@ -51,10 +65,13 @@ function Shelving({ tiers = 3, tall = false }: { tiers?: number; tall?: boolean 
 }
 
 /** A cupboard — enclosed keeping for what is not on show (LARDER2 § I.4).
- *  `doors` timber doors with turned handles; closed and at rest. */
-function Cupboard({ doors = 2 }: { doors?: number }) {
+ *  `doors` timber doors with turned handles; closed and at rest.
+ *  Variants: `tall` (floor to above the eye) · `base` (a low unit beneath a shelf). */
+function Cupboard({
+  doors = 2, variant = "tall", label,
+}: { doors?: number; variant?: "tall" | "base"; label: string }) {
   return (
-    <div className="lr-cupboard" aria-hidden="true">
+    <div className={`lr-cupboard is-${variant}`} role="img" aria-label={label}>
       {Array.from({ length: doors }).map((_, i) => (
         <div className="lr-door" key={i}>
           <span className="lr-door-panel" />
@@ -65,11 +82,27 @@ function Cupboard({ doors = 2 }: { doors?: number }) {
   );
 }
 
-/** A deep drawer — for the low, heavy and loose, read by pulling it toward you
- *  (LARDER2 § I.4). Closed and flush; a face with a rail handle. */
-function Drawer({ rows = 2 }: { rows?: number }) {
+/** The working surface — warm oak, the still point and baking area (LARDER2 § I.4) —
+ *  with the DEEP DRAWERS in its base, where the low, heavy and loose are kept and
+ *  read by pulling them toward you (LARDER2 § I.4). Counter and drawers are one
+ *  piece of joinery, as they are in a real larder: the surface you work on, and
+ *  the store directly beneath your hands. */
+function WorkingSurface() {
   return (
-    <div className="lr-drawers" aria-hidden="true">
+    <div className="lr-counter" role="img" aria-label="Working surface, with deep drawers beneath">
+      <div className="lr-counter-top" />
+      <div className="lr-counter-base">
+        <div className="lr-drawer"><span className="lr-drawer-rail" /></div>
+        <div className="lr-drawer"><span className="lr-drawer-rail" /></div>
+      </div>
+    </div>
+  );
+}
+
+/** A deep drawer unit standing on its own — low and tucked (the pet corner). */
+function Drawer({ rows = 1, label }: { rows?: number; label: string }) {
+  return (
+    <div className="lr-drawers is-low" role="img" aria-label={label}>
       {Array.from({ length: rows }).map((_, i) => (
         <div className="lr-drawer" key={i}>
           <span className="lr-drawer-rail" />
@@ -79,11 +112,11 @@ function Drawer({ rows = 2 }: { rows?: number }) {
   );
 }
 
-/** A shallow spice rack — many small niches at eye level, found by sight
- *  (LARDER2 § I.5-A5). Empty niches, breathing. */
+/** A shallow spice rack — many small niches at eye level, found by sight, hung on
+ *  the wall by where the cooking happens (LARDER2 § I.5-A5). Empty niches, breathing. */
 function SpiceRack() {
   return (
-    <div className="lr-spice-rack" aria-hidden="true">
+    <div className="lr-spice-rack" role="img" aria-label="Spice rack, on the wall above the working surface">
       <div className="lr-spice-row">
         {Array.from({ length: 8 }).map((_, i) => <span className="lr-niche" key={i} />)}
       </div>
@@ -94,31 +127,23 @@ function SpiceRack() {
 
 /** A narrow pull-out run for bottles beside the working surface (LARDER2 § I.4/§ I.5-A6).
  *  Tall, slim, upright — empty and standing ready. */
-function BottleRun() {
+function BottleRun({
+  variant = "tall", label,
+}: { variant?: "tall" | "short"; label: string }) {
   return (
-    <div className="lr-bottle-run" aria-hidden="true">
+    <div className={`lr-bottle-run is-${variant}`} role="img" aria-label={label}>
       {Array.from({ length: 4 }).map((_, i) => <span className="lr-bottle-slot" key={i} />)}
     </div>
   );
 }
 
-/** The working surface — warm oak, the still point and baking area (LARDER2 § I.4).
- *  A clear, calm counter: the one place that is a working surface first. */
-function WorkingSurface() {
-  return (
-    <div className="lr-counter" aria-hidden="true">
-      <div className="lr-counter-top" />
-      <div className="lr-counter-front" />
-    </div>
-  );
-}
-
 /** Woven produce baskets — open holders for things that breathe (LARDER2 § I.5-C1).
- *  Willow, open, honest; empty and settled, waiting. */
-function Baskets({ count = 3 }: { count?: number }) {
+ *  Willow, open, honest; empty and settled on the floor, gathered the way baskets
+ *  gather in a real larder — nested and overlapping, never lined up. */
+function Baskets() {
   return (
-    <div className="lr-baskets" aria-hidden="true">
-      {Array.from({ length: count }).map((_, i) => (
+    <div className="lr-baskets" role="img" aria-label="Produce baskets">
+      {Array.from({ length: 3 }).map((_, i) => (
         <div className="lr-basket" key={i}>
           <span className="lr-basket-weave" />
           <span className="lr-basket-rim" />
@@ -129,10 +154,10 @@ function Baskets({ count = 3 }: { count?: number }) {
 }
 
 /** The fridge — a cold door onto compartments (LARDER2 § I.5-C2). Closed, at rest;
- *  a tall door with a long handle. Presentation only; it does not open at Pass 1. */
+ *  a tall door with a long handle. Presentation only; it does not open at this pass. */
 function Fridge() {
   return (
-    <div className="lr-appliance lr-fridge" aria-hidden="true">
+    <div className="lr-appliance lr-fridge" role="img" aria-label="Fridge">
       <div className="lr-appliance-door">
         <span className="lr-appliance-seam" />
         <span className="lr-appliance-handle" />
@@ -144,7 +169,7 @@ function Fridge() {
 /** The freezer — long cold keeping, stacked drawers (LARDER2 § I.5-C3). Closed. */
 function Freezer() {
   return (
-    <div className="lr-appliance lr-freezer" aria-hidden="true">
+    <div className="lr-appliance lr-freezer" role="img" aria-label="Freezer">
       {Array.from({ length: 3 }).map((_, i) => (
         <div className="lr-freezer-drawer" key={i}>
           <span className="lr-freezer-rail" />
@@ -156,46 +181,58 @@ function Freezer() {
 
 /** A reserved bay — deliberately unfilled shelving the room keeps in hand so it
  *  can grow without redesign (LARDER2 § I.4/§ F2/§ I.9). Composed emptiness, warm
- *  and intended — never a bare gap. The room's promise that it will mature. */
+ *  and intended — never a bare gap. It continues the seasonal shelf's own planks,
+ *  a touch lighter: the same run of shelving, with room left in it. */
 function ReservedBay() {
   return (
-    <div className="lr-reserved" aria-hidden="true">
-      <div className="lr-reserved-space" />
-      <div className="lr-plank" />
-      <div className="lr-reserved-space" />
-      <div className="lr-plank" />
+    <div className="lr-reserved" role="img" aria-label="Reserved shelving, room left in hand">
+      {Array.from({ length: 3 }).map((_, i) => (
+        <div className="lr-shelf" key={i}>
+          <div className="lr-reserved-space" />
+          <div className="lr-plank" />
+        </div>
+      ))}
     </div>
   );
 }
 
-// ── A wing — a warm area of the room answering one rhythm of family life ───────
-// The label is quiet signage in a well-kept pantry, giving a sense of place
-// (recognition, not reading — LARDER2 § I.2). It is never a form header, and it
-// carries no count, status, or control.
+// ── Composition ───────────────────────────────────────────────────────────────
+
+/** A wing — a warm area of the room answering one rhythm of family life.
+ *  The signage is quiet, the way a well-kept pantry is signed: it gives a sense of
+ *  place (recognition, not reading — LARDER2 § I.2). It is never a form header,
+ *  and it carries no count, status, or control. */
 function Wing({
-  name, sense, children, wide = false,
-}: { name: string; sense: string; children: React.ReactNode; wide?: boolean }) {
+  name, sense, place, children,
+}: {
+  name: string; sense: string;
+  place: "spanning" | "left" | "right" | "centre";
+  children: React.ReactNode;
+}) {
   return (
-    <section className={`lr-wing${wide ? " is-wide" : ""}`} aria-label={name}>
+    <section className={`lr-wing is-${place}`} aria-label={name}>
       <header className="lr-wing-head">
         <h2 className="lr-wing-name">{name}</h2>
         <p className="lr-wing-sense">{sense}</p>
       </header>
-      <div className="lr-wing-body">{children}</div>
+      {/* The elevation — a wall of plaster with a floor beneath it. The furniture
+          stands on that floor; the wall above it is the room's air and light. */}
+      <div className="lr-elevation">{children}</div>
     </section>
   );
 }
 
-/** A named piece of furniture within a wing — a quiet nameplate beneath the piece,
- *  the way a joiner's room is known. Keeps the empty room legible without turning
- *  it into a list. */
-function Piece({ name, children }: { name: string; children: React.ReactNode }) {
-  return (
-    <div className="lr-piece">
-      <div className="lr-piece-furniture">{children}</div>
-      <span className="lr-piece-name">{name}</span>
-    </div>
-  );
+/** A run of furniture — the things that belong together and stand together.
+ *  Within a run, pieces touch or tuck against one another; between runs there is
+ *  breathing space. Grouping is the whole of this pass. */
+function Run({ kind, children }: { kind?: string; children: React.ReactNode }) {
+  return <div className={`lr-run${kind ? ` lr-run-${kind}` : ""}`}>{children}</div>;
+}
+
+/** A bay — one piece standing on the floor with another hung on the wall above it.
+ *  The vertical relationship that turns two objects into one place. */
+function Bay({ children }: { children: React.ReactNode }) {
+  return <div className="lr-bay">{children}</div>;
 }
 
 export default function LarderRoomPage() {
@@ -211,79 +248,115 @@ export default function LarderRoomPage() {
           simply opens, kept, into its wings. */}
       <div className="lr-inner">
         <div className="lr-rooms">
-          {/* Wing A — The Dry Store (the heart). Open shelving dominates; the
-              working surface is the still point; a spice rack, a bottle run, a
-              deep drawer, and an overflow cupboard complete the heart of the room. */}
+          {/* ── Wing A — The Dry Store (the heart) ───────────────────────────────
+              The room's focal wall, and the only wing given the whole width. It
+              reads left to right as a family larder does: the tall dresser where
+              the morning falls; the working surface at its still centre, drawers
+              beneath and spices on the wall above, the bottle pull-out tucked at
+              its side; the overflow cupboard closing the run. */}
           <Wing
             name="The Dry Store"
             sense="The heart of the larder — everything the house always keeps in."
-            wide
+            place="spanning"
           >
-            <Piece name="Open shelving"><Shelving tiers={4} tall /></Piece>
-            <Piece name="Spice rack"><SpiceRack /></Piece>
-            <Piece name="Oils &amp; bottles"><BottleRun /></Piece>
-            <Piece name="Working surface"><WorkingSurface /></Piece>
-            <Piece name="Deep drawer"><Drawer rows={2} /></Piece>
-            <Piece name="Overflow cupboard"><Cupboard doors={2} /></Piece>
+            <Run kind="dresser">
+              <Shelving tiers={5} variant="tall" label="Open shelving" />
+            </Run>
+
+            <Run kind="working">
+              <Bay>
+                <SpiceRack />
+                <WorkingSurface />
+              </Bay>
+              <BottleRun variant="tall" label="Oils and vinegars, in a pull-out beside the working surface" />
+            </Run>
+
+            <Run kind="overflow">
+              <Cupboard doors={2} variant="tall" label="Overflow cupboard" />
+            </Run>
           </Wing>
 
-          {/* Wing B — The Daily Rhythm. The few stations touched every morning and
-              evening: the breakfast shelf and the tea &amp; coffee station. */}
+          {/* ── Wing B — The Daily Rhythm ────────────────────────────────────────
+              The breakfast corner: one small, quiet composition — the breakfast
+              shelf hung above the tea and coffee cupboard, so the morning is one
+              reach. Set to one side, with the rest of the wall left as air. */}
           <Wing
             name="The Daily Rhythm"
             sense="What starts and ends the day — reached for half-awake, every morning."
+            place="left"
           >
-            <Piece name="Breakfast shelf"><Shelving tiers={2} /></Piece>
-            <Piece name="Tea &amp; coffee station"><Cupboard doors={1} /></Piece>
+            <Run kind="breakfast">
+              <Bay>
+                <Shelving tiers={2} variant="wall" label="Breakfast shelf" />
+                <Cupboard doors={2} variant="base" label="Tea and coffee station" />
+              </Bay>
+            </Run>
           </Wing>
 
-          {/* Wing C — The Cool Store. A physical fact, a wing of its own: the
-              produce baskets, the fridge, and the freezer. */}
+          {/* ── Wing C — The Cool Store ──────────────────────────────────────────
+              One cluster, not two objects: the cold pair — fridge and freezer,
+              side by side as one run of joinery — with the produce baskets
+              gathered on the floor just short of them, where the cool larder
+              always sits in a real kitchen. The rest of the wall is left open. */}
           <Wing
             name="The Cool Store"
             sense="What will not keep on a dry shelf — kept cool, kept cold, kept fresh."
-            wide
+            place="right"
           >
-            <Piece name="Produce baskets"><Baskets count={3} /></Piece>
-            <Piece name="Fridge"><Fridge /></Piece>
-            <Piece name="Freezer"><Freezer /></Piece>
+            <Run kind="produce">
+              <Baskets />
+            </Run>
+
+            <Run kind="cold">
+              <Fridge />
+              <Freezer />
+            </Run>
           </Wing>
 
-          {/* Wing D — Hospitality. What the home keeps ready for other people —
-              hospitality is the founding value of the whole house (GEA1). */}
+          {/* ── Wing D — Hospitality ─────────────────────────────────────────────
+              Kept together and kept to one side: the hospitality cupboard with the
+              drinks standing against it — what the home reaches for when people
+              come (GEA1, hospitality before productivity). */}
           <Wing
             name="Hospitality"
             sense="Kept ready for when people come — so a guest is never met with an empty cupboard."
+            place="left"
           >
-            <Piece name="Hospitality cupboard"><Cupboard doors={2} /></Piece>
-            <Piece name="Drinks"><BottleRun /></Piece>
+            <Run kind="guests">
+              <Cupboard doors={2} variant="tall" label="Hospitality cupboard" />
+              <BottleRun variant="short" label="Drinks" />
+            </Run>
           </Wing>
 
-          {/* Wing E — The Working House. The non-food provisions a running home
-              needs, and the corner kept for the household's animals. */}
+          {/* ── Wing E — The Working House ───────────────────────────────────────
+              The household cupboard, with the pet corner low at its foot — the
+              corner kept for the animals who depend on the house. */}
           <Wing
             name="The Working House"
             sense="What keeps the house itself going — and a corner for the animals who depend on it."
+            place="right"
           >
-            <Piece name="Household cupboard"><Cupboard doors={2} /></Piece>
-            <Piece name="Pet corner"><Drawer rows={1} /></Piece>
+            <Run kind="household">
+              <Cupboard doors={2} variant="tall" label="Household cupboard" />
+              <Drawer rows={1} label="Pet corner" />
+            </Run>
           </Wing>
 
-          {/* Wing F — The Seasonal &amp; Growing Room. What comes and goes with the
-              year, and space deliberately kept in hand so the room can mature for a
-              decade without being redesigned (LARDER2 § I.9). */}
+          {/* ── Wing F — The Seasonal & Growing Room ─────────────────────────────
+              One long, low run of shelving that simply keeps going: the seasonal
+              shelf, and then the same shelving with nothing yet on it. The room's
+              quietest note, and its promise that it will mature (LARDER2 § I.9). */}
           <Wing
-            name="The Seasonal &amp; Growing Room"
+            name="The Seasonal & Growing Room"
             sense="What the year brings, and room left in hand for all the family will one day keep."
+            place="centre"
           >
-            <Piece name="Seasonal shelf"><Shelving tiers={2} /></Piece>
-            <Piece name="Room to grow"><ReservedBay /></Piece>
+            <Run kind="growing">
+              <Shelving tiers={3} variant="long" label="Seasonal shelf" />
+              <ReservedBay />
+            </Run>
           </Wing>
         </div>
-
-        <footer className="lr-foot" aria-hidden="true">
-          <span className="lr-foot-mark" />
-        </footer>
       </div>
     </div>
   );
