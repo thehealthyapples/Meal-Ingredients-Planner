@@ -4,7 +4,7 @@
 **Date:** 2026-07-23
 **Rollback identifier:** `rollback/larder-asset-governance-foundation-20260723` → `ee365a31`
 **Report location:** `docs/implementation/LARDER_ASSET_GOVERNANCE_FOUNDATION.md`
-**Commit hash:** recorded in the follow-up hash-recording commit (repo precedent: `a8b22162`)
+**Commit hash:** `90778d47` (implementation); hash recorded in this follow-up commit per repo precedent (`a8b22162`)
 
 ## 1. Purpose
 
