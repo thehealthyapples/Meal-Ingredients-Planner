@@ -4,7 +4,7 @@
 **Date:** 2026-07-23
 **Status:** IMPLEMENTED — Pass 2 only (interior composition; still no data, no interactions)
 **Rollback identifier:** `rollback/larder-pass2-room-composition-20260723` → `d25f29a2` (annotated tag object `e93647ef`)
-**Commit:** _see § 9 below_
+**Commit:** `555ceb8f` (§ 9)
 **Author of record:** Colin Clapson (Home Owner) · implemented by Claude under the Engineering Workflow
 **Governing architecture:** [`LARDER_ROOM_NORTH_STAR_ARCHITECTURE.md`](../architecture/LARDER_ROOM_NORTH_STAR_ARCHITECTURE.md) (`LARDER1`) · [`LIVING_LARDER_INTERIOR_ARCHITECTURE.md`](../architecture/LIVING_LARDER_INTERIOR_ARCHITECTURE.md) (`LARDER2`) · [`LIVING_LARDER_INTERACTION_CONSTITUTION.md`](../architecture/LIVING_LARDER_INTERACTION_CONSTITUTION.md) (`LARDER3`) · [`LIVING_LARDER_IMPLEMENTATION_CONSTITUTION.md`](../architecture/LIVING_LARDER_IMPLEMENTATION_CONSTITUTION.md) (`LARDER4`, § 8 Pass 2) · [`THA_CRAFTSMANSHIP_CONSTITUTION.md`](../architecture/THA_CRAFTSMANSHIP_CONSTITUTION.md) (`CRAFT1`)
 **Predecessor:** [`LARDER_PASS1_ROOM_STRUCTURE.md`](./LARDER_PASS1_ROOM_STRUCTURE.md)
@@ -191,7 +191,9 @@ The before shots show warm, correct furniture floating in labelled isolation. Th
 
 ## 9. Commit
 
-`_recorded in the follow-up commit below_`
+**`555ceb8f55f3a67660298c2d4d67108af7539af8`** — *LARDER Pass 2 — compose the Living Larder as one interior.*
+
+That commit carries the whole of this pass: the recomposed room, the capture harness, the screenshots, the session record, and this report. A commit cannot contain its own hash, so the hash above is written here by the one small follow-up commit that does nothing else.
 
 ---
 
