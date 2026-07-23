@@ -659,7 +659,7 @@ function larderJarChecks() {
     problemsJ3.length ? "fail" : "pass",
     problemsJ3.length
       ? problemsJ3.join("  |  ")
-      : `${records.filter((r) => r.approvalStatus !== "approved").length} unapproved record(s), all unavailable (all 27 planned at the foundation).`,
+      : `${records.filter((r) => r.approvalStatus !== "approved").length} unapproved record(s), all unavailable (planned: ${records.filter((r) => r.approvalStatus === "planned").length}, candidate: ${records.filter((r) => r.approvalStatus === "candidate").length}).`,
   );
 
   // J4 — files on disk: a missing file is lawful ONLY for a planned record; every
@@ -753,22 +753,30 @@ function larderJarChecks() {
   // must return to candidate and lose availability in the correcting commit).
   const problemsJ6: string[] = [];
   for (const r of records) {
-    if (r.approvalStatus !== "approved") continue;
+    if (r.approvalStatus === "planned") continue;
     const abs = resolve(jarDirAbs, r.filename);
     if (!existsSync(abs)) continue; // J4 already fails this
     const actual = sha256(abs);
-    if (actual !== r.checksum || r.visualApproval?.approvedChecksum !== actual) {
+    if (r.approvalStatus === "candidate" && actual !== r.checksum) {
+      // A stale candidate checksum would let a future approval bind to bytes that
+      // no longer exist — refuse the drift at the candidate stage already.
+      problemsJ6.push(
+        `${r.id}: candidate bytes ${actual.slice(0, 12)}… do not match the registered checksum ${String(r.checksum).slice(0, 12)}… — re-record the candidate checksum in the SAME commit that changes the file.`,
+      );
+    }
+    if (r.approvalStatus === "approved" && (actual !== r.checksum || r.visualApproval?.approvedChecksum !== actual)) {
       problemsJ6.push(
         `${r.id}: bytes ${actual.slice(0, 12)}… do not match the approved checksum ${String(r.checksum).slice(0, 12)}… — approval is INVALID; return the record to candidate + unavailable, preserve the approval in history, re-verify and re-approve (checksum drift law).`,
       );
     }
   }
+  const candidateCount = records.filter((r) => r.approvalStatus === "candidate").length;
   record(
-    "Approved jars are checksum-bound to their Home Owner approval (J6)",
+    "Candidate + approved jars are checksum-bound (J6)",
     problemsJ6.length ? "fail" : "pass",
     problemsJ6.length
       ? problemsJ6.join("  |  ")
-      : "No approved asset drifts (0 approved at the foundation — the gate arms with the first approval).",
+      : `${candidateCount} candidate(s) byte-match their registered checksum; no approved asset drifts (0 approved — that gate arms with the first approval).`,
   );
 
   // J7 — no runtime reference to unapproved assets, and one mouth only: no client file
@@ -850,7 +858,18 @@ function larderJarChecks() {
     try {
       const c1 = "cc".repeat(32);
       const c2 = "dd".repeat(32);
-      const candidate = promoteJarToCandidate(base, c1);
+      // A synthetic PLANNED record (the register's own records may lawfully already
+      // be candidates/approved — the self-test always exercises the full path).
+      const syntheticPlanned: LarderJarAssetRecord = {
+        ...base,
+        approvalStatus: "planned",
+        checksum: null,
+        availabilityState: "unavailable",
+        visualApproval: null,
+        visualApprovalHistory: [],
+        rejectionHistory: [],
+      };
+      const candidate = promoteJarToCandidate(syntheticPlanned, c1);
       if (candidate.approvalStatus !== "candidate" || candidate.availabilityState !== "unavailable") {
         problemsJ9.push("candidate promotion did not yield an unavailable candidate.");
       }

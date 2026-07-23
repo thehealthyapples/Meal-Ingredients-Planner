@@ -333,13 +333,14 @@ function plannedJar(
 }
 
 /**
- * THE PLANNED INVENTORY — all 27 records, explicit, planned, unavailable,
- * checksum null. 25 approved ingredient visual families + the empty
- * shopping-state jar + the green visual-gap fallback jar. The inventory is
- * CLOSED at 27: adding a family is a governance change to this register, in
- * this file, verified by the inventory check.
+ * THE PLANNED INVENTORY — all 27 identities, explicit. 25 approved ingredient
+ * visual families + the empty shopping-state jar + the green visual-gap
+ * fallback jar. The inventory is CLOSED at 27: adding a family is a governance
+ * change to this register, in this file, verified by the inventory check.
+ * (The register derives from this inventory below — records with a generated
+ * candidate file are promoted through the lifecycle law, never edited by hand.)
  */
-export const larderJarAssetRegister: ReadonlyArray<LarderJarAssetRecord> = Object.freeze([
+const LARDER_JAR_PLANNED_INVENTORY: ReadonlyArray<LarderJarAssetRecord> = Object.freeze([
   plannedJar("rolled-oats", "breakfast",
     "Photorealistic rolled oat flakes, pale cream, softly irregular, settled to the shared fill line.",
     ["rolled oats"], ["granola"]),
@@ -455,6 +456,60 @@ export const larderJarAssetRegister: ReadonlyArray<LarderJarAssetRecord> = Objec
       ],
     }),
 ]);
+
+/**
+ * CANDIDATE CHECKSUMS — LARDER_PRODUCTION_ASSET_GENERATION (2026-07-23).
+ * sha256 of each generated PNG master under LARDER_JAR_ASSET_DIR. The masters
+ * were produced by `scripts/generate-larder-jar-masters.ts` (deterministic
+ * procedural rendering — one parametric jar per the shared spec + seeded
+ * per-family contents, rasterised by Chromium to 512×768 RGBA). Recorded
+ * honestly as CANDIDATES: automated verification has run (J-checks), but NO
+ * Home Owner visual approval exists — every asset remains unavailable, out of
+ * runtime and out of exports, until an approval is bound to its exact checksum.
+ * Review sheet: docs/reference-assets/living-larder-review/.
+ */
+export const LARDER_JAR_CANDIDATE_CHECKSUMS: Readonly<Record<string, string>> = Object.freeze({
+  "tha-larder-jar-rolled-oats": "3fc47c3da129a49fc3dea80dca4b6483f10e4b972e2f428ea41e5b709bec60b9",
+  "tha-larder-jar-white-rice": "27f76e996b070286f488de42f36503a64a3d94aa61bc5eb6e97577e16e117895",
+  "tha-larder-jar-brown-rice": "39ed3447f29f5aa9990874cc33dbc8249cb52a5b873fe4085552f10dd4727efd",
+  "tha-larder-jar-mixed-rice": "90c1558104f2db61c61b9cd4e06192619e641af98c92e207ae655095afa12a56",
+  "tha-larder-jar-white-penne": "5fa8b7061491e3116db7e3ee9a8056f21a7c4a774ffe7850439ff4a57dd97f4a",
+  "tha-larder-jar-wholemeal-penne": "4b234f4577b9dcdcc1a20d7d4804ca140518ebefc7e57289b945c0b7b41cb4ad",
+  "tha-larder-jar-white-fusilli": "aa53616ff46e364c3917f7c5a5b540085a0e47e206984c974079575b7dabedb0",
+  "tha-larder-jar-wholemeal-fusilli": "6b9a6ac9d6ce385fad3ab3fd5cacc10990e6cdb776e4bfb9517595688d077847",
+  "tha-larder-jar-red-lentils": "c327015460a9e6449a9cf5ad1374b944717f019dfb0b69d2f087e92fbc83ae88",
+  "tha-larder-jar-green-lentils": "0f25cd1f529586a7b01a4bea98e9ba82921122632971897345875a9077cc3ea9",
+  "tha-larder-jar-dried-chickpeas": "4eb6870019d449938bff1ed22338c49f5b022a0a4d59815c788202553b9c531d",
+  "tha-larder-jar-black-beans": "e4a81b866c6754ddd4bc042b782a8a9fdf7f3b81bfc5d8894c097c91772ba2ea",
+  "tha-larder-jar-mixed-nuts": "ee177072f8dd2f52ccfa8869a6f5570340e89eb862094ee4462cdbe6c3d28dc5",
+  "tha-larder-jar-pumpkin-seeds": "df6836155de54fe594edd465246510f8c26f902d32c1fc01b1c3fb920c2cad54",
+  "tha-larder-jar-plain-flour": "7de165059c5718ad973fc2a0df4402fabb3f1e779510ae5beba2e99866558e1f",
+  "tha-larder-jar-quinoa": "98016fcb4b56caa693fc649434c85ee7803577cfecda2d9bf07d0d6c620a59ba",
+  "tha-larder-jar-couscous": "9b836dffcd2075f0d31105da686377887bfb1de6cadc73583e4b032ec24c7fb9",
+  "tha-larder-jar-pearl-barley": "29f0aaa7c29905fa6fd4f6bb1bc4b6340b8eae0108236780ae0f0747c78788b9",
+  "tha-larder-jar-kidney-beans": "02a810331354848e9a47ce27a8c7cc81910af8cb2d86b7cad7d86705735536b7",
+  "tha-larder-jar-cannellini-beans": "d35619adfdcdd3786afe37ec0365d88127bc9137d412f4ccad0738992000e7f7",
+  "tha-larder-jar-sunflower-seeds": "6f79cb7a446af1a8b8eb41b230b1a72c8a0ce281a638d937b9efcd479f3b4a74",
+  "tha-larder-jar-chia-seeds": "8604fdf9c8fa394f5ecac3a6b51f18f4ae8a5c361702f8b3218e15f2dd71c243",
+  "tha-larder-jar-ground-almonds": "ba5c8d8b61000d60077edbd28d78bdbac62d892655d15597e14581b0d10de32d",
+  "tha-larder-jar-granola": "970fc50482fbc358b29b64b88aee0d8f9c68294e01038e023ef50916ef931d40",
+  "tha-larder-jar-sugar": "12633858559afc0b9476480d2b57ed989e576ae4a4ffb556d1928698b350f419",
+  "tha-larder-jar-empty": "379d586082ee95938a8d204eb2078c430ebbb4ba6637140720f9fcfff48cc0d0",
+  "tha-larder-jar-fallback-green": "3227423ed61a5c277cadc2838427f8f4da7133931d2819221a09ed82f05fbbc4",
+});
+
+/**
+ * THE REGISTER — the planned inventory with every generated master promoted
+ * `planned → candidate` through the lifecycle law itself (promoteJarToCandidate),
+ * never by hand-editing a record. All 27 are candidates: unavailable, excluded
+ * from runtime and exports, awaiting checksum-bound Home Owner approval.
+ */
+export const larderJarAssetRegister: ReadonlyArray<LarderJarAssetRecord> = Object.freeze(
+  LARDER_JAR_PLANNED_INVENTORY.map((record) => {
+    const checksum = LARDER_JAR_CANDIDATE_CHECKSUMS[record.id];
+    return checksum ? promoteJarToCandidate(record, checksum) : record;
+  }),
+);
 
 /** The 25 approved ingredient families, in approval order — the closed inventory the verifier checks. */
 export const LARDER_JAR_INGREDIENT_FAMILIES: ReadonlyArray<string> = Object.freeze([

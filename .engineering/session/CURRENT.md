@@ -178,6 +178,7 @@ Find the active session, open its run file, and continue from **Next action**.
 | `PLANNER1_Continuous_Timeline` | Planning | `rollback/PLANNER-continuous-timeline-20260722` | Fill in the first concrete step | [runs/PLANNER1_Continuous_Timeline.md](./runs/PLANNER1_Continuous_Timeline.md) |
 | `REBUILD1_Room_Rebuild_Programme` | Planning | `rollback/REBUILD1-room-rebuild-programme-20260722` | Fill in the first concrete step | [runs/REBUILD1_Room_Rebuild_Programme.md](./runs/REBUILD1_Room_Rebuild_Programme.md) |
 | `LARDER_ASSET_GOVERNANCE_FOUNDATION` | Waiting for User | `rollback/larder-asset-governance-foundation-20260723` → `ee365a31` | Delivered — Larder jar asset governance foundation: Life Register extended with the 27-record planned jar inventory (25 ingredient families + empty + fallback-green), shared one-jar visual spec, visual-gap-green colour governance (artwork colour, one meaning), Visual Gap Register (honest empty), checksum-bound Home Owner approval lifecycle (planned → candidate → approved, drift invalidation) and fail-closed export contract; verifier extended J1–J12 (26/26 PASS); rejected predecessors archived to `docs/reference-assets/rejected/living-larder/` with rejection record. Governance only — no artwork, no runtime UI. | [runs/LARDER_ASSET_GOVERNANCE_FOUNDATION.md](./runs/LARDER_ASSET_GOVERNANCE_FOUNDATION.md) |
+| `LARDER_PRODUCTION_ASSET_GENERATION` | Waiting for User | `rollback/larder-production-asset-generation-20260723` → `03578305` | Delivered — 27 candidate jar masters generated (deterministic parametric jar + per-family procedural contents, Chromium 512×768 RGBA), verifier 26/26 with no bypasses, candidates registered via the lifecycle law with byte-checked checksums, equal-scale contact sheet at `docs/reference-assets/living-larder-review/` for Home Owner review. NOTHING approved — all 27 unavailable pending checksum-bound Home Owner approval. Medium honestly disclosed: procedural illustration approaching realism, not photography. | [runs/LARDER_PRODUCTION_ASSET_GENERATION.md](./runs/LARDER_PRODUCTION_ASSET_GENERATION.md) |
 
 > Multiple rows may be active at once — simultaneous Claude Code sessions are
 > supported. Each session owns exactly one run file named by its Session ID, so
@@ -188,4 +189,4 @@ When a session reaches **Complete**, move its row out of this table and add a
 line to [INDEX.md](./INDEX.md) — `.engineering/scripts/session-complete.sh` does
 both. If no active sessions remain, set the top marker to `ESR:IDLE`.
 
-_Last automatic heartbeat (Stop hook): 2026-07-23T15:18:22Z UTC_
+_Last automatic heartbeat (Stop hook): 2026-07-23T15:34:37Z UTC_
