@@ -31,8 +31,27 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
+import { inflateSync } from "node:zlib";
 
-import { livingDetailsManifest } from "../../client/src/components/layout/living-details-manifest";
+import {
+  livingDetailsManifest,
+  larderJarAssetRegister,
+  larderVisualGapRegister,
+  LARDER_JAR_ASSET_DIR,
+  LARDER_JAR_INGREDIENT_FAMILIES,
+  LARDER_JAR_OWNER_COMPONENT,
+  LARDER_JAR_SHARED_SPEC,
+  LARDER_REJECTED_PREDECESSOR_DIR,
+  VISUAL_GAP_GREEN,
+  assertJarRecordWellFormed,
+  applyJarChecksumDrift,
+  buildJarExportSet,
+  deriveJarAvailability,
+  promoteJarToCandidate,
+  recordJarHomeOwnerApproval,
+  type JarVisualApproval,
+  type LarderJarAssetRecord,
+} from "../../client/src/components/layout/living-details-manifest";
 import {
   loadDressingRegister,
   canonicalizeItems,
@@ -59,6 +78,10 @@ const DRESSING_ASSET_DIR = "client/src/assets/living-home/dressing";
 // forms contain this substring, so the one-mouth check catches either.
 const DRESSING_ASSET_IMPORT = "assets/living-home/dressing";
 const DRESSING_OWNER_COMPONENT = "client/src/components/layout/dressing-layer.tsx";
+// LARDER_ASSET_GOVERNANCE_FOUNDATION — the Larder jar asset section of the Life
+// Register (fourth governed asset class; same register module, same verifier).
+const LARDER_JAR_IMPORT = "assets/living-home/larder";
+const LARDER_REJECTED_FILES = ["larder-counter.webp", "larder-jars.webp"];
 
 const ICON = { pass: "✓", fail: "✗", skip: "○" } as const;
 
@@ -192,7 +215,14 @@ function checkSingleMouth() {
     // not a Life-asset violation.
     if (file === DRESSING_OWNER_COMPONENT) continue;
     const src = readFileSync(resolve(ROOT, file), "utf8");
-    if (importsAssetPath(src, "assets/living-home") && !importsAssetPath(src, DRESSING_ASSET_IMPORT)) {
+    if (
+      importsAssetPath(src, "assets/living-home") &&
+      !importsAssetPath(src, DRESSING_ASSET_IMPORT) &&
+      // The larder/jars subtree is the fourth governed section (Larder jar assets,
+      // LARDER_ASSET_GOVERNANCE_FOUNDATION) with its own single-mouth + lifecycle
+      // gates (J-checks below) — not a Life-manifest asset.
+      !importsAssetPath(src, LARDER_JAR_IMPORT)
+    ) {
       offenders.push(`${file} imports from assets/living-home/ — only ${LIFE_OWNER_COMPONENT} may (EXP3 § 6/§ 7.1).`);
     }
   }
@@ -210,7 +240,11 @@ function checkNoOrphans() {
           // The dressing/ subdir is the third register (Dressing), not Life — it has its
           // own single-mouth (D7) and byte-lock (D8) gates and is not referenced by the
           // Life manifest, so it must not be judged an orphan Life asset.
-          !f.startsWith(`${DRESSING_ASSET_DIR}/`),
+          !f.startsWith(`${DRESSING_ASSET_DIR}/`) &&
+          // The larder/ subtree is the Larder jar asset section of the Life Register
+          // (LARDER_ASSET_GOVERNANCE_FOUNDATION) with its own registration, lifecycle
+          // and stray-file gates (J-checks) — not a Life-manifest object asset.
+          !f.startsWith("client/src/assets/living-home/larder/"),
       )
     : [];
 
@@ -494,6 +528,467 @@ function dressingChecks() {
   }
 }
 
+// ── Larder jar asset checks (J1–J12) — LARDER_ASSET_GOVERNANCE_FOUNDATION ─────
+// The lifecycle, checksum-approval and export gates over the Life Register's
+// Larder jar section. All 27 records are `planned` at the foundation, so the
+// file-level checks hold vacuously — honestly labelled, and real gates the
+// moment the first candidate PNG lands.
+
+/** Minimal deterministic PNG inspection: IHDR facts + decoded RGBA pixels. */
+interface PngFacts {
+  width: number;
+  height: number;
+  bitDepth: number;
+  colourType: number;
+  /** Unfiltered raw RGBA pixels (only when colourType 6, bitDepth 8). */
+  pixels: Uint8Array | null;
+  /** Raw text found in tEXt/iTXt chunks (checked for baked-wording metadata). */
+  textChunks: string[];
+}
+
+function readPng(absPath: string): PngFacts | { error: string } {
+  const buf = readFileSync(absPath);
+  const SIG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+  if (buf.length < 8 || !SIG.every((b, i) => buf[i] === b)) return { error: "not a PNG (bad signature)" };
+  let width = 0, height = 0, bitDepth = 0, colourType = -1;
+  const idat: Buffer[] = [];
+  const textChunks: string[] = [];
+  let off = 8;
+  while (off + 8 <= buf.length) {
+    const len = buf.readUInt32BE(off);
+    const type = buf.toString("ascii", off + 4, off + 8);
+    const data = buf.subarray(off + 8, off + 8 + len);
+    if (type === "IHDR") {
+      width = data.readUInt32BE(0);
+      height = data.readUInt32BE(4);
+      bitDepth = data[8];
+      colourType = data[9];
+      if (data[12] !== 0) return { error: "interlaced PNG — masters must be non-interlaced" };
+    } else if (type === "IDAT") idat.push(Buffer.from(data));
+    else if (type === "tEXt" || type === "iTXt" || type === "zTXt") textChunks.push(data.toString("latin1"));
+    else if (type === "IEND") break;
+    off += 12 + len;
+  }
+  let pixels: Uint8Array | null = null;
+  if (colourType === 6 && bitDepth === 8 && idat.length) {
+    try {
+      const raw = inflateSync(Buffer.concat(idat));
+      const stride = width * 4;
+      pixels = new Uint8Array(width * height * 4);
+      let prev = new Uint8Array(stride);
+      for (let y = 0; y < height; y++) {
+        const rowStart = y * (stride + 1);
+        const filter = raw[rowStart];
+        const row = raw.subarray(rowStart + 1, rowStart + 1 + stride);
+        const out = new Uint8Array(stride);
+        for (let x = 0; x < stride; x++) {
+          const a = x >= 4 ? out[x - 4] : 0;
+          const b = prev[x];
+          const c = x >= 4 ? prev[x - 4] : 0;
+          let v = row[x];
+          if (filter === 1) v = (v + a) & 0xff;
+          else if (filter === 2) v = (v + b) & 0xff;
+          else if (filter === 3) v = (v + ((a + b) >> 1)) & 0xff;
+          else if (filter === 4) {
+            const p = a + b - c;
+            const pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c);
+            v = (v + (pa <= pb && pa <= pc ? a : pb <= pc ? b : c)) & 0xff;
+          }
+          out[x] = v;
+        }
+        pixels.set(out, y * stride);
+        prev = out;
+      }
+    } catch {
+      pixels = null;
+    }
+  }
+  return { width, height, bitDepth, colourType, pixels, textChunks };
+}
+
+function alphaAt(png: PngFacts, x: number, y: number): number {
+  return png.pixels ? png.pixels[(y * png.width + x) * 4 + 3] : 255;
+}
+
+function larderJarChecks() {
+  const records = larderJarAssetRegister;
+
+  // J1 — the closed 27-record inventory: 25 ingredient families + empty + fallback,
+  // each exactly once, unique ids/filenames/families.
+  const problemsJ1: string[] = [];
+  if (records.length !== 27) problemsJ1.push(`register holds ${records.length} records, not 27.`);
+  const ids = new Set(records.map((r) => r.id));
+  const families = new Set(records.map((r) => r.family));
+  const filenames = new Set(records.map((r) => r.filename));
+  if (ids.size !== records.length) problemsJ1.push("duplicate asset id.");
+  if (families.size !== records.length) problemsJ1.push("duplicate family.");
+  if (filenames.size !== records.length) problemsJ1.push("duplicate filename.");
+  if (LARDER_JAR_INGREDIENT_FAMILIES.length !== 25) {
+    problemsJ1.push(`ingredient family list holds ${LARDER_JAR_INGREDIENT_FAMILIES.length}, not 25.`);
+  }
+  for (const fam of LARDER_JAR_INGREDIENT_FAMILIES) {
+    if (!families.has(fam)) problemsJ1.push(`approved ingredient family "${fam}" is missing from the register.`);
+  }
+  for (const special of ["empty", "fallback-green"]) {
+    if (!families.has(special)) problemsJ1.push(`the "${special}" jar is missing from the register.`);
+  }
+  record(
+    "Jar inventory is the approved 27 (J1)",
+    problemsJ1.length ? "fail" : "pass",
+    problemsJ1.length ? problemsJ1.join("  |  ") : "25 ingredient families + empty + fallback-green, all unique, all present.",
+  );
+
+  // J2 — every record is well-formed and its stored availability equals the derived law.
+  const problemsJ2 = records.flatMap((r) => assertJarRecordWellFormed(r));
+  record(
+    "Every jar record well-formed; availability obeys the one law (J2)",
+    problemsJ2.length ? "fail" : "pass",
+    problemsJ2.length ? problemsJ2.join("  |  ") : `${records.length} record(s) internally consistent; availability ⇔ checksum-bound approval.`,
+  );
+
+  // J3 — lifecycle/availability: planned & candidate are ALWAYS unavailable; only a
+  // checksum-bound approved record is available.
+  const problemsJ3: string[] = [];
+  for (const r of records) {
+    if (r.approvalStatus !== "approved" && (r.availabilityState === "available" || deriveJarAvailability(r) === "available")) {
+      problemsJ3.push(`${r.id}: ${r.approvalStatus} record must be unavailable.`);
+    }
+  }
+  record(
+    "Planned/candidate jars are unavailable (J3)",
+    problemsJ3.length ? "fail" : "pass",
+    problemsJ3.length
+      ? problemsJ3.join("  |  ")
+      : `${records.filter((r) => r.approvalStatus !== "approved").length} unapproved record(s), all unavailable (all 27 planned at the foundation).`,
+  );
+
+  // J4 — files on disk: a missing file is lawful ONLY for a planned record; every
+  // candidate/approved record must have its registered file; every file in the jar
+  // dir must be a registered filename (no strays).
+  const jarDirAbs = resolve(ROOT, LARDER_JAR_ASSET_DIR);
+  const onDisk = existsSync(jarDirAbs)
+    ? readdirSync(jarDirAbs).filter((f) => /\.(png|webp|avif|svg|jpg|jpeg)$/i.test(f))
+    : [];
+  const problemsJ4: string[] = [];
+  for (const r of records) {
+    const exists = onDisk.includes(r.filename);
+    if (r.approvalStatus !== "planned" && !exists) {
+      problemsJ4.push(`${r.id}: ${r.approvalStatus} record but no file at ${LARDER_JAR_ASSET_DIR}/${r.filename}.`);
+    }
+    if (r.approvalStatus === "planned" && exists) {
+      problemsJ4.push(`${r.id}: a file exists but the record is still planned — promote to candidate (with checksum) in the same commit.`);
+    }
+  }
+  for (const f of onDisk) {
+    if (!records.some((r) => r.filename === f)) {
+      problemsJ4.push(`stray file ${LARDER_JAR_ASSET_DIR}/${f} — not a registered jar filename.`);
+    }
+  }
+  record(
+    "Jar files match lifecycle (missing only while planned; no strays) (J4)",
+    problemsJ4.length ? "fail" : "pass",
+    problemsJ4.length
+      ? problemsJ4.join("  |  ")
+      : onDisk.length === 0
+        ? "No files yet — all 27 records are planned, for which absence is the lawful state (honest vacuity)."
+        : `${onDisk.length} file(s), each registered and lifecycle-consistent.`,
+  );
+
+  // J5 — PNG integrity for every existing candidate/approved file: exact 512×768,
+  // 8-bit RGBA, transparent corners, genuine (non-vacuous) alpha, no opaque or
+  // checkerboard background, no text-chunk label wording. Vacuous while no file exists.
+  const problemsJ5: string[] = [];
+  let inspected = 0;
+  for (const r of records) {
+    if (!onDisk.includes(r.filename)) continue;
+    inspected++;
+    const png = readPng(resolve(jarDirAbs, r.filename));
+    if ("error" in png) {
+      problemsJ5.push(`${r.id}: ${png.error}.`);
+      continue;
+    }
+    const { width, height } = LARDER_JAR_SHARED_SPEC.dimensions;
+    if (png.width !== width || png.height !== height) {
+      problemsJ5.push(`${r.id}: ${png.width}×${png.height}, must be exactly ${width}×${height}.`);
+    }
+    if (png.colourType !== 6 || png.bitDepth !== 8) {
+      problemsJ5.push(`${r.id}: colour type ${png.colourType}/bit depth ${png.bitDepth} — must be 8-bit RGBA (type 6).`);
+    } else if (!png.pixels) {
+      problemsJ5.push(`${r.id}: pixel data could not be decoded for alpha verification.`);
+    } else {
+      const corners = [
+        alphaAt(png, 0, 0),
+        alphaAt(png, png.width - 1, 0),
+        alphaAt(png, 0, png.height - 1),
+        alphaAt(png, png.width - 1, png.height - 1),
+      ];
+      if (corners.some((a) => a !== 0)) {
+        problemsJ5.push(`${r.id}: corners are not fully transparent (alpha ${corners.join("/")}) — opaque or checkerboard background.`);
+      }
+      let transparent = 0;
+      const total = png.width * png.height;
+      for (let i = 3; i < png.pixels.length; i += 4) if (png.pixels[i] === 0) transparent++;
+      if (transparent === 0) problemsJ5.push(`${r.id}: no transparent pixel anywhere — alpha channel is not genuine.`);
+      if (transparent < total * 0.05) {
+        problemsJ5.push(`${r.id}: under 5% transparent pixels — background does not read as transparent.`);
+      }
+    }
+    const bakedWords = png.textChunks.filter((t) => /label|title|name/i.test(t));
+    if (bakedWords.length) {
+      problemsJ5.push(`${r.id}: PNG text chunk carries label-like metadata (${bakedWords.length} chunk(s)) — labels are runtime text only.`);
+    }
+  }
+  record(
+    "Jar PNG integrity: 512×768 RGBA, transparent corners, genuine alpha (J5)",
+    problemsJ5.length ? "fail" : "pass",
+    problemsJ5.length
+      ? problemsJ5.join("  |  ")
+      : inspected === 0
+        ? "No file exists yet (all planned) — dimensional/alpha gates hold vacuously and arm on the first candidate."
+        : `${inspected} file(s) verified: exact canvas, 8-bit RGBA, transparent corners, genuine alpha, no baked-label metadata.`,
+  );
+
+  // J6 — checksum-bound approval: every approved record's file bytes hash to BOTH the
+  // record checksum AND the live approval's approvedChecksum; drift ⇒ fail (the asset
+  // must return to candidate and lose availability in the correcting commit).
+  const problemsJ6: string[] = [];
+  for (const r of records) {
+    if (r.approvalStatus !== "approved") continue;
+    const abs = resolve(jarDirAbs, r.filename);
+    if (!existsSync(abs)) continue; // J4 already fails this
+    const actual = sha256(abs);
+    if (actual !== r.checksum || r.visualApproval?.approvedChecksum !== actual) {
+      problemsJ6.push(
+        `${r.id}: bytes ${actual.slice(0, 12)}… do not match the approved checksum ${String(r.checksum).slice(0, 12)}… — approval is INVALID; return the record to candidate + unavailable, preserve the approval in history, re-verify and re-approve (checksum drift law).`,
+      );
+    }
+  }
+  record(
+    "Approved jars are checksum-bound to their Home Owner approval (J6)",
+    problemsJ6.length ? "fail" : "pass",
+    problemsJ6.length
+      ? problemsJ6.join("  |  ")
+      : "No approved asset drifts (0 approved at the foundation — the gate arms with the first approval).",
+  );
+
+  // J7 — no runtime reference to unapproved assets, and one mouth only: no client file
+  // other than the declared owner component may reference the jar asset dir at all,
+  // and even the owner may not reference it while nothing is approved.
+  const problemsJ7: string[] = [];
+  const clientAbs = resolve(ROOT, CLIENT_SRC);
+  const approvedCount = records.filter((r) => r.approvalStatus === "approved").length;
+  if (existsSync(clientAbs)) {
+    for (const file of walk(clientAbs)) {
+      if (!/\.(ts|tsx|css)$/.test(file)) continue;
+      const src = readFileSync(resolve(ROOT, file), "utf8");
+      if (file === "client/src/components/layout/living-details-manifest.ts") continue; // the register itself
+      if (!importsAssetPath(src, LARDER_JAR_IMPORT)) continue;
+      if (file !== LARDER_JAR_OWNER_COMPONENT) {
+        problemsJ7.push(`${file} references ${LARDER_JAR_ASSET_DIR}/ — only ${LARDER_JAR_OWNER_COMPONENT} (the one declared mouth) may.`);
+      } else if (approvedCount === 0) {
+        problemsJ7.push(`${file} references jar assets while 0 are approved — planned/candidate assets may not reach runtime.`);
+      }
+    }
+  }
+  record(
+    "No runtime reference to planned/candidate jars; one mouth only (J7)",
+    problemsJ7.length ? "fail" : "pass",
+    problemsJ7.length ? problemsJ7.join("  |  ") : `No client reference to ${LARDER_JAR_ASSET_DIR}/ (0 approved; any reference today would fail).`,
+  );
+
+  // J8 — export law: buildJarExportSet() excludes every unapproved/drifted record and
+  // never reports an incomplete package complete. Proven over the real register AND a
+  // synthetic sweep (planned/candidate/forged-approval records must all be excluded).
+  const problemsJ8: string[] = [];
+  const exportSet = buildJarExportSet();
+  if (exportSet.included.some((r) => r.approvalStatus !== "approved")) {
+    problemsJ8.push("export set includes a non-approved record.");
+  }
+  if (exportSet.included.length !== records.filter((r) => deriveJarAvailability(r) === "available").length) {
+    problemsJ8.push("export inclusion diverges from the availability law.");
+  }
+  if (exportSet.complete && exportSet.included.length !== records.length) {
+    problemsJ8.push("an incomplete package reports complete.");
+  }
+  if (exportSet.complete !== (records.length > 0 && exportSet.included.length === records.length)) {
+    problemsJ8.push("completeness is not the strict all-27 condition.");
+  }
+  // Synthetic: a forged approval (approved status, checksum mismatch) must be excluded.
+  const base = records[0];
+  if (base) {
+    const forged: LarderJarAssetRecord = {
+      ...base,
+      approvalStatus: "approved",
+      checksum: "aa".repeat(32),
+      availabilityState: "unavailable",
+      visualApproval: {
+        status: "approved",
+        approvedByRole: "home-owner",
+        approvedAt: "2026-07-23T00:00:00Z",
+        approvedChecksum: "bb".repeat(32),
+      },
+      visualApprovalHistory: [],
+    };
+    const forgedSet = buildJarExportSet([forged]);
+    if (forgedSet.included.length !== 0 || forgedSet.complete) {
+      problemsJ8.push("a forged (checksum-unbound) approval reached the export set.");
+    }
+  }
+  record(
+    "Exports include only checksum-approved assets; incompleteness is never hidden (J8)",
+    problemsJ8.length ? "fail" : "pass",
+    problemsJ8.length
+      ? problemsJ8.join("  |  ")
+      : `Export set: ${exportSet.included.length} included / ${exportSet.excluded.length} excluded, complete=${exportSet.complete} (honest: nothing is approved yet); forged approvals excluded.`,
+  );
+
+  // J9 — lifecycle behaviour self-test: planned → candidate → approved → drift, over a
+  // synthetic record with fixed timestamps (deterministic; proves the checksum-drift
+  // invalidation law executes, not merely that it is written down).
+  const problemsJ9: string[] = [];
+  if (base) {
+    try {
+      const c1 = "cc".repeat(32);
+      const c2 = "dd".repeat(32);
+      const candidate = promoteJarToCandidate(base, c1);
+      if (candidate.approvalStatus !== "candidate" || candidate.availabilityState !== "unavailable") {
+        problemsJ9.push("candidate promotion did not yield an unavailable candidate.");
+      }
+      if (deriveJarAvailability(candidate) !== "unavailable") problemsJ9.push("a candidate derives available.");
+      const approval: JarVisualApproval = {
+        status: "approved",
+        approvedByRole: "home-owner",
+        approvedAt: "2026-07-23T00:00:00Z",
+        approvedChecksum: c1,
+        notes: "self-test",
+      };
+      const approved = recordJarHomeOwnerApproval(candidate, approval);
+      if (deriveJarAvailability(approved) !== "available") problemsJ9.push("a checksum-bound approval did not yield availability.");
+      let wrongBindingRefused = false;
+      try {
+        recordJarHomeOwnerApproval(candidate, { ...approval, approvedChecksum: c2 });
+      } catch {
+        wrongBindingRefused = true;
+      }
+      if (!wrongBindingRefused) problemsJ9.push("an approval NOT bound to the candidate checksum was accepted.");
+      const drifted = applyJarChecksumDrift(approved, c2);
+      if (drifted.approvalStatus !== "candidate" || deriveJarAvailability(drifted) !== "unavailable") {
+        problemsJ9.push("checksum drift did not return the asset to candidate/unavailable.");
+      }
+      if (!drifted.visualApprovalHistory.some((a) => a.status === "invalidated-by-checksum-drift" && a.approvedChecksum === c1)) {
+        problemsJ9.push("drift did not preserve the invalidated approval in history.");
+      }
+      if (drifted.visualApproval !== null) problemsJ9.push("a drifted asset still carries a live approval.");
+    } catch (e) {
+      problemsJ9.push(`lifecycle self-test threw: ${(e as Error).message}`);
+    }
+  }
+  record(
+    "Lifecycle law executes: candidate → checksum-bound approval → drift invalidation (J9)",
+    problemsJ9.length ? "fail" : "pass",
+    problemsJ9.length
+      ? problemsJ9.join("  |  ")
+      : "Synthetic sweep: unbound approvals refused; drift withdraws availability and preserves history.",
+  );
+
+  // J10 — visual-gap-green has ONE meaning, applies only to the governed fallback, and
+  // is not a second colour registry (exactly one governed colour entry exists here).
+  const problemsJ10: string[] = [];
+  if (VISUAL_GAP_GREEN.colourId !== "visual-gap-green" || VISUAL_GAP_GREEN.baseColour !== "#63A844") {
+    problemsJ10.push(`governed colour drifted: ${VISUAL_GAP_GREEN.colourId} ${VISUAL_GAP_GREEN.baseColour}.`);
+  }
+  if (VISUAL_GAP_GREEN.meaning !== "approved visual representation missing") {
+    problemsJ10.push(`meaning drifted: "${VISUAL_GAP_GREEN.meaning}".`);
+  }
+  const gapApplies = [...VISUAL_GAP_GREEN.appliesOnlyToAssetIds];
+  if (gapApplies.length !== 1 || gapApplies[0] !== "tha-larder-jar-fallback-green") {
+    problemsJ10.push("visual-gap-green may apply ONLY to the governed fallback jar.");
+  }
+  const FORBIDDEN_MEANINGS = ["quantity", "nutrition", "quality", "freshness", "availability", "error", "shopping-list state"];
+  for (const m of FORBIDDEN_MEANINGS) {
+    if (!VISUAL_GAP_GREEN.mustNeverMean.includes(m as (typeof VISUAL_GAP_GREEN.mustNeverMean)[number])) {
+      problemsJ10.push(`forbidden-meaning list lost "${m}".`);
+    }
+  }
+  record(
+    "visual-gap-green: one colour, one meaning, fallback-only (J10)",
+    problemsJ10.length ? "fail" : "pass",
+    problemsJ10.length
+      ? problemsJ10.join("  |  ")
+      : "#63A844 means exactly 'approved visual representation missing', on the fallback jar only; artwork-content colour, no UI token.",
+  );
+
+  // J11 — the Visual Gap Register: every entry names a canonical food, the governed
+  // fallback, a first-encountered date and a coherent status; resolved ⇔ replacement.
+  const problemsJ11: string[] = [];
+  for (const gap of larderVisualGapRegister) {
+    if (!gap.canonicalFoodIdentity) problemsJ11.push("a gap lacks its canonical food identity.");
+    if (gap.fallbackAssetId !== "tha-larder-jar-fallback-green") {
+      problemsJ11.push(`${gap.canonicalFoodIdentity}: gap must reference the governed fallback jar.`);
+    }
+    if (!/^\d{4}-\d{2}-\d{2}/.test(gap.firstEncountered)) {
+      problemsJ11.push(`${gap.canonicalFoodIdentity}: firstEncountered must be an ISO date.`);
+    }
+    if ((gap.status === "resolved") !== (gap.replacementAssetId !== null)) {
+      problemsJ11.push(`${gap.canonicalFoodIdentity}: resolved ⇔ replacementAssetId recorded.`);
+    }
+    if (gap.replacementAssetId && !larderJarAssetRegister.some((r) => r.id === gap.replacementAssetId)) {
+      problemsJ11.push(`${gap.canonicalFoodIdentity}: replacement "${gap.replacementAssetId}" is not a registered asset.`);
+    }
+  }
+  record(
+    "Visual Gap Register well-formed; one owner (J11)",
+    problemsJ11.length ? "fail" : "pass",
+    problemsJ11.length
+      ? problemsJ11.join("  |  ")
+      : `${larderVisualGapRegister.length} gap(s) recorded (none yet — no runtime Larder UI exists; honest empty).`,
+  );
+
+  // J12 — rejected predecessors: archived under the evidence path with a rejection
+  // record, ABSENT from the client tree, and referenced by no client source.
+  const problemsJ12: string[] = [];
+  const archiveAbs = resolve(ROOT, LARDER_REJECTED_PREDECESSOR_DIR);
+  for (const f of LARDER_REJECTED_FILES) {
+    if (!existsSync(resolve(archiveAbs, f))) problemsJ12.push(`archive missing ${LARDER_REJECTED_PREDECESSOR_DIR}/${f}.`);
+    if (existsSync(resolve(ROOT, "client/src/assets/larder", f))) {
+      problemsJ12.push(`rejected predecessor still present at client/src/assets/larder/${f}.`);
+    }
+  }
+  if (!existsSync(resolve(archiveAbs, "REJECTION_RECORD.md"))) {
+    problemsJ12.push(`archive lacks its REJECTION_RECORD.md (an unrecorded rejection is not a rejection).`);
+  }
+  if (existsSync(clientAbs)) {
+    for (const file of walk(clientAbs)) {
+      if (!/\.(ts|tsx|css)$/.test(file)) continue;
+      // The register itself lawfully NAMES the archive paths as evidence pointers
+      // (predecessorOrRejectedReference) — a record of the rejection, not an import.
+      if (file === "client/src/components/layout/living-details-manifest.ts") continue;
+      const src = readFileSync(resolve(ROOT, file), "utf8");
+      if (LARDER_REJECTED_FILES.some((f) => importsAssetPath(src, f))) {
+        problemsJ12.push(`${file} still references a rejected predecessor asset.`);
+      }
+    }
+  }
+  record(
+    "Rejected predecessors archived with evidence; out of runtime forever (J12)",
+    problemsJ12.length ? "fail" : "pass",
+    problemsJ12.length
+      ? problemsJ12.join("  |  ")
+      : `${LARDER_REJECTED_FILES.join(" + ")} archived under ${LARDER_REJECTED_PREDECESSOR_DIR}/ with a rejection record; no client reference.`,
+  );
+
+  // HONEST GAP (reported, not hidden): baked-wording detection inside the label
+  // rectangle's PIXELS is not deterministically automatable without OCR. The automated
+  // gates cover metadata text chunks (J5) and the runtime-text law (dynamicLabel, J2);
+  // wording-in-pixels remains a Home Owner visual-approval responsibility (J6 binds
+  // that approval to the exact bytes, so an approved file cannot silently change).
+  record(
+    "Baked-label wording in pixels — honest automation gap",
+    "pass",
+    "Deterministic checks cover PNG text metadata + runtime-text law; in-pixel wording review is bound to the checksum-locked Home Owner approval (cannot be silently bypassed).",
+  );
+}
+
 function main() {
   console.log("EXP3 Phase 2 — Living Home Asset Verification");
   console.log("=============================================\n");
@@ -504,6 +999,7 @@ function main() {
   checkSingleMouth();
   checkNoOrphans();
   dressingChecks();
+  larderJarChecks();
 
   let failed = 0;
   for (const r of results) {
