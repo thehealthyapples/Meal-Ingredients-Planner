@@ -48,7 +48,7 @@ Adopting `EmptyState` on a room WITHOUT adding its `isError` branch makes the de
 - [ ] R1/R2 rooms rollout
 - [ ] R4 ErrorBoundary coverage
 - [ ] R5/R6/R7 polish
-- [ ] docs/implementation/PROD1_PRODUCT_COMPLETION_PROGRAMME.md
+- [ ] docs/implementation/production/PROD1_PRODUCT_COMPLETION_PROGRAMME.md
 
 - [x] R1/R2 rooms rollout — shopping, cookbook, planner, diary, pantry, analyser
 - [x] R4 ErrorBoundary now wraps the outer Suspense (auth, onboarding, /shared/:token, logged-out home, lazy-chunk 404s)
@@ -74,7 +74,7 @@ Adopting `EmptyState` on a room WITHOUT adding its `isError` branch makes the de
 - **Verification account REMOVED** — user 927 / household 561 deleted and confirmed absent (0 rows remaining for both).
 
 ## Deliverable
-`docs/implementation/PROD1_PRODUCT_COMPLETION_PROGRAMME.md` — written, with all nine required sections. Product completion assessed at **~72%**.
+`docs/implementation/production/PROD1_PRODUCT_COMPLETION_PROGRAMME.md` — written, with all nine required sections. Product completion assessed at **~72%**.
 
 ## Next action
 Confirm the `npm test` aggregate exits 0, then hand to owner. **Owner decisions are the gate on everything material that remains** — billing (no payment SDK exists at all), Terms/Privacy (blocks App Store submission and is a live GDPR exposure for special-category health data), and the three unenforced `TODO [PREMIUM]` limits. All are evidenced with file:line in the report §8 and none was attempted, per the brief.

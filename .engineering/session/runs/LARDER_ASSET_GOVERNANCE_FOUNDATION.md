@@ -20,7 +20,7 @@ second register, verifier, approval log or state owner.
 - `client/src/components/layout/living-details-manifest.ts` — Life Register extension (jar asset governance section)
 - `scripts/ci/verify-living-home-assets.ts` — verifier extension (jar checks)
 - `client/src/assets/larder/larder-counter.webp`, `larder-jars.webp` — archived to `docs/reference-assets/rejected/living-larder/`
-- `docs/implementation/LARDER_ASSET_GOVERNANCE_FOUNDATION.md` — implementation report
+- `docs/implementation/pantry/LARDER_ASSET_GOVERNANCE_FOUNDATION.md` — implementation report
 - `.engineering/session/runs/LARDER_ASSET_GOVERNANCE_FOUNDATION.md` + `CURRENT.md` — session tracking
 
 ## Checkpoints

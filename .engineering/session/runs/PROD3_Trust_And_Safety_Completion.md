@@ -93,7 +93,7 @@ recorded data — reporting, not recommending; filtering would hide a household'
 own data from them. If any starts to SUGGEST, it must adopt the gate then.
 
 ## Next action
-Owner to review `docs/implementation/PROD3_TRUST_AND_SAFETY_COMPLETION.md`.
+Owner to review `docs/implementation/production/PROD3_TRUST_AND_SAFETY_COMPLETION.md`.
 Top recommendations: (1) parallelise `npm test` — an aggregate that cannot run
 is a safety suite that does not run; (2) populate template slot data, now the
 binding constraint on recommendation breadth for restricted households;

@@ -31,7 +31,7 @@ LHDC1 (§2 two lists, §4 restraint strengthened, §18/§19/§21 hold) · Experi
 - [x] Shipped the restraint refinement (three `onlyRooms` narrowed); recomputed register checksum (`a73130f6…`).
 - [x] Verified against LHDC1 / Experience Constitution / HOMEOWNER1 / LIVINGHOME2.
 - [x] Recorded the eye-dependent calls as staged, not blind-changed.
-- [x] Wrote `docs/implementation/LH3_LIVING_HOME_REFINEMENT.md` (all required sections + room-by-room audit).
+- [x] Wrote `docs/implementation/house/LH3_LIVING_HOME_REFINEMENT.md` (all required sections + room-by-room audit).
 - [x] Verified: verify 13/13 · typecheck 88 pre-existing / 0 in touched files · build exit 0 · adoption 103·0·9.
 - [x] Commit; record hash here + dashboard.
 

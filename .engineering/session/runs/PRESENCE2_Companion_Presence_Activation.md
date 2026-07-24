@@ -4,7 +4,7 @@
 **Started:** 2026-07-20
 **Branch:** `int1-intelligence-platform`
 **Rollback:** `rollback/presence2-companion-presence-activation` → `5320c2d1dd06a06229b744a99417c1df0d602177`
-**Report:** [`docs/implementation/PRESENCE2_COMPANION_PRESENCE_ACTIVATION.md`](../../../docs/implementation/PRESENCE2_COMPANION_PRESENCE_ACTIVATION.md)
+**Report:** [`docs/implementation/companion/PRESENCE2_COMPANION_PRESENCE_ACTIVATION.md`](../../../docs/implementation/companion/PRESENCE2_COMPANION_PRESENCE_ACTIVATION.md)
 
 ---
 

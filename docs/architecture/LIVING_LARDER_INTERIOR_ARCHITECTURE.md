@@ -450,7 +450,7 @@ Final aesthetic approval of the room's character — its warmth, materials, ligh
 - Any new stored fact — quantity, measure, freshness, expiry, purchase date, shelf life, or a second categorisation. Introducing one is a governed act, outside this scope (`LARDER1` § 15, inherited).
 - Renaming internal identifiers (route `/pantry`, Domain 30's Register name, the `pantry` capability id, the `user_pantry_items` table) — the naming divergence `LARDER1` § 15 surfaced remains a separate decision, unchanged and unresolved here.
 
-**Discovered item requiring a separate decision** (reported, not resolved): the committed reconstruction (`a788d212`; `docs/implementation/LARDER_NORTH_STAR_RECONSTRUCTION.md`) already presents a furniture model (`AREAS`, `deriveForm`) that this interior architecture governs. Whether and how that implementation is refined to this document is an *implementation* decision under `CRAFT1` § 7 (architecture-first: the design here is authority; the existing code is reference material) — carried to the implementation phase, not made here.
+**Discovered item requiring a separate decision** (reported, not resolved): the committed reconstruction (`a788d212`; `docs/implementation/pantry/LARDER_NORTH_STAR_RECONSTRUCTION.md`) already presents a furniture model (`AREAS`, `deriveForm`) that this interior architecture governs. Whether and how that implementation is refined to this document is an *implementation* decision under `CRAFT1` § 7 (architecture-first: the design here is authority; the existing code is reference material) — carried to the implementation phase, not made here.
 
 ---
 

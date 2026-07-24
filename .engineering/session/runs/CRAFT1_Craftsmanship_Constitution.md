@@ -10,7 +10,7 @@
 | **Work commit** | `9ff3fdfd` on `int1-intelligence-platform` |
 
 ## Objective
-Create `docs/architecture/THA_CRAFTSMANSHIP_CONSTITUTION.md` — the **final governing design constitution**, defining **HOW** every future room is designed (not what it does — that is owned architecture). It governs implementation quality, does not replace existing architecture, and marks the end of architectural design work: future work should normally be implementation, refinement, verification only. Then create the implementation report `docs/implementation/CRAFT1_CRAFTSMANSHIP_CONSTITUTION.md`. Governance only — no route, schema, token, component, string, or business logic; no runtime code reads it.
+Create `docs/architecture/THA_CRAFTSMANSHIP_CONSTITUTION.md` — the **final governing design constitution**, defining **HOW** every future room is designed (not what it does — that is owned architecture). It governs implementation quality, does not replace existing architecture, and marks the end of architectural design work: future work should normally be implementation, refinement, verification only. Then create the implementation report `docs/implementation/architecture/CRAFT1_CRAFTSMANSHIP_CONSTITUTION.md`. Governance only — no route, schema, token, component, string, or business logic; no runtime code reads it.
 
 ## Governing inputs read (before any change)
 - `docs/architecture/README.md` (the Architecture Bootstrap + the full canon summaries)
@@ -24,7 +24,7 @@ Create `docs/architecture/THA_CRAFTSMANSHIP_CONSTITUTION.md` — the **final gov
 - [x] Read the mandated inputs; confirmed git status; created the annotated rollback tag before any work.
 - [x] Wrote `docs/architecture/THA_CRAFTSMANSHIP_CONSTITUTION.md`.
 - [x] Added the README index entry + governing summary (DOCGOV1 filing gate satisfied).
-- [x] Wrote `docs/implementation/CRAFT1_CRAFTSMANSHIP_CONSTITUTION.md` (all eight required sections).
+- [x] Wrote `docs/implementation/architecture/CRAFT1_CRAFTSMANSHIP_CONSTITUTION.md` (all eight required sections).
 - [x] Updated CURRENT.md dashboard row.
 - [x] Verified the diff touches only `docs/` and `.engineering/session/`; committed `9ff3fdfd`.
 - [x] Recorded commit hash here + dashboard.

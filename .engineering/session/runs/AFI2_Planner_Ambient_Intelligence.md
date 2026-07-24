@@ -97,14 +97,14 @@ AFI1 made it ambient/timely in the planner). Connection, not duplication.
 - [x] Typecheck: opportunity-engine.ts clean (0 errors); only pre-existing COMP1 `assembleFoodComparison` stub in test §2 fixture (documented AFI1 §6.2)
 - [x] Verified in running app — API end-to-end (demo 201 → food-opportunities returns cited `planner-batch-cook`: "Overnight Oats with Berries" on 3 days (Tue/Wed/Fri) → cook one batch; evidence planner-week; in the planner group)
 - [x] Screenshots (3): planner-batchcook-card (focused, clear), planner-ambient-batchcook (full surface), home-ambient-aggregate (beside the AFI1 uplift). docs/implementation/assets/afi2/
-- [x] AFI2 doc + report — docs/implementation/AFI2_PLANNER_AMBIENT_INTELLIGENCE.md
+- [x] AFI2 doc + report — docs/implementation/intelligence/AFI2_PLANNER_AMBIENT_INTELLIGENCE.md
 - [x] Deliverables backed up to scratchpad (clobber hazard); temp probe script removed
 
 **Last checkpoint (COMPLETE 2026-07-18):** AFI2 delivered. New `planner-batch-cook`
 ambient recommendation through the EXISTING FI4/OD1/DEC1/PHASE5C pipeline (no new
 pipeline, no second engine, no new knowledge, no contested-domain computation, no client
 change). Verified end-to-end (API cited output, 64/64 unit + 203 downstream assertions
-green, typecheck-clean, 3 screenshots). Doc: `docs/implementation/AFI2_PLANNER_AMBIENT_INTELLIGENCE.md`.
+green, typecheck-clean, 3 screenshots). Doc: `docs/implementation/intelligence/AFI2_PLANNER_AMBIENT_INTELLIGENCE.md`.
 
 **Implementation notes:** (1) selection/ordering MUST go through `orderByAttention`
 (canonical mechanics) — direct `ATTENTION_RANK` indexing trips the DEC1 "no local

@@ -92,7 +92,7 @@ type.
 | File | Role |
 |---|---|
 | `scripts/afi1-capture-ambient-screenshots.ts` | Playwright capture of the ambient surfaces against a live dev server + seeded demo household. Read-only; writes only PNGs. |
-| `docs/implementation/AFI1_AMBIENT_FOOD_INTELLIGENCE.md` | This doc. |
+| `docs/implementation/intelligence/AFI1_AMBIENT_FOOD_INTELLIGENCE.md` | This doc. |
 | `docs/implementation/assets/afi1/*.png` + `manifest.json` | The captured screenshot set. |
 
 > No new capability, no new route, no schema, no owner, no knowledge file. The

@@ -3,7 +3,7 @@
 **Commit:** `e3cd4a8e` (pushed to `int1-intelligence-platform`)
 **Rollback identifier:** `rollback/COOKBOOK1-family-cookbook-transformation-20260720` → `d03e77ff`
 **Tree state at tag time:** one tracked file modified (`.engineering/session/CURRENT.md`, the automated Stop-hook heartbeat line). The tag does not cover it. No other uncommitted work existed.
-**Report:** `docs/implementation/COOKBOOK1_FAMILY_COOKBOOK_TRANSFORMATION.md`
+**Report:** `docs/implementation/cookbook/COOKBOOK1_FAMILY_COOKBOOK_TRANSFORMATION.md`
 
 ---
 
@@ -49,4 +49,4 @@ Evidence: `docs/ui-audit/cookbook1-family-cookbook/`
 
 ## Next action
 
-Owner to review `docs/implementation/COOKBOOK1_FAMILY_COOKBOOK_TRANSFORMATION.md` § 8 — six decisions, of which the load-bearing three are: **delete or keep the 490**; **commission photography**; **correct the provenance and persist the classification** (needs a reviewed migration in `server/migrations/runner.ts`, the only sanctioned schema route). Also: run the name repair against **production** — it ran against the disposable dev DB only.
+Owner to review `docs/implementation/cookbook/COOKBOOK1_FAMILY_COOKBOOK_TRANSFORMATION.md` § 8 — six decisions, of which the load-bearing three are: **delete or keep the 490**; **commission photography**; **correct the provenance and persist the classification** (needs a reviewed migration in `server/migrations/runner.ts`, the only sanctioned schema route). Also: run the name repair against **production** — it ran against the disposable dev DB only.

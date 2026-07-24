@@ -17,7 +17,7 @@
 ## Objective
 READ-ONLY conformance audit of the completed Ambient Food Intelligence platform.
 **NO IMPLEMENTATION.** Deliverable is
-`docs/investigations/AFI_VERIFY1_AMBIENT_FOOD_INTELLIGENCE_CONFORMANCE_AUDIT.md`
+`docs/investigations/intelligence/AFI_VERIFY1_AMBIENT_FOOD_INTELLIGENCE_CONFORMANCE_AUDIT.md`
 with overall score, findings, evidence, follow-on work, production readiness.
 
 ## Checkpoints

@@ -14,7 +14,7 @@ Fresh first-principles launch readiness audit of The Healthy Apples across 17 ar
 explicitly disregarded; the repository is assessed exactly as it exists today.
 
 ## Files being modified
-- `docs/investigations/LAUNCH1_THA_LAUNCH_READINESS_AUDIT.md` — the sole deliverable (new file).
+- `docs/investigations/platform/LAUNCH1_THA_LAUNCH_READINESS_AUDIT.md` — the sole deliverable (new file).
 - `.engineering/session/` — run file and dashboard only.
 No product source, schema, config or test file is touched by this session.
 
@@ -29,7 +29,7 @@ No product source, schema, config or test file is touched by this session.
       - 5 orphan test files referenced by no npm script; 147 of 150 `test:*` scripts wired into `npm test`.
 - [x] Ten parallel first-principles area audits commissioned across all 17 assessed areas.
 
-- [x] All 17 areas assessed; `docs/investigations/LAUNCH1_THA_LAUNCH_READINESS_AUDIT.md` written.
+- [x] All 17 areas assessed; `docs/investigations/platform/LAUNCH1_THA_LAUNCH_READINESS_AUDIT.md` written.
 
 **Last checkpoint:** deliverable complete. Nothing implemented; no product source touched.
 
@@ -60,7 +60,7 @@ None for the audit itself. Two repository facts the owner should know immediatel
    is a prerequisite for every other quality claim in the repository.
 
 ## Note on file placement
-The deliverable sits at `docs/investigations/LAUNCH1_THA_LAUNCH_READINESS_AUDIT.md`
+The deliverable sits at `docs/investigations/platform/LAUNCH1_THA_LAUNCH_READINESS_AUDIT.md`
 as explicitly instructed. `repo-structure-verify.sh` fails "docs/investigations/ has
 no loose files" — this check was **already failing** before this session
 (`AFI_VERIFY1_…md` was already loose); this file adds to it. Moving it into a

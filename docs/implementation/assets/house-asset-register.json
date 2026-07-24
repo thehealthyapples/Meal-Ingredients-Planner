@@ -3,7 +3,7 @@
   "register": "house",
   "version": 1,
   "governingDocuments": [
-    "docs/implementation/EXP3_LIVING_HOME_ASSET_SYSTEM.md",
+    "docs/implementation/house/EXP3_LIVING_HOME_ASSET_SYSTEM.md",
     "docs/architecture/LIVING_HOME_EXPERIENCE_ARCHITECTURE.md",
     "docs/architecture/LIVING_HOME_ENVIRONMENTAL_DRESSING_ARCHITECTURE.md",
     "docs/architecture/THA_EXPERIENCE_BLUEPRINT.md"

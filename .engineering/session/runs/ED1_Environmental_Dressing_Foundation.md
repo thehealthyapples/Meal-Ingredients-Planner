@@ -18,7 +18,7 @@ The brief, read literally ("implement the Registry + interfaces as artifacts"), 
 - [x] git status confirmed; annotated rollback tag created (`94edc39a`) & reported before any modification.
 - [x] Surfaced the gate conflict; owner selected "Phase 1 + Foundation doc".
 - [x] Landed the four § 10.2 owner amendments (8 edits), each a citation-based annotation preserving the original rule verbatim.
-- [x] Wrote `docs/implementation/ED1_ENVIRONMENTAL_DRESSING_FOUNDATION.md` — full platform spec (owner · registry · placement · rendering · lifecycle · seasonal · visibility · eligibility · registration · extension points) DECLARED-NOT-BUILT, with all 9 required sections.
+- [x] Wrote `docs/implementation/house/ED1_ENVIRONMENTAL_DRESSING_FOUNDATION.md` — full platform spec (owner · registry · placement · rendering · lifecycle · seasonal · visibility · eligibility · registration · extension points) DECLARED-NOT-BUILT, with all 9 required sections.
 - [x] Verified diff is docs/session only — no code path.
 - [x] Commit (`a9440761`); record commit hash here + dashboard.
 

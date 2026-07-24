@@ -27,7 +27,7 @@
 
 ## 2. Implementation report locations
 
-- `docs/implementation/PROFILE_ALLERGY_SAFETY_COMPLETION.md` (Phase 1)
+- `docs/implementation/health/PROFILE_ALLERGY_SAFETY_COMPLETION.md` (Phase 1)
 - `docs/implementation/rebuild/NSR1_ROOM_COOKBOOK.md`
 - `docs/implementation/rebuild/NSR1_ROOM_NUTRITION.md`
 - `docs/implementation/rebuild/NSR1_ROOM_SHOPPING.md`
@@ -35,7 +35,7 @@
 - `docs/implementation/rebuild/NSR1_ROOM_PLANNER.md`
 - `docs/implementation/rebuild/NSR1_ROOM_PARTNERS.md`
 - `docs/implementation/rebuild/NSR1_ROOM_COMPANION.md`
-- `docs/implementation/LARDER_GROUND_UP_REBUILD.md` (Phase 3)
+- `docs/implementation/pantry/LARDER_GROUND_UP_REBUILD.md` (Phase 3)
 - `docs/implementation/rebuild/REBUILD1_ROOM01_WELCOME_HOME.md` · `docs/implementation/rebuild/REBUILD1_CONSOLIDATED_AUDIT_MAP.md`
 
 ## 3. What was done

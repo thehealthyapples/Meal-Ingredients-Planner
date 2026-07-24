@@ -46,7 +46,7 @@ Keying the fragment surfaces a **dev-only** warning: `cartographer` injects `dat
 
 ## Next action
 
-**Owner to review** `docs/implementation/UX_REFINE1_HOUSEHOLD_EXPERIENCE_REFINEMENT.md`. All seven EXPERIENCE_VERIFY1 defects are now closed or reported with evidence; nothing is left silently open.
+**Owner to review** `docs/implementation/experience/UX_REFINE1_HOUSEHOLD_EXPERIENCE_REFINEMENT.md`. All seven EXPERIENCE_VERIFY1 defects are now closed or reported with evidence; nothing is left silently open.
 
 Carried gaps: manual step 4 **still not executed** (Shopping mode switches did not register, so D3's retraction rests on code evidence at `:2638`, not a screenshot). No contrast ratio measured numerically.
 

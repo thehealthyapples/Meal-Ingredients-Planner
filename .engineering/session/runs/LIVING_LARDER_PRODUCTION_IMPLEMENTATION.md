@@ -19,7 +19,7 @@ Implement the approved Living Larder (front-on realistic elevation) in the produ
 - `client/src/components/layout/living-details-manifest.ts` — 7 jar approvals (checksum-bound), §P produce register, mapping curation
 - `docs/implementation/assets/house-asset-register.json` — 10 joinery rows
 - `scripts/ci/verify-living-home-assets.ts` — P1–P3, K1–K2, J12 extension
-- `docs/implementation/2026-07-24-living-larder-production-implementation.md` — implementation report + evidence dir
+- `docs/implementation/pantry/2026-07-24-living-larder-production-implementation.md` — implementation report + evidence dir
 
 ## Checkpoints
 - [x] Rollback protection created (branch + dirty snapshot tag)
@@ -29,7 +29,7 @@ Implement the approved Living Larder (front-on realistic elevation) in the produ
 - [x] Asset calibration page verified (PASS) and deleted (J7)
 - [x] Production room implemented; `/pantry` serves it; SVG room retired
 - [x] Verification suite run (build PASS; targeted tests green; pre-existing failures verified pre-existing at rollback commit)
-- [x] Report complete: `docs/implementation/2026-07-24-living-larder-production-implementation.md`
+- [x] Report complete: `docs/implementation/pantry/2026-07-24-living-larder-production-implementation.md`
 - [x] Committed to `claude-work` (pathspec-scoped; pre-staged housekeeping untouched): `50de9a35` + `25118140`
 - [ ] Push blocked: the only remote (`gitsafe-backup`) rejects every branch but `main` ("Only pushes to main branch are allowed"), and pushing `main` is out of scope — commits remain local on `claude-work`
 

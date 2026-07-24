@@ -5,7 +5,7 @@
 **Type:** Interior Architecture programme. Visual only.
 **Rollback:** `rollback/INTARCH2-material-surface-adoption-20260720` → `73765ff1`
 **Commit:** `ff4fbd68` (pushed)
-**Report:** `docs/implementation/INTARCH2_MATERIAL_SURFACE_ADOPTION.md`
+**Report:** `docs/implementation/house/INTARCH2_MATERIAL_SURFACE_ADOPTION.md`
 **Evidence:** `docs/ui-audit/intarch2-material-surfaces/` (44 room captures + 1 dialog)
 
 ---
@@ -74,6 +74,6 @@ glass with a line drawn round it, casting nothing onto the floor `INTARCH1` laid
 
 ## Next action
 
-Owner to review `docs/implementation/INTARCH2_MATERIAL_SURFACE_ADOPTION.md` § 7 —
+Owner to review `docs/implementation/house/INTARCH2_MATERIAL_SURFACE_ADOPTION.md` § 7 —
 five decisions, of which **§ 7.2 (where the support tier actually lives)** is the
 one this workstream created and cannot answer for itself.

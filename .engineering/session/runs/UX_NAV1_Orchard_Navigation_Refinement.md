@@ -6,7 +6,7 @@ one continuous shelf instead of nine pills, the active room lit rather than
 filled, calmer spacing, better balance with the permanent header.
 **Rollback ID:** `rollback/UXNAV1-orchard-navigation-refinement-20260719` → `5d5ccd09`
 **Stage:** Complete — committed `169ddc09`, pushed; awaiting owner review
-**Report:** `docs/implementation/UX_NAV1_ORCHARD_NAVIGATION_REFINEMENT.md`
+**Report:** `docs/implementation/ux/UX_NAV1_ORCHARD_NAVIGATION_REFINEMENT.md`
 
 ---
 
@@ -94,7 +94,7 @@ work. Not fixed here. **BENCHINT3** stands.
 
 ## Next action
 
-Owner to review `docs/implementation/UX_NAV1_ORCHARD_NAVIGATION_REFINEMENT.md`,
+Owner to review `docs/implementation/ux/UX_NAV1_ORCHARD_NAVIGATION_REFINEMENT.md`,
 in particular the § 4 opacity finding and the § 6 honest accounting.
 
 Open items, all inherited rather than created: **BENCHINT3** (the red suite),

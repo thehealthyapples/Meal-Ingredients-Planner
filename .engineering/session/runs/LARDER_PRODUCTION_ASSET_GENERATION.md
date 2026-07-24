@@ -20,7 +20,7 @@ runtime derivatives, NO WebP.
 - `client/src/components/layout/living-details-manifest.ts` — 27 records promoted planned → candidate (checksums recorded, via the register's own lifecycle law)
 - `scripts/ci/verify-living-home-assets.ts` — J6 strengthened: candidate bytes must hash to the record checksum
 - `docs/reference-assets/living-larder-review/` — contact sheet + README
-- `docs/implementation/LARDER_PRODUCTION_ASSET_GENERATION.md` — report
+- `docs/implementation/pantry/LARDER_PRODUCTION_ASSET_GENERATION.md` — report
 - Session tracking files
 
 ## Checkpoints

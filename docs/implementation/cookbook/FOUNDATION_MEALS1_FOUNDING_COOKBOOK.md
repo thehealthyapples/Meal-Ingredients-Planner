@@ -29,10 +29,10 @@
 - [x] `docs/architecture/THA_RECIPE_ACQUISITION_ARCHITECTURE.md` — the four lanes; §3.4 honest provenance; §8's carried-forward caveat
 - [x] `docs/architecture/ENGINEERING_WORKFLOW.md`, `REPOSITORY_CONVENTIONS.md` — compliance and filing
 - [x] `shared/cookbook/curation.ts` — the current owner of *"what belongs on the shelf"*
-- [x] `docs/implementation/COOKBOOK1_FAMILY_COOKBOOK_TRANSFORMATION.md` §4, §8 — the shelving change and its six unresolved owner decisions
+- [x] `docs/implementation/cookbook/COOKBOOK1_FAMILY_COOKBOOK_TRANSFORMATION.md` §4, §8 — the shelving change and its six unresolved owner decisions
 - [x] `docs/implementation/cookbook/COOKBOOK3_IMPORT_THA_ORIGINAL_FOUNDING_COOKBOOK.md` — the 500-recipe import
-- [x] `docs/investigations/EXPREVIEW1_FIRST_TIME_HOUSEHOLD_EXPERIENCE.md` §6, §8 — *"the room that broke the house"*
-- [x] `docs/implementation/PLANNER_MEALS1_DEFAULT_MEAL_CURATION.md` — the curated default weeks
+- [x] `docs/investigations/experience/EXPREVIEW1_FIRST_TIME_HOUSEHOLD_EXPERIENCE.md` §6, §8 — *"the room that broke the house"*
+- [x] `docs/implementation/planner/PLANNER_MEALS1_DEFAULT_MEAL_CURATION.md` — the curated default weeks
 
 ---
 

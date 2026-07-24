@@ -53,7 +53,7 @@ arithmetic.
 - `client/src/components/layout/app-shell.tsx`
 
 ## Files added
-- `docs/implementation/INTARCH1_INTERIOR_ARCHITECTURE_COMPLETION.md`
+- `docs/implementation/house/INTARCH1_INTERIOR_ARCHITECTURE_COMPLETION.md`
 - `scripts/capture-intarch1-interior-architecture.ts`
 - `docs/ui-audit/intarch1-interior-architecture/` (44 captures)
 
@@ -73,5 +73,5 @@ not an administrator, so `/admin` renders the not-found room. No picture of the 
 off the hall exists in this evidence set.
 
 ## Next action
-Owner to review `docs/implementation/INTARCH1_INTERIOR_ARCHITECTURE_COMPLETION.md`
+Owner to review `docs/implementation/house/INTARCH1_INTERIOR_ARCHITECTURE_COMPLETION.md`
 § 8 (decisions requiring owner approval).

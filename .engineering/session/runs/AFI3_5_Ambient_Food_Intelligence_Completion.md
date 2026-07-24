@@ -96,7 +96,7 @@ notice-engine.ts:296 + no mounted client surface). NO new pipeline/engine/knowle
 - [x] Tests + typecheck
 - [x] Verified in running app (live dev server, real seeded household — not internals)
 - [x] Screenshots — 7/7, docs/implementation/assets/afi35/
-- [x] Doc: docs/implementation/AFI3_5_AMBIENT_FOOD_INTELLIGENCE_COMPLETION.md
+- [x] Doc: docs/implementation/intelligence/AFI3_5_AMBIENT_FOOD_INTELLIGENCE_COMPLETION.md
 
 ## Verification log (2026-07-18)
 

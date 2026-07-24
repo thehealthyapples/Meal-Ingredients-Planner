@@ -9,13 +9,13 @@
 | **Commit** | `bd9a9be4` (pushed to `int1-intelligence-platform`; rollback tag pushed) |
 
 ## Objective
-Create `docs/architecture/HOME_OWNER_ARCHITECTURE.md` — the governing Home Owner architecture: the single creative authority for THA's emotional, aesthetic and hospitality character. Governs feeling, not functionality; no business logic, intelligence, data, permissions. Sections: Philosophy · Governing Principles · Owns · Does Not Own · Relationship with Existing Architecture · Decision Framework · Design Authority · Architecture Compliance · AI Architecture Compliance · Impact (governance only). Cross-reference from UI_CANONICAL_EXPERIENCE_OWNERSHIP.md; produce docs/implementation/HOME_OWNER_ARCHITECTURE_IMPLEMENTATION.md. No application code.
+Create `docs/architecture/HOME_OWNER_ARCHITECTURE.md` — the governing Home Owner architecture: the single creative authority for THA's emotional, aesthetic and hospitality character. Governs feeling, not functionality; no business logic, intelligence, data, permissions. Sections: Philosophy · Governing Principles · Owns · Does Not Own · Relationship with Existing Architecture · Decision Framework · Design Authority · Architecture Compliance · AI Architecture Compliance · Impact (governance only). Cross-reference from UI_CANONICAL_EXPERIENCE_OWNERSHIP.md; produce docs/implementation/architecture/HOME_OWNER_ARCHITECTURE_IMPLEMENTATION.md. No application code.
 
 ## Files being modified
 - docs/architecture/HOME_OWNER_ARCHITECTURE.md — the governing architecture (to create)
 - docs/architecture/UI_CANONICAL_EXPERIENCE_OWNERSHIP.md — cross-reference (mission-directed; authored this session)
 - docs/architecture/README.md — index entry (DOCGOV1 gate)
-- docs/implementation/HOME_OWNER_ARCHITECTURE_IMPLEMENTATION.md — implementation report (to create)
+- docs/implementation/architecture/HOME_OWNER_ARCHITECTURE_IMPLEMENTATION.md — implementation report (to create)
 - .engineering/session/CURRENT.md — session row
 - .engineering/session/runs/HOMEOWNER1_Home_Owner_Architecture.md — this file
 

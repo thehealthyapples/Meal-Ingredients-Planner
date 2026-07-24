@@ -26,7 +26,7 @@ architecture (`LIVINGHOME2`) into governing Living Home architecture where appro
   GEA11 (surplus space becomes air and view); GEA15 (silence default).
 
 ## Deliverables
-- `docs/implementation/LIVING_HOME_COMPLETION_PROGRAMME.md` — governing completion programme +
+- `docs/implementation/house/LIVING_HOME_COMPLETION_PROGRAMME.md` — governing completion programme +
   room-by-room completion report + roadmap + mandatory report sections.
 - Lawful, owned implementation of approved changes only; larger moves recorded as owner decisions.
 
@@ -34,7 +34,7 @@ architecture (`LIVINGHOME2`) into governing Living Home architecture where appro
 - [x] Read README; confirm git status; create rollback tag `rollback/LIVING-HOME-COMPLETION-20260722` → `56628c7a`.
 - [x] Read `HOMEOWNER2_LIVING_HOME_REVIEW.md` (the motivating critique).
 - [x] Gather: LIVINGHOME1/2 rules, current room-identity code map, prior room-programme reports.
-- [x] Author `docs/implementation/LIVING_HOME_COMPLETION_PROGRAMME.md` (13 rooms × 11 dimensions;
+- [x] Author `docs/implementation/house/LIVING_HOME_COMPLETION_PROGRAMME.md` (13 rooms × 11 dimensions;
       Environmental Dressing seated as the governing third layer; roadmap + 4 recorded owner decisions;
       8 mandatory report sections).
 - [x] Implement lawful/owned change: `TrialBanner.tsx` — remove the ticking countdown from the calm

@@ -86,7 +86,7 @@ placeholder removal (found none surviving verification) · UX polish (ACT1:
   four sessions in this area is unproven in a browser.**
 
 ## Next action
-Owner to review `docs/implementation/PROD4_HOUSEHOLD_EXPERIENCE_COMPLETION.md`.
+Owner to review `docs/implementation/production/PROD4_HOUSEHOLD_EXPERIENCE_COMPLETION.md`.
 Top recommendation is NOT a feature: **get a browser into the verification loop**
 — it converts a large body of unproven UX work into evidenced work and is worth
 more than anything else in the list. Then: the week-declaration path; the

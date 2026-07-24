@@ -22,7 +22,7 @@ Flagship: **activate COMP1** — the built, cited, test-green Food Comparison En
 - Existing ambient surfaces (planner/pantry/shopping/home/dashboard) are already mounted — NOT duplicated.
 
 ## Files being modified (this session's writes)
-- `docs/implementation/FI20_FOOD_INTELLIGENCE_ACTIVATION.md` — the mission doc + report
+- `docs/implementation/intelligence/FI20_FOOD_INTELLIGENCE_ACTIVATION.md` — the mission doc + report
 - `server/routes.ts` — add read-only `GET /api/foods/compare` (projection of `assembleFoodComparison`; no new ownership)
 - `client/src/components/intelligence/FoodComparisonView.tsx` — new; renders the cited comparison bundle (reuses IntelligenceCard/tokens)
 - `client/src/pages/food-comparison-page.tsx` — new `/compare` page
@@ -38,12 +38,12 @@ Flagship: **activate COMP1** — the built, cited, test-green Food Comparison En
 - [x] Comparison UI + `/compare` page + food-page entry (FoodComparisonView.tsx, food-comparison-page.tsx, App.tsx:376, food-detail-page.tsx:212)
 - [x] Resume-verify: FI20 files typecheck clean (0 errors); COMP1 still 56/56; 275 tree-wide TS errors are pre-existing sibling/COMP1 baseline (2 in unmodified test port mocks), NOT FI20
 - [x] Verified in running app + screenshots — API end-to-end (demo 201 → compare 200, cited bundle); 4 surfaces captured at 430×932 via real Chromium against seeded demo household → `docs/implementation/assets/fi20/`
-- [x] FI20 doc + report written — `docs/implementation/FI20_FOOD_INTELLIGENCE_ACTIVATION.md` (rollback ID, files changed, verification, screenshots, follow-ons)
+- [x] FI20 doc + report written — `docs/implementation/intelligence/FI20_FOOD_INTELLIGENCE_ACTIVATION.md` (rollback ID, files changed, verification, screenshots, follow-ons)
 
 **Last checkpoint (COMPLETE 2026-07-17):** Implementation found intact from pre-interruption work and completed. Rollback protection confirmed (tag → `7bfad50c`, HEAD matches; sibling-dirty tree left untouched). Verified: route live end-to-end, COMP1 56/56, FI20 files typecheck-clean, 4 screenshots captured & reviewed. Doc written. Product source untouched beyond the +52 tracked lines + 2 new client files. **Awaiting owner review before commit.**
 
 ## Next action
-None — session deliverables complete. Owner to review `docs/implementation/FI20_FOOD_INTELLIGENCE_ACTIVATION.md` and decide on commit + the 5 follow-ons (esp. differentiating-comparison fixtures so the positive "better choice" card can be shown).
+None — session deliverables complete. Owner to review `docs/implementation/intelligence/FI20_FOOD_INTELLIGENCE_ACTIVATION.md` and decide on commit + the 5 follow-ons (esp. differentiating-comparison fixtures so the positive "better choice" card can be shown).
 
 ## Blockers
 none

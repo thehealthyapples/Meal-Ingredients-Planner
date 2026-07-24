@@ -34,7 +34,7 @@ Complete the highest-value production improvements identified by AFI_VERIFY1 —
 - [ ] M2 Client registry conformance coverage
 - [ ] M3 Retire dead nutrition limb
 - [ ] M4 Production verification + screenshots
-- [ ] docs/implementation/MAT1_PLATFORM_MATURITY_AND_TRUST.md
+- [ ] docs/implementation/platform/MAT1_PLATFORM_MATURITY_AND_TRUST.md
 
 - [x] M1 Household Learning integration (OD1 requests the candidate set; 22/0 new suite, negative-controlled)
 - [x] M2 Client registry conformance coverage (`OPPORTUNITY_DOMAIN_LABELS` moved to shared; all four registries asserted)
@@ -59,7 +59,7 @@ Complete the highest-value production improvements identified by AFI_VERIFY1 —
 - Live probes: every delivered domain labelled (no "Food" fallback); `/api/household-nutrition` indistinguishable from a control unmatched path (content-type, not status — the Vite dev catch-all makes status a false signal).
 
 ## Deliverable
-`docs/implementation/MAT1_PLATFORM_MATURITY_AND_TRUST.md` — written. Final maturity score **7.8 / 10** (from AFI_VERIFY1's 6.6).
+`docs/implementation/platform/MAT1_PLATFORM_MATURITY_AND_TRUST.md` — written. Final maturity score **7.8 / 10** (from AFI_VERIFY1's 6.6).
 
 ## Final verification
 - **`npm test`: exit code 0 — 130 suites, 0 failures.**
@@ -67,7 +67,7 @@ Complete the highest-value production improvements identified by AFI_VERIFY1 —
 - Screenshots re-captured with a corrected harness: the first run's manifest contradicted its own PNGs (a seeding-wave plateau); the script now records the bundle at BOTH ends and states the drift (5 → 10, planner → planner+shopping) rather than hiding it. Label check re-run against the final bundle: every delivered domain labelled.
 
 ## Next action
-**Owner to review `docs/implementation/MAT1_PLATFORM_MATURITY_AND_TRUST.md`** and decide commit + follow-ons. Highest-priority follow-on named in the report: audit §4.5's duplicate-observation pairs, which M1 raises from latent to likely.
+**Owner to review `docs/implementation/platform/MAT1_PLATFORM_MATURITY_AND_TRUST.md`** and decide commit + follow-ons. Highest-priority follow-on named in the report: audit §4.5's duplicate-observation pairs, which M1 raises from latent to likely.
 
 **Closeout is BLOCKED and not by MAT1:** `session-complete.sh` runs the DOCGOV1 filing gate, which was already failing before this session — 6 pre-existing untracked loose reports in `docs/implementation/` (AFI1, AFI2, AFI3_5, COMP_ACT1, COMP_ACT2, FI20) plus 2 loose investigations. This report sits at the exact path the brief specified. Recorded as debt item 11; filing another session's unreviewed report would hide it from its owner, so it was not done unilaterally.
 

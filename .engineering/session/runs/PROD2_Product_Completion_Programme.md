@@ -22,7 +22,7 @@ Complete the existing THA product by connecting, hardening and finishing what al
 - Pre-delete snapshots outside the repo: `<scratchpad>/pre-delete-snapshot/`
 
 ## Relationship to PROD1 — no duplicate ownership
-`docs/implementation/PROD1_PRODUCT_COMPLETION_PROGRAMME.md` already existed with
+`docs/implementation/production/PROD1_PRODUCT_COMPLETION_PROGRAMME.md` already existed with
 almost this title. PROD2 is its **successor, not a second owner**: PROD1 closed
 the failed-load-renders-as-absence theme and listed 14 remaining gaps in its §8.
 PROD2 took the decision-free remainder of that list plus LAUNCH1's backlog, and
@@ -105,7 +105,7 @@ Finding 2 named (`OPERATING_MANUAL` §9 — one concern per commit, never commit
 work you did not author).
 
 ## Next action
-Owner to review `docs/implementation/PROD2_PRODUCT_COMPLETION_PROGRAMME.md`.
+Owner to review `docs/implementation/production/PROD2_PRODUCT_COMPLETION_PROGRAMME.md`.
 Top three recommendations, none implemented: (1) Companion allergen safety;
 (2) parallelise `npm test` so CI can complete at all; (3) an owner decision on
 the unbuilt explainer workstream — build the explainers or retire the spec —

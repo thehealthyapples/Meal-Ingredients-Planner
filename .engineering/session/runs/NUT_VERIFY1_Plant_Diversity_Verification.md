@@ -49,7 +49,7 @@ The first suite version failed 13 assertions and was right to: `parseIngredient`
 
 ## Next action
 
-**Owner to review** `docs/implementation/NUT_VERIFY1_PLANT_DIVERSITY_VERIFICATION.md`.
+**Owner to review** `docs/implementation/nutrition/NUT_VERIFY1_PLANT_DIVERSITY_VERIFICATION.md`.
 
 Manual steps 2 (group dedupe via the UI) and 4 (honest absence) **not executed** — both proven by unit test, not by a household action. The **Nutrients** tab (a different assembler) was not re-verified.
 

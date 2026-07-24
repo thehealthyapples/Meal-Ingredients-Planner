@@ -16,7 +16,7 @@ room feels like part of one house — without redesigning any room independently
 ## Files being modified
 - `docs/architecture/HOME_OWNER_ARCHITECTURE.md` — add Principle 11 (continual care)
 - (Phase 1 code targets: shared owners only — determined after measurement)
-- `docs/implementation/UI_NORTH_STAR_IMPLEMENTATION_PHASE1.md` — implementation report
+- `docs/implementation/house/UI_NORTH_STAR_IMPLEMENTATION_PHASE1.md` — implementation report
 
 ## Checkpoints
 - [x] Read governing architecture (README + Experience Governance docs)
@@ -32,7 +32,7 @@ room feels like part of one house — without redesigning any room independently
 - [x] Spacing/section rhythm — MEASURED, deliberately deferred (no safe blind sweep); staged (Principle 11)
 - [x] Verification: client typecheck clean; adoption:check 100 passed · 0 notices · 9 pre-existing
       failures (proven at tag by stash); Loader2 ceiling ratcheted 175→169; production build exit 0
-- [x] Implementation report at docs/implementation/UI_NORTH_STAR_IMPLEMENTATION_PHASE1.md
+- [x] Implementation report at docs/implementation/house/UI_NORTH_STAR_IMPLEMENTATION_PHASE1.md
 
 **Last checkpoint:** Phase 1 implemented + verified (typecheck, adoption gate, production build); report written
 

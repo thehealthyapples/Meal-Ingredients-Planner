@@ -16,17 +16,26 @@ governed by [`../architecture/REPOSITORY_CONVENTIONS.md`](../architecture/REPOSI
 
 ## Workstreams
 
+Every investigation lives in exactly one of these. Rows marked **†** are folders
+this tree carries that are **not yet in the shared vocabulary table** of
+[`../architecture/REPOSITORY_CONVENTIONS.md`](../architecture/REPOSITORY_CONVENTIONS.md)
+§4 — a divergence recorded here rather than resolved.
+
 | Folder | Covers |
 |---|---|
-| [`intelligence/`](./intelligence/) | Intelligence Platform, companion, engines (observation, behaviour, decision, attention), conversation/intents, Food Intelligence, nutrition-boost feature |
+| [`intelligence/`](./intelligence/) | Intelligence Platform, engines (observation, behaviour, decision, attention), conversation/intents, Food Intelligence, nutrition-boost feature. **Not the Companion** — see `companion/` |
+| [`companion/`](./companion/) | The Companion as a surface and as intelligence: identity, presence, conversation, authority, integration. Carved out under `DOCGOV2` (2026-07-18) |
+| [`house/`](./house/) | The House experience: Home, Arrival, the North Star, the Orchard House, rooms, spatial experience, the Living Home review. Carved out of `ux/` under `DOCGOV2` |
+| [`ux/`](./ux/) | **General** UI/interaction: dialogs, density/layout, workspace/header, profile display, copy/rename. **Not** the Companion (→ `companion/`) and **not** the House experience (→ `house/`) |
+| [`experience/`](./experience/) † | Cross-room experience reviews — the first-time household experience, experience-governance analysis |
 | [`knowledge/`](./knowledge/) | Canonical food & nutrition knowledge, evidence, food imports (WS0/WS0X/WS1–WS11), plant diversity, dietary dictionaries, knowledge review |
-| [`planner/`](./planner/) | Weekly & smart planner, plan generation, meal–household compatibility, dietary enforcement, meal discovery for planning |
-| [`ux/`](./ux/) | UI/interaction, dialogs, density/layout, workspace/header, profile display, copy/rename |
 | [`cookbook/`](./cookbook/) | Recipes and meal content, meal detail, meal shells/templates/catalogue, meal-occasion & component modelling, recipe acquisition |
-| [`benchmarking/`](./benchmarking/) | Benchmark framework, execution, scoring, measurement |
+| [`planner/`](./planner/) | Weekly & smart planner, plan generation, meal–household compatibility, dietary enforcement, meal discovery for planning |
+| [`admin/`](./admin/) | Admin console, navigation, the Support Hub experience |
 | [`platform/`](./platform/) | Platform architecture & quality, resilience, launch-readiness, platform regressions |
-| [`engineering/`](./engineering/) | Engineering workflow & process, repository structure, release/deployment mechanics, documentation rules, dev-status records |
 | [`governance/`](./governance/) | Architecture principles, source-of-truth, roadmap, governance decisions |
+| [`engineering/`](./engineering/) | Engineering workflow & process, repository structure, release/deployment mechanics, documentation rules, dev-status records |
+| [`benchmarking/`](./benchmarking/) | Benchmark framework, execution, scoring, measurement |
 | [`development_world/`](./development_world/) | Development World dataset, import, and coverage (DEVWORLD*) |
 | [`backups/`](./backups/) | Historical patch files and agent transcripts — preserved verbatim, never rewritten |
 

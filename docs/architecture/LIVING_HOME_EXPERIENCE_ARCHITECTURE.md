@@ -26,7 +26,7 @@ This is not a compromise position. It is the reason a real home feels alive: the
 
 ## 1. Why this document exists
 
-The North Star implementation (`docs/implementation/EXP1_NORTH_STAR_EXPERIENCE_ARCHITECTURE.md`, 2026-07-20) made every room begin at the top of the browser inside one shell, with one orchard rendered at each room's governed exposure. The house, for the first time, *is* one house.
+The North Star implementation (`docs/implementation/house/EXP1_NORTH_STAR_EXPERIENCE_ARCHITECTURE.md`, 2026-07-20) made every room begin at the top of the browser inside one shell, with one orchard rendered at each room's governed exposure. The house, for the first time, *is* one house.
 
 What no governing document then answered, in one place, was the question that arrives next: **how does one constant house stay alive across years of a household's life?** The canon answers it piecemeal and emphatically — the one-morning law, the one-season law, data-borne Living Details, the Companion's sole voice of interpretation — but three gaps remained:
 

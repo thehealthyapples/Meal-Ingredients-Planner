@@ -28,7 +28,7 @@ Added `onlyRooms` (per-object room allow-list) + `resolveRoomDressing` (at most 
 - [x] Verifier: D6 respects `onlyRooms`, verifies each item WINS a sill (no shadowed item) and no sill holds two season-specific objects. `verify:living-home-assets` 13/13 PASS.
 - [x] Wrote 5 admission docs (LHDC1 §21 · §18 · §19 · §20 approval; winter §0 records the wreath resolution).
 - [x] Updated the adoption `environmental-dressing` concern (LH1 → LH1/LH2); regenerated `.md`. `adoption:check` 103·0·9.
-- [x] Wrote `docs/implementation/LH2_FIRST_SEASONAL_COLLECTION.md` (9 sections).
+- [x] Wrote `docs/implementation/house/LH2_FIRST_SEASONAL_COLLECTION.md` (9 sections).
 - [x] Verified: verify 13/13 · typecheck 88 pre-existing / 0 in touched files · build exit 0 (all 6 assets ship; 5 inlined as data URIs) · adoption 103·0·9.
 - [x] Commit; record hash here + dashboard.
 

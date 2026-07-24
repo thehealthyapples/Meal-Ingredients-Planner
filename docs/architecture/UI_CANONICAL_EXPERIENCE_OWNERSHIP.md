@@ -278,7 +278,7 @@ If any check fails: STOP. Explain why. Do not continue.
 - **No APIs.** No endpoint added, changed, or removed.
 - **No implementation.** Every binding above describes what already is (with its owner cited) or what is declared-not-built (with its declaring document cited). Where this document and running code disagree, the code has a defect *or this document does* — the resolution is the cited owner's text, and this document is corrected if it misread the owner.
 
-**Cross-check results (mission-required), recorded:** conflicts found during authoring and their resolutions are recorded in `docs/implementation/UI_CANONICAL_EXPERIENCE_OWNERSHIP_IMPLEMENTATION.md` § 3. None required amending any owner; every conflict resolved by citing the owner's existing text or recording the debt the owner already records.
+**Cross-check results (mission-required), recorded:** conflicts found during authoring and their resolutions are recorded in `docs/implementation/architecture/UI_CANONICAL_EXPERIENCE_OWNERSHIP_IMPLEMENTATION.md` § 3. None required amending any owner; every conflict resolved by citing the owner's existing text or recording the debt the owner already records.
 
 ---
 

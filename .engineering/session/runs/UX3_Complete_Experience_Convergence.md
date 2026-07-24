@@ -43,7 +43,7 @@ architecture or business-logic change.
 - [x] Adoption register — 82·1·9 → 99·0·9, remaining 9 diffed IDENTICAL to baseline
 - [x] Commit `7a5b48cf` + pushed to origin/int1-intelligence-platform
 
-**Last checkpoint:** Committed `7a5b48cf` and pushed. Report at docs/implementation/UX3_COMPLETE_EXPERIENCE_CONVERGENCE.md
+**Last checkpoint:** Committed `7a5b48cf` and pushed. Report at docs/implementation/experience/UX3_COMPLETE_EXPERIENCE_CONVERGENCE.md
 
 ## Next action
 Nothing — the work is delivered, committed and pushed. Awaiting the owner on the

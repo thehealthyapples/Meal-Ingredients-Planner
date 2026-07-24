@@ -85,7 +85,7 @@ calm. Fallback: seasonal-peak or FI4's named benefit-coverage type.
 - [x] Typecheck: AFI1 files clean (0 new errors; pre-existing baseline breakage in unbuilt cbk2/pantry1/shop1 tests + COMP1 port stub, not mine)
 - [x] Verified in running app — API end-to-end: demo 201 → food-opportunities returns the cited uplift ("Overnight Oats with Berries" (Tue) → add chia seeds; evidence planner-week + nutrition-enhancement)
 - [x] Screenshots — home aggregate (new card clearly), planner ambient (system + type). Meal-card scoped shot re-capturing after demo rate-limit window (5/hr exhausted) resets (~8 min).
-- [x] AFI1 doc + report written — `docs/implementation/AFI1_AMBIENT_FOOD_INTELLIGENCE.md`
+- [x] AFI1 doc + report written — `docs/implementation/intelligence/AFI1_AMBIENT_FOOD_INTELLIGENCE.md`
 
 - [x] Meal-card scoped screenshot re-captured (real meal id 4769; "A small lift for this week · 1" mount confirmed). All 3 shots final.
 - [x] Downstream regression clear: OD1 60/60, DEC1 49/49, ATTN1 29/29, notice-engine 65/65.
@@ -94,7 +94,7 @@ calm. Fallback: seasonal-peak or FI4's named benefit-coverage type.
 ambient recommendation through the EXISTING FI4/OD1/DEC1/PHASE5C pipeline (no new
 pipeline, no duplicated logic). Verified end-to-end (API cited output, 51/51 unit +
 203 downstream assertions green, typecheck-clean, 3 screenshots). Doc:
-`docs/implementation/AFI1_AMBIENT_FOOD_INTELLIGENCE.md`.
+`docs/implementation/intelligence/AFI1_AMBIENT_FOOD_INTELLIGENCE.md`.
 
 ⚠️ **HAZARD OBSERVED:** a concurrent sibling process deleted two UNTRACKED docs
 mid-session (`docs/implementation/AFI1_...md` and the prior session's

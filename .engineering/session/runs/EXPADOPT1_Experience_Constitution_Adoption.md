@@ -48,7 +48,7 @@ no permissions, no routes, no canonical ownership, no AI architecture.
 - [x] Implementation — P2, P5, P6 substantially; P1/P3/P4/P7 partially
 - [x] Before/after screenshots — 32 captures, 8 rooms × 2 widths × 2 states
 - [x] Gates: adoption 99·0·9 = byte-identical baseline; client typecheck clean; build clean
-- [x] Report written — `docs/implementation/EXPADOPT1_EXPERIENCE_CONSTITUTION_ADOPTION.md`
+- [x] Report written — `docs/implementation/experience/EXPADOPT1_EXPERIENCE_CONSTITUTION_ADOPTION.md`
 - [x] Committed (`ea9b5e2f`) and pushed to `origin/int1-intelligence-platform`
 
 **Last checkpoint:** after-capture verified by eye; the `absolute` → in-flow correction
@@ -56,7 +56,7 @@ no permissions, no routes, no canonical ownership, no AI architecture.
 the probe, and is recorded in `orchard-backdrop.tsx`'s header.
 
 ## Next action
-Owner to review `docs/implementation/EXPADOPT1_EXPERIENCE_CONSTITUTION_ADOPTION.md` § 5
+Owner to review `docs/implementation/experience/EXPADOPT1_EXPERIENCE_CONSTITUTION_ADOPTION.md` § 5
 (remaining gaps) and § 3 Priority 6 (the grid cap is a recorded JUDGEMENT — capped at
 xl:grid-cols-4 rather than frozen at lg:grid-cols-3; overrule with eyes open if wanted).
 Two rulings are wanted and were deliberately not taken here: which of the two orchard

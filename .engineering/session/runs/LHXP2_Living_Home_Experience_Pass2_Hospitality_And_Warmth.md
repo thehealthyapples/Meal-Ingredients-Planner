@@ -20,7 +20,7 @@ Living Home Experience Pass 2 — Hospitality & Warmth. A copy/microcopy-only pa
 - `client/src/pages/meals-page.tsx` — nutrition-widget "N/A"→"—".
 - `client/src/pages/pantry-page.tsx` — "No additional info available yet."→warm.
 - `client/src/pages/shopping-workspace-page.tsx` — "All items accounted for"→"That's everything".
-- `docs/implementation/LIVING_HOME_PASS2_HOSPITALITY_AND_WARMTH.md` — the deliverable.
+- `docs/implementation/house/LIVING_HOME_PASS2_HOSPITALITY_AND_WARMTH.md` — the deliverable.
 
 ## Checkpoints
 - [x] Rollback tag created & reported: `rollback/LIVING-HOME-PASS2-20260722` → `5fe253c2`.

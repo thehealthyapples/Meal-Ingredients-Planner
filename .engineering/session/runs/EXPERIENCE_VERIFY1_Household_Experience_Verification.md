@@ -43,6 +43,6 @@ D1 Planner React key warning (**not located** — reported, not speculatively pa
 
 ## Next action
 
-**Owner to review** `docs/implementation/EXPERIENCE_VERIFY1_HOUSEHOLD_EXPERIENCE_VERIFICATION.md`.
+**Owner to review** `docs/implementation/experience/EXPERIENCE_VERIFY1_HOUSEHOLD_EXPERIENCE_VERIFICATION.md`.
 
 ⚠️ **The fix is NOT durable** — a symlink into `/nix/store` inside a gitignored cache. It survives neither a fresh clone nor a nix GC, so **CI still cannot verify**. Recommended next: **`EXPERIENCE_VERIFY2 — Durable Verification`** (R1 declare the browser dependency, R2 discharge the three outstanding HOUSE_ACT acceptance debts now that a browser exists, R7 widen to mobile/dark/write paths). **R1 first: until the browser survives a fresh clone, the next programme can ship blind again.**

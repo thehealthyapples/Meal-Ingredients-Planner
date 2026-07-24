@@ -381,7 +381,7 @@ LOOK; it says nothing the model reads and adds no capability.
 ### Rollback Plan
 
 - **Rollback identifier:** `rollback/ED3-environmental-dressing-design-constitution-20260722` → `4dc22eb4` (annotated tag, created before any change; covers committed state only — the working tree held one uncommitted `.engineering/session/CURRENT.md` heartbeat, not covered).
-- **Files modified:** this document (new) · `docs/implementation/ED3_ENVIRONMENTAL_DRESSING_DESIGN_CONSTITUTION.md` (new) · `docs/architecture/README.md` (index entry) · `.engineering/session/CURRENT.md` (dashboard row) · `.engineering/session/runs/ED3_Environmental_Dressing_Design_Constitution.md` (session record).
+- **Files modified:** this document (new) · `docs/implementation/architecture/ED3_ENVIRONMENTAL_DRESSING_DESIGN_CONSTITUTION.md` (new) · `docs/architecture/README.md` (index entry) · `.engineering/session/CURRENT.md` (dashboard row) · `.engineering/session/runs/ED3_Environmental_Dressing_Design_Constitution.md` (session record).
 - **To revert:** `git checkout rollback/ED3-environmental-dressing-design-constitution-20260722 -- docs/architecture/README.md .engineering/session/CURRENT.md` and `git rm` the two new documents and this session record, or `git revert` the ED3 commit. No runtime surface exists to restore.
 - **Verification after rollback:** `git diff <tag> -- docs/ .engineering/` is empty; no runtime surface existed to verify.
 
@@ -406,7 +406,7 @@ Performed for this change (documentation-only):
 - **State: Waiting for User.** This is a governing-standard deliverable; acceptance is the Home Owner's review that this is the right visual language for the house.
 - **The decision this document records rather than assumes:** the realism/illustration *quality standard* (§ 8) — honest media, never stock-photographic, never cartoon, never a claim, one coherent hand — supplied so the open `EXP3` Verdict 3 **medium** question (existing media by default vs the approval-gated illustrated track) is decided against a written standard. The verdict itself stays the Home Owner's, recorded at first admission (§ 20).
 - **The gate this establishes, named so it cannot be crossed silently:** no dressing object may be admitted (ED4 onward) without satisfying this Constitution's per-object admission evidence (§ 21) and the recorded Home Owner approval (§ 20).
-- **Evidence for review:** this document; the implementation report at `docs/implementation/ED3_ENVIRONMENTAL_DRESSING_DESIGN_CONSTITUTION.md`; the session record at `.engineering/session/runs/ED3_Environmental_Dressing_Design_Constitution.md`.
+- **Evidence for review:** this document; the implementation report at `docs/implementation/architecture/ED3_ENVIRONMENTAL_DRESSING_DESIGN_CONSTITUTION.md`; the session record at `.engineering/session/runs/ED3_Environmental_Dressing_Design_Constitution.md`.
 
 ---
 

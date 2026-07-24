@@ -19,7 +19,7 @@ Living Home Experience Pass 1 — a consistent Composition & Balance refinement 
 - `client/src/pages/profile-page.tsx` — suppress raw login email in the household header (warmth; still in Account).
 - `client/src/pages/weekly-planner-page.tsx` — grid structural borders `border-border`→`/60` (reduce spreadsheet weight), ×4 sites.
 - `client/src/pages/food-diary-page.tsx` — meal-accordion box border/dividers softened (reduce clinical/chore feel).
-- `docs/implementation/LIVING_HOME_PASS1_COMPOSITION_AND_BALANCE.md` — the deliverable.
+- `docs/implementation/house/LIVING_HOME_PASS1_COMPOSITION_AND_BALANCE.md` — the deliverable.
 
 ## Checkpoints
 - [x] Read the 5 required governing docs + LHC1 + Rollback protocol.

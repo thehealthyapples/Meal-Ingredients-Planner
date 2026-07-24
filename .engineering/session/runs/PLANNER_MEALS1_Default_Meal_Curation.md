@@ -80,7 +80,7 @@ App not launched; no UI screenshot. Production not seeded.
 
 ## Next action
 
-**Owner to review** `docs/implementation/PLANNER_MEALS1_DEFAULT_MEAL_CURATION.md`
+**Owner to review** `docs/implementation/planner/PLANNER_MEALS1_DEFAULT_MEAL_CURATION.md`
 — specifically the 42 dinners against the success test, *"I'd happily cook every
 one of those."* Then run `npm run seed:family-plan` in **production**; the curation
 is live in dev only.

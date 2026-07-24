@@ -28,7 +28,7 @@ Restore per-file: `git checkout rollback/HOMEROOM1-home-room-north-star-20260721
   (2) shopping preview: read the Shopping owner's actual `productName` field instead of
   `i.name ?? i.itemName` (neither exists on a shopping_list row → blank preview rows). Surfaced by
   running the app and looking; presentation-only, no data/field/route/schema change.
-- `docs/implementation/HOME_ROOM_NORTH_STAR_REFINEMENT.md` — implementation report.
+- `docs/implementation/house/HOME_ROOM_NORTH_STAR_REFINEMENT.md` — implementation report.
 
 ## Checkpoints
 - [x] Read governing architecture (README + the six named Experience Governance docs via agent)

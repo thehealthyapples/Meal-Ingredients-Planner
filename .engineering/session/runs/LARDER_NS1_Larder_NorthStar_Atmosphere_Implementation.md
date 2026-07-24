@@ -26,14 +26,14 @@ architecture, capture atmosphere"). Atmosphere captured via OWNED mechanisms onl
 - `client/src/components/layout/app-shell.tsx` — ROOM_PURPOSE "/pantry" → North Star voice.
 - `client/src/pages/pantry-page.tsx` — resolve room/tab collision (Larder tab → "Cupboard"),
   in-body labels "In Pantry" → "In Larder".
-- `docs/implementation/LARDER_NORTHSTAR_IMPLEMENTATION.md` — report.
+- `docs/implementation/pantry/LARDER_NORTHSTAR_IMPLEMENTATION.md` — report.
 
 ## Checkpoints
 - [x] git status; rollback tag; read README + LARDER1 + LIVINGHOME1 + HOMEOWNER1.
 - [x] View reference image; map current Larder code + owned atmosphere mechanisms.
 - [x] Make lawful edits (rename + purpose + collision fix + household-facing consistency). 9 files.
 - [x] Verify: client typecheck 0 errors (88 server pre-existing); build exit 0; adoption 100·0·9 (baseline).
-- [x] Write report `docs/implementation/LARDER_NORTHSTAR_IMPLEMENTATION.md`.
+- [x] Write report `docs/implementation/pantry/LARDER_NORTHSTAR_IMPLEMENTATION.md`.
 - [x] Commit (`14c4e272`) + push to `origin/int1-intelligence-platform`.
 
 **Last checkpoint:** Committed `14c4e272` and pushed. (Push used `gh auth setup-git` — the

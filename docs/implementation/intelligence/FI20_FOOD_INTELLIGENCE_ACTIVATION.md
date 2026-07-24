@@ -65,7 +65,7 @@ to its pre-FI20 (still sibling-dirty) state. **To roll back to clean HEAD:**
 | `client/src/components/intelligence/FoodComparisonView.tsx` | 268 | Presentation only. Renders an already-assembled `FoodComparisonBundle` through the WX2_5 Intelligence card system (verdict → household scope → dimension rows with cited progressive-disclosure evidence → honest gaps → sources). Owns no intelligence. |
 | `client/src/pages/food-comparison-page.tsx` | 217 | The `/compare` page. Collects 2–4 food names (deep-linked or typed), asks the route, renders the view. Publishes Companion deixis (`currentFoodSlug`) so "which is better?" points at what's on screen. |
 | `scripts/fi20-capture-comparison-screenshots.ts` | 165 | Playwright capture of the four FI20 surfaces against a live dev server + seeded demo household. Read-only w.r.t. the product; writes only PNGs. |
-| `docs/implementation/FI20_FOOD_INTELLIGENCE_ACTIVATION.md` | — | This doc. |
+| `docs/implementation/intelligence/FI20_FOOD_INTELLIGENCE_ACTIVATION.md` | — | This doc. |
 | `docs/implementation/assets/fi20/*.png` + `manifest.json` | — | The captured screenshot baseline. |
 
 **Modified files**

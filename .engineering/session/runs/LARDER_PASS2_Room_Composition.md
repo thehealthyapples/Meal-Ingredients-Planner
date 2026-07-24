@@ -19,7 +19,7 @@ architectural change, no change of room ownership.**
 - `client/src/pages/larder-room.tsx` — recompose the room (grouping/relationships)
 - `client/src/pages/larder-room.css` — ground plane, wall, proportion, rhythm
 - `scripts/capture-larder-pass2.ts` — NEW: capture harness (dev tool)
-- `docs/implementation/LARDER_PASS2_ROOM_COMPOSITION.md` — NEW: implementation report
+- `docs/implementation/pantry/LARDER_PASS2_ROOM_COMPOSITION.md` — NEW: implementation report
 
 
 ## Checkpoints

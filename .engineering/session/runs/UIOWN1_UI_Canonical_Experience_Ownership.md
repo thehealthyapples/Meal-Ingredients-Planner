@@ -9,12 +9,12 @@
 | **Commit** | `9b44b0d7` (pushed to `int1-intelligence-platform`; rollback tag pushed) |
 
 ## Objective
-Create the governing architecture for **Canonical UI Experience Ownership** — `docs/architecture/UI_CANONICAL_EXPERIENCE_OWNERSHIP.md` — so every visible element in THA has exactly one authoritative owner before UI implementation continues. UI renders published state and never owns business state; owners publish, experiences compose. Define canonical owners for 15 experiences (Living Home · Household · Companion · Planner · Cookbook · Pantry · Shopping · Nutrition · Canonical Food Platform · Diary · Community · Profile · Administration · Notifications · Seasonal/Environmental Dressing), each with Responsibilities / Owns / Does Not Own / Primary Consumers; UI composition rules; an ownership decision matrix; Architecture + AI Architecture Compliance; explicit governance-only impact. Cross-check against Living Home, Companion, Intelligence and Community architecture; resolve ownership conflicts; produce `docs/implementation/UI_CANONICAL_EXPERIENCE_OWNERSHIP_IMPLEMENTATION.md`. No application code.
+Create the governing architecture for **Canonical UI Experience Ownership** — `docs/architecture/UI_CANONICAL_EXPERIENCE_OWNERSHIP.md` — so every visible element in THA has exactly one authoritative owner before UI implementation continues. UI renders published state and never owns business state; owners publish, experiences compose. Define canonical owners for 15 experiences (Living Home · Household · Companion · Planner · Cookbook · Pantry · Shopping · Nutrition · Canonical Food Platform · Diary · Community · Profile · Administration · Notifications · Seasonal/Environmental Dressing), each with Responsibilities / Owns / Does Not Own / Primary Consumers; UI composition rules; an ownership decision matrix; Architecture + AI Architecture Compliance; explicit governance-only impact. Cross-check against Living Home, Companion, Intelligence and Community architecture; resolve ownership conflicts; produce `docs/implementation/architecture/UI_CANONICAL_EXPERIENCE_OWNERSHIP_IMPLEMENTATION.md`. No application code.
 
 ## Files being modified
 - docs/architecture/UI_CANONICAL_EXPERIENCE_OWNERSHIP.md — the governing architecture (to create)
 - docs/architecture/README.md — index entry (DOCGOV1 gate: every architecture document indexed)
-- docs/implementation/UI_CANONICAL_EXPERIENCE_OWNERSHIP_IMPLEMENTATION.md — implementation report (to create, at mission-specified path)
+- docs/implementation/architecture/UI_CANONICAL_EXPERIENCE_OWNERSHIP_IMPLEMENTATION.md — implementation report (to create, at mission-specified path)
 - .engineering/session/CURRENT.md — session row
 - .engineering/session/runs/UIOWN1_UI_Canonical_Experience_Ownership.md — this file
 

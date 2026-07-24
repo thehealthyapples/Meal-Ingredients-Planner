@@ -34,7 +34,7 @@ Standard / ED8: decoration-for-decoration's-sake is refused).
 ## Files modified
 - 22 household-facing `client/src` files (warm error/empty/unknown-value copy; 2 EmptyState
   adoptions; 5 `N/A` → em-dash). +95 / −84.
-- `docs/implementation/HOSP1_HOSPITALITY_PASS.md` — implementation report
+- `docs/implementation/house/HOSP1_HOSPITALITY_PASS.md` — implementation report
 - `.engineering/session/CURRENT.md` — dashboard row · this run file
 
 ## Checkpoints
@@ -49,11 +49,11 @@ Standard / ED8: decoration-for-decoration's-sake is refused).
       redesign, remaining Loader2→Skeleton, internal non-surfaced throw strings, ALL dressing
 - [x] Verification: ZERO client typecheck errors (server errors pre-existing, no server file
       touched); adoption:check 100·0·9 (baseline, zero new); production build exit 0
-- [x] Implementation report at docs/implementation/HOSP1_HOSPITALITY_PASS.md
+- [x] Implementation report at docs/implementation/house/HOSP1_HOSPITALITY_PASS.md
 - [x] Commit + push
 
 ## Next action
-Home Owner to review `docs/implementation/HOSP1_HOSPITALITY_PASS.md` and the warmed surfaces.
+Home Owner to review `docs/implementation/house/HOSP1_HOSPITALITY_PASS.md` and the warmed surfaces.
 Next hospitality increment = the § 4 deferred backlog (uppercase-tracking pass, table
 composition, Loader2→Skeleton remainder), each with per-surface visual verification.
 NOT deployed — production is a separate human-gated act.

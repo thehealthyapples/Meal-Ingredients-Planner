@@ -17,7 +17,7 @@ no duplicate components, no new features, no Environmental Dressing. This is the
 
 ## Files being modified
 - (Room page targets under client/src/pages/ — determined after mapping)
-- `docs/implementation/ROOM1_ROOM_PERSONALITY_PASS.md` — implementation report
+- `docs/implementation/house/ROOM1_ROOM_PERSONALITY_PASS.md` — implementation report
 
 ## Checkpoints
 - [x] Read governing architecture (README)
@@ -48,7 +48,7 @@ no duplicate components, no new features, no Environmental Dressing. This is the
       live authenticated sweep, deferred to Home Owner as HOSP1/UINORTH1 did):
       client typecheck 0 client errors (88 pre-existing server) · adoption 100·0·9
       (baseline, 0 introduced) · production build exit 0.
-- [x] Implementation report → docs/implementation/ROOM1_ROOM_PERSONALITY_PASS.md
+- [x] Implementation report → docs/implementation/house/ROOM1_ROOM_PERSONALITY_PASS.md
 - [x] Commit + push — committed `97d8dbc9` on `int1-intelligence-platform`, pushed.
 
 **Last checkpoint:** Committed `97d8dbc9` + pushed; commit hash recorded in report,
@@ -56,7 +56,7 @@ dashboard and this file.
 
 ## Next action
 DONE. Waiting for User: Home Owner to review the seven rooms on desktop + mobile
-(`docs/implementation/ROOM1_ROOM_PERSONALITY_PASS.md`). NOT deployed — production
+(`docs/implementation/house/ROOM1_ROOM_PERSONALITY_PASS.md`). NOT deployed — production
 is a separate human-gated act. Staged next work (report § 4): per-room Living
 Details (governed admission, one at a time) and deeper body redesigns (Diary's
 daily log, Analyser's bench hierarchy) — each a Home Owner visual-judgement pass.

@@ -22,7 +22,7 @@ Build the canonical **Environmental Dressing Runtime** (`LIVINGHOME2` Phase 2) a
 - [x] Built `client/src/lib/living-home/dressing-register.ts` — register (empty) + loader + placement resolver + runtime resolver + renderer interface/shell + placement validation + admission hooks + checksum (ED1 § 5–§ 7 contract; forbidden fields inexpressible + refused at read time).
 - [x] Filled the verifier's `dressingChecks()` seam — 6 checks (checksum · no forbidden field · admissible & § 7.2-gated · § 5.1 placement exclusions · admission-doc existence · empty resolves/renders to nothing). Tightened the Life "one mouth" check to match quoted imports (removes prose false-positive). `verify:living-home-assets` 12/12 PASS.
 - [x] Recorded the pure module as a passing known-orphan in the adoption register; regenerated `ADOPTION_REGISTER.md`.
-- [x] Wrote `docs/implementation/ED2_ENVIRONMENTAL_DRESSING_RUNTIME.md` (all 9 sections).
+- [x] Wrote `docs/implementation/house/ED2_ENVIRONMENTAL_DRESSING_RUNTIME.md` (all 9 sections).
 - [x] Verified: typecheck 88/0-in-new · build exit 0 · verify 12/12 · adoption 102 pass/9 baseline fails · runtime demo (0 resolved, 0 rendered, binding & text refused).
 - [x] Commit; record hash here + dashboard.
 

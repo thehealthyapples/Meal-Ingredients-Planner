@@ -19,7 +19,7 @@ Implement only high-value fixes found during verification.
   paths belonging to concurrent sessions are **not** covered and were not touched.
 
 ## The de-duplication finding — this reframed the whole session
-`docs/investigations/LAUNCH1_THA_LAUNCH_READINESS_AUDIT.md` is a **first-principles launch
+`docs/investigations/platform/LAUNCH1_THA_LAUNCH_READINESS_AUDIT.md` is a **first-principles launch
 readiness audit dated 2026-07-18 — the same day**, at HEAD `24e37d20` (four commits behind
 this session). It already reports **~41% build / ~25% commercial readiness** and covers every
 area PROD5 names. Re-running it would have produced a second opinion on a six-hour-old

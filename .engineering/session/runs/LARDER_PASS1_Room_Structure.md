@@ -19,7 +19,7 @@ warm and beautifully organised while empty.
 - `client/src/pages/larder-room.tsx` — NEW: the empty Living Larder room (Pass 1)
 - `client/src/pages/larder-room.css` — NEW: the room's materials, light, furniture
 - `client/src/App.tsx` — register route `/larder` (the room's future home; LARDER1 rename)
-- `docs/implementation/LARDER_PASS1_ROOM_STRUCTURE.md` — NEW: implementation report
+- `docs/implementation/pantry/LARDER_PASS1_ROOM_STRUCTURE.md` — NEW: implementation report
 
 ## Key decisions
 - New route `/larder`; `/pantry` reconstruction left intact as reference material

@@ -46,7 +46,7 @@ Folding peeling into `ingredientKeyVariants` broke `canonical-food`, `NK6R` and 
 
 ## Next action
 
-**Owner to review** `docs/implementation/NUT_VERIFY2_CANONICAL_RESOLUTION_COMPLETION.md`.
+**Owner to review** `docs/implementation/nutrition/NUT_VERIFY2_CANONICAL_RESOLUTION_COMPLETION.md`.
 
 Manual steps 2 (red cabbage vs cabbage) and 3 (unknown ingredient) **not executed through the UI** — proven by unit test only. Nutrients tab not re-verified.
 

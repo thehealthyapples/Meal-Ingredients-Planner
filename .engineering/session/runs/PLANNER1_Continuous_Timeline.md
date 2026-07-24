@@ -30,7 +30,7 @@ Replace the Planner's fixed six-week rota with a continuous, dated, unbounded ti
 - `docs/architecture/THA_HOUSEHOLD_TIME_ARCHITECTURE.md` — governed amendment (migration principle 3 + continuous-timeline section)
 - `client/src/pages/weekly-planner-page.tsx` — real-date labels, current-week landing, unbounded prev/next date navigation
 - `server/tests/test-planner-continuous-timeline.ts` — new suite; `package.json` — register + wire into `npm test`
-- `docs/implementation/PLANNER_CONTINUOUS_TIMELINE.md` — the report
+- `docs/implementation/planner/PLANNER_CONTINUOUS_TIMELINE.md` — the report
 
 ## Scope refusals (decisions, not omissions)
 - **No back-fill** of the 192/195 unanchored households' existing weeks (HT7) — they become undated legacy.

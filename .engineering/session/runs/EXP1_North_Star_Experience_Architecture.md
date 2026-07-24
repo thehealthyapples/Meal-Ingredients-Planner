@@ -13,7 +13,7 @@
 Establish the approved North Star experience architecture (NorthStar Final image) across every THA room: one reusable workspace framework, environment headers, single global search, one Companion entry, stencil branding
 
 ## Files being modified
-- docs/implementation/EXP1_NORTH_STAR_EXPERIENCE_ARCHITECTURE.md — the North Star architecture + completion report (to create)
+- docs/implementation/house/EXP1_NORTH_STAR_EXPERIENCE_ARCHITECTURE.md — the North Star architecture + completion report (to create)
 - client/src/components/** — reusable workspace framework (room shell, environment header, compressing sticky, global search, Companion button)
 - client/src/pages/** — per-room adoption (Home, Planner, Cookbook, Pantry, Shopping, Nutrition, Diary, Analyser, Orchard, Household, Admin, Companion)
 
@@ -24,7 +24,7 @@ Establish the approved North Star experience architecture (NorthStar Final image
 - [x] Governing canon brief received. Key rulings: exposure scale binds environment bands (Home E3; Cookbook/Pantry/Nutrition/Diary E2; Planner/Shopping/Analyser/Household E1 light-only; Admin E0; Orchard E2 w/o orchard imagery). Titles need ground-plane under type (orchard never carries text). Pill tabs = in-room sections, bottom bar = the one canonical nav. Stencil identity = governed UI §10 amendment + retire-on-introduction, recorded in EXP1 doc. Report files as House workstream; STEP 5 eight mandatory sections + Experience gates in order (Constitution Check first).
 - [ ] Client shell/rooms survey (Explore agent running)
 - [x] BEFORE screenshots captured (all rooms, scratchpad screens/before; dev screenshot user id 1225 created, beta+verified)
-- [x] EXP1 doc authored at docs/implementation/EXP1_NORTH_STAR_EXPERIENCE_ARCHITECTURE.md (evidence sections to finalise)
+- [x] EXP1 doc authored at docs/implementation/house/EXP1_NORTH_STAR_EXPERIENCE_ARCHITECTURE.md (evidence sections to finalise)
 - [x] Framework built: app-shell (RoomThreshold + sticky ws-header-zone + ROOM_PURPOSE), workspace-header (pill + compress, top-right cluster retired), orchard-backdrop (E2 band grown), index.css (E2 0.55→0.82 light, threshold/pill/gutter CSS), FloatingAssistant (door → fixed top-right), nav-bar (Household + Admin(adminOnly) + shopping badge), AppleStencil icon
 - [x] Rooms adopted: meals-page (3 coloured apples out, panel search retired, stencil placeholders), MealImageWidget (stencil placeholder), profile-page (realm home, title Household, Back retired). Peeks verified: cookbook rest+stuck, planner (E1), home, household, mobile cookbook. Client typecheck: 0 errors (server test reds pre-existing).
 - [x] AFTER screenshots captured to attached_assets/design/north_star/v3/evidence/ (16 after + 15 before; admin via role toggle, reverted to user)
@@ -36,7 +36,7 @@ Establish the approved North Star experience architecture (NorthStar Final image
 **Last checkpoint:** Committed and pushed; session complete pending owner review.
 
 ## Next action
-Owner to review docs/implementation/EXP1_NORTH_STAR_EXPERIENCE_ARCHITECTURE.md and the before/after evidence at attached_assets/design/north_star/v3/evidence/ against the approved North Star image. Remaining refinements are listed in the doc's §8 rollout plan (per-room environment assets by governed admission; two-orchard asset convergence; true cross-room search; Shopping control-bar compression pass; AdminBanner fold-in; /dashboard's future).
+Owner to review docs/implementation/house/EXP1_NORTH_STAR_EXPERIENCE_ARCHITECTURE.md and the before/after evidence at attached_assets/design/north_star/v3/evidence/ against the approved North Star image. Remaining refinements are listed in the doc's §8 rollout plan (per-room environment assets by governed admission; two-orchard asset convergence; true cross-room search; Shopping control-bar compression pass; AdminBanner fold-in; /dashboard's future).
 
 ## Blockers
 none

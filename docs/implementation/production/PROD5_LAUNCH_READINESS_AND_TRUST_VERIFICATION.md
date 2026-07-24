@@ -6,7 +6,7 @@
 **Rollback:** `rollback/PROD5-launch-readiness-20260718` → `8e25c195` (tag + branch); worktree snapshot `refs/snapshots/PROD5-worktree-20260718` → `e6362f9c`
 **Governing architecture:** [`README.md`](../../architecture/README.md) bootstrap read; Architecture + AI Architecture Compliance §7.
 
-> ## ⚠️ Read [`LAUNCH1`](../../investigations/LAUNCH1_THA_LAUNCH_READINESS_AUDIT.md) first — it is the launch assessment, not this document.
+> ## ⚠️ Read [`LAUNCH1`](../../investigations/platform/LAUNCH1_THA_LAUNCH_READINESS_AUDIT.md) first — it is the launch assessment, not this document.
 >
 > `LAUNCH1` is a first-principles launch readiness audit **dated 2026-07-18 — the same day as
 > this one**, at HEAD `24e37d20`, four commits behind PROD5. It already covers all nine areas

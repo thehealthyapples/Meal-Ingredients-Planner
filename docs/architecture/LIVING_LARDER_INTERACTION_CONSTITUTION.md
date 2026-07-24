@@ -325,7 +325,7 @@ If any criterion is met: **STOP, explain why, do not continue** until the intera
 - Any new stored fact — quantity, measure, freshness, expiry, or a second categorisation. Introducing one is a governed act outside this scope (`LARDER1` § 15; `LARDER2` § II.15, inherited).
 - Renaming internal identifiers (route `/pantry`, the `pantry` capability id, the `user_pantry_items` table) — the naming divergence `LARDER1` § 15 surfaced remains a separate decision, unchanged here.
 
-**Discovered item requiring a separate decision** (reported, not resolved): the committed reconstruction (`5faa05f4` and prior; `docs/implementation/LARDER_NORTH_STAR_RECONSTRUCTION.md`) presents inventory sections inside per-shelf drawers. Whether that presentation, and any card-grid or modal remnants within it, fully satisfy the rejection criteria of § 9.2 is an **implementation** judgement under `CRAFT1` § 7 (architecture-first: this constitution is authority; the existing code is reference material) — carried to the implementation phase, not made here.
+**Discovered item requiring a separate decision** (reported, not resolved): the committed reconstruction (`5faa05f4` and prior; `docs/implementation/pantry/LARDER_NORTH_STAR_RECONSTRUCTION.md`) presents inventory sections inside per-shelf drawers. Whether that presentation, and any card-grid or modal remnants within it, fully satisfy the rejection criteria of § 9.2 is an **implementation** judgement under `CRAFT1` § 7 (architecture-first: this constitution is authority; the existing code is reference material) — carried to the implementation phase, not made here.
 
 ---
 

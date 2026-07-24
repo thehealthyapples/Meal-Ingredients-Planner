@@ -5,8 +5,8 @@
 **Type:** Presence programme. Presentation layer only.
 **Rollback:** `rollback/PRESENCE1-household-presence-20260720` → `3d5500c2`
 **Commit:** `dea9d513` (pushed)
-**Report:** `docs/implementation/PRESENCE1_HOUSEHOLD_PRESENCE.md`
-**Source:** `docs/investigations/EXPREVIEW1_FIRST_TIME_HOUSEHOLD_EXPERIENCE.md`
+**Report:** `docs/implementation/experience/PRESENCE1_HOUSEHOLD_PRESENCE.md`
+**Source:** `docs/investigations/experience/EXPREVIEW1_FIRST_TIME_HOUSEHOLD_EXPERIENCE.md`
 
 ---
 
@@ -84,7 +84,7 @@ assessing the household; whether it has begun to *notice* them is decision 2.
 
 ## Next action
 
-Owner to review `docs/implementation/PRESENCE1_HOUSEHOLD_PRESENCE.md` § 8 — five
+Owner to review `docs/implementation/experience/PRESENCE1_HOUSEHOLD_PRESENCE.md` § 8 — five
 Presence decisions, of which two are load-bearing:
 
 - **Decision 1 — the Cookbook.** 500 generated titles, one ending in `2`, no

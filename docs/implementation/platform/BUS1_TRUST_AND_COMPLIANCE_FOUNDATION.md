@@ -35,7 +35,7 @@
 - [x] `docs/architecture/THA_EXPERIENCE_BLUEPRINT.md` § 15.2, § 15.3 (Blueprint Checks, Experience Test)
 - [x] `.engineering/protocols/ROLLBACK_PROTECTION_PROTOCOL.md`
 - [x] `MIGRATIONS.md`
-- [x] `docs/investigations/LAUNCH1_THA_LAUNCH_READINESS_AUDIT.md` (the gap this closes)
+- [x] `docs/investigations/platform/LAUNCH1_THA_LAUNCH_READINESS_AUDIT.md` (the gap this closes)
 
 ---
 

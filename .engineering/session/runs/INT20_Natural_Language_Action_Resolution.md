@@ -37,7 +37,7 @@ ONE concise clarification, never a guess.
 - `package.json` — registered the new test in the chain
 - `server/tests/test-intelligence-conversation-gateway.ts` — 1 stale assertion updated
 - `server/tests/test-intelligence-behaviour-decision.ts` — exit-path count 5 → 6
-- `docs/implementation/INT20_NATURAL_LANGUAGE_ACTION_RESOLUTION.md` — NEW, the report
+- `docs/implementation/intelligence/INT20_NATURAL_LANGUAGE_ACTION_RESOLUTION.md` — NEW, the report
 
 ## Checkpoints
 <!-- Append one line per checkpoint. Newest at the bottom. -->
@@ -56,7 +56,7 @@ live against real household data (planner.add → dayId 3 / mealId 115 cross-che
 against the DB). Nothing executed — every proposal left in `proposed`.
 
 ## Next action
-Owner to review `docs/implementation/INT20_NATURAL_LANGUAGE_ACTION_RESOLUTION.md`
+Owner to review `docs/implementation/intelligence/INT20_NATURAL_LANGUAGE_ACTION_RESOLUTION.md`
 and decide commit + the three follow-ons in its §7: (1) add proposal/clarification
 templates to the six personalities so the two new exit paths are registry-voiced;
 (2) file COMP_ACT1 / COMP_ACT2 / INT20 together into `docs/implementation/companion/`

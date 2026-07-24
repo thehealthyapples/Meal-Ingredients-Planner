@@ -114,10 +114,10 @@ Every proposal additionally gated by the EXISTING `canExecute(capabilityId, verb
       replace, missing diary slot, unchosen pantry category). `planner.add` confirmed NOT
       switched on. **Screenshots NOT captured** — dev registration returns 403 and login
       requires `isBetaUser`, so no browser session was obtainable.
-- [x] Doc: docs/implementation/COMP_ACT2_COMPANION_ACTION_SURFACING.md written
+- [x] Doc: docs/implementation/companion/COMP_ACT2_COMPANION_ACTION_SURFACING.md written
 
 ## Next action
-Owner to review `docs/implementation/COMP_ACT2_COMPANION_ACTION_SURFACING.md` and decide
+Owner to review `docs/implementation/companion/COMP_ACT2_COMPANION_ACTION_SURFACING.md` and decide
 commit + follow-ons. Two open items for the owner:
 1. **Browser screenshots** still uncaptured — needs beta credentials (see doc §7).
 2. **Cleanup decision:** an early probe run auto-selected user 1 (`colinclapson@hotmail.co.uk`,

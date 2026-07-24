@@ -6,7 +6,7 @@ unified navigation, contextual desktop rail, shared page shell, responsive
 behaviour, active highlighting, Companion entry in the header.
 **Rollback ID:** `rollback/NAV1-application-shell-20260719` → `993e1bc8`
 **Stage:** Complete — committed `aa2f58cb`, pushed; awaiting owner review
-**Report:** `docs/implementation/NAV1_APPLICATION_SHELL_IMPLEMENTATION.md`
+**Report:** `docs/implementation/ux/NAV1_APPLICATION_SHELL_IMPLEMENTATION.md`
 
 ---
 
@@ -86,7 +86,7 @@ neither NAV1's nor the community work's. Not fixed here; recommended as BENCHINT
 
 ## Next action
 
-Owner to review `docs/implementation/NAV1_APPLICATION_SHELL_IMPLEMENTATION.md`.
+Owner to review `docs/implementation/ux/NAV1_APPLICATION_SHELL_IMPLEMENTATION.md`.
 Decisions waiting: **BENCHINT3** (the red suite — the branch's `npm test` has
 been failing independently of this work), **NAV2** (adopt or delete the unadopted
 `RoomActions` rail), NAV3 (admin pages now stack the shell header above

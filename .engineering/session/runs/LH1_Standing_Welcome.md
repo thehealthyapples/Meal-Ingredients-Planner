@@ -19,7 +19,7 @@ Deliver, as one governed admission:
 - Admission document — full LHDC1 § 21 evidence (11 items) + § 18 with-and-without review + § 19 rejection-criteria clearance.
 - Home Owner approval path — recorded approval (Colin Clapson, Home Owner) per `HOMEOWNER1` § 20 / LHDC1 § 20.
 - Verification updates — `dressingChecks()` now sees one admitted item (was 0); `verify:living-home-assets` green.
-- Implementation report `docs/implementation/LH1_STANDING_WELCOME.md` — 9 required sections.
+- Implementation report `docs/implementation/house/LH1_STANDING_WELCOME.md` — 9 required sections.
 
 **No other object may be implemented** (mission Scope Lock). Only the bowl of apples.
 
@@ -47,7 +47,7 @@ All prerequisite gates cleared before this stage:
 - [x] Verifier: scoped the dressing subdir out of the Life orphan/mouth checks; strengthened D6 (resolve/refuse assertion); alias-safe D7 needle; added D8 (asset byte-lock). `verify:living-home-assets` 13/13 PASS.
 - [x] Adoption register: retired the `dressing-register.ts` orphan (now adopted); added the mouth + token concerns; regenerated `.md`. `adoption:check` 103·0·9 (no regression).
 - [x] Authored the admission document (LHDC1 § 21 · § 18 with-and-without · § 19 clearance · § 20 Home Owner approval recorded).
-- [x] Wrote `docs/implementation/LH1_STANDING_WELCOME.md` (all 9 sections).
+- [x] Wrote `docs/implementation/house/LH1_STANDING_WELCOME.md` (all 9 sections).
 - [x] Verified: verify 13/13 · typecheck 88 pre-existing / 0 in touched files · build exit 0 (SVG bundled to `dist/public/assets/`) · adoption 103·0·9.
 - [x] Commit; record hash here + dashboard.
 
