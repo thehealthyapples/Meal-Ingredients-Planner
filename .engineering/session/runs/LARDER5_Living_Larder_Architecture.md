@@ -33,24 +33,24 @@ Home rooms inherit). Architecture only. No UI implementation, no deployment.
 - [x] Room designed from first principles (architecture-first, `CRAFT1` § 7.2 — existing code consulted only afterwards, as reference)
 - [x] `LIVING_LARDER_ARCHITECTURE.md` authored
 - [x] Architecture index updated — `LARDER2`/`LARDER3`/`LARDER4`/`ASSET1` had been GOVERNING since 2026-07-22/23 while **absent from the index**; indexed alongside `LARDER5` in the same change
-- [x] `repo-structure-verify.sh`: **"every architecture document indexed in README.md" FAIL → PASS** (verified by stashing the README change and re-running). Two structure FAILs remain and are **pre-existing, untouched by this session**: loose files under `docs/implementation/` and `docs/investigations/`
+- [x] `repo-structure-verify.sh`: **"every architecture document indexed in README.md" FAIL → PASS** (verified by stashing the README change and re-running). The two remaining structure FAILs (loose files under `docs/implementation/` and `docs/investigations/`) were pre-existing at this point and are **cleared by the tidy below**
 - [x] Committed to `claude-work` — `30bdb0c5`
 - [x] Repository structure tidy — 70 loose reports filed by workstream; `repo-structure-verify.sh` **2 FAIL → 0 FAIL (11 PASS)**; 243 absolute + 43 relative citations repaired; broken-link audit 154 → 146 with **0 newly broken**; two divergent duplicate reports quarantined unresolved for an owner decision (`45f14909`)
 - [x] Summary file written — `docs/implementation/pantry/LARDER5_LIVING_LARDER_ARCHITECTURE.md`
 - [ ] **Pushed to `claude-work` — BLOCKED.** `git push origin claude-work` fails with *"Invalid username or token. Password authentication is not supported for Git operations"* (`https://github.com/thehealthyapples/Meal-Ingredients-Planner.git`). No credential is available in this environment. The same block was recorded by the preceding session (`1e0ac8ff`). The commit is complete and safe locally; it needs an authenticated push by the owner.
 
-**Last checkpoint:** committed locally as `30bdb0c5`; push blocked on credentials
+**Last checkpoint:** summary written and committed (`337aef8f`); four commits local, push blocked on credentials
 
 ## Next action
 **1. Push.** `git push origin claude-work` from an authenticated session — three commits (`30bdb0c5`, `8e456d71`, `45f14909`) are local only.
-**2.** Home Owner review of `LARDER5`, in particular the two Discovered Items in § 15:
+**2.** Home Owner review of `LARDER5`, in particular the two Discovered Items in `LARDER5` § 17:
 (1) the single aperture placed on the **left return** (the one-morning law) where
 the North Star imagery composes the orchard on the right; (2) the inherited
 `/pantry` naming divergence. **Do not begin implementation** on the strength of
 this document — `LARDER4` § 14 governs when a build may start.
 
 ## Blockers
-None.
+**Push to GitHub is blocked.** `git push origin claude-work` fails with *"Invalid username or token. Password authentication is not supported for Git operations"*; no credential exists in this environment. Cleared by the owner running the push from an authenticated session — nothing else in this session is waiting on anything.
 
 ---
 _Stages: Planning → Rollback Complete → Implementation → Testing → Verification → Documentation → Waiting for User → Complete (or Blocked)._
