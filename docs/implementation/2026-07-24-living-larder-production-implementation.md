@@ -208,5 +208,5 @@ object size, min-height tags 26px + padding.
 
 ---
 
-**Implementation commit:** recorded on `claude-work` (see `git log`).
+**Implementation commit:** `50de9a35` on `claude-work`.
 **Deployed:** NO.
