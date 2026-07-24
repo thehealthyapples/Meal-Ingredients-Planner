@@ -30,9 +30,10 @@ Implement the approved Living Larder (front-on realistic elevation) in the produ
 - [x] Production room implemented; `/pantry` serves it; SVG room retired
 - [x] Verification suite run (build PASS; targeted tests green; pre-existing failures verified pre-existing at rollback commit)
 - [x] Report complete: `docs/implementation/2026-07-24-living-larder-production-implementation.md`
-- [x] Committed to `claude-work` (pathspec-scoped; pre-staged housekeeping untouched)
+- [x] Committed to `claude-work` (pathspec-scoped; pre-staged housekeeping untouched): `50de9a35` + `25118140`
+- [ ] Push blocked: the only remote (`gitsafe-backup`) rejects every branch but `main` ("Only pushes to main branch are allowed"), and pushing `main` is out of scope — commits remain local on `claude-work`
 
-**Last checkpoint:** committed + pushed to claude-work
+**Last checkpoint:** committed to claude-work; push blocked by remote branch protection
 
 ## Next action
 Home Owner review: accept the production room (report §11 acceptance steps) and rule on the 20 remaining procedural jar candidates (fail-closed until approved). Do not merge or deploy.
