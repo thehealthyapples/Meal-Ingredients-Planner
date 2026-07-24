@@ -32,6 +32,9 @@ Both tags were created **before** any file in their scope was touched.
 | `30bdb0c5` | `LARDER5` — the canonical Living Larder Architecture |
 | `8e456d71` | `LARDER5` — record push-blocked status in the run file and dashboard |
 | `45f14909` | Repository structure tidy — file 70 loose reports by workstream |
+| `337aef8f` | `LARDER5` — session summary report (this document) |
+| `4bc4f9f3` | `LARDER5` — correct the run file's stale structure-FAIL note and section reference |
+| `67be0123` | `LARDER5` — record the successful push to `origin/claude-work` |
 
 **All commits are pushed to `origin/claude-work`.** See § 7.
 
