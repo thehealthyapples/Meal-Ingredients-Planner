@@ -31,9 +31,10 @@ Home rooms inherit). Architecture only. No UI implementation, no deployment.
 - [x] `LIVING_LARDER_ARCHITECTURE.md` authored
 - [x] Architecture index updated — `LARDER2`/`LARDER3`/`LARDER4`/`ASSET1` had been GOVERNING since 2026-07-22/23 while **absent from the index**; indexed alongside `LARDER5` in the same change
 - [x] `repo-structure-verify.sh`: **"every architecture document indexed in README.md" FAIL → PASS** (verified by stashing the README change and re-running). Two structure FAILs remain and are **pre-existing, untouched by this session**: loose files under `docs/implementation/` and `docs/investigations/`
-- [x] Committed and pushed to `claude-work`
+- [x] Committed to `claude-work` — `30bdb0c5`
+- [ ] **Pushed to `claude-work` — BLOCKED.** `git push origin claude-work` fails with *"Invalid username or token. Password authentication is not supported for Git operations"* (`https://github.com/thehealthyapples/Meal-Ingredients-Planner.git`). No credential is available in this environment. The same block was recorded by the preceding session (`1e0ac8ff`). The commit is complete and safe locally; it needs an authenticated push by the owner.
 
-**Last checkpoint:** committed and pushed to `claude-work`
+**Last checkpoint:** committed locally as `30bdb0c5`; push blocked on credentials
 
 ## Next action
 Home Owner review of `LARDER5`, in particular the two Discovered Items in § 15:
