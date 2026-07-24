@@ -136,6 +136,16 @@ export type JarApprovalStatus = "planned" | "candidate" | "approved";
 /** Runtime availability. ONLY a checksum-bound-approved asset may ever be "available". */
 export type JarAvailabilityState = "available" | "unavailable";
 
+/**
+ * Artwork size class (LIVING_LARDER_PRODUCTION_IMPLEMENTATION, 2026-07-24).
+ * The Home Owner's uploaded production pack ships the one clamp-top jar in TWO
+ * physical sizes — the large store jar and the small spice/seed jar — both on
+ * the shared 512×768 canvas. Size class is an ARTWORK fact (what the bytes
+ * depict), never a quantity claim; presentation scales by it so a small jar is
+ * never drawn at a large jar's height.
+ */
+export type JarSizeClass = "large" | "small";
+
 /** The Larder's presentation shelving vocabulary — presentation only; Domain 2 owns food identity. */
 export type LarderJarCategory =
   | "grains"
@@ -251,6 +261,8 @@ export interface LarderJarAssetRecord {
    */
   readonly canonicalFoodMappings: ReadonlyArray<string>;
   readonly allowedLarderCategory: LarderJarCategory;
+  /** Artwork size class — absent means "large" (the foundation records predate the field). */
+  readonly sizeClass?: JarSizeClass;
   /** Labels are runtime text only (shared spec label law); never baked wording. */
   readonly dynamicLabel: true;
   readonly availabilityState: JarAvailabilityState;
@@ -303,7 +315,7 @@ function plannedJar(
   visualDescription: string,
   mappings: ReadonlyArray<string>,
   confusableWith: ReadonlyArray<string>,
-  overrides?: Partial<Pick<LarderJarAssetRecord, "permittedUses" | "prohibitedUses" | "predecessorOrRejectedReference">>,
+  overrides?: Partial<Pick<LarderJarAssetRecord, "permittedUses" | "prohibitedUses" | "predecessorOrRejectedReference" | "sizeClass">>,
 ): LarderJarAssetRecord {
   return {
     id: `tha-larder-jar-${family}`,
@@ -317,6 +329,7 @@ function plannedJar(
     availabilityState: "unavailable",
     spec: LARDER_JAR_SHARED_SPEC.specId,
     requiresTransparency: true,
+    sizeClass: overrides?.sizeClass ?? "large",
     permittedUses: overrides?.permittedUses ?? JAR_PERMITTED_USES,
     prohibitedUses: overrides?.prohibitedUses ?? JAR_PROHIBITED_USES,
     confusableWith,
@@ -341,21 +354,26 @@ function plannedJar(
  * candidate file are promoted through the lifecycle law, never edited by hand.)
  */
 const LARDER_JAR_PLANNED_INVENTORY: ReadonlyArray<LarderJarAssetRecord> = Object.freeze([
+  // Mapping curation (2026-07-24, production implementation): each list may name
+  // ONLY spellings the artwork honestly depicts — extended to the real household
+  // vocabulary the Domain-30 seeds use ("Oats", "Rice (basmati)", "Flour — plain",
+  // "Sugar (granulated)"). Ambiguous names (bare "rice", "pasta (dried)") are
+  // deliberately NOT mapped: an unmapped food is an honest gap, never a guess.
   plannedJar("rolled-oats", "breakfast",
     "Photorealistic rolled oat flakes, pale cream, softly irregular, settled to the shared fill line.",
-    ["rolled oats"], ["granola"]),
+    ["rolled oats", "oats", "porridge oats"], ["granola"]),
   plannedJar("white-rice", "grains",
     "Photorealistic white long-grain rice, bright matte white grains, fine and even.",
-    ["white rice"], ["couscous", "sugar", "mixed-rice"]),
+    ["white rice", "rice (basmati)", "basmati rice", "long grain rice"], ["couscous", "sugar", "mixed-rice"]),
   plannedJar("brown-rice", "grains",
     "Photorealistic brown wholegrain rice, warm tan grains with visible bran sheen.",
-    ["brown rice"], ["mixed-rice", "pearl-barley"]),
+    ["brown rice", "wholegrain rice"], ["mixed-rice", "pearl-barley"]),
   plannedJar("mixed-rice", "grains",
     "Photorealistic mixed rice blend: white, brown and dark wild grains interleaved.",
     ["mixed rice"], ["brown-rice", "white-rice"]),
   plannedJar("white-penne", "pasta",
     "Photorealistic white penne tubes, pale gold semolina, angled cuts visible.",
-    ["white penne"], ["wholemeal-penne", "white-fusilli"]),
+    ["white penne", "penne", "penne pasta"], ["wholemeal-penne", "white-fusilli"]),
   plannedJar("wholemeal-penne", "pasta",
     "Photorealistic wholemeal penne tubes, warm brown speckled semolina.",
     ["wholemeal penne"], ["white-penne", "wholemeal-fusilli"]),
@@ -385,7 +403,7 @@ const LARDER_JAR_PLANNED_INVENTORY: ReadonlyArray<LarderJarAssetRecord> = Object
     ["pumpkin seeds"], ["sunflower-seeds"]),
   plannedJar("plain-flour", "baking",
     "Photorealistic plain white flour, soft matte powder with a gently settled surface.",
-    ["plain flour"], ["ground-almonds"]),
+    ["plain flour", "flour — plain", "flour - plain"], ["ground-almonds"]),
   plannedJar("quinoa", "grains",
     "Photorealistic uncooked quinoa, tiny ivory spheres with visible germ rings.",
     ["quinoa"], ["couscous", "pearl-barley"]),
@@ -406,7 +424,7 @@ const LARDER_JAR_PLANNED_INVENTORY: ReadonlyArray<LarderJarAssetRecord> = Object
     ["sunflower seeds"], ["pumpkin-seeds"]),
   plannedJar("chia-seeds", "nuts-seeds",
     "Photorealistic chia seeds, tiny mottled grey-black and white ovals.",
-    ["chia seeds"], []),
+    ["chia seeds", "chia"], [], { sizeClass: "small" }),
   plannedJar("ground-almonds", "baking",
     "Photorealistic ground almonds, pale warm-cream coarse meal, gently settled.",
     ["ground almonds"], ["plain-flour"]),
@@ -415,7 +433,7 @@ const LARDER_JAR_PLANNED_INVENTORY: ReadonlyArray<LarderJarAssetRecord> = Object
     ["granola"], ["rolled-oats", "mixed-nuts"]),
   plannedJar("sugar", "baking",
     "Photorealistic white granulated sugar, fine bright crystalline grains.",
-    ["sugar"], ["white-rice", "couscous"]),
+    ["sugar", "sugar (granulated)", "granulated sugar", "white sugar"], ["white-rice", "couscous"]),
   // The empty shopping-state jar — the same jar, honestly empty. Its emptiness is
   // a PRESENTATION of the shopping state owned elsewhere (Domain 15); it asserts
   // no quantity and carries no food.
@@ -458,22 +476,26 @@ const LARDER_JAR_PLANNED_INVENTORY: ReadonlyArray<LarderJarAssetRecord> = Object
 ]);
 
 /**
- * CANDIDATE CHECKSUMS — LARDER_PRODUCTION_ASSET_GENERATION (2026-07-23).
- * sha256 of each generated PNG master under LARDER_JAR_ASSET_DIR. The masters
- * were produced by `scripts/generate-larder-jar-masters.ts` (deterministic
- * procedural rendering — one parametric jar per the shared spec + seeded
- * per-family contents, rasterised by Chromium to 512×768 RGBA). Recorded
- * honestly as CANDIDATES: automated verification has run (J-checks), but NO
- * Home Owner visual approval exists — every asset remains unavailable, out of
- * runtime and out of exports, until an approval is bound to its exact checksum.
- * Review sheet: docs/reference-assets/living-larder-review/.
+ * CANDIDATE CHECKSUMS — LARDER_PRODUCTION_ASSET_GENERATION (2026-07-23),
+ * amended by LIVING_LARDER_PRODUCTION_IMPLEMENTATION (2026-07-24).
+ * sha256 of each PNG master under LARDER_JAR_ASSET_DIR. Twenty of the masters
+ * remain the 2026-07-23 procedural candidates (deterministic parametric jar,
+ * `scripts/generate-larder-jar-masters.ts`), still awaiting Home Owner review.
+ * SEVEN families — rolled-oats, white-rice, brown-rice, white-penne,
+ * plain-flour, sugar, chia-seeds — were superseded on 2026-07-24 by the Home
+ * Owner's uploaded photographic-realistic production masters
+ * (`attached_assets/THA_Living_Larder_Assets/`), whose checksums replace the
+ * procedural ones here IN THE SAME COMMIT that replaced the files (J6). The
+ * superseded procedural files are archived under
+ * docs/reference-assets/rejected/living-larder/ with rejection records.
+ * Review sheet for the remaining candidates: docs/reference-assets/living-larder-review/.
  */
 export const LARDER_JAR_CANDIDATE_CHECKSUMS: Readonly<Record<string, string>> = Object.freeze({
-  "tha-larder-jar-rolled-oats": "3fc47c3da129a49fc3dea80dca4b6483f10e4b972e2f428ea41e5b709bec60b9",
-  "tha-larder-jar-white-rice": "27f76e996b070286f488de42f36503a64a3d94aa61bc5eb6e97577e16e117895",
-  "tha-larder-jar-brown-rice": "39ed3447f29f5aa9990874cc33dbc8249cb52a5b873fe4085552f10dd4727efd",
+  "tha-larder-jar-rolled-oats": "38911597f81c269dce624546873f2ae5c86c0947b644ed0ca1ff1aee647eb553",
+  "tha-larder-jar-white-rice": "914fae689fc81fe5dba5dda33596bf3b00d2bf76c141f697cea12846fe74dc12",
+  "tha-larder-jar-brown-rice": "a03799b9d81c419b5b323b02c7678e4089f77e0df153603bc7974cc0d91065c7",
   "tha-larder-jar-mixed-rice": "90c1558104f2db61c61b9cd4e06192619e641af98c92e207ae655095afa12a56",
-  "tha-larder-jar-white-penne": "5fa8b7061491e3116db7e3ee9a8056f21a7c4a774ffe7850439ff4a57dd97f4a",
+  "tha-larder-jar-white-penne": "6dae4f4205fa4b1e692e7d335e6a33ca7be3908b46407928362e75e0b532cf89",
   "tha-larder-jar-wholemeal-penne": "4b234f4577b9dcdcc1a20d7d4804ca140518ebefc7e57289b945c0b7b41cb4ad",
   "tha-larder-jar-white-fusilli": "aa53616ff46e364c3917f7c5a5b540085a0e47e206984c974079575b7dabedb0",
   "tha-larder-jar-wholemeal-fusilli": "6b9a6ac9d6ce385fad3ab3fd5cacc10990e6cdb776e4bfb9517595688d077847",
@@ -483,31 +505,111 @@ export const LARDER_JAR_CANDIDATE_CHECKSUMS: Readonly<Record<string, string>> = 
   "tha-larder-jar-black-beans": "e4a81b866c6754ddd4bc042b782a8a9fdf7f3b81bfc5d8894c097c91772ba2ea",
   "tha-larder-jar-mixed-nuts": "ee177072f8dd2f52ccfa8869a6f5570340e89eb862094ee4462cdbe6c3d28dc5",
   "tha-larder-jar-pumpkin-seeds": "df6836155de54fe594edd465246510f8c26f902d32c1fc01b1c3fb920c2cad54",
-  "tha-larder-jar-plain-flour": "7de165059c5718ad973fc2a0df4402fabb3f1e779510ae5beba2e99866558e1f",
+  "tha-larder-jar-plain-flour": "92a9008d64460e5ccfd9e5c8a34c860ccb809232afb79cb8f5ada955f86fc7ab",
   "tha-larder-jar-quinoa": "98016fcb4b56caa693fc649434c85ee7803577cfecda2d9bf07d0d6c620a59ba",
   "tha-larder-jar-couscous": "9b836dffcd2075f0d31105da686377887bfb1de6cadc73583e4b032ec24c7fb9",
   "tha-larder-jar-pearl-barley": "29f0aaa7c29905fa6fd4f6bb1bc4b6340b8eae0108236780ae0f0747c78788b9",
   "tha-larder-jar-kidney-beans": "02a810331354848e9a47ce27a8c7cc81910af8cb2d86b7cad7d86705735536b7",
   "tha-larder-jar-cannellini-beans": "d35619adfdcdd3786afe37ec0365d88127bc9137d412f4ccad0738992000e7f7",
   "tha-larder-jar-sunflower-seeds": "6f79cb7a446af1a8b8eb41b230b1a72c8a0ce281a638d937b9efcd479f3b4a74",
-  "tha-larder-jar-chia-seeds": "8604fdf9c8fa394f5ecac3a6b51f18f4ae8a5c361702f8b3218e15f2dd71c243",
+  "tha-larder-jar-chia-seeds": "d14474f390f76093cb6c57cf4114377de65b6d182fe911381542321f46e6b01a",
   "tha-larder-jar-ground-almonds": "ba5c8d8b61000d60077edbd28d78bdbac62d892655d15597e14581b0d10de32d",
   "tha-larder-jar-granola": "970fc50482fbc358b29b64b88aee0d8f9c68294e01038e023ef50916ef931d40",
-  "tha-larder-jar-sugar": "12633858559afc0b9476480d2b57ed989e576ae4a4ffb556d1928698b350f419",
+  "tha-larder-jar-sugar": "56bb0d3b03bba532046c673676f0c00872b3a8b727db4e4957406f8e101c99d6",
   "tha-larder-jar-empty": "379d586082ee95938a8d204eb2078c430ebbb4ba6637140720f9fcfff48cc0d0",
   "tha-larder-jar-fallback-green": "3227423ed61a5c277cadc2838427f8f4da7133931d2819221a09ed82f05fbbc4",
 });
 
 /**
- * THE REGISTER — the planned inventory with every generated master promoted
- * `planned → candidate` through the lifecycle law itself (promoteJarToCandidate),
- * never by hand-editing a record. All 27 are candidates: unavailable, excluded
- * from runtime and exports, awaiting checksum-bound Home Owner approval.
+ * PRODUCTION APPROVALS — LIVING_LARDER_PRODUCTION_IMPLEMENTATION (2026-07-24).
+ * The Home Owner supplied the production jar masters themselves (the uploaded
+ * `attached_assets/THA_Living_Larder_Assets/` pack, curated with its own
+ * rejected/ subfolder) and directed, in the written 2026-07-24 implementation
+ * instruction: "Implement the approved Living Larder … using the existing
+ * governed production PNG assets. … The uploaded PNG assets are the production
+ * source of truth. Do not redraw, replace, approximate or silently substitute
+ * them." That recorded instruction is the Home Owner approval instrument for
+ * exactly these seven uploaded masters — bound here, per HOMEOWNER1, to the
+ * exact checksum of each file it approved. The twenty remaining procedural
+ * candidates and the empty/fallback jars received NO approval and stay
+ * candidates: unavailable, out of runtime and out of exports.
+ */
+const PRODUCTION_APPROVAL_NOTE =
+  "Production master uploaded and directed into production by the Home Owner " +
+  "(2026-07-24 Living Larder production implementation instruction; pack: " +
+  "attached_assets/THA_Living_Larder_Assets/). Medium: photographic-realistic " +
+  "render. Supersedes the 2026-07-23 procedural candidate, archived under " +
+  "docs/reference-assets/rejected/living-larder/.";
+
+export const LARDER_JAR_HOME_OWNER_APPROVALS: Readonly<Record<string, JarVisualApproval>> =
+  Object.freeze(
+    Object.fromEntries(
+      ([
+        "tha-larder-jar-rolled-oats",
+        "tha-larder-jar-white-rice",
+        "tha-larder-jar-brown-rice",
+        "tha-larder-jar-white-penne",
+        "tha-larder-jar-plain-flour",
+        "tha-larder-jar-sugar",
+        "tha-larder-jar-chia-seeds",
+      ] as const).map((id) => [
+        id,
+        {
+          status: "approved",
+          approvedByRole: "home-owner",
+          approvedAt: "2026-07-24T11:30:00Z",
+          approvedChecksum: LARDER_JAR_CANDIDATE_CHECKSUMS[id],
+          notes: PRODUCTION_APPROVAL_NOTE,
+        } satisfies JarVisualApproval,
+      ]),
+    ),
+  );
+
+/** The archived procedural predecessors of the seven approved families (evidence kept). */
+const SUPERSEDED_PROCEDURAL: Readonly<Record<string, JarRejectionRecord>> = Object.freeze(
+  Object.fromEntries(
+    Object.entries({
+      "tha-larder-jar-rolled-oats": "3fc47c3da129a49fc3dea80dca4b6483f10e4b972e2f428ea41e5b709bec60b9",
+      "tha-larder-jar-white-rice": "27f76e996b070286f488de42f36503a64a3d94aa61bc5eb6e97577e16e117895",
+      "tha-larder-jar-brown-rice": "39ed3447f29f5aa9990874cc33dbc8249cb52a5b873fe4085552f10dd4727efd",
+      "tha-larder-jar-white-penne": "5fa8b7061491e3116db7e3ee9a8056f21a7c4a774ffe7850439ff4a57dd97f4a",
+      "tha-larder-jar-plain-flour": "7de165059c5718ad973fc2a0df4402fabb3f1e779510ae5beba2e99866558e1f",
+      "tha-larder-jar-chia-seeds": "8604fdf9c8fa394f5ecac3a6b51f18f4ae8a5c361702f8b3218e15f2dd71c243",
+      "tha-larder-jar-sugar": "12633858559afc0b9476480d2b57ed989e576ae4a4ffb556d1928698b350f419",
+    }).map(([id, rejectedChecksum]) => [
+      id,
+      {
+        rejectedAt: "2026-07-24T11:30:00Z",
+        rejectedChecksum,
+        reason:
+          "Superseded by the Home Owner's uploaded photographic-realistic production master " +
+          "(2026-07-24 instruction). Procedural candidate archived as " +
+          `${id}-procedural-v1.png under ${LARDER_REJECTED_PREDECESSOR_DIR}/.`,
+        replacementRef: id,
+      } satisfies JarRejectionRecord,
+    ]),
+  ),
+);
+
+/**
+ * THE REGISTER — the planned inventory with every master promoted
+ * `planned → candidate` through the lifecycle law itself (promoteJarToCandidate)
+ * and the seven Home-Owner-approved production masters promoted
+ * `candidate → approved` through recordJarHomeOwnerApproval — never by
+ * hand-editing a record. 7 approved (available); 20 candidates (unavailable,
+ * awaiting checksum-bound Home Owner approval).
  */
 export const larderJarAssetRegister: ReadonlyArray<LarderJarAssetRecord> = Object.freeze(
   LARDER_JAR_PLANNED_INVENTORY.map((record) => {
     const checksum = LARDER_JAR_CANDIDATE_CHECKSUMS[record.id];
-    return checksum ? promoteJarToCandidate(record, checksum) : record;
+    if (!checksum) return record;
+    let next = promoteJarToCandidate(record, checksum);
+    const supersession = SUPERSEDED_PROCEDURAL[record.id];
+    if (supersession) {
+      next = { ...next, rejectionHistory: [...next.rejectionHistory, supersession] };
+    }
+    const approval = LARDER_JAR_HOME_OWNER_APPROVALS[record.id];
+    return approval ? recordJarHomeOwnerApproval(next, approval) : next;
   }),
 );
 
@@ -580,13 +682,27 @@ export const larderVisualGapRegister: ReadonlyArray<LarderVisualGapRecord> = Obj
 // ── § J.4 · Lifecycle law — pure, deterministic, verifier-enforced ────────────
 
 /**
+ * The minimal lifecycle-bearing shape the law operates on. The jar records and
+ * the produce records (§ P) both satisfy it, so there is exactly ONE lifecycle
+ * law — never a second copy for a second asset class.
+ */
+export interface LarderAssetLifecycleState {
+  readonly id: string;
+  readonly approvalStatus: JarApprovalStatus;
+  readonly availabilityState: JarAvailabilityState;
+  readonly checksum: string | null;
+  readonly visualApproval: JarVisualApproval | null;
+  readonly visualApprovalHistory: ReadonlyArray<JarVisualApproval>;
+}
+
+/**
  * The ONE definition of availability (Principle 2). A record's stored
  * `availabilityState` must equal this derivation; the verifier fails any drift.
  * Available ⇔ approved + checksum present + live Home Owner approval bound to
  * that exact checksum. Everything else — planned, candidate, drifted — is
  * unavailable.
  */
-export function deriveJarAvailability(record: LarderJarAssetRecord): JarAvailabilityState {
+export function deriveJarAvailability(record: LarderAssetLifecycleState): JarAvailabilityState {
   return record.approvalStatus === "approved" &&
     record.checksum !== null &&
     record.visualApproval !== null &&
@@ -597,15 +713,15 @@ export function deriveJarAvailability(record: LarderJarAssetRecord): JarAvailabi
 }
 
 /** planned → candidate: a real file now exists with this checksum. Still unavailable. */
-export function promoteJarToCandidate(
-  record: LarderJarAssetRecord,
+export function promoteJarToCandidate<T extends LarderAssetLifecycleState>(
+  record: T,
   fileChecksum: string,
-): LarderJarAssetRecord {
+): T {
   if (record.approvalStatus !== "planned") {
     throw new Error(`${record.id}: only a planned record may become candidate (is ${record.approvalStatus}).`);
   }
   if (!fileChecksum) throw new Error(`${record.id}: a candidate requires a real file checksum.`);
-  return { ...record, approvalStatus: "candidate", checksum: fileChecksum, availabilityState: "unavailable" };
+  return { ...record, approvalStatus: "candidate", checksum: fileChecksum, availabilityState: "unavailable" } as T;
 }
 
 /**
@@ -613,10 +729,10 @@ export function promoteJarToCandidate(
  * candidate's exact checksum, and only after automated verification has passed
  * (the verifier gates the commit that records this).
  */
-export function recordJarHomeOwnerApproval(
-  record: LarderJarAssetRecord,
+export function recordJarHomeOwnerApproval<T extends LarderAssetLifecycleState>(
+  record: T,
   approval: JarVisualApproval,
-): LarderJarAssetRecord {
+): T {
   if (record.approvalStatus !== "candidate") {
     throw new Error(`${record.id}: only a candidate may be approved (is ${record.approvalStatus}).`);
   }
@@ -632,7 +748,7 @@ export function recordJarHomeOwnerApproval(
     availabilityState: "available",
     visualApproval: approval,
     visualApprovalHistory: [...record.visualApprovalHistory, approval],
-  };
+  } as T;
 }
 
 /**
@@ -641,10 +757,10 @@ export function recordJarHomeOwnerApproval(
  * and the previous approval is PRESERVED in history as invalidated — fresh
  * automated verification and a fresh Home Owner approval are required.
  */
-export function applyJarChecksumDrift(
-  record: LarderJarAssetRecord,
+export function applyJarChecksumDrift<T extends LarderAssetLifecycleState>(
+  record: T,
   actualChecksum: string,
-): LarderJarAssetRecord {
+): T {
   if (record.approvalStatus !== "approved" || record.visualApproval === null) {
     throw new Error(`${record.id}: drift applies only to an approved record.`);
   }
@@ -665,7 +781,7 @@ export function applyJarChecksumDrift(
       ...record.visualApprovalHistory.filter((a) => a !== record.visualApproval),
       invalidated,
     ],
-  };
+  } as T;
 }
 
 /** Record-level law: every internal consistency rule a record must satisfy. Empty ⇒ well-formed. */
@@ -774,4 +890,135 @@ export function buildJarExportSet(
     excluded,
     complete: included.length === records.length && records.length > 0,
   };
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// § P · LARDER PRODUCE ASSET GOVERNANCE (LIVING_LARDER_PRODUCTION_IMPLEMENTATION,
+// 2026-07-24)
+//
+// Life-class, data-bound produce artwork for the Living Larder: whether a piece
+// appears is decided at read time by the household's own Domain-30 staples,
+// exactly as a jar is. Records share § J's lifecycle law verbatim (the generic
+// functions above — ONE law, never a second copy), the same checksum-bound Home
+// Owner approval instrument, and the same one-mouth rule (LARDER_JAR_OWNER_COMPONENT
+// is the only client file that may reference client/src/assets/living-home/larder/).
+// The inventory is CLOSED at what the Home Owner has actually supplied: two
+// masters from the 2026-07-24 uploaded production pack. An unmapped fruit or
+// vegetable is an HONEST GAP — presented as runtime text, never a guessed
+// visual (Principle 6).
+// ═════════════════════════════════════════════════════════════════════════════
+
+/** The governed produce asset directory (inside the larder subtree; same one-mouth gate as jars). */
+export const LARDER_PRODUCE_ASSET_DIR = "client/src/assets/living-home/larder/produce";
+
+/** One governed produce asset record — § J's lifecycle fields plus the produce facts. */
+export interface LarderProduceAssetRecord extends LarderAssetLifecycleState {
+  /** Canonical asset id — `tha-larder-produce-<family>`. */
+  readonly id: string;
+  /** `tha-larder-produce-<family>.png`, under LARDER_PRODUCE_ASSET_DIR. */
+  readonly filename: string;
+  /** Stable semantic visual family, kebab-case. */
+  readonly family: string;
+  readonly visualDescription: string;
+  /** CURATED Domain-2-facing mappings — exact pantry-name strings only; never inferred. */
+  readonly canonicalFoodMappings: ReadonlyArray<string>;
+  /** Master canvas, verified from the PNG IHDR by the verifier. */
+  readonly dimensions: { readonly width: number; readonly height: number };
+  readonly requiresTransparency: true;
+  readonly ownerComponent: string;
+  readonly permittedUses: ReadonlyArray<string>;
+  readonly prohibitedUses: ReadonlyArray<string>;
+}
+
+const PRODUCE_PERMITTED_USES: ReadonlyArray<string> = Object.freeze([
+  "larder-room-produce-presentation",
+  "approved-production-export",
+]);
+
+const PRODUCE_PROHIBITED_USES: ReadonlyArray<string> = Object.freeze([
+  "household-quantity-representation",
+  "nutrition-quality-or-freshness-claim",
+  "marketing-or-promotional-use",
+  "use-outside-the-larder-room-presentation",
+  "representation-of-any-food-outside-canonicalFoodMappings",
+]);
+
+function producedProduce(
+  family: string,
+  visualDescription: string,
+  mappings: ReadonlyArray<string>,
+  checksum: string,
+): LarderProduceAssetRecord {
+  const planned: LarderProduceAssetRecord = {
+    id: `tha-larder-produce-${family}`,
+    filename: `tha-larder-produce-${family}.png`,
+    family,
+    visualDescription,
+    canonicalFoodMappings: mappings,
+    dimensions: { width: 768, height: 768 },
+    requiresTransparency: true,
+    ownerComponent: LARDER_JAR_OWNER_COMPONENT,
+    permittedUses: PRODUCE_PERMITTED_USES,
+    prohibitedUses: PRODUCE_PROHIBITED_USES,
+    approvalStatus: "planned",
+    availabilityState: "unavailable",
+    checksum: null,
+    visualApproval: null,
+    visualApprovalHistory: [],
+  };
+  return recordJarHomeOwnerApproval(promoteJarToCandidate(planned, checksum), {
+    status: "approved",
+    approvedByRole: "home-owner",
+    approvedAt: "2026-07-24T11:30:00Z",
+    approvedChecksum: checksum,
+    notes: PRODUCTION_APPROVAL_NOTE,
+  });
+}
+
+/**
+ * THE PRODUCE REGISTER — closed at the two Home-Owner-supplied masters, both
+ * promoted planned → candidate → approved through the one lifecycle law, each
+ * approval checksum-bound to the exact uploaded bytes (2026-07-24 instruction).
+ */
+export const larderProduceAssetRegister: ReadonlyArray<LarderProduceAssetRecord> = Object.freeze([
+  producedProduce(
+    "apple-red",
+    "Photorealistic single red apple, warm red skin with natural speckling, short stalk.",
+    // Curated to RED varieties only — a green Granny Smith may never wear this
+    // artwork (honest gaps over near-matches).
+    ["apples", "apple", "red apples", "red apple", "fuji apple", "gala apple", "braeburn apple", "pink lady apple", "red delicious apple"],
+    "73ab576b02f8186769900be1948676b1107e074f02997c6ff27b7969a1737a08",
+  ),
+  producedProduce(
+    "broccoli",
+    "Photorealistic whole broccoli head, deep green florets, pale trimmed stalk.",
+    ["broccoli"],
+    "f840a5ae2dd75f5a7cac74ec7e15c84dc80c5319003d01055b80ad9123e12ffe",
+  ),
+]);
+
+/** Record-level law for produce records. Empty ⇒ well-formed. */
+export function assertProduceRecordWellFormed(record: LarderProduceAssetRecord): string[] {
+  const problems: string[] = [];
+  if (record.id !== `tha-larder-produce-${record.family}`) {
+    problems.push(`${record.id}: id must be tha-larder-produce-<family>.`);
+  }
+  if (record.filename !== `${record.id}.png`) {
+    problems.push(`${record.id}: filename must be "${record.id}.png".`);
+  }
+  if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(record.family)) {
+    problems.push(`${record.id}: family must be stable kebab-case.`);
+  }
+  if (record.ownerComponent !== LARDER_JAR_OWNER_COMPONENT) {
+    problems.push(`${record.id}: ownerComponent must be the one declared mouth (${LARDER_JAR_OWNER_COMPONENT}).`);
+  }
+  if (record.canonicalFoodMappings.length === 0) {
+    problems.push(`${record.id}: a produce family must carry at least one curated mapping.`);
+  }
+  if (record.permittedUses.length === 0) problems.push(`${record.id}: permittedUses must be declared.`);
+  if (record.prohibitedUses.length === 0) problems.push(`${record.id}: prohibitedUses must be declared.`);
+  if (record.availabilityState !== deriveJarAvailability(record)) {
+    problems.push(`${record.id}: availabilityState contradicts the derived law.`);
+  }
+  return problems;
 }

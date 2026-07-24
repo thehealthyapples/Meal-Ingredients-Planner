@@ -27,6 +27,96 @@
       "sha256": "c0405f55272b4ceccb6ae751dcba9d4f77c46a9462c75aa7b546eaa505f46ef3",
       "citation": "Blueprint § 6.1 · NORTH2 (2026-07-17) bake-time grade (saturation 1.28, contrast 1.06 at 1536×1024) · Adoption Register row 40",
       "note": "The arrival/graded orchard environment image (E3). PRE-CONVERGENCE sibling of orchard.webp; see EXP3 § 4.2. The five recorded orchard-bg.webp bypasses (register row 40) are resolved at Phase 1 convergence, not here."
+    },
+    {
+      "id": "larder-joinery-floating-shelf-oak-wide",
+      "path": "client/src/assets/living-home/larder/joinery/tha-larder-joinery-floating-shelf-oak-wide.png",
+      "layer": 2,
+      "ownerComponent": "client/src/pages/larder-room.tsx",
+      "sha256": "187109d738d1fb4a8c78cf54cff267f51ccb13a4508320b6a32c5a0d20428494",
+      "citation": "LARDER2 § I.4 (furniture before products) · LIVING_LARDER_ASSET_LIBRARY.md (ASSET1 § A JOINERY) · Home Owner 2026-07-24 Living Larder production implementation instruction (\"The uploaded PNG assets are the production source of truth\")",
+      "note": "Wide floating oak shelf — the Dry Store's principal jar shelf. House-class larder furniture: byte-constant joinery of the Living Larder room, admitted 2026-07-24 from the Home Owner uploaded pack (attached_assets/THA_Living_Larder_Assets/joinery/). Furniture owns no fact; what stands ON it is decided by Domain-30 data at read time."
+    },
+    {
+      "id": "larder-joinery-floating-shelf-oak-medium",
+      "path": "client/src/assets/living-home/larder/joinery/tha-larder-joinery-floating-shelf-oak-medium.png",
+      "layer": 2,
+      "ownerComponent": "client/src/pages/larder-room.tsx",
+      "sha256": "c1558887ee5547a6b5bea45fdb824c160713f880d9d1091a0f7dc9622585e4a5",
+      "citation": "LARDER2 § I.4 (furniture before products) · LIVING_LARDER_ASSET_LIBRARY.md (ASSET1 § A JOINERY) · Home Owner 2026-07-24 Living Larder production implementation instruction (\"The uploaded PNG assets are the production source of truth\")",
+      "note": "Medium floating oak shelf — second jar shelf. House-class larder furniture: byte-constant joinery of the Living Larder room, admitted 2026-07-24 from the Home Owner uploaded pack (attached_assets/THA_Living_Larder_Assets/joinery/). Furniture owns no fact; what stands ON it is decided by Domain-30 data at read time."
+    },
+    {
+      "id": "larder-joinery-floating-shelf-oak-short",
+      "path": "client/src/assets/living-home/larder/joinery/tha-larder-joinery-floating-shelf-oak-short.png",
+      "layer": 2,
+      "ownerComponent": "client/src/pages/larder-room.tsx",
+      "sha256": "dc1047cb8faa7dee57ff2e53c7abe79b85f1b7b4f9852da84e8441a7cf6e74f0",
+      "citation": "LARDER2 § I.4 (furniture before products) · LIVING_LARDER_ASSET_LIBRARY.md (ASSET1 § A JOINERY) · Home Owner 2026-07-24 Living Larder production implementation instruction (\"The uploaded PNG assets are the production source of truth\")",
+      "note": "Short floating oak shelf — breakfast/small-goods shelf. House-class larder furniture: byte-constant joinery of the Living Larder room, admitted 2026-07-24 from the Home Owner uploaded pack (attached_assets/THA_Living_Larder_Assets/joinery/). Furniture owns no fact; what stands ON it is decided by Domain-30 data at read time."
+    },
+    {
+      "id": "larder-joinery-floating-spice-rack-oak",
+      "path": "client/src/assets/living-home/larder/joinery/tha-larder-joinery-floating-spice-rack-oak.png",
+      "layer": 2,
+      "ownerComponent": "client/src/pages/larder-room.tsx",
+      "sha256": "4c12026c1f37b7fa6a5e7f33455122cb43f6285f6cfd09a5192014539ba2fce8",
+      "citation": "LARDER2 § I.4 (furniture before products) · LIVING_LARDER_ASSET_LIBRARY.md (ASSET1 § A JOINERY) · Home Owner 2026-07-24 Living Larder production implementation instruction (\"The uploaded PNG assets are the production source of truth\")",
+      "note": "Floating oak spice rack — small-jar herbs & spices rail. House-class larder furniture: byte-constant joinery of the Living Larder room, admitted 2026-07-24 from the Home Owner uploaded pack (attached_assets/THA_Living_Larder_Assets/joinery/). Furniture owns no fact; what stands ON it is decided by Domain-30 data at read time."
+    },
+    {
+      "id": "larder-joinery-cupboard-oak-double",
+      "path": "client/src/assets/living-home/larder/joinery/tha-larder-joinery-cupboard-oak-double.png",
+      "layer": 2,
+      "ownerComponent": "client/src/pages/larder-room.tsx",
+      "sha256": "808b7d518edf42a2955805038e082695e36b8620f93132518a09de6691b7886e",
+      "citation": "LARDER2 § I.4 (furniture before products) · LIVING_LARDER_ASSET_LIBRARY.md (ASSET1 § A JOINERY) · Home Owner 2026-07-24 Living Larder production implementation instruction (\"The uploaded PNG assets are the production source of truth\")",
+      "note": "Double-door oak wall cupboard — larder cupboard (opens to real Domain-30 contents). House-class larder furniture: byte-constant joinery of the Living Larder room, admitted 2026-07-24 from the Home Owner uploaded pack (attached_assets/THA_Living_Larder_Assets/joinery/). Furniture owns no fact; what stands ON it is decided by Domain-30 data at read time."
+    },
+    {
+      "id": "larder-joinery-cupboard-oak-single",
+      "path": "client/src/assets/living-home/larder/joinery/tha-larder-joinery-cupboard-oak-single.png",
+      "layer": 2,
+      "ownerComponent": "client/src/pages/larder-room.tsx",
+      "sha256": "fe5df7442c3dce1191f5d65fc9528e6f495edfda1b7345ff59a0cd84acf39159",
+      "citation": "LARDER2 § I.4 (furniture before products) · LIVING_LARDER_ASSET_LIBRARY.md (ASSET1 § A JOINERY) · Home Owner 2026-07-24 Living Larder production implementation instruction (\"The uploaded PNG assets are the production source of truth\")",
+      "note": "Single-door tall oak cupboard — household cupboard (opens to real Domain-30 contents). House-class larder furniture: byte-constant joinery of the Living Larder room, admitted 2026-07-24 from the Home Owner uploaded pack (attached_assets/THA_Living_Larder_Assets/joinery/). Furniture owns no fact; what stands ON it is decided by Domain-30 data at read time."
+    },
+    {
+      "id": "larder-joinery-drawer-unit-oak-deep",
+      "path": "client/src/assets/living-home/larder/joinery/tha-larder-joinery-drawer-unit-oak-deep.png",
+      "layer": 2,
+      "ownerComponent": "client/src/pages/larder-room.tsx",
+      "sha256": "77f857c684ad2ab6226d1f143877783d81e6f7ec0b9bb5a3f25cf55121beffa1",
+      "citation": "LARDER2 § I.4 (furniture before products) · LIVING_LARDER_ASSET_LIBRARY.md (ASSET1 § A JOINERY) · Home Owner 2026-07-24 Living Larder production implementation instruction (\"The uploaded PNG assets are the production source of truth\")",
+      "note": "Deep oak drawer unit — the cold store drawers (fridge category; opens to real contents). House-class larder furniture: byte-constant joinery of the Living Larder room, admitted 2026-07-24 from the Home Owner uploaded pack (attached_assets/THA_Living_Larder_Assets/joinery/). Furniture owns no fact; what stands ON it is decided by Domain-30 data at read time."
+    },
+    {
+      "id": "larder-joinery-drawer-unit-oak-shallow",
+      "path": "client/src/assets/living-home/larder/joinery/tha-larder-joinery-drawer-unit-oak-shallow.png",
+      "layer": 2,
+      "ownerComponent": "client/src/pages/larder-room.tsx",
+      "sha256": "99591a759c3992bd6925b5cd25a65501fe2b30a874ad74cacfc2a2f791c255bf",
+      "citation": "LARDER2 § I.4 (furniture before products) · LIVING_LARDER_ASSET_LIBRARY.md (ASSET1 § A JOINERY) · Home Owner 2026-07-24 Living Larder production implementation instruction (\"The uploaded PNG assets are the production source of truth\")",
+      "note": "Shallow oak drawer unit — the frozen store drawers (freezer category; opens to real contents). House-class larder furniture: byte-constant joinery of the Living Larder room, admitted 2026-07-24 from the Home Owner uploaded pack (attached_assets/THA_Living_Larder_Assets/joinery/). Furniture owns no fact; what stands ON it is decided by Domain-30 data at read time."
+    },
+    {
+      "id": "larder-joinery-preparation-table-oak",
+      "path": "client/src/assets/living-home/larder/joinery/tha-larder-joinery-preparation-table-oak.png",
+      "layer": 2,
+      "ownerComponent": "client/src/pages/larder-room.tsx",
+      "sha256": "80a715129e79b04e3ac7fba64a328b6596c85fb4dac7843375ac225377523557",
+      "citation": "LARDER2 § I.4 (furniture before products) · LIVING_LARDER_ASSET_LIBRARY.md (ASSET1 § A JOINERY) · Home Owner 2026-07-24 Living Larder production implementation instruction (\"The uploaded PNG assets are the production source of truth\")",
+      "note": "Oak preparation table — the working surface; fruit stands on its top. House-class larder furniture: byte-constant joinery of the Living Larder room, admitted 2026-07-24 from the Home Owner uploaded pack (attached_assets/THA_Living_Larder_Assets/joinery/). Furniture owns no fact; what stands ON it is decided by Domain-30 data at read time."
+    },
+    {
+      "id": "larder-joinery-side-worktable-oak",
+      "path": "client/src/assets/living-home/larder/joinery/tha-larder-joinery-side-worktable-oak.png",
+      "layer": 2,
+      "ownerComponent": "client/src/pages/larder-room.tsx",
+      "sha256": "b4358d1f982956d3a85018ee159aaa0a5cf7a8d27238a10d4ba4f936af65e5d4",
+      "citation": "LARDER2 § I.4 (furniture before products) · LIVING_LARDER_ASSET_LIBRARY.md (ASSET1 § A JOINERY) · Home Owner 2026-07-24 Living Larder production implementation instruction (\"The uploaded PNG assets are the production source of truth\")",
+      "note": "Oak side worktable — the pet corner; its drawers open to real contents. House-class larder furniture: byte-constant joinery of the Living Larder room, admitted 2026-07-24 from the Home Owner uploaded pack (attached_assets/THA_Living_Larder_Assets/joinery/). Furniture owns no fact; what stands ON it is decided by Domain-30 data at read time."
     }
   ],
   "extensionPoints": {

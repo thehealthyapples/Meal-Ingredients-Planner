@@ -36,14 +36,17 @@ import { inflateSync } from "node:zlib";
 import {
   livingDetailsManifest,
   larderJarAssetRegister,
+  larderProduceAssetRegister,
   larderVisualGapRegister,
   LARDER_JAR_ASSET_DIR,
   LARDER_JAR_INGREDIENT_FAMILIES,
   LARDER_JAR_OWNER_COMPONENT,
   LARDER_JAR_SHARED_SPEC,
+  LARDER_PRODUCE_ASSET_DIR,
   LARDER_REJECTED_PREDECESSOR_DIR,
   VISUAL_GAP_GREEN,
   assertJarRecordWellFormed,
+  assertProduceRecordWellFormed,
   applyJarChecksumDrift,
   buildJarExportSet,
   deriveJarAvailability,
@@ -81,7 +84,19 @@ const DRESSING_OWNER_COMPONENT = "client/src/components/layout/dressing-layer.ts
 // LARDER_ASSET_GOVERNANCE_FOUNDATION — the Larder jar asset section of the Life
 // Register (fourth governed asset class; same register module, same verifier).
 const LARDER_JAR_IMPORT = "assets/living-home/larder";
-const LARDER_REJECTED_FILES = ["larder-counter.webp", "larder-jars.webp"];
+const LARDER_REJECTED_FILES = [
+  "larder-counter.webp",
+  "larder-jars.webp",
+  // 2026-07-24 — the seven procedural jar candidates superseded by the Home
+  // Owner's uploaded production masters (LIVING_LARDER_PRODUCTION_IMPLEMENTATION).
+  "tha-larder-jar-rolled-oats-procedural-v1.png",
+  "tha-larder-jar-white-rice-procedural-v1.png",
+  "tha-larder-jar-brown-rice-procedural-v1.png",
+  "tha-larder-jar-white-penne-procedural-v1.png",
+  "tha-larder-jar-plain-flour-procedural-v1.png",
+  "tha-larder-jar-sugar-procedural-v1.png",
+  "tha-larder-jar-chia-seeds-procedural-v1.png",
+];
 
 const ICON = { pass: "✓", fail: "✗", skip: "○" } as const;
 
@@ -776,7 +791,7 @@ function larderJarChecks() {
     problemsJ6.length ? "fail" : "pass",
     problemsJ6.length
       ? problemsJ6.join("  |  ")
-      : `${candidateCount} candidate(s) byte-match their registered checksum; no approved asset drifts (0 approved — that gate arms with the first approval).`,
+      : `${candidateCount} candidate(s) byte-match their registered checksum; ${records.filter((r) => r.approvalStatus === "approved").length} approved asset(s) byte-match their checksum-bound approval.`,
   );
 
   // J7 — no runtime reference to unapproved assets, and one mouth only: no client file
@@ -801,7 +816,9 @@ function larderJarChecks() {
   record(
     "No runtime reference to planned/candidate jars; one mouth only (J7)",
     problemsJ7.length ? "fail" : "pass",
-    problemsJ7.length ? problemsJ7.join("  |  ") : `No client reference to ${LARDER_JAR_ASSET_DIR}/ (0 approved; any reference today would fail).`,
+    problemsJ7.length
+      ? problemsJ7.join("  |  ")
+      : `One mouth holds: only ${LARDER_JAR_OWNER_COMPONENT} may reference the larder asset subtree (${approvedCount} approved asset(s) unlock that mouth).`,
   );
 
   // J8 — export law: buildJarExportSet() excludes every unapproved/drifted record and
@@ -1008,6 +1025,163 @@ function larderJarChecks() {
   );
 }
 
+// ── Larder physical-environment checks (P1–P3 · K1–K2) ───────────────────────
+// LIVING_LARDER_PRODUCTION_IMPLEMENTATION (2026-07-24): the produce register
+// (Life-class, § P of the manifest) and the joinery furniture (House-class,
+// rows in the House Register). One-mouth for the whole larder/ subtree is
+// already enforced by J7 (the needle covers assets/living-home/larder).
+
+function larderPhysicalChecks() {
+  // P1 — produce register well-formed; availability obeys the one lifecycle law.
+  const produce = larderProduceAssetRegister;
+  const problemsP1: string[] = [];
+  const pIds = new Set(produce.map((r) => r.id));
+  if (pIds.size !== produce.length) problemsP1.push("duplicate produce asset id.");
+  problemsP1.push(...produce.flatMap((r) => assertProduceRecordWellFormed(r)));
+  for (const r of produce) {
+    if (r.approvalStatus === "approved" && r.visualApproval?.approvedChecksum !== r.checksum) {
+      problemsP1.push(`${r.id}: approval not bound to the record checksum.`);
+    }
+  }
+  record(
+    "Produce register well-formed; availability obeys the one law (P1)",
+    problemsP1.length ? "fail" : "pass",
+    problemsP1.length ? problemsP1.join("  |  ") : `${produce.length} produce record(s) internally consistent.`,
+  );
+
+  // P2 — produce files: every non-planned record's file exists and byte-matches its
+  // checksum; every file in the produce dir is a registered filename.
+  const produceDirAbs = resolve(ROOT, LARDER_PRODUCE_ASSET_DIR);
+  const produceOnDisk = existsSync(produceDirAbs)
+    ? readdirSync(produceDirAbs).filter((f) => /\.(png|webp|avif|svg|jpg|jpeg)$/i.test(f))
+    : [];
+  const problemsP2: string[] = [];
+  for (const r of produce) {
+    const abs = resolve(produceDirAbs, r.filename);
+    if (r.approvalStatus !== "planned" && !existsSync(abs)) {
+      problemsP2.push(`${r.id}: ${r.approvalStatus} record but no file at ${LARDER_PRODUCE_ASSET_DIR}/${r.filename}.`);
+      continue;
+    }
+    if (existsSync(abs)) {
+      const actual = sha256(abs);
+      if (actual !== r.checksum) {
+        problemsP2.push(`${r.id}: bytes ${actual.slice(0, 12)}… do not match the registered checksum — re-record (and re-approve) in the SAME commit.`);
+      }
+    }
+  }
+  for (const f of produceOnDisk) {
+    if (!produce.some((r) => r.filename === f)) {
+      problemsP2.push(`stray file ${LARDER_PRODUCE_ASSET_DIR}/${f} — not a registered produce filename.`);
+    }
+  }
+  record(
+    "Produce files registered, lifecycle-consistent, checksum-bound (P2)",
+    problemsP2.length ? "fail" : "pass",
+    problemsP2.length ? problemsP2.join("  |  ") : `${produceOnDisk.length} file(s), each registered and byte-locked.`,
+  );
+
+  // P3 — produce PNG integrity: registered canvas, 8-bit RGBA, transparent corners,
+  // genuine alpha (same structural bar as J5).
+  const problemsP3: string[] = [];
+  let inspectedP = 0;
+  for (const r of produce) {
+    const abs = resolve(produceDirAbs, r.filename);
+    if (!existsSync(abs)) continue;
+    inspectedP++;
+    const png = readPng(abs);
+    if ("error" in png) {
+      problemsP3.push(`${r.id}: ${png.error}.`);
+      continue;
+    }
+    if (png.width !== r.dimensions.width || png.height !== r.dimensions.height) {
+      problemsP3.push(`${r.id}: ${png.width}×${png.height}, registered ${r.dimensions.width}×${r.dimensions.height}.`);
+    }
+    if (png.colourType !== 6 || png.bitDepth !== 8) {
+      problemsP3.push(`${r.id}: must be 8-bit RGBA.`);
+    } else if (png.pixels) {
+      const corners = [
+        alphaAt(png, 0, 0),
+        alphaAt(png, png.width - 1, 0),
+        alphaAt(png, 0, png.height - 1),
+        alphaAt(png, png.width - 1, png.height - 1),
+      ];
+      if (corners.some((a) => a !== 0)) problemsP3.push(`${r.id}: corners are not fully transparent.`);
+      let transparent = 0;
+      for (let i = 3; i < png.pixels.length; i += 4) if (png.pixels[i] === 0) transparent++;
+      if (transparent < png.width * png.height * 0.05) {
+        problemsP3.push(`${r.id}: under 5% transparent pixels.`);
+      }
+    }
+  }
+  record(
+    "Produce PNG integrity: registered canvas, RGBA, genuine alpha (P3)",
+    problemsP3.length ? "fail" : "pass",
+    problemsP3.length ? problemsP3.join("  |  ") : `${inspectedP} file(s) verified.`,
+  );
+
+  // K1 — joinery dir ⟷ House Register: every file in the joinery dir is a registered
+  // House asset row (byte-lock itself is Check 1's), and every larder-joinery row's
+  // file exists in the joinery dir.
+  const JOINERY_DIR = "client/src/assets/living-home/larder/joinery";
+  const joineryAbs = resolve(ROOT, JOINERY_DIR);
+  const joineryOnDisk = existsSync(joineryAbs)
+    ? readdirSync(joineryAbs).filter((f) => /\.(png|webp|avif|svg|jpg|jpeg)$/i.test(f))
+    : [];
+  const problemsK1: string[] = [];
+  let houseRows: Array<{ id: string; path: string }> = [];
+  try {
+    const reg = JSON.parse(readFileSync(resolve(ROOT, HOUSE_REGISTER), "utf8"));
+    houseRows = (reg.assets ?? []).filter((a: { path?: string }) => String(a.path ?? "").startsWith(`${JOINERY_DIR}/`));
+  } catch {
+    problemsK1.push("House Register unreadable (Check 1 reports the detail).");
+  }
+  for (const f of joineryOnDisk) {
+    if (!houseRows.some((a) => a.path === `${JOINERY_DIR}/${f}`)) {
+      problemsK1.push(`stray file ${JOINERY_DIR}/${f} — not a registered House asset.`);
+    }
+  }
+  for (const a of houseRows) {
+    if (!existsSync(resolve(ROOT, a.path))) problemsK1.push(`${a.id}: registered but missing at ${a.path}.`);
+  }
+  record(
+    "Larder joinery ⟷ House Register (no strays, none missing) (K1)",
+    problemsK1.length ? "fail" : "pass",
+    problemsK1.length ? problemsK1.join("  |  ") : `${joineryOnDisk.length} joinery file(s), each a byte-locked House asset.`,
+  );
+
+  // K2 — joinery PNG integrity: 8-bit RGBA, transparent corners, genuine alpha —
+  // furniture must composite onto the room wall without an opaque background.
+  const problemsK2: string[] = [];
+  let inspectedK = 0;
+  for (const f of joineryOnDisk) {
+    inspectedK++;
+    const png = readPng(resolve(joineryAbs, f));
+    if ("error" in png) {
+      problemsK2.push(`${f}: ${png.error}.`);
+      continue;
+    }
+    if (png.colourType !== 6 || png.bitDepth !== 8) {
+      problemsK2.push(`${f}: must be 8-bit RGBA.`);
+    } else if (png.pixels) {
+      const corners = [
+        alphaAt(png, 0, 0),
+        alphaAt(png, png.width - 1, 0),
+        alphaAt(png, 0, png.height - 1),
+        alphaAt(png, png.width - 1, png.height - 1),
+      ];
+      if (corners.some((a) => a !== 0)) problemsK2.push(`${f}: corners are not fully transparent.`);
+      let transparent = 0;
+      for (let i = 3; i < png.pixels.length; i += 4) if (png.pixels[i] === 0) transparent++;
+      if (transparent < png.width * png.height * 0.05) problemsK2.push(`${f}: under 5% transparent pixels.`);
+    }
+  }
+  record(
+    "Joinery PNG integrity: RGBA, transparent corners, genuine alpha (K2)",
+    problemsK2.length ? "fail" : "pass",
+    problemsK2.length ? problemsK2.join("  |  ") : `${inspectedK} joinery file(s) verified.`,
+  );
+}
+
 function main() {
   console.log("EXP3 Phase 2 — Living Home Asset Verification");
   console.log("=============================================\n");
@@ -1019,6 +1193,7 @@ function main() {
   checkNoOrphans();
   dressingChecks();
   larderJarChecks();
+  larderPhysicalChecks();
 
   let failed = 0;
   for (const r of results) {

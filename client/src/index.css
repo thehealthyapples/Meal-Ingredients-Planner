@@ -2169,29 +2169,12 @@ a:hover > .brand-mark .bm-face { opacity: 0.86; }
  * real — never a flat photo with hotspots. Presentation only; no token owner or
  * business fact is touched here (CRAFT1 §1). Class prefix `.lardr-`.
  */
+/* (The SVG-glyph object vocabulary this block once carried was retired on
+   2026-07-24 with pantry-page.tsx — the production room draws governed PNG
+   assets; larder-room.css owns the physical composition.) */
 :root {
   --lardr-cream: 246, 240, 226;
   --lardr-ink: 58, 44, 28;
-  --lardr-glass: #eef1ec;
-  --lardr-edge: rgba(58, 44, 28, 0.28);
-  --lardr-lid: #b79b6a;
-  --lardr-label: #f4ecd8;
-  --lardr-metal: #cdd2d6;
-  --lardr-metal-top: #e4e8ea;
-  --lardr-basket: #b07f42;
-  --lardr-basket-rim: #96692f;
-  --lardr-pot: #b5763f;
-  --lardr-fill: #cdae72;
-  --lardr-low-fill: #ddc9a0;
-  --lardr-wood: #a9793f;
-  --lardr-wood-dark: #8a6132;
-}
-.dark .lardr-room {
-  --lardr-glass: #3a4038;
-  --lardr-label: #4a4030;
-  --lardr-metal: #6b7076;
-  --lardr-metal-top: #868c92;
-  --lardr-edge: rgba(230, 216, 190, 0.24);
 }
 
 .lardr-room {
@@ -2201,14 +2184,6 @@ a:hover > .brand-mark .bm-face { opacity: 0.86; }
   background: linear-gradient(160deg, rgb(var(--lardr-cream)) 0%, #efe6d2 60%, #e7dcc4 100%);
 }
 .dark .lardr-room { background: linear-gradient(160deg, hsl(34 16% 13%), hsl(32 14% 10%)); }
-
-/* Warm sunlit wall behind the constructed furniture — light, not interaction. */
-.lardr-wall {
-  position: absolute; inset: 0; z-index: 0; pointer-events: none;
-  background:
-    radial-gradient(120% 80% at 92% 0%, rgba(255, 244, 214, 0.85), rgba(255, 244, 214, 0) 55%),
-    radial-gradient(90% 60% at 8% 4%, rgba(255, 250, 236, 0.6), rgba(255, 250, 236, 0) 60%);
-}
 
 .lardr-inner {
   position: relative; z-index: 1;
@@ -2243,72 +2218,15 @@ a:hover > .brand-mark .bm-face { opacity: 0.86; }
 .dark .lardr-chip.is-low { color: #e0b56a; }
 .dark .lardr-chip.is-empty { color: #d68b78; }
 
-.lardr-loading, .lardr-furniture-stack { display: flex; flex-direction: column; gap: 1rem; }
+.lardr-loading { display: flex; flex-direction: column; gap: 1rem; }
 
-/* ── A piece of storage furniture ─────────────────────────────────────────── */
-.lardr-furniture {
-  border-radius: 18px;
-  background: linear-gradient(180deg, rgba(255, 253, 247, 0.86), rgba(250, 244, 231, 0.8));
-  border: 1px solid rgba(var(--lardr-ink), 0.1);
-  box-shadow: 0 2px 8px rgba(var(--lardr-ink), 0.06);
-  overflow: hidden;
-  transition: box-shadow 0.15s ease, outline-color 0.15s ease;
-  outline: 2px solid transparent; outline-offset: -2px;
-}
-.dark .lardr-furniture { background: hsl(34 16% 16% / 0.82); border-color: hsl(38 18% 40% / 0.24); }
-.lardr-furniture.is-over { outline-color: #7c8a41; box-shadow: 0 6px 18px rgba(124, 138, 65, 0.2); }
-
-.lardr-furniture-head {
-  display: flex; align-items: center; gap: 0.5rem;
-  padding: 0.7rem 0.9rem 0.5rem; color: rgba(var(--lardr-ink), 0.85);
-}
-.dark .lardr-furniture-head { color: hsl(38 24% 80%); }
-.lardr-furniture-head h2 { font-size: 0.92rem; font-weight: 700; margin: 0; }
-.lardr-furniture-count { margin-left: auto; font-size: 0.75rem; color: rgba(var(--lardr-ink), 0.5); font-weight: 600; }
-.dark .lardr-furniture-count { color: hsl(38 16% 58%); }
-
-.lardr-furniture-body { padding: 0 0.6rem 0.5rem; }
-
-/* A shelf board: items stand on the plank. */
-.lardr-board { position: relative; padding: 0.2rem 0.3rem 0.9rem; }
-.lardr-board-plank {
-  position: absolute; left: 0.3rem; right: 0.3rem; bottom: 0.35rem; height: 8px; border-radius: 3px;
-  background: linear-gradient(180deg, var(--lardr-wood), var(--lardr-wood-dark));
-  box-shadow: 0 4px 6px rgba(58, 44, 28, 0.18);
-}
-.lardr-board-plank.is-cold { background: linear-gradient(180deg, #cfd6db, #aeb7be); }
-
-.lardr-shelf-row {
-  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.35rem 0.5rem;
-  min-height: 60px;
-}
 .lardr-shelf-empty {
   font-size: 0.8rem; color: rgba(var(--lardr-ink), 0.5); font-style: italic;
   padding: 0.6rem 0.4rem 1rem;
 }
 .dark .lardr-shelf-empty { color: hsl(38 14% 58%); }
 
-/* ── A product object standing on the shelf ───────────────────────────────── */
-.lardr-product {
-  position: relative; z-index: 1;
-  display: flex; flex-direction: column; align-items: center; gap: 1px;
-  width: 62px; padding: 2px 2px 4px; border: 0; background: transparent;
-  cursor: grab; border-radius: 10px;
-  transition: transform 0.12s ease, filter 0.12s ease;
-  touch-action: none;
-}
-.lardr-product:hover { transform: translateY(-3px); filter: drop-shadow(0 6px 6px rgba(58, 44, 28, 0.18)); }
-.lardr-product:focus-visible { outline: 2px solid #7c8a41; outline-offset: 2px; }
-.lardr-product:active { cursor: grabbing; }
-.lardr-product.is-dragging { opacity: 0.35; }
-@media (prefers-reduced-motion: reduce) { .lardr-product { transition: none; } .lardr-product:hover { transform: none; } }
-.lardr-glyph { width: 40px; height: 54px; display: block; }
-.lardr-product-name {
-  font-size: 0.66rem; line-height: 1.15; text-align: center; font-weight: 600;
-  color: rgba(var(--lardr-ink), 0.82); max-width: 62px;
-  overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-}
-.dark .lardr-product-name { color: hsl(38 22% 78%); }
+/* The running-low flag a physical object wears (text, never colour alone). */
 .lardr-product-flag {
   position: absolute; top: -2px; right: 2px;
   font-size: 0.55rem; font-weight: 700; letter-spacing: 0.02em;
@@ -2336,36 +2254,6 @@ a:hover > .brand-mark .bm-face { opacity: 0.86; }
 }
 .lardr-menu-back:hover { background: var(--muted); }
 .lardr-menu-about { padding: 0.4rem 0.55rem 0.6rem; max-height: 320px; overflow-y: auto; }
-
-/* ── Fridge / freezer appliance ───────────────────────────────────────────── */
-.lardr-appliance-door {
-  display: flex; align-items: center; gap: 0.75rem; width: 100%;
-  padding: 0.9rem 0.9rem; background: linear-gradient(180deg, #e9eef1, #d7dee3); border: 0; cursor: pointer;
-  border-bottom: 1px solid rgba(58, 44, 28, 0.12);
-}
-.lardr-freezer .lardr-appliance-door { background: linear-gradient(180deg, #e6eef4, #cfdde8); }
-.dark .lardr-appliance-door { background: linear-gradient(180deg, hsl(210 12% 26%), hsl(210 12% 20%)); }
-.lardr-appliance-handle {
-  width: 6px; height: 34px; border-radius: 4px; background: linear-gradient(180deg, #b9c2c9, #8f9aa2); flex-shrink: 0;
-}
-.lardr-appliance-label { display: flex; align-items: center; gap: 0.6rem; flex: 1; text-align: left; color: rgba(var(--lardr-ink), 0.9); }
-.dark .lardr-appliance-label { color: hsl(210 16% 84%); }
-.lardr-appliance-label b { display: block; font-size: 0.92rem; }
-.lardr-appliance-label small { display: block; font-size: 0.72rem; opacity: 0.7; }
-.lardr-appliance-chev { transition: transform 0.2s ease; color: rgba(var(--lardr-ink), 0.5); }
-.lardr-appliance-chev.is-open { transform: rotate(180deg); }
-.lardr-appliance-inside {
-  padding: 0.4rem 0.6rem 0.7rem;
-  background: linear-gradient(180deg, rgba(236, 242, 246, 0.7), rgba(224, 233, 239, 0.6));
-}
-.dark .lardr-appliance-inside { background: hsl(210 12% 17% / 0.7); }
-.lardr-freezer .lardr-appliance-inside { background: linear-gradient(180deg, rgba(226, 239, 248, 0.75), rgba(208, 227, 240, 0.6)); }
-.lardr-compartment { position: relative; padding: 0.2rem 0.3rem 0.9rem; }
-.lardr-compartment-label {
-  display: block; font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
-  color: rgba(var(--lardr-ink), 0.42); padding: 0.2rem 0.2rem 0;
-}
-.dark .lardr-compartment-label { color: hsl(210 12% 62%); }
 
 /* ── The sticky dock: Shopping + Bin drop destinations ────────────────────── */
 .lardr-dock {

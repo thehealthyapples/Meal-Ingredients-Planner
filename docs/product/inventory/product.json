@@ -605,23 +605,23 @@
     },
     {
       "id": "page-pantry",
-      "name": "Pantry",
+      "name": "Pantry (the Living Larder)",
       "section": "pages",
       "status": "live",
       "visibility": "household",
       "route": "/pantry",
-      "purpose": "What is in the fridge, freezer and cupboard — and what THA knows about each of those ingredients.",
+      "purpose": "The household's own larder drawn as a real room — governed production artwork, real staples, drag or menu to add to Shopping (never removing the staple), reversible removal, search to add; /larder redirects here.",
       "owner": "Colin Clapson",
       "sources": [
-        "client/src/pages/pantry-page.tsx"
+        "client/src/pages/larder-room.tsx"
       ],
       "related": [
         "dom-pantry",
         "jrn-stock-pantry",
         "cap-pantry"
       ],
-      "last_verified": "2026-07-11",
-      "version": 1
+      "last_verified": "2026-07-24",
+      "version": 2
     },
     {
       "id": "page-nutrition",

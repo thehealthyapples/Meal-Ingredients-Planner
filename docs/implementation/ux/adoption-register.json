@@ -99,7 +99,7 @@
         {
           "what": "`<DrawerContent>` — a second overlay container chosen per-file",
           "pattern": "<DrawerContent[\\s>]",
-          "ceiling": 11,
+          "ceiling": 10,
           "note": "Capped. New overlays use `Overlay`, which decides sheet-vs-dialog by viewport."
         },
         {
@@ -201,7 +201,7 @@
         {
           "what": "`<Loader2>` usages",
           "pattern": "<Loader2[\\s>]",
-          "ceiling": 169,
+          "ceiling": 166,
           "note": "Capped, not banned: 140 are the exempt inline pending mark above. The population may fall, never rise. BUS1 raised 179 → 181: two `<Loader2>` marks on Privacy Settings, both INSIDE a control (the data-download button and the account-deletion confirm button) while an indeterminate request is in flight. That is the usage this concern's own rule assigns to Loader2 rather than to Skeleton — 'Skeleton owns content arriving; Loader2 owns indeterminate work inside a control' — so the ceiling is raised rather than the marks replaced. Content-arriving states on that page use Skeleton, as the rule requires."
         }
       ],
@@ -777,8 +777,8 @@
         {
           "what": "`dark:` utilities authored across the client",
           "pattern": "\\bdark:",
-          "asAt": 677,
-          "asAtDate": "2026-07-20"
+          "asAt": 665,
+          "asAtDate": "2026-07-24"
         }
       ],
       "openMigration": {
@@ -800,8 +800,8 @@
         {
           "what": "`<ToastAction>` usages (the mechanism exists)",
           "pattern": "<ToastAction[\\s>]",
-          "asAt": 1,
-          "asAtDate": "2026-07-13"
+          "asAt": 2,
+          "asAtDate": "2026-07-24"
         }
       ],
       "openMigration": {
@@ -1162,12 +1162,6 @@
         "loc": 20,
         "disposition": "Orphaned BY PRESENCE1, deliberately and with its cause recorded. Its only two consumers were the diary's and the dashboard's five-apple Mood/Energy pickers — THA's own mark used as the unit in which a household rated how they felt that day (GEA12; identity borrowed to lend authority to a number, GOVERNING_EXPERIENCE_ARCHITECTURE.md § 11.2). Both were replaced by HowYouFeltScale, which is unbranded. The mark's two sanctioned uses are unaffected and neither goes through this component: product ratings via AppleRating, and identity positions via the tha-apple.png asset directly. So this component has no legitimate consumer left. Recorded as a DEFECT, not an exemption, per this section's own doctrine — PRESENCE1 did not delete it because retiring a brand-mark component is an owner's call, not an implementation's.",
         "owner": "Colin Clapson — delete, or adopt for identity positions (PRESENCE1 owner decision 3)"
-      },
-      {
-        "path": "client/src/components/layout/living-details-manifest.ts",
-        "loc": 96,
-        "disposition": "NOT a defect and NOT the PageHeader failure mode — the one deliberate, governed entry here. It is EXP3 Phase 2's Life Register: the empty Living Details manifest (types + `export const livingDetailsManifest = {}`), which EXP3 § 13 Phase 2 mandates ship NOW while EXP3 § 7.1 mandates its consumer — the composition mouth `living-details.tsx` — land ONLY with the first admitted detail (the Cookbook pilot, EXP3 Phase 3). It is a pure declarative data/types module with no React, no asset import, and no rendering, so it is inert (nothing imports it in the client tree; `scripts/ci/verify-living-home-assets.ts` reads it, but a script importer is not a client consumer). It is recorded here — the gate's sanctioned third remedy — precisely so this 0-importer state is KNOWN and owned rather than hidden, and so a genuinely NEW unexpected orphan still fails. It leaves this list the moment EXP3 Phase 3 mounts the mouth that imports it.",
-        "owner": "Colin Clapson — adopt at EXP3 Phase 3 (the Cookbook pilot mounts `living-details.tsx`, which imports this manifest), per EXP3 § 7.1"
       }
     ]
   }
