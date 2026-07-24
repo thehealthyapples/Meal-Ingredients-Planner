@@ -33,7 +33,7 @@ Both tags were created **before** any file in their scope was touched.
 | `8e456d71` | `LARDER5` — record push-blocked status in the run file and dashboard |
 | `45f14909` | Repository structure tidy — file 70 loose reports by workstream |
 
-**All three are committed locally and none has been pushed.** See § 7.
+**All commits are pushed to `origin/claude-work`.** See § 7.
 
 ---
 
@@ -240,22 +240,28 @@ A pre-existing staged set of `attached_assets/ → archive/assets/` renames was
 also present in the index throughout and was left untouched — every commit in
 this session was made with an explicit pathspec so it was never swept in.
 
-## 7. Push status — ACTION REQUIRED
+## 7. Push status — DONE
 
-**All three commits are local. None has been pushed.**
+**All commits are pushed to `origin/claude-work`** (new remote branch), verified
+by comparing heads:
 
 ```
-git push origin claude-work
-  → remote: Invalid username or token.
-    Password authentication is not supported for Git operations.
-  → fatal: Authentication failed for
-    'https://github.com/thehealthyapples/Meal-Ingredients-Planner.git'
+origin/claude-work  4bc4f9f34aa95b0b423a5c5b99150f3b2df1d551
+HEAD                4bc4f9f34aa95b0b423a5c5b99150f3b2df1d551   MATCH
 ```
 
-No git credential exists in this environment. The immediately preceding session
-(`1e0ac8ff`) recorded the same block, so this is an environment condition rather
-than a fault in this work. **The push must be performed by the owner from an
-authenticated session.**
+The first attempt failed — *"Invalid username or token. Password authentication
+is not supported for Git operations"* — because git had **no credential helper
+configured**, not because no credential existed: `gh` was already authenticated
+as `thehealthyapples`. `gh auth setup-git` wired the two together and the push
+succeeded on the owner's explicit instruction.
+
+`claude-work` now tracks `origin/claude-work`. **`main` was not touched, no pull
+request was opened, and nothing was deployed.**
+
+*(The preceding session recorded the same push as permanently blocked; it was a
+missing credential helper, and it is now fixed for every future session in this
+environment.)*
 
 ## 8. Definition of Done
 
@@ -269,7 +275,7 @@ authenticated session.**
 - [x] Citations repaired and audited; 0 newly broken links
 - [x] Session run file and recovery dashboard updated per the ESR protocol
 - [x] Committed to `claude-work`
-- [ ] **Pushed to `claude-work` — BLOCKED on credentials (§ 7)**
+- [x] **Pushed to `claude-work`** — `origin/claude-work` at `4bc4f9f3`, heads verified equal (§ 7)
 - [ ] **Home Owner review** of `LARDER5` and the four items in § 5
 - [ ] **Implementation — NOT STARTED and NOT AUTHORISED.** `LARDER4` § 14 governs when a build may begin: *"Do not begin implementation on the strength of this document alone."*
 
