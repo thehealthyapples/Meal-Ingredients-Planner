@@ -5,6 +5,7 @@
 **Status:** DESIGN INVESTIGATION — point-in-time exploration. **Not governing architecture. Nothing is approved. No concept is selected.**
 **Rollback identifier:** `rollback/LARDER7-living-larder-visual-concepts-20260725` → `bcab1846`
 **Author of record:** Colin Clapson (Home Owner) · explored by Claude as Creative Director under the Engineering Workflow
+**Commit:** `b2e3de25` — pushed to `origin/claude-work` (`bcab1846..b2e3de25`). **Not deployed.** *(SHA recorded in a follow-up commit: a commit cannot contain its own hash.)*
 **Aesthetic authority:** **The Home Owner** ([`HOME_OWNER_ARCHITECTURE.md`](../../architecture/HOME_OWNER_ARCHITECTURE.md), cited). This document *recommends*; it decides nothing.
 
 > **What this is.** Five genuinely different senior-level visual concepts for the Living Larder, explored **before engineering resumes**, each with its own identity, as though authored by five different senior interior designers. Its purpose is to open the design space, not to close it.

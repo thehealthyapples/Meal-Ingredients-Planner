@@ -58,7 +58,7 @@ Reported to the owner in the response and in the investigation's own Scope Lock.
 - [x] `repo-structure-verify.sh` **11 PASS · 0 FAIL**
 - [x] Committed; pushed to `claude-work`. **NOT deployed.**
 
-**Last checkpoint:** committed and pushed to `origin/claude-work`
+**Last checkpoint:** committed `b2e3de25` and **pushed** — `origin/claude-work` advanced `bcab1846..b2e3de25`. **Not deployed.**
 
 ## The one capability boundary met
 **Model Capability Gap — the concepts are specified; they cannot be *shown*.**
