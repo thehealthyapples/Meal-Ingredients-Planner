@@ -171,6 +171,77 @@ SUGGESTION:
 
 ---
 
+## CAPABILITY BOUNDARY COMPLIANCE
+
+*(Copy the block from `docs/architecture/ENGINEERING_WORKFLOW.md`.)*
+
+---
+
+## IMPLEMENTATION COMPLETION REPORT
+
+*(Mandatory for **every** implementation — one that completed and one that stopped
+short. Added under `CAPBOUND1` (2026-07-25). Governed by
+`docs/architecture/CAPABILITY_BOUNDARY_ASSESSMENT.md`.)*
+
+The test is one question: **when this implementation stopped, whose limitation
+stopped it?** If the honest answer is *the tool doing the implementing*, that is a
+**Model Capability Gap** and it says nothing about THA. Reporting it as an
+architecture, repository, or asset limitation is a false claim about the project —
+and it invites an amendment to a document that was never wrong (`CB3`, `CB10`).
+
+**Remaining Gaps is not Scope Lock.** *Excluded scope* is work deliberately not
+attempted; a *remaining gap* is a boundary met. A boundary filed as excluded scope
+is never classified (`CB6`).
+
+```
+IMPLEMENTATION COMPLETION REPORT
+================================
+
+Architecture Complete:   YES / PARTIAL / NO
+  Governing documents bound: [list]
+  Rules satisfied:           [evidence]
+  Rules NOT satisfied:       [each is a gap below, or NONE]
+
+Engineering Complete:    YES / PARTIAL / NO
+  Commands run and outcome:  [typecheck / build / verifiers / tests]
+  Gates not run, and why:    [or NONE]
+  Pre-existing failures:     [distinguished from any introduced here]
+
+Interaction Complete:    YES / PARTIAL / NO
+  Interactions exercised:    [what, on which input methods]
+  Reachable but unproven:    [or NONE]
+
+Existing Assets Used:
+  [owners, components, modules, tokens, artefacts, registers consumed]
+
+New Assets Required:
+  [artefact — specified where (or UNSPECIFIED) — surface waiting on it
+             — what stands in its place, labelled]      or NONE
+
+Remaining Gaps:          [N gaps, or NONE]
+
+  GAP 1
+    Classification:      Architecture Gap / Repository Gap / Asset Gap /
+                         External Dependency / Model Capability Gap
+      Evidence:          [what assigned this classification]
+      Attribution Test:  [would another implementer still be blocked? YES/NO]
+    Reason:              [why it could not be completed]
+    Impact:              [household first, then platform — or NONE]
+    Recommended next action:
+                         [the smallest act that closes it]
+    Recommended capability to complete it:
+                         [Continue implementation / Generate governed asset
+                          using ChatGPT Image Generation / Extend repository
+                          assets / Architecture decision required / named party]
+
+  GAP 2 …
+
+Stop Test:               [Is any remaining work independent of these gaps?
+                          MUST BE NO before stopping]
+```
+
+---
+
 ## OUTCOME
 
 [One paragraph: what is now true that was not true before.]

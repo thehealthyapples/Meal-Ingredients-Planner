@@ -116,7 +116,7 @@ or `docs/investigations/`) or to the repository root — the only file permitted
 either root is that tree's index `README.md`. This is enforced by
 `.engineering/scripts/repo-structure-verify.sh`; run it after filing.
 
-Every workstream implementation document must contain all eight sections:
+Every workstream implementation document must contain **all of the sections below**. *(This line previously read "all eight sections" while nine were listed; the count was stale before `CAPBOUND1` added the tenth, and is replaced rather than re-stated at a number that will drift again.)*
 
 ### Architecture Compliance
 *(See checklist below — copy and complete it.)*
@@ -202,6 +202,25 @@ The test is one question: **does this change introduce, adopt, or retire a build
 - Implemented scope
 - Explicitly excluded scope (list what is NOT being done)
 - Suggestions (anything useful observed outside scope — do not implement without approval)
+
+### Implementation Completion Report
+*(Added under `CAPBOUND1`, 2026-07-25. Mandatory for **every** implementation — one that stops short of completion and one that completes. Governed by [`CAPABILITY_BOUNDARY_ASSESSMENT.md`](./CAPABILITY_BOUNDARY_ASSESSMENT.md), whose copyable block is § 7.1.)*
+
+The test is one question: **when this implementation stopped, whose limitation stopped it?** If the honest answer is *the tool doing the implementing*, that is a **Model Capability Gap** and it says nothing about THA — reporting it as an architecture, repository or asset limitation is a false claim about the project (`CB3`).
+
+**Why this is a mandatory section and not a closing courtesy.** The two dishonest endings the canon already forbids — the silent approximation (`LIVING_LARDER_IMPLEMENTATION_CONSTITUTION.md` § 2) and the invented fact ([`ARCHITECTURE_PRINCIPLES.md`](./ARCHITECTURE_PRINCIPLES.md) Principle 6) — both leave **no trace**: the room still renders and the demo still works. A misattributed boundary leaves a worse one, because it invites an amendment to a document that was never wrong. This section is the moment the attribution is made in writing, while the person who met the boundary still knows which side of it they were standing on.
+
+- Architecture Complete: YES / PARTIAL / NO — with the rules bound and the evidence
+- Engineering Complete: YES / PARTIAL / NO — with the commands that ran, and any not run and why
+- Interaction Complete: YES / PARTIAL / NO — every promised behaviour reachable, on every input method named
+- Existing Assets Used: [owners, modules, tokens, artefacts, registers consumed rather than recreated]
+- New Assets Required: [artefact — specified where, or UNSPECIFIED — surface waiting — what stands in its place, labelled, or NONE]
+- Remaining Gaps: [each with **classification · reason · impact · recommended next action · recommended capability**, or **NONE**]
+- Stop Test: [no remaining work independent of these gaps was left unattempted — must be confirmed]
+
+**Remaining Gaps is not Scope Lock.** *Excluded scope* is work **deliberately not attempted**; a *remaining gap* is a boundary **met**. A boundary filed as excluded scope is never classified, which is exactly how a tool's limitation becomes THA's on the record (`CB6`).
+
+*(See the Capability Boundary Compliance block below — copy and complete it.)*
 
 ---
 
@@ -595,6 +614,65 @@ For every implementation that touches a building block confirm:
 
 ---
 
+## CAPABILITY BOUNDARY COMPLIANCE
+
+**Adopted under `CAPBOUND1` (2026-07-25).** This section applies to **every implementation that stops short of completion, or that reports completion** — which is every implementation — in addition to the general Architecture Compliance Checklist above. It enforces [`CAPABILITY_BOUNDARY_ASSESSMENT.md`](./CAPABILITY_BOUNDARY_ASSESSMENT.md), which owns the classification, the report shape, and the rules `CB1`–`CB12`. **This workflow does not restate them** — a copy here would be the second owner Principle 2 forbids; it makes them mandatory and names when they run.
+
+The one rule the block exists for: **a limitation of the tool implementing THA is never reported as a limitation of THA** (`CB3`). Its companion is `CB6` — everything that does not depend on the boundary is finished **before** anything stops. This is not a licence to stop at the first difficulty: difficulty is met with craft, and only a genuine boundary is met with a stop ([`LIVING_LARDER_IMPLEMENTATION_CONSTITUTION.md`](./LIVING_LARDER_IMPLEMENTATION_CONSTITUTION.md) § 2, cited).
+
+```
+----------------------------------------
+CAPABILITY BOUNDARY COMPLIANCE
+----------------------------------------
+
+For every implementation confirm:
+
+✓ The ATTRIBUTION TEST is answered for every remaining item —
+    "would a different implementer, with this same repository, this same
+     architecture and this same approval state, still be blocked?"
+       YES → the project's boundary   NO → the implementer's boundary
+✓ Every remaining item carries EXACTLY ONE classification, with its evidence:
+    Architecture Gap · Repository Gap · Asset Gap · External Dependency ·
+    Model Capability Gap
+✓ No limitation of the implementing tool is attributed to THA's architecture,
+    governance, repository or assets                                    (CB3)
+✓ The STOP TEST returns NO — there is no remaining work independent of the
+    declared boundaries that was left unattempted                       (CB6)
+✓ No unsuitable asset silently substitutes for a specified one; every
+    placeholder is DECLARED, in the report and wherever it could be
+    mistaken for the real thing                                         (CB4)
+✓ The approved architecture was not simplified, partially applied, or
+    reinterpreted for implementation convenience or for a capability
+    limitation                                                          (CB5)
+✓ Every gap names the SMALLEST next action and the narrowest capability
+    that closes it — never a re-plan                                    (CB7)
+✓ Any externally-produced artefact enters through the EXISTING asset
+    governance unchanged (ASSET1 spec · LHDC1 admission · candidate →
+    checksum → recorded approval · Home Owner approval)                 (CB9)
+✓ No Model Capability Gap has produced an architecture amendment,
+    exception, or relaxed standard                                     (CB10)
+✓ The IMPLEMENTATION COMPLETION REPORT is filed in the implementation
+    report — Architecture Complete · Engineering Complete · Interaction
+    Complete · Existing Assets Used · New Assets Required · Remaining
+    Gaps — with all five fields on every gap (classification · reason ·
+    impact · recommended next action · recommended capability)      (CB1, §7)
+✓ The assessment is recorded in the session run file's Blockers and Next
+    action, so a resumed session inherits it                           (CB11)
+✓ Completion is claimed only where it is true; a full completion still
+    files the report, with Remaining Gaps: NONE                        (CB12)
+```
+
+**If any check fails: STOP. Explain why. Do not continue.**
+
+> **This block is not machine-checked, and that is disclosed rather than implied.**
+> A script can assert that the Completion Report section exists; no script can
+> verify that the Attribution Test was answered *truthfully*. It is therefore a
+> discipline held by the report and by the owner reading it — the same class as
+> the Trust Check, and a declared gap in the Rule KC8 sense
+> (`PLATFORM_KNOWLEDGE_COMPLETION_ARCHITECTURE.md`, cited).
+
+---
+
 ## IMPLEMENTATION TEMPLATE
 
 **Relocated under `EOM1` (2026-07-10).** The canonical, copyable template now
@@ -773,9 +851,10 @@ The file must:
 2. The project document has been saved in its canonical location (see File Requirements above).
 3. **For user-facing implementations: every affected Product Knowledge Registry entry has been created, updated, or retired — in this change — and named in the project document.** *(Added under `PKR2`, 2026-07-11. A user-facing task with a stale registry is not complete, however finished the code is; see [`THA_PRODUCT_KNOWLEDGE_REGISTRY_ARCHITECTURE.md`](./THA_PRODUCT_KNOWLEDGE_REGISTRY_ARCHITECTURE.md) § 16, and — for why this is a knowledge-domain obligation rather than a documentation chore — [`PLATFORM_KNOWLEDGE_COMPLETION_ARCHITECTURE.md`](./PLATFORM_KNOWLEDGE_COMPLETION_ARCHITECTURE.md) § 9.7, Rule KC15.)*
 4. **For implementations that touch a client-side building block: the Adoption Register is updated in this change, and `npm run adoption:check` passes.** *(Added under `PX1-W5`, 2026-07-13. A new component with no register entry, or a successor whose predecessor still exists, is not complete however finished the code is — it is the authored-but-unadopted failure state [`THA_UI_ARCHITECTURE.md`](./THA_UI_ARCHITECTURE.md) § 17 exists to end, and the gate will fail the build.)*
-5. The project document has been staged with git (`git add <canonical path>`).
-6. The project document has been committed locally with an appropriate commit message.
-7. Claude has reported:
+5. **For every implementation, whether it completed or stopped short: the Implementation Completion Report is filed in the project document, and every remaining gap carries its classification, reason, impact, recommended next action and recommended capability.** *(Added under `CAPBOUND1`, 2026-07-25. A task that stopped without a Capability Boundary Assessment is not complete and is not honestly reportable — it is indistinguishable from abandoned work, and it reads to the owner as a limitation of THA. A task that completed fully files the report with Remaining Gaps: **NONE**, which is a claim worth making explicitly. See [`CAPABILITY_BOUNDARY_ASSESSMENT.md`](./CAPABILITY_BOUNDARY_ASSESSMENT.md) `CB1`, `CB11`, `CB12`.)*
+6. The project document has been staged with git (`git add <canonical path>`).
+7. The project document has been committed locally with an appropriate commit message.
+8. Claude has reported:
 
 ```
 Project File Created:     <canonical path>
