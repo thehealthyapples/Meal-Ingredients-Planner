@@ -5,6 +5,7 @@
 **Risk:** 🟢 GREEN
 **Reason:** Governance documentation only — one new governing document plus three wiring edits. No runtime code, no schema, no asset, no user-facing surface, no deployment.
 **Status:** DELIVERED — the standard is governing, indexed, gated and templated. **Awaiting owner review.**
+**Commit:** `7aba2a16` — pushed to `origin/claude-work` (`deb63a13..7aba2a16`). **Not deployed.** *(This SHA is recorded in a follow-up commit, per repo precedent `67be0123` / `a8b22162`: a commit cannot contain its own hash.)*
 
 ---
 

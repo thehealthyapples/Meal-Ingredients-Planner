@@ -55,7 +55,8 @@ staged, or committed by this session. Only the files listed above are written.
       — with *Continue implementation* as the recommended capability)
 - [x] Committed; pushed to `claude-work`. **NOT deployed.**
 
-**Last checkpoint:** committed and pushed to `origin/claude-work`
+**Last checkpoint:** committed `7aba2a16` and **pushed** — `origin/claude-work`
+advanced `deb63a13..7aba2a16`. **Not deployed.**
 
 ## Next action
 **Owner review.** In particular: the five classifications, and whether
