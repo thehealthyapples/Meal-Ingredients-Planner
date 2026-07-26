@@ -162,7 +162,7 @@ export default function TrialBanner() {
         // kept only for the <2-minute warning below, where an honest heads-up
         // before unsaved preview data is discarded is hospitality, not pressure —
         // and the timer effect (expiry → /auth) is untouched, so functionality is
-        // unchanged. See docs/implementation/LIVING_HOME_COMPLETION_PROGRAMME.md.
+        // unchanged. See docs/implementation/house/LIVING_HOME_COMPLETION_PROGRAMME.md.
         <span className="flex-1 min-w-0">
           <span className="font-semibold">Preview</span>
           {" - "}

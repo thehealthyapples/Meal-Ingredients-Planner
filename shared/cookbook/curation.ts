@@ -6,7 +6,7 @@
  *
  * WHY THIS EXISTS
  * ---------------
- * `EXPREVIEW1` (docs/investigations/EXPREVIEW1_FIRST_TIME_HOUSEHOLD_EXPERIENCE.md
+ * `EXPREVIEW1` (docs/investigations/experience/EXPREVIEW1_FIRST_TIME_HOUSEHOLD_EXPERIENCE.md
  * § 6) found the Cookbook to be the worst room in the house, and the finding was
  * not a design finding:
  *

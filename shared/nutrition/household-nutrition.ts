@@ -13,7 +13,7 @@
  * (`server/lib/household-nutrition-assembler.ts`) and its only UI
  * (`client/src/components/HouseholdNutritionPanel.tsx`) were retired as dead code,
  * along with this file's own opportunity limb — see
- * `docs/implementation/MAT1_PLATFORM_MATURITY_AND_TRUST.md` §3.3. The pure core
+ * `docs/implementation/platform/MAT1_PLATFORM_MATURITY_AND_TRUST.md` §3.3. The pure core
  * below was KEPT deliberately: unlike the opportunity limb, it duplicates no live
  * observation, and retiring it would have raised the cost of the then-open decision on
  * whether to enrol a nutrition producer.

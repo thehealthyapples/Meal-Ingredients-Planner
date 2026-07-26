@@ -20,7 +20,7 @@
  *      source, so a future edit that breaks them fails here as well as at the gate.
  *
  * Governing architecture: THA_HOUSEHOLD_TIME_ARCHITECTURE.md § 13 (migration principle 3,
- * as amended); docs/implementation/PLANNER_CONTINUOUS_TIMELINE.md.
+ * as amended); docs/implementation/planner/PLANNER_CONTINUOUS_TIMELINE.md.
  */
 
 import { readFileSync } from "node:fs";

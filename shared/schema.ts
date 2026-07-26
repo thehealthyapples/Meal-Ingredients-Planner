@@ -460,7 +460,7 @@ export const plannerWeeks = pgTable("planner_weeks", {
    * + 1`. Still `UNIQUE(user_id, week_number)`, and still NEVER RENUMBERED (HT8 / CONV1 R9):
    * an existing week keeps its number for life — renumbering silently rotates its consumers.
    * Governance: THA_HOUSEHOLD_TIME_ARCHITECTURE.md § 13 (migration principle 3, as amended);
-   * docs/implementation/PLANNER_CONTINUOUS_TIMELINE.md.
+   * docs/implementation/planner/PLANNER_CONTINUOUS_TIMELINE.md.
    */
   weekNumber: integer("week_number").notNull(),
   weekName: text("week_name").notNull(),

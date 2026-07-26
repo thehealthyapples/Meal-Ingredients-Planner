@@ -2,7 +2,7 @@
  * test-mat1-registry-conformance.ts (MAT1)
  * =========================================================
  * Closes the two production-readiness reservations AFI_VERIFY1 named as the gate
- * before wider rollout (docs/investigations/AFI_VERIFY1_AMBIENT_FOOD_INTELLIGENCE_CONFORMANCE_AUDIT.md §8):
+ * before wider rollout (docs/investigations/intelligence/AFI_VERIFY1_AMBIENT_FOOD_INTELLIGENCE_CONFORMANCE_AUDIT.md §8):
  * R2 (the engine clamped before the delivery layer could rank) and R3 (the client
  * rendering registry had no test of any kind).
  *

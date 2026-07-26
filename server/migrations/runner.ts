@@ -3694,7 +3694,7 @@ const MIGRATIONS: Migration[] = [
   // ─── PLANNER1 — Continuous Timeline ────────────────────────────────────────
   //
   // Governing architecture: THA_HOUSEHOLD_TIME_ARCHITECTURE.md § 13 (migration
-  // principle 3, as amended 2026-07-22); docs/implementation/PLANNER_CONTINUOUS_TIMELINE.md.
+  // principle 3, as amended 2026-07-22); docs/implementation/planner/PLANNER_CONTINUOUS_TIMELINE.md.
   //
   // The Planner's fixed six-week rota becomes a continuous, dated, unbounded timeline.
   // `week_number` is now an unbounded per-household ordinal; the calendar coordinate is

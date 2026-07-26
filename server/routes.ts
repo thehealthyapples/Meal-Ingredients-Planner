@@ -6164,7 +6164,7 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
   // ── The Continuous Timeline — PLANNER1 (2026-07-22) ─────────────────────────
   //
   // Governing architecture: THA_HOUSEHOLD_TIME_ARCHITECTURE.md § 13 (migration principle 3,
-  // as amended); docs/implementation/PLANNER_CONTINUOUS_TIMELINE.md.
+  // as amended); docs/implementation/planner/PLANNER_CONTINUOUS_TIMELINE.md.
   //
   // `/timeline/current` is the Planner's LANDING view: the household's real current dated
   // week, CREATED on demand if it does not yet exist. It is distinct from `/current-week`
