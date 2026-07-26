@@ -128,6 +128,30 @@ const ROOM_EXPOSURE: Record<string, "e0" | "e1" | "e2"> = {
   home: "e1", // Home draws its OWN E3 window; the shell must not draw a second.
 };
 
+/**
+ * LIVING_LARDER_CANONICAL_EXPERIENCE_REFINEMENT (2026-07-24) — the ROOMS THAT
+ * DRAW THEIR OWN THRESHOLD.
+ *
+ * A room modelled as an architectural space has a wall, a window and a floor of
+ * its own, so the shell must not lay a second view, a second ground plane, or a
+ * second sign at its door on top of them. That is not an exemption invented for
+ * one page: it is the position Home has held since NORTH4 — *"Home draws its
+ * OWN E3 window; the shell must not draw a second"* — and § 8.2's **one ground
+ * per workspace, NEVER NESTED**, which is why Home is absent from `ROOM_GROUND`.
+ *
+ * The Larder joins Home for exactly the same reason and on exactly the same
+ * terms: it is a modelled room, so its window IS the shell's window (the same
+ * asset, at the same governed `--orchard-exposure-e2`, through
+ * `<OrchardCasement />`), its plaster and flagstones ARE its ground plane, and
+ * its own wall carries its name.
+ *
+ * **The exposure constant does not move.** `ROOM_EXPOSURE` above stays the one
+ * owner of how much orchard a room stands in; a room on this list still reads
+ * its value from there (`resolveRoomExposure`) and cannot choose its own. What
+ * moves is only WHO PAINTS IT — which is the same thing that moved for Home.
+ */
+const ROOMS_OWN_THRESHOLD: ReadonlySet<string> = new Set(["/home", "/pantry"]);
+
 /*
  * INTARCH1 — THE GROUND POSTURE OF EVERY ROOM.
  *
@@ -149,7 +173,11 @@ const ROOM_GROUND: Record<string, "full" | "room" | "air" | "none"> = {
   planner: "full",
   analyser: "full",
   cookbook: "room",
-  pantry: "room",
+  // The Larder owns its own ground — the flagstone floor its furniture stands
+  // on — exactly as Home owns the plaster wall beneath its sill. A translucent
+  // plane laid inside a modelled room is the nesting § 8.2 forbids, and it is
+  // also what made the room read as a page: a card, with a room printed on it.
+  pantry: "none",
   nutrition: "room",
   orchard: "room",
   diary: "air",
@@ -217,6 +245,17 @@ export function resolveShellRoom(path: string): { title: string; realm: PageReal
  * name any of them as a room, so none is given a ground here. They stand on
  * the warm canvas, as they did.
  */
+/**
+ * The one reader of `ROOM_EXPOSURE`. Exported so a room that draws its own
+ * aperture (`ROOMS_OWN_THRESHOLD`) still asks the shell how much orchard it
+ * stands in rather than declaring it — the constant keeps one owner, and § 6.2
+ * rule 1's "never a per-surface choice" survives the room painting it.
+ */
+export function resolveRoomExposure(path: string): "e0" | "e1" | "e2" {
+  if (path.startsWith("/admin")) return "e0";
+  return ROOM_EXPOSURE[resolveShellRoom(path).realm] ?? "e1";
+}
+
 function resolveShellGround(path: string): "full" | "room" | "air" | "none" {
   if (path.startsWith("/admin")) return "full";
   if (path === "/profile") return "air";
@@ -243,10 +282,10 @@ function ShellHeader() {
  */
 function RoomThreshold({ path }: { path: string }) {
   const canonical = ROOM_ALIASES[path] ?? path;
-  if (canonical === "/home") return null;
+  if (ROOMS_OWN_THRESHOLD.has(canonical)) return null;
 
   const { title, realm } = resolveShellRoom(path);
-  const exposure = path.startsWith("/admin") ? "e0" : ROOM_EXPOSURE[realm] ?? "e1";
+  const exposure = resolveRoomExposure(path);
   if (exposure === "e0") return null;
 
   const isRoom = NAV_ITEMS.some((item) => item.href === canonical);
@@ -326,12 +365,11 @@ export function AppShell({
   }, [location]);
 
   // The room's identity is on screen at rest when the shell's threshold names
-  // it — or on Home, whose window and welcome are its own threshold.
-  const thresholdExposure = location.startsWith("/admin")
-    ? "e0"
-    : ROOM_EXPOSURE[resolveShellRoom(location).realm] ?? "e1";
+  // it — or in a room that draws its own threshold and names itself on its own
+  // wall (Home's window and welcome; the Larder's plaster).
+  const thresholdExposure = resolveRoomExposure(location);
   const roomIdentity =
-    canonical === "/home" ||
+    ROOMS_OWN_THRESHOLD.has(canonical) ||
     (thresholdExposure !== "e0" && NAV_ITEMS.some((item) => item.href === canonical));
 
   const registerPageHeader = useCallback(() => {

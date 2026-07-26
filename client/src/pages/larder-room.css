@@ -1,90 +1,1195 @@
 /**
- * The Living Larder — production room styles
- * (LIVING_LARDER_PRODUCTION_IMPLEMENTATION, 2026-07-24).
+ * THE LIVING LARDER — the canonical Living Home room.
+ * (`LARDER6_NORTH_STAR_IMPLEMENTATION`, 2026-07-25; supersedes the composition
+ * authored by `LIVING_LARDER_CANONICAL_EXPERIENCE_REFINEMENT`, 2026-07-24.)
  *
- * A front-on realistic elevation composed from the governed production PNG
- * assets. One physical scale for everything: --lvcm (px per depicted cm), so
- * relative scale is structurally constant at every breakpoint. The furniture
- * is constant; the household's data decides what stands on it.
+ * ── WHAT THIS FILE IS ────────────────────────────────────────────────────────
+ * The built form of `LIVING_LARDER_ARCHITECTURE.md` (`LARDER5`) — a VOLUME, not
+ * a page (`RC1`). It has a floor, three walls, a bounded top and a way out, and
+ * nothing in it floats on a field.
  *
- * Interaction chrome (menus, dock, status chips, add row) reuses the shared
- * `.lardr-*` vocabulary in index.css — one owner for those styles. This file
- * owns only the physical composition (`.lv-*`).
+ * The room is drawn as ONE LONG-LENS, ONE-POINT ELEVATION from ONE STATION
+ * POINT: the household stands one step inside the door, at standing eye height,
+ * facing the Dry Store wall square-on (`LARDER5` §§ 6–7). That never moves.
  *
- * Motion: restrained and household-caused only (GEA14). The single hover lift
- * and the door-open reveal are disabled under prefers-reduced-motion; state is
- * always legible without motion (the confirmation is the state change).
+ * The elevation, exactly as `LARDER5` § 9.2 draws it:
+ *
+ *   ░░░ the bounded top — quiet lit wall, no ceiling drawn ░░░
+ *   ┌──────────┐  ╔═════ THE DRY STORE — the back wall ═════╗  ┌──────────┐
+ *   │▓ORCHARD ▓│  ║ ── board ──  ── board ──  ── board ──   ║  │          │
+ *   │▓  E2    ▓│  ║ ── board ──  ── board ──  ── board ──   ║  │ THE      │
+ *   │▓ window ▓│  ║ ── board ──  ── board ──  ── board ──   ║  │ STORE    │
+ *   ├── sill ──┤  ╚═════════════════════════════════════════╝  │ CUPBOARD │
+ *   │ ▤ spice ▤│                                               │ (closed) │
+ *   ══════════════ THE WORKTOP — one oak slab ═══════════════  │          │
+ *   [ cold ][ deep drawer ][ small drawers ]                   └──────────┘
+ *   ╱╱╱╱╱╱╱ THE FLOOR — one continuous ground ╱╱╱ ⌂ basket ╱ ▭ doorway ╱╱╱╱
+ *
+ * ── THE FOUR CONSTANTS ───────────────────────────────────────────────────────
+ *   ONE CAMERA        — a front elevation from the door. Nothing is drawn in a
+ *                       second projection; nothing floats (`LARDER5` § 7).
+ *   ONE PERSPECTIVE   — depth is REVEAL and OCCLUSION: the wall has thickness,
+ *                       the returns meet the back wall at real corners, the
+ *                       worktop passes in front of the run, the run stands on
+ *                       the floor. Never a shadow under a card.
+ *   ONE SCALE         — `--lvcm` is px per depicted centimetre, set ONCE on the
+ *                       room and never overridden anywhere (`LARDER5` § 7.4).
+ *                       A 26 cm jar is 26 cm on a phone and on a desktop, on the
+ *                       wall and set out on the worktop. There is no zoom.
+ *   ONE LIGHT         — one morning, upper-left, forever (Blueprint § 7). The
+ *                       casement is in the LEFT RETURN because of that law: a
+ *                       window opposite the light is a second sun. This is the
+ *                       recorded divergence from the North Star image, which
+ *                       composes the orchard on the right (`LARDER5` § 17).
+ *
+ * ── ONE GROUND, NEVER NESTED (`LARDER5` § 5.2) ───────────────────────────────
+ * No card, panel, tile, sheet or bordered container may sit on the room. The
+ * furniture IS the surface. Where information must be attached to a thing it is
+ * attached TO THE THING — a shelf edge, a label, a plate on a jar.
+ *
+ * ── MATERIALS BEFORE EFFECTS ─────────────────────────────────────────────────
+ * Limewashed plaster, warm oak, painted joinery, worn stone. Matte throughout:
+ * no gloss, no glow, no lamp, no vignette, no stage (`LARDER5` § 5.3).
+ *
+ * ── WHAT THIS FILE DOES NOT OWN ──────────────────────────────────────────────
+ *   • the orchard asset and its exposure — `<OrchardCasement />`;
+ *   • the interaction chrome (menus, add row) — the shared `.lardr-*` vocabulary;
+ *   • any colour, radius or motion law — `THA_UI_ARCHITECTURE.md`.
  */
 
-.lv-room {
-  /* px per depicted cm — the ONE scale of the elevation. */
-  --lvcm: clamp(2.1px, 0.26vw + 1.35px, 4px);
+/* ═══════════════════════════════════════════════════════════════════════════
+   THE ROOM — the volume itself
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.lardr-room.lv-room {
+  /* ── The room's materials ─────────────────────────────────────────────────
+     Warm, matte, and read from the approved Pantry North Star: limewashed
+     cream plaster carrying a morning, waxed oak, worn stone. Named here and
+     consumed only here, as `.home-room` names its own. */
+  --lv-plaster:       38 34% 89%;  /* limewashed plaster, matte */
+  --lv-plaster-lit:   42 58% 95%;  /* the plaster the casement reaches */
+  --lv-plaster-far:   34 26% 82%;  /* the wall away from the light */
+  --lv-plaster-deep:  32 20% 71%;  /* inside a reveal — wall thickness */
+  --lv-recess:        33 24% 76%;  /* the plastered back of the dry store */
+  --lv-recess-deep:   31 20% 68%;
+
+  --lv-oak:           33 42% 58%;  /* oak, waxed and worn pale on top */
+  --lv-oak-mid:       30 38% 45%;
+  --lv-oak-dark:      27 34% 30%;  /* a slab's front edge in its own shade */
+
+  --lv-paint:         38 22% 82%;  /* painted joinery — warm bone, not sage */
+  --lv-paint-lit:     42 34% 90%;
+  --lv-paint-deep:    34 16% 70%;
+
+  --lv-stone:         36 27% 76%;  /* flagstone floor and the casement sill */
+  --lv-stone-dark:    32 23% 62%;
+  --lv-stone-joint:   28 22% 47%;
+
+  --lv-kraft:         34 30% 68%;  /* the honest-gap packet — plain paper */
+  --lv-kraft-lit:     38 38% 78%;
+  --lv-kraft-deep:    31 26% 54%;
+
+  --lv-ink:           58, 44, 28;  /* the room's own text, as an rgb triple */
+  --lv-daylight:      46 92% 90%;
+  --lv-focus:         #6f7d3a;
+
+  /* ── ONE SCALE ────────────────────────────────────────────────────────────
+     px per depicted centimetre. Set here, and NOWHERE else: every object in
+     the room — on the wall, in the run, set out on the worktop, in the hand —
+     is drawn against this one number (`LARDER5` § 7.4). */
+  --lvcm: clamp(2.4px, 0.17vw + 0.65px, 3.1px);
+
+  /* The depicted architecture, in cm. These are the room, not a layout. */
+  --lv-worktop-h: 6.5;   /* the slab's own thickness */
+  --lv-under-h: 84;      /* floor to the underside of the slab */
+  --lv-terminus-w: 49;   /* the bay the tall store cupboard occupies */
+  --lv-floor-d: 52;      /* the floor between the run and the near edge */
+
+  position: relative;
+  /* The room is a COLUMN: wall, then worktop, then run, then floor — and THE
+     FLOOR TAKES WHAT IS LEFT. On a tall display the room gains floor and lit
+     wall, never more furniture and never more content (`LARDER5` § 11; GEA11).
+     Without this the ground stops short and the room becomes a page again. */
+  display: flex;
+  flex-direction: column;
+  /* THE ROOM IS NEVER SHRUNK TO THE FRAME. `main` is a column flex container,
+     so without this the room becomes a flex item with `flex-shrink: 1` and
+     collapses to the viewport — which is what hid the worktop, the run, the
+     floor and the doorway entirely. A room is as tall as it is. */
+  flex: none;
+  min-height: 100%;
+  padding-bottom: 0;
+  /* THE WALL. One matte plaster gradient, brightest where the casement lets
+     the morning in and settling toward the floor. This is the room's ground:
+     it runs to every edge and is never a panel (GEA11 — surplus becomes air). */
+  background:
+    radial-gradient(72% 54% at 11% 4%, hsl(var(--lv-plaster-lit) / 0.92), transparent 66%),
+    linear-gradient(
+      180deg,
+      hsl(var(--lv-plaster-lit)) 0%,
+      hsl(var(--lv-plaster)) 40%,
+      hsl(var(--lv-plaster-far)) 100%
+    );
+  /* The floor is full-bleed, so the room clips SIDEWAYS only. Clipping the
+     block axis is what swallowed the room; it must never return. */
+  overflow-x: clip;
+  overflow-y: visible;
 }
 
-/* The room's own morning light on plaster — presentation only, no claim. */
-.lv-light {
+/* Dark mode is the SAME one morning, re-rendered warm token for token (UIA § 7's
+   complete-mode law) — never a second hour and never a mood. */
+.dark .lardr-room.lv-room {
+  --lv-plaster:      34 13% 16%;
+  --lv-plaster-lit:  38 17% 21%;
+  --lv-plaster-far:  32 11% 11%;
+  --lv-plaster-deep: 30 10% 9%;
+  --lv-recess:       32 11% 14%;
+  --lv-recess-deep:  30 10% 10%;
+  --lv-oak:          32 28% 38%;
+  --lv-oak-mid:      30 26% 29%;
+  --lv-oak-dark:     28 24% 18%;
+  --lv-paint:        36 9% 27%;
+  --lv-paint-lit:    38 12% 34%;
+  --lv-paint-deep:   34 8% 20%;
+  --lv-stone:        34 8% 26%;
+  --lv-stone-dark:   32 7% 19%;
+  --lv-stone-joint:  30 6% 14%;
+  --lv-kraft:        33 14% 34%;
+  --lv-kraft-lit:    36 18% 42%;
+  --lv-kraft-deep:   30 12% 24%;
+  --lv-daylight:     44 34% 58%;
+}
+
+/* PLASTER GRAIN — a hand-troweled wall, not a flat fill. The same one grain
+   `.home-room::after` carries: one house, one wall. Felt, not seen. */
+.lardr-room.lv-room::before {
+  content: "";
   position: absolute;
   inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.055;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* THE BOUNDED TOP — the room is closed above by a band of quiet, lit wall and
+   the reveal of the wall's own thickness. NO CEILING IS DRAWN (`LARDER5` § 5.1):
+   a drawn ceiling lids the room and adds weight for nothing. */
+.lv-ceiling {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: clamp(16px, 3vh, 32px);
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    hsl(var(--lv-plaster-deep) / 0.6),
+    hsl(var(--lv-plaster-deep) / 0)
+  );
+}
+
+/* THE ONE MORNING the casement throws into the room: a wash across the plaster
+   and the pool it lays on the floor. Still — the morning holds still. */
+.lv-daylight {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
   pointer-events: none;
   background:
-    radial-gradient(120% 70% at 18% 0%, rgba(255, 244, 214, 0.55), transparent 55%),
-    linear-gradient(180deg, rgba(255, 250, 238, 0.25), transparent 40%);
+    radial-gradient(40% 46% at 7% 22%, hsl(var(--lv-daylight) / 0.46), transparent 72%),
+    linear-gradient(104deg, hsl(var(--lv-daylight) / 0.22) 0%, transparent 38%);
 }
-.dark .lv-light { opacity: 0.25; }
+.dark .lv-daylight { opacity: 0.34; }
 
-.lv-inner { position: relative; }
-
-/* ── The elevation ──────────────────────────────────────────────────────────── */
-.lv-elevation {
-  display: flex;
-  flex-direction: column;
-  gap: calc(var(--lvcm) * 12);
-  padding: calc(var(--lvcm) * 6) 0 calc(var(--lvcm) * 4);
-}
-
-/* The wall band: cupboard bay · shelf stack · spice rack bay. */
-.lv-wall-band {
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  gap: calc(var(--lvcm) * 12);
-  border-radius: 12px;
-}
-.lv-wall-band.is-over,
-.lv-tablegroup.is-over,
-.lv-store.is-over { outline: 2px dashed #7c8a41; outline-offset: 6px; border-radius: 12px; }
-
-.lv-cupboard-bay { flex: none; }
-.lv-rack-bay { flex: none; padding-top: calc(var(--lvcm) * 10); }
-
-.lv-shelf-stack {
-  display: flex;
-  flex-direction: column;
-  /* Board-to-board spacing leaves headroom for the 26cm jars standing on each. */
-  gap: calc(var(--lvcm) * 30);
-  padding-top: calc(var(--lvcm) * 28);
+/* ── The hall: the room's measure ────────────────────────────────────────────
+   The FURNITURE is bounded; the PLASTER and the FLAGSTONES are not. As the
+   window widens the room gains air, lit wall and floor — never more furniture
+   and never more content (`LARDER5` § 11; GEA11). */
+.lardr-inner.lv-hall {
+  position: relative;
+  z-index: 2;
+  display: block;
   flex: none;
+  width: 100%;
+  max-width: 1400px;
+  margin-inline: auto;
+  padding: clamp(12px, 2vh, 24px) clamp(10px, 1.8vw, 30px) 0;
 }
 
-/* The floor bands: furniture standing on one ground line. */
-.lv-floor-band {
+/* ── The room's own sign, written on its own wall ──────────────────────────────
+   The Larder names itself, because it draws its own threshold (app-shell's
+   `ROOMS_OWN_THRESHOLD`). The type stands on PLASTER — an opaque material —
+   never on the glass (Blueprint § 6.1's non-negotiable). It is not a header
+   band: it is lettering on the wall above the dresser, and the room continues
+   past it on every side. */
+.lv-sign {
+  position: relative;
+  z-index: 6;
+  margin-bottom: clamp(6px, 1vh, 14px);
+  max-width: 46ch;
+}
+.lv-sign h1 {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  font-size: clamp(28px, 3vw, 42px);
+  line-height: 1;
+  color: rgba(var(--lv-ink), 0.92);
+}
+.dark .lv-sign h1 { color: hsl(38 26% 86%); }
+.lv-sign p {
+  margin-top: 4px;
+  font-size: clamp(13px, 1vw, 15px);
+  line-height: 1.5;
+  color: rgba(var(--lv-ink), 0.6);
+}
+.dark .lv-sign p { color: hsl(38 16% 68%); }
+
+/* One quiet line of what the room notices — a fact, never a verdict (GEA21),
+   and deliberately NOT the North Star's three-count strip, which would be a
+   second ground laid across the room (`LARDER5` § 5.2). */
+.lv-note {
+  margin-top: 7px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgba(var(--lv-ink), 0.64);
+}
+.dark .lv-note { color: hsl(38 20% 72%); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   THE BODY OF THE ROOM — the three walls, the worktop and the run, in one
+   elevation. This block is the reason the room reads as a volume: everything
+   inside it shares one baseline (the floor line at its foot), one head height
+   and one light, and the tall store cupboard can rise THROUGH the worktop the
+   way a real cupboard does.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.lv-body {
+  position: relative;
+  z-index: 2;
+  padding-bottom: calc(var(--lvcm) * var(--lv-under-h));
+}
+
+/* UNDER THE WORKTOP — the wall a household actually has beneath a counter: in
+   the slab's own shade at the top, lifting toward the floor, with the plinth
+   line the run stands on at its foot. Without it the stretch of wall a fitted
+   run does not fill reads as nothing at all, and the room loses its floor line
+   exactly where the eye most needs it. Honest absence has to be a PLACE
+   (`LARDER2` § I.8 — quiet where a household uses none), never a hole. */
+.lv-body::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  left: calc(50% - 50vw);
+  right: calc(var(--lvcm) * var(--lv-terminus-w));
+  bottom: 0;
+  height: calc(var(--lvcm) * var(--lv-under-h));
+  pointer-events: none;
+  background:
+    /* the plinth the fitted run stands on, at the foot of the wall */
+    linear-gradient(
+      180deg,
+      transparent calc(100% - var(--lvcm) * 6),
+      hsl(var(--lv-paint) / 0.75) calc(100% - var(--lvcm) * 6),
+      hsl(var(--lv-paint-deep) / 0.85) 100%
+    ),
+    /* the shade the slab casts down the wall behind the run, and the wall
+       darkening as it goes under the counter and out of the morning */
+    linear-gradient(180deg, hsl(28 26% 26% / 0.42) 0%, hsl(28 26% 26% / 0.16) 22%, hsl(28 26% 26% / 0.08) 62%, hsl(28 26% 26% / 0.14) 100%),
+    linear-gradient(100deg, hsl(var(--lv-plaster-lit) / 0.5) 0%, transparent 46%);
+}
+
+/* THE WALLS — the left return, the back wall, and the bay the right return's
+   store cupboard occupies. They MEET: there is no gap between a return and the
+   back wall, because walls meet at corners. */
+.lv-walls {
+  display: grid;
+  grid-template-columns: minmax(0, 0.30fr) minmax(0, 1fr);
+  align-items: end;
+  padding-right: calc(var(--lvcm) * var(--lv-terminus-w));
+}
+
+/* ── THE LEFT RETURN — the working wall ──────────────────────────────────────
+   The wall to the household's left, carrying the aperture, the light, and the
+   spice rack hung beneath it. It is drawn a half-step deeper than the back wall
+   because it turns away from the household — that turn is the whole of the
+   room's depth on this side, and it is why the room is a volume and not an
+   elevation drawing. */
+.lv-return {
+  position: relative;
+  align-self: end;
+  padding-bottom: calc(var(--lvcm) * 3);
+}
+.lv-return::before {
+  /* The plane of the return itself, receding from the light. It runs off the
+     left edge of the frame because a return has no end the household can see —
+     it is the wall they are standing beside. It fades UP rather than stopping
+     at a ruled line, so the wall reads as continuing past the top of the frame
+     (`LARDER5` § 5.1's bounded top: the building continues out of frame). */
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 0 calc(var(--lvcm) * -2) 0 calc(50% - 50vw);
+  background: linear-gradient(
+    100deg,
+    hsl(var(--lv-plaster-lit) / 0.8) 0%,
+    hsl(var(--lv-plaster) / 0.45) 60%,
+    hsl(var(--lv-plaster-deep) / 0.4) 100%
+  );
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 14%, #000 100%);
+  mask-image: linear-gradient(180deg, transparent 0%, #000 14%, #000 100%);
+  pointer-events: none;
+}
+/* THE CORNER — the arris where the left return meets the back wall. One line of
+   shade, and the single most economical piece of depth in the room. */
+.lv-return::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  top: calc(var(--lvcm) * 6);
+  bottom: 0;
+  right: calc(var(--lvcm) * -2);
+  width: calc(var(--lvcm) * 4);
+  background: linear-gradient(90deg, hsl(28 26% 30% / 0.2), hsl(28 26% 30% / 0));
+  pointer-events: none;
+}
+
+/* ═══ THE CASEMENT ═══════════════════════════════════════════════════════════
+   The room's ONE opening, and both its window onto the orchard and its only
+   source of light — because in a real room they are always the same thing
+   (`LARDER5` § 8). It is an opening cut INTO a wall that has thickness: the
+   head reveal and the returning jambs are the whole architectural claim.
+   The GLASS (the asset, its crop, its exposure) is `<OrchardCasement />`'s;
+   this owns only the joinery it sits in. Nothing is ever laid on the glass. */
+.lv-casement-well {
+  position: relative;
+  z-index: 2;
+}
+/* THE REVEAL — the faces of the wall returning into the opening. The upper-left
+   returns catch the morning; the lower-right ones are in their own shade. Its
+   absence is what makes an image on plaster read as a picture hanging there. */
+.lv-casement-well::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  left: calc(var(--lvcm) * -3);
+  right: calc(var(--lvcm) * -3);
+  top: calc(var(--lvcm) * -3);
+  bottom: calc(var(--lvcm) * -3);
+  border-radius: 2px;
+  background: linear-gradient(
+    136deg,
+    hsl(var(--lv-plaster-lit)) 0%,
+    hsl(var(--lv-plaster)) 44%,
+    hsl(var(--lv-plaster-deep)) 100%
+  );
+  box-shadow: 0 3px 12px -5px hsl(28 30% 26% / 0.4);
+}
+
+/* THE LINTEL — the timber head the wall sits on above the opening. An opening
+   with nothing over it is a rectangle, not a window. */
+.lv-lintel {
+  position: relative;
+  z-index: 3;
+  height: calc(var(--lvcm) * 5);
+  margin-inline: calc(var(--lvcm) * -4);
+  border-radius: 1px;
+  background: linear-gradient(180deg, hsl(var(--lv-oak)) 0%, hsl(var(--lv-oak-mid)) 66%, hsl(var(--lv-oak-dark)) 100%);
+  box-shadow:
+    inset 0 1px 0 hsl(44 52% 84% / 0.6),
+    0 4px 10px -4px hsl(28 30% 22% / 0.5);
+}
+
+.lv-casement {
+  position: relative;
+  z-index: 2;
+  height: calc(var(--lvcm) * 92);
+  overflow: hidden;
+  isolation: isolate;
+  /* the wall's thickness returning into the opening on all four sides */
+  box-shadow:
+    inset 14px 16px 22px -12px hsl(var(--lv-plaster-lit) / 0.9),
+    inset -22px -18px 28px -12px hsl(28 30% 26% / 0.5);
+  /* Behind the glass, the morning itself, so the governed E2 exposure reads as
+     daylight through glass rather than a faded picture. The exposure constant
+     is NOT touched; this is what it is composited over. */
+  background: linear-gradient(180deg, hsl(202 46% 90%) 0%, hsl(48 76% 92%) 56%, hsl(42 54% 86%) 100%);
+}
+.dark .lv-casement {
+  background: linear-gradient(180deg, hsl(212 20% 30%), hsl(220 18% 20%));
+}
+
+/* The asset, seen through the opening. Still, wordless, never animated. */
+.lv-casement-glass {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+  object-position: 50% 62%;
+  display: block;
+  z-index: 0;
+}
+
+/* THE FRAME — painted timber holding the glass: an outer casing and one glazing
+   bar. SLIM, because a heavy frame divides the view into four pictures and the
+   orchard stops being one place seen through one window. */
+.lv-casement-frame {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  border: calc(var(--lvcm) * 1.9) solid hsl(var(--lv-paint-lit));
+  border-radius: 1px;
+  box-shadow:
+    inset 0 0 0 1px hsl(34 20% 66% / 0.7),
+    /* the glass sits back from the frame's face: the shadow the timber casts in */
+    inset 8px 9px 14px -7px hsl(28 30% 30% / 0.55);
+}
+.dark .lv-casement-frame { border-color: hsl(38 10% 28%); }
+/* the one upright glazing bar — a casement, not a grid of panes */
+.lv-casement-frame::before {
+  content: "";
+  position: absolute;
+  left: calc(50% - var(--lvcm) * 0.7);
+  top: 0;
+  bottom: 0;
+  width: calc(var(--lvcm) * 1.4);
+  background: hsl(var(--lv-paint-lit));
+  box-shadow: 1px 0 3px hsl(28 30% 30% / 0.35);
+}
+.dark .lv-casement-frame::before { background: hsl(38 10% 28%); }
+
+/* THE SILL — worn stone, projecting proud of the wall, catching the light on
+   its top face and casting one soft line beneath. It is the boundary:
+   everything the household reads stands below it. */
+.lv-casement-sill {
+  position: relative;
+  z-index: 3;
+  height: calc(var(--lvcm) * 5.5);
+  margin-inline: calc(var(--lvcm) * -5);
+  border-radius: 1px 1px 3px 3px;
+  background: linear-gradient(
+    180deg,
+    hsl(var(--lv-stone)) 0%,
+    hsl(var(--lv-stone)) 44%,
+    hsl(var(--lv-stone-dark)) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 hsl(45 40% 97% / 0.85),
+    0 4px 9px -3px hsl(30 26% 34% / 0.45);
+}
+
+/* ── WHAT HANGS ON THE WORKING WALL ──────────────────────────────────────────
+   The spice rack, beneath the sill and above the worktop, exactly where
+   `LARDER5` § 9.2 puts it (`A5│spice`). It is in the light because the things a
+   household reaches for constantly belong in the light. */
+.lv-hangings {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--lvcm) * 2);
+  padding: calc(var(--lvcm) * 6) 0 calc(var(--lvcm) * 5);
+}
+
+/* ═══ THE DRY STORE — the back wall ══════════════════════════════════════════
+   The room's focal plane, directly ahead of the household: full-height open
+   shelving in a plastered recess, with a painted cornice finishing it and real
+   oak boards carrying the household's own things. This is what they came to
+   look at, and it is the best-lit surface in the room.
+
+   `LARDER5` § 10 answered structurally: a category is NOT a card that contains
+   a shelf. It is a stretch of shelf inside the room's furniture, and the
+   furniture is the navigation. */
+.lv-dresser {
+  position: relative;
+  z-index: 2;
+}
+
+/* THE CORNICE — the moulding that finishes the top of a built-in and stops it
+   reading as a rectangle drawn on a wall. */
+.lv-cornice {
+  position: relative;
+  z-index: 4;
+  height: calc(var(--lvcm) * 4);
+  margin-inline: calc(var(--lvcm) * -2.5);
+  border-radius: 2px 2px 0 0;
+  background: linear-gradient(
+    180deg,
+    hsl(var(--lv-paint-lit)) 0%,
+    hsl(var(--lv-paint)) 52%,
+    hsl(var(--lv-paint-deep)) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 hsl(45 40% 97% / 0.75),
+    0 5px 12px -5px hsl(28 30% 22% / 0.45);
+}
+
+.lv-drystore {
+  position: relative;
+  padding: calc(var(--lvcm) * 3) calc(var(--lvcm) * 4) calc(var(--lvcm) * 1);
+  /* the plastered back of the recess — always a half-step deeper than the room,
+     because the light does not reach as far into a recess as onto a wall */
+  background: linear-gradient(
+    118deg,
+    hsl(var(--lv-recess)) 0%,
+    hsl(var(--lv-recess)) 34%,
+    hsl(var(--lv-recess-deep)) 100%
+  );
+  box-shadow:
+    inset 16px 18px 34px -16px hsl(45 34% 96% / 0.55),
+    inset -22px -16px 38px -16px hsl(28 30% 22% / 0.5);
+}
+/* THE STILES — the recess's side reveals, standing proud of its back. */
+.lv-drystore::before,
+.lv-drystore::after {
+  content: "";
+  position: absolute;
+  top: calc(var(--lvcm) * -0.5);
+  bottom: 0;
+  width: calc(var(--lvcm) * 4);
+  z-index: 3;
+  pointer-events: none;
+}
+.lv-drystore::before {
+  left: 0;
+  background: linear-gradient(90deg, hsl(var(--lv-paint-lit)) 0%, hsl(var(--lv-paint)) 60%, hsl(var(--lv-paint-deep)) 100%);
+  box-shadow: 5px 0 13px -5px hsl(28 30% 22% / 0.42);
+}
+.lv-drystore::after {
+  right: 0;
+  background: linear-gradient(90deg, hsl(var(--lv-paint-deep)) 0%, hsl(var(--lv-paint)) 40%, hsl(var(--lv-paint-lit)) 100%);
+  box-shadow: -5px 0 13px -5px hsl(28 30% 22% / 0.42);
+}
+
+/* The bays inside the recess. Three on a wall, one on a phone — never a "grid
+   of cards": each bay is a stretch of shelf, and the divisions between them are
+   the boards' own ends, not borders. */
+.lv-bays {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: calc(var(--lvcm) * 4) calc(var(--lvcm) * 2);
+  align-items: end;
+  justify-items: center;
+}
+
+/* ── A BERTH: one category, standing where it is kept ────────────────────────
+   Deliberately NOT a card: no panel, no border, no radius, no shadow of its
+   own. It is a stretch of shelf with the household's own things on it. */
+.lv-berth {
+  position: relative;
+  display: block;
+  width: 100%;
+  background: none;
+  border: 0;
+  padding: 0 0 calc(var(--lvcm) * 1);
+  text-align: center;
+  cursor: pointer;
+  color: inherit;
+  transition: transform 0.16s ease;
+}
+.lv-berth:hover { transform: translateY(-2px); }
+.lv-berth:focus-visible {
+  outline: 2px solid var(--lv-focus);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+/* A drop target is LIT, not outlined: the morning brightens on the shelf you
+   are about to set something down on. Places, not modes (`LARDER5` § 10.4). */
+.lv-berth.is-over::after,
+.lv-piece.is-over::after {
+  content: "";
+  position: absolute;
+  inset: calc(var(--lvcm) * -2);
+  border-radius: 5px;
+  background: hsl(var(--lv-daylight) / 0.45);
+  box-shadow: inset 0 0 0 2px hsl(74 32% 42% / 0.55);
+  pointer-events: none;
+}
+
+/* Things stand ON a board: the row sits in flow directly above it, so their
+   feet ARE the board's top surface. A shelf of small things is never given a
+   tall jar's headroom it does not need. */
+.lv-seated {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  gap: calc(var(--lvcm) * 14);
-  border-bottom: 3px solid rgba(107, 82, 49, 0.28);
-  padding-bottom: 2px;
+  gap: calc(var(--lvcm) * 2.5);
+  position: relative;
+  z-index: 2;
+  min-height: calc(var(--lvcm) * 12);
 }
-.lv-floor-band.is-second { border-bottom-color: rgba(107, 82, 49, 0.18); }
+.lv-seated > * { flex: none; }
+.lv-seated.is-preview { gap: calc(var(--lvcm) * 1.8); }
 
-/* Visual order on the floor (DOM order stays semantic: fruit, fridge, freezer). */
-.lv-order-1 { order: 1; }
-.lv-order-2 { order: 2; }
-.lv-order-3 { order: 3; }
+/* The board itself, and the shade it lays on the recess behind it. THE BATTEN
+   is what makes a board part of the furniture rather than a plank floating in a
+   bay: a housed bearer running the full width of the bay, with the oak board
+   sitting on it. The board artwork is cm-true and never stretches, so the
+   batten is what carries it to the stiles. */
+.lv-board { position: relative; display: flex; flex-direction: column; align-items: center; width: 100%; }
+.lv-board::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--lvcm) * -2);
+  right: calc(var(--lvcm) * -2);
+  bottom: calc(var(--lvcm) * 1.4);
+  height: calc(var(--lvcm) * 4);
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    hsl(var(--lv-oak)) 0%,
+    hsl(var(--lv-oak-mid)) 55%,
+    hsl(var(--lv-oak-dark)) 100%
+  );
+  box-shadow: 0 3px 7px -3px hsl(28 30% 20% / 0.5);
+}
+/* the shade a board throws down the recess behind it */
+.lv-board::after {
+  content: "";
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  top: 100%;
+  height: calc(var(--lvcm) * 5);
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, hsl(28 30% 22% / 0.32), transparent 80%);
+}
 
-/* ── Physical objects ───────────────────────────────────────────────────────── */
+/* THE SHELF-EDGE LABEL — a small written card slipped into the front of the
+   board, the way a larder has always been labelled. It carries the household's
+   OWN shelf name and their own count: a fact the room reports, never a claim it
+   invents (GEA21). It is attached TO THE BOARD, which is why it is not a second
+   ground (`LARDER5` § 5.2). */
+.lv-card {
+  position: relative;
+  z-index: 4;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  margin-top: calc(var(--lvcm) * 0.8);
+  padding: calc(var(--lvcm) * 0.7) calc(var(--lvcm) * 2.2);
+  border-radius: 1px;
+  background: linear-gradient(180deg, hsl(42 46% 96%), hsl(40 32% 90%));
+  box-shadow:
+    0 1px 0 hsl(45 40% 98% / 0.9) inset,
+    0 2px 5px -2px hsl(28 30% 22% / 0.45);
+  color: rgba(var(--lv-ink), 0.9);
+  max-width: 100%;
+}
+.lv-card b {
+  font-family: var(--font-serif);
+  font-size: max(12px, calc(var(--lvcm) * 3.6));
+  font-weight: 600;
+  letter-spacing: 0.005em;
+  line-height: 1.15;
+}
+.lv-card small {
+  font-size: max(10px, calc(var(--lvcm) * 2.8));
+  line-height: 1.3;
+  color: rgba(var(--lv-ink), 0.55);
+}
+.dark .lv-card {
+  background: linear-gradient(180deg, hsl(36 12% 26%), hsl(34 12% 21%));
+  color: hsl(38 24% 84%);
+}
+.dark .lv-card small { color: hsl(38 14% 62%); }
 
-/* An asset drawn as its measured CONTENT box; artwork overflows for shadows. */
+/* ═══ THE WORKTOP ════════════════════════════════════════════════════════════
+   ONE oak slab at working height, laid ON the fitted run and passing IN FRONT
+   of it. It runs the full width of the room, from the left return to the tall
+   store cupboard, because a worktop does not run through a cupboard. It is the
+   room's still point, and it is where an opened category is set out.
+
+   The slab is the clearest piece of occlusion in the room: it passes in front
+   of the run beneath it, which is how the elevation carries depth without a
+   second camera (`LARDER5` § 7.3). */
+.lv-worktop {
+  position: absolute;
+  z-index: 5;
+  left: calc(50% - 50vw);
+  right: calc(var(--lvcm) * var(--lv-terminus-w));
+  bottom: calc(var(--lvcm) * var(--lv-under-h));
+  height: calc(var(--lvcm) * var(--lv-worktop-h));
+  border-radius: 0 0 2px 2px;
+  /* The slab seen from standing height: a sliver of its lit TOP face, then its
+     full FRONT EDGE in the oak's own shade. That top sliver is what says the
+     household is looking slightly DOWN at a horizontal surface — without it a
+     worktop is a brown stripe on a wall. */
+  background: linear-gradient(
+    180deg,
+    hsl(38 46% 72%) 0%,
+    hsl(var(--lv-oak)) 22%,
+    hsl(var(--lv-oak)) 40%,
+    hsl(var(--lv-oak-mid)) 72%,
+    hsl(var(--lv-oak-dark)) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 hsl(46 56% 88% / 0.9),
+    /* the shadow the slab throws down the wall and over the run beneath it */
+    0 calc(var(--lvcm) * 3) calc(var(--lvcm) * 6) calc(var(--lvcm) * -2) hsl(28 30% 22% / 0.55);
+  pointer-events: none;
+}
+/* the grain running the length of the slab — felt, not seen */
+.lv-worktop::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.16;
+  mix-blend-mode: multiply;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0 17px,
+    hsl(28 34% 24% / 0.5) 17px 18px,
+    transparent 18px 41px,
+    hsl(28 34% 24% / 0.3) 41px 42px
+  );
+}
+
+/* ── SET OUT ON THE WORKTOP ───────────────────────────────────────────────────
+   Opening a category does not navigate anywhere and does not move the viewer
+   (`LARDER5` § 10.3): the household takes it DOWN, and it is set out on the
+   counter, in the same room, under the same light, AT THE SAME SCALE — there is
+   no camera, so nothing grows because it is nearer the hand. The wall stays
+   exactly where it was above. */
+.lv-setout {
+  position: relative;
+  z-index: 4;
+  margin-top: calc(var(--lvcm) * 3);
+  padding: calc(var(--lvcm) * 2) calc(var(--lvcm) * 3) calc(var(--lvcm) * 1);
+  /* the shade the room gathers on the wall behind a worktop */
+  background: linear-gradient(180deg, hsl(28 26% 30% / 0.14), hsl(28 26% 30% / 0.03) 70%, transparent);
+}
+.lv-setout.is-over {
+  background: linear-gradient(180deg, hsl(var(--lv-daylight) / 0.5), hsl(28 26% 30% / 0.04) 78%, transparent);
+}
+.lv-setout-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  margin-bottom: calc(var(--lvcm) * 1.5);
+}
+.lv-setout-head h2 {
+  font-family: var(--font-serif);
+  font-size: clamp(18px, 1.8vw, 24px);
+  font-weight: 600;
+  color: rgba(var(--lv-ink), 0.92);
+}
+.dark .lv-setout-head h2 { color: hsl(38 26% 84%); }
+.lv-putback {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 44px;
+  padding: 0.35rem 0.85rem 0.35rem 0.55rem;
+  border: 0;
+  border-radius: 999px;
+  background: hsl(42 40% 97% / 0.85);
+  color: rgba(var(--lv-ink), 0.8);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.lv-putback:hover { background: hsl(42 44% 98%); }
+.lv-putback:focus-visible { outline: 2px solid var(--lv-focus); outline-offset: 2px; }
+.dark .lv-putback { background: hsl(34 14% 22% / 0.9); color: hsl(38 22% 82%); }
+
+.lv-setout-boards {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--lvcm) * 3);
+}
+
+.lv-empty {
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: rgba(var(--lv-ink), 0.62);
+  text-align: center;
+  padding: 0.4rem 0 0.6rem;
+}
+.dark .lv-empty { color: hsl(38 16% 68%); }
+
+/* ═══ THE RUN — the fitted furniture beneath the worktop ═════════════════════
+   The household's other storage places, standing on the floor beneath the slab
+   as one continuous run of fitted furniture that TOUCHES. A fitted larder,
+   never a row of objects arranged on a background. */
+.lv-run {
+  position: absolute;
+  z-index: 4;
+  left: 0;
+  right: calc(var(--lvcm) * var(--lv-terminus-w));
+  bottom: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+}
+/* The run TOUCHES: fitted furniture shares its edges. The overlap absorbs the
+   soft edge each master carries inside its own alpha content box, so the pieces
+   meet rather than sit a hair apart like objects in a catalogue. */
+.lv-run > * + * { margin-left: calc(var(--lvcm) * -1.2); }
+
+/* ── THE TERMINUS — the tall store cupboard that ends the wall on the right ──
+   It stands on the floor and rises PAST the worktop, which is why the slab
+   stops at it and why it is drawn last: a nearer, taller object occludes what
+   is behind it, and that occlusion is this room's depth (`LARDER5` § 7.3). */
+.lv-terminus {
+  position: absolute;
+  z-index: 6;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  width: calc(var(--lvcm) * var(--lv-terminus-w));
+}
+
+/* One piece of furniture. Not a card: a thing standing on a floor. */
+.lv-piece {
+  position: relative;
+  display: block;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+  text-align: center;
+  transition: transform 0.16s ease;
+}
+.lv-piece:hover { transform: translateY(-2px); }
+.lv-piece:focus-visible { outline: 2px solid var(--lv-focus); outline-offset: 3px; border-radius: 4px; }
+
+/* A piece stands ON the floor, so it casts one contact shadow at its feet — the
+   only shadow in the room that is not a material's own shading. */
+.lv-piece-art { position: relative; display: block; }
+.lv-piece-art::after {
+  content: "";
+  position: absolute;
+  left: 3%;
+  right: -5%;
+  bottom: calc(var(--lvcm) * -0.5);
+  height: calc(var(--lvcm) * 2.5);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, hsl(28 30% 20% / 0.36), transparent);
+  pointer-events: none;
+}
+/* The piece's own written label, slipped into the front of the furniture the
+   way a pantry drawer has always been labelled. It is taken OUT of the flow so
+   that the furniture's FEET — never a label — are what meets the flagstones,
+   which is the whole reason the run reads as standing in a room. */
+.lv-piece .lv-card {
+  position: absolute;
+  left: 50%;
+  bottom: 28%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  max-width: 96%;
+}
+
+/* ═══ THE FLOOR ══════════════════════════════════════════════════════════════
+   ONE continuous warm ground, running from the base of every wall forward to
+   the near edge, passing beneath every piece of furniture. The single most
+   load-bearing element of the room (`LARDER5` § 5.1): a floor is what makes
+   furniture STAND rather than float. Without it every shelf and cupboard is an
+   image on a field, and the room is a collage.
+
+   It is full-bleed to the room's own walls: a floor that stops short of them is
+   a rug. It carries the room's fourth interaction destination — the basket by
+   the door — and it is the room's terminus on a phone (`LARDER5` § 12). */
+.lv-floorline {
+  /* Deliberately NO z-index: the floor must not become a stacking context, or
+     the furniture standing on it would be trapped behind the stone. */
+  position: relative;
+  /* THE FLOOR TAKES WHAT IS LEFT. On a tall frame the room gains ground, never
+     content — and the room never ends in a band of nothing. */
+  flex: 1 1 auto;
+  margin-inline: calc(50% - 50vw);
+  padding-inline: calc(50vw - 50%);
+  padding-bottom: clamp(24px, 4vh, 48px);
+  min-height: calc(var(--lvcm) * var(--lv-floor-d));
+  background:
+    /* THE SKIRTING — where the floor meets the foot of the wall. A floor that
+       simply changes colour at a ruled line is two backgrounds; a floor that
+       arrives at a skirting is a floor. */
+    linear-gradient(
+      180deg,
+      hsl(var(--lv-paint-deep) / 0.55) 0 calc(var(--lvcm) * 2.4),
+      hsl(28 26% 24% / 0.4) calc(var(--lvcm) * 2.4) calc(var(--lvcm) * 3.4),
+      transparent calc(var(--lvcm) * 3.4)
+    ),
+    /* the floor coming forward toward the household, out of the morning */
+    linear-gradient(180deg, transparent 0%, hsl(var(--lv-stone-dark) / 0) 26%, hsl(var(--lv-stone-dark) / 0.55) 100%),
+    /* THE COURSES, opening out as they come forward — the one place in the room
+       where recession is drawn rather than implied, because a floor read from
+       standing height is the only surface whose foreshortening the eye checks */
+    linear-gradient(
+      180deg,
+      transparent 0 calc(var(--lvcm) * 9),
+      hsl(var(--lv-stone-joint) / 0.34) calc(var(--lvcm) * 9) calc(var(--lvcm) * 9.7),
+      transparent calc(var(--lvcm) * 9.7) calc(var(--lvcm) * 24),
+      hsl(var(--lv-stone-joint) / 0.28) calc(var(--lvcm) * 24) calc(var(--lvcm) * 24.9),
+      transparent calc(var(--lvcm) * 24.9) calc(var(--lvcm) * 47),
+      hsl(var(--lv-stone-joint) / 0.22) calc(var(--lvcm) * 47) calc(var(--lvcm) * 48.1),
+      transparent calc(var(--lvcm) * 48.1) calc(var(--lvcm) * 80),
+      hsl(var(--lv-stone-joint) / 0.16) calc(var(--lvcm) * 80) calc(var(--lvcm) * 81.3),
+      transparent calc(var(--lvcm) * 81.3)
+    ),
+    /* THE FLAGS THEMSELVES — worn, uneven, laid by hand. Deliberately NOT a
+       regular grid of joints: a floor ruled into equal squares is a tiled
+       kitchen, and the room is a stone-floored larder. The stones are read from
+       their wear, and the joints are broken so no two courses line up. */
+    radial-gradient(38% 60% at 12% 22%, hsl(var(--lv-stone-joint) / 0.13), transparent 70%),
+    radial-gradient(30% 52% at 44% 68%, hsl(var(--lv-stone-joint) / 0.11), transparent 70%),
+    radial-gradient(34% 56% at 74% 30%, hsl(var(--lv-stone-joint) / 0.12), transparent 70%),
+    radial-gradient(28% 48% at 92% 76%, hsl(var(--lv-stone-joint) / 0.1), transparent 70%),
+    radial-gradient(26% 44% at 28% 88%, hsl(var(--lv-stone-joint) / 0.09), transparent 70%),
+    /* the worn stone itself */
+    linear-gradient(178deg, hsl(var(--lv-stone)) 0%, hsl(var(--lv-stone-dark)) 100%);
+}
+/* the pool of morning the casement lays on the flagstones */
+.lv-floorline::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(34% 92% at 8% 0%, hsl(var(--lv-daylight) / 0.42), transparent 76%);
+}
+.dark .lv-floorline::after { opacity: 0.26; }
+
+/* The near edge of the floor: the room does not stop and become a page — the
+   ground runs out under the household's own feet and darkens as it comes
+   forward, out of the one morning. */
+.lv-floorline::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: clamp(20px, 4vh, 44px);
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, hsl(28 24% 22% / 0.22));
+}
+
+/* THE FLOOR PLAN — what stands on the flagstones, read from the light: the
+   room's own worktable forward in the morning on the left, and the doorway with
+   the shopping basket at the household's feet on the right (`LARDER5` § 10.4).
+   Both destructive-feeling acts are therefore a movement TOWARD the viewer and
+   DOWN — the physical motion of putting something in a basket or carrying it
+   out of the house. */
+.lv-floor-plan {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+  align-items: end;
+  gap: clamp(14px, 2.4vw, 40px);
+  padding-top: calc(var(--lvcm) * 4);
+}
+
+/* The room's own worktable, standing FORWARD of the fitted run on the
+   flagstones — the foreground of the one elevation, and the reason the room has
+   depth without a second camera: a nearer object sits lower in the frame. */
+.lv-foreground {
+  position: relative;
+  z-index: 5;
+  margin-top: calc(var(--lvcm) * -26);
+}
+
+/* ── THE DOORWAY — the way out, and the basket standing in it ────────────────
+   `LARDER5` § 5.1: a room must have a way out. The doorway is the open side the
+   household is standing in, and it is what makes "take it out of the house" a
+   direction rather than a metaphor. The basket stands in it, at their feet.
+
+   This is NOT a toolbar. `LARDER5` § 12 refuses "a bar pinned to the bottom of
+   the screen, which would be a navigation control by another name" — so these
+   are places on the floor of the room, drawn where they physically are. */
+.lv-door {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--lvcm) * 2);
+  padding-bottom: calc(var(--lvcm) * 2);
+}
+
+.lv-destinations {
+  display: flex;
+  align-items: flex-end;
+  gap: clamp(10px, 1.4vw, 22px);
+  flex-wrap: wrap;
+}
+
+/* THE SHOPPING BASKET — a real basket on the floor by the door. Dropping a
+   thing in it originates a Domain 15 entry and THE PROVISION STAYS ON ITS SHELF
+   (`LARDER1` § 8, the load-bearing rule). */
+.lv-place {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--lvcm) * 0.8);
+  min-height: 44px;
+  padding: calc(var(--lvcm) * 1.5) calc(var(--lvcm) * 2.5);
+  border: 0;
+  border-radius: 3px;
+  background: none;
+  cursor: pointer;
+  color: rgba(var(--lv-ink), 0.78);
+  font-size: max(11px, calc(var(--lvcm) * 3));
+  font-weight: 600;
+  line-height: 1.2;
+  transition: transform 0.16s ease;
+}
+.dark .lv-place { color: hsl(38 20% 78%); }
+.lv-place:hover { transform: translateY(-2px); }
+.lv-place:focus-visible { outline: 2px solid var(--lv-focus); outline-offset: 2px; }
+/* the basket and the doorway are drawn as what they are, in the room's own
+   materials — willow, and the dark of the passage beyond the door */
+.lv-place-art {
+  position: relative;
+  display: block;
+  width: calc(var(--lvcm) * 34);
+  height: calc(var(--lvcm) * 26);
+}
+/* Both stand ON the flagstones, so both gather one contact shadow at their
+   feet, falling down and to the right from the one morning. */
+.lv-place-art::after {
+  content: "";
+  position: absolute;
+  left: 4%;
+  right: -6%;
+  bottom: calc(var(--lvcm) * -1);
+  height: calc(var(--lvcm) * 3);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, hsl(28 30% 20% / 0.34), transparent);
+}
+/* THE BASKET — willow, woven, standing open on the flagstones. */
+.lv-place.is-basket .lv-place-art {
+  border-radius: 3px 3px 34% 34% / 3px 3px 26% 26%;
+  background:
+    /* the weave */
+    repeating-linear-gradient(
+      90deg,
+      hsl(36 42% 64% / 0.85) 0 calc(var(--lvcm) * 2),
+      hsl(33 34% 50% / 0.85) calc(var(--lvcm) * 2) calc(var(--lvcm) * 2.9)
+    ),
+    repeating-linear-gradient(
+      180deg,
+      transparent 0 calc(var(--lvcm) * 4),
+      hsl(30 30% 40% / 0.28) calc(var(--lvcm) * 4) calc(var(--lvcm) * 4.9)
+    ),
+    linear-gradient(100deg, hsl(38 44% 66%), hsl(31 32% 44%));
+  box-shadow:
+    /* the rim, and the dark inside of an empty basket */
+    inset 0 calc(var(--lvcm) * 2) 0 hsl(38 46% 72% / 0.8),
+    inset 0 calc(var(--lvcm) * 5) calc(var(--lvcm) * 4) calc(var(--lvcm) * -2) hsl(28 30% 20% / 0.55),
+    inset 0 -8px 12px -6px hsl(28 30% 20% / 0.45);
+}
+/* THE THRESHOLD — the way out.
+   `LARDER5` § 5.1 puts the doorway at the NEAR EDGE, "unrendered because it is
+   behind them", so the room must not draw a little door standing on its own
+   floor: the household is already in the doorway. What CAN be drawn is the one
+   part of it they can see — the worn stone threshold at their feet, with the
+   passage beyond it falling away toward the viewer. Carrying something over it
+   is carrying it out of the house, which is the direction the act actually has. */
+.lv-place.is-doorway .lv-place-art {
+  width: calc(var(--lvcm) * 58);
+  height: calc(var(--lvcm) * 15);
+  border-radius: 1px;
+  background:
+    /* the passage beyond, falling away toward the household */
+    linear-gradient(180deg, transparent 0 62%, hsl(28 20% 20% / 0.5) 78%, hsl(28 18% 13% / 0.8) 100%),
+    /* the threshold stone, worn hollow in the middle by everyone who ever
+       carried something out */
+    radial-gradient(64% 120% at 50% 40%, hsl(var(--lv-stone-dark)) 0%, hsl(var(--lv-stone)) 76%),
+    linear-gradient(180deg, hsl(var(--lv-stone)) 0%, hsl(var(--lv-stone-dark)) 100%);
+  box-shadow:
+    inset 0 1px 0 hsl(45 44% 96% / 0.8),
+    inset 0 calc(var(--lvcm) * -1) 0 hsl(28 24% 30% / 0.35);
+}
+.lv-place.is-doorway .lv-place-art::after { display: none; }
+/* A destination is LIT when a thing is about to be set down in it. Places, not
+   modes: nothing "enters drag mode" and no zone lights up as a rectangle. */
+.lv-place.is-over .lv-place-art {
+  box-shadow:
+    inset 0 0 0 2px hsl(74 32% 42% / 0.7),
+    0 0 0 6px hsl(var(--lv-daylight) / 0.5);
+}
+.lv-place.is-over { color: rgba(var(--lv-ink), 0.95); }
+
+/* The other places in the house a carried thing can be set down — present only
+   while something is being carried, because a place to put a thing down is only
+   a question when a thing is in the hand. The same outcomes live in every
+   object's own menu for anyone not dragging (`LARDER1` § 10). */
+.lv-carrying {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--lvcm) * 1.5);
+  padding-top: calc(var(--lvcm) * 1);
+}
+.lv-carry-target {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 40px;
+  padding: calc(var(--lvcm) * 1.2) calc(var(--lvcm) * 2.6);
+  border-radius: 3px;
+  border: 1px solid hsl(var(--lv-oak-mid) / 0.4);
+  background: linear-gradient(180deg, hsl(42 44% 95% / 0.9), hsl(40 30% 88% / 0.9));
+  color: rgba(var(--lv-ink), 0.82);
+  font-size: max(11px, calc(var(--lvcm) * 3));
+  font-weight: 600;
+}
+.dark .lv-carry-target {
+  background: linear-gradient(180deg, hsl(36 12% 26% / 0.9), hsl(34 12% 20% / 0.9));
+  color: hsl(38 22% 80%);
+}
+.lv-carry-target.is-over {
+  border-color: var(--lv-focus);
+  background: hsl(74 32% 42% / 0.18);
+}
+
+/* ── WHAT STANDS BY THE DOOR ─────────────────────────────────────────────────
+   The one add-item gesture (`LARDER1` § 6) and the Companion's own door
+   (GEA8 — advice is the Companion's, never the room's). They are the only two
+   pieces of chrome the room admits, and they are admitted because they are
+   things a household reaches for at the door on the way in and out.
+
+   They keep the shared `.lardr-*` vocabulary — its markup, its behaviour and
+   its test hooks are unchanged — but they are re-materialised HERE, in the
+   room's own paper and oak, and bounded to a hand's width. A rounded translucent
+   web card laid on flagstones is a second ground (`LARDER5` § 5.2), and it is
+   the single most visible way a room turns back into a page. */
+.lv-door .lardr-add,
+.lv-door .lardr-suggest {
+  max-width: calc(var(--lvcm) * 148);
+  border-radius: 3px;
+  border: 1px solid hsl(var(--lv-oak-mid) / 0.34);
+  box-shadow: 0 3px 8px -4px hsl(28 30% 20% / 0.4);
+}
+.lv-door .lardr-add {
+  background: linear-gradient(180deg, hsl(42 46% 96% / 0.96), hsl(40 32% 91% / 0.96));
+}
+.dark .lv-door .lardr-add { background: linear-gradient(180deg, hsl(36 12% 24% / 0.96), hsl(34 12% 19% / 0.96)); }
+.lv-door .lardr-add-input,
+.lv-door .lardr-add-btn,
+.lv-door .lardr-add-chip { border-radius: 3px; }
+.lv-door .lardr-suggest {
+  background: linear-gradient(180deg, hsl(38 36% 88% / 0.96), hsl(35 28% 80% / 0.96));
+}
+.dark .lv-door .lardr-suggest { background: linear-gradient(180deg, hsl(36 14% 26% / 0.96), hsl(34 13% 21% / 0.96)); }
+.lv-door .lardr-link { align-self: flex-start; }
+
+/* ── An asset drawn as its measured CONTENT box; artwork overflows for shadows ── */
 .lv-asset { position: relative; display: block; flex: none; }
 .lv-asset > img {
   position: absolute;
@@ -93,57 +1198,7 @@
   user-select: none;
 }
 
-/* A shelf group: the board, with its jars seated on the measured board line. */
-.lv-shelfgroup { position: relative; }
-.lv-shelf-seated {
-  position: absolute;
-  left: 4%;
-  right: 4%;
-  top: 0;
-  transform: translateY(-100%);
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: calc(var(--lvcm) * 4);
-  z-index: 2;
-}
-
-/* The spice rack: small jars seated on the lower rail line, in front of the
-   rack's solid back panel (the artwork is one plate — a jar behind it would
-   vanish, so the jar stands proud of the rail instead). */
-.lv-rackgroup { position: relative; }
-.lv-rack-seated {
-  position: absolute;
-  left: 10%;
-  right: 10%;
-  top: 78%;
-  transform: translateY(-100%);
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: calc(var(--lvcm) * 3);
-  z-index: 2;
-}
-
-/* The preparation table: fruit stands on the measured table top. */
-.lv-tablegroup { position: relative; }
-.lv-table-seated {
-  position: absolute;
-  left: 8%;
-  right: 8%;
-  top: 0;
-  transform: translateY(-100%);
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: flex-end;
-  justify-content: center;
-  /* Wide enough that each piece's hanging caption never collides with its neighbour's. */
-  gap: calc(var(--lvcm) * 11);
-  z-index: 2;
-}
-.lv-table-empty { position: static; transform: none; }
-
-/* An interactive staple object (jar, produce, or honest chalk tag). */
+/* ── Physical objects: the household's own things ──────────────────────────── */
 .lv-object {
   position: relative;
   display: inline-flex;
@@ -154,18 +1209,27 @@
   padding: 0;
   cursor: grab;
   touch-action: none;
-  transition: transform 0.15s ease, filter 0.15s ease;
+  color: inherit;
+  transition: transform 0.14s ease, filter 0.14s ease;
 }
-.lv-object:hover { transform: translateY(-3px); filter: drop-shadow(0 6px 6px rgba(58, 44, 28, 0.18)); }
-.lv-object:focus-visible { outline: 2px solid #7c8a41; outline-offset: 3px; border-radius: 6px; }
-.lv-object:active { cursor: grabbing; }
-.lv-object.is-dragging { opacity: 0.35; }
+/* AN OBJECT YOU COULD PICK UP. The affordance is physical, not chromatic: the
+   thing lifts a little off the shelf under the pointer and gathers its own
+   shadow, the way a jar does when a hand closes round it. */
+.lv-object:hover { transform: translateY(-3px); filter: drop-shadow(0 7px 6px rgba(48, 36, 22, 0.22)); }
+.lv-object:focus-visible { outline: 2px solid var(--lv-focus); outline-offset: 3px; border-radius: 5px; }
+.lv-object:active { cursor: grabbing; transform: translateY(-1px); }
+.lv-object.is-dragging { opacity: 0.28; }
+/* On the wall an object is looked at, not handled — the berth is the way in. */
+.lv-object.is-preview { cursor: inherit; pointer-events: none; }
+.lv-object.is-preview:hover { transform: none; filter: none; }
+
 @media (prefers-reduced-motion: reduce) {
-  .lv-object { transition: none; }
-  .lv-object:hover { transform: none; }
+  .lv-object, .lv-berth, .lv-piece, .lv-place { transition: none; }
+  .lv-object:hover, .lv-berth:hover, .lv-piece:hover, .lv-place:hover { transform: none; }
+  .lv-object:active { transform: none; }
 }
 
-/* The jar's runtime chalk label (shared spec label law — never baked wording). */
+/* The jar's runtime chalk label (never baked wording — the shared label law). */
 .lv-jar-label {
   position: absolute;
   display: flex;
@@ -188,129 +1252,195 @@
   z-index: 3;
 }
 
-/* A quiet caption beneath produce (its name in the household's words). It
-   hangs BELOW the seat line so the object's feet stay on the surface. */
+/* The shelf-edge label: the household's own words for the thing standing above
+   it, slipped onto the board's front face where a pantry keeps its labels. */
 .lv-caption {
   position: absolute;
   top: 100%;
   left: 50%;
   transform: translateX(-50%);
-  margin-top: 2px;
-  font-size: max(10px, calc(var(--lvcm) * 2.4));
+  margin-top: 3px;
+  padding: 2px 6px;
+  border-radius: 2px;
+  background: hsl(42 42% 96% / 0.94);
+  box-shadow: 0 1px 2px hsl(28 30% 22% / 0.28);
+  font-size: max(11px, calc(var(--lvcm) * 3));
   font-weight: 600;
-  color: rgba(58, 44, 28, 0.78);
+  color: rgba(var(--lv-ink), 0.92);
   width: max-content;
-  max-width: calc(var(--lvcm) * 34);
+  max-width: calc(var(--lvcm) * 20);
   text-align: center;
-  line-height: 1.15;
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  z-index: 5;
 }
-.dark .lv-caption { color: hsl(38 22% 78%); }
-.lv-furniture-caption {
-  display: block;
-  margin: 4px auto 0;
-  font-size: 0.78rem;
-  color: rgba(58, 44, 28, 0.6);
-  text-align: center;
-}
-.dark .lv-furniture-caption { color: hsl(38 16% 62%); }
+.dark .lv-caption { background: hsl(34 16% 22% / 0.94); color: hsl(38 26% 86%); }
 
-/* The HONEST GAP: a wooden chalk tag carrying the household's own words.
-   Deliberately NOT a drawn jar or food (Principle 6 — honest gaps). */
+/* ═══ THE HONEST GAP — a plain packet, standing at true scale ════════════════
+   `LARDER6` governed placeholder, recorded as an implementation gap.
+
+   The approved Life Register holds SEVEN jars and TWO produce masters. Almost
+   everything a real household keeps therefore has no approved artwork, and the
+   room must still be a room: a shelf carrying nothing but floating words is not
+   a larder, it is a list in a costume, and it breaks `RC1` outright.
+
+   So a staple with no approved visual stands as a PLAIN UNMARKED PACKET at its
+   own depicted size (18 cm), in the room's own paper, under the room's own one
+   light, carrying the household's OWN WORDS on its label. It is drawn in CSS,
+   introduces no artwork, and — this is the whole of its honesty — **it does not
+   depict the food**. It claims only that something is kept here, which is
+   exactly what the room knows. It is never a redrawn jar and never a guessed
+   food (Core Principle 6; `LARDER5` § 13's "honest absence").
+
+   It is a PLACEHOLDER. The gap closes when the Life Register grows, and every
+   packet that becomes a jar does so without touching this room. */
 .lv-tag {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 26px;
-  padding: 4px 8px;
-  border-radius: 6px;
-  background: linear-gradient(180deg, #47392a, #382c1f);
-  border: 1px solid rgba(138, 97, 50, 0.75);
-  box-shadow: 0 1px 3px rgba(58, 44, 28, 0.25);
-  color: #efe6d4;
-  font-family: "Nunito Sans", sans-serif;
-  font-weight: 500;
-  font-size: max(10px, calc(var(--lvcm) * 2.1));
-  line-height: 1.15;
-  max-width: calc(var(--lvcm) * 30);
-  text-align: center;
-}
-
-/* ── Furniture with doors (cupboards, drawer units, the pet worktable) ───────── */
-.lv-store { position: relative; display: flex; flex-direction: column; align-items: center; }
-.lv-store-door {
   position: relative;
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  display: block;
-}
-.lv-store-door:focus-visible { outline: 2px solid #7c8a41; outline-offset: 4px; border-radius: 8px; }
-
-/* The furniture's quiet name plate — recognition, not a form header. */
-.lv-store-plate {
-  position: absolute;
-  left: 50%;
-  bottom: calc(var(--lvcm) * -1);
-  transform: translate(-50%, 100%);
   display: flex;
-  align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-  color: rgba(58, 44, 28, 0.78);
-  font-size: 0.78rem;
-}
-.lv-store-plate b { font-weight: 700; }
-.lv-store-plate small { color: rgba(58, 44, 28, 0.55); }
-.dark .lv-store-plate { color: hsl(38 22% 78%); }
-.dark .lv-store-plate small { color: hsl(38 16% 60%); }
-
-/* The opened interior: the REAL contents, on warm timber. */
-.lv-inside {
-  margin-top: calc(var(--lvcm) * 7);
-  width: min(92vw, calc(var(--lvcm) * 120));
-  border-radius: 10px;
-  border: 1px solid rgba(58, 44, 28, 0.18);
-  background: linear-gradient(180deg, #efe3cc, #e7d8ba);
-  box-shadow: inset 0 2px 10px rgba(58, 44, 28, 0.18);
-  padding: 10px;
-  z-index: 4;
-}
-.dark .lv-inside { background: linear-gradient(180deg, hsl(34 16% 18%), hsl(32 14% 14%)); border-color: hsl(38 18% 40% / 0.3); }
-.lv-inside-row {
-  display: flex;
-  flex-wrap: wrap;
   align-items: flex-end;
   justify-content: center;
-  gap: calc(var(--lvcm) * 3);
+  width: calc(var(--lvcm) * 14);
+  height: calc(var(--lvcm) * 19);
+  padding: 0 calc(var(--lvcm) * 1) calc(var(--lvcm) * 3.4);
+  border-radius: 1px 1px 2px 2px;
+  /* plain kraft paper, lit from the upper-left like everything else */
+  background: linear-gradient(
+    100deg,
+    hsl(var(--lv-kraft-lit)) 0%,
+    hsl(var(--lv-kraft)) 46%,
+    hsl(var(--lv-kraft-deep)) 100%
+  );
+  box-shadow:
+    inset 0 calc(var(--lvcm) * 2.4) 0 hsl(var(--lv-kraft-deep) / 0.55),
+    inset 0 calc(var(--lvcm) * 2.9) 0 hsl(var(--lv-kraft-lit) / 0.5),
+    0 3px 6px -3px hsl(28 30% 20% / 0.45);
+  color: rgba(var(--lv-ink), 0.86);
+  font-family: "Nunito Sans", sans-serif;
+  font-weight: 600;
+  font-size: max(8px, calc(var(--lvcm) * 2.4));
+  line-height: 1.08;
+  text-align: center;
+  overflow: hidden;
 }
+/* the paper label the household's own words are written on */
+.lv-tag::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--lvcm) * 1);
+  right: calc(var(--lvcm) * 1);
+  bottom: calc(var(--lvcm) * 2.4);
+  height: calc(var(--lvcm) * 8.4);
+  border-radius: 1px;
+  background: linear-gradient(180deg, hsl(44 42% 94%), hsl(42 30% 88%));
+  box-shadow: inset 0 0 0 1px hsl(34 22% 70% / 0.6);
+}
+.lv-tag > span {
+  position: relative;
+  z-index: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+  width: 100%;
+  padding-bottom: calc(var(--lvcm) * 0.6);
+}
+.dark .lv-tag { color: hsl(38 20% 82%); }
+.dark .lv-tag::before { background: linear-gradient(180deg, hsl(38 12% 32%), hsl(36 12% 26%)); }
 
-/* Drag overlay ghost sizing. */
+/* The thing in the hand: the same object, at the same one scale (§ 7.4 — there
+   is no camera, so nothing grows because it is being carried). */
+.lv-drag-overlay {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  background: hsl(42 44% 97% / 0.92);
+  box-shadow: 0 8px 18px -8px hsl(28 30% 20% / 0.5);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(var(--lv-ink), 0.9);
+}
+.dark .lv-drag-overlay { background: hsl(34 14% 22% / 0.94); color: hsl(38 22% 82%); }
 .lv-drag-overlay .lv-asset { pointer-events: none; }
 
-/* ── Mobile: the same room, one physical section at a time ──────────────────── */
-@media (max-width: 860px) {
-  .lv-room { --lvcm: clamp(2px, calc((100vw - 48px) / 170), 3.2px); }
+/* ══ THE PHONE: the same room, from the same place, through a narrower field ══
+   NOT the desktop compressed, NOT a reduced Larder, and NOT a list. The station
+   point, the projection, the light and the scale are unchanged (`LARDER5`
+   § 12): a phone is a narrower view of ONE room.
 
-  .lv-elevation { gap: calc(var(--lvcm) * 16); }
-
-  .lv-wall-band {
-    flex-direction: column;
-    align-items: center;
-    gap: calc(var(--lvcm) * 16);
+   The three walls are transposed into one continuous wall, read top to bottom
+   in the order the household moves through the room — the aperture and the
+   working wall, the Dry Store, the worktop, the fitted run, and THE FLOOR LAST,
+   because reaching the floor is how the household knows they have seen the
+   whole room. A room that ends is a room that can be finished. */
+@media (max-width: 767px) {
+  /* Closer to the wall: the same centimetre, more pixels — one scale, one
+     room, a different distance to stand at. */
+  .lardr-room.lv-room {
+    --lvcm: clamp(2.8px, calc((100vw - 28px) / 84), 4.6px);
+    --lv-terminus-w: 0;
+    padding-bottom: 5.5rem;
   }
-  .lv-rack-bay { padding-top: 0; }
 
-  .lv-floor-band {
-    flex-direction: column;
-    align-items: center;
-    gap: calc(var(--lvcm) * 16);
-    border-bottom: none;
+  /* The wall is read top to bottom, so the returns come out of the grid and
+     stand above the back wall. The casement keeps a WINDOW's proportion and
+     holds only part of the wall's width — plaster continues past it on the
+     right — which is what stops it becoming a banner across the top of a page. */
+  .lv-walls {
+    grid-template-columns: minmax(0, 1fr);
+    padding-right: 0;
+    gap: calc(var(--lvcm) * 3);
   }
-  /* Semantic order IS the visual order on mobile. */
-  .lv-order-1 { order: 0; }
-  .lv-order-2 { order: 0; }
-  .lv-order-3 { order: 0; }
+  .lv-return { width: min(58%, 230px); padding-bottom: calc(var(--lvcm) * 2); }
+  .lv-return::after { display: none; }
+  /* The aperture keeps a WINDOW's proportion and part of the wall's width so it
+     is met as a window in a room, never as a picture across the top of a page —
+     but it must not BE the first screenful either, or the household enters the
+     view instead of the room (`LARDER5` § 12). */
+  .lv-casement { height: calc(var(--lvcm) * 52); }
+  .lv-hangings { align-items: flex-start; padding: calc(var(--lvcm) * 4) 0 calc(var(--lvcm) * 3); }
 
-  .lv-store-plate { position: static; transform: none; margin-top: 4px; white-space: normal; justify-content: center; }
+  /* One bay wide: a full-width stretch of shelf is a comfortable target and a
+     readable label, and the board is long enough to stand things on. */
+  .lv-bays { grid-template-columns: minmax(0, 1fr); gap: calc(var(--lvcm) * 1) 0; }
+
+  /* The run wraps onto the floor rather than shrinking below a touch target,
+     and the terminus joins it as the last piece rather than ending a wall
+     that, on a phone, has no right-hand end to stand at. */
+  .lv-run {
+    position: relative;
+    right: auto;
+    bottom: auto;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    row-gap: calc(var(--lvcm) * 2);
+  }
+  .lv-terminus {
+    position: relative;
+    right: auto;
+    bottom: auto;
+    width: auto;
+    justify-content: flex-start;
+  }
+  .lv-body { padding-bottom: 0; display: flex; flex-direction: column; }
+  .lv-worktop {
+    position: relative;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    order: 1;
+    margin-inline: calc(50% - 50vw);
+    margin-block: calc(var(--lvcm) * 2) 0;
+  }
+  .lv-run { order: 2; }
+  .lv-terminus { order: 3; }
+
+  .lv-floor-plan { grid-template-columns: minmax(0, 1fr); gap: calc(var(--lvcm) * 4); }
+  .lv-foreground { margin-top: calc(var(--lvcm) * -18); justify-self: start; }
 }

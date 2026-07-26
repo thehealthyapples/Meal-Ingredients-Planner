@@ -13,6 +13,12 @@
  *     the view IS part of the room's purpose." Real joinery — see its own header.
  *   • <OrchardRoomWindow /> — THE E2 ROOMS, at E2, and NOTHING at E1/E0. Added by
  *     EXPADOPT1; see its header for why a window is not the wallpaper BEH-7 retired.
+ *   • <OrchardCasement />   — an E2 ROOM THAT DRAWS ITS OWN APERTURE, at E2. Added by
+ *     LIVING_LARDER_CANONICAL_EXPERIENCE_REFINEMENT (2026-07-24) for the Larder, which
+ *     is a modelled architectural space and therefore has a real window in its wall
+ *     rather than a band across the top of the page. Same asset, same E2 exposure
+ *     constant, same stillness — see its own header for why this is not a fourth
+ *     exposure level and not a second owner.
  *
  * EXPADOPT1 corrected this list. It read "exactly two shapes" and named
  * `<OrchardOpenView />` as Home's — a shape UX2 had already superseded with
@@ -297,6 +303,59 @@ export function OrchardRoomWindow({ exposure }: { exposure: "e0" | "e1" | "e2" }
   );
 }
 
+/**
+ * LIVING_LARDER_CANONICAL_EXPERIENCE_REFINEMENT (2026-07-24) — THE CASEMENT.
+ *
+ * The orchard seen through a room's OWN window, at the room's own governed E2
+ * exposure. This exists for exactly one reason: a room that is drawn as a
+ * modelled architectural space has a **wall**, and a view arrives through an
+ * opening cut into that wall, not as a band laid across the top of the page. The
+ * Larder is the first such room; `OrchardRoomWindow` above remains every other
+ * E2 room's, unchanged and unretired, because those rooms are pages with a
+ * threshold and a band is the honest shape for them.
+ *
+ * ── WHY THIS IS NOT A FOURTH EXPOSURE LEVEL ──
+ * It is not a new *amount* of orchard; it is the same amount, framed by the room
+ * instead of by the layout. The exposure is still read from
+ * `--orchard-exposure-e2` — the per-domain governed constant (Blueprint § 6.2
+ * rule 1) — and this component still renders NOTHING below E2, so a room cannot
+ * open a window by importing a different component. § 6.2's own definition of E2
+ * is *"a framed, partial presence in one committed region the content
+ * deliberately does not cover"*, and an aperture in a wall is the most literal
+ * possible reading of it: the region is committed by joinery.
+ *
+ * ── WHY THIS IS NOT A SECOND OWNER ──
+ * This file owns the ASSET (Blueprint § 6.1; adoption register
+ * `orchard-environment`). The shape lives here, beside the other three, exactly
+ * as `OrchardWindow` does — and, exactly as `OrchardWindow` does, it owns only
+ * the asset, its crop and its exposure. **The joinery is the consuming room's**
+ * (`larder-room.css`), which is the same division of labour Home has held since
+ * UX2. No second `url(...)` and no second file.
+ *
+ * ── THE CROP ──
+ * Anchored at `50% 62%`, matching `MASK_E2`'s object-position, so the asset's
+ * upper-right sun-flare never sits centre-frame against Blueprint § 7's one
+ * upper-left morning. A pantry window is at working height: what it shows is the
+ * trees and the path, not the sky.
+ *
+ * STILL — no drift, no parallax, no ambience (§ 6.1). Carries no type: the glass
+ * is glass, and everything the household reads stands in the room (§ 6.1's
+ * non-negotiable, and the reason Home's sill is load-bearing in perpetuity).
+ */
+export function OrchardCasement({ exposure }: { exposure: "e0" | "e1" | "e2" }) {
+  if (exposure !== "e2") return null;
+  return (
+    <img
+      src="/orchard.webp"
+      alt=""
+      aria-hidden
+      data-testid="larder-orchard-casement"
+      data-orchard-exposure="e2"
+      className="lv-casement-glass"
+      style={{ opacity: "var(--orchard-exposure-e2)" }}
+    />
+  );
+}
 
 /* `OrchardOpenView`, `MASK_H`, `MASK_BAND` and `MASK_V` stood here until
  * EXPADOPT1 (2026-07-20) retired them — 176 lines with zero consumers, left
