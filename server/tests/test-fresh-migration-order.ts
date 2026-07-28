@@ -72,6 +72,33 @@ assert(
   "all three conversation-turn FK repairs must be idempotently guarded",
 );
 
+// A fresh database runs the baseline first, so later historical migrations must not blindly
+// re-add constraints the baseline already established. A later duplicate is safe only when that
+// migration either drops the named constraint first or checks pg_constraint before adding it.
+const baselineConstraintNames = new Set(
+  [...baseline.matchAll(/(?:ADD\s+)?CONSTRAINT\s+["`]?([A-Za-z_][A-Za-z0-9_]*)/gi)]
+    .map((match) => match[1].toLowerCase()),
+);
+const duplicateOffenders: string[] = [];
+for (let i = baselineIndex + 1; i < idMatches.length; i += 1) {
+  const entryStart = idMatches[i].index!;
+  const entryEnd = idMatches[i + 1]?.index ?? appendStart;
+  const entry = source.slice(entryStart, entryEnd);
+  for (const add of entry.matchAll(/ADD\s+CONSTRAINT\s+["`]?([A-Za-z_][A-Za-z0-9_]*)/gi)) {
+    const name = add[1].toLowerCase();
+    if (!baselineConstraintNames.has(name)) continue;
+    const beforeAdd = entry.slice(0, add.index);
+    const dropsFirst = new RegExp('DROP\\s+CONSTRAINT\\s+IF\\s+EXISTS\\s+["`]?' + name + '\\b', "i").test(beforeAdd);
+    const checksFirst = beforeAdd.includes("pg_constraint") && beforeAdd.includes("NOT EXISTS");
+    if (!dropsFirst && !checksFirst) duplicateOffenders.push(`${idMatches[i][1]}:${name}`);
+  }
+}
+assert(
+  duplicateOffenders.length === 0,
+  `later migrations re-add baseline constraints without a guard: ${duplicateOffenders.join(", ")}`,
+);
+
 console.log("fresh migration forward-reference audit: PASS");
+console.log("later baseline-constraint duplicate audit: PASS");
 console.log(`forward targets: ${[...forwardTargets].sort().join(", ")}`);
 console.log(`runner: ${runnerPath}`);

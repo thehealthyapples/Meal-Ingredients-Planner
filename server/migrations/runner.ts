@@ -1573,11 +1573,19 @@ const MIGRATIONS: Migration[] = [
   {
     id: "2026-03-15_meals_meal_template_fk",
     statements: [
-      `ALTER TABLE meals
-        ADD CONSTRAINT meals_meal_template_id_fkey
-        FOREIGN KEY (meal_template_id)
-        REFERENCES meal_templates(id)
-        ON DELETE SET NULL`,
+      `DO $$ BEGIN
+         IF NOT EXISTS (
+           SELECT 1 FROM pg_constraint c
+           JOIN pg_class r ON r.oid = c.conrelid
+           WHERE c.conname = 'meals_meal_template_id_fkey' AND r.relname = 'meals'
+         ) THEN
+           ALTER TABLE meals
+             ADD CONSTRAINT meals_meal_template_id_fkey
+             FOREIGN KEY (meal_template_id)
+             REFERENCES meal_templates(id)
+             ON DELETE SET NULL;
+         END IF;
+       END $$`,
     ],
   },
 
