@@ -101,6 +101,7 @@
     "verify:branch-protection": "tsx scripts/ci/verify-branch-protection.ts",
     "db:push": "tsx scripts/db/schema-push-guard.ts",
     "verify:schema-coverage": "tsx scripts/ci/verify-schema-migration-coverage.ts",
+    "test:fresh-migration-order": "tsx server/tests/test-fresh-migration-order.ts",
     "verify:publication": "tsx scripts/ci/verify-canonical-publication.ts",
     "verify:coherence": "tsx scripts/ci/verify-governing-coherence.ts",
     "verify:living-home-assets": "tsx scripts/ci/verify-living-home-assets.ts",
