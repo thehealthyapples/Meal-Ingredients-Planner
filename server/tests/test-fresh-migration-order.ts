@@ -7,48 +7,71 @@ function assert(condition: unknown, message: string): asserts condition {
 
 const runnerPath = path.resolve(process.argv[2] ?? "server/migrations/runner.ts");
 const source = fs.readFileSync(runnerPath, "utf8");
-
-const baselineId = 'id: "2026-07-17_conv1_p10_schema_coverage"';
-const registryId = 'id: "2026-06-18_ws0_knowledge_registry"';
-const fixId = 'id: "2026-07-28_fix_canonical_food_knowledge_food_slug_fkey_order"';
 const appendMarker = "// ← Add new migrations here, appended to the end";
-const fkSql = /ALTER TABLE\s+"canonical_food"\s+ADD CONSTRAINT\s+"canonical_food_knowledge_food_slug_fkey"[\s\S]*?REFERENCES\s+knowledge_foods\(slug\)\s+ON DELETE SET NULL;/g;
+const baselineId = 'id: "2026-07-17_conv1_p10_schema_coverage"';
+const knowledgeRepairId = 'id: "2026-07-28_fix_canonical_food_knowledge_food_slug_fkey_order"';
+const conversationRepairId = 'id: "2026-07-28_fix_conversation_turn_foreign_key_order"';
 
-const baselineStart = source.indexOf(baselineId);
-const registryStart = source.indexOf(registryId);
-const fixStart = source.indexOf(fixId);
+const idMatches = [...source.matchAll(/^\s*id:\s*"([^"]+)"/gm)];
+const baselineIndex = idMatches.findIndex((match) => match[1] === "2026-07-17_conv1_p10_schema_coverage");
+assert(baselineIndex >= 0, "baseline migration is missing");
+assert(idMatches[baselineIndex + 1], "migration following baseline is missing");
+
+const baselineStart = idMatches[baselineIndex].index!;
+const baselineEnd = idMatches[baselineIndex + 1].index!;
+const baseline = source.slice(baselineStart, baselineEnd);
 const appendStart = source.indexOf(appendMarker);
+assert(appendStart > baselineEnd, "append marker is missing");
 
-assert(baselineStart >= 0, "baseline migration is missing");
-assert(registryStart > baselineStart, "knowledge registry migration must follow the baseline");
-assert(fixStart > registryStart, "FK repair migration must follow knowledge_foods creation");
-assert(appendStart > fixStart, "FK repair migration must remain the final appended migration");
+const createdInBaseline = new Set(
+  [...baseline.matchAll(/CREATE TABLE IF NOT EXISTS\s+["`]?([A-Za-z_][A-Za-z0-9_]*)/gi)]
+    .map((match) => match[1].toLowerCase()),
+);
+const baselineStatements = [...baseline.matchAll(/`([\s\S]*?)`/g)].map((match) => match[1]);
+const forwardTargets = new Set<string>();
 
-const baselineSection = source.slice(baselineStart, registryStart);
-const registrySection = source.slice(registryStart, fixStart);
-const fixSection = source.slice(fixStart, appendStart);
+for (const statement of baselineStatements) {
+  for (const reference of statement.matchAll(/REFERENCES\s+["`]?([A-Za-z_][A-Za-z0-9_]*)\s*\(/gi)) {
+    const target = reference[1].toLowerCase();
+    if (createdInBaseline.has(target)) continue;
+    forwardTargets.add(target);
+    assert(
+      statement.includes(`to_regclass('public.${target}') IS NOT NULL`),
+      `fresh-schema ordering regression: baseline forward reference to ${target} is not guarded`,
+    );
+  }
+}
 
 assert(
-  (baselineSection.match(fkSql) ?? []).length === 1,
-  "baseline must preserve the historical canonical_food knowledge_foods FK statement",
-);
-assert(
-  baselineSection.includes("to_regclass('public.knowledge_foods') IS NOT NULL"),
-  "fresh-schema ordering regression: baseline FK must be deferred until knowledge_foods exists",
-);
-fkSql.lastIndex = 0;
-assert(
-  /CREATE TABLE IF NOT EXISTS knowledge_foods\s*\(/.test(registrySection),
-  "knowledge registry migration must create knowledge_foods",
-);
-assert(
-  (fixSection.match(fkSql) ?? []).length === 1,
-  "final repair migration must add the canonical_food knowledge_foods FK exactly once",
-);
-assert(
-  fixSection.includes("pg_constraint") && fixSection.includes("IF NOT EXISTS"),
-  "final FK repair must remain idempotently guarded",
+  [...forwardTargets].sort().join(",") === "conversation_turns,knowledge_foods",
+  `unexpected baseline forward-reference targets: ${[...forwardTargets].sort().join(",")}`,
 );
 
-console.log("fresh migration order: PASS");
+const knowledgeCreate = source.indexOf("CREATE TABLE IF NOT EXISTS knowledge_foods");
+const conversationCreate = source.indexOf("CREATE TABLE IF NOT EXISTS conversation_turns");
+const knowledgeRepair = source.indexOf(knowledgeRepairId);
+const conversationRepair = source.indexOf(conversationRepairId);
+assert(knowledgeCreate > baselineEnd, "knowledge_foods must be created after the baseline");
+assert(conversationCreate > baselineEnd, "conversation_turns must be created after the baseline");
+assert(knowledgeRepair > knowledgeCreate, "knowledge_foods FK repair must follow table creation");
+assert(conversationRepair > conversationCreate, "conversation_turns FK repair must follow table creation");
+assert(appendStart > conversationRepair, "conversation-turn FK repair must remain appended at the end");
+
+const conversationRepairSection = source.slice(conversationRepair, appendStart);
+const expectedConversationConstraints = [
+  "companion_action_proposals_conversation_turn_id_fkey",
+  "companion_guidance_events_conversation_turn_id_fkey",
+  "companion_response_feedback_conversation_turn_id_fkey",
+];
+for (const constraint of expectedConversationConstraints) {
+  const occurrences = conversationRepairSection.split(constraint).length - 1;
+  assert(occurrences === 2, `repair migration must check and add ${constraint} exactly once`);
+}
+assert(
+  (conversationRepairSection.match(/IF NOT EXISTS\s*\(/g) ?? []).length === 3,
+  "all three conversation-turn FK repairs must be idempotently guarded",
+);
+
+console.log("fresh migration forward-reference audit: PASS");
+console.log(`forward targets: ${[...forwardTargets].sort().join(", ")}`);
 console.log(`runner: ${runnerPath}`);
