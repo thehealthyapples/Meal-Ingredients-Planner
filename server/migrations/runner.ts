@@ -3404,6 +3404,24 @@ const MIGRATIONS: Migration[] = [
   },
 
   {
+    // Compatibility repair for schema state present in Replit/Drizzle but omitted
+    // from this TypeScript runner. Neon has a contiguous ledger through BUS2A, so
+    // this new ID must run here: KNOW2 references reviewed_at immediately below.
+    // Every change is additive and idempotent; nullable columns need no backfill,
+    // while source_refs uses the intended deterministic empty-array default.
+    id: "2026-07-28_reconcile_schema_prerequisites",
+    statements: [
+      `ALTER TABLE knowledge_food_nutrients ADD COLUMN IF NOT EXISTS source_refs JSONB NOT NULL DEFAULT '[]'::jsonb`,
+      `ALTER TABLE knowledge_food_nutrients ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ`,
+      `ALTER TABLE knowledge_food_nutrients ADD COLUMN IF NOT EXISTS reviewed_by TEXT`,
+      `ALTER TABLE knowledge_food_benefits ADD COLUMN IF NOT EXISTS reviewed_by TEXT`,
+      `ALTER TABLE knowledge_nutrient_benefits ADD COLUMN IF NOT EXISTS reviewed_by TEXT`,
+      `ALTER TABLE conversation_turns ADD COLUMN IF NOT EXISTS fallback_state TEXT`,
+      `ALTER TABLE knowledge_nutrients ADD COLUMN IF NOT EXISTS family TEXT`,
+    ],
+  },
+
+  {
     // KNOW2 — the terminal REJECTED state for a nutrition claim.
     //
     // KNOW5 gave every claim table `reviewed_at` + `reviewed_by`, and KNOW1 found
