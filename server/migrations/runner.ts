@@ -859,7 +859,7 @@ const MIGRATIONS: Migration[] = [
          END IF;
        END $$`,
       `DO $$ BEGIN
-         IF NOT EXISTS (
+         IF to_regclass('public.conversation_turns') IS NOT NULL AND NOT EXISTS (
            SELECT 1 FROM pg_constraint c
            JOIN pg_class r ON r.oid = c.conrelid
            WHERE c.conname = 'companion_action_proposals_conversation_turn_id_fkey' AND r.relname = 'companion_action_proposals'
@@ -868,7 +868,7 @@ const MIGRATIONS: Migration[] = [
          END IF;
        END $$`,
       `DO $$ BEGIN
-         IF NOT EXISTS (
+         IF to_regclass('public.conversation_turns') IS NOT NULL AND NOT EXISTS (
            SELECT 1 FROM pg_constraint c
            JOIN pg_class r ON r.oid = c.conrelid
            WHERE c.conname = 'companion_guidance_events_conversation_turn_id_fkey' AND r.relname = 'companion_guidance_events'
@@ -895,7 +895,7 @@ const MIGRATIONS: Migration[] = [
          END IF;
        END $$`,
       `DO $$ BEGIN
-         IF NOT EXISTS (
+         IF to_regclass('public.conversation_turns') IS NOT NULL AND NOT EXISTS (
            SELECT 1 FROM pg_constraint c
            JOIN pg_class r ON r.oid = c.conrelid
            WHERE c.conname = 'companion_response_feedback_conversation_turn_id_fkey' AND r.relname = 'companion_response_feedback'
@@ -3746,6 +3746,44 @@ const MIGRATIONS: Migration[] = [
            WHERE c.conname = 'canonical_food_knowledge_food_slug_fkey' AND r.relname = 'canonical_food'
          ) THEN
            ALTER TABLE "canonical_food" ADD CONSTRAINT "canonical_food_knowledge_food_slug_fkey" FOREIGN KEY (knowledge_food_slug) REFERENCES knowledge_foods(slug) ON DELETE SET NULL;
+         END IF;
+       END $$`,
+    ],
+  },
+
+  // ─── Fix — conversation_turn FK ordering on fresh databases ────────────────
+  // The baseline creates the three referencing companion tables, but conversation_turns is
+  // created later by the conversation-store migration. Baseline guards defer these constraints;
+  // this append-only migration adds them once both sides exist. Existing schemas no-op via the
+  // pg_constraint checks.
+  {
+    id: "2026-07-28_fix_conversation_turn_foreign_key_order",
+    statements: [
+      `DO $$ BEGIN
+         IF NOT EXISTS (
+           SELECT 1 FROM pg_constraint c
+           JOIN pg_class r ON r.oid = c.conrelid
+           WHERE c.conname = 'companion_action_proposals_conversation_turn_id_fkey' AND r.relname = 'companion_action_proposals'
+         ) THEN
+           ALTER TABLE "companion_action_proposals" ADD CONSTRAINT "companion_action_proposals_conversation_turn_id_fkey" FOREIGN KEY (conversation_turn_id) REFERENCES conversation_turns(id) ON DELETE CASCADE;
+         END IF;
+       END $$`,
+      `DO $$ BEGIN
+         IF NOT EXISTS (
+           SELECT 1 FROM pg_constraint c
+           JOIN pg_class r ON r.oid = c.conrelid
+           WHERE c.conname = 'companion_guidance_events_conversation_turn_id_fkey' AND r.relname = 'companion_guidance_events'
+         ) THEN
+           ALTER TABLE "companion_guidance_events" ADD CONSTRAINT "companion_guidance_events_conversation_turn_id_fkey" FOREIGN KEY (conversation_turn_id) REFERENCES conversation_turns(id) ON DELETE CASCADE;
+         END IF;
+       END $$`,
+      `DO $$ BEGIN
+         IF NOT EXISTS (
+           SELECT 1 FROM pg_constraint c
+           JOIN pg_class r ON r.oid = c.conrelid
+           WHERE c.conname = 'companion_response_feedback_conversation_turn_id_fkey' AND r.relname = 'companion_response_feedback'
+         ) THEN
+           ALTER TABLE "companion_response_feedback" ADD CONSTRAINT "companion_response_feedback_conversation_turn_id_fkey" FOREIGN KEY (conversation_turn_id) REFERENCES conversation_turns(id) ON DELETE CASCADE;
          END IF;
        END $$`,
     ],
