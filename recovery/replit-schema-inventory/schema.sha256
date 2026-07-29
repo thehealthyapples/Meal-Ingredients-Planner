@@ -1,0 +1,4 @@
+# SHA-256 checksums — verify with: sha256sum -c schema.sha256
+# content hash (structural payload, excludes meta): 872358e6a6e1f02228181c09ab4e2dd8b4743bb7dac6d82afde53fd404bd24a1
+8115cd7cc3906e4e83f348b552a605f4a09716a0643ecf371c6f7f4f70fed905  schema.json
+063bcd1a5f94048da02cfabc5bb1e4437ef6a0dff91a9b12fe38fb4fa1b1f957  schema.md

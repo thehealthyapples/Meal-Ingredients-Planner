@@ -1,0 +1,8 @@
+{
+  "formatVersion": 1,
+  "identityHashAlgorithm": "sha256(host,port,database,user)",
+  "identitySha256": "4d622b5241bacaf7f4e495d9dc85dbdeb636ffd7f123d1c64b0a01db8ddd1bd8",
+  "endpointDiscriminatorVerified": true,
+  "pinnedAt": "2026-07-29T07:39:49.324327+00:00",
+  "containsConnectionDetails": false
+}

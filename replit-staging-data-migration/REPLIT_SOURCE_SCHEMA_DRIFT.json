@@ -1,0 +1,266 @@
+{
+  "status": "PASS",
+  "metadataOnly": true,
+  "transactionReadOnly": true,
+  "sourceSnapshotContentHash": "872358e6a6e1f02228181c09ab4e2dd8b4743bb7dac6d82afde53fd404bd24a1",
+  "baseTableComparison": {
+    "matches": false,
+    "expectedTableCount": 104,
+    "actualTableCount": 104,
+    "onlyExpectedTables": [],
+    "onlyActualTables": [],
+    "changedTables": [
+      {
+        "table": "additives",
+        "onlyExpectedColumns": [],
+        "onlyActualColumns": [],
+        "changedColumnDefinitions": [
+          "aliases"
+        ]
+      },
+      {
+        "table": "canonical_food",
+        "onlyExpectedColumns": [],
+        "onlyActualColumns": [],
+        "changedColumnDefinitions": [
+          "availability_modifiers",
+          "peak_seasons"
+        ]
+      },
+      {
+        "table": "food_knowledge",
+        "onlyExpectedColumns": [],
+        "onlyActualColumns": [],
+        "changedColumnDefinitions": [
+          "tags"
+        ]
+      },
+      {
+        "table": "household_eaters",
+        "onlyExpectedColumns": [],
+        "onlyActualColumns": [],
+        "changedColumnDefinitions": [
+          "default_diet_types",
+          "hard_restrictions"
+        ]
+      },
+      {
+        "table": "ingredient_sources",
+        "onlyExpectedColumns": [],
+        "onlyActualColumns": [],
+        "changedColumnDefinitions": [
+          "eater_ids"
+        ]
+      },
+      {
+        "table": "knowledge_foods",
+        "onlyExpectedColumns": [],
+        "onlyActualColumns": [],
+        "changedColumnDefinitions": [
+          "aliases",
+          "common_forms"
+        ]
+      },
+      {
+        "table": "meal_templates",
+        "onlyExpectedColumns": [],
+        "onlyActualColumns": [],
+        "changedColumnDefinitions": [
+          "carb_slots",
+          "compatible_diets",
+          "nutrition_opportunities",
+          "protein_slots",
+          "sauce_slots",
+          "shared_base_components",
+          "style_tags",
+          "suitable_slots",
+          "topping_slots",
+          "veg_slots"
+        ]
+      },
+      {
+        "table": "meals",
+        "onlyExpectedColumns": [],
+        "onlyActualColumns": [],
+        "changedColumnDefinitions": [
+          "diet_types",
+          "ingredients",
+          "instructions",
+          "style_tags",
+          "suitable_slots"
+        ]
+      },
+      {
+        "table": "pantry_ingredient_knowledge",
+        "onlyExpectedColumns": [],
+        "onlyActualColumns": [],
+        "changedColumnDefinitions": [
+          "highlights",
+          "how_to_choose",
+          "supports",
+          "tags"
+        ]
+      },
+      {
+        "table": "planner_week_eater_overrides",
+        "onlyExpectedColumns": [],
+        "onlyActualColumns": [],
+        "changedColumnDefinitions": [
+          "diet_types"
+        ]
+      },
+      {
+        "table": "session",
+        "onlyExpectedColumns": [],
+        "onlyActualColumns": [],
+        "changedColumnDefinitions": [
+          "expire"
+        ]
+      },
+      {
+        "table": "user_preferences",
+        "onlyExpectedColumns": [],
+        "onlyActualColumns": [],
+        "changedColumnDefinitions": [
+          "diet_types",
+          "excluded_ingredients",
+          "health_goals",
+          "muted_opportunity_types",
+          "preferred_ingredients",
+          "preferred_stores"
+        ]
+      }
+    ]
+  },
+  "previousCheckComparisonIncludingViews": {
+    "matches": false,
+    "expectedTableCount": 104,
+    "actualTableCount": 104,
+    "onlyExpectedTables": [],
+    "onlyActualTables": [],
+    "changedTables": [
+      {
+        "table": "additives",
+        "onlyExpectedColumns": [],
+        "onlyActualColumns": [],
+        "changedColumnDefinitions": [
+          "aliases"
+        ]
+      },
+      {
+        "table": "canonical_food",
+        "onlyExpectedColumns": [],
+        "onlyActualColumns": [],
+        "changedColumnDefinitions": [
+          "availability_modifiers",
+          "peak_seasons"
+        ]
+      },
+      {
+        "table": "food_knowledge",
+        "onlyExpectedColumns": [],
+        "onlyActualColumns": [],
+        "changedColumnDefinitions": [
+          "tags"
+        ]
+      },
+      {
+        "table": "household_eaters",
+        "onlyExpectedColumns": [],
+        "onlyActualColumns": [],
+        "changedColumnDefinitions": [
+          "default_diet_types",
+          "hard_restrictions"
+        ]
+      },
+      {
+        "table": "ingredient_sources",
+        "onlyExpectedColumns": [],
+        "onlyActualColumns": [],
+        "changedColumnDefinitions": [
+          "eater_ids"
+        ]
+      },
+      {
+        "table": "knowledge_foods",
+        "onlyExpectedColumns": [],
+        "onlyActualColumns": [],
+        "changedColumnDefinitions": [
+          "aliases",
+          "common_forms"
+        ]
+      },
+      {
+        "table": "meal_templates",
+        "onlyExpectedColumns": [],
+        "onlyActualColumns": [],
+        "changedColumnDefinitions": [
+          "carb_slots",
+          "compatible_diets",
+          "nutrition_opportunities",
+          "protein_slots",
+          "sauce_slots",
+          "shared_base_components",
+          "style_tags",
+          "suitable_slots",
+          "topping_slots",
+          "veg_slots"
+        ]
+      },
+      {
+        "table": "meals",
+        "onlyExpectedColumns": [],
+        "onlyActualColumns": [],
+        "changedColumnDefinitions": [
+          "diet_types",
+          "ingredients",
+          "instructions",
+          "style_tags",
+          "suitable_slots"
+        ]
+      },
+      {
+        "table": "pantry_ingredient_knowledge",
+        "onlyExpectedColumns": [],
+        "onlyActualColumns": [],
+        "changedColumnDefinitions": [
+          "highlights",
+          "how_to_choose",
+          "supports",
+          "tags"
+        ]
+      },
+      {
+        "table": "planner_week_eater_overrides",
+        "onlyExpectedColumns": [],
+        "onlyActualColumns": [],
+        "changedColumnDefinitions": [
+          "diet_types"
+        ]
+      },
+      {
+        "table": "session",
+        "onlyExpectedColumns": [],
+        "onlyActualColumns": [],
+        "changedColumnDefinitions": [
+          "expire"
+        ]
+      },
+      {
+        "table": "user_preferences",
+        "onlyExpectedColumns": [],
+        "onlyActualColumns": [],
+        "changedColumnDefinitions": [
+          "diet_types",
+          "excluded_ingredients",
+          "health_goals",
+          "muted_opportunity_types",
+          "preferred_ingredients",
+          "preferred_stores"
+        ]
+      }
+    ]
+  },
+  "nonBaseRelationNames": [],
+  "conclusion": "BASE_TABLE_SCHEMA_DRIFT_REQUIRES_REVIEW"
+}
