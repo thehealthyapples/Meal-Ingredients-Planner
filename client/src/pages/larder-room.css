@@ -21,13 +21,17 @@
   --lvcm: clamp(2.1px, 0.26vw + 1.35px, 4px);
 }
 
-/* The room's own morning light on plaster — presentation only, no claim. */
+/* The room's own morning light on plaster — presentation only, no claim.
+   Direction matches the North Star (v3 "atmosphere pantry"): the warm daylight
+   enters from the window/orchard on the RIGHT, so the pool sits upper-right and
+   the left of the room falls into warmer shadow. (Fidelity fix: it previously
+   pooled upper-left, against the canonical light source.) */
 .lv-light {
   position: absolute;
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(120% 70% at 18% 0%, rgba(255, 244, 214, 0.55), transparent 55%),
+    radial-gradient(120% 72% at 85% 2%, rgba(255, 244, 214, 0.55), transparent 56%),
     linear-gradient(180deg, rgba(255, 250, 238, 0.25), transparent 40%);
 }
 .dark .lv-light { opacity: 0.25; }
