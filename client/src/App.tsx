@@ -54,6 +54,11 @@ const InvitationPage = lazy(() => import("@/pages/invitation-page"));
 // (the canonical route — LARDER1 §15: the rename is display-only) and retires
 // the SVG-glyph pantry-page room (retire-on-introduction, Principle 8).
 const LarderRoomPage = lazy(() => import("@/pages/larder-room"));
+// Settled visual language (2026-08-01, Option A · brass): the running Larder is the
+// photoreal Orchard Workroom with brass shelf-edge plaques. LarderRoomPage (the
+// constructed elevation) is retained as a fallback until the plaque room is
+// dev-verified. See LIVING_LARDER_BRASS_PLAQUE_IMPLEMENTATION.md.
+const LarderPlaqueRoom = lazy(() => import("@/pages/larder-plaque-room"));
 // COMM2 — the Orchard: Community as a place. ONE route for the whole room; the
 // Orchard overview, Neighbourhoods, the Village and the High Street are state
 // inside the page, never separate destinations.
@@ -399,7 +404,7 @@ function Router() {
       <Route path="/admin/knowledge-review" component={() => <ProtectedRoute component={AdminKnowledgeReviewPage} />} />
       <Route path="/admin/knowledge-claims" component={() => <ProtectedRoute component={AdminKnowledgeClaimsChrome} />} />
       <Route path="/admin/canonical-publication-integrity" component={() => <ProtectedRoute component={AdminCanonicalPublicationIntegrityChrome} />} />
-      <Route path="/pantry" component={() => <ProtectedRoute component={LarderRoomPage} />} />
+      <Route path="/pantry" component={() => <ProtectedRoute component={LarderPlaqueRoom} />} />
       {/* The Larder IS the pantry room (LARDER1 §2 — one room, one arrangement);
           the old preview door is honoured by redirect, never a rival room. */}
       <Route path="/larder"><Redirect to="/pantry" /></Route>

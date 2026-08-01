@@ -1,0 +1,177 @@
+/**
+ * The Living Larder — brass shelf-edge plaque interaction (settled visual language,
+ * 2026-08-01: Option A · brass). The photoreal room is the fixed, dominant
+ * background; interaction lives on the shelf edge as a brass plaque built into the
+ * cabinetry — never a card floating over the photograph.
+ *
+ * Progressive disclosure: L1 room → L2 shelf selected (plaque warms/enlarges, shelf
+ * brightens, count/status shown) → L3 that shelf's jars listed → L4 a jar acted on.
+ * Individual jar names are NEVER shown for every shelf at once — only for the
+ * selected shelf. The room always wins: if UI would dim the room, it is removed.
+ *
+ * NOTE: plaque/shelf %-anchors are tuned to the canonical room image aspect and
+ * must be verified/nudged against a running render (see the component header).
+ */
+
+.lpq-room {
+  position: relative;
+  width: 100%;
+  max-width: 1536px;
+  margin: 0 auto;
+  aspect-ratio: 1536 / 1024;           /* the canonical room's own ratio */
+  background: #d9cbb4 url("/images/living-larder/room/orchard-workroom.png") center/cover no-repeat;
+  border-radius: 10px;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Per-shelf warm highlight — transparent at rest; only this shelf's produce
+   brightens on hover/selection (soft-light keeps it a lift of the real photo,
+   never a flat overlay). */
+.lpq-shelf {
+  position: absolute;
+  border-radius: 10px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.28s ease;
+  background: radial-gradient(120% 120% at 50% 40%, rgba(255, 240, 205, 0.5), rgba(255, 236, 196, 0) 70%);
+  mix-blend-mode: soft-light;
+}
+.lpq-cat.is-hover .lpq-shelf,
+.lpq-cat.is-active .lpq-shelf { opacity: 1; }
+
+/* ── The brass plaque (built into the shelf edge) ──────────────────────────── */
+.lpq-plaque {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  min-width: 158px;
+  padding: 6px 12px 7px;
+  border: 0;
+  cursor: pointer;
+  text-align: center;
+  color: #43301a;
+  font-family: Georgia, "Nunito Sans", serif;
+  border-radius: 7px;
+  /* brushed-brass plate */
+  background: linear-gradient(180deg, #d2ab68 0%, #c19a56 46%, #a9843f 100%);
+  box-shadow:
+    0 1px 2px rgba(30, 20, 8, 0.45),                 /* seated on the wood */
+    inset 0 1px 0 rgba(248, 232, 176, 0.75),         /* top highlight */
+    inset 0 -1px 0 rgba(90, 66, 26, 0.6);            /* lower shade */
+  outline: 1px solid rgba(112, 84, 38, 0.9);
+  outline-offset: -1px;
+  /* at rest: subtle — recede toward the wood */
+  opacity: 0.9;
+  transition: transform 0.2s ease, opacity 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
+}
+/* tiny corner screws — the cabinet-maker's fixings */
+.lpq-plaque::before,
+.lpq-plaque::after {
+  content: "";
+  position: absolute;
+  top: 5px;
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #6f5326, #3f2e14);
+}
+.lpq-plaque::before { left: 6px; }
+.lpq-plaque::after { right: 6px; }
+
+.lpq-plaque__name {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  line-height: 1.15;
+  text-shadow: 0 1px 0 rgba(250, 236, 190, 0.55);   /* engraved lift */
+}
+/* count + status appear on selection (progressive disclosure) */
+.lpq-plaque__meta {
+  display: block;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  font-size: 11.5px;
+  color: #5c4620;
+  transition: max-height 0.24s ease, opacity 0.24s ease;
+}
+.lpq-plaque__pip {
+  display: inline-block;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  margin-right: 5px;
+  vertical-align: -1px;
+}
+.pip-well { background: #6a8a4a; }
+.pip-low  { background: #b08a42; }
+.pip-att  { background: #a85c40; }
+
+/* Hover: gently warm + enlarge */
+.lpq-plaque:hover,
+.lpq-plaque:focus-visible {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1.05);
+  filter: saturate(1.06) brightness(1.05);
+  box-shadow: 0 3px 8px rgba(30, 20, 8, 0.5), inset 0 1px 0 rgba(252, 238, 188, 0.9), inset 0 -1px 0 rgba(90, 66, 26, 0.6);
+  outline: none;
+}
+.lpq-plaque:focus-visible { box-shadow: 0 0 0 3px rgba(150, 118, 60, 0.55), 0 3px 8px rgba(30, 20, 8, 0.5); }
+
+/* Selected: the active category — plaque enlarges and reveals count/status */
+.lpq-cat.is-active .lpq-plaque {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1.1);
+  box-shadow: 0 4px 12px rgba(30, 20, 8, 0.55), inset 0 1px 0 rgba(252, 240, 194, 0.95), inset 0 -1px 0 rgba(90, 66, 26, 0.6);
+}
+.lpq-cat.is-active .lpq-plaque__meta { max-height: 34px; opacity: 1; margin-top: 2px; }
+
+/* ── Level 3: the selected shelf's jars (only ever one shelf at a time) ─────── */
+.lpq-drawer {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  width: min(94%, 900px);
+  max-height: 40%;
+  overflow-y: auto;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(250, 244, 231, 0.96), rgba(244, 235, 216, 0.96));
+  border: 1px solid rgba(150, 120, 80, 0.5);
+  box-shadow: 0 6px 22px rgba(40, 28, 14, 0.35);
+  backdrop-filter: blur(2px);
+}
+.lpq-drawer__head {
+  display: flex; align-items: baseline; gap: 10px;
+  margin-bottom: 8px;
+  color: #4a3418; font-family: Georgia, serif;
+}
+.lpq-drawer__head b { font-size: 16px; }
+.lpq-drawer__head small { color: #7a5f34; }
+.lpq-drawer__close { margin-left: auto; border: 0; background: none; cursor: pointer; color: #7a5f34; font-size: 13px; }
+.lpq-jars { display: flex; flex-wrap: wrap; gap: 8px; }
+.lpq-jar {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 6px 11px;
+  border-radius: 8px;
+  border: 1px solid rgba(160, 130, 90, 0.5);
+  background: rgba(255, 252, 245, 0.9);
+  color: #46331b; font-size: 13px; cursor: pointer;
+}
+.lpq-jar:hover { background: #fff; border-color: rgba(150, 118, 60, 0.8); }
+.lpq-jar.is-low { color: #8a5a2a; }
+.lpq-empty { color: #8a6f45; font-size: 13px; font-style: italic; }
+
+/* A stubbed area the current room doesn't depict yet (fridge/freezer): honest,
+   never faked into the photograph. */
+.lpq-plaque.is-stub { opacity: 0.55; background: linear-gradient(180deg, #cdbfa2, #b6a684); }
+.lpq-plaque.is-stub .lpq-plaque__name { color: #5a4a30; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lpq-plaque, .lpq-shelf, .lpq-plaque__meta { transition: none; }
+}
+@media (max-width: 760px) {
+  .lpq-plaque { min-width: 118px; padding: 5px 9px; }
+  .lpq-plaque__name { font-size: 12.5px; }
+  .lpq-drawer { max-height: 46%; }
+}
