@@ -31,8 +31,6 @@ import imgFlour from "@/assets/living-home/larder/jars/tha-larder-jar-plain-flou
 import imgRice from "@/assets/living-home/larder/jars/tha-larder-jar-white-rice.png";
 import imgSugar from "@/assets/living-home/larder/jars/tha-larder-jar-sugar.png";
 import imgChia from "@/assets/living-home/larder/jars/tha-larder-jar-chia-seeds.png";
-import imgProduceApple from "@/assets/living-home/larder/produce/tha-larder-produce-apple-red.png";
-import imgProduceBroccoli from "@/assets/living-home/larder/produce/tha-larder-produce-broccoli.png";
 
 interface Point { x: number; y: number; scale: number; shadowW: number; }
 const POINTS: Point[] = [
@@ -61,7 +59,7 @@ const groupById = (id: string | null) => GROUPS.find(g => g.id === id) ?? null;
 interface ZoneCategory { id: string; name: string; items: string[]; }
 interface Zone { id: string; name: string; plate: string; items?: string[]; categories?: ZoneCategory[]; }
 const ZONES: Zone[] = [
-  { id: "fruit-bowl", name: "Fruit bowl",      plate: "fruit",    items: ["Apples", "Bananas", "Pears", "Satsumas", "Oranges", "Mangoes", "Avocados"] },
+  { id: "fruit-bowl", name: "Fruit bowl",      plate: "fruit",    items: ["Apples", "Bananas", "Pears", "Satsumas", "Oranges"] },
   // The worktop plate is the wide room view; its counter holds the fruit baskets.
   // Re-scoped to the produce the plate actually shows (no floating melons) — the
   // same fruit as the Fruit bowl, here seen from the wider worktop camera.
@@ -78,7 +76,7 @@ const ZONES: Zone[] = [
     { id: "coconut",     name: "Coconut",     items: ["Coconut milk", "Coconut cream", "Creamed coconut"] },
   ] },
   { id: "tea-coffee", name: "Tea & coffee",    plate: "tea-coffee", items: ["Black tea", "Herbal teas", "Coffee", "Hot chocolate"] },
-  { id: "bread",      name: "Bread store",     plate: "bread",    items: ["Bread", "Rolls", "Wraps", "Bagels"] },
+  { id: "bread",      name: "Bread store",     plate: "bread",    items: ["Bread", "Rolls", "Bagels"] },
 ];
 const zoneById = (id: string | null) => ZONES.find(z => z.id === id) ?? null;
 
@@ -93,16 +91,12 @@ const AREAS: { id: string; name: string }[] = [
 ];
 
 const slug = (s: string) => s.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-const norm = (s: string) => s.trim().toLowerCase();
 const seat = (p: Point, cb: number, h: number) => ({ h: h * p.scale, top: p.y - cb * h * p.scale });
 
-// The only two photoreal produce masters we hold today. Everything without an
-// approved object image is handled HONESTLY as a chalk object token (never a
-// guessed or redrawn food) — it upgrades automatically as masters are captured.
-const PRODUCE: Record<string, string> = {
-  "apples": imgProduceApple, "apple": imgProduceApple,
-  "broccoli": imgProduceBroccoli,
-};
+// In the Pantry the Environment Plate already depicts the real food, so a Living
+// Object is anchored ON its depicted food and named there — never a separate
+// floating produce cut-out (which reads as staged). Fresh items are name tags on
+// the food they sit on; only the pantry-shelf staples render their own jar vessel.
 
 // ── Canonical Homes (architecture §4A) ────────────────────────────────────────
 // Where the Environment Plate already depicts the food, the Living Object rests
@@ -126,17 +120,17 @@ const HOMES: Record<string, Record<string, { x: number; y: number }>> = {
   },
   "fruit-bowl": {
     "Apples": { x: 72, y: 54 }, "Oranges": { x: 21, y: 47 }, "Satsumas": { x: 24, y: 51 },
-    "Bananas": { x: 44, y: 52 }, "Pears": { x: 58, y: 54 }, "Mangoes": { x: 50, y: 57 }, "Avocados": { x: 55, y: 60 },
+    "Bananas": { x: 44, y: 52 }, "Pears": { x: 58, y: 54 },
   },
   worktop: {  // the fruit baskets on the right of the wide worktop plate
-    "Apples": { x: 76, y: 58 }, "Bananas": { x: 82, y: 60 }, "Oranges": { x: 87, y: 62 }, "Pears": { x: 85, y: 52 },
+    "Apples": { x: 78, y: 58 }, "Bananas": { x: 82, y: 60 }, "Oranges": { x: 87, y: 62 }, "Pears": { x: 85, y: 52 },
   },
   freezer: {  // the open freezer drawers on the left (the only frozen food shown)
     "Frozen veg": { x: 13, y: 70 }, "Frozen fruit": { x: 20, y: 73 }, "Prepared meals": { x: 15, y: 78 },
     "Meat": { x: 12, y: 86 }, "Fish": { x: 19, y: 87 },
   },
   bread: {  // the loaves, rolls and bagels on the board (right of the crock)
-    "Bread": { x: 61, y: 51 }, "Wraps": { x: 60, y: 70 }, "Rolls": { x: 57, y: 77 }, "Bagels": { x: 68, y: 81 },
+    "Bread": { x: 61, y: 51 }, "Rolls": { x: 57, y: 77 }, "Bagels": { x: 68, y: 81 },
   },
 };
 const homeFor = (zoneId: string, name: string) => HOMES[zoneId]?.[name] ?? null;
@@ -294,12 +288,8 @@ export default function LivingHomeRoom() {
 
   // A leaf's physical presence: a real object image where we hold one, else a
   // chalk object token. `jar` uses the group's vessel seated on the shelf points.
-  const leafSrc = (name: string, groupJar?: string): { src: string | null; variant: ObjVariant } => {
-    const p = PRODUCE[norm(name)];
-    if (p) return { src: p, variant: "produce" };
-    if (groupJar) return { src: groupJar, variant: "jar" };
-    return { src: null, variant: "token" };
-  };
+  const leafSrc = (_name: string, groupJar?: string): { src: string | null; variant: ObjVariant } =>
+    groupJar ? { src: groupJar, variant: "jar" } : { src: null, variant: "token" };
 
   return (
     <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setDrag(null)}>
