@@ -1,0 +1,36 @@
+{
+  "plate": "fridge-obj-salad",
+  "candidate": 1,
+  "model": "gpt-image-2",
+  "size_requested": "1536x1024",
+  "quality": "high",
+  "output_format": "png",
+  "operation": "generate",
+  "edit_base": null,
+  "prompt_sha256": "e043e39766ca0f9865669e8048c660a6bb304ae380ddae932f9de42b00437ac9",
+  "prompt_spec": "C:\\Users\\Colin\\The Healthy Apples\\GitHub\\tha-living-larder-authoritative\\docs\\asset-specs\\FRIDGE_OBJECTS_SALAD_SPEC.md",
+  "image_sha256": "8ab630505e402a082f55ea6a0538eaee3508189823031be8622c7aac6c2a8af4",
+  "bytes": 1618620,
+  "response": {
+    "created": 1785792599,
+    "background": "opaque",
+    "output_format": "png",
+    "quality": "high",
+    "size": "1536x1024",
+    "usage": {
+      "input_tokens": 276,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 276
+      },
+      "output_tokens": 5488,
+      "output_tokens_details": {
+        "image_tokens": 5488,
+        "text_tokens": 0
+      },
+      "total_tokens": 5764
+    }
+  },
+  "item": {},
+  "generated_unix": 1785792599
+}

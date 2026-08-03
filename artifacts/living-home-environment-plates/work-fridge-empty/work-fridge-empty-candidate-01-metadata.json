@@ -1,0 +1,36 @@
+{
+  "plate": "work-fridge-empty",
+  "candidate": 1,
+  "model": "gpt-image-2",
+  "size_requested": "1536x1024",
+  "quality": "high",
+  "output_format": "png",
+  "operation": "edit",
+  "edit_base": "C:\\Users\\Colin\\The Healthy Apples\\GitHub\\tha-living-larder-authoritative\\client\\public\\images\\living-home\\room\\work-fridge.png",
+  "prompt_sha256": "8df9a6809f3443749a9933cc33ac0df8ad76e27dcfa9b96d1ca868923cf7631b",
+  "prompt_spec": "C:\\Users\\Colin\\The Healthy Apples\\GitHub\\tha-living-larder-authoritative\\docs\\asset-specs\\EMPTY_FRIDGE_SPEC.md",
+  "image_sha256": "d6d33991a27eb5c249748f1ff56b1fb01e9fb47d4408f23a6a6778a7366973b9",
+  "bytes": 2180483,
+  "response": {
+    "created": 1785792326,
+    "background": "opaque",
+    "output_format": "png",
+    "quality": "high",
+    "size": "1536x1024",
+    "usage": {
+      "input_tokens": 1946,
+      "input_tokens_details": {
+        "image_tokens": 1536,
+        "text_tokens": 410
+      },
+      "output_tokens": 5488,
+      "output_tokens_details": {
+        "image_tokens": 5488,
+        "text_tokens": 0
+      },
+      "total_tokens": 7434
+    }
+  },
+  "item": {},
+  "generated_unix": 1785792326
+}

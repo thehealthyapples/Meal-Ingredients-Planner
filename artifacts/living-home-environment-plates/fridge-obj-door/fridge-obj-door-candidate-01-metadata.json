@@ -1,0 +1,36 @@
+{
+  "plate": "fridge-obj-door",
+  "candidate": 1,
+  "model": "gpt-image-2",
+  "size_requested": "1536x1024",
+  "quality": "high",
+  "output_format": "png",
+  "operation": "generate",
+  "edit_base": null,
+  "prompt_sha256": "8bf797665cb7c40302fdab800d817d641bd3a510ca2198b19c982c57de2d2316",
+  "prompt_spec": "C:\\Users\\Colin\\The Healthy Apples\\GitHub\\tha-living-larder-authoritative\\docs\\asset-specs\\FRIDGE_OBJECTS_DOOR_SPEC.md",
+  "image_sha256": "21c5aeb0668344a5469fd0b03505ba8c193086e27ffd810fbffe461134fbace7",
+  "bytes": 1369854,
+  "response": {
+    "created": 1785792889,
+    "background": "opaque",
+    "output_format": "png",
+    "quality": "high",
+    "size": "1536x1024",
+    "usage": {
+      "input_tokens": 265,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 265
+      },
+      "output_tokens": 5488,
+      "output_tokens_details": {
+        "image_tokens": 5488,
+        "text_tokens": 0
+      },
+      "total_tokens": 5753
+    }
+  },
+  "item": {},
+  "generated_unix": 1785792889
+}

@@ -57,6 +57,8 @@
 .lh-plate--shelf { background-image: url("/images/living-home/room/shelf.png"); }
 /* Working Positions for the other zones of the same room (open, stocked). */
 .lh-plate--fridge { background-image: url("/images/living-home/room/work-fridge.png"); }
+/* Phase 0 — the EMPTY fridge Environment Plate; independent Living Objects sit on it */
+.lh-plate--fridge-empty { background-image: url("/images/living-home/room/work-fridge-empty.png"); }
 .lh-plate--freezer { background-image: url("/images/living-home/room/work-freezer.png"); }
 .lh-plate--cupboard { background-image: url("/images/living-home/room/work-cupboard.png"); }
 .lh-plate--baskets { background-image: url("/images/living-home/room/work-baskets.png"); }

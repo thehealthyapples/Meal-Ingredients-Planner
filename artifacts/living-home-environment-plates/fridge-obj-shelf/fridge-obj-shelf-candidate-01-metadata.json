@@ -1,0 +1,36 @@
+{
+  "plate": "fridge-obj-shelf",
+  "candidate": 1,
+  "model": "gpt-image-2",
+  "size_requested": "1536x1024",
+  "quality": "high",
+  "output_format": "png",
+  "operation": "generate",
+  "edit_base": null,
+  "prompt_sha256": "d4220180df0e9cb447b09d8c96a9a36ab14f24856135c5fe8fa273e4d80196e8",
+  "prompt_spec": "C:\\Users\\Colin\\The Healthy Apples\\GitHub\\tha-living-larder-authoritative\\docs\\asset-specs\\FRIDGE_OBJECTS_SHELF_SPEC.md",
+  "image_sha256": "48db524af7b0c95d7e559b6d805a4149be118d530dc75648ad8f1ee7a3452220",
+  "bytes": 1608763,
+  "response": {
+    "created": 1785792986,
+    "background": "opaque",
+    "output_format": "png",
+    "quality": "high",
+    "size": "1536x1024",
+    "usage": {
+      "input_tokens": 264,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 264
+      },
+      "output_tokens": 5488,
+      "output_tokens_details": {
+        "image_tokens": 5488,
+        "text_tokens": 0
+      },
+      "total_tokens": 5752
+    }
+  },
+  "item": {},
+  "generated_unix": 1785792987
+}

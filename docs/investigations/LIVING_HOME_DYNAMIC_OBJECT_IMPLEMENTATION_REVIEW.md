@@ -4,8 +4,9 @@
 **Branch:** `feat/living-larder-authoritative`
 **Rollback identifier:** **`rollback/living-pantry-dynamic-objects-base` → `5b1e00d0`** *(repo clean; synced with `origin/claude-work`; nothing modified in this pass).*
 **Governs:** the Living Home Production Asset Architecture (constitution). This review corrects an implementation drift; it proposes no architectural change.
+**Status:** **APPROVED** with refinements incorporated (2026-08-03): (1) three-way asset split — Already Available / Needs Editing / Needs Generation; (2) "Food Objects" → **Living Objects** throughout; (3) the *"five-seconds-earlier"* plate acceptance criterion (§9A); (4) **Living Object Runtime Attributes** (§4C); (5) Kitchen Worktop recorded as a **potential camera** (§6A). **Phase 0 (Fridge) implementation approved and begun** — see `docs/implementation/LIVING_HOME_DYNAMIC_OBJECT_PHASE0_FRIDGE.md`.
 
-> **Do not begin asset generation.** Await Home Owner approval of the recommended sequence and cost below.
+> The Living Home platform owns **Living Objects** — jars, bottles, tins, produce, dairy, bread, drinks, vessels — not merely "food". Generation is approved **for Phase 0 (Fridge) only**; all later phases remain gated.
 
 ---
 
@@ -55,16 +56,24 @@ The household must always interact with **Living Objects** — never with coordi
 
 ---
 
-## 4. Missing reusable assets (gap analysis)
+## 4. Asset gap analysis — Already Available · Needs Editing · Needs Generation
 
-**Two things are missing for every drifted position: (a) an EMPTY plate, and (b) independent food-object masters.**
+Every missing asset falls into exactly one of three groups. **Editing is always preferred over generation** where it faithfully preserves furniture, craftsmanship, camera, lighting and room continuity — because an edited plate stays the *same room*.
 
-### 4A. Empty Environment Plates — **missing (7)**
-Empty fridge interior · empty fruit bowl/baskets · empty root-veg rack · empty bread store/board · empty tea & coffee station · empty store-cupboard shelves · empty freezer drawers. *(Kitchen Worktop plate is a redundant wide-room view — recommend fold, not a new empty plate.)*
-Each is either **generated fresh empty** or **edited from the existing full plate** (inpaint the food out) — the edit route preserves the exact room, furniture, camera and lighting, which best satisfies the Camera Acceptance Test.
+### 4-i. Already Available (reuse — §3)
+- **Empty Pantry-Shelf plate** (`shelf.png`) + **empty shelf backup**.
+- **27 clip-top jars** (+ empty jar) — all dry-goods shelf staples.
+- **2 produce** (`apple-red`, `broccoli`).
+- **Mechanics template**: `larder-room.tsx` (independent objects + drag + move/bin + inventory).
 
-### 4B. Living Object masters — reuse-first
-| Class | Master | Serves (reuse) | Status |
+### 4-ii. Needs Editing (preferred — empty the existing plate, keep the room)
+The 7 full plates edited to **empty Environment Plates** (food removed; furniture / drawers / door racks / lighting / camera retained):
+empty **fridge** interior · empty **fruit** bowl/baskets · empty **root-veg** rack · empty **bread** store/board · empty **tea & coffee** station · empty **store-cupboard** shelves · empty **freezer** drawers.
+*(Kitchen Worktop plate is a redundant wide-room view — fold, don't empty; see §6A.)* Regenerate a plate **only if** editing cannot faithfully preserve the room (§9A acceptance test).
+
+### 4-iii. Needs Generation (new Living Objects — reuse-first)
+
+| Class | Living Object master | Serves (reuse) | Status |
 |---|---|---|---|
 | Vessel | **Tin** | all Store Cupboard (fish, soup, beans, tomatoes, tinned veg, coconut ≈ 24) | 🔴 need |
 | Vessel | **Glass bottle** | oils, ketchup, brown sauce | 🔴 need |
@@ -82,13 +91,25 @@ Each is either **generated fresh empty** or **edited from the existing full plat
 | Hero | Berries | punnet | 🔴 need |
 | Hero | Bakery | loaf, rolls | 🔴 need (broccoli ✅ but unused) |
 
+### 4C. Living Object Runtime Attributes (future platform capability)
+Every Living Object should eventually carry a small runtime record — the platform's data spine, reused by every room:
+
+| Attribute | Meaning | Example (Apple) | Example (Milk) |
+|---|---|---|---|
+| **Canonical Home** | where it belongs | Fruit basket | Fridge door |
+| **Current Position** | where it is now | (its home, until moved) | (its home, until moved) |
+| **Current Quantity** | how much is kept | — | — |
+| **Default Purchase Unit** | Shopping's suggestion | Pack of 6 | 2-litre bottle |
+
+*Not required for Phase 0.* Phase 0 wires **Canonical Home + Current Position** (placement + move/remove); Quantity and Purchase Unit are later platform layers (Purchase Unit already exists in the Shopping-intent inference). This is a capability record, not an ownership change.
+
 ---
 
 ## 5. Minimum asset generation required & estimated cost
 
 **Reuse-first minimum to convert *all* positions:**
 - **Empty plates: 7** (fridge, fruit, root-veg, bread, tea, cupboard, freezer).
-- **New object masters: ~25** (8 reusable vessels + ~17 hero foods). One Tin alone unlocks ~24 cupboard identities; one Canister → 4; one Milk bottle → 5.
+- **New Living Object masters: ~25** (8 reusable vessels + ~17 hero Living Objects). One Tin alone unlocks ~24 cupboard identities; one Canister → 4; one Milk bottle → 5.
 
 **Cost (gpt-image-2, 1536×1024, high ≈ £0.19/image):**
 | Set | Count | Singles | Batched (contact-sheet) |
@@ -118,6 +139,9 @@ Convert **one position first as the reference**, validate true movement/removal,
 
 The Pantry Shelves are the pattern; Arrival stays as the orientation environment (no objects). Prefer **editing** each full plate to empty it (preserves the exact room → Camera Acceptance) over fresh generation where feasible.
 
+### 6A. Architectural observation — Kitchen Worktop (record only, do not implement)
+The **Kitchen Worktop** should be reviewed as a **potential camera rather than a permanent Working Position**. Its plate is the wide-room view and it appears to **duplicate information already visible from neighbouring cameras** (shelves, fruit baskets, the worktop itself). Recorded here for a **later architectural review** — no change is made in this or Phase 0 work.
+
 ---
 
 ## 7. Data impact
@@ -139,7 +163,15 @@ The Pantry Shelves are the pattern; Arrival stays as the orientation environment
 
 ## 9. Verification plan (per converted position)
 
-1. **Independence:** each food renders as its own PNG on the **empty** plate (no baked-in food behind it).
+### 9A. Empty-plate acceptance criterion (new)
+Every edited (or generated) empty Environment Plate must pass, in addition to the Camera Acceptance Test:
+
+> **"Could this photograph genuinely have been taken five seconds earlier — before the household placed the food into the room?"**
+
+If **No → reject the plate.** It must not introduce another room, different furniture, or different craftsmanship. It is simply the *same room, moments before the Living Objects were set down.*
+
+### 9B. Per-position verification
+1. **Independence:** each Living Object renders as its own PNG on the **empty** plate (no baked-in food behind it).
 2. **Movement/removal:** dragging to the **Kitchen bin** visibly **removes the object** (now possible — it is not painted in); undo restores it.
 3. **Universal drag:** object → Shopping / Companion / Bin all work (Shopping still infers quantity).
 4. **Hover-only names** preserved; **no label sits over unrelated food** (there is no baked food to lie over).

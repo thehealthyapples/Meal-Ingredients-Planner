@@ -32,6 +32,46 @@ import imgRice from "@/assets/living-home/larder/jars/tha-larder-jar-white-rice.
 import imgSugar from "@/assets/living-home/larder/jars/tha-larder-jar-sugar.png";
 import imgChia from "@/assets/living-home/larder/jars/tha-larder-jar-chia-seeds.png";
 
+// Phase 0 — the Fridge's independent Living Objects (transparent PNGs placed on
+// the EMPTY fridge plate). No baked-in food, no hotspots — real movable objects.
+import fMilk from "@/assets/living-home/larder/fridge/tha-fridge-milk.png";
+import fJuice from "@/assets/living-home/larder/fridge/tha-fridge-juice.png";
+import fKetchup from "@/assets/living-home/larder/fridge/tha-fridge-ketchup.png";
+import fMustard from "@/assets/living-home/larder/fridge/tha-fridge-mustard.png";
+import fMayo from "@/assets/living-home/larder/fridge/tha-fridge-mayonnaise.png";
+import fPickles from "@/assets/living-home/larder/fridge/tha-fridge-pickles.png";
+import fButter from "@/assets/living-home/larder/fridge/tha-fridge-butter.png";
+import fCheese from "@/assets/living-home/larder/fridge/tha-fridge-cheese.png";
+import fYoghurt from "@/assets/living-home/larder/fridge/tha-fridge-yoghurt.png";
+import fLeftovers from "@/assets/living-home/larder/fridge/tha-fridge-leftovers.png";
+import fBerries from "@/assets/living-home/larder/fridge/tha-fridge-berries.png";
+import fGrapes from "@/assets/living-home/larder/fridge/tha-fridge-grapes.png";
+import fTomatoes from "@/assets/living-home/larder/fridge/tha-fridge-tomatoes.png";
+import fCucumber from "@/assets/living-home/larder/fridge/tha-fridge-cucumber.png";
+import fPepper from "@/assets/living-home/larder/fridge/tha-fridge-pepper.png";
+import fRadishes from "@/assets/living-home/larder/fridge/tha-fridge-radishes.png";
+import fLettuce from "@/assets/living-home/larder/fridge/tha-fridge-lettuce.png";
+import fSpringOnions from "@/assets/living-home/larder/fridge/tha-fridge-spring-onions.png";
+
+// Each object: its canonical home on the empty fridge (x centre %, y BASE %, height %).
+interface PlacedObject { name: string; src: string; x: number; y: number; h: number; }
+const FRIDGE_OBJECTS: PlacedObject[] = [
+  // door — left rack
+  { name: "Milk", src: fMilk, x: 20, y: 53, h: 21 }, { name: "Juice", src: fJuice, x: 20, y: 76, h: 20 },
+  // door — right rack
+  { name: "Ketchup", src: fKetchup, x: 80, y: 44, h: 21 }, { name: "Mustard", src: fMustard, x: 80, y: 60, h: 17 },
+  { name: "Mayonnaise", src: fMayo, x: 80, y: 74, h: 15 }, { name: "Pickles", src: fPickles, x: 80, y: 89, h: 15 },
+  // upper shelves
+  { name: "Leftovers", src: fLeftovers, x: 40, y: 47, h: 13 }, { name: "Cheese", src: fCheese, x: 58, y: 46, h: 12 },
+  { name: "Butter", src: fButter, x: 40, y: 59, h: 9 }, { name: "Yoghurt", src: fYoghurt, x: 57, y: 59, h: 12 },
+  // salad crisper (left drawer)
+  { name: "Lettuce", src: fLettuce, x: 46, y: 82, h: 12 }, { name: "Tomatoes", src: fTomatoes, x: 34, y: 81, h: 10 },
+  { name: "Pepper", src: fPepper, x: 32, y: 84, h: 10 }, { name: "Cucumber", src: fCucumber, x: 41, y: 75, h: 7 },
+  { name: "Radishes", src: fRadishes, x: 50, y: 80, h: 9 }, { name: "Spring onions", src: fSpringOnions, x: 39, y: 85, h: 7 },
+  // fruit crisper (right drawer)
+  { name: "Berries", src: fBerries, x: 57, y: 82, h: 9 }, { name: "Grapes", src: fGrapes, x: 63, y: 84, h: 11 },
+];
+
 interface Point { x: number; y: number; scale: number; shadowW: number; }
 const POINTS: Point[] = [
   { x: 25.0, y: 40.0, scale: 1.00, shadowW: 11.0 },
@@ -64,15 +104,9 @@ const ZONES: Zone[] = [
   // Re-scoped to the produce the plate actually shows (no floating melons) — the
   // same fruit as the Fruit bowl, here seen from the wider worktop camera.
   { id: "worktop",    name: "Kitchen worktop", plate: "baskets",  items: ["Apples", "Bananas", "Oranges", "Pears"] },
-  // Direct items live loose; Salad / Condiments / Pickles are GROUPS that open to
-  // their own breakdown (Salad and Condiments are collections, not single things).
-  { id: "fridge",     name: "Fridge",          plate: "fridge",
-    items: ["Milk", "Yoghurt", "Cheese", "Butter", "Eggs", "Berries", "Leftovers"],
-    categories: [
-      { id: "salad",      name: "Salad",      items: ["Lettuce", "Tomatoes", "Cucumber", "Radish", "Peppers", "Spinach"] },
-      { id: "condiments", name: "Condiments", items: ["Ketchup", "Mayonnaise", "Mustard", "Chutney", "Brown sauce"] },
-      { id: "pickles",    name: "Pickles",    items: ["Gherkins", "Pickled onions", "Olives", "Sauerkraut"] },
-    ] },
+  // Phase 0 REFERENCE — the Fridge is now an EMPTY plate carrying INDEPENDENT
+  // Living Objects (see FRIDGE_OBJECTS). No baked-in food, no coordinate hotspots.
+  { id: "fridge",     name: "Fridge",          plate: "fridge-empty" },
   { id: "freezer",    name: "Freezer",         plate: "freezer",  items: ["Frozen veg", "Frozen fruit", "Meat", "Fish", "Prepared meals"] },
   { id: "rootveg",    name: "Root veg rack",   plate: "rootveg",  items: ["Potatoes", "Sweet potatoes", "Onions", "Garlic", "Shallots"] },
   { id: "cupboard",   name: "Store cupboard",  plate: "cupboard", categories: [
@@ -88,7 +122,7 @@ const ZONES: Zone[] = [
 ];
 const zoneById = (id: string | null) => ZONES.find(z => z.id === id) ?? null;
 
-const ROOM_PLATES = ["arrival", "shelf", "fridge", "freezer", "cupboard", "baskets", "rootveg", "bread", "tea-coffee", "fruit"];
+const ROOM_PLATES = ["arrival", "shelf", "fridge", "fridge-empty", "freezer", "cupboard", "baskets", "rootveg", "bread", "tea-coffee", "fruit"];
 
 // The always-present "Areas" list — the simple way to move between Working
 // Positions. The whole room (Arrival) is always the first entry to step back to.
@@ -360,6 +394,17 @@ export default function LivingHomeRoom() {
                     style={{ left: `${POINTS[i].x}%`, top: `${top}%`, height: `${h}%`, transform: "translate(-50%,0)" }} />
                 );
               })}
+            </div>
+          )}
+
+          {/* ── Phase 0 reference: the Fridge — INDEPENDENT Living Objects on the
+               EMPTY plate. Each is a real PNG; the bin removes it (removed set). ── */}
+          {level === "zone" && zone?.id === "fridge" && (
+            <div className="lh-layer" key="fridge-objects">
+              {FRIDGE_OBJECTS.filter(o => !isRemoved(o.name)).map(o => (
+                <LivingObject key={o.name} id={`obj-${slug(o.name)}`} name={o.name} product={o.name} src={o.src} variant="jar" hint={false}
+                  style={{ left: `${o.x}%`, top: `${o.y - o.h}%`, height: `${o.h}%`, transform: "translate(-50%,0)" }} />
+              ))}
             </div>
           )}
 
