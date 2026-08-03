@@ -62,7 +62,10 @@ interface ZoneCategory { id: string; name: string; items: string[]; }
 interface Zone { id: string; name: string; plate: string; items?: string[]; categories?: ZoneCategory[]; }
 const ZONES: Zone[] = [
   { id: "fruit-bowl", name: "Fruit bowl",      plate: "fruit",    items: ["Apples", "Bananas", "Pears", "Satsumas", "Oranges", "Mangoes", "Avocados"] },
-  { id: "worktop",    name: "Kitchen worktop", plate: "baskets",  items: ["Watermelon", "Pineapple", "Pumpkin", "Squash", "Broccoli"] },
+  // The worktop plate is the wide room view; its counter holds the fruit baskets.
+  // Re-scoped to the produce the plate actually shows (no floating melons) — the
+  // same fruit as the Fruit bowl, here seen from the wider worktop camera.
+  { id: "worktop",    name: "Kitchen worktop", plate: "baskets",  items: ["Apples", "Bananas", "Oranges", "Pears"] },
   { id: "fridge",     name: "Fridge",          plate: "fridge",   items: ["Milk", "Yoghurt", "Cheese", "Butter", "Eggs", "Berries", "Salad", "Condiments", "Leftovers"] },
   { id: "freezer",    name: "Freezer",         plate: "freezer",  items: ["Frozen veg", "Frozen fruit", "Meat", "Fish", "Prepared meals"] },
   { id: "rootveg",    name: "Root veg rack",   plate: "rootveg",  items: ["Potatoes", "Sweet potatoes", "Onions", "Garlic", "Shallots"] },
@@ -125,8 +128,25 @@ const HOMES: Record<string, Record<string, { x: number; y: number }>> = {
     "Apples": { x: 72, y: 54 }, "Oranges": { x: 21, y: 47 }, "Satsumas": { x: 24, y: 51 },
     "Bananas": { x: 44, y: 52 }, "Pears": { x: 58, y: 54 }, "Mangoes": { x: 50, y: 57 }, "Avocados": { x: 55, y: 60 },
   },
+  worktop: {  // the fruit baskets on the right of the wide worktop plate
+    "Apples": { x: 76, y: 58 }, "Bananas": { x: 82, y: 60 }, "Oranges": { x: 87, y: 62 }, "Pears": { x: 85, y: 52 },
+  },
+  freezer: {  // the open freezer drawers on the left (the only frozen food shown)
+    "Frozen veg": { x: 13, y: 70 }, "Frozen fruit": { x: 20, y: 73 }, "Prepared meals": { x: 15, y: 78 },
+    "Meat": { x: 12, y: 86 }, "Fish": { x: 19, y: 87 },
+  },
+  bread: {  // the loaves, rolls and bagels on the board (right of the crock)
+    "Bread": { x: 61, y: 51 }, "Wraps": { x: 60, y: 70 }, "Rolls": { x: 57, y: 77 }, "Bagels": { x: 68, y: 81 },
+  },
 };
 const homeFor = (zoneId: string, name: string) => HOMES[zoneId]?.[name] ?? null;
+
+// Canonical homes for the Store Cupboard's category plaques — seated on the two
+// tin shelves the plate depicts (so a category sits on its own tins).
+const CAT_HOMES: Record<string, { x: number; y: number }> = {
+  "tinned-fish": { x: 34, y: 58 }, "soups": { x: 50, y: 58 }, "beans": { x: 66, y: 58 },
+  "tomatoes": { x: 34, y: 74 }, "tinned-veg": { x: 50, y: 74 }, "coconut": { x: 66, y: 74 },
+};
 
 // Lay a zone's Living Objects out as a gathered standing row "in front of you",
 // wrapping to a tidy second row when there are many (fallback when no canonical home).
@@ -347,7 +367,7 @@ export default function LivingHomeRoom() {
           {level === "zone" && zone && zone.categories && (
             <div className="lh-layer" key={"zonecats-" + zone.id}>
               {zone.categories.map((c, i, arr) => {
-                const { x, y } = bandPos(i, arr.length);
+                const { x, y } = CAT_HOMES[c.id] ?? bandPos(i, arr.length);
                 return (
                   <button key={c.id} className="lh-subarea" style={{ left: `${x}%`, top: `${y}%`, transform: "translate(-50%,-50%)" }}
                     onClick={() => openZoneCat(c.id)} aria-label={`Open ${c.name}`} data-testid={`lh-opencat-${slug(c.name)}`}>

@@ -369,7 +369,8 @@
 .lh-obj--jar { transform-origin: 50% 100%; }
 .lh-obj__img { display: block; filter: drop-shadow(-4px 5px 4px rgba(26, 17, 7, 0.26)); transition: transform 0.18s ease, filter 0.18s ease; }
 .lh-obj--jar .lh-obj__img { height: 100%; width: auto; }
-.lh-obj--produce .lh-obj__img { height: clamp(58px, 12vh, 132px); width: auto; }
+/* a hero produce object, scaled to sit believably in its basket/home (not oversized) */
+.lh-obj--produce .lh-obj__img { height: clamp(46px, 8.5vh, 92px); width: auto; }
 
 /* Physical cue, never a software affordance: a soft warm light-catch that pools
    under the object and strengthens as the hand nears it. No outlines, no rings. */

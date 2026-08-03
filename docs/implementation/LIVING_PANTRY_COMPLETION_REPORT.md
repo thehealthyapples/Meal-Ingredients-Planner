@@ -96,3 +96,33 @@ Build it **from the governing architecture**, reusing everything the Pantry prov
 The Living Pantry **feels like one handcrafted room** a household instinctively understands: you walk between viewpoints of the same pantry and **handle the real food where it lives**. Technology recedes. Remaining work is **polish and optional assets**, itemised above — not architecture. **The Pantry is the benchmark for the Living Cookbook.**
 
 **STOP — awaiting approval before beginning the Living Cookbook.**
+
+---
+
+## Production Polish Addendum (2026-08-03, later)
+
+Rollback: `rollback/living-pantry-polish-base` → `16be5294`.
+
+**Passes completed:**
+- **Pass 1 — Worktop** 🟢 The 🔴 is resolved. The worktop plate is the wide-room view whose counter holds the fruit baskets; re-scoped its items from the un-depicted melons to **Apples/Bananas/Oranges/Pears** and anchored them to those baskets. No Living Object floats over something the plate doesn't show.
+- **Pass 2 — Canonical Homes completed everywhere** 🟢 Anchored **Freezer** (5 items → the open freezer drawers), **Bread** (loaf/rolls/bagels on the board; wraps honestly on the board), and **Cupboard** (6 category plaques seated on their tin shelves via `CAT_HOMES`). Combined with the earlier Shelves/Fridge/Fruit/Root-veg/Tea, **all ten Working Positions now anchor their objects to the depicted food/vessel.**
+- **Pass 3 — Arrival completeness** 🟡 7/8 destinations already visible from Arrival (shelves, fridge-freezer, fruit, root-veg, worktop, tea canisters, base cupboards). **Bread is absent** from the wide arrival plate — the only remaining completeness gap; closing it needs an Arrival-plate regen (gated, optional).
+- **Pass 4 — Camera continuity** 🟢 Verified: the wide plates (arrival/worktop/freezer) are literally the same room; the close-ups (shelf, fridge, root-veg, tea, fruit, bread, cupboard) are materially consistent (oak joinery, stone floor, plaster, warm light-from-right). Reads as one home.
+- **Pass 5 — Material polish** 🟢 Hero produce rescaled to seat believably in its basket (no oversized floating apple). Anchoring itself is the main craft gain.
+- **Pass 6 — Hospitality** 🟢 Universal drag intact (drag → Shopping / Companion / Bin), verified live (`Pears`, `Onions` → 201, Shopping infers quantity); **no software buttons on food**; destinations quiet at rest.
+- **Pass 7 — Final review** 🟢 Same pantry · same furniture · same permanent props · same craftsmanship · same lighting · Canonical Homes respected · Spatial Recognition maintained · Camera Acceptance passed · Hospitality improved. **Only Arrival-completeness (bread) is outstanding, and it is a gated asset item, not implementation.**
+
+**Files changed (this addendum):**
+- `client/src/pages/living-home-room.tsx` — worktop re-scope; `HOMES` extended (worktop/freezer/bread) + `CAT_HOMES` for cupboard categories; category render uses `CAT_HOMES`.
+- `client/src/pages/living-home-room.css` — hero-produce scale reduced to seat in its home.
+- `docs/implementation/pantry-final-evidence/` — verification captures.
+
+**Remaining optional improvements (all gated / non-blocking):**
+1. Arrival-plate regen so **Bread** (and clearer tea/cupboard) reads from Arrival — the only checklist gap.
+2. Optional dressing-continuity regen of the two older wide plates.
+3. Optional per-object contact shadows; micro-tune a few labels (fridge eggs/berries).
+4. Hero produce for mango/avocado (fruit) and worktop overflow — optional.
+
+**Confirmation:** With every Working Position anchored to its depicted food, faithful camera continuity, universal object drag, and no software attached to food, **the Living Pantry is considered production ready** — the one open item (Arrival bread visibility) is an optional gated asset refinement, not an implementation blocker.
+
+**STOP — Pantry production-ready. Awaiting approval before the Living Cookbook.**
