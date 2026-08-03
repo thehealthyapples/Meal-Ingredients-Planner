@@ -1900,39 +1900,27 @@ a:hover > .brand-mark .bm-face { opacity: 0.86; }
    and HOME_ARRIVAL_PRODUCTION_LOCK § 6.2 both scope out of a visual change, so
    this block defines the state completely and nothing sets it yet.
    ═══════════════════════════════════════════════════════════════════════════ */
+/* THE COMPANION MARK — the canonical THA embossed-apple-landscape badge. This is
+   now the one Companion logo, used everywhere the Companion appears (the launcher
+   on every page, the Pantry destination, …). The badge is a full medallion with
+   its own rim and depth, so the old CSS-carved sage disc is retired here; the
+   state light (.companion-light) still lives BEHIND it and is untouched. */
 .companion-emblem {
   position: relative;
   display: block;
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  /* the sage ceramic — a soft top-lit surface, the way the oak is lit from above */
-  background: radial-gradient(120% 90% at 50% 8%, hsl(74 16% 54%), hsl(74 14% 44%) 70%);
-  box-shadow:
-    inset 0 1px 0 hsl(74 20% 72% / 0.7),    /* lit top rim — the material has a lip */
-    inset 0 -2px 3px hsl(74 24% 26% / 0.5),  /* shaded lower body */
-    0 6px 16px -4px hsl(56 45% 9% / 0.34);    /* it sits on the wall: furniture, not a sticker */
+  background: url("/companion-mark.png") center / contain no-repeat;
+  /* it still sits on the wall: a soft elevation shadow, not a sticker */
+  box-shadow: 0 6px 16px -4px hsl(56 45% 9% / 0.34);
 }
 .dark .companion-emblem {
-  background: radial-gradient(120% 90% at 50% 8%, hsl(74 18% 60%), hsl(74 14% 52%) 70%);
+  background: url("/companion-mark.png") center / contain no-repeat;
 }
 
-/* the apple, carved as a recess into the sage — ~80 % of the disc, so the mark
-   owns the object (COMP1 § 4.5.2) */
-.companion-emblem i {
-  position: absolute;
-  inset: 0;
-  margin: auto;
-  width: 80%;
-  height: 80%;
-  display: block;
-  -webkit-mask: url("/tha-apple.png") center / contain no-repeat;
-          mask: url("/tha-apple.png") center / contain no-repeat;
-}
-.companion-emblem .c-occ    { background: hsl(74 28% 26%); filter: blur(1px); transform: scale(1.04) translateY(1px); opacity: .7; }
-.companion-emblem .c-rim-up { background: hsl(74 30% 28%); transform: translateY(-1.5px); opacity: .9; }
-.companion-emblem .c-rim-lo { background: hsl(74 42% 72%); transform: translateY(1.5px);  opacity: .95; }
-.companion-emblem .c-face   { background: linear-gradient(to bottom, hsl(74 22% 34%) 0%, hsl(74 17% 44%) 52%, hsl(74 24% 56%) 100%); }
+/* the old carved-apple layers are retired — the badge carries the mark itself */
+.companion-emblem i { display: none; }
 
 /* THE LIGHT. Apple-shaped and blooming from WITHIN the carved apple, spilling
    softly past the disc's edge — it escapes the emblem rather than ringing the

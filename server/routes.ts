@@ -3741,6 +3741,29 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         }
       }
 
+      // ── Purchase-intent inference (Domain 15 owns quantity) ─────────────────
+      // A Living Home add communicates INTENT ("I need to buy this"), never a
+      // literal quantity. When the caller signals purchaseIntent and gave no
+      // quantity, the Shopping domain infers the most likely purchase: household
+      // history → common retail packaging → sensible default. The caller (the
+      // Living Home) never owns quantity; this keeps ownership where it belongs.
+      if (req.body?.purchaseIntent === true && !insertPayload.quantityValue) {
+        const { inferPurchaseIntent } = await import("./lib/shopping-purchase-intent");
+        let history: { quantityValue: number; unit: string } | null = null;
+        try {
+          const current = await storage.getShoppingListItems(req.user!.id);
+          const prior = current.find(i =>
+            i.normalizedName === resolved.normalizedName &&
+            i.quantityValue != null && i.unit && i.unit !== "unit");
+          if (prior && prior.quantityValue != null && prior.unit) {
+            history = { quantityValue: prior.quantityValue, unit: prior.unit };
+          }
+        } catch { /* history is best-effort; retail packaging / default still apply */ }
+        const inferred = inferPurchaseIntent(resolved.productName, resolved.normalizedName, resolved.category, history);
+        insertPayload.quantityValue = inferred.quantityValue;
+        insertPayload.unit = inferred.unit;
+      }
+
       if (input.quantityValue && input.unit) {
         const grams = convertToGrams(input.quantityValue, input.unit);
         if (grams !== null) insertPayload.quantityInGrams = grams;

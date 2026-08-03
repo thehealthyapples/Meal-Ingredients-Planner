@@ -48,7 +48,7 @@ export const NAV_ITEMS = [
   { href: "/planner", label: "Planner", icon: CalendarDays, hasWorkspace: true },
   { href: "/cookbook", label: "Cookbook", icon: ChefHat, hasWorkspace: true },
   { href: "/shopping-workspace", label: "Shopping", icon: ShoppingCart, hasWorkspace: false },
-  { href: "/pantry", label: "Larder", icon: PantryIcon, hasWorkspace: true },
+  { href: "/pantry", label: "Pantry", icon: PantryIcon, hasWorkspace: true },
   { href: "/nutrition", label: "Nutrition", icon: BarChart3, hasWorkspace: true },
   { href: "/my-diary", label: "Diary", icon: BookOpen, hasWorkspace: true },
   { href: "/analyser", label: "Analyser", icon: Microscope, hasWorkspace: true },

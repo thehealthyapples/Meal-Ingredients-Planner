@@ -241,9 +241,19 @@ function ShellHeader() {
  * is Blueprint § 6.1's own non-negotiable remedy. Home draws no threshold here
  * — its E3 window and welcome ARE its threshold, owned by the room since NORTH4.
  */
+// Concept Lock P1 — the Living Home rooms are immersive: the Environment Plate is
+// the page. The shell's threshold banner (orchard window + room identity) and its
+// default header stand down for them, leaving only essential navigation, the
+// Companion and trust notices. Technology recedes behind the room.
+const LIVING_HOME_ROUTES = new Set<string>(["/pantry"]);
+function isLivingHomeRoom(path: string): boolean {
+  return LIVING_HOME_ROUTES.has(ROOM_ALIASES[path] ?? path);
+}
+
 function RoomThreshold({ path }: { path: string }) {
   const canonical = ROOM_ALIASES[path] ?? path;
   if (canonical === "/home") return null;
+  if (isLivingHomeRoom(canonical)) return null; // the Environment Plate is the page
 
   const { title, realm } = resolveShellRoom(path);
   const exposure = path.startsWith("/admin") ? "e0" : ROOM_EXPOSURE[realm] ?? "e1";
@@ -402,7 +412,7 @@ export function AppShell({
                               caught error (NAV1, preserved). */}
                           <div className="sticky top-0 z-40 shrink-0" data-testid="ws-header-zone">
                             <div ref={setHeaderSlot} className="w-full" data-testid="ws-header-slot" />
-                            {pageHeaders === 0 && <ShellHeader />}
+                            {pageHeaders === 0 && !isLivingHomeRoom(location) && <ShellHeader />}
                           </div>
 
                           {/* INTARCH1 — the room's ground plane. Mounted ONCE, here:

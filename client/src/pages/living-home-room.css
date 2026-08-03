@@ -1,0 +1,520 @@
+/**
+ * Living Home — the room stage (Model B). The Environment Plate is a fixed,
+ * still photograph; only Living Objects (jars) move on it. Two working positions
+ * this phase: Arrival (the whole room) and Shelves (jars on the timber).
+ *
+ * Nothing here is a card, a panel or a dashboard. The room holds still.
+ */
+
+/* The room is the page: fill the reclaimed space (no threshold, header or card),
+   centring the Environment Plate. */
+.lh-room-page {
+  flex: 1;
+  width: 100%;
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 12px 14px;
+}
+
+.lh-stage {
+  position: relative;
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  aspect-ratio: 1536 / 1024;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #d9cbb4;
+  user-select: none;
+  box-shadow: 0 18px 50px rgba(40, 28, 14, 0.22);
+}
+/* On a roomy screen the whole room fits the viewport — you see the entire pantry,
+   including the in-room selection tray, without scrolling. With the shell chrome
+   removed, the room now fills most of the screen. */
+@media (min-width: 820px) {
+  .lh-stage {
+    width: auto;
+    height: min(88dvh, 1120px);
+    max-width: 100%;
+  }
+}
+
+/* Crossfading environment plates — stepping closer, never a page flip. */
+.lh-plate {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0;
+  transform: scale(1.02);
+  transition: opacity 0.6s ease, transform 0.9s ease;
+  pointer-events: none;
+}
+.lh-plate.is-visible { opacity: 1; transform: scale(1); }
+.lh-plate--arrival { background-image: url("/images/living-home/room/arrival.png"); }
+.lh-plate--shelf { background-image: url("/images/living-home/room/shelf.png"); }
+/* Working Positions for the other zones of the same room (open, stocked). */
+.lh-plate--fridge { background-image: url("/images/living-home/room/work-fridge.png"); }
+.lh-plate--freezer { background-image: url("/images/living-home/room/work-freezer.png"); }
+.lh-plate--cupboard { background-image: url("/images/living-home/room/work-cupboard.png"); }
+.lh-plate--baskets { background-image: url("/images/living-home/room/work-baskets.png"); }
+.lh-plate--rootveg { background-image: url("/images/living-home/room/work-rootveg.png"); }
+.lh-plate--bread { background-image: url("/images/living-home/room/work-bread.png"); }
+.lh-plate--tea-coffee { background-image: url("/images/living-home/room/work-tea-coffee.png"); }
+.lh-plate--fruit { background-image: url("/images/living-home/room/work-fruit.png"); }
+
+@media (prefers-reduced-motion: reduce) {
+  .lh-plate { transition: opacity 0.2s ease; transform: none; }
+  .lh-plate.is-visible { transform: none; }
+}
+
+/* the quiet way back to the wider room */
+.lh-back {
+  position: absolute;
+  left: 18px; top: 16px;
+  z-index: 60;
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 14px;
+  border: 0; border-radius: 999px;
+  background: rgba(28, 19, 10, 0.62);
+  color: #f4ead0; font-family: Georgia, serif; font-size: 14px;
+  cursor: pointer; backdrop-filter: blur(3px);
+  transition: background 0.2s ease;
+}
+.lh-back:hover { background: rgba(28, 19, 10, 0.82); }
+
+/* ── Living Objects: jars seated on canonical placement points ─────────────────
+   Layer order (back → front): Environment Plate · Contact Shadow · Glass Vessel
+   + Ingredient (baked into the jar PNG) · Runtime Label · Hover. The vessel
+   always sits ABOVE its own contact shadow so it reads as inside the room. */
+
+/* Contact shadow — cast on the timber, grounded, offset a touch left because the
+   room light comes from the right. It never lifts with the jar; it only spreads
+   and softens as the jar leaves the shelf. */
+.lh-jar-shadow {
+  position: absolute;
+  z-index: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  /* a firmer, tighter core so the vessel reads as having weight where it meets
+     the timber, softening quickly outward */
+  background: radial-gradient(ellipse 58% 56% at 50% 48%,
+    rgba(20, 12, 5, 0.58), rgba(20, 12, 5, 0.30) 40%, rgba(20, 12, 5, 0) 74%);
+  filter: blur(1.4px);
+  transition: opacity 0.18s ease, width 0.18s ease, height 0.18s ease, filter 0.18s ease;
+  pointer-events: none;
+}
+
+.lh-jar {
+  position: absolute;
+  z-index: 2;
+  transform-origin: 50% 100%;      /* lift/hover originate from the base */
+  padding: 0; border: 0; background: transparent;
+  cursor: grab;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.lh-jar img {
+  height: 100%;
+  width: auto;
+  display: block;
+  /* soft directional body shadow, down-left to match the right-hand light */
+  filter: drop-shadow(-4px 5px 4px rgba(26, 17, 7, 0.26));
+  transition: transform 0.18s ease, filter 0.18s ease;
+}
+/* Hover: a 2–4px lift and a softer shadow — no scaling, no bounce. */
+.lh-jar:hover img,
+.lh-jar:focus-visible img {
+  transform: translateY(-3px);
+  filter: drop-shadow(-5px 7px 6px rgba(26, 17, 7, 0.3));
+}
+.lh-jar:focus-visible { outline: none; }
+/* Lift (drag): the jar leaves the shelf from its point — still no scaling. */
+.lh-jar.is-dragging { cursor: grabbing; z-index: 50; }
+.lh-jar.is-dragging img {
+  transform: translateY(-4px);
+  filter: drop-shadow(-9px 13px 11px rgba(26, 17, 7, 0.36));
+}
+@media (prefers-reduced-motion: reduce) {
+  .lh-jar img { transition: none; }
+}
+
+/* runtime name on the jar's own chalk plate (crisp text, never baked) */
+.lh-jar-name {
+  position: absolute;
+  left: 50%; top: 56.5%;
+  transform: translate(-50%, -50%);
+  width: 58%;
+  text-align: center;
+  font-family: Georgia, "Nunito Sans", serif;
+  font-size: clamp(7px, 0.95vw, 13px);
+  line-height: 1.05;
+  color: #f3e7c8;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+}
+
+/* ── Working Surface (Levels 2–4) ──────────────────────────────────────────────
+   The Environment Plate supplies timber, light, shelving and atmosphere; the
+   runtime supplies the vessels, labels, information and interaction. NEITHER
+   dominates and the room NEVER recedes — moving closer reveals more of the home,
+   not less. The plate keeps its full warmth (no dimming, no desaturation); only a
+   whisper of warm grounding sits at the very base to seat the objects. */
+.lh-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(135% 66% at 50% 100%, rgba(40, 28, 14, 0) 70%, rgba(40, 28, 14, 0.12) 100%);
+}
+
+/* A jar on the working surface is now a VESSEL — decorative; the label is the
+   control. It lifts a touch when its label is engaged. */
+.lh-jar-static {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+}
+.lh-jar-static img {
+  height: 100%; width: auto; display: block;
+  /* Glass, not a white object: the EMPTY upper glass (shoulders, above the
+     contents) fades so the room shows through it, while the metal clip-top and
+     the ingredient below stay solid. A whisper of warmth settles the vessel into
+     the room's palette rather than reading as stark white. */
+  /* Glass, not a white object: the empty upper shoulders read further THROUGH the
+     glass (room visible), with a crisp lid and solid contents below. */
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 17%, rgba(0,0,0,0.38) 26%, rgba(0,0,0,0.46) 40%, #000 48%, #000 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 17%, rgba(0,0,0,0.38) 26%, rgba(0,0,0,0.46) 40%, #000 48%, #000 100%);
+  filter: drop-shadow(-4px 5px 4px rgba(26, 17, 7, 0.26)) saturate(1.06) contrast(1.04) sepia(0.05) brightness(0.99);
+  transition: transform 0.18s ease, filter 0.18s ease;
+}
+.lh-jar-static.is-lifted img {
+  transform: translateY(-3px);
+  filter: drop-shadow(-5px 7px 6px rgba(26, 17, 7, 0.3));
+}
+@media (prefers-reduced-motion: reduce) { .lh-jar-static img { transition: none; } }
+
+/* The legible label + information: a hand-engraved shelf name-plate mounted on the
+   timber. This is the working affordance — readable, comfortable to hit, and it
+   carries the runtime's information. Furniture, not a floating card. */
+.lh-nameplate {
+  position: absolute;
+  z-index: 6;
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: 5px 15px 6px;
+  border: 0; border-radius: 6px;
+  cursor: pointer;
+  background: linear-gradient(180deg, #6f5631 0%, #5c4726 100%);
+  box-shadow:
+    0 2px 6px rgba(18, 11, 3, 0.42),
+    inset 0 1px 0 rgba(255, 236, 190, 0.20),
+    inset 0 -1px 0 rgba(30, 20, 8, 0.55);
+  outline: 1px solid rgba(38, 26, 12, 0.55);
+  outline-offset: -1px;
+  transition: transform 0.16s ease, filter 0.16s ease, box-shadow 0.16s ease;
+}
+.lh-nameplate--static { cursor: default; }
+.lh-nameplate__name {
+  font-family: Georgia, "Nunito Sans", serif;
+  font-size: clamp(12px, 1.15vw, 17px);
+  letter-spacing: 0.3px;
+  color: #f4e8ca;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+}
+.lh-nameplate__info {
+  font-size: clamp(9px, 0.8vw, 11px);
+  color: rgba(244, 232, 202, 0.72);
+  white-space: nowrap;
+}
+.lh-nameplate:not(.lh-nameplate--static):hover,
+.lh-nameplate:not(.lh-nameplate--static):focus-visible,
+.lh-nameplate.is-hot {
+  transform: translateY(-1px);
+  filter: brightness(1.09);
+  box-shadow: 0 5px 12px rgba(18, 11, 3, 0.5), inset 0 1px 0 rgba(255, 240, 200, 0.3), inset 0 -1px 0 rgba(30, 20, 8, 0.55);
+  outline: none;
+}
+.lh-nameplate:focus-visible { box-shadow: 0 0 0 3px rgba(150, 118, 60, 0.6), 0 5px 12px rgba(18, 11, 3, 0.5); }
+@media (prefers-reduced-motion: reduce) { .lh-nameplate { transition: none; } }
+
+/* selected in the multi-selection workspace — a warm brass ring, not a checkbox */
+.lh-nameplate.is-selected {
+  background: linear-gradient(180deg, #8c6a34 0%, #6f5326 100%);
+  box-shadow: 0 0 0 2px rgba(230, 194, 124, 0.85), 0 6px 14px rgba(18, 11, 3, 0.5), inset 0 1px 0 rgba(255, 240, 200, 0.3);
+}
+.lh-nameplate__tick { color: #f4e8ca; margin-left: 6px; font-size: 12px; }
+
+/* ── Moving closer: each level's object layer settles in (never a page flip) ─── */
+.lh-layer {
+  position: absolute;
+  inset: 0;
+  animation: lh-approach 0.5s cubic-bezier(0.22, 0.61, 0.36, 1);
+  /* the layer itself is click-through so the continuous-navigation hotspots behind
+     it stay reachable; only its actual controls (name-plates) capture clicks */
+  pointer-events: none;
+}
+.lh-layer .lh-nameplate,
+.lh-layer .lh-obj,
+.lh-layer .lh-groupjar,
+.lh-layer .lh-subarea { pointer-events: auto; }
+@keyframes lh-approach {
+  from { opacity: 0; transform: scale(0.972); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lh-layer { animation: none; }
+}
+
+/* ── Drop targets: the shelf boards highlight while a jar is in hand ────────── */
+.lh-board {
+  position: absolute;
+  pointer-events: none; /* the droppable hit-area is handled by dnd-kit ref */
+}
+.lh-board__glow {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 5px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, transparent, rgba(255, 226, 158, 0.85), transparent);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.lh-board.is-over .lh-board__glow { opacity: 1; }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   INTERACTION REFINEMENT — you handle real objects, you don't operate an app.
+   • Areas list: the simple, always-present way between Working Positions.
+   • Living Objects: photoreal things you pick up and DRAG.
+   • Three permanent kitchen destinations: the Shopping pad, Apple, the Bin.
+   The room stays fully visible the whole time.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Areas: a lightweight navigator. NAVIGATION ONLY — deliberately reads as
+      quiet UI set slightly off the scene, never kitchen furniture. It is the way
+      to move between Working Positions; it is not part of the room. ─────────── */
+.lh-areas {
+  position: absolute;
+  left: 14px; top: 12px;
+  z-index: 40;
+  display: flex; flex-direction: column; align-items: stretch; gap: 1px;
+  padding: 8px 8px 9px;
+  border-radius: 10px;
+  background: rgba(250, 248, 243, 0.66);
+  backdrop-filter: blur(7px) saturate(1.05);
+  border: 1px solid rgba(120, 100, 70, 0.18);
+  box-shadow: 0 6px 18px rgba(30, 22, 10, 0.14);
+  max-width: 38%;
+}
+.lh-areas__head {
+  font-family: "Nunito Sans", system-ui, sans-serif; font-size: 10px; letter-spacing: 0.7px;
+  text-transform: uppercase; color: rgba(90, 72, 46, 0.62); font-weight: 600;
+  padding: 1px 8px 6px;
+}
+.lh-areas__item {
+  border: 0; background: transparent; cursor: pointer;
+  padding: 5px 10px; border-radius: 7px; width: 100%; text-align: left;
+  font-family: "Nunito Sans", system-ui, sans-serif; font-size: 13px; color: #4f4028;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+.lh-areas__item:hover, .lh-areas__item:focus-visible { outline: none; background: rgba(140, 106, 52, 0.12); color: #33260f; }
+.lh-areas__item.is-here { background: rgba(140, 106, 52, 0.18); color: #33260f; font-weight: 600; }
+
+/* ── Navigation objects: the group jars (shelves) and cupboard sub-areas ────── */
+.lh-groupjar {
+  position: absolute; z-index: 3;
+  transform: translate(-50%, 0);
+  border: 0; background: transparent; padding: 0; cursor: pointer;
+}
+.lh-groupjar img { height: 100%; width: auto; display: block;
+  filter: drop-shadow(-4px 5px 4px rgba(26, 17, 7, 0.26));
+  transition: transform 0.16s ease, filter 0.16s ease; }
+.lh-groupjar:hover img, .lh-groupjar:focus-visible img { transform: translateY(-3px); filter: drop-shadow(-5px 7px 7px rgba(26, 17, 7, 0.32)); }
+.lh-groupjar:focus-visible { outline: none; }
+.lh-groupjar__name {
+  position: absolute; left: 50%; bottom: -6px; transform: translate(-50%, 100%);
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: 4px 12px 5px; border-radius: 6px; white-space: nowrap;
+  background: linear-gradient(180deg, #6f5631, #5c4726);
+  outline: 1px solid rgba(38, 26, 12, 0.55); outline-offset: -1px;
+  box-shadow: 0 2px 6px rgba(18, 11, 3, 0.42), inset 0 1px 0 rgba(255, 236, 190, 0.2);
+  font-family: Georgia, serif; color: #f4e8ca; font-size: clamp(12px, 1.1vw, 16px);
+}
+.lh-groupjar__name small { color: rgba(244, 232, 202, 0.7); font-size: 10px; }
+
+.lh-subarea {
+  position: absolute; z-index: 4; cursor: pointer;
+  display: inline-flex; align-items: baseline; gap: 7px;
+  padding: 9px 16px; border-radius: 8px; white-space: nowrap;
+  border: 1px solid rgba(38, 26, 12, 0.5);
+  background: linear-gradient(180deg, #6f5631, #5c4726); color: #f4e8ca;
+  box-shadow: 0 3px 9px rgba(18, 11, 3, 0.4), inset 0 1px 0 rgba(255, 236, 190, 0.18);
+  font-family: Georgia, serif; font-size: clamp(12px, 1.1vw, 16px);
+  transition: transform 0.16s ease, filter 0.16s ease;
+}
+.lh-subarea small { color: rgba(244, 232, 202, 0.62); font-size: 11px; }
+.lh-subarea:hover, .lh-subarea:focus-visible { outline: none; transform: translateY(-1px); filter: brightness(1.09); }
+
+/* ── Living Objects: real things you pick up. Jar seats on the shelf, produce &
+      token stand on the surface in front of you. cursor:grab says "handle me". ── */
+.lh-obj {
+  position: absolute; z-index: 5;
+  cursor: grab; touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  display: flex; flex-direction: column; align-items: center;
+}
+.lh-obj:focus-visible { outline: none; }
+.lh-obj--jar { transform-origin: 50% 100%; }
+.lh-obj__img { display: block; filter: drop-shadow(-4px 5px 4px rgba(26, 17, 7, 0.26)); transition: transform 0.18s ease, filter 0.18s ease; }
+.lh-obj--jar .lh-obj__img { height: 100%; width: auto; }
+.lh-obj--produce .lh-obj__img { height: clamp(58px, 12vh, 132px); width: auto; }
+
+/* Physical cue, never a software affordance: a soft warm light-catch that pools
+   under the object and strengthens as the hand nears it. No outlines, no rings. */
+.lh-obj__catch {
+  position: absolute; left: 50%; top: 52%; transform: translate(-50%, -50%);
+  width: 150%; height: 150%; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 244, 214, 0.5), rgba(255, 244, 214, 0) 72%);
+  opacity: 0; transition: opacity 0.22s ease; pointer-events: none; z-index: -1;
+}
+.lh-obj:hover .lh-obj__img, .lh-obj:focus-visible .lh-obj__img { transform: translateY(-3px); filter: drop-shadow(-5px 8px 8px rgba(26, 17, 7, 0.32)) brightness(1.04); }
+.lh-obj:hover .lh-obj__catch, .lh-obj:focus-visible .lh-obj__catch { opacity: 1; }
+.lh-obj.is-dragging { cursor: grabbing; opacity: 0.26; }
+
+/* Quietly discoverable: one object catches the light and breathes, ever so
+   slightly, to invite the hand — the room hinting, not a button pulsing. */
+.lh-obj.is-hint .lh-obj__catch { opacity: 0.7; animation: lh-glow 3.4s ease-in-out infinite; }
+.lh-obj.is-hint .lh-obj__img { animation: lh-liftbreathe 3.4s ease-in-out infinite; }
+@keyframes lh-glow { 0%,100% { opacity: 0.34; } 50% { opacity: 0.85; } }
+@keyframes lh-liftbreathe { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2.5px); } }
+@media (prefers-reduced-motion: reduce) {
+  .lh-obj.is-hint .lh-obj__catch { animation: none; opacity: 0.6; }
+  .lh-obj.is-hint .lh-obj__img { animation: none; }
+}
+
+/* The honest gap — a thing we don't yet photograph, written in the household's
+   own hand on a soft warm haze. Kept quiet: a gentle label you pick up, not a
+   button. It upgrades to a photograph the moment a master exists. */
+.lh-obj__token, .lh-ghost .lh-obj__token {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 70px; padding: 9px 15px; border-radius: 10px;
+  font-family: Georgia, "Nunito Sans", serif; font-style: italic;
+  font-size: clamp(12px, 1.1vw, 15px); text-align: center; white-space: nowrap;
+  color: #fbf1d8; text-shadow: 0 1px 3px rgba(20, 12, 4, 0.6);
+  background: radial-gradient(120% 150% at 40% 25%, rgba(60, 44, 24, 0.52), rgba(40, 28, 14, 0.34) 70%, rgba(40, 28, 14, 0) 100%);
+  box-shadow: none; border: 0;
+  transition: transform 0.18s ease, filter 0.18s ease;
+}
+.lh-obj:hover .lh-obj__token, .lh-obj:focus-visible .lh-obj__token { filter: brightness(1.08); transform: translateY(-2px); }
+/* a runtime name beneath a photoreal object — a whisper, no pill, no chrome */
+.lh-obj__cap {
+  margin-top: 2px;
+  font-family: Georgia, serif; font-size: clamp(10px, 0.9vw, 13px); color: #f6ecd4;
+  text-shadow: 0 1px 3px rgba(20, 12, 4, 0.72), 0 0 10px rgba(20, 12, 4, 0.4);
+  white-space: nowrap; opacity: 0.9;
+}
+@media (prefers-reduced-motion: reduce) { .lh-obj__img { transition: none; } }
+
+/* the lifted object that follows the hand */
+.lh-ghost { pointer-events: none; filter: drop-shadow(-8px 12px 12px rgba(20, 12, 4, 0.4)); }
+.lh-ghost--jar img { height: 128px; width: auto; display: block; }
+.lh-ghost--produce img { height: 108px; width: auto; display: block; }
+
+/* ── The three permanent kitchen destinations ─────────────────────────────────
+      Part of the kitchen, not application controls: a handwritten pad on the
+      counter, Apple to hand, and a bin on the floor. Present at all times; they
+      simply glow a little when there is something in your hand. */
+.lh-dock {
+  position: absolute; right: 18px; bottom: 16px;
+  z-index: 42;
+  display: flex; align-items: flex-end; gap: 12px;
+}
+.lh-drop {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 8px; border-radius: 12px;
+  background: transparent;
+  transition: transform 0.18s ease, filter 0.18s ease;
+}
+.lh-drop__art { position: relative; display: block; }
+.lh-drop__label { display: flex; flex-direction: column; align-items: center; line-height: 1.05; text-align: center; }
+.lh-drop__label b { font-family: Georgia, serif; font-size: 12.5px; color: #f4ead0; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+/* the instruction is silent until something is in hand — then each destination
+   quietly says what it will do */
+.lh-drop__label small {
+  font-family: Georgia, serif; font-size: 10px; color: rgba(244, 232, 202, 0.82);
+  height: 12px; opacity: 0; transform: translateY(-2px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.lh-stage.is-dragging .lh-drop__label small { opacity: 1; transform: translateY(0); }
+/* armed: something is in hand — the destinations invite the drop */
+.lh-stage.is-dragging .lh-drop.is-armed { filter: brightness(1.04); }
+.lh-drop.is-armed { animation: lh-breathe 1.6s ease-in-out infinite; }
+.lh-drop.is-over { transform: translateY(-4px) scale(1.05); filter: brightness(1.12) drop-shadow(0 6px 14px rgba(0,0,0,0.35)); }
+@keyframes lh-breathe { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+@media (prefers-reduced-motion: reduce) { .lh-drop.is-armed { animation: none; } }
+
+/* the handwritten shopping pad — paper, torn top, ruled lines, a scribble */
+.lh-pad {
+  position: relative; display: block; width: 66px; height: 82px;
+  background: linear-gradient(180deg, #fbf6e9, #f3ead2);
+  border-radius: 3px 3px 5px 5px;
+  box-shadow: 0 6px 14px rgba(30, 20, 8, 0.34), inset 0 1px 0 rgba(255,255,255,0.7);
+  transform: rotate(-4deg);
+  border: 1px solid rgba(150, 128, 90, 0.4);
+}
+.lh-pad::before { /* torn/bound top */
+  content: ""; position: absolute; left: 0; right: 0; top: -4px; height: 8px;
+  background: repeating-linear-gradient(90deg, #b9a06a 0 5px, #a98f57 5px 9px);
+  border-radius: 3px;
+}
+.lh-pad__line { position: absolute; left: 9px; right: 9px; height: 1px; background: rgba(120, 100, 66, 0.4); }
+.lh-pad__line:nth-child(1) { top: 34px; } .lh-pad__line:nth-child(2) { top: 48px; } .lh-pad__line:nth-child(3) { top: 62px; }
+.lh-pad__scribble {
+  position: absolute; left: 0; right: 0; top: 12px; text-align: center;
+  font-family: "Segoe Script", "Bradley Hand", cursive, Georgia; font-size: 13px; color: #6a4f28;
+  transform: rotate(-2deg);
+}
+
+/* The Companion — its canonical mark (the THA apple carved into sage ceramic),
+   the same emblem that stands as the Companion's one door on every page. We only
+   size it here; the mark itself is owned by .companion-emblem in index.css. */
+.lh-companion-mark {
+  display: block; width: 60px; height: 60px; margin: 6px 0 2px;
+  transition: transform 0.18s ease, filter 0.18s ease;
+}
+.lh-drop--companion.is-over .lh-companion-mark { filter: brightness(1.08); }
+
+/* Kitchen bin — a pedal bin on the floor, part of the kitchen */
+.lh-bin { position: relative; display: block; width: 58px; height: 72px; }
+.lh-bin__body {
+  position: absolute; left: 6px; right: 6px; bottom: 0; height: 60px;
+  background: linear-gradient(90deg, #8f97a0, #c3cad2 30%, #9aa2ab 62%, #7c848d);
+  border-radius: 5px 5px 7px 7px;
+  box-shadow: 0 6px 13px rgba(20, 24, 30, 0.34), inset 0 0 0 1px rgba(255,255,255,0.14);
+}
+.lh-bin__body::after { /* pedal-bin flutes */
+  content: ""; position: absolute; inset: 6px 10px 8px; border-radius: 3px;
+  background: repeating-linear-gradient(90deg, rgba(255,255,255,0.12) 0 3px, rgba(0,0,0,0.06) 3px 9px);
+}
+.lh-bin__lid {
+  position: absolute; left: 2px; right: 2px; top: 8px; height: 11px;
+  background: linear-gradient(90deg, #7c848d, #b6bdc5 40%, #868e97);
+  border-radius: 6px;
+  box-shadow: 0 2px 5px rgba(20, 24, 30, 0.4);
+  transition: transform 0.18s ease;
+}
+.lh-drop--bin.is-over .lh-bin__lid { transform: translateY(-8px) rotate(-9deg); } /* the lid lifts to receive */
+
+/* a gentle standing caption, not chrome */
+.lh-caption {
+  position: absolute;
+  left: 50%; bottom: 14px; transform: translateX(-50%);
+  z-index: 60;
+  color: #f4ead0; font-family: Georgia, serif; font-size: 13px;
+  padding: 6px 14px; border-radius: 999px;
+  background: rgba(28, 19, 10, 0.5); backdrop-filter: blur(3px);
+  pointer-events: none; opacity: 0.9;
+}

@@ -1,0 +1,7 @@
+# Living Home — Tea & Coffee Working Position (canonical drinks station, text-to-image)
+## Canonical prompt
+Photorealistic photograph of a calm, warm, handcrafted tea and coffee station in an English farmhouse larder, a close front-on view at standing eye height. On a thick aged-oak shelf above a stone worktop, against chalky lime-plaster in soft morning daylight: a row of ceramic tea caddies, a glass jar of coffee beans, a hand-cranked wooden coffee grinder, a glass French press, a stovetop moka pot, a small row of favourite mugs hung on a simple rail, a jar of honey with a wooden dipper, a jar of cinnamon sticks, a tin of hot chocolate, and a couple of wooden spoons. Warm, homely, handcrafted, comfortably and naturally arranged with breathing room — a household's real drinks corner, not a shop display. Same warm oak, lime plaster and daylight language as the larder. Editorial architectural photography, natural light, sharp, realistic — not CGI, illustrated or stylised.
+## Negative constraints
+No brand packaging, printed labels, text or logos. No plastic, no supermarket display, no clutter, no perfect symmetry. No people, animals, CGI, illustration or stylisation. Warm handcrafted materials only.
+## Candidate strategy
+Text-to-image, 1536x1024, high. Fixed: close front-on eye-height view of a warm handcrafted tea & coffee station — ceramic caddies, coffee beans, grinder, French press, moka pot, mugs, honey, cinnamon, hot chocolate, wooden spoons — same oak/plaster/daylight language; homely not merchandised; North Star editorial quality.

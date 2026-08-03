@@ -59,6 +59,8 @@ const LarderRoomPage = lazy(() => import("@/pages/larder-room"));
 // constructed elevation) is retained as a fallback until the plaque room is
 // dev-verified. See LIVING_LARDER_BRASS_PLAQUE_IMPLEMENTATION.md.
 const LarderPlaqueRoom = lazy(() => import("@/pages/larder-plaque-room"));
+const LarderCategoryView = lazy(() => import("@/pages/larder-category-view"));
+const LivingHomeRoom = lazy(() => import("@/pages/living-home-room"));
 // COMM2 — the Orchard: Community as a place. ONE route for the whole room; the
 // Orchard overview, Neighbourhoods, the Village and the High Street are state
 // inside the page, never separate destinations.
@@ -404,7 +406,8 @@ function Router() {
       <Route path="/admin/knowledge-review" component={() => <ProtectedRoute component={AdminKnowledgeReviewPage} />} />
       <Route path="/admin/knowledge-claims" component={() => <ProtectedRoute component={AdminKnowledgeClaimsChrome} />} />
       <Route path="/admin/canonical-publication-integrity" component={() => <ProtectedRoute component={AdminCanonicalPublicationIntegrityChrome} />} />
-      <Route path="/pantry" component={() => <ProtectedRoute component={LarderPlaqueRoom} />} />
+      <Route path="/pantry" component={() => <ProtectedRoute component={LivingHomeRoom} />} />
+      <Route path="/pantry/:group" component={() => <ProtectedRoute component={LarderCategoryView} />} />
       {/* The Larder IS the pantry room (LARDER1 §2 — one room, one arrangement);
           the old preview door is honoured by redirect, never a rival room. */}
       <Route path="/larder"><Redirect to="/pantry" /></Route>
