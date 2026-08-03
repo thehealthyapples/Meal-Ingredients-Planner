@@ -333,6 +333,8 @@
   transition: transform 0.16s ease, filter 0.16s ease; }
 .lh-groupjar:hover img, .lh-groupjar:focus-visible img { transform: translateY(-3px); filter: drop-shadow(-5px 7px 7px rgba(26, 17, 7, 0.32)); }
 .lh-groupjar:focus-visible { outline: none; }
+/* the group's name plate — hidden until the jar is hovered/focused; the jar itself
+   is always the visible physical object on the shelf */
 .lh-groupjar__name {
   position: absolute; left: 50%; bottom: -6px; transform: translate(-50%, 100%);
   display: flex; flex-direction: column; align-items: center; gap: 1px;
@@ -341,21 +343,31 @@
   outline: 1px solid rgba(38, 26, 12, 0.55); outline-offset: -1px;
   box-shadow: 0 2px 6px rgba(18, 11, 3, 0.42), inset 0 1px 0 rgba(255, 236, 190, 0.2);
   font-family: Georgia, serif; color: #f4e8ca; font-size: clamp(12px, 1.1vw, 16px);
+  opacity: 0; transition: opacity 0.16s ease;
 }
+.lh-groupjar:hover .lh-groupjar__name, .lh-groupjar:focus-visible .lh-groupjar__name { opacity: 1; }
 .lh-groupjar__name small { color: rgba(244, 232, 202, 0.7); font-size: 10px; }
 
+/* the Store Cupboard's category plaques — INVISIBLE regions over the tins at rest
+   (the household sees the tins, not labels); the plaque + name appear on hover/focus */
 .lh-subarea {
   position: absolute; z-index: 4; cursor: pointer;
   display: inline-flex; align-items: baseline; gap: 7px;
   padding: 9px 16px; border-radius: 8px; white-space: nowrap;
-  border: 1px solid rgba(38, 26, 12, 0.5);
+  border: 1px solid transparent;
+  background: transparent; color: transparent;
+  box-shadow: none;
+  font-family: Georgia, serif; font-size: clamp(12px, 1.1vw, 16px);
+  transition: transform 0.16s ease, background 0.16s ease, color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+.lh-subarea small { color: transparent; font-size: 11px; }
+.lh-subarea:hover, .lh-subarea:focus-visible {
+  outline: none; transform: translateY(-1px);
+  border-color: rgba(38, 26, 12, 0.5);
   background: linear-gradient(180deg, #6f5631, #5c4726); color: #f4e8ca;
   box-shadow: 0 3px 9px rgba(18, 11, 3, 0.4), inset 0 1px 0 rgba(255, 236, 190, 0.18);
-  font-family: Georgia, serif; font-size: clamp(12px, 1.1vw, 16px);
-  transition: transform 0.16s ease, filter 0.16s ease;
 }
-.lh-subarea small { color: rgba(244, 232, 202, 0.62); font-size: 11px; }
-.lh-subarea:hover, .lh-subarea:focus-visible { outline: none; transform: translateY(-1px); filter: brightness(1.09); }
+.lh-subarea:hover small, .lh-subarea:focus-visible small { color: rgba(244, 232, 202, 0.62); }
 
 /* ── Living Objects: real things you pick up. Jar seats on the shelf, produce &
       token stand on the surface in front of you. cursor:grab says "handle me". ── */
@@ -395,27 +407,42 @@
   .lh-obj.is-hint .lh-obj__img { animation: none; }
 }
 
-/* The honest gap — a thing we don't yet photograph, written in the household's
-   own hand on a soft warm haze. Kept quiet: a gentle label you pick up, not a
-   button. It upgrades to a photograph the moment a master exists. */
-.lh-obj__token, .lh-ghost .lh-obj__token {
+/* A Living Object anchored on the food the plate already shows. At REST it is an
+   INVISIBLE interaction region — the household sees the food, never a label pinned
+   over it. The name appears only on hover / focus (and while the object is carried).
+   Information quietly appears only when it is genuinely helpful. */
+.lh-obj__token {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 88px; min-height: 40px; padding: 8px 15px; border-radius: 10px;
+  font-family: Georgia, "Nunito Sans", serif; font-style: italic;
+  font-size: clamp(12px, 1.1vw, 15px); text-align: center; white-space: nowrap;
+  color: transparent; background: transparent; box-shadow: none; border: 0;
+  transition: color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+}
+.lh-obj:hover .lh-obj__token,
+.lh-obj:focus-visible .lh-obj__token,
+.lh-obj.is-dragging .lh-obj__token {
+  color: #fbf1d8; text-shadow: 0 1px 3px rgba(20, 12, 4, 0.6);
+  background: radial-gradient(120% 150% at 40% 25%, rgba(60, 44, 24, 0.62), rgba(40, 28, 14, 0.42) 70%, rgba(40, 28, 14, 0) 100%);
+  transform: translateY(-2px);
+}
+/* the carried object's ghost always names itself */
+.lh-ghost .lh-obj__token {
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 70px; padding: 9px 15px; border-radius: 10px;
   font-family: Georgia, "Nunito Sans", serif; font-style: italic;
-  font-size: clamp(12px, 1.1vw, 15px); text-align: center; white-space: nowrap;
+  font-size: clamp(12px, 1.1vw, 15px); white-space: nowrap;
   color: #fbf1d8; text-shadow: 0 1px 3px rgba(20, 12, 4, 0.6);
-  background: radial-gradient(120% 150% at 40% 25%, rgba(60, 44, 24, 0.52), rgba(40, 28, 14, 0.34) 70%, rgba(40, 28, 14, 0) 100%);
-  box-shadow: none; border: 0;
-  transition: transform 0.18s ease, filter 0.18s ease;
+  background: radial-gradient(120% 150% at 40% 25%, rgba(60, 44, 24, 0.62), rgba(40, 28, 14, 0.42) 70%, rgba(40, 28, 14, 0) 100%);
 }
-.lh-obj:hover .lh-obj__token, .lh-obj:focus-visible .lh-obj__token { filter: brightness(1.08); transform: translateY(-2px); }
-/* a runtime name beneath a photoreal object — a whisper, no pill, no chrome */
+/* the runtime name beneath a photoreal object (jar) — hidden until hover/focus */
 .lh-obj__cap {
   margin-top: 2px;
   font-family: Georgia, serif; font-size: clamp(10px, 0.9vw, 13px); color: #f6ecd4;
   text-shadow: 0 1px 3px rgba(20, 12, 4, 0.72), 0 0 10px rgba(20, 12, 4, 0.4);
-  white-space: nowrap; opacity: 0.9;
+  white-space: nowrap; opacity: 0; transition: opacity 0.18s ease;
 }
+.lh-obj:hover .lh-obj__cap, .lh-obj:focus-visible .lh-obj__cap { opacity: 0.95; }
 @media (prefers-reduced-motion: reduce) { .lh-obj__img { transition: none; } }
 
 /* the lifted object that follows the hand */
