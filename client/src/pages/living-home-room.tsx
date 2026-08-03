@@ -64,7 +64,15 @@ const ZONES: Zone[] = [
   // Re-scoped to the produce the plate actually shows (no floating melons) — the
   // same fruit as the Fruit bowl, here seen from the wider worktop camera.
   { id: "worktop",    name: "Kitchen worktop", plate: "baskets",  items: ["Apples", "Bananas", "Oranges", "Pears"] },
-  { id: "fridge",     name: "Fridge",          plate: "fridge",   items: ["Milk", "Yoghurt", "Cheese", "Butter", "Eggs", "Berries", "Salad", "Condiments", "Leftovers"] },
+  // Direct items live loose; Salad / Condiments / Pickles are GROUPS that open to
+  // their own breakdown (Salad and Condiments are collections, not single things).
+  { id: "fridge",     name: "Fridge",          plate: "fridge",
+    items: ["Milk", "Yoghurt", "Cheese", "Butter", "Eggs", "Berries", "Leftovers"],
+    categories: [
+      { id: "salad",      name: "Salad",      items: ["Lettuce", "Tomatoes", "Cucumber", "Radish", "Peppers", "Spinach"] },
+      { id: "condiments", name: "Condiments", items: ["Ketchup", "Mayonnaise", "Mustard", "Chutney", "Brown sauce"] },
+      { id: "pickles",    name: "Pickles",    items: ["Gherkins", "Pickled onions", "Olives", "Sauerkraut"] },
+    ] },
   { id: "freezer",    name: "Freezer",         plate: "freezer",  items: ["Frozen veg", "Frozen fruit", "Meat", "Fish", "Prepared meals"] },
   { id: "rootveg",    name: "Root veg rack",   plate: "rootveg",  items: ["Potatoes", "Sweet potatoes", "Onions", "Garlic", "Shallots"] },
   { id: "cupboard",   name: "Store cupboard",  plate: "cupboard", categories: [
@@ -116,7 +124,7 @@ const HOMES: Record<string, Record<string, { x: number; y: number }>> = {
   fridge: {
     "Milk": { x: 37, y: 55 }, "Yoghurt": { x: 34, y: 45 }, "Cheese": { x: 61, y: 45 },
     "Butter": { x: 52, y: 45 }, "Eggs": { x: 66, y: 55 }, "Berries": { x: 57, y: 55 },
-    "Salad": { x: 39, y: 74 }, "Condiments": { x: 58, y: 74 }, "Leftovers": { x: 53, y: 24 },
+    "Leftovers": { x: 53, y: 24 },
   },
   "fruit-bowl": {
     "Apples": { x: 72, y: 54 }, "Oranges": { x: 21, y: 47 }, "Satsumas": { x: 24, y: 51 },
@@ -138,8 +146,11 @@ const homeFor = (zoneId: string, name: string) => HOMES[zoneId]?.[name] ?? null;
 // Canonical homes for the Store Cupboard's category plaques — seated on the two
 // tin shelves the plate depicts (so a category sits on its own tins).
 const CAT_HOMES: Record<string, { x: number; y: number }> = {
+  // Store cupboard — on the two tin shelves
   "tinned-fish": { x: 34, y: 58 }, "soups": { x: 50, y: 58 }, "beans": { x: 66, y: 58 },
   "tomatoes": { x: 34, y: 74 }, "tinned-veg": { x: 50, y: 74 }, "coconut": { x: 66, y: 74 },
+  // Fridge — Salad on the crisper drawer; Condiments & Pickles on the door jars
+  "salad": { x: 42, y: 73 }, "condiments": { x: 17, y: 55 }, "pickles": { x: 15, y: 74 },
 };
 
 // Lay a zone's Living Objects out as a gathered standing row "in front of you",
@@ -154,6 +165,17 @@ const bandPos = (i: number, n: number) => {
   const x = 50 + (col - (inRow - 1) / 2) * spread;
   const y = rows === 1 ? 66 : row === 0 ? 58 : 74;
   return { x, y };
+};
+
+// A group's breakdown items, clustered over the group's OWN region (its plaque
+// home) rather than the room centre — so a drilled sub-name never appears over
+// unrelated food. Falls back to the gathered band when the group has no home.
+const clusterPos = (catId: string, i: number, n: number) => {
+  const base = CAT_HOMES[catId];
+  if (!base) return bandPos(i, n);
+  const spread = Math.min(8, 34 / Math.max(1, n));
+  const x = base.x + (i - (n - 1) / 2) * spread;
+  return { x: Math.max(9, Math.min(91, x)), y: base.y };
 };
 
 // ── One draggable Living Object — a real thing you pick up ─────────────────────
@@ -370,7 +392,7 @@ export default function LivingHomeRoom() {
           {level === "zone-category" && zoneCat && (
             <div className="lh-layer" key={"zonecat-" + zoneCat.id}>
               {zoneCat.items.filter(name => !isRemoved(name)).map((name, i, arr) => {
-                const { x, y } = bandPos(i, arr.length);
+                const { x, y } = clusterPos(zoneCat.id, i, arr.length);
                 const { src, variant } = leafSrc(name);
                 return (
                   <LivingObject key={name} id={`obj-${slug(name)}`} name={name} product={productOf(name)} src={src} variant={variant} hint={i === 0}
@@ -410,8 +432,13 @@ export default function LivingHomeRoom() {
 
           {level === "shelves" && <span className="lh-caption">Your shelves — open a group to handle the jars</span>}
           {level === "category" && group && <span className="lh-caption">{group.name} — drag a jar to shopping, to the Companion, or the bin</span>}
-          {level === "zone" && zone && zone.categories && <span className="lh-caption">{zone.name} — open a category</span>}
-          {level === "zone" && zone && zone.items && <span className="lh-caption">{zone.name} — drag a thing to shopping, to the Companion, or the bin</span>}
+          {level === "zone" && zone && (
+            <span className="lh-caption">
+              {zone.items && zone.categories ? `${zone.name} — drag a thing, or open a group`
+                : zone.categories ? `${zone.name} — open a group`
+                : `${zone.name} — drag a thing to shopping, to the Companion, or the bin`}
+            </span>
+          )}
           {level === "zone-category" && zoneCat && <span className="lh-caption">{zoneCat.name} — drag a thing to shopping, to the Companion, or the bin</span>}
         </div>
       </div>
