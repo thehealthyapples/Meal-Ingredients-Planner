@@ -1,0 +1,213 @@
+You are performing a READ-ONLY retirement assessment for this Replit workspace.
+
+Do NOT modify any files.
+Do NOT install anything.
+Do NOT commit.
+Do NOT deploy.
+Do NOT start or stop services.
+
+Your task is to determine whether this Replit workspace is still required now that active development has moved to a local machine with GitHub and Render Staging.
+
+==================================================
+OBJECTIVE
+==================================================
+
+Determine whether Replit can be safely retired, archived, or deleted.
+
+This is an investigation only.
+
+==================================================
+CHECK 1 — SOURCE OF TRUTH
+==================================================
+
+Determine:
+
+- Is this repository still the active development environment?
+- Is it ahead or behind GitHub?
+- Are there local changes?
+- Are there uncommitted files?
+- Are there untracked files?
+- Are there files that exist here but not in GitHub?
+
+Report:
+
+SAFE: YES / NO
+
+==================================================
+CHECK 2 — DEPLOYMENT
+==================================================
+
+Determine whether anything in this workspace is responsible for:
+
+- production deployment
+- staging deployment
+- automatic deployment
+- scheduled deployment
+- webhooks
+- CI/CD
+
+If yes, identify exactly what.
+
+==================================================
+CHECK 3 — ENVIRONMENT VARIABLES
+==================================================
+
+List every environment variable name.
+
+DO NOT reveal secrets.
+
+For each variable report:
+
+- name
+- purpose
+- appears essential
+- appears duplicated elsewhere (if detectable)
+
+Highlight variables that would prevent local or Render development if lost.
+
+==================================================
+CHECK 4 — BACKGROUND SERVICES
+==================================================
+
+Determine whether Replit is still running:
+
+- scheduled jobs
+- cron jobs
+- background workers
+- web servers
+- AI services
+- MCP services
+- bots
+- polling services
+- queues
+- webhooks
+
+For each:
+
+- purpose
+- required
+- safe to retire?
+
+==================================================
+CHECK 5 — DATABASE
+==================================================
+
+Determine whether this workspace owns:
+
+- migrations
+- database scripts
+- local databases
+- persistent storage
+- Neon connections
+- Postgres connections
+
+Identify anything that would break if this workspace disappeared.
+
+==================================================
+CHECK 6 — FILES
+==================================================
+
+Identify:
+
+temporary files
+
+generated files
+
+logs
+
+cached files
+
+old experiments
+
+unused scripts
+
+duplicate documentation
+
+large files
+
+orphaned assets
+
+Anything that should NOT be archived.
+
+==================================================
+CHECK 7 — AUTOMATION
+==================================================
+
+Determine whether any of these still depend on Replit:
+
+Telegram
+
+Hermes
+
+Claude
+
+ChatGPT
+
+GitHub
+
+Render
+
+Stripe
+
+Email
+
+Scheduled jobs
+
+Companion
+
+Background reporting
+
+If yes, explain exactly how.
+
+==================================================
+CHECK 8 — FINAL RISK REVIEW
+==================================================
+
+Answer:
+
+Can Replit now be:
+
+□ kept
+□ archived
+□ shut down
+□ deleted
+
+For every "NO" answer explain precisely why.
+
+==================================================
+OUTPUT
+==================================================
+
+Return:
+
+REPLIT STILL REQUIRED:
+YES / NO
+
+SAFE TO ARCHIVE:
+YES / NO
+
+SAFE TO DELETE:
+YES / NO
+
+BLOCKERS
+
+1.
+2.
+3.
+
+MISSING MIGRATION ITEMS
+
+DEPENDENCIES STILL USING REPLIT
+
+FILES THAT SHOULD BE SAVED
+
+ENVIRONMENT VARIABLES THAT MUST EXIST ELSEWHERE
+(names only)
+
+FINAL RECOMMENDATION
+
+If everything required has moved to GitHub + local development + Render staging, explicitly state:
+
+"Replit is no longer required for normal development and can be archived."
+
+Otherwise explain exactly what still depends on it.
