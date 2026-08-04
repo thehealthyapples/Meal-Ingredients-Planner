@@ -5,7 +5,7 @@
 **Rollback identifier:** `rollback/living-home-prod-arch-base` → `e1b38dc8` *(doc-only — nothing to roll back).*
 **Extends:** [`docs/implementation/LIVING_HOME_PANTRY_CANONICAL_ASSET_LIBRARY.md`](../implementation/LIVING_HOME_PANTRY_CANONICAL_ASSET_LIBRARY.md) (the asset inventory). This document is the **governing production architecture** for every future Living Home room; the library is its first populated instance.
 **Locked & unchanged:** Living Home Concept · Architecture · Working Position Architecture · Navigation Model · Living Object Model · Shopping Intent · Companion.
-**Status:** **COMPLETE (governing constitution).** Incorporates the earlier refinements (R1 canonical-home ownership · R2 Canonical Spatial Continuity · R3 Arrival Visibility · R4 Canonical Homes) and this Final Completion pass (Canonical Room Inventory · Camera Acceptance Test · Spatial Recognition · Camera Continuity records · Arrival Completeness · Permanent Room Identity · Implementation Gate). See §11 — architecture declared complete; effort now moves to implementation. Governance: **§13 Production Review Checklist** · **§14 Final Architectural Declaration**.
+**Status:** 🔒 **LOCKED (governing production constitution) — 2026-08-04.** Incorporates the earlier refinements (R1 canonical-home ownership · R2 Canonical Spatial Continuity · R3 Arrival Visibility · R4 Canonical Homes), the Final Completion pass (Canonical Room Inventory · Camera Acceptance Test · Spatial Recognition · Camera Continuity records · Permanent Room Identity · Implementation Gate), and the **Final Architectural Lock** (§8.1.1 Camera Continuity · **§8.1.2 Camera Truth** · §11 Camera-Truth gate · §13 Camera-Truth review question). **Architecture now gives way to craftsmanship** (§14). No further architectural redesign unless a genuine deficiency is first demonstrated.
 
 > This is the ownership and reuse **framework** the next generation programme proceeds from — not a request for images. Nothing here is generated.
 
@@ -294,6 +294,35 @@ A Working Position is **not** a new scene, a regenerated room, or another kitche
 
 *(Current-state note: several plates were generated as separate scenes and do not yet satisfy this rule strictly — see the Camera Continuity Review in `docs/implementation/LIVING_HOME_DYNAMIC_OBJECT_PHASE0_FRIDGE.md`. This rule now governs their correction.)*
 
+### 8.1.2 Camera Truth
+
+> **A camera records reality. It never invents it.**
+
+Every Working Position must be created by **observing the Canonical Living Home Set from another genuine physical viewpoint.**
+
+A Working Position is never:
+- another room
+- another kitchen
+- another fridge
+- another cupboard
+- another piece of furniture
+
+It is **another camera position inside the SAME Living Home.** The camera may move. The household may walk. Doors may open. Drawers may open. **The room itself never changes.**
+
+A Working Position must **never** introduce:
+- different cabinetry
+- different shelving
+- different architecture
+- different joinery
+- different appliances
+- different permanent furniture
+- different room proportions
+- different craftsmanship
+
+**If a Working Position requires different architecture to exist, it is not another camera — it is another room. Reject it.**
+
+The Living Home therefore contains only **one** Pantry. Every Working Position is simply another truthful observation of that Pantry. **The camera records. The room remains.**
+
 ### 8.2 Arrival Visibility & Completeness
 
 > **Every navigable area is already visible when you enter the pantry. Selecting an area only moves the household closer — nothing appears because it was selected.**
@@ -405,6 +434,8 @@ All remaining effort now moves **from architectural invention into faithful impl
 
 **This architecture is now considered governing. Future implementation should *extend* this architecture rather than replace it. Any proposed architectural change must demonstrate a genuine deficiency that cannot reasonably be resolved through implementation, craftsmanship or production quality alone.** The Living Home now evolves through **craftsmanship, production quality, visual continuity and hospitality — not more architecture.**
 
+**Camera Truth gate (mandatory — §8.1.2):** **No Working Position may be approved unless it can genuinely be interpreted as another photograph taken from inside the already-approved Canonical Living Home Set. The camera changes. The room does not.** A position that requires different architecture, cabinetry, appliances or proportions to exist is *another room* and is rejected.
+
 ---
 
 ## 12. Definition of Done
@@ -434,6 +465,7 @@ Future work should focus on **faithfully implementing** this architecture rather
 Every new **Working Position, Camera and Environment Plate** must pass this review before approval. It operationalises the Camera Acceptance Test (§8.3) and the governing principles (§8) into one gate — a single failed box rejects the asset.
 
 **Truth of the room**
+- ☐ **Could this image genuinely have been taken by physically walking to another location inside the same Living Home? (Camera Truth — §8.1.2; if No → reject the Working Position.)**
 - ☐ Could this image genuinely have been photographed from another position inside the **same** room?
 - ☐ Can the household **immediately recognise where they are**?
 - ☐ Does the camera **faithfully represent the Canonical Room Inventory** (§1A)?
@@ -454,12 +486,21 @@ Every new **Working Position, Camera and Environment Plate** must pass this revi
 
 ---
 
-## 14. Final architectural declaration
+## 14. Final architectural declaration — 🔒 LOCKED
 
-> **The Living Home Production Architecture is now the governing constitution for all Living Home environments.**
+> **The Living Home Production Architecture is now LOCKED. It is the governing production constitution for all Living Home environments.**
 >
-> Future work should improve **craftsmanship, hospitality, continuity and production quality**.
+> Future work should improve — and only improve:
+> - **craftsmanship**
+> - **hospitality**
+> - **implementation quality**
+> - **Living Object quality**
+> - **production quality**
+> - **camera fidelity**
+> - **environmental continuity**
 >
-> Future work should **not redesign the architecture** unless a **genuine architectural deficiency** has been demonstrated — one that cannot reasonably be resolved through implementation, craftsmanship or production quality alone.
+> Future work should **NOT introduce new architectural concepts** unless a **genuine architectural deficiency has first been demonstrated** — one that cannot reasonably be resolved through implementation, craftsmanship or production quality alone.
 >
-> This document is permanent. Implementation is measured against it.
+> **Architecture now gives way to craftsmanship.** This document is permanent; implementation is measured against it.
+
+*(Locked 2026-08-04. Final refinement incorporated: §8.1.2 Camera Truth; the §11 Camera-Truth implementation gate; the §13 Camera-Truth review question.)*
