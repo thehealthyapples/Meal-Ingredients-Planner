@@ -282,6 +282,18 @@ Moving the camera must **never** introduce:
 
 Lighting is fixed for the whole Set (one morning, **light from camera-right**) — this is also the mandatory object-lighting spec, so every object composites into the same room. This principle governs **every** Living Home Set and is the acceptance test for any new plate, camera or object: *if it could not be a photograph taken from a different spot in the one room, it is rejected.*
 
+#### 8.1.1 Camera Continuity — governing production rule (2026-08-04)
+
+> **The camera moves. The house never does.**
+
+A Working Position is **not** a new scene, a regenerated room, or another kitchen — it is **another viewpoint inside the SAME pantry**. The following must be **identical across every Working Position**: cabinetry · timber · stone worktops · windows · handles · lighting · floor · architecture · craftsmanship · scale. **Only the camera position changes.**
+
+**Same-fixture corollary.** A close-up of a fixture must be the **same integrated fixture** seen from Arrival — same appliance, same cabinetry, same handles, same proportions, same location. The **Fridge** specifically: the Working Position is the **inside of the SAME integrated fridge** visible from Arrival, both doors fully open, camera square, internal fridge lighting — **no regenerated appliance**. The canonical entry sequence is: *Arrival → walk to the fridge → stand directly in front → open both doors fully → look inside.* The Working Position begins only after those actions; nothing else changes.
+
+**Acceptance question (every position):** *"Could this image have been captured by physically walking around the SAME pantry?"* If **No → reject** the Working Position. The household must immediately recognise: *"this is the fridge I was just standing beside."*
+
+*(Current-state note: several plates were generated as separate scenes and do not yet satisfy this rule strictly — see the Camera Continuity Review in `docs/implementation/LIVING_HOME_DYNAMIC_OBJECT_PHASE0_FRIDGE.md`. This rule now governs their correction.)*
+
 ### 8.2 Arrival Visibility & Completeness
 
 > **Every navigable area is already visible when you enter the pantry. Selecting an area only moves the household closer — nothing appears because it was selected.**

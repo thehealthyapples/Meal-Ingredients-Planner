@@ -293,3 +293,32 @@ Milk (door), Butter/Cheese (shelf), Tea (canister), Wholemeal flour (flour shelf
 **Architectural Homes: ✓ COMPLETE.** **Production Homes: largely achieved** — anchored positions, shelves and the fridge doors/drawers *feel at home*; the **fridge open-shelf lighting is the single residual** still short of an unqualified Yes. **Not declared complete without qualification** — that residual, plus per-position visual re-verification beyond the fridge, remains.
 
 **STOP — Production Home review complete; fridge shelves seated this pass. One honest residual (shelf-item lighting) keeps it from an unqualified "feels at home." Awaiting Home Owner direction before the next Working Position.**
+
+---
+
+# CAMERA CONTINUITY REVIEW (2026-08-04)
+
+**Governing rule now recorded** in the constitution (§8.1.1): *the camera moves; the house never does.* A Working Position is another viewpoint inside the **same** pantry, not a new scene. Acceptance question per position: *"Could this image have been captured by physically walking around the SAME pantry?"* Rollback: `rollback/living-home-camera-continuity-base` → `c10a6dab`. **Review only — no regeneration.**
+
+### Honest per-position verdict
+
+| Working Position | Same physical pantry? | Verdict |
+|---|---|---|
+| **Arrival · Pantry Shelves · Worktop · Freezer** (wide views) | Yes — they literally share the one composition (shelves, worktop, kombucha, baskets, stone floor) | 🟢 **pass** |
+| **Fruit · Bread · Tea & Coffee · Store Cupboard · Root Veg** (close-ups) | Consistent *style* (oak, stone, plaster, warm light) but each was **generated as its own scene** — not verified as the same room from a moved camera | 🟡 **consistent, not verified** — likely re-establish from the one room |
+| **Fridge** | **No.** Arrival shows a **narrow, oak-panelled *integrated* fridge** on the far left; the Working Position shows a **wide, stainless *American french-door* fridge**. Different width, proportions and finish. | 🔴 **fails the same-appliance test** |
+
+### The honest finding
+Judged strictly against the rule, the plates were authored as **separate, stylistically-matched scenes**, not as **one physical room photographed from several camera positions**. The strongest failure is the **Fridge**: opening it does **not** reveal the *same appliance* the household just walked past in Arrival — it reads as a different, larger fridge. So today the household would **not** unquestionably think *"this is the fridge I was just standing beside."*
+
+### What this governs (future correction — not this pass)
+1. **Fridge (priority):** re-establish the Working Position as the **same integrated appliance** shown in Arrival — same cabinetry, handles, proportions, location — both doors fully open, camera square, internal light. The empty-plate + Living Object work carries over unchanged onto the corrected appliance.
+2. **Close-ups (Fruit/Bread/Tea/Cupboard/Root Veg):** re-establish as viewpoints of the one room (or confirm each is genuinely a corner of it), so cabinetry/timber/floor/windows/lighting/scale are identical.
+3. **Wide positions:** already compliant — the continuity reference.
+
+**No appliance or room was regenerated in this pass** (explicitly out of scope). The rule is now recorded and the failures are honestly logged.
+
+### Verdict
+**Camera Continuity is now a governing production rule.** Against it, **the wide positions pass, the close-ups are consistent-but-unverified, and the Fridge fails the same-appliance test.** The Fridge is therefore **not** yet the household's *own* fridge seen from inside — the correction is the priority before the Fridge can be declared the benchmark.
+
+**STOP — rule recorded; honest review complete; the Fridge fails same-appliance continuity and needs correction. No regeneration performed. Awaiting Home Owner approval for the continuity-correction pass.**
