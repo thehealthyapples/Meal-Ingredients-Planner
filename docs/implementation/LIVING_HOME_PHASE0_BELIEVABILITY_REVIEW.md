@@ -79,3 +79,36 @@ Do **not** regenerate the fridge (the plate is faithful). Re-do Phase 0 object i
 Only this integration layer changes — the Living Object Platform (independent, movable, removable objects) is untouched. It becomes **visually invisible**: the household simply believes *"my milk is in my fridge."*
 
 **STOP — awaiting approval before implementing the believability pass.**
+
+---
+
+## Canonical Asset Capture — governing production principle (approved 2026-08-04)
+
+**Reusable Living Objects should be authored under the *same* canonical camera, lighting, perspective and craftsmanship as their intended Environment Plate — wherever practical.** A Living Object should not begin life as generic product photography or an isolated studio asset that runtime must then *rescue*; it should already **belong to the Living Home before runtime**. Runtime then performs only **subtle integration**, never correction.
+
+**Canonical production pipeline:**
+
+```
+Canonical Environment Plate
+        ↓
+Canonical Camera
+        ↓
+Canonical Lighting  (the room's own warm light)
+        ↓
+Living Object Master  (authored to belong)
+        ↓
+Minor Runtime Grounding  (contact shadow · ambient occlusion · foreground masking)
+```
+
+This is the canonical methodology for **every future Living Object**. (Phase 0 objects were captured as studio product shots and **relit to the fridge's warm light at the master level** — a retroactive application of this principle; future objects are captured canonically from the start, so relighting becomes refinement, not rescue.)
+
+## Living Object Acceptance Test (production quality gate)
+
+Every Living Object must pass **all** of the following before implementation:
+
+- ☐ Could this object genuinely be mistaken for part of the original photograph?
+- ☐ Does it naturally occupy its **Canonical Home**?
+- ☐ Does it already share the Environment Plate's **camera, lighting and perspective**?
+- ☐ Does it need only **subtle runtime grounding**, not significant visual correction?
+
+**Any "No" → reject and refine the object before implementation.** This gate sits alongside the Environment Plate's Camera Acceptance Test and the Production Review Checklist.

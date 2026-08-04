@@ -129,4 +129,32 @@ Far closer to *"my milk is in my fridge."* The **crisper drawers are convincing*
 | `client/src/pages/living-home-room.css` | `.lh-obj--fridge` grounding + seat shadow; `.lh-front*` clipped occlusion layers; `.lh-areas-tab` collapsed navigator. |
 | `client/src/assets/.../fridge/*.png` | 18 objects relit (warm top-light + AO); milk re-extracted solid. Raw pre-relight copies kept in `artifacts/fridge-objects-raw/`. |
 
-**STOP — believability pass complete. Fridge remains the benchmark. Awaiting approval before any further Working Position.**
+---
+
+## Phase 0B (Final) — Door occlusion, clustering & Canonical Asset Capture (2026-08-04)
+
+**Rollback:** `rollback/living-fridge-believability-base` → `9af4b723`. **Same fridge, same platform, same interaction — integration only.**
+
+### Production improvements (this pass)
+1. **Environment Plate layering completed (BACK → OBJECTS → FRONT).** The FRONT layer now includes **both the crisper drawer fronts *and* the four door-rack front walls** (masked to just the bin bands, so a bottle's base tucks into its rack while its body pokes above). Milk & juice now sit **inside** the left door bins; ketchup, mustard, mayonnaise and **pickles (lowest rack)** each sit **inside** a right-door bin. The "on the door" read is gone.
+2. **Natural arrangement.** Objects are clustered — **butter beside cheese**, leftovers beside yoghurt, one condiment per door bin, drawers filled — instead of isolated product spacing. The fridge reads *lived-in*.
+3. **Canonical homes respected.** Milk always in its door bin, butter beside cheese, pickles in the lower rack; when an object is binned its **home remains** (verified).
+4. **Relit masters (not runtime rescue).** The 18 object masters were regraded to the fridge's **warm top-light with base ambient occlusion at the master level**; runtime does only contact-shadow + drawer/rack occlusion.
+5. **Navigation recedes** to a small "Areas" tab inside the Working Position.
+
+### Environment Plate layering (summary)
+`.lh-plate--fridge-empty` (BACK) · independent `LivingObject`s (MIDDLE) · `.lh-front--fridge-drawers` + `.lh-front--fridge-doorL/R` (FRONT, the same plate clipped/masked to the foreground furniture). Objects are always sandwiched between.
+
+### Canonical Asset Capture (applied + adopted)
+Phase-0 objects were studio product shots **relit at the master level** to the fridge's light — a retroactive application of the new **Canonical Asset Capture** principle (`LIVING_HOME_PHASE0_BELIEVABILITY_REVIEW.md`). Every **future** Living Object is authored under its plate's canonical camera & lighting so runtime is *refinement, not rescue*.
+
+### Living Object Acceptance Test (applied)
+Each object was judged against: *mistaken for the original photo? · occupies its canonical home? · shares the plate's camera/lighting/perspective? · needs only subtle grounding?* The door bottles, drawer produce and shelf dairy pass; the two areas still improvable are noted below (not blockers).
+
+### Homeowner review (honest)
+Standing at the fridge: milk & juice are **in the door**, the condiments are **in their racks**, the salad & fruit are **in the frosted drawers**, dairy rests on the shelves with contact shadows, and nothing obscures the room. The answer to *"would I believe these were photographed in this fridge?"* is now **close to an immediate yes** for the doors and drawers. **Remaining light-polish** (candidates, not blockers): the mid-shelf dairy is the least "seated" (open shelf, no front lip to tuck behind); a couple of salad tops sit near the drawer front edge. Recommend a small follow-up only if desired.
+
+### Before / after
+`docs/implementation/pantry-final-evidence/phase0b-before-after.png` — Phase 0 (objects over the photo) vs Phase 0B (objects inside the fridge). Latest: `phase0b-fridge.png`.
+
+**STOP — believability pass complete; the Fridge is the production benchmark for every future Working Position. Commit/push done. Awaiting Home Owner approval before Phase 1 (Fruit / Bread / Cupboards / Tea & Coffee).**
