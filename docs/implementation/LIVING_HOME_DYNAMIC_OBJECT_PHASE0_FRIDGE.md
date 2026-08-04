@@ -173,6 +173,15 @@ Standing at the fridge as the Home Owner, forgetting the code:
 | Has the software disappeared? | **Largely** — navigation recedes to a tab; a standing instruction caption remains. |
 | Would I proudly show this to another household? | **The doors & drawers, yes. The whole fridge — not without qualification.** |
 
+### The decisive question (capstone)
+
+> **"When I open the fridge, does it feel like I opened *my* fridge — or does it feel like I opened *another screen*?"**
+
+- If **"another screen" → continue refining.**
+- If **"my fridge" → the Working Position passes.**
+
+**Honest answer today:** *closer to "my fridge" than ever — the moment of opening the door, the bottles in the racks and the veg in the drawers land that feeling — but the open-shelf dairy still tips a discerning eye back toward **"a screen."*** So the capstone verdict is **not yet an unqualified "my fridge."** → **continue refining.**
+
 **Verdict: the Fridge is NOT yet complete and is NOT yet declared the production benchmark.** The Living Object *Platform* is proven and correct; the *illusion* is strong for the doors and drawers and still short on the open shelves.
 
 ### Honest remaining work before completion
