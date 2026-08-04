@@ -191,3 +191,77 @@ Standing at the fridge as the Home Owner, forgetting the code:
 4. Re-run the full Home Owner Acceptance Review and only then update this line.
 
 **STOP — refining continues; the Fridge is a strong candidate, not a finished benchmark. Not proceeding to Fruit / Bread / Cupboards / Tea & Coffee. Awaiting Home Owner direction.**
+
+---
+
+# CANONICAL HOME COMPLETION REVIEW (2026-08-04)
+
+**Question answered here is not "does it look real?" but "does every Living Object have a *home*?"** Rollback: `rollback/living-home-canonical-homes-review-base` → `ca1b64e3`. No assets generated; no redesign.
+
+**Headline: every Living Object in the Living Pantry has a Canonical Home that is physically represented in its plate, is where the object appears, and is where it returns.** The Fridge realises its homes as **independent objects** (the platform target); the other positions realise their homes as **anchored placements over the depicted furniture** (Canonical Homes §4A) — homed, though not yet converted to independent objects (a future phase, not a missing home).
+
+For each object the six tests pass unless noted: *has a home · home physically represented · appears there · household understands it · can be picked up · can return.*
+
+### Register by area
+
+**Pantry Shelves** — jars seated on the shelf; each item's home is its group's shelf. *(Home model: independent jar objects on POINTS — the platform pattern.)*
+| Group (home = its shelf) | Living Objects | Status |
+|---|---|---|
+| Flours shelf | Wholemeal · White · Strong bread · Self-raising · Spelt · Rye | 🟢 homed |
+| Grains shelf | Rolled oats · Pearl barley · Bulgur wheat · Couscous | 🟢 homed |
+| Pulses shelf | Chickpeas · Red lentils · Green lentils · Butter beans · Kidney beans | 🟢 homed |
+| Rice & pasta shelf | White rice · Brown rice · Penne · Fusilli | 🟢 homed |
+| Oils & vinegars shelf | Olive oil · Sunflower oil · Balsamic · White wine vinegar | 🟢 homed |
+| Baking shelf | Caster sugar · Icing sugar · Soft brown sugar · Bicarb of soda | 🟢 homed |
+
+**Fridge** — independent Living Objects at fixed homes (Phase 0/0B).
+| Home | Living Objects | Status |
+|---|---|---|
+| Door — left rack | Milk · Juice | 🟢 homed (independent) |
+| Door — right rack | Ketchup · Mustard · Mayonnaise · Pickles (lowest) | 🟢 homed (independent) |
+| Upper shelves | Leftovers · Yoghurt · Cheese · Butter | 🟡 homed; shelf grounding under refinement |
+| Salad crisper | Tomatoes · Cucumber · Pepper · Radishes · Lettuce · Spring onions | 🟢 homed (in drawer) |
+| Fruit crisper | Berries · Grapes | 🟢 homed (in drawer) |
+
+**Freezer** | Frozen veg · Frozen fruit · Meat · Fish · Prepared meals → **freezer drawers** | 🟢 homed (anchored) |
+**Store Cupboard** — categories, each a shelf home:
+| Category home | Living Objects | Status |
+|---|---|---|
+| Tinned fish shelf | Tuna · Sardines · Mackerel · Salmon | 🟢 homed |
+| Soups shelf | Tomato · Chicken & mushroom · Chickpea & lentil · Vegetable | 🟢 homed |
+| Beans shelf | Kidney beans · Butter beans · Chickpeas · Cannellini · Black beans | 🟢 homed |
+| Tomatoes shelf | Chopped · Plum · Passata · Cherry | 🟢 homed |
+| Tinned veg shelf | Sweetcorn · Peas · Carrots · Green beans | 🟢 homed |
+| Coconut shelf | Coconut milk · Coconut cream · Creamed coconut | 🟢 homed |
+
+**Bread** | Bread · Rolls · Bagels → **the bread board / crock** | 🟢 homed |
+**Tea & Coffee** | Black tea · Herbal teas · Coffee · Hot chocolate → **the canisters** | 🟢 homed |
+**Fruit** | Apples · Bananas · Pears · Satsumas · Oranges → **the fruit baskets** | 🟢 homed |
+**Root Vegetable Rack** | Potatoes · Sweet potatoes · Onions · Garlic · Shallots → **the wire-rack tiers** | 🟢 homed |
+**Kitchen Worktop** | Apples · Bananas · Oranges · Pears → **the worktop baskets** | 🟡 homed, but **duplicates Fruit** (same fruit/baskets) — recorded as a *potential camera, not a permanent position* (see review §6A) |
+
+### Missing homes
+**None.** Every Living Object has a Canonical Home.
+
+### Homes requiring refinement
+1. **Fridge open shelves** — the dairy is homed but its *seating* is still being refined (visual grounding), not its home.
+2. **Kitchen Worktop** — its four objects are the same fruit as the Fruit bowl; the position likely folds into a camera rather than owning distinct homes (architectural, not a missing home).
+
+### Homes requiring new assets
+**None for the *home* question.** Independent-object realisation of the non-Fridge positions (empty plate + object masters, as the Fridge and Shelves have) is a **future phase**, not a missing home — those objects already live at represented homes today.
+
+### Home Owner Review — "where do we keep the ___?"
+| Question | Instinctive answer |
+|---|---|
+| Flour? | **Pantry Shelves → Flours** ✅ |
+| Tea? | **Tea & Coffee → canister** ✅ |
+| Ketchup? | **Fridge → door** ✅ |
+| Potatoes? | **Root Vegetable Rack** ✅ |
+| Yoghurt? | **Fridge → shelf** ✅ |
+
+Every answer is immediate: the Areas navigator names the place, the plate shows the furniture, the object sits at its home. **The household never has to wonder where something lives.**
+
+### Verdict
+**Canonical Home dimension: COMPLETE — every Living Object has a permanent, represented home.** This is distinct from (and now decoupled from) the *visual* believability of the Fridge shelves, which continues to be refined. No object in the Living Pantry is homeless.
+
+**STOP — Canonical Home review complete. Awaiting Home Owner approval before beginning the next Working Position.**
