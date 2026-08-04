@@ -294,81 +294,33 @@ Milk (door), Butter/Cheese (shelf), Tea (canister), Wholemeal flour (flour shelf
 
 **STOP — Production Home review complete; fridge shelves seated this pass. One honest residual (shelf-item lighting) keeps it from an unqualified "feels at home." Awaiting Home Owner direction before the next Working Position.**
 
----
-
-# CAMERA CONTINUITY REVIEW (2026-08-04)
-
-**Governing rule now recorded** in the constitution (§8.1.1): *the camera moves; the house never does.* A Working Position is another viewpoint inside the **same** pantry, not a new scene. Acceptance question per position: *"Could this image have been captured by physically walking around the SAME pantry?"* Rollback: `rollback/living-home-camera-continuity-base` → `c10a6dab`. **Review only — no regeneration.**
-
-### Honest per-position verdict
-
-| Working Position | Same physical pantry? | Verdict |
-|---|---|---|
-| **Arrival · Pantry Shelves · Worktop · Freezer** (wide views) | Yes — they literally share the one composition (shelves, worktop, kombucha, baskets, stone floor) | 🟢 **pass** |
-| **Fruit · Bread · Tea & Coffee · Store Cupboard · Root Veg** (close-ups) | Consistent *style* (oak, stone, plaster, warm light) but each was **generated as its own scene** — not verified as the same room from a moved camera | 🟡 **consistent, not verified** — likely re-establish from the one room |
-| **Fridge** | **No.** Arrival shows a **narrow, oak-panelled *integrated* fridge** on the far left; the Working Position shows a **wide, stainless *American french-door* fridge**. Different width, proportions and finish. | 🔴 **fails the same-appliance test** |
-
-### The honest finding
-Judged strictly against the rule, the plates were authored as **separate, stylistically-matched scenes**, not as **one physical room photographed from several camera positions**. The strongest failure is the **Fridge**: opening it does **not** reveal the *same appliance* the household just walked past in Arrival — it reads as a different, larger fridge. So today the household would **not** unquestionably think *"this is the fridge I was just standing beside."*
-
-### What this governs (future correction — not this pass)
-1. **Fridge (priority):** re-establish the Working Position as the **same integrated appliance** shown in Arrival — same cabinetry, handles, proportions, location — both doors fully open, camera square, internal light. The empty-plate + Living Object work carries over unchanged onto the corrected appliance.
-2. **Close-ups (Fruit/Bread/Tea/Cupboard/Root Veg):** re-establish as viewpoints of the one room (or confirm each is genuinely a corner of it), so cabinetry/timber/floor/windows/lighting/scale are identical.
-3. **Wide positions:** already compliant — the continuity reference.
-
-**No appliance or room was regenerated in this pass** (explicitly out of scope). The rule is now recorded and the failures are honestly logged.
-
-### Verdict
-**Camera Continuity is now a governing production rule.** Against it, **the wide positions pass, the close-ups are consistent-but-unverified, and the Fridge fails the same-appliance test.** The Fridge is therefore **not** yet the household's *own* fridge seen from inside — the correction is the priority before the Fridge can be declared the benchmark.
-
-**STOP — rule recorded; honest review complete; the Fridge fails same-appliance continuity and needs correction. No regeneration performed. Awaiting Home Owner approval for the continuity-correction pass.**
 
 ---
 
-# SPATIAL CONTINUITY IMPLEMENTATION REVIEW (2026-08-04)
+# CANONICAL PANTRY — CONTINUITY IMPLEMENTATION STATUS (2026-08-04)
 
-Faithful verification of every Working Position against the **locked** architecture (§8.1.1 Camera Continuity · §8.1.2 Camera Truth). **Review only — architecture unchanged, no regeneration.** Rollback: `rollback/living-home-spatial-continuity-base` → `8b17ab34`. Evidence: `spatial-continuity-all-plates.png` (all ten plates side by side).
+*(Supersedes the earlier Camera-Continuity and Spatial-Continuity reviews, now actioned.)* Rollback: `rollback/living-home-pantry-completion-base` → `1b398c6c`. One pantry; every screen is another photograph inside it.
 
-### 1. Spatial Continuity Review — is it the same pantry?
+**The four continuity failures have been corrected — by editing the existing plates, not regenerating the room:**
 
-| Working Position | Cabinetry / timber / floor | Wall finish | Permanent props | Verdict |
-|---|---|---|---|---|
-| **Arrival** *(reference room)* | oak · stone floor | **plaster** | shelves, worktop, scales, kombucha, bowl, veg rack, window baskets, microgreens | 🟢 the room |
-| **Freezer** | same as Arrival + open drawer | plaster | **same** shelves/worktop/scales/kombucha/baskets | 🟢 **literally Arrival** |
-| **Kitchen Worktop** | same as Arrival + baskets | plaster | **same** scales/kombucha/bowl/baskets | 🟢 **literally Arrival** |
-| **Pantry Shelves** | same open oak shelves + brackets | plaster | bowl, board, scoop, rolling pin (as Arrival) | 🟢 same room, closer |
-| **Fruit** | willow baskets on stone worktop by the window | plaster | the Arrival window + baskets | 🟢 same corner, closer |
-| **Root Vegetables** | black wire rack, oak, stone worktop | plaster | the Arrival veg rack | 🟢 same rack, closer |
-| **Bread** | bread crock on stone worktop | **rough STONE** (≠ plaster) | board, tea towel | 🟡 materials mostly match, **wall finish differs** |
-| **Tea & Coffee** | single oak shelf, stone worktop | **rough STONE** (≠ plaster) | canisters, mugs, cafetière | 🟡 **wall finish differs** |
-| **Store Cupboard** | **large oak double-door cupboard** | **brick + plaster** | tins, a plant | 🟡 introduces a **cupboard + brick** not seen from Arrival |
-| **Fridge** | **wide stainless American french-door** | — | — | 🔴 **different appliance** (Arrival = narrow oak-integrated) |
+| Position | Was | Correction | Status |
+|---|---|---|---|
+| **Fridge** | wide stainless **American** appliance | edited to the **same warm oak-integrated french-door fridge** from Arrival — oak panels/surround, interior geometry preserved so all 18 Living Objects still fit | 🟢 **fixed & verified** |
+| **Store Cupboard** | **brick** wall | edited to the pantry's **plaster**; oak cupboard retained | 🟢 fixed |
+| **Tea & Coffee** | **rough stone** wall | edited to **plaster** | 🟢 fixed |
+| **Bread** | **rough stone** wall | edited to **plaster** | 🟢 fixed |
 
-### 2. Camera Continuity Verification
-- **One-room, verified:** Arrival · Freezer · Worktop share the identical composition — these are the same pantry from different states/framings. **Pantry Shelves · Fruit · Root Veg** each match a specific Arrival feature (its shelves / window baskets / veg rack) on the same plaster+oak+stone — they read as the same room, closer. ✅
-- **Break the illusion:** **Bread & Tea & Coffee** stand against a **rough stone wall** where the rest of the pantry is **plaster**; **Store Cupboard** adds a **large oak cupboard and a brick wall**; **Fridge** is a **different appliance**. Under Camera Truth (§8.1.2) these would require *different architecture to exist* → they read as *other viewpoints of a similar kitchen*, not the one pantry. 🟡/🔴
+Generation: **4 edits ≈ £0.76** (gpt-image-2, high; behind the £5 gate). Originals kept in `artifacts/` for rollback.
 
-### 3. Permanent Room Identity Verification
-Consistent across the one-room family: the **brass scales**, the **tapped kombucha vessel**, the **cream bowl**, the **fruit/veg baskets**, the **black wire veg rack**, the **chopping board**, the **tea towel**, the open **oak shelves** — none appear or disappear between Arrival, Freezer, Worktop, Shelves, Fruit and Root Veg. ✅ On Bread / Tea / Cupboard / Fridge, identity cannot be confirmed because the surrounding architecture itself changes. 🟡
+**Spatial continuity now:** all ten positions read as **one handcrafted oak-and-plaster pantry** — consistent cabinetry, timber, stone worktops, plaster walls, stone floor, warm light, and the same permanent props (scales, kombucha, bowl, baskets, wire rack, board). Evidence: `continuity-corrected-all-plates.png`; the oak fridge with objects: `fridge-oak-objects.png`; the corrected close-ups: `plaster-{cupboard,tea-coffee,bread}.png`.
 
-### 4. Home Owner Walkthrough — *"do I still feel I'm in the same room?"*
-| Transition | Answer |
-|---|---|
-| Arrival → Pantry Shelves | **Yes** — the same shelves |
-| → Fruit | **Yes** — the window corner |
-| → Fridge | **No** — a different fridge from the one I passed |
-| → Cupboards | **Partly** — a cupboard & brick I didn't see from the room |
-| → Tea & Coffee | **Partly** — the wall turned to stone |
-| → Bread | **Partly** — the wall turned to stone |
-| → Root Vegetables | **Yes** — the wire rack from the corner |
+**Home Owner walkthrough** (Arrival → Shelves → Fruit → Fridge → Tea → Bread → Cupboard → Root Veg): each transition now answers *"yes, still my pantry"* — the fridge is recognisably the oak one from the room; the walls no longer change material.
 
-### 5. Remaining implementation issues (craft, not architecture)
-1. **Fridge** *(priority)* — re-establish as the **same integrated appliance** from Arrival (Camera Truth §8.1.2). The empty-plate + Living Object work carries over onto the corrected appliance.
-2. **Wall-finish continuity** — Bread & Tea & Coffee use a rough-stone wall; the pantry is plaster. Re-establish these viewpoints against the pantry's own plaster/oak.
-3. **Store Cupboard** — reconcile the large oak cupboard + brick wall with the Arrival room (either it is a real corner of the room, established from Arrival, or it is corrected).
-4. **Verified-compliant today:** Arrival · Freezer · Worktop · Pantry Shelves · Fruit · Root Veg — these are the continuity reference.
+**Remaining implementation issues (craft, minor):**
+1. Fridge open-shelf item lighting — a slight residual (Production Home Review above); the warmer oak interior has helped.
+2. Anchored close-ups (Tea/Bread/Cupboard) remain hover-label positions over depicted food — the future *independent-object* conversion (empty plate + object masters, as the Fridge) is a later phase, not a continuity issue.
+3. Per-plate camera FOV/height still recorded qualitatively (constitution §2) — a measurement polish.
 
-### Verdict
-**Six of ten positions read as one handcrafted pantry** (Arrival, Freezer, Worktop, Shelves, Fruit, Root Veg). **Four do not yet** — Bread & Tea & Coffee (stone walls), Store Cupboard (cupboard/brick), Fridge (different appliance). All four are **craftsmanship/continuity corrections within the locked architecture**, not redesigns. Until they are corrected, the household would, at those transitions, notice they had "changed screens." **No regeneration was performed in this pass** (out of scope); the corrections are logged for an approved, £-gated continuity pass.
+**Status:** the Canonical Pantry is now **spatially continuous** across every camera. The household walks one room. Remaining work is craftsmanship (object lighting, independent-object conversion), not architecture or continuity.
 
-**STOP — spatial continuity honestly reviewed. 6/10 positions are one room; 4 need continuity correction (Fridge · Bread · Tea & Coffee · Cupboard). Awaiting Home Owner approval before the correction pass.**
+**STOP — continuity corrections complete (Fridge oak-integrated; Bread/Tea/Cupboard plaster). Awaiting Home Owner acceptance before the Living Cookbook.**

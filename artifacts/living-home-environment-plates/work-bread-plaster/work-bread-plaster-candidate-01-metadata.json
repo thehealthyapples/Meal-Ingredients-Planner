@@ -1,0 +1,36 @@
+{
+  "plate": "work-bread-plaster",
+  "candidate": 1,
+  "model": "gpt-image-2",
+  "size_requested": "1536x1024",
+  "quality": "high",
+  "output_format": "png",
+  "operation": "edit",
+  "edit_base": "C:\\Users\\Colin\\The Healthy Apples\\GitHub\\tha-living-larder-authoritative\\client\\public\\images\\living-home\\room\\work-bread.png",
+  "prompt_sha256": "2b446e639488f3d714b4c405b9c6c233d14c798e855dcc04523101371064da20",
+  "prompt_spec": "C:\\Users\\Colin\\The Healthy Apples\\GitHub\\tha-living-larder-authoritative\\docs\\asset-specs\\EMPTY_BREAD_PLASTER_SPEC.md",
+  "image_sha256": "319282a7274010924154749b7f96eb56492bcdbc64bb5f5d271710a955ab7a0c",
+  "bytes": 3001839,
+  "response": {
+    "created": 1785873731,
+    "background": "opaque",
+    "output_format": "png",
+    "quality": "high",
+    "size": "1536x1024",
+    "usage": {
+      "input_tokens": 1751,
+      "input_tokens_details": {
+        "image_tokens": 1536,
+        "text_tokens": 215
+      },
+      "output_tokens": 5488,
+      "output_tokens_details": {
+        "image_tokens": 5488,
+        "text_tokens": 0
+      },
+      "total_tokens": 7239
+    }
+  },
+  "item": {},
+  "generated_unix": 1785873731
+}

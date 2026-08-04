@@ -1,0 +1,36 @@
+{
+  "plate": "work-cupboard-plaster",
+  "candidate": 1,
+  "model": "gpt-image-2",
+  "size_requested": "1536x1024",
+  "quality": "high",
+  "output_format": "png",
+  "operation": "edit",
+  "edit_base": "C:\\Users\\Colin\\The Healthy Apples\\GitHub\\tha-living-larder-authoritative\\client\\public\\images\\living-home\\room\\work-cupboard.png",
+  "prompt_sha256": "4efa115fdf4db30cb7e95d57f4a1f5b5c9e0c2a947e10e0f181493fe2b1fa334",
+  "prompt_spec": "C:\\Users\\Colin\\The Healthy Apples\\GitHub\\tha-living-larder-authoritative\\docs\\asset-specs\\EMPTY_CUPBOARD_PLASTER_SPEC.md",
+  "image_sha256": "2abd2f48dd69fcee03a425917f22b12c89b73d2d044f8cf01ad964a4b9c41b93",
+  "bytes": 2708567,
+  "response": {
+    "created": 1785873853,
+    "background": "opaque",
+    "output_format": "png",
+    "quality": "high",
+    "size": "1536x1024",
+    "usage": {
+      "input_tokens": 1751,
+      "input_tokens_details": {
+        "image_tokens": 1536,
+        "text_tokens": 215
+      },
+      "output_tokens": 5488,
+      "output_tokens_details": {
+        "image_tokens": 5488,
+        "text_tokens": 0
+      },
+      "total_tokens": 7239
+    }
+  },
+  "item": {},
+  "generated_unix": 1785873853
+}

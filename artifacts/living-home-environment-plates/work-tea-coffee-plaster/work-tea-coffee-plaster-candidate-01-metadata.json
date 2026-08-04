@@ -1,0 +1,36 @@
+{
+  "plate": "work-tea-coffee-plaster",
+  "candidate": 1,
+  "model": "gpt-image-2",
+  "size_requested": "1536x1024",
+  "quality": "high",
+  "output_format": "png",
+  "operation": "edit",
+  "edit_base": "C:\\Users\\Colin\\The Healthy Apples\\GitHub\\tha-living-larder-authoritative\\client\\public\\images\\living-home\\room\\work-tea-coffee.png",
+  "prompt_sha256": "9262aa37a44a43f1fcea0a2642ab9baa0979eace3a656e507123aee438e30787",
+  "prompt_spec": "C:\\Users\\Colin\\The Healthy Apples\\GitHub\\tha-living-larder-authoritative\\docs\\asset-specs\\EMPTY_TEA_PLASTER_SPEC.md",
+  "image_sha256": "556fe74790a6e791f3f146d1c113b479507fc3e4360dd34f9441d765978faa8a",
+  "bytes": 2580892,
+  "response": {
+    "created": 1785873621,
+    "background": "opaque",
+    "output_format": "png",
+    "quality": "high",
+    "size": "1536x1024",
+    "usage": {
+      "input_tokens": 1755,
+      "input_tokens_details": {
+        "image_tokens": 1536,
+        "text_tokens": 219
+      },
+      "output_tokens": 5488,
+      "output_tokens_details": {
+        "image_tokens": 5488,
+        "text_tokens": 0
+      },
+      "total_tokens": 7243
+    }
+  },
+  "item": {},
+  "generated_unix": 1785873621
+}
