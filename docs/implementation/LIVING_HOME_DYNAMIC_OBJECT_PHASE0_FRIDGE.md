@@ -194,11 +194,17 @@ Standing at the fridge as the Home Owner, forgetting the code:
 
 ---
 
-# CANONICAL HOME COMPLETION REVIEW (2026-08-04)
+# PRODUCTION HOME REVIEW (2026-08-04)
 
-**Question answered here is not "does it look real?" but "does every Living Object have a *home*?"** Rollback: `rollback/living-home-canonical-homes-review-base` → `ca1b64e3`. No assets generated; no redesign.
+Two distinct questions, two distinct verdicts:
+- **Architectural Home** — *where does the object belong?* → **✓ COMPLETE** (every object, all positions; register below).
+- **Production Home** — *does the object genuinely feel like it belongs there?* → **🟡 largely achieved; one residual under refinement.**
 
-**Headline: every Living Object in the Living Pantry has a Canonical Home that is physically represented in its plate, is where the object appears, and is where it returns.** The Fridge realises its homes as **independent objects** (the platform target); the other positions realise their homes as **anchored placements over the depicted furniture** (Canonical Homes §4A) — homed, though not yet converted to independent objects (a future phase, not a missing home).
+Rollback: `rollback/living-home-production-home-base` → `51c88b09`. No new assets; craftsmanship only (prefer improving existing assets).
+
+## ✓ Architectural Homes — COMPLETE
+
+**Every Living Object has a Canonical Home that is physically represented in its plate, is where the object appears, and is where it returns.** The Fridge and Pantry Shelves realise their homes as **independent objects** (the platform target); the other positions realise them as **anchored placements over the depicted furniture** (Canonical Homes §4A) — homed, conversion to independent objects being a future phase, not a missing home.
 
 For each object the six tests pass unless noted: *has a home · home physically represented · appears there · household understands it · can be picked up · can return.*
 
@@ -261,7 +267,29 @@ For each object the six tests pass unless noted: *has a home · home physically 
 
 Every answer is immediate: the Areas navigator names the place, the plate shows the furniture, the object sits at its home. **The household never has to wonder where something lives.**
 
-### Verdict
-**Canonical Home dimension: COMPLETE — every Living Object has a permanent, represented home.** This is distinct from (and now decoupled from) the *visual* believability of the Fridge shelves, which continues to be refined. No object in the Living Pantry is homeless.
+## 🟡 Production Homes — does it *feel* at home?
 
-**STOP — Canonical Home review complete. Awaiting Home Owner approval before beginning the next Working Position.**
+A Production Home is achieved only when the object *occupies its home · appears naturally seated · shares the plate's lighting & perspective · feels supported · needs no explanation · is instinctively accepted.*
+
+| Working Position | Home realisation | Production Home status |
+|---|---|---|
+| **Anchored positions** — Cupboard · Freezer · Fruit · Root Veg · Bread · Tea & Coffee | the object **is the depicted food in the plate** (photographed in place — it shares the plate's exact light/camera/craft because it *is* the plate) | 🟢 **inherently at home** — nothing is composited; nothing looks placed |
+| **Pantry Shelves** | independent jar objects on the empty shelf (reference pattern, baked contact shadows) | 🟢 **at home** — jars seated on the timber |
+| **Fridge — doors** | milk/juice & condiments tucked **inside the door racks** (bin-front occlusion) | 🟢 **at home** |
+| **Fridge — crispers** | salad & fruit **inside the frosted drawers** (drawer-front occlusion) | 🟢 **at home** |
+| **Fridge — shelves** | dairy now **seated on the glass shelves behind the shelf lips** (this pass) | 🟡 **seated — a slight lighting residual remains** (shelf items read a touch crisper than the warm interior under close scrutiny) |
+| **Kitchen Worktop** | same fruit as the Fruit bowl | ⚪ likely folds to a camera, not a home-owning position |
+
+**This pass's craftsmanship:** added the **glass-shelf-lip occlusion** and seated the fridge dairy on the actual shelf lines — the one "floating" gap from the last review is now closed (verified: `phase0b-fridge.png`). No new assets generated.
+
+### Home Owner test — *"If I'd lived here for years, would I expect to find this exactly where it is?"*
+Milk (door), Butter/Cheese (shelf), Tea (canister), Wholemeal flour (flour shelf), Pearl barley (grains shelf), Potatoes (rack), Bananas (fruit bowl), Ketchup (fridge door) — **every answer is an immediate Yes.** The homes are consistent, so the household builds **spatial memory**: *"we keep the ketchup in the fridge door."* Objects may disappear; their homes remain.
+
+### The final question — *"merely has a home, or genuinely feels at home?"*
+- **Anchored positions + Pantry Shelves + Fridge doors & drawers:** **feels at home.**
+- **Fridge open shelves:** **now seated and close to *feels at home*** — held at 🟡 for one honest reason: the shelf-item lighting is a touch crisper than the warm interior. Not floating; not yet a flawless match.
+
+### Verdict
+**Architectural Homes: ✓ COMPLETE.** **Production Homes: largely achieved** — anchored positions, shelves and the fridge doors/drawers *feel at home*; the **fridge open-shelf lighting is the single residual** still short of an unqualified Yes. **Not declared complete without qualification** — that residual, plus per-position visual re-verification beyond the fridge, remains.
+
+**STOP — Production Home review complete; fridge shelves seated this pass. One honest residual (shelf-item lighting) keeps it from an unqualified "feels at home." Awaiting Home Owner direction before the next Working Position.**
