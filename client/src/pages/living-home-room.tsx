@@ -60,16 +60,16 @@ const FRIDGE_OBJECTS: PlacedObject[] = [
   { name: "Milk", src: fMilk, x: 20, y: 49, h: 18 }, { name: "Juice", src: fJuice, x: 20, y: 67, h: 18 },
   // door — right rack (one condiment per bin; pickles in the lowest rack)
   { name: "Ketchup", src: fKetchup, x: 80, y: 31, h: 20 }, { name: "Mustard", src: fMustard, x: 80, y: 48, h: 16 },
-  { name: "Mayonnaise", src: fMayo, x: 80, y: 66, h: 14 }, { name: "Pickles", src: fPickles, x: 80, y: 87, h: 14 },
+  { name: "Mayonnaise", src: fMayo, x: 80, y: 66, h: 14 }, { name: "Pickles", src: fPickles, x: 80, y: 83, h: 13 },
   // upper shelves — seated on the glass shelf lines (y39 & y51), clustered pairs
   { name: "Leftovers", src: fLeftovers, x: 43, y: 39, h: 12 }, { name: "Yoghurt", src: fYoghurt, x: 60, y: 39, h: 11 },
   { name: "Cheese", src: fCheese, x: 45, y: 51, h: 11 }, { name: "Butter", src: fButter, x: 57, y: 51, h: 8 },
-  // salad crisper (left drawer)
-  { name: "Lettuce", src: fLettuce, x: 46, y: 82, h: 12 }, { name: "Tomatoes", src: fTomatoes, x: 34, y: 81, h: 10 },
-  { name: "Pepper", src: fPepper, x: 32, y: 84, h: 10 }, { name: "Cucumber", src: fCucumber, x: 41, y: 75, h: 7 },
-  { name: "Radishes", src: fRadishes, x: 50, y: 79, h: 9 }, { name: "Spring onions", src: fSpringOnions, x: 39, y: 82, h: 7 },
+  // salad crisper (left drawer) — seated in the crisper above the freezer drawer
+  { name: "Lettuce", src: fLettuce, x: 45, y: 75, h: 11 }, { name: "Tomatoes", src: fTomatoes, x: 34, y: 74, h: 9 },
+  { name: "Pepper", src: fPepper, x: 32, y: 76, h: 9 }, { name: "Cucumber", src: fCucumber, x: 41, y: 69, h: 6 },
+  { name: "Radishes", src: fRadishes, x: 49, y: 73, h: 8 }, { name: "Spring onions", src: fSpringOnions, x: 39, y: 76, h: 6 },
   // fruit crisper (right drawer)
-  { name: "Berries", src: fBerries, x: 57, y: 82, h: 9 }, { name: "Grapes", src: fGrapes, x: 63, y: 84, h: 11 },
+  { name: "Berries", src: fBerries, x: 57, y: 74, h: 8 }, { name: "Grapes", src: fGrapes, x: 63, y: 76, h: 10 },
 ];
 
 interface Point { x: number; y: number; scale: number; shadowW: number; }

@@ -424,10 +424,10 @@
   background-image: url("/images/living-home/room/work-fridge-empty.png");
   background-size: cover; background-position: center;
 }
-.lh-front--fridge-drawers { /* the two crisper drawer fronts */
+.lh-front--fridge-drawers { /* the two crisper drawer fronts (above the freezer drawer) */
   opacity: 0.62;
-  -webkit-clip-path: polygon(29% 66%, 69% 66%, 69% 86%, 29% 86%);
-          clip-path: polygon(29% 66%, 69% 66%, 69% 86%, 29% 86%);
+  -webkit-clip-path: polygon(29% 61%, 69% 61%, 69% 78%, 29% 78%);
+          clip-path: polygon(29% 61%, 69% 61%, 69% 78%, 29% 78%);
 }
 /* the three glass shelf front lips — thin bands at y≈27/39/51%, so items seated
    on a shelf tuck their base behind the glass edge (grounded, not floating) */
@@ -444,15 +444,15 @@
   opacity: 0.5;
   -webkit-clip-path: polygon(11% 14%, 30% 14%, 30% 90%, 11% 90%);
           clip-path: polygon(11% 14%, 30% 14%, 30% 90%, 11% 90%);
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0 20%, #000 20% 31%, transparent 31% 39%, #000 39% 49%, transparent 49% 58%, #000 58% 68%, transparent 68% 78%, #000 78% 88%, transparent 88% 100%);
-          mask-image: linear-gradient(to bottom, transparent 0 20%, #000 20% 31%, transparent 31% 39%, #000 39% 49%, transparent 49% 58%, #000 58% 68%, transparent 68% 78%, #000 78% 88%, transparent 88% 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0 20%, #000 20% 30%, transparent 30% 38%, #000 38% 48%, transparent 48% 56%, #000 56% 66%, transparent 66% 74%, #000 74% 84%, transparent 84% 100%);
+          mask-image: linear-gradient(to bottom, transparent 0 20%, #000 20% 30%, transparent 30% 38%, #000 38% 48%, transparent 48% 56%, #000 56% 66%, transparent 66% 74%, #000 74% 84%, transparent 84% 100%);
 }
 .lh-front--fridge-doorR {
   opacity: 0.5;
   -webkit-clip-path: polygon(70% 14%, 89% 14%, 89% 90%, 70% 90%);
           clip-path: polygon(70% 14%, 89% 14%, 89% 90%, 70% 90%);
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0 20%, #000 20% 31%, transparent 31% 39%, #000 39% 49%, transparent 49% 58%, #000 58% 68%, transparent 68% 78%, #000 78% 88%, transparent 88% 100%);
-          mask-image: linear-gradient(to bottom, transparent 0 20%, #000 20% 31%, transparent 31% 39%, #000 39% 49%, transparent 49% 58%, #000 58% 68%, transparent 68% 78%, #000 78% 88%, transparent 88% 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0 20%, #000 20% 30%, transparent 30% 38%, #000 38% 48%, transparent 48% 56%, #000 56% 66%, transparent 66% 74%, #000 74% 84%, transparent 84% 100%);
+          mask-image: linear-gradient(to bottom, transparent 0 20%, #000 20% 30%, transparent 30% 38%, #000 38% 48%, transparent 48% 56%, #000 56% 66%, transparent 66% 74%, #000 74% 84%, transparent 84% 100%);
 }
 
 /* Physical cue, never a software affordance: a soft warm light-catch that pools
