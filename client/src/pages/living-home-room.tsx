@@ -61,9 +61,9 @@ const FRIDGE_OBJECTS: PlacedObject[] = [
   // door — right rack (one condiment per bin; pickles in the lowest rack)
   { name: "Ketchup", src: fKetchup, x: 80, y: 31, h: 20 }, { name: "Mustard", src: fMustard, x: 80, y: 48, h: 16 },
   { name: "Mayonnaise", src: fMayo, x: 80, y: 66, h: 14 }, { name: "Pickles", src: fPickles, x: 80, y: 87, h: 14 },
-  // upper shelves — clustered pairs (butter beside cheese)
-  { name: "Leftovers", src: fLeftovers, x: 43, y: 47, h: 13 }, { name: "Yoghurt", src: fYoghurt, x: 60, y: 47, h: 12 },
-  { name: "Cheese", src: fCheese, x: 45, y: 59, h: 12 }, { name: "Butter", src: fButter, x: 57, y: 58, h: 9 },
+  // upper shelves — seated on the glass shelf lines (y39 & y51), clustered pairs
+  { name: "Leftovers", src: fLeftovers, x: 43, y: 39, h: 12 }, { name: "Yoghurt", src: fYoghurt, x: 60, y: 39, h: 11 },
+  { name: "Cheese", src: fCheese, x: 45, y: 51, h: 11 }, { name: "Butter", src: fButter, x: 57, y: 51, h: 8 },
   // salad crisper (left drawer)
   { name: "Lettuce", src: fLettuce, x: 46, y: 82, h: 12 }, { name: "Tomatoes", src: fTomatoes, x: 34, y: 81, h: 10 },
   { name: "Pepper", src: fPepper, x: 32, y: 84, h: 10 }, { name: "Cucumber", src: fCucumber, x: 41, y: 75, h: 7 },
@@ -424,6 +424,7 @@ export default function LivingHomeRoom() {
                   fridge, tucked behind the fronts. Door walls are masked to just the
                   bin bands so an object's body pokes above while its base tucks in. */}
               <div className="lh-front lh-front--fridge-drawers" aria-hidden />
+              <div className="lh-front lh-front--fridge-shelves" aria-hidden />
               <div className="lh-front lh-front--fridge-doorL" aria-hidden />
               <div className="lh-front lh-front--fridge-doorR" aria-hidden />
             </>

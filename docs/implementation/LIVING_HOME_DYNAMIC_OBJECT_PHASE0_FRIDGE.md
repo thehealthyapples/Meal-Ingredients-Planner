@@ -96,7 +96,7 @@ Each position repeats this exact reference: **edit the full plate to empty → g
 - [x] Passes the Camera Acceptance Test and the Production Review Checklist.
 - [x] Rollback identifier reported; cost ≈ £0.76.
 
-**STOP — Fridge complete. It is the benchmark for the Living Object Platform. Awaiting Home Owner approval before Fruit / Bread / Cupboards / Tea & Coffee.**
+**STOP — Phase 0 established the Living Object *Platform* (independent, movable, removable objects). It did NOT yet meet the Living Home visual standard — that is the work of the believability passes below. Not a benchmark yet.**
 
 ---
 
@@ -131,7 +131,7 @@ Far closer to *"my milk is in my fridge."* The **crisper drawers are convincing*
 
 ---
 
-## Phase 0B (Final) — Door occlusion, clustering & Canonical Asset Capture (2026-08-04)
+## Phase 0B — Door occlusion, clustering, shelf grounding & Canonical Asset Capture (2026-08-04, in progress)
 
 **Rollback:** `rollback/living-fridge-believability-base` → `9af4b723`. **Same fridge, same platform, same interaction — integration only.**
 
@@ -157,4 +157,28 @@ Standing at the fridge: milk & juice are **in the door**, the condiments are **i
 ### Before / after
 `docs/implementation/pantry-final-evidence/phase0b-before-after.png` — Phase 0 (objects over the photo) vs Phase 0B (objects inside the fridge). Latest: `phase0b-fridge.png`.
 
-**STOP — believability pass complete; the Fridge is the production benchmark for every future Working Position. Commit/push done. Awaiting Home Owner approval before Phase 1 (Fruit / Bread / Cupboards / Tea & Coffee).**
+---
+
+## Home Owner Acceptance Review (2026-08-04) — honest, unqualified
+
+Standing at the fridge as the Home Owner, forgetting the code:
+
+| Question | Honest answer |
+|---|---|
+| Would I believe **every** object was photographed inside this fridge? | **Not yet.** The **door bottles & condiments** (in their bins) and the **crisper salad & fruit** (in the frosted drawers) — yes. The **open-shelf dairy** (leftovers, cheese, butter, yoghurt) — not fully; open glass shelves give nothing to tuck behind. |
+| Would I notice any object that appears composited? | **Yes** — chiefly the mid-shelf dairy, and a couple of object cut-out edges under scrutiny. |
+| Same fridge as shown from Arrival? | **Unverified.** The empty plate is a faithful edit of the working fridge; whether it reads as *the* Arrival appliance needs a direct Arrival-vs-Fridge check (open the closed appliance). |
+| Every object in its Canonical Home? | **Mostly** — milk/juice in the door, condiments in racks (pickles lowest), salad/fruit in drawers; the shelf pairs are reasonable but less "assigned." |
+| Every object physically supported by the furniture? | **Doors & drawers: yes.** Shelves: **improving** — this pass adds glass-shelf-lip occlusion + seats the dairy on the shelf lines, but that refinement is **not yet visually re-verified** (demo auth rate-limit this session). |
+| Has the software disappeared? | **Largely** — navigation recedes to a tab; a standing instruction caption remains. |
+| Would I proudly show this to another household? | **The doors & drawers, yes. The whole fridge — not without qualification.** |
+
+**Verdict: the Fridge is NOT yet complete and is NOT yet declared the production benchmark.** The Living Object *Platform* is proven and correct; the *illusion* is strong for the doors and drawers and still short on the open shelves.
+
+### Honest remaining work before completion
+1. **Open-shelf dairy** — verify (and, if needed, refine) the new glass-shelf-lip grounding so leftovers/cheese/butter/yoghurt read as *on the shelf*, not floating. *(Committed this pass; visual re-verification pending — the demo auth rate-limit blocked a fresh capture.)*
+2. **Object edges / relight** — a couple of cut-outs still show faint mattes; ideally re-author under Canonical Asset Capture (fridge-lit masters) rather than relit studio shots.
+3. **Arrival consistency** — confirm the open fridge reads as the same appliance seen closed from Arrival.
+4. Re-run the full Home Owner Acceptance Review and only then update this line.
+
+**STOP — refining continues; the Fridge is a strong candidate, not a finished benchmark. Not proceeding to Fruit / Bread / Cupboards / Tea & Coffee. Awaiting Home Owner direction.**
