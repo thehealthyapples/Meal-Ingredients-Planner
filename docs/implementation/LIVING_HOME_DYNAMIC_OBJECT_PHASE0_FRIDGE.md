@@ -97,3 +97,36 @@ Each position repeats this exact reference: **edit the full plate to empty → g
 - [x] Rollback identifier reported; cost ≈ £0.76.
 
 **STOP — Fridge complete. It is the benchmark for the Living Object Platform. Awaiting Home Owner approval before Fruit / Bread / Cupboards / Tea & Coffee.**
+
+---
+
+## Phase 0B — Believability Integration Pass (2026-08-04)
+
+**Rollback:** `rollback/living-fridge-believability-base` → `9af4b723`. **Same fridge, same platform, same interaction — only visual integration changed.**
+The Phase-0 objects read as *PNGs placed over a photograph*. This pass makes them read as *photographed inside the fridge*.
+
+### Improvements made
+1. **Same fridge** — the empty plate is unchanged (the edit was already faithful); no appliance/cabinetry/proportions were regenerated.
+2. **Environment Plate layering (BACK → OBJECTS → FRONT).** A **front occlusion layer** was introduced: the *same* empty-fridge plate, clipped to the **crisper drawer fronts** and drawn **above** the Living Objects. The salad and fruit now sit **inside** the frosted drawers (behind the fronts) instead of on top of them. *(The door-rack overlay was tried and removed — a full clear-rack overlay washes out light objects like milk; door racks are shallow and read fine without it.)*
+3. **Relight.** Every object was regraded to the fridge's **warm top-light** with base darkening (ambient occlusion), so they no longer look like neutral studio product shots.
+4. **Grounding.** Each object now carries a soft **contact-shadow seat** + a downward cast shadow — it rests on the shelf instead of floating.
+5. **Milk re-extraction.** The clear glass milk bottle had been mis-cut (the background flood-fill leaked through the glass, leaving holes → ghostly). Re-extracted with a low threshold → a solid, clean bottle.
+6. **Navigation recedes.** Inside a Working Position the Areas navigator **collapses to a small "Areas" tab** (reopens on tap/hover), so it never obscures the fridge.
+7. **Canonical homes hold.** Objects live at fixed homes; when one is binned its **spot remains** (verified — milk and cheese removed cleanly, 18 → 17).
+
+### Believability verification
+- Interaction unchanged and intact: drag → Shopping / Companion / Bin; hover names; **objects still truly disappear** (re-verified live).
+- Camera / lighting / craftsmanship / proportions: the plate is the original fridge.
+- Evidence: `phase0b-fridge.png` (integrated) and `phase0b-before-after.png` (Phase 0 vs 0B side by side).
+
+### Homeowner review (honest)
+Far closer to *"my milk is in my fridge."* The **crisper drawers are convincing** — the veg and fruit genuinely sit inside them; the milk, juice and door condiments are solid and grounded; the shelf items rest with contact shadows; and nothing obscures the room. **Remaining honest imperfections** (candidates for a light polish, not blockers): the door condiments sit *in front of* their shallow racks (no front lip occlusion there); a couple of salad tops poke a little high; the middle-shelf items could cluster a touch more. Overall the "placed PNG" read is largely gone.
+
+### Files changed (Phase 0B)
+| File | Change |
+|---|---|
+| `client/src/pages/living-home-room.tsx` | `fridge` object variant; FRONT drawer-occlusion layer; Areas-navigator collapse (tab) inside Working Positions; minor placement tuning. |
+| `client/src/pages/living-home-room.css` | `.lh-obj--fridge` grounding + seat shadow; `.lh-front*` clipped occlusion layers; `.lh-areas-tab` collapsed navigator. |
+| `client/src/assets/.../fridge/*.png` | 18 objects relit (warm top-light + AO); milk re-extracted solid. Raw pre-relight copies kept in `artifacts/fridge-objects-raw/`. |
+
+**STOP — believability pass complete. Fridge remains the benchmark. Awaiting approval before any further Working Position.**

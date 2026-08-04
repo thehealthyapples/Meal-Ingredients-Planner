@@ -323,6 +323,22 @@
 }
 .lh-areas__item:hover, .lh-areas__item:focus-visible { outline: none; background: rgba(140, 106, 52, 0.12); color: #33260f; }
 .lh-areas__item.is-here { background: rgba(140, 106, 52, 0.18); color: #33260f; font-weight: 600; }
+/* inside a Working Position the navigator floats a touch prouder while open */
+.lh-areas.is-floating { box-shadow: 0 12px 30px rgba(30, 22, 10, 0.24); }
+/* …and otherwise recedes to a small tab so it never obscures the room */
+.lh-areas-tab {
+  position: absolute; left: 14px; top: 12px; z-index: 40;
+  display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+  padding: 7px 12px; border-radius: 9px;
+  background: rgba(250, 248, 243, 0.6); backdrop-filter: blur(7px) saturate(1.05);
+  border: 1px solid rgba(120, 100, 70, 0.18); box-shadow: 0 6px 18px rgba(30, 22, 10, 0.14);
+  font-family: "Nunito Sans", system-ui, sans-serif; font-size: 12px; letter-spacing: 0.5px;
+  color: #4f4028; text-transform: uppercase; font-weight: 600;
+  transition: background 0.16s ease;
+}
+.lh-areas-tab:hover { background: rgba(250, 248, 243, 0.82); }
+.lh-areas-tab__grip { display: inline-block; width: 13px; height: 10px;
+  background: repeating-linear-gradient(180deg, currentColor 0 2px, transparent 2px 4px); opacity: 0.55; }
 
 /* ── Navigation objects: the group jars (shelves) and cupboard sub-areas ────── */
 .lh-groupjar {
@@ -385,6 +401,44 @@
 .lh-obj--jar .lh-obj__img { height: 100%; width: auto; }
 /* a hero produce object, scaled to sit believably in its basket/home (not oversized) */
 .lh-obj--produce .lh-obj__img { height: clamp(46px, 8.5vh, 92px); width: auto; }
+
+/* ── Fridge Living Objects — grounded & seated (Phase 0B believability) ──────── */
+.lh-obj--fridge .lh-obj__img { height: 100%; width: auto;
+  /* a downward cast shadow toward the shelf, plus a whisper of scene warmth */
+  filter: drop-shadow(0 3px 4px rgba(20, 14, 6, 0.42)) drop-shadow(0 1px 1px rgba(20, 14, 6, 0.3)); }
+/* the contact shadow the object rests on — soft, warm-dark, tight at the base */
+.lh-obj__seat {
+  position: absolute; left: 50%; bottom: -3%; transform: translateX(-50%);
+  width: 82%; height: 12%; min-height: 7px; border-radius: 50%;
+  background: radial-gradient(ellipse 50% 52% at 50% 50%, rgba(18, 12, 5, 0.5), rgba(18, 12, 5, 0.22) 45%, rgba(18, 12, 5, 0) 72%);
+  filter: blur(2.5px); z-index: -1; pointer-events: none;
+}
+.lh-obj--fridge:hover .lh-obj__img, .lh-obj--fridge:focus-visible .lh-obj__img { transform: translateY(-4px); }
+
+/* ── FRONT occlusion layers — the SAME fridge plate, clipped to the foreground
+      furniture (crisper drawer fronts + door-rack columns) and drawn ABOVE the
+      Living Objects, so each object sits INSIDE the fridge, behind the fronts.
+      The Environment Plate is the permanent set; objects live within it. ─────── */
+.lh-front {
+  position: absolute; inset: 0; z-index: 8; pointer-events: none;
+  background-image: url("/images/living-home/room/work-fridge-empty.png");
+  background-size: cover; background-position: center;
+}
+.lh-front--fridge-drawers { /* the two crisper drawer fronts */
+  opacity: 0.62;
+  -webkit-clip-path: polygon(29% 66%, 69% 66%, 69% 86%, 29% 86%);
+          clip-path: polygon(29% 66%, 69% 66%, 69% 86%, 29% 86%);
+}
+.lh-front--fridge-doorL { /* left door rack column (clear plastic in front) */
+  opacity: 0.34;
+  -webkit-clip-path: polygon(11% 14%, 30% 14%, 30% 90%, 11% 90%);
+          clip-path: polygon(11% 14%, 30% 14%, 30% 90%, 11% 90%);
+}
+.lh-front--fridge-doorR { /* right door rack column */
+  opacity: 0.34;
+  -webkit-clip-path: polygon(70% 14%, 89% 14%, 89% 90%, 70% 90%);
+          clip-path: polygon(70% 14%, 89% 14%, 89% 90%, 70% 90%);
+}
 
 /* Physical cue, never a software affordance: a soft warm light-catch that pools
    under the object and strengthens as the hand nears it. No outlines, no rings. */

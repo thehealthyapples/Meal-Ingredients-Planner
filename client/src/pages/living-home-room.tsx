@@ -57,7 +57,7 @@ import fSpringOnions from "@/assets/living-home/larder/fridge/tha-fridge-spring-
 interface PlacedObject { name: string; src: string; x: number; y: number; h: number; }
 const FRIDGE_OBJECTS: PlacedObject[] = [
   // door — left rack
-  { name: "Milk", src: fMilk, x: 20, y: 53, h: 21 }, { name: "Juice", src: fJuice, x: 20, y: 76, h: 20 },
+  { name: "Milk", src: fMilk, x: 20, y: 58, h: 19 }, { name: "Juice", src: fJuice, x: 20, y: 81, h: 19 },
   // door — right rack
   { name: "Ketchup", src: fKetchup, x: 80, y: 44, h: 21 }, { name: "Mustard", src: fMustard, x: 80, y: 60, h: 17 },
   { name: "Mayonnaise", src: fMayo, x: 80, y: 74, h: 15 }, { name: "Pickles", src: fPickles, x: 80, y: 89, h: 15 },
@@ -67,7 +67,7 @@ const FRIDGE_OBJECTS: PlacedObject[] = [
   // salad crisper (left drawer)
   { name: "Lettuce", src: fLettuce, x: 46, y: 82, h: 12 }, { name: "Tomatoes", src: fTomatoes, x: 34, y: 81, h: 10 },
   { name: "Pepper", src: fPepper, x: 32, y: 84, h: 10 }, { name: "Cucumber", src: fCucumber, x: 41, y: 75, h: 7 },
-  { name: "Radishes", src: fRadishes, x: 50, y: 80, h: 9 }, { name: "Spring onions", src: fSpringOnions, x: 39, y: 85, h: 7 },
+  { name: "Radishes", src: fRadishes, x: 50, y: 79, h: 9 }, { name: "Spring onions", src: fSpringOnions, x: 39, y: 82, h: 7 },
   // fruit crisper (right drawer)
   { name: "Berries", src: fBerries, x: 57, y: 82, h: 9 }, { name: "Grapes", src: fGrapes, x: 63, y: 84, h: 11 },
 ];
@@ -216,7 +216,7 @@ const clusterPos = (catId: string, i: number, n: number) => {
 // The object IS the interaction. It has exactly three destinations (Shopping,
 // Apple, the Bin) and NO buttons around it. Pointer/touch drag for most; the
 // dnd-kit keyboard sensor (space to lift, arrows to carry) serves keyboard/switch.
-type ObjVariant = "jar" | "produce" | "token";
+type ObjVariant = "jar" | "produce" | "token" | "fridge";
 function LivingObject({ id, name, product, src, variant, style, hint }: {
   id: string; name: string; product: string; src: string | null; variant: ObjVariant;
   style: React.CSSProperties; hint: boolean;
@@ -233,6 +233,7 @@ function LivingObject({ id, name, product, src, variant, style, hint }: {
       data-testid={`lh-obj-${slug(name)}`}
     >
       <span className="lh-obj__catch" aria-hidden />
+      {variant === "fridge" && <span className="lh-obj__seat" aria-hidden />}
       {src
         ? <img className="lh-obj__img" src={src} alt="" draggable={false} />
         : <span className="lh-obj__token">{name}</span>}
@@ -267,6 +268,7 @@ export default function LivingHomeRoom() {
   const [zoneId, setZoneId] = useState<string | null>(null);
   const [zoneCatId, setZoneCatId] = useState<string | null>(null);
   const [removed, setRemoved] = useState<Set<string>>(new Set());  // dragged to the bin
+  const [navOpen, setNavOpen] = useState(false);                    // Areas navigator (collapsed inside a Working Position)
   const [drag, setDrag] = useState<{ name: string; src: string | null; variant: ObjVariant } | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -354,18 +356,27 @@ export default function LivingHomeRoom() {
           {ROOM_PLATES.map(p => <div key={p} className={`lh-plate lh-plate--${p}${currentPlate === p ? " is-visible" : ""}`} />)}
           {working && <div className="lh-veil" aria-hidden />}
 
-          {/* Areas — the always-present, simple navigation between Working Positions */}
-          <nav className="lh-areas" aria-label="Areas of the pantry">
-            <span className="lh-areas__head">Around the pantry</span>
-            {AREAS.map(a => (
-              <button key={a.id} type="button"
-                className={`lh-areas__item${currentTop === a.id ? " is-here" : ""}`}
-                aria-current={currentTop === a.id ? "true" : undefined}
-                onClick={() => goToArea(a.id)} data-testid={`lh-area-${a.id}`}>
-                {a.name}
-              </button>
-            ))}
-          </nav>
+          {/* Areas — inside a Working Position the navigator RECEDES to a small tab
+              so the room stays the primary experience; it reopens on tap/hover. */}
+          {working && !navOpen ? (
+            <button type="button" className="lh-areas-tab" onClick={() => setNavOpen(true)}
+              onMouseEnter={() => setNavOpen(true)} aria-label="Show areas of the pantry" data-testid="lh-areas-tab">
+              <span className="lh-areas-tab__grip" aria-hidden />Areas
+            </button>
+          ) : (
+            <nav className={`lh-areas${working ? " is-floating" : ""}`} aria-label="Areas of the pantry"
+              onMouseLeave={() => working && setNavOpen(false)}>
+              <span className="lh-areas__head">Around the pantry</span>
+              {AREAS.map(a => (
+                <button key={a.id} type="button"
+                  className={`lh-areas__item${currentTop === a.id ? " is-here" : ""}`}
+                  aria-current={currentTop === a.id ? "true" : undefined}
+                  onClick={() => { goToArea(a.id); setNavOpen(false); }} data-testid={`lh-area-${a.id}`}>
+                  {a.name}
+                </button>
+              ))}
+            </nav>
+          )}
 
           {level === "arrival" && <span className="lh-caption">Your kitchen — pick an area, then handle what's inside</span>}
 
@@ -400,12 +411,19 @@ export default function LivingHomeRoom() {
           {/* ── Phase 0 reference: the Fridge — INDEPENDENT Living Objects on the
                EMPTY plate. Each is a real PNG; the bin removes it (removed set). ── */}
           {level === "zone" && zone?.id === "fridge" && (
-            <div className="lh-layer" key="fridge-objects">
-              {FRIDGE_OBJECTS.filter(o => !isRemoved(o.name)).map(o => (
-                <LivingObject key={o.name} id={`obj-${slug(o.name)}`} name={o.name} product={o.name} src={o.src} variant="jar" hint={false}
-                  style={{ left: `${o.x}%`, top: `${o.y - o.h}%`, height: `${o.h}%`, transform: "translate(-50%,0)" }} />
-              ))}
-            </div>
+            <>
+              <div className="lh-layer" key="fridge-objects">
+                {FRIDGE_OBJECTS.filter(o => !isRemoved(o.name)).map(o => (
+                  <LivingObject key={o.name} id={`obj-${slug(o.name)}`} name={o.name} product={o.name} src={o.src} variant="fridge" hint={false}
+                    style={{ left: `${o.x}%`, top: `${o.y - o.h}%`, height: `${o.h}%`, transform: "translate(-50%,0)" }} />
+                ))}
+              </div>
+              {/* FRONT layer — the SAME fridge plate, clipped to the crisper drawer
+                  fronts, drawn ABOVE the objects so the salad & fruit sit INSIDE the
+                  frosted drawers, never on them. (Door racks are shallow; a full
+                  overlay there washes out light objects like milk, so it is omitted.) */}
+              <div className="lh-front lh-front--fridge-drawers" aria-hidden />
+            </>
           )}
 
           {/* ── A flat zone → objects; a deep zone (cupboard) → categories → objects ── */}
