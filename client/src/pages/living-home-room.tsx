@@ -54,23 +54,24 @@ import fLettuce from "@/assets/living-home/larder/fridge/tha-fridge-lettuce.png"
 import fSpringOnions from "@/assets/living-home/larder/fridge/tha-fridge-spring-onions.png";
 
 // Each object: its canonical home on the empty fridge (x centre %, y BASE %, height %).
-interface PlacedObject { name: string; src: string; x: number; y: number; h: number; }
+interface PlacedObject { name: string; src: string; x: number; y: number; h: number; reflect?: boolean; }
 const FRIDGE_OBJECTS: PlacedObject[] = [
   // Geometry measured from the arrival-derived, step-closer plate.
   // door — left bins (white moulded; bases tuck behind the bin fronts)
-  { name: "Milk", src: fMilk, x: 29, y: 34, h: 18 }, { name: "Juice", src: fJuice, x: 29, y: 47.5, h: 16 },
+  // Sizes rebalanced to real proportions and to counter the +1.2 step-zoom.
+  { name: "Milk", src: fMilk, x: 29, y: 34, h: 13.5 }, { name: "Juice", src: fJuice, x: 29, y: 47.5, h: 12.5 },
   // door — right bins (one condiment per bin; pickles in the lowest)
-  { name: "Ketchup", src: fKetchup, x: 69.5, y: 22.5, h: 16 }, { name: "Mustard", src: fMustard, x: 69.5, y: 33.5, h: 13 },
-  { name: "Mayonnaise", src: fMayo, x: 69.5, y: 47.5, h: 12 }, { name: "Pickles", src: fPickles, x: 69.5, y: 62, h: 12 },
+  { name: "Ketchup", src: fKetchup, x: 69.5, y: 22.5, h: 12.5 }, { name: "Mustard", src: fMustard, x: 69.5, y: 33.5, h: 9.5 },
+  { name: "Mayonnaise", src: fMayo, x: 69.5, y: 47.5, h: 8.5 }, { name: "Pickles", src: fPickles, x: 69.5, y: 62, h: 9 },
   // glass shelves (front edges at y≈24 and y≈34.7)
-  { name: "Leftovers", src: fLeftovers, x: 41, y: 24, h: 10 }, { name: "Yoghurt", src: fYoghurt, x: 55, y: 24, h: 9.5 },
-  { name: "Cheese", src: fCheese, x: 43, y: 34.5, h: 9.5 }, { name: "Butter", src: fButter, x: 55, y: 34.5, h: 7 },
+  { name: "Leftovers", src: fLeftovers, x: 41, y: 24, h: 7, reflect: true }, { name: "Yoghurt", src: fYoghurt, x: 55, y: 24, h: 7, reflect: true },
+  { name: "Cheese", src: fCheese, x: 43, y: 34.5, h: 6.2, reflect: true }, { name: "Butter", src: fButter, x: 55, y: 34.5, h: 4.6, reflect: true },
   // salad crisper (left clear drawer)
-  { name: "Lettuce", src: fLettuce, x: 45, y: 60, h: 9 }, { name: "Tomatoes", src: fTomatoes, x: 38, y: 59.5, h: 7.5 },
-  { name: "Pepper", src: fPepper, x: 36.5, y: 61, h: 7.5 }, { name: "Cucumber", src: fCucumber, x: 42, y: 55.5, h: 5 },
-  { name: "Radishes", src: fRadishes, x: 48, y: 59, h: 6.5 }, { name: "Spring onions", src: fSpringOnions, x: 41, y: 61, h: 5 },
+  { name: "Lettuce", src: fLettuce, x: 45, y: 60, h: 7 }, { name: "Tomatoes", src: fTomatoes, x: 38, y: 59.5, h: 5.2 },
+  { name: "Pepper", src: fPepper, x: 36.5, y: 61, h: 6 }, { name: "Cucumber", src: fCucumber, x: 42, y: 55.5, h: 3.8 },
+  { name: "Radishes", src: fRadishes, x: 48, y: 59, h: 4.6 }, { name: "Spring onions", src: fSpringOnions, x: 41, y: 61, h: 4 },
   // fruit crisper (right clear drawer)
-  { name: "Berries", src: fBerries, x: 54, y: 59.5, h: 6.5 }, { name: "Grapes", src: fGrapes, x: 59, y: 61, h: 8 },
+  { name: "Berries", src: fBerries, x: 54, y: 59.5, h: 5 }, { name: "Grapes", src: fGrapes, x: 59, y: 61, h: 6.5 },
 ];
 
 interface Point { x: number; y: number; scale: number; shadowW: number; }
@@ -218,9 +219,9 @@ const clusterPos = (catId: string, i: number, n: number) => {
 // Apple, the Bin) and NO buttons around it. Pointer/touch drag for most; the
 // dnd-kit keyboard sensor (space to lift, arrows to carry) serves keyboard/switch.
 type ObjVariant = "jar" | "produce" | "token" | "fridge";
-function LivingObject({ id, name, product, src, variant, style, hint }: {
+function LivingObject({ id, name, product, src, variant, style, hint, reflect }: {
   id: string; name: string; product: string; src: string | null; variant: ObjVariant;
-  style: React.CSSProperties; hint: boolean;
+  style: React.CSSProperties; hint: boolean; reflect?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id, data: { name, product, src, variant } });
   return (
@@ -238,6 +239,9 @@ function LivingObject({ id, name, product, src, variant, style, hint }: {
       {src
         ? <img className="lh-obj__img" src={src} alt="" draggable={false} />
         : <span className="lh-obj__token">{name}</span>}
+      {/* faint mirror on the glass shelf — the cue that most removes the "pasted"
+          look; only for items that actually rest on reflective fridge glass */}
+      {src && reflect && <img className="lh-obj__reflect" src={src} alt="" aria-hidden draggable={false} />}
       {src && <span className="lh-obj__cap">{name}</span>}
     </div>
   );
@@ -415,7 +419,7 @@ export default function LivingHomeRoom() {
             <>
               <div className="lh-layer" key="fridge-objects">
                 {FRIDGE_OBJECTS.filter(o => !isRemoved(o.name)).map(o => (
-                  <LivingObject key={o.name} id={`obj-${slug(o.name)}`} name={o.name} product={o.name} src={o.src} variant="fridge" hint={false}
+                  <LivingObject key={o.name} id={`obj-${slug(o.name)}`} name={o.name} product={o.name} src={o.src} variant="fridge" hint={false} reflect={o.reflect}
                     style={{ left: `${o.x}%`, top: `${o.y - o.h}%`, height: `${o.h}%`, transform: "translate(-50%,0)" }} />
                 ))}
               </div>
