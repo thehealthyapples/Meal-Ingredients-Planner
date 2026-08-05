@@ -56,20 +56,21 @@ import fSpringOnions from "@/assets/living-home/larder/fridge/tha-fridge-spring-
 // Each object: its canonical home on the empty fridge (x centre %, y BASE %, height %).
 interface PlacedObject { name: string; src: string; x: number; y: number; h: number; }
 const FRIDGE_OBJECTS: PlacedObject[] = [
-  // door — left rack (milk & juice tuck into the bins)
-  { name: "Milk", src: fMilk, x: 20, y: 49, h: 18 }, { name: "Juice", src: fJuice, x: 20, y: 67, h: 18 },
-  // door — right rack (one condiment per bin; pickles in the lowest rack)
-  { name: "Ketchup", src: fKetchup, x: 80, y: 31, h: 20 }, { name: "Mustard", src: fMustard, x: 80, y: 48, h: 16 },
-  { name: "Mayonnaise", src: fMayo, x: 80, y: 66, h: 14 }, { name: "Pickles", src: fPickles, x: 80, y: 83, h: 13 },
-  // upper shelves — seated on the glass shelf lines (y39 & y51), clustered pairs
-  { name: "Leftovers", src: fLeftovers, x: 43, y: 39, h: 12 }, { name: "Yoghurt", src: fYoghurt, x: 60, y: 39, h: 11 },
-  { name: "Cheese", src: fCheese, x: 45, y: 51, h: 11 }, { name: "Butter", src: fButter, x: 57, y: 51, h: 8 },
-  // salad crisper (left drawer) — seated in the crisper above the freezer drawer
-  { name: "Lettuce", src: fLettuce, x: 45, y: 75, h: 11 }, { name: "Tomatoes", src: fTomatoes, x: 34, y: 74, h: 9 },
-  { name: "Pepper", src: fPepper, x: 32, y: 76, h: 9 }, { name: "Cucumber", src: fCucumber, x: 41, y: 69, h: 6 },
-  { name: "Radishes", src: fRadishes, x: 49, y: 73, h: 8 }, { name: "Spring onions", src: fSpringOnions, x: 39, y: 76, h: 6 },
-  // fruit crisper (right drawer)
-  { name: "Berries", src: fBerries, x: 57, y: 74, h: 8 }, { name: "Grapes", src: fGrapes, x: 63, y: 76, h: 10 },
+  // Geometry measured from the arrival-derived, step-closer plate.
+  // door — left bins (white moulded; bases tuck behind the bin fronts)
+  { name: "Milk", src: fMilk, x: 29, y: 34, h: 18 }, { name: "Juice", src: fJuice, x: 29, y: 47.5, h: 16 },
+  // door — right bins (one condiment per bin; pickles in the lowest)
+  { name: "Ketchup", src: fKetchup, x: 69.5, y: 22.5, h: 16 }, { name: "Mustard", src: fMustard, x: 69.5, y: 33.5, h: 13 },
+  { name: "Mayonnaise", src: fMayo, x: 69.5, y: 47.5, h: 12 }, { name: "Pickles", src: fPickles, x: 69.5, y: 62, h: 12 },
+  // glass shelves (front edges at y≈24 and y≈34.7)
+  { name: "Leftovers", src: fLeftovers, x: 41, y: 24, h: 10 }, { name: "Yoghurt", src: fYoghurt, x: 55, y: 24, h: 9.5 },
+  { name: "Cheese", src: fCheese, x: 43, y: 34.5, h: 9.5 }, { name: "Butter", src: fButter, x: 55, y: 34.5, h: 7 },
+  // salad crisper (left clear drawer)
+  { name: "Lettuce", src: fLettuce, x: 45, y: 60, h: 9 }, { name: "Tomatoes", src: fTomatoes, x: 38, y: 59.5, h: 7.5 },
+  { name: "Pepper", src: fPepper, x: 36.5, y: 61, h: 7.5 }, { name: "Cucumber", src: fCucumber, x: 42, y: 55.5, h: 5 },
+  { name: "Radishes", src: fRadishes, x: 48, y: 59, h: 6.5 }, { name: "Spring onions", src: fSpringOnions, x: 41, y: 61, h: 5 },
+  // fruit crisper (right clear drawer)
+  { name: "Berries", src: fBerries, x: 54, y: 59.5, h: 6.5 }, { name: "Grapes", src: fGrapes, x: 59, y: 61, h: 8 },
 ];
 
 interface Point { x: number; y: number; scale: number; shadowW: number; }

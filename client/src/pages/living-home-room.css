@@ -424,35 +424,35 @@
   background-image: url("/images/living-home/room/work-fridge-empty.png");
   background-size: cover; background-position: center;
 }
-.lh-front--fridge-drawers { /* the two crisper drawer fronts (above the freezer drawer) */
-  opacity: 0.62;
-  -webkit-clip-path: polygon(29% 61%, 69% 61%, 69% 78%, 29% 78%);
-          clip-path: polygon(29% 61%, 69% 61%, 69% 78%, 29% 78%);
+.lh-front--fridge-drawers { /* the two clear crisper drawer fronts */
+  opacity: 0.55;
+  -webkit-clip-path: polygon(34.5% 48%, 64.5% 48%, 64.5% 62.5%, 34.5% 62.5%);
+          clip-path: polygon(34.5% 48%, 64.5% 48%, 64.5% 62.5%, 34.5% 62.5%);
 }
-/* the three glass shelf front lips — thin bands at y≈27/39/51%, so items seated
-   on a shelf tuck their base behind the glass edge (grounded, not floating) */
+/* the three glass shelf front lips (y≈24 / 34.7 / 45), so a seated item's base
+   tucks behind the glass edge — grounded, not floating */
 .lh-front--fridge-shelves {
   opacity: 0.9;
-  -webkit-clip-path: polygon(30% 12%, 70% 12%, 70% 55%, 30% 55%);
-          clip-path: polygon(30% 12%, 70% 12%, 70% 55%, 30% 55%);
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0 25.5%, #000 25.5% 28.5%, transparent 28.5% 37.5%, #000 37.5% 40.5%, transparent 40.5% 49.5%, #000 49.5% 52.5%, transparent 52.5% 100%);
-          mask-image: linear-gradient(to bottom, transparent 0 25.5%, #000 25.5% 28.5%, transparent 28.5% 37.5%, #000 37.5% 40.5%, transparent 40.5% 49.5%, #000 49.5% 52.5%, transparent 52.5% 100%);
+  -webkit-clip-path: polygon(34.5% 12%, 64.5% 12%, 64.5% 48%, 34.5% 48%);
+          clip-path: polygon(34.5% 12%, 64.5% 12%, 64.5% 48%, 34.5% 48%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0 23%, #000 23% 25.5%, transparent 25.5% 33.5%, #000 33.5% 36%, transparent 36% 43.8%, #000 43.8% 46.3%, transparent 46.3% 100%);
+          mask-image: linear-gradient(to bottom, transparent 0 23%, #000 23% 25.5%, transparent 25.5% 33.5%, #000 33.5% 36%, transparent 36% 43.8%, #000 43.8% 46.3%, transparent 46.3% 100%);
 }
 /* door-rack FRONT WALLS only — clip to the door column (x), mask to the four bin
    bands (y), so just the rack front walls occlude an object's base, never its body */
 .lh-front--fridge-doorL {
-  opacity: 0.5;
-  -webkit-clip-path: polygon(11% 14%, 30% 14%, 30% 90%, 11% 90%);
-          clip-path: polygon(11% 14%, 30% 14%, 30% 90%, 11% 90%);
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0 20%, #000 20% 30%, transparent 30% 38%, #000 38% 48%, transparent 48% 56%, #000 56% 66%, transparent 66% 74%, #000 74% 84%, transparent 84% 100%);
-          mask-image: linear-gradient(to bottom, transparent 0 20%, #000 20% 30%, transparent 30% 38%, #000 38% 48%, transparent 48% 56%, #000 56% 66%, transparent 66% 74%, #000 74% 84%, transparent 84% 100%);
+  opacity: 0.92;
+  -webkit-clip-path: polygon(24% 12%, 34.5% 12%, 34.5% 66%, 24% 66%);
+          clip-path: polygon(24% 12%, 34.5% 12%, 34.5% 66%, 24% 66%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0 19%, #000 19% 22.8%, transparent 22.8% 29.5%, #000 29.5% 34.2%, transparent 34.2% 43%, #000 43% 48%, transparent 48% 56.5%, #000 56.5% 62.3%, transparent 62.3% 100%);
+          mask-image: linear-gradient(to bottom, transparent 0 19%, #000 19% 22.8%, transparent 22.8% 29.5%, #000 29.5% 34.2%, transparent 34.2% 43%, #000 43% 48%, transparent 48% 56.5%, #000 56.5% 62.3%, transparent 62.3% 100%);
 }
 .lh-front--fridge-doorR {
-  opacity: 0.5;
-  -webkit-clip-path: polygon(70% 14%, 89% 14%, 89% 90%, 70% 90%);
-          clip-path: polygon(70% 14%, 89% 14%, 89% 90%, 70% 90%);
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0 20%, #000 20% 30%, transparent 30% 38%, #000 38% 48%, transparent 48% 56%, #000 56% 66%, transparent 66% 74%, #000 74% 84%, transparent 84% 100%);
-          mask-image: linear-gradient(to bottom, transparent 0 20%, #000 20% 30%, transparent 30% 38%, #000 38% 48%, transparent 48% 56%, #000 56% 66%, transparent 66% 74%, #000 74% 84%, transparent 84% 100%);
+  opacity: 0.92;
+  -webkit-clip-path: polygon(64.5% 12%, 74.5% 12%, 74.5% 66%, 64.5% 66%);
+          clip-path: polygon(64.5% 12%, 74.5% 12%, 74.5% 66%, 64.5% 66%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0 19%, #000 19% 22.8%, transparent 22.8% 29.5%, #000 29.5% 34.2%, transparent 34.2% 43%, #000 43% 48%, transparent 48% 56.5%, #000 56.5% 62.3%, transparent 62.3% 100%);
+          mask-image: linear-gradient(to bottom, transparent 0 19%, #000 19% 22.8%, transparent 22.8% 29.5%, #000 29.5% 34.2%, transparent 34.2% 43%, #000 43% 48%, transparent 48% 56.5%, #000 56.5% 62.3%, transparent 62.3% 100%);
 }
 
 /* Physical cue, never a software affordance: a soft warm light-catch that pools
