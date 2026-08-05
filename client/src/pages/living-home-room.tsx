@@ -239,9 +239,6 @@ function LivingObject({ id, name, product, src, variant, style, hint, reflect }:
       {src
         ? <img className="lh-obj__img" src={src} alt="" draggable={false} />
         : <span className="lh-obj__token">{name}</span>}
-      {/* faint mirror on the glass shelf — the cue that most removes the "pasted"
-          look; only for items that actually rest on reflective fridge glass */}
-      {src && reflect && <img className="lh-obj__reflect" src={src} alt="" aria-hidden draggable={false} />}
       {src && <span className="lh-obj__cap">{name}</span>}
     </div>
   );
