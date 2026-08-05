@@ -455,6 +455,23 @@
           mask-image: linear-gradient(to bottom, transparent 0 19%, #000 19% 22.8%, transparent 22.8% 29.5%, #000 29.5% 34.2%, transparent 34.2% 43%, #000 43% 48%, transparent 48% 56.5%, #000 56.5% 62.3%, transparent 62.3% 100%);
 }
 
+/* ── Fridge "step closer" ─────────────────────────────────────────────────────
+   A truthful camera move: zoom the WHOLE fridge scene — plate, the object layer
+   and every occlusion front — as one, around a single origin at the opening's
+   centre. Because all three are inset:0 and share the same background/coordinate
+   space, one identical transform keeps objects, shelves and occlusion perfectly
+   registered. To step nearer or back, change only --fridge-step. */
+.lh-stage.is-fridge-step { --fridge-step: 1.2; }
+.lh-stage.is-fridge-step .lh-plate--fridge-empty,
+.lh-stage.is-fridge-step .lh-layer,
+.lh-stage.is-fridge-step .lh-front {
+  transform: scale(var(--fridge-step));
+  transform-origin: 50% 40%;
+}
+/* the layer's entry animation ends at scale(1) and would fight the zoom; drop it
+   for the fridge and let the plate's own transform transition carry the step-in */
+.lh-stage.is-fridge-step .lh-layer { animation: none; transition: transform 0.9s cubic-bezier(0.22, 0.61, 0.36, 1); }
+
 /* Physical cue, never a software affordance: a soft warm light-catch that pools
    under the object and strengthens as the hand nears it. No outlines, no rings. */
 .lh-obj__catch {

@@ -353,7 +353,7 @@ export default function LivingHomeRoom() {
   return (
     <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setDrag(null)}>
       <div data-realm="pantry" className="lh-room-page">
-        <div className={`lh-stage${working ? " is-working" : ""}${drag ? " is-dragging" : ""}`} data-testid="lh-stage">
+        <div className={`lh-stage${working ? " is-working" : ""}${drag ? " is-dragging" : ""}${level === "zone" && zone?.id === "fridge" ? " is-fridge-step" : ""}`} data-testid="lh-stage">
           {ROOM_PLATES.map(p => <div key={p} className={`lh-plate lh-plate--${p}${currentPlate === p ? " is-visible" : ""}`} />)}
           {working && <div className="lh-veil" aria-hidden />}
 
