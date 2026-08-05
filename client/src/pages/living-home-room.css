@@ -466,7 +466,9 @@
 .lh-stage.is-fridge-step .lh-layer,
 .lh-stage.is-fridge-step .lh-front {
   transform: scale(var(--fridge-step));
-  transform-origin: 50% 40%;
+  /* origin y raises the camera: lower % anchors higher, revealing more of the
+     fridge top (the transom) instead of clipping it */
+  transform-origin: 50% 22%;
 }
 /* the layer's entry animation ends at scale(1) and would fight the zoom; drop it
    for the fridge and let the plate's own transform transition carry the step-in */
