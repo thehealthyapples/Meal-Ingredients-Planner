@@ -1,15 +1,85 @@
 # Living Pantry — Canonical Production Set (Generation Plan · AWAITING APPROVAL)
 
-**Date:** 2026-08-06 · **Risk:** 🟢 GREEN (production imagery). **Status: FOUR-IMAGE PROOF PRODUCED (~£0.75) — awaiting Home Owner approval before the remaining 5 positions.** (See "FOUR-IMAGE PROOF — RESULTS" below.)
-**Gate:** the full nine-position set still stops for approval (estimate > £5); the approved four-image proof (< £5) has been produced.
+**Date:** 2026-08-06 · **Risk:** 🟢 GREEN (production imagery/architecture). **Status: ARCHITECTURE REFINED — Three-Asset Model adopted (see ▶ PRODUCTION ARCHITECTURE v2 below). Awaiting review of the refined architecture; no further images to be generated until approved.**
+**Gate:** further image generation is **paused** pending review of the refined architecture below (Refinement Pass, 2026-08-06). Visual language approved; pipeline approved in principle.
 **Evidence:** [V]erified · [I]nferred · [A]ssumed.
+
+---
+
+# ▶ PRODUCTION ARCHITECTURE v2 — Three-Asset Model (Refinement Pass, 2026-08-06)
+
+**Why the change.** The pipeline proof (`LIVING_PANTRY_PIPELINE_PROOF.md`) showed that deriving an Empty Environment by *removing* objects from a populated master forces AI to **invent pixels** (streaked timber behind the jar) — **rejected.** The empty must be a **real asset**, never inpainted.
+
+## The three production assets (per Working Position)
+- **Asset 1 — Environment Plate (empty):** room · furniture · lighting · shadows · permanent props. **No Living Objects. Never modified.** The runtime background.
+- **Asset 2 — Canonical Master (populated):** the **identical** camera/room/lighting/furniture, now with **every Living Object in its Canonical Home.** For **approval, extraction, and lighting reference only — NOT a runtime asset.**
+- **Asset 3 — Living Object Library:** each object **extracted individually** from Asset 2 as a transparent PNG (jar, bottle, tin, fruit, vegetable, bread, tea/coffee canister…).
+
+**Runtime = Asset 1 (Environment Plate) + Asset 3 (Living Objects).** Nothing is ever removed from the plate; nothing is ever AI-inpainted. Removing an object at runtime reveals the plate's **real** pixels.
+
+## Generation method — pixel-compatibility WITHOUT inpainting
+Order inverted from the failed approach — **empty first, then add objects** (not populated then remove):
+1. Generate **Asset 1** (empty Environment Plate) at the approved camera.
+2. Generate **Asset 2** as a **masked edit of Asset 1** — mask only the object zones so the model *places* Living Objects there while **Asset 1's environment pixels are preserved unchanged**. Asset 2 is pixel-compatible with Asset 1 by construction.
+3. Extract **Asset 3** from Asset 2 (each object's surroundings in Asset 1 are the real empty).
+4. Runtime composes **Asset 1 + Asset 3** — an object removed reveals Asset 1, believable and artefact-free.
+*(The pixels behind every object genuinely exist in Asset 1 — so no reconstruction is ever needed.)*
+
+## Refinements incorporated
+2. **Camera distance** — for **Pantry Shelves** and **Fridge**, move the camera **physically closer** (step forward into the room; **do not zoom**). Room unchanged.
+3. **Jar labels** — the physical chalkboard label is the **primary interaction surface**, currently too small. Enlarge **~50% wider, ~15% taller**; **standardise** across **all** pantry jars; fit **"Wholemeal Flour" on one line** where possible, longer names wrap to **two balanced lines**; **matte chalkboard texture** (never glossy plastic); ingredient must stay **visible through the glass**. Runtime edits **text only**.
+4. **Store Cupboard — current proof REJECTED** (wrong furniture). Generate the **under-counter cupboard shown in Arrival**, **both doors open**, shelves of **realistic TINS** — baked beans, chopped tomatoes, tuna, sardines, soups, chickpeas, lentils, coconut milk, sweetcorn, tomatoes — **varied diameters/heights, real printed tin labels. No pantry jars, no glass.** A household tinned-food cupboard.
+5. **Root Vegetables** — the rack **permanently lives beneath the Fruit worktop**; **Fruit, Root Vegetables, and Arrival must all depict the same physical location.**
+6. **Bread** — **no Canonical Home yet.** Before generating, determine from **Arrival**: where bread lives · what furniture owns it · how the camera reaches it. Generate only then.
+7. **Worktop — REMOVED** as a separate Working Position (duplicates Fruit / Root Vegetables / Store Cupboard / Pantry Shelves).
+8. **Lived-in household** — vary staging: one jar half full, another full, natural ingredient-level variation, believable usage. **Authenticity, not clutter.**
+
+## Revised Working Position list (Worktop removed → 8 + Arrival)
+| # | Working Position | Location in Arrival | Camera | Status |
+|---|---|---|---|---|
+| 01 | **Arrival** | the whole room (anchor) | wide, room entrance | exists (reused) |
+| 02 | **Pantry Shelves** | centre floating shelves | front-on, **CLOSER** | re-shoot: closer + bigger labels + lived-in |
+| 03 | **Fridge** | left oak integrated appliance | front-on, **CLOSER**, upper open | re-shoot closer |
+| 04 | **Freezer** | same appliance, lower drawer | front-on, lower open | same appliance as 03 |
+| 05 | **Fruit** | worktop by the window (right) | front-on / slightly down | root veg rack beneath (same place) |
+| 06 | **Root Vegetables** | **beneath the Fruit worktop** | tilt down to the rack | must match Fruit + Arrival location |
+| 07 | **Store Cupboard** | **under-counter cupboard** (lower cabinets) | front-on, both doors open | CORRECTED — tins, not jars |
+| 08 | **Tea & Coffee** | **not clearly in Arrival** | TBD | **open item** — determine home from Arrival |
+| 09 | **Bread** | **not established** | TBD | **determine home from Arrival first** |
+
+**Open architectural items before generation:** (a) Bread's Canonical Home; (b) Tea & Coffee's Canonical Home — both must be locatable within Arrival, or Arrival must be extended to establish them.
+
+## Revised camera map (one room; the camera moves, the pantry does not)
+```
+   LEFT                         CENTRE                                   RIGHT
+   ┌──────────────┐      ┌────────────────────────┐          ┌────────────────────┐
+   │ OAK          │      │  Floating pantry        │          │  Window +          │
+   │ INTEGRATED   │      │  shelves (3 tiers) ▲02  │          │  Fruit worktop ▲05 │
+   │ FRIDGE  ▲03  │      │  Worktop / scale        │          │  Root veg rack     │
+   │ ───────────  │      │  Under-counter cupboard │          │  BENEATH  ▲06      │
+   │ FREEZER ▲04  │      │        ▲07 (tins)        │          │  (tilt down)       │
+   └──────────────┘      └────────────────────────┘          └────────────────────┘
+   ▲01 Arrival = wide view spanning LEFT → CENTRE → RIGHT (establishes every home)
+   ▲08 Tea & Coffee, ▲09 Bread = homes TBD from Arrival (cameras cannot be placed yet)
+```
+- **02 / 03:** step *forward* to the fixture (closer, front-on) — same room, nearer camera, no zoom.
+- **05 / 06:** the **same right-hand worktop**; Fruit looks at the baskets, Root Veg tilts **down** to the rack beneath — provably one place, matching Arrival.
+- **07:** the **lower under-counter cabinets** (beneath the worktop in Arrival), doors open — not a standalone larder cupboard.
+- **08 / 09:** cannot be placed until their homes are established in Arrival.
+
+## Cost note (three assets now)
+Per position ≈ 2 generations (Empty Plate + Master) + local extraction. At ~£0.20/image, 8 positions ≈ **£3–7** with iteration. A fresh per-position estimate and the £5 gate will accompany the actual generation request — **after** this architecture is approved.
+
+---
 
 ## Architecture compliance
 - Realizes the LOCKED two‑master workflow (Master Empty + Master Populated per object‑bearing camera; extraction later). **No runtime, schema, ownership, or behavioural change.** [V]
 - Data impact: **none.** Runtime impact: **none.** Nothing promoted to runtime; output lands only under `artifacts/canonical-pantry-production-set/`. [V]
 - Rollback identifier: **`rollback/canonical-production-set-20260806` → `9b3e59c7`.** [V]
 
-## Canonical Master model (updated per Home Owner philosophy, 2026-08-06)
+## Canonical Master model — SUPERSEDED (historical, kept for traceability)
+> **Superseded by the Three-Asset Model above.** The single-master "derive the empty by removing objects" approach was rejected because removal forces AI to invent occluded pixels (`LIVING_PANTRY_PIPELINE_PROOF.md`). The empty is now its own real asset (Asset 1); the section below is retained only for traceability.
+
 **One source per Working Position: the Canonical Master** — the finished, fully‑populated photograph (permanent room + props + every Living Object in its Canonical Home). From it, and *only* it:
 - the **Empty Environment** is **derived** by removing the movable objects (masked edit), and
 - the **Living Objects** are **extracted** (cut‑outs).
