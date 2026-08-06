@@ -77,9 +77,12 @@ Because a Canonical Master's pair partner is its Environment Plate (same positio
 
 ---
 
-## Next entries (to be created BEFORE any generation)
-The next paid generation is the **Production Pair Proof — Pantry Shelves** (Execution Plan §4 Step 2):
-- `GEN-0011` — Environment Plate → on approval becomes **`LP-PS-EP-001`**.
-- `GEN-0012` — Canonical Master → on approval becomes **`LP-PS-CM-001`**.
+## Active Milestone — Pantry Shelves Production Master Pair (authorised)
+Authorised assets only: **LP-PS-EP-001** and **LP-PS-CM-001**. Rollback: `rollback/lp-ps-pair-20260806` → `9886489a`. Entries created **before** generation (Asset Status `Planned`); actuals recorded immediately after.
 
-Both rows must be appended here with **Rollback Commit (exact HEAD), estimated cost, and Asset Status `Planned`** *before* generation, then updated with **Actual Cost, Generation Result, and Asset Status** immediately after. **No generation is approved yet.**
+| Gen ID | Date | Rollback Commit | Working Position | Asset Type | Production Library ID | Prompt Version | Est £ | Actual £ | Generation Result | Asset Status | HO Approval | Notes |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| GEN-0011 | 2026-08-06 | `9886489a` | Pantry Shelves | Environment Plate | LP-PS-EP-001 (on approval) | `_specs/lp-ps-ep-001.md` v1 (edit-from `shelf.png`) | 0.18 | 0.17 | Generated | Pending Review | Pending | ✅ Belongs to approved pantry; empty; passed critical review. Awaiting Home Owner. |
+| GEN-0012 | 2026-08-06 | `9886489a` | Pantry Shelves | Canonical Master | — (rejected) | `_specs/lp-ps-cm-001.md` v1 (masked-add + composite onto EP) | 0.18 | 0.17 | Generated | **Rejected** | No | Env pixel-identical to EP (diff 0.0), jars/labels good — **BUT hard band composite CLIPPED jars at boundaries (rectangular seams / sliced bases). Masking artefacts → rejected on critical review.** Mechanism needs refinement; not presented for approval. |
+
+**Milestone actual cost so far: ≈ £0.34** (GEN-0011 + GEN-0012). **Cumulative to date ≈ £2.09.** LP-PS-CM-001 rejected — no Production Library ID assigned. Milestone **incomplete**: EP passes, Canonical Master mechanism (pixel-preserving masked add without boundary clipping) is unproven and needs a Home Owner decision.
