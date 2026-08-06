@@ -1,7 +1,7 @@
 # Living Pantry — Canonical Production Architecture
 
 **Date:** 2026-08-06 · **Risk:** 🟢 GREEN — production imagery & architecture. **No runtime, schema, ownership, or behavioural change.**
-**Status:** Governing production architecture — the **Three-Asset Model**. Visual language approved; pipeline approved in principle. Image generation is **paused** pending the outstanding Canonical-Home decisions (see Open Architectural Decisions).
+**Status:** Governing production architecture — the **Three-Asset Model**, built as **Production Master Pairs** (Environment Plate + Canonical Master, generated together and locked). The **camera/composition of the approved proof is now LOCKED** — no closer views, no zoom; **continuity over proximity**. Image generation is **paused** until this Proof-vs-Production distinction is approved (and the Bread / Tea & Coffee homes are established).
 **Rollback identifier:** `rollback/canonical-production-set-20260806` → `9b3e59c7`.
 **Evidence:** [V]erified · [I]nferred · [A]ssumed.
 
@@ -27,7 +27,7 @@ Every Working Position produces exactly three assets:
 The empty room from this camera: architecture · furniture · lighting · shadows · permanent props. **Contains no Living Objects. Never modified.** This is the runtime background.
 
 **Master B — Canonical Master.**
-The **identical** camera, room, lighting, and furniture as Master A — now containing **every Living Object in its Canonical Home**. Master B exists **only** for approval, extraction, and lighting reference. **It is a production asset only and is never used directly by runtime.**
+Generated **as an edit of Master A** and **locked together with it as a production pair** — the identical camera, room, lighting, and furniture, now containing **every Living Object in its Canonical Home**. Master B exists **only** for approval, extraction, and lighting reference. **It is a production asset only and is never used directly by runtime.** *(This is a Production Master Pair — distinct from the Proof Canonical Masters; see below.)*
 
 **Living Object Library.**
 Each Living Object **extracted individually** from Master B (the Canonical Master) as its own transparent PNG — jar, bottle, tin, fruit, vegetable, bread, tea/coffee canister, and so on. This library is the **single source of interactive assets**.
@@ -41,14 +41,37 @@ Each Living Object **extracted individually** from Master B (the Canonical Maste
    runtime bg             production only          transparent PNG          plate; never modify it)
 ```
 
-### Why three assets (pixel-compatibility without inpainting)
-The empty is a **real generated asset**, not a reconstruction. The order is **empty first, then add objects**:
-1. Generate **Master A** (the empty Environment Plate) at the approved camera.
-2. Generate **Master B** as a **masked edit of Master A** — the mask covers only the object zones, so the model *places* Living Objects there while **Master A's environment pixels are preserved unchanged**. Master B is therefore pixel-compatible with Master A by construction.
-3. Build the **Living Object Library** by extracting each object from Master B; every object's surroundings in Master A are the real empty.
-4. Runtime composes **Master A + Living Objects** — removing an object reveals Master A, believable and artefact-free.
+### How each Production Master Pair is made (generated together, locked)
+The Environment Plate and the Canonical Master are **generated together as a locked pair — neither image is derived from the other afterwards.** The order *within* the pair is **empty first, then add objects**:
+1. Generate **Master A** (the empty Environment Plate) at the approved camera/composition.
+2. **Immediately** generate **Master B** as an **edit of Master A that ADDS the Living Objects** (a masked add — objects are placed only in the object zones, so Master A's real environment is carried through unchanged). Master B is pixel-compatible with Master A by construction.
+3. **Lock both together** as the production pair.
+4. Build the **Living Object Library** by extracting each object from Master B; every object's surroundings are the real Master A.
+5. Runtime composes **Master A + Living Objects** — removing an object reveals the real Master A.
 
-Because the pixels behind every object genuinely exist in Master A, **no occluded region is ever reconstructed.** *(This replaced an earlier single-master approach that derived the empty by removing objects; that forced AI to invent occluded pixels — visible streaking — and was rejected. See `LIVING_PANTRY_PIPELINE_PROOF.md`.)*
+**Objects are only ever ADDED onto a real empty plate — never removed, reconstructed, or inpainted.** Because Master A is a genuine empty asset, no environment pixel is ever invented. *(The rejected earlier approach did the reverse — deriving an empty by removing objects from a populated master, forcing AI to invent occluded pixels; see `LIVING_PANTRY_PIPELINE_PROOF.md`.)*
+
+---
+
+## Proof Canonical Masters vs Production Master Pairs
+
+Two different kinds of asset — they must not be confused:
+
+**Proof Canonical Masters — *visual approval evidence, not runtime assets.***
+The four-image proof (Pantry Shelves, Fridge, Fruit) under `artifacts/canonical-pantry-production-set/00_FOUR_IMAGE_PROOF/`. They **approve the room, camera, composition, furniture, and visual language** — the *look* of the one pantry. **Their pixels are not sacred, and they are never used by runtime.** They remain valuable only as references and approval evidence.
+
+**Production Master Pairs — *the true runtime source assets.***
+For every Working Position, a **locked pair — Environment Plate (Master A) + Canonical Master (Master B)** — generated **together** (plate first, master as an edit of the plate, locked as a pair). Master A is the runtime background; Master B is for extraction and lighting reference. These pairs, and the Living Object Library extracted from them, are what runtime actually uses.
+
+| | Proof Canonical Master | Production Master Pair |
+|---|---|---|
+| **Purpose** | approve room / camera / composition / visual language | runtime source of truth |
+| **Pixels** | not sacred — reference only | the locked production pixels |
+| **Runtime use** | never | Master A = background · Library = objects |
+| **How made** | a single proof generation | Plate first, then Master as an edit of it, **locked together** |
+| **Status** | ✅ approved (visual language) | ⏳ not yet generated |
+
+The Proof Canonical Masters guide each Production Master Pair (same room, camera, composition, furniture, visual language), but every runtime pixel comes from the **Production Master Pair**, not the proof.
 
 ---
 
@@ -102,7 +125,7 @@ The Store Cupboard is a **real family tinned-food cupboard**, not decorative sto
 
 ## Camera & Staging Refinements
 
-- **Camera distance.** For **Pantry Shelves** and **Fridge**, the camera moves **physically closer** — the household should feel they have stepped forward into the room. **Do not zoom.** The room is unchanged.
+- **Camera — LOCKED.** The camera/composition of the approved proof is **locked**. **Do not move the camera closer, and do not zoom.** Every Production Master Pair is generated at the approved framing. **Continuity is more important than proximity.** *(An earlier "step closer" refinement was withdrawn — a closer view broke continuity and produced a different pantry.)*
 - **Lived-in household.** Vary the staging so the pantry feels used: one jar half full, another completely full, natural differences in ingredient levels, believable household usage. **Authenticity, not clutter** — do not stage every shelf perfectly, and do not create mess.
 
 ---
@@ -114,8 +137,8 @@ The separate **Worktop** Working Position is **removed** — it duplicated infor
 | # | Working Position | Location in Arrival | Camera |
 |---|---|---|---|
 | 01 | **Arrival** | the whole room (anchor) | wide, room entrance — establishes every Canonical Home |
-| 02 | **Pantry Shelves** | centre floating shelves | front-on, **closer**; larger standardised labels; lived-in |
-| 03 | **Fridge** | left oak integrated appliance | front-on, **closer**, refrigerator open |
+| 02 | **Pantry Shelves** | centre floating shelves | front-on, **approved framing (locked)**; larger standardised labels; lived-in |
+| 03 | **Fridge** | left oak integrated appliance | front-on, **approved framing (locked)**, refrigerator open |
 | 04 | **Freezer** | same appliance, lower section | front-on, lower drawer open (same appliance as 03) |
 | 05 | **Fruit** | worktop by the window (right) | front-on / slightly down; root veg rack beneath |
 | 06 | **Root Vegetables** | **beneath the Fruit worktop** | tilt down to the rack — same location as Fruit + Arrival |
@@ -136,7 +159,7 @@ The separate **Worktop** Working Position is **removed** — it duplicated infor
    ▲01 Arrival = wide view spanning LEFT → CENTRE → RIGHT (establishes every home)
    ▲08 Tea & Coffee, ▲09 Bread = homes not yet established (cameras cannot be placed yet)
 ```
-- **02 / 03:** step *forward* to the fixture (closer, front-on) — same room, nearer camera, no zoom.
+- **02 / 03:** the approved (locked) front-on framing of the fixture — no closer view, no zoom.
 - **05 / 06:** the **same right-hand worktop**; Fruit views the baskets, Root Vegetables tilts **down** to the rack beneath — provably one place, matching Arrival.
 - **07:** the **lower under-counter cabinets** (beneath the worktop in Arrival), both doors open — a tinned-food cupboard.
 
@@ -154,9 +177,10 @@ Until these are settled, positions 08 and 09 have no camera and cannot enter pro
 
 ## Production Status (record)
 
-- **Four-Image Proof (2026-08-06):** four **Master B (Canonical Master)** images produced as a visual-language proof — Pantry Shelves, Fridge, Fruit, Store Cupboard (Arrival reused as anchor). Actual cost **≈ £0.75** (21,952 output tokens; gpt-image-2, 1536×1024, via the governed `scripts/generate-environment-plate.py`). The visual language was approved; the **Store Cupboard proof was rejected** (wrong furniture — see the strengthened spec above). Deliverable: `artifacts/canonical-pantry-production-set/00_FOUR_IMAGE_PROOF/`. [V]
-- **Pipeline Proof (2026-08-06):** extraction, recomposition (pixel-identical), and runtime label text were proven; deriving the empty by *removal* was rejected — which established the Three-Asset Model above. `artifacts/canonical-pantry-production-set/00_PIPELINE_PROOF/`. [V]
-- **Master A (Environment Plates)** at the approved *closer* camera are **not yet generated**; nor is any Living Object Library. **No runtime asset has been touched.** [V]
+- **Proof Canonical Masters (2026-08-06):** the four-image proof — Pantry Shelves, Fridge, Fruit, Store Cupboard (Arrival reused). **Visual approval evidence only — NOT production assets** (their pixels are not sacred and never enter runtime). The **room, camera, composition, furniture, and visual language are approved**; the **Store Cupboard proof was rejected** (wrong furniture — see the strengthened spec above). Cost ≈ £0.75. `artifacts/canonical-pantry-production-set/00_FOUR_IMAGE_PROOF/`. [V]
+- **Pipeline Proof (2026-08-06):** extraction, recomposition, and runtime label text were proven; deriving an empty by *removal* was rejected — establishing that production must generate a real Environment Plate first. `artifacts/canonical-pantry-production-set/00_PIPELINE_PROOF/`. [V]
+- **Rejected off-canon attempt (2026-08-06):** six Environment Plates generated by fresh text-to-image produced a *different* pantry and were **deleted**. Lesson recorded: every production asset is anchored to the approved room/camera/composition — never fresh text-to-image. See `LIVING_PANTRY_IMPLEMENTATION_PHASE.md`. [V]
+- **Production Master Pairs (Master A + Master B) — NOT yet generated;** no Living Object Library; **no runtime asset touched.** Awaiting approval of this documented Proof-vs-Production distinction before any generation. [V]
 
 ## Cost & Gate (for the eventual generation request)
 Each Working Position needs **2 generations** (Master A + Master B) plus **local extraction** (masking). At ~£0.20/image, the eight positions ≈ **£3–7** with iteration. A fresh per-position estimate and a **£5 approval gate** will accompany the actual generation request — **after** this architecture is approved and the Bread / Tea & Coffee homes are established.
