@@ -133,21 +133,26 @@ Every Living Object expected to be extracted from each Canonical Master. This is
 
 ---
 
-## 4. Implementation Order (lowest-risk sequence)
+## 4. Implementation Order (lowest risk)
 
-**Recommended sequence — prove the mechanism on one position before committing to the set:**
+The Living Pantry Production Architecture is now **LOCKED**. The remaining work is **no longer architectural — it is production execution.** The objective is to **minimise financial risk while proving the production pipeline one Working Position at a time.**
 
-1. **Resolve the two open architectural decisions** (Bread + Tea & Coffee Canonical Homes) — *documentation only, no spend.* Removes the two blockers before any generation planning is "complete." *(Could be deferred if the Home Owner accepts shipping the 6 ready positions first.)*
-2. **Production Pair mechanism proof (ONE position — Pantry Shelves).** Generate EP-02, then produce CM-02 by the chosen mechanism, and **verify the pair meets the Production Pair Principle** (Master A + Master B share every non-object pixel; removing an object reveals the real plate). This proves the mechanism cheaply (~£0.40–1.00) before the full run. **Do not generate the rest until this passes.**
-3. **Confirm the extraction (matting) capability** on that first pair — extract one jar cleanly to a transparent PNG. Proves Phase 4 is viable end-to-end.
-4. **Generate the remaining ready pairs** (Fridge, Freezer, Fruit, Root Vegetables, Store Cupboard) — Fridge/Freezer together (shared appliance), Fruit/Root-Veg together (shared location), then Store Cupboard.
-5. **Extract the full Living Object Library** per the register.
-6. **Runtime implementation** (separate, later approval): compose Environment Plate + Library; wire drag/remove/restore/Shopping/Bin/Companion.
-7. **Bread + Tea & Coffee** last, only after their homes are approved.
+**STEP 1 — Resolve any remaining Canonical Home decisions.** Bread. Tea & Coffee. **These remain documentation tasks only — no image generation.**
 
-**Why this order:** it spends the least money before the biggest unknowns are retired — the pair mechanism and extraction are proven on one cheap position before the full set; shared-identity positions (Fridge+Freezer, Fruit+Root-Veg) are produced adjacently to hold continuity; blocked positions never enter the paid path until unblocked.
+**STEP 2 — Production Pair Proof.** Generate exactly **ONE** complete Production Master Pair. **Working Position: Pantry Shelves.** Generate the **Environment Plate** and the **Canonical Master**. The pair must satisfy the governing architecture — verify **identical** room · camera · composition · shelves · lighting · shadows · permanent props; **only the Living Objects may differ.** **Do not generate any additional Working Positions.**
 
-**Dependencies (must precede generation):** locked architecture ✅ · a **proven pair mechanism** (⏳) · a **confirmed extraction capability** (⏳) · the label spec ✅ · Bread/Tea&Coffee homes (⛔ for those two only).
+**STEP 3 — Home Owner Approval Gate.** Present the completed Production Master Pair. The Home Owner must approve **both** the **Environment Plate** and the **Canonical Master**. **No further work is approved until this approval is received.** Do not begin extraction. Do not begin runtime implementation.
+
+**STEP 4 — Living Object Library Proof.** After the Production Master Pair is approved, produce the Living Object Library for **Pantry Shelves**. Demonstrate: **transparent objects · clean boundaries · correct lighting · correct perspective · editable label artwork.** *The implementation technology is not governed by this document — only the production outcome is governed.*
+
+**STEP 5 — Generate the remaining Production Master Pairs.** Order: **Fridge → Freezer → Fruit → Root Vegetables → Store Cupboard.** **Each Production Master Pair requires Home Owner approval before Living Object extraction begins.**
+
+**STEP 6 — Complete the Living Object Library.** Extract every Living Object from every approved Production Master Pair. **No runtime work begins until the complete Living Object Library exists.**
+
+**STEP 7 — Runtime Implementation.** Only after **all Production Master Pairs approved · Living Object Library complete · Definition of Done satisfied** may runtime implementation begin. Runtime becomes **Environment Plate + Living Object Library** — no AI reconstruction, no AI inpainting, no object removal from backgrounds; removing a Living Object simply reveals the original Environment Plate.
+
+### Success criteria
+**The first implementation milestone is NOT runtime — it is one fully approved Production Master Pair.** Only after one Production Master Pair has been successfully completed and approved may the remaining Working Positions enter production. This minimises financial risk while proving the production architecture using **real production assets**, not theoretical discussion.
 
 ---
 
@@ -159,7 +164,7 @@ Every Living Object expected to be extracted from each Canonical Master. This is
 
 **Remaining production (non-architectural) risks that could invalidate generation if unaddressed:**
 3. **Production Pair mechanism is unproven.** The architecture requires Master A and Master B to share every non-object pixel. The four-image proof used a whole-image edit (not a pixel-preserving pair); a mechanism that actually yields a compliant pair (masked add, or another) has **not been proven or tooled**. **If we generate the full set before proving this, the pairs could fail the architecture — wasted spend.** → **Mitigation: mechanism proof on one position first (§4 step 2).**
-4. **Extraction (matting) capability is not installed** (no `rembg`/`cv2`/SAM; the pipeline proof showed hand-masking is not viable at scale). Blocks the Living Object Library and therefore runtime. → **Mitigation: confirm on the first pair (§4 step 3) before the full run.**
+4. **Extraction (matting) capability is not installed** (no `rembg`/`cv2`/SAM; the pipeline proof showed hand-masking is not viable at scale). Blocks the Living Object Library and therefore runtime. → **Mitigation: the Living Object Library Proof (§4 step 4) confirms extraction on the first approved pair before the full run.**
 5. **Cross-camera continuity is approximate** with AI generation (independent generations share style, not identical fixtures). → Mitigation: anchor every asset to the approved room; produce shared-identity positions adjacently; accept that guaranteed identity is only reachable via photography.
 
 **STOP condition (honoured):** risks **3 and 4 could invalidate the full generation run**, so **generation of the full set is NOT recommended yet.** The only generation recommended is the **single-position mechanism proof (step 2)** — and even that only on explicit Home Owner approval with the £5 gate. Positions **08/09 are additionally blocked** on their homes.
