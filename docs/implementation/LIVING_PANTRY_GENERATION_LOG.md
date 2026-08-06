@@ -25,6 +25,23 @@ Every **approved production asset** receives a **permanent** Production Library 
 - Examples: `LP-PS-EP-001` · `LP-PS-CM-001` · `LP-FR-EP-001` · `LP-FR-CM-001` · `LP-RV-EP-001` · `LP-SC-CM-001`.
 - **A Production Library ID is never reassigned.** If its asset is rejected or superseded, the ID is retired with that asset, never reused. Proof assets and rejected images receive **no** Production Library ID.
 
+## Living Object provenance & lineage (prepared now, applied at extraction)
+Every Living Object, when extracted, carries a record that preserves **complete asset lineage** — defined now so it is ready at extraction, **without blocking or complicating production** (the field is optional to the runtime):
+- **Production Library ID** — `LP-<POS>-LO-<NNN>` (the object's permanent identity).
+- **Parent Production Asset** — the **Canonical Master** the object was extracted from, e.g. `LP-PS-CM-001`.
+- **Working Position / Canonical Home** — its one home.
+
+This links the full chain, each hop by Production Library ID:
+
+```
+Environment Plate  →  Canonical Master  →  Living Object                →  Runtime
+LP-PS-EP-001          LP-PS-CM-001          LP-PS-LO-001                    (Environment Plate
+(pair partner)        (Parent of the LO)    Parent Production Asset =        + Living Objects)
+                                            LP-PS-CM-001
+```
+
+Because a Canonical Master's pair partner is its Environment Plate (same position, locked pair), any Living Object is traceable back through its Master to the exact empty plate and the governing **Rollback Commit**. **If an extraction record cannot carry `Parent Production Asset` inline, it is recorded here in the log against the object's row** — a planned extension, never a blocker.
+
 ## Governance principle — immutability
 - **Production assets are immutable once approved.**
 - If an approved asset is replaced, the original is marked **`Superseded`** or **`Archived`** — **it is never deleted.**

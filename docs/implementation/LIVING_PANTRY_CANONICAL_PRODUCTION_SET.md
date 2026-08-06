@@ -54,7 +54,7 @@ The empty room from this camera: architecture · furniture · lighting · shadow
 Produced **from** the approved Master A (by any mechanism that meets the Production Pair Principle below) and **locked together with it as a production pair** — the identical room, camera, composition, furniture, permanent props, lighting, shadows, and perspective, now containing **every Living Object in its Canonical Home**. Master B exists **only** for approval, extraction, and lighting reference. **It is a production asset only and is never used directly by runtime.** *(This is a Production Master Pair — distinct from the Proof Canonical Masters; see below.)*
 
 **Living Object Library.**
-Each Living Object **extracted individually** from Master B (the Canonical Master) as its own transparent PNG — jar, bottle, tin, fruit, vegetable, bread, tea/coffee canister, and so on. This library is the **single source of interactive assets**.
+Each Living Object **extracted individually** from Master B (the Canonical Master) as its own transparent PNG — jar, bottle, tin, fruit, vegetable, bread, tea/coffee canister, and so on. This library is the **single source of interactive assets**. Each Living Object record carries a **Parent Production Asset** (the Canonical Master it was extracted from, e.g. `LP-PS-CM-001`), preserving full lineage **Environment Plate → Canonical Master → Living Object → Runtime** — a provenance field prepared in `LIVING_PANTRY_GENERATION_LOG.md`, optional to runtime and adding no implementation complexity.
 
 ### Production flow
 ```
