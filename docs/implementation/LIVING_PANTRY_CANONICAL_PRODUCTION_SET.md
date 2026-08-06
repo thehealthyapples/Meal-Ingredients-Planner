@@ -27,7 +27,7 @@ Every Working Position produces exactly three assets:
 The empty room from this camera: architecture · furniture · lighting · shadows · permanent props. **Contains no Living Objects. Never modified.** This is the runtime background.
 
 **Master B — Canonical Master.**
-Generated **as an edit of Master A** and **locked together with it as a production pair** — the identical camera, room, lighting, and furniture, now containing **every Living Object in its Canonical Home**. Master B exists **only** for approval, extraction, and lighting reference. **It is a production asset only and is never used directly by runtime.** *(This is a Production Master Pair — distinct from the Proof Canonical Masters; see below.)*
+Produced **from** the approved Master A (by any mechanism that meets the Production Pair Principle below) and **locked together with it as a production pair** — the identical room, camera, composition, furniture, permanent props, lighting, shadows, and perspective, now containing **every Living Object in its Canonical Home**. Master B exists **only** for approval, extraction, and lighting reference. **It is a production asset only and is never used directly by runtime.** *(This is a Production Master Pair — distinct from the Proof Canonical Masters; see below.)*
 
 **Living Object Library.**
 Each Living Object **extracted individually** from Master B (the Canonical Master) as its own transparent PNG — jar, bottle, tin, fruit, vegetable, bread, tea/coffee canister, and so on. This library is the **single source of interactive assets**.
@@ -41,15 +41,20 @@ Each Living Object **extracted individually** from Master B (the Canonical Maste
    runtime bg             production only          transparent PNG          plate; never modify it)
 ```
 
-### How each Production Master Pair is made (generated together, locked)
-The Environment Plate and the Canonical Master are **generated together as a locked pair — neither image is derived from the other afterwards.** The order *within* the pair is **empty first, then add objects**:
-1. Generate **Master A** (the empty Environment Plate) at the approved camera/composition.
-2. **Immediately** generate **Master B** as an **edit of Master A that ADDS the Living Objects** (a masked add — objects are placed only in the object zones, so Master A's real environment is carried through unchanged). Master B is pixel-compatible with Master A by construction.
-3. **Lock both together** as the production pair.
-4. Build the **Living Object Library** by extracting each object from Master B; every object's surroundings are the real Master A.
-5. Runtime composes **Master A + Living Objects** — removing an object reveals the real Master A.
+### The Production Pair Principle (required outcome — governs, not the mechanism)
 
-**Objects are only ever ADDED onto a real empty plate — never removed, reconstructed, or inpainted.** Because Master A is a genuine empty asset, no environment pixel is ever invented. *(The rejected earlier approach did the reverse — deriving an empty by removing objects from a populated master, forcing AI to invent occluded pixels; see `LIVING_PANTRY_PIPELINE_PROOF.md`.)*
+**Master B (Canonical Master) is produced from the approved Master A (Environment Plate) while preserving the identical room, camera, composition, furniture, permanent props, lighting, shadows, and perspective. Only the Living Objects may differ.**
+
+The architecture specifies this **outcome, not the implementation mechanism.** Whether the pair is achieved through **masked editing**, **future image-generation capabilities**, **photography**, or another production technique is an **implementation decision** — valid so long as the resulting Production Master Pair satisfies this principle.
+
+**Invariants any mechanism must satisfy:**
+- Master A and Master B share **every non-object pixel** — removing a Living Object reveals the real Master A, believable and artefact-free.
+- The pair is **produced together and locked**; Master B is produced *from* Master A. **Neither image is derived from the other afterwards.**
+- Objects are only ever **present on a real empty plate** — the environment is never removed, reconstructed, or inpainted, so **no environment pixel is invented.**
+
+**Current candidate mechanism (implementation detail, may change):** generate Master A (empty plate) at the locked framing, then produce Master B as a **masked add** of the Living Objects onto Master A (object zones only; the environment carried through unchanged). A future capability, or photographing the same set empty then dressed, is equally valid if it meets the invariants above.
+
+Then: extract the **Living Object Library** from Master B; runtime composes **Master A + Living Objects** — removing an object reveals the real Master A. *(The rejected earlier approach did the reverse — deriving an empty by removing objects from a populated master, forcing AI to invent occluded pixels; see `LIVING_PANTRY_PIPELINE_PROOF.md`.)*
 
 ---
 
