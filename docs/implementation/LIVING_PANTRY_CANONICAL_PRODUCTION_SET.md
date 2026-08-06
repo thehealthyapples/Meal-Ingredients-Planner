@@ -19,6 +19,30 @@ This principle is the reason the production pipeline has three assets rather tha
 
 ---
 
+## Production Principle — Fixed World
+
+**The Living Home is a fixed world. The physical environment is the canonical truth.**
+
+- Furniture does not move.
+- Walls do not move.
+- Windows do not move.
+- Architectural features do not move.
+- The structure of the room does not move.
+- Lighting for a Working Position remains consistent.
+- **The room is never reinvented.**
+
+**Only the following may change:**
+- the **camera**
+- **Living Objects**
+- **seasonal dressing**
+- **hospitality dressing**
+
+Every Working Position is simply another view of the same physical space. **The camera moves. The Living Home does not.**
+
+**This principle governs every future Living Home environment** — Pantry · Fridge · Freezer · Kitchen · Living Room · Utility · Garage · Garden. **Every future room inherits this principle automatically.**
+
+---
+
 ## The Three Production Assets
 
 Every Working Position produces exactly three assets:
