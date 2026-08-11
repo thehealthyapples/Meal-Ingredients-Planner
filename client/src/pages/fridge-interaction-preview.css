@@ -1,0 +1,46 @@
+.fridge-preview-page { min-height: 100vh; padding: 8px clamp(18px, 4vw, 64px) 32px; color: #2d2a24; background: #eee8dc; }
+.fridge-preview-room { max-width: 1180px; margin: auto; padding-bottom: 0; }
+.fridge-preview-room { position: relative; }
+.fridge-preview-canvas { position: relative; width: auto; height: min(694px, calc(100dvh - 90px)); max-width: 100%; aspect-ratio: 1.5; margin: auto; overflow: visible; border-radius: 18px; background: #d8c8ac url("/images/living-home/room/fridge-labelled-master/full-labelled.png?v=larger-veg-drawer") center / 100% 100% no-repeat; box-shadow: 0 16px 36px rgb(69 49 24 / 16%); transition: background-image .28s ease; }
+.fridge-preview-canvas.is-object-removed { background-image: url("/images/living-home/room/fridge-labelled-master/empty-orange-labelled.png?v=larger-veg-drawer"); }
+.fridge-preview-canvas.is-drawer-open { background-image: url("/images/living-home/room/fridge-labelled-master/produce-drawer-overhead.png?v=drawer-camera"); }
+.fridge-preview-removal { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
+.fridge-preview-objects { position: absolute; inset: 0; z-index: 3; }
+.fridge-preview-object { position: absolute; transform: translateX(-50%); padding: 0; border: 0; background: transparent; cursor: grab; touch-action: none; filter: drop-shadow(0 8px 7px rgb(33 24 13 / 22%)); }
+.fridge-preview-object:active { cursor: grabbing; }
+.fridge-preview-object:focus-visible { outline: 2px solid #f4c66a; outline-offset: 5px; border-radius: 8px; }
+.fridge-preview-object.is-selected { outline: 0; }
+.fridge-preview-object.is-selected::after { display: none; }
+.fridge-preview-selection-outline { position: absolute; inset: 0; z-index: 4; width: 100%; height: 100%; overflow: visible; pointer-events: none; filter: drop-shadow(0 1px 2px rgb(33 24 13 / 75%)); }
+.fridge-preview-object--round { border-radius: 50%; clip-path: ellipse(47% 47% at 50% 50%); }
+.fridge-preview-object--cluster { border-radius: 42%; clip-path: ellipse(48% 46% at 50% 50%); }
+.fridge-preview-object--leafy { border-radius: 46% 54% 43% 57%; clip-path: polygon(7% 18%, 23% 4%, 47% 10%, 66% 3%, 94% 22%, 88% 55%, 98% 78%, 69% 96%, 39% 89%, 13% 99%, 3% 67%, 10% 43%); }
+.fridge-preview-object--long { border-radius: 40%; clip-path: polygon(13% 2%, 82% 0, 96% 17%, 89% 87%, 69% 100%, 11% 96%, 2% 81%, 8% 17%); }
+.fridge-preview-object img { display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+.fridge-preview-object.is-dragging { opacity: .22; }
+.fridge-preview-drawer-trigger { position: absolute; z-index: 4; left: 30%; top: 65%; width: 40%; height: 23%; padding: 0; border: 0; border-radius: 9px; background: transparent; cursor: zoom-in; }
+.fridge-preview-drawer-trigger span { position: absolute; right: 8px; bottom: 8px; padding: 5px 8px; border-radius: 999px; background: rgb(35 30 22 / 76%); color: #fff8eb; font-size: 12px; opacity: 0; transform: translateY(3px); transition: opacity .16s ease, transform .16s ease; }
+.fridge-preview-drawer-trigger:hover span, .fridge-preview-drawer-trigger:focus-visible span { opacity: 1; transform: translateY(0); }
+.fridge-preview-drawer-trigger:focus-visible, .fridge-preview-close-drawer:focus-visible { outline: 2px solid #f4c66a; outline-offset: 4px; }
+.fridge-preview-close-drawer { position: absolute; z-index: 5; top: 14px; left: 14px; border: 1px solid rgb(109 93 65 / 55%); border-radius: 999px; padding: 8px 12px; background: rgb(255 250 242 / 90%); color: #514936; cursor: pointer; box-shadow: 0 3px 10px rgb(33 24 13 / 16%); }
+.fridge-preview-destination { min-width: 130px; padding: 12px 18px; border: 1px solid #c9bda9; border-radius: 14px; background: #f8f3ea; box-shadow: 0 5px 14px rgb(80 61 35 / 10%); display: flex; align-items: center; justify-content: center; gap: 8px; color: #514936; transition: transform .15s, background .15s, border-color .15s; }
+.fridge-preview-destination.is-over { transform: translateY(-4px); background: #e5f0de; border-color: #78956a; }
+.fridge-preview-destination { min-width: 126px; padding: 4px 8px; border: 0; border-radius: 12px; background: transparent; box-shadow: none; color: #514936; }
+.fridge-preview-destination .lh-drop__label small { height: auto; opacity: 1; transform: none; color: #766e61; text-shadow: none; }
+.fridge-preview-destination.is-over { background: rgb(229 240 222 / 82%); border-color: transparent; }
+.fridge-preview-destination .lh-drop__art { min-height: 78px; display: flex; align-items: flex-end; justify-content: center; }
+.fridge-preview-drag-ghost { width: 100px; height: 100px; filter: drop-shadow(0 12px 10px rgb(33 24 13 / 28%)); }
+.fridge-preview-drag-ghost img { width: 100%; height: 100%; object-fit: contain; }
+.fridge-preview-drawer-ghost { display: block; width: 100%; height: 100%; overflow: visible; transform: rotate(-3deg); }
+@media (max-width: 680px) { .fridge-preview-canvas { width: 100%; height: auto; } .fridge-preview-destination { min-width: 0; padding: 10px 6px; font-size: 13px; } }
+
+/* Living Home placement: these are objects in the room, not a control bar. */
+.fridge-preview-destinations { position: absolute; z-index: 6; right: 12px; left: auto; bottom: 68px; transform: none; display: flex; flex-direction: row; justify-content: center; align-items: flex-end; gap: 18px; width: max-content; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; backdrop-filter: none; }
+.fridge-preview-destination { min-width: 0; padding: 8px; border: 0; border-radius: 12px; background: transparent; box-shadow: none; }
+.fridge-preview-destination.is-over { transform: translateY(-4px) scale(1.05); background: transparent; border-color: transparent; filter: brightness(1.12) drop-shadow(0 6px 14px rgb(0 0 0 / 35%)); }
+.fridge-preview-destination .lh-drop__art { min-height: 42px; }
+.fridge-preview-destination .lh-drop__label { display: none; }
+.fridge-preview-destination .lh-pad { transform: rotate(-4deg) scale(.5); transform-origin: bottom center; margin: -20px -16px -20px; }
+.fridge-preview-destination .lh-companion-mark { transform: scale(.5); transform-origin: bottom center; margin: -14px -12px -14px; }
+.fridge-preview-destination .lh-bin { transform: scale(.5); transform-origin: bottom center; margin: -18px -14px -18px; }
+@media (max-width: 680px) { .fridge-preview-destinations { right: 8px; bottom: 68px; gap: 10px; width: max-content; } .fridge-preview-destination { flex: none; padding: 5px; } }

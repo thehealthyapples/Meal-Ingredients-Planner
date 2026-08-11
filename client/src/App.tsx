@@ -61,6 +61,7 @@ const LarderRoomPage = lazy(() => import("@/pages/larder-room"));
 const LarderPlaqueRoom = lazy(() => import("@/pages/larder-plaque-room"));
 const LarderCategoryView = lazy(() => import("@/pages/larder-category-view"));
 const LivingHomeRoom = lazy(() => import("@/pages/living-home-room"));
+const FridgeInteractionPreview = lazy(() => import("@/pages/fridge-interaction-preview"));
 // COMM2 — the Orchard: Community as a place. ONE route for the whole room; the
 // Orchard overview, Neighbourhoods, the Village and the High Street are state
 // inside the page, never separate destinations.
@@ -407,6 +408,7 @@ function Router() {
       <Route path="/admin/knowledge-claims" component={() => <ProtectedRoute component={AdminKnowledgeClaimsChrome} />} />
       <Route path="/admin/canonical-publication-integrity" component={() => <ProtectedRoute component={AdminCanonicalPublicationIntegrityChrome} />} />
       <Route path="/pantry" component={() => <ProtectedRoute component={LivingHomeRoom} />} />
+      <Route path="/pantry/fridge-preview" component={() => <ProtectedRoute component={FridgeInteractionPreview} />} />
       <Route path="/pantry/:group" component={() => <ProtectedRoute component={LarderCategoryView} />} />
       {/* The Larder IS the pantry room (LARDER1 §2 — one room, one arrangement);
           the old preview door is honoured by redirect, never a rival room. */}

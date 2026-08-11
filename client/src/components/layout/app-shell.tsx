@@ -245,7 +245,7 @@ function ShellHeader() {
 // the page. The shell's threshold banner (orchard window + room identity) and its
 // default header stand down for them, leaving only essential navigation, the
 // Companion and trust notices. Technology recedes behind the room.
-const LIVING_HOME_ROUTES = new Set<string>(["/pantry"]);
+const LIVING_HOME_ROUTES = new Set<string>(["/pantry", "/pantry/fridge-preview"]);
 function isLivingHomeRoom(path: string): boolean {
   return LIVING_HOME_ROUTES.has(ROOM_ALIASES[path] ?? path);
 }
