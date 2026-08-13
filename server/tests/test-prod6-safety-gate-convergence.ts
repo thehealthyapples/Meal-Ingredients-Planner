@@ -194,6 +194,8 @@ interface GatedRoute { path: string; what: string; via?: string }
 interface ExemptRoute { path: RegExp | string; why: string }
 
 const GATED_ROUTES: GatedRoute[] = [
+  { path: 'api.search.recipes.path', what: 'trusted external recipe discovery (constant route; canonical household gate)', via: 'server/routes.ts' },
+  { path: '/api/preview-recipe', what: 'external recipe preview (canonical household gate)' },
   { path: '/api/planner/entries/:entryId/adapt', what: 'AI meal adaptation (PROD5 §10.1)' },
   { path: '/api/planner/entries/:entryId/accept-household-safe-variant', what: 'persists an AI adaptation as household-safe (PROD5 §10.1)' },
   { path: '/api/meals/:id/adapt', what: 'recipe swap engine (PROD5 §10.2)' },
@@ -209,6 +211,7 @@ const GATED_ROUTES: GatedRoute[] = [
 ];
 
 const EXEMPT_ROUTES: ExemptRoute[] = [
+  { path: '/api/pantry/:id/restore', why: "restores the household's own archived pantry row; it does not recommend or create food" },
   // The household's OWN records. THA proposes nothing; it stores and returns
   // what the household themselves chose. Gating these would hide a household's
   // own food from them, which is a different harm and not a safer one.
@@ -254,7 +257,6 @@ const EXEMPT_ROUTES: ExemptRoute[] = [
 // This list may only ever shrink. The assertion below fails if anything is added
 // to it, so a future session cannot quietly park a new ungated route here.
 const KNOWN_UNGATED: ExemptRoute[] = [
-  { path: '/api/search-recipes', why: 'RECORDED GAP — filters on storage.getPersonDiet, which is requester-only and fails OPEN (returns [] on error). Not the canonical gate.' },
   { path: '/api/smart-suggest/auto-import', why: 'RECORDED GAP — uses the planner-compliance engine, a second compliance path, not household-dietary-safety.' },
   { path: '/api/pantry/alternatives', why: 'RECORDED GAP — its only dietary input is a CLIENT-SUPPLIED `diet` query param. Surfaces foods, not meals, so the meal gate does not fit as-is.' },
   { path: '/api/pantry/discover', why: 'RECORDED GAP — surfaces foods to try with no household dietary filter. Food-level verdict does not exist yet.' },
@@ -266,13 +268,12 @@ const KNOWN_UNGATED: ExemptRoute[] = [
   { path: '/api/plan-templates/:id/apply', why: 'RECORDED GAP — WRITES a full week of meals into the planner, ungated.' },
   { path: '/api/plan-templates/:id/apply-to-week/:weekId', why: 'RECORDED GAP — as above, scoped to one week.' },
   { path: '/api/plan-templates/:id/import', why: 'RECORDED GAP — imports a shared template of meals, ungated.' },
-  { path: '/api/preview-recipe', why: 'RECORDED GAP — renders a recipe card from a supplied URL/text, ungated.' },
+
   { path: '/api/product-alternatives', why: 'RECORDED GAP — proposes healthier product alternatives from OpenFoodFacts with no household dietary filter.' },
   { path: '/api/intelligence/food-opportunities', why: 'RECORDED GAP — surfaces food opportunities; gating belongs with the Opportunity pipeline (HNP1 M2).' },
   { path: '/api/intelligence/food-opportunities/:opportunityId/:action', why: 'RECORDED GAP — acts on a food opportunity.' },
   { path: '/api/planner/weeks/:weekId/save-week-template', why: "RECORDED GAP — snapshots the household's own week; low risk, listed for completeness." },
   { path: '/api/meals/:id/link-template', why: "RECORDED GAP — links a template to the household's own meal; low risk, listed for completeness." },
-  { path: 'api.search.recipes.path', why: 'RECORDED GAP — constant-registered recipe search; same fail-open diet source as /api/search-recipes.' },
   { path: 'api.swaps.list.path', why: 'RECORDED GAP — unfiltered ingredient swap list.' },
   { path: 'api.diets.getMealDiets.path', why: "RECORDED GAP — reads diet tags on a meal; reference, but reached via the food vocabulary." },
   { path: 'api.diets.setMealDiets.path', why: 'RECORDED GAP — writes diet tags on a meal.' },

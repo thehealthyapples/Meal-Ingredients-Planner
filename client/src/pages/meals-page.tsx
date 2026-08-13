@@ -2718,6 +2718,16 @@ export default function MealsPage() {
     if (q) setSearchTerm(q);
   }, [searchStr]);
 
+  // The physical Real Book delegates scanning to this canonical Cookbook owner.
+  // A standalone scan entry must not fabricate planner context or duplicate the
+  // scanner; it opens the existing file input and then removes the one-shot flag.
+  useEffect(() => {
+    const params = new URLSearchParams(searchStr);
+    if (params.get("openScan") !== "1" || params.get("plannerImport") === "1") return;
+    scanFileRef.current?.click();
+    navigate("/cookbook", { replace: true } as any);
+  }, [searchStr, navigate]);
+
   // Repeat-tap nav: open workspace drawer when mobile nav fires tha:open-workspace for this page
   useEffect(() => {
     const handler = (e: Event) => {

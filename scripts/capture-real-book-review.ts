@@ -31,12 +31,31 @@ const meals = names.map((name, i) => ({
 }));
 
 async function mock(page: Page) {
+  const pageMeals = [...meals];
+  const webRecipes = [
+    {
+      id: "bbc-soup-1", name: "Roasted tomato and lentil soup", image: "", url: "https://example.test/tomato-lentil-soup",
+      category: "Soup", cuisine: "British", ingredients: [], instructions: [], source: "BBC Good Food",
+    },
+    {
+      id: "mealdb-soup-2", name: "Spring vegetable soup", image: "", url: "https://example.test/spring-soup",
+      category: "Soup", cuisine: "European", ingredients: ["2 leeks", "3 carrots", "vegetable stock"], instructions: ["Slice the vegetables.", "Simmer until tender."], source: "TheMealDB",
+    },
+  ];
   await page.route("**/api/**", async route => {
     const url = new URL(route.request().url());
     const p = url.pathname;
     const json = (body: unknown) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
     if (p === "/api/user") return json({ id: 1, username: "review", email: "review@example.test", isAdmin: false, onboardingCompleted: true, trialEndsAt: null });
-    if (p === "/api/meals") return json(meals);
+    if (p === "/api/meals" && route.request().method() === "GET") return json(pageMeals);
+    if (p === "/api/meals" && route.request().method() === "POST") {
+      const body = route.request().postDataJSON();
+      const saved = { ...meals[0], ...body, id: 901, userId: 1 };
+      pageMeals.unshift(saved);
+      return route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify(saved) });
+    }
+    if (p === "/api/search-recipes") return json({ recipes: webRecipes, hasMore: true });
+    if (p === "/api/preview-recipe") return json({ ingredients: ["6 ripe tomatoes", "150g red lentils", "vegetable stock"], instructions: ["Roast the tomatoes.", "Simmer with lentils and stock.", "Blend and serve."] });
     if (p === "/api/site-settings/banner") return json({ enabled: false });
     if (p === "/api/user/planner-settings") return json({ enableBabyMeals: false, enableChildMeals: false, enableDrinks: false });
     if (p === "/api/planner/full" || p === "/api/household/eaters") return json([]);
@@ -56,6 +75,9 @@ for (const vp of [
   const errors: string[] = [];
   page.on("console", m => { if (m.type() === "error") errors.push(m.text()); });
   page.on("pageerror", e => errors.push(e.message));
+  page.on("response", response => {
+    if (response.status() >= 400) errors.push(`HTTP ${response.status()} ${response.url()}`);
+  });
   await page.goto(`${BASE}/cookbook/concept-real-book`, { waitUntil: "domcontentloaded", timeout: 60000 });
   await page.waitForSelector('[data-testid="real-book-stage"]', { state: "visible", timeout: 20000 });
   await page.screenshot({ path: path.join(OUT, `${vp.name}-collection.png`) });
@@ -69,9 +91,33 @@ for (const vp of [
   if (visibleRecipes) await recipeButtons.nth(1).click();
   await page.waitForTimeout(150);
   await page.screenshot({ path: path.join(OUT, `${vp.name}-recipe.png`) });
+  if (vp.name.startsWith("mobile")) {
+    await page.getByRole("button", { name: "Turn to the collection page" }).click();
+  }
+  const trustedMode = page.getByRole("button", { name: "Trusted recipe sources", exact: true }).filter({ visible: true });
+  await trustedMode.click();
+  await search.fill("soup");
+  await page.getByText("Roasted tomato and lentil soup", { exact: true }).filter({ visible: true }).first().waitFor({ state: "visible", timeout: 5000 });
+  const webRequestObserved = await page.locator('section[aria-label="Trusted recipe results"]:visible').count();
+  const webResult = page.getByRole("button", { name: "Preview recipe Roasted tomato and lentil soup" }).filter({ visible: true });
+  await webResult.focus();
+  await page.keyboard.press("Enter");
+  await page.getByText("6 ripe tomatoes", { exact: true }).filter({ visible: true }).first().waitFor({ state: "visible", timeout: 5000 });
+  await page.screenshot({ path: path.join(OUT, `${vp.name}-trusted-preview.png`) });
+  const sourceVisible = await page.getByText("BBC Good Food", { exact: true }).filter({ visible: true }).count();
+  const originalLink = await page.getByRole("link", { name: "Read original recipe" }).filter({ visible: true }).getAttribute("href");
+  await page.getByRole("button", { name: "Add to my Cookbook" }).filter({ visible: true }).click();
+  await page.getByText("Roasted tomato and lentil soup", { exact: true }).filter({ visible: true }).first().waitFor({ state: "visible", timeout: 5000 });
+  const selectedRecipe = await page.locator('article[aria-label^="Recipe:"]:visible').getAttribute("aria-label");
+  await page.screenshot({ path: path.join(OUT, `${vp.name}-trusted-saved.png`) });
+  if (vp.name.startsWith("mobile")) {
+    await page.getByRole("button", { name: "Turn to the collection page" }).click();
+  }
   results[vp.name] = {
-    heading, soupButtons, visibleRecipes,
-    selectedRecipe: await page.locator('article[aria-label^="Recipe:"]:visible').getAttribute("aria-label"),
+    heading, soupButtons, visibleRecipes, webRequestObserved, sourceVisible, originalLink,
+    returnedToSavedMode: await page.getByRole("button", { name: "My Cookbook", exact: true }).filter({ visible: true }).getAttribute("aria-pressed"),
+    savedRecipeVisible: await page.getByText("Roasted tomato and lentil soup", { exact: true }).filter({ visible: true }).count(),
+    selectedRecipe,
     desktopCollectionVisible: await page.locator('[data-testid="real-book-desktop-collection"]').isVisible(),
     mobilePageVisible: await page.locator('[data-testid="real-book-mobile-page"]').isVisible(),
     searchAfterCreate: await page.evaluate(() => {

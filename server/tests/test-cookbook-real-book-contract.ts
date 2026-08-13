@@ -52,4 +52,23 @@ assert.match(
   "Phase 1: the enlarged book keeps its photographic aspect ratio while the desktop crops overflow",
 );
 
+const leftPlaneRule = stageCss.match(/\.rb-plane--left\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
+const leftSafeRule = stageCss.match(/\.rb-plane--left \.rb-plane__safe\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
+const thumbnailRule = stageCss.match(/\.rb-recipe-grid img, \.rb-thumb-placeholder\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
+const lowerPrintRule = stageCss.match(/\.rb-page-nav, \.rb-create, \.rb-search, \.rb-ink-actions\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
+assert.match(leftPlaneRule, /18\.6% 11\.5%/, "Page correctness: top-sheet mask excludes the exposed page stack");
+assert.match(leftSafeRule, /left:\s*22\.25%/, "Page correctness: the entire left-page print field sits visibly inside the paper edge");
+assert.match(leftSafeRule, /width:\s*23\.5%/, "Page correctness: the shifted left-page field still clears the spine");
+assert.match(leftSafeRule, /top:\s*14%/, "Page correctness: print clears the curled top edge");
+const rightSafeRule = stageCss.match(/\.rb-plane--right \.rb-plane__safe\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
+assert.match(rightSafeRule, /left:\s*52\.65%/, "Page correctness: the right-page print field moves left toward the spine");
+assert.match(rightSafeRule, /width:\s*29\.1%/, "Page correctness: the shifted right-page field clears the outer edge");
+assert.match(thumbnailRule, /aspect-ratio:\s*4\s*\/\s*3/, "Page correctness: collection photographs are landscape");
+assert.match(thumbnailRule, /height:\s*auto/, "Page correctness: collection photographs cannot stretch into portrait slots");
+assert.match(lowerPrintRule, /font-size:\s*12px/, "Page correctness: lower-page controls have a legible minimum size");
+assert.match(lowerPrintRule, /font-weight:\s*600/, "Page correctness: lower-page controls use clear printed contrast");
+const mobileSafeRule = stageCss.match(/\.rb-plane--mobile-collection \.rb-plane__safe\s*\{([\s\S]*?)\n\s*\}/g)?.at(-1) ?? "";
+assert.match(mobileSafeRule, /left:\s*24%/, "Page correctness: mobile print clears the visible stack of pages");
+assert.match(mobileSafeRule, /width:\s*65%/, "Page correctness: mobile print remains within the top sheet");
+
 console.log("cookbook real book contract: ok");

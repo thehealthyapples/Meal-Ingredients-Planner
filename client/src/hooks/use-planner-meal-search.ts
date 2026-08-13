@@ -56,6 +56,8 @@ export interface UsePlannerMealSearchOptions {
   limit?: number;
   /** Activate the web recipe fetch path. Default false. */
   enableWebSearch?: boolean;
+  /** External result page. Defaults to 1. */
+  webPage?: number;
 }
 
 export interface UsePlannerMealSearchResult {
@@ -69,6 +71,8 @@ export interface UsePlannerMealSearchResult {
   includeWeb: boolean;
   /** Toggle or set includeWeb. Persists to sessionStorage automatically. */
   setIncludeWeb: (v: boolean) => void;
+  webError: boolean;
+  webHasMore: boolean;
 }
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
@@ -83,11 +87,14 @@ export function usePlannerMealSearch({
   excludeDrinks = false,
   limit = 100,
   enableWebSearch = false,
+  webPage = 1,
 }: UsePlannerMealSearchOptions): UsePlannerMealSearchResult {
   // includeWeb: session-persisted, default OFF (cookbook-first, explicit opt-in)
   const [includeWeb, setIncludeWebState] = useState<boolean>(loadWebPref);
   const [webResults, setWebResults] = useState<WebSearchRecipe[]>([]);
   const [webLoading, setWebLoading] = useState(false);
+  const [webError, setWebError] = useState(false);
+  const [webHasMore, setWebHasMore] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   // Persist to sessionStorage on every change
@@ -104,12 +111,16 @@ export function usePlannerMealSearch({
     if (!enableWebSearch || !includeWeb) {
       setWebResults([]);
       setWebLoading(false);
+      setWebError(false);
+      setWebHasMore(false);
       return;
     }
     const q = query.trim();
     if (q.length < MIN_WEB_QUERY_LENGTH) {
       setWebResults([]);
       setWebLoading(false);
+      setWebError(false);
+      setWebHasMore(false);
       return;
     }
 
@@ -120,19 +131,27 @@ export function usePlannerMealSearch({
     const timer = setTimeout(async () => {
       setWebLoading(true);
       try {
-        const res = await fetch(`/api/search-recipes?q=${encodeURIComponent(q)}&page=1`, {
+        setWebError(false);
+        const res = await fetch(`/api/search-recipes?q=${encodeURIComponent(q)}&page=${webPage}`, {
           signal: ctrl.signal,
           credentials: "include",
         });
-        if (!res.ok || !active) return;
-        const data: { recipes: WebSearchRecipe[] } = await res.json();
+        if (!res.ok || !active) {
+          if (active) setWebError(true);
+          return;
+        }
+        const data: { recipes: WebSearchRecipe[]; hasMore?: boolean } = await res.json();
         const filtered = (data.recipes ?? []).filter(r => {
           const allText = [r.name, ...(r.ingredients ?? []), ...(r.instructions ?? [])].join("\0");
           return !allText.includes(PREMIUM_MARKER);
         });
-        if (active) setWebResults(filtered.slice(0, WEB_RESULT_LIMIT));
+        if (active) {
+          setWebResults(filtered.slice(0, WEB_RESULT_LIMIT));
+          setWebHasMore(data.hasMore === true);
+        }
       } catch (err: unknown) {
         if ((err as { name?: string })?.name === "AbortError" || !active) return;
+        setWebError(true);
       } finally {
         if (active) setWebLoading(false);
       }
@@ -143,7 +162,7 @@ export function usePlannerMealSearch({
       clearTimeout(timer);
       ctrl.abort();
     };
-  }, [query, includeWeb, enableWebSearch]);
+  }, [query, includeWeb, enableWebSearch, webPage]);
 
   // ── Local meal filtering ─────────────────────────────────────────────────────
   // Uses scoreMealSearch for synonym-aware ranking when a query is present.
@@ -190,5 +209,5 @@ export function usePlannerMealSearch({
     return result.slice(0, limit);
   }, [meals, query, filterMode, plannerMealIdSet, excludePlaceholders, excludeReadyMeals, excludeDrinks, limit]);
 
-  return { filteredMeals, webResults, webLoading, includeWeb, setIncludeWeb };
+  return { filteredMeals, webResults, webLoading, includeWeb, setIncludeWeb, webError, webHasMore };
 }

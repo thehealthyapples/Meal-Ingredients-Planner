@@ -123,11 +123,11 @@
 /* Left (verso) collection page — spine on its right, fore-edge bulge on its left. */
 .rb-plane--left {
   clip-path: polygon(
-    17.943% 10.202%,
-    47.727% 9.140%,
-    47.548% 90.011%,
-    17.703% 90.117%,
-    14.354% 70.138%
+    18.6% 11.5%,
+    47.35% 10.3%,
+    47.2% 88.7%,
+    18.55% 88.8%,
+    16.25% 69.6%
   );
   transform: perspective(1600px) rotateY(1.5deg);
   transform-origin: right center;
@@ -136,19 +136,19 @@
   mask-image: linear-gradient(to right, #000 90%, rgba(0, 0, 0, 0.55) 100%);
 }
 .rb-plane--left .rb-plane__safe {
-  left: 19.258%;
-  top: 12.752%;
-  width: 27.512%;
-  height: 74.389%;
+  left: 22.25%;
+  top: 14%;
+  width: 23.5%;
+  height: 71.6%;
 }
 
 /* Right (recto) recipe page — spine on its left, fore-edge fan on its right. */
 .rb-plane--right {
   clip-path: polygon(
-    51.794% 10.627%,
-    84.270% 13.603%,
-    85.945% 89.586%,
-    51.914% 89.904%
+    52.15% 11.55%,
+    83.65% 14.2%,
+    84.9% 88.5%,
+    52.2% 88.85%
   );
   transform: perspective(1600px) rotateY(-1.5deg);
   transform-origin: left center;
@@ -156,10 +156,10 @@
   mask-image: linear-gradient(to left, #000 90%, rgba(0, 0, 0, 0.55) 100%);
 }
 .rb-plane--right .rb-plane__safe {
-  left: 52.512%;
-  top: 12.965%;
-  width: 30.622%;
-  height: 74.389%;
+  left: 52.65%;
+  top: 14.15%;
+  width: 29.1%;
+  height: 71.4%;
 }
 
 /* ===========================================================================
@@ -249,10 +249,10 @@
 .rb-collection h1, .rb-recipe h2 { margin: 0; font: 500 clamp(21px, 2.15vw, 34px)/1.02 Georgia, serif; }
 .rb-shelves { display: flex; flex-wrap: wrap; gap: .25em .8em; padding-bottom: .35em; border-bottom: 1px solid var(--rb-rule); }
 .rb-shelves button { font-size: .84em; }
-.rb-recipe-grid { min-height: 0; margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: .55em .75em; }
+.rb-recipe-grid { min-height: 0; margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, auto); align-content: center; gap: .55em .75em; }
 .rb-recipe-grid li, .rb-recipe-grid button { min-height: 0; height: 100%; }
-.rb-recipe-grid button { width: 100%; display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: .25em; }
-.rb-recipe-grid img, .rb-thumb-placeholder { width: 100%; height: 100%; min-height: 0; object-fit: cover; border-radius: 38% 42% 36% 40% / 34% 39% 42% 37%; }
+.rb-recipe-grid button { width: 100%; display: grid; grid-template-rows: auto auto; align-content: start; gap: .25em; }
+.rb-recipe-grid img, .rb-thumb-placeholder { width: 100%; height: auto; aspect-ratio: 4 / 3; min-height: 0; object-fit: cover; border-radius: 10% 12% 9% 11% / 12% 10% 11% 9%; }
 .rb-thumb-placeholder { display: grid; place-items: center; color: var(--rb-ink-muted); border: 1px solid var(--rb-rule); background: rgba(113, 96, 59, .055); font: 1.2em Georgia, serif; }
 .rb-recipe-grid button > span:last-child { min-height: 2.3em; font-family: Georgia, serif; line-height: 1.1; }
 .rb-page-nav { display: flex; align-items: center; justify-content: space-between; font-size: .82em; }
@@ -274,6 +274,17 @@
 .rb-recipe li { margin-bottom: .18em; }
 .rb-ink-actions { display: flex; flex-wrap: wrap; gap: .35em 1em; padding-top: .4em; border-top: 1px solid var(--rb-rule); font-size: .88em; }
 
+@media (min-width: 901px) {
+  .rb-page-nav, .rb-create, .rb-search, .rb-ink-actions {
+    color: var(--rb-ink-body);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.22;
+  }
+  .rb-page-nav, .rb-create, .rb-search { padding-inline: .15em; }
+  .rb-search input { padding-block: .25em; }
+}
+
 @media (max-width: 900px) {
   .rb-root, .rb-mobile { height: calc(100dvh - var(--rb-bottom-nav-mobile) - env(safe-area-inset-bottom, 0px)); min-height: 0; }
   .rb-mobile__stage { height: 100%; aspect-ratio: auto; overflow: hidden; }
@@ -282,8 +293,9 @@
   .rb-mobile__stage--recipe .rb-mobile__plate { right: -39%; }
   .rb-plane--mobile { clip-path: inset(7% 6% 8% 6% round 4%); }
   .rb-plane--mobile .rb-plane__safe { left: 14%; top: 11%; width: 72%; height: 75%; font-size: clamp(8.5px, 2.35vw, 11px); }
+  .rb-plane--mobile-collection .rb-plane__safe { left: 24%; width: 65%; }
   .rb-collection { gap: .5em; }
-  .rb-collection h1 { font-size: clamp(22px, 7.4vw, 30px); white-space: nowrap; }
+  .rb-collection h1 { font-size: clamp(21px, 6vw, 26px); white-space: nowrap; }
   .rb-recipe h2 { font-size: clamp(25px, 8vw, 32px); }
   .rb-recipe-grid { gap: .5em .65em; }
   .rb-recipe-grid button > span:last-child { min-height: 2.2em; }

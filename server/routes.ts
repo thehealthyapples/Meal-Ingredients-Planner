@@ -2227,6 +2227,13 @@ export async function registerRoutes(
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
     try {
+      const householdSafety = await resolveHouseholdSafetyContext(req.user!.id);
+      if (householdSafety.status === "unavailable") {
+        return res.status(503).json({
+          code: "HOUSEHOLD_SAFETY_UNAVAILABLE",
+          message: "Recipe search is temporarily unavailable until household safety can be confirmed.",
+        });
+      }
       const q = (req.query.q as string || '').trim();
       const page = Math.max(1, parseInt(req.query.page as string) || 1);
       // Diet filtering: explicit query param > user profile > no filter
@@ -2392,6 +2399,16 @@ export async function registerRoutes(
           }
         }
       }
+
+      // Canonical household safety is the primary gate for every external
+      // candidate. Explicit diet query preferences remain secondary.
+      interleaved = interleaved.filter(recipe => isMealSafeForHousehold({
+        name: recipe.name,
+        ingredients: recipe.ingredients,
+        instructions: recipe.instructions,
+        category: recipe.category,
+        cuisine: recipe.cuisine,
+      }, householdSafety).safe);
 
       if (effectiveDietPattern || effectiveDietRestrictions.length > 0) {
         const ctx = { dietPattern: effectiveDietPattern, dietRestrictions: effectiveDietRestrictions };
@@ -3212,7 +3229,27 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
     try {
+      const householdSafety = await resolveHouseholdSafetyContext(req.user!.id);
+      if (householdSafety.status === "unavailable") {
+        return res.status(503).json({
+          code: "HOUSEHOLD_SAFETY_UNAVAILABLE",
+          message: "Recipe preview is temporarily unavailable until household safety can be confirmed.",
+        });
+      }
       const { url } = z.object({ url: z.string().url() }).parse(req.body);
+
+      const sendSafePreview = (ingredients: string[], instructions: string[], error?: string) => {
+        if (ingredients.length > 0 || instructions.length > 0) {
+          const verdict = isMealSafeForHousehold({ name: url, ingredients, instructions }, householdSafety);
+          if (!verdict.safe) {
+            return res.status(422).json({
+              code: "RECIPE_UNSAFE_FOR_HOUSEHOLD",
+              message: "This recipe preview was withheld because it conflicts with household dietary safety.",
+            });
+          }
+        }
+        return res.json({ ingredients, instructions, ...(error ? { error } : {}) });
+      };
 
       const browserHeaders: Record<string, string> = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -3257,7 +3294,7 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
 
       if (!html) {
         console.error(`[preview-recipe] all fetch methods failed for ${url} — returning empty result`);
-        return res.json({ ingredients: [], instructions: [], error: 'Could not access this recipe page' });
+        return sendSafePreview([], [], 'Could not access this recipe page');
       }
 
       const $ = cheerio.load(html);
@@ -3266,7 +3303,7 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       if (jsonLdRecipe && jsonLdRecipe.recipeIngredient && jsonLdRecipe.recipeIngredient.length > 0) {
         const ingredients = jsonLdRecipe.recipeIngredient.map(i => i.replace(/<[^>]+>/g, '').trim()).filter(Boolean);
         const instructions = extractJsonLdInstructions(jsonLdRecipe.recipeInstructions);
-        return res.json({ ingredients, instructions: instructions.length > 0 ? instructions : [] });
+        return sendSafePreview(ingredients, instructions.length > 0 ? instructions : []);
       }
 
       const ingredients: string[] = [];
@@ -3318,7 +3355,7 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
 
       const cleanedInstructions = instructions.map(text => text.replace(/^step\s*\d+\s*/i, '').trim()).filter(text => text.length >= 5);
 
-      res.json({ ingredients, instructions: cleanedInstructions });
+      return sendSafePreview(ingredients, cleanedInstructions);
     } catch (err) {
       console.error('Preview recipe error:', err);
       res.json({ ingredients: [], instructions: [], error: 'Failed to fetch recipe details' });
