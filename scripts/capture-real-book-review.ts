@@ -2,8 +2,8 @@ import { chromium, type Page } from "playwright";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
-const BASE = "http://127.0.0.1:5197";
-const OUT = path.resolve("artifacts/cookbook-real-book-integrated-review");
+const BASE = process.env.COOKBOOK_REVIEW_BASE ?? "http://127.0.0.1:5197";
+const OUT = path.resolve(process.env.COOKBOOK_REVIEW_OUT ?? "artifacts/cookbook-real-book-integrated-review");
 mkdirSync(OUT, { recursive: true });
 
 const names = [
@@ -56,8 +56,8 @@ for (const vp of [
   const errors: string[] = [];
   page.on("console", m => { if (m.type() === "error") errors.push(m.text()); });
   page.on("pageerror", e => errors.push(e.message));
-  await page.goto(`${BASE}/cookbook/concept-real-book`, { waitUntil: "networkidle", timeout: 60000 });
-  await page.waitForSelector('[data-testid="real-book-stage"]', { timeout: 20000 });
+  await page.goto(`${BASE}/cookbook/concept-real-book`, { waitUntil: "domcontentloaded", timeout: 60000 });
+  await page.waitForSelector('[data-testid="real-book-stage"]', { state: "visible", timeout: 20000 });
   await page.screenshot({ path: path.join(OUT, `${vp.name}-collection.png`) });
   const heading = await page.getByRole("heading", { name: "Our Family Favourites" }).count();
   const search = page.locator('input[aria-label="Search recipes"]:visible');

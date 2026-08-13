@@ -68,11 +68,14 @@
 
 .rb-stage {
   position: relative;
+  flex: 0 0 auto;
   aspect-ratio: 1672 / 941;
-  /* object-fit: contain, expressed so the plate is width- or height-bound as needed. */
-  width: min(
-    100%,
-    calc((100dvh - var(--rb-bottom-nav-desktop) - env(safe-area-inset-bottom, 0px)) * 1672 / 941)
+  /* Phase 1: cover the room with the photographed tabletop and bring the book
+   * modestly closer. The plate and semantic page planes remain one measured box;
+   * the desktop viewport crops only peripheral table rather than exposing gutters. */
+  width: max(
+    104%,
+    calc((100dvh - var(--rb-bottom-nav-desktop) - env(safe-area-inset-bottom, 0px)) * 1672 / 941 * 1.04)
   );
   /* One slow, restrained arrival settle → more book, less table (§10). */
   animation: rb-settle 720ms cubic-bezier(0.22, 0.61, 0.36, 1) both;

@@ -34,4 +34,22 @@ const stageSource = readFileSync(path.resolve(here, "../../client/src/components
 assert.doesNotMatch(stageSource, /cookbook-(collection|recipe)-mobile-candidate\.png/, "live mobile uses no populated candidate raster");
 assert.match(stageSource, /DESKTOP_PLATE/, "the blank plate is the only live book surface");
 
+const stageCss = readFileSync(path.resolve(here, "../../client/src/components/cookbook-real-book/real-book.css"), "utf8");
+const desktopStageRule = stageCss.match(/\.rb-stage\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
+assert.match(
+  desktopStageRule,
+  /width:\s*max\(/,
+  "Phase 1: the photographed tabletop covers the desktop stage instead of exposing side gutters",
+);
+assert.doesNotMatch(
+  desktopStageRule,
+  /width:\s*min\(/,
+  "Phase 1: contained plate sizing must not return",
+);
+assert.match(
+  desktopStageRule,
+  /flex:\s*0\s+0\s+auto/,
+  "Phase 1: the enlarged book keeps its photographic aspect ratio while the desktop crops overflow",
+);
+
 console.log("cookbook real book contract: ok");
