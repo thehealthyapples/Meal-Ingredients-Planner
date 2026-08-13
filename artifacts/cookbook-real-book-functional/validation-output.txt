@@ -1,0 +1,30 @@
+Cookbook real-book functional lane validation
+Date: 2026-08-13
+Worktree: C:\Users\Colin\The Healthy Apples\GitHub\tha-cookbook-real-book-functional
+
+RED (before implementation)
+Command: npx tsx server/tests/test-cookbook-real-book-contract.ts
+Result: RED at runner boundary: Node reported MODULE_NOT_FOUND for node_modules\tsx\dist\cli.mjs while the focused test imported the not-yet-created collection helper. No production implementation was changed before this attempt.
+
+GREEN (after implementation)
+Command: npm run test:cookbook-real-book-contract
+Result: PASS — cookbook real book contract: ok
+
+Focused TypeScript check
+Command: npm run typecheck
+Result: repository baseline FAIL. Existing unrelated errors remain in server/intelligence handlers, shopping discovery, older cookbook/intelligence tests and other server tests. No error was reported for the new real-book page, collection helper, route, shell change, or planner export in the complete output.
+
+Canonical seed regression
+Command: npm run test:cbk1-cookbook-seed
+Result: PASS — 28 passed, 0 failed; live database checks skipped because DATABASE_URL was not set.
+
+Build
+Command: npm run build
+Result: PASS — client and server built successfully. Existing warnings: stale Browserslist data, PostCSS from option, large chunks, and four pre-existing import.meta CJS warnings.
+
+Diff hygiene
+Command: git diff --check
+Result: PASS — no whitespace errors.
+
+Integration seam
+The page contains RealBookStageSeam in client/src/pages/cookbook-real-book-concept.tsx. It exposes the contract-compatible stage test IDs and accepts collectionPage, recipePage, mobilePage and onMobilePageChange. Claude can replace this wrapper with RealBookStage without moving the semantic controls or action ownership.

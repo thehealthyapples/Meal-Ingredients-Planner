@@ -132,6 +132,7 @@
     "test:trust1-o8-production-schema-protection": "tsx server/tests/test-trust1-o8-production-schema-protection.ts",
     "test:ops1-media-storage": "tsx server/tests/test-ops1-media-storage.ts",
     "test:cbk1-cookbook-seed": "tsx server/tests/test-cbk1-cookbook-seed.ts",
+    "test:cookbook-real-book-contract": "tsx server/tests/test-cookbook-real-book-contract.ts",
     "test:rel3-production-verification": "tsx server/tests/test-rel3-production-verification.ts",
     "test:trust1-s1-session-secret": "tsx server/tests/test-trust1-s1-session-secret-fails-closed.ts",
     "test:trust1-s8-p8-no-secret-disclosure": "tsx server/tests/test-trust1-s8-p8-no-secret-disclosure.ts",

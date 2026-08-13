@@ -1,0 +1,22 @@
+{
+  "desktop-1440x900": {
+    "heading": 1,
+    "soupButtons": 3,
+    "visibleRecipes": 6,
+    "selectedRecipe": "Recipe: Garden vegetable soup",
+    "desktopCollectionVisible": true,
+    "mobilePageVisible": false,
+    "searchAfterCreate": true,
+    "errors": []
+  },
+  "mobile-390x844": {
+    "heading": 1,
+    "soupButtons": 3,
+    "visibleRecipes": 6,
+    "selectedRecipe": "Recipe: Garden vegetable soup",
+    "desktopCollectionVisible": false,
+    "mobilePageVisible": true,
+    "searchAfterCreate": true,
+    "errors": []
+  }
+}

@@ -22,6 +22,7 @@ const NotFound = lazy(() => import("@/pages/not-found"));
 const AuthPage = lazy(() => import("@/pages/auth-page"));
 const OnboardingPage = lazy(() => import("@/pages/onboarding-page"));
 const MealsPage = lazy(() => import("@/pages/meals-page"));
+const CookbookRealBookConcept = lazy(() => import("@/pages/cookbook-real-book-concept"));
 const ImportRecipePage = lazy(() => import("@/pages/import-recipe-page"));
 const ProductsPage = lazy(() => import("@/pages/products-page"));
 const SupermarketsPage = lazy(() => import("@/pages/supermarkets-page"));
@@ -377,6 +378,7 @@ function Router() {
       <Route path="/foods/:slug" component={() => <ProtectedRoute component={FoodDetailPage} />} />
       <Route path="/compare" component={() => <ProtectedRoute component={FoodComparisonPage} />} />
       <Route path="/meals" component={() => <ProtectedRoute component={MealsPage} />} />
+      <Route path="/cookbook/concept-real-book" component={() => <ProtectedRoute component={CookbookRealBookConcept} />} />
       <Route path="/cookbook" component={() => <ProtectedRoute component={MealsPage} />} />
       <Route path="/import-recipe" component={() => <ProtectedRoute component={ImportRecipePage} />} />
       {/* SHOP3 — the second Shopping door is closed. `/basket` and

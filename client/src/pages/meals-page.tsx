@@ -1389,7 +1389,7 @@ interface PlannerAssignment {
 }
 
 
-function AddToPlannerDialog({ mealId, mealName, isDrink, audience: mealAudience, open, onOpenChange }: {
+export function AddToPlannerDialog({ mealId, mealName, isDrink, audience: mealAudience, open, onOpenChange }: {
   mealId: number;
   mealName: string;
   isDrink: boolean;

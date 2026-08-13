@@ -311,6 +311,7 @@ export function AppShell({
 }) {
   const [location] = useLocation();
   const canonical = ROOM_ALIASES[location] ?? location;
+  const isRealBookConcept = location === "/cookbook/concept-real-book";
   const shellGround = resolveShellGround(location);
   const [headerSlot, setHeaderSlot] = useState<HTMLDivElement | null>(null);
   const [railSlot, setRailSlot] = useState<HTMLDivElement | null>(null);
@@ -398,7 +399,7 @@ export function AppShell({
                               flow, scrolling away with the room), then the sticky
                               header zone at its fade boundary. The old permanent
                               bar above the room is retired. */}
-                          <RoomThreshold path={location} />
+                          {!isRealBookConcept && <RoomThreshold path={location} />}
 
                           {/* The stuck sentinel — 1px of the room's own flow. While
                               it is visible the pill floats at rest; the moment it
@@ -412,7 +413,7 @@ export function AppShell({
                               caught error (NAV1, preserved). */}
                           <div className="sticky top-0 z-40 shrink-0" data-testid="ws-header-zone">
                             <div ref={setHeaderSlot} className="w-full" data-testid="ws-header-slot" />
-                            {pageHeaders === 0 && !isLivingHomeRoom(location) && <ShellHeader />}
+                            {pageHeaders === 0 && !isLivingHomeRoom(location) && !isRealBookConcept && <ShellHeader />}
                           </div>
 
                           {/* INTARCH1 — the room's ground plane. Mounted ONCE, here:
