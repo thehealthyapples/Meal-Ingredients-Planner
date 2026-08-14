@@ -2,6 +2,24 @@ import type { Meal } from "@shared/schema";
 import { BROWSABLE_SHELVES, shelfForMeal, type CookbookShelf } from "@shared/cookbook/curation";
 
 export type CookbookShelfFilter = CookbookShelf | "all";
+export type CookbookSourceFilter = "all" | "cookbook" | "freezer" | "kitchen" | "saved-web" | "internet" | "packaged" | "drinks";
+
+export function filterCookbookMealsBySource(
+  meals: readonly Meal[],
+  source: CookbookSourceFilter,
+  activeFreezerMealIds: ReadonlySet<number>,
+): Meal[] {
+  if (source === "internet") return [];
+  if (source === "freezer") return meals.filter((meal) => activeFreezerMealIds.has(meal.id));
+  if (source === "all") return [...meals];
+
+  const shelf: CookbookShelf = source === "cookbook"
+    ? "household"
+    : source === "saved-web"
+      ? "web"
+      : source;
+  return meals.filter((meal) => shelfForMeal(meal) === shelf);
+}
 
 export function filterCookbookMeals(
   meals: readonly Meal[],

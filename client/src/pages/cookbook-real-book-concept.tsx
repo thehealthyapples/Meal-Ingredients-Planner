@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
-import { useQueryClient } from "@tanstack/react-query";
-import type { Meal } from "@shared/schema";
-import { BROWSABLE_SHELVES, SHELF_LABELS, shelfForMeal, type CookbookShelf } from "@shared/cookbook/curation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import type { FreezerMeal, Meal } from "@shared/schema";
+import { SHELF_LABELS, shelfForMeal } from "@shared/cookbook/curation";
 import { useMeals, invalidateMealLibrary } from "@/hooks/use-meals";
 import { usePlannerMealSearch, type WebSearchRecipe } from "@/hooks/use-planner-meal-search";
 import { usePublishCompanionContext } from "@/components/conversation/companion-context";
@@ -10,13 +10,28 @@ import { openCompanion } from "@/components/conversation/companion-open";
 import { CreateMealModal } from "@/components/create-meal-modal";
 import { AddToPlannerDialog } from "@/components/cookbook/add-to-planner-dialog";
 import { RealBookStage, type RealBookMobilePage } from "@/components/cookbook-real-book";
-import { filterCookbookMeals, paginateCookbookMeals } from "@/lib/cookbook-real-book/collection";
+import {
+  filterCookbookMeals,
+  filterCookbookMealsBySource,
+  paginateCookbookMeals,
+  type CookbookSourceFilter,
+} from "@/lib/cookbook-real-book/collection";
 import { apiRequest } from "@/lib/queryClient";
 
 const PAGE_SIZE = 6;
+const SOURCE_FILTERS: ReadonlyArray<{ key: CookbookSourceFilter; label: string }> = [
+  { key: "all", label: "All" },
+  { key: "cookbook", label: "My Cookbook" },
+  { key: "freezer", label: "My Freezer" },
+  { key: "kitchen", label: "Healthy Apples" },
+  { key: "saved-web", label: "Saved from web" },
+  { key: "internet", label: "Internet" },
+  { key: "packaged", label: "Packaged" },
+  { key: "drinks", label: "Drinks" },
+];
 
 function RecipePage({ meal, onRead, onPlanner }: { meal: Meal | null; onRead: () => void; onPlanner: () => void }) {
-  if (!meal) return <article className="rb-recipe" aria-label="Selected recipe"><h2>Select a recipe</h2><p>Your cookbook is ready for its first recipe.</p></article>;
+  if (!meal) return <article className="rb-recipe" aria-label="Selected recipe"><h2>Select a recipe</h2><p>No saved recipe matches this search and filter.</p></article>;
   const ingredients = meal.ingredients ?? [];
   const instructions = meal.instructions ?? [];
   return <article aria-label={`Recipe: ${meal.name}`} className="rb-recipe">
@@ -31,7 +46,7 @@ function RecipePage({ meal, onRead, onPlanner }: { meal: Meal | null; onRead: ()
 type PreviewDetails = { ingredients: string[]; instructions: string[]; loading: boolean; error: boolean };
 
 function WebPreview({ recipe, details, onAdd, saving }: { recipe: WebSearchRecipe | null; details: PreviewDetails | null; onAdd: () => void; saving: boolean }) {
-  if (!recipe) return <section aria-label="Recipe preview" className="rb-web-preview"><h2>Preview recipe</h2><p>Select a trusted recipe to see its ingredients and method.</p></section>;
+  if (!recipe) return <section aria-label="Recipe preview" className="rb-web-preview"><h2>Preview recipe</h2><p>Search, then choose an internet recipe to see its ingredients and method.</p></section>;
   const ingredients = details?.ingredients ?? recipe.ingredients;
   const instructions = details?.instructions ?? recipe.instructions ?? [];
   return <section aria-label={`Preview recipe: ${recipe.name}`} className="rb-web-preview"><p className="rb-kicker">{recipe.source || "Trusted recipe source"}</p><h2>{recipe.name}</h2>
@@ -39,7 +54,7 @@ function WebPreview({ recipe, details, onAdd, saving }: { recipe: WebSearchRecip
     {details?.loading && <p role="status">Loading recipe details…</p>}
     {details?.error && <p role="alert">Couldn’t load recipe details. You can still read the original source.</p>}
     {!details?.loading && <><h3>Ingredients</h3><ul>{ingredients.map((item, i) => <li key={`${item}-${i}`}>{item}</li>)}</ul><h3>Method</h3><ol>{instructions.map((item, i) => <li key={`${item}-${i}`}>{item}</li>)}</ol></>}
-    {recipe.url && <p><a href={recipe.url} target="_blank" rel="noopener noreferrer">Read original recipe</a></p>}<button type="button" onClick={onAdd} disabled={saving || details?.loading || ingredients.length === 0}> {saving ? "Adding…" : "Add to my Cookbook"}</button>
+    {recipe.url && <p><a href={recipe.url} target="_blank" rel="noopener noreferrer">Read original recipe</a></p>}<button type="button" onClick={onAdd} disabled={saving || details?.loading || ingredients.length === 0}>{saving ? "Adding…" : "Add to my Cookbook"}</button>
   </section>;
 }
 
@@ -47,29 +62,73 @@ export default function CookbookRealBookConcept() {
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
   const { meals = [], isLoading, isError, refetch } = useMeals();
+  const { data: freezerMeals = [] } = useQuery<FreezerMeal[]>({ queryKey: ["/api/freezer"] });
   const [query, setQuery] = useState("");
-  const [shelf, setShelf] = useState<CookbookShelf | "all">("all");
+  const [sourceFilter, setSourceFilter] = useState<CookbookSourceFilter>("all");
   const [page, setPage] = useState(0);
-  const [webPage, setWebPage] = useState(1);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [selectedWeb, setSelectedWeb] = useState<WebSearchRecipe | null>(null);
+  const [selectedKind, setSelectedKind] = useState<"local" | "web">("local");
   const [previewDetails, setPreviewDetails] = useState<Record<string, PreviewDetails>>({});
-  const [mode, setMode] = useState<"saved" | "trusted">("saved");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
   const [mobilePage, setMobilePage] = useState<RealBookMobilePage>("collection");
   const [createOpen, setCreateOpen] = useState(false);
   const [plannerOpen, setPlannerOpen] = useState(false);
-  const { filteredMeals, webResults, webLoading, webError, webHasMore, setIncludeWeb } = usePlannerMealSearch({ meals, query, filterMode: "all", enableWebSearch: true, webPage });
-  const availableMeals = useMemo(() => filterCookbookMeals(filteredMeals, "", shelf), [filteredMeals, shelf]);
-  const visibleMeals = useMemo(() => paginateCookbookMeals(availableMeals, page, PAGE_SIZE), [availableMeals, page]);
-  const selectedMeal = useMemo(() => availableMeals.find((meal) => meal.id === selectedId) ?? visibleMeals[0] ?? null, [availableMeals, selectedId, visibleMeals]);
-  usePublishCompanionContext({ selectedMealId: selectedMeal?.id });
 
-  useEffect(() => { setPage(0); setWebPage(1); setSelectedWeb(null); }, [query, shelf, mode]);
-  useEffect(() => { setIncludeWeb(mode === "trusted"); }, [mode]);
-  useEffect(() => { if (selectedMeal && selectedMeal.id !== selectedId) setSelectedId(selectedMeal.id); }, [selectedMeal, selectedId]);
-  useEffect(() => { setSelectedWeb(webResults[0] ?? null); }, [webResults]);
+  const webPage = page + 1;
+  const { filteredMeals, webResults, webLoading, webError, webHasMore, setIncludeWeb } = usePlannerMealSearch({
+    meals,
+    query,
+    filterMode: "all",
+    enableWebSearch: true,
+    webPage,
+  });
+  const activeFreezerMealIds = useMemo(
+    () => new Set(freezerMeals.filter((item) => item.remainingPortions > 0).map((item) => item.mealId)),
+    [freezerMeals],
+  );
+  const searchableLocalMeals = useMemo(
+    () => filterCookbookMeals(filteredMeals, "", "all"),
+    [filteredMeals],
+  );
+  const availableMeals = useMemo(
+    () => filterCookbookMealsBySource(searchableLocalMeals, sourceFilter, activeFreezerMealIds),
+    [searchableLocalMeals, sourceFilter, activeFreezerMealIds],
+  );
+  const includesInternet = sourceFilter === "all" || sourceFilter === "internet";
+  const hasSearchQuery = query.trim().length >= 2;
+  const showWebResults = includesInternet && hasSearchQuery;
+  const localPageSize = sourceFilter === "all" && showWebResults ? 3 : PAGE_SIZE;
+  const visibleMeals = useMemo(
+    () => paginateCookbookMeals(availableMeals, page, localPageSize),
+    [availableMeals, page, localPageSize],
+  );
+  const visibleWebResults = showWebResults
+    ? webResults.slice(0, sourceFilter === "all" ? 3 : PAGE_SIZE)
+    : [];
+  const selectedMeal = useMemo(
+    () => availableMeals.find((meal) => meal.id === selectedId) ?? visibleMeals[0] ?? null,
+    [availableMeals, selectedId, visibleMeals],
+  );
+  const localPageCount = Math.max(1, Math.ceil(availableMeals.length / localPageSize));
+  const canGoNext = sourceFilter === "internet"
+    ? webHasMore
+    : showWebResults
+      ? page + 1 < localPageCount || webHasMore
+      : page + 1 < localPageCount;
+
+  usePublishCompanionContext({ selectedMealId: selectedKind === "local" ? selectedMeal?.id : undefined });
+
+  useEffect(() => { setPage(0); setSelectedWeb(null); }, [query, sourceFilter]);
+  useEffect(() => { setIncludeWeb(sourceFilter === "all" || sourceFilter === "internet"); }, [sourceFilter]);
+  useEffect(() => {
+    if (selectedMeal && selectedMeal.id !== selectedId) setSelectedId(selectedMeal.id);
+  }, [selectedMeal, selectedId]);
+  useEffect(() => {
+    setSelectedWeb(webResults[0] ?? null);
+    if (sourceFilter === "internet") setSelectedKind("web");
+  }, [webResults, sourceFilter]);
   useEffect(() => {
     if (!selectedWeb?.url || (selectedWeb.ingredients.length > 0 && (selectedWeb.instructions?.length ?? 0) > 0)) return;
     const key = `${selectedWeb.source || "source"}:${selectedWeb.id}`;
@@ -92,7 +151,11 @@ export default function CookbookRealBookConcept() {
     return () => { active = false; };
   }, [selectedWeb]);
 
-  const selectMode = (next: "saved" | "trusted") => { setMode(next); setIncludeWeb(next === "trusted"); };
+  const chooseSource = (next: CookbookSourceFilter) => {
+    setSourceFilter(next);
+    setSelectedKind(next === "internet" ? "web" : "local");
+  };
+
   const addExternalRecipe = async () => {
     if (!selectedWeb) return;
     const previewKey = `${selectedWeb.source || "source"}:${selectedWeb.id}`;
@@ -103,18 +166,45 @@ export default function CookbookRealBookConcept() {
     try {
       const response = await apiRequest("POST", "/api/meals", { name: selectedWeb.name, ingredients, instructions, servings: 4, imageUrl: selectedWeb.image || null, sourceUrl: selectedWeb.url, mealSourceType: "imported_website", acquisitionLane: "licensed_discovery", acquisitionType: "licensed_import", acquisitionSourceKey: selectedWeb.source || "trusted_recipe_source" });
       const saved = await response.json() as Meal;
-      invalidateMealLibrary(queryClient); await refetch(); setSelectedId(saved.id); setMode("saved"); setIncludeWeb(false); setMobilePage("recipe");
-    } catch { setSaveError(true); } finally { setSaving(false); }
+      invalidateMealLibrary(queryClient);
+      await refetch();
+      setSelectedId(saved.id);
+      setSourceFilter("cookbook");
+      setSelectedKind("local");
+      setIncludeWeb(false);
+      setMobilePage("recipe");
+    } catch {
+      setSaveError(true);
+    } finally {
+      setSaving(false);
+    }
   };
-  const pageCount = Math.max(1, Math.ceil(availableMeals.length / PAGE_SIZE));
-  const collection = <article aria-label="Cookbook collection" className="rb-collection"><header><p className="rb-kicker">My cookbook</p><h1>Our Family Favourites</h1></header>
-    <div role="group" aria-label="Recipe search scope" className="rb-search-modes"><button type="button" aria-pressed={mode === "saved"} onClick={() => selectMode("saved")}><span>My Cookbook</span><small>Saved family recipes</small></button><button type="button" aria-pressed={mode === "trusted"} onClick={() => selectMode("trusted")}><span>Search the internet</span><small>Trusted recipe sources</small></button></div>
-    {mode === "saved" && <><div role="group" aria-label="Cookbook shelves" className="rb-shelves"><button type="button" aria-pressed={shelf === "all"} onClick={() => setShelf("all")}>All</button>{BROWSABLE_SHELVES.map((item) => <button key={item} type="button" aria-pressed={shelf === item} onClick={() => setShelf(item)}>{SHELF_LABELS[item]}</button>)}</div>{isLoading && <p role="status">Loading recipes…</p>}{isError && <p role="alert">We couldn’t load the cookbook. <button type="button" onClick={() => refetch()}>Try again</button></p>}{!isLoading && !isError && visibleMeals.length === 0 && <p>No recipes match this shelf and search.</p>}<ul className="rb-recipe-grid">{visibleMeals.map((meal) => <li key={meal.id}><button type="button" aria-label={`Open recipe ${meal.name}`} aria-pressed={selectedMeal?.id === meal.id} onClick={() => { setSelectedId(meal.id); setMobilePage("recipe"); }}>{meal.imageUrl ? <img src={meal.imageUrl} alt="" /> : <span className="rb-thumb-placeholder" aria-hidden="true">✦</span>}<span>{meal.name}</span></button></li>)}</ul><nav aria-label="Cookbook pages" className="rb-page-nav"><button type="button" disabled={page === 0} onClick={() => setPage((value) => value - 1)}>‹ Previous</button><span>{page + 1} / {pageCount}</span><button type="button" disabled={page + 1 >= pageCount} onClick={() => setPage((value) => value + 1)}>Next ›</button></nav></>}
-    {mode === "trusted" && <section aria-label="Trusted recipe results" className="rb-web-results">{webLoading && <p role="status">Searching trusted recipe sources…</p>}{webError && <p role="alert">Trusted recipe search is unavailable. Try again.</p>}{!webLoading && !webError && query.trim().length < 2 && <p>Type at least two characters to search trusted sources.</p>}{!webLoading && !webError && query.trim().length >= 2 && webResults.length === 0 && <p>No trusted recipes found.</p>}<ul>{webResults.map((recipe) => <li key={`${recipe.source}-${recipe.id}`}><button type="button" aria-label={`Preview recipe ${recipe.name}`} aria-pressed={selectedWeb?.id === recipe.id} onClick={() => { setSelectedWeb(recipe); setMobilePage("recipe"); }}><span>{recipe.name}</span><small>{recipe.source || "Trusted source"}</small></button></li>)}</ul><nav aria-label="Trusted recipe pages"><button type="button" disabled={webPage === 1} onClick={() => setWebPage((value) => value - 1)}>‹ Previous</button><span>Page {webPage}</span><button type="button" disabled={!webHasMore} onClick={() => setWebPage((value) => value + 1)}>Next ›</button></nav>{saveError && <p role="alert">Couldn’t add this recipe. Try again.</p>}</section>}
+
+  const collection = <article aria-label="Cookbook collection" className="rb-collection">
+    <header><p className="rb-kicker">My cookbook</p><h1>Our Family Favourites</h1></header>
+    <div role="group" aria-label="Filter recipe sources" className="rb-source-filters">
+      {SOURCE_FILTERS.map((item) => <button key={item.key} type="button" aria-pressed={sourceFilter === item.key} onClick={() => chooseSource(item.key)}>{item.label}</button>)}
+    </div>
+    {isLoading && <p role="status">Loading recipes…</p>}
+    {isError && <p role="alert">We couldn’t load the cookbook. <button type="button" onClick={() => refetch()}>Try again</button></p>}
+    {webLoading && <p role="status">Searching the internet…</p>}
+    {webError && showWebResults && <p role="alert">Internet recipe search is unavailable. Local results are still shown.</p>}
+    {!webLoading && !isLoading && query.trim().length > 0 && query.trim().length < 2 && includesInternet && <p>Type at least two characters to include internet recipes.</p>}
+    {!webLoading && !isLoading && visibleMeals.length === 0 && visibleWebResults.length === 0 && <p>{query.trim() ? "No recipes match this search and filter." : sourceFilter === "internet" ? "Search to find recipes on the internet." : "No recipes match this filter."}</p>}
+    <ul className="rb-recipe-grid">
+      {visibleMeals.map((meal) => <li key={`local-${meal.id}`}><button type="button" aria-label={`Open recipe ${meal.name}`} aria-pressed={selectedKind === "local" && selectedMeal?.id === meal.id} onClick={() => { setSelectedId(meal.id); setSelectedKind("local"); setMobilePage("recipe"); }}>{meal.imageUrl ? <img src={meal.imageUrl} alt="" /> : <span className="rb-thumb-placeholder" aria-hidden="true">✦</span>}<span>{meal.name}</span></button></li>)}
+      {visibleWebResults.map((recipe) => <li key={`web-${recipe.source}-${recipe.id}`}><button type="button" aria-label={`Preview internet recipe ${recipe.name}`} aria-pressed={selectedKind === "web" && selectedWeb?.id === recipe.id} onClick={() => { setSelectedWeb(recipe); setSelectedKind("web"); setMobilePage("recipe"); }}>{recipe.image ? <img src={recipe.image} alt="" /> : <span className="rb-thumb-placeholder" aria-hidden="true">↗</span>}<span>{recipe.name}<small>{recipe.source || "Internet"}</small></span></button></li>)}
+    </ul>
+    <nav aria-label="Recipe result pages" className="rb-page-nav"><button type="button" disabled={page === 0} onClick={() => setPage((value) => value - 1)}>‹ Previous</button><span>Page {page + 1}</span><button type="button" disabled={!canGoNext} onClick={() => setPage((value) => value + 1)}>Next ›</button></nav>
+    {saveError && <p role="alert">Couldn’t add this recipe. Try again.</p>}
     <section aria-label="Create or import a recipe" className="rb-create"><strong>Create your own</strong><button type="button" onClick={() => setCreateOpen(true)}>Create recipe</button><button type="button" onClick={() => navigate("/import-recipe")}>Import recipe</button><button type="button" onClick={() => navigate("/cookbook?openScan=1")}>Scan recipe</button></section>
-    <label className="rb-search"><span>{mode === "trusted" ? "Search trusted recipes online" : "Search my Cookbook"}</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={mode === "trusted" ? "Recipe, ingredient or dish…" : "Recipe or ingredient…"} aria-label={mode === "trusted" ? "Search trusted recipes online" : "Search my Cookbook"} /></label>
+    <label className="rb-search"><span>Search recipes, freezer and internet</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Recipe, ingredient or dish…" aria-label="Search recipes, freezer and internet" /></label>
   </article>;
+
   const selectedPreviewKey = selectedWeb ? `${selectedWeb.source || "source"}:${selectedWeb.id}` : "";
-  const recipe = mode === "trusted" ? <WebPreview recipe={selectedWeb} details={selectedWeb ? previewDetails[selectedPreviewKey] ?? null : null} onAdd={addExternalRecipe} saving={saving} /> : <RecipePage meal={selectedMeal} onRead={() => selectedMeal && navigate(`/meals/${selectedMeal.id}`)} onPlanner={() => setPlannerOpen(true)} />;
+  const recipe = selectedKind === "web"
+    ? <WebPreview recipe={selectedWeb} details={selectedWeb ? previewDetails[selectedPreviewKey] ?? null : null} onAdd={addExternalRecipe} saving={saving} />
+    : <RecipePage meal={selectedMeal} onRead={() => selectedMeal && navigate(`/meals/${selectedMeal.id}`)} onPlanner={() => setPlannerOpen(true)} />;
+
   return <main aria-label="The Healthy Apples cookbook" data-realm="cookbook"><RealBookStage collectionPage={collection} recipePage={recipe} mobilePage={mobilePage} onMobilePageChange={setMobilePage} /><CreateMealModal open={createOpen} onOpenChange={setCreateOpen} /><AddToPlannerDialog mealId={selectedMeal?.id ?? 0} mealName={selectedMeal?.name ?? "recipe"} isDrink={selectedMeal?.isDrink ?? false} audience={selectedMeal?.audience ?? "adult"} open={plannerOpen && !!selectedMeal} onOpenChange={setPlannerOpen} /></main>;
 }

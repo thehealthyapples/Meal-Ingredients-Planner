@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import { filterCookbookMeals, paginateCookbookMeals } from "../../client/src/lib/cookbook-real-book/collection";
+import { filterCookbookMeals, filterCookbookMealsBySource, paginateCookbookMeals } from "../../client/src/lib/cookbook-real-book/collection";
 
 const meals = [
   { id: 1, name: "Family Soup", ingredients: ["carrot"], isDrink: false, mealFormat: "meal", isReadyMeal: false, mealSourceType: "manual", isSystemMeal: false, sourceUrl: null, retiredAt: null },
@@ -17,12 +17,21 @@ assert.equal(filterCookbookMeals(meals, "carrot", "household").length, 2);
 assert.equal(filterCookbookMeals(meals, "", "drinks")[0].id, 3);
 assert.deepEqual(paginateCookbookMeals(all, 1, 2).map((meal) => meal.id), [3, 4]);
 assert.deepEqual(paginateCookbookMeals(all, 99, 2).map((meal) => meal.id), []);
+assert.deepEqual(filterCookbookMealsBySource(meals, "freezer", new Set([2, 4])).map((meal) => meal.id), [2, 4], "Freezer filter uses active freezer meal IDs");
+assert.deepEqual(filterCookbookMealsBySource(meals, "internet", new Set()).map((meal) => meal.id), [], "Internet filter excludes local meals");
+assert.deepEqual(filterCookbookMealsBySource(meals, "cookbook", new Set()).map((meal) => meal.id), [1, 2, 4], "Cookbook filter retains household recipes");
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const pageSource = readFileSync(path.resolve(here, "../../client/src/pages/cookbook-real-book-concept.tsx"), "utf8");
 assert.match(pageSource, /import\s+\{[^}]*\bRealBookStage\b[^}]*\}\s+from\s+["']@\/components\/cookbook-real-book["']/);
 assert.doesNotMatch(pageSource, /function\s+RealBookStageSeam/);
 assert.match(pageSource, /<RealBookStage\s+collectionPage=/);
+assert.equal((pageSource.match(/<input\b/g) ?? []).length, 1, "Real Book exposes exactly one search input");
+assert.doesNotMatch(pageSource, /rb-search-modes/, "Competing top search-mode controls are removed");
+assert.match(pageSource, /Search recipes, freezer and internet/, "The one bottom search names its complete scope");
+assert.match(pageSource, /queryKey:\s*\["\/api\/freezer"\]/, "Real Book reads canonical active freezer stock");
+assert.match(pageSource, /setIncludeWeb\(sourceFilter === "all" \|\| sourceFilter === "internet"\)/, "All and Internet filters activate public-web search");
+assert.doesNotMatch(pageSource, /setQuery\(""\).*setSourceFilter|setSourceFilter.*setQuery\(""\)/s, "Source filters never clear the current query");
 const createPosition = pageSource.indexOf("Create your own");
 const searchPosition = pageSource.indexOf('className="rb-search"');
 assert.ok(createPosition >= 0 && searchPosition > createPosition, "Search is semantically after Create at the approved bottom-left");

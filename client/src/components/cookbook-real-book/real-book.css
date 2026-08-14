@@ -246,11 +246,9 @@
 .rb-kicker { margin: 0 0 .25em; color: var(--rb-ink-muted); font-size: .76em; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; }
 .rb-collection { height: 100%; display: grid; grid-template-rows: auto auto 1fr auto auto auto; gap: .55em; }
 .rb-collection h1, .rb-recipe h2 { margin: 0; font: 500 clamp(21px, 2.15vw, 34px)/1.02 Georgia, serif; }
-.rb-search-modes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75em; padding: .25em 0 .45em; border-bottom: 1px solid var(--rb-rule); }
-.rb-search-modes button { min-height: 2.75em; display: grid; align-content: start; gap: .15em; padding: .2em .15em .35em; border-bottom: 2px solid transparent; }
-.rb-search-modes button[aria-pressed="true"] { border-bottom-color: var(--rb-ink-accent); text-decoration: none; }
-.rb-search-modes button > span { font: 600 1em/1.1 Georgia, serif; }
-.rb-search-modes button > small { color: var(--rb-ink-muted); font-size: .76em; line-height: 1.1; }
+.rb-source-filters { display: flex; flex-wrap: wrap; gap: .28em .85em; padding: .25em 0 .45em; border-bottom: 1px solid var(--rb-rule); }
+.rb-source-filters button { font-size: .82em; line-height: 1.15; }
+.rb-source-filters button[aria-pressed="true"] { color: var(--rb-ink-accent); font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
 .rb-shelves { display: flex; flex-wrap: wrap; gap: .25em .8em; padding-bottom: .35em; border-bottom: 1px solid var(--rb-rule); }
 .rb-shelves button { font-size: .84em; }
 .rb-recipe-grid { min-height: 0; margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, auto); align-content: center; gap: .55em .75em; }
@@ -259,6 +257,7 @@
 .rb-recipe-grid img, .rb-thumb-placeholder { width: 100%; height: auto; aspect-ratio: 4 / 3; min-height: 0; object-fit: cover; border-radius: 10% 12% 9% 11% / 12% 10% 11% 9%; }
 .rb-thumb-placeholder { display: grid; place-items: center; color: var(--rb-ink-muted); border: 1px solid var(--rb-rule); background: rgba(113, 96, 59, .055); font: 1.2em Georgia, serif; }
 .rb-recipe-grid button > span:last-child { min-height: 2.3em; font-family: Georgia, serif; line-height: 1.1; }
+.rb-recipe-grid button > span:last-child small { display: block; margin-top: .15em; color: var(--rb-ink-muted); font: 500 .72em/1.05 Arial, sans-serif; }
 .rb-page-nav { display: flex; align-items: center; justify-content: space-between; font-size: .82em; }
 .rb-page-nav button:disabled { opacity: .4; }
 .rb-create { display: flex; align-items: baseline; flex-wrap: wrap; gap: .25em .75em; border-top: 1px solid var(--rb-rule); padding-top: .35em; }
