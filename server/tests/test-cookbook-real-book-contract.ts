@@ -82,6 +82,8 @@ assert.match(leftSafeRule, /top:\s*14%/, "Page correctness: print clears the cur
 const rightSafeRule = stageCss.match(/\.rb-plane--right \.rb-plane__safe\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
 assert.match(rightSafeRule, /left:\s*52\.65%/, "Page correctness: the right-page print field moves left toward the spine");
 assert.match(rightSafeRule, /width:\s*29\.1%/, "Page correctness: the shifted right-page field clears the outer edge");
+assert.match(rightSafeRule, /transform:\s*perspective\(/, "Print treatment: the right-page ink receives only a local page projection");
+assert.match(leftSafeRule, /transform:\s*perspective\(/, "Print treatment: the left-page ink receives only a local page projection");
 assert.match(thumbnailRule, /aspect-ratio:\s*4\s*\/\s*3/, "Page correctness: collection photographs are landscape");
 assert.match(thumbnailRule, /height:\s*auto/, "Page correctness: collection photographs cannot stretch into portrait slots");
 assert.match(lowerPrintRule, /font-size:\s*12px/, "Page correctness: lower-page controls have a legible minimum size");
@@ -103,7 +105,8 @@ assert.doesNotMatch(rightPlaneRule, /mask-image/, "Clarity: the right page plane
 
 // The text slot stays in normal blend while photographs retain printed-on-paper
 // multiply compositing.
-const safeBaseRule = stageCss.match(/\.rb-plane__safe\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
+const safeBaseRule = stageCss.match(/(?:^|\n)\.rb-plane__safe\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
+assert.match(safeBaseRule, /font-family:\s*Georgia/, "Print treatment: live page copy uses a stronger editorial serif stack");
 assert.doesNotMatch(safeBaseRule, /mix-blend-mode/, "Clarity: the text slot keeps subpixel antialiasing");
 assert.match(
   stageCss,

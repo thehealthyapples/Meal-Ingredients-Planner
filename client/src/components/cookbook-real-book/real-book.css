@@ -46,6 +46,11 @@
 }
 
 @media (max-width: 900px) {
+  .rb-plane--mobile-collection .rb-plane__safe,
+  .rb-plane--mobile-recipe .rb-plane__safe { transform: none; }
+}
+
+@media (max-width: 900px) {
   .rb-desktop {
     display: none;
   }
@@ -118,6 +123,9 @@
   pointer-events: auto;
   /* Keep live text out of offscreen blend buffers so glyph edges stay crisp. */
   color: var(--rb-ink-primary);
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 500;
+  letter-spacing: .005em;
 }
 
 /* Imagery still sinks into the paper grain; live text stays in normal blend. */
@@ -142,6 +150,8 @@
   top: 14%;
   width: 23.5%;
   height: 71.6%;
+  transform: perspective(1400px) rotateY(1.6deg) rotateX(.35deg);
+  transform-origin: 50% 50%;
 }
 
 /* Right (recto) recipe page — spine on its left, fore-edge fan on its right. */
@@ -159,6 +169,8 @@
   top: 14.15%;
   width: 29.1%;
   height: 71.4%;
+  transform: perspective(1400px) rotateY(-1.8deg) rotateX(.35deg);
+  transform-origin: 50% 50%;
 }
 
 /* ===========================================================================
@@ -330,6 +342,11 @@
   }
   .rb-page-nav, .rb-create, .rb-search { padding-inline: .15em; }
   .rb-search input { padding-block: .25em; }
+}
+
+@media (max-width: 900px) {
+  .rb-plane--mobile-collection .rb-plane__safe,
+  .rb-plane--mobile-recipe .rb-plane__safe { transform: none; }
 }
 
 @media (max-width: 900px) {
