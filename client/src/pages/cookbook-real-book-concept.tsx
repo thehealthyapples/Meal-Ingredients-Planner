@@ -198,7 +198,7 @@ export default function CookbookRealBookConcept() {
     <nav aria-label="Recipe result pages" className="rb-page-nav"><button type="button" disabled={page === 0} onClick={() => setPage((value) => value - 1)}>‹ Previous</button><span>Page {page + 1}</span><button type="button" disabled={!canGoNext} onClick={() => setPage((value) => value + 1)}>Next ›</button></nav>
     {saveError && <p role="alert">Couldn’t add this recipe. Try again.</p>}
     <section aria-label="Create or import a recipe" className="rb-create"><strong>New recipe:</strong><button type="button" onClick={() => setCreateOpen(true)}>Create</button><button type="button" onClick={() => navigate("/import-recipe")}>Import</button><button type="button" onClick={() => navigate("/cookbook?openScan=1")}>Scan</button></section>
-    <label className="rb-search"><span>Search recipes, freezer and internet</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Recipe, ingredient or dish…" aria-label="Search recipes, freezer and internet" /></label>
+    <label className="rb-search"><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search recipes, freezer and internet" aria-label="Search recipes, freezer and internet" /></label>
   </article>;
 
   const selectedPreviewKey = selectedWeb ? `${selectedWeb.source || "source"}:${selectedWeb.id}` : "";

@@ -263,9 +263,20 @@
 .rb-create { display: flex; align-items: baseline; flex-wrap: wrap; gap: .25em .75em; border-top: 1px solid var(--rb-rule); padding-top: .35em; }
 .rb-create strong { font-family: Georgia, serif; font-weight: 500; }
 .rb-create button, .rb-ink-actions button { text-decoration: underline; text-underline-offset: 2px; }
-.rb-search { display: grid; grid-template-columns: minmax(0, 1fr); gap: .22em; align-items: center; }
-.rb-search span { font-family: Georgia, serif; font-weight: 600; }
-.rb-search input { width: 100%; min-width: 0; border: 0; border-bottom: 1px solid var(--rb-rule); outline: 0; background: transparent; padding: .15em 0; }
+.rb-search { display: block; margin-top: .7em; }
+.rb-search input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid rgba(68, 87, 49, .58);
+  border-radius: 6px;
+  outline: 0;
+  background: rgba(255, 255, 255, .08);
+  color: var(--rb-ink-body);
+  font: inherit;
+  padding: .38em .55em;
+}
+.rb-search input::placeholder { color: rgba(47, 42, 32, .58); opacity: 1; font-weight: 500; }
+.rb-search input:focus-visible { border-color: rgba(52, 82, 39, .85); box-shadow: 0 0 0 1px rgba(52, 82, 39, .22); }
 .rb-recipe { height: 100%; display: flex; flex-direction: column; gap: .45em; }
 .rb-recipe h2 { font-size: clamp(23px, 2.4vw, 38px); }
 .rb-recipe-photo { width: 100%; height: 28%; object-fit: cover; border-radius: 45% 46% 42% 48% / 8% 10% 9% 8%; filter: sepia(.08) saturate(.85); }
