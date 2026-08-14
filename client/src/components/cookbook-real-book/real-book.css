@@ -277,6 +277,19 @@
 .rb-recipe li { margin-bottom: .18em; }
 .rb-ink-actions { display: flex; flex-wrap: wrap; gap: .35em 1em; padding-top: .4em; border-top: 1px solid var(--rb-rule); font-size: .88em; }
 
+/* Curved lower-right actions: the three recipe buttons are printed as a
+ * restrained staggered arc that traces the physical lower-page curve instead of
+ * sitting in one straight web toolbar. Each button keeps its own live hit area
+ * and a tiny local rotation only — no whole-page perspective/rotateY/mask, so
+ * the glyphs stay crisp. Right-aligned max-content lines keep every label and
+ * focus ring inside the right-page paper edge. */
+.rb-ink-actions--curved { display: block; position: relative; padding-top: .5em; border-top: 1px solid var(--rb-rule); }
+.rb-ink-actions--curved .rb-ink-action { display: block; position: relative; width: max-content; max-width: 100%; margin-left: auto; text-align: right; }
+.rb-ink-actions--curved .rb-ink-action + .rb-ink-action { margin-top: .22em; }
+.rb-ink-action--read { transform: translateX(-1.6em) rotate(-1deg); }
+.rb-ink-action--planner { transform: translateX(-.65em) rotate(-.3deg); }
+.rb-ink-action--companion { transform: translateX(0) rotate(.7deg); }
+
 /* ---- Trusted external-recipe results & preview ----------------------------
  * These regions share the saved-recipe page planes but had no scoped type, so
  * the heading reset collapsed them to base body size and result sources ran
@@ -324,6 +337,8 @@
   .rb-web-results, .rb-web-preview { font-size: clamp(9px, 2.5vw, 11.5px); }
   .rb-recipe-grid { gap: .5em .65em; }
   .rb-recipe-grid button > span:last-child { min-height: 2.2em; }
+  .rb-ink-actions--curved { display: flex; flex-wrap: wrap; gap: .35em 1em; position: static; }
+  .rb-ink-actions--curved .rb-ink-action { display: inline; width: auto; max-width: none; margin: 0; text-align: left; transform: none; }
   .rb-pageturn { position: fixed; bottom: calc(var(--rb-bottom-nav-mobile) + 3px); z-index: 4; }
 }
 

@@ -39,7 +39,7 @@ function RecipePage({ meal, onRead, onPlanner }: { meal: Meal | null; onRead: ()
     {meal.imageUrl ? <img src={meal.imageUrl} alt="" className="rb-recipe-photo" /> : <p className="rb-photo-note">A family recipe · photograph not added yet</p>}
     <p className="rb-meta">Serves {meal.servings || 4}</p>
     <div className="rb-recipe-columns"><section><h3>Ingredients</h3><ul>{ingredients.slice(0, 8).map((item, i) => <li key={`${item}-${i}`}>{item}</li>)}</ul></section><section><h3>Method</h3><ol>{instructions.slice(0, 6).map((item, i) => <li key={`${item}-${i}`}>{item}</li>)}</ol></section></div>
-    <div className="rb-ink-actions"><button type="button" onClick={onRead}>Read full recipe</button><button type="button" onClick={onPlanner}>Add to Planner</button><button type="button" onClick={() => openCompanion()}>Ask Companion about this recipe</button></div>
+    <div className="rb-ink-actions rb-ink-actions--curved"><button type="button" className="rb-ink-action rb-ink-action--read" onClick={onRead}>Read full recipe</button><button type="button" className="rb-ink-action rb-ink-action--planner" onClick={onPlanner}>Add to Planner</button><button type="button" className="rb-ink-action rb-ink-action--companion" onClick={() => openCompanion()}>Ask Companion about this recipe</button></div>
   </article>;
 }
 

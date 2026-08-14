@@ -116,4 +116,43 @@ assert.match(webResultsButtonRule, /gap:/, "Spacing: trusted result labels reser
 assert.match(webResultsSourceRule, /var\(--rb-ink-muted\)/, "Spacing: trusted result source is a muted secondary line");
 assert.doesNotMatch(safeBaseRule, /clamp\(11px,/, "Scope: trusted-region type does not alter the global page slot");
 
+// Curved lower-right recipe actions ------------------------------------------
+// The three recipe actions must each be individually addressable, grouped under
+// a dedicated curved-layout marker, and placed as distinct staggered points on
+// the lower-page curve rather than one straight flex toolbar — while staying
+// flat/crisp (no page-level 3D) and flattening to a safe compact flow on mobile.
+assert.match(pageSource, /className="rb-ink-actions rb-ink-actions--curved"/, "Actions carry a dedicated curved-layout marker");
+assert.match(pageSource, /className="rb-ink-action rb-ink-action--read"/, "Read action is individually addressable");
+assert.match(pageSource, /className="rb-ink-action rb-ink-action--planner"/, "Add to Planner action is individually addressable");
+assert.match(pageSource, /className="rb-ink-action rb-ink-action--companion"/, "Companion action is individually addressable");
+
+const inkActionsCurvedRule = stageCss.match(/\.rb-ink-actions--curved\s*\{([^}]*)\}/)?.[1] ?? "";
+const readActionRule = stageCss.match(/\.rb-ink-action--read\s*\{([\s\S]*?)\n?\}/)?.[1] ?? "";
+const plannerActionRule = stageCss.match(/\.rb-ink-action--planner\s*\{([\s\S]*?)\n?\}/)?.[1] ?? "";
+const companionActionRule = stageCss.match(/\.rb-ink-action--companion\s*\{([\s\S]*?)\n?\}/)?.[1] ?? "";
+assert.match(inkActionsCurvedRule, /position:\s*relative/, "Curved layout establishes a positioning context for the arc");
+assert.doesNotMatch(inkActionsCurvedRule, /display:\s*flex/, "Curved layout is not one straight flex row");
+assert.match(readActionRule, /transform:/, "Read action has its own point on the curve");
+assert.match(plannerActionRule, /transform:/, "Planner action has its own point on the curve");
+assert.match(companionActionRule, /transform:/, "Companion action has its own point on the curve");
+assert.ok(
+  readActionRule.trim() !== plannerActionRule.trim() &&
+    plannerActionRule.trim() !== companionActionRule.trim() &&
+    readActionRule.trim() !== companionActionRule.trim(),
+  "Each action sits at a distinct staggered placement, not an identical flex slot",
+);
+assert.doesNotMatch(inkActionsCurvedRule, /perspective\(|rotateY/, "Clarity: curved actions use no whole-page 3D transform on live text");
+assert.doesNotMatch(readActionRule, /perspective\(|rotateY/, "Clarity: read action text stays crisp");
+assert.doesNotMatch(plannerActionRule, /perspective\(|rotateY/, "Clarity: planner action text stays crisp");
+assert.doesNotMatch(companionActionRule, /perspective\(|rotateY/, "Clarity: companion action text stays crisp");
+
+// The file holds two `@media (max-width: 900px)` blocks, so target the mobile
+// override rules directly: the second `.rb-ink-actions--curved` rule and the
+// second `.rb-ink-actions--curved .rb-ink-action` rule are the mobile ones.
+const mobileCurvedRule = stageCss.match(/\.rb-ink-actions--curved\s*\{[^}]*\}/g)?.at(-1) ?? "";
+const mobileActionRule = stageCss.match(/\.rb-ink-actions--curved \.rb-ink-action\s*\{[^}]*\}/g)?.at(-1) ?? "";
+assert.match(mobileCurvedRule, /display:\s*flex/, "Mobile restores a safe compact flow for the actions");
+assert.match(mobileCurvedRule, /position:\s*static/, "Mobile drops the arc positioning context");
+assert.match(mobileActionRule, /transform:\s*none/, "Mobile drops the per-action arc transforms so cramped curvature is avoided");
+
 console.log("cookbook real book contract: ok");
