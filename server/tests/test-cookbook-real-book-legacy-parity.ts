@@ -21,6 +21,9 @@ assert.match(route, /enableWebSearch:\s*true/, "Real Book activates trusted web 
 assert.match(route, /setIncludeWeb\(mode\s*===\s*["']trusted["']\)/, "Network search state follows the visible Real Book search mode");
 assert.match(route, /My Cookbook/, "Real Book names the saved-recipe search mode explicitly");
 assert.match(route, /Trusted recipe sources/, "Real Book names the external search mode explicitly");
+assert.match(route, /Search the internet/, "Real Book makes the public-web search action unmistakable");
+assert.match(route, /Search trusted recipes online/, "Internet mode labels the search field by its true destination");
+assert.match(route, /Search my Cookbook/, "Saved mode labels the search field by its true destination");
 assert.match(route, /webResults/, "Real Book renders external recipe results separately from saved meals");
 assert.match(route, /webLoading/, "Real Book exposes the external-search loading state");
 assert.match(route, /Preview recipe/, "External recipes can be previewed before they are saved");

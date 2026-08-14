@@ -24,7 +24,7 @@ assert.match(pageSource, /import\s+\{[^}]*\bRealBookStage\b[^}]*\}\s+from\s+["']
 assert.doesNotMatch(pageSource, /function\s+RealBookStageSeam/);
 assert.match(pageSource, /<RealBookStage\s+collectionPage=/);
 const createPosition = pageSource.indexOf("Create your own");
-const searchPosition = pageSource.indexOf('aria-label="Search recipes"');
+const searchPosition = pageSource.indexOf('className="rb-search"');
 assert.ok(createPosition >= 0 && searchPosition > createPosition, "Search is semantically after Create at the approved bottom-left");
 assert.match(pageSource, /const PAGE_SIZE = 6;/, "compact page shows six recipes without internal scrolling");
 assert.match(pageSource, /openCompanion\(\)/, "recipe offers a keyboard-accessible Companion action");
