@@ -1,0 +1,32 @@
+{
+  "desktop-1440x900": {
+    "heading": 1,
+    "soupButtons": 3,
+    "visibleRecipes": 6,
+    "webRequestObserved": 1,
+    "sourceVisible": 2,
+    "originalLink": "https://example.test/tomato-lentil-soup",
+    "returnedToSavedMode": "true",
+    "savedRecipeVisible": 2,
+    "selectedRecipe": "Recipe: Roasted tomato and lentil soup",
+    "desktopCollectionVisible": true,
+    "mobilePageVisible": false,
+    "searchAfterCreate": true,
+    "errors": []
+  },
+  "mobile-390x844": {
+    "heading": 1,
+    "soupButtons": 3,
+    "visibleRecipes": 6,
+    "webRequestObserved": 1,
+    "sourceVisible": 1,
+    "originalLink": "https://example.test/tomato-lentil-soup",
+    "returnedToSavedMode": "true",
+    "savedRecipeVisible": 1,
+    "selectedRecipe": "Recipe: Roasted tomato and lentil soup",
+    "desktopCollectionVisible": false,
+    "mobilePageVisible": true,
+    "searchAfterCreate": true,
+    "errors": []
+  }
+}

@@ -273,6 +273,26 @@
 .rb-recipe li { margin-bottom: .18em; }
 .rb-ink-actions { display: flex; flex-wrap: wrap; gap: .35em 1em; padding-top: .4em; border-top: 1px solid var(--rb-rule); font-size: .88em; }
 
+/* ---- Trusted external-recipe results & preview ----------------------------
+ * These regions share the saved-recipe page planes but had no scoped type, so
+ * the heading reset collapsed them to base body size and result sources ran
+ * into their names. Reuse the printed recto hierarchy without adding chrome. */
+.rb-web-results { min-height: 0; display: flex; flex-direction: column; gap: .5em; font-size: clamp(11px, .95vw, 13.5px); }
+.rb-web-results > ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: .5em; }
+.rb-web-results li button { width: 100%; display: grid; gap: .05em .5em; }
+.rb-web-results li button > span { font-family: Georgia, serif; font-size: 1.08em; line-height: 1.16; }
+.rb-web-results li button > small { color: var(--rb-ink-muted); font-size: .84em; letter-spacing: .04em; }
+.rb-web-results nav { display: flex; align-items: center; justify-content: space-between; gap: .5em; font-size: .82em; }
+.rb-web-results nav button:disabled { opacity: .4; }
+
+.rb-web-preview { height: 100%; display: flex; flex-direction: column; gap: .4em; font-size: clamp(11px, .95vw, 13.5px); }
+.rb-web-preview h2 { margin: 0; font: 500 clamp(23px, 2.4vw, 38px)/1.02 Georgia, serif; }
+.rb-web-preview h3 { margin: .15em 0 .2em; font: 500 1.35em Georgia, serif; }
+.rb-web-preview ul, .rb-web-preview ol { margin: 0; padding-left: 1.25em; }
+.rb-web-preview li { margin-bottom: .18em; }
+.rb-web-preview p { margin: 0; }
+.rb-web-preview a, .rb-web-preview button { text-decoration: underline; text-underline-offset: 2px; }
+
 @media (min-width: 901px) {
   .rb-page-nav, .rb-create, .rb-search, .rb-ink-actions {
     color: var(--rb-ink-body);
@@ -296,6 +316,8 @@
   .rb-collection { gap: .5em; }
   .rb-collection h1 { font-size: clamp(21px, 6vw, 26px); white-space: nowrap; }
   .rb-recipe h2 { font-size: clamp(25px, 8vw, 32px); }
+  .rb-web-preview h2 { font-size: clamp(25px, 8vw, 32px); }
+  .rb-web-results, .rb-web-preview { font-size: clamp(9px, 2.5vw, 11.5px); }
   .rb-recipe-grid { gap: .5em .65em; }
   .rb-recipe-grid button > span:last-child { min-height: 2.2em; }
   .rb-pageturn { position: fixed; bottom: calc(var(--rb-bottom-nav-mobile) + 3px); z-index: 4; }

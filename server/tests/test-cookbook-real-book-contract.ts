@@ -89,4 +89,22 @@ assert.match(
   "Print treatment: photographs still multiply into the paper",
 );
 
+// Trusted external-recipe results and preview previously had no scoped type, so
+// preflight collapsed headings to body size and result names/sources ran together.
+const webPreviewRule = stageCss.match(/\.rb-web-preview\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
+const webPreviewHeadingRule = stageCss.match(/\.rb-web-preview h2\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
+const webPreviewSubheadRule = stageCss.match(/\.rb-web-preview h3\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
+const webResultsRule = stageCss.match(/\.rb-web-results\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
+const webResultsButtonRule = stageCss.match(/\.rb-web-results li button\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
+const webResultsSourceRule = stageCss.match(/\.rb-web-results li button > small\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
+assert.match(webPreviewHeadingRule, /clamp\(23px,\s*2\.4vw,\s*38px\)/, "Legibility: trusted preview title reuses the recto heading scale");
+assert.match(webPreviewHeadingRule, /Georgia/, "Legibility: trusted preview title uses the printed serif face");
+assert.match(webPreviewSubheadRule, /1\.35em/, "Legibility: trusted preview subheads reuse the recto subhead scale");
+assert.match(webPreviewRule, /font-size:\s*clamp\(11px,/, "Legibility: trusted preview body has a scoped minimum");
+assert.match(webResultsRule, /font-size:\s*clamp\(11px,/, "Legibility: trusted result labels have a scoped minimum");
+assert.match(webResultsButtonRule, /display:\s*grid/, "Spacing: trusted result name and source use separate grid lines");
+assert.match(webResultsButtonRule, /gap:/, "Spacing: trusted result labels reserve a gap");
+assert.match(webResultsSourceRule, /var\(--rb-ink-muted\)/, "Spacing: trusted result source is a muted secondary line");
+assert.doesNotMatch(safeBaseRule, /clamp\(11px,/, "Scope: trusted-region type does not alter the global page slot");
+
 console.log("cookbook real book contract: ok");

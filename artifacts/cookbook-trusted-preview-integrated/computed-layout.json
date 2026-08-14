@@ -1,0 +1,42 @@
+{
+  "desktop-1440x900": {
+    "preview": {
+      "width": 447.390625,
+      "height": 617.796875,
+      "scrollHeight": 618,
+      "overflowY": "visible"
+    },
+    "title": {
+      "fontSize": "34.56px",
+      "lineHeight": "35.2512px",
+      "fontFamily": "Georgia, serif"
+    },
+    "subhead": {
+      "fontSize": "18.225px",
+      "fontFamily": "Georgia, serif"
+    },
+    "lastChildInside": true,
+    "pageSafeScrollHeight": 618,
+    "pageSafeClientHeight": 618
+  },
+  "mobile-390x844": {
+    "preview": {
+      "width": 288.59100341796875,
+      "height": 601.2379760742188,
+      "scrollHeight": 585,
+      "overflowY": "visible"
+    },
+    "title": {
+      "fontSize": "31.2px",
+      "lineHeight": "31.824px",
+      "fontFamily": "Georgia, serif"
+    },
+    "subhead": {
+      "fontSize": "13.1625px",
+      "fontFamily": "Georgia, serif"
+    },
+    "lastChildInside": true,
+    "pageSafeScrollHeight": 585,
+    "pageSafeClientHeight": 585
+  }
+}
