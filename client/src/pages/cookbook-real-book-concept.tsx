@@ -197,7 +197,7 @@ export default function CookbookRealBookConcept() {
     </ul>
     <nav aria-label="Recipe result pages" className="rb-page-nav"><button type="button" disabled={page === 0} onClick={() => setPage((value) => value - 1)}>‹ Previous</button><span>Page {page + 1}</span><button type="button" disabled={!canGoNext} onClick={() => setPage((value) => value + 1)}>Next ›</button></nav>
     {saveError && <p role="alert">Couldn’t add this recipe. Try again.</p>}
-    <section aria-label="Create or import a recipe" className="rb-create"><strong>Create your own</strong><button type="button" onClick={() => setCreateOpen(true)}>Create recipe</button><button type="button" onClick={() => navigate("/import-recipe")}>Import recipe</button><button type="button" onClick={() => navigate("/cookbook?openScan=1")}>Scan recipe</button></section>
+    <section aria-label="Create or import a recipe" className="rb-create"><strong>New recipe:</strong><button type="button" onClick={() => setCreateOpen(true)}>Create</button><button type="button" onClick={() => navigate("/import-recipe")}>Import</button><button type="button" onClick={() => navigate("/cookbook?openScan=1")}>Scan</button></section>
     <label className="rb-search"><span>Search recipes, freezer and internet</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Recipe, ingredient or dish…" aria-label="Search recipes, freezer and internet" /></label>
   </article>;
 

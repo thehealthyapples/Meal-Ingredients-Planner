@@ -30,7 +30,7 @@ assert.match(route, /Add to my Cookbook/, "External recipes can be imported into
 assert.match(route, /recipe\.source/, "External results preserve visible source/provider attribution");
 assert.match(route, /recipe\.url/, "External results retain a link to the original source");
 assert.match(route, /acquisitionLane/, "Imported web recipes preserve canonical acquisition provenance");
-assert.match(route, /Scan recipe/, "The Real Book retains the legacy scan-recipe entry");
+assert.match(route, />Scan<\/button>/, "The Real Book retains the concise legacy scan-recipe entry");
 assert.match(route, /\/cookbook\?openScan=1/, "Scan recipe enters the canonical legacy Cookbook scanner");
 assert.match(route, /\/api\/preview-recipe/, "Sparse external results use the canonical preview fallback");
 assert.match(route, /\}, \[selectedWeb\]\);/, "Preview cache updates do not cancel their own in-flight request");

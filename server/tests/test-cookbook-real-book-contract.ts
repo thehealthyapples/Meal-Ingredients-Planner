@@ -32,9 +32,14 @@ assert.match(pageSource, /Search recipes, freezer and internet/, "The one bottom
 assert.match(pageSource, /queryKey:\s*\["\/api\/freezer"\]/, "Real Book reads canonical active freezer stock");
 assert.match(pageSource, /setIncludeWeb\(sourceFilter === "all" \|\| sourceFilter === "internet"\)/, "All and Internet filters activate public-web search");
 assert.doesNotMatch(pageSource, /setQuery\(""\).*setSourceFilter|setSourceFilter.*setQuery\(""\)/s, "Source filters never clear the current query");
-const createPosition = pageSource.indexOf("Create your own");
+assert.doesNotMatch(pageSource, /Create your own/, "The lower recipe action line contains no unnecessary promotional heading");
+const createPosition = pageSource.indexOf("New recipe:");
+const createButtonPosition = pageSource.indexOf(">Create</button>", createPosition);
+const importButtonPosition = pageSource.indexOf(">Import</button>", createButtonPosition);
+const scanButtonPosition = pageSource.indexOf(">Scan</button>", importButtonPosition);
+assert.ok(createPosition >= 0 && createButtonPosition > createPosition && importButtonPosition > createButtonPosition && scanButtonPosition > importButtonPosition, "The lower action line uses the concise New recipe: Create Import Scan wording");
 const searchPosition = pageSource.indexOf('className="rb-search"');
-assert.ok(createPosition >= 0 && searchPosition > createPosition, "Search is semantically after Create at the approved bottom-left");
+assert.ok(createPosition >= 0 && searchPosition > createPosition, "Search is semantically after the concise New recipe line at the approved bottom-left");
 assert.match(pageSource, /const PAGE_SIZE = 6;/, "compact page shows six recipes without internal scrolling");
 assert.match(pageSource, /openCompanion\(\)/, "recipe offers a keyboard-accessible Companion action");
 assert.doesNotMatch(pageSource, /aspect-\[4\/3\].*No photograph yet/, "missing photos do not become a large white web panel");
