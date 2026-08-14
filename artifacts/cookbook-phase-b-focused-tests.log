@@ -1,0 +1,69 @@
+cookbook legacy-grid functional parity contract: ok
+cookbook canonical scan entry contract: ok
+cookbook search canonical safety contract: ok
+cookbook real book contract: ok
+
+> rest-express@1.0.0 test:cbk1-cookbook-seed
+> tsx server/tests/test-cbk1-cookbook-seed.ts
+
+
+=== CBK1 — Canonical Production Cookbook Seeding ===
+
+── The seed target is classified, and it fails closed ──
+  ✓ a Neon connection string is classified as a managed (production) host
+  ✓ the Replit dev database and the CI service container are classified as disposable
+  ✓ a missing or unparseable DATABASE_URL is neither disposable nor silently accepted
+  ✓ credentials are stripped before a target is ever printed
+  ✓ a managed host is production EVEN WHEN NODE_ENV is unset (the hole the old guard had)
+  ✓ NODE_ENV=production makes even a disposable host production
+  ✓ a disposable host in development is not production
+  ✓ a host that cannot be PROVEN disposable is treated as production — the guard fails closed
+
+── There is exactly one cookbook seeding mechanism ──
+  ✓ inserts go through the canonical write funnel storage.createMeal (RECIPE_ACQUISITION §5)
+  ✓ the seeder contains no raw insert into the meals table
+  ✓ every seeded row carries canonical provenance (lane, type, source key)
+
+── Production cannot be seeded, or wiped, by accident ──
+  ✓ the seeder gates every run through a single target guard
+  ✓ seeding a production target requires an explicit --production flag
+  ✓ --rollback is refused against a production target
+  ✓ the rollback refusal states it has NO override — no flag can delete 500 live recipes
+  ✓ a dry run can preview a production seed without writing (RELEASE.md Step 4 precedent)
+
+── Categories are resolved by name, not by a guessed id ──
+  ✓ categories are resolved from meal_categories BY NAME at run time
+  ✓ the old hard-coded category id map is gone
+  ✓ a missing category is a loud refusal, not a silent miscategorisation
+
+── The recipe source is intact and its identities are unique ──
+  ✓ the committed cookbook source exists (REL1 tracked it)
+  ✓ the source holds exactly 500 recipes
+  ✓ every recipe has a unique import_key — its canonical identity
+  ✓ every import_key sits in the canonical tha_original: key space
+
+── Canonical identity is enforced by the database, not merely intended ──
+  ✓ a unique index on the founding cookbook's key space is a reviewed migration
+  ✓ the migration is registered in the reviewed migration list (the only sanctioned schema route)
+
+── The release process documents the canonical mechanism ──
+  ✓ RELEASE.md names the canonical seeding command
+  ✓ RELEASE.md names the verification gate that proves the seed worked
+  ✓ RELEASE.md no longer claims the importer refuses production — that statement is now false
+
+── Live database — the cookbook is seeded, once ──
+  (DATABASE_URL not set — skipping live DB checks)
+
+28 passed, 0 failed
+
+C:\Users\Colin\The Healthy Apples\GitHub\tha-cookbook-real-book-functional\server\db.ts:8
+  throw new Error(
+        ^
+
+Error: DATABASE_URL must be set. Did you forget to provision a database?
+    at <anonymous> (C:\Users\Colin\The Healthy Apples\GitHub\tha-cookbook-real-book-functional\server\db.ts:8:9)
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+    at async node:internal/modules/esm/loader:643:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v24.18.0

@@ -1,0 +1,179 @@
+
+── 1. COVERAGE — every food-producing route reaches the canonical gate ──
+  ✓ discovery found the route table (335 registrations)
+  ✓ discovery sees constant-registered routes, not only string literals
+  ✓ discovery sees app.get routes, not only app.post
+  ✓ every discovered food-surface route is classified (gated, exempt, or a recorded gap)
+  ✓ gated-route classification is not stale: api.search.recipes.path
+  ✓ gated-route classification is not stale: /api/preview-recipe
+  ✓ gated-route classification is not stale: /api/planner/entries/:entryId/adapt
+  ✓ gated-route classification is not stale: /api/planner/entries/:entryId/accept-household-safe-variant
+  ✓ gated-route classification is not stale: /api/meals/:id/adapt
+  ✓ gated-route classification is not stale: /api/suggest-from-ingredients
+  ✓ gated-route classification is not stale: /api/generate-recipe-from-suggestion
+  ✓ gated-route classification is not stale: /api/meals/smart-create-from-ingredients
+  ✓ gated-route classification is not stale: /api/meal-plans/smart-suggest
+  ✓ gated-route classification is not stale: /api/meal-pairings/:mealId
+  ✓ gated-route classification is not stale: /api/starter-meals
+  ✓ trusted external recipe discovery (constant route; canonical household gate) reaches the canonical gate [resolveHouseholdSafetyContext, isMealSafeForHousehold, validateAdaptationSafety, requireHardRestrictions] via server/routes.ts
+  ✓ external recipe preview (canonical household gate) reaches the canonical gate [resolveHouseholdSafetyContext, isMealSafeForHousehold]
+  ✓ AI meal adaptation (PROD5 §10.1) reaches the canonical gate [resolveHouseholdSafetyContext, validateAdaptationSafety]
+  ✓ persists an AI adaptation as household-safe (PROD5 §10.1) reaches the canonical gate [resolveHouseholdSafetyContext, validateAdaptationSafety]
+  ✓ recipe swap engine (PROD5 §10.2) reaches the canonical gate [resolveHouseholdSafetyContext, validateAdaptationSafety]
+  ✓ AI meal suggestions from ingredients (PROD6) reaches the canonical gate [validateAdaptationSafety]
+  ✓ AI full recipe generation (PROD6) reaches the canonical gate [isMealSafeForHousehold, validateAdaptationSafety]
+  ✓ ingredient-led meal recommendation (NUTPLAN1) reaches the canonical gate [resolveHouseholdSafetyContext, isMealSafeForHousehold, validateAdaptationSafety]
+  ✓ whole-week meal suggestion (single-quoted — invisible before NUTPLAN2) reaches the canonical gate [resolveHouseholdSafetyContext]
+  ✓ meals recommended alongside a meal (GET — invisible before NUTPLAN2) reaches the canonical gate [resolveHouseholdSafetyContext, isMealSafeForHousehold]
+  ✓ onboarding starter cookbook reaches the canonical gate [resolveHouseholdSafetyContext, isMealSafeForHousehold] via server/lib/meal-service.ts
+  ✓ classification states a reason: /api/pantry/:id/restore
+  ✓ classification states a reason: /^\/api\/food-diary/
+  ✓ classification states a reason: /^\/api\/pantry(\/(:id)?)?$/
+  ✓ classification states a reason: /^\/api\/plan-templates\/mine/
+  ✓ classification states a reason: /^\/api\/meal-templates/
+  ✓ classification states a reason: /^\/api\/meals\/:id\/items$/
+  ✓ classification states a reason: /api/meals/summary
+  ✓ classification states a reason: /api/planner/ready-meal-library
+  ✓ classification states a reason: /api/planner/basket-meal-ids
+  ✓ classification states a reason: /api/meals/lookup
+  ✓ classification states a reason: /^\/api\/freezer/
+  ✓ classification states a reason: /^\/api\/meals\/:id\/(image|freezer-eligible|cookbook-visibility)$/
+  ✓ classification states a reason: /api/planner/entries/:entryId/meal
+  ✓ classification states a reason: /api/meal-items/:id
+  ✓ classification states a reason: /api/meals/:mealId/uplift-applications
+  ✓ classification states a reason: /api/household/dietary-context
+  ✓ classification states a reason: /api/nutrition-centre
+  ✓ classification states a reason: /^\/api\/knowledge\//
+  ✓ classification states a reason: /^\/api\/food-knowledge/
+  ✓ classification states a reason: /^\/api\/foods\//
+  ✓ classification states a reason: /^\/api\/meals\/:id\/(food-)?intelligence$/
+  ✓ classification states a reason: /api/pantry/intelligence
+  ✓ classification states a reason: /api/pantry/search-index
+  ✓ classification states a reason: /^\/api\/pantry\/knowledge/
+  ✓ classification states a reason: /api/nutrition/bulk
+  ✓ classification states a reason: /^\/api\/intelligence\/learning\/recommendations/
+  ✓ classification states a reason: /api/intelligence/observability/suggest-matchers
+  ✓ classification states a reason: /api/smart-suggest/auto-import
+  ✓ classification states a reason: /api/pantry/alternatives
+  ✓ classification states a reason: /api/pantry/discover
+  ✓ classification states a reason: /api/pantry/stories
+  ✓ classification states a reason: /api/pantry/seasonal
+  ✓ classification states a reason: /api/plan-templates/library
+  ✓ classification states a reason: /api/plan-templates/default
+  ✓ classification states a reason: /api/plan-templates/:id
+  ✓ classification states a reason: /api/plan-templates/:id/apply
+  ✓ classification states a reason: /api/plan-templates/:id/apply-to-week/:weekId
+  ✓ classification states a reason: /api/plan-templates/:id/import
+  ✓ classification states a reason: /api/product-alternatives
+  ✓ classification states a reason: /api/intelligence/food-opportunities
+  ✓ classification states a reason: /api/intelligence/food-opportunities/:opportunityId/:action
+  ✓ classification states a reason: /api/planner/weeks/:weekId/save-week-template
+  ✓ classification states a reason: /api/meals/:id/link-template
+  ✓ classification states a reason: api.swaps.list.path
+  ✓ classification states a reason: api.diets.getMealDiets.path
+  ✓ classification states a reason: api.diets.setMealDiets.path
+  ✓ classification states a reason: api.diets.list.path
+  ✓ classification states a reason: api.meals.list.path
+  ✓ classification states a reason: api.meals.get.path
+  ✓ classification states a reason: api.meals.create.path
+  ✓ classification states a reason: api.meals.update.path
+  ✓ classification states a reason: api.meals.copy.path
+  ✓ classification states a reason: api.meals.delete.path
+  ✓ classification states a reason: api.meals.saveProduct.path
+  ✓ classification states a reason: api.meals.generateImage.path
+  ✓ classification states a reason: api.meals.getEditedCopy.path
+  ✓ classification states a reason: api.meals.reimportInstructions.path
+  ✓ classification states a reason: api.import.recipe.path
+  ✓ classification states a reason: api.import.recipeFromText.path
+  ✓ classification states a reason: api.import.parse.path
+  ✓ classification states a reason: api.analyze.meal.path
+  ✓ classification states a reason: api.nutrition.get.path
+  ✓ classification states a reason: api.allergens.get.path
+  ✓ classification states a reason: api.shoppingList.generateFromMeals.path
+  ✓ classification states a reason: api.shoppingList.autoSmp.path
+  ✓ classification states a reason: api.shoppingList.suggestSpellings.path
+  ✓ classification states a reason: api.categories.list.path
+  ✓ the recorded-gap list has not grown (40 of at most 43)
+  ✓ AI path validates its OWN output via validateAdaptationSafety: app.post("/api/planner/entries/:entryId/adapt"
+  ✓ AI path fails closed on an unresolved context: app.post("/api/planner/entries/:entryId/adapt"
+  ✓ AI path validates its OWN output via validateAdaptationSafety: app.post("/api/planner/entries/:entryId/accept-household-safe-variant"
+  ✓ AI path fails closed on an unresolved context: app.post("/api/planner/entries/:entryId/accept-household-safe-variant"
+  ✓ AI path validates its OWN output via validateAdaptationSafety: app.post("/api/suggest-from-ingredients"
+  ✓ AI path fails closed on an unresolved context: app.post("/api/suggest-from-ingredients"
+  ✓ AI path validates its OWN output via validateAdaptationSafety: app.post("/api/generate-recipe-from-suggestion"
+  ✓ AI path fails closed on an unresolved context: app.post("/api/generate-recipe-from-suggestion"
+  ✓ recipe-swap route resolves the household SERVER-SIDE, not from req.body
+  ✓ recipe-swap route enforces meal ownership (was missing — PROD5 §10.2 adjacent)
+
+── 2. PROPOSED INGREDIENTS — the exact harms PROD5 described are refused ──
+  ✓ "almond flour" is REFUSED for a tree_nut household (keto swap for flour)
+  ✓ "almond flour" is REFUSED for a nuts household (legacy "nuts" alias)
+  ✓ "tahini" is REFUSED for a sesame household (the AI free-hand case)
+  ✓ "smoked tofu" is REFUSED for a soy household (vegetarian swap for bacon)
+  ✓ "soy sauce" is REFUSED for a soy household (vegetarian swap for fish sauce)
+  ✓ "soy sauce" is REFUSED for a gluten household (soy sauce carries gluten)
+  ✓ a refusal names the canonical restriction that caused it
+  ✓ an ingredient violation is reported as field "ingredient"
+  ✓ "savoy cabbage" is NOT refused for a soy household (word boundaries hold)
+  ✓ guest restrictions are unioned in
+  ✓ a GUEST's sesame allergy refuses tahini, though the household declared none
+
+── 3. METHOD — an allergen in the rewritten instructions is caught ──
+  ✓ an allergen appearing ONLY in the method is refused
+  ✓ the violation is attributed to the instruction, not an ingredient
+  ✓ method scanning is restriction-specific, not a blanket refusal
+
+── 4. FAIL-CLOSED — an unresolved context refuses ──
+  ✓ refuseAdaptation() is never safe
+  ✓ refuseAdaptation() reports unavailability distinctly
+  ✓ an unavailable context refuses with NO violations — "could not find out" is not "found nothing"
+  ✓ an unsafe preview is WITHHELD, not flagged — it is one tap from being persisted
+  ✓ the persistence boundary REFUSES rather than saving an unsafe variant
+  ✓ the safety check runs BEFORE the write, not after
+  ✓ the client explains a WITHHELD household-safe version rather than rendering nothing
+  ✓ the client distinguishes "could not confirm your household" from "no safe version exists"
+  ✓ the withheld suggestion is never shown in the act of withholding it
+
+── 5. NO FALSE POSITIVES — safe adaptations still reach a restricted household ──
+  ✓ plant swaps with no allergen pass for a tree-nut + sesame household
+  ✓ coconut flour passes for a tree-nut household (a separate canonical restriction)
+  ✓ an UNRESTRICTED household is unaffected — no gate, no cost, no behaviour change
+  ✓ null/blank replacements (an ingredient REMOVED) are not violations
+
+── 6. PROMPT — the hand-written restriction list is gone ──
+  ✓ the hand-written 5-restriction reference has been REMOVED from the prompt
+  ✓ the prompt reference is now RENDERED from the canonical library
+  ✓ the rendered reference names Sesame (absent from the old hand-written list)
+  ✓ the rendered reference names Soy (absent from the old hand-written list)
+  ✓ the rendered reference names Shellfish (absent from the old hand-written list)
+  ✓ the rendered reference names Egg (absent from the old hand-written list)
+  ✓ the rendered reference names Mustard (absent from the old hand-written list)
+  ✓ the rendered reference carries derived ingredients (tahini for sesame) — the names an allergen hides behind
+  ✓ an unrestricted household renders an explicit empty reference, not a blank
+
+── 7. ONE OWNER — PROD6 defines no second restriction list ──
+  ✓ recipe-swap-engine reaches the canonical gate (it referenced NO restriction before PROD6)
+  ✓ recipe-swap-engine accepts server-resolved hard restrictions
+  ✓ recipe-swap-engine does not re-implement restriction resolution (resolveActiveRestrictions)
+  ✓ recipe-swap-engine does not re-implement restriction resolution (TRUSTED_SOURCE)
+  ✓ recipe-swap-engine does not re-implement restriction resolution (ALLERGEN)
+  ✓ validateAdaptationSafety delegates its VERDICT to the same matcher the meal gate uses
+  ✓ the canonical library carries the full restriction set the old prompt list omitted
+  ✓ every canonical restriction id renders in a prompt reference: gluten
+  ✓ every canonical restriction id renders in a prompt reference: dairy
+  ✓ every canonical restriction id renders in a prompt reference: peanut
+  ✓ every canonical restriction id renders in a prompt reference: tree_nut
+  ✓ every canonical restriction id renders in a prompt reference: sesame
+  ✓ every canonical restriction id renders in a prompt reference: soy
+  ✓ every canonical restriction id renders in a prompt reference: mustard
+  ✓ every canonical restriction id renders in a prompt reference: shellfish
+  ✓ every canonical restriction id renders in a prompt reference: eggs
+  ✓ every canonical restriction id renders in a prompt reference: coconut
+  ✓ every canonical restriction id renders in a prompt reference: fish
+  ✓ every canonical restriction id renders in a prompt reference: meat
+  ✓ every canonical restriction id renders in a prompt reference: honey
+
+════════════════════════════════════════════════════════
+  PROD6 safety gate convergence: 160 passed, 0 failed
+  ✅ Every CLASSIFIED food-producing route reaches the canonical safety gate.
+     11 gated · 27 exempt with a stated reason · 40 RECORDED GAPS still ungated (NUTPLAN2 report, Remaining Risks).

@@ -102,9 +102,10 @@
 
 /* ---- Page planes: project the semantic slot into photographed geometry ------
  * Each plane covers the whole plate box and reveals only its measured paper
- * polygon via clip-path. A mild rotateY leans into the gutter; a mask-image fades
- * ink into the binding shadow. To draw content INTO the photo — never to draw a
- * book. */
+ * polygon via clip-path. The plane stays flat and axis-aligned: page direction is
+ * read from the asymmetric clip polygon and the binding shadow baked into the
+ * plate, never from a 3D rotation or an offscreen gutter mask. Those operations
+ * resample live text; clarity takes priority. */
 .rb-plane {
   position: absolute;
   inset: 0;
@@ -115,9 +116,14 @@
 .rb-plane__safe {
   position: absolute;
   pointer-events: auto;
-  /* The whole slot blends into the paper grain — the key "printed not web" trick. */
-  mix-blend-mode: multiply;
+  /* Keep live text out of offscreen blend buffers so glyph edges stay crisp. */
   color: var(--rb-ink-primary);
+}
+
+/* Imagery still sinks into the paper grain; live text stays in normal blend. */
+.rb-plane__safe img,
+.rb-plane__safe .rb-thumb-placeholder {
+  mix-blend-mode: multiply;
 }
 
 /* Left (verso) collection page — spine on its right, fore-edge bulge on its left. */
@@ -129,11 +135,7 @@
     18.55% 88.8%,
     16.25% 69.6%
   );
-  transform: perspective(1600px) rotateY(1.5deg);
-  transform-origin: right center;
-  /* Ink fades into the binding shadow on the spine (right) edge. */
-  -webkit-mask-image: linear-gradient(to right, #000 90%, rgba(0, 0, 0, 0.55) 100%);
-  mask-image: linear-gradient(to right, #000 90%, rgba(0, 0, 0, 0.55) 100%);
+  /* Flat plane: the photographed binding shadow supplies the gutter cue. */
 }
 .rb-plane--left .rb-plane__safe {
   left: 22.25%;
@@ -150,10 +152,7 @@
     84.9% 88.5%,
     52.2% 88.85%
   );
-  transform: perspective(1600px) rotateY(-1.5deg);
-  transform-origin: left center;
-  -webkit-mask-image: linear-gradient(to left, #000 90%, rgba(0, 0, 0, 0.55) 100%);
-  mask-image: linear-gradient(to left, #000 90%, rgba(0, 0, 0, 0.55) 100%);
+  /* Flat plane: the photographed binding shadow supplies the gutter cue. */
 }
 .rb-plane--right .rb-plane__safe {
   left: 52.65%;

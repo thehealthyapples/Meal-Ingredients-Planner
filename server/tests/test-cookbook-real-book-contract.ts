@@ -53,6 +53,7 @@ assert.match(
 );
 
 const leftPlaneRule = stageCss.match(/\.rb-plane--left\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
+const rightPlaneRule = stageCss.match(/\.rb-plane--right\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
 const leftSafeRule = stageCss.match(/\.rb-plane--left \.rb-plane__safe\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
 const thumbnailRule = stageCss.match(/\.rb-recipe-grid img, \.rb-thumb-placeholder\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
 const lowerPrintRule = stageCss.match(/\.rb-page-nav, \.rb-create, \.rb-search, \.rb-ink-actions\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
@@ -70,5 +71,22 @@ assert.match(lowerPrintRule, /font-weight:\s*600/, "Page correctness: lower-page
 const mobileSafeRule = stageCss.match(/\.rb-plane--mobile-collection \.rb-plane__safe\s*\{([\s\S]*?)\n\s*\}/g)?.at(-1) ?? "";
 assert.match(mobileSafeRule, /left:\s*24%/, "Page correctness: mobile print clears the visible stack of pages");
 assert.match(mobileSafeRule, /width:\s*65%/, "Page correctness: mobile print remains within the top sheet");
+
+// Typographic clarity: page planes stay flat and unmasked so live text is not
+// rasterised and resampled through a transformed/offscreen compositing layer.
+assert.doesNotMatch(leftPlaneRule, /rotateY|perspective\(/, "Clarity: the left page plane uses no 3D transform that softens live text");
+assert.doesNotMatch(rightPlaneRule, /rotateY|perspective\(/, "Clarity: the right page plane uses no 3D transform that softens live text");
+assert.doesNotMatch(leftPlaneRule, /mask-image/, "Clarity: the left page plane uses no offscreen gutter mask");
+assert.doesNotMatch(rightPlaneRule, /mask-image/, "Clarity: the right page plane uses no offscreen gutter mask");
+
+// The text slot stays in normal blend while photographs retain printed-on-paper
+// multiply compositing.
+const safeBaseRule = stageCss.match(/\.rb-plane__safe\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
+assert.doesNotMatch(safeBaseRule, /mix-blend-mode/, "Clarity: the text slot keeps subpixel antialiasing");
+assert.match(
+  stageCss,
+  /\.rb-plane__safe img[^{]*\{[^}]*mix-blend-mode:\s*multiply/,
+  "Print treatment: photographs still multiply into the paper",
+);
 
 console.log("cookbook real book contract: ok");
