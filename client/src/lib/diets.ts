@@ -1,4 +1,5 @@
 import { DECLARABLE_HARD_RESTRICTIONS, ONBOARDING_OTHER_VALUE } from "@shared/onboarding-restrictions";
+import { getRestrictionMatches } from "@shared/restrictions/restriction-resolver";
 
 export const DIET_PATTERNS = [
   { value: "Mediterranean", label: "Mediterranean", desc: "Olive oil, fish & veg" },
@@ -45,6 +46,29 @@ export const DIET_PATTERN_OPTIONS = [
 export const ALLERGY_INTOLERANCE_OPTIONS = DECLARABLE_HARD_RESTRICTIONS.map(
   (r) => ({ value: r.value, label: r.label }),
 );
+
+/**
+ * NSR1 follow-up (profile-label-vs-allergy trace, 2026-10-05): the canonical
+ * restriction library already tags every restriction a `tier` — `major_allergen`
+ * or `additional_restriction` — and the server already trusts that tier to tell a
+ * MAJOR ALLERGEN apart from a plain restriction in its own safety wording
+ * (`server/lib/household-dietary-safety.ts`). A stored restriction whose tier the
+ * library marks `additional_restriction` (today: meat, honey, coconut — see
+ * `shared/restrictions/restriction-library.ts`, each with an explicit "not an
+ * allergen" comment) is, by that same canonical source, "a choice, not an
+ * anaphylaxis risk" — never a declared medical allergy.
+ *
+ * A value the library cannot resolve at all stays on the cautious side here
+ * (treated as a potential allergen): this only ever reclassifies a value the
+ * safety library has already and permanently cleared, never a value it is
+ * silent on. Display-only — it changes no stored value, no enforcement, no API
+ * contract, and is exercised offline by
+ * `server/tests/test-profile-allergy-dietary-exclusion-labels.ts`.
+ */
+export function isDietaryExclusionOnly(value: string): boolean {
+  const matches = getRestrictionMatches([value]);
+  return matches.length > 0 && matches.every((m) => m.restriction.tier === "additional_restriction");
+}
 
 export const EATING_SCHEDULES = [
   { value: "None",                 label: "No preference",        desc: "Eat at any time" },

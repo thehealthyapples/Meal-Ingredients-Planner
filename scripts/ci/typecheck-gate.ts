@@ -45,6 +45,10 @@ import { fileURLToPath } from "node:url";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const BASELINE_PATH = resolve(HERE, "typecheck-baseline.json");
 const REPO_ROOT = resolve(HERE, "..", "..");
+// Resolved to a local file and invoked via process.execPath — NOT "npx", which is npx.cmd on
+// Windows and cannot be run by execFileSync without shell:true (a command-injection surface
+// we don't want to open just to shell out to tsc).
+const TSC_BIN = resolve(REPO_ROOT, "node_modules", "typescript", "bin", "tsc");
 
 interface Baseline {
   /** Human-facing note. Not read by the gate. */
@@ -79,7 +83,7 @@ function runTypecheck(): Observed {
   let output: string;
   try {
     // tsc exits non-zero whenever there is at least one error, which is the normal case here.
-    output = execFileSync("npx", ["tsc", "--noEmit"], {
+    output = execFileSync(process.execPath, [TSC_BIN, "--noEmit"], {
       cwd: REPO_ROOT,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],

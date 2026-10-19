@@ -34,7 +34,7 @@ export interface ShoppingDiscoveryStorage {
     id: number;
     productName: string | null;
     normalizedName: string | null;
-    quantity: string | null;
+    quantityValue: number | null;
     unit: string | null;
     category: string | null;
     checked: boolean | null;
@@ -75,7 +75,7 @@ export class ShoppingDiscoveryEngine implements ShoppingDiscoveryPort {
         shoppingItemId: item.id,
         name: name || normalizedName,
         normalizedName,
-        quantity: item.quantity ?? "",
+        quantityValue: item.quantityValue,
         unit: item.unit ?? "",
         category: item.category ?? "uncategorised",
         checked: item.checked ?? false,

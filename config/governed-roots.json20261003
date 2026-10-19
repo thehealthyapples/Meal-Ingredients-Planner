@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "source": "PROJECT_GOVERNANCE.md, \"The governed repository-root allowlist is exactly:\" — this file is a mechanical, machine-readable transcription of that ratified text, not an independent governance decision. It carries no authority of its own; PROJECT_GOVERNANCE.md remains authoritative. Whoever amends the allowlist in PROJECT_GOVERNANCE.md must update this file in the same change, or the two will drift.",
+  "roots": [
+    { "role": "Application", "path": "C:\\Users\\Colin\\The Healthy Apples\\GitHub\\tha-integrated-dev" },
+    { "role": "Bridge", "path": "C:\\Users\\Colin\\The Healthy Apples\\tha-chatgpt-bridge" }
+  ]
+}

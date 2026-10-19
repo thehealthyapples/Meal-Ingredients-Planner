@@ -81,6 +81,7 @@ import { sortableKeyboardCoordinates, SortableContext, verticalListSortingStrate
 import { DroppablePlannerCell, SortablePlannerEntry, MobileSortableMealEntry, MobileDayDropTarget, DroppableProvisioning, type DragItemData, type DropZoneData } from "@/components/PlannerDragDrop";
 import { PlannerMealCardContent } from "@/components/PlannerMealCard";
 import { invalidateMealLibrary } from "@/hooks/use-meals";
+import "@/styles/planner-physical.css";
 
 interface MatrixRow {
   id: string;
@@ -91,6 +92,11 @@ interface MatrixRow {
   addMealType: string;
   icon: React.ElementType;
   iconColor: string;
+  // Desktop hanging-planner presentation: Breakfast/Lunch/Dinner are the three
+  // principal rows the physical planner is built around. Every other row
+  // (snacks, drinks, kids, baby) stays fully present and functional but reads
+  // as a lighter, secondary addition rather than a fourth+ principal row.
+  isPrincipal: boolean;
 }
 
 
@@ -116,10 +122,10 @@ const MEAL_TYPES = [
 ];
 
 const BASE_MATRIX_ROWS: MatrixRow[] = [
-  { id: "breakfast", label: "Breakfast", mealType: "breakfast", audience: "adult", isDrink: false, addMealType: "breakfast", icon: Coffee, iconColor: "text-amber-500" },
-  { id: "lunch",     label: "Lunch",     mealType: "lunch",     audience: "adult", isDrink: false, addMealType: "lunch",      icon: Sun,    iconColor: "text-orange-500" },
-  { id: "dinner",    label: "Dinner",    mealType: "dinner",    audience: "adult", isDrink: false, addMealType: "dinner",     icon: Moon,   iconColor: "text-indigo-500" },
-  { id: "snacks",    label: "Snacks",    mealType: "snacks",    audience: "adult", isDrink: false, addMealType: "snacks",     icon: Cookie, iconColor: "text-green-500" },
+  { id: "breakfast", label: "Breakfast", mealType: "breakfast", audience: "adult", isDrink: false, addMealType: "breakfast", icon: Coffee, iconColor: "text-amber-500", isPrincipal: true },
+  { id: "lunch",     label: "Lunch",     mealType: "lunch",     audience: "adult", isDrink: false, addMealType: "lunch",      icon: Sun,    iconColor: "text-orange-500", isPrincipal: true },
+  { id: "dinner",    label: "Dinner",    mealType: "dinner",    audience: "adult", isDrink: false, addMealType: "dinner",     icon: Moon,   iconColor: "text-indigo-500", isPrincipal: true },
+  { id: "snacks",    label: "Snacks",    mealType: "snacks",    audience: "adult", isDrink: false, addMealType: "snacks",     icon: Cookie, iconColor: "text-green-500", isPrincipal: false },
 ];
 
 function findEntry(entries: PlannerEntry[], mealType: string, audience: string, isDrink: boolean = false): PlannerEntry | undefined {
@@ -1675,17 +1681,17 @@ export default function WeeklyPlannerPage() {
   const visibleRows = useMemo((): MatrixRow[] => {
     const rows: MatrixRow[] = [...BASE_MATRIX_ROWS];
     if (plannerSettings?.enableDrinks) {
-      rows.push({ id: "drinks", label: "Drinks", mealType: undefined, audience: "adult", isDrink: true, addMealType: "snacks", icon: Wine, iconColor: "text-purple-400" });
+      rows.push({ id: "drinks", label: "Drinks", mealType: undefined, audience: "adult", isDrink: true, addMealType: "snacks", icon: Wine, iconColor: "text-purple-400", isPrincipal: false });
     }
     if (plannerSettings?.enableChildMeals) {
-      rows.push({ id: "child-breakfast", label: "Kids Breakfast", mealType: "breakfast", audience: "child", isDrink: false, addMealType: "breakfast", icon: PersonStanding, iconColor: "text-sky-500" });
-      rows.push({ id: "child-lunch",     label: "Kids Lunch",     mealType: "lunch",     audience: "child", isDrink: false, addMealType: "lunch",     icon: PersonStanding, iconColor: "text-sky-500" });
-      rows.push({ id: "child-dinner",    label: "Kids Dinner",    mealType: "dinner",    audience: "child", isDrink: false, addMealType: "dinner",    icon: PersonStanding, iconColor: "text-sky-500" });
+      rows.push({ id: "child-breakfast", label: "Kids Breakfast", mealType: "breakfast", audience: "child", isDrink: false, addMealType: "breakfast", icon: PersonStanding, iconColor: "text-sky-500", isPrincipal: false });
+      rows.push({ id: "child-lunch",     label: "Kids Lunch",     mealType: "lunch",     audience: "child", isDrink: false, addMealType: "lunch",     icon: PersonStanding, iconColor: "text-sky-500", isPrincipal: false });
+      rows.push({ id: "child-dinner",    label: "Kids Dinner",    mealType: "dinner",    audience: "child", isDrink: false, addMealType: "dinner",    icon: PersonStanding, iconColor: "text-sky-500", isPrincipal: false });
     }
     if (plannerSettings?.enableBabyMeals) {
-      rows.push({ id: "baby-breakfast", label: "Baby Breakfast", mealType: "breakfast", audience: "baby", isDrink: false, addMealType: "breakfast", icon: Baby, iconColor: "text-pink-500" });
-      rows.push({ id: "baby-lunch",     label: "Baby Lunch",     mealType: "lunch",     audience: "baby", isDrink: false, addMealType: "lunch",     icon: Baby, iconColor: "text-pink-500" });
-      rows.push({ id: "baby-dinner",    label: "Baby Dinner",    mealType: "dinner",    audience: "baby", isDrink: false, addMealType: "dinner",    icon: Baby, iconColor: "text-pink-500" });
+      rows.push({ id: "baby-breakfast", label: "Baby Breakfast", mealType: "breakfast", audience: "baby", isDrink: false, addMealType: "breakfast", icon: Baby, iconColor: "text-pink-500", isPrincipal: false });
+      rows.push({ id: "baby-lunch",     label: "Baby Lunch",     mealType: "lunch",     audience: "baby", isDrink: false, addMealType: "lunch",     icon: Baby, iconColor: "text-pink-500", isPrincipal: false });
+      rows.push({ id: "baby-dinner",    label: "Baby Dinner",    mealType: "dinner",    audience: "baby", isDrink: false, addMealType: "dinner",    icon: Baby, iconColor: "text-pink-500", isPrincipal: false });
     }
     return rows;
   }, [plannerSettings]);
@@ -1853,6 +1859,7 @@ export default function WeeklyPlannerPage() {
       title="Planner"
       realm="planner"
       wide
+      className="planner-workspace-header"
       titleTestId="text-weekly-planner-title"
       search={{
         placeholder: "Search meals...",
@@ -2049,7 +2056,13 @@ export default function WeeklyPlannerPage() {
         </DropdownMenu>
       }
     />
-    <div className={pageContainerClass(true)} data-realm="planner">
+    <div className={`${pageContainerClass(true)} planner-physical-surface`} data-realm="planner">
+      <img
+        className="planner-physical-photo"
+        src="/images/planner/PLANNER_TARGET_BLANK_ACCEPTED.png"
+        alt=""
+        aria-hidden="true"
+      />
       <DndContext
         sensors={dndSensors}
         collisionDetection={mobileFriendlyCollision}
@@ -2464,7 +2477,7 @@ export default function WeeklyPlannerPage() {
             </div>
 
             {/* ── Desktop Matrix Grid (hidden on mobile) ── */}
-            <div className="hidden sm:block overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 mb-6">
+            <div className="planner-physical-grid hidden sm:block overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 mb-6">
               <div style={{ minWidth: "900px" }}>
                 <Card className="overflow-hidden">
                   <div
@@ -2516,15 +2529,18 @@ export default function WeeklyPlannerPage() {
                       // own `visibleRows.map`, so this adopts the file's own convention.
                       return (
                         <Fragment key={row.id}>
-                          {/* Row label - sticky left */}
+                          {/* Row label - sticky left. Breakfast/Lunch/Dinner read as the three
+                              principal rows of the hanging planner; every other row (snacks,
+                              drinks, kids, baby) stays fully present but reads as a lighter,
+                              secondary addition rather than a fourth+ principal row. */}
                           <div
                             key={row.id + "-label"}
-                            className={`flex flex-col justify-center px-2 py-1.5 border-r border-border/60 sticky left-0 z-10 group ${!isLastRow ? "border-b border-border/60" : ""}`}
+                            className={`flex flex-col justify-center px-2 border-r border-border/60 sticky left-0 z-10 group ${row.isPrincipal ? "py-2.5" : "py-1"} ${!isLastRow ? "border-b border-border/60" : ""}`}
                             style={{ backgroundColor: "hsl(var(--background))" }}
                           >
                             <div className="flex items-center gap-1">
-                              <RowIcon className={`h-3.5 w-3.5 flex-shrink-0 ${row.iconColor}`} />
-                              <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">{row.label}</span>
+                              <RowIcon className={`${row.isPrincipal ? "h-3.5 w-3.5" : "h-3 w-3"} flex-shrink-0 ${row.iconColor}`} />
+                              <span className={`whitespace-nowrap ${row.isPrincipal ? "text-xs font-medium text-muted-foreground" : "text-[11px] font-normal text-muted-foreground/70"}`}>{row.label}</span>
                             </div>
                             {row.mealType && (
                               <Tooltip>
@@ -2557,7 +2573,7 @@ export default function WeeklyPlannerPage() {
                                 mealType={row.mealType ?? row.addMealType}
                                 audience={row.audience}
                                 isDrink={row.isDrink}
-                                className={`relative p-2 min-h-[68px] flex flex-col gap-0.5 border-l border-border/60 ${!isLastRow ? "border-b border-border/60" : ""}`}
+                                className={`relative p-2 flex flex-col gap-0.5 border-l border-border/60 ${row.isPrincipal ? "min-h-[68px]" : "min-h-[40px]"} ${!isLastRow ? "border-b border-border/60" : ""}`}
                                 data-testid={`cell-${row.id}-${day.dayOfWeek}`}
                               >
                                 {/* Meal name pills — each slot is its own sortable context for within-slot reorder */}

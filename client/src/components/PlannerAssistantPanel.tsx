@@ -1894,7 +1894,7 @@ export function PlannerAssistantPanel({
   if (!mode) {
     return (
       <aside
-        className="shrink-0 w-[244px] sticky top-28 mt-4 self-start rounded-xl flex flex-col max-h-[calc(100vh-6rem)] overflow-hidden"
+        className="shrink-0 w-[244px] sticky top-28 mt-4 self-start rounded-xl flex flex-col max-h-[calc(100dvh-11.5rem)] overflow-hidden"
         style={{ border: "1px solid var(--realm-border)", background: "var(--realm-bg)" }}
         data-testid="panel-planner-assistant-idle"
       >
@@ -1923,7 +1923,7 @@ export function PlannerAssistantPanel({
   // ── Desktop: active assistant sidebar ────────────────────────────────────
   return (
     <aside
-      className="shrink-0 w-[244px] sticky top-28 mt-4 self-start rounded-xl flex flex-col max-h-[calc(100vh-6rem)] overflow-hidden"
+      className="shrink-0 w-[244px] sticky top-28 mt-4 self-start rounded-xl flex flex-col max-h-[calc(100dvh-11.5rem)] overflow-hidden"
       style={{ border: "1px solid var(--realm-border)", background: "var(--realm-bg)" }}
       data-testid="panel-planner-assistant"
     >

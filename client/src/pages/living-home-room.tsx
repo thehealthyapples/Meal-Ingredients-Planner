@@ -10,11 +10,13 @@
  *
  * Ownership unchanged: Living Objects own inventory/selection/shopping intent; the
  * Shopping domain decides purchase quantity; the Companion (Apple) owns knowledge.
- * Drag is an enhancement, never the only way — every object also opens a small
- * in-place action bar (tap / keyboard).
+ * Objects carry no buttons and no action bar of any kind; the keyboard sensor
+   (space to lift, arrows to carry) drives the same three destinations as
+   pointer/touch drag.
  */
 import "./living-home-room.css";
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   DndContext, DragOverlay, PointerSensor, TouchSensor, KeyboardSensor, useSensor, useSensors,
@@ -37,13 +39,10 @@ import imgChia from "@/assets/living-home/larder/jars/tha-larder-jar-chia-seeds.
 import fMilk from "@/assets/living-home/larder/fridge/tha-fridge-milk.png";
 import fJuice from "@/assets/living-home/larder/fridge/tha-fridge-juice.png";
 import fKetchup from "@/assets/living-home/larder/fridge/tha-fridge-ketchup.png";
-import fMustard from "@/assets/living-home/larder/fridge/tha-fridge-mustard.png";
 import fMayo from "@/assets/living-home/larder/fridge/tha-fridge-mayonnaise.png";
 import fPickles from "@/assets/living-home/larder/fridge/tha-fridge-pickles.png";
-import fButter from "@/assets/living-home/larder/fridge/tha-fridge-butter.png";
 import fCheese from "@/assets/living-home/larder/fridge/tha-fridge-cheese.png";
 import fYoghurt from "@/assets/living-home/larder/fridge/tha-fridge-yoghurt.png";
-import fLeftovers from "@/assets/living-home/larder/fridge/tha-fridge-leftovers.png";
 import fBerries from "@/assets/living-home/larder/fridge/tha-fridge-berries.png";
 import fGrapes from "@/assets/living-home/larder/fridge/tha-fridge-grapes.png";
 import fTomatoes from "@/assets/living-home/larder/fridge/tha-fridge-tomatoes.png";
@@ -52,25 +51,40 @@ import fPepper from "@/assets/living-home/larder/fridge/tha-fridge-pepper.png";
 import fRadishes from "@/assets/living-home/larder/fridge/tha-fridge-radishes.png";
 import fLettuce from "@/assets/living-home/larder/fridge/tha-fridge-lettuce.png";
 import fSpringOnions from "@/assets/living-home/larder/fridge/tha-fridge-spring-onions.png";
+import fCheddar from "@/assets/living-home/larder/fridge/tha-fridge-cheddar.png";
+import fAppleJuice from "@/assets/living-home/larder/fridge/tha-fridge-apple-juice.png";
+import fBbqSauce from "@/assets/living-home/larder/fridge/tha-fridge-bbq-sauce.png";
+import fJalapenos from "@/assets/living-home/larder/fridge/tha-fridge-jalapenos.png";
+import fOlives from "@/assets/living-home/larder/fridge/tha-fridge-olives.png";
+import fCream from "@/assets/living-home/larder/fridge/tha-fridge-cream.png";
 
 // Each object: its canonical home on the empty fridge (x centre %, y BASE %, height %).
-interface PlacedObject { name: string; src: string; x: number; y: number; h: number; reflect?: boolean; }
+// Boxy items (cartons/blocks) belong on the front-facing shelves; door bins take
+// only round bottles/jars (which read the same at the door's raked angle).
+interface PlacedObject { name: string; src: string; x: number; y: number; h: number; }
+// Household layout (owner-specified). Door bins take ONLY round bottles/jars —
+// they read correctly at the raked open-door angle; boxy items would not.
+// Left-door bin fronts sit at base y≈33.5 / 47 / 61; likewise the right door.
 const FRIDGE_OBJECTS: PlacedObject[] = [
-  // Geometry measured from the arrival-derived, step-closer plate.
-  // door — left bins (white moulded; bases tuck behind the bin fronts)
-  // Sizes rebalanced to real proportions and to counter the +1.2 step-zoom.
-  { name: "Milk", src: fMilk, x: 29, y: 34, h: 13.5 }, { name: "Juice", src: fJuice, x: 29, y: 47.5, h: 12.5 },
-  // door — right bins (one condiment per bin; pickles in the lowest)
-  { name: "Ketchup", src: fKetchup, x: 69.5, y: 22.5, h: 12.5 }, { name: "Mustard", src: fMustard, x: 69.5, y: 33.5, h: 9.5 },
-  { name: "Mayonnaise", src: fMayo, x: 69.5, y: 47.5, h: 8.5 }, { name: "Pickles", src: fPickles, x: 69.5, y: 62, h: 9 },
-  // glass shelves (front edges at y≈24 and y≈34.7)
-  { name: "Leftovers", src: fLeftovers, x: 41, y: 24, h: 7, reflect: true }, { name: "Yoghurt", src: fYoghurt, x: 55, y: 24, h: 7, reflect: true },
-  { name: "Cheese", src: fCheese, x: 43, y: 34.5, h: 6.2, reflect: true }, { name: "Butter", src: fButter, x: 55, y: 34.5, h: 4.6, reflect: true },
-  // salad crisper (left clear drawer)
+  // LEFT DOOR — the drinks (base sits at the bin-holder TOP so the label clears it)
+  { name: "Orange juice", src: fJuice, x: 29, y: 30, h: 10.5 },
+  { name: "Apple juice", src: fAppleJuice, x: 29, y: 43.5, h: 10.5 },
+  { name: "Milk", src: fMilk, x: 29, y: 57, h: 12 },
+  // RIGHT DOOR — sauces in a line down the lower bins
+  { name: "Ketchup", src: fKetchup, x: 69.5, y: 30, h: 10.5 },
+  { name: "Mayonnaise", src: fMayo, x: 69.5, y: 43.5, h: 8.5 },
+  { name: "BBQ sauce", src: fBbqSauce, x: 69.5, y: 57, h: 10 },
+  // TOP SHELF — jars sit BACK on the glass surface, not on the front rail (rail y≈23.6)
+  { name: "Pickles", src: fPickles, x: 40, y: 23, h: 8 }, { name: "Jalapeños", src: fJalapenos, x: 50, y: 23, h: 8 }, { name: "Olives", src: fOlives, x: 60, y: 23, h: 8 },
+  // SECOND SHELF — cheese sits back on the surface (rail y≈34.0)
+  { name: "Cheese", src: fCheese, x: 44, y: 33.3, h: 6.6 }, { name: "Cheddar", src: fCheddar, x: 56, y: 33.3, h: 6.4 },
+  // THIRD SHELF — yoghurt & cream sit back on the surface (rail y≈44.1)
+  { name: "Yoghurt", src: fYoghurt, x: 44, y: 43.3, h: 7 }, { name: "Cream", src: fCream, x: 56, y: 43.3, h: 5.5 },
+  // LEFT CRISPER — salad veg
   { name: "Lettuce", src: fLettuce, x: 45, y: 60, h: 7 }, { name: "Tomatoes", src: fTomatoes, x: 38, y: 59.5, h: 5.2 },
   { name: "Pepper", src: fPepper, x: 36.5, y: 61, h: 6 }, { name: "Cucumber", src: fCucumber, x: 42, y: 55.5, h: 3.8 },
   { name: "Radishes", src: fRadishes, x: 48, y: 59, h: 4.6 }, { name: "Spring onions", src: fSpringOnions, x: 41, y: 61, h: 4 },
-  // fruit crisper (right clear drawer)
+  // RIGHT CRISPER — fruit
   { name: "Berries", src: fBerries, x: 54, y: 59.5, h: 5 }, { name: "Grapes", src: fGrapes, x: 59, y: 61, h: 6.5 },
 ];
 
@@ -265,9 +279,12 @@ function DropSpot({ kind, className, dragging, title, sub, children, testid }: {
 
 export default function LivingHomeRoom() {
   type Level = "arrival" | "shelves" | "category" | "zone" | "zone-category";
-  const [level, setLevel] = useState<Level>("arrival");
+  const [location, setLocation] = useLocation();
+  const preview = location === "/pantry/shelves-preview" ? "shelves"
+    : location === "/pantry/cupboard-preview" ? "cupboard" : null;
+  const [level, setLevel] = useState<Level>(() => preview === "shelves" ? "shelves" : preview === "cupboard" ? "zone" : "arrival");
   const [groupId, setGroupId] = useState<string | null>(null);
-  const [zoneId, setZoneId] = useState<string | null>(null);
+  const [zoneId, setZoneId] = useState<string | null>(() => preview === "cupboard" ? "cupboard" : null);
   const [zoneCatId, setZoneCatId] = useState<string | null>(null);
   const [removed, setRemoved] = useState<Set<string>>(new Set());  // dragged to the bin
   const [navOpen, setNavOpen] = useState(false);                    // Areas navigator (collapsed inside a Working Position)
@@ -298,7 +315,10 @@ export default function LivingHomeRoom() {
   const openGroup = (id: string) => { setGroupId(id); setLevel("category"); };
   const openZone = (id: string) => { setZoneId(id); setZoneCatId(null); setLevel("zone"); };
   const openZoneCat = (id: string) => { setZoneCatId(id); setLevel("zone-category"); };
-  const goToArea = (id: string) => { id === "arrival" ? goArrival() : id === "shelves" ? goShelves() : openZone(id); };
+  const goToArea = (id: string) => {
+    if (id === "fridge") { setLocation("/pantry/fridge-preview"); return; }
+    id === "arrival" ? goArrival() : id === "shelves" ? goShelves() : openZone(id);
+  };
 
   // ── The three universal object gestures ─────────────────────────────────────
   const toShopping = async (name: string) => {
@@ -326,7 +346,7 @@ export default function LivingHomeRoom() {
   };
   const isRemoved = (name: string) => removed.has(productOf(name));
 
-  // ── Drag orchestration (pointer + touch; keyboard/tap served by the bar) ────
+  // ── Drag orchestration (pointer + touch; keyboard sensor below, no action bar) ─
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 6 } }),
@@ -416,7 +436,7 @@ export default function LivingHomeRoom() {
             <>
               <div className="lh-layer" key="fridge-objects">
                 {FRIDGE_OBJECTS.filter(o => !isRemoved(o.name)).map(o => (
-                  <LivingObject key={o.name} id={`obj-${slug(o.name)}`} name={o.name} product={o.name} src={o.src} variant="fridge" hint={false} reflect={o.reflect}
+                  <LivingObject key={o.name} id={`obj-${slug(o.name)}`} name={o.name} product={o.name} src={o.src} variant="fridge" hint={false}
                     style={{ left: `${o.x}%`, top: `${o.y - o.h}%`, height: `${o.h}%`, transform: "translate(-50%,0)" }} />
                 ))}
               </div>

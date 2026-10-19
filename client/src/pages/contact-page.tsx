@@ -252,6 +252,9 @@ export default function ContactPage() {
                 onChange={(e) => setSubject(e.target.value)}
                 data-testid="input-contact-subject"
               />
+              <p className="text-xs text-muted-foreground" data-testid="text-contact-subject-count">
+                {subject.length} of {limits.subjectMax} characters
+              </p>
             </div>
 
             <div className="space-y-2">

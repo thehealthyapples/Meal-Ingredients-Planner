@@ -34,15 +34,17 @@ assert.match(pageSource, /queryKey:\s*\["\/api\/freezer"\]/, "Real Book reads ca
 assert.match(pageSource, /setIncludeWeb\(sourceFilter === "all" \|\| sourceFilter === "internet"\)/, "All and Internet filters activate public-web search");
 assert.doesNotMatch(pageSource, /setQuery\(""\).*setSourceFilter|setSourceFilter.*setQuery\(""\)/s, "Source filters never clear the current query");
 assert.doesNotMatch(pageSource, /Create your own/, "The lower recipe action line contains no unnecessary promotional heading");
-const createPosition = pageSource.indexOf("New recipe:");
+const createPosition = pageSource.indexOf("Do you have inspiration for a new recipe?");
 const createButtonPosition = pageSource.indexOf(">Create</button>", createPosition);
 const importButtonPosition = pageSource.indexOf(">Import</button>", createButtonPosition);
 const scanButtonPosition = pageSource.indexOf(">Scan</button>", importButtonPosition);
-assert.ok(createPosition >= 0 && createButtonPosition > createPosition && importButtonPosition > createButtonPosition && scanButtonPosition > importButtonPosition, "The lower action line uses the concise New recipe: Create Import Scan wording");
+assert.ok(createPosition >= 0 && createButtonPosition > createPosition && importButtonPosition > createButtonPosition && scanButtonPosition > importButtonPosition, "The inspiration line uses Create Import Scan wording");
 const searchPosition = pageSource.indexOf('className="rb-search"');
-assert.ok(createPosition >= 0 && searchPosition > createPosition, "Search is semantically after the concise New recipe line at the approved bottom-left");
-assert.match(pageSource, /const PAGE_SIZE = 6;/, "compact page shows six recipes without internal scrolling");
-assert.match(pageSource, /openCompanion\(\)/, "recipe offers a keyboard-accessible Companion action");
+assert.ok(createPosition >= 0 && searchPosition > createPosition, "Search follows directly after the inspiration line");
+assert.match(pageSource, /const PAGE_SIZE = 12;/, "collection fetches enough recipes for responsive grid layouts");
+assert.match(pageSource, /usePublishCompanionContext/, "the page preserves the existing Companion integration");
+assert.doesNotMatch(pageSource, /rb-ink-action--read|rb-ink-action--companion|Ask Companion about this recipe/, "recipe page no longer duplicates full-recipe or Companion actions in the lower ink area");
+assert.match(pageSource, /CalendarDays/, "recipe page exposes a planner icon action");
 assert.doesNotMatch(pageSource, /aspect-\[4\/3\].*No photograph yet/, "missing photos do not become a large white web panel");
 
 const stageSource = readFileSync(path.resolve(here, "../../client/src/components/cookbook-real-book/RealBookStage.tsx"), "utf8");
@@ -92,9 +94,13 @@ assert.match(searchRule, /margin-top:\s*\.7em/, "The search field has breathing 
 assert.match(searchInputRule, /border:\s*1px solid/, "The complete search outline remains visible when the field is not focused");
 assert.match(searchInputRule, /border-radius:\s*6px/, "The search box has softly rounded corners");
 assert.match(searchPlaceholderRule, /color:\s*rgba\([^)]*,\s*\.58\)/, "The in-field search guidance is deliberately fainter than entered text");
-const mobileSafeRule = stageCss.match(/\.rb-plane--mobile-collection \.rb-plane__safe\s*\{([\s\S]*?)\n\s*\}/g)?.at(-1) ?? "";
-assert.match(mobileSafeRule, /left:\s*24%/, "Page correctness: mobile print clears the visible stack of pages");
-assert.match(mobileSafeRule, /width:\s*65%/, "Page correctness: mobile print remains within the top sheet");
+const mobileSafeRules = (stageCss.match(/\.rb-plane--mobile-collection \.rb-plane__safe\s*\{([\s\S]*?)\n\s*\}/g) ?? []).filter((rule) => /left:/.test(rule));
+const mobileSafeRule = mobileSafeRules[0] ?? "";
+const wideMobileSafeRule = mobileSafeRules.at(-1) ?? "";
+assert.match(mobileSafeRule, /left:\s*24%/, "Page correctness: narrow mobile print clears the visible stack of pages");
+assert.match(mobileSafeRule, /width:\s*65%/, "Page correctness: narrow mobile print remains within the top sheet");
+assert.match(wideMobileSafeRule, /left:\s*20%/, "Page correctness: wide mobile collection print aligns with the photographed paper");
+assert.match(wideMobileSafeRule, /width:\s*36%/, "Page correctness: wide mobile collection print stays inside the paper edge");
 
 // Typographic clarity: page planes stay flat and unmasked so live text is not
 // rasterised and resampled through a transformed/offscreen compositing layer.
@@ -133,34 +139,24 @@ assert.match(webResultsSourceRule, /var\(--rb-ink-muted\)/, "Spacing: trusted re
 assert.doesNotMatch(safeBaseRule, /clamp\(11px,/, "Scope: trusted-region type does not alter the global page slot");
 
 // Curved lower-right recipe actions ------------------------------------------
-// The three recipe actions must each be individually addressable, grouped under
-// a dedicated curved-layout marker, and placed as distinct staggered points on
-// the lower-page curve rather than one straight flex toolbar — while staying
-// flat/crisp (no page-level 3D) and flattening to a safe compact flow on mobile.
+// Recipe actions live in a dedicated dock. The recipe reads continuously as
+// a physical book page: there is no artificial "Page 2" pagination footer.
+// (Governance reconciliation 2026-08-20: the approved decision requires
+// continuous physical-book reading; the prior assertion requiring a visible
+// pagination footer was stale relative to that decision and is replaced
+// with a positive assertion of the approved continuous-reading outcome.)
 assert.match(pageSource, /className="rb-ink-actions rb-ink-actions--curved"/, "Actions carry a dedicated curved-layout marker");
-assert.match(pageSource, /className="rb-ink-action rb-ink-action--read"/, "Read action is individually addressable");
-assert.match(pageSource, /className="rb-ink-action rb-ink-action--planner"/, "Add to Planner action is individually addressable");
-assert.match(pageSource, /className="rb-ink-action rb-ink-action--companion"/, "Companion action is individually addressable");
+assert.match(pageSource, /className="rb-recipe-action-dock"/, "Recipe actions have a dedicated dock");
+assert.doesNotMatch(pageSource, /Page 2/, "Recipe page reads continuously with no artificial pagination footer");
+assert.match(pageSource, /className="rb-recipe-action-item"[\s\S]*Add to Planner/, "Add to Planner action is individually addressable");
+assert.doesNotMatch(pageSource, /className="rb-ink-action rb-ink-action--read"|className="rb-ink-action rb-ink-action--companion"/, "Read and Companion lower actions are removed from the curved actions row");
 
 const inkActionsCurvedRule = stageCss.match(/\.rb-ink-actions--curved\s*\{([^}]*)\}/)?.[1] ?? "";
-const readActionRule = stageCss.match(/\.rb-ink-action--read\s*\{([\s\S]*?)\n?\}/)?.[1] ?? "";
-const plannerActionRule = stageCss.match(/\.rb-ink-action--planner\s*\{([\s\S]*?)\n?\}/)?.[1] ?? "";
-const companionActionRule = stageCss.match(/\.rb-ink-action--companion\s*\{([\s\S]*?)\n?\}/)?.[1] ?? "";
-assert.match(inkActionsCurvedRule, /position:\s*relative/, "Curved layout establishes a positioning context for the arc");
-assert.doesNotMatch(inkActionsCurvedRule, /display:\s*flex/, "Curved layout is not one straight flex row");
-assert.match(readActionRule, /transform:/, "Read action has its own point on the curve");
-assert.match(plannerActionRule, /transform:/, "Planner action has its own point on the curve");
-assert.match(companionActionRule, /transform:/, "Companion action has its own point on the curve");
-assert.ok(
-  readActionRule.trim() !== plannerActionRule.trim() &&
-    plannerActionRule.trim() !== companionActionRule.trim() &&
-    readActionRule.trim() !== companionActionRule.trim(),
-  "Each action sits at a distinct staggered placement, not an identical flex slot",
-);
+const recipeDockRule = stageCss.match(/\.rb-recipe-action-dock\s*\{([^}]*)\}/)?.[1] ?? "";
+assert.match(inkActionsCurvedRule, /position:\s*absolute/, "Curved action layer is independently anchored to the page");
+assert.match(recipeDockRule, /position:\s*absolute/, "Recipe actions are positioned independently of content flow");
+assert.match(recipeDockRule, /bottom:\s*1\.65em/, "Recipe actions sit near the page bottom");
 assert.doesNotMatch(inkActionsCurvedRule, /perspective\(|rotateY/, "Clarity: curved actions use no whole-page 3D transform on live text");
-assert.doesNotMatch(readActionRule, /perspective\(|rotateY/, "Clarity: read action text stays crisp");
-assert.doesNotMatch(plannerActionRule, /perspective\(|rotateY/, "Clarity: planner action text stays crisp");
-assert.doesNotMatch(companionActionRule, /perspective\(|rotateY/, "Clarity: companion action text stays crisp");
 
 // The file holds two `@media (max-width: 900px)` blocks, so target the mobile
 // override rules directly: the second `.rb-ink-actions--curved` rule and the
@@ -168,7 +164,7 @@ assert.doesNotMatch(companionActionRule, /perspective\(|rotateY/, "Clarity: comp
 const mobileCurvedRule = stageCss.match(/\.rb-ink-actions--curved\s*\{[^}]*\}/g)?.at(-1) ?? "";
 const mobileActionRule = stageCss.match(/\.rb-ink-actions--curved \.rb-ink-action\s*\{[^}]*\}/g)?.at(-1) ?? "";
 assert.match(mobileCurvedRule, /display:\s*flex/, "Mobile restores a safe compact flow for the actions");
-assert.match(mobileCurvedRule, /position:\s*static/, "Mobile drops the arc positioning context");
+assert.match(mobileCurvedRule, /position:\s*absolute/, "Mobile keeps actions anchored above the fixed footer");
 assert.match(mobileActionRule, /transform:\s*none/, "Mobile drops the per-action arc transforms so cramped curvature is avoided");
 
 console.log("cookbook real book contract: ok");

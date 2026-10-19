@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Larder — Food-group shelves (Concept A · shelf-first)</title>
+<style>
+/* Orchard palette (from _palette.css — hues are law) */
+:root{
+  --plaster:hsl(36 46% 94%); --plaster-deep:hsl(34 34% 89%); --surface:hsl(39 62% 96%);
+  --oak:hsl(43 40% 62%); --oak-mid:hsl(43 44% 46%); --oak-edge:hsl(45 40% 28%);
+  --ink:hsl(70 30% 13%); --ink-body:hsl(64 16% 26%); --ink-quiet:hsl(52 10% 44%);
+  --leaf:hsl(74 34% 24%); --leaf-lift:hsl(74 26% 33%);
+  --gold:hsl(43 62% 47%); --gold-quiet:hsl(43 46% 72%);
+  --hair:hsl(38 24% 82%);
+  --shade-2:0 2px 10px hsl(56 40% 9% / .08), 0 1px 2px hsl(56 40% 9% / .06);
+  --shade-3:0 12px 40px hsl(56 40% 9% / .13), 0 2px 6px hsl(56 40% 9% / .07);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1536px;height:1024px}
+body{
+  font-family:"Nunito Sans",-apple-system,system-ui,sans-serif;
+  color:var(--ink-body);
+  /* plaster wall with morning sun from the upper-right */
+  background:
+    radial-gradient(120% 90% at 88% -8%, hsl(39 70% 97%) 0%, transparent 46%),
+    linear-gradient(178deg, var(--plaster) 0%, var(--plaster-deep) 100%);
+  overflow:hidden;
+}
+.serif{font-family:"Fraunces",Georgia,"Times New Roman",serif}
+
+/* ── header ─────────────────────────────────────────────── */
+header{
+  height:74px; display:flex; align-items:center; gap:18px;
+  padding:0 40px; border-bottom:1px solid var(--hair);
+}
+.mark{width:26px;height:26px;border-radius:50%;
+  background:radial-gradient(circle at 34% 30%, var(--gold) 0 46%, var(--leaf) 47% 100%);
+  box-shadow:inset 0 0 0 1px hsl(43 40% 40% / .25)}
+.brand{font-size:14px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink);font-weight:700}
+.crumb{margin-left:6px;color:var(--ink-quiet);font-size:13px;letter-spacing:.06em}
+.crumb b{color:var(--ink-body);font-weight:700}
+.search{margin-left:auto;display:flex;align-items:center;gap:8px;
+  background:var(--surface);border:1px solid var(--hair);border-radius:999px;
+  padding:8px 16px;color:var(--ink-quiet);font-size:13px;min-width:230px;box-shadow:var(--shade-2)}
+.legend{display:flex;gap:16px;font-size:12px;color:var(--ink-quiet);align-items:center}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:-1px}
+.dot.good{background:var(--leaf-lift)} .dot.low{background:var(--gold)} .dot.out{background:var(--hair)}
+
+/* ── the shelf wall ─────────────────────────────────────── */
+.wall{padding:12px 40px 6px}
+.shelf{position:relative;height:186px;display:flex;align-items:flex-end}
+
+/* food-group hierarchy — the category rail on the left */
+.cat{width:150px;flex:none;padding-bottom:64px}
+.cat .name{color:var(--ink);letter-spacing:.01em}
+.cat .name.serif{font-weight:600;font-size:23px;line-height:1.05}
+.cat .meta{margin-top:4px;font-size:12px;color:var(--ink-quiet);letter-spacing:.04em;text-transform:uppercase}
+.cat .rule{margin-top:11px;width:34px;height:3px;border-radius:2px;background:var(--gold-quiet)}
+
+/* the run of products + the timber board */
+.run{flex:1;position:relative;height:100%}
+
+/* the timber shelf board: lit top surface + label-carrying fascia */
+.board{position:absolute;left:-12px;right:-40px;bottom:0;height:54px}
+.board .top{position:absolute;left:0;right:0;top:0;height:11px;border-radius:4px 4px 0 0;
+  background:linear-gradient(180deg, hsl(43 47% 74%) 0%, var(--oak) 100%);
+  box-shadow:0 1px 0 hsl(43 40% 82%) inset, 0 -1px 3px hsl(45 40% 20% / .12)}
+.board .fascia{position:absolute;left:0;right:0;top:10px;bottom:0;border-radius:0 0 5px 5px;
+  background:linear-gradient(180deg, var(--oak-mid) 0%, var(--oak-edge) 100%);box-shadow:var(--shade-3)}
+.board .fascia::after{content:"";position:absolute;inset:0;border-radius:0 0 5px 5px;opacity:.45;
+  background:repeating-linear-gradient(90deg, hsl(43 40% 30% / 0) 0 30px, hsl(43 40% 20% / .16) 31px 33px)}
+
+/* jars SIT on the top surface (base at the shelf) */
+.products{position:absolute;left:0;right:0;bottom:47px;display:flex;justify-content:space-between;align-items:flex-end;padding:0 12px}
+.product{width:150px;display:flex;justify-content:center}
+.jar{height:122px;width:auto;display:block;filter:drop-shadow(0 5px 4px hsl(45 45% 18% / .34))}
+
+/* labels: paper tags clipped to the shelf fascia, one centred under each jar */
+.tags{position:absolute;left:0;right:0;bottom:9px;height:38px;display:flex;justify-content:space-between;padding:0 12px}
+.tagslot{width:150px;display:flex;justify-content:center}
+.tag{background:var(--surface);border:1px solid var(--hair);border-radius:7px;
+  padding:5px 13px;box-shadow:var(--shade-2);text-align:center;min-width:106px;line-height:1.12}
+.tag .n{display:block;font-size:13px;font-weight:800;color:var(--ink);letter-spacing:.01em}
+.tag .q{display:block;font-size:11px;color:var(--ink-quiet);margin-top:1px}
+.tag .q .dot{margin-right:5px}
+</style>
+</head>
+<body>
+  <header>
+    <span class="mark"></span>
+    <span class="brand">The Healthy Apples</span>
+    <span class="crumb">· <b>The Larder</b></span>
+    <span class="search">⌕&nbsp; Find in the larder…</span>
+    <span class="legend" style="margin-left:22px">
+      <span><span class="dot good"></span>Stocked</span>
+      <span><span class="dot low"></span>Running low</span>
+      <span><span class="dot out"></span>Out</span>
+    </span>
+  </header>
+  <main class="wall" id="wall"></main>
+
+<script>
+const J = "../../client/src/assets/living-home/larder/jars/tha-larder-jar-";
+const SHELVES = [
+  { cat:"Grains", meta:"5 kinds", items:[
+    ["rolled-oats","Rolled oats","2 jars","good"],
+    ["pearl-barley","Pearl barley","Running low","low"],
+    ["couscous","Couscous","1 jar","good"],
+    ["quinoa","Quinoa","Half a jar","good"],
+    ["granola","Granola","Full","good"],
+  ]},
+  { cat:"Pulses", meta:"6 kinds", items:[
+    ["dried-chickpeas","Chickpeas","2 jars","good"],
+    ["red-lentils","Red lentils","Full","good"],
+    ["green-lentils","Green lentils","Half a jar","good"],
+    ["kidney-beans","Kidney beans","1 jar","good"],
+    ["cannellini-beans","Cannellini","Out","out"],
+    ["black-beans","Black beans","Running low","low"],
+  ]},
+  { cat:"Rice & pasta", meta:"5 kinds", items:[
+    ["white-rice","White rice","3 jars","good"],
+    ["brown-rice","Brown rice","1 jar","good"],
+    ["white-penne","Penne","Full","good"],
+    ["white-fusilli","Fusilli","Running low","low"],
+    ["wholemeal-penne","Wholemeal penne","Half a jar","good"],
+  ]},
+  { cat:"Flours & baking", meta:"5 kinds", items:[
+    ["plain-flour","Plain flour","2 jars","good"],
+    ["sugar","Caster sugar","Full","good"],
+    ["ground-almonds","Ground almonds","Half a jar","good"],
+    ["plain-flour","Wholemeal flour","1 jar","good"],
+    ["sugar","Icing sugar","Running low","low"],
+  ]},
+  { cat:"Seeds & nuts", meta:"4 kinds", items:[
+    ["mixed-nuts","Mixed nuts","Full","good"],
+    ["pumpkin-seeds","Pumpkin seeds","1 jar","good"],
+    ["sunflower-seeds","Sunflower seeds","Half a jar","good"],
+    ["chia-seeds","Chia seeds","Running low","low"],
+  ]},
+];
+const wall = document.getElementById("wall");
+for (const s of SHELVES){
+  const shelf = document.createElement("section"); shelf.className="shelf";
+  shelf.innerHTML = `
+    <div class="cat">
+      <div class="name serif">${s.cat}</div>
+      <div class="meta">${s.meta}</div>
+      <div class="rule"></div>
+    </div>
+    <div class="run">
+      <div class="products">
+        ${s.items.map(([slug])=>`<div class="product"><img class="jar" src="${J}${slug}.png" alt=""></div>`).join("")}
+      </div>
+      <div class="board"><div class="top"></div><div class="fascia"></div></div>
+      <div class="tags">
+        ${s.items.map(([slug,name,qty,st])=>`
+          <div class="tagslot"><div class="tag"><span class="n">${name}</span>
+            <span class="q"><span class="dot ${st}"></span>${qty}</span></div></div>`).join("")}
+      </div>
+    </div>`;
+  wall.appendChild(shelf);
+}
+</script>
+</body>
+</html>

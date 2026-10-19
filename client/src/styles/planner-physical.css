@@ -1,0 +1,135 @@
+/* Planner physical surface. The approved photograph is the surface; the existing
+   semantic matrix is positioned into its measured paper area. */
+.planner-physical-surface {
+  --planner-ink: #3f3a2b;
+  --planner-rule: rgba(74, 60, 32, 0.28);
+  padding-top: 0.75rem !important;
+}
+
+/* Planner has a second, stable room label in the threshold. Its workspace pill
+   can therefore spend less height on its search and week controls. */
+.planner-workspace-header:not([data-stuck="true"]) .workspace-pill {
+  margin-block: 0.25rem;
+}
+
+.planner-workspace-header .workspace-pill > .flex.items-center {
+  min-height: 40px;
+  padding-block: 0;
+}
+
+.planner-workspace-header .workspace-pill > .flex.items-center.min-h-\[40px\] {
+  min-height: 32px;
+  padding-bottom: 0.125rem;
+}
+
+@media (min-width: 640px) {
+  .planner-physical-surface {
+    position: relative;
+    min-height: calc(100dvh - 68px);
+    overflow: hidden;
+    background: #2c2620;
+    color: var(--planner-ink);
+  }
+
+  .planner-physical-surface > .planner-physical-photo {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: fill;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .planner-physical-surface > [data-realm="planner"] {
+    position: relative;
+    z-index: 1;
+  }
+
+  .planner-physical-surface .planner-physical-grid {
+    position: absolute;
+    z-index: 2;
+    left: 17.65625%;
+    top: 11.35417%;
+    width: 64.609375%;
+    height: 76.35417%;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: auto;
+    color: var(--planner-ink);
+    font-family: Georgia, "Times New Roman", serif;
+  }
+
+  .planner-physical-surface .planner-physical-grid > div {
+    min-width: 0 !important;
+    height: 100%;
+  }
+
+  .planner-physical-surface .planner-physical-grid > div > .overflow-hidden {
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .planner-physical-surface .planner-physical-grid [class*="bg-muted"],
+  .planner-physical-surface .planner-physical-grid [class*="bg-background"],
+  .planner-physical-surface .planner-physical-grid [class*="bg-card"] {
+    background: transparent !important;
+  }
+
+  .planner-physical-surface .planner-physical-grid [class*="border-border"] {
+    border-color: var(--planner-rule) !important;
+  }
+
+  .planner-physical-surface .planner-physical-grid .text-foreground,
+  .planner-physical-surface .planner-physical-grid .text-muted-foreground {
+    color: inherit;
+  }
+
+  .planner-physical-surface .planner-physical-grid button {
+    font-family: Georgia, "Times New Roman", serif;
+  }
+
+  .planner-physical-surface .planner-physical-grid .shadow-sm,
+  .planner-physical-surface .planner-physical-grid .shadow-lg {
+    box-shadow: none !important;
+  }
+
+  .planner-physical-surface .planner-physical-grid .rounded-lg {
+    border-radius: 0;
+  }
+}
+
+/* At tablet widths the measured paper grid and assistant rail compete for the
+   same pixels. Keep both in view: anchor the full seven-day grid at the left,
+   reserve the right edge for the rail, and give review text a little more room. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .planner-physical-surface .planner-physical-grid {
+    left: 1%;
+    width: calc(98% - 280px);
+  }
+
+  .planner-physical-surface [data-testid="panel-planner-assistant"],
+  .planner-physical-surface [data-testid="panel-planner-assistant-idle"] {
+    width: 260px;
+  }
+}
+
+/* The persistent bottom navigation occupies the final 4rem on compact screens.
+   Shorten the rail's own scroll viewport so Cancel and review content remain
+   reachable above it, even before the page has scrolled to the sticky position. */
+@media (min-width: 768px) and (max-width: 1023px) and (max-height: 700px) {
+  .planner-physical-surface [data-testid="panel-planner-assistant"],
+  .planner-physical-surface [data-testid="panel-planner-assistant-idle"] {
+    max-height: calc(100dvh - 20.5rem);
+  }
+}
+
+@media (max-width: 639px) {
+  .planner-physical-surface > .planner-physical-photo {
+    display: none;
+  }
+}

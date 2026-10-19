@@ -31,7 +31,7 @@ export function normalizeIngredientKey(s: string): string {
 export const PLURAL_MAP: Record<string, string> = {
   apples:    "apple",   bananas:  "banana",  cherries: "cherry",
   berries:   "berry",   tomatoes: "tomato",  potatoes: "potato",
-  grapes:    "grape",   oranges:  "orange",  lemons:   "lemon",
+  leaves:    "leaf",    grapes:   "grape",   oranges:  "orange",  lemons:   "lemon",
   limes:     "lime",    peaches:  "peach",   pears:    "pear",
   plums:     "plum",    mangoes:  "mango",   mangos:   "mango",
   avocados:  "avocado", kiwis:    "kiwi",    melons:   "melon",

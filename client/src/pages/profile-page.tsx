@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -49,7 +50,7 @@ import {
 import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
 import LearningSignalsPanel from "@/components/LearningSignalsPanel";
 import { apiRequest, queryClient as qc } from "@/lib/queryClient";
-import { DIET_PATTERNS, DIET_RESTRICTIONS, EATING_SCHEDULES, ONBOARDING_DIET_OPTIONS, ALLERGY_OPTIONS, DIET_PATTERN_OPTIONS, ALLERGY_INTOLERANCE_OPTIONS, formatDietLabel } from "@/lib/diets";
+import { DIET_PATTERNS, DIET_RESTRICTIONS, EATING_SCHEDULES, ONBOARDING_DIET_OPTIONS, ALLERGY_OPTIONS, DIET_PATTERN_OPTIONS, ALLERGY_INTOLERANCE_OPTIONS, formatDietLabel, isDietaryExclusionOnly } from "@/lib/diets";
 import { GOAL_OPTIONS, STORE_OPTIONS, UPF_OPTIONS, BUDGET_OPTIONS, deriveGoalType } from "@/lib/shared-options";
 import { UPFInfoModal } from "@/components/upf-info-modal";
 import type { HouseholdEater } from "@shared/household-eater";
@@ -1185,7 +1186,13 @@ function HouseholdEatersSection() {
         </div>
 
         {eaters.length === 0 ? (
-          <p className="text-xs text-muted-foreground">No eaters yet. Adult members are synced automatically.</p>
+          <EmptyState
+            variant="empty"
+            size="compact"
+            icon={Baby}
+            title="No eaters yet"
+            description="Adult members are synced automatically."
+          />
         ) : (
           <div className="space-y-2">
             {eaters.map(eater => (
@@ -1207,9 +1214,15 @@ function HouseholdEatersSection() {
                         </span>
                       ))}
                       {eater.hardRestrictions.map(r => (
-                        <span key={r} className="text-xs px-2 py-0.5 rounded-full bg-destructive/10 border border-destructive/20 text-destructive">
-                          {formatDietLabel(r)}
-                        </span>
+                        isDietaryExclusionOnly(r) ? (
+                          <span key={r} className="text-xs px-2 py-0.5 rounded-full bg-muted border border-border text-muted-foreground" title="Dietary exclusion — not a declared allergy">
+                            {formatDietLabel(r)}
+                          </span>
+                        ) : (
+                          <span key={r} className="text-xs px-2 py-0.5 rounded-full bg-destructive/10 border border-destructive/20 text-destructive">
+                            {formatDietLabel(r)}
+                          </span>
+                        )
                       ))}
                     </div>
                   )}
@@ -1488,7 +1501,18 @@ export function GoalsPreferences({ profile, onSave, showDiet = true }: { profile
   const cuisineSummary = dietPattern
     ? (DIET_PATTERNS.find(d => d.value === dietPattern)?.label ?? dietPattern)
     : "Add yours";
-  const allergiesSummary = dietRestrictions.length > 0 ? dietRestrictions.join(", ") : "Nothing noted";
+  // NSR1 follow-up: stored dietRestrictions mixes declared medical allergies with
+  // hard dietary exclusions the canonical restriction library itself tags as "not
+  // an allergen" (isDietaryExclusionOnly, defined above). Split the display only —
+  // dietRestrictions itself, and what gets saved, is unchanged below.
+  const trueAllergyRestrictions = dietRestrictions.filter(r => !isDietaryExclusionOnly(r));
+  const dietaryExclusionRestrictions = dietRestrictions.filter(isDietaryExclusionOnly);
+  const allergiesSummary = trueAllergyRestrictions.length > 0
+    ? trueAllergyRestrictions.map(formatDietLabel).join(", ")
+    : "Nothing noted";
+  const dietaryExclusionsSummary = dietaryExclusionRestrictions.length > 0
+    ? dietaryExclusionRestrictions.map(formatDietLabel).join(", ")
+    : "Nothing noted";
   const scheduleSummary = (eatingSchedule && eatingSchedule !== "None")
     ? (EATING_SCHEDULES.find(s => s.value === eatingSchedule)?.label ?? eatingSchedule)
     : "Add yours";
@@ -1580,6 +1604,26 @@ export function GoalsPreferences({ profile, onSave, showDiet = true }: { profile
                 ))}
               </div>
             </SettingRow>
+
+            {/* NSR1 follow-up: a stored restriction THA's canonical library tags
+                "not an allergen" (e.g. meat, honey — see isDietaryExclusionOnly
+                above) is shown here, visibly apart from Allergies & Intolerances,
+                never inside it. Read-only: these values are edited by changing the
+                Dietary Pattern above or on the household Eaters section, never here. */}
+            {dietaryExclusionRestrictions.length > 0 && (
+              <SettingRow label="Other Dietary Restrictions" summary={dietaryExclusionsSummary} testId="row-dietary-exclusions">
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {dietaryExclusionRestrictions.map((r) => (
+                    <Badge key={r} variant="outline" data-testid={`badge-dietary-exclusion-${r}`}>
+                      {formatDietLabel(r)}
+                    </Badge>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground pt-1.5">
+                  Hard exclusions THA enforces as strictly as an allergy, but that are not themselves a declared medical allergy.
+                </p>
+              </SettingRow>
+            )}
 
             <SettingRow label="Eating Schedule" summary={scheduleSummary} testId="row-eating-schedule">
               <div className="flex flex-wrap gap-2 pt-1">

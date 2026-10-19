@@ -138,7 +138,7 @@ function PreviewCardContent({ item, showAllIngredients = false }: { item: Previe
           ))}
         </div>
 
-        {ingredients.length > 0 && (
+        {ingredients.length > 0 ? (
           <div>
             <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-0.5">
               Ingredients
@@ -159,7 +159,11 @@ function PreviewCardContent({ item, showAllIngredients = false }: { item: Previe
               </p>
             )}
           </div>
-        )}
+        ) : showAllIngredients ? (
+          <p className="text-[11px] text-muted-foreground" role="note">
+            Ingredients are unavailable in the preview data.
+          </p>
+        ) : null}
 
         {item.kind === "meal" && item.meal.servings > 1 && (
           <p className="text-[10px] text-muted-foreground">{item.meal.servings} servings</p>
@@ -210,6 +214,7 @@ export function MealPreviewBubble({
 // ── Mobile inline card ────────────────────────────────────────────────────────
 
 interface MealPreviewInlineProps {
+  id?: string;
   item: PreviewItem;
   onAction?: () => void;
   actionLabel?: string;
@@ -219,6 +224,7 @@ interface MealPreviewInlineProps {
 }
 
 export function MealPreviewInline({
+  id,
   item,
   onAction,
   actionLabel,
@@ -229,6 +235,7 @@ export function MealPreviewInline({
   return (
     <div
       className="mx-1 mb-1 rounded-lg border border-border bg-card shadow-sm overflow-hidden animate-in fade-in-0 duration-150"
+      id={id}
       role="region"
       aria-label={`Preview: ${item.kind === "meal" ? item.meal.name : item.recipe.name}`}
     >

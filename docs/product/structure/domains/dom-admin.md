@@ -21,8 +21,8 @@ anyone else is shown the not-found page. It is a hub of cards leading to the
 operator tools: managing users, curating ingredient-product picks and recipe
 sources, tuning companion intelligence, reviewing unresolved knowledge terms,
 and working through the intelligence surfaces — the Intelligence Dashboard,
-benchmark and development-world households, and the Observation and Behaviour
-workbenches. A shared Admin banner sits above every admin page so an operator
+benchmark and development-world households, the Observation and Behaviour
+workbenches, and the contract-independent Activity Monitor shell. A shared Admin banner sits above every admin page so an operator
 can move between these tools without retyping URLs.
 
 ## Where it lives
@@ -36,6 +36,7 @@ can move between these tools without retyping URLs.
 ## Related
 
 - [[adm-home]] — the admin hub experience
+- [[adm-activity-monitor]] — the governed activity shell
 - [[adm-users]] — the users admin experience
 - [[cap-administration]] — the administration capability
 

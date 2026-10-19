@@ -1,0 +1,18 @@
+.pantry-area-page { min-height: 100dvh; height: 100dvh; box-sizing: border-box; overflow: hidden; padding: 8px 28px 78px; background: #eee8dc; color: #2d2a24; }
+.pantry-area-room { max-width: 1180px; height: 100%; margin: auto; position: relative; }
+.pantry-area-canvas { position: relative; width: 100%; height: min(760px, calc(100dvh - 92px)); aspect-ratio: 1.5; background-position: center; background-size: 100% 100%; border-radius: 18px; overflow: hidden; box-shadow: 0 16px 36px rgb(69 49 24 / 16%); }
+.pantry-area-back { position: absolute; z-index: 5; top: 14px; left: 14px; border: 1px solid rgb(109 93 65 / 55%); border-radius: 999px; padding: 8px 12px; background: rgb(255 250 242 / 90%); color: #514936; cursor: pointer; }
+.pantry-area-targets { position: absolute; inset: 0; z-index: 4; }
+.pantry-area-target { position: absolute; transform: translateX(-50%); padding: 0; border: 0; background: transparent; cursor: grab; touch-action: none; filter: drop-shadow(0 8px 7px rgb(33 24 13 / 22%)); }
+.pantry-area-target.is-exact-product { transform: none; filter: none; }
+.pantry-area-target:active { cursor: grabbing; }
+.pantry-area-target:hover, .pantry-area-target:focus-visible { outline: 0; }
+.pantry-area-chalk-label { position: absolute; z-index: 5; transform: translate(-50%, -50%); box-sizing: border-box; padding: 2px 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; color: #fffdf1; font: 8px/1.02 "Segoe Print", "Bradley Hand", cursive; text-align: center; text-shadow: 0 1px 1px #111, 0 0 2px #111; pointer-events: none; }
+.pantry-area-chalk-label.is-runtime { font-size: clamp(6px, .62vw, 10px); line-height: .95; padding: 1px 2px; }
+.pantry-area-chalk-label.is-runtime.is-bottle { font-size: clamp(5px, .48vw, 8px); }
+.pantry-area-target.is-removed { opacity: 0; pointer-events: none; }
+.pantry-area-target.is-dragging { opacity: .22; }
+.pantry-area-empty-patch { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; pointer-events: none; }
+.pantry-area-destinations { position: absolute; z-index: 6; right: 12px; top: calc(min(760px, 100dvh - 92px) - 128px); bottom: auto; display: flex; align-items: flex-end; gap: 18px; width: max-content; }
+.pantry-area-drag-ghost { display: block; width: auto; height: 165px; object-fit: contain; pointer-events: none; user-select: none; filter: drop-shadow(0 12px 10px rgb(33 24 13 / 28%)); }
+@media (max-width: 680px) { .pantry-area-page { padding: 8px 10px 78px; } .pantry-area-destinations { right: 8px; top: calc(min(760px, 100dvh - 92px) - 112px); gap: 10px; } }

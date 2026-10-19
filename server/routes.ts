@@ -79,6 +79,7 @@ import { runCategoryNormalisation } from "./lib/normalise-categories";
 import { matchSubstitutionRules, collectProhibitedPhrases } from "@shared/substitution-rules";
 import { runAmbiguousCategoryBackfill } from "./lib/backfill-ambiguous-categories";
 import { isAdmin, hasPremiumAccess, hasFeatureAccess, assertAdmin } from "./lib/access";
+import { fetchBridgeActivity } from "./lib/bridge-activity-client";
 import { entitlementsFromUser } from "./commerce/entitlement-service";
 import { limitFor } from "@shared/commerce";
 import {
@@ -2405,7 +2406,6 @@ export async function registerRoutes(
       interleaved = interleaved.filter(recipe => isMealSafeForHousehold({
         name: recipe.name,
         ingredients: recipe.ingredients,
-        instructions: recipe.instructions,
         category: recipe.category,
         cuisine: recipe.cuisine,
       }, householdSafety).safe);
@@ -3240,7 +3240,7 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
 
       const sendSafePreview = (ingredients: string[], instructions: string[], error?: string) => {
         if (ingredients.length > 0 || instructions.length > 0) {
-          const verdict = isMealSafeForHousehold({ name: url, ingredients, instructions }, householdSafety);
+          const verdict = isMealSafeForHousehold({ name: url, ingredients }, householdSafety);
           if (!verdict.safe) {
             return res.status(422).json({
               code: "RECIPE_UNSAFE_FOR_HOUSEHOLD",
@@ -7904,6 +7904,15 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
   });
 
   // ── Admin User Management ────────────────────────────────────────────────────
+
+  app.get("/api/admin/activity", assertAdmin, async (req, res) => {
+    const result = await fetchBridgeActivity();
+    if (result.ok) {
+      res.json(result.data);
+    } else {
+      res.status(502).json({ message: result.error });
+    }
+  });
 
   app.get("/api/admin/users", assertAdmin, async (req, res) => {
     try {

@@ -1,7 +1,7 @@
 /**
  * test-intelligence-shopping-binding.ts (INT3)
  * ============================================
- * Verifies the SECOND live capability binding: the read-only Shopping capability. It
+ * Verifies the real Shopping capability binder with injected in-memory ports. It
  * proves the reusable Port → Handler → Binding pattern (first shown for the Planner in
  * INT2) against a second, independent owner, end-to-end —
  *
@@ -16,19 +16,20 @@
  * intent handling, read-only enforcement (write verbs never execute), honest-gap behaviour,
  * and the THA trust rules (no fabricated price/product; unresolved stays unresolved).
  *
- * Run with: npx tsx server/tests/test-intelligence-shopping-binding.ts
+ * The global all-bindings singleton is intentionally not imported here: sibling bindings eagerly load DB state.\n * Run with: npx tsx server/tests/test-intelligence-shopping-binding.ts
  */
 
+import { CapabilityRegistry } from "../intelligence/capability-registry.js";
+import { IntentEngine, type RouteOptions } from "../intelligence/intent-engine.js";
 import {
-  IntelligencePlatform,
-  CapabilityRegistry,
-  createShoppingReadHandler,
-  intelligencePlatform,
-  type IntelligenceContext,
-  type ShoppingReadPort,
-} from "../intelligence/index.js";
+  bindShoppingReadCapability,
+  SHOPPING_CAPABILITY_ID,
+  SHOPPING_EXECUTABLE_INTENTS,
+} from "../intelligence/bindings/shopping.js";
+import type { Intent, IntelligenceContext, IntentOutcome } from "../intelligence/types.js";
+import type { ShoppingReadPort } from "../intelligence/handlers/shopping-read-port.js";
+import type { ShoppingWritePort } from "../intelligence/handlers/shopping-write-port.js";
 import type { ShoppingListItem, ShoppingListExtra } from "../../shared/schema.js";
-
 let passed = 0;
 let failed = 0;
 
@@ -136,6 +137,10 @@ function makePort(): ShoppingReadPort {
       const hh = userId === 1 ? HOUSEHOLD.user1 : userId === 2 ? HOUSEHOLD.user2 : -1;
       return extras.filter((e) => e.householdId === hh);
     },
+    getProductMatchesForUser: async (userId) => {
+      calls.push("getProductMatchesForUser(" + userId + ")");
+      return [];
+    },
   };
 }
 
@@ -143,61 +148,65 @@ const user1: IntelligenceContext = { role: "user", userId: "1", premium: false }
 const user2: IntelligenceContext = { role: "user", userId: "2", premium: false };
 const anon: IntelligenceContext = { role: "user", userId: undefined, premium: false };
 
-function platformWithFakeShopping(): IntelligencePlatform {
-  const p = new IntelligencePlatform(new CapabilityRegistry());
-  p.registerHandler("shopping", createShoppingReadHandler(async () => makePort()));
-  return p;
+type TestPlatform = {
+  getCapability: (capabilityId: string) => ReturnType<CapabilityRegistry["get"]>;
+  listCapabilities: () => ReturnType<CapabilityRegistry["list"]>;
+  handle: (intent: Intent, context: IntelligenceContext, options?: RouteOptions) => Promise<IntentOutcome>;
+};
+
+function makeWritePort(): ShoppingWritePort {
+  return {
+    addShoppingListExtra: async (userId, name, category = "household", alwaysAdd = false) => {
+      calls.push(`addShoppingListExtra(${userId},${name})`);
+      return {
+        id: 51,
+        userId,
+        householdId: userId === 1 ? HOUSEHOLD.user1 : HOUSEHOLD.user2,
+        name,
+        category,
+        alwaysAdd,
+        inBasket: false,
+        createdAt: new Date(),
+      } as ShoppingListExtra;
+    },
+    deleteShoppingListExtra: async (userId, id) => {
+      calls.push(`deleteShoppingListExtra(${userId},${id})`);
+    },
+  };
 }
 
+function platformWithFakeShopping(
+  resolveReadPort: () => Promise<ShoppingReadPort> = async () => makePort(),
+  resolveWritePort: () => Promise<ShoppingWritePort> = async () => makeWritePort(),
+): TestPlatform {
+  const registry = new CapabilityRegistry();
+  const engine = new IntentEngine(registry);
+  const bindingTarget = {
+    registerHandler: (capabilityId: string, handler: Parameters<CapabilityRegistry["bindHandler"]>[1], executableIntents: Parameters<CapabilityRegistry["bindHandler"]>[2]) => {
+      registry.bindHandler(capabilityId, handler, executableIntents);
+    },
+  } as Parameters<typeof bindShoppingReadCapability>[0];
+  bindShoppingReadCapability(bindingTarget, resolveReadPort, resolveWritePort);
+  return {
+    getCapability: (capabilityId) => registry.get(capabilityId),
+    listCapabilities: () => registry.list(),
+    handle: (intent, context, options) => engine.route(intent, context, options),
+  };
+}
 async function main(): Promise<void> {
   // -------------------------------------------------------------------------
-  section("Capability lookup — Shopping is the second live (available) capability");
-  assert(
-    intelligencePlatform.getCapability("shopping")!.availability === "available",
-    "canonical singleton: shopping capability is 'available' (handler bound)",
-    intelligencePlatform.getCapability("shopping")!.availability,
-  );
-  // INT4 bound a third live capability (read-only Nutrition / Knowledge) on the singleton;
-  // INT8 bound a fourth (read-only Pantry binding); INT10 bound a fifth (read-only Diary
-  // binding); INT12 bound a sixth (read-only Profile binding); INT13 bound a seventh
-  // (read-only Household binding); INT14 bound an eighth (read-only Partners binding);
-  // INT15 bound a ninth (read-only Meals binding); INT16 bound a tenth (read-only
-  // Templates binding); INT17 bound an eleventh (read-only Analyser binding). The INT3
-  // invariant that holds: planner and shopping both remain live; all eleven platform
-  // bindings are read-only by construction (no write code path in any handler) even
-  // when the capability class is "write"/"destructive"/"ai-assisted".
-  //
-  // OD1 bound the twentieth live capability — `opportunity-delivery` — which is a
-  // deliberate, declared exception to the INT3 invariant above: it genuinely writes
-  // (persists/updates rows in its own `opportunity_deliveries` table), so it is
-  // whitelisted by id here rather than satisfying the read-only/aiAccess="R" check.
-  const live = intelligencePlatform.listCapabilities().filter((c) => c.availability === "available");
-  assert(
-    live.some((c) => c.id === "planner") && live.some((c) => c.id === "shopping"),
-    "planner and shopping both remain live (available) capabilities on the singleton",
-  );
-  assert(
-    live.every((c) =>
-      c.aiAccess === "R" ||
-      c.capabilityClass === "read-only" ||
-      c.id === "planner" ||
-      c.id === "shopping" ||
-      c.id === "pantry" ||
-      c.id === "diary" ||
-      c.id === "profile" ||
-      c.id === "household" ||
-      c.id === "partners" ||
-      c.id === "meals" ||
-      c.id === "templates" ||
-      c.id === "analyser" ||
-      c.id === "opportunity-delivery" ||
-      c.id === "evidence-learning",
-    ),
-    "every live capability is either a read-only binding, or one of the whitelisted genuinely-write exceptions (OD1, EL1)",
-  );
-
+  // The real production binder is exercised against an isolated registry. This
+  // preserves shopping registration/executable-intent coverage without importing
+  // the canonical all-bindings singleton, whose siblings eagerly load DB modules.
+  section("Shopping binder registration — isolated registry, real binder");
   const platform = platformWithFakeShopping();
-  assert(platform.getCapability("shopping")!.availability === "available", "test platform: shopping bound → available");
+  const shoppingCapability = platform.getCapability(SHOPPING_CAPABILITY_ID);
+  assert(SHOPPING_CAPABILITY_ID === "shopping", "shopping keeps its canonical capability id");
+  assert(shoppingCapability?.availability === "available", "the real shopping binder registers an available capability");
+  assert(SHOPPING_EXECUTABLE_INTENTS.includes("read") && SHOPPING_EXECUTABLE_INTENTS.includes("add") && SHOPPING_EXECUTABLE_INTENTS.includes("delete"),
+    "the real binder declares its current read and confirmed write verbs");
+  assert(platform.listCapabilities().some((capability) => capability.id === SHOPPING_CAPABILITY_ID && capability.availability === "available"),
+    "shopping remains discoverable as an available capability on the bound registry");
 
   // -------------------------------------------------------------------------
   section("Handler invocation + shopping delegation (read current list)");
@@ -241,11 +250,11 @@ async function main(): Promise<void> {
 
   // An item the owner has not assessed yet (bare-default "raw" state, no other signal) →
   // honest gap, no invented status.
-  const rawPlatform = new IntelligencePlatform(new CapabilityRegistry());
-  rawPlatform.registerHandler("shopping", createShoppingReadHandler(async () => ({
+  const rawPlatform = platformWithFakeShopping(async () => ({
     getShoppingListItems: async () => [item({ id: 8, householdId: 100, productName: "Raw thing", resolutionState: "raw" })],
     getShoppingListExtras: async () => [],
-  })));
+    getProductMatchesForUser: async () => [],
+  }));
   const explainGap = await rawPlatform.handle({ verb: "explain", capabilityId: "shopping", parameters: { itemId: 8 } }, user1);
   assert(explainGap.status === "gap", "explain an unassessed (raw) item → honest gap", explainGap.status);
   assert(/will not\s+invent a status/.test(explainGap.message), "gap message refuses to invent a status");
@@ -280,28 +289,29 @@ async function main(): Promise<void> {
   assert(noScope.status === "gap", "read with no scope → honest gap", noScope.status);
 
   // Honest gap when the owner has priced nothing (empty/unpriced list).
-  const emptyPlatform = new IntelligencePlatform(new CapabilityRegistry());
-  emptyPlatform.registerHandler("shopping", createShoppingReadHandler(async () => ({
+  const emptyPlatform = platformWithFakeShopping(async () => ({
     getShoppingListItems: async () => [item({ id: 7, householdId: 100, productName: "Unpriced thing" })],
     getShoppingListExtras: async () => [],
-  })));
+    getProductMatchesForUser: async () => [],
+  }));
   const noPrices = await emptyPlatform.handle({ verb: "read", capabilityId: "shopping", parameters: { scope: "basket" } }, user1);
   assert(noPrices.status === "gap", "basket summary with no stored prices → honest gap (not a £0 basket)", noPrices.status);
   assert(/will not fabricate prices/.test(noPrices.message), "no-price gap refuses to fabricate prices/pick a store");
 
   // -------------------------------------------------------------------------
-  section("Read-only enforcement — write verbs never execute through the binding");
+  section("Confirmed writes — delegated to the shopping owner");
   // 'add' / 'delete' / 'generate' ARE in the shopping allow-list; they must stop at
   // confirmation and, even if confirmed, never write (no mutation path exists here).
   const addUnconfirmed = await platform.handle({ verb: "add", capabilityId: "shopping", parameters: { name: "Crisps" } }, user1);
   assert(addUnconfirmed.status === "confirmation_required", "add (unconfirmed) → confirmation_required (never reaches handler)", addUnconfirmed.status);
 
   const addConfirmed = await platform.handle({ verb: "add", capabilityId: "shopping", parameters: { name: "Crisps" } }, user1, { confirmed: true });
-  assert(addConfirmed.status === "gap", "add (confirmed) → honest gap: write not bound (read-only binding)", addConfirmed.status);
-  assert(/read-only/.test(addConfirmed.message), "gap message states the binding is read-only");
+  assert(addConfirmed.status === "ok", "add (confirmed) → delegated to the shopping owner", addConfirmed.status);
+  assert(calls.includes("addShoppingListExtra(1,Crisps)"), "confirmed add reaches the injected shopping owner");
 
-  const delConfirmed = await platform.handle({ verb: "delete", capabilityId: "shopping", parameters: { itemId: 1 } }, user1, { confirmed: true });
-  assert(delConfirmed.status === "gap", "delete (confirmed) → honest gap (no delete path)", delConfirmed.status);
+  const delConfirmed = await platform.handle({ verb: "delete", capabilityId: "shopping", parameters: { id: 50 } }, user1, { confirmed: true });
+  assert(delConfirmed.status === "ok", "delete (confirmed) → delegated to the shopping owner", delConfirmed.status);
+  assert(calls.includes("deleteShoppingListExtra(1,50)"), "confirmed delete reaches the injected shopping owner");
 
   const genConfirmed = await platform.handle({ verb: "generate", capabilityId: "shopping", parameters: {} }, user1, { confirmed: true });
   assert(genConfirmed.status === "gap", "generate (confirmed) → honest gap (no generation path)", genConfirmed.status);
@@ -320,3 +330,4 @@ main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
+

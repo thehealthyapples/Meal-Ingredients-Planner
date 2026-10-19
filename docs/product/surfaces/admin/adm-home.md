@@ -32,6 +32,7 @@ serve — each admin API enforces its own admin check.
 ## Related
 
 - [[page-admin-home]] — the page this capability is reached at
+- [[adm-activity-monitor]] — the contract-independent governed activity shell
 - [[dom-admin]] — the domain this capability belongs to
 
 ---

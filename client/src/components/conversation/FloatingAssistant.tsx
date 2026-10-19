@@ -1533,6 +1533,33 @@ export default function FloatingAssistant() {
     [isPending, sendTurn],
   );
 
+  const handleCompanionDrop = useCallback((event: React.DragEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    if (isPending) return;
+    const foodPayload = event.dataTransfer.getData("application/x-tha-canonical-food");
+    const recipePayload = event.dataTransfer.getData("application/x-tha-recipe");
+    try {
+      if (foodPayload) {
+        const food = JSON.parse(foodPayload) as { canonicalName?: string; ingredient?: string };
+        const name = food.canonicalName || food.ingredient;
+        if (name) {
+          setIsOpen(true);
+          sendTurn({ utterance: `Please give me advice about this ingredient: ${name}.` });
+        }
+        return;
+      }
+      if (recipePayload) {
+        const recipe = JSON.parse(recipePayload) as { name?: string };
+        if (recipe.name) {
+          setIsOpen(true);
+          sendTurn({ utterance: `Please give me advice about this recipe: ${recipe.name}.` });
+        }
+      }
+    } catch {
+      // Ignore malformed external drag data; only governed THA payloads are accepted.
+    }
+  }, [isPending, sendTurn]);
+
   // PHASE5E — a surface asked the Companion a question ("Why this?" on an ambient
   // opportunity card). Open, ask it, and clear it.
   //
@@ -1560,6 +1587,8 @@ export default function FloatingAssistant() {
       <button
         ref={fabRef}
         onClick={() => setIsOpen((v) => !v)}
+        onDragOver={(event) => event.preventDefault()}
+        onDrop={handleCompanionDrop}
         aria-label={isOpen ? "Close Apple assistant" : "Open Apple assistant"}
         // While withheld, the Companion is not yet present — so it is absent from the
         // tab order and the accessibility tree too, rather than being an invisible

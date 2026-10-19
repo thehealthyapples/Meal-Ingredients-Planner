@@ -4,7 +4,7 @@
 ChatGPT owns final integration, tests and visual inspection. Workers do not commit/push/deploy.
 
 ## Codex-owned functional lane
-Worktree: `tha-cookbook-real-book-functional`
+Worktree: `tha-integrated-dev` (`C:\Users\Colin\The Healthy Apples\GitHub\tha-integrated-dev`, branch `feat/integrated-dev`)
 
 May modify:
 - `client/src/pages/cookbook-real-book-concept.tsx`
@@ -18,7 +18,7 @@ May modify:
 Must not modify raster assets or visual-lane files.
 
 ## Claude-owned visual lane
-Worktree: `tha-cookbook-real-book-visual`
+Worktree: `tha-integrated-dev` (`C:\Users\Colin\The Healthy Apples\GitHub\tha-integrated-dev`, branch `feat/integrated-dev`)
 
 May modify/create only:
 - `client/src/components/cookbook-real-book/RealBookStage.tsx`

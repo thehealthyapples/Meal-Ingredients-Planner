@@ -91,6 +91,7 @@ import { OrchardWindow } from "@/components/layout/orchard-backdrop";
 import { MealCard } from "@/components/MealCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { LoadError } from "@/components/ui/load-error";
 // MAT1 converged this file's private `= 30` onto the shared owner. PRESENCE1 went
 // one step further and removed the import entirely: Home no longer needs the target,
@@ -746,9 +747,7 @@ export default function HomeExperiencePage() {
                         </Link>
                       </div>
                     ) : todaysMeals.length === 0 ? (
-                      <p className="text-sm text-muted-foreground" data-testid="text-home-meals-empty">
-                        Nothing planned for today yet — the day is yours to map out.
-                      </p>
+                      <EmptyState variant="empty" size="compact" title="Nothing planned for today yet — the day is yours to map out." data-testid="text-home-meals-empty" />
                     ) : (
                       <ul className="flex flex-col gap-1.5" data-testid="list-home-todays-meals">
                         {todaysMeals.map((m) => (
@@ -807,9 +806,7 @@ export default function HomeExperiencePage() {
                         <Skeleton className="h-5 w-1/2" />
                       </div>
                     ) : openShoppingCount === 0 ? (
-                      <p className="text-sm text-muted-foreground" data-testid="text-home-shopping-empty">
-                        Nothing to fetch — the cupboards are as you left them.
-                      </p>
+                      <EmptyState variant="empty" size="compact" title="Nothing to fetch — the cupboards are as you left them." data-testid="text-home-shopping-empty" />
                     ) : (
                       // The list's own first items, in the list's own order. Never
                       // re-sorted, never re-ranked: Shopping owns what matters most.

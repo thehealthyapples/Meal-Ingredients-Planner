@@ -26,7 +26,8 @@ export interface ShoppingDiscoveryItem {
   readonly shoppingItemId: number;
   readonly name: string;
   readonly normalizedName: string;
-  readonly quantity: string;
+  /** The stored amount, or null when the household added the item with no amount specified. */
+  readonly quantityValue: number | null;
   readonly unit: string;
   readonly category: string;
   readonly checked: boolean;

@@ -2660,6 +2660,10 @@ export default function MealsPage() {
   });
   const householdZone = householdForClock?.timeZone ?? DECLARED_DEFAULT_ZONE;
   const [addToFreezerMealId, setAddToFreezerMealId] = useState<number | null>(null);
+  useEffect(() => {
+    const requestedMealId = Number(new URLSearchParams(window.location.search).get("openFreezer"));
+    if (Number.isInteger(requestedMealId) && requestedMealId > 0) setAddToFreezerMealId(requestedMealId);
+  }, []);
   const [expandedMealId, setExpandedMealId] = useState<number | string | null>(null);
   /**
    * COOKBOOK1 — RETIRED: `cardInfoTabs`.

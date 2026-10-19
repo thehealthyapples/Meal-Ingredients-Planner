@@ -77,10 +77,26 @@
   aspect-ratio: 1672 / 941;
   /* Phase 1: cover the room with the photographed tabletop and bring the book
    * modestly closer. The plate and semantic page planes remain one measured box;
-   * the desktop viewport crops only peripheral table rather than exposing gutters. */
+   * the desktop viewport crops only peripheral table rather than exposing gutters.
+   *
+   * COOKBOOK-LAYOUT1 — the height-driven term below has no upper bound of its
+   * own, so at a viewport that is wide-for-its-height in the wrong proportion
+   * (observed: ~900px-wide windows) it can exceed the intended ~104% crop by a
+   * lot, pushing the recto (recipe) page's fore-edge past the right edge of the
+   * centred, overflow:hidden stage — the "right side obscured" symptom. The
+   * measured page-plane geometry (.rb-plane--left/--right clip-path, below) puts
+   * the spread's outer edges at 16.25% and 84.9% of the plate's own width, so the
+   * stage can grow to at most ~143.3% of the viewport before the recto fore-edge
+   * clips (1 / (0.5 − 0.349)). Capping at 135% keeps a real margin under that
+   * exact limit while leaving the existing "104% minimum, height can push it
+   * wider" behaviour untouched for every viewport where it was already ≤135% —
+   * i.e. this never changes the look on a normally-proportioned desktop window. */
   width: max(
     104%,
-    calc((100dvh - var(--rb-bottom-nav-desktop) - env(safe-area-inset-bottom, 0px)) * 1672 / 941 * 1.04)
+    min(
+      135%,
+      calc((100dvh - var(--rb-bottom-nav-desktop) - env(safe-area-inset-bottom, 0px)) * 1672 / 941 * 1.04)
+    )
   );
   /* One slow, restrained arrival settle → more book, less table (§10). */
   animation: rb-settle 720ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
@@ -256,25 +272,28 @@
 .rb-plane__safe button { border: 0; padding: 0; background: transparent; text-align: left; cursor: pointer; }
 .rb-plane__safe button[aria-pressed="true"] { color: var(--rb-ink-accent); text-decoration: underline; text-underline-offset: 2px; }
 .rb-kicker { margin: 0 0 .25em; color: var(--rb-ink-muted); font-size: .76em; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; }
-.rb-collection { height: 100%; display: grid; grid-template-rows: auto auto 1fr auto auto auto; gap: .55em; }
+.rb-collection { height: 100%; position: relative; display: flex; flex-direction: column; gap: .55em; padding-bottom: 1.8em; }
 .rb-collection h1, .rb-recipe h2 { margin: 0; font: 500 clamp(21px, 2.15vw, 34px)/1.02 Georgia, serif; }
 .rb-source-filters { display: flex; flex-wrap: wrap; gap: .28em .85em; padding: .25em 0 .45em; border-bottom: 1px solid var(--rb-rule); }
 .rb-source-filters button { font-size: .82em; line-height: 1.15; }
 .rb-source-filters button[aria-pressed="true"] { color: var(--rb-ink-accent); font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
 .rb-shelves { display: flex; flex-wrap: wrap; gap: .25em .8em; padding-bottom: .35em; border-bottom: 1px solid var(--rb-rule); }
 .rb-shelves button { font-size: .84em; }
-.rb-recipe-grid { min-height: 0; margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, auto); align-content: center; gap: .55em .75em; }
+.rb-recipe-grid { flex: 1 1 auto; min-height: 0; margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(6.4em, 1fr)); grid-auto-rows: minmax(0, 1fr); align-content: stretch; gap: .9em 1em; }
 .rb-recipe-grid li, .rb-recipe-grid button { min-height: 0; height: 100%; }
 .rb-recipe-grid button { width: 100%; display: grid; grid-template-rows: auto auto; align-content: start; gap: .25em; }
 .rb-recipe-grid img, .rb-thumb-placeholder { width: 100%; height: auto; aspect-ratio: 4 / 3; min-height: 0; object-fit: cover; border-radius: 10% 12% 9% 11% / 12% 10% 11% 9%; }
 .rb-thumb-placeholder { display: grid; place-items: center; color: var(--rb-ink-muted); border: 1px solid var(--rb-rule); background: rgba(113, 96, 59, .055); font: 1.2em Georgia, serif; }
 .rb-recipe-grid button > span:last-child { min-height: 2.3em; font-family: Georgia, serif; line-height: 1.1; }
+.rb-recipe-grid button[draggable="true"] { cursor: grab; }
+.rb-recipe-grid button[draggable="true"]:active { cursor: grabbing; }
 .rb-recipe-grid button > span:last-child small { display: block; margin-top: .15em; color: var(--rb-ink-muted); font: 500 .72em/1.05 Arial, sans-serif; }
-.rb-page-nav { display: flex; align-items: center; justify-content: space-between; font-size: .82em; }
+.rb-page-nav { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: space-between; font-size: .82em; }
 .rb-page-nav button:disabled { opacity: .4; }
 .rb-create { display: flex; align-items: baseline; flex-wrap: wrap; gap: .25em .75em; border-top: 1px solid var(--rb-rule); padding-top: .35em; }
 .rb-create strong { font-family: Georgia, serif; font-weight: 500; }
 .rb-create button, .rb-ink-actions button { text-decoration: underline; text-underline-offset: 2px; }
+.rb-create-line { flex-basis: 100%; margin-top: .1em; color: var(--rb-ink-muted); font: 600 .72em/1.1 Arial, sans-serif; letter-spacing: .06em; text-transform: uppercase; }
 .rb-search { display: block; margin-top: .7em; }
 .rb-search input {
   width: 100%;
@@ -289,15 +308,82 @@
 }
 .rb-search input::placeholder { color: rgba(47, 42, 32, .58); opacity: 1; font-weight: 500; }
 .rb-search input:focus-visible { border-color: rgba(52, 82, 39, .85); box-shadow: 0 0 0 1px rgba(52, 82, 39, .22); }
-.rb-recipe { height: 100%; display: flex; flex-direction: column; gap: .45em; }
-.rb-recipe h2 { font-size: clamp(23px, 2.4vw, 38px); }
-.rb-recipe-photo { width: 100%; height: 28%; object-fit: cover; border-radius: 45% 46% 42% 48% / 8% 10% 9% 8%; filter: sepia(.08) saturate(.85); }
+.rb-recipe { height: 100%; position: relative; container-type: inline-size; display: flex; flex-direction: column; gap: .45em; padding-bottom: 3.2em; }
+.rb-recipe h2 { max-width: 100%; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: clamp(.78em, 3.6cqw, 2.4em); letter-spacing: -.018em; }
+.rb-recipe-reference { margin: -.25em 0 0; text-align: right; font: 500 .72em/1 Arial, sans-serif; }
+.rb-recipe-reference a { color: var(--rb-ink-muted); text-decoration: underline; text-underline-offset: 2px; }
+.rb-recipe-photo {
+  width: 100%;
+  height: 28%;
+  object-fit: cover;
+  /* The lower edge follows the recto page sweep: tighter at the gutter,
+   * fuller toward the outer fore-edge. This is deliberately not a symmetric
+   * card radius. */
+  border-radius: 3% 4% 3% 3% / 5% 6% 5% 5%;
+  /* The paper edge arches upward through the middle of the recto page and
+   * sits lower again toward the gutter and outer fore-edge. */
+  clip-path: polygon(
+    0 89%, 3% 88.8%, 9% 87.5%, 17% 85.8%,
+    27% 84.7%, 38% 85.5%, 50% 86.4%, 61% 87.1%,
+    72% 87.7%, 82% 88%, 90% 88.2%, 96% 88.3%, 100% 88.4%,
+    100% 6%, 96% 5.9%, 90% 5.7%, 82% 5.5%,
+    72% 5.1%, 61% 4.5%, 50% 3.8%, 38% 3.2%,
+    27% 2.8%, 17% 3.5%, 9% 4.5%, 3% 5.4%, 0 6%
+  );
+  transform: perspective(900px) rotateX(.8deg);
+  transform-origin: 25% 100%;
+  filter: sepia(.08) saturate(.85);
+}
 .rb-photo-note { margin: .15em 0; padding: .45em 0; border-block: 1px solid var(--rb-rule); color: var(--rb-ink-muted); font: italic 1em Georgia, serif; }
 .rb-meta { margin: 0; color: var(--rb-ink-muted); font-size: .9em; }
 .rb-recipe-columns { min-height: 0; flex: 1; display: grid; grid-template-columns: .82fr 1.18fr; gap: 1.2em; }
-.rb-recipe h3 { margin: 0 0 .25em; font: 500 1.35em Georgia, serif; }
+.rb-recipe-tabs { display: grid; grid-template-columns: repeat(3, 1fr); align-items: baseline; border-bottom: 1px solid var(--rb-rule); margin: .25em 0 .45em; padding-inline: .1em; }
+.rb-recipe-tabs button { appearance: none; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--rb-ink-muted); cursor: pointer; font: 600 .92em Georgia, serif; margin: 0; padding: .18em .12em .28em; }
+.rb-recipe-tabs button:nth-child(1) { text-align: left; }
+.rb-recipe-tabs button:nth-child(2) { text-align: center; }
+.rb-recipe-tabs button:nth-child(3) { text-align: right; }
+.rb-recipe-tabs button.is-active { border-bottom-color: var(--rb-ink); color: var(--rb-ink); }
+.rb-recipe-tabs button:focus-visible, .rb-method-pager button:focus-visible { outline: 2px solid var(--rb-ink); outline-offset: 2px; }
+.rb-recipe-panel { min-height: 7.6em; text-align: left; font-size: 1.08em; }
+.rb-recipe-action-dock { position: absolute; left: 0; right: 0; bottom: 1.65em; display: flex; align-items: center; justify-content: center; gap: .5em; }
+.rb-recipe-action-prompt { color: var(--rb-ink); font: 500 .82em/1 Georgia, serif; }
+.rb-recipe-action-item { display: inline-flex; align-items: center; gap: .3em; border: 0; background: transparent; color: var(--rb-ink); cursor: pointer; font: 600 .72em/1 Arial, sans-serif; padding: .3em .45em; }
+.rb-recipe-action-item:hover, .rb-recipe-action-item:focus-visible { color: var(--rb-ink-accent); text-decoration: underline; text-underline-offset: 2px; }
+.rb-recipe-footer { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: space-between; color: var(--rb-ink-muted); font: 700 .82em/1 Arial, sans-serif; }
+.rb-recipe-footer button { border: 0; padding: 0; background: transparent; color: inherit; cursor: pointer; font: inherit; }
+.rb-recipe-footer button:disabled { opacity: .4; cursor: default; }
+.rb-recipe-footer button:not(:disabled):hover, .rb-recipe-footer button:not(:disabled):focus-visible { color: var(--rb-ink-accent); text-decoration: underline; text-underline-offset: 2px; }
+
+.rb-ingredients-panel { column-count: 2; column-gap: 1.8em; }
+.rb-ingredients-panel li { break-inside: avoid; }
+.rb-ingredients-panel li[draggable="true"] { cursor: grab; }
+.rb-ingredients-panel li[draggable="true"]:active { cursor: grabbing; }
+.rb-method-panel { line-height: 1.38; }
+.rb-recipe-panel li { margin-bottom: .28em; }
+.rb-method-ingredient { font-weight: 700; cursor: grab; }
+.rb-method-ingredient:active { cursor: grabbing; }
+.rb-method-pager { display: flex; justify-content: space-between; align-items: center; gap: .6em; margin-top: .55em; font-size: .82em; }
+.rb-method-pager button { border: 0; background: transparent; color: var(--rb-ink); cursor: pointer; font: inherit; padding: .1em; }
+.rb-method-pager button:disabled { color: var(--rb-ink-muted); cursor: default; }
+.rb-nutrition-panel dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6em 1.6em; margin: 0; text-align: left; }
+.rb-nutrition-panel dl div { border-bottom: 1px solid var(--rb-rule); padding: .12em 0 .3em; }
+.rb-nutrition-panel dt { color: var(--rb-ink); font-size: .92em; font-weight: 700; letter-spacing: .04em; text-transform: capitalize; }
+.rb-nutrition-panel dd { margin: .12em 0 0; font-size: 1.06em; font-weight: 700; }
+
 .rb-recipe ul, .rb-recipe ol { margin: 0; padding-left: 1.25em; }
 .rb-recipe li { margin-bottom: .18em; }
+/* Recipe lines inherit the same shallow page arch as the photograph. Each
+ * semantic line remains real HTML, but receives a tiny local lift/rotation so
+ * the printed rows do not stay perfectly screen-flat across the curved page. */
+.rb-print-line { transform-origin: 50% 50%; }
+.rb-print-line--1 { transform: translateY(-.12em) rotate(-.35deg); }
+.rb-print-line--2 { transform: translateY(-.08em) rotate(-.22deg); }
+.rb-print-line--3 { transform: translateY(-.04em) rotate(-.1deg); }
+.rb-print-line--4 { transform: translateY(0) rotate(0deg); }
+.rb-print-line--5 { transform: translateY(.04em) rotate(.1deg); }
+.rb-print-line--6 { transform: translateY(.08em) rotate(.22deg); }
+.rb-print-line--7 { transform: translateY(.1em) rotate(.3deg); }
+.rb-print-line--8 { transform: translateY(.12em) rotate(.35deg); }
 .rb-ink-actions { display: flex; flex-wrap: wrap; gap: .35em 1em; padding-top: .4em; border-top: 1px solid var(--rb-rule); font-size: .88em; }
 
 /* Curved lower-right actions: the three recipe buttons are printed as a
@@ -306,12 +392,15 @@
  * and a tiny local rotation only — no whole-page perspective/rotateY/mask, so
  * the glyphs stay crisp. Right-aligned max-content lines keep every label and
  * focus ring inside the right-page paper edge. */
-.rb-ink-actions--curved { display: block; position: relative; padding-top: .5em; border-top: 1px solid var(--rb-rule); }
+.rb-ink-actions--curved { position: absolute; left: 0; right: 0; bottom: 1.65em; display: block; padding: 0; border-top: 0; }
 .rb-ink-actions--curved .rb-ink-action { display: block; position: relative; width: max-content; max-width: 100%; margin-left: auto; text-align: right; }
 .rb-ink-actions--curved .rb-ink-action + .rb-ink-action { margin-top: .22em; }
-.rb-ink-action--read { transform: translateX(-1.6em) rotate(-1deg); }
-.rb-ink-action--planner { transform: translateX(-.65em) rotate(-.3deg); }
-.rb-ink-action--companion { transform: translateX(0) rotate(.7deg); }
+/* The annotated page edge falls toward the outer fore-edge in this photograph.
+ * The action labels follow that same downward sweep from the spine toward the
+ * right-hand edge, rather than rising back against the paper. */
+.rb-ink-action--read { top: 0; transform: translateX(-1.6em) rotate(-1deg); }
+.rb-ink-action--planner { top: 0; transform: translateX(-.65em) rotate(-.3deg); }
+.rb-ink-action--companion { top: 0; transform: translateX(0) rotate(.7deg); }
 
 /* ---- Trusted external-recipe results & preview ----------------------------
  * These regions share the saved-recipe page planes but had no scoped type, so
@@ -361,14 +450,78 @@
   .rb-collection { gap: .5em; }
   .rb-collection h1 { font-size: clamp(21px, 6vw, 26px); white-space: nowrap; }
   .rb-recipe h2 { font-size: clamp(25px, 8vw, 32px); }
+  .rb-recipe-photo { transform: none; }
+  .rb-print-line { transform: none; }
   .rb-web-preview h2 { font-size: clamp(25px, 8vw, 32px); }
   .rb-web-results, .rb-web-preview { font-size: clamp(9px, 2.5vw, 11.5px); }
   .rb-recipe-grid { gap: .5em .65em; }
   .rb-recipe-grid button > span:last-child { min-height: 2.2em; }
-  .rb-ink-actions--curved { display: flex; flex-wrap: wrap; gap: .35em 1em; position: static; }
-  .rb-ink-actions--curved .rb-ink-action { display: inline; width: auto; max-width: none; margin: 0; text-align: left; transform: none; }
+  .rb-ink-actions--curved .rb-ink-action { transform: none; top: 0; }
+  .rb-ink-actions--curved { position: absolute; left: 0; right: 0; bottom: 1.65em; display: flex; flex-wrap: wrap; justify-content: center; gap: .25em .45em; }
+  .rb-ink-actions--curved .rb-recipe-action-label { display: none; }
+  .rb-ink-actions--curved .rb-recipe-action-prompt { font-size: .72em; }
+  .rb-ink-actions--curved .rb-recipe-action-item { padding: .3em; }
   .rb-pageturn { position: fixed; bottom: calc(var(--rb-bottom-nav-mobile) + 3px); z-index: 4; }
 }
+
+/* In the wide end of the single-page layout, align live controls with the
+   photographed paper instead of letting them spill onto the dark tabletop. */
+@media (min-width: 700px) and (max-width: 900px) {
+  .rb-plane--mobile-collection .rb-plane__safe {
+    left: 20%;
+    width: 36%;
+  }
+
+  .rb-plane--mobile-recipe .rb-plane__safe {
+    left: 47%;
+    width: 47%;
+  }
+
+  .rb-plane--mobile-collection .rb-recipe-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-auto-rows: 6.6em;
+    align-content: start;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+
+  .rb-plane--mobile-collection .rb-recipe-grid img,
+  .rb-plane--mobile-collection .rb-recipe-grid .rb-thumb-placeholder {
+    height: 4em;
+    aspect-ratio: auto;
+    object-fit: cover;
+  }
+
+  .rb-plane--mobile-collection .rb-recipe-grid button > span:last-child {
+    display: -webkit-box;
+    min-height: 2.2em;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+}
+
+@media (max-width: 1200px) {
+  .rb-ink-actions--curved .rb-recipe-action-label { display: none; }
+  .rb-ink-actions--curved .rb-recipe-action-item { padding: .3em; }
+}
+
+.rb-freezer-backdrop { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center end; padding: 1em 6vw 1em 1em; background: transparent; }
+.rb-freezer-widget { position: relative; width: min(26em, 42vw); min-width: 0; max-height: 82%; padding: 1.15em 1.25em 1.1em; border: 2px solid #527544; border-radius: 4px 16px 16px 4px; background: linear-gradient(rgb(248 243 234 / 94%), rgb(248 243 234 / 94%)), url('/images/living-home/room/fridge-labelled-master/full-labelled.png') center / cover no-repeat; box-shadow: 7px 9px 0 rgb(75 97 54 / 15%), 0 14px 30px rgb(38 31 20 / 25%); color: var(--rb-ink); overflow: visible; }
+.rb-freezer-widget::before { content: '❄'; position: absolute; top: 1.2em; left: -1.25em; z-index: 2; display: grid; place-items: center; width: 2.5em; height: 4.2em; border: 2px solid #527544; border-radius: 4px 4px 9px 9px; background: #dce8d4; color: #416537; font: 700 1.15em Georgia, serif; box-shadow: 2px 3px 0 rgb(75 97 54 / 12%); }
+.rb-freezer-widget::after { content: ''; position: absolute; inset: .65em; z-index: 0; border: 1px solid rgb(82 117 68 / 20%); border-radius: 10px; pointer-events: none; }
+.rb-freezer-widget > * { position: relative; z-index: 1; }
+.rb-freezer-widget h3 { display: flex; align-items: center; gap: .4em; margin: 0 0 .35em; font: 600 1.2em Georgia, serif; }
+.rb-freezer-widget p { margin: 0 0 1em; }
+.rb-freezer-widget label { display: grid; gap: .3em; margin-top: .75em; font: 600 .82em Arial, sans-serif; }
+.rb-freezer-widget input, .rb-freezer-widget textarea { width: 100%; border: 1px solid var(--rb-rule); border-radius: 5px; padding: .45em; background: rgb(255 255 255 / 70%); color: inherit; }
+.rb-freezer-stepper { display: flex; align-items: center; gap: .8em; }
+.rb-freezer-stepper button, .rb-freezer-actions button { display: inline-flex; align-items: center; gap: .35em; border: 1px solid var(--rb-rule); border-radius: 5px; padding: .45em .7em; background: rgb(255 255 255 / 72%); color: inherit; cursor: pointer; }
+.rb-freezer-stepper strong { min-width: 2em; text-align: center; font-size: 1.2em; }
+.rb-freezer-actions { display: flex; justify-content: flex-end; gap: .6em; margin-top: 1.2em; }
+.rb-freezer-actions button:last-child { min-width: 10.5em; justify-content: center; border-color: #416537; background: #527544; color: #fffdf7; font-weight: 700; box-shadow: 0 2px 0 rgb(45 75 38 / 35%); }
+.rb-freezer-actions button:last-child:hover:not(:disabled) { background: #416537; }
+.rb-freezer-actions button:last-child:disabled { background: #aab9a1; border-color: #8da184; color: #f4f7f1; opacity: .8; cursor: wait; }
 
 @media (prefers-reduced-motion: reduce) {
   .rb-stage,

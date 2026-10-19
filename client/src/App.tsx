@@ -41,6 +41,7 @@ const AdminDevelopmentWorldPage = lazy(() => import("@/pages/admin-development-w
 const AdminDevelopmentWorldHouseholdPage = lazy(() => import("@/pages/admin-development-world-household-page"));
 const AdminObservationWorkbenchPage = lazy(() => import("@/pages/admin-observation-workbench-page"));
 const AdminBehaviourWorkbenchPage = lazy(() => import("@/pages/admin-behaviour-workbench-page"));
+const AdminActivityMonitorPage = lazy(() => import("@/pages/admin-activity-monitor-page"));
 const AdminKnowledgeReviewPage = lazy(() => import("@/pages/admin-knowledge-review-page"));
 const AdminKnowledgeClaimsPage = lazy(() => import("@/pages/admin-knowledge-claims-page"));
 const AdminCanonicalPublicationIntegrityPage = lazy(() => import("@/pages/admin-canonical-publication-integrity-page"));
@@ -63,6 +64,7 @@ const LarderPlaqueRoom = lazy(() => import("@/pages/larder-plaque-room"));
 const LarderCategoryView = lazy(() => import("@/pages/larder-category-view"));
 const LivingHomeRoom = lazy(() => import("@/pages/living-home-room"));
 const FridgeInteractionPreview = lazy(() => import("@/pages/fridge-interaction-preview"));
+const PantryAreaInteractionPreview = lazy(() => import("@/pages/pantry-area-interaction-preview"));
 // COMM2 — the Orchard: Community as a place. ONE route for the whole room; the
 // Orchard overview, Neighbourhoods, the Village and the High Street are state
 // inside the page, never separate destinations.
@@ -269,6 +271,7 @@ const AdminDevelopmentWorldChrome = withAdminBanner(AdminDevelopmentWorldPage);
 const AdminDevelopmentWorldHouseholdChrome = withAdminBanner(AdminDevelopmentWorldHouseholdPage);
 const AdminObservationsChrome = withAdminBanner(AdminObservationWorkbenchPage);
 const AdminBehaviourChrome = withAdminBanner(AdminBehaviourWorkbenchPage);
+const AdminActivityMonitorChrome = withAdminBanner(AdminActivityMonitorPage);
 const AdminCanonicalPublicationIntegrityChrome = withAdminBanner(AdminCanonicalPublicationIntegrityPage);
 const AdminKnowledgeClaimsChrome = withAdminBanner(AdminKnowledgeClaimsPage);
 
@@ -379,7 +382,8 @@ function Router() {
       <Route path="/compare" component={() => <ProtectedRoute component={FoodComparisonPage} />} />
       <Route path="/meals" component={() => <ProtectedRoute component={MealsPage} />} />
       <Route path="/cookbook/concept-real-book" component={() => <ProtectedRoute component={CookbookRealBookConcept} />} />
-      <Route path="/cookbook" component={() => <ProtectedRoute component={MealsPage} />} />
+      <Route path="/cookbook" component={() => <ProtectedRoute component={CookbookRealBookConcept} />} />
+      <Route path="/cookbook/grid" component={() => <ProtectedRoute component={MealsPage} />} />
       <Route path="/import-recipe" component={() => <ProtectedRoute component={ImportRecipePage} />} />
       {/* SHOP3 — the second Shopping door is closed. `/basket` and
           `/analyse-basket` were a duplicate of the canonical Shopping room
@@ -406,11 +410,14 @@ function Router() {
       <Route path="/admin/development-world" component={() => <ProtectedRoute component={AdminDevelopmentWorldChrome} />} />
       <Route path="/admin/observations" component={() => <ProtectedRoute component={AdminObservationsChrome} />} />
       <Route path="/admin/behaviour" component={() => <ProtectedRoute component={AdminBehaviourChrome} />} />
+      <Route path="/admin/activity" component={() => <ProtectedRoute component={AdminActivityMonitorChrome} />} />
       <Route path="/admin/knowledge-review" component={() => <ProtectedRoute component={AdminKnowledgeReviewPage} />} />
       <Route path="/admin/knowledge-claims" component={() => <ProtectedRoute component={AdminKnowledgeClaimsChrome} />} />
       <Route path="/admin/canonical-publication-integrity" component={() => <ProtectedRoute component={AdminCanonicalPublicationIntegrityChrome} />} />
       <Route path="/pantry" component={() => <ProtectedRoute component={LivingHomeRoom} />} />
       <Route path="/pantry/fridge-preview" component={() => <ProtectedRoute component={FridgeInteractionPreview} />} />
+      <Route path="/pantry/shelves-preview" component={() => <ProtectedRoute component={() => <PantryAreaInteractionPreview kind="shelves" />} />} />
+      <Route path="/pantry/cupboard-preview" component={() => <ProtectedRoute component={() => <PantryAreaInteractionPreview kind="cupboard" />} />} />
       <Route path="/pantry/:group" component={() => <ProtectedRoute component={LarderCategoryView} />} />
       {/* The Larder IS the pantry room (LARDER1 §2 — one room, one arrangement);
           the old preview door is honoured by redirect, never a rival room. */}

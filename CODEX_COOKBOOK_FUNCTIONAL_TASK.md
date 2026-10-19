@@ -1,6 +1,6 @@
 # Codex task — Real Cookbook functional implementation
 
-Work only in the isolated local worktree `C:\Users\Colin\The Healthy Apples\GitHub\tha-cookbook-real-book-functional`.
+For any new work under this brief, work only in the authorised local development worktree `C:\Users\Colin\The Healthy Apples\GitHub\tha-integrated-dev` on `feat/integrated-dev`.
 
 Read first:
 - `COOKBOOK_COLLABORATION_CONTRACT.md`
@@ -12,7 +12,7 @@ Read first:
 Implement a substantial, tested functional vertical slice of `/cookbook/concept-real-book` using real canonical data and existing application actions. This is the functional lane; do not solve Claude's visual stage.
 
 ## Required behavior
-1. Route works in this clean worktree and shell suppresses the top room threshold/header for this route while preserving the one global Companion and bottom navigation.
+1. Route works in the integrated development worktree and shell suppresses the top room threshold/header for this route while preserving the one global Companion and bottom navigation.
 2. Real semantic DOM—not canvas hit regions—renders:
    - exact heading `Our Family Favourites`;
    - real search input positioned logically after the Create area in DOM/desktop composition;

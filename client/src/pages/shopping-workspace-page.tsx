@@ -44,6 +44,7 @@ import { WorkspaceAnalyserSheet } from "@/components/WorkspaceAnalyserSheet";
 // shopping list. EmptyState's `variant` discriminator makes that confusion
 // structurally impossible.
 import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 // PROD1 — the canonical error presentation, adopted as the PAIR of EmptyState.
 // Adopting one without the other is what turned a server outage into a confident,
 // well-designed lie about the household's own data.
@@ -2977,7 +2978,7 @@ export default function ShoppingWorkspacePage() {
       {mode !== "add" && (isLoading ? (
         <div className="space-y-2">
           {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="h-14 rounded-lg bg-muted/40 animate-pulse" />
+            <Skeleton key={i} className="h-14 rounded-lg" />
           ))}
         </div>
       ) : isError ? (

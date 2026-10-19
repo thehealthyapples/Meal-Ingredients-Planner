@@ -63,10 +63,11 @@ function section(name: string): void {
 // ---------------------------------------------------------------------------
 
 const SHOPPING_ITEMS = [
-  { id: 1, productName: "Free-Range Chicken Breast", normalizedName: "chicken breast", quantity: "500g", unit: "g", category: "Meat & Fish", checked: false },
-  { id: 2, productName: "Organic Pasta", normalizedName: "pasta", quantity: "400g", unit: "g", category: "Dry Goods", checked: false },
-  { id: 3, productName: "Full-Fat Milk", normalizedName: "milk", quantity: "2L", unit: "L", category: "Dairy", checked: true },
-  { id: 4, productName: null, normalizedName: "olive oil", quantity: "500ml", unit: "ml", category: "Condiments", checked: false },
+  { id: 1, productName: "Free-Range Chicken Breast", normalizedName: "chicken breast", quantityValue: 500, unit: "g", category: "Meat & Fish", checked: false },
+  { id: 2, productName: "Organic Pasta", normalizedName: "pasta", quantityValue: 400, unit: "g", category: "Dry Goods", checked: false },
+  { id: 3, productName: "Full-Fat Milk", normalizedName: "milk", quantityValue: 2, unit: "L", category: "Dairy", checked: true },
+  { id: 4, productName: null, normalizedName: "olive oil", quantityValue: 500, unit: "ml", category: "Condiments", checked: false },
+  { id: 5, productName: "Bread", normalizedName: "bread", quantityValue: null, unit: null, category: "Bakery", checked: false },
 ];
 
 function makeStorage() {
@@ -91,7 +92,7 @@ const engine = new ShoppingDiscoveryEngine(makeStorage() as any);
 
 // Empty query — all items
 const allResult = await engine.discover("", 1);
-assert(allResult.length === 4, "empty query returns all 4 items");
+assert(allResult.length === 5, "empty query returns all 5 items");
 
 // Match by productName
 const chickenResult = await engine.discover("chicken", 1);
@@ -100,6 +101,12 @@ assert(chickenResult[0].name === "Free-Range Chicken Breast", "matched item is C
 assert(chickenResult[0].source === "shopping-discovery", "result carries source='shopping-discovery'");
 assert(chickenResult[0].id.startsWith("shopping-item:"), "result id prefixed 'shopping-item:'");
 assert(chickenResult[0].shoppingItemId === 1, "shoppingItemId is 1");
+assert(chickenResult[0].quantityValue === 500, "quantityValue is the real numeric amount (500), not a string");
+
+// Item with no stored amount — honest null, never fabricated
+const breadResult = await engine.discover("bread", 1);
+assert(breadResult.length === 1, "query 'bread' matches 1 item");
+assert(breadResult[0].quantityValue === null, "quantityValue is null when no amount was ever specified (not coerced to 0)");
 
 // Match by normalizedName
 const pastaResult = await engine.discover("pasta", 1);
@@ -132,7 +139,7 @@ const bigStorage = {
       id: i + 1,
       productName: `Item ${i + 1}`,
       normalizedName: `item ${i + 1}`,
-      quantity: "1",
+      quantityValue: 1,
       unit: "",
       category: "General",
       checked: false,
@@ -161,7 +168,7 @@ const stubPort: ShoppingDiscoveryPort = {
         shoppingItemId: 1,
         name: "Free-Range Chicken Breast",
         normalizedName: "chicken breast",
-        quantity: "500g",
+        quantityValue: 500,
         unit: "g",
         category: "Meat & Fish",
         checked: false,
@@ -170,8 +177,8 @@ const stubPort: ShoppingDiscoveryPort = {
     }
     if (query === "") {
       return [
-        { id: "shopping-item:1", shoppingItemId: 1, name: "Chicken Breast", normalizedName: "chicken breast", quantity: "500g", unit: "g", category: "Meat", checked: false, source: "shopping-discovery" },
-        { id: "shopping-item:2", shoppingItemId: 2, name: "Pasta", normalizedName: "pasta", quantity: "400g", unit: "g", category: "Dry Goods", checked: false, source: "shopping-discovery" },
+        { id: "shopping-item:1", shoppingItemId: 1, name: "Chicken Breast", normalizedName: "chicken breast", quantityValue: 500, unit: "g", category: "Meat", checked: false, source: "shopping-discovery" },
+        { id: "shopping-item:2", shoppingItemId: 2, name: "Pasta", normalizedName: "pasta", quantityValue: 400, unit: "g", category: "Dry Goods", checked: false, source: "shopping-discovery" },
       ];
     }
     return [];

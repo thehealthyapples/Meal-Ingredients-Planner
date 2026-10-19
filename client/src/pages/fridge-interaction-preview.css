@@ -1,8 +1,8 @@
 .fridge-preview-page { min-height: 100vh; padding: 8px clamp(18px, 4vw, 64px) 32px; color: #2d2a24; background: #eee8dc; }
 .fridge-preview-room { max-width: 1180px; margin: auto; padding-bottom: 0; }
 .fridge-preview-room { position: relative; }
-.fridge-preview-canvas { position: relative; width: auto; height: min(694px, calc(100dvh - 90px)); max-width: 100%; aspect-ratio: 1.5; margin: auto; overflow: visible; border-radius: 18px; background: #d8c8ac url("/images/living-home/room/fridge-labelled-master/full-labelled.png?v=larger-veg-drawer") center / 100% 100% no-repeat; box-shadow: 0 16px 36px rgb(69 49 24 / 16%); transition: background-image .28s ease; }
-.fridge-preview-canvas.is-object-removed { background-image: url("/images/living-home/room/fridge-labelled-master/empty-orange-labelled.png?v=larger-veg-drawer"); }
+.fridge-preview-canvas { position: relative; width: auto; height: min(694px, calc(100dvh - 90px)); max-width: 100%; aspect-ratio: 1.5; margin: auto; overflow: visible; border-radius: 18px; background: #d8c8ac url("/images/living-home/room/fridge-labelled-master/full-labelled.png?v=shallow-crisper") center / 100% 100% no-repeat; box-shadow: 0 16px 36px rgb(69 49 24 / 16%); transition: background-image .28s ease; }
+.fridge-preview-canvas.is-object-removed { background-image: url("/images/living-home/room/fridge-labelled-master/empty-orange-labelled.png?v=shallow-crisper"); }
 .fridge-preview-canvas.is-drawer-open { background-image: url("/images/living-home/room/fridge-labelled-master/produce-drawer-overhead.png?v=drawer-camera"); }
 .fridge-preview-removal { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
 .fridge-preview-objects { position: absolute; inset: 0; z-index: 3; }

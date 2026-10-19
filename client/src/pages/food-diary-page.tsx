@@ -2031,13 +2031,13 @@ export default function FoodDiaryPage() {
                       <Tooltip contentStyle={{ fontSize: 12 }} />
                       <Legend wrapperStyle={{ fontSize: 11 }} />
                       {trendChartData.some((d) => d.mood != null) && (
-                        <Line type="monotone" dataKey="mood" name="Mood" stroke="#e88c4a" strokeWidth={2} dot={false} connectNulls />
+                        <Line type="monotone" dataKey="mood" name="Mood" stroke="hsl(var(--secondary))" strokeWidth={2} dot={false} connectNulls />
                       )}
                       {trendChartData.some((d) => d.energy != null) && (
-                        <Line type="monotone" dataKey="energy" name="Energy" stroke="#5aad6f" strokeWidth={2} dot={false} connectNulls />
+                        <Line type="monotone" dataKey="energy" name="Energy" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} connectNulls />
                       )}
                       {trendChartData.some((d) => d.sleep != null) && (
-                        <Line type="monotone" dataKey="sleep" name="Sleep (hrs)" stroke="#7c9fcb" strokeWidth={2} dot={false} connectNulls />
+                        <Line type="monotone" dataKey="sleep" name="Sleep (hrs)" stroke="hsl(var(--muted-foreground))" strokeWidth={2} dot={false} connectNulls />
                       )}
                     </LineChart>
                   </ResponsiveContainer>

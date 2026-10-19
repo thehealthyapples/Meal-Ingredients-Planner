@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -19,11 +19,7 @@ import { NutritionVarietyDots } from "@/components/nutrition-variety-chips";
 import { MealNutrientTags } from "@/components/nutrition-insights-panel";
 import type { Meal, Nutrition } from "@shared/schema";
 import type { SmartSuggestEntry, SmartSuggestResult } from "@/lib/planner-types";
-import { MealPreviewBubble, MealPreviewInline, useMealPreview, type PreviewItem } from "@/components/MealPreviewBubble";
-
-// PX1-W2 (fnd-px-breakpoint-six-truths): the local useIsMobile copy is retired;
-// breakpoint truth has one owner.
-import { useIsMobile } from "@/hooks/use-adaptive-density";
+import { MealPreviewInline, type PreviewItem } from "@/components/MealPreviewBubble";
 
 // ── UPF helpers ───────────────────────────────────────────────────────────────
 
@@ -55,17 +51,14 @@ interface SmartMealEntryCardProps {
   onRefresh: () => void;
   onExpandExplain: () => void;
   onNutritionRefresh: () => void;
-  onOpenPreview: (item: PreviewItem, el: HTMLElement) => void;
-  onScheduleClose: () => void;
-  isMobile: boolean;
 }
 
-function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, expanded, smartLoading, onLock, onRefresh, onExpandExplain, onNutritionRefresh, onOpenPreview, onScheduleClose, isMobile }: SmartMealEntryCardProps) {
+function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, expanded, smartLoading, onLock, onRefresh, onExpandExplain, onNutritionRefresh }: SmartMealEntryCardProps) {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [, navigate] = useLocation();
   const [qty, setQty] = useState(1);
-  const [showMobilePreview, setShowMobilePreview] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const [hfExpanded, setHfExpanded] = useState(false);
   const mealId = !entry.candidate.isExternal ? Number(entry.candidate.id) : null;
   const key = `${entry.dayOfWeek}-${entry.slot}`;
@@ -141,19 +134,7 @@ function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, 
     <div className="flex flex-col">
       <div className="flex items-start gap-2 px-3 py-2.5">
         {/* Interactive area: image + info — hover/tap to preview */}
-        <div
-          role="button"
-          tabIndex={0}
-          className="flex items-start gap-2.5 flex-1 min-w-0 rounded-md cursor-pointer"
-          onClick={() => { if (isMobile) setShowMobilePreview(v => !v); }}
-          onMouseEnter={(e) => { if (!isMobile) onOpenPreview(previewItem, e.currentTarget); }}
-          onMouseLeave={() => { if (!isMobile) onScheduleClose(); }}
-          onFocus={(e) => { if (!isMobile) onOpenPreview(previewItem, e.currentTarget); }}
-          onBlur={() => { if (!isMobile) onScheduleClose(); }}
-          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowMobilePreview(v => !v); } }}
-          aria-label={`Preview ${entry.candidate.name}`}
-          aria-expanded={isMobile ? showMobilePreview : undefined}
-        >
+        <div className="flex items-start gap-2.5 flex-1 min-w-0 rounded-md">
           <div className="h-14 w-14 rounded-lg overflow-hidden bg-muted shrink-0 border flex items-center justify-center">
             {mealImg
               ? <img src={mealImg} alt={entry.candidate.name} className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
@@ -208,6 +189,18 @@ function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, 
           </div>
         </div>
         <div className="flex flex-col gap-1 shrink-0">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-7 px-2 text-xs"
+            onClick={() => setShowPreview(true)}
+            aria-expanded={showPreview}
+            aria-controls={`smart-preview-${key}`}
+            data-testid={`button-preview-${key}`}
+          >
+            Preview
+          </Button>
           <button onClick={onRefresh} disabled={smartLoading} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors disabled:opacity-40" title="Get a different meal for this slot" data-testid={`button-refresh-${key}`}>
             <RefreshCw className="h-3.5 w-3.5" />
           </button>
@@ -386,12 +379,11 @@ function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, 
         </div>
       )}
 
-      {isMobile && showMobilePreview && (
+      {showPreview && (
         <MealPreviewInline
+          id={`smart-preview-${key}`}
           item={previewItem}
-          onAction={mealId ? () => { setShowMobilePreview(false); navigate(`/meals/${mealId}`); } : undefined}
-          actionLabel={mealId ? "View recipe" : undefined}
-          onDismiss={() => setShowMobilePreview(false)}
+          onDismiss={() => setShowPreview(false)}
           showAllIngredients
         />
       )}
@@ -442,16 +434,6 @@ export function SmartReviewPanelContent({
   restoredFromSession,
   onDismissRestoreBanner,
 }: SmartReviewPanelContentProps) {
-  const isMobile = useIsMobile();
-  const { previewItem, previewAnchor, openPreview, scheduleClose, cancelClose, closePreview } = useMealPreview();
-
-  useEffect(() => {
-    if (!previewItem) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") closePreview(); };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [previewItem, closePreview]);
-
   if (!smartResult) return null;
 
   const dayNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
@@ -520,9 +502,6 @@ export function SmartReviewPanelContent({
                     onRefresh={() => regenerateSingleEntry(entry)}
                     onExpandExplain={() => setExpandedExplanation(expandedExplanation === exKey ? null : exKey)}
                     onNutritionRefresh={() => setNutritionFetchTick(t => t + 1)}
-                    onOpenPreview={openPreview}
-                    onScheduleClose={scheduleClose}
-                    isMobile={isMobile}
                   />
                 );
               })}
@@ -570,15 +549,6 @@ export function SmartReviewPanelContent({
         </Button>
       </div>
 
-      {!isMobile && previewItem && previewAnchor && (
-        <MealPreviewBubble
-          item={previewItem}
-          anchor={previewAnchor}
-          onMouseEnter={cancelClose}
-          onMouseLeave={scheduleClose}
-          showAllIngredients
-        />
-      )}
     </div>
   );
 }

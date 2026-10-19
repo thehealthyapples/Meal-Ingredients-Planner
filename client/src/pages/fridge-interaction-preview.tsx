@@ -104,7 +104,16 @@ function DraggableFood({ item, removed, selected, onSelect }: { item: FridgeObje
       onClick={() => onSelect(item)}
       aria-pressed={selected}
     >
-      <img src={item.src} alt="" draggable={false} style={{ visibility: "hidden" }} />
+      {/* FRIDGE-IMG1: the visible food is the master photo behind this
+          transparent hotspot (fridge-preview-canvas's background-image) — this
+          <img> has never been shown (visibility: hidden) and exists only so a
+          populated item.src is available to DragOverlay's ghost. An item whose
+          master-image extraction (fridge-labelled-master/manifest.json) hasn't
+          run yet has no src to give it; rendering `<img src="">` anyway produced
+          an empty-src, zero-natural-size <img> in the DOM for no visible gain.
+          Omitting it here changes nothing visible — DragOverlay already falls
+          back to the item's name when src is empty. */}
+      {item.src && <img src={item.src} alt="" draggable={false} style={{ visibility: "hidden" }} />}
     </button>
   );
 }

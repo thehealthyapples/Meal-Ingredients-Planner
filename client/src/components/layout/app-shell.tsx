@@ -18,6 +18,7 @@
 // compressing, not stacking — and the one Companion door is fixed top-right.
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Loader2 } from "lucide-react";
 
@@ -42,6 +43,7 @@ import {
 } from "@/components/layout/shell-slots";
 import TrialBanner from "@/components/TrialBanner";
 import SiteBanner from "@/components/SiteBanner";
+import { apiRequest } from "@/lib/queryClient";
 
 /*
  * Room names are NOT redeclared here. `NAV_ITEMS` is the single source of truth
@@ -245,7 +247,12 @@ function ShellHeader() {
 // the page. The shell's threshold banner (orchard window + room identity) and its
 // default header stand down for them, leaving only essential navigation, the
 // Companion and trust notices. Technology recedes behind the room.
-const LIVING_HOME_ROUTES = new Set<string>(["/pantry", "/pantry/fridge-preview"]);
+const LIVING_HOME_ROUTES = new Set<string>([
+  "/pantry",
+  "/pantry/fridge-preview",
+  "/pantry/shelves-preview",
+  "/pantry/cupboard-preview",
+]);
 function isLivingHomeRoom(path: string): boolean {
   return LIVING_HOME_ROUTES.has(ROOM_ALIASES[path] ?? path);
 }
@@ -310,8 +317,29 @@ export function AppShell({
   showTrialBanner?: boolean;
 }) {
   const [location] = useLocation();
+  const queryClient = useQueryClient();
+  const [returnError, setReturnError] = useState(false);
+  const impersonationStatus = useQuery<{ impersonating: boolean }>({
+    queryKey: ["/api/benchmark-impersonation"],
+  });
+  const returnToAdmin = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/benchmark-impersonation/stop");
+      return response.json() as Promise<{ ok: boolean }>;
+    },
+    onSuccess: (result) => {
+      if (!result.ok) {
+        setReturnError(true);
+        return;
+      }
+      setReturnError(false);
+      queryClient.setQueryData(["/api/benchmark-impersonation"], { impersonating: false });
+      window.location.assign("/admin/benchmark-households");
+    },
+    onError: () => setReturnError(true),
+  });
   const canonical = ROOM_ALIASES[location] ?? location;
-  const isRealBookConcept = location === "/cookbook/concept-real-book";
+  const isRealBookConcept = location === "/cookbook" || location === "/cookbook/concept-real-book";
   const shellGround = resolveShellGround(location);
   const [headerSlot, setHeaderSlot] = useState<HTMLDivElement | null>(null);
   const [railSlot, setRailSlot] = useState<HTMLDivElement | null>(null);
@@ -378,6 +406,30 @@ export function AppShell({
                           them. Hospitality yields to honesty here, and only here. */}
                       {showTrialBanner && <TrialBanner />}
                       <SiteBanner />
+                      {impersonationStatus.data?.impersonating && (
+                        <div
+                          className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-muted/50 px-4 py-2"
+                          role="status"
+                          aria-live="polite"
+                          data-testid="benchmark-impersonation-notice"
+                        >
+                          <span className="text-sm">This session is using an impersonated benchmark household.</span>
+                          <button
+                            type="button"
+                            className="rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+                            onClick={() => { setReturnError(false); returnToAdmin.mutate(); }}
+                            disabled={returnToAdmin.isPending}
+                            data-testid="button-return-to-admin"
+                          >
+                            {returnToAdmin.isPending ? "Returning…" : "Return to Admin"}
+                          </button>
+                          {returnError && (
+                            <p className="w-full text-sm text-destructive" role="alert">
+                              Couldn’t confirm the return to Admin. Please try again.
+                            </p>
+                          )}
+                        </div>
+                      )}
 
                       <div className="flex flex-1 overflow-hidden">
                         {/* The contextual rail (UX1 unchanged: not navigation; BottomNav

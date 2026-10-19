@@ -100,6 +100,13 @@ const TOOLS: Record<string, Tool> = {
     icon: ListTree,
     href: "/admin/behaviour",
   },
+  "activity-monitor": {
+    id: "activity-monitor",
+    title: "Activity Monitor",
+    description: "Read-only bridge activity, projection metadata, and safety state.",
+    icon: Activity,
+    href: "/admin/activity",
+  },
   "knowledge-review": {
     id: "knowledge-review",
     title: "Knowledge Review",
@@ -149,7 +156,7 @@ const GROUPS: Group[] = [
     blurb: "The health and integrity of the platform itself.",
     learnMore:
       "Platform tools watch the parts of THA that keep every household's data honest — that each canonical domain still matches its declared owner, and that what the platform publishes is true at runtime. Come here to check the platform is sound before a release, or when a publication check has flagged something to look into.",
-    toolIds: ["canonical-publication-integrity"],
+    toolIds: ["canonical-publication-integrity", "activity-monitor"],
   },
   {
     id: "intelligence",

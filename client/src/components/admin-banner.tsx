@@ -29,6 +29,7 @@ const ADMIN_NAV = [
   { href: "/admin/benchmark-households", label: "Benchmark Households", icon: FlaskConical },
   { href: "/admin/observations", label: "Observations", icon: Activity },
   { href: "/admin/behaviour", label: "Behaviour", icon: ListTree },
+  { href: "/admin/activity", label: "Activity Monitor", icon: Activity },
   // KNOW2 — a review surface nobody can find reviews nothing. The claim backlog
   // is only actionable if a reviewer can reach it without being told the URL.
   { href: "/admin/knowledge-claims", label: "Claim Review", icon: ShieldCheck },
@@ -46,12 +47,14 @@ export function AdminBanner() {
       data-testid="admin-banner"
     >
       <div className="max-w-6xl mx-auto px-4 md:px-6">
-        <div className="flex items-center gap-2 py-2.5">
-          <div className="flex items-center gap-2 pr-3 mr-1 border-r border-border shrink-0">
-            <ShieldCheck className="h-5 w-5 text-primary" />
-            <span className="text-sm font-semibold tracking-tight">Support Hub</span>
+        <div className="flex items-center gap-3 py-2">
+          <div className="flex items-center gap-2 pr-3 mr-0.5 border-r border-border shrink-0">
+            <div className="p-1 bg-accent/10 rounded-md">
+              <ShieldCheck className="h-4 w-4 text-primary" />
+            </div>
+            <span className="text-sm font-semibold tracking-tight leading-none">Support Hub</span>
           </div>
-          <nav className="flex items-center gap-1 overflow-x-auto" data-testid="admin-banner-nav">
+          <nav className="flex items-center gap-0.5 overflow-x-auto" data-testid="admin-banner-nav">
             {ADMIN_NAV.map((item) => {
               const Icon = item.icon;
               const isActive = location === item.href;
@@ -60,14 +63,14 @@ export function AdminBanner() {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm whitespace-nowrap transition-colors",
+                    "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium whitespace-nowrap transition-colors",
                     isActive
-                      ? "bg-accent text-primary font-medium"
+                      ? "bg-accent text-primary"
                       : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
                   )}
                   data-testid={`admin-banner-link-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
                 >
-                  <Icon className="h-4 w-4 shrink-0" />
+                  <Icon className="h-3.5 w-3.5 shrink-0" />
                   {item.label}
                 </Link>
               );

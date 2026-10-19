@@ -1,0 +1,181 @@
+{
+  "source": "C:\\Users\\Colin\\The Healthy Apples\\GitHub\\tha-living-larder-authoritative\\client\\public\\images\\living-home\\room\\pantry-shelves-populated-labelled-v2.png",
+  "items": {
+    "plain-flour": {
+      "box": [
+        102,
+        58,
+        229,
+        293
+      ]
+    },
+    "granola": {
+      "box": [
+        245,
+        86,
+        367,
+        291
+      ]
+    },
+    "brown-rice": {
+      "box": [
+        391,
+        55,
+        516,
+        292
+      ]
+    },
+    "white-penne": {
+      "box": [
+        538,
+        92,
+        657,
+        292
+      ]
+    },
+    "rolled-oats": {
+      "box": [
+        664,
+        42,
+        792,
+        292
+      ]
+    },
+    "chickpeas": {
+      "box": [
+        809,
+        70,
+        935,
+        292
+      ]
+    },
+    "cannellini-beans": {
+      "box": [
+        949,
+        74,
+        1074,
+        292
+      ]
+    },
+    "wholemeal-penne": {
+      "box": [
+        1113,
+        82,
+        1249,
+        292
+      ]
+    },
+    "white-beans": {
+      "box": [
+        51,
+        330,
+        187,
+        586
+      ]
+    },
+    "red-lentils": {
+      "box": [
+        183,
+        319,
+        315,
+        585
+      ]
+    },
+    "green-lentils": {
+      "box": [
+        386,
+        335,
+        521,
+        585
+      ]
+    },
+    "sugar": {
+      "box": [
+        529,
+        318,
+        665,
+        586
+      ]
+    },
+    "pearl-barley": {
+      "box": [
+        676,
+        340,
+        811,
+        585
+      ]
+    },
+    "white-rice": {
+      "box": [
+        820,
+        337,
+        951,
+        586
+      ]
+    },
+    "wholemeal-fusilli": {
+      "box": [
+        970,
+        336,
+        1103,
+        585
+      ]
+    },
+    "white-fusilli": {
+      "box": [
+        1225,
+        335,
+        1361,
+        588
+      ]
+    },
+    "plain-flour-lower": {
+      "box": [
+        376,
+        650,
+        501,
+        900
+      ]
+    },
+    "brown-rice-lower": {
+      "box": [
+        505,
+        642,
+        636,
+        900
+      ]
+    },
+    "granola-lower": {
+      "box": [
+        621,
+        650,
+        746,
+        900
+      ]
+    },
+    "white-rice-lower": {
+      "box": [
+        743,
+        645,
+        868,
+        900
+      ]
+    },
+    "rolled-oats-lower": {
+      "box": [
+        895,
+        640,
+        1019,
+        900
+      ]
+    },
+    "granola-cereal": {
+      "box": [
+        1018,
+        633,
+        1157,
+        900
+      ]
+    }
+  }
+}

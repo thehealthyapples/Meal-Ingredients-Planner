@@ -11,9 +11,7 @@
  * OWNERSHIP:  no data mutation — pure read.
  */
 
-import type { CapabilityHandler } from "../capability-registry.js";
-import type { Intent } from "../types.js";
-import type { IntelligenceContext } from "../intelligence-platform.js";
+import type { CapabilityHandler, Intent, IntelligenceContext } from "../types.js";
 import type {
   HouseholdDiscoveryPort,
   HouseholdDiscoverySearchResult,
