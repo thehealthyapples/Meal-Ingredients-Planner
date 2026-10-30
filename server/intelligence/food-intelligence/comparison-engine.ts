@@ -31,6 +31,11 @@
  *                          there IS a stored result, scoped to the caller.
  *   Household context   → resolveHouseholdSignal (FI3, reused verbatim) +
  *                          resolveIngredientRestrictions (restriction library)
+ *   Per-100g macros      → server/lib/usda-whole-food-service.ts
+ *                          (getWholeFoodSnapshot — USDA FoodData Central, a
+ *                          curated slug→fdcId allowlist, FOODUI12). Covers a
+ *                          named subset of canonical whole foods only; absent
+ *                          for everything else — an honest gap, not a zero.
  *
  * TRUST RULES ENFORCED HERE (FI1 §5, carried forward):
  *   Rule E1 (no citation, no card) — every dimension entry carries the owner it
@@ -59,6 +64,7 @@
 
 import type { ProductHistory } from "@shared/schema";
 import type { FoodReportKnowledge } from "@shared/canonical/food-report-adapter";
+import type { NutrientSnapshot } from "../../lib/usda-whole-food-service.js";
 import { resolveCanonicalFood } from "@shared/canonical/resolver.js";
 import { resolveIngredientRestrictions } from "@shared/restrictions/restriction-resolver.js";
 import { resolveHouseholdSignal, NO_HOUSEHOLD_SIGNAL, type HouseholdSignal } from "./engine.js";
@@ -115,6 +121,21 @@ export interface ComparisonDimensionEntry {
   /** Present when status is "gap" — why no owner has this fact. */
   readonly gapReason: string | null;
   readonly evidence: readonly ComparisonEvidence[];
+  /**
+   * FOODUI11 — present only for dimensions that are naturally a LIST (notable
+   * nutrients, documented benefits), never derived by parsing `summary`. The
+   * same facts `summary` already states, exposed structured so a view can
+   * render them as a scannable chip grid instead of a sentence, without
+   * re-deriving or guessing the list from prose.
+   */
+  readonly items?: readonly string[];
+  /**
+   * FOODUI12 — present only when a real, quantified per-100g value exists
+   * (currently: USDA macros on nutritionalProfile for a covered canonical
+   * food). Unlike `items` (names only), these are actual numbers — the one
+   * dimension this engine can show a true quantitative difference on.
+   */
+  readonly metrics?: readonly { label: string; value: string }[];
 }
 
 export interface ComparisonSubject {
@@ -192,6 +213,8 @@ export interface SubjectFacts {
   readonly report: FoodReportKnowledge | null;
   /** The caller's own stored scan record (scanned products only). */
   readonly product: ProductHistory | null;
+  /** FOODUI12 — per-100g USDA macros (canonical foods on the curated allowlist only; null otherwise). */
+  readonly usdaSnapshot: NutrientSnapshot | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -203,6 +226,7 @@ const OWNER_KNOWLEDGE = "food-knowledge-registry (WS0 knowledge_*, evidence-gate
 const OWNER_PRODUCT_HISTORY = "product-history (the caller's own stored scan record)";
 const OWNER_RESTRICTIONS = "restriction-library + household eaters";
 const OWNER_PLANNER = "planner-history";
+const OWNER_USDA = "usda-whole-food-service (USDA FoodData Central, curated allowlist)";
 
 // ---------------------------------------------------------------------------
 // Dimension builders (pure)
@@ -210,6 +234,11 @@ const OWNER_PLANNER = "planner-history";
 
 function evidence(summary: string, ...refs: ComparisonEvidence[]): ComparisonDimensionEntry {
   return { status: "evidence", summary, gapReason: null, evidence: refs };
+}
+
+/** FOODUI11 — same as evidence(), plus the structured list `summary` already describes in prose. */
+function evidenceWithItems(summary: string, items: string[], ...refs: ComparisonEvidence[]): ComparisonDimensionEntry {
+  return { status: "evidence", summary, gapReason: null, evidence: refs, items };
 }
 
 function dimensionGap(reason: string): ComparisonDimensionEntry {
@@ -261,21 +290,45 @@ function buildSubjectDimensions(
     );
 
     const nutrients = report?.keyNutrients ?? [];
-    dims.nutritionalProfile =
-      nutrients.length > 0
-        ? evidence(
-            `Documented key nutrients: ${nutrients.join(", ")}. (Documentation, not a full composition table — an undocumented nutrient is not evidence of absence.)`,
-            { owner: OWNER_KNOWLEDGE, fact: `Food Knowledge Registry links ${name} to: ${nutrients.join(", ")}.` },
-          )
-        : dimensionGap(
-            `The Food Knowledge Registry documents no key nutrients for ${name} yet — an honest gap, not evidence that it has none.`,
-          );
+    // FOODUI12 — USDA per-100g macros, when this food is on the curated
+    // allowlist. A real quantity, never derived from or blended with the
+    // editorial keyNutrients list — the two are independent owners.
+    const snapshot = subject.usdaSnapshot?.per100g;
+    const metrics = snapshot
+      ? ([
+          snapshot.calories != null ? { label: "Calories", value: `${snapshot.calories} kcal` } : null,
+          snapshot.protein != null ? { label: "Protein", value: `${snapshot.protein} g` } : null,
+          snapshot.carbs != null ? { label: "Carbs", value: `${snapshot.carbs} g` } : null,
+          snapshot.fat != null ? { label: "Fat", value: `${snapshot.fat} g` } : null,
+          snapshot.fibre != null ? { label: "Fibre", value: `${snapshot.fibre} g` } : null,
+          snapshot.sugar != null ? { label: "Sugar", value: `${snapshot.sugar} g` } : null,
+        ].filter((m): m is { label: string; value: string } => m !== null))
+      : [];
+
+    if (nutrients.length === 0 && metrics.length === 0) {
+      dims.nutritionalProfile = dimensionGap(
+        `The Food Knowledge Registry documents no key nutrients for ${name} yet — an honest gap, not evidence that it has none.`,
+      );
+    } else {
+      const refs: ComparisonEvidence[] = [];
+      if (nutrients.length > 0) refs.push({ owner: OWNER_KNOWLEDGE, fact: `Food Knowledge Registry links ${name} to: ${nutrients.join(", ")}.` });
+      if (metrics.length > 0) refs.push({ owner: OWNER_USDA, fact: `Per 100g, raw: ${metrics.map((m) => `${m.label} ${m.value}`).join(", ")} (fdcId ${subject.usdaSnapshot!.fdcId}).` });
+      const entry = evidenceWithItems(
+        nutrients.length > 0
+          ? `Documented key nutrients: ${nutrients.join(", ")}. (Documentation, not a full composition table — an undocumented nutrient is not evidence of absence.)`
+          : `Per 100g (raw), from USDA FoodData Central.`,
+        nutrients,
+        ...refs,
+      );
+      dims.nutritionalProfile = metrics.length > 0 ? { ...entry, metrics } : entry;
+    }
 
     const benefits = report?.healthBenefits ?? [];
     dims.healthBenefits =
       benefits.length > 0
-        ? evidence(
+        ? evidenceWithItems(
             `Evidence-gated documented benefits: ${benefits.join(", ")}.`,
+            benefits,
             { owner: OWNER_KNOWLEDGE, fact: `Each listed benefit passed the Layer-2 evidence gate (valid SourceRef + human review).` },
           )
         : dimensionGap(
@@ -624,7 +677,11 @@ async function resolveSubject(
   const canonical = resolveCanonicalFood(query);
   if (canonical.matched && canonical.canonicalSlug) {
     const { getEvidenceBackedFoodReport } = await import("../../lib/food-report-evidence.js");
-    const report = await getEvidenceBackedFoodReport(canonical.canonicalSlug);
+    const { getWholeFoodSnapshot } = await import("../../lib/usda-whole-food-service.js");
+    const [report, usdaSnapshot] = await Promise.all([
+      getEvidenceBackedFoodReport(canonical.canonicalSlug),
+      getWholeFoodSnapshot(canonical.canonicalSlug),
+    ]);
     return {
       query,
       kind: "canonical-food",
@@ -633,6 +690,7 @@ async function resolveSubject(
       category: report?.overview.category ?? null,
       report,
       product: null,
+      usdaSnapshot,
     };
   }
 
@@ -644,12 +702,13 @@ async function resolveSubject(
       slug: product.barcode ?? String(product.id),
       name: product.productName,
       category: product.brand ?? null,
+      usdaSnapshot: null,
       report: null,
       product,
     };
   }
 
-  return { query, kind: "unresolved", slug: null, name: null, category: null, report: null, product: null };
+  return { query, kind: "unresolved", slug: null, name: null, category: null, report: null, product: null, usdaSnapshot: null };
 }
 
 /**

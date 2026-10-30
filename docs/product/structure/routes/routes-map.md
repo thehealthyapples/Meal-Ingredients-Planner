@@ -5,14 +5,14 @@ section: routes
 status: live
 visibility: household
 owner: Colin Clapson
-last_verified: 2026-07-18
-version: 2
+last_verified: 2026-10-27
+version: 3
 ---
 
 # Route Map
 
 > Every address THA answers, and the page each one resolves to —
-> including the five aliases and two redirects.
+> including the aliases and redirects.
 
 ## What it is
 
@@ -60,7 +60,7 @@ in `App.tsx`.
 | `/supermarkets` | SupermarketsPage | `client/src/pages/supermarkets-page.tsx` |
 | `/profile` | ProfilePage | `client/src/pages/profile-page.tsx` |
 | `/pantry` | PantryPage | `client/src/pages/pantry-page.tsx` |
-| `/plant-diversity` | PlantDiversityPage | `client/src/pages/plant-diversity-page.tsx` |
+| `/nutrition` | PlantDiversityPage | `client/src/pages/plant-diversity-page.tsx` |
 | `/diary` | FoodDiaryPage | `client/src/pages/food-diary-page.tsx` |
 | `/my-diary` | FoodDiaryPage *(alias of `/diary`)* | `client/src/pages/food-diary-page.tsx` |
 | `/partners` | PartnersPage | `client/src/pages/partners-page.tsx` |
@@ -98,6 +98,7 @@ directly.
 |---|---|
 | `/list` | `/shopping-workspace` |
 | `/shopping-list` | `/shopping-workspace` |
+| `/plant-diversity` | `/nutrition` |
 
 ## Fallback
 
@@ -107,9 +108,9 @@ directly.
 
 ## Aliases and redirects — the actual count
 
-The registered routes include **four pure redirects** (`/list`,
-`/shopping-list`, and — since **SHOP3** — `/basket` and `/analyse-basket`, all
-four to `/shopping-workspace`) and **four aliased paths**: `/cookbook`
+The registered routes include **five pure redirects** (`/list`,
+`/shopping-list`, `/basket` and `/analyse-basket` to `/shopping-workspace`, and
+`/plant-diversity` to `/nutrition`) and **four aliased paths**: `/cookbook`
 (→ MealsPage), `/analyser` (→ ProductsPage), `/planner` (→ WeeklyPlannerPage)
 and `/my-diary` (→ FoodDiaryPage). SHOP3 converted the `/basket` pair from an
 aliased *page* into redirects, retiring the duplicate Shopping surface: the
@@ -124,6 +125,7 @@ household keeps its bookmarks and arrives at the one room that carries the
 - [[page-diary]] — reachable at `/diary` and `/my-diary`
 - [[page-shopping-workspace]] — the canonical Shopping room; `/basket` and
   `/analyse-basket` redirect here (**SHOP3**)
+- [[page-nutrition]] — `/nutrition` is canonical; `/plant-diversity` redirects here
 - [[page-legal]] — reachable at `/legal` and `/legal/:slug`, both unprotected
 - [[page-privacy-settings]] — reachable at `/privacy-settings`
 - [[page-help-centre]] — reachable at `/help`
@@ -131,12 +133,12 @@ household keeps its bookmarks and arrives at the one room that carries the
 
 ## Known defects
 
-- `fnd-alias-sprawl` — several pages answer to more than one path and two more
+- `fnd-alias-sprawl` — several pages answer to more than one path and five more
   paths exist only to redirect, spreading a single destination across multiple
   addresses (`/meals` and `/cookbook`; `/products` and `/analyser`; `/planner`
   and `/weekly-planner`; `/diary` and `/my-diary`; plus `/list`,
   `/shopping-list`, `/basket` and `/analyse-basket` all redirecting to
-  `/shopping-workspace`). See PDA1. **Partially reduced by SHOP3**, which
+  `/shopping-workspace`; `/plant-diversity` redirects to `/nutrition`). See PDA1. **Partially reduced by SHOP3**, which
   removed the `/basket` pair as a distinct destination — the sprawl that
   remains is alias-only and no longer hides a divergent surface.
 

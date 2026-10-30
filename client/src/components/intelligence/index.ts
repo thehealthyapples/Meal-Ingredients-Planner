@@ -36,6 +36,11 @@ export { HouseholdInsightCard } from "./HouseholdInsightCard";
 // WX5 — Connected Food Panel (Food Page relationship web).
 export { ConnectedFoodPanel } from "./ConnectedFoodPanel";
 
+// NUTUI-EXPAND1 — the shared in-place "what's this food like?" panel, used
+// wherever a food is already on screen and would otherwise require leaving the
+// page to learn more about it.
+export { FoodQuickLook } from "./FoodQuickLook";
+
 // SURF1A — the ONE client owner of preparation knowledge's presentation. Every
 // surface that shows a preparation renders it through this, so WS5A's three-state
 // trust rule ("we know it doesn't matter" ≠ "nobody knows yet") is turned into

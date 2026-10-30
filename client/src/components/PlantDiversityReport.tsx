@@ -14,6 +14,7 @@ import {
   type CanonicalVarietyDisplay,
 } from "@shared/canonical/variety";
 import { FoodReport } from "@/components/FoodReport";
+import { FoodQuickLook } from "@/components/intelligence";
 import { Card } from "@/components/ui/card";
 
 // MAT1 — imported, not redeclared. This file held its own `= 30`; so did two other
@@ -749,6 +750,14 @@ function ReportRow({
                 </div>
               )}
 
+              {/* NUTUI-EXPAND1 — benefits + the connected-food web (Domain 1, Food
+                  Intelligence), complementing FoodReport's key-nutrients/variety
+                  content above (Domain 23) rather than repeating it. Previously
+                  this row had no way to reach this content at all — the only
+                  path anywhere in Nutrition was the Nutrients tab's full-page
+                  navigation (fnd-food-detail-disjointed). */}
+              <FoodQuickLook slug={variety?.canonicalSlug ?? row.canonicalKey} />
+
               {/* Day → Meal mapping (all rows) */}
               <ExpandedDayMealList row={row} />
             </div>
@@ -935,33 +944,25 @@ function ReportSummary({
   totalIngredients: number;
   categoriesFound: Set<PlantCategory>;
 }) {
-  // PRESENCE1: three counts, stated plainly. No denominator, no bar, no colour
-  // that grades the number. A household asked what is in their week; this
-  // answers that and stops (GEA13 — the permitted case is "reporting a quantity
-  // a household asked for"; GEA8 — the room reports, it does not appraise).
+  // Lead with the number of ingredients in the selected week. Keep the same
+  // three sourced counts and their existing meanings; the plant count remains
+  // visible but is not the headline while its register entry is being reconciled.
   return (
-    <Card className="overflow-hidden">
-      <div className="px-5 py-4 grid grid-cols-3 divide-x divide-border/40">
-        <div className="pr-4">
-          <p className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide mb-1">
-            Plants
-          </p>
-          <p className="text-xl font-bold tabular-nums text-foreground">{plantCount}</p>
-          <p className="text-[11px] text-muted-foreground/45 mt-1">this week</p>
+    <Card className="overflow-hidden p-4 sm:p-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-sm font-medium text-muted-foreground">Distinct ingredients this week</p>
+          <p className="mt-1 text-numeric tabular-nums text-foreground">{totalIngredients}</p>
         </div>
-        <div className="px-4">
-          <p className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide mb-1">
-            Ingredients
-          </p>
-          <p className="text-xl font-bold tabular-nums">{totalIngredients}</p>
-          <p className="text-[11px] text-muted-foreground/45 mt-1">this week</p>
-        </div>
-        <div className="pl-4">
-          <p className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide mb-1">
-            Plant Categories
-          </p>
-          <p className="text-xl font-bold tabular-nums">{categoriesFound.size}</p>
-          <p className="text-[11px] text-muted-foreground/45 mt-1">this week</p>
+        <div className="grid grid-cols-2 gap-x-6 gap-y-3 border-t border-border/50 pt-3 sm:min-w-[18rem] sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0">
+          <div>
+            <p className="text-xs text-muted-foreground">Plants</p>
+            <p className="mt-1 text-lg font-medium tabular-nums text-foreground">{plantCount}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Plant categories</p>
+            <p className="mt-1 text-lg font-medium tabular-nums text-foreground">{categoriesFound.size}</p>
+          </div>
         </div>
       </div>
     </Card>

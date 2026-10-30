@@ -29,6 +29,9 @@ import {
   getNutrientDetailView,
   getBenefitDetailView,
   resolveIngredientsToKnowledgeSummary,
+  getFoodsForNutrient,
+  getSimilarFoodsByNutrients,
+  findBestFoodMatch,
 } from "./services/nutrition-knowledge-registry";
 // BENCHINT2 — meal derivation (nutrition + allergens) and the recipe-page extraction helpers it
 // uses were route-local functions in this file. They are now services, so the ONE derivation path
@@ -2199,9 +2202,17 @@ export async function registerRoutes(
       // any product record. Returned as a separate field so the client can
       // render a clearly-labelled Whole Food Analysis mode without fabricating
       // a product search result.
-      const wholeFoodAnalysis = isWholeFoodIngredient(q)
-        ? { isWholeFood: true as const, query: q, thaRating: 5 }
-        : null;
+      // FOODUI3 (2026-10-29) — also resolve the canonical slug via the same
+      // resolver every other free-text food lookup already uses (comparison
+      // engine, meal ingredients), so the client can link straight to the
+      // real Food Intelligence page (/foods/:slug) instead of duplicating a
+      // thinner, generic summary of what that page already knows properly.
+      let wholeFoodAnalysis: { isWholeFood: true; query: string; thaRating: number; slug: string | null } | null = null;
+      if (isWholeFoodIngredient(q)) {
+        const { resolveCanonicalFood } = await import("@shared/canonical/resolver");
+        const resolution = resolveCanonicalFood(q);
+        wholeFoodAnalysis = { isWholeFood: true, query: q, thaRating: 5, slug: resolution.canonicalSlug ?? null };
+      }
 
       res.json({ products: pagedProducts, hasMore, wholeFoodAnalysis });
 
@@ -5643,6 +5654,66 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       // non-empty items) — already guarded above — so this is an unexpected fault.
       console.error("[FI20] food-comparison error:", err);
       res.status(500).json({ message: "Failed to assemble food comparison" });
+    }
+  });
+
+  // ── FOODUI7: Food Page search — foods OR nutrients ────────────────────────────
+  // Backs the Food page's "Look up a food" search box. A query resolves to
+  // AT MOST ONE of a nutrient match (with the foods that notably contribute
+  // it) or a food match (with foods of similar nutrient makeup) — never both,
+  // so the result is never ambiguous about what was found. Every knowledge-
+  // space food is bridged to its canonical /foods/:slug page where one exists
+  // (`canonicalSlugForKnowledgeSlug`); `canonicalSlug: null` means no page to
+  // link to yet, never a broken link.
+  app.get("/api/foods/lookup", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const q = String(req.query.q ?? "").trim();
+    if (!q) return res.json({ query: q, nutrient: null, food: null });
+    try {
+      const { canonicalSlugForKnowledgeSlug } = await import("@shared/canonical/food-report-adapter");
+      const results = await searchKnowledgeRegistry(q);
+
+      if (results.nutrients.length > 0) {
+        const match = results.nutrients[0];
+        const foods = await getFoodsForNutrient(match.slug);
+        return res.json({
+          query: q,
+          nutrient: {
+            slug: match.slug,
+            name: match.name,
+            foods: foods.map((f) => ({
+              knowledgeSlug: f.slug,
+              name: f.name,
+              canonicalSlug: canonicalSlugForKnowledgeSlug(f.slug),
+            })),
+          },
+          food: null,
+        });
+      }
+
+      const match = await findBestFoodMatch(q);
+      if (match) {
+        const similar = await getSimilarFoodsByNutrients(match.slug);
+        return res.json({
+          query: q,
+          nutrient: null,
+          food: {
+            knowledgeSlug: match.slug,
+            name: match.name,
+            canonicalSlug: canonicalSlugForKnowledgeSlug(match.slug),
+            similar: similar.map(({ food }) => ({
+              knowledgeSlug: food.slug,
+              name: food.name,
+              canonicalSlug: canonicalSlugForKnowledgeSlug(food.slug),
+            })),
+          },
+        });
+      }
+
+      res.json({ query: q, nutrient: null, food: null });
+    } catch (err) {
+      console.error("[FOODUI7] food-lookup error:", err);
+      res.status(500).json({ message: "Failed to look up food" });
     }
   });
 
@@ -11547,7 +11618,27 @@ Keep each string short and concrete. Return [] for any array with no entries.`;
       if (householdId == null) {
         return res.json({ available: false });
       }
-      const centre = await assembleNutritionCentre(householdId);
+      // NUTUI3 / FOODUI6 — "window" is the only accepted deviation from
+      // today's default; anything else (missing, misspelled, tampered) falls
+      // back to "all-time" rather than erroring, matching this route's
+      // existing total-read posture. "week" is only read for window ===
+      // "this-week", and only an honest planner week number is accepted.
+      const window =
+        req.query.window === "this-year"
+          ? "this-year"
+          : req.query.window === "this-week"
+            ? "this-week"
+            : "all-time";
+      const weekParam = Number(req.query.week);
+      const thisWeekNumber =
+        window === "this-week" && Number.isInteger(weekParam) && weekParam > 0
+          ? weekParam
+          : undefined;
+      // A "this-week" request with no resolvable week number has nothing to
+      // scope to — fall back to "all-time" rather than silently returning
+      // all-time figures mislabelled as one week's.
+      const effectiveWindow = window === "this-week" && thisWeekNumber === undefined ? "all-time" : window;
+      const centre = await assembleNutritionCentre(householdId, new Date(), effectiveWindow, thisWeekNumber);
       res.json(centre);
     } catch (err) {
       console.error("[WX8] nutrition-centre error:", err);

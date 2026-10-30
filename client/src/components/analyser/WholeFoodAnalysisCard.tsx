@@ -1,7 +1,9 @@
 import { useMemo } from "react";
-import { Leaf } from "lucide-react";
+import { Link } from "wouter";
+import { Leaf, ArrowRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import AppleRating from "@/components/AppleRating";
 import RestrictionSafetyPanel from "@/components/analyser/RestrictionSafetyPanel";
 import { computeRestrictionSafety } from "@shared/restrictions/restriction-safety";
@@ -23,6 +25,17 @@ interface WholeFoodAnalysisCardProps {
   foodName: string;
   /** Apple Score — always 5 for recognised whole foods */
   thaRating?: number;
+  /**
+   * FOODUI3 (2026-10-29) — the resolved canonical slug (same resolver the
+   * Food Comparison engine and meal-ingredient resolution already use), when
+   * one exists. This card used to duplicate a thin, mostly-generic summary
+   * of what the real Food Intelligence page (/foods/:slug) already shows
+   * properly (real nutrients, benefits, evidence) — it now recognises the
+   * food and links straight there instead of re-describing it more thinly.
+   * Null means no canonical match was found; the card still confirms
+   * recognition and the household-restriction check without a dead link.
+   */
+  slug?: string | null;
   /** Household eater profiles for restriction safety check */
   householdEaterProfiles?: EaterProfile[];
   className?: string;
@@ -35,6 +48,7 @@ function capitalizeFirst(s: string): string {
 export function WholeFoodAnalysisCard({
   foodName,
   thaRating = 5,
+  slug = null,
   householdEaterProfiles,
   className,
 }: WholeFoodAnalysisCardProps) {
@@ -89,34 +103,28 @@ export function WholeFoodAnalysisCard({
           </div>
         </div>
 
-        {/* ── Classification detail ── */}
-        <div className="rounded-lg bg-green-100/60 dark:bg-green-900/20 border border-green-200/60 dark:border-green-800/40 px-4 py-3 space-y-2">
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
-            <div>
-              <span className="text-muted-foreground/70">Category</span>
-              <p className="font-medium text-foreground mt-0.5">Whole Food</p>
-            </div>
-            <div>
-              <span className="text-muted-foreground/70">Processing</span>
-              <p className="font-medium text-green-700 dark:text-green-400 mt-0.5">None / Minimal</p>
-            </div>
-            <div>
-              <span className="text-muted-foreground/70">Additives</span>
-              <p className="font-medium text-foreground mt-0.5">None expected</p>
-            </div>
-            <div>
-              <span className="text-muted-foreground/70">Apple Score</span>
-              <p className="font-medium text-foreground mt-0.5">{thaRating} / 5</p>
-            </div>
-          </div>
-        </div>
-
         {/* ── THA classification note ── */}
         <p className="text-xs text-muted-foreground leading-relaxed" data-testid="whole-food-classification-note">
           Recognised by THA as a whole or minimally processed food. No packaged
           product lookup is required — whole foods score {thaRating}/5 by
           classification.
         </p>
+
+        {/* ── FOODUI3 — the real profile lives at /foods/:slug (nutrients,
+            benefits, evidence); this card confirms recognition and links
+            there rather than duplicating a thinner summary of it. ── */}
+        {slug ? (
+          <Button asChild variant="outline" size="sm" className="gap-2" data-testid="link-whole-food-profile">
+            <Link href={`/foods/${slug}`}>
+              See full food profile
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </Button>
+        ) : (
+          <p className="text-xs text-muted-foreground/70 italic" data-testid="text-whole-food-no-profile">
+            No detailed food profile found for this name yet.
+          </p>
+        )}
 
         {/* ── Restriction safety ── */}
         {hasRestrictionsConfigured && (

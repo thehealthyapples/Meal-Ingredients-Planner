@@ -194,3 +194,15 @@ export function buildFoodReport(canonicalSlug: string): FoodReportKnowledge | nu
 export function isCanonicalFood(slug: string): boolean {
   return CANONICAL_SEED.some((e) => e.food.slug === slug);
 }
+
+/**
+ * FOODUI7 — the reverse of the `knowledgeFoodSlug` bridge: given a WS0
+ * Knowledge Registry food slug (e.g. "apples"), find the canonical food that
+ * links to it (e.g. "apple"), so a knowledge-space result can be linked to
+ * its real /foods/:slug page. Returns null when no canonical food bridges to
+ * it — never guessed, since several knowledge foods have no canonical
+ * identity yet (SURF1A).
+ */
+export function canonicalSlugForKnowledgeSlug(knowledgeSlug: string): string | null {
+  return CANONICAL_SEED.find((e) => e.food.knowledgeFoodSlug === knowledgeSlug)?.food.slug ?? null;
+}

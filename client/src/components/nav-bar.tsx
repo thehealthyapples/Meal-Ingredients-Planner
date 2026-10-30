@@ -12,8 +12,8 @@ import {
   LayoutDashboard, CalendarDays, ShoppingCart,
   LogOut, ShieldCheck,
   Search, ChevronLeft, ChevronRight,
-  Microscope, BookOpen, ChefHat,
-  User, Users, BarChart3, Home, Trees,
+  BookOpen, ChefHat, UtensilsCrossed,
+  User, Users, Home, Trees,
 } from "lucide-react";
 import { api } from "@shared/routes";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
@@ -49,9 +49,14 @@ export const NAV_ITEMS = [
   { href: "/cookbook", label: "Cookbook", icon: ChefHat, hasWorkspace: true },
   { href: "/shopping-workspace", label: "Shopping", icon: ShoppingCart, hasWorkspace: false },
   { href: "/pantry", label: "Pantry", icon: PantryIcon, hasWorkspace: true },
-  { href: "/nutrition", label: "Nutrition", icon: BarChart3, hasWorkspace: true },
+  // FOODUI1 (2026-10-29) — Nutrition and Analyser merged into one destination:
+  // the household's own food history plus looking up and comparing any food,
+  // fresh or packaged, behind one door instead of two. The route stays
+  // /nutrition (unchanged hrefs, no redirect needed); the label and icon are
+  // what changed. Analyser's own full page is still reachable at /analyser —
+  // this is a first merge pass, not a deletion of that page.
+  { href: "/nutrition", label: "Food", icon: UtensilsCrossed, hasWorkspace: true },
   { href: "/my-diary", label: "Diary", icon: BookOpen, hasWorkspace: true },
-  { href: "/analyser", label: "Analyser", icon: Microscope, hasWorkspace: true },
   // COMM2 (2026-07-19) — the Orchard. ONE entry, deliberately: the Orchard
   // overview, Neighbourhoods, the Village and the High Street are the experience
   // INSIDE this room, not four destinations. Adding them as separate nav entries

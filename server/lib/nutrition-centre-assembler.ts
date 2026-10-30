@@ -17,7 +17,15 @@
 // section is independently optional — empty intelligence is silent, never
 // fabricated, estimated, or shown with invented progress.
 
+import { db } from "../db";
+import { households } from "@shared/schema";
+import { eq } from "drizzle-orm";
 import { fetchHouseholdPlannerFoods } from "./food-intelligence-assembler";
+import {
+  householdToday,
+  DECLARED_DEFAULT_ZONE,
+  type IANAZone,
+} from "@shared/time/household-time";
 import { plantDiversityGroup } from "@shared/canonical/plant-classifier";
 import { seasonForDate, SEASON_SEED, SEASON_LABEL } from "@shared/discovery/seasonal-map";
 import { discover } from "@shared/discovery/engine";
@@ -89,6 +97,8 @@ export interface CentreSimplyBetter {
   why: string;
 }
 
+export type NutritionCentreWindow = "this-week" | "all-time" | "this-year";
+
 export interface NutritionCentre {
   available: boolean;
   overview: NutritionCentreOverview | null;
@@ -98,6 +108,14 @@ export interface NutritionCentre {
   trends: { mostFrequent: CentreTrendFood[] } | null;
   discovery: NutritionCentreDiscovery | null;
   simplyBetter: CentreSimplyBetter[];
+  /**
+   * NUTUI3 — true only for window === "this-year", when at least one of the
+   * household's planner weeks has no known calendar date (HT7) and was
+   * therefore excluded from every figure above rather than guessed into or
+   * out of this year. The client shows this as a visible "~" rather than
+   * presenting a partial total as if it were complete.
+   */
+  incomplete: boolean;
 }
 
 const EMPTY: NutritionCentre = {
@@ -109,6 +127,7 @@ const EMPTY: NutritionCentre = {
   trends: null,
   discovery: null,
   simplyBetter: [],
+  incomplete: false,
 };
 
 // ── Lazy uplift rule index (reused canonical Nutrition Enhancement owner) ───────
@@ -127,11 +146,53 @@ const TOP_N = 6;
 export async function assembleNutritionCentre(
   householdId: number,
   now: Date = new Date(),
+  window: NutritionCentreWindow = "all-time",
+  /**
+   * FOODUI6 — required when window is "this-week": the same planner week
+   * number the client's "Foods this week" tab is currently showing (see
+   * useWeekMealEntries' activeWeek). Passed in rather than resolved here so
+   * "Foods this week" and "Nutrition this week" are always the same week —
+   * never two different answers to "this week" on the same page.
+   */
+  thisWeekNumber?: number,
 ): Promise<NutritionCentre> {
-  const planner = await fetchHouseholdPlannerFoods(householdId);
+  // The household's own civil year, resolved at read time (CP8) — never
+  // stored, never guessed from a device's clock (HT12). "all-time" needs no
+  // zone at all, so the lookup is skipped entirely in the common case.
+  let yearFilter: number | undefined;
+  if (window === "this-year") {
+    const household = await db.query.households.findFirst({
+      where: eq(households.id, householdId),
+    });
+    const zone: IANAZone = household?.timeZone ?? DECLARED_DEFAULT_ZONE;
+    yearFilter = householdToday(now, zone).year;
+  }
 
-  // No planner history → the household sections have nothing to assemble.
-  if (planner.enjoys.length === 0) return EMPTY;
+  const weekNumberFilter =
+    window === "this-week" && thisWeekNumber !== undefined ? thisWeekNumber : undefined;
+
+  const planner = await fetchHouseholdPlannerFoods(
+    householdId,
+    yearFilter !== undefined || weekNumberFilter !== undefined
+      ? { yearFilter, weekNumberFilter }
+      : undefined,
+  );
+
+  // No planner history in this window → the household sections have nothing
+  // to assemble. Still honest about why when the window is "this-year" and
+  // some weeks couldn't be placed in or out of it.
+  //
+  // FOODUI8 — gated on `mealEntryCount`, not `enjoys.length`. A week can have
+  // real logged meals whose ingredients happen not to resolve to any
+  // canonical food (a small, single-week sample makes this far likelier than
+  // it ever was for "this-year"/"all-time", where some ingredient somewhere
+  // almost always resolves). Gating on `enjoys` there claimed "nothing
+  // planned" for a week the Foods tab — reading the exact same planner row —
+  // correctly showed had meals in it. `mealEntryCount` is the honest signal:
+  // whether anything was logged in this window at all.
+  if (planner.mealEntryCount === 0) {
+    return { ...EMPTY, incomplete: planner.yearFilterIncomplete };
+  }
 
   // Canonical food catalogue: slug → { name, category }.
   const foods = await listFoods();
@@ -327,5 +388,6 @@ export async function assembleNutritionCentre(
     trends,
     discovery,
     simplyBetter,
+    incomplete: planner.yearFilterIncomplete,
   };
 }

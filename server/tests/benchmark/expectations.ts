@@ -95,7 +95,9 @@ const REGISTRY_CAPABILITY_IDS: ReadonlySet<string> = new Set(
  * relabel a real, distinct registered capability as a different one.
  */
 const CAPABILITY_FAMILY_ALIASES: Readonly<Record<string, string>> = {
-  // Analyser (Product / UPF) owns /api/additives, /api/scan, /api/products/barcode/*.
+  // Analyser (Product / UPF) owns /api/additives, /api/products/barcode/*.
+  // (/api/scan is recipe/shopping-list/planner OCR extraction, not Analyser — see
+  // capability-registry.ts and docs/architecture/capabilities/analyser.md.)
   additive: "analyser",
   additives: "analyser",
   "product-analysis": "analyser",

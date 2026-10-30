@@ -26,6 +26,7 @@ import {
   ChefHat,
   Archive,
   Scale,
+  Link2,
 } from "lucide-react";
 import {
   IntelligenceCard,
@@ -39,7 +40,7 @@ import {
 
 // ── Types (mirror the server FoodIntelligence model) ──────────────────────────
 
-interface FoodIntelligence {
+export interface FoodIntelligence {
   slug: string;
   food: {
     name: string;
@@ -81,6 +82,8 @@ interface FoodIntelligence {
       suggestions: Array<{ ingredient: string; action: string; why: string }>;
     }>;
   } | null;
+  /** FOODUI5 — reviewed pairings where this food is the suggested ingredient. */
+  recommendedPairings: Array<{ why: string; evidenceTopic?: string }>;
   /** SURF1A — rendered through the one preparation owner, never re-worded here. */
   preparations: FoodPreparation[];
 }
@@ -295,6 +298,26 @@ function FoodIntelligenceView({ data }: { data: FoodIntelligence }) {
           }
           data-testid="food-nutrients"
         />
+      )}
+
+      {/* ── Recommended pairing (FOODUI5) ──
+          Reviewed uplift-rule content, read in the opposite direction from
+          Simply Better Choices: this food IS the suggested ingredient, so each
+          `why` was authored to name its real partner (e.g. turmeric → black
+          pepper). Never composed here — the rule owner's own sentence, as-is. */}
+      {data.recommendedPairings.length > 0 && (
+        <IntelligenceCard
+          icon={<Link2 className="h-4 w-4" />}
+          eyebrow="Recommended pairing"
+          title={`What pairs well with ${food.name.toLowerCase()}`}
+          data-testid="food-recommended-pairings"
+        >
+          <ul className="space-y-1.5 text-sm text-foreground/80">
+            {data.recommendedPairings.map((pairing, i) => (
+              <li key={i}>{pairing.why}</li>
+            ))}
+          </ul>
+        </IntelligenceCard>
       )}
 
       {/* ── Varieties (SURF1A) ── */}

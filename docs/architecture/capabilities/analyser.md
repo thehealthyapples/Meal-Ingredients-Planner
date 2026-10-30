@@ -68,10 +68,10 @@ Handler responsibilities: read verb returns the additives reference list, nothin
 Binding registration:   ANALYSER_EXECUTABLE_INTENTS = ["read"]
 Tests required:         Standard set, scoped to the single "additives" read. No barcode/UPF analysis
                          tests possible until the live-fetch governance decision above is resolved.
-Documentation updates:  Recommend the Developer Capability Registry's apiSurface for this capability
-                         be corrected to remove /api/scan and recommend the SoT D19 owner re-verify
-                         the "product analysis tables" claim — recorded as a recommendation in this
-                         card; not applied to capability-registry.ts (runtime) by this workstream.
+Documentation updates:  /api/scan removed from this capability's apiSurface in capability-registry.ts
+                         (2026-10-29), closing the recommendation this line used to record. SoT D19's
+                         own data-store list is accurate (see "Related — product_history" below);
+                         only this card's narrower claims needed reconciling, not the register.
 Data impact:            Reads only (static reference table)
 Trust rules:            Never fabricate a UPF classification, health score, or NOVA group for a
                          product — there is no stored result; any such value can only come from a
@@ -105,3 +105,15 @@ This settles the decision BENCHINT3 §4.11 raised and BENCHINT3 §8 task 14 refe
 
 **Source investigation:** `docs/implementation/governance/INT11_CAPABILITY_CARDS_SPECIFICATION.md` (INT11, EPIC 1, 2026-06-30)
 **Governance decision:** `docs/implementation/benchmarking/BENCHINT4_INTENT_ROUTING_CONVERGENCE.md` §6 (BENCHINT4, 2026-07-10) — closes BENCHINT3 §8 task 14.
+
+---
+
+## Related — `product_history` and the Food Intelligence capability (added 2026-10-29)
+
+The Honest gaps and Source of Truth fields above say no per-product result is ever persisted. That is accurate for **this capability's own binding** — `analyser` still has no product-scoped read, and the BENCHINT4 decision above is unchanged and correctly decided: an ambient "this product" question with no referent is still an honest gap, not something to fabricate an answer to.
+
+It is not accurate as a claim that nothing anywhere persists a product result. `product_history` (`shared/schema.ts`) is a real table: the Analyser's own owning service (`product-analysis.ts` + `upf-analysis-service.ts`) writes a scoped snapshot (`thaRating`, `upfScore`, `novaGroup`, `nutriscoreGrade`, `healthScore`) to it at scan time, for the scanning user. SoT Domain 19's data-store list (`product_events`, `product_history`, `groceryProducts`, `productAdditives`, `additives`) is correct as written; it did not need re-verification.
+
+A separate, already-registered capability — `food-intelligence` (COMP1, `server/intelligence/food-intelligence/comparison-engine.ts`) — reads `product_history` legitimately, and is already consumed by Companion today for food-comparison requests. Its own header comment (lines 22–30) explains why this does not conflict with this card's trust rule: it reads the caller's own prior stored snapshot, never a live refetch, never a recompute — "the analyser Capability Card's trust rule... is satisfied because here there IS a stored result, scoped to the caller." It also clears BENCHINT4's two reversal conditions for its own use case specifically, not generally: the snapshot is the stored analysis BENCHINT4 required, and the caller naming the products in their own comparison request is the referent BENCHINT4 required — a different, stronger grounding than an ambient chat mention of "this product" could ever provide.
+
+**In short:** this card's own binding stays additives-only, by design, per BENCHINT4. A different capability is the correct, already-built, already-safe home for product-history-grounded questions, and this section exists so a future reader does not treat the Honest gaps language above as a reason to believe `product_history` is unused or ungoverned.

@@ -25,6 +25,7 @@
 import { db } from "../db";
 import { meals, plannerEntries, plannerDays, plannerWeeks } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
+import { parseCivilDate } from "@shared/time/household-time";
 import { resolveCanonicalFood } from "@shared/canonical/resolver";
 import { isCanonicalFood } from "@shared/canonical/food-report-adapter";
 import type { FoodReportKnowledge } from "@shared/canonical/food-report-adapter";
@@ -142,6 +143,20 @@ export interface FoodNutritionEnhancement {
 }
 
 /**
+ * FOODUI5 — a recommended pairing for THIS food, read from the same reviewed
+ * uplift rules as Simply Better Choices, but in the opposite direction: this
+ * food is the SUGGESTED ingredient (e.g. "turmeric"), not the triggering meal.
+ * `why` is the exact reviewed sentence authored for this ingredient in that
+ * rule — never composed or inferred from the rule's other ingredients, so a
+ * food is never shown "pairing" with something only because they happened to
+ * appear in the same suggestion list (e.g. turmeric + frozen peas).
+ */
+export interface FoodRecommendedPairing {
+  why: string;
+  evidenceTopic?: string;
+}
+
+/**
  * Trust model — how much of this page is grounded in canonical knowledge.
  * Based solely on which sections validated. Never estimated.
  */
@@ -187,6 +202,8 @@ export interface FoodIntelligence {
   discovery: FoodDiscovery | null;
   /** Simply Better Choices involving this food. Null when no rule matches. */
   nutritionEnhancement: FoodNutritionEnhancement | null;
+  /** FOODUI5 — reviewed pairings where this food is the suggested ingredient. Empty when none. */
+  recommendedPairings: FoodRecommendedPairing[];
   /**
    * SURF1A — how people prepare this food, and (only where the Layer-2 evidence
    * gate signed it off) what that changes. Read verbatim from the preparation
@@ -267,6 +284,16 @@ export interface HouseholdPlannerFoods {
   mealEntryCount: number;
   /** Distinct meal ids the household has planned. */
   distinctMealIds: number[];
+  /**
+   * NUTUI3 — true only when a `yearFilter` was requested AND at least one of
+   * the household's planner weeks has no `weekStartDate` (HT7: never
+   * back-filled, true for most households today). Those weeks are excluded
+   * from every figure above rather than guessed into or out of the target
+   * year, so this flag is what tells a caller the figures are a lower bound,
+   * not a wrong total — the honest-absence signal HT6 requires made visible
+   * to the one layer that can act on it.
+   */
+  yearFilterIncomplete: boolean;
 }
 
 /**
@@ -278,9 +305,23 @@ export interface HouseholdPlannerFoods {
  *
  * Single canonical read of household planner history. The Nutrition Centre
  * reuses this; it does not re-derive any of these figures elsewhere.
+ *
+ * `options.yearFilter`, when given, restricts every figure to planner weeks
+ * whose `weekStartDate` (Domain 14, HT7) falls in that calendar year. A week
+ * with no `weekStartDate` cannot be placed in or out of the target year, so
+ * it is excluded either way — never guessed — and `yearFilterIncomplete`
+ * reports that the result may be a lower bound. Omitting `yearFilter`
+ * reproduces exactly today's all-time behaviour for every existing caller.
+ *
+ * `options.weekNumberFilter` (FOODUI6), when given, restricts every figure to
+ * the one planner week with that `weekNumber` — the same identifier the
+ * Planner and the Food page's "Foods this week" tab already use to mean
+ * "this week" (it is always present; unlike `weekStartDate` there is no
+ * HT7 back-fill gap, so this filter never needs an `incomplete` flag).
  */
 export async function fetchHouseholdPlannerFoods(
-  householdId: number
+  householdId: number,
+  options?: { yearFilter?: number; weekNumberFilter?: number },
 ): Promise<HouseholdPlannerFoods> {
   const rows = await db
     .select({
@@ -288,6 +329,7 @@ export async function fetchHouseholdPlannerFoods(
       mealName: meals.name,
       ingredients: meals.ingredients,
       weekNumber: plannerWeeks.weekNumber,
+      weekStartDate: plannerWeeks.weekStartDate,
     })
     .from(plannerEntries)
     .innerJoin(plannerDays, eq(plannerEntries.dayId, plannerDays.id))
@@ -300,7 +342,25 @@ export async function fetchHouseholdPlannerFoods(
   // Per-slug accumulation so we can build history for ANY requested food.
   const bySlug = new Map<string, PlannerFoodAcc>();
 
+  const yearFilter = options?.yearFilter;
+  const weekNumberFilter = options?.weekNumberFilter;
+  let yearFilterIncomplete = false;
+  let mealEntryCount = 0;
+
   for (const row of rows) {
+    if (weekNumberFilter !== undefined && row.weekNumber !== weekNumberFilter) continue;
+    if (yearFilter !== undefined) {
+      const civil = parseCivilDate(row.weekStartDate);
+      if (civil === null) {
+        // Unanchored week (HT7): its year is genuinely unknown. Excluded from
+        // the target-year figures, never guessed in or out.
+        yearFilterIncomplete = true;
+        continue;
+      }
+      if (civil.year !== yearFilter) continue;
+    }
+
+    mealEntryCount += 1;
     distinctMeals.add(row.mealId);
     // One distinct canonical slug per planner entry, even if several
     // ingredients resolve to the same food.
@@ -336,8 +396,9 @@ export async function fetchHouseholdPlannerFoods(
   return {
     enjoys: Array.from(enjoys),
     bySlug,
-    mealEntryCount: rows.length,
+    mealEntryCount,
     distinctMealIds: Array.from(distinctMeals),
+    yearFilterIncomplete,
   };
 }
 
@@ -383,6 +444,36 @@ function assembleNutritionEnhancement(
   return { matches };
 }
 
+const MAX_PAIRINGS = 4;
+
+function normalisePairingToken(value: string): string {
+  return value.toLowerCase().trim();
+}
+
+/**
+ * FOODUI5 — reviewed rules where `foodName` itself is a suggested ingredient
+ * (e.g. "turmeric" inside the mac-cheese-turmeric-pepper rule). Each entry's
+ * own `why` already reads correctly on its own (it was authored per-ingredient,
+ * e.g. turmeric's why names black pepper by name) — nothing here composes new
+ * text or infers a partner from sibling suggestions in the same rule.
+ */
+function assembleRecommendedPairings(foodName: string): FoodRecommendedPairing[] {
+  const token = normalisePairingToken(foodName);
+  const out: FoodRecommendedPairing[] = [];
+  const seen = new Set<string>();
+  for (const rule of UPLIFT_RULES) {
+    if (!rule.reviewedAt) continue;
+    for (const s of rule.suggestions) {
+      if (normalisePairingToken(s.ingredient) !== token) continue;
+      if (seen.has(s.why)) continue;
+      seen.add(s.why);
+      out.push({ why: s.why, evidenceTopic: s.evidenceTopic });
+      if (out.length >= MAX_PAIRINGS) return out;
+    }
+  }
+  return out;
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /**
@@ -419,6 +510,7 @@ export async function getFoodIntelligence(
       household: null,
       discovery: null,
       nutritionEnhancement: null,
+      recommendedPairings: [],
       preparations: [],
       trust: { isCanonical: false, populatedSections: 0 },
       metadata: { assembledAt: now.toISOString(), sources },
@@ -477,6 +569,7 @@ export async function getFoodIntelligence(
         }
       : null;
   const nutritionEnhancement = assembleNutritionEnhancement(report);
+  const recommendedPairings = assembleRecommendedPairings(report.overview.name);
 
   if (report.healthBenefits.length > 0) sources.push("health_benefits");
   if (report.keyNutrients.length > 0) sources.push("nutrients");
@@ -485,7 +578,7 @@ export async function getFoodIntelligence(
   if (mealRefs.length > 0) sources.push("meals");
   if (household) sources.push("household");
   if (discovery) sources.push("discovery");
-  if (nutritionEnhancement) sources.push("nutrition_enhancement");
+  if (nutritionEnhancement || recommendedPairings.length > 0) sources.push("nutrition_enhancement");
   if (knowledgeFood) sources.push("knowledge_foods");
   if (preparations.length > 0) sources.push("knowledge_preparations");
 
@@ -499,7 +592,7 @@ export async function getFoodIntelligence(
     (mealRefs.length > 0 ? 1 : 0) +
     (household ? 1 : 0) +
     (discovery ? 1 : 0) +
-    (nutritionEnhancement ? 1 : 0) +
+    (nutritionEnhancement || recommendedPairings.length > 0 ? 1 : 0) +
     (preparations.length > 0 ? 1 : 0) +
     (storageGuidance ? 1 : 0);
 
@@ -521,6 +614,7 @@ export async function getFoodIntelligence(
     household,
     discovery,
     nutritionEnhancement,
+    recommendedPairings,
     preparations,
     trust: { isCanonical: true, populatedSections },
     metadata: { assembledAt: now.toISOString(), sources },

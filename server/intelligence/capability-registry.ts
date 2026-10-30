@@ -557,7 +557,7 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     description: "Product and ultra-processed-food analysis (advisory).",
     owner: "server/lib/product-analysis.ts + upf-analysis-service.ts (SoT D19)",
     owningService: "server/lib/product-analysis.ts, ocr.ts, openfoodfacts-importer.ts",
-    apiSurface: "/api/scan, /api/products/barcode/:barcode, /api/additives",
+    apiSurface: "/api/products/barcode/:barcode, /api/additives",
     supportedIntents: ["read", "explain", "analyse", "report"],
     executableIntents: [],
     permissions: { minimumRole: "user", knowledgeClass: "public", ownershipScoped: false, audited: false },

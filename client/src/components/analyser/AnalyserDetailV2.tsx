@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -107,6 +108,113 @@ function formatConcernList(items: string[]): string {
   return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
 }
 
+// FOODUI2 (2026-10-29) — "a better option exists" used to mean a name and a
+// rating, with nothing to hold it next to. A household deciding whether to
+// swap needs to see their own product's numbers beside the alternative's,
+// same shape as Analyser's own compare table (products-page.tsx) and the
+// Food Comparison view (FoodComparisonView.tsx) — one side-by-side pattern,
+// three surfaces, not three different ways of showing "which is better".
+const SWAP_METRICS: Array<{
+  key: string;
+  label: string;
+  value: (p: any) => number | null;
+  format: (v: number) => string;
+  betterWhen: "lower" | "higher";
+}> = [
+  { key: "tha", label: "THA score", value: (p) => p.upfAnalysis?.thaRating ?? null, format: (v) => `${v}/5`, betterWhen: "higher" },
+  { key: "sugar", label: "Sugar", value: (p) => p.nutriments?.sugar ?? null, format: (v) => `${v}g`, betterWhen: "lower" },
+  { key: "protein", label: "Protein", value: (p) => p.nutriments?.protein ?? null, format: (v) => `${v}g`, betterWhen: "higher" },
+  { key: "additives", label: "Additives", value: (p) => p.upfAnalysis?.additiveMatches?.length ?? null, format: (v) => `${v}`, betterWhen: "lower" },
+];
+
+function SwapTable({
+  current,
+  options,
+  onViewProduct,
+}: {
+  current: InputProduct;
+  options: any[];
+  onViewProduct: (product: any) => void;
+}) {
+  const columns = [current as any, ...options];
+  return (
+    <div className="overflow-x-auto rounded-lg border border-border/60" data-testid="swap-table">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-border/60">
+            <th className="sticky left-0 z-10 min-w-16 bg-background p-2.5" />
+            {columns.map((p, i) => (
+              <th key={p.barcode ?? i} className={cn("min-w-[140px] p-2.5 text-center", i === 0 && "bg-muted/40")}>
+                <p className="line-clamp-2 text-xs font-semibold leading-snug" data-testid={i === 0 ? undefined : "text-shop-alt-name"}>
+                  {i === 0 ? "Yours" : p.product_name}
+                </p>
+                {i > 0 && (
+                  <button
+                    className="mt-1 inline-flex items-center gap-0.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => onViewProduct(p)}
+                    data-testid="button-shop-alternative-view"
+                    aria-label={`View ${p.product_name}`}
+                  >
+                    View <ArrowRight className="h-2.5 w-2.5" />
+                  </button>
+                )}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {SWAP_METRICS.map((metric) => {
+            const values = columns.map((p) => metric.value(p));
+            const knownIndices = values.map((v, i) => (v === null ? -1 : i)).filter((i) => i >= 0);
+            const bestIndex = knownIndices.length > 0
+              ? knownIndices.reduce((best, i) => {
+                  const bv = values[best] as number, iv = values[i] as number;
+                  return metric.betterWhen === "lower" ? (iv < bv ? i : best) : (iv > bv ? i : best);
+                }, knownIndices[0])
+              : -1;
+            return (
+              <tr key={metric.key} className="border-b border-border/50 last:border-0">
+                <th scope="row" className="sticky left-0 z-10 bg-background p-2.5 text-left text-[10px] font-medium uppercase tracking-[0.1em] text-muted-foreground/70">
+                  {metric.label}
+                </th>
+                {columns.map((p, i) => {
+                  const v = values[i];
+                  return (
+                    <td
+                      key={i}
+                      className={cn(
+                        "p-2.5 text-center text-xs",
+                        i === 0 && "bg-muted/40",
+                        i === bestIndex && i !== 0 && "font-semibold text-green-700 dark:text-green-400",
+                      )}
+                    >
+                      {v === null ? <span className="text-muted-foreground/50">—</span> : metric.format(v)}
+                    </td>
+                  );
+                })}
+              </tr>
+            );
+          })}
+          <tr>
+            <th scope="row" className="sticky left-0 z-10 bg-background p-2.5 text-left text-[10px] font-medium uppercase tracking-[0.1em] text-muted-foreground/70">
+              Why
+            </th>
+            <td className="bg-muted/40 p-2.5" />
+            {options.map((opt, i) => {
+              const reasons = buildWhyBetter(opt, (current as any).upfAnalysis?.thaRating ?? null);
+              return (
+                <td key={opt.barcode ?? i} className="p-2.5 text-center text-[11px] text-muted-foreground">
+                  {reasons.length > 0 ? reasons.join(" · ") : "—"}
+                </td>
+              );
+            })}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export default function AnalyserDetailV2({
   product,
   otherProducts,
@@ -141,9 +249,6 @@ export default function AnalyserDetailV2({
     topOptions = ranked.slice(0, 5);
   }
   const bestOption = topOptions[0] ?? null;
-  const bestOptionReason = bestOption
-    ? (buildWhyBetter(bestOption, currentScore)[0] ?? null)
-    : null;
 
   const dietConcerns = checkDietConcerns(product.ingredients_text ?? null, dietProfile);
   const showDietBanner = hasDietPreferences(dietProfile);
@@ -214,6 +319,11 @@ export default function AnalyserDetailV2({
             {vm.product.confirmedRetailers.length === 0 && vm.product.inferredRetailers.length === 0 && vm.product.retailers.length > 0 && (
               <p className="text-xs text-muted-foreground/70 pt-0.5">
                 {vm.product.retailers.join(" · ")}
+              </p>
+            )}
+            {(product as any).scanConfidence === "low" && (
+              <p className="text-[11px] text-amber-600 dark:text-amber-400 pt-0.5" data-testid="text-v2-limited-data">
+                Limited ingredient data — score is indicative only
               </p>
             )}
           </div>
@@ -325,89 +435,24 @@ export default function AnalyserDetailV2({
       {/* ── Shop alternative ─────────────────────────────────────────── */}
       {bestOption && (
         <Card className="border-border shadow-none" data-testid="card-shop-alternative">
-          <CardContent className="p-5 space-y-4">
-            <p className={SECTION_LABEL}>Best swap in {primaryStore}</p>
-
-            {/* Best option - always visible */}
-            <div className="flex items-start gap-3">
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground leading-snug" data-testid="text-shop-alt-name">
-                  {bestOption.product_name}
-                </p>
-                {bestOption.brand && (
-                  <p className="text-xs text-muted-foreground mt-0.5">{bestOption.brand}</p>
-                )}
-                <div className="flex items-center gap-2.5 mt-1.5">
-                  <AppleRating
-                    rating={bestOption.upfAnalysis?.thaRating ?? 0}
-                    sizePx={18}
-                    additiveContext={undefined}
-                  />
-                  {bestOptionReason && (
-                    <span className="text-xs text-muted-foreground">{bestOptionReason}</span>
-                  )}
-                </div>
-              </div>
-              <button
-                className="flex-shrink-0 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors pt-0.5"
-                onClick={() => onViewProduct(bestOption)}
-                data-testid="button-shop-alternative-view"
-                aria-label={`View ${bestOption.product_name}`}
-              >
-                View <ArrowRight className="h-3.5 w-3.5" />
-              </button>
-            </div>
-
-            {/* Expand toggle - only when more than 1 option */}
+          <CardContent className="p-5 space-y-3">
+            <p className={SECTION_LABEL}>Swap in {primaryStore}</p>
+            <SwapTable
+              current={product}
+              options={showMoreAlternatives ? topOptions : topOptions.slice(0, 1)}
+              onViewProduct={onViewProduct}
+            />
             {topOptions.length > 1 && (
               <button
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
                 onClick={() => setShowMoreAlternatives((v) => !v)}
                 data-testid="button-view-more-alternatives"
               >
-                {showMoreAlternatives ? "Hide options" : "View more options"}
+                {showMoreAlternatives ? "Fewer options" : `View ${topOptions.length - 1} more option${topOptions.length - 1 === 1 ? "" : "s"}`}
                 {showMoreAlternatives
                   ? <ChevronUp className="h-3 w-3" />
                   : <ChevronDown className="h-3 w-3" />}
               </button>
-            )}
-
-            {/* Expanded list - options 2–5 */}
-            {showMoreAlternatives && topOptions.length > 1 && (
-              <div className="space-y-4 pt-1 border-t border-border/60" data-testid="section-more-alternatives">
-                {topOptions.slice(1).map((opt, idx) => {
-                  const reason = buildWhyBetter(opt, currentScore)[0] ?? null;
-                  return (
-                    <div key={opt.barcode ?? idx} className="flex items-start gap-3 pt-3 first:pt-4">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-foreground leading-snug">
-                          {opt.product_name}
-                        </p>
-                        {opt.brand && (
-                          <p className="text-xs text-muted-foreground mt-0.5">{opt.brand}</p>
-                        )}
-                        <div className="flex items-center gap-2.5 mt-1.5">
-                          <AppleRating
-                            rating={opt.upfAnalysis?.thaRating ?? 0}
-                            sizePx={16}
-                            additiveContext={undefined}
-                          />
-                          {reason && (
-                            <span className="text-xs text-muted-foreground">{reason}</span>
-                          )}
-                        </div>
-                      </div>
-                      <button
-                        className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors pt-0.5"
-                        onClick={() => onViewProduct(opt)}
-                        aria-label={`View ${opt.product_name}`}
-                      >
-                        <ArrowRight className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
             )}
           </CardContent>
         </Card>
@@ -442,7 +487,10 @@ export default function AnalyserDetailV2({
           {/* EXP1 — the apple is retired from beside the review: identity is
               not evidence, and a mark beside a claim becomes a truth claim
               (UIA §10 corollary). The words carry the voice. */}
-          <p className={SECTION_LABEL}>THA Review</p>
+          <div className="flex items-baseline justify-between">
+            <p className={SECTION_LABEL}>THA Review</p>
+            <p className="text-[10px] text-muted-foreground/60">Computed from ingredients &amp; additives</p>
+          </div>
           <p className="text-[15px] text-foreground leading-relaxed" data-testid="text-v2-review">
             {vm.thaReview}
           </p>
@@ -451,9 +499,12 @@ export default function AnalyserDetailV2({
 
       {/* ── Card 4: Ingredients ──────────────────────────────────────── */}
       {vm.uiMeta.hasIngredients && (
-        <Card className="border-border shadow-none" data-testid="card-ingredients">
+        <Card className="border-border shadow-none bg-muted/10" data-testid="card-ingredients">
           <CardContent className="p-5 space-y-5">
-            <p className={SECTION_LABEL}>What&apos;s in it</p>
+            <div className="flex items-baseline justify-between">
+              <p className={SECTION_LABEL}>What&apos;s in it</p>
+              <p className="text-[10px] text-muted-foreground/60">As listed on the pack</p>
+            </div>
 
             {/* Additives */}
             {vm.uiMeta.hasAdditives && (

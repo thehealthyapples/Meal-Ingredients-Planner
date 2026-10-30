@@ -2,8 +2,13 @@
  * Thin wrapper around the USDA FoodData Central (FDC) API.
  * Returns a lightweight nutrient snapshot for a curated set of whole foods.
  *
- * API key: set USDA_API_KEY env var, otherwise falls back to the public DEMO_KEY
- * (30 req/hour unauthenticated). This is fine for on-demand food-knowledge lookups.
+ * API key: set USDA_API_KEY env var, otherwise falls back to the public DEMO_KEY.
+ * FOODUI12 (2026-10-29) — confirmed live: DEMO_KEY is 10 req/hour (the API's own
+ * x-ratelimit-limit header), not the 30/hour this comment used to claim — USDA
+ * appears to have tightened it since. A registered key (free, instant, at
+ * https://api.data.gov/signup/) raises this to roughly 1,000 req/hour and is
+ * the only way this stays usable once the comparison table is used more than
+ * a handful of times an hour.
  *
  * Usage: call getWholeFoodSnapshot(slug) and, if non-null, append the result to
  * the food knowledge response.
@@ -25,6 +30,125 @@ const SLUG_TO_FDC_ID: Record<string, number> = {
   chickpeas: 173757, // Chickpeas (garbanzo beans), raw
   "sweet-potato": 168483, // Sweet potato, raw
   banana:  173944,  // Bananas, raw
+  // FOODUI12 (2026-10-29) — added after verifying each fdcId against a live
+  // USDA FDC search, not guessed: every one of these was fetched and its
+  // per-100g values cross-checked (carrots matched a household-supplied
+  // Google nutrition panel almost exactly, within normal rounding).
+  carrots: 170393,  // Carrots, raw
+  apple:   1750340, // Apples, fuji, with skin, raw
+  tomato:  170457,  // Tomatoes, red, ripe, raw, year round average
+  onion:   170000,  // Onions, raw
+  potato:  170032,  // Potatoes, raw, skin
+
+  // FOODUI14 (2026-10-30) — matched via a full bulk-download pass over USDA
+  // FoodData Central (Foundation + SR Legacy, zero rate limit) against all 610
+  // active registry foods, reusing the WS0.11/WS0.12 alias-resolver pipeline
+  // (exact normalised-key matching, not word-subset) — see
+  // Claude-usda-bulk-match-ALL-610-v2-TIGHTENED-2026-10-30.csv for the full
+  // matching inventory. This is the "exact_candidate_found" bucket (52 rows)
+  // minus 3 manually excluded after reading every description: a branded
+  // product ("Vegetable juice, BOLTHOUSE FARMS") and two syrup-packed fruits
+  // (mangosteen, rambutan) whose added sugar would misrepresent the fresh
+  // fruit the registry entry means.
+  basil: 172232, // Basil, fresh
+  garlic: 1104647, // Garlic, raw
+  watercress: 170068, // Watercress, raw
+  swede: 2727580, // Rutabaga, peeled, raw (US->UK translation)
+  "spring-onion": 2727585, // Green onion, (scallion), bulb and greens, root removed, raw
+  fennel: 169385, // Fennel, bulb, raw
+  radicchio: 168564, // Radicchio, raw
+  chicory: 170404, // Chicory, witloof, raw
+  pomegranate: 169134, // Pomegranates, raw
+  nectarine: 327357, // Nectarines, raw
+  watermelon: 167765, // Watermelon, raw
+  "passion-fruit": 169108, // Passion-fruit, (granadilla), purple, raw
+  dill: 172233, // Dill weed, fresh
+  cassava: 169985, // Cassava, raw
+  elderberries: 171727, // Elderberries, raw
+  "goji-berries": 173032, // Goji berries, dried
+  mulberries: 169913, // Mulberries, raw
+  loganberries: 169088, // Loganberries, frozen
+  miso: 172442, // Miso
+  flaxseed: 2262075, // Flaxseed, ground
+  farro: 2710828, // Farro, pearled, dry, raw
+  "chia-seeds": 2710819, // Chia seeds, dry, raw
+  sauerkraut: 169279, // Sauerkraut, canned, solids and liquids
+  rosemary: 173473, // Rosemary, fresh
+  thyme: 173470, // Thyme, fresh
+  "cottage-cheese": 2346384, // Cottage cheese, full fat, large or small curd
+  "cream-cheese": 2346385, // Cream cheese, full fat, block
+  buttermilk: 2259792, // Buttermilk, low fat
+  "almond-butter": 2262074, // Almond butter, creamy
+  tahini: 2262073, // Sesame butter, creamy — common-synonym match, not a literal "tahini" USDA entry
+  capers: 172238, // Capers, canned
+  horseradish: 173472, // Horseradish, prepared
+  natto: 172443, // Natto
+  // Excluded after review: vegetable-juice (branded — "BOLTHOUSE FARMS"),
+  // mangosteen and rambutan (both only matched "canned, syrup pack" forms —
+  // added sugar would misrepresent the fresh fruit).
+  //
+  // FOODUI16 (2026-10-30) — 14 keys removed here after an audit the owner's
+  // own question prompted: arrowroot, breadfruit, carrot-juice, cherimoya,
+  // chicken-feet, kumquat, lard, peppermint, pomelo, prune-juice, quince,
+  // rye-grain, starfruit, tomato-puree, mustard. Every one was keyed by its
+  // `knowledge_foods` slug, but the comparison engine looks up this map by
+  // `canonical.canonicalSlug` (shared/canonical/foods.ts, a SEPARATE, smaller
+  // 312-food identity list) — none of these 14 foods have a canonical-food
+  // entry at all, so the key could never be reached; it wasn't a typo to fix,
+  // the food itself doesn't exist in the system that would look it up. Their
+  // real, matched USDA fdcIds are preserved in
+  // Claude-usda-bulk-match-ALL-610-v2-TIGHTENED-2026-10-30.csv for whenever
+  // someone decides whether these foods should be added to the canonical list
+  // — that's a product decision, not something to default silently here.
+
+  // FOODUI15 (2026-10-30) — a second pass over the "ambiguous" bucket from the
+  // tightened matcher: where USDA held several distinct forms (raw / frozen /
+  // canned / cooked) for one food, this applies a "raw/fresh wins when exactly
+  // one raw/fresh candidate exists" default policy — close-enough forms
+  // (frozen) and meaningfully different ones (dried, canned-in-syrup, cooked)
+  // are excluded rather than averaged in. Foods where MULTIPLE raw/fresh forms
+  // still competed (e.g. carrots: mature vs baby; onion: red/yellow/white;
+  // apple: three named varieties) were deliberately left unresolved — variety
+  // selection is an editorial call, not something this policy should guess.
+  // Also excluded after manual review: Papayas (only matched "Pawpaw", which
+  // in formal US usage can mean a botanically different fruit, Asimina
+  // triloba — no scientific name was available in the USDA record to confirm
+  // either way, so left out rather than risk the wrong fruit's nutrition).
+  parsley: 170416, // Parsley, fresh
+  beetroot: 169145, // Beets, raw
+  blueberry: 171711, // Blueberries, raw — FOODUI16: key corrected from "blueberries" (the knowledge-registry slug, not canonical)
+  strawberry: 167762, // Strawberries, raw — FOODUI16: key corrected from "strawberries" (the knowledge-registry slug, not canonical)
+  kiwi: 168153, // Kiwifruit, green, raw
+  parsnip: 170417, // Parsnips, raw
+  turnip: 170465, // Turnips, raw
+  aubergine: 169228, // Eggplant, raw
+  celery: 169988, // Celery, raw
+  pumpkin: 168448, // Pumpkin, raw
+  "brussels-sprouts": 170383, // Brussels sprouts, raw
+  celeriac: 170400, // Celeriac, raw
+  kohlrabi: 168424, // Kohlrabi, raw
+  chard: 169991, // Chard, swiss, raw
+  raspberry: 167755, // Raspberries, raw
+  peach: 169928, // Peaches, yellow, raw
+  fig: 173021, // Figs, raw
+  blackberry: 173946, // Blackberries, raw
+  cranberry: 171722, // Cranberries, raw
+  gooseberry: 173030, // Gooseberries, raw
+  chives: 169994, // Chives, raw
+  barley: 170284, // Barley, pearled, raw
+  "bulgur-wheat": 2710820, // Bulgur, dry, raw
+  okra: 169260, // Okra, raw
+  "bamboo-shoots": 169210, // Bamboo shoots, raw
+  "broccoli-raab": 170381, // Broccoli raab, raw
+  "mustard-greens": 169256, // Mustard greens, raw
+  jackfruit: 174687, // Jackfruit, raw
+  lychees: 169086, // Litchis, raw
+  tempeh: 174272, // Tempeh
+  mint: 173475, // Spearmint, fresh
+  buckwheat: 170286, // Buckwheat
+  kale: 168421, // Kale, raw
+  // FOODUI16: longan and rhubarb removed — same reason as the 14 above, no
+  // canonical-food entry exists for either, so these keys were unreachable.
 };
 
 // USDA nutrient IDs for the fields we care about

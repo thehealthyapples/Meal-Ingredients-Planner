@@ -629,8 +629,11 @@
       "section": "pages",
       "status": "live",
       "visibility": "household",
-      "route": "/plant-diversity",
-      "purpose": "How many different plants the household has eaten, what that means, and which foods to try next.",
+      "route": "/nutrition",
+      "aliases": [
+        "/plant-diversity"
+      ],
+      "purpose": "A household view of foods in the selected Planner week and nutrient knowledge linked to foods across available Planner history; coverage counts are not nutrient amounts consumed.",
       "owner": "Colin Clapson",
       "sources": [
         "client/src/pages/plant-diversity-page.tsx"
@@ -640,11 +643,8 @@
         "gls-plant-diversity",
         "jrn-understand-nutrition"
       ],
-      "known_defects": [
-        "fnd-route-name-drift"
-      ],
-      "last_verified": "2026-07-11",
-      "version": 1
+      "last_verified": "2026-10-27",
+      "version": 2
     },
     {
       "id": "page-diary",
@@ -1156,7 +1156,7 @@
       "section": "routes",
       "status": "live",
       "visibility": "household",
-      "purpose": "Every address THA answers, and the page each one resolves to — including the five aliases and two redirects.",
+      "purpose": "Every address THA answers, and the page each one resolves to — including the four aliases and five redirects.",
       "owner": "Colin Clapson",
       "sources": [
         "client/src/App.tsx"
@@ -1167,6 +1167,7 @@
         "page-planner",
         "page-diary",
         "page-basket",
+        "page-nutrition",
         "page-legal",
         "page-privacy-settings",
         "page-help-centre",
@@ -1175,8 +1176,8 @@
       "known_defects": [
         "fnd-alias-sprawl"
       ],
-      "last_verified": "2026-07-18",
-      "version": 2
+      "last_verified": "2026-10-27",
+      "version": 3
     },
     {
       "id": "jrn-first-run",

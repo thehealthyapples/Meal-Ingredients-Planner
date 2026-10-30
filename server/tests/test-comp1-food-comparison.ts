@@ -88,6 +88,7 @@ function canonicalSubject(
     category,
     report: foodReport(name, category, nutrients, benefits),
     product: null,
+    usdaSnapshot: null,
   };
 }
 
@@ -118,11 +119,12 @@ function productSubject(
     category: fields.brand ?? null,
     report: null,
     product,
+    usdaSnapshot: null,
   };
 }
 
 function unresolvedSubject(query: string): SubjectFacts {
-  return { query, kind: "unresolved", slug: null, name: null, category: null, report: null, product: null };
+  return { query, kind: "unresolved", slug: null, name: null, category: null, report: null, product: null, usdaSnapshot: null };
 }
 
 const HOUSEHOLD_NUT_FREE: HouseholdSignal = {

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef, type TouchEvent } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   Search, Loader2, ShoppingBasket, ListPlus, Package, AlertTriangle, Heart,
-  Leaf, ArrowRight, X, ChevronDown, ChevronUp, Shield,
+  Leaf, ArrowRight, X, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Shield,
   Scale, Beaker, Star, Filter, Info, Layers,
   ScanLine,
   Award, Zap, History, Trash2,
@@ -400,6 +400,117 @@ function RiskBreakdownPanel({ breakdown }: { breakdown: UPFAnalysisInfo['riskBre
   );
 }
 
+// ANLCMP1 — the compare dialog's metric fields, shared between the desktop
+// aligned-column table and the mobile reference/alternative pairing so both
+// layouts read the exact same existing fields and honest missing/unknown values.
+const compareFieldDefs: Array<{
+  key: string;
+  label: string;
+  render: (p: ProductResult) => JSX.Element;
+  highlightBest?: (products: ProductResult[]) => number;
+}> = [
+  {
+    key: 'tha-score',
+    label: 'THA Score',
+    render: (p) => {
+      if (!p.upfAnalysis) return <span className="text-muted-foreground" title="Not yet known">—</span>;
+      return <AppleRating rating={p.upfAnalysis.thaRating} sizePx={20} showTooltip={false} animate={false} />;
+    },
+    highlightBest: (products) => {
+      const ratings = products.map(p => p.upfAnalysis?.thaRating ?? -1);
+      return ratings.indexOf(Math.max(...ratings));
+    },
+  },
+  {
+    key: 'upf-score',
+    label: 'UPF Score',
+    render: (p) => {
+      if (!p.upfAnalysis) return <span className="text-muted-foreground" title="Not yet known">—</span>;
+      return <span className={p.upfAnalysis.upfScore >= 60 ? 'text-red-600 font-semibold' : p.upfAnalysis.upfScore >= 30 ? 'text-orange-600 font-semibold' : 'text-green-600 font-semibold'}>{p.upfAnalysis.upfScore}/100</span>;
+    },
+    highlightBest: (products) => {
+      const scores = products.map(p => p.upfAnalysis?.upfScore ?? Infinity);
+      return scores.indexOf(Math.min(...scores));
+    },
+  },
+  {
+    key: 'nova-group',
+    label: 'NOVA Group',
+    render: (p) => {
+      const nova = p.nova_group || p.analysis?.novaGroup;
+      return nova ? <NovaGroupBadge group={nova} /> : <span className="text-muted-foreground" title="Not yet known">—</span>;
+    },
+  },
+  {
+    key: 'additives',
+    label: 'Additives',
+    render: (p) => {
+      if (!p.upfAnalysis) return <span className="text-muted-foreground" title="Not yet known">—</span>;
+      const highRisk = p.upfAnalysis.additiveMatches.filter(a => a.riskLevel === 'high');
+      return (
+        <div className="space-y-0.5">
+          <span className={highRisk.length > 0 ? 'text-red-600 font-semibold' : ''}>
+            {p.upfAnalysis.additiveMatches.length} total
+          </span>
+          {highRisk.length > 0 && (
+            <p className="text-[10px] text-red-600">{highRisk.length} high risk</p>
+          )}
+        </div>
+      );
+    },
+    highlightBest: (products) => {
+      const counts = products.map(p => p.upfAnalysis?.additiveMatches.length ?? Infinity);
+      return counts.indexOf(Math.min(...counts));
+    },
+  },
+  {
+    key: 'ultra-processed',
+    label: 'Ultra-Processed?',
+    render: (p) => {
+      if (!p.analysis) return <span className="text-muted-foreground" title="Not yet known">—</span>;
+      return p.analysis.isUltraProcessed
+        ? <Badge variant="outline" className="text-xs border-red-300 text-red-600">Yes</Badge>
+        : <Badge variant="outline" className="text-xs border-green-300 text-green-600">No</Badge>;
+    },
+  },
+  { key: 'calories', label: 'Calories', render: (p) => <span>{p.nutriments?.calories || 'N/A'}</span> },
+  { key: 'protein', label: 'Protein', render: (p) => <span>{p.nutriments?.protein || 'N/A'}</span> },
+  { key: 'sugar', label: 'Sugar', render: (p) => <span>{p.nutriments?.sugar || 'N/A'}</span> },
+  { key: 'fat', label: 'Fat', render: (p) => <span>{p.nutriments?.fat || 'N/A'}</span> },
+  { key: 'salt', label: 'Salt', render: (p) => <span>{p.nutriments?.salt || 'N/A'}</span> },
+  {
+    key: 'retailer',
+    label: 'Retailer',
+    render: (p) => (
+      p.confirmedStores && p.confirmedStores.length > 0
+        ? <span>Available at {p.confirmedStores.slice(0, 2).join(', ')}</span>
+        : p.inferredStores && p.inferredStores.length > 0
+          ? <span className="text-muted-foreground/70">Likely at {p.inferredStores.slice(0, 2).join(', ')}</span>
+          : p.availableStores && p.availableStores.length > 0
+            ? <span className="flex items-center justify-center gap-1"><Store className="h-3 w-3" />{p.availableStores.slice(0, 2).join(', ')}</span>
+            : <span className="text-muted-foreground">Unknown</span>
+    ),
+  },
+  {
+    key: 'ingredients',
+    label: 'Ingredients',
+    render: (p) => {
+      if (!p.ingredients_text) return (
+        <Badge variant="outline" className="text-[10px] border-amber-400 text-amber-600">
+          <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
+          {p.ingredientsUnavailable ? 'Not in English' : 'Missing'}
+        </Badge>
+      );
+      const items = p.ingredients_text.split(',').map(i => i.trim()).filter(Boolean);
+      return (
+        <span className="text-[10px] text-left block leading-relaxed">
+          {items.slice(0, 4).join(', ')}{items.length > 4 ? `… +${items.length - 4} more` : ''}
+        </span>
+      );
+    },
+  },
+];
+
 export default function ProductsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -416,7 +527,7 @@ export default function ProductsPage() {
   // wholeFoodAnalysis is populated when the search query is recognised as a whole
   // food by THA's classification logic. It is distinct from product search results
   // and must be rendered with explicit "Whole Food Analysis" labelling.
-  const [wholeFoodAnalysis, setWholeFoodAnalysis] = useState<{ isWholeFood: true; query: string; thaRating: number } | null>(null);
+  const [wholeFoodAnalysis, setWholeFoodAnalysis] = useState<{ isWholeFood: true; query: string; thaRating: number; slug: string | null } | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [clearHistoryOpen, setClearHistoryOpen] = useState(false);
@@ -424,6 +535,10 @@ export default function ProductsPage() {
   const [addToWeekProduct, setAddToWeekProduct] = useState<ProductResult | null>(null);
   const [compareProducts, setCompareProducts] = useState<ProductResult[]>([]);
   const [showCompare, setShowCompare] = useState(false);
+  // ANLCMP1 — mobile compare view shows one alternative at a time against the
+  // pinned reference (first-selected product); this tracks which alternative.
+  const [mobileCompareIndex, setMobileCompareIndex] = useState(0);
+  const compareTouchStartX = useRef<number | null>(null);
   const [showDetailWFRecipe, setShowDetailWFRecipe] = useState(false);
   const [hideUltraProcessed, setHideUltraProcessed] = useState(false);
   const [hideHighRiskAdditives, setHideHighRiskAdditives] = useState(false);
@@ -458,6 +573,13 @@ export default function ProductsPage() {
     window.addEventListener("tha:open-workspace", handler);
     return () => window.removeEventListener("tha:open-workspace", handler);
   }, []);
+
+  // Clamp the mobile compare index when alternatives are removed (reference
+  // stays pinned at compareProducts[0], alternatives are everything after it).
+  useEffect(() => {
+    const alternativesLength = Math.max(0, compareProducts.length - 1);
+    setMobileCompareIndex(i => Math.min(i, Math.max(0, alternativesLength - 1)));
+  }, [compareProducts.length]);
 
   const { data: userProfile } = useQuery<{
     dietPattern: string | null;
@@ -1010,13 +1132,13 @@ export default function ProductsPage() {
             onBlur={() => setSearchInputFocused(false)}
             aria-label="Search packaged foods"
             data-testid="input-product-search"
-            className="h-8"
+            className="h-9"
           />
           {intelligenceSettings?.barcodeScannerEnabled !== false && (
             <Button
               variant="outline"
               size="icon"
-              className="h-8 w-8 shrink-0 realm-banner-btn"
+              className="h-9 w-9 shrink-0 realm-banner-btn"
               onClick={() => setShowBarcodeScanner(true)}
               disabled={barcodeLoading}
               aria-label="Scan barcode"
@@ -1027,7 +1149,7 @@ export default function ProductsPage() {
           )}
           <Button variant="default"
             size="sm"
-            className="h-8 shrink-0 gap-1.5 realm-banner-btn"
+            className="h-9 shrink-0 gap-1.5 realm-banner-btn"
             onClick={handleSearch}
             disabled={isSearching || !searchQuery.trim()}
             aria-label="Analyse"
@@ -1169,6 +1291,7 @@ export default function ProductsPage() {
       }
     />
     <div className={pageContainerClass(true)} data-realm="analyser">
+      <div className="rounded-2xl border border-[var(--realm-border)] p-3 sm:p-5 lg:p-6" data-testid="analyser-page-surface">
       <div className="space-y-6">
         {hasSearched && retailerFilter && filteredResults.length === 0 && searchResults.length > 0 && !isSearching && (
           /* UINORTH1 — the canonical empty-state owner (UIA §17), variant "filtered":
@@ -1190,6 +1313,7 @@ export default function ProductsPage() {
           <WholeFoodAnalysisCard
             foodName={wholeFoodAnalysis.query}
             thaRating={wholeFoodAnalysis.thaRating}
+            slug={wholeFoodAnalysis.slug}
             householdEaterProfiles={householdEaterProfiles.length > 0 ? householdEaterProfiles : undefined}
           />
         )}
@@ -1291,7 +1415,7 @@ export default function ProductsPage() {
               </AlertDialog>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="flex flex-col gap-2">
                 {productHistoryData.map((item) => {
                   const novaConfig = item.novaGroup ? NOVA_CONFIG[item.novaGroup] : null;
                   const openHistoryItem = () => {
@@ -1419,7 +1543,7 @@ export default function ProductsPage() {
                       <h3 className="font-semibold text-sm">{store}</h3>
                       <span className="text-xs text-muted-foreground">({groups.length})</span>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div className="space-y-3">
                       {groups.map((group, index) => {
                         const product = group.representative;
                         const displayName = getDisplayName(product.product_name);
@@ -1448,14 +1572,14 @@ export default function ProductsPage() {
                               }}
                               data-testid={`card-product-${product.barcode || index}`}
                             >
-                              <div className="flex gap-4 p-4">
+                              <div className="flex gap-3 p-3 sm:gap-4 sm:p-4">
                                 {product.image_url ? (
-                                  <div className="w-20 h-20 flex-shrink-0 rounded-md overflow-hidden bg-muted">
+                                  <div className="w-16 h-16 flex-shrink-0 rounded-md overflow-hidden bg-muted">
                                     <img src={product.image_url} alt={displayName} className="w-full h-full object-contain" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                                   </div>
                                 ) : (
-                                  <div className="w-20 h-20 flex-shrink-0 rounded-md bg-muted flex items-center justify-center">
-                                    <Package className="h-8 w-8 text-muted-foreground/50" />
+                                  <div className="w-16 h-16 flex-shrink-0 rounded-md bg-muted flex items-center justify-center">
+                                    <Package className="h-6 w-6 text-muted-foreground/50" />
                                   </div>
                                 )}
                                 <div className="flex-1 min-w-0">
@@ -1485,7 +1609,7 @@ export default function ProductsPage() {
                                         <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1"><Store className="h-3 w-3 flex-shrink-0" />{group.mergedStores.slice(0, 2).join(' · ')}</p>
                                       )}
                                     </div>
-                                    {product.upfAnalysis && (<div className="flex-shrink-0"><AppleRating rating={product.upfAnalysis.thaRating} sizePx={34} showTooltip={false} animate={false} /></div>)}
+                                    {product.upfAnalysis && (<div className="flex-shrink-0"><AppleRating rating={product.upfAnalysis.thaRating} sizePx={30} showTooltip={false} animate={false} /></div>)}
                                   </div>
                                 </div>
                               </div>
@@ -1526,7 +1650,7 @@ export default function ProductsPage() {
               </div>
             ) : canonicalGroups.length > 0 ? (
               /* ── Flat sorted grid ─────────────────────────────────────────── */
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div className="space-y-3">
                 <AnimatePresence mode="popLayout">
                   {canonicalDisplayResults.map((group, index) => {
                     const product = group.representative;
@@ -1558,7 +1682,7 @@ export default function ProductsPage() {
                         >
                           <div className="flex gap-4 p-4">
                             {product.image_url ? (
-                              <div className="w-20 h-20 flex-shrink-0 rounded-md overflow-hidden bg-muted">
+                              <div className="w-16 h-16 flex-shrink-0 rounded-md overflow-hidden bg-muted">
                                 <img
                                   src={product.image_url}
                                   alt={displayName}
@@ -1568,8 +1692,8 @@ export default function ProductsPage() {
                                 />
                               </div>
                             ) : (
-                              <div className="w-20 h-20 flex-shrink-0 rounded-md bg-muted flex items-center justify-center">
-                                <Package className="h-8 w-8 text-muted-foreground/50" />
+                              <div className="w-16 h-16 flex-shrink-0 rounded-md bg-muted flex items-center justify-center">
+                                <Package className="h-6 w-6 text-muted-foreground/50" />
                               </div>
                             )}
                             <div className="flex-1 min-w-0">
@@ -1610,7 +1734,7 @@ export default function ProductsPage() {
                                 </div>
                                 {product.upfAnalysis && (
                                   <div className="flex-shrink-0">
-                                    <AppleRating rating={product.upfAnalysis.thaRating} sizePx={34} showTooltip={false} animate={false} />
+                                  <AppleRating rating={product.upfAnalysis.thaRating} sizePx={30} showTooltip={false} animate={false} />
                                   </div>
                                 )}
                               </div>
@@ -1715,10 +1839,11 @@ export default function ProductsPage() {
             ) : null}
           </div>
         </div>
+      </div>
 
         {/* ── Product Detail Dialog ────────────────────────────────────────── */}
         <Dialog open={selectedProduct !== null} onOpenChange={(open) => { if (!open) setSelectedProduct(null); }}>
-          <DialogContent className="max-w-2xl max-h-[88vh] overflow-y-auto" data-testid="dialog-product-detail">
+          <DialogContent className="w-[calc(100vw-1rem)] max-w-5xl max-h-[88vh] overflow-y-auto" data-testid="dialog-product-detail">
             <DialogTitle className="sr-only">
               {selectedProduct?.product_name ?? "Product detail"}
             </DialogTitle>
@@ -1755,7 +1880,7 @@ export default function ProductsPage() {
       )}
 
       <Dialog open={showCompare} onOpenChange={setShowCompare}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto" data-testid="dialog-compare">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-6xl max-h-[88vh] overflow-y-auto" data-testid="dialog-compare">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Scale className="h-5 w-5" />
@@ -1765,123 +1890,123 @@ export default function ProductsPage() {
               Apple rating combines E-number additives, soft UPF ingredients (yeast extract, natural flavourings, maltodextrin…) and NOVA group - NOVA 4 products are capped at 3 apples or lower.
             </p>
           </DialogHeader>
-          {compareProducts.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b">
-                    <th className="p-3 text-left text-muted-foreground font-medium">Metric</th>
-                    {compareProducts.map((p, i) => (
-                      <th key={i} className="p-3 text-center min-w-[150px]">
-                        <div className="flex flex-col items-center gap-1">
-                          {p.image_url ? (
-                            <img src={p.image_url} alt={p.product_name} className="w-14 h-14 object-contain rounded bg-muted" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                          ) : (
-                            <div className="w-14 h-14 rounded bg-muted flex items-center justify-center">
-                              <Package className="h-6 w-6 text-muted-foreground/50" />
-                            </div>
-                          )}
-                          <span className="font-semibold text-xs leading-tight text-center line-clamp-2">{p.product_name}</span>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-destructive text-xs px-2"
-                            onClick={() => toggleCompare(p)}
-                          >
-                            <X className="h-3 w-3 mr-1" />
-                            Remove
-                          </Button>
-                        </div>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  <CompareRow label="THA Score" products={compareProducts} render={(p) => {
-                    if (!p.upfAnalysis) return <span className="text-muted-foreground" title="Not yet known">—</span>;
-                    return <AppleRating rating={p.upfAnalysis.thaRating} sizePx={20} showTooltip={false} animate={false} />;
-                  }} highlightBest={(products) => {
-                    const ratings = products.map(p => p.upfAnalysis?.thaRating ?? -1);
-                    return ratings.indexOf(Math.max(...ratings));
-                  }} />
-                  <CompareRow label="UPF Score" products={compareProducts} render={(p) => {
-                    if (!p.upfAnalysis) return <span className="text-muted-foreground" title="Not yet known">—</span>;
-                    return <span className={p.upfAnalysis.upfScore >= 60 ? 'text-red-600 font-semibold' : p.upfAnalysis.upfScore >= 30 ? 'text-orange-600 font-semibold' : 'text-green-600 font-semibold'}>{p.upfAnalysis.upfScore}/100</span>;
-                  }} highlightBest={(products) => {
-                    const scores = products.map(p => p.upfAnalysis?.upfScore ?? Infinity);
-                    return scores.indexOf(Math.min(...scores));
-                  }} />
-                  <CompareRow label="NOVA Group" products={compareProducts} render={(p) => {
-                    const nova = p.nova_group || p.analysis?.novaGroup;
-                    return nova ? <NovaGroupBadge group={nova} /> : <span className="text-muted-foreground" title="Not yet known">—</span>;
-                  }} />
-                  <CompareRow label="Additives" products={compareProducts} render={(p) => {
-                    if (!p.upfAnalysis) return <span className="text-muted-foreground" title="Not yet known">—</span>;
-                    const highRisk = p.upfAnalysis.additiveMatches.filter(a => a.riskLevel === 'high');
-                    return (
-                      <div className="space-y-0.5">
-                        <span className={highRisk.length > 0 ? 'text-red-600 font-semibold' : ''}>
-                          {p.upfAnalysis.additiveMatches.length} total
-                        </span>
-                        {highRisk.length > 0 && (
-                          <p className="text-[10px] text-red-600">{highRisk.length} high risk</p>
-                        )}
+          {compareProducts.length > 0 ? (() => {
+            const reference = compareProducts[0];
+            const alternatives = compareProducts.slice(1);
+            const activeIndex = Math.min(mobileCompareIndex, Math.max(0, alternatives.length - 1));
+            const activeAlternative = alternatives[activeIndex];
+            const changeAlternative = (direction: -1 | 1) => {
+              if (alternatives.length < 2) return;
+              setMobileCompareIndex(index => (index + direction + alternatives.length) % alternatives.length);
+            };
+            const onSwipeStart = (event: TouchEvent<HTMLDivElement>) => {
+              compareTouchStartX.current = event.changedTouches[0]?.clientX ?? null;
+            };
+            const onSwipeEnd = (event: TouchEvent<HTMLDivElement>) => {
+              const startX = compareTouchStartX.current;
+              compareTouchStartX.current = null;
+              const endX = event.changedTouches[0]?.clientX;
+              if (startX === null || endX === undefined || Math.abs(endX - startX) < 45) return;
+              changeAlternative(endX < startX ? 1 : -1);
+            };
+            const productHeading = (product: ProductResult, isReference: boolean) => (
+              <div className="flex min-w-0 items-center gap-2 text-left">
+                {product.image_url ? (
+                  <img src={product.image_url} alt={product.product_name} className="h-10 w-10 shrink-0 rounded bg-muted object-contain" onError={(event) => { (event.target as HTMLImageElement).style.display = 'none'; }} />
+                ) : (
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-muted"><Package className="h-5 w-5 text-muted-foreground/50" /></div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="line-clamp-2 text-xs font-semibold leading-snug">{product.product_name}</p>
+                  <p className="text-[10px] text-muted-foreground">{isReference ? 'Reference product' : 'Compared with reference'}</p>
+                </div>
+                <Button size="sm" variant="ghost" className="shrink-0 px-2 text-destructive" onClick={() => toggleCompare(product)} aria-label={'Remove ' + product.product_name + ' from comparison'}>
+                  <X className="mr-1 h-3 w-3" />Remove
+                </Button>
+              </div>
+            );
+            const renderDesktopColumn = (product: ProductResult, index: number) => (
+              <th key={(product.barcode || product.product_name) + '-' + index} className={index === 0 ? 'sticky left-32 z-20 min-w-[150px] bg-muted/40 p-3 text-center' : 'min-w-[150px] p-3 text-center'}>
+                {productHeading(product, index === 0)}
+              </th>
+            );
+            return (
+              <div>
+                <p className="mb-3 text-[11px] text-muted-foreground">The first selected product stays as the reference while you compare the others.</p>
+                {alternatives.length === 0 && (
+                  <p className="mb-3 rounded-md border border-border/60 bg-muted/20 p-3 text-xs text-muted-foreground">Add another product to compare it with {reference.product_name}.</p>
+                )}
+
+                <div className="hidden overflow-x-auto md:block">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="sticky left-0 z-20 w-32 min-w-32 bg-background p-3 text-left text-xs font-medium text-muted-foreground">Metric</th>
+                        {renderDesktopColumn(reference, 0)}
+                        {alternatives.map((product, index) => renderDesktopColumn(product, index + 1))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {compareFieldDefs.map(field => {
+                        const bestIndex = field.highlightBest?.(compareProducts) ?? -1;
+                        return (
+                          <tr key={field.key} className="border-b border-border/50">
+                            <th scope="row" className="sticky left-0 z-10 bg-background p-3 text-left text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground/70">{field.label}</th>
+                            {compareProducts.map((product, index) => (
+                              <td key={field.key + '-' + (product.barcode || index)} className={'p-3 text-center ' + (index === 0 ? 'sticky left-32 z-10 bg-muted/40 ' : '') + (index === bestIndex ? 'ring-1 ring-inset ring-green-500/25' : '')}>
+                                {field.render(product)}
+                              </td>
+                            ))}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="md:hidden">
+                  <div className="mb-3 rounded-lg border border-border/60 bg-muted/20 p-3">
+                    <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">Reference</p>
+                    {productHeading(reference, true)}
+                  </div>
+                  {activeAlternative ? (
+                    <div onTouchStart={onSwipeStart} onTouchEnd={onSwipeEnd} className="touch-pan-y">
+                      <div className="mb-3 rounded-lg border border-border/60 p-3">
+                        {productHeading(activeAlternative, false)}
                       </div>
-                    );
-                  }} highlightBest={(products) => {
-                    const counts = products.map(p => p.upfAnalysis?.additiveMatches.length ?? Infinity);
-                    return counts.indexOf(Math.min(...counts));
-                  }} />
-                  <CompareRow label="Ultra-Processed?" products={compareProducts} render={(p) => {
-                    if (!p.analysis) return <span className="text-muted-foreground" title="Not yet known">—</span>;
-                    return p.analysis.isUltraProcessed
-                      ? <Badge variant="outline" className="text-xs border-red-300 text-red-600">Yes</Badge>
-                      : <Badge variant="outline" className="text-xs border-green-300 text-green-600">No</Badge>;
-                  }} />
-                  <CompareRow label="Calories" products={compareProducts} render={(p) => (
-                    <span>{p.nutriments?.calories || 'N/A'}</span>
-                  )} />
-                  <CompareRow label="Protein" products={compareProducts} render={(p) => (
-                    <span>{p.nutriments?.protein || 'N/A'}</span>
-                  )} />
-                  <CompareRow label="Sugar" products={compareProducts} render={(p) => (
-                    <span>{p.nutriments?.sugar || 'N/A'}</span>
-                  )} />
-                  <CompareRow label="Fat" products={compareProducts} render={(p) => (
-                    <span>{p.nutriments?.fat || 'N/A'}</span>
-                  )} />
-                  <CompareRow label="Salt" products={compareProducts} render={(p) => (
-                    <span>{p.nutriments?.salt || 'N/A'}</span>
-                  )} />
-                  <CompareRow label="Retailer" products={compareProducts} render={(p) => (
-                    p.confirmedStores && p.confirmedStores.length > 0
-                      ? <span>Available at {p.confirmedStores.slice(0, 2).join(', ')}</span>
-                      : p.inferredStores && p.inferredStores.length > 0
-                        ? <span className="text-muted-foreground/70">Likely at {p.inferredStores.slice(0, 2).join(', ')}</span>
-                        : p.availableStores && p.availableStores.length > 0
-                          ? <span className="flex items-center justify-center gap-1"><Store className="h-3 w-3" />{p.availableStores.slice(0, 2).join(', ')}</span>
-                          : <span className="text-muted-foreground">Unknown</span>
-                  )} />
-                  <CompareRow label="Ingredients" products={compareProducts} render={(p) => {
-                    if (!p.ingredients_text) return (
-                      <Badge variant="outline" className="text-[10px] border-amber-400 text-amber-600">
-                        <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
-                        {p.ingredientsUnavailable ? 'Not in English' : 'Missing'}
-                      </Badge>
-                    );
-                    const items = p.ingredients_text.split(',').map(i => i.trim()).filter(Boolean);
-                    return (
-                      <span className="text-[10px] text-left block leading-relaxed">
-                        {items.slice(0, 4).join(', ')}{items.length > 4 ? `… +${items.length - 4} more` : ''}
-                      </span>
-                    );
-                  }} />
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            /* UINORTH1 — the canonical empty-state owner (UIA §17), variant "empty":
-               nothing chosen to compare yet. Was a hand-rolled centred paragraph. */
+                      <div className="overflow-hidden rounded-lg border border-border/60">
+                        <div className="grid grid-cols-[minmax(5.5rem,0.8fr)_minmax(0,1fr)_minmax(0,1fr)] border-b border-border/60 bg-muted/30">
+                          <div className="p-2 text-[9px] font-medium uppercase tracking-wide text-muted-foreground">Metric</div>
+                          <div className="p-2 text-center text-[9px] font-medium uppercase tracking-wide text-muted-foreground">Reference</div>
+                          <div className="p-2 text-center text-[9px] font-medium uppercase tracking-wide text-muted-foreground">Alternative</div>
+                        </div>
+                        {compareFieldDefs.map(field => {
+                          const bestIndex = field.highlightBest?.(compareProducts) ?? -1;
+                          const activeProductIndex = compareProducts.indexOf(activeAlternative);
+                          return (
+                            <div key={field.key} className="grid grid-cols-[minmax(5.5rem,0.8fr)_minmax(0,1fr)_minmax(0,1fr)] border-b border-border/50 last:border-b-0">
+                              <div className="p-2 text-[10px] font-medium text-muted-foreground">{field.label}</div>
+                              <div className={bestIndex === 0 ? 'bg-green-50 p-2 text-center text-xs dark:bg-green-900/10' : 'p-2 text-center text-xs'} aria-label={field.label + ' for reference'}>{field.render(reference)}</div>
+                              <div className={bestIndex === activeProductIndex ? 'bg-green-50 p-2 text-center text-xs dark:bg-green-900/10' : 'p-2 text-center text-xs'} aria-label={field.label + ' for ' + activeAlternative.product_name}>{field.render(activeAlternative)}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div className="mt-3 flex items-center justify-between gap-2">
+                        <Button size="sm" variant="outline" onClick={() => changeAlternative(-1)} disabled={alternatives.length < 2} aria-label="Previous product">
+                          <ChevronLeft className="mr-1 h-4 w-4" />Previous
+                        </Button>
+                        <span className="text-xs tabular-nums text-muted-foreground" aria-live="polite">{activeIndex + 1} of {alternatives.length}</span>
+                        <Button size="sm" variant="outline" onClick={() => changeAlternative(1)} disabled={alternatives.length < 2} aria-label="Next product">
+                          Next<ChevronRight className="ml-1 h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })() : (
             <EmptyState
               variant="empty"
               title="No products selected for comparison"
@@ -2240,24 +2365,5 @@ function FilterPanelContent({
         </p>
       )}
     </div>
-  );
-}
-
-function CompareRow({ label, products, render, highlightBest }: {
-  label: string;
-  products: ProductResult[];
-  render: (p: ProductResult) => JSX.Element;
-  highlightBest?: (products: ProductResult[]) => number;
-}) {
-  const bestIdx = highlightBest ? highlightBest(products) : -1;
-  return (
-    <tr className="border-b border-border/50">
-      <td className="p-3 text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">{label}</td>
-      {products.map((p, i) => (
-        <td key={i} className={`p-3 text-center ${i === bestIdx ? 'bg-green-50 dark:bg-green-900/10' : ''}`}>
-          {render(p)}
-        </td>
-      ))}
-    </tr>
   );
 }

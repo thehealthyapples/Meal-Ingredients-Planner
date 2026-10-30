@@ -187,6 +187,53 @@ export async function getFoodsForNutrient(nutrientSlug: string): Promise<Knowled
   return foodsBySlugs(links.map((l) => l.foodSlug));
 }
 
+/**
+ * FOODUI7 — foods with a similar nutrient makeup to `foodSlug`, ranked by
+ * Jaccard overlap of their notable-nutrient sets (composition only; this is
+ * NOT a benefit claim, so it carries no evidence gate — same posture as
+ * getNutrientsForFood). Chosen over the curated food-graph `similar_to`
+ * relationship because that graph only covers a small hand-authored subset
+ * of foods; every food in this registry has at least one nutrient link, so
+ * this reaches foods the curated graph has no opinion on. Returns foods with
+ * zero overlap excluded — never pads results with unrelated foods just to
+ * fill a quota.
+ */
+export async function getSimilarFoodsByNutrients(
+  foodSlug: string,
+  limit = 6,
+): Promise<Array<{ food: KnowledgeFood; score: number }>> {
+  const anchorLinks = await getNutrientsForFood(foodSlug);
+  const anchorSet = new Set(anchorLinks.map((l) => l.nutrient.slug));
+  if (anchorSet.size === 0) return [];
+
+  const allLinks = await db
+    .select({ foodSlug: knowledgeFoodNutrients.foodSlug, nutrientSlug: knowledgeFoodNutrients.nutrientSlug })
+    .from(knowledgeFoodNutrients)
+    .where(eq(knowledgeFoodNutrients.isActive, true));
+
+  const setsByFood = new Map<string, Set<string>>();
+  for (const row of allLinks) {
+    if (!setsByFood.has(row.foodSlug)) setsByFood.set(row.foodSlug, new Set());
+    setsByFood.get(row.foodSlug)!.add(row.nutrientSlug);
+  }
+
+  const scored: Array<{ slug: string; score: number }> = [];
+  for (const [slug, set] of setsByFood) {
+    if (slug === foodSlug) continue;
+    let intersection = 0;
+    for (const n of anchorSet) if (set.has(n)) intersection++;
+    const union = anchorSet.size + set.size - intersection;
+    const score = union > 0 ? intersection / union : 0;
+    if (score > 0) scored.push({ slug, score });
+  }
+  scored.sort((a, b) => b.score - a.score);
+  const top = scored.slice(0, limit);
+
+  const foods = await foodsBySlugs(top.map((t) => t.slug));
+  const scoreBySlug = new Map(top.map((t) => [t.slug, t.score]));
+  return foods.map((food) => ({ food, score: scoreBySlug.get(food.slug) ?? 0 }));
+}
+
 /** Reverse lookup: foods that support a health benefit.
  *
  *  KNOW5: this must apply exactly the same full-chain gate as
@@ -486,6 +533,45 @@ export async function searchKnowledgeRegistry(rawQuery: string): Promise<Knowled
     nutrients: nutrientMatches.map((n) => ({ slug: n.slug, name: n.name, category: n.category })),
     benefits: benefitMatches.map(toBenefitChip),
   };
+}
+
+/**
+ * FOODUI7 — the single best food match for a query, ranked by how exactly it
+ * matches rather than by `listFoods()`'s display order. `searchKnowledgeRegistry`
+ * (Pantry Explore's search, unchanged) returns every substring match in display
+ * order, which is right for a results LIST but wrong for picking "the" food a
+ * one-box lookup should resolve to — e.g. "apple" substring-matches "Apple
+ * Cider Vinegar" before "Apples" in display order, even though "apple" is a
+ * registered alias of "Apples" and not of the vinegar at all. Exact name/alias
+ * matches win first; only when none exists does this fall back to the first
+ * substring match, same as today's behaviour.
+ */
+export async function findBestFoodMatch(rawQuery: string): Promise<KnowledgeFood | null> {
+  const q = rawQuery.trim().toLowerCase();
+  if (!q) return null;
+  const foods = await listFoods();
+
+  const exactName = foods.find((f) => f.name.toLowerCase() === q);
+  if (exactName) return exactName;
+
+  const exactAlias = foods.find((f) => f.aliases.some((a) => a.toLowerCase() === q));
+  if (exactAlias) return exactAlias;
+
+  const nameStartsWith = foods.find((f) => f.name.toLowerCase().startsWith(q));
+  if (nameStartsWith) return nameStartsWith;
+
+  const aliasStartsWith = foods.find((f) => f.aliases.some((a) => a.toLowerCase().startsWith(q)));
+  if (aliasStartsWith) return aliasStartsWith;
+
+  const substring = foods.find(
+    (f) =>
+      f.name.toLowerCase().includes(q) ||
+      f.slug.toLowerCase().includes(q) ||
+      f.category.toLowerCase().includes(q) ||
+      (f.subcategory?.toLowerCase().includes(q) ?? false) ||
+      f.aliases.some((a) => a.toLowerCase().includes(q)),
+  );
+  return substring ?? null;
 }
 
 /** Distinct food categories with counts, in editorial display order. */

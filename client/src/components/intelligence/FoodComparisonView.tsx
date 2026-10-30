@@ -13,9 +13,11 @@
 // engine's household-suitability dimension and its final recommendation carry the
 // "for us" signal; this view puts them first.
 
-import { Scale, Home, Info, CheckCircle2, CircleDashed } from "lucide-react";
+import { useState } from "react";
+import { Scale, Home, Info, CheckCircle2, CircleDashed, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   IntelligenceCard,
   bodyText,
@@ -50,6 +52,10 @@ export interface ComparisonDimensionEntry {
   summary: string | null;
   gapReason: string | null;
   evidence: ComparisonEvidence[];
+  /** FOODUI11 — present only for naturally list-shaped dimensions (nutrients, benefits). */
+  items?: string[];
+  /** FOODUI12 — real per-100g quantities (currently: USDA macros, nutritionalProfile only, covered foods only). */
+  metrics?: { label: string; value: string }[];
 }
 
 export interface ComparisonSubject {
@@ -174,12 +180,16 @@ export function FoodComparisonView({ bundle }: { bundle: FoodComparisonBundle })
         </p>
       </div>
 
-      {/* ── Dimension by dimension: the cited, decision-grade detail ── */}
-      <div className="space-y-2.5">
-        {orderedDimensions.map((d) => (
-          <DimensionRow key={d.dimension} outcome={d} subjects={resolved} />
-        ))}
-      </div>
+      {/* ── Side by side: every subject in one column each, every dimension a row.
+            FOODUI2 (2026-10-29) — a vertical dimension-by-dimension list made a
+            household read N summaries just to find the one line about the food
+            they actually had in mind. A household scans left to right across
+            what they're choosing between (the same reason Analyser's own compare
+            table, products-page.tsx, is built this way) — this view now matches
+            it, same table shape, for one consistent comparison pattern app-wide. ── */}
+      {resolved.length > 0 && (
+        <ComparisonTable dimensions={orderedDimensions} subjects={resolved} />
+      )}
 
       {/* ── Honest gaps + sources ── */}
       {(bundle.trust.gaps.length > 0 || unresolved.length > 0) && (
@@ -211,58 +221,177 @@ export function FoodComparisonView({ bundle }: { bundle: FoodComparisonBundle })
   );
 }
 
-// One dimension: the cross-subject verdict, with each subject's cited fact behind
-// a calm progressive-disclosure toggle.
-function DimensionRow({
-  outcome,
-  subjects,
-}: {
-  outcome: ComparisonDimensionOutcome;
-  subjects: ComparisonSubject[];
-}) {
-  const label = DIMENSION_LABEL[outcome.dimension];
-  const perSubject = subjects
-    .map((s) => ({ subject: s, entry: s.dimensions[outcome.dimension] }))
-    .filter((x) => !!x.entry);
-
-  const hasCitedDetail = perSubject.some(
-    (x) => x.entry.status === "evidence" && x.entry.evidence.length > 0,
+// FOODUI2 — one table: a column per subject, a row per dimension. Mirrors
+// products-page.tsx's own compare table shape (sticky first column, one
+// column per thing being compared) so the two comparison surfaces in the app
+// read as one pattern, not two. Each cell is that subject's OWN cited summary
+// for that row — the engine already computes this per-subject (Rule E1, no
+// citation no card); this view just stops hiding it behind a per-dimension
+// list the household had to re-scan for every row.
+// FOODUI9 — a cell's full prose summary is the evidence-grounded claim (Rule
+// E1); this never shortens or rewrites it. What changes is DEFAULT VISIBILITY:
+// collapsed to two lines with a toggle, same text, full text one click away —
+// so the table reads at a glance instead of forcing a full read of every row
+// to find the one line that actually differs between two foods.
+// FOODUI11 — the "Why?" source tooltip, shared by both the prose and the
+// badge-grid cell shapes so expanding either one reveals the same citation.
+function CellSourceTooltip({ evidence }: { evidence: ComparisonEvidence[] }) {
+  if (evidence.length === 0) return null;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button type="button" className="text-muted-foreground/50 hover:text-muted-foreground" data-testid="comparison-cell-source">
+          <Info className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-60 text-xs">{evidence.map((e) => e.owner).join(", ")}</TooltipContent>
+    </Tooltip>
   );
+}
+
+function ComparisonCell({
+  entry,
+}: {
+  entry: ComparisonDimensionEntry;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  if (entry.status !== "evidence") {
+    return <p className={cn(subtleText, "italic")}>{entry.gapReason ?? "No data yet."}</p>;
+  }
+
+  // FOODUI11/12 — a naturally list-shaped or quantified dimension (nutrients,
+  // benefits, USDA macros) reads as scannable chips/numbers by default, not a
+  // sentence to parse. The same evidence-grounded summary is still one click
+  // away via "Why?" — nothing is hidden, only the DEFAULT shape changes to
+  // match what the data actually is.
+  if ((entry.items && entry.items.length > 0) || (entry.metrics && entry.metrics.length > 0)) {
+    return (
+      <div>
+        {/* FOODUI12 — real quantities get their own row, distinct from named-only chips. */}
+        {entry.metrics && entry.metrics.length > 0 && (
+          <div className="mb-1.5 grid grid-cols-2 gap-x-2 gap-y-0.5">
+            {entry.metrics.map((m) => (
+              <div key={m.label} className="flex items-baseline justify-between gap-1">
+                <span className="text-[11px] text-muted-foreground/70">{m.label}</span>
+                <span className="text-sm font-semibold tabular-nums">{m.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {entry.items && entry.items.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {entry.items.map((item) => (
+              <span
+                key={item}
+                className="inline-flex items-center rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-xs font-medium text-foreground/80"
+              >
+                {item}
+              </span>
+            ))}
+          </div>
+        )}
+        <div className="mt-1.5 flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="inline-flex items-center gap-0.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+            data-testid="comparison-cell-toggle"
+          >
+            <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", expanded && "rotate-180")} aria-hidden="true" />
+            {expanded ? "Less" : "Why?"}
+          </button>
+          {expanded && <CellSourceTooltip evidence={entry.evidence} />}
+        </div>
+        {expanded && <p className="mt-1 text-sm leading-relaxed text-foreground/80">{entry.summary}</p>}
+      </div>
+    );
+  }
 
   return (
-    <IntelligenceCard
-      icon={outcome.dimension === "householdSuitability" ? <Home className="h-4 w-4" /> : <Scale className="h-4 w-4" />}
-      eyebrow={label}
-      body={
-        outcome.comparable
-          ? (outcome.outcome ?? undefined)
-          : (outcome.gapReason ?? "Not enough evidence to compare this fairly.")
-      }
-      details={
-        hasCitedDetail ? (
-          <ul className="space-y-2">
-            {perSubject.map(({ subject, entry }) => (
-              <li key={subject.query}>
-                <p className="text-xs font-medium text-foreground/80">{subjectLabel(subject)}</p>
-                {entry.status === "evidence" ? (
-                  <>
-                    <p className={subtleText}>{entry.summary}</p>
-                    {entry.evidence.map((e, i) => (
-                      <p key={i} className={cn(subtleText, "text-muted-foreground/70")}>
-                        {e.fact} <span className="text-muted-foreground/50">— {e.owner}</span>
-                      </p>
-                    ))}
-                  </>
-                ) : (
-                  <p className={subtleText}>{entry.gapReason ?? "No data yet."}</p>
+    <div>
+      <p className={cn("text-sm leading-relaxed", !expanded && "line-clamp-2")}>{entry.summary}</p>
+      <div className="mt-1 flex items-center gap-1">
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="inline-flex items-center gap-0.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+          data-testid="comparison-cell-toggle"
+        >
+          <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", expanded && "rotate-180")} aria-hidden="true" />
+          {expanded ? "Less" : "Why?"}
+        </button>
+        {expanded && <CellSourceTooltip evidence={entry.evidence} />}
+      </div>
+    </div>
+  );
+}
+
+function ComparisonTable({
+  dimensions,
+  subjects,
+}: {
+  dimensions: ComparisonDimensionOutcome[];
+  subjects: ComparisonSubject[];
+}) {
+  return (
+    <div className="overflow-x-auto rounded-lg border border-border/60" data-testid="comparison-table">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-border/60">
+            <th className="sticky left-0 z-10 min-w-28 bg-background p-3 text-left text-xs font-medium uppercase tracking-[0.1em] text-muted-foreground/70">
+              Dimension
+            </th>
+            {subjects.map((s, i) => (
+              <th
+                key={s.query}
+                className={cn(
+                  "min-w-[160px] p-3 text-center text-base font-semibold",
+                  i === 0 && "bg-muted/40",
                 )}
-              </li>
+              >
+                {subjectLabel(s)}
+              </th>
             ))}
-          </ul>
-        ) : undefined
-      }
-      detailsLabel="Show the evidence"
-      data-testid={`comparison-dimension-${outcome.dimension}`}
-    />
+          </tr>
+        </thead>
+        <tbody>
+          {dimensions.map((d) => {
+            const label = DIMENSION_LABEL[d.dimension];
+            return (
+              <tr key={d.dimension} className="border-b border-border/50 last:border-0 align-top">
+                <th
+                  scope="row"
+                  className="sticky left-0 z-10 bg-background p-3 text-left text-sm font-semibold text-foreground/80"
+                >
+                  {d.dimension === "householdSuitability" ? (
+                    <Home className="mb-1 h-3.5 w-3.5 text-muted-foreground/60" aria-hidden="true" />
+                  ) : (
+                    <Scale className="mb-1 h-3.5 w-3.5 text-muted-foreground/60" aria-hidden="true" />
+                  )}
+                  <br />
+                  {label}
+                </th>
+                {subjects.map((s, i) => {
+                  const entry = s.dimensions[d.dimension];
+                  if (!entry) {
+                    return <td key={s.query} className={cn("p-3 text-center", subtleText, i === 0 && "bg-muted/40")} />;
+                  }
+                  return (
+                    <td
+                      key={s.query}
+                      className={cn("p-3 align-top", i === 0 && "bg-muted/40")}
+                      data-testid={`comparison-cell-${d.dimension}-${s.query}`}
+                    >
+                      <ComparisonCell entry={entry} />
+                    </td>
+                  );
+                })}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }

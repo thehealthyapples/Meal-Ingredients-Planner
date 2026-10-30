@@ -38,7 +38,18 @@ function parseItems(search: string): string[] {
     .slice(0, MAX_ITEMS);
 }
 
-export default function FoodComparisonPage() {
+interface FoodComparisonPageProps {
+  /**
+   * FOODUI1 (2026-10-29) — true when rendered as the Food page's Compare tab
+   * rather than the standalone /compare route. Suppresses the page-level Back
+   * link (the parent page's own tabs are the way back) and outer page padding
+   * (the parent already provides a container). The engine, inputs and results
+   * are identical either way — this changes chrome only.
+   */
+  embedded?: boolean;
+}
+
+export default function FoodComparisonPage({ embedded = false }: FoodComparisonPageProps = {}) {
   const search = useSearch();
   const seeded = useMemo(() => parseItems(search), [search]);
 
@@ -111,25 +122,34 @@ export default function FoodComparisonPage() {
   const canCompare = items.filter((s) => s.trim().length > 0).length >= MIN_ITEMS;
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-      <Link
-        href="/cookbook"
-        className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground/70 hover:text-foreground transition-colors mb-5"
-        data-testid="link-back"
-      >
-        <ArrowLeft className="h-3.5 w-3.5" />
-        Back
-      </Link>
+    <div className={embedded ? "w-full" : "mx-auto w-full max-w-3xl px-4 sm:px-6 lg:px-8 py-4 sm:py-6"}>
+      {!embedded && (
+        <Link
+          href="/cookbook"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground/70 hover:text-foreground transition-colors mb-5"
+          data-testid="link-back"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back
+        </Link>
+      )}
 
-      <header className="space-y-1.5 mb-5">
-        <div className="flex items-center gap-2.5">
-          <Scale className="h-5 w-5 text-primary/70 flex-shrink-0" aria-hidden="true" />
-          <h1 className="text-2xl font-bold tracking-tight" data-testid="compare-title">
-            Compare foods
-          </h1>
-        </div>
-        <p className="text-sm text-muted-foreground/80 leading-relaxed pl-8 max-w-2xl">
-          Two everyday choices, side by side — with the reasons, not just a score.
+      {/* FOODUI13 — embedded on the Food page's own "Look up a food" tab, this
+          repeated its own "Compare foods" heading right under that tab's name
+          and a "Back to search" link — the same redundant-title stacking the
+          standalone page's heading exists to solve for. Standalone keeps it;
+          embedded relies on the parent tab's own context instead. */}
+      <header className={cn("space-y-1", embedded ? "mb-3" : "mb-5")}>
+        {!embedded && (
+          <div className="flex items-center gap-2.5">
+            <Scale className="h-5 w-5 text-primary/70 flex-shrink-0" aria-hidden="true" />
+            <h1 className="text-2xl font-bold tracking-tight" data-testid="compare-title">
+              Compare foods
+            </h1>
+          </div>
+        )}
+        <p className={cn("max-w-md text-base leading-snug text-muted-foreground/80", !embedded && "pl-8")}>
+          <strong className="font-semibold text-foreground/90">Side by side</strong>, with the reasons, not just a score.
           Weighed against your household where we can.
         </p>
       </header>
