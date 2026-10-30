@@ -71,14 +71,33 @@ const NOISE_SEGMENT_PATTERNS: RegExp[] = [
 const SUFFIX_CLASSES = new Set([
   "oil", "cheese", "juice", "yogurt", "yoghurt", "vinegar", "flour",
   "butter", "milk", "cream", "nectar",
+  // These group words carry the food identity when the specifier is only a
+  // colour, maturity or moisture descriptor: "Beans, black turtle" →
+  // "Black Turtle Beans".
+  "beans", "bean", "peas", "pea", "squash",
 ]);
 
 // ── Class words that are a GENERIC GROUPING: drop the class, keep the specifier ──
 // e.g. "Fish, haddock" → "Haddock"; "Nuts, almonds" → "Almonds".
 const DROP_CLASSES = new Set([
-  "fish", "nuts", "nut", "seeds", "seed", "beans", "bean", "peas", "pea",
-  "berries", "greens", "squash", "melons",
+  "fish", "nuts", "nut", "seeds", "seed", "berries", "greens", "melons",
 ]);
+
+// Qualifiers naming a cut or anatomical part normally follow the animal name:
+// "Veal, loin" → "Veal Loin". Other generic descriptions retain the existing
+// adjective-prefix order ("Peppers, bell" → "Bell Peppers").
+const CUT_QUALIFIER_PATTERNS: RegExp[] = [
+  /^loin\b/i, /^top loin\b/i, /^breast\b/i, /^tenderloin\b/i, /^shank\b/i,
+  /^rib\b/i, /^thigh\b/i, /^wing\b/i, /^drumstick\b/i, /^oyster\b/i,
+  /^liver\b/i, /^kidney\b/i, /^heart\b/i, /^variety meats?\b/i,
+  /^round\b/i, /^leg\b/i, /^shoulder\b/i, /^neck\b/i, /^tail\b/i,
+  /^meat and skin\b/i, /^separable (lean|fat)\b/i, /^rump\b/i,
+  /^flank\b/i, /^brisket\b/i, /^chuck\b/i, /^sirloin\b/i,
+];
+
+function isCutQualifier(segment: string): boolean {
+  return CUT_QUALIFIER_PATTERNS.some((pattern) => pattern.test(segment.trim()));
+}
 
 function isNoise(segment: string): boolean {
   return NOISE_SEGMENT_PATTERNS.some((p) => p.test(segment.trim()));
@@ -186,11 +205,17 @@ export function normaliseName(usdaDescription: string): NameNormalisation {
   } else if (DROP_CLASSES.has(headLower)) {
     normalisedName = headLower; // nothing specific survived — keep the group word
     pattern = "drop-class-bare";
-  // 4c. Generic: head is the food; meaningful qualifiers prefix it.
+  // 4c. Generic: head is the food; ordinary qualifiers prefix it. Meat cuts
+  //     and anatomical parts instead follow the base food noun in English.
   } else if (meaningful.length >= 1) {
-    // "Peppers, bell, green" → head=peppers, meaningful=[bell, green]
-    normalisedName = `${meaningful.join(" ")} ${head}`;
-    pattern = "qualifier-prefix";
+    if (meaningful.some(isCutQualifier)) {
+      normalisedName = `${head} ${meaningful.join(" ")}`;
+      pattern = "qualifier-suffix";
+    } else {
+      // "Peppers, bell, green" → head=peppers, meaningful=[bell, green]
+      normalisedName = `${meaningful.join(" ")} ${head}`;
+      pattern = "qualifier-prefix";
+    }
   } else {
     normalisedName = head;
     pattern = "head-only";
