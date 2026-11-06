@@ -41,6 +41,7 @@
 
 import type { IIntentResolver, IntentResolutionHints, ResolvedIntent } from "./intent-resolver.js";
 import type { ConversationSurface } from "./conversation/conversation-store.js";
+import { DAY_NAMES } from "@shared/time/household-time";
 
 // Maximum intents returned per turn (INT18 per-turn latency budget).
 const MAX_INTENTS = 4;
@@ -702,7 +703,13 @@ const NUTRITION_DISCOVERY_MATCHERS: Matcher[] = [
   //    and correctly stays with `nutrition-knowledge`, which is what its fixture intends.
   (u) => {
     if (!/\b(?:meals?|recipes?|dishes?)\b/i.test(u)) return null;
-    if (!/\b(?:highest|lowest|most|least|richest|poorest|strongest|top|best|greatest)\b/i.test(u)) return null;
+    // 2026-11-06 (owner) — "more"/"higher"/"less"/"lower"/"fewer" added: "I want more
+    // protein in my meals" carries the same ranking intent as "most protein", and the
+    // engine's own parser (nutrition-discovery-engine.ts parseNutritionFilter) already
+    // treats them identically. Without this, "more protein" matched no nutrition-discovery
+    // entry and fell to whichever meal-discovery/keyword fallback happened to fire — none
+    // of which rank by a nutrient at all.
+    if (!/\b(?:highest|lowest|most|least|richest|poorest|strongest|top|best|greatest|more|higher|less|lower|fewer)\b/i.test(u)) return null;
     if (!KNOWN_NUTRIENT_TERMS.test(u) && !/\b(?:calories?|sugar)\b/i.test(u)) return null;
     return { capability: "nutrition-discovery", verb: "search", parameters: { query: u.trim().toLowerCase() }, confidence: 0.85 };
   },
@@ -970,6 +977,45 @@ const PLANNER_MATCHERS: Matcher[] = [
         ? { scope: "week", weekId: hints.activePlannerWeekId }
         : {},
       confidence: 0.75,
+    };
+  },
+
+  // 2026-11-06 (owner) — "can you increase the protein in Saturday's meals" / "what's for
+  // dinner on Saturday" / "is chicken planned for Saturday". Before this, NO matcher
+  // anywhere recognised a day-of-week name — every planner question, day-named or not,
+  // resolved the WHOLE active week ({ scope: "week" }), so "Saturday's meals" asked for a
+  // single day's ingredients/calories (both already carried by PlannerDayView) but was
+  // never actually scoped to that day — the model had to find Saturday itself inside a
+  // full week it was handed undifferentiated, and for this exact question it didn't.
+  // planner-read-handler.ts's readDay already fully supports { scope: "day", weekId,
+  // dayOfWeek }; this is the one missing route to it. Resolves the day within the week ON
+  // SCREEN — never a bare dayOfWeek with no week to anchor it (Principle 6) — and declines
+  // for clearly past-tense phrasing ("what did I eat Saturday"), which means the Diary, not
+  // the Planner.
+  (u, _l, hints) => {
+    const dayMatch = /\b(sunday|monday|tuesday|wednesday|thursday|friday|saturday)(?:'s|s)?\b/i.exec(u);
+    if (!dayMatch) return null;
+    if (!/\b(?:plan(?:ner)?|meals?|dinner|lunch|breakfast|planned|cook(?:ing)?|protein|calories?|ingredients?)\b/i.test(u)) return null;
+    if (/\b(?:ate|eaten|had|was|were)\b/i.test(u)) return null;
+    // PL-030 regression guard — "what WOULD BE a good quick dinner for Tuesday?" names a
+    // day but asks for a RECOMMENDATION ("would be"/"should"/quick/easy framing — a
+    // meal-discovery question), not a read of what's already on the planner for that day.
+    if (/\bwhat\s+(?:would|should|could)\b/i.test(u)) return null;
+    if (/\b(?:would|should|could)\s+be\b/i.test(u)) return null;
+    if (SPEED_SIGNAL.test(u) || EFFORT_SIGNAL.test(u)) return null;
+    const dayOfWeek = DAY_NAMES.findIndex((d) => d.toLowerCase() === dayMatch[1].toLowerCase());
+    if (dayOfWeek < 0) return null;
+    return {
+      capability: "planner",
+      verb: "read",
+      parameters: hints.activePlannerWeekId != null
+        ? { scope: "day", weekId: hints.activePlannerWeekId, dayOfWeek }
+        : { scope: "day", dayOfWeek },
+      // Above every other PLANNER_MATCHERS entry (max 0.86, the "dinner tonight"
+      // matcher): naming a specific day is strictly more informative than a bare
+      // week/tonight framing, and dedupe keeps exactly one "planner" intent per
+      // turn — the day-scoped read must win whenever both would otherwise match.
+      confidence: 0.90,
     };
   },
 
@@ -1875,10 +1921,20 @@ const MEAL_DISCOVERY_MATCHERS: Matcher[] = [
   (u) => {
     const m = u.match(/\b(?:(?:find|show|give)\s+me\s+(?:a\s+|some\s+)?|i\s+want\s+(?:a\s+)?)(.+?)\s+recipes?\b/i);
     if (!m?.[1]) return null;
+    // 2026-11-06 (owner) — cleanFoodTerm, not a raw trim/lowercase: a sentence
+    // containing "recipes" (or the sibling matcher's "meals") TWICE forces this
+    // non-greedy capture past the first occurrence to the second, e.g. "show me
+    // some meals that might be a better fit as I want more protein in my meals
+    // next week" captured the entire middle clause as the "query" — a string no
+    // meal name or ingredient will ever contain, so meal-discovery silently
+    // matched nothing. cleanFoodTerm rejects anything longer than a named food
+    // (>3 words), so this matcher now declines rather than searching garbage.
+    const food = cleanFoodTerm(m[1]);
+    if (!food) return null;
     return {
       capability: "meal-discovery",
       verb: "search",
-      parameters: { query: m[1].trim().toLowerCase() },
+      parameters: { query: food },
       confidence: 0.83,
     };
   },
@@ -1899,10 +1955,17 @@ const MEAL_DISCOVERY_MATCHERS: Matcher[] = [
         confidence: 0.84,
       };
     }
+    // 2026-11-06 (owner) — cleanFoodTerm, not a raw qualifier: "meals" appearing
+    // twice in one sentence (e.g. "...meals that might be a better fit as I want
+    // more protein in my meals next week") forces the non-greedy capture above
+    // past the FIRST "meals" to the second, swallowing the whole middle clause as
+    // the "qualifier" — unsearchable garbage, never a real food/meal-type term.
+    const food = cleanFoodTerm(qualifier);
+    if (!food) return null;
     return {
       capability: "meal-discovery",
       verb: "search",
-      parameters: { query: qualifier.toLowerCase() },
+      parameters: { query: food },
       confidence: 0.80,
     };
   },

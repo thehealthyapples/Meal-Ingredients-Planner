@@ -116,6 +116,15 @@ function parseNutrition(raw: { calories?: string | null; protein?: string | null
 export function parseNutritionFilter(query: string): NutritionFilter | null {
   const q = query.toLowerCase();
   const filter: Record<string, number> = {};
+  // Superlatives AND comparatives are ordering requests, not invented nutrition
+  // thresholds. "more protein" / "higher protein" carry the same intent as "most
+  // protein" / "highest protein" — a household asking for more of a nutrient
+  // means more than what they have, i.e. rank by it — and "less"/"lower"/"fewer"
+  // mirror "least"/"lowest"/"fewest" the same way (2026-11-06, owner).
+  const order = q.match(/\b(highest|most|more|higher|lowest|least|fewest|less|lower|fewer)\s+(?:in\s+)?(protein|calories?|carbs?|carbohydrates?|fat|sugar)\b/i);
+  const sortBy = order
+    ? ({ calorie: "calories", calories: "calories", carb: "carbs", carbs: "carbs", carbohydrate: "carbs", carbohydrates: "carbs", protein: "protein", fat: "fat", sugar: "sugar" } as Record<string, NonNullable<NutritionFilter["sortBy"]>>)[order[2]]
+    : undefined;
 
   // Calorie ceiling
   const calMax = q.match(/\b(?:under|less\s+than|below|no\s+more\s+than|max(?:imum)?)\s+(\d+)\s*(?:kcal|calories?|cals?)/i);
@@ -161,9 +170,11 @@ export function parseNutritionFilter(query: string): NutritionFilter | null {
     filter.sugarMax = LOW_SUGAR_MAX_G;
   }
 
-  if (Object.keys(filter).length === 0) return null;
+  if (Object.keys(filter).length === 0 && !sortBy) return null;
 
   return {
+    sortBy,
+    sortDirection: sortBy ? (/^(highest|most|more|higher)$/.test(order![1]) ? "desc" : "asc") : undefined,
     caloriesMax: filter.caloriesMax,
     caloriesMin: filter.caloriesMin,
     proteinMin:  filter.proteinMin,
@@ -225,6 +236,9 @@ export class NutritionDiscoveryEngine {
     mealsWithNutritionCount: number;
     mealsWithoutNutritionCount: number;
   }> {
+    const safety = this.port.safety ?? await import("../../lib/household-dietary-safety.js");
+    const safetyContext = await safety.resolveHouseholdSafetyContext(userId);
+    const gateActive = safety.isSafetyGateActive(safetyContext);
     const rows: MealNutritionRow[] = await this.port.getMealRows(userId);
 
     const results: NutritionDiscoveryItem[] = [];
@@ -232,6 +246,9 @@ export class NutritionDiscoveryEngine {
     let withoutNutrition = 0;
 
     for (const row of rows) {
+      // The same owner gates Meal Discovery and Planner recommendations. Missing
+      // household context fails closed in that owner; never substitute an empty diet.
+      if (gateActive && !safety.isMealSafeForHousehold(row.meal, safetyContext).safe) continue;
       const nutriResult = parseNutrition(row.nutrition);
 
       if (!nutriResult) {
@@ -242,6 +259,8 @@ export class NutritionDiscoveryEngine {
       withNutrition++;
 
       if (!satisfiesFilter(nutriResult.parsed, filter)) continue;
+      // Unknown values cannot participate in a nutritional ranking.
+      if (filter.sortBy && nutriResult.parsed[filter.sortBy] == null) continue;
 
       results.push({
         id: `${row.isSystem ? "system" : "personal"}:${row.meal.id}`,
@@ -255,9 +274,13 @@ export class NutritionDiscoveryEngine {
         imageUrl: row.meal.imageUrl ?? undefined,
       });
 
-      if (results.length >= NUTRITION_DISCOVERY_MAX_RESULTS) break;
     }
 
-    return { results, mealsWithNutritionCount: withNutrition, mealsWithoutNutritionCount: withoutNutrition };
+    if (filter.sortBy) {
+      const key = filter.sortBy;
+      const direction = filter.sortDirection === "asc" ? 1 : -1;
+      results.sort((a, b) => direction * (a.nutrition[key]! - b.nutrition[key]!) || a.internalId - b.internalId);
+    }
+    return { results: results.slice(0, NUTRITION_DISCOVERY_MAX_RESULTS), mealsWithNutritionCount: withNutrition, mealsWithoutNutritionCount: withoutNutrition };
   }
 }

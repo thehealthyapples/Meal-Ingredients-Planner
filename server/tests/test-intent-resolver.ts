@@ -228,6 +228,49 @@ async function main(): Promise<void> {
     assert(hasCapability(r, "planner"),  "planner keyword: floating + 'meals this week' → planner");
   }
 
+  // 2026-11-06 (owner) — day-of-week recognition: "can you increase the protein in
+  // Saturday's meals" named a real, reported Companion bug (no matcher anywhere
+  // recognised a day name, so every planner question — day-named or not — read the
+  // WHOLE active week, never a single day).
+  {
+    const r = await resolve("can you incrase the protein in saturdays meals", "floating", { activePlannerWeekId: 42 });
+    const p = firstWith(r, "planner")!;
+    assert(p?.verb === "read" && (p.parameters as any)?.scope === "day" && (p.parameters as any)?.dayOfWeek === 6,
+      "day-of-week: 'saturdays meals' (typo'd 'increase', no apostrophe) → scope:day, dayOfWeek:6");
+  }
+
+  {
+    const r = await resolve("what's for dinner on saturday", "floating", { activePlannerWeekId: 42 });
+    assert(topResult(r)?.capability === "planner" && (topResult(r).parameters as any)?.scope === "day",
+      "day-of-week: 'what's for dinner on saturday' → day-scoped planner read wins the turn");
+  }
+
+  {
+    const r = await resolve("is chicken planned for saturday", "floating", { activePlannerWeekId: 42 });
+    const p = firstWith(r, "planner")!;
+    assert((p.parameters as any)?.dayOfWeek === 6, "day-of-week: 'is chicken planned for saturday' also day-scopes the planner read");
+    assert(hasCapability(r, "planner-discovery"), "…alongside the existing cross-week ingredient search");
+  }
+
+  {
+    // No active week published (e.g. asked from a surface other than the Planner) —
+    // the day name alone names no week; the matcher still fires (so the handler can
+    // state the honest gap) but carries no weekId to guess one.
+    const r = await resolve("what's for dinner on monday", "floating");
+    const p = firstWith(r, "planner")!;
+    assert((p.parameters as any)?.weekId === undefined && (p.parameters as any)?.dayOfWeek === 1,
+      "day-of-week: with no active week, dayOfWeek is still resolved but weekId is honestly absent");
+  }
+
+  {
+    // PL-030 regression guard: a day name attached to a RECOMMENDATION question
+    // ("what would be a good quick dinner for Tuesday?") must still reach
+    // meal-discovery, not get claimed by the new day-of-week planner-read matcher.
+    const r = await resolve("What would be a good quick dinner for Tuesday?", "floating", { activePlannerWeekId: 42 });
+    assert(topResult(r)?.capability === "meal-discovery",
+      "day-of-week guard: a day name does not hijack a 'what would be a good X' recommendation question");
+  }
+
   // 2. shopping
   {
     const r = await resolve("show me my shopping list", "shopping");
