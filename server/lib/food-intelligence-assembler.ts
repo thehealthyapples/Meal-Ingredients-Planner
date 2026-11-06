@@ -188,6 +188,10 @@ export interface FoodIntelligence {
   food: FoodOverview | null;
   /** Health benefits (WS0). Empty when none. */
   healthBenefits: string[];
+  /** Cautions/triggers (WS0) — the deliberate counterweight to `healthBenefits`:
+   *  foods a cited, human-reviewed source names as able to trigger or cause a
+   *  negative effect for some people. Empty is the honest default. */
+  cautions: string[];
   /** Top nutrients (WS0, max 5). Empty when none. */
   keyNutrients: string[];
   /** Curated context lines (WS2F). Empty when none authored. */
@@ -503,6 +507,7 @@ export async function getFoodIntelligence(
       slug: foodSlug,
       food: null,
       healthBenefits: [],
+      cautions: [],
       keyNutrients: [],
       nutritionContext: [],
       seasonality: null,
@@ -572,6 +577,7 @@ export async function getFoodIntelligence(
   const recommendedPairings = assembleRecommendedPairings(report.overview.name);
 
   if (report.healthBenefits.length > 0) sources.push("health_benefits");
+  if (report.cautions.length > 0) sources.push("cautions");
   if (report.keyNutrients.length > 0) sources.push("nutrients");
   if (report.nutritionContext.length > 0) sources.push("nutrition_context");
   if (seasonality) sources.push("seasonality");
@@ -586,6 +592,7 @@ export async function getFoodIntelligence(
 
   const populatedSections =
     (report.healthBenefits.length > 0 ? 1 : 0) +
+    (report.cautions.length > 0 ? 1 : 0) +
     (report.keyNutrients.length > 0 ? 1 : 0) +
     (report.nutritionContext.length > 0 ? 1 : 0) +
     (seasonality ? 1 : 0) +
@@ -607,6 +614,7 @@ export async function getFoodIntelligence(
       storageGuidance,
     },
     healthBenefits: report.healthBenefits,
+    cautions: report.cautions,
     keyNutrients: report.keyNutrients,
     nutritionContext: report.nutritionContext,
     seasonality,

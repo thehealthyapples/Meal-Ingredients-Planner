@@ -39,6 +39,7 @@ import {
   knowledgeFoodBenefits,
   knowledgeNutrientBenefits,
   knowledgePreparationEffects,
+  knowledgeFoodCautions,
   knowledgeReviewAudit,
   type KnowledgeReviewAudit,
 } from "@shared/schema";
@@ -68,13 +69,14 @@ export class ClaimReviewError extends Error {
 // across approve / reject / reopen / list / history is four chances to add an
 // edge to three of them.
 
-export type ClaimEdge = "composition" | "food-benefit" | "nutrient-benefit" | "preparation-effect";
+export type ClaimEdge = "composition" | "food-benefit" | "nutrient-benefit" | "preparation-effect" | "food-caution";
 
 export const CLAIM_EDGES: readonly ClaimEdge[] = [
   "composition",
   "food-benefit",
   "nutrient-benefit",
   "preparation-effect",
+  "food-caution",
 ];
 
 export function isClaimEdge(value: unknown): value is ClaimEdge {
@@ -95,6 +97,7 @@ const AUDIT_ENTITY: Readonly<Record<ClaimEdge, string>> = {
   "food-benefit": "claim:food-benefit",
   "nutrient-benefit": "claim:nutrient-benefit",
   "preparation-effect": "claim:preparation-effect",
+  "food-caution": "claim:food-caution",
 };
 
 const TABLES = {
@@ -102,6 +105,7 @@ const TABLES = {
   "food-benefit": knowledgeFoodBenefits,
   "nutrient-benefit": knowledgeNutrientBenefits,
   "preparation-effect": knowledgePreparationEffects,
+  "food-caution": knowledgeFoodCautions,
 } as const;
 
 export const CLAIM_EDGE_LABELS: Readonly<Record<ClaimEdge, string>> = {
@@ -109,6 +113,7 @@ export const CLAIM_EDGE_LABELS: Readonly<Record<ClaimEdge, string>> = {
   "food-benefit": "Food → benefit (direct)",
   "nutrient-benefit": "Nutrient → benefit (physiological)",
   "preparation-effect": "Food + preparation → effect",
+  "food-caution": "Food → caution (direct)",
 };
 
 /**
@@ -123,6 +128,7 @@ export const CLAIM_EDGE_MEANINGS: Readonly<Record<ClaimEdge, string>> = {
   "food-benefit": "You are approving a source that speaks about this food and this benefit together. Optional corroboration: it raises confidence but never licenses a chip on its own.",
   "nutrient-benefit": "You are approving the physiological claim that this nutrient supports this benefit — not that any particular food provides it.",
   "preparation-effect": "You are approving the exact wording shown to households, not only the underlying effect.",
+  "food-caution": "You are approving a source that directly names this food as able to cause or trigger this effect for some people — not a general risk statement about the nutrient or food group.",
 };
 
 // ── The reviewer's view of one claim ─────────────────────────────────────────
@@ -158,6 +164,8 @@ function subjectOf(edge: ClaimEdge, row: any): string {
       return `${row.nutrientSlug} → ${row.benefitSlug}`;
     case "preparation-effect":
       return `${row.foodSlug} + ${row.preparationSlug} → ${row.direction} ${row.targetSlug ?? row.effectKind}`;
+    case "food-caution":
+      return `${row.foodSlug} → ${row.cautionSlug}`;
   }
 }
 

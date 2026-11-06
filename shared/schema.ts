@@ -1786,6 +1786,45 @@ export const knowledgeNutrientBenefits = pgTable("knowledge_nutrient_benefits", 
   uniqueNutrientBenefit: unique("uq_knowledge_nutrient_benefit").on(t.nutrientSlug, t.benefitSlug),
 }));
 
+// ── Food Cautions (the inverse of Food ↔ Health Benefit) ────────────────────
+// THA's mission is an honest relationship with food, not a one-sided highlight
+// reel. This is a DIRECT food-level observation ("NHS: garlic and onion can
+// trigger heartburn for some people"), not a nutrient-mediated physiological
+// claim — so, unlike a benefit chip, it does NOT need KNOW5's nutrient-bridge
+// chain. It is gated the same way every other edge is: isEvidenceBackedClaim()
+// applied directly to this row. Starts empty; nothing renders until a named
+// human signs it off.
+export const knowledgeCautions = pgTable("knowledge_cautions", {
+  id: serial("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  description: text("description"),
+  icon: text("icon"),
+  source: text("source").notNull().default("THA editorial"),
+  displayOrder: integer("display_order").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const knowledgeFoodCautions = pgTable("knowledge_food_cautions", {
+  id: serial("id").primaryKey(),
+  foodSlug: text("food_slug").notNull().references(() => knowledgeFoods.slug, { onDelete: "cascade" }),
+  cautionSlug: text("caution_slug").notNull().references(() => knowledgeCautions.slug, { onDelete: "cascade" }),
+  evidenceStrength: text("evidence_strength").notNull().default("emerging"),
+  ranking: integer("ranking").notNull().default(0),
+  source: text("source").notNull().default("THA editorial"),
+  sourceRefs: jsonb("source_refs").$type<KnowledgeSourceRef[]>().notNull().default(sql`'[]'::jsonb`),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  reviewedBy: text("reviewed_by"),
+  rejectedAt: timestamp("rejected_at", { withTimezone: true }),
+  rejectedBy: text("rejected_by"),
+  rejectionReason: text("rejection_reason"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  uniqueFoodCaution: unique("uq_knowledge_food_caution").on(t.foodSlug, t.cautionSlug),
+}));
+
 export const insertKnowledgeFoodSchema = createInsertSchema(knowledgeFoods).omit({ id: true, createdAt: true });
 export const insertKnowledgeNutrientSchema = createInsertSchema(knowledgeNutrients).omit({ id: true, createdAt: true });
 export const insertKnowledgeHealthBenefitSchema = createInsertSchema(knowledgeHealthBenefits).omit({ id: true, createdAt: true });
@@ -1798,6 +1837,10 @@ export const insertKnowledgeFoodBenefitSchema = createInsertSchema(knowledgeFood
   sourceRefs: z.custom<KnowledgeSourceRef[]>().optional(),
 }).omit({ id: true, createdAt: true });
 export const insertKnowledgeNutrientBenefitSchema = createInsertSchema(knowledgeNutrientBenefits, {
+  sourceRefs: z.custom<KnowledgeSourceRef[]>().optional(),
+}).omit({ id: true, createdAt: true });
+export const insertKnowledgeCautionSchema = createInsertSchema(knowledgeCautions).omit({ id: true, createdAt: true });
+export const insertKnowledgeFoodCautionSchema = createInsertSchema(knowledgeFoodCautions, {
   sourceRefs: z.custom<KnowledgeSourceRef[]>().optional(),
 }).omit({ id: true, createdAt: true });
 
@@ -1813,6 +1856,10 @@ export type KnowledgeFoodBenefit = typeof knowledgeFoodBenefits.$inferSelect;
 export type InsertKnowledgeFoodBenefit = z.infer<typeof insertKnowledgeFoodBenefitSchema>;
 export type KnowledgeNutrientBenefit = typeof knowledgeNutrientBenefits.$inferSelect;
 export type InsertKnowledgeNutrientBenefit = z.infer<typeof insertKnowledgeNutrientBenefitSchema>;
+export type KnowledgeCaution = typeof knowledgeCautions.$inferSelect;
+export type InsertKnowledgeCaution = z.infer<typeof insertKnowledgeCautionSchema>;
+export type KnowledgeFoodCaution = typeof knowledgeFoodCautions.$inferSelect;
+export type InsertKnowledgeFoodCaution = z.infer<typeof insertKnowledgeFoodCautionSchema>;
 
 // ── Preparation Knowledge (PHASE5A — builds WS5A; PKCA §7 Phase 4) ───────────
 //

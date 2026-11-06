@@ -76,6 +76,7 @@ function makePort(): NutritionKnowledgeReadPort {
           imageUrl: null,
         },
         benefits: [{ slug: "heart-health", name: "Heart health", icon: "heart" }],
+        cautions: [],
         nutrients: [{ slug: "vitamin-c", name: "Vitamin C", amount: "high" }],
         // PHASE5A — the owner now carries preparations. "steamed" exists for
         // broccoli and has NO reviewed effect, which is the honest default and

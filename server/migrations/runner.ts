@@ -3713,6 +3713,54 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  // Food Cautions — the inverse of knowledge_food_benefits (owner, 2026-11-06).
+  // THA's mission is a household's honest relationship with food, not a one-sided
+  // highlight reel: the benefit system has no way to say "garlic can trigger
+  // heartburn for some people" (NHS, "Good foods to help your digestion"), only
+  // ways to say what's good. This is a direct food-level observation, not a
+  // nutrient-mediated physiological claim, so it deliberately does NOT need the
+  // benefit system's nutrient-bridge chain (KNOW5) — it is its own single edge,
+  // gated by the exact same Layer-2 contract (source_refs + reviewed_at +
+  // reviewed_by, isEvidenceBackedClaim) and reusing the SAME generic review-store
+  // machinery (approve/reject/reopen/source-attach) by registering as a new
+  // ClaimEdge. Starts EMPTY; automation may prepare a citation for review, but
+  // nothing renders to a household until a named human signs it off (Rule KC9).
+  {
+    id: "2026-11-06_food_cautions",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS knowledge_cautions (
+         id            SERIAL PRIMARY KEY,
+         slug          TEXT NOT NULL UNIQUE,
+         name          TEXT NOT NULL,
+         description   TEXT,
+         icon          TEXT,
+         source        TEXT NOT NULL DEFAULT 'THA editorial',
+         display_order INTEGER NOT NULL DEFAULT 0,
+         is_active     BOOLEAN NOT NULL DEFAULT TRUE,
+         created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+       )`,
+      `CREATE TABLE IF NOT EXISTS knowledge_food_cautions (
+         id                SERIAL PRIMARY KEY,
+         food_slug         TEXT NOT NULL REFERENCES knowledge_foods(slug) ON DELETE CASCADE,
+         caution_slug      TEXT NOT NULL REFERENCES knowledge_cautions(slug) ON DELETE CASCADE,
+         evidence_strength TEXT NOT NULL DEFAULT 'emerging',
+         ranking           INTEGER NOT NULL DEFAULT 0,
+         source            TEXT NOT NULL DEFAULT 'THA editorial',
+         source_refs       JSONB NOT NULL DEFAULT '[]'::jsonb,
+         reviewed_at       TIMESTAMPTZ,
+         reviewed_by       TEXT,
+         rejected_at       TIMESTAMPTZ,
+         rejected_by       TEXT,
+         rejection_reason  TEXT,
+         is_active         BOOLEAN NOT NULL DEFAULT TRUE,
+         created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+         CONSTRAINT uq_knowledge_food_caution UNIQUE (food_slug, caution_slug)
+       )`,
+      `CREATE INDEX IF NOT EXISTS knowledge_food_cautions_food_idx
+         ON knowledge_food_cautions (food_slug)`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

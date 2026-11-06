@@ -38,7 +38,7 @@ import {
   type FoodReportKnowledge,
 } from "@shared/canonical/food-report-adapter";
 import { CANONICAL_SEED } from "@shared/canonical/foods";
-import { getFoodBenefitsForDisplay } from "../services/nutrition-knowledge-registry";
+import { getFoodBenefitsForDisplay, getFoodCautionsForDisplay } from "../services/nutrition-knowledge-registry";
 
 /**
  * Assemble the evidence-backed Food Report for a canonical food slug.
@@ -57,8 +57,12 @@ export async function getEvidenceBackedFoodReport(
   const entry = CANONICAL_SEED.find((e) => e.food.slug === canonicalSlug);
   const parentKnowledgeSlug = entry?.food.knowledgeFoodSlug ?? null;
 
-  const [parentBenefits, varietyBenefitLists] = await Promise.all([
+  const [parentBenefits, parentCautions, varietyBenefitLists] = await Promise.all([
     parentKnowledgeSlug ? getFoodBenefitsForDisplay(parentKnowledgeSlug) : Promise.resolve([]),
+    // Cautions are a direct food-level edge (no nutrient bridge, unlike
+    // benefits), so this is a single flat fetch — no per-variety breakdown yet
+    // for the narrow first version of the feature.
+    parentKnowledgeSlug ? getFoodCautionsForDisplay(parentKnowledgeSlug) : Promise.resolve([]),
     Promise.all(
       report.varieties.map((v) => {
         const vKnowledgeSlug =
@@ -70,6 +74,7 @@ export async function getEvidenceBackedFoodReport(
 
   const parentBenefitNames = parentBenefits.map((b) => b.benefit.name);
   const parentBenefitNameSet = new Set(parentBenefitNames);
+  const parentCautionNames = parentCautions.map((c) => c.caution.name);
 
   const varieties = report.varieties.map((v, i) => ({
     ...v,
@@ -81,6 +86,7 @@ export async function getEvidenceBackedFoodReport(
   return {
     ...report,
     healthBenefits: parentBenefitNames,
+    cautions: parentCautionNames,
     varieties,
   };
 }

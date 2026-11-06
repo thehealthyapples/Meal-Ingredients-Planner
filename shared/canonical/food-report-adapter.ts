@@ -101,6 +101,10 @@ export interface FoodReportKnowledge {
   /** Always empty from this adapter — a claim it cannot gate. Populated only by
    *  `getEvidenceBackedFoodReport()`. See the "Health benefits" note above. */
   healthBenefits: string[];
+  /** Cautions/triggers (WS0, direct food-level edge — the counterweight to
+   *  `healthBenefits`). Always empty from this adapter — a claim it cannot
+   *  gate. Populated only by `getEvidenceBackedFoodReport()`. */
+  cautions: string[];
   /** Curated context lines from NUTRITION_CONTEXT. Empty when none authored. */
   nutritionContext: string[];
   /** All defined varieties with any additional (variety-exclusive) knowledge. */
@@ -181,6 +185,7 @@ export function buildFoodReport(canonicalSlug: string): FoodReportKnowledge | nu
     keyNutrients: toNutrientDisplayNames(nutrientSlugsFor(knowledgeSlug).slice(0, 5)),
     // A claim this module cannot gate. getEvidenceBackedFoodReport() fills it.
     healthBenefits: [],
+    cautions: [],
     nutritionContext: NUTRITION_CONTEXT[canonicalSlug] ?? [],
     varieties,
   };

@@ -69,6 +69,7 @@ function foodReport(name: string, category: string, nutrients: string[], benefit
     overview: { name, category, description: `${name} description` },
     keyNutrients: nutrients,
     healthBenefits: benefits,
+    cautions: [],
     nutritionContext: [],
     varieties: [],
   };

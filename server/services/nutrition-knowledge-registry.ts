@@ -51,10 +51,13 @@ import {
   knowledgePreparations,
   knowledgeFoodPreparations,
   knowledgePreparationEffects,
+  knowledgeCautions,
+  knowledgeFoodCautions,
   type KnowledgeFood,
   type KnowledgeNutrient,
   type KnowledgeHealthBenefit,
   type KnowledgePreparation,
+  type KnowledgeCaution,
 } from "@shared/schema";
 
 // ── Entities ─────────────────────────────────────────────────────────────────
@@ -92,6 +95,16 @@ export async function listHealthBenefits(opts?: { includeInactive?: boolean }): 
 
 export async function getHealthBenefitBySlug(slug: string): Promise<KnowledgeHealthBenefit | undefined> {
   const [row] = await db.select().from(knowledgeHealthBenefits).where(eq(knowledgeHealthBenefits.slug, slug)).limit(1);
+  return row;
+}
+
+export async function listCautions(opts?: { includeInactive?: boolean }): Promise<KnowledgeCaution[]> {
+  const where = opts?.includeInactive ? undefined : eq(knowledgeCautions.isActive, true);
+  return db.select().from(knowledgeCautions).where(where).orderBy(asc(knowledgeCautions.displayOrder), asc(knowledgeCautions.name));
+}
+
+export async function getCautionBySlug(slug: string): Promise<KnowledgeCaution | undefined> {
+  const [row] = await db.select().from(knowledgeCautions).where(eq(knowledgeCautions.slug, slug)).limit(1);
   return row;
 }
 
@@ -165,6 +178,71 @@ export async function getBenefitsForFood(foodSlug: string): Promise<BenefitLink[
     .where(and(eq(knowledgeFoodBenefits.foodSlug, foodSlug), eq(knowledgeFoodBenefits.isActive, true)))
     .orderBy(asc(knowledgeFoodBenefits.ranking));
   return joinBenefits(links.map((l) => ({ benefitSlug: l.benefitSlug, ranking: l.ranking, source: l.source, evidenceStrength: l.evidenceStrength, sourceRefs: l.sourceRefs, reviewedAt: l.reviewedAt })));
+}
+
+export interface CautionLink {
+  caution: KnowledgeCaution;
+  ranking: number;
+  source: string;
+  /** Internal editorial signal — DO NOT show to users yet. */
+  evidenceStrength: string;
+  /** Layer-2 claim-trust fields (PKC Phase 0). */
+  sourceRefs: KnowledgeSourceRef[];
+  reviewedAt: Date | null;
+}
+
+/** Cautions/triggers a food is editorially linked to. Includes evidenceStrength (storage only). */
+export async function getCautionsForFood(foodSlug: string): Promise<CautionLink[]> {
+  const links = await db
+    .select()
+    .from(knowledgeFoodCautions)
+    .where(and(eq(knowledgeFoodCautions.foodSlug, foodSlug), eq(knowledgeFoodCautions.isActive, true)))
+    .orderBy(asc(knowledgeFoodCautions.ranking));
+  if (links.length === 0) return [];
+  const cautions = await listCautions();
+  const bySlug = new Map(cautions.map((c) => [c.slug, c]));
+  return links
+    .map((l) => {
+      const caution = bySlug.get(l.cautionSlug);
+      return caution
+        ? { caution, ranking: l.ranking, source: l.source, evidenceStrength: l.evidenceStrength, sourceRefs: l.sourceRefs, reviewedAt: l.reviewedAt }
+        : null;
+    })
+    .filter((x): x is CautionLink => x !== null);
+}
+
+export interface DisplayCaution {
+  caution: KnowledgeCaution;
+  ranking: number;
+  source: string;
+  sourceRefs: KnowledgeSourceRef[];
+  confidence: EvidenceConfidence;
+}
+
+/**
+ * Food → cautions, display-safe and evidence-gated.
+ *
+ * Unlike a benefit chip, this is a DIRECT food-level observation ("NHS: garlic
+ * and onion can trigger heartburn for some people") with no nutrient-mediated
+ * physiological claim behind it — so it does not need the benefit chip's
+ * nutrient-bridge chain (KNOW5). `isEvidenceBackedClaim` is applied straight to
+ * this single edge: a cited, signed-off row renders; anything else is an
+ * honest gap, absent from the result.
+ */
+export async function getFoodCautionsForDisplay(foodSlug: string): Promise<DisplayCaution[]> {
+  const links = await getCautionsForFood(foodSlug);
+  const out: DisplayCaution[] = [];
+  for (const link of links) {
+    if (!isEvidenceBackedClaim(link)) continue;
+    out.push({
+      caution: link.caution,
+      ranking: link.ranking,
+      source: link.source,
+      sourceRefs: link.sourceRefs,
+      confidence: deriveClaimConfidence(link),
+    });
+  }
+  return out;
 }
 
 /** Health benefits a nutrient supports. Includes evidenceStrength (storage only). */
@@ -495,6 +573,15 @@ const toFoodCard = (f: KnowledgeFood): FoodCard => ({
 
 const toBenefitChip = (b: KnowledgeHealthBenefit): BenefitChip => ({ slug: b.slug, name: b.name, icon: b.icon });
 
+/** A caution reduced to display fields. `icon` is a lucide icon name. */
+export interface CautionChip {
+  slug: string;
+  name: string;
+  icon: string | null;
+}
+
+const toCautionChip = (c: KnowledgeCaution): CautionChip => ({ slug: c.slug, name: c.name, icon: c.icon });
+
 /** A nutrient reduced to display fields. */
 export interface NutrientLite {
   slug: string;
@@ -605,6 +692,12 @@ export interface FoodDetailView {
   };
   benefits: BenefitChip[];
   nutrients: NutrientChip[];
+  /** Foods this app knows, from a cited human-reviewed source, can be a trigger
+   *  or cause a negative effect for some people — the deliberate counterweight
+   *  to `benefits`. A direct food-level edge (see getFoodCautionsForDisplay),
+   *  not derived through the nutrient bridge. Empty is the honest default:
+   *  THA has not fabricated a downside where no reviewed source names one. */
+  cautions: CautionChip[];
   /** PHASE5A — how people prepare this food, and (only where evidence earns it)
    *  what that changes. Empty when the owner records no preparations: an honest
    *  gap, never a default set. Additive — a surface that ignores it is unchanged
@@ -615,8 +708,9 @@ export interface FoodDetailView {
 export async function getFoodDetailView(slug: string): Promise<FoodDetailView | undefined> {
   const food = await getFoodBySlug(slug);
   if (!food || !food.isActive) return undefined;
-  const [benefits, nutrients, preparations] = await Promise.all([
+  const [benefits, cautions, nutrients, preparations] = await Promise.all([
     getFoodBenefitsForDisplay(slug),
+    getFoodCautionsForDisplay(slug),
     getNutrientsForFood(slug),
     getPreparationsForFood(slug),
   ]);
@@ -634,6 +728,7 @@ export async function getFoodDetailView(slug: string): Promise<FoodDetailView | 
       imageUrl: food.imageUrl,
     },
     benefits: benefits.map((b) => toBenefitChip(b.benefit)),
+    cautions: cautions.map((c) => toCautionChip(c.caution)),
     nutrients: nutrients.map((n) => ({ slug: n.nutrient.slug, name: n.nutrient.name, amount: n.amount })),
     preparations,
   };

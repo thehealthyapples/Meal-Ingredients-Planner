@@ -67,6 +67,7 @@ export const focusRing =
 export type IntelligenceChipKind =
   | "nutrient"
   | "benefit"
+  | "caution"
   | "seasonal"
   | "discovery"
   | "household"
@@ -88,6 +89,12 @@ export const chipKindStyles: Record<IntelligenceChipKind, string> = {
   // so the dark variants are gone rather than restated: one pairing, two hours.
   benefit:
     "bg-primary-tint text-primary-ink border-primary/20 dark:border-primary/30",
+  // Cautions/triggers — the deliberate counterweight to `benefit`. Warm orange,
+  // distinct from both the benefit green and the seasonal amber: worth reading
+  // before you decide, never an alarm (that's `destructive`, reserved for real
+  // data loss or safety — a food trigger for some people is neither).
+  caution:
+    "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/40 dark:text-orange-400 dark:border-orange-800/60",
   // Seasonality — warm amber.
   seasonal:
     "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800/60",

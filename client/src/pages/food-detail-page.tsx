@@ -27,6 +27,7 @@ import {
   Archive,
   Scale,
   Link2,
+  TriangleAlert,
 } from "lucide-react";
 import {
   IntelligenceCard,
@@ -54,6 +55,10 @@ export interface FoodIntelligence {
     storageGuidance: string | null;
   } | null;
   healthBenefits: string[];
+  /** Foods this app knows, from a cited human-reviewed source, can trigger or
+   *  cause a negative effect for some people — the deliberate counterweight
+   *  to `healthBenefits`. Empty is the honest default. */
+  cautions: string[];
   keyNutrients: string[];
   nutritionContext: string[];
   seasonality: { season: string; seasonLabel: string; note: string } | null;
@@ -281,6 +286,31 @@ function FoodIntelligenceView({ data }: { data: FoodIntelligence }) {
           }
           detailsLabel="More about this food"
           data-testid="food-why"
+        />
+      )}
+
+      {/* ── Worth knowing (cautions/triggers) ──
+          The deliberate counterweight to "Why it matters": THA is about an
+          honest relationship with food, not a one-sided highlight reel. Each
+          entry is a cited, human-reviewed, direct food-level finding (e.g.
+          NHS naming garlic/onion as a heartburn trigger for some people) — not
+          a nutrient-derived claim, and never a fabricated downside. Absent
+          when there is nothing reviewed to say, same as every other section. */}
+      {data.cautions.length > 0 && (
+        <IntelligenceCard
+          icon={<TriangleAlert className="h-4 w-4" />}
+          eyebrow="Worth knowing"
+          title={`What to be aware of with ${food.name.toLowerCase()}`}
+          body="Some people find these foods trigger a reaction — not a reason to avoid them, just worth knowing."
+          chips={
+            <IntelligenceChipGroup
+              items={data.cautions}
+              kind="caution"
+              max={8}
+              aria-label="Cautions"
+            />
+          }
+          data-testid="food-cautions"
         />
       )}
 
