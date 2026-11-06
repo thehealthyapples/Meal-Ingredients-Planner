@@ -377,7 +377,14 @@ export const CONTEXT_VIEW_SPECS: Readonly<Record<string, ContextViewSpec>> = {
       {
         name: "opportunities",
         groupBy: "type",
-        keep: ["id", "type", "priority", "owningDomain", "explanation", "suggestedAction", "evidence"],
+        // `subject` added 2026-11-06 (owner) — `FoodOpportunity` already carried it
+        // (opportunity-engine.ts): the structured { entity, id, label } anchor naming
+        // exactly which planner day / pantry item / shopping item / planner meal this
+        // opportunity is about. This allowlist dropped it, leaving only prose
+        // (`explanation`) with no named entity to ground it — the same shape of gap
+        // as the chicken/ingredients bug, here causing the model to describe an
+        // opportunity about a specific meal without a reliable anchor to its identity.
+        keep: ["id", "type", "priority", "owningDomain", "explanation", "suggestedAction", "evidence", "subject"],
       },
     ],
   },
@@ -402,10 +409,15 @@ export const CONTEXT_VIEW_SPECS: Readonly<Record<string, ContextViewSpec>> = {
       {
         name: "meals",
         groupBy: "mealSourceType",
+        // `isFreezerEligible` added 2026-11-06 (owner) — `MealView` already
+        // carried it (meals-read-handler.ts), but this allowlist dropped it
+        // before it ever reached the model: "can I freeze the Chicken Handi?"
+        // had no data to answer from, the same shape of gap as planner's
+        // missing `ingredients` above.
         keep: [
           "id", "name", "mealSourceType", "isReadyMeal", "isSystemMeal", "kind",
           "mealFormat", "audience", "dietTypes", "ingredientCount", "servings",
-          "isDrink", "drinkType", "ingredients", "instructions",
+          "isDrink", "drinkType", "ingredients", "instructions", "isFreezerEligible",
         ],
       },
       // `scope=detail` only. `meal` itself is a plain object and flows to the
@@ -427,8 +439,16 @@ export const CONTEXT_VIEW_SPECS: Readonly<Record<string, ContextViewSpec>> = {
       // a balance dimension that seats rows carrying none spends the core on nothing.
       // See the note above — this was measured, not assumed.
       { name: "days", keep: ["dayId", "dayOfWeek", "meals"] },
-      // `scope=day` only.
-      { name: "meals", keep: ["entryId", "mealId", "mealName", "mealType", "audience", "isDrink"] },
+      // `scope=day` only. `ingredients` added 2026-11-06 (owner) — same field
+      // `meals:read` already keeps (above), now here too: a household asking
+      // "how much chicken is on my planner?" needs the planner's own meals to
+      // carry their ingredient lines, not just names, or there is nothing for
+      // the engine to rank against the utterance at all.
+      // `calories` added alongside `ingredients` — planner_entries.calories was
+      // already stored and already resolved by the handler but dropped here,
+      // so "how many calories is my planner this week?" had the same shape
+      // of gap as the chicken question.
+      { name: "meals", keep: ["entryId", "mealId", "mealName", "mealType", "audience", "isDrink", "ingredients", "calories"] },
     ],
   },
   "shopping:read": {
@@ -447,6 +467,7 @@ export const CONTEXT_VIEW_SPECS: Readonly<Record<string, ContextViewSpec>> = {
           "id", "name", "quantity", "unit", "category", "checked",
           "resolutionState", "shopStatus", "needsReview", "reviewReason",
           "hasMatch", "matchedStore", "matchedPrice", "confidenceLevel", "confidenceReason",
+          "cupboardQuantity", "source", "thaRating",
         ],
       },
       { name: "extras", keep: ["id", "name", "category", "alwaysAdd", "inBasket"] },
@@ -468,7 +489,18 @@ export const CONTEXT_VIEW_SPECS: Readonly<Record<string, ContextViewSpec>> = {
           "dietPattern", "dietTypes", "dietRestrictions", "excludedIngredients",
         ],
       },
-      { name: "eaters", keep: ["id", "displayName", "kind", "userId", "defaultDietTypes", "hardRestrictions"] },
+      {
+        name: "eaters",
+        // `reportedHealthContext` / `nutritionFocuses` added 2026-11-06 (owner) —
+        // `HouseholdEaterView` already carried both, consent-gated by the handler
+        // (hasCurrentHealthContextConsent), but this allowlist dropped them before
+        // they ever reached the model: a household that had reported e.g. a child's
+        // allergy had no data to answer "what health context is logged for X?" from.
+        keep: [
+          "id", "displayName", "kind", "userId", "defaultDietTypes", "hardRestrictions",
+          "reportedHealthContext", "nutritionFocuses",
+        ],
+      },
     ],
   },
 };

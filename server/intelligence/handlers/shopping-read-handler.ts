@@ -62,6 +62,12 @@ export interface ShoppingItemView {
   readonly matchedPrice: number | null;
   /** The owner's stored match confidence, or null (low-confidence matches stay reviewable). */
   readonly confidenceLevel: string | null;
+  /** How much the household already has at home, when a partial-cupboard check was recorded. */
+  readonly cupboardQuantity: number | null;
+  /** Where this line came from: quick_list | planner | basket | null (unrecorded). */
+  readonly source: string | null;
+  /** THA's own stored product rating for the matched item, or null (never fabricated). */
+  readonly thaRating: number | null;
 }
 
 export interface ShoppingExtraView {
@@ -177,6 +183,9 @@ function toItemView(item: ShoppingListItem): ShoppingItemView {
     matchedStore: hasStoredMatch(item) ? (item.matchedStore ?? null) : null,
     matchedPrice: item.matchedPrice ?? null,
     confidenceLevel: item.confidenceLevel ?? null,
+    cupboardQuantity: item.cupboardQuantity ?? null,
+    source: item.source ?? null,
+    thaRating: item.thaRating ?? null,
   };
 }
 

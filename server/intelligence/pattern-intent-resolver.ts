@@ -703,7 +703,7 @@ const NUTRITION_DISCOVERY_MATCHERS: Matcher[] = [
   (u) => {
     if (!/\b(?:meals?|recipes?|dishes?)\b/i.test(u)) return null;
     if (!/\b(?:highest|lowest|most|least|richest|poorest|strongest|top|best|greatest)\b/i.test(u)) return null;
-    if (!KNOWN_NUTRIENT_TERMS.test(u)) return null;
+    if (!KNOWN_NUTRIENT_TERMS.test(u) && !/\b(?:calories?|sugar)\b/i.test(u)) return null;
     return { capability: "nutrition-discovery", verb: "search", parameters: { query: u.trim().toLowerCase() }, confidence: 0.85 };
   },
 ];
@@ -712,35 +712,64 @@ const NUTRITION_DISCOVERY_MATCHERS: Matcher[] = [
 // Planner Discovery (INT28) — search for meals within the user's planner
 // ---------------------------------------------------------------------------
 
+// NOTE: planner-discovery substring-matches a meal NAME (PlannerDiscoveryEngine.discover),
+// so every matcher below extracts and validates a short named food via `cleanFoodTerm`
+// rather than ever passing the raw utterance — a whole sentence is not a substring of any
+// stored meal name, so passing `u.trim()` as the query silently never matches anything
+// (COMP2 §4's own invariant: "planner-discovery is given a named food, not an utterance").
 const PLANNER_DISCOVERY_MATCHERS: Matcher[] = [
   // "search my plan for chicken" / "search my meal plan for pasta"
   (u) => {
-    if (!/\bsearch\s+(?:my\s+)?(?:meal\s+)?plan(?:ner)?\s+for\s+\S/i.test(u)) return null;
-    return { capability: "planner-discovery", verb: "search", parameters: { query: u.trim() }, confidence: 0.90 };
+    const m = u.match(/\bsearch\s+(?:my\s+)?(?:meal\s+)?plan(?:ner)?\s+for\s+(.+)$/i);
+    if (!m) return null;
+    const food = cleanFoodTerm(m[1]);
+    if (!food) return null;
+    return { capability: "planner-discovery", verb: "search", parameters: { query: food }, confidence: 0.90 };
   },
 
   // "find chicken in my plan" / "find pasta in my meal planner"
   (u) => {
-    if (!/\bfind\s+.+\s+in\s+(?:my\s+)?(?:meal\s+)?plan(?:ner)?\b/i.test(u)) return null;
-    return { capability: "planner-discovery", verb: "search", parameters: { query: u.trim() }, confidence: 0.88 };
+    const m = u.match(/\bfind\s+(.+?)\s+in\s+(?:my\s+)?(?:meal\s+)?plan(?:ner)?\b/i);
+    if (!m) return null;
+    const food = cleanFoodTerm(m[1]);
+    if (!food) return null;
+    return { capability: "planner-discovery", verb: "search", parameters: { query: food }, confidence: 0.88 };
   },
 
   // "is pasta in my plan?" / "is chicken planned this week?"
   (u) => {
-    if (!/\bis\s+\S.+\s+(?:in\s+(?:my\s+)?(?:meal\s+)?plan(?:ner)?|planned(?:\s+this\s+week)?)\b/i.test(u)) return null;
-    return { capability: "planner-discovery", verb: "search", parameters: { query: u.trim() }, confidence: 0.86 };
+    const m = u.match(/\bis\s+(.+?)\s+(?:in\s+(?:my\s+)?(?:meal\s+)?plan(?:ner)?|planned(?:\s+this\s+week)?)\b/i);
+    if (!m) return null;
+    const food = cleanFoodTerm(m[1]);
+    if (!food) return null;
+    return { capability: "planner-discovery", verb: "search", parameters: { query: food }, confidence: 0.86 };
   },
 
   // "look for X in my planner"
   (u) => {
-    if (!/\blook\s+for\s+.+\s+in\s+(?:my\s+)?(?:meal\s+)?plan(?:ner)?\b/i.test(u)) return null;
-    return { capability: "planner-discovery", verb: "search", parameters: { query: u.trim() }, confidence: 0.85 };
+    const m = u.match(/\blook\s+for\s+(.+?)\s+in\s+(?:my\s+)?(?:meal\s+)?plan(?:ner)?\b/i);
+    if (!m) return null;
+    const food = cleanFoodTerm(m[1]);
+    if (!food) return null;
+    return { capability: "planner-discovery", verb: "search", parameters: { query: food }, confidence: 0.85 };
   },
 
-  // "do I have chicken planned?" / "do I have pasta in my plan?"
+  // "do I have chicken planned?" / "do I have pasta in my plan?" / "do we have chicken this week?"
   (u) => {
-    if (!/\bdo\s+I\s+have\s+\S.+\s+(?:planned|in\s+(?:my\s+)?(?:meal\s+)?plan(?:ner)?)\b/i.test(u)) return null;
-    return { capability: "planner-discovery", verb: "search", parameters: { query: u.trim() }, confidence: 0.85 };
+    const m = u.match(/\bdo\s+(?:I|we)\s+have\s+(.+?)\s+(?:planned(?:\s+this\s+week)?|in\s+(?:my\s+)?(?:meal\s+)?plan(?:ner)?|this\s+week)\b/i);
+    if (!m) return null;
+    const food = cleanFoodTerm(m[1]);
+    if (!food) return null;
+    return { capability: "planner-discovery", verb: "search", parameters: { query: food }, confidence: 0.85 };
+  },
+
+  // "any chicken lined up this week?"
+  (u) => {
+    const m = u.match(/\b(?:any|anything)\s+(.+?)\s+lined\s+up\b/i);
+    if (!m) return null;
+    const food = cleanFoodTerm(m[1]);
+    if (!food) return null;
+    return { capability: "planner-discovery", verb: "search", parameters: { query: food }, confidence: 0.80 };
   },
 ];
 
@@ -917,9 +946,10 @@ const HOUSEHOLD_DISCOVERY_MATCHERS: Matcher[] = [
 // ---------------------------------------------------------------------------
 
 const PLANNER_MATCHERS: Matcher[] = [
-  // "what meals do I have this week?" / "what's on my meal plan?"
+  // "what meals do I have this week?" / "what's on my meal plan?" / "what's on my meal planner?" /
+  // "what meals do we have this week?" / "what do we have planned this week?"
   (u, _l, hints) => {
-    if (!/\b(?:what(?:'s|\s+is)\s+on\s+(?:my\s+)?(?:meal\s+)?plan|what\s+meals?\s+do\s+I\s+have)\b/i.test(u)) return null;
+    if (!/\b(?:what(?:'s|\s+is)\s+on\s+(?:my\s+)?(?:meal\s+)?plan(?:ner)?|what\s+meals?\s+do\s+(?:I|we)\s+have|what\s+do\s+(?:I|we)\s+have\s+planned)\b/i.test(u)) return null;
     return {
       capability: "planner",
       verb: "read",
@@ -930,9 +960,9 @@ const PLANNER_MATCHERS: Matcher[] = [
     };
   },
 
-  // "show me my plan" / "my meal plan this week"
+  // "show me my plan" / "my meal plan this week" / "show me my planner" / "my meal planner this week"
   (u, _l, hints) => {
-    if (!/\b(?:show\s+(?:me\s+)?(?:my\s+)?(?:meal\s+)?plan|my\s+(?:meal\s+)?plan(?:\s+this\s+week)?)\b/i.test(u)) return null;
+    if (!/\b(?:show\s+(?:me\s+)?(?:my\s+)?(?:meal\s+)?plan(?:ner)?|my\s+(?:meal\s+)?plan(?:ner)?(?:\s+this\s+week)?)\b/i.test(u)) return null;
     return {
       capability: "planner",
       verb: "read",
@@ -2043,9 +2073,9 @@ const MEALS_MATCHERS: Matcher[] = [
 // ---------------------------------------------------------------------------
 
 const TEMPLATES_MATCHERS: Matcher[] = [
-  // "show my meal plan templates" / "do I have any templates?"
+  // "show my meal plan templates" / "show my meal planner templates" / "do I have any templates?"
   (u) => {
-    if (!/\b(?:(?:show\s+(?:me\s+)?(?:my\s+)?)?(?:meal\s+plan\s+)?templates?|my\s+templates?)\b/i.test(u)) return null;
+    if (!/\b(?:(?:show\s+(?:me\s+)?(?:my\s+)?)?(?:meal\s+plan(?:ner)?\s+)?templates?|my\s+templates?)\b/i.test(u)) return null;
     return {
       capability: "templates",
       verb: "read",
