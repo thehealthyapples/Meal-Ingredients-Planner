@@ -34,6 +34,7 @@ import type {
 } from "./planner-read-port.js";
 import { toInt, requireUserId, gap, denied, readOnlyVerbGuard } from "./_read-kit.js";
 import type { PlannerWeek } from "@shared/schema";
+import { parseCivilDate, addCivilDays, formatCivilDate } from "@shared/time/household-time";
 
 // ---------------------------------------------------------------------------
 // Result shapes (read projections — owned data, surfaced honestly)
@@ -47,6 +48,16 @@ export interface PlannerMealView {
   /** Resolved from the Meal owner; null if the meal row could not be read. */
   readonly mealName: string | null;
   readonly isDrink: boolean;
+  /**
+   * 2026-11-06 (owner) — the meal's own ingredient lines (e.g. "1.2 kg
+   * Chicken"), straight from the Meal owner, empty if the row couldn't be
+   * read. See PlannerMealRef's doc comment (planner-read-port.ts) for why
+   * this exists: without it, a question like "how much chicken is on my
+   * planner this week?" had no real data to answer from at all.
+   */
+  readonly ingredients: readonly string[];
+  /** The entry's own stored calorie figure (planner_entries.calories), null if never set. */
+  readonly calories: number | null;
 }
 
 export interface PlannerDayView {
@@ -60,6 +71,14 @@ export interface PlannerWeekReadResult {
   readonly weekId: number;
   readonly weekNumber: number;
   readonly weekName: string;
+  /**
+   * 2026-11-06 (owner) — the Monday this week means (`planner_weeks.week_start_date`),
+   * or null for a legacy week THA was never told a date for (HT7). Without this,
+   * "what's on my planner last/next week?" could resolve the *correct* week but never
+   * SAY which calendar week it read — a household asking about "next week" has no way
+   * to confirm the answer matches what they meant.
+   */
+  readonly weekStartDate: string | null;
   readonly days: readonly PlannerDayView[];
 }
 
@@ -111,6 +130,46 @@ export interface PlannerExplainResult {
  * caller's household. Any week outside the caller's household is reported as not-found
  * (denied) — no cross-household read, and no existence leak.
  */
+/**
+ * 2026-11-06 (owner) — "previous"/"next" step the ANCHOR week (`weekId`, normally the
+ * week on screen) by seven calendar days and look up the week that lands on, exactly
+ * mirroring the Planner UI's own `goToAdjacentWeek` (weekly-planner-page.tsx): dated
+ * navigation steps `weekStartDate`, never `weekNumber` — weekNumber is "a stable,
+ * unbounded, per-household ORDINAL — NOT a time coordinate" (shared/schema.ts), so
+ * `weekNumber + 1` is not necessarily the following calendar week. Unlike the UI, this
+ * read-only binding never CREATES the target week — a missing one is an honest gap.
+ */
+async function resolveAdjacentWeek(
+  weekId: number,
+  direction: "previous" | "next",
+  householdId: number,
+  userId: number,
+  port: PlannerReadPort,
+): Promise<PlannerWeek> {
+  const anchor = await port.getPlannerWeek(weekId);
+  if (!anchor || anchor.householdId !== householdId) {
+    throw denied("Planner week not found in your planner (no cross-household access).");
+  }
+  const anchorDate = parseCivilDate(anchor.weekStartDate);
+  if (!anchorDate) {
+    throw gap(
+      `Honest gap: "${anchor.weekName}" has no calendar date recorded, so THA cannot step to the ` +
+        `${direction === "previous" ? "week before" : "week after"} it — open the Planner and ` +
+        "navigate there directly instead.",
+    );
+  }
+  const targetDate = formatCivilDate(addCivilDays(anchorDate, direction === "previous" ? -7 : 7));
+  const weeks = await port.getPlannerWeeks(userId);
+  const week = weeks.find((w) => w.weekStartDate === targetDate);
+  if (!week) {
+    throw gap(
+      `Honest gap: no planner week is recorded for the week starting ${targetDate}. ` +
+        "THA will not fabricate one — open the Planner and navigate there to create it.",
+    );
+  }
+  return week;
+}
+
 async function resolveOwnedWeek(
   params: Readonly<Record<string, unknown>>,
   userId: number,
@@ -120,6 +179,17 @@ async function resolveOwnedWeek(
 
   const weekId = toInt(params.weekId);
   const weekNumber = toInt(params.weekNumber);
+  const direction = params.direction === "previous" || params.direction === "next" ? params.direction : undefined;
+
+  if (direction) {
+    if (weekId === undefined) {
+      throw gap(
+        `Reading the ${direction === "previous" ? "previous" : "next"} week needs an active planner ` +
+          "week to step from — open the Planner so THA knows which week is on screen, then ask again.",
+      );
+    }
+    return resolveAdjacentWeek(weekId, direction, householdId, userId, port);
+  }
 
   let week: PlannerWeek | undefined;
   if (weekId !== undefined) {
@@ -165,6 +235,8 @@ async function mealViewsForDay(
         mealId: e.mealId,
         mealName: mealRef?.name ?? null,
         isDrink: e.isDrink,
+        ingredients: mealRef?.ingredients ?? [],
+        calories: e.calories ?? null,
       };
     }),
   );
@@ -190,6 +262,7 @@ async function readWeek(
     weekId: week.id,
     weekNumber: week.weekNumber,
     weekName: week.weekName,
+    weekStartDate: week.weekStartDate ?? null,
     days: dayViews,
   };
 }

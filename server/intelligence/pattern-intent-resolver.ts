@@ -973,6 +973,28 @@ const PLANNER_MATCHERS: Matcher[] = [
     };
   },
 
+  // 2026-11-06 (owner) — "what was on my planner last week?" / "what's on my planner next
+  // week?" / "what did I have last week" / "what's for dinner next week". Steps the week
+  // ON SCREEN by seven calendar days (planner-read-handler.ts's resolveAdjacentWeek), never
+  // weekNumber — the Continuous Timeline's weekNumber is a per-household ordinal, not a time
+  // coordinate, so "next" must mean the following calendar week, not weekNumber + 1. With no
+  // active week in view there is nothing to step from; the handler states that honestly
+  // rather than guessing one (Principle 6).
+  (u, _l, hints) => {
+    const directionMatch = /\b(last|next)\s+week\b/i.exec(u);
+    if (!directionMatch) return null;
+    if (!/\b(?:plan(?:ner)?|meals?|dinner|lunch|breakfast|planned|cook(?:ing)?)\b/i.test(u)) return null;
+    const direction = directionMatch[1].toLowerCase() === "last" ? "previous" : "next";
+    return {
+      capability: "planner",
+      verb: "read",
+      parameters: hints.activePlannerWeekId != null
+        ? { scope: "week", weekId: hints.activePlannerWeekId, direction }
+        : { scope: "week", direction },
+      confidence: 0.85,
+    };
+  },
+
   // BENCH3 (PL-024): "what am I having for dinner tonight?" / "what's for dinner tonight?"
   // A planned-meal READ, not a recipe discovery — "what should I cook tonight?" (no plan
   // implied) stays with MEAL_DISCOVERY_MATCHERS, which requires cook/make/eat/prepare.
@@ -2628,7 +2650,17 @@ const ALL_SPECIFIC_MATCHERS: Matcher[] = [
 interface KeywordFallback {
   readonly pattern: RegExp;
   readonly capability: string;
-  readonly parameters: Readonly<Record<string, unknown>>;
+  /**
+   * Static parameters, or a function of the surface hints. Needed by the planner
+   * fallback: a static `{}` can never carry `activePlannerWeekId`, so a planner
+   * question that only this (lower-confidence, vocabulary-only) entry recognises
+   * — e.g. "how much chicken do I have on the planner this week", which names no
+   * phrasing any PLANNER_MATCHERS/PLANNER_DISCOVERY_MATCHERS entry covers — would
+   * silently read whatever week the handler defaults to, never the week on screen.
+   */
+  readonly parameters:
+    | Readonly<Record<string, unknown>>
+    | ((hints: IntentResolutionHints) => Readonly<Record<string, unknown>>);
   readonly confidence: number;
 }
 
@@ -2712,7 +2744,11 @@ const KEYWORD_FALLBACKS: KeywordFallback[] = [
   {
     pattern: PLANNER_FALLBACK_PATTERN,
     capability: "planner",
-    parameters: {},
+    // The week on screen, when the surface published one — same shape the
+    // dedicated PLANNER_MATCHERS pass, so this low-confidence vocabulary-only
+    // route never answers about a different week than the household is looking at.
+    parameters: (hints) =>
+      hints.activePlannerWeekId != null ? { scope: "week", weekId: hints.activePlannerWeekId } : {},
     confidence: 0.60,
   },
   {
@@ -3004,7 +3040,7 @@ export class PatternIntentResolver implements IIntentResolver {
         collected.push({
           capability: fb.capability,
           verb: "read",
-          parameters: fb.parameters,
+          parameters: typeof fb.parameters === "function" ? fb.parameters(hints) : fb.parameters,
           confidence: fb.confidence,
         });
       }

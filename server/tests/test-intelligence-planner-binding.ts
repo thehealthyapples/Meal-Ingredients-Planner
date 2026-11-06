@@ -61,6 +61,11 @@ const weeks: PlannerWeek[] = [
   { id: 11, userId: 1, householdId: 100, weekNumber: 2, weekName: "Week 2", weekStartDate: null },
   // Another household's week — must never be readable by user 1.
   { id: 20, userId: 2, householdId: 200, weekNumber: 1, weekName: "Other Week 1", weekStartDate: null },
+  // 2026-11-06 (owner) — two CONSECUTIVE dated weeks (Mondays 7 days apart), for the
+  // "previous"/"next" direction tests. weekNumber is deliberately non-adjacent (12, 40) —
+  // the point of stepping by weekStartDate, never weekNumber, is that it must not matter.
+  { id: 12, userId: 1, householdId: 100, weekNumber: 12, weekName: "Week of 2 Nov", weekStartDate: "2026-11-02" },
+  { id: 13, userId: 1, householdId: 100, weekNumber: 40, weekName: "Week of 9 Nov", weekStartDate: "2026-11-09" },
 ];
 
 const days: PlannerDay[] = [
@@ -92,8 +97,8 @@ const entries: PlannerEntry[] = [
 ];
 
 const meals: Record<number, PlannerMealRef> = {
-  9000: { id: 9000, name: "Porridge" },
-  9001: { id: 9001, name: "Veggie Curry" },
+  9000: { id: 9000, name: "Porridge", ingredients: ["80g rolled oats", "300ml milk"] },
+  9001: { id: 9001, name: "Veggie Curry", ingredients: ["400g chickpeas", "1 onion"] },
 };
 
 const calls: string[] = [];
@@ -314,6 +319,37 @@ async function main(): Promise<void> {
 
   const weekNoId = await platform.handle({ verb: "read", capabilityId: "planner", parameters: { scope: "week" } }, user1);
   assert(weekNoId.status === "gap", "read week with no identifier → honest gap", weekNoId.status);
+
+  // -------------------------------------------------------------------------
+  section("\"Previous\"/\"next\" week — steps the week ON SCREEN by calendar date");
+  // -------------------------------------------------------------------------
+  const nextWeek = await platform.handle({ verb: "read", capabilityId: "planner", parameters: { scope: "week", weekId: 12, direction: "next" } }, user1);
+  assert(nextWeek.status === "ok", "next week from a dated anchor → ok", nextWeek.status);
+  const nwr = nextWeek.result as any;
+  assert(nwr?.weekId === 13 && nwr?.weekStartDate === "2026-11-09", "resolves the week exactly 7 days after the anchor, by DATE not weekNumber", JSON.stringify(nwr));
+
+  const prevWeek = await platform.handle({ verb: "read", capabilityId: "planner", parameters: { scope: "week", weekId: 13, direction: "previous" } }, user1);
+  assert(prevWeek.status === "ok", "previous week from a dated anchor → ok", prevWeek.status);
+  const pwr = prevWeek.result as any;
+  assert(pwr?.weekId === 12 && pwr?.weekStartDate === "2026-11-02", "resolves the week exactly 7 days before the anchor", JSON.stringify(pwr));
+
+  const readWeek = await platform.handle({ verb: "read", capabilityId: "planner", parameters: { scope: "week", weekId: 12 } }, user1);
+  assert((readWeek.result as any)?.weekStartDate === "2026-11-02", "an ordinary week read also states its own weekStartDate");
+
+  const noAnchor = await platform.handle({ verb: "read", capabilityId: "planner", parameters: { scope: "week", direction: "next" } }, user1);
+  assert(noAnchor.status === "gap", "direction with no weekId → honest gap (nothing to step from)", noAnchor.status);
+  assert(/active planner week/.test(noAnchor.message), "gap message explains an anchor is needed");
+
+  const undatedAnchor = await platform.handle({ verb: "read", capabilityId: "planner", parameters: { scope: "week", weekId: 10, direction: "next" } }, user1);
+  assert(undatedAnchor.status === "gap", "direction from an UNDATED legacy anchor → honest gap, never a guess", undatedAnchor.status);
+  assert(/no calendar date recorded/.test(undatedAnchor.message), "gap message names the real reason (HT7)");
+
+  const noWeekAtTarget = await platform.handle({ verb: "read", capabilityId: "planner", parameters: { scope: "week", weekId: 13, direction: "next" } }, user1);
+  assert(noWeekAtTarget.status === "gap", "direction stepping past the last recorded week → honest gap, never fabricated", noWeekAtTarget.status);
+  assert(/no planner week is recorded/.test(noWeekAtTarget.message), "gap message states no week exists there — this read-only binding never creates one");
+
+  const crossHouseholdAnchor = await platform.handle({ verb: "read", capabilityId: "planner", parameters: { scope: "week", weekId: 20, direction: "next" } }, user1);
+  assert(crossHouseholdAnchor.status === "denied", "direction from another household's week → denied (no cross-household anchor)", crossHouseholdAnchor.status);
 
   // -------------------------------------------------------------------------
   section("Read-only enforcement — write verbs never execute through the binding");
