@@ -1,0 +1,1171 @@
+{
+  "exportDate": "2026-11-08T22:20:21.634Z",
+  "relicensingStatus": "pending",
+  "summary": {
+    "totalMeals": 163,
+    "bbcGoodFood": 156,
+    "allRecipes": 7
+  },
+  "bbcGoodFood": {
+    "publisher": "Immediate Media Company",
+    "source": "BBC Good Food",
+    "licensingPath": "Commercial syndication license (FS2 §3.1)",
+    "meals": [
+      {
+        "id": 61,
+        "name": "Chicken tikka masala",
+        "userId": 28,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/chicken-tikka-masala"
+      },
+      {
+        "id": 63,
+        "name": "Thai green chicken curry",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/thai-green-chicken-curry"
+      },
+      {
+        "id": 64,
+        "name": "Italian vegetable soup",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/italian-vegetable-soup"
+      },
+      {
+        "id": 66,
+        "name": "Family meals: Easy fish pie recipe",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/family-meals-easy-fish-pie-recipe"
+      },
+      {
+        "id": 67,
+        "name": "Superhealthy salmon burgers",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/superhealthy-salmon-burgers"
+      },
+      {
+        "id": 68,
+        "name": "Salmon noodle soup",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/salmon-noodle-soup"
+      },
+      {
+        "id": 69,
+        "name": "Salmon noodle wraps",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/salmon-noodle-wraps"
+      },
+      {
+        "id": 70,
+        "name": "Cajun-style prawn cocktail",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/cajun-style-prawn-cocktail"
+      },
+      {
+        "id": 71,
+        "name": "Prawn stir-fry",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/thai-prawn-ginger-spring-onion-stir-fry"
+      },
+      {
+        "id": 72,
+        "name": "Thai prawn curry",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/easy-thai-prawn-curry"
+      },
+      {
+        "id": 73,
+        "name": "Breakfast egg wraps",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/breakfast-egg-wraps"
+      },
+      {
+        "id": 75,
+        "name": "Breakfast burrito",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/breakfast-burrito"
+      },
+      {
+        "id": 76,
+        "name": "Help-yourself tuna rice salad",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/help-yourself-tuna-rice-salad"
+      },
+      {
+        "id": 77,
+        "name": "Easiest ever seafood rice",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/easiest-ever-paella"
+      },
+      {
+        "id": 78,
+        "name": "Slow cooker coq au vin",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/slow-cooker-coq-au-vin"
+      },
+      {
+        "id": 79,
+        "name": "Coq au vin",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/1913655/coq-au-vin"
+      },
+      {
+        "id": 83,
+        "name": "Smoked mackerel & leek hash with horseradish",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/smoked-mackerel-leek-hash-horseradish"
+      },
+      {
+        "id": 84,
+        "name": "Healthy pancakes",
+        "userId": 38,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/healthy-pancakes"
+      },
+      {
+        "id": 85,
+        "name": "Pomegranate salad",
+        "userId": 38,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/pomegranate-salad"
+      },
+      {
+        "id": 86,
+        "name": "Chicken Marengo",
+        "userId": 38,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/3146682/chicken-marengo"
+      },
+      {
+        "id": 87,
+        "name": "Healthy banana pancakes",
+        "userId": 38,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/banana-oat-pancakes"
+      },
+      {
+        "id": 88,
+        "name": "Salmon Avocado Salad",
+        "userId": 38,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/4521/salmon-avocado-and-cucumber-salad"
+      },
+      {
+        "id": 89,
+        "name": "Nutty Chicken Curry",
+        "userId": 38,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/11753/nutty-chicken-curry"
+      },
+      {
+        "id": 90,
+        "name": "Healthy porridge bowl",
+        "userId": 38,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/healthy-porridge-bowl"
+      },
+      {
+        "id": 91,
+        "name": "Chorizo & tomato salad",
+        "userId": 38,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/chorizo-tomato-salad"
+      },
+      {
+        "id": 93,
+        "name": "Breakfast burrito",
+        "userId": 38,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/breakfast-burrito"
+      },
+      {
+        "id": 95,
+        "name": "Thai prawn curry",
+        "userId": 38,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/easy-thai-prawn-curry"
+      },
+      {
+        "id": 96,
+        "name": "Breakfast egg wraps",
+        "userId": 38,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/breakfast-egg-wraps"
+      },
+      {
+        "id": 97,
+        "name": "Spiced carrot & lentil soup",
+        "userId": 38,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/spiced-carrot-lentil-soup"
+      },
+      {
+        "id": 99,
+        "name": "Two-minute breakfast smoothie",
+        "userId": 38,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/two-minute-breakfast-smoothie"
+      },
+      {
+        "id": 100,
+        "name": "Healthy tomato soup",
+        "userId": 38,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/5-veg-creamy-tomato-soup"
+      },
+      {
+        "id": 101,
+        "name": "Healthy cookies",
+        "userId": 38,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/raspberry-almond-oat-breakfast-cookies"
+      },
+      {
+        "id": 102,
+        "name": "Breakfast muffins",
+        "userId": 38,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/breakfast-muffins"
+      },
+      {
+        "id": 103,
+        "name": "Chicken Quinoa Greek Salad",
+        "userId": 38,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/griddled-chicken-quinoa-greek-salad"
+      },
+      {
+        "id": 104,
+        "name": "Healthy roast dinner",
+        "userId": 38,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/healthy-roast-dinner"
+      },
+      {
+        "id": 108,
+        "name": "Molten cheese-stuffed burgers",
+        "userId": 38,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/molten-cheese-stuffed-burgers"
+      },
+      {
+        "id": 109,
+        "name": "Molten cheese-stuffed burgers",
+        "userId": 38,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/molten-cheese-stuffed-burgers"
+      },
+      {
+        "id": 398,
+        "name": "Thai curry noodle soup",
+        "userId": 42,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/thai-curry-noodle-soup"
+      },
+      {
+        "id": 399,
+        "name": "Thai curry noodle soup",
+        "userId": 42,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/thai-curry-noodle-soup"
+      },
+      {
+        "id": 400,
+        "name": "Thai Green Curry",
+        "userId": 42,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "http://www.bbcgoodfood.com/recipes/3235/thai-green-chicken-curry"
+      },
+      {
+        "id": 464,
+        "name": "Healthy pepper, tomato & ham omelette",
+        "userId": 42,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/skinny-pepper-tomato-ham-omelette"
+      },
+      {
+        "id": 466,
+        "name": "Teriyaki salmon",
+        "userId": 42,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/teriyaki-salmon-sesame-pak-choi"
+      },
+      {
+        "id": 467,
+        "name": "Lasagne",
+        "userId": 42,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/classic-lasagne"
+      },
+      {
+        "id": 468,
+        "name": "Moules marinière",
+        "userId": 42,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/moules-mariniere"
+      },
+      {
+        "id": 911,
+        "name": "Prawn & harissa spaghetti",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/prawn-harissa-spaghetti"
+      },
+      {
+        "id": 1165,
+        "name": "Pizza Margherita in 4 easy steps",
+        "userId": 56,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/pizza-margherita-4-easy-steps"
+      },
+      {
+        "id": 1387,
+        "name": "Lasagne",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/classic-lasagne"
+      },
+      {
+        "id": 1461,
+        "name": "Help-yourself tuna rice salad (Edited)",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/help-yourself-tuna-rice-salad"
+      },
+      {
+        "id": 1462,
+        "name": "Creamy courgette lasagne",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/creamy-courgette-lasagne"
+      },
+      {
+        "id": 1464,
+        "name": "Easy chocolate fudge cake",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/naughty-chocolate-fudge-cake"
+      },
+      {
+        "id": 1465,
+        "name": "Iced fairy cakes",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/iced-fairy-cakes"
+      },
+      {
+        "id": 1466,
+        "name": "Red velvet cake",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/red-velvet-cake"
+      },
+      {
+        "id": 1467,
+        "name": "Sex on the beach cocktail",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/sex-beach-cocktail"
+      },
+      {
+        "id": 1468,
+        "name": "Long Island iced tea",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/long-island-iced-tea"
+      },
+      {
+        "id": 1469,
+        "name": "Forest fruit & banana smoothie",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/forest-fruit-banana-smoothie"
+      },
+      {
+        "id": 1475,
+        "name": "Punjabi cauliflower with potatoes (aloo gobi)",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/punjabi-cauliflower-with-potatoes-aloo-gobi"
+      },
+      {
+        "id": 1476,
+        "name": "Thai green chicken curry",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/thai-green-chicken-curry"
+      },
+      {
+        "id": 1477,
+        "name": "Classic champagne cocktail",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/classic-champagne-cocktail"
+      },
+      {
+        "id": 1478,
+        "name": "The best spaghetti bolognese recipe",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/best-spaghetti-bolognese-recipe"
+      },
+      {
+        "id": 1555,
+        "name": "Lentil & sweet potato curry",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/lentil-sweet-potato-curry"
+      },
+      {
+        "id": 1556,
+        "name": "Lentil & sweet potato curry (Edited)",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/lentil-sweet-potato-curry"
+      },
+      {
+        "id": 1557,
+        "name": "Classic pesto",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/classic-pesto"
+      },
+      {
+        "id": 1560,
+        "name": "Beef burger with sweet potato chilli chips",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/beef-burger-sweet-potato-chilli-chips"
+      },
+      {
+        "id": 1561,
+        "name": "Sex on the beach cocktail (Edited)",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/sex-beach-cocktail"
+      },
+      {
+        "id": 1562,
+        "name": "Spinach, sweet potato & lentil dhal",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/spinach-sweet-potato-lentil-dhal"
+      },
+      {
+        "id": 1563,
+        "name": "Khatti dhal",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/khatti-dhal"
+      },
+      {
+        "id": 1564,
+        "name": "Red lentil & squash dhal",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/red-lentil-squash-dhal"
+      },
+      {
+        "id": 1565,
+        "name": "Chickpea & coconut dhal",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/chickpea-coconut-dhal"
+      },
+      {
+        "id": 1566,
+        "name": "One-pan coconut dhal",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/one-pan-coconut-dhal"
+      },
+      {
+        "id": 1567,
+        "name": "Quick & easy chickpea coconut dhal",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/quick-easy-chickpea-coconut-dhal"
+      },
+      {
+        "id": 1568,
+        "name": "Seafood paella",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/seafood-paella"
+      },
+      {
+        "id": 1569,
+        "name": "Seafood rice",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/easiest-ever-paella"
+      },
+      {
+        "id": 1570,
+        "name": "Easy paella",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/easy-paella"
+      },
+      {
+        "id": 1761,
+        "name": "Creamy courgette lasagne",
+        "userId": 1,
+        "createdAt": "2026-02-28 23:52:12.32+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/creamy-courgette-lasagne"
+      },
+      {
+        "id": 1762,
+        "name": "Miso aubergine",
+        "userId": 57,
+        "createdAt": "2026-03-01 11:11:58.389+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/miso-aubergines"
+      },
+      {
+        "id": 1763,
+        "name": "Really easy roasted red pepper sauce",
+        "userId": 57,
+        "createdAt": "2026-03-01 11:12:40.763+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/really-easy-roasted-red-pepper-sauce"
+      },
+      {
+        "id": 1764,
+        "name": "Chow mein",
+        "userId": 57,
+        "createdAt": "2026-03-01 11:19:12.913+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/chow-mein"
+      },
+      {
+        "id": 1765,
+        "name": "Sweet & sour tofu",
+        "userId": 57,
+        "createdAt": "2026-03-01 11:19:42.652+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/sweet-sour-tofu"
+      },
+      {
+        "id": 1766,
+        "name": "Aubergine couscous salad",
+        "userId": 57,
+        "createdAt": "2026-03-01 11:42:46.136+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/aubergine-couscous-salad"
+      },
+      {
+        "id": 1770,
+        "name": "Classic lasagne",
+        "userId": 57,
+        "createdAt": "2026-03-01 22:11:17.987+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/classic-lasagne-0"
+      },
+      {
+        "id": 1772,
+        "name": "Classic lasagne (Edited)",
+        "userId": 59,
+        "createdAt": "2026-03-01 22:32:17.847+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/classic-lasagne-0"
+      },
+      {
+        "id": 1773,
+        "name": "Classic pesto",
+        "userId": 59,
+        "createdAt": "2026-03-01 22:57:19.471+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/classic-pesto"
+      },
+      {
+        "id": 1774,
+        "name": "Best ever macaroni cheese recipe",
+        "userId": 59,
+        "createdAt": "2026-03-01 23:26:36.939+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/best-ever-macaroni-cheese-recipe"
+      },
+      {
+        "id": 1778,
+        "name": "Lasagne (Edited)",
+        "userId": 1,
+        "createdAt": "2026-03-06 08:52:54.731+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/classic-lasagne"
+      },
+      {
+        "id": 1779,
+        "name": "Chicken jalfrezi",
+        "userId": 1,
+        "createdAt": "2026-03-06 20:46:03.213+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/chicken-jalfrezi"
+      },
+      {
+        "id": 1782,
+        "name": "Dundee cake",
+        "userId": 1,
+        "createdAt": "2026-03-11 16:31:15.062+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/2155640/dundee-cake"
+      },
+      {
+        "id": 1854,
+        "name": "Taiwanese-style chicken chow mein",
+        "userId": 64,
+        "createdAt": "2026-03-13 22:52:22.141+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/taiwanese-style-chicken-chow-mein"
+      },
+      {
+        "id": 1855,
+        "name": "Taiwanese-style chicken chow mein (Edited)",
+        "userId": 64,
+        "createdAt": "2026-03-13 22:52:31.149+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/taiwanese-style-chicken-chow-mein"
+      },
+      {
+        "id": 1860,
+        "name": "Creamy courgette lasagne",
+        "userId": 65,
+        "createdAt": "2026-03-13 23:19:28.961+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/creamy-courgette-lasagne"
+      },
+      {
+        "id": 1873,
+        "name": "Chilli con carne recipe",
+        "userId": 1,
+        "createdAt": "2026-03-14 00:40:51.228+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/chilli-con-carne-recipe"
+      },
+      {
+        "id": 1874,
+        "name": "Long Island iced tea",
+        "userId": 1,
+        "createdAt": "2026-03-14 00:54:07.366+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/long-island-iced-tea"
+      },
+      {
+        "id": 1875,
+        "name": "Long Island iced tea (Edited)",
+        "userId": 1,
+        "createdAt": "2026-03-14 00:54:13.634+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/long-island-iced-tea"
+      },
+      {
+        "id": 1900,
+        "name": "Creamy courgette lasagne (Edited)",
+        "userId": 1,
+        "createdAt": "2026-03-14 21:44:59.253+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/creamy-courgette-lasagne"
+      },
+      {
+        "id": 1901,
+        "name": "Creamy courgette lasagne (Edited) (Edited)",
+        "userId": 1,
+        "createdAt": "2026-03-14 21:52:06.314+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/creamy-courgette-lasagne"
+      },
+      {
+        "id": 1920,
+        "name": "Sage & onion stuffing",
+        "userId": 38,
+        "createdAt": "2026-03-16 23:07:38.213+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/sage-and-onion-stuffing"
+      },
+      {
+        "id": 1921,
+        "name": "Sage & onion stuffing (Edited)",
+        "userId": 38,
+        "createdAt": "2026-03-16 23:07:38.474+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/sage-and-onion-stuffing"
+      },
+      {
+        "id": 1923,
+        "name": "Cauliflower cheese",
+        "userId": 38,
+        "createdAt": "2026-03-16 23:14:54.22+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/cauliflower-cheese-0"
+      },
+      {
+        "id": 1924,
+        "name": "Slow cooker whole chicken",
+        "userId": 38,
+        "createdAt": "2026-03-16 23:15:35.481+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/slow-cooker-chicken"
+      },
+      {
+        "id": 1925,
+        "name": "Next-level cauliflower cheese",
+        "userId": 38,
+        "createdAt": "2026-03-17 07:05:37.108+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/next-level-cauliflower-cheese"
+      },
+      {
+        "id": 1926,
+        "name": "Spiced braised red cabbage",
+        "userId": 38,
+        "createdAt": "2026-03-17 07:05:50.989+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/spiced-braised-red-cabbage"
+      },
+      {
+        "id": 1932,
+        "name": "Chicken pad Thai",
+        "userId": 38,
+        "createdAt": "2026-03-17 09:14:21.135+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/chicken-pad-thai"
+      },
+      {
+        "id": 1933,
+        "name": "Thai green chicken curry",
+        "userId": 38,
+        "createdAt": "2026-03-17 09:14:32.197+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/thai-green-chicken-curry"
+      },
+      {
+        "id": 1934,
+        "name": "Weeping tiger steaks",
+        "userId": 38,
+        "createdAt": "2026-03-17 09:14:53.688+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/weeping-tiger-steaks"
+      },
+      {
+        "id": 1938,
+        "name": "Sweet & sour chicken balls",
+        "userId": 38,
+        "createdAt": "2026-03-17 10:59:54.857+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/sweet-sour-chicken-balls"
+      },
+      {
+        "id": 1939,
+        "name": "Microwave sweet & sour chicken",
+        "userId": 38,
+        "createdAt": "2026-03-17 12:28:04.744+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/easy-sweet-sour-chicken"
+      },
+      {
+        "id": 1940,
+        "name": "Squid, chickpea & chorizo salad",
+        "userId": 38,
+        "createdAt": "2026-03-19 14:35:04.017+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/squid-chickpea-chorizo-salad"
+      },
+      {
+        "id": 1982,
+        "name": "Teriyaki tofu with charred spring onions",
+        "userId": 1,
+        "createdAt": "2026-03-24 22:28:38.184+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/charred-spring-onions-teriyaki-tofu"
+      },
+      {
+        "id": 2004,
+        "name": "Sweet potato salad",
+        "userId": 1,
+        "createdAt": "2026-04-10 09:42:38.541+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/sweet-potato-salad"
+      },
+      {
+        "id": 2027,
+        "name": "Spaghetti alla Carbonara",
+        "userId": 1,
+        "createdAt": "2026-04-16 08:23:45.389+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/ultimate-spaghetti-carbonara-recipe"
+      },
+      {
+        "id": 2030,
+        "name": "Creamy Tomato Soup",
+        "userId": 1,
+        "createdAt": "2026-04-16 21:55:11.043+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/2604646/creamy-tomato-soup"
+      },
+      {
+        "id": 2031,
+        "name": "Creamy Tomato Soup",
+        "userId": 1,
+        "createdAt": "2026-04-16 21:56:19.541+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/2604646/creamy-tomato-soup"
+      },
+      {
+        "id": 2037,
+        "name": "Pizza sauce",
+        "userId": 1,
+        "createdAt": "2026-04-17 20:12:01.473+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/pizza-sauce"
+      },
+      {
+        "id": 2047,
+        "name": "Pancakes",
+        "userId": 1,
+        "createdAt": "2026-04-28 22:42:21.29+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/2907669/easy-pancakes"
+      },
+      {
+        "id": 2111,
+        "name": "Slow-cooked chunky beef lasagne",
+        "userId": 60,
+        "createdAt": "2026-05-06 20:14:33.872+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/slow-cooked-chunky-beef-lasagne"
+      },
+      {
+        "id": 2138,
+        "name": "Ultimate chocolate cake",
+        "userId": 1,
+        "createdAt": "2026-05-13 14:42:33.021+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/ultimate-chocolate-cake"
+      },
+      {
+        "id": 2144,
+        "name": "The best salmon fish cakes",
+        "userId": 1,
+        "createdAt": "2026-05-14 16:43:56.419+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/best-salmon-fish-cakes"
+      },
+      {
+        "id": 2145,
+        "name": "The best salmon fish cakes (Edited)",
+        "userId": 1,
+        "createdAt": "2026-05-14 16:44:09.287+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/best-salmon-fish-cakes"
+      },
+      {
+        "id": 2147,
+        "name": "Easy paella",
+        "userId": 1,
+        "createdAt": "2026-05-14 20:54:54.281+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/easy-paella"
+      },
+      {
+        "id": 2148,
+        "name": "Green minestrone with tortellini",
+        "userId": 1,
+        "createdAt": "2026-05-17 12:42:52.111+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/green-minestrone-tortellini"
+      },
+      {
+        "id": 2161,
+        "name": "Thai pumpkin soup",
+        "userId": 1,
+        "createdAt": "2026-05-19 16:48:59.25+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/thai-pumpkin-soup"
+      },
+      {
+        "id": 2162,
+        "name": "Carbonara butter beans",
+        "userId": 1,
+        "createdAt": "2026-05-20 14:47:12.611+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/carbonara-butter-beans"
+      },
+      {
+        "id": 2163,
+        "name": "Ultimate spaghetti carbonara recipe",
+        "userId": 1,
+        "createdAt": "2026-05-20 14:47:27.058+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/ultimate-spaghetti-carbonara-recipe"
+      },
+      {
+        "id": 2164,
+        "name": "Tofu, greens & cashew stir-fry",
+        "userId": 1,
+        "createdAt": "2026-05-20 21:02:12.125+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/tofu-greens-cashew-stir-fry"
+      },
+      {
+        "id": 2165,
+        "name": "Kidney Bean Curry",
+        "userId": 1,
+        "createdAt": "2026-05-20 21:37:34.542+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/kidney-bean-curry"
+      },
+      {
+        "id": 2173,
+        "name": "Healthy Easter bunny pancakes",
+        "userId": 1,
+        "createdAt": "2026-05-25 08:57:16.12+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/healthy-easter-bunny-pancakes"
+      },
+      {
+        "id": 2174,
+        "name": "Healthy Easter bunny pancakes (Edited)",
+        "userId": 1,
+        "createdAt": "2026-05-25 08:57:32.919+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/healthy-easter-bunny-pancakes"
+      },
+      {
+        "id": 2175,
+        "name": "Fluffy Japanese soufflé pancakes",
+        "userId": 1,
+        "createdAt": "2026-05-25 08:58:42.308+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/fluffy-japanese-pancakes-2"
+      },
+      {
+        "id": 2178,
+        "name": "Fluffy Japanese soufflé pancakes (Edited)",
+        "userId": 1,
+        "createdAt": "2026-05-25 09:11:10.551+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/fluffy-japanese-pancakes-2"
+      },
+      {
+        "id": 2214,
+        "name": "Vegan lemon cake",
+        "userId": 1,
+        "createdAt": "2026-06-08 09:55:00.946+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/vegan-lemon-cake"
+      },
+      {
+        "id": 2215,
+        "name": "Quick pizza dough",
+        "userId": 1,
+        "createdAt": "2026-06-08 09:55:02.255+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/quick-pizza-dough-2"
+      },
+      {
+        "id": 2216,
+        "name": "Vegan banana muffins",
+        "userId": 1,
+        "createdAt": "2026-06-08 09:55:02.992+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/vegan-banana-cupcakes"
+      },
+      {
+        "id": 2217,
+        "name": "Vegan chickpea curry jacket potatoes",
+        "userId": 1,
+        "createdAt": "2026-06-08 09:55:03.739+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/vegan-chickpea-curry-jacket-potato"
+      },
+      {
+        "id": 2218,
+        "name": "One-pot vegan rice and beans",
+        "userId": 1,
+        "createdAt": "2026-06-08 09:55:04.831+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/one-pot-vegan-rice-and-beans"
+      },
+      {
+        "id": 2219,
+        "name": "Vegan burrito bowl",
+        "userId": 1,
+        "createdAt": "2026-06-08 09:55:05.386+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/vegan-burrito-bowl"
+      },
+      {
+        "id": 2220,
+        "name": "Vegan chilli",
+        "userId": 1,
+        "createdAt": "2026-06-08 09:55:05.934+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/vegan-chilli"
+      },
+      {
+        "id": 2221,
+        "name": "Quick seafood linguine",
+        "userId": 1,
+        "createdAt": "2026-06-08 21:32:10.296+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/20minute-seafood-pasta"
+      },
+      {
+        "id": 2222,
+        "name": "Quick seafood linguine",
+        "userId": 38,
+        "createdAt": "2026-06-10 15:37:05.81+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/20minute-seafood-pasta"
+      },
+      {
+        "id": 2225,
+        "name": "Chorizo & halloumi breakfast baguette",
+        "userId": 38,
+        "createdAt": "2026-06-11 22:11:07.893+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/chorizo-halloumi-breakfast-baguette"
+      },
+      {
+        "id": 2226,
+        "name": "Roasted sweet potato & carrot soup",
+        "userId": 38,
+        "createdAt": "2026-06-11 22:11:08.256+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/roasted-sweet-potato-carrot-soup"
+      },
+      {
+        "id": 2227,
+        "name": "Spinach, sweet potato & lentil dhal",
+        "userId": 38,
+        "createdAt": "2026-06-11 22:11:09.103+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/spinach-sweet-potato-lentil-dhal"
+      },
+      {
+        "id": 2228,
+        "name": "Double bean & roasted pepper chilli",
+        "userId": 38,
+        "createdAt": "2026-06-11 22:11:10.686+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/double-bean-roasted-pepper-chilli"
+      },
+      {
+        "id": 2229,
+        "name": "Vegetarian lentil stew",
+        "userId": 38,
+        "createdAt": "2026-06-11 22:11:11.524+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/vegetarian-lentil-stew"
+      },
+      {
+        "id": 2267,
+        "name": "French Omelette",
+        "userId": 38,
+        "createdAt": "2026-06-13 00:17:57.853+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/1669/ultimate-french-omelette"
+      },
+      {
+        "id": 2268,
+        "name": "Breakfast casserole",
+        "userId": 38,
+        "createdAt": "2026-06-13 00:17:58.578+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/breakfast-casserole"
+      },
+      {
+        "id": 2269,
+        "name": "Mushroom brunch",
+        "userId": 38,
+        "createdAt": "2026-06-13 00:17:58.948+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/mushroom-brunch"
+      },
+      {
+        "id": 2270,
+        "name": "Quick and easy fish stew",
+        "userId": 38,
+        "createdAt": "2026-06-13 00:17:59.32+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/simple-fish-stew"
+      },
+      {
+        "id": 2271,
+        "name": "Provençal Omelette Cake",
+        "userId": 38,
+        "createdAt": "2026-06-13 00:17:59.701+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/6428/provenal-omelette-cake"
+      },
+      {
+        "id": 2272,
+        "name": "Quick tartar sauce",
+        "userId": 38,
+        "createdAt": "2026-06-13 00:18:00.228+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/tartare-sauce"
+      },
+      {
+        "id": 2274,
+        "name": "Quick prawn curry",
+        "userId": 38,
+        "createdAt": "2026-06-13 00:18:00.983+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/prawn-curry-hurry"
+      },
+      {
+        "id": 2275,
+        "name": "Keto smoothie",
+        "userId": 38,
+        "createdAt": "2026-06-13 00:18:01.524+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/keto-smoothie"
+      },
+      {
+        "id": 2276,
+        "name": "Keto vanilla ice cream",
+        "userId": 38,
+        "createdAt": "2026-06-13 00:18:01.886+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/keto-vanilla-ice-cream"
+      },
+      {
+        "id": 2277,
+        "name": "Healthy pepper, tomato & ham omelette",
+        "userId": 38,
+        "createdAt": "2026-06-13 00:18:02.622+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/skinny-pepper-tomato-ham-omelette"
+      },
+      {
+        "id": 2278,
+        "name": "Healthy beef stew",
+        "userId": 38,
+        "createdAt": "2026-06-13 00:18:02.995+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/italian-style-beef-stew"
+      },
+      {
+        "id": 2280,
+        "name": "Healthy shakshuka",
+        "userId": 38,
+        "createdAt": "2026-06-15 06:12:46.046+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/healthy-shakshuka"
+      },
+      {
+        "id": 2281,
+        "name": "Tortellini with ricotta, spinach & bacon",
+        "userId": 38,
+        "createdAt": "2026-06-24 21:02:07.305+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/tortellini-ricotta-spinach-bacon"
+      },
+      {
+        "id": 2282,
+        "name": "Tortellini with ricotta, spinach & bacon (Edited)",
+        "userId": 38,
+        "createdAt": "2026-06-24 21:02:07.649+00",
+        "sourceUrl": "https://www.bbcgoodfood.com/recipes/tortellini-ricotta-spinach-bacon"
+      }
+    ]
+  },
+  "allRecipes": {
+    "publisher": "Dotdash Meredith",
+    "source": "AllRecipes",
+    "licensingPath": "Commercial content license (FS2 §3.2)",
+    "meals": [
+      {
+        "id": 92,
+        "name": "Algerian Flafla (Bell Pepper Salad)",
+        "userId": 38,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.allrecipes.com/recipe/153802/algerian-flafla-bell-pepper-salad/"
+      },
+      {
+        "id": 532,
+        "name": "Mussels Mariniere",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.allrecipes.com/recipe/12718/mussels-mariniere/"
+      },
+      {
+        "id": 1166,
+        "name": "Pizza on the Grill",
+        "userId": 56,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.allrecipes.com/recipe/14522/pizza-on-the-grill-i/"
+      },
+      {
+        "id": 1167,
+        "name": "My Big Fat Greek Salad",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.allrecipes.com/recipe/267974/my-big-fat-greek-salad/"
+      },
+      {
+        "id": 1388,
+        "name": "Lasagne Verdi al Forno",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.allrecipes.com/recipe/20568/lasagne-verdi-al-forno/"
+      },
+      {
+        "id": 1452,
+        "name": "Simple Beef Stroganoff",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.allrecipes.com/recipe/16311/simple-beef-stroganoff/"
+      },
+      {
+        "id": 1458,
+        "name": "Lasagne Verdi al Forno (Edited)",
+        "userId": 1,
+        "createdAt": "2026-02-27 23:20:26.681+00",
+        "sourceUrl": "https://www.allrecipes.com/recipe/20568/lasagne-verdi-al-forno/"
+      }
+    ]
+  },
+  "relicensingRoadmap": "docs/architecture/RECIPE_RELICENSING_ROADMAP.md",
+  "notes": [
+    "All meals are user imports (acquisitionLane: personal_cookbook)",
+    "All are historical (Feb-Jun 2026, no ongoing imports)",
+    "27 meals actively used in household plans",
+    "Marked for relicensing post-production revenue"
+  ]
+}

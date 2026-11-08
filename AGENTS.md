@@ -60,3 +60,36 @@ All meal writes must set `acquisitionLane` and `acquisitionType` per `shared/rec
    - Runs: `npm run seed:ready-meals` (startup-only seed)
 
 **Write path architecture:** All writers either call `createMeal()` or explicitly derive acquisition. Direct inserts are forbidden.
+
+---
+
+## Recipe Licensing Strategy
+
+### Pre-Production User Imports
+
+**163 meals currently stored from unlicensed sources (BBC Good Food, AllRecipes):**
+- All are user imports (`acquisitionLane: personal_cookbook`)
+- Historical only (Feb-Jun 2026, no ongoing imports)
+- 27 actively used in household plans
+- Marked for relicensing post-production
+
+**Status:** Awaiting commercial licensing via Apify and direct publisher contracts
+
+**Reference:** `docs/architecture/RECIPE_RELICENSING_ROADMAP.md` (licensing timeline and compliance strategy)
+
+### Post-Production Path
+
+**Timeline:** Initiate licensing negotiations after production revenue begins
+
+**Publishers:**
+- **BBC Good Food** (Immediate Media) — Syndication license
+- **AllRecipes** (Dotdash Meredith) — Content license
+- **Apify** — Legitimate commercial data extraction
+
+**Action items:**
+1. Contact Immediate Media and Dotdash Meredith for commercial licensing
+2. Establish Apify integration for ongoing legitimate imports
+3. Transition 163 meals to `licensed_discovery` lane once contracts signed
+4. Update `acquisitionType` to `licensed_import` and set `licenceRef`
+
+**Until licensed:** Meals remain in personal_cookbook lane, user imports, unlicensed (documented intent to relicense)
