@@ -109,10 +109,11 @@ async function updateActivitySummary(input: ProductEventInput): Promise<void> {
     .from(shoppingList)
     .where(eq(shoppingList.userId, userId));
 
+  // Household-scoped active pantry count (canonical read per Domain 30)
   const [pantryRow] = await db
     .select({ count: count() })
     .from(userPantryItems)
-    .where(eq(userPantryItems.userId, userId));
+    .where(and(eq(userPantryItems.householdId, householdId), eq(userPantryItems.isDeleted, false)));
 
   // Planner count is household-scoped — join through the week
   const plannerResult = await db.execute<{ cnt: string }>(sql`

@@ -30,6 +30,7 @@ import {
   getBenefitDetailView,
   resolveIngredientsToKnowledgeSummary,
   getFoodsForNutrient,
+  getFoodsForNutrients,
   getSimilarFoodsByNutrients,
   findBestFoodMatch,
 } from "./services/nutrition-knowledge-registry";
@@ -65,6 +66,7 @@ import { expandSearchQuery, correctFoodSpelling, conservativeSpellCorrect, sugge
 import { parseIngredient as parseIngredientShared } from "@shared/parse-ingredient";
 import { INGREDIENT_TAXONOMY } from "@shared/ingredient-taxonomy";
 import { normalizeIngredientKey, singularizeIngredientKey } from "@shared/normalize";
+import { nutritionFocusLabel } from "@shared/nutrition-focus";
 import { discover } from "../shared/discovery/engine";
 import { alternatives } from "../shared/alternatives/engine";
 import { stories } from "../shared/stories/engine";
@@ -73,7 +75,7 @@ import { deriveHouseholdCompanionFields } from "./lib/household-companion-fields
 import type { HouseholdHistory, MealEntry } from "../shared/stories/types";
 import type { AlternativeContext, Diet as AlternativeDiet } from "../shared/alternatives/types";
 import { lookupFoodConstruct, isLikelyFoodConstruct, logUnrecognisedConstruct, logConstructMappingFailure } from "@shared/food-constructs";
-import { insertMealTemplateSchema, insertFreezerMealSchema, updateMealSchema, householdMembers, users } from "@shared/schema";
+import { insertMealTemplateSchema, insertFreezerMealSchema, updateMealSchema, householdMembers, users, type InsertProductMatch } from "@shared/schema";
 import { importGlobalMeals, getImportStatus } from "./lib/openfoodfacts-importer";
 import { sanitizeUser } from "./lib/sanitizeUser";
 import { classifyAndEnrich, lookupClassification, updateClassification, applyClassificationToItems } from "./lib/classification-store";
@@ -149,7 +151,6 @@ import { pool } from "./db";
 import { db } from "./db";
 import { shoppingFulfilmentMemory } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
-import { SAVINGS_RATES } from "./lib/savings-config";
 import multer from "multer";
 import { intelligencePlatform } from "./intelligence/index.js";
 
@@ -584,7 +585,13 @@ export async function registerRoutes(
   // CONV1 P4 (OWN-1): the API shape keeps `dietPattern` / `dietRestrictions`, but they
   // are read from the canonical owner — the caller's eater row — not from the retired
   // users.diet* shadow columns. Callers pass `storage.getPersonDiet(userId)`.
-  function buildProfileResponse(user: any, prefs: any, personDiet: { dietPattern: string | null; hardRestrictions: string[] }) {
+  function buildProfileResponse(
+    user: any,
+    prefs: any,
+    personDiet: { dietPattern: string | null; hardRestrictions: string[] },
+    reportedHealthContext: readonly { id: string; fact: string; reportedAt: string }[] = [],
+    nutritionFocuses: readonly { id: string; focus: string; reportedAt: string }[] = [],
+  ) {
     const heightCm = prefs?.heightCm || null;
     const weightKg = prefs?.weightKg || null;
     let bmi: number | null = null;
@@ -635,6 +642,10 @@ export async function registerRoutes(
       hasPremiumAccess: hasPremiumAccess(user),
       dietPattern: personDiet.dietPattern,
       dietRestrictions: personDiet.hardRestrictions,
+      // This is the caller's own reported information only. The household
+      // projection below deliberately excludes account-backed adult records.
+      reportedHealthContext,
+      nutritionFocuses,
       eatingSchedule: user.eatingSchedule ?? null,
       customMetricDefs: (user.customMetricDefs as Array<{ id: string; name: string; unit: string }> | null) ?? [],
       diaryExtraMetrics: (user.diaryExtraMetrics as string[] | null) ?? [],
@@ -667,7 +678,15 @@ export async function registerRoutes(
     if (!user) return res.status(404).json({ message: "User not found" });
     const prefs = await storage.getUserPreferences(req.user!.id);
     const personDiet = await storage.getPersonDiet(req.user!.id);
-    res.json(buildProfileResponse(user, prefs, personDiet));
+    const { hasCurrentHealthContextConsent } = await import("./privacy/health-context-consent.js");
+    const mayReadHealthContext = await hasCurrentHealthContextConsent(req.user!.id);
+    const reportedHealthContext = mayReadHealthContext
+      ? await storage.getPersonReportedHealthContext(req.user!.id)
+      : [];
+    const nutritionFocuses = mayReadHealthContext
+      ? await storage.getPersonNutritionFocuses(req.user!.id)
+      : [];
+    res.json(buildProfileResponse(user, prefs, personDiet, reportedHealthContext, nutritionFocuses));
   });
 
   const ALLOWED_DIET_PATTERNS = ["Mediterranean", "DASH", "MIND", "Flexitarian", "Vegetarian", "Vegan", "Keto", "Low-Carb", "Paleo", "Carnivore"] as const;
@@ -694,6 +713,7 @@ export async function registerRoutes(
     profilePhotoUrl: z.string().nullable().optional(),
     dietPattern: z.enum(ALLOWED_DIET_PATTERNS).nullable().optional(),
     dietRestrictions: hardRestrictionsSchema.optional(),
+    nutritionFocuses: z.array(z.string().refine((focus) => Boolean(nutritionFocusLabel(focus)))).max(20).optional(),
     eatingSchedule: z.enum(ALLOWED_EATING_SCHEDULES).nullable().optional(),
     customMetricDefs: z.array(z.object({ id: z.string(), name: z.string(), unit: z.string() })).optional(),
     diaryExtraMetrics: z.array(z.string()).optional(),
@@ -756,6 +776,14 @@ export async function registerRoutes(
         });
       }
 
+      if (parsed.nutritionFocuses !== undefined) {
+        const { hasCurrentHealthContextConsent } = await import("./privacy/health-context-consent.js");
+        if (!(await hasCurrentHealthContextConsent(req.user!.id))) {
+          return res.status(403).json({ message: "Review and grant the current health-data consent in Privacy Settings before saving nutrition focuses." });
+        }
+        await storage.setPersonNutritionFocuses(req.user!.id, parsed.nutritionFocuses);
+      }
+
       // CP2 — the Companion voice the user is replacing, read BEFORE the write
       // so the selection observation can name both ends honestly. Only read
       // when the request actually carries a voice change.
@@ -806,8 +834,15 @@ export async function registerRoutes(
       const user = await storage.getUser(req.user!.id);
       const prefs = await storage.getUserPreferences(req.user!.id);
       const personDiet = await storage.getPersonDiet(req.user!.id);
-
-      const profileResponse = buildProfileResponse(user!, prefs, personDiet);
+      const { hasCurrentHealthContextConsent } = await import("./privacy/health-context-consent.js");
+      const mayReadHealthContext = await hasCurrentHealthContextConsent(req.user!.id);
+      const reportedHealthContext = mayReadHealthContext
+        ? await storage.getPersonReportedHealthContext(req.user!.id)
+        : [];
+      const nutritionFocuses = mayReadHealthContext
+        ? await storage.getPersonNutritionFocuses(req.user!.id)
+        : [];
+      const profileResponse = buildProfileResponse(user!, prefs, personDiet, reportedHealthContext, nutritionFocuses);
       res.json(profileResponse);
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -3831,7 +3866,13 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
           ? "quick_list"
           : "manual";
       }
-      const item = await storage.addShoppingListItem(
+      // FNDFIX3 (2026-11-03) — this was the plain, non-merging insert, so every
+      // Quick Add submission landed as permanent new rows with zero awareness
+      // of what the list already held (only the Planner's meal-ingredient path
+      // called the consolidating variant). addOrConsolidateShoppingListItem
+      // already does the correct (householdId, normalizedName, unit) match —
+      // reused here rather than inventing a second matching path.
+      const item = await storage.addOrConsolidateShoppingListItem(
         req.user!.id,
         insertPayload as typeof input,
       );
@@ -4436,76 +4477,108 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       }
 
       const allStores = ['Tesco', "Sainsbury's", 'Asda', 'Morrisons', 'Aldi', 'Lidl', 'Waitrose', 'Ocado', 'Marks & Spencer'];
-      const allMatches = [];
-      for (const item of items) {
-        if (isGarbageIngredient(item.productName)) continue;
 
-        // HARD FAIL-SAFE: never look up prices for unrecognised items.
-        // Use only the stored category — do NOT run keyword detection on the
-        // product name here.  The product name may have been assigned by AI
-        // from a nonsense input (e.g. "Boorboans"→"Bourbon Biscuits"), and
-        // keyword-matching it would silently grant it a real category and
-        // trigger fake prices.  Items that reached the DB as 'uncategorised'
-        // or 'other' (or with no category) stay unmatched.
-        // Also skip any item explicitly marked for review.
+      // FNDFIX12 (2026-11-03) — this handler used to do one sequential
+      // Spoonacular HTTP call per item AND one sequential single-row INSERT
+      // per (item × store) pair, all inside one loop (findings 1c + 4a,
+      // 2026-11-03 backend perf audit). Restructured in three phases: (1)
+      // filter to eligible items, (2) run external lookups in
+      // concurrency-capped parallel batches — same pattern as
+      // enrichExternalCandidates in lib/external-meal-service.ts — (3) issue
+      // every resulting product-match row as one batched INSERT. Filtering
+      // and per-item business rules (garbage/category/needsReview gates, the
+      // matched_to_product promotion conditions) are unchanged.
+      const getSearchUrl = (productName: string, storeName: string) => {
+        const q = encodeURIComponent(productName);
+        const urls: Record<string, string> = {
+          'Tesco': `https://www.tesco.com/groceries/en-GB/search?query=${q}`,
+          "Sainsbury's": `https://www.sainsburys.co.uk/gol-ui/SearchResults/${q}`,
+          'Asda': `https://groceries.asda.com/search/${q}`,
+          'Morrisons': `https://groceries.morrisons.com/search?entry=${q}`,
+          'Aldi': `https://groceries.aldi.co.uk/en-GB/Search?keywords=${q}`,
+          'Lidl': `https://www.lidl.co.uk/q/search?q=${q}`,
+          'Waitrose': `https://www.waitrose.com/ecom/shop/search?searchTerm=${q}`,
+          'Ocado': `https://www.ocado.com/search?entry=${q}`,
+          'Marks & Spencer': `https://www.ocado.com/search?entry=${q}&dnr=y&bof=marksandspencer`,
+        };
+        return urls[storeName] || null;
+      };
+
+      // HARD FAIL-SAFE: never look up prices for unrecognised items. Use
+      // only the stored category — do NOT run keyword detection on the
+      // product name here. The product name may have been assigned by AI
+      // from a nonsense input (e.g. "Boorboans"→"Bourbon Biscuits"), and
+      // keyword-matching it would silently grant it a real category and
+      // trigger fake prices. Items that reached the DB as 'uncategorised'
+      // or 'other' (or with no category) stay unmatched. Also skip any item
+      // explicitly marked for review.
+      const eligibleItems = items.filter((item) => {
+        if (isGarbageIngredient(item.productName)) return false;
         const effectiveCategory = item.category;
-        if (!effectiveCategory || effectiveCategory === 'other' || effectiveCategory === 'uncategorised') continue;
-        if (item.needsReview === true) continue;
+        if (!effectiveCategory || effectiveCategory === 'other' || effectiveCategory === 'uncategorised') return false;
+        if (item.needsReview === true) return false;
+        return true;
+      });
 
-        if (item.matchedProductId && item.matchedPrice) {
-          const getSearchUrl = (storeName: string) => {
-            const q = encodeURIComponent(item.productName);
-            const urls: Record<string, string> = {
-              'Tesco': `https://www.tesco.com/groceries/en-GB/search?query=${q}`,
-              "Sainsbury's": `https://www.sainsburys.co.uk/gol-ui/SearchResults/${q}`,
-              'Asda': `https://groceries.asda.com/search/${q}`,
-              'Morrisons': `https://groceries.morrisons.com/search?entry=${q}`,
-              'Aldi': `https://groceries.aldi.co.uk/en-GB/Search?keywords=${q}`,
-              'Lidl': `https://www.lidl.co.uk/q/search?q=${q}`,
-              'Waitrose': `https://www.waitrose.com/ecom/shop/search?searchTerm=${q}`,
-              'Ocado': `https://www.ocado.com/search?entry=${q}`,
-              'Marks & Spencer': `https://www.ocado.com/search?entry=${q}&dnr=y&bof=marksandspencer`,
-            };
-            return urls[storeName] || null;
-          };
-          let knownStores: string[] = [];
-          try {
-            knownStores = item.availableStores ? JSON.parse(item.availableStores) : [];
-          } catch { knownStores = []; }
-          const storesToShow = knownStores.length > 0 ? knownStores.filter(s => allStores.includes(s)) : allStores;
-          let finalStores = storesToShow.length > 0 ? storesToShow : allStores;
-          // Scope to the requested store if one was specified
-          if (store) finalStores = finalStores.filter(s => s === store);
-          for (const storeName of finalStores) {
-            const match = await storage.addProductMatch({
-              shoppingListItemId: item.id,
-              supermarket: storeName,
-              productName: item.productName,
-              price: item.matchedPrice,
-              pricePerUnit: null,
-              productUrl: getSearchUrl(storeName),
-              imageUrl: item.imageUrl || null,
-              currency: 'GBP',
-              tier: 'standard',
-              productWeight: null,
-              thaRating: item.thaRating || null,
-              priceSource: 'provider',
-            });
-            allMatches.push(match);
-          }
-          continue;
+      const alreadyMatchedItems = eligibleItems.filter((item) => item.matchedProductId && item.matchedPrice);
+      const needsLookupItems = eligibleItems.filter((item) => !(item.matchedProductId && item.matchedPrice));
+
+      const pendingMatches: InsertProductMatch[] = [];
+
+      for (const item of alreadyMatchedItems) {
+        let knownStores: string[] = [];
+        try {
+          knownStores = item.availableStores ? JSON.parse(item.availableStores) : [];
+        } catch { knownStores = []; }
+        const storesToShow = knownStores.length > 0 ? knownStores.filter(s => allStores.includes(s)) : allStores;
+        let finalStores = storesToShow.length > 0 ? storesToShow : allStores;
+        // Scope to the requested store if one was specified
+        if (store) finalStores = finalStores.filter(s => s === store);
+        for (const storeName of finalStores) {
+          pendingMatches.push({
+            shoppingListItemId: item.id,
+            supermarket: storeName,
+            productName: item.productName,
+            price: item.matchedPrice,
+            pricePerUnit: null,
+            productUrl: getSearchUrl(item.productName, storeName),
+            imageUrl: item.imageUrl || null,
+            currency: 'GBP',
+            tier: 'standard',
+            productWeight: null,
+            thaRating: item.thaRating || null,
+            priceSource: 'provider',
+          });
         }
+      }
 
-        const prices = await lookupPricesForIngredient(
-          item.productName,
-          effectiveCategory,
-          item.quantityValue || 1,
-          item.unit || 'unit',
-          store ? [store] : undefined
-        );
+      const LOOKUP_CONCURRENCY = 5;
+      const priceResultsByItemId = new Map<number, Awaited<ReturnType<typeof lookupPricesForIngredient>>>();
+      for (let i = 0; i < needsLookupItems.length; i += LOOKUP_CONCURRENCY) {
+        const batch = needsLookupItems.slice(i, i + LOOKUP_CONCURRENCY);
+        const results = await Promise.all(batch.map((item) =>
+          lookupPricesForIngredient(
+            item.productName,
+            item.category as string,
+            item.quantityValue || 1,
+            item.unit || 'unit',
+            store ? [store] : undefined
+          )
+        ));
+        batch.forEach((item, idx) => priceResultsByItemId.set(item.id, results[idx]));
+      }
 
+      // ── Promote to matched_to_product ──────────────────────────────────
+      // Only promote when ALL four conditions are true:
+      // 1. Item is already confidently resolved (not raw / needs_review)
+      // 2. Category is valid and not unresolved (already checked above)
+      // 3. At least one match from a genuine lookup has a real price
+      // 4. Price came from lookupPricesForIngredient, not legacy fallback data
+      const promotions: number[] = [];
+      for (const item of needsLookupItems) {
+        const prices = priceResultsByItemId.get(item.id) ?? [];
         for (const p of prices) {
-          const match = await storage.addProductMatch({
+          pendingMatches.push({
             shoppingListItemId: item.id,
             supermarket: p.supermarket,
             productName: p.productName,
@@ -4518,22 +4591,20 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
             productWeight: p.productWeight || null,
             priceSource: p.priceSource,
           });
-          allMatches.push(match);
         }
 
-        // ── Promote to matched_to_product ──────────────────────────────────
-        // Only promote when ALL four conditions are true:
-        // 1. Item is already confidently resolved (not raw / needs_review)
-        // 2. Category is valid and not unresolved (already checked above)
-        // 3. At least one match from a genuine lookup has a real price
-        // 4. Price came from lookupPricesForIngredient, not legacy fallback data
         const genuinePriceMatches = prices.filter(p => p.price !== null && p.price !== undefined);
         if (
           genuinePriceMatches.length > 0 &&
           (item as any).resolutionState === 'resolved'
         ) {
-          await storage.updateShoppingListItem(item.id, { resolutionState: 'matched_to_product' });
+          promotions.push(item.id);
         }
+      }
+
+      const allMatches = await storage.addProductMatches(pendingMatches);
+      if (promotions.length > 0) {
+        await Promise.all(promotions.map((id) => storage.updateShoppingListItem(id, { resolutionState: 'matched_to_product' })));
       }
 
       res.json({ matches: allMatches });
@@ -5714,6 +5785,37 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     } catch (err) {
       console.error("[FOODUI7] food-lookup error:", err);
       res.status(500).json({ message: "Failed to look up food" });
+    }
+  });
+
+  // ── 2026-10-31: Food Page — foods with ALL of several selected nutrients ──────
+  // "I want foods that have vitamin C AND vitamin K AND calcium", not "any one
+  // of these" — intersection, via getFoodsForNutrients. Takes real nutrient
+  // slugs directly (the client already resolves a display name to its slug via
+  // the existing nutrientSlugForDisplayName helper before calling this), so no
+  // search/matching happens here — just the lookup and the canonical bridge,
+  // same posture as FOODUI7 just above.
+  app.get("/api/foods/lookup-nutrients", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const slugs = String(req.query.slugs ?? "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+    if (slugs.length === 0) return res.json({ slugs: [], foods: [] });
+    try {
+      const { canonicalSlugForKnowledgeSlug } = await import("@shared/canonical/food-report-adapter");
+      const foods = await getFoodsForNutrients(slugs);
+      res.json({
+        slugs,
+        foods: foods.map((f) => ({
+          knowledgeSlug: f.slug,
+          name: f.name,
+          canonicalSlug: canonicalSlugForKnowledgeSlug(f.slug),
+        })),
+      });
+    } catch (err) {
+      console.error("[2026-10-31] lookup-nutrients error:", err);
+      res.status(500).json({ message: "Failed to look up foods for these nutrients" });
     }
   });
 
@@ -8296,6 +8398,18 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       const restored = await storage.restorePantryItem(req.user!.id, id);
       if (!restored) return res.status(404).json({ message: "Item not found" });
       res.json(restored);
+
+      // Trigger activity_summary refresh for all household members
+      const _restoreUserId = req.user!.id;
+      const _restoreItemId = id;
+      getHouseholdForUser(_restoreUserId).then(hid =>
+        logProductEvent({
+          eventType: EventTypes.PANTRY_ITEM_ADDED,
+          userId: _restoreUserId,
+          householdId: hid,
+          pantryItemId: _restoreItemId,
+        })
+      ).catch(() => {});
     } catch (err) {
       const msg = String((err as any)?.message ?? "");
       if (msg.includes("unique") || msg.includes("duplicate") || msg.includes("UNIQUE")) {
@@ -8313,6 +8427,18 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       if (isNaN(id)) return res.status(400).json({ message: "Invalid id" });
       await storage.deletePantryItem(req.user!.id, id);
       res.sendStatus(204);
+
+      // Trigger activity_summary refresh for all household members
+      const _deleteUserId = req.user!.id;
+      const _deleteItemId = id;
+      getHouseholdForUser(_deleteUserId).then(hid =>
+        logProductEvent({
+          eventType: EventTypes.PANTRY_ITEM_ADDED,
+          userId: _deleteUserId,
+          householdId: hid,
+          pantryItemId: _deleteItemId,
+        })
+      ).catch(() => {});
     } catch (err) {
       console.error("[Pantry] DELETE error:", err);
       res.status(500).json({ message: "Failed to delete pantry item" });
@@ -9030,9 +9156,90 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     }
   });
 
+  // ANR1 review workbench: source and calculation review only. Decisions are
+  // appended to the existing Nutrition Knowledge evidence ledger; they do not
+  // activate or publish Companion runtime guidance.
+  app.get("/api/admin/nutrient-reference-review", assertAdmin, async (_req, res) => {
+    try {
+      const { listReferenceMethodCandidates, getReferenceMethodReviewHistory } = await import(
+        "./lib/knowledge-claim-review-store"
+      );
+      const [candidates, history] = await Promise.all([
+        Promise.resolve(listReferenceMethodCandidates()),
+        getReferenceMethodReviewHistory(),
+      ]);
+      const latestByMethod = new Map<string, any>();
+      for (const row of history) {
+        const methodId = (row.after as any)?.methodId;
+        const version = (row.after as any)?.version;
+        const key = typeof methodId === "string" && typeof version === "string" ? `${methodId}:${version}` : "";
+        if (key && !latestByMethod.has(key)) latestByMethod.set(key, row);
+      }
+      res.json({ methods: candidates.map(candidate => ({
+        ...candidate,
+        latestDecision: latestByMethod.get(`${candidate.method.id}:${candidate.method.version}`) ?? null,
+      })), history });
+    } catch (err: any) {
+      console.error("[AdminNutrientReferenceReview] list GET error:", err);
+      res.status(500).json({ message: "Failed to load nutrient reference review" });
+    }
+  });
+
+  app.post("/api/admin/nutrient-reference-review/:methodId/preview", assertAdmin, async (req, res) => {
+    try {
+      const { previewNutrientReferenceMethod } = await import("./intelligence/food-intelligence/nutrient-reference-engine");
+      if (req.body?.bodyMassUnit !== undefined && req.body.bodyMassUnit !== "kg" && req.body.bodyMassUnit !== "lb") {
+        return res.status(400).json({ message: "bodyMassUnit must be kg or lb when provided" });
+      }
+      if (req.body?.sourceSex !== undefined && req.body.sourceSex !== "male" && req.body.sourceSex !== "female") {
+        return res.status(400).json({ message: "sourceSex must match the method's source category" });
+      }
+      const result = previewNutrientReferenceMethod(String(req.params.methodId), {
+        ageYears: Number(req.body?.ageYears),
+        ...(req.body?.bodyMass === undefined ? {} : { bodyMass: Number(req.body.bodyMass) }),
+        ...(req.body?.bodyMassUnit === undefined ? {} : { bodyMassUnit: req.body.bodyMassUnit }),
+        exerciseConfirmed: req.body?.exerciseConfirmed === true,
+        muscleStrengthGoal: req.body?.muscleStrengthGoal === true,
+        ...(req.body?.sourceSex === undefined ? {} : { sourceSex: req.body.sourceSex }),
+      });
+      res.json(result);
+    } catch (err: any) {
+      console.error("[AdminNutrientReferenceReview] preview POST error:", err);
+      res.status(500).json({ message: "Failed to preview candidate method" });
+    }
+  });
+
+  app.post("/api/admin/nutrient-reference-review/:methodId/decision", assertAdmin, async (req, res) => {
+    try {
+      const { recordReferenceMethodDecision, ClaimReviewError } = await import("./lib/knowledge-claim-review-store");
+      const action = String(req.body?.action ?? "");
+      if (action !== "approve" && action !== "reject") return res.status(400).json({ message: "action must be approve or reject" });
+      const user = req.user as any;
+      const reviewer: string = user?.displayName?.trim() || user?.firstName?.trim() || user?.username?.trim() || "";
+      if (!reviewer) return res.status(400).json({ message: "Your account needs a name to attribute this review." });
+      try {
+        const decision = await recordReferenceMethodDecision({
+          methodId: String(req.params.methodId),
+          action,
+          reviewer,
+          reviewerUserId: user?.id ?? null,
+          reason: typeof req.body?.reason === "string" ? req.body.reason : null,
+          confirmations: req.body?.confirmations,
+        });
+        res.json(decision);
+      } catch (e: any) {
+        if (e instanceof ClaimReviewError) return res.status(e.status).json({ message: e.message });
+        throw e;
+      }
+    } catch (err: any) {
+      console.error("[AdminNutrientReferenceReview] decision POST error:", err);
+      res.status(500).json({ message: "Failed to record nutrient reference review" });
+    }
+  });
+
   app.get("/api/admin/knowledge-claims", assertAdmin, async (req, res) => {
     try {
-      const { listClaims, isClaimEdge, CLAIM_EDGE_LABELS, CLAIM_EDGE_MEANINGS } = await import(
+      const { listClaimsPage, isClaimEdge, CLAIM_EDGE_LABELS, CLAIM_EDGE_MEANINGS } = await import(
         "./lib/knowledge-claim-review-store"
       );
       const edgeParam = req.query.edge ? String(req.query.edge) : undefined;
@@ -9043,13 +9250,29 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         return res.status(400).json({ message: "Unknown status" });
       }
 
-      const claims = await listClaims({
+      const sourceStatusParam = req.query.sourceStatus ? String(req.query.sourceStatus) : undefined;
+      if (sourceStatusParam && !["all", "cited", "missing"].includes(sourceStatusParam)) {
+        return res.status(400).json({ message: "Unknown source status" });
+      }
+
+      const limitParam = req.query.limit === undefined ? 50 : Number.parseInt(String(req.query.limit), 10);
+      const offsetParam = req.query.offset === undefined ? 0 : Number.parseInt(String(req.query.offset), 10);
+      if (!Number.isInteger(limitParam) || limitParam < 1 || limitParam > 100) {
+        return res.status(400).json({ message: "Limit must be between 1 and 100" });
+      }
+      if (!Number.isInteger(offsetParam) || offsetParam < 0) {
+        return res.status(400).json({ message: "Offset must be zero or greater" });
+      }
+
+      const page = await listClaimsPage({
         edge: edgeParam as any,
         status: statusParam as any,
+        sourceStatus: sourceStatusParam as any,
         citedOnly: req.query.citedOnly === "true",
-        limit: req.query.limit ? parseInt(String(req.query.limit), 10) : undefined,
+        limit: limitParam,
+        offset: offsetParam,
       });
-      res.json({ claims, labels: CLAIM_EDGE_LABELS, meanings: CLAIM_EDGE_MEANINGS });
+      res.json({ ...page, labels: CLAIM_EDGE_LABELS, meanings: CLAIM_EDGE_MEANINGS });
     } catch (err: any) {
       console.error("[AdminKnowledgeClaims] list GET error:", err);
       res.status(500).json({ message: "Failed to load claims" });
@@ -9141,6 +9364,31 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     } catch (err: any) {
       console.error("[AdminKnowledgeClaims] decision error:", err);
       res.status(500).json({ message: err?.message || "Failed to record decision" });
+    }
+  });
+
+  app.post("/api/admin/knowledge-claims/:edge/:id/source", assertAdmin, async (req, res) => {
+    try {
+      const { recordClaimSourceChange, ClaimReviewError, isClaimEdge } = await import("./lib/knowledge-claim-review-store");
+      const edge = String(req.params.edge);
+      const id = parseInt(String(req.params.id), 10);
+      if (!isClaimEdge(edge)) return res.status(400).json({ message: "Unknown claim edge" });
+      if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ message: "Invalid id" });
+      const user = req.user as any;
+      const reviewer: string = user?.displayName?.trim() || user?.firstName?.trim() || user?.username?.trim() || "";
+      try {
+        res.json(await recordClaimSourceChange({
+          edge, claimId: id, reviewer, reviewerUserId: user?.id ?? null,
+          sourceRef: req.body?.action === "attach" ? req.body?.sourceRef : undefined,
+          removeUrl: req.body?.action === "remove" && typeof req.body?.url === "string" ? req.body.url : undefined,
+        }));
+      } catch (e: any) {
+        if (e instanceof ClaimReviewError) return res.status(e.status).json({ message: e.message });
+        throw e;
+      }
+    } catch (err: any) {
+      console.error("[AdminKnowledgeClaims] source change error:", err);
+      res.status(500).json({ message: "Failed to record source change" });
     }
   });
 
@@ -10023,10 +10271,23 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       const householdId = await getHouseholdForUser(req.user!.id);
       const rows = await storage.getHouseholdEaters(householdId);
       const { dbEaterToHouseholdEater } = await import("@shared/household-eater.js");
+      const { hasCurrentHealthContextConsent } = await import("./privacy/health-context-consent.js");
+      const mayReadReportedHealthContext = await hasCurrentHealthContextConsent(req.user!.id);
       // CONV1 P4 (READ-1): the read-time profile enrichment is deleted. Every eater
       // row — account-backed or not — stores its own diets and restrictions; it IS
       // the canonical owner (OWN-1), so the stored values are served unchanged.
-      res.json(rows.map(dbEaterToHouseholdEater));
+      res.json(rows.map((row) => ({
+        ...dbEaterToHouseholdEater(row),
+        // Child/dependent reports are shared with active household adults under
+        // the consent wording. An adult's own context remains private to their
+        // /api/profile response and is never exposed through this shared list.
+        reportedHealthContext: mayReadReportedHealthContext && row.userId == null
+          ? (row.reportedHealthContext ?? []).map(({ id, fact, reportedAt }) => ({ id, fact, reportedAt }))
+          : [],
+        nutritionFocuses: mayReadReportedHealthContext && row.userId == null
+          ? (row.nutritionFocuses ?? []).map(({ id, focus, reportedAt }) => ({ id, focus, reportedAt }))
+          : [],
+      })));
     } catch (err) {
       console.error("[HouseholdEaters] GET error:", err);
       res.status(500).json({ message: "Failed to fetch household eaters" });
@@ -11302,16 +11563,6 @@ Keep each string short and concrete. Return [] for any array with no entries.`;
       return res.status(404).json({ message: "Meal not found" });
     }
     const result = await storage.logMealToDiary(req.user!.id, date, mealId, mealSlot);
-    // Savings: one takeaway_avoided per meal log action (deduped by mealId+date via unique index)
-    storage.createSavingsEvent(req.user!.id, {
-      userId: req.user!.id,
-      date,
-      type: 'takeaway_avoided',
-      amount: SAVINGS_RATES.takeaway_avoided,
-      sourceId: mealId,
-      sourceType: 'meal_log',
-      note: null,
-    }).catch(() => {});
     res.status(201).json(result);
   });
 
@@ -11335,16 +11586,6 @@ Keep each string short and concrete. Return [] for any array with no entries.`;
     });
     // Track usage for recent/frequent (Epic 3)
     storage.recordItemUsage(req.user!.id, 'manual', name).catch(() => {});
-    // Savings: one takeaway_avoided event per logged entry (fire-and-forget)
-    storage.createSavingsEvent(req.user!.id, {
-      userId: req.user!.id,
-      date,
-      type: 'takeaway_avoided',
-      amount: SAVINGS_RATES.takeaway_avoided,
-      sourceId: entry.id,
-      sourceType: 'diary_entry',
-      note: null,
-    }).catch(() => {});
     res.status(201).json(entry);
   });
 
@@ -13399,6 +13640,28 @@ Generate a complete recipe using these as the foundation.`;
   });
 
   /**
+   * 2026-11-06 (owner) — "it remembers and I can't clear it". Closes the
+   * caller's active conversation thread, so the very next message opens a
+   * fresh one (ConversationGateway.startNewThread). The household's past
+   * turns are not deleted — they stay in the conversation's history, just
+   * no longer fed to the model as this thread's "CONVERSATION HISTORY" on
+   * every future turn.
+   */
+  app.post("/api/intelligence/conversation/new", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const user = req.user as import("@shared/schema").User;
+
+    try {
+      const { conversationGateway } = await import("./intelligence/conversation/conversation-gateway.js");
+      await conversationGateway.startNewThread(user.id);
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("[ConversationGateway] POST /new error:", err);
+      res.status(500).json({ message: "Failed to start a new conversation" });
+    }
+  });
+
+  /**
    * CP2 — the Companion panel's empty-state text, in the user's chosen voice.
    *
    * This route exists so the CLIENT holds no copy of the Companion's words. It
@@ -13650,11 +13913,14 @@ Generate a complete recipe using these as the foundation.`;
       const context = intelligencePlatform.contextFor(user);
       const outcome = await intelligencePlatform.handle(intent, context, { confirmed: true });
 
+      const proposedParameters = proposal.parameters as Record<string, unknown>;
+      const sensitiveHealthAction = ["reported-health-context", "nutrition-focus"].includes(String(proposedParameters.scope));
       const updated = outcome.status === "ok"
-        ? await companionActionStore.updateProposalStatus(actionId, "succeeded", { resultSummary: outcome.message })
+        ? await companionActionStore.updateProposalStatus(actionId, "succeeded", { resultSummary: outcome.message, clearParameters: sensitiveHealthAction })
         : await companionActionStore.updateProposalStatus(actionId, "failed", {
             errorCode: outcome.status,
             errorMessage: outcome.message,
+            clearParameters: sensitiveHealthAction,
           });
 
       res.json({
@@ -13687,7 +13953,9 @@ Generate a complete recipe using these as the foundation.`;
       if (!owner) return res.status(404).json({ message: "Action not found" });
       if (owner.userId !== user.id) return res.sendStatus(403);
 
-      const updated = await companionActionStore.updateProposalStatus(actionId, "cancelled");
+      const updated = await companionActionStore.updateProposalStatus(actionId, "cancelled", {
+        clearParameters: ["reported-health-context", "nutrition-focus"].includes(String((proposal.parameters as Record<string, unknown>).scope)),
+      });
       res.json({ id: updated.id, status: updated.status });
     } catch (err) {
       console.error("[CompanionActions] POST cancel error:", err);

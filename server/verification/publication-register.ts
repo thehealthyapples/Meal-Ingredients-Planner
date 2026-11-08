@@ -773,7 +773,7 @@ export const CANONICAL_PUBLICATION_REGISTER: DomainDeclaration[] = [
         severity: "fail",
         cpi1: "S1-5",
         sql: `SELECT a.user_id, a.current_pantry_items,
-                     (SELECT count(*)::int FROM user_pantry_items p WHERE p.household_id = a.household_id) AS canonical
+                     (SELECT count(*)::int FROM user_pantry_items p WHERE p.household_id = a.household_id AND p.is_deleted = FALSE) AS canonical
               FROM activity_summary a`,
         evaluate: (rows) => {
           const drifted = rows.filter(
