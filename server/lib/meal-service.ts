@@ -52,6 +52,7 @@ import {
   type HouseholdSafetyContext,
   type SafetyCheckableMeal,
 } from "./household-dietary-safety";
+import { deriveAcquisitionFromLegacy } from "@shared/recipe-acquisition";
 
 const BREAKFAST_CATEGORY_ID = 1;
 const LUNCH_CATEGORY_ID = 2;
@@ -244,6 +245,8 @@ export async function preloadStarterMeals(userId: number): Promise<number> {
     return 0;
   }
 
+  const derived = deriveAcquisitionFromLegacy({ mealSourceType: "starter" });
+
   await db.transaction(async (tx) => {
     for (const meal of allStarter) {
       await tx.insert(meals).values({
@@ -259,6 +262,8 @@ export async function preloadStarterMeals(userId: number): Promise<number> {
         mealFormat: meal.mealFormat,
         dietTypes: meal.dietTypes,
         mealSourceType: "starter",
+        acquisitionLane: derived.acquisitionLane,
+        acquisitionType: derived.acquisitionType,
       });
     }
     await tx
