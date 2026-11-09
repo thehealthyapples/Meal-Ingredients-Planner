@@ -10,63 +10,17 @@
 //                       PX1-W3 — names and thumbnails only, never the full rows)
 //   • Shopping        → /api/shopping-list      (Shopping state)
 //   • Plant diversity → /api/home/intelligence  (weeklyProgress.plantCount)
-//   • The rooms       → NAV_ITEMS via roomsByHref (UX1's one navigation list)
+//   • Room navigation → the canonical BottomNav in AppShell
 // Reminders are NOT read here any more (UX3): the Notice Engine's mouth is the
 // Companion, in every room, not this one page speaking in its name.
 // No new store, no duplicate state, no second assistant. Honest gaps: a section
 // that has no validated data renders as a calm empty state, never fabricated.
 //
 // ─────────────────────────────────────────────────────────────────────────────
-// NORTH1 (2026-07-17) — the North Star built.
-//
-// Home now stands at E3, "the open view" — the orchard visible as itself,
-// generously; the view IS part of the room's purpose (Blueprint §6.2, Home only).
-// It is the last of the four exposure levels to exist and the only room that will
-// ever hold this one.
-//
-// The room reads, top to bottom, as NORTH1 §4.1's grammar — light above, horizon,
-// working plane, hand below:
-//
-//   1. THE OPEN VIEW  — the orchard, dissolving into the room: a window beside the
-//                       greeting on a wide wall, a band over the counter on a narrow
-//                       one (OrchardOpenView, the asset's one owner). It is also the
-//                       room's ONLY light — Home pours no --light-ambient, because the
-//                       pool plus the sun in the window is two suns in one room, which
-//                       Blueprint §16 forbids and which looked exactly as bad as it
-//                       sounds.
-//   2. THE ARRIVAL    — the household's name in THA's own hand, standing on the warm
-//                       canvas in the light from that window, with the Companion's card
-//                       beside it resting against the view.
-//   3. THE COUNTER    — the ground plane: one warm working surface, rising into the
-//                       bottom of the view so it has a world behind it, holding the
-//                       glance, the one door, and the doors of the house.
-//
-// Every value here is a governed token (UIA §4, valued by ODL2). Nothing on this
-// page sets a colour, a shadow, a radius or an exposure of its own — the ODL1-era
-// hardcoded HSL chips are gone with the rest of the token bypass (NORTH1 §8.5).
-//
-// WHAT THE NORTH STAR IMAGE ASKS FOR AND THIS ROOM REFUSES, each refused by a rule
-// that already had an owner, and each recorded in docs/implementation/
-// NORTH1_HOME_IMPLEMENTATION.md rather than discovered again later:
-//   • Its left sidebar — UX1's BottomNav is the sole primary navigation at every
-//     size and the walls never change (Blueprint §14; NORTH1 §5.3).
-//   • Type on the orchard — the greeting sits on canvas, never on the image
-//     (Blueprint §6.1, "without negotiation"; the law that deleted EXP4's B and C).
-//   • Its photographic props (the notebook, the soup, the jars, the tote, the apple
-//     bowl) — "data-borne or dead" (Blueprint §12.1); where the render puts a bowl
-//     of apples, the software puts the household's actual plan (NORTH1 §5.2).
-//   • "Nourishing food. Happy home." — a marketing line inside the product
-//     (NORTH1 §5.7). The state sentence below is data-borne and says more.
-//   • Its Family and Pantry glance columns — Home has no validated data for either,
-//     and a fabricated fact is the one thing this page has never done.
-//   • Its clock — a CIVIL read. Household Time (HT1–HT18) owns it and CONV1 P6 is
-//     converging the four getGreeting copies right now; a fifth private clock added
-//     here would be the exact duplication that architecture exists to retire.
-//
-// PX1-W0 (fnd-px-false-empty-home). Every query below separates WAITING (skeleton),
-// BROKEN (the canonical LoadError), and genuinely EMPTY. An absence is only ever
-// claimed once it is known to be true. That is unchanged by the North Star, and the
-// three states are why the room survives a bad morning as well as a good one.
+// HOMEEXT1 — Home now opens onto the owner-selected front garden. The image is
+// decorative and static; the welcome and the three sourced summaries each have
+// solid reading ground. Home still owns no data and the canonical shell still
+// owns navigation, the Companion and all trust notices.
 
 import { useMemo } from "react";
 import { Link } from "wouter";
@@ -78,27 +32,19 @@ import { useMealsSummary } from "@/hooks/use-meals-summary";
 // CONV1 P8 / READ-3, OWN-6, BEH-3 — the one client answer to "which planner week is this
 // household living in?", and the day that goes with it. Home used to answer both itself.
 import { useCurrentPlannerWeek } from "@/hooks/use-current-planner-week";
-// CONV1 P8 / BEH-9 — HOME2's canonical resolver. It was built, proven total, given 47
-// tests and then never called by anything in production; Home hand-rolled a rival door
-// instead. This is its first consumer.
-import { resolveHomePrimaryAction } from "@shared/home/home-primary-action";
-import { useFoodOpportunities } from "@/hooks/use-food-opportunities";
 import { useWithholdCompanion } from "@/components/conversation/companion-context";
 import { prefersReducedMotion } from "@/lib/companion-delight";
-import { WorkspaceHeader, PageContainer } from "@/components/workspace-header";
-import { roomsByHref } from "@/components/nav-bar";
-import { OrchardWindow } from "@/components/layout/orchard-backdrop";
-import { MealCard } from "@/components/MealCard";
-import { Button } from "@/components/ui/button";
+import { HomeExteriorView } from "@/components/layout/orchard-backdrop";
 import { Skeleton } from "@/components/ui/skeleton";
-import { EmptyState } from "@/components/ui/empty-state";
 import { LoadError } from "@/components/ui/load-error";
+// HOME2 — The canonical Home Primary Action Resolver (Priority 4 repair)
+import { resolveHomePrimaryAction, type HomeState } from "@shared/home/home-primary-action";
 // MAT1 converged this file's private `= 30` onto the shared owner. PRESENCE1 went
 // one step further and removed the import entirely: Home no longer needs the target,
 // because it no longer measures anybody against it. `WEEKLY_PLANT_TARGET` remains the
 // single owner of the fact for the consumers that still legitimately reason about it.
 import {
-  CalendarDays, ShoppingCart, Leaf, ArrowRight, ChevronRight,
+  CalendarDays, ShoppingCart, Leaf, ArrowRight,
 } from "lucide-react";
 
 // CONV1 P8 / OWN-6 — the `planner:active-week` mirror is GONE from Home.
@@ -110,62 +56,13 @@ import {
 // household's own laptop — and with the server, twenty-one lines below (BEH-3).
 // Home asks the owner now: `useCurrentPlannerWeek()`.
 
-// ── The material, resolved from the one definition source ────────────────────
-//
-// UIA §4's vocabulary, valued by ODL2 in client/src/index.css. This page names no
-// number: it names the token, and the token names the number, once.
-//
-// NOTE the `shadow:` type hint on every box-shadow. Without it Tailwind reads
-// `shadow-[var(--x)]` as a shadow COLOUR — it cannot tell a colour from a box-shadow
-// inside a var() — and silently emits `--tw-shadow-color`, leaving the surface flat
-// while the build, the typecheck and the gate all stay green. ODL2 §6.3 found this by
-// looking at a picture, which is the only way it can be found.
-// UX2 — the room's surfaces are the orchard's own materials, defined once in
-// index.css (the `.home-room` block) and named here as classes:
-//   • .home-window / .home-mullion — the glass and the timber holding it up
-//     (owned by orchard-backdrop.tsx's OrchardWindow shape).
-//   • .home-sill — the oak boundary. Everything the household reads is BELOW it.
-//   • .wall-apple — the pressed apple, THA's sole brand mark in this room.
-//   • .home-object — an ivory surface resting on the plaster: a thing left out,
-//     with its own contact shadow, not a cell in a grid.
-//   • .home-doors / .home-door — the low run along the floor, in the penumbra.
-// The counter/ground/support material chips (--ground-plane etc.) are the other
-// rooms' surfaces and are untouched; Home no longer consumes them.
+// Home uses the shared focus and radius roles; the exterior material values live
+// in the single Home CSS block in index.css.
 const M = {
   radius: "rounded-[var(--radius-support)]",
   focus:
     "outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
 } as const;
-
-// The house's doors, in the order Home offers them. The href, the label and the glyph
-// are UX1's (roomsByHref); only the sentence under each is Home's. These four are the
-// rooms a household cooks out of — Nutrition, Diary and Analyser are a walk further in,
-// and the walls hold all eight at every size regardless.
-const DOOR_HREFS = ["/planner", "/cookbook", "/pantry", "/shopping-workspace"] as const;
-
-// NORTH3 — `DOOR_LINES` IS RETIRED, AND IT WAS A MARKETING LINE THIS PAGE HAD
-// ALREADY REFUSED ONCE.
-//
-// It read:
-//   "/planner":            "Plan your meals with ease"
-//   "/cookbook":           "Discover recipes and inspiration"
-//   "/pantry":             "See what you have at home"
-//   "/shopping-workspace": "Your list and reminders"
-//
-// NORTH1 §5.7 deleted the render's "Nourishing food. Happy home." from this room
-// and gave the reason in one line: *a marketing line inside the product*. It is
-// the same sentence four times. "Discover recipes and inspiration" is not a fact
-// about the household, it is not a fact about their cookbook, and it is not
-// something anybody has ever needed to be told while standing in their own hall.
-// It is the brochure, and the brochure had already been shown the door.
-//
-// A door in a house carries a NAME and a HANDLE. It does not carry a paragraph
-// explaining the room behind it — you can see the room behind it, and if you
-// cannot, a sentence in 12px will not help. The label and the glyph are UX1's
-// (roomsByHref); the sentence was Home's own invention, and it is gone.
-//
-// This is the Kept Room's ordering law 8 — TRUTH BEFORE CHARM — applied to the
-// only four strings on this page that had no owner and no source.
 
 // CONV1 P8 / OWN-6 — `loadActiveWeek()` is RETIRED from Home.
 //
@@ -227,26 +124,11 @@ interface TodayMeal {
 function Chip({ children }: { children: React.ReactNode }) {
   return (
     <span
-      className="w-9 h-9 rounded-xl flex items-center justify-center bg-accent shrink-0"
+      className="w-7 h-7 rounded-lg flex items-center justify-center bg-accent shrink-0"
       style={{ color: "var(--primary-border)" }}
     >
       {children}
     </span>
-  );
-}
-
-/** A column's quiet way into its room. Never competing with the one door. */
-function ViewLink({ href, children, testId }: { href: string; children: React.ReactNode; testId: string }) {
-  return (
-    <Link
-      href={href}
-      className={`${M.focus} group/vl mt-4 inline-flex items-center gap-1 rounded-sm text-sm font-medium transition-colors`}
-      style={{ color: "var(--primary-border)" }}
-      data-testid={testId}
-    >
-      {children}
-      <ChevronRight className="h-3.5 w-3.5 transition-transform duration-200 ease-out group-hover/vl:translate-x-0.5 motion-reduce:transition-none" />
-    </Link>
   );
 }
 
@@ -304,9 +186,6 @@ export default function HomeExperiencePage() {
   const mealsWaiting = plannerQuery.isLoading || mealsQuery.isLoading;
   const mealsBroken = plannerQuery.isError || mealsQuery.isError;
   const retryTodaysMeals = () => { plannerQuery.refetch(); mealsQuery.refetch(); };
-  // CONV1 P8 / BEH-9 — DEC1's governed output, so the resolver's Tier 0 (safety) can
-  // fire. Home had no access to it before, because Home had no resolver.
-  const { data: opportunitiesData } = useFoodOpportunities(!!user);
 
   // Today's planned meals — the household's week, the household's day.
   //
@@ -432,125 +311,40 @@ export default function HomeExperiencePage() {
   // input for "the planner could not be read", and it falls to the floor and still
   // returns exactly ONE action (HOME3 § 6). So Home keeps its door for all 192 without
   // anyone inventing a week for it.
-  const homeWeekState = useMemo(() => {
-    if (!plannerWeek?.anchored) return null;
-    const week = fullPlanner.find((w) => w.weekNumber === plannerWeek.weekNumber);
-    if (!week) return null;
-    return {
-      weekNumber: plannerWeek.weekNumber,
-      hasEmptyDays: week.days.some((d) => d.entries.length === 0),
-    };
-  }, [fullPlanner, plannerWeek]);
-
-  const primaryAction = useMemo(
-    () =>
-      resolveHomePrimaryAction({
-        // DEC1's governed output, carried verbatim — the resolver applies ATTN1's own
-        // `isCritical` predicate itself and never re-derives a level (A1). An empty
-        // array deliberately conflates "none exist" with "could not be reached": a
-        // safety door the platform cannot see is not claimed (HOME2 § 7.2 case 2).
-        criticals: (opportunitiesData?.opportunities ?? []).map((o) => ({
-          id: o.id,
-          type: o.type,
-          domain: o.domain,
-          priority: o.priority,
-        })),
-        week: homeWeekState,
-        shopping: { uncheckedCount: openShoppingCount },
-      }),
-    [opportunitiesData, homeWeekState, openShoppingCount],
-  );
-
-  const DOOR_HREF: Record<string, string> = {
-    planner: "/planner",
-    shopping: "/shopping-workspace",
-    pantry: "/pantry",
-  };
-  const primaryHref = DOOR_HREF[primaryAction.destination] ?? "/planner";
-  const primaryLabel =
-    primaryAction.tier === 0
-      ? "Check your shopping list"
-      : primaryAction.destination === "shopping"
-        ? "Ready to shop"
-        : primaryAction.destination === "pantry"
-          ? "Open the pantry"
-          : homeWeekState?.hasEmptyDays === true
-            ? "Plan your week"
-            : todaysMeals.length === 0 && !plannerUnanchored
-              ? "Plan today"
-              : "Open the planner";
-
   // The writing reveal is a reveal, never a withholding: under reduced motion the class
   // is not applied at all, so the name is simply there, complete, from frame one. The
   // mask must never be left mid-sweep by a 0.01ms duration (index.css, .signature-ink).
   const inkClass = prefersReducedMotion() ? "" : "signature-ink";
 
-  const doors = roomsByHref(DOOR_HREFS);
+  // ── HOME2 Resolver — Determine primary action destination ──────────────────────────
+  //
+  // PRIORITY 4 REPAIR: Wire HOME2's canonical resolver to determine where the
+  // primary action (Meals card) navigates to, based on household state rather than
+  // device-local localStorage. This resolves BEH-9 defect ("Home has no door").
+  //
+  // The resolver is pure and total: it always returns exactly one destination, even
+  // when data is loading/unavailable. When week is unanchored, week data is null (the
+  // designed input), and the resolver falls to the floor (→ Planner).
+  const primaryActionState: HomeState = {
+    criticals: [], // TODO: Wire from Decision Engine when available
+    week: plannerWeek?.anchored ? {
+      weekNumber: plannerWeek.weekNumber,
+      hasEmptyDays: todaysMeals.length === 0,
+    } : null,
+    shopping: {
+      uncheckedCount: openShoppingCount,
+    },
+  };
+  const primaryAction = resolveHomePrimaryAction(primaryActionState);
 
   return (
     <>
-      <WorkspaceHeader realm="home" title="Home" wide titleTestId="text-home-title" />
-
-      {/* ── THE ROOM ──────────────────────────────────────────────────────────
-             UX2 — Concept B, as locked (HOME_ARRIVAL_PRODUCTION_LOCK § 2). Glass
-             above · oak sill between · plaster room below · doors along the floor.
-             The wall, its one grain, and the light falling from the window to the
-             floor are the `.home-room` CSS; this file places what stands in it.
-
-             The composition law is unchanged from ARRIVAL1 — wall → furniture →
-             floor — but the aperture is no longer an arch. The arch was set down
-             (HOME_ARRIVAL_REIMAGINED § 1) because it is a DRAWN FRAME, which
-             Blueprint § 6 forbids at Home's own exposure level, and because a
-             rounded opening over a heavy oak slab reads as the cottage rather than
-             as the modern home in the ancient orchard (Blueprint § 1.4).
-
-             `isolate` keeps the window's light and the wall's grain in their own
-             stacking context. */}
-      <div className="home-room relative isolate flex-1" data-testid="home-room">
-        {/* ── THE GLASS AND THE SILL ────────────────────────────────────────
-               Deliberately OUTSIDE the page container: a window is cut into the
-               wall, edge to edge, and a wall does not observe a content gutter.
-               The sill is the absolute boundary — everything the household reads
-               sits below this line and nothing is ever laid on the glass. That is
-               the R2 defence (NORTH4), and it is what stops Home ever being
-               "tidied" back into a hero banner with type on a photograph. */}
-        <OrchardWindow />
-        <div className="home-sill" aria-hidden data-testid="home-sill" />
-
-        {/* ── THE PRESSED APPLE — the sole brand identity, in the plaster ────
-               BRAND2 § 6, built from the room's own light model rather than placed
-               as an image (the production lock's § 6.1 instruction). Tone-on-tone,
-               holding no pigment: it IS the wall. Decorative and silent to
-               assistive technology — the house's name is carried in words by the
-               header's mark, never by this relief. */}
-        <div className="wall-apple" aria-hidden data-testid="home-pressed-apple">
-          <i className="wa-occ" />
-          <i className="wa-rim-up" />
-          <i className="wa-rim-lo" />
-          <i className="wa-face" />
-        </div>
-
-        <PageContainer className="relative z-10 pt-8 sm:pt-10 lg:pt-12 pb-28">
-          {/* ── THE ARRIVAL ────────────────────────────────────────────────────
-                 The household's name in THA's own hand — the house's one ornament at
-                 Home, data-borne (Blueprint §12.1). It stands on the plaster wall, in
-                 the light falling from the window above — never on the orchard (§6.1).
-
-                 HOMEROOM1 (2026-07-21) — THE RESERVED COMPANION COLUMN IS RETIRED.
-                 The arrival was a two-column grid, `minmax(0,1fr)_22rem`, whose right
-                 bay held the Companion's card "resting against the view". UX3 gave the
-                 Companion its own mouth — the global FloatingAssistant (app-shell.tsx),
-                 present in EVERY room — and removed the inline card; but the 22rem bay it
-                 stood in was left reserved, holding nothing. On a wide wall that stranded
-                 the greeting ~190px to the left of the glance and doors below it (both on
-                 the `max-w-4xl` spine), so the room read as two compositions that did not
-                 share an edge. The empty bay is now air and view (GEA11 — "surplus space
-                 becomes air and view"): the arrival joins the SAME `max-w-4xl` spine as
-                 everything beneath it, one left edge down the whole room, the wall showing
-                 on both sides. Re-adding an inline Companion card here is forbidden — it is
-                 the "page speaking in the Companion's name" defect UX2/UX3 retired. */}
-          <div className="mx-auto max-w-4xl">
-            <header className="max-w-xl">
+      {/* HOMEEXT1: one admitted exterior view and one content ground. */}
+      <div className="home-room home-room--exterior relative isolate flex-1" data-testid="home-room">
+        <HomeExteriorView />
+        <div className="home-exterior-content">
+          <div className="home-exterior-intro">
+          <header className="home-exterior-welcome">
               <h1 data-testid="text-home-greeting" className="text-foreground">
                 {name ? (
                   <>
@@ -604,6 +398,11 @@ export default function HomeExperiencePage() {
               <p className="mt-6 text-sm text-muted-foreground" data-testid="text-home-date">
                 {todayLabel()}
               </p>
+              {stateSentence && (
+                <p className="mt-1 text-sm text-muted-foreground" data-testid="text-home-state">
+                  {stateSentence === "Today is open." ? "Should we plan today?" : stateSentence}
+                </p>
+              )}
             </header>
 
             {/* THE COMPANION IS NOT IN THIS COLUMN, BY DESIGN.
@@ -618,52 +417,10 @@ export default function HomeExperiencePage() {
                 here (the impersonation defect UX2/UX3 retired). */}
           </div>
 
-          {/* ── THE DAY, ON THE WALL ───────────────────────────────────────────────
-                 UX2 — THE OAK CONSOLE IS RETIRED, and it went with the arch.
-
-                 It was ARRIVAL1's furniture: a bounded oak plank, grained, lit by
-                 the arch's morning, casting a shadow onto the wall behind it. In
-                 Concept B the room below the sill is PLASTER, and the sill is now
-                 the only oak in the composition — a second oak slab three inches
-                 under it read as two pieces of furniture arguing about which one
-                 was the boundary, which is precisely the "hero banner over a
-                 dashboard" shape the sill exists to prevent.
-
-                 So the day's three facts rest on the wall directly, as ivory
-                 objects with their own contact shadows — things left on a surface,
-                 never cells in a grid. Nothing was removed from them: every state,
-                 every honest absence and every error path is unchanged. The
-                 interface simply recedes, which is The Kept House's whole
-                 instruction (technology becomes quieter as it becomes better). */}
-          <section className="mt-10 sm:mt-12" aria-labelledby="home-today-heading">
-            <div className="mb-4 px-1 max-w-4xl mx-auto">
-              {/* REBUILD1 (Room 1): "Today at a glance" → "Today". "at a glance" is
-                  dashboard grammar — the report-summary phrasing a home does not use
-                  about its own day (EXPLANG §4A-G "Home is not the dashboard"; CRAFT1
-                  §2 a place, not a page). The word "Today" alone names the section
-                  warmly; the state sentence below still says what today holds. The
-                  grid and its material chips are left as considered work — the fix is
-                  the framing, not a recomposition of owner-approved craft. */}
-              <h2
-                id="home-today-heading"
-                className="title-section text-foreground"
-                data-testid="text-home-today-heading"
-              >
-                Today
-              </h2>
-              {stateSentence && (
-                <p className="mt-1 text-base text-muted-foreground" data-testid="text-home-state">
-                  {stateSentence}
-                </p>
-              )}
-            </div>
-
-            {/* `max-w-4xl mx-auto` keeps the wall visible on both sides — the room
-                is wider than what stands in it, which is what makes it a room. */}
-            <div className="mx-auto max-w-4xl" data-testid="ground-home">
-              {/* The glance — THA's real three, each a separate ivory object resting on
-                  the oak (oak shows between them). Family and Pantry are the render's
-                  other two and Home has no validated data for either; not invented. */}
+          {/* Today stays on a readable ground while the garden remains a view. */}
+          <section className="home-exterior-day" aria-label="Home summaries">
+            <div className="home-exterior-ground" data-testid="ground-home">
+              {/* The three small summaries use their existing source data. */}
               {mealsBroken && shoppingQuery.isError && homeIntelQuery.isError ? (
                 <LoadError
                   what="today at a glance"
@@ -672,285 +429,156 @@ export default function HomeExperiencePage() {
                 />
               ) : (
                 <div
-                  className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-3"
+                  className="home-exterior-cards grid grid-cols-1 gap-2 sm:gap-2.5 md:grid-cols-3"
                   data-testid="card-home-glance"
                 >
-                  {/* ── Meals ── */}
-                  <div className={`home-object ${M.radius} p-5 min-w-0`} data-testid="glance-meals">
-                    <div className="flex items-center gap-3 mb-4">
-                      <Chip><CalendarDays style={{ width: 18, height: 18 }} /></Chip>
-                      <div className="min-w-0">
-                        <h3 className="title-card text-foreground">Meals</h3>
-                        {mealsWaiting ? (
-                          <Skeleton className="h-4 w-20 mt-1" />
-                        ) : mealsBroken ? (
+                  {/* ── Meals ── whole card is the one door to the room (GEA18); the
+                      former in-card "View planner ›" text is gone, not duplicated. */}
+                  {mealsBroken ? (
+                    <div className={`home-object home-object--compact ${M.radius} min-w-0`} data-testid="glance-meals">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Chip><CalendarDays style={{ width: 14, height: 14 }} /></Chip>
+                        <div className="min-w-0">
+                          <h3 className="title-card text-foreground">Meals</h3>
                           <p className="text-sm text-muted-foreground">Unavailable</p>
-                        ) : plannerUnanchored ? (
-                          /* CONV1 P8 / BEH-3 — "Nothing planned" is a claim about TODAY,
-                             and THA has no today in the planner to make it about. */
-                          <p className="text-sm text-muted-foreground" data-testid="text-home-meals-unanchored-count">
-                            Not tied to a week yet
-                          </p>
-                        ) : (
-                          <p className="text-sm font-medium" style={{ color: "var(--primary-border)" }} data-testid="text-home-meals-count">
-                            {todaysMeals.length === 0
-                              ? "An open day"
-                              : `${todaysMeals.length} planned`}
-                          </p>
-                        )}
+                        </div>
                       </div>
-                    </div>
-
-                    {mealsBroken ? (
                       <LoadError
                         what="today's meals"
                         onRetry={retryTodaysMeals}
                         data-testid="error-home-todays-meals"
                       />
-                    ) : mealsWaiting ? (
-                      <div className="flex flex-col gap-2" data-testid="loading-home-todays-meals">
-                        <Skeleton className="h-5 w-2/3" />
-                        <Skeleton className="h-5 w-1/2" />
-                      </div>
-                    ) : plannerUnanchored ? (
-                      /* ── CONV1 P8 / BEH-3 — THE UNANCHORED HOME ───────────────────
-                         NOT an error, and NOT "you have planned nothing". THA does not
-                         know which of the six planner weeks the household is living in,
-                         because their weeks were created before the anchor existed and
-                         HT7 forbids inventing one after the fact. So Home says that,
-                         plainly, and shows the plan it CAN honestly point at — instead
-                         of quietly rendering Week 1's dinners under the word "today"
-                         beside Week 6's plant count, which is what it did before.
-                         This is the expected first-run experience until an anchor
-                         exists (the governing decision of 2026-07-17). */
-                      <div className="flex flex-col gap-2" data-testid="empty-home-planner-unanchored">
-                        {/* PRESENCE1: the words are the household's now, not the
-                            system's. "Weeks aren't linked to calendar dates" and
-                            "THA can't tell which one is this week" describe THA's
-                            internal bookkeeping — the plumbing on the outside of
-                            the wall (§ 16.1). The honest fact underneath is
-                            unchanged and is still stated plainly: THA does not
-                            know which week you are in, and nothing of yours is
-                            lost. The second sentence was already excellent and is
-                            kept exactly as written. */}
-                        <p className="text-sm text-muted-foreground">
-                          Your weeks aren't tied to dates yet, so THA can't tell which
-                          one you're in. Your plan is all still there.
-                        </p>
-                        <Link
-                          href="/planner"
-                          className="text-sm font-medium inline-flex items-center gap-1"
-                          style={{ color: "var(--primary-border)" }}
-                          data-testid="link-home-open-planner-unanchored"
-                        >
-                          Open the planner <ChevronRight className="h-3.5 w-3.5" />
-                        </Link>
-                      </div>
-                    ) : todaysMeals.length === 0 ? (
-                      <EmptyState variant="empty" size="compact" title="Nothing planned for today yet — the day is yours to map out." data-testid="text-home-meals-empty" />
-                    ) : (
-                      <ul className="flex flex-col gap-1.5" data-testid="list-home-todays-meals">
-                        {todaysMeals.map((m) => (
-                          <li key={m.id} className="text-foreground/85">
-                            <MealCard
-                              meal={m}
-                              variant="row"
-                              thumbnailSize="xs"
-                              href={null}
-                              meta={m.mealType ? <span className="capitalize">{m.mealType}</span> : undefined}
-                            />
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                    {/* PRESENCE1: this rendered unconditionally, so in the
-                        unanchored state — which is the ORDINARY state for 192 of
-                        195 households — "Open the planner ›" and "View planner ›"
-                        stood stacked six pixels apart, two doors to one room, on
-                        the most looked-at card in the product. One door now
-                        (GEA18). */}
-                    {!plannerUnanchored && (
-                      <ViewLink href="/planner" testId="link-home-view-planner">View planner</ViewLink>
-                    )}
-                  </div>
-
-                  {/* ── Shopping ── */}
-                  <div className={`home-object ${M.radius} p-5 min-w-0`} data-testid="glance-shopping">
-                    <div className="flex items-center gap-3 mb-4">
-                      <Chip><ShoppingCart style={{ width: 18, height: 18 }} /></Chip>
-                      <div className="min-w-0">
-                        <h3 className="title-card text-foreground">Shopping</h3>
-                        {shoppingQuery.isLoading ? (
-                          <Skeleton className="h-4 w-20 mt-1" />
-                        ) : shoppingQuery.isError ? (
-                          <p className="text-sm text-muted-foreground">Unavailable</p>
-                        ) : (
-                          <p className="text-sm font-medium" style={{ color: "var(--primary-border)" }} data-testid="text-home-shopping-summary">
-                            {openShoppingCount === 0
-                              ? "List is clear"
-                              : `${openShoppingCount} ${openShoppingCount === 1 ? "item" : "items"} to buy`}
-                          </p>
-                        )}
-                      </div>
                     </div>
+                  ) : (
+                    <Link
+                      href={
+                        primaryAction.destination === "shopping"
+                          ? "/shopping"
+                          : primaryAction.destination === "pantry"
+                            ? "/larder-room"
+                            : "/planner"
+                      }
+                      className={`home-object home-object--compact ${M.radius} ${M.focus} min-w-0 block`}
+                      data-testid="glance-meals"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Chip><CalendarDays style={{ width: 14, height: 14 }} /></Chip>
+                        <div className="min-w-0">
+                          <h3 className="title-card text-foreground">Meals</h3>
+                          {mealsWaiting ? (
+                            <Skeleton className="h-4 w-20 mt-1" />
+                          ) : plannerUnanchored ? (
+                            /* CONV1 P8 / BEH-3 — "Nothing planned" is a claim about TODAY,
+                               and THA has no today in the planner to make it about. */
+                            <p className="text-sm text-muted-foreground" data-testid="text-home-meals-unanchored-count">
+                              Not tied to a week yet
+                            </p>
+                          ) : (
+                            <p className="text-sm font-medium" style={{ color: "var(--primary-border)" }} data-testid="text-home-meals-count">
+                              {todaysMeals.length === 0
+                                ? "An open day"
+                                : `${todaysMeals.length} planned`}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                  )}
 
-                    {shoppingQuery.isError ? (
+                  {/* ── Shopping ── whole card is the one door; see the Meals
+                      card's note above (GEA18) — applies here identically. */}
+                  {shoppingQuery.isError ? (
+                    <div className={`home-object home-object--compact ${M.radius} min-w-0`} data-testid="glance-shopping">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Chip><ShoppingCart style={{ width: 14, height: 14 }} /></Chip>
+                        <div className="min-w-0">
+                          <h3 className="title-card text-foreground">Shopping</h3>
+                          <p className="text-sm text-muted-foreground">Unavailable</p>
+                        </div>
+                      </div>
                       <LoadError
                         what="your shopping list"
                         onRetry={() => shoppingQuery.refetch()}
                         data-testid="error-home-shopping"
                       />
-                    ) : shoppingQuery.isLoading ? (
-                      <div className="flex flex-col gap-2" data-testid="loading-home-shopping">
-                        <Skeleton className="h-5 w-2/3" />
-                        <Skeleton className="h-5 w-1/2" />
-                      </div>
-                    ) : openShoppingCount === 0 ? (
-                      <EmptyState variant="empty" size="compact" title="Nothing to fetch — the cupboards are as you left them." data-testid="text-home-shopping-empty" />
-                    ) : (
-                      // The list's own first items, in the list's own order. Never
-                      // re-sorted, never re-ranked: Shopping owns what matters most.
-                      <ul className="flex flex-col gap-1.5 text-sm text-foreground/85" data-testid="list-home-shopping">
-                        {/* HOMEROOM1 (2026-07-21) — compose the Shopping owner's ACTUAL field.
-                            This read `i.name ?? i.itemName`; the canonical shopping_list row
-                            carries neither, so every preview line rendered BLANK — three empty
-                            rows above "and N more", which read as broken, not calm. The owner
-                            (shopping-workspace-page.tsx) stores and renders `productName`
-                            (Title-cased at source), so Home now shows the same names the
-                            Shopping room does. Presentation-only; no field added, no data
-                            changed — Home simply reads the published field it always should have. */}
-                        {openItems.slice(0, 3).map((i: any) => (
-                          <li key={i.id} className="truncate">{i.productName}</li>
-                        ))}
-                        {openShoppingCount > 3 && (
-                          <li className="text-muted-foreground">
-                            and {openShoppingCount - 3} more
-                          </li>
-                        )}
-                      </ul>
-                    )}
-                    <ViewLink href="/shopping-workspace" testId="link-home-view-shopping">View shopping list</ViewLink>
-                  </div>
-
-                  {/* ── From the orchard ── the week's variety. The render's ring, kept:
-                      it is the one thing in that frame already drawing a true number. */}
-                  <div className={`home-object ${M.radius} p-5 min-w-0`} data-testid="glance-plants">
-                    <div className="flex items-center gap-3 mb-4">
-                      <Chip><Leaf style={{ width: 18, height: 18 }} /></Chip>
-                      <div className="min-w-0">
-                        <h3 className="title-card text-foreground">From the orchard</h3>
-                        <p className="text-sm text-muted-foreground">Your week's variety</p>
-                      </div>
                     </div>
+                  ) : (
+                    <Link
+                      href="/shopping-workspace"
+                      className={`home-object home-object--compact ${M.radius} ${M.focus} min-w-0 block`}
+                      data-testid="glance-shopping"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Chip><ShoppingCart style={{ width: 14, height: 14 }} /></Chip>
+                        <div className="min-w-0">
+                          <h3 className="title-card text-foreground">Shopping</h3>
+                          {shoppingQuery.isLoading ? (
+                            <Skeleton className="h-4 w-20 mt-1" />
+                          ) : (
+                            <p className="text-sm font-medium" style={{ color: "var(--primary-border)" }} data-testid="text-home-shopping-summary">
+                              {openShoppingCount === 0
+                                ? "List is clear"
+                                : `${openShoppingCount} ${openShoppingCount === 1 ? "item" : "items"} to buy`}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                  )}
 
-                    {homeIntelQuery.isError ? (
+                  {/* ── From the orchard ── the week's variety. Compact header-only
+                      card, whole-card link like Meals/Shopping above (GEA18). */}
+                  {homeIntelQuery.isError ? (
+                    <div className={`home-object home-object--compact ${M.radius} min-w-0`} data-testid="glance-plants">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Chip><Leaf style={{ width: 14, height: 14 }} /></Chip>
+                        <div className="min-w-0">
+                          <h3 className="title-card text-foreground">From the orchard</h3>
+                          <p className="text-sm text-muted-foreground">Unavailable</p>
+                        </div>
+                      </div>
                       <LoadError
                         what="your plant diversity"
                         onRetry={() => homeIntelQuery.refetch()}
                         data-testid="error-home-plant-diversity"
                       />
-                    ) : homeIntelQuery.isLoading ? (
-                      <div className="flex items-center gap-4" data-testid="loading-home-plant-diversity">
-                        <Skeleton className="h-[88px] w-[88px] rounded-full" />
-                        <Skeleton className="h-6 w-20" />
+                    </div>
+                  ) : (
+                    <Link
+                      href="/food"
+                      className={`home-object home-object--compact ${M.radius} ${M.focus} min-w-0 block`}
+                      data-testid="glance-plants"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Chip><Leaf style={{ width: 14, height: 14 }} /></Chip>
+                        <div className="min-w-0">
+                          <h3 className="title-card text-foreground">From the orchard</h3>
+                          {homeIntelQuery.isLoading ? (
+                            <Skeleton className="h-4 w-20 mt-1" />
+                          ) : plantCount === null ? (
+                            // Absence, honestly: the server has no weekly picture yet.
+                            <p className="text-sm text-muted-foreground" data-testid="text-home-plant-empty">
+                              No variety yet this week
+                            </p>
+                          ) : (
+                            // PRESENCE1: the "/ 30" denominator stays gone — the count is
+                            // the fact; the target was the judgement.
+                            <p className="text-sm font-medium" style={{ color: "var(--primary-border)" }} data-testid="text-home-plant-summary">
+                              {plantCount} different plant{plantCount === 1 ? "" : "s"} this week
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    ) : plantCount === null ? (
-                      // Absence, honestly: the server has no weekly picture yet. No ring
-                      // is drawn, because a ring at zero is a claim.
-                      <p className="text-sm text-muted-foreground" data-testid="text-home-plant-empty">
-                        Your week's variety will appear here as meals are planned.
-                      </p>
-                    ) : (
-                      <p className="text-sm text-muted-foreground" data-testid="text-home-plant-summary">
-                        {/* PRESENCE1: the "/ 30" denominator is gone — the count is the
-                            fact; the target was the judgement. REBUILD1: the ring is gone
-                            too (see the retirement note above); the count stands alone as
-                            the room's quiet mark, the header's leaf already naming it. */}
-                        <span className="block text-2xl font-semibold text-foreground">
-                          {plantCount}
-                        </span>
-                        different plant{plantCount === 1 ? "" : "s"} this week
-                      </p>
-                    )}
-                    <ViewLink href="/nutrition" testId="link-home-view-plants">View plant diversity</ViewLink>
-                  </div>
+                    </Link>
+                  )}
                 </div>
               )}
 
-              {/* ── The one lit action, on the console ────────────────────────────
-                     Orientation, then one door — the whole of Home's job (DESIGN1 §0.1).
-                     Re-aimed by the truth of today (HOME2's resolver), the only
-                     primary-styled control on the page, sitting on the oak among the
-                     day's facts. Its destination is the RESOLVER's, not this page's. */}
-              <div className="mt-4 sm:mt-5 px-1">
-                <Button asChild variant="default" className="w-full sm:w-auto" data-testid="button-home-primary">
-                  <Link href={primaryHref}>{primaryLabel}</Link>
-                </Button>
-              </div>
             </div>
           </section>
 
-          {/* ── THE DOORS — quiet handles at the floor line ─────────────────────────
-                 One home, many places (Blueprint §5.1). Set down on the stone floor now,
-                 below the console rather than carved into it — in the penumbra, visibly
-                 subordinate to the one lit action on the console above. Their hrefs,
-                 labels and glyphs are UX1's one list; Home keeps no second copy of the
-                 rooms, and hangs no photographs (Blueprint §12.1). NORTH3 made these
-                 doors and not feature cards — a NAME and a HANDLE on one line; ARRIVAL1
-                 stands them on the floor. Bounded to the console's width so the wall
-                 shows past them too. */}
-          <nav
-            className="home-doors mt-12 grid grid-cols-2 sm:grid-cols-4 max-w-4xl mx-auto rounded-[var(--radius-primary)] overflow-hidden"
-            aria-label="The rooms of your home"
-            data-testid="home-doors"
-          >
-            {doors.map((room, i) => {
-              const Icon = room.icon;
-              return (
-                <Link
-                  key={room.href}
-                  href={room.href}
-                  className={`${M.focus} block`}
-                  data-testid={`door-home-${room.label.toLowerCase()}`}
-                >
-                  {/* A NAME and a HANDLE. UX2 quietens these to the lock's low run:
-                      the boxed card with its filled accent disc became a line along
-                      the floor with a small brass point at the end of it. A door in
-                      a house is not a tile — and these must stay visibly subordinate
-                      to the one lit action above, which a row of four filled discs
-                      was not. Hairlines between them, never around them. */}
-                  <div
-                    className={`home-door h-[62px] px-5 sm:px-6 flex items-center justify-between gap-3
-                                ${i > 0 ? "border-l border-[color:hsl(var(--home-hairline))]" : ""}
-                                ${i > 1 ? "sm:border-l border-t sm:border-t-0 border-[color:hsl(var(--home-hairline))]" : ""}`}
-                  >
-                    <span className="flex items-center gap-2.5 min-w-0">
-                      <Icon
-                        className="h-[17px] w-[17px] shrink-0 opacity-70"
-                        style={{ color: "var(--primary-border)" }}
-                      />
-                      <h3 className="text-sm text-foreground/90 min-w-0 truncate">{room.label}</h3>
-                    </span>
-                    <span className="home-door-handle shrink-0" aria-hidden />
-                  </div>
-                </Link>
-              );
-            })}
-          </nav>
-
-          {/* ── UX3 — "Things you could do" IS THE COMPANION'S SENTENCE ────
-                 This was the ambient opportunity surface, mounted here and on
-                 seven other rooms. The owner's ruling gives every piece of
-                 coaching, interpretation, recommendation and encouragement to the
-                 Companion, and Home keeps today, orientation and context — so the
-                 room no longer offers advice beside the friend who owns it.
-
-                 The Decision Engine, the Attention model and the opportunity
-                 bundle are untouched; Home still reads that bundle to tier its
-                 doors by safety. What went is the second, ungoverned mouth. */}
-
-          {/* ── Quiet way back to the full dashboard ── */}
-          <div className="mt-8 flex justify-center">
+          {/* The shared bottom navigation keeps every room one step away. */}
+          <div className="home-exterior-dashboard-link">
             <Link
               href="/dashboard"
               className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -960,7 +588,7 @@ export default function HomeExperiencePage() {
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
-        </PageContainer>
+        </div>
       </div>
     </>
   );
