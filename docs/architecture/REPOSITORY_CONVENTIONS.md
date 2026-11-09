@@ -62,6 +62,12 @@ Exactly these categories:
 - **Runtime data assets that must resolve from the working directory** —
   `eng.traineddata` (loaded by `tesseract.js` via `server/services/ocr.ts`;
   moving it changes OCR behaviour)
+- **Root governance entry points** — `AGENTS.md`, `PROJECT_GOVERNANCE.md`
+  (named-by-reference as the mandatory first read for every agent and every
+  task, by both documents themselves and every governance citation across
+  this repository; omitted from this list until 2026-11-09, which made
+  `repo-structure-verify.sh` flag both as stray root files — a gap in this
+  document, not evidence either file was ever actually misplaced)
 
 Anything not in one of those categories does not belong at the root.
 

@@ -27,6 +27,7 @@ Anything in this directory is **governing**: required reading before significant
 | THA Product Knowledge Registry Architecture | [`THA_PRODUCT_KNOWLEDGE_REGISTRY_ARCHITECTURE.md`](./THA_PRODUCT_KNOWLEDGE_REGISTRY_ARCHITECTURE.md) |
 | THA Master Evolution Roadmap | [`THA_MASTER_EVOLUTION_ROADMAP.md`](./THA_MASTER_EVOLUTION_ROADMAP.md) |
 | THA Recipe Acquisition Architecture | [`THA_RECIPE_ACQUISITION_ARCHITECTURE.md`](./THA_RECIPE_ACQUISITION_ARCHITECTURE.md) |
+| THA Recipe Relicensing Roadmap — *the compliance timeline for the 163 pre-production meals stored from currently-unlicensed sources (BBC Good Food, AllRecipes): retained for testing, with commercial licensing (Immediate Media, Dotdash Meredith, Apify) to begin once the application generates revenue* | [`RECIPE_RELICENSING_ROADMAP.md`](./RECIPE_RELICENSING_ROADMAP.md) |
 | THA Platform Quality Architecture | [`PLATFORM_QUALITY_ARCHITECTURE.md`](./PLATFORM_QUALITY_ARCHITECTURE.md) |
 | THA Canonical Alias Principle (GOV2) | [`GOV2_CANONICAL_ALIAS_PRINCIPLE.md`](./GOV2_CANONICAL_ALIAS_PRINCIPLE.md) |
 | THA Trust & Compliance Architecture | [`THA_TRUST_AND_COMPLIANCE_ARCHITECTURE.md`](./THA_TRUST_AND_COMPLIANCE_ARCHITECTURE.md) |
@@ -103,6 +104,10 @@ Anything in this directory is **governing**: required reading before significant
 | **THA Living Larder Architecture** (`LARDER5`) — *the room's canonical spatial composition* | [`LIVING_LARDER_ARCHITECTURE.md`](./LIVING_LARDER_ARCHITECTURE.md) |
 | THA Living Larder Asset Specification Library (`ASSET1`) | [`LIVING_LARDER_ASSET_LIBRARY.md`](./LIVING_LARDER_ASSET_LIBRARY.md) |
 | **THA Living Home Visual Registry** (`VISREG1`) — *the canonical owner of what kind each visual asset is, who owns it, and where it stands in its life* | [`LIVING_HOME_VISUAL_REGISTRY.md`](./LIVING_HOME_VISUAL_REGISTRY.md) |
+| THA Living Home Canonical Architecture Lock | [`LIVING_HOME_CANONICAL_ARCHITECTURE_LOCK.md`](./LIVING_HOME_CANONICAL_ARCHITECTURE_LOCK.md) |
+| THA Living Home Canonical Production Asset Architecture | [`LIVING_HOME_CANONICAL_PRODUCTION_ASSET_ARCHITECTURE.md`](./LIVING_HOME_CANONICAL_PRODUCTION_ASSET_ARCHITECTURE.md) |
+| THA Living Home Spatial Blueprint | [`LIVING_HOME_SPATIAL_BLUEPRINT.md`](./LIVING_HOME_SPATIAL_BLUEPRINT.md) |
+| THA Living Larder Visual Acceptance Decisions | [`LIVING_LARDER_VISUAL_ACCEPTANCE_DECISIONS.md`](./LIVING_LARDER_VISUAL_ACCEPTANCE_DECISIONS.md) |
 | **THA Craftsmanship Constitution** — *the final governing design constitution; the permanent implementation standard for every user experience* | [`THA_CRAFTSMANSHIP_CONSTITUTION.md`](./THA_CRAFTSMANSHIP_CONSTITUTION.md) |
 
 > ### ⬥ Read this first

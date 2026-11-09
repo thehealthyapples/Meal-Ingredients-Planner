@@ -94,25 +94,34 @@ verify_tag() { # verify_tag <tag> <context>
 
 # --- Extract the rollback identifier a session has recorded -----------------
 # §6 requires the identifier to be identical in the run file and the dashboard.
+#
+# Rewritten in pure bash/awk (2026-11-09): the original shelled out to `python3`,
+# which on this machine resolves to the Windows Store app-execution-alias stub
+# rather than a real interpreter — so every call silently produced no output,
+# and every session in the dashboard FAILed this check regardless of whether its
+# rollback identifier was actually present. Confirmed by hand for
+# KNOW3_UNCITED_CLAIM_FILTER_20261105: the dashboard row does carry
+# `rollback/KNOW3-uncited-claim-filter-20261105`, yet the python3 path reported
+# nothing. This version does the identical parse — find the dashboard row whose
+# first cell is `` `<sid>` ``, take its third cell, extract the first
+# `` `rollback/...` `` token — with no external interpreter dependency.
+# Original (python3-based) version preserved at
+# rollback-verify.sh.pre-python3-fix-<timestamp>.bak.
 tag_from_dashboard() { # tag_from_dashboard <session-id>
-  python3 - "$CURRENT" "$1" <<'PY'
-import re, sys
-path, sid = sys.argv[1], sys.argv[2]
-try:
-    lines = open(path).read().split("\n")
-except OSError:
-    sys.exit(0)
-for line in lines:
-    if not line.startswith(f"| `{sid}` |"):
-        continue
-    cells = [c.strip() for c in line.strip().strip("|").split("|")]
-    if len(cells) < 3:
-        break
-    m = re.search(r"`(rollback/[^`]+)`", cells[2])
-    if m:
-        print(m.group(1))
-    break
-PY
+  local sid="$1"
+  [ -f "$CURRENT" ] || return 0
+  awk -F'|' -v sid="$sid" '
+    BEGIN { pat = "| `" sid "` |" }
+    index($0, pat) == 1 {
+      cell3 = $4
+      if (match(cell3, /`rollback\/[^`]+`/)) {
+        tok = substr(cell3, RSTART, RLENGTH)
+        gsub(/`/, "", tok)
+        print tok
+      }
+      exit
+    }
+  ' "$CURRENT"
 }
 
 tag_from_run_file() { # tag_from_run_file <session-id>

@@ -23,7 +23,8 @@ echo
 ALLOWED="package.json package-lock.json tsconfig.json vite.config.ts \
 tailwind.config.ts postcss.config.js drizzle.config.ts capacitor.config.ts \
 components.json .replit .gitignore .env.example deploy.sh \
-RELEASE.md MIGRATIONS.md replit.md eng.traineddata"
+RELEASE.md MIGRATIONS.md replit.md eng.traineddata \
+AGENTS.md PROJECT_GOVERNANCE.md"
 ALLOWED="$(printf '%s' "$ALLOWED" | tr -s '[:space:]' ' ')"   # one line, single-spaced
 
 strays=""
