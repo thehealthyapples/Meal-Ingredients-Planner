@@ -106,14 +106,14 @@ export const CONSENT_DEFINITIONS: Readonly<Record<ConsentType, ConsentDefinition
   "health-data-processing": {
     type: "health-data-processing",
     prompt:
-      "I consent to The Healthy Apples storing my household's allergies, dietary restrictions and health goals",
+      "I explicitly consent to The Healthy Apples storing food-relevant health information I report about myself and dependent children in my household",
     why:
-      "This is health data, and the law protects it specially. We hold it so the product never suggests food someone in your household cannot safely eat.",
+      "This may include a condition or nutrient concern you report, as well as allergies, dietary restrictions and health goals. Companion can use it to tailor food information. It is recorded as reported, not verified or diagnosed by the app. Adult members can see dependent-child context; adults' own health context remains private to them.",
     document: "privacy-policy",
     required: true,
     lawfulBasis: "Article 9(2)(a) — explicit consent for special category data",
     withdrawalConsequence:
-      "We erase the allergies, restrictions and health goals recorded for your household, and the product stops filtering food for them. Nothing will warn you about an ingredient again.",
+      "We erase the reported health information on your own profile and dependent-child health entries you reported. Companion stops using those details for you. Another adult's private profile information is not removed.",
   },
 };
 

@@ -33,7 +33,7 @@ async function open(ctx: any, path: string) {
   return page;
 }
 
-const ROOMS = ["/home", "/planner", "/cookbook", "/pantry", "/shopping-workspace", "/nutrition", "/my-diary"];
+const ROOMS = ["/", "/planner", "/cookbook", "/pantry", "/shopping-workspace", "/nutrition", "/diary"];
 
 async function main() {
   const browser = await chromium.launch();
@@ -83,7 +83,7 @@ async function main() {
 
   console.log("\n3. THE COMPANION — one owner of coaching, and a presence at rest");
   {
-    const page = await open(ctx, "/home");
+    const page = await open(ctx, "/");
     // The emblem must be present in every room, and at rest must show presence.
     const state = await page.locator('[data-testid="button-open-assistant"]').getAttribute("data-companion-state");
     check(state === "idle" || state === "aware", "at rest the Companion shows presence, never urgency", `got ${state}`);

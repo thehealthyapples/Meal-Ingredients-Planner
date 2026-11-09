@@ -16,7 +16,7 @@ Anyone, signed in or not. The Companion answers households most from this tier a
 | `ben-everyone-fed-safely` | Everyone in the house is accounted for | benefits |
 | `ben-know-whats-in-it` | You know what is actually in your food | benefits |
 | `ben-week-decided` | The week is decided, once | benefits |
-| `gls-apple` | Apple (the Companion) | glossary |
+| `gls-apple` | Companion | glossary |
 | `gls-basket` | Basket | glossary |
 | `gls-glossary` | Product Glossary | glossary |
 | `gls-plant-diversity` | Plant Diversity | glossary |
@@ -36,7 +36,7 @@ Anyone, signed in or not. The Companion answers households most from this tier a
 | `ntf-email-password-reset` | Password reset email | notifications |
 | `ntf-email-verification` | Verification email | notifications |
 | `page-auth` | Sign in | pages |
-| `page-landing` | Landing | pages |
+| `page-home` | Home | pages |
 | `page-legal` | Policies | pages |
 | `page-not-found` | Not Found | pages |
 | `page-shared-plan` | Shared Plan | pages |
@@ -48,7 +48,7 @@ Any signed-in household. Everything public, plus the household-facing product it
 | id | name | section |
 |---|---|---|
 | `cap-analyser` | Analyser capability | intelligence-capabilities |
-| `cap-companion` | Apple | companion-capabilities |
+| `cap-companion` | Companion | companion-capabilities |
 | `cap-diary` | Diary capability | intelligence-capabilities |
 | `cap-household` | Household capability | intelligence-capabilities |
 | `cap-meals` | Meals capability | intelligence-capabilities |
@@ -62,7 +62,7 @@ Any signed-in household. Everything public, plus the household-facing product it
 | `dlg-bad-apple` | Highly Ultra-Processed warning | dialogs |
 | `dom-analyser` | Analyser | domains |
 | `dom-commerce` | Plans and Entitlements | domains |
-| `dom-companion` | Apple | domains |
+| `dom-companion` | Companion | domains |
 | `dom-cookbook` | Cookbook | domains |
 | `dom-diary` | Diary | domains |
 | `dom-home` | Home | domains |
@@ -99,16 +99,16 @@ Any signed-in household. Everything public, plus the household-facing product it
 | `page-basket` | Basket | pages |
 | `page-contact` | Contact | pages |
 | `page-cookbook` | Cookbook | pages |
+| `page-cookbook-grid` | Cookbook Grid | pages |
 | `page-dashboard` | Dashboard | pages |
-| `page-diary` | My Diary | pages |
+| `page-diary` | Diary | pages |
 | `page-food-detail` | Food | pages |
 | `page-help-centre` | Help Centre | pages |
-| `page-home` | Home | pages |
 | `page-import-recipe` | Import Recipe | pages |
 | `page-meal-detail` | Meal | pages |
-| `page-nutrition` | Nutrition | pages |
+| `page-nutrition` | Food | pages |
 | `page-onboarding` | Onboarding | pages |
-| `page-pantry` | Pantry | pages |
+| `page-pantry` | Pantry (the Living Larder) | pages |
 | `page-partners` | Partners | pages |
 | `page-planner` | Planner | pages |
 | `page-privacy-settings` | Privacy and your data | pages |
@@ -153,7 +153,7 @@ Operators. Everything above, plus admin surfaces, hidden experiences, and positi
 | `gls-bad-apple` | Bad Apple | glossary |
 | `gls-tha-picks` | THA Picks | glossary |
 | `hid-add-meal-gateway` | Add a Recipe gateway dialog (never rendered) | hidden-experiences |
-| `hid-analyse-basket` | /analyse-basket (unclickable alias) | hidden-experiences |
+| `hid-analyse-basket` | Former /analyse-basket route | hidden-experiences |
 | `hid-devworld-prod` | Development World in production | hidden-experiences |
 | `hid-dormant-chrome` | Dormant navigation and header components | hidden-experiences |
 | `hid-import-recipe` | Import Recipe (bounce stub) | hidden-experiences |

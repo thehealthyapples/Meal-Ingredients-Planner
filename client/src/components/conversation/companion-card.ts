@@ -168,7 +168,7 @@ export interface CompanionCardView_Response {
  * navigate here — always an in-app THA route, never an external URL.
  */
 const DOMAIN_LANDING: Readonly<Record<string, string>> = {
-  meal:      "/meals",
+  meal:      "/cookbook/grid",
   planner:   "/planner",
   shopping:  "/shopping-workspace",
   pantry:    "/pantry",

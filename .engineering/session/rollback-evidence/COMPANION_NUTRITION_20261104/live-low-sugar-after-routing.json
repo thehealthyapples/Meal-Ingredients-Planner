@@ -1,0 +1,81 @@
+{
+  "threadId": 748,
+  "text": "The context data does not provide a list of meals ranked by sugar content, but I can tell you that the Cheese Quesadilla has a sugar content of 0 grams. If you're looking for meals with low sugar, you might consider options like this one.",
+  "entityRefCount": 15,
+  "outcomeStatus": "ok",
+  "reachedCapability": "meals",
+  "invokedCapabilities": [
+    "nutrition-discovery",
+    "meal-discovery",
+    "meals"
+  ],
+  "invokedCapabilitiesSource": "resolved-intent",
+  "capabilityInvocations": [
+    {
+      "capabilityId": "profile",
+      "verb": "read",
+      "status": "ok",
+      "ok": true,
+      "durationMs": 145,
+      "threw": false,
+      "errorMessage": null,
+      "contribution": "context-only",
+      "baseline": true
+    },
+    {
+      "capabilityId": "meals",
+      "verb": "read",
+      "status": "ok",
+      "ok": true,
+      "durationMs": 605,
+      "threw": false,
+      "errorMessage": null,
+      "contribution": "grounding-data",
+      "baseline": false
+    },
+    {
+      "capabilityId": "meal-discovery",
+      "verb": "search",
+      "status": "ok",
+      "ok": true,
+      "durationMs": 624,
+      "threw": false,
+      "errorMessage": null,
+      "contribution": "empty-result",
+      "baseline": false
+    },
+    {
+      "capabilityId": "nutrition-discovery",
+      "verb": "search",
+      "status": "ok",
+      "ok": true,
+      "durationMs": 4582,
+      "threw": false,
+      "errorMessage": null,
+      "contribution": "grounding-data",
+      "baseline": false
+    },
+    {
+      "capabilityId": "household",
+      "verb": "read",
+      "status": "ok",
+      "ok": true,
+      "durationMs": 140,
+      "threw": false,
+      "errorMessage": null,
+      "contribution": "context-only",
+      "baseline": true
+    }
+  ],
+  "capabilityProbeActive": true,
+  "discoveryCount": 1,
+  "guidanceCount": 2,
+  "guidanceKind": "next-step",
+  "enrichmentCount": 1,
+  "actionCount": 0,
+  "fallbackState": null,
+  "latencyMs": 7546,
+  "error": null,
+  "personality": "companion",
+  "llmProviderAvailable": true
+}

@@ -56,6 +56,9 @@ interface SourceRef {
   url: string;
   evidenceLevel: "established" | "emerging";
   lastReviewed: string;
+  preparedBy?: string;
+  preparedOn?: string;
+  evidenceExcerpt?: string;
 }
 
 interface ClaimItem {
@@ -77,6 +80,9 @@ interface ClaimItem {
 
 interface ClaimsResponse {
   claims: ClaimItem[];
+  total: number;
+  offset: number;
+  limit: number;
   labels: Record<ClaimEdge, string>;
   meanings: Record<ClaimEdge, string>;
 }
@@ -101,6 +107,8 @@ interface AuditRow {
 }
 
 const ALL = "__all__";
+type SourceStatusFilter = "all" | "cited" | "missing";
+const CLAIM_PAGE_SIZE = 50;
 
 function formatDate(value: string | null): string {
   if (!value) return "—";
@@ -122,21 +130,26 @@ function StatusBadge({ status }: { status: ClaimStatus }) {
 export default function AdminKnowledgeClaimsPage() {
   const [edge, setEdge] = useState<string>(ALL);
   const [status, setStatus] = useState<string>("pending");
-  const [citedOnly, setCitedOnly] = useState(true);
+  const [sourceStatus, setSourceStatus] = useState<SourceStatusFilter>("cited");
+  const [page, setPage] = useState(0);
 
   // The claim a reviewer is rejecting, and the reason they are typing.
   const [rejecting, setRejecting] = useState<ClaimItem | null>(null);
   const [reason, setReason] = useState("");
   // The claim whose full decision history is open.
   const [historyFor, setHistoryFor] = useState<ClaimItem | null>(null);
+  const [sourceFor, setSourceFor] = useState<ClaimItem | null>(null);
+  const [sourceDraft, setSourceDraft] = useState({ body: "", title: "", url: "", evidenceExcerpt: "", evidenceLevel: "established" as "established" | "emerging", confirmed: false });
 
   const params = useMemo(() => {
     const p: Record<string, string> = {};
     if (edge !== ALL) p.edge = edge;
     if (status !== ALL) p.status = status;
-    if (citedOnly) p.citedOnly = "true";
+    if (sourceStatus !== "all") p.sourceStatus = sourceStatus;
+    p.limit = String(CLAIM_PAGE_SIZE);
+    p.offset = String(page * CLAIM_PAGE_SIZE);
     return new URLSearchParams(p).toString();
-  }, [edge, status, citedOnly]);
+  }, [edge, status, sourceStatus, page]);
 
   const { data, isPending } = useQuery<ClaimsResponse>({
     queryKey: ["/api/admin/knowledge-claims", params],
@@ -168,6 +181,7 @@ export default function AdminKnowledgeClaimsPage() {
       }).then(r => r.json()),
     onSuccess: () => {
       invalidate();
+      setPage(0);
       setRejecting(null);
       setReason("");
     },
@@ -202,6 +216,15 @@ export default function AdminKnowledgeClaimsPage() {
         return { title: "That decision was declined", description: message };
       },
     },
+  });
+
+  const changeSource = useTrackedMutation({
+    mutationFn: (vars: { claim: ClaimItem; action: "attach" | "remove"; url?: string; sourceRef?: SourceRef }) =>
+      apiRequest("POST", `/api/admin/knowledge-claims/${vars.claim.edge}/${vars.claim.id}/source`, {
+        action: vars.action, url: vars.url, sourceRef: vars.sourceRef,
+      }).then(r => r.json()),
+    onSuccess: () => { invalidate(); setSourceFor(null); setSourceDraft({ body: "", title: "", url: "", evidenceExcerpt: "", evidenceLevel: "established", confirmed: false }); },
+    feedback: { success: "Source evidence saved", successDescription: "The claim remains awaiting review; no approval was made.", failure: "Source could not be saved", failureDescription: "The claim was not changed. Check the source details and try again." },
   });
 
   const claims = data?.claims ?? [];
@@ -259,7 +282,7 @@ export default function AdminKnowledgeClaimsPage() {
       <div className="flex flex-wrap items-end gap-3 mb-6">
         <div className="grid gap-1.5">
           <Label className="text-xs">Claim type</Label>
-          <Select value={edge} onValueChange={setEdge}>
+          <Select value={edge} onValueChange={value => { setEdge(value); setPage(0); }}>
             <SelectTrigger className="w-[260px]" data-testid="select-edge"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>All claim types</SelectItem>
@@ -271,7 +294,7 @@ export default function AdminKnowledgeClaimsPage() {
         </div>
         <div className="grid gap-1.5">
           <Label className="text-xs">Status</Label>
-          <Select value={status} onValueChange={setStatus}>
+          <Select value={status} onValueChange={value => { setStatus(value); setPage(0); }}>
             <SelectTrigger className="w-[180px]" data-testid="select-status"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="pending">Awaiting review</SelectItem>
@@ -281,13 +304,33 @@ export default function AdminKnowledgeClaimsPage() {
             </SelectContent>
           </Select>
         </div>
-        <Button
-          variant={citedOnly ? "default" : "outline"}
-          onClick={() => setCitedOnly(v => !v)}
-          data-testid="button-toggle-cited"
-        >
-          {citedOnly ? "Showing cited only" : "Showing all"}
-        </Button>
+        <div className="grid gap-1.5">
+          <Label className="text-xs">Source</Label>
+          <Select value={sourceStatus} onValueChange={value => { setSourceStatus(value as SourceStatusFilter); setPage(0); }}>
+            <SelectTrigger className="w-[220px]" data-testid="select-source-status"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="cited">Has a source</SelectItem>
+              <SelectItem value="missing">Awaiting a source</SelectItem>
+              <SelectItem value="all">All source states</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between gap-3 mb-4 text-sm" data-testid="claim-pagination">
+        <span className="text-muted-foreground">
+          {data && data.total > 0
+            ? `Showing ${data.offset + 1}–${data.offset + claims.length} of ${data.total} claims`
+            : "No claims in this view"}
+        </span>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" disabled={page === 0 || isPending} onClick={() => setPage(value => Math.max(0, value - 1))} data-testid="button-claims-previous">
+            Previous
+          </Button>
+          <Button variant="outline" size="sm" disabled={!data || data.offset + claims.length >= data.total || isPending} onClick={() => setPage(value => value + 1)} data-testid="button-claims-next">
+            Next
+          </Button>
+        </div>
       </div>
 
       {isPending ? (
@@ -297,9 +340,11 @@ export default function AdminKnowledgeClaimsPage() {
           <Inbox className="h-8 w-8 mx-auto mb-3 opacity-50" />
           <p className="font-medium text-foreground mb-1">Nothing here</p>
           <p className="text-sm">
-            {status === "pending" && citedOnly
-              ? "No cited claim is waiting for a reviewer. Claims without a source are hidden — switch to “Showing all” to see them."
-              : "No claims match these filters."}
+            {sourceStatus === "missing"
+              ? "No claims without a source match these filters."
+              : sourceStatus === "cited"
+                ? "No claims with a source match these filters. Choose “All source states” to see every claim."
+                : "No claims match these filters."}
           </p>
         </div>
       ) : (
@@ -342,8 +387,10 @@ export default function AdminKnowledgeClaimsPage() {
                         {ref.body}: {ref.title} <ExternalLink className="h-3 w-3" />
                       </a>
                       <span className="text-xs text-muted-foreground ml-2">
-                        {ref.evidenceLevel} · link checked {ref.lastReviewed}
+                        {ref.evidenceLevel} · {ref.lastReviewed ? `link checked ${ref.lastReviewed}` : `prepared by ${ref.preparedBy} on ${ref.preparedOn} · awaiting verification`}
                       </span>
+                      {ref.evidenceExcerpt && <p className="mt-1 text-xs text-muted-foreground">Source evidence: {ref.evidenceExcerpt}</p>}
+                      {claim.status === "pending" && <Button size="sm" variant="ghost" className="ml-2 h-7" disabled={changeSource.isPending} onClick={() => changeSource.mutate({ claim, action: "remove", url: ref.url })}>Remove source</Button>}
                     </div>
                   ))
                 )}
@@ -375,6 +422,7 @@ export default function AdminKnowledgeClaimsPage() {
               <div className="flex items-center gap-2 flex-wrap">
                 {claim.status === "pending" && (
                   <>
+                    <Button size="sm" variant="outline" disabled={changeSource.isPending} onClick={() => { setSourceFor(claim); setSourceDraft({ body: "", title: "", url: "", evidenceExcerpt: "", evidenceLevel: "established", confirmed: false }); }} data-testid={`button-add-source-${claim.id}`}>Attach source</Button>
                     <Button
                       size="sm"
                       variant="default"
@@ -382,7 +430,7 @@ export default function AdminKnowledgeClaimsPage() {
                       onClick={() => decide.mutate({ claim, action: "approve" })}
                       data-testid={`button-approve-${claim.id}`}
                     >
-                      <ThumbsUp className="h-4 w-4 mr-2" /> Approve
+                      <ThumbsUp className="h-4 w-4 mr-2" /> {claim.sourceRefs.some(ref => ref.preparedBy && !ref.lastReviewed) ? "Verify sources and approve" : "Approve"}
                     </Button>
                     <Button
                       size="sm"
@@ -431,10 +479,33 @@ export default function AdminKnowledgeClaimsPage() {
                   <FileClock className="h-4 w-4 mr-2" /> History
                 </Button>
               </div>
+
             </div>
           ))}
         </div>
       )}
+
+      <Dialog open={sourceFor !== null} onOpenChange={open => { if (!open) setSourceFor(null); }}>
+        <DialogContent data-testid="dialog-attach-source">
+          <DialogHeader>
+            <DialogTitle>Attach a source to this claim</DialogTitle>
+            <DialogDescription>{sourceFor?.subject}. This records evidence only. It does not approve or publish the claim.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3">
+            <div className="grid gap-1"><Label>Publishing body</Label><input className="h-9 rounded-md border bg-background px-3 text-sm" value={sourceDraft.body} onChange={e => setSourceDraft(v => ({ ...v, body: e.target.value }))} placeholder="e.g. NHS" /></div>
+            <div className="grid gap-1"><Label>Source page title</Label><input className="h-9 rounded-md border bg-background px-3 text-sm" value={sourceDraft.title} onChange={e => setSourceDraft(v => ({ ...v, title: e.target.value }))} /></div>
+            <div className="grid gap-1"><Label>HTTPS source URL</Label><input className="h-9 rounded-md border bg-background px-3 text-sm" value={sourceDraft.url} onChange={e => setSourceDraft(v => ({ ...v, url: e.target.value }))} placeholder="https://…" /></div>
+            <div className="grid gap-1"><Label>Exact passage supporting this claim</Label><Textarea value={sourceDraft.evidenceExcerpt} onChange={e => setSourceDraft(v => ({ ...v, evidenceExcerpt: e.target.value }))} /></div>
+            <div className="grid gap-1"><Label>Evidence level</Label><Select value={sourceDraft.evidenceLevel} onValueChange={value => setSourceDraft(v => ({ ...v, evidenceLevel: value as "established" | "emerging" }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="established">Established</SelectItem><SelectItem value="emerging">Emerging</SelectItem></SelectContent></Select></div>
+            <label className="flex gap-2 text-sm items-start"><input type="checkbox" checked={sourceDraft.confirmed} onChange={e => setSourceDraft(v => ({ ...v, confirmed: e.target.checked }))} /><span>I opened this source and confirmed the passage supports this exact claim.</span></label>
+            <p className="text-xs text-muted-foreground">Source URLs must use a trusted official domain. USDA FoodData Central and Health Canada are accepted for composition claims only.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setSourceFor(null)}>Cancel</Button>
+            <Button disabled={!sourceFor || !sourceDraft.confirmed || !sourceDraft.body.trim() || !sourceDraft.title.trim() || !sourceDraft.url.trim() || !sourceDraft.evidenceExcerpt.trim() || changeSource.isPending} onClick={() => sourceFor && changeSource.mutate({ claim: sourceFor, action: "attach", sourceRef: { body: sourceDraft.body.trim(), title: sourceDraft.title.trim(), url: sourceDraft.url.trim(), evidenceExcerpt: sourceDraft.evidenceExcerpt.trim(), evidenceLevel: sourceDraft.evidenceLevel, lastReviewed: new Date().toISOString().slice(0, 10) } })}>Attach source only</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Rejection: a reason is mandatory, because an unexplained refusal cannot
           be appealed or reversed by anyone who was not in the room. */}

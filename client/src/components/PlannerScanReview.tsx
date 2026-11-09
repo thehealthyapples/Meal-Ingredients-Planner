@@ -563,7 +563,7 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
       params.set("plannerResolve", "1");
       if (resolutionContext.returnMode) params.set("returnMode", resolutionContext.returnMode);
     }
-    return `/meals?${params.toString()}`;
+    return `/cookbook/grid?${params.toString()}`;
   };
 
   const FOLLOWUP_SLOT_LABELS: Record<string, string> = {

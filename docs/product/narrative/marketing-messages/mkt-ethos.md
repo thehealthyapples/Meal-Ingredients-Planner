@@ -37,7 +37,7 @@ suggests rather than tracks and restricts.
 
 ## Related
 
-- [[page-landing]]
+- [[page-home]]
 
 ---
 

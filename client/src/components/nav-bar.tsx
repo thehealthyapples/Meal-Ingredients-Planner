@@ -44,7 +44,7 @@ function PantryIcon({ className }: { className?: string }) {
 // glyph, so Home reads its doors from here (`roomsByHref`) and owns only their
 // descriptions. Consumers may read this list; nothing may reorder or fork it.
 export const NAV_ITEMS = [
-  { href: "/home", label: "Home", icon: Home, hasWorkspace: false },
+  { href: "/", label: "Home", icon: Home, hasWorkspace: false },
   { href: "/planner", label: "Planner", icon: CalendarDays, hasWorkspace: true },
   { href: "/cookbook", label: "Cookbook", icon: ChefHat, hasWorkspace: true },
   { href: "/shopping-workspace", label: "Shopping", icon: ShoppingCart, hasWorkspace: false },
@@ -55,8 +55,8 @@ export const NAV_ITEMS = [
   // /nutrition (unchanged hrefs, no redirect needed); the label and icon are
   // what changed. Analyser's own full page is still reachable at /analyser —
   // this is a first merge pass, not a deletion of that page.
-  { href: "/nutrition", label: "Food", icon: UtensilsCrossed, hasWorkspace: true },
-  { href: "/my-diary", label: "Diary", icon: BookOpen, hasWorkspace: true },
+  { href: "/food", label: "Food", icon: UtensilsCrossed, hasWorkspace: true },
+  { href: "/diary", label: "Diary", icon: BookOpen, hasWorkspace: true },
   // COMM2 (2026-07-19) — the Orchard. ONE entry, deliberately: the Orchard
   // overview, Neighbourhoods, the Village and the High Street are the experience
   // INSIDE this room, not four destinations. Adding them as separate nav entries
@@ -114,7 +114,7 @@ export function roomsByHref(hrefs: readonly string[]): NavItem[] {
  * (the sidebar is out of a visual-refinement brief's scope) nor adds to it.
  */
 const REALM_STYLES: Record<string, { active: string; hover: string; inactive: string; hue: number }> = {
-  "/home": {
+  "/": {
     // orchard/apple green — the calm brand-green home anchor
     active:         "bg-[hsl(132,24%,88%)] text-[hsl(132,36%,20%)] dark:bg-[hsl(132,15%,17%)] dark:text-[hsl(132,26%,70%)]",
     hover:          "hover:bg-[hsl(132,18%,92%)] hover:text-[hsl(132,30%,26%)] dark:hover:bg-[hsl(132,10%,14%)] dark:hover:text-[hsl(132,20%,58%)]",
@@ -127,7 +127,7 @@ const REALM_STYLES: Record<string, { active: string; hover: string; inactive: st
     inactive:       "bg-[hsl(42,26%,94%)] text-[hsl(42,32%,44%)] dark:bg-[hsl(42,12%,12%)] dark:text-[hsl(42,20%,46%)]",
     hue:            42,
   },
-  "/nutrition": {
+  "/food": {
     active:         "bg-[hsl(145,22%,88%)] text-[hsl(145,36%,20%)] dark:bg-[hsl(145,14%,17%)] dark:text-[hsl(145,26%,70%)]",
     hover:          "hover:bg-[hsl(145,16%,92%)] hover:text-[hsl(145,30%,26%)] dark:hover:bg-[hsl(145,10%,14%)] dark:hover:text-[hsl(145,20%,58%)]",
     inactive:       "bg-[hsl(145,10%,94%)] text-[hsl(145,20%,42%)] dark:bg-[hsl(145,8%,12%)] dark:text-[hsl(145,12%,46%)]",
@@ -167,7 +167,7 @@ const REALM_STYLES: Record<string, { active: string; hover: string; inactive: st
     inactive:       "bg-[hsl(74,10%,94%)] text-[hsl(74,18%,44%)] dark:bg-[hsl(74,6%,12%)] dark:text-[hsl(74,10%,44%)]",
     hue:            74,
   },
-  "/my-diary": {
+  "/diary": {
     // apple blossom rose - warm muted berry, reflective and gentle
     active:         "bg-[hsl(348,35%,89%)] text-[hsl(348,45%,24%)] dark:bg-[hsl(348,22%,18%)] dark:text-[hsl(348,35%,72%)]",
     hover:          "hover:bg-[hsl(348,26%,93%)] hover:text-[hsl(348,38%,30%)] dark:hover:bg-[hsl(348,16%,15%)] dark:hover:text-[hsl(348,28%,60%)]",
@@ -193,13 +193,6 @@ const REALM_STYLES: Record<string, { active: string; hover: string; inactive: st
     hover:          "hover:bg-[hsl(20,26%,93%)] hover:text-[hsl(20,38%,28%)] dark:hover:bg-[hsl(20,14%,15%)] dark:hover:text-[hsl(20,24%,60%)]",
     inactive:       "bg-[hsl(20,14%,94%)] text-[hsl(20,24%,42%)] dark:bg-[hsl(20,9%,12%)] dark:text-[hsl(20,14%,47%)]",
     hue:            20,
-  },
-  "/shopping-list": {
-    // soft sage - light, quick-capture feel
-    active:         "bg-[hsl(95,22%,88%)] text-[hsl(95,32%,22%)] dark:bg-[hsl(95,14%,17%)] dark:text-[hsl(95,26%,70%)]",
-    hover:          "hover:bg-[hsl(95,16%,92%)] hover:text-[hsl(95,26%,28%)] dark:hover:bg-[hsl(95,10%,14%)] dark:hover:text-[hsl(95,18%,58%)]",
-    inactive:       "bg-[hsl(95,10%,94%)] text-[hsl(95,20%,42%)] dark:bg-[hsl(95,6%,12%)] dark:text-[hsl(95,12%,46%)]",
-    hue:            95,
   },
   "/profile": {
     // EXP1 — Household: warm oak, the family record's own material. Sits clear
@@ -344,7 +337,7 @@ function SidebarBody({
             label={item.label}
             icon={item.icon}
             isCollapsed={isCollapsed}
-            isActive={location === item.href.split("?")[0] || (item.href === "/my-diary" && location === "/diary")}
+            isActive={isNavItemActive(item.href.split("?")[0], location)}
             onClick={onClose}
           />
         ))}
@@ -480,13 +473,13 @@ export function BrandBanner() {
       data-testid="brand-banner"
     >
       {/* HOUSE2: aligned with the two canonical logos in `workspace-header.tsx:249,387`,
-          which both target `/home`. Stated honestly: this component is **exported but
+          which both target `/`. Stated honestly: this component is **exported but
           mounted nowhere** (verified — `BrandBanner` has no reference in the repo outside
           this definition), so the change has no runtime effect today. It is corrected
           rather than left wrong so the component is right if it is ever mounted.
           Consequently this was NOT the live mechanism behind `fnd-home-dashboard-rivalry`,
           as had been supposed — see the HOUSE2 report. */}
-      <Link href="/home" aria-label="Home" className="flex items-center">
+      <Link href="/" aria-label="Home" className="flex items-center">
         <img
           src="/logo-long.png"
           alt="The Healthy Apples"
@@ -567,20 +560,24 @@ export function DesktopSidebar() {
  * Routes that render the same page as a canonical nav destination, so the nav
  * pill stays clearly highlighted regardless of which alias the user is on. */
 const NAV_ACTIVE_ALIASES: Record<string, string[]> = {
-  "/my-diary": ["/diary"],
-  "/cookbook": ["/meals"],
+  "/cookbook": ["/cookbook/grid"],
   "/planner": ["/weekly-planner"],
   "/analyser": ["/products"],
-  /* SHOP3 — `/basket` and `/analyse-basket` were aliased here so the Shopping
-     pip lit up on the duplicate room, which meant a household standing on the
-     unguarded door had no visual signal they were anywhere else. Both paths now
-     redirect, so there is nothing left to alias. */
+  // FOODUI1 follow-up (2026-10-30) — /food was /nutrition (itself previously
+  // /plant-diversity); both redirect at the router, but a bookmark or an
+  // in-flight navigation can briefly show the old path before it settles.
+  "/food": ["/nutrition", "/plant-diversity"],
 };
 
 function isNavItemActive(basePath: string, location: string): boolean {
   if (location === basePath) return true;
   // EXP1 — the Admin door lights for every admin subpage: /admin/* is one room.
   if (basePath === "/admin" && location.startsWith("/admin/")) return true;
+  // FOODUI1 follow-up (2026-10-30) — a food's own detail page (/foods/:slug) is
+  // reached FROM Food (the lookup result's "View food details" link) and its
+  // own back-link returns there; it is the same door, not a separate one, so
+  // Food stays lit the same way /admin/* keeps Admin lit.
+  if (basePath === "/food" && location.startsWith("/foods/")) return true;
   return NAV_ACTIVE_ALIASES[basePath]?.includes(location) ?? false;
 }
 

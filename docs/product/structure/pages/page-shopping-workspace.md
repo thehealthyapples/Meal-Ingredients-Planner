@@ -6,11 +6,8 @@ status: live
 visibility: household
 owner: Colin Clapson
 route: /shopping-workspace
-aliases:
-  - /list
-  - /shopping-list
-last_verified: 2026-07-11
-version: 1
+last_verified: 2026-11-05
+version: 2
 ---
 
 # Shopping
@@ -33,24 +30,10 @@ the current, primary shopping surface, reached from the main navigation.
 | Route | `/shopping-workspace` |
 | Source | `client/src/pages/shopping-workspace-page.tsx` |
 
-## Aliases
-
-- `/list` and `/shopping-list` — older addresses; both now redirect here.
-
 ## Related
 
 - [[dom-shopping]] — the domain this page belongs to
-- [[page-basket]] — the older shopping surface that does the same job
 - [[jrn-shop]] — the shopping journey
-
-## Known defects
-
-- `fnd-shopping-duplicate` — two shopping surfaces exist for the same task: this
-  Shopping workspace and the older Basket page, each with its own interface over
-  the same list. See PDA1.
-- `fnd-broken-shopping-link` — the workspace menu's "Basket" item links to
-  `/shopping`, which is not a route in the product. Following it lands on the
-  404 page instead of the Basket. See PDA1.
 
 ---
 

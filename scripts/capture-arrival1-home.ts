@@ -1,4 +1,4 @@
-// ARRIVAL1 — captures of the definitive Home (/home): the archway, the plaster wall,
+// ARRIVAL1 — captures of the definitive Home (/): the archway, the plaster wall,
 // the oak console, the stone floor. Reuses the NORTH3 dev-world harness.
 //
 // Usage: npx tsx scripts/capture-arrival1-home.ts
@@ -84,7 +84,7 @@ async function shoot(browser: any, state: string, table: Record<string, unknown>
     await login(ctx);
     const page = await ctx.newPage();
     if (table) await mock(page, table);
-    await page.goto(`${BASE}/home`, { waitUntil: "networkidle" });
+    await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
     await settle(page);
     await page.screenshot({ path: path.join(OUT, `${state}-${vp.name}.png`), fullPage: false });
     await page.screenshot({ path: path.join(OUT, `${state}-${vp.name}-full.png`), fullPage: true });
@@ -110,7 +110,7 @@ async function main() {
     await login(ctx);
     const page = await ctx.newPage();
     await mock(page, POPULATED);
-    await page.goto(`${BASE}/home`, { waitUntil: "networkidle" });
+    await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
     await settle(page);
     for (const [id, name] of [
       ["home-orchard-arch", "arch"],

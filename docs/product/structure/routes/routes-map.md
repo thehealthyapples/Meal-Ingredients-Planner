@@ -5,144 +5,111 @@ section: routes
 status: live
 visibility: household
 owner: Colin Clapson
-last_verified: 2026-10-27
-version: 3
+last_verified: 2026-11-05
+version: 8
 ---
 
 # Route Map
 
-> Every address THA answers, and the page each one resolves to —
-> including the aliases and redirects.
+> Every client page address declared by the active application router, and the page each one resolves to.
 
 ## What it is
 
-THA's client routing is a single `wouter` `<Switch>` in `client/src/App.tsx`.
-This entry is the complete, exact map of every path it
-answers and the page each resolves to. Most household paths render inside
-`ProtectedRoute`, which redirects to `/auth` when signed out and to
-`/onboarding` when onboarding is incomplete; a few paths are public, and two are
-pure redirects. The first matching route wins, so the order below is the order
-in `App.tsx`.
+The client router is the `wouter` `<Switch>` in `client/src/App.tsx`. This map mirrors all 51 declared route patterns there, including aliases, redirects, protected pages, and parameterized routes. Most household pages are protected; signed-out visitors are sent to `/auth`, and incomplete onboarding is sent to `/onboarding`.
 
-## Public routes (no protection)
+## Public routes
 
-| Path | Resolves to | Source |
-|---|---|---|
-| `/auth` | AuthPage (in OrchardShell) | `client/src/pages/auth-page.tsx` |
-| `/onboarding` | OnboardingPage (in OrchardShell) | `client/src/pages/onboarding-page.tsx` |
-| `/shared/:token` | SharedPlanPage — rendered directly, not protected | `client/src/pages/shared-plan-page.tsx` |
-| `/legal/:slug` | LegalPage — one legal document in full, unauthenticated | `client/src/pages/legal-page.tsx` |
-| `/legal` | LegalPage — the index of published policies, unauthenticated | `client/src/pages/legal-page.tsx` |
-
-## The root
-
-| Path | Resolves to | Source |
-|---|---|---|
-| `/` | HomeRoute — signed out shows HomePage; signed in redirects to `/home` (or `/onboarding` if onboarding is incomplete) | `client/src/App.tsx` (HomeRoute), `client/src/pages/home-page.tsx` |
-
-## Household routes (protected)
-
-| Path | Resolves to | Source |
-|---|---|---|
-| `/home` | HomeExperiencePage | `client/src/pages/home-experience-page.tsx` |
-| `/dashboard` | DashboardPage | `client/src/pages/dashboard.tsx` |
-| `/meals/:id` | MealDetailPage | `client/src/pages/meal-detail-page.tsx` |
-| `/foods/:slug` | FoodDetailPage | `client/src/pages/food-detail-page.tsx` |
-| `/meals` | MealsPage | `client/src/pages/meals-page.tsx` |
-| `/cookbook` | MealsPage *(alias of `/meals`)* | `client/src/pages/meals-page.tsx` |
-| `/import-recipe` | ImportRecipePage | `client/src/pages/import-recipe-page.tsx` |
-| `/analyse-basket` | *(redirect to `/shopping-workspace`)* — **SHOP3** | — |
-| `/basket` | *(redirect to `/shopping-workspace`)* — **SHOP3** | — |
-| `/products` | ProductsPage | `client/src/pages/products-page.tsx` |
-| `/analyser` | ProductsPage *(alias of `/products`)* | `client/src/pages/products-page.tsx` |
-| `/weekly-planner` | WeeklyPlannerPage (via PlannerPageWrapper) | `client/src/pages/weekly-planner-page.tsx` |
-| `/planner` | WeeklyPlannerPage *(alias of `/weekly-planner`)* | `client/src/pages/weekly-planner-page.tsx` |
-| `/supermarkets` | SupermarketsPage | `client/src/pages/supermarkets-page.tsx` |
-| `/profile` | ProfilePage | `client/src/pages/profile-page.tsx` |
-| `/pantry` | PantryPage | `client/src/pages/pantry-page.tsx` |
-| `/nutrition` | PlantDiversityPage | `client/src/pages/plant-diversity-page.tsx` |
-| `/diary` | FoodDiaryPage | `client/src/pages/food-diary-page.tsx` |
-| `/my-diary` | FoodDiaryPage *(alias of `/diary`)* | `client/src/pages/food-diary-page.tsx` |
-| `/partners` | PartnersPage | `client/src/pages/partners-page.tsx` |
-| `/quick-meal` | QuickMealPage | `client/src/pages/quick-meal-page.tsx` |
-| `/shopping-workspace` | ShoppingWorkspacePage | `client/src/pages/shopping-workspace-page.tsx` |
-| `/privacy-settings` | PrivacySettingsPage | `client/src/pages/privacy-settings-page.tsx` |
-| `/help` | HelpCentrePage | `client/src/pages/help-centre-page.tsx` |
-| `/contact` | ContactPage | `client/src/pages/contact-page.tsx` |
-
-## Admin routes (protected)
-
-Each admin page except `/admin/knowledge-review` renders wrapped in the shared
-Admin banner (`withAdminBanner`); `/admin/knowledge-review` renders the page
-directly.
-
-| Path | Resolves to | Source |
-|---|---|---|
-| `/admin` | AdminPage (+ Admin banner) | `client/src/pages/admin-page.tsx` |
-| `/admin/users` | AdminUsersPage (+ banner) | `client/src/pages/admin-users-page.tsx` |
-| `/admin/ingredient-products` | AdminIngredientProductsPage (+ banner) | `client/src/pages/admin-ingredient-products-page.tsx` |
-| `/admin/recipe-sources` | AdminRecipeSourcesPage (+ banner) | `client/src/pages/admin-recipe-sources-page.tsx` |
-| `/admin/companion-intelligence` | AdminCompanionIntelligencePage (+ banner) | `client/src/pages/admin-companion-intelligence-page.tsx` |
-| `/admin/intelligence` | AdminIntelligencePage (+ banner) | `client/src/pages/admin-intelligence-page.tsx` |
-| `/admin/benchmark-households` | AdminBenchmarkHouseholdsPage (+ banner) | `client/src/pages/admin-benchmark-households-page.tsx` |
-| `/admin/development-world/:id` | AdminDevelopmentWorldHouseholdPage (+ banner) | `client/src/pages/admin-development-world-household-page.tsx` |
-| `/admin/development-world` | AdminDevelopmentWorldPage (+ banner) | `client/src/pages/admin-development-world-page.tsx` |
-| `/admin/observations` | AdminObservationWorkbenchPage (+ banner) | `client/src/pages/admin-observation-workbench-page.tsx` |
-| `/admin/behaviour` | AdminBehaviourWorkbenchPage (+ banner) | `client/src/pages/admin-behaviour-workbench-page.tsx` |
-| `/admin/knowledge-review` | AdminKnowledgeReviewPage *(no banner wrapper)* | `client/src/pages/admin-knowledge-review-page.tsx` |
-| `/admin/knowledge-claims` | AdminKnowledgeClaimsPage (+ banner) | `client/src/pages/admin-knowledge-claims-page.tsx` |
-
-## Redirects
-
-| Path | Redirects to |
+| Path | Resolves to |
 |---|---|
-| `/list` | `/shopping-workspace` |
-| `/shopping-list` | `/shopping-workspace` |
-| `/plant-diversity` | `/nutrition` |
+| `/auth` | Auth page |
+| `/onboarding` | Onboarding page |
+| `/legal` | Legal index |
+| `/legal/:slug` | Legal document |
+| `/shared/:token` | Shared plan |
+| `/invitation` | Invitation page |
+
+## Home and household pages
+
+| Path | Resolves to |
+|---|---|
+| `/` | Signed-out visitors see the public welcome; signed-in households see Home; incomplete onboarding goes to `/onboarding` |
+| `/dashboard` | Dashboard |
+| `/profile` | Profile |
+| `/privacy-settings` | Privacy settings |
+| `/help` | Help centre |
+| `/contact` | Contact |
+
+## Food, cookbook, and meal pages (protected)
+
+| Path | Resolves to |
+|---|---|
+| `/food` | Food and plant diversity |
+| `/nutrition` | Redirects to `/food` |
+| `/plant-diversity` | Redirects to `/food` |
+| `/foods/:slug` | Food detail |
+| `/compare` | Food comparison |
+| `/products` | Product analyser |
+| `/analyser` | Product analyser (same page as `/products`) |
+| `/meals/:id` | Meal detail |
+| `/cookbook` | Cookbook real-book view |
+| `/cookbook/grid` | Cookbook Grid |
+| `/import-recipe` | Import recipe |
+| `/quick-meal` | Quick meal |
+
+## Planning and household spaces (protected)
+
+| Path | Resolves to |
+|---|---|
+| `/planner` | Weekly planner |
+| `/weekly-planner` | Weekly planner (same page as `/planner`) |
+| `/pantry` | Pantry |
+| `/pantry/:group` | Pantry category |
+| `/pantry/fridge-preview` | Fridge interaction preview |
+| `/pantry/shelves-preview` | Shelf interaction preview |
+| `/pantry/cupboard-preview` | Cupboard interaction preview |
+| `/orchard` | Orchard |
+| `/supermarkets` | Supermarkets |
+
+## Shopping and diary (protected)
+
+| Path | Resolves to |
+|---|---|
+| `/shopping-workspace` | Shopping workspace |
+| `/diary` | Diary |
+
+## Admin (protected)
+
+| Path | Resolves to |
+|---|---|
+| `/admin` | Admin overview |
+| `/admin/users` | Users |
+| `/admin/ingredient-products` | Ingredient products |
+| `/admin/recipe-sources` | Recipe sources |
+| `/admin/companion-intelligence` | Companion intelligence |
+| `/admin/intelligence` | Intelligence dashboard |
+| `/admin/benchmark-households` | Benchmark households |
+| `/admin/development-world` | Development world households |
+| `/admin/development-world/:id` | Development world household detail |
+| `/admin/observations` | Observation workbench |
+| `/admin/behaviour` | Behaviour workbench |
+| `/admin/activity` | Activity monitor |
+| `/admin/knowledge-review` | Knowledge review |
+| `/admin/knowledge-claims` | Knowledge claims |
+| `/admin/nutrient-reference-review` | Nutrient reference review |
+| `/admin/canonical-publication-integrity` | Canonical publication integrity |
+
+## Redirects and aliases
+
+There are two redirects (`/nutrition` and `/plant-diversity` to `/food`) and two same-page aliases (`/analyser` to Products and `/weekly-planner` to Planner). Home has one address, `/`, with signed-out and signed-in views. Diary has one route: `/diary`. Shopping has one route: `/shopping-workspace`. `/home`, `/my-diary`, `/shopping-list`, `/list`, `/basket`, and `/analyse-basket` are not registered and render the not-found page.
 
 ## Fallback
 
-| Path | Resolves to | Source |
-|---|---|---|
-| *(no match)* | NotFound | `client/src/pages/not-found.tsx` |
+Any address that does not match a registered route renders the friendly NotFound page.
 
-## Aliases and redirects — the actual count
+## Source
 
-The registered routes include **five pure redirects** (`/list`,
-`/shopping-list`, `/basket` and `/analyse-basket` to `/shopping-workspace`, and
-`/plant-diversity` to `/nutrition`) and **four aliased paths**: `/cookbook`
-(→ MealsPage), `/analyser` (→ ProductsPage), `/planner` (→ WeeklyPlannerPage)
-and `/my-diary` (→ FoodDiaryPage). SHOP3 converted the `/basket` pair from an
-aliased *page* into redirects, retiring the duplicate Shopping surface: the
-household keeps its bookmarks and arrives at the one room that carries the
-`shopping-restriction-conflict` safety card.
-
-## Related
-
-- [[page-cookbook]] — reachable at `/cookbook` and `/meals`
-- [[page-analyser]] — reachable at `/analyser` and `/products`
-- [[page-planner]] — reachable at `/planner` and `/weekly-planner`
-- [[page-diary]] — reachable at `/diary` and `/my-diary`
-- [[page-shopping-workspace]] — the canonical Shopping room; `/basket` and
-  `/analyse-basket` redirect here (**SHOP3**)
-- [[page-nutrition]] — `/nutrition` is canonical; `/plant-diversity` redirects here
-- [[page-legal]] — reachable at `/legal` and `/legal/:slug`, both unprotected
-- [[page-privacy-settings]] — reachable at `/privacy-settings`
-- [[page-help-centre]] — reachable at `/help`
-- [[page-contact]] — reachable at `/contact`
-
-## Known defects
-
-- `fnd-alias-sprawl` — several pages answer to more than one path and five more
-  paths exist only to redirect, spreading a single destination across multiple
-  addresses (`/meals` and `/cookbook`; `/products` and `/analyser`; `/planner`
-  and `/weekly-planner`; `/diary` and `/my-diary`; plus `/list`,
-  `/shopping-list`, `/basket` and `/analyse-basket` all redirecting to
-  `/shopping-workspace`; `/plant-diversity` redirects to `/nutrition`). See PDA1. **Partially reduced by SHOP3**, which
-  removed the `/basket` pair as a distinct destination — the sprawl that
-  remains is alias-only and no longer hides a divergent surface.
+`client/src/App.tsx` is authoritative for the declared route patterns and ordering. Dynamic segments such as `:id`, `:slug`, `:group`, and `:token` stand for record-specific values.
 
 ---
 
-_Registry entry. Present tense; if it is no longer true it is a defect, not
-history (Rule PKR15). Owner: Colin Clapson. Last verified 2026-07-18._
+_Registry entry. Last verified against the active router on 2026-11-05._

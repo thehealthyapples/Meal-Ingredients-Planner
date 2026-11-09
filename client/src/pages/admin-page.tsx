@@ -114,6 +114,13 @@ const TOOLS: Record<string, Tool> = {
     icon: ClipboardList,
     href: "/admin/knowledge-review",
   },
+  "nutrient-reference-review": {
+    id: "nutrient-reference-review",
+    title: "Adult Nutrient Reference Review",
+    description: "Review sourced adult reference methods with a simulation before a separate Companion release gate.",
+    icon: FlaskConical,
+    href: "/admin/nutrient-reference-review",
+  },
   "canonical-publication-integrity": {
     id: "canonical-publication-integrity",
     title: "Canonical Publication Integrity",
@@ -174,7 +181,7 @@ const GROUPS: Group[] = [
     blurb: "The food, recipe, and knowledge content THA draws on.",
     learnMore:
       "Knowledge tools tend the content THA reasons over: the ingredient Picks it recommends, the recipe sources it draws from, and the review queue where unresolved knowledge terms are approved before they become canonical. Come here to curate what THA knows — and remember that publishing a knowledge release changes what every household sees.",
-    toolIds: ["picks", "recipe-sources", "knowledge-review"],
+    toolIds: ["picks", "recipe-sources", "knowledge-review", "nutrient-reference-review"],
   },
   {
     id: "people",

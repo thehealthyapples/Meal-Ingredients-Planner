@@ -1,0 +1,812 @@
+/* The accepted 4:3 kitchen photograph is the Planner surface. The semantic
+   Planner remains a live overlay; the photograph is never stretched. */
+.planner-physical-surface {
+  --planner-ink: #3f3a2b;
+  --planner-rule: rgba(74, 60, 32, 0.28);
+  position: relative;
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0 !important;
+  background: #44372b;
+}
+
+.planner-physical-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+.planner-physical-scene-holder {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: visible;
+  container-type: size;
+}
+
+.planner-physical-stage {
+  position: relative;
+  isolation: isolate;
+  width: min(100cqw, calc(100cqh * 4 / 3));
+  height: min(100cqh, calc(100cqw * 3 / 4));
+  aspect-ratio: 4 / 3;
+  color: var(--planner-ink);
+}
+
+.planner-physical-photo {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* The existing title and week controls sit in the paper's upper margin. */
+.planner-workspace-header.workspace-header--inline {
+  position: absolute;
+  z-index: 5;
+  top: 11.3%;
+  left: 17.65%;
+  width: 64.6%;
+  height: auto;
+}
+
+.planner-workspace-header.workspace-header--inline > header > div {
+  max-width: none !important;
+  padding-inline: 0 !important;
+}
+
+.planner-workspace-header.workspace-header--inline .workspace-pill {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.planner-workspace-header.workspace-header--inline .workspace-pill > .flex.items-center {
+  min-height: 34px;
+  padding-block: 0;
+}
+
+.planner-workspace-header.workspace-header--inline .workspace-pill > .flex.items-center.min-h-\[40px\] {
+  min-height: 30px;
+  padding-bottom: 0;
+}
+
+.planner-workspace-header.workspace-header--inline .workspace-pill input {
+  height: 30px;
+}
+
+.planner-workspace-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 30px;
+  padding: 0 0.55rem;
+  border: 1px solid rgba(74, 60, 32, 0.18);
+  border-radius: 999px;
+  color: #39534d;
+  background: rgba(244, 239, 225, 0.72);
+  font-size: 0.7rem;
+  line-height: 1;
+  white-space: nowrap;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.planner-workspace-toggle:hover {
+  border-color: rgba(74, 60, 32, 0.32);
+  background: rgba(244, 239, 225, 0.96);
+}
+
+.planner-workspace-toggle:focus-visible {
+  outline: 2px solid #527b72;
+  outline-offset: 2px;
+}
+
+.planner-physical-content,
+.planner-physical-main {
+  display: contents;
+}
+
+/* Empty guidance has its own narrow paper margin above the weekday names. */
+.planner-empty-guidance {
+  position: absolute;
+  z-index: 4;
+  top: 21.8%;
+  left: 17.65%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  width: 64.6%;
+  min-height: 28px;
+  padding: 0 !important;
+  text-align: left;
+  color: var(--planner-ink);
+}
+
+.planner-empty-guidance > svg,
+.planner-empty-guidance > p:nth-of-type(2) {
+  display: none;
+}
+
+.planner-empty-guidance > p:first-of-type {
+  margin: 0;
+  color: inherit;
+  font-size: 0.72rem;
+}
+
+.planner-empty-guidance > div {
+  margin: 0 !important;
+}
+
+.planner-empty-guidance > div > button {
+  min-height: 26px;
+  height: 26px;
+  padding-inline: 0.55rem;
+  font-size: 0.68rem;
+}
+
+/* Household and week-level provisions live in the kitchen margin, outside the
+   seven-day writing area. They keep their existing controls and data owners. */
+.planner-physical-stage [data-testid="section-week-diets"],
+.planner-physical-stage [data-testid="section-weekly-provisioning"] {
+  position: absolute;
+  z-index: 3;
+  left: 1.1%;
+  width: 15.2%;
+  margin: 0 !important;
+}
+
+.planner-physical-stage [data-testid="section-week-diets"] {
+  top: 34%;
+}
+
+.planner-physical-stage [data-testid="section-weekly-provisioning"] {
+  top: 51%;
+}
+
+.planner-physical-stage [data-testid="section-week-diets"] > button,
+.planner-physical-stage [data-testid="section-weekly-provisioning"] > button {
+  display: flex;
+  width: 100%;
+  min-height: 34px;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid rgba(244, 239, 225, 0.32);
+  border-radius: 0.6rem;
+  color: #f3ecdc;
+  background: rgba(45, 38, 31, 0.64);
+  font-size: 0.65rem;
+  text-align: left;
+  white-space: normal;
+}
+
+.planner-physical-stage [data-testid="section-weekly-provisioning"] > button > span:nth-of-type(1) {
+  line-height: 1.2;
+}
+
+.planner-physical-stage [data-testid="card-week-diets"] {
+  position: absolute;
+  z-index: 4;
+  top: 38%;
+  left: 1.1%;
+  width: 15.2%;
+  max-height: 34%;
+  overflow: auto;
+  margin: 0 !important;
+  padding: 0.55rem !important;
+  background: rgba(248, 243, 232, 0.96);
+}
+
+.planner-physical-stage [data-testid="section-provisioning-items"] {
+  max-height: 30%;
+  overflow: auto;
+  padding: 0.55rem !important;
+  background: rgba(248, 243, 232, 0.96);
+}
+
+.planner-physical-grid {
+  position: absolute;
+  z-index: 2;
+  top: 27%;
+  left: 17.65625%;
+  width: 64.609375%;
+  height: 60.7%;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: auto;
+  color: var(--planner-ink);
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.planner-physical-grid > div {
+  min-width: 0 !important;
+  height: 100%;
+}
+
+.planner-physical-grid > div > .overflow-hidden {
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.planner-physical-grid [class*="bg-muted"],
+.planner-physical-grid [class*="bg-background"],
+.planner-physical-grid [class*="bg-card"] {
+  background: transparent !important;
+}
+
+.planner-physical-grid [class*="border-border"] {
+  border-color: var(--planner-rule) !important;
+}
+
+.planner-physical-grid .text-foreground,
+.planner-physical-grid .text-muted-foreground {
+  color: inherit;
+}
+
+.planner-physical-grid button {
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.planner-physical-grid .shadow-sm,
+.planner-physical-grid .shadow-lg {
+  box-shadow: none !important;
+}
+
+.planner-physical-grid .rounded-lg {
+  border-radius: 0;
+}
+
+/* Compact layouts retain the established scene; desktop uses its approved wide
+   composition, with the live grid aligned to the larger paper area. */
+@media (min-width: 1024px) {
+  /* The approved desktop photograph matches the wide Planner viewport and runs edge to edge. */
+  .planner-physical-layout {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+  }
+
+  .planner-physical-stage {
+    width: min(100cqw, calc(100cqh * 2.14486));
+    height: min(100cqh, calc(100cqw * 0.46621));
+    aspect-ratio: 1836 / 856;
+  }
+
+  .planner-workspace-header.workspace-header--inline {
+    top: 20%;
+    left: 12.5%;
+    width: 75%;
+  }
+
+  /* The paper's toolbar shares one 38px control row: family · search · week · actions. */
+  .planner-workspace-header.workspace-header--inline .workspace-pill {
+    position: relative;
+    height: 38px;
+    min-height: 38px;
+    overflow: visible;
+  }
+
+  .planner-workspace-header .workspace-header-primary-row,
+  .planner-workspace-header .workspace-header-context-row {
+    display: contents;
+  }
+
+  .planner-workspace-header .workspace-header-search-slot {
+    position: absolute;
+    top: 0;
+    left: 16.5%;
+    width: min(170px, 14.5vw);
+    height: 38px;
+    min-width: 0;
+    flex: none;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .planner-workspace-header .workspace-header-actions {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 38px;
+    margin-left: 0;
+    align-items: center;
+  }
+
+  .planner-workspace-header .planner-week-toolbar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    width: 100%;
+    height: 38px;
+    min-height: 38px;
+    justify-content: center;
+    align-items: center;
+    overflow: visible;
+  }
+
+  .planner-workspace-header .planner-week-toolbar > [data-testid="button-placeholder-review"],
+  .planner-workspace-header .planner-week-toolbar > [data-testid="text-week-progress"] {
+    display: none;
+  }
+
+  .planner-workspace-header .planner-week-toolbar .planner-paper-action-group {
+    position: absolute;
+    top: 0;
+    right: 14%;
+    height: 38px;
+    align-items: center;
+  }
+
+  .planner-workspace-header .realm-title {
+    display: none;
+  }
+
+  /* Keep the week's intelligence in the upper paper margin, above the
+     translucent workspace controls that previously blurred it underneath. */
+  .planner-physical-stage [data-testid="planner-intelligence-strip"] {
+    position: absolute;
+    z-index: 7;
+    top: 20%;
+    left: 1.5%;
+    width: 10.5%;
+    margin: 0 !important;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    filter: none;
+    backdrop-filter: none;
+  }
+
+  .planner-physical-stage [data-testid="planner-intelligence-strip"] > .flex.items-center {
+    display: flex;
+    width: 100%;
+    min-height: 38px;
+    justify-content: space-between;
+    gap: 0.6rem;
+    padding: 0;
+  }
+
+  .planner-physical-stage [data-testid="planner-intelligence-strip"] [data-testid="strip-label"] > span {
+    display: none;
+  }
+
+  .planner-physical-stage [data-testid="planner-intelligence-strip"] [data-testid="strip-plant-count"] > span > .text-muted-foreground\/70,
+  .planner-physical-stage [data-testid="planner-intelligence-strip"] [data-testid="button-intelligence-strip-expand"] > span {
+    display: none;
+  }
+
+  .planner-physical-stage [data-testid="planner-intelligence-strip"] > .flex.items-center > .flex-1 {
+    display: none;
+  }
+
+  .planner-physical-stage [data-testid="planner-intelligence-strip"] [data-testid="button-intelligence-strip-expand"] {
+    margin-left: 0;
+    padding-left: 0;
+  }
+
+  .planner-empty-guidance {
+    left: 12.5%;
+    width: 75%;
+  }
+
+  /* Household controls sit in the paper margin above the meal grid. */
+  .planner-physical-stage [data-testid="section-week-diets"],
+  .planner-physical-stage [data-testid="section-weekly-provisioning"] {
+    top: 34%;
+    width: 24%;
+  }
+
+  .planner-physical-stage [data-testid="section-week-diets"] {
+    top: 20%;
+    width: auto;
+    z-index: 8;
+    pointer-events: auto;
+  }
+
+  .planner-physical-stage [data-testid="section-week-diets"],
+  .planner-physical-stage [data-testid="card-week-diets"] {
+    left: 12.5%;
+    width: 24%;
+  }
+
+  .planner-physical-stage [data-testid="section-weekly-provisioning"] {
+    top: 20%;
+    left: 63.5%;
+    width: 17%;
+  }
+
+  .planner-physical-stage [data-testid="section-weekly-provisioning"] > button {
+    width: 100%;
+    min-width: 0;
+    height: 38px;
+    justify-content: flex-start;
+    gap: 0.3rem;
+    padding-inline: 0.2rem;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  .planner-physical-stage [data-testid="section-weekly-provisioning"] > button > span:nth-of-type(1) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.58rem;
+  }
+
+  .planner-physical-stage [data-testid="section-weekly-provisioning"] > button > span:nth-of-type(2),
+  .planner-physical-stage [data-testid="section-weekly-provisioning"] > button > svg:last-child {
+    display: none;
+  }
+
+  .planner-physical-stage [data-testid="section-provisioning-items"] {
+    max-height: 8cqh;
+    overflow: auto;
+    padding: 0.25rem 0.35rem !important;
+    background: rgba(248, 243, 232, 0.98);
+  }
+
+  .planner-physical-stage [data-testid="section-week-diets"] > button,
+  .planner-physical-stage [data-testid="section-weekly-provisioning"] > button {
+    min-height: 28px;
+    padding: 0.25rem 0.4rem;
+    border: 0;
+    border-bottom: 1px solid var(--planner-rule);
+    border-radius: 0;
+    color: var(--planner-ink);
+    background: transparent;
+  }
+  /* A small, proportional zoom gives the board more presence. The photo and
+     every paper overlay scale together; the tools-open layout keeps its fit. */
+  .planner-physical-stage {
+    transform: scale(1.12);
+    transform-origin: center;
+  }
+
+  .planner-physical-surface[data-workspace-open="true"] .planner-physical-stage {
+    transform: none;
+  }
+
+  /* The header's Plan action already owns the desktop empty-week action; hide
+     the duplicate floating empty-state card that collides with the week controls. */
+  .planner-empty-guidance {
+    display: none;
+  }
+
+  .planner-physical-grid {
+    top: 24.5%;
+    left: 13.5%;
+    width: 74.5%;
+    height: 65%;
+  }
+
+  /* Keep all meal rows and the summary inside the visible paper grid. */
+  .planner-physical-grid [data-testid^="cell-"] {
+    min-height: 0 !important;
+    padding: 0.25rem !important;
+  }
+
+  .planner-physical-grid > div > div.sticky.left-0 {
+    padding-block: 0.25rem !important;
+  }
+
+  /* Cookbook-style paper controls: warm ink, no web pills or button cards. */
+  .planner-workspace-header .planner-paper-action-group {
+    border: 0;
+    padding: 0;
+    background: transparent;
+  }
+
+  .planner-workspace-header .planner-workspace-toggle,
+  .planner-workspace-header [data-testid="button-plan-my-week"],
+  .planner-workspace-header [data-testid="button-planner-workspace-menu"],
+  .planner-workspace-header [data-testid="button-prev-week"],
+  .planner-workspace-header [data-testid="button-next-week"],
+  .planner-workspace-header [data-testid^="button-rename-week"],
+  .planner-workspace-header [data-testid="button-placeholder-review"] {
+    min-height: 30px;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: var(--planner-ink) !important;
+  }
+
+  .planner-workspace-header [data-testid="tabs-weeks"] {
+    border: 0;
+    border-bottom: 1px solid var(--planner-rule);
+    border-radius: 0;
+    background: transparent;
+    color: var(--planner-ink);
+    box-shadow: none;
+  }
+
+  .planner-physical-stage [data-testid="section-week-diets"] > .planner-household-override-button {
+    filter: none !important;
+    backdrop-filter: none !important;
+    opacity: 1 !important;
+    display: inline-flex;
+    width: auto;
+    min-width: 38px;
+    height: 38px;
+    min-height: 38px;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.25rem;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    color: var(--planner-ink);
+    position: relative;
+    z-index: 1;
+    pointer-events: auto;
+  }
+
+  .planner-physical-stage [data-testid="section-week-diets"] > .planner-household-override-button:hover,
+  .planner-physical-stage [data-testid="section-week-diets"] > .planner-household-override-button:focus-visible {
+    border-color: var(--planner-rule);
+    background: rgba(248, 243, 232, 0.72);
+  }
+
+  .planner-override-count {
+    display: inline-flex;
+    min-width: 16px;
+    height: 16px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding-inline: 4px;
+    background: #d5a437;
+    color: #342c1d;
+    font-size: 10px;
+    line-height: 1;
+    font-weight: 600;
+  }
+
+  .planner-workspace-header .planner-workspace-toggle:hover,
+  .planner-workspace-header [data-testid="button-plan-my-week"]:hover,
+  .planner-workspace-header [data-testid="button-planner-workspace-menu"]:hover,
+  .planner-workspace-header [data-testid^="button-rename-week"]:hover {
+    color: #5f6c3e !important;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .planner-physical-grid [data-testid^="button-add-"],
+  .planner-physical-grid [data-testid^="button-copy-day-"],
+  .planner-physical-grid [data-testid^="button-meal-"] {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .planner-physical-grid [data-testid^="button-add-"] {
+    min-width: 28px;
+    min-height: 28px;
+    color: #6b7652;
+    opacity: 0.74;
+  }
+
+  .planner-physical-grid [data-testid^="button-add-"]:hover {
+    color: #5f6c3e;
+    opacity: 1;
+  }
+
+  .planner-workspace-header :focus-visible,
+  .planner-physical-grid :focus-visible {
+    outline: 2px solid #5f6c3e;
+    outline-offset: -2px;
+  }
+  .planner-physical-surface[data-workspace-open="true"] > .planner-physical-layout {
+    grid-template-columns: minmax(0, 1fr) 244px;
+  }
+
+  .planner-physical-layout > [data-testid^="panel-planner-assistant"] {
+    position: relative;
+    align-self: center;
+    width: 244px;
+    max-height: calc(100% - 1.5rem);
+    margin: 0;
+    top: auto;
+    border: 1px solid var(--realm-border);
+    background: var(--realm-bg);
+  }
+}
+
+/* On compact tablets, dock the tools below the scene so opening them does not
+   squeeze the seven-day grid until Sunday becomes unusable. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .planner-physical-surface[data-workspace-open="true"] {
+    overflow: auto;
+  }
+
+  .planner-physical-surface[data-workspace-open="true"] > .planner-physical-layout {
+    height: calc(100% + 220px);
+    grid-template-rows: minmax(0, 1fr) 208px;
+  }
+
+  .planner-physical-layout > [data-testid^="panel-planner-assistant"] {
+    position: relative;
+    width: 100%;
+    height: 208px;
+    max-height: 208px;
+    margin: 0;
+    top: auto;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) and (max-height: 700px) {
+  .planner-physical-layout > [data-testid^="panel-planner-assistant"] {
+    height: 184px;
+    max-height: 184px;
+  }
+
+  .planner-physical-surface[data-workspace-open="true"] > .planner-physical-layout {
+    height: calc(100% + 196px);
+    grid-template-rows: minmax(0, 1fr) 184px;
+  }
+}
+
+/* Keep the real kitchen object visible on phones too. The established day-by-
+   day interaction stays in the foreground while the photograph remains its
+   physical setting instead of disappearing at the mobile breakpoint. */
+@media (max-width: 767px) {
+  .planner-physical-surface {
+    overflow: auto;
+    background: #44372b;
+  }
+
+  .planner-physical-layout {
+    display: block;
+    height: auto;
+    min-height: 100%;
+  }
+
+  .planner-physical-scene-holder {
+    display: block;
+    height: auto;
+    min-height: calc(100dvh - 9rem);
+    overflow: visible;
+    container-type: normal;
+  }
+
+  .planner-physical-stage {
+    width: 100%;
+    height: auto;
+    min-height: calc(100dvh - 9rem);
+    aspect-ratio: auto;
+    overflow: visible;
+  }
+
+  .planner-physical-photo {
+    object-fit: cover;
+    object-position: center top;
+  }
+
+  .planner-workspace-header.workspace-header--inline {
+    top: 11.3%;
+    left: 8%;
+    width: 84%;
+  }
+
+  .planner-workspace-header.workspace-header--inline .workspace-pill {
+    background: transparent;
+  }
+
+  .planner-workspace-header.workspace-header--inline .workspace-pill > .flex.items-center {
+    min-height: 34px;
+  }
+
+  .planner-workspace-header.workspace-header--inline .workspace-pill > .flex.items-center.min-h-\[40px\] {
+    min-height: 30px;
+  }
+
+  .planner-workspace-toggle > span {
+    display: none;
+  }
+
+  .planner-physical-content,
+  .planner-physical-main {
+    position: relative;
+    display: block;
+    min-width: 0;
+  }
+
+  .planner-physical-content {
+    padding: 142px 0 1rem;
+  }
+
+  .planner-workspace-header .realm-title {
+    display: none;
+  }
+
+  .planner-empty-guidance {
+    position: relative;
+    top: auto;
+    left: auto;
+    width: 100%;
+    min-height: 0;
+    justify-content: flex-start;
+    gap: 0.4rem;
+    margin: 0 0 0.75rem;
+    padding: 0.6rem 0.75rem !important;
+    border-radius: 0.75rem;
+    background: rgba(248, 243, 232, 0.92);
+  }
+
+  .planner-empty-guidance > svg,
+  .planner-empty-guidance > p:nth-of-type(2) {
+    display: block;
+  }
+
+  .planner-empty-guidance > p:nth-of-type(2) {
+    display: none;
+  }
+
+  .planner-empty-guidance > div > button {
+    white-space: nowrap;
+  }
+
+  .planner-physical-stage [data-testid="section-week-diets"],
+  .planner-physical-stage [data-testid="section-weekly-provisioning"],
+  .planner-physical-stage [data-testid="card-week-diets"] {
+    position: relative;
+    top: auto;
+    left: auto;
+    width: 100%;
+    max-height: none;
+    margin: 0 0 0.75rem !important;
+  }
+
+  .planner-physical-stage [data-testid="section-week-diets"] > button,
+  .planner-physical-stage [data-testid="section-weekly-provisioning"] > button {
+    min-height: 40px;
+    color: var(--planner-ink);
+    background: rgba(248, 243, 232, 0.94);
+    border-color: rgba(74, 60, 32, 0.18);
+  }
+
+  .planner-physical-stage [data-testid="section-provisioning-items"] {
+    max-height: none;
+    background: rgba(248, 243, 232, 0.96);
+  }
+
+  .planner-physical-grid {
+    display: none !important;
+  }
+}
+
+/* The Planner is a readable writing surface. Global workspace materials and
+   brand details can use blur elsewhere, but no Planner content may be blurred. */
+.planner-physical-surface,
+.planner-physical-surface *,
+.planner-physical-surface *::before,
+.planner-physical-surface *::after {
+  filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}

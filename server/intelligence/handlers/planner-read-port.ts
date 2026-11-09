@@ -16,10 +16,25 @@
 
 import type { PlannerWeek, PlannerDay, PlannerEntry } from "@shared/schema";
 
-/** A meal as the read binding surfaces it — name only, no recipe/business detail. */
+/**
+ * A meal as the read binding surfaces it.
+ *
+ * 2026-11-06 (owner) — `ingredients` added. A household asked the Companion
+ * "how much chicken is on my planner this week?" and it answered "you don't
+ * have any chicken meals" in the same breath as naming two — because this
+ * type carried `name` only, so there was nothing to check the name against.
+ * The data was never missing: `meals.ingredients` already holds lines like
+ * "1.2 kg Chicken" for exactly these meals (`meals:read`, a sibling
+ * capability, has included `ingredients` in its own context keep-list for
+ * other questions all along — see context-view.ts). Honest-gap discipline
+ * (Principle 6) means stating real data honestly, not withholding it and
+ * calling the withholding "honest" — the gap here was architectural, not a
+ * fact the household's own data didn't contain.
+ */
 export interface PlannerMealRef {
   readonly id: number;
   readonly name: string;
+  readonly ingredients: readonly string[];
 }
 
 /**
@@ -106,7 +121,7 @@ export async function createStoragePlannerReadPort(): Promise<PlannerReadPort> {
     getPlannerEntryById: (id) => storage.getPlannerEntryById(id),
     getMeal: async (id) => {
       const meal = await storage.getMeal(id);
-      return meal ? { id: meal.id, name: meal.name } : undefined;
+      return meal ? { id: meal.id, name: meal.name, ingredients: meal.ingredients ?? [] } : undefined;
     },
 
     // COMP4 — delegate to the canonical explanation owner. Every import here is

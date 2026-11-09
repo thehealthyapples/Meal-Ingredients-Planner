@@ -1,0 +1,74 @@
+{
+  "task": "SHOP4",
+  "repository": "G:\\The Healthy Apples\\Applications\\GitHub\\tha-integrated-dev-g-native-20261003",
+  "branch": "feat/integrated-dev",
+  "head": "3467abad4eca8d82ffc52756fee13874e389597f",
+  "dirtyEntryCount": 263,
+  "rollbackTag": "rollback/SHOP4-remove-shopping-redirects-20261105",
+  "files": [
+    {
+      "path": "client/src/App.tsx",
+      "sha256": "E675D6059B234DA6495F448C7EF65071DB5D5F539E30C702B8C2672B5CA391C7"
+    },
+    {
+      "path": "client/src/components/nav-bar.tsx",
+      "sha256": "D52670410150683AF53D0B35AE5558CA10A528F83281A67592ED8162B6051220"
+    },
+    {
+      "path": "client/src/components/conversation/FloatingAssistant.tsx",
+      "sha256": "07B7F2D4DF9FC7A44CA1E58BE1A9EF47290F3F77B170DC3F2FFBF96AAF9543AD"
+    },
+    {
+      "path": "server/lib/routing.ts",
+      "sha256": "24FE36F2F8F32514FCCB39DA1875DC4ACBBCEF2FAE1CCB185E87E5253CE1219C"
+    },
+    {
+      "path": "docs/product/inventory/product.yaml",
+      "sha256": "DF1649C659A9B8887B26F2F16664D335D3CE8FFC8B2471635FD685CF41983CB6"
+    },
+    {
+      "path": "docs/product/inventory/product.json",
+      "sha256": "3E486ACC6B9761E56ACC27279F62BA7F4E43832D2772DD482900BC4D5280A808"
+    },
+    {
+      "path": "docs/product/OWNERS.md",
+      "sha256": "54A558D1C6A591973EA6707F0A63FA586D991B425C4C620FE372F424711E7E6E"
+    },
+    {
+      "path": "docs/product/VISIBILITY.md",
+      "sha256": "A7D817A3A1AD9048D77B82B446F8CEA300BCA4ECA822FC8EB47E91F8ADB49F04"
+    },
+    {
+      "path": "docs/product/structure/routes/routes-map.md",
+      "sha256": "D8E26BC9CF4B98D8B6A43157C74D2D5CCDBDBE4448E4A6C1A00FA9A40B6D272A"
+    },
+    {
+      "path": "docs/product/structure/pages/page-shopping-workspace.md",
+      "sha256": "F4DDC8E05517568356E493C8EF3704C99572887F51813A8490D670FAFBDEB590"
+    },
+    {
+      "path": "docs/product/structure/pages/page-basket.md",
+      "sha256": "E50F2C008EA82AE6A7489623F06B7FA902836C6434BC74026206C8FE7FC5F481"
+    },
+    {
+      "path": "docs/product/structure/domains/dom-shopping.md",
+      "sha256": "17E823493B6238371BBB277058A75C3BAE5E204C5B6E2FEA064AF85959CBBA67"
+    },
+    {
+      "path": "docs/product/structure/journeys/jrn-shop.md",
+      "sha256": "4A7B921143D41E607E59B3D5DB0BE65C0694BDA72A7736F24E1BA5A26B09EA76"
+    },
+    {
+      "path": "docs/product/structure/pages/page-not-found.md",
+      "sha256": "810141CA71E69FBA544CCEA60D463ED43ADF1DC6EE8FD2BE3615FD25964EB365"
+    },
+    {
+      "path": "docs/investigations/ux/APP_ROUTE_INVENTORY_20261105.md",
+      "sha256": "0229BD06A8A69294A855E4256A3A75DBD65ED37766A92B70B2BC21D78BFDD5AE"
+    },
+    {
+      "path": ".engineering/session/CURRENT.md",
+      "sha256": "0AEF37B08307574CE088520DB3C2841C8DCFAFBF85390A725E507B2D888DF3D7"
+    }
+  ]
+}

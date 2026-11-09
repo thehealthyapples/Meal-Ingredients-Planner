@@ -144,7 +144,7 @@ section("§3 Next Steps render correctly");
   const view = buildCompanionCardView(MEAL_DISCOVERY)!;
   assert(view.nextSteps.length === 1, "result-level actions become Next Steps");
   assert(view.nextSteps[0].kind === "view-all", "View All is a Next Step, not a per-card action");
-  assert(view.nextSteps[0].href === "/meals", "View All navigates to the canonical domain landing page");
+  assert(view.nextSteps[0].href === "/cookbook/grid", "View All navigates to the canonical Cookbook Grid page");
   // Per-card actions are NOT duplicated into Next Steps.
   assert(!view.nextSteps.some(s => s.kind === "open"), "per-card (entity) actions do not leak into Next Steps");
   assert(!view.cards[0].actions.some(a => a.kind === "view-all"), "result-level View All does not leak onto cards");

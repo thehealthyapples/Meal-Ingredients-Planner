@@ -9,7 +9,7 @@
 //     no `WorkspaceHeader` of their own and were never changed by NAV1 — if the
 //     header is in these shots, it is the shell's, not the page's.
 //   • /admin is one of 13 admin pages in the same state.
-//   • /home, /cookbook and /pantry are rooms that DO draw their own header, and
+//   • /, /cookbook and /pantry are rooms that DO draw their own header, and
 //     are here to prove the opposite case: the shell's default stands down, and
 //     there is exactly one header on screen rather than two.
 //
@@ -38,7 +38,7 @@ const ROUTES = [
   { slug: "compare", path: "/compare", headerOwner: "none-before-nav1" },
   { slug: "import-recipe", path: "/import-recipe", headerOwner: "none-before-nav1" },
   { slug: "admin", path: "/admin", headerOwner: "none-before-nav1" },
-  { slug: "home", path: "/home", headerOwner: "page" },
+  { slug: "home", path: "/", headerOwner: "page" },
   { slug: "cookbook", path: "/cookbook", headerOwner: "page" },
   { slug: "pantry", path: "/pantry", headerOwner: "page" },
 ] as const;

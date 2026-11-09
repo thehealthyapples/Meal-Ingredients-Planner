@@ -1,0 +1,2028 @@
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useLocation } from "wouter";
+import { useQueryClient } from "@tanstack/react-query";
+import { subscribeStagingBus } from "@/lib/planner-staging-bus";
+import { AlertTriangle, Camera, Upload, X, Loader2, ScanLine, Sparkles, DollarSign, Shield, Fish, Beef, Salad, LayoutGrid, Plus, Calendar, CalendarDays, ScanSearch, Settings, Baby, PersonStanding, Wine, Search, Wand2, BookOpen, ChevronLeft, ChevronDown, ChefHat, CheckCircle2, ClipboardList, Lightbulb, Coffee, Sun, Moon, Cookie, GripVertical, Globe, Copy, Share2, Microscope, ShoppingCart, Snowflake, PackageCheck } from "lucide-react";
+import type { ShoppingHandoffData, FreezerDeduction } from "@/hooks/use-planner-operations";
+import { PlannerAnalyserContent } from "@/components/PlannerAnalyserContent";
+import { useToast } from "@/hooks/use-toast";
+import { DraggableProposalCard } from "@/components/PlannerDragDrop";
+import { Button } from "@/components/ui/button";
+import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import type { AssistantMode } from "@/contexts/PlannerContext";
+import { CreateMealContent } from "@/components/create-meal-modal";
+import { usePlannerWorkspaceContext } from "@/contexts/PlannerWorkspaceContext";
+import { TemplatesPanel } from "@/components/templates-panel";
+import type { User, Meal, FreezerMeal } from "@shared/schema";
+import { PlannerMealPickerPanel } from "@/components/PlannerMealPickerPanel";
+import type { EntryTarget, PlannerProductResult } from "@/components/PlannerMealPickerPanel";
+import { usePlannerMealSearch, type WebSearchRecipe } from "@/hooks/use-planner-meal-search";
+import { MealPreviewBubble, MealPreviewInline, useMealPreview } from "@/components/MealPreviewBubble";
+import { DayViewDrawer } from "@/components/day-view-drawer";
+import { PlannerBulkAssignPanel } from "@/components/PlannerBulkAssignPanel";
+import type { FullDay, FullWeek } from "@/lib/planner-types";
+
+// ── Reduced prop surface (Phase 3A) ──────────────────────────────────────────
+// Smart suggest controls and settings are now consumed from PlannerWorkspaceContext
+// reducing this interface from ~34 props to ~19 props.
+
+export interface PlaceholderItem {
+  entryId: number;
+  mealId: number;
+  mealName: string;
+  dayName: string;
+  slotLabel: string;
+  dayId: number;
+  mealType: string;
+  audience: string;
+  isDrink: boolean;
+  position: number;
+}
+
+export interface ResolveTarget {
+  mealName: string;
+  dayName: string;
+  slotLabel: string;
+  // Phase 3C: entry context for inline resolution
+  entryId: number;
+  dayId: number;
+  mealType: string;
+  audience: string;
+  isDrink: boolean;
+  position: number;
+}
+
+interface PlannerAssistantPanelProps {
+  mode: AssistantMode;
+  onClose: () => void;
+  reviewContent?: React.ReactNode;
+  user: User | null | undefined;
+  onScanFile: (file: File) => void;
+  onUploadClick: () => void;
+  scanLoading: boolean;
+  pickerTarget: EntryTarget | null;
+  meals: Meal[];
+  plannerMealIdSet: Set<number>;
+  categoryIdForSlot: Record<string, number | undefined>;
+  onPickerSelect: (mealId: number) => void;
+  addingEntry: boolean;
+  onAddProduct: (product: PlannerProductResult) => void;
+  freezerMeals?: FreezerMeal[];
+  dayViewDay: FullDay | null;
+  dayViewLabel: string;
+  getMeal: (id: number | null) => Meal | undefined;
+  onPlannerInvalidate: () => void;
+  fullPlanner: FullWeek[];
+  resolveTarget?: ResolveTarget;
+  onResolveAction?: (action: "build" | "scan" | "later") => void;
+  onResolveRecipe?: (mealId: number) => void;
+  isResolving?: boolean;
+  placeholderItems?: PlaceholderItem[];
+  onResolveRecipeFromReview?: (mealId: number, target: ResolveTarget) => void;
+  /** Phase 3F: carry item context from review into build/scan workflows */
+  onBuildFromReview?: (target: ResolveTarget) => void;
+  onScanFromReview?: (target: ResolveTarget) => void;
+  /** Retained for signature compatibility — no longer used internally */
+  onImportFromReview?: (target: ResolveTarget) => void;
+  /** Phase 5B: idle state controls */
+  onSetMode?: (mode: AssistantMode) => void;
+  onCreateIntent?: (name: string, mealType: string) => Promise<void>;
+  selectedDayLabel?: string | null;
+  /** Open planner-native recipe search (switches to manual mode) */
+  onBrowseRecipes?: () => void;
+  onBuildRecipe?: () => void;
+  onScanRecipe?: () => void;
+  /** Mobile drawer: open the assistant hub (idle state) on mobile */
+  mobileOpen?: boolean;
+  /** Mobile drawer: go back to the hub without closing the drawer */
+  onBackToHub?: () => void;
+  /** Phase A: proposal ID consumed by drag-to-planner; forwarded to IdlePanelContent for removal */
+  consumedProposalId?: string | null;
+  /** Phase 2: open share-plan dialog from hub Manage section */
+  onSharePlan?: () => void;
+  /** Phase 3: post-generation shopping handoff data */
+  shoppingHandoff?: ShoppingHandoffData | null;
+  /** Phase 3: number of distinct meals currently in shopping list (from basketMealIds) */
+  basketMealsCount?: number;
+  /** Embedded build-a-meal mode: prefill title (e.g. from placeholder resolve context) */
+  buildInitialTitle?: string;
+  /** Embedded build-a-meal mode: called after meal is successfully created */
+  onBuildCreated?: (mealId: number) => void;
+}
+
+// PX1-W2 (fnd-px-breakpoint-six-truths): the local useIsMobile copy is retired;
+// breakpoint truth has one owner.
+import { useIsMobile } from "@/hooks/use-adaptive-density";
+import { invalidateMealLibrary } from "@/hooks/use-meals";
+
+interface ScanContentProps {
+  onScanFile: (file: File) => void;
+  scanLoading: boolean;
+  onUploadClick: () => void;
+}
+
+function ScanContent({ onScanFile, scanLoading, onUploadClick }: ScanContentProps) {
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  return (
+    <div className="space-y-4" data-testid="panel-scan-idle">
+      <div className="flex items-start gap-2.5 bg-muted/40 rounded-lg px-3 py-3">
+        <ScanLine className="h-7 w-7 shrink-0 text-primary/60 mt-0.5" />
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Photograph your handwritten or printed meal plan and we'll extract the meals into your planner.
+        </p>
+      </div>
+
+      {/* Native camera capture — opens device camera directly */}
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="sr-only"
+        aria-hidden="true"
+        tabIndex={-1}
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) onScanFile(f); e.target.value = ""; }}
+        data-testid="input-panel-camera-capture"
+      />
+
+      <div className="space-y-2">
+        <Button variant="default"
+          className="w-full realm-banner-btn"
+          onClick={() => cameraInputRef.current?.click()}
+          disabled={scanLoading}
+          data-testid="button-assistant-take-photo"
+        >
+          {scanLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Camera className="h-4 w-4 mr-2" />}
+          Take Photo
+        </Button>
+        <Button
+          variant="outline"
+          className="w-full realm-banner-btn"
+          disabled={scanLoading}
+          onClick={onUploadClick}
+          data-testid="button-assistant-upload"
+        >
+          <Upload className="h-4 w-4 mr-2" />Upload Image
+        </Button>
+      </div>
+      {scanLoading && (
+        <p className="text-xs text-center text-muted-foreground animate-pulse pt-1">
+          Scanning your plan…
+        </p>
+      )}
+    </div>
+  );
+
+}
+
+// SmartContent now reads all controls from PlannerWorkspaceContext
+function SmartContent() {
+  const {
+    smartMealsPerDay, setSmartMealsPerDay,
+    smartCuisine, setSmartCuisine,
+    smartBudget, setSmartBudget,
+    smartMaxUPF, setSmartMaxUPF,
+    smartFishPerWeek, setSmartFishPerWeek,
+    smartRedMeatPerWeek, setSmartRedMeatPerWeek,
+    smartVegDays, setSmartVegDays,
+    smartLeftovers, setSmartLeftovers,
+    smartLoading,
+    onRunSmartSuggest,
+  } = usePlannerWorkspaceContext();
+
+  const [advancedOverridesOpen, setAdvancedOverridesOpen] = useState(false);
+
+  return (
+    <div className="space-y-4" data-testid="panel-smart-content">
+      <div className="flex items-start gap-2.5 bg-muted/40 rounded-lg px-3 py-3">
+        <Sparkles className="h-6 w-6 shrink-0 text-primary/60 mt-0.5" />
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Set preferences, we'll propose tailored household meals for this week.
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-muted-foreground">Meals per day</label>
+          <Select value={smartMealsPerDay} onValueChange={setSmartMealsPerDay}>
+            <SelectTrigger data-testid="select-meals-per-day"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1">1 meal</SelectItem>
+              <SelectItem value="2">2 meals</SelectItem>
+              <SelectItem value="3">3 meals</SelectItem>
+              <SelectItem value="4">3 meals + snack</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-muted-foreground">Cuisine preference</label>
+          <Select value={smartCuisine || "any"} onValueChange={v => setSmartCuisine(v === "any" ? "" : v)}>
+            <SelectTrigger data-testid="select-cuisine"><SelectValue placeholder="Any" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="any">Any cuisine</SelectItem>
+              <SelectItem value="british">British</SelectItem>
+              <SelectItem value="italian">Italian</SelectItem>
+              <SelectItem value="mexican">Mexican</SelectItem>
+              <SelectItem value="indian">Indian</SelectItem>
+              <SelectItem value="chinese">Chinese</SelectItem>
+              <SelectItem value="japanese">Japanese</SelectItem>
+              <SelectItem value="thai">Thai</SelectItem>
+              <SelectItem value="mediterranean">Mediterranean</SelectItem>
+              <SelectItem value="middle-eastern">Middle Eastern</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+              <DollarSign className="h-3 w-3" />Budget (£)
+            </label>
+            <Input
+              placeholder="e.g. 80"
+              value={smartBudget}
+              onChange={e => setSmartBudget(e.target.value)}
+              data-testid="input-smart-budget"
+              className="h-8 text-xs"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+              <Shield className="h-3 w-3" />Max UPF %
+            </label>
+            <Input
+              placeholder="e.g. 30"
+              value={smartMaxUPF}
+              onChange={e => setSmartMaxUPF(e.target.value)}
+              data-testid="input-smart-upf"
+              className="h-8 text-xs"
+            />
+          </div>
+        </div>
+
+        <div data-testid="section-advanced-overrides">
+          <button
+            className="w-full flex items-start justify-between py-2 text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
+            onClick={() => setAdvancedOverridesOpen(v => !v)}
+            aria-expanded={advancedOverridesOpen}
+            data-testid="button-advanced-overrides-toggle"
+          >
+            <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider">
+              Smart Plan Overrides
+            </span>
+            <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/40 mt-0.5 transition-transform duration-150 ${advancedOverridesOpen ? "" : "-rotate-90"}`} />
+          </button>
+          <div className="grid transition-[grid-template-rows] duration-200 ease-out" style={{ gridTemplateRows: advancedOverridesOpen ? "1fr" : "0fr" }}>
+            <div className="overflow-hidden">
+              <div className="space-y-3 pb-2">
+                <p className="text-[10px] text-muted-foreground/60 leading-relaxed">
+                  Temporary Smart Plan override of your Profile.
+                </p>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                      <Fish className="h-3 w-3" />Fish meals per week
+                    </label>
+                    <Select value={smartFishPerWeek ?? "use-profile"} onValueChange={v => setSmartFishPerWeek(v === "use-profile" ? null : v)}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="use-profile">Use Profile</SelectItem>
+                        {[0,1,2,3,4,5].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                      <Beef className="h-3 w-3" />Red meat meals per week
+                    </label>
+                    <Select value={smartRedMeatPerWeek ?? "use-profile"} onValueChange={v => setSmartRedMeatPerWeek(v === "use-profile" ? null : v)}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="use-profile">Use Profile</SelectItem>
+                        {[0,1,2,3,4,5].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                      <Salad className="h-3 w-3 text-green-500" />Vegetarian days
+                    </label>
+                    <Select value={smartVegDays ?? "use-profile"} onValueChange={v => setSmartVegDays(v === "use-profile" ? null : v)} data-testid="select-smart-veg">
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="use-profile">Use Profile</SelectItem>
+                        {[0,1,2,3,4,5,6,7].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 pt-1">
+          <Switch
+            id="panel-smart-leftovers"
+            checked={smartLeftovers}
+            onCheckedChange={c => setSmartLeftovers(!!c)}
+            data-testid="toggle-smart-leftovers"
+          />
+          <label htmlFor="panel-smart-leftovers" className="text-xs cursor-pointer">Include leftovers</label>
+        </div>
+      </div>
+
+      <Button variant="default"
+        className="w-full realm-banner-btn"
+        onClick={onRunSmartSuggest}
+        disabled={smartLoading}
+        data-testid="button-run-smart-suggest"
+      >
+        {smartLoading
+          ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          : <Sparkles className="h-4 w-4 mr-2" />}
+        {smartLoading ? "Planning your week…" : "Propose My Plan"}
+      </Button>
+    </div>
+  );
+}
+
+// PlannerSettingsContent reads from PlannerWorkspaceContext
+function PlannerSettingsContent() {
+  const { plannerSettings, toggleSetting, settingsUpdating } = usePlannerWorkspaceContext();
+
+  return (
+    <div className="space-y-6 py-2" data-testid="panel-settings-content">
+      <div className="flex items-start gap-2.5 bg-muted/40 rounded-lg px-3 py-3">
+        <Settings className="h-5 w-5 shrink-0 text-primary/60 mt-0.5" />
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Customise which rows appear in your planner grid.
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-1.5">
+              <Baby className="h-3.5 w-3.5 text-pink-500" />
+              <span className="text-sm font-medium" data-testid="label-enable-baby-meals">Baby Meals</span>
+            </div>
+            <p className="text-xs text-muted-foreground">Enable baby meal row in planner</p>
+          </div>
+          <Switch
+            checked={plannerSettings?.enableBabyMeals ?? false}
+            onCheckedChange={(v) => toggleSetting("enableBabyMeals", v)}
+            disabled={settingsUpdating}
+            data-testid="switch-enable-baby-meals"
+          />
+        </div>
+
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-1.5">
+              <PersonStanding className="h-3.5 w-3.5 text-sky-500" />
+              <span className="text-sm font-medium" data-testid="label-enable-child-meals">Child Meals</span>
+            </div>
+            <p className="text-xs text-muted-foreground">Enable kids meal row in planner</p>
+          </div>
+          <Switch
+            checked={plannerSettings?.enableChildMeals ?? false}
+            onCheckedChange={(v) => toggleSetting("enableChildMeals", v)}
+            disabled={settingsUpdating}
+            data-testid="switch-enable-child-meals"
+          />
+        </div>
+
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-1.5">
+              <Wine className="h-3.5 w-3.5 text-purple-400" />
+              <span className="text-sm font-medium" data-testid="label-enable-drinks">Drinks</span>
+            </div>
+            <p className="text-xs text-muted-foreground">Enable drinks row in planner</p>
+          </div>
+          <Switch
+            checked={plannerSettings?.enableDrinks ?? false}
+            onCheckedChange={(v) => toggleSetting("enableDrinks", v)}
+            disabled={settingsUpdating}
+            data-testid="switch-enable-drinks"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface ResolveSearchContentProps {
+  mealName: string;
+  meals: Meal[];
+  onSelectRecipe: (mealId: number) => void;
+  onBack: () => void;
+  isResolving: boolean;
+}
+
+function ResolveSearchContent({ mealName, meals, onSelectRecipe, onBack, isResolving }: ResolveSearchContentProps) {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const [search, setSearch] = useState(mealName);
+  const [importingWebId, setImportingWebId] = useState<string | null>(null);
+  // PX1-W2 (fnd-px-breakpoint-six-truths): was a one-shot innerWidth read that
+  // never updated on rotation; now the canonical reactive hook.
+  const isMobileResolve = useIsMobile();
+
+  const {
+    previewItem: resolvePreviewItem,
+    previewAnchor: resolvePreviewAnchor,
+    mobilePreviewId: resolveMobileId,
+    setMobilePreviewId: setResolveMobileId,
+    openPreview: openResolvePreview,
+    scheduleClose: scheduleResolveClose,
+    cancelClose: cancelResolveClose,
+    closePreview: closeResolvePreview,
+  } = useMealPreview();
+
+  useEffect(() => {
+    if (!resolvePreviewItem && !resolveMobileId) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { closeResolvePreview(); setResolveMobileId(null); }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [resolvePreviewItem, resolveMobileId, closeResolvePreview, setResolveMobileId]);
+
+  // Shared hook owns: filteredMeals (now with scoreMealSearch), web fetch, includeWeb persistence
+  const { filteredMeals, webResults, webLoading, includeWeb, setIncludeWeb } = usePlannerMealSearch({
+    meals,
+    query: search,
+    excludePlaceholders: true,
+    excludeReadyMeals: true,
+    excludeDrinks: true,
+    limit: 50,
+    enableWebSearch: true,
+  });
+
+  const handleImportWebRecipe = async (recipe: WebSearchRecipe) => {
+    if (importingWebId) return;
+    setImportingWebId(recipe.id);
+    try {
+      const res = await fetch("/api/meals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          name: recipe.name,
+          ingredients: recipe.ingredients ?? [],
+          instructions: recipe.instructions ?? [],
+          imageUrl: recipe.image || null,
+          sourceUrl: recipe.url || null,
+          servings: 1,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to save recipe");
+      const meal = await res.json();
+      invalidateMealLibrary(qc);
+      onSelectRecipe(meal.id);
+    } catch {
+      toast({ title: "Could not import web recipe", variant: "destructive" });
+    } finally {
+      setImportingWebId(null);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-3" data-testid="panel-resolve-search">
+      <button
+        onClick={onBack}
+        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors self-start"
+        data-testid="button-resolve-search-back"
+      >
+        <ChevronLeft className="h-3.5 w-3.5" />
+        Back
+      </button>
+
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1 min-w-0">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Search your recipes…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full pl-9 pr-3 h-8 text-sm rounded-md border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-0"
+            autoFocus
+            data-testid="input-resolve-recipe-search"
+          />
+        </div>
+        <button
+          onClick={() => setIncludeWeb(!includeWeb)}
+          className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border transition-colors shrink-0 whitespace-nowrap ${
+            includeWeb
+              ? "bg-primary text-primary-foreground border-primary"
+              : "border-border/60 bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
+          }`}
+          data-testid="button-resolve-include-web"
+          title={includeWeb ? "Web recipes active — click to disable" : "Search trusted web recipe sources"}
+        >
+          <Globe className="h-3 w-3 shrink-0" />
+          {includeWeb ? "Web on" : "Web recipes"}
+        </button>
+      </div>
+
+      <div className="overflow-y-auto space-y-0.5" data-testid="list-resolve-recipes">
+        {filteredMeals.length === 0 && !includeWeb ? (
+          <div className="text-center py-8">
+            <ChefHat className="h-8 w-8 mx-auto mb-2 text-muted-foreground/30" />
+            <p className="text-sm text-muted-foreground">
+              {search.trim() ? "No recipes found" : "No recipes in your cookbook yet"}
+            </p>
+            {search.trim() && (
+              <button
+                className="text-xs text-primary mt-1.5 hover:underline"
+                onClick={() => setSearch("")}
+                data-testid="button-resolve-clear-search"
+              >
+                Clear search
+              </button>
+            )}
+          </div>
+        ) : (
+          filteredMeals.map(meal => (
+            <div key={meal.id}>
+              <button
+                className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-accent/40 text-left transition-colors disabled:opacity-50"
+                onClick={() => {
+                  if (isMobileResolve) {
+                    const pid = `resolve-meal-${meal.id}`;
+                    setResolveMobileId(resolveMobileId === pid ? null : pid);
+                    return;
+                  }
+                  onSelectRecipe(meal.id);
+                }}
+                onMouseEnter={(e) => !isMobileResolve && openResolvePreview({ kind: "meal", meal }, e.currentTarget)}
+                onMouseLeave={() => !isMobileResolve && scheduleResolveClose()}
+                onFocus={(e) => !isMobileResolve && openResolvePreview({ kind: "meal", meal }, e.currentTarget)}
+                onBlur={() => !isMobileResolve && scheduleResolveClose()}
+                disabled={isResolving || !!importingWebId}
+                data-testid={`button-resolve-select-${meal.id}`}
+              >
+                {meal.imageUrl ? (
+                  <img src={meal.imageUrl} alt={meal.name} className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
+                ) : (
+                  <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
+                    <ChefHat className="h-4 w-4 text-muted-foreground/40" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate text-foreground">{meal.name}</p>
+                  {meal.servings > 1 && (
+                    <p className="text-xs text-muted-foreground">{meal.servings} servings</p>
+                  )}
+                </div>
+                {isResolving && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />}
+              </button>
+              {isMobileResolve && resolveMobileId === `resolve-meal-${meal.id}` && (
+                <MealPreviewInline
+                  item={{ kind: "meal", meal }}
+                  onAction={() => { setResolveMobileId(null); onSelectRecipe(meal.id); }}
+                  actionLabel="Use this recipe"
+                  actionDisabled={isResolving}
+                  onDismiss={() => setResolveMobileId(null)}
+                />
+              )}
+            </div>
+          ))
+        )}
+
+        {/* Web results — appear below cookbook results, never replace them */}
+        {includeWeb && search.trim().length >= 2 && (webLoading || webResults.length > 0) && (
+          <div className="mt-1" data-testid="section-resolve-web-results">
+            <div className="flex items-center gap-2 py-1.5">
+              <div className="h-px flex-1 bg-border/50" />
+              <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wide flex items-center gap-1">
+                <Globe className="h-3 w-3" />
+                From the web
+              </span>
+              {webLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground/60" />}
+              <div className="h-px flex-1 bg-border/50" />
+            </div>
+            {webResults.map(recipe => (
+              <div key={recipe.id}>
+                <button
+                  className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-muted/40 text-left disabled:opacity-50"
+                  onClick={() => {
+                    if (isMobileResolve) {
+                      const pid = `resolve-web-${recipe.id}`;
+                      setResolveMobileId(resolveMobileId === pid ? null : pid);
+                      return;
+                    }
+                    handleImportWebRecipe(recipe);
+                  }}
+                  onMouseEnter={(e) => !isMobileResolve && openResolvePreview({ kind: "web", recipe }, e.currentTarget)}
+                  onMouseLeave={() => !isMobileResolve && scheduleResolveClose()}
+                  onFocus={(e) => !isMobileResolve && openResolvePreview({ kind: "web", recipe }, e.currentTarget)}
+                  onBlur={() => !isMobileResolve && scheduleResolveClose()}
+                  disabled={isResolving || !!importingWebId}
+                  data-testid={`button-resolve-web-${recipe.id}`}
+                >
+                  {recipe.image ? (
+                    <img src={recipe.image} alt={recipe.name} className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
+                  ) : (
+                    <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
+                      <Globe className="h-4 w-4 text-muted-foreground/40" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{recipe.name}</p>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <span className="text-[10px] text-orange-600 dark:text-orange-400 border border-orange-300/60 dark:border-orange-600/40 px-1 rounded">Web</span>
+                      {recipe.source && (
+                        <span className="text-[10px] text-muted-foreground/60">{recipe.source}</span>
+                      )}
+                    </div>
+                  </div>
+                  {importingWebId === recipe.id
+                    ? <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground shrink-0" />
+                    : null}
+                </button>
+                {isMobileResolve && resolveMobileId === `resolve-web-${recipe.id}` && (
+                  <MealPreviewInline
+                    item={{ kind: "web", recipe }}
+                    onAction={() => { setResolveMobileId(null); handleImportWebRecipe(recipe); }}
+                    actionLabel="Import & use"
+                    actionDisabled={isResolving || !!importingWebId}
+                    onDismiss={() => setResolveMobileId(null)}
+                  />
+                )}
+              </div>
+            ))}
+            {!webLoading && webResults.length === 0 && search.trim().length >= 2 && (
+              <p className="text-center text-[11px] text-muted-foreground/60 py-3">No web recipes found</p>
+            )}
+          </div>
+        )}
+        {!includeWeb && filteredMeals.length < 3 && search.trim().length >= 2 && (
+          <p className="text-center text-[11px] text-muted-foreground/60 pt-2">
+            Can't find it in your cookbook?{" "}
+            <button
+              onClick={() => setIncludeWeb(true)}
+              className="underline hover:text-foreground/70 transition-colors"
+              data-testid="button-resolve-include-web-nudge"
+            >
+              Turn on web recipes
+            </button>{" "}
+            to search trusted recipe sources.
+          </p>
+        )}
+      </div>
+
+      {/* Desktop floating preview bubble */}
+      {!isMobileResolve && resolvePreviewItem && resolvePreviewAnchor && (
+        <MealPreviewBubble
+          item={resolvePreviewItem}
+          anchor={resolvePreviewAnchor}
+          onMouseEnter={cancelResolveClose}
+          onMouseLeave={scheduleResolveClose}
+        />
+      )}
+    </div>
+  );
+}
+
+interface ResolveContentProps {
+  mealName: string;
+  dayName: string;
+  slotLabel: string;
+  onSearch: () => void;
+  onAction: (action: "build" | "scan" | "later") => void;
+}
+
+function ResolveContent({ mealName, dayName, slotLabel, onSearch, onAction }: ResolveContentProps) {
+  return (
+    <div className="space-y-4" data-testid="panel-resolve-content">
+      <div className="space-y-0.5">
+        <p className="text-xs text-muted-foreground">{dayName} · {slotLabel}</p>
+        <h3 className="text-sm font-semibold text-foreground leading-snug">{mealName}</h3>
+      </div>
+
+      <div className="flex items-start gap-2.5 bg-muted/40 rounded-lg px-3 py-3">
+        <BookOpen className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" />
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          This meal is planned, but no full recipe has been linked yet.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <button
+          className="w-full flex items-center gap-2.5 rounded-lg border border-border realm-banner-btn px-3 py-2.5 text-sm transition-colors text-left"
+          onClick={onSearch}
+          data-testid="button-resolve-search"
+        >
+          <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+          Search cookbook
+        </button>
+        <button
+          className="w-full flex items-center gap-2.5 rounded-lg border border-border realm-banner-btn px-3 py-2.5 text-sm transition-colors text-left"
+          onClick={() => onAction("build")}
+          data-testid="button-resolve-build"
+        >
+          <Wand2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+          Build recipe
+        </button>
+        <button
+          className="w-full flex items-center gap-2.5 rounded-lg border border-border realm-banner-btn px-3 py-2.5 text-sm transition-colors text-left"
+          onClick={() => onAction("scan")}
+          data-testid="button-resolve-scan"
+        >
+          <Camera className="h-4 w-4 shrink-0 text-muted-foreground" />
+          Scan recipe
+        </button>
+        <button
+          className="w-full flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground transition-colors text-left"
+          onClick={() => onAction("later")}
+          data-testid="button-resolve-later"
+        >
+          <CalendarDays className="h-4 w-4 shrink-0" />
+          Add later / keep as planned
+        </button>
+      </div>
+    </div>
+  );
+}
+
+interface PlaceholderReviewContentProps {
+  placeholderItems: PlaceholderItem[];
+  onSearchRecipe: (item: PlaceholderItem) => void;
+  onBuildRecipe: (item: PlaceholderItem) => void;
+  onScanRecipe: (item: PlaceholderItem) => void;
+  onImportRecipe?: (item: PlaceholderItem) => void;
+  isResolving: boolean;
+}
+
+function PlaceholderReviewContent({
+  placeholderItems,
+  onSearchRecipe,
+  onBuildRecipe,
+  onScanRecipe,
+  onImportRecipe,
+  isResolving,
+}: PlaceholderReviewContentProps) {
+  if (placeholderItems.length === 0) {
+    return (
+      <div className="flex flex-col items-center py-10 gap-2" data-testid="panel-review-empty">
+        <CheckCircle2 className="h-8 w-8 text-green-500/70" />
+        <p className="text-sm font-medium text-foreground">All meals linked!</p>
+        <p className="text-xs text-muted-foreground text-center">Every planned meal has a recipe.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-0.5" data-testid="panel-placeholder-review">
+      <p className="text-xs text-muted-foreground pb-2">
+        {placeholderItems.length} unlinked meal{placeholderItems.length !== 1 ? "s" : ""}
+      </p>
+      {placeholderItems.map((item) => (
+        <div
+          key={item.entryId}
+          className="flex items-start gap-2 py-2 px-2 rounded-lg hover:bg-muted/40 border-b border-border/40 last:border-0 transition-colors group"
+          data-testid={`review-item-${item.entryId}`}
+        >
+          <div className="flex-1 min-w-0 pt-0.5">
+            <p className="text-sm font-medium truncate text-foreground leading-snug">{item.mealName}</p>
+            <p className="text-[11px] text-muted-foreground leading-tight">{item.dayName} · {item.slotLabel}</p>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              className="text-[10px] px-1.5 py-0.5 rounded border border-border hover:border-primary hover:text-primary transition-colors disabled:opacity-40"
+              onClick={() => onSearchRecipe(item)}
+              disabled={isResolving}
+              title="Search cookbook"
+              data-testid={`button-review-search-${item.entryId}`}
+            >
+              Search
+            </button>
+            <button
+              className="text-[10px] px-1.5 py-0.5 rounded border border-border hover:border-primary hover:text-primary transition-colors disabled:opacity-40"
+              onClick={() => onBuildRecipe(item)}
+              disabled={isResolving}
+              title="Build recipe"
+              data-testid={`button-review-build-${item.entryId}`}
+            >
+              Build
+            </button>
+            <button
+              className="p-1 text-muted-foreground/40 hover:text-muted-foreground transition-colors disabled:opacity-40"
+              onClick={() => onScanRecipe(item)}
+              disabled={isResolving}
+              title="Scan recipe"
+              data-testid={`button-review-scan-${item.entryId}`}
+            >
+              <Camera className="h-3 w-3" />
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const INTENT_MEAL_TYPES = [
+  { key: "breakfast", label: "Breakfast", icon: Coffee },
+  { key: "lunch",     label: "Lunch",     icon: Sun },
+  { key: "dinner",    label: "Dinner",    icon: Moon },
+  { key: "snacks",    label: "Snack",     icon: Cookie },
+] as const;
+
+// ── Workspace Phase A+2: section open/close persistence ──────────────────────
+const WORKSPACE_SECTIONS_KEY = "planner-workspace-sections";
+interface WorkspaceSections { plan: boolean; addMeals: boolean; manage: boolean; continuePlanning: boolean; }
+function loadWorkspaceSections(): WorkspaceSections {
+  try {
+    const raw = sessionStorage.getItem(WORKSPACE_SECTIONS_KEY);
+    if (!raw) return { plan: true, addMeals: true, manage: true, continuePlanning: true };
+    const p = JSON.parse(raw) as Record<string, unknown>;
+    return {
+      plan: typeof p.plan === "boolean" ? p.plan : true,
+      addMeals: typeof p.addMeals === "boolean" ? p.addMeals : true,
+      manage: typeof p.manage === "boolean" ? p.manage : true,
+      continuePlanning: typeof p.continuePlanning === "boolean" ? p.continuePlanning : true,
+    };
+  } catch { return { plan: true, addMeals: true, manage: true, continuePlanning: true }; }
+}
+function saveWorkspaceSections(s: WorkspaceSections): void {
+  try { sessionStorage.setItem(WORKSPACE_SECTIONS_KEY, JSON.stringify(s)); } catch {}
+}
+
+interface IdlePanelContentProps {
+  onSetMode: (mode: AssistantMode) => void;
+  onCreateIntent?: (name: string, mealType: string) => Promise<void>;
+  selectedDayLabel?: string | null;
+  /** Phase 5F: unresolved placeholder count for Continue Planning section */
+  placeholderCount?: number;
+  /** Open planner-native recipe search (manual mode with web toggle) */
+  onBrowseRecipes?: () => void;
+  /** Phase 5F: open create-recipe modal from idle state */
+  onBuildRecipe?: () => void;
+  /** Phase 5F: navigate to /meals with scan mode open */
+  onScanRecipe?: () => void;
+  /** Phase A: proposal ID consumed by drag-to-planner; triggers removal from tray */
+  consumedProposalId?: string | null;
+  /** Phase 2: open share-plan dialog from hub */
+  onSharePlan?: () => void;
+  /** Phase 3: number of distinct meals in shopping list for summary section */
+  basketMealsCount?: number;
+  /** Mobile drawer: start sections collapsed, hide chevrons on desktop */
+  isMobile?: boolean;
+}
+
+interface ProposalItem {
+  id: string;
+  name: string;
+  mealType: string;
+}
+
+let _proposalSeq = 0;
+function nextProposalId() { return `prop-${++_proposalSeq}`; }
+
+// ── Phase A: Proposal tray session persistence ────────────────────────────────
+
+const PROPOSAL_TRAY_KEY = "planner-proposal-tray";
+
+interface StoredProposal {
+  name: string;
+  mealType: string;
+}
+
+function saveTraySession(proposals: ProposalItem[]): void {
+  try {
+    if (proposals.length === 0) {
+      sessionStorage.removeItem(PROPOSAL_TRAY_KEY);
+    } else {
+      const stored: StoredProposal[] = proposals.map(p => ({ name: p.name, mealType: p.mealType }));
+      sessionStorage.setItem(PROPOSAL_TRAY_KEY, JSON.stringify(stored));
+    }
+  } catch {}
+}
+
+function loadTraySession(): ProposalItem[] | null {
+  try {
+    const raw = sessionStorage.getItem(PROPOSAL_TRAY_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) {
+      sessionStorage.removeItem(PROPOSAL_TRAY_KEY);
+      return null;
+    }
+    const valid = (parsed as unknown[]).filter(
+      (s): s is StoredProposal =>
+        typeof s === "object" && s !== null &&
+        typeof (s as StoredProposal).name === "string" &&
+        (s as StoredProposal).name.trim().length > 0 &&
+        typeof (s as StoredProposal).mealType === "string"
+    );
+    if (valid.length === 0) {
+      sessionStorage.removeItem(PROPOSAL_TRAY_KEY);
+      return null;
+    }
+    return valid.map(s => ({ id: nextProposalId(), name: s.name.trim(), mealType: s.mealType }));
+  } catch {
+    try { sessionStorage.removeItem(PROPOSAL_TRAY_KEY); } catch {}
+    return null;
+  }
+}
+
+// Tracks whether the restore banner has fired this page load. Prevents the
+// banner re-appearing on every mode switch (which unmounts/remounts IdlePanelContent).
+let _traySessionRestored = false;
+
+function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeholderCount = 0, onBrowseRecipes, onBuildRecipe, onScanRecipe, consumedProposalId, onSharePlan, basketMealsCount = 0, isMobile = false }: IdlePanelContentProps) {
+  const [, navigate] = useLocation();
+  const [intentOpen, setIntentOpen] = useState(false);
+  const [intentName, setIntentName] = useState("");
+  const [intentMealType, setIntentMealType] = useState<string>("dinner");
+  const [intentSaving, setIntentSaving] = useState(false);
+  const [shoppingOpen, setShoppingOpen] = useState(!isMobile);
+
+  const [proposals, setProposals] = useState<ProposalItem[]>([]);
+  const [proposalName, setProposalName] = useState("");
+  const [proposalMealType, setProposalMealType] = useState<string>("dinner");
+  const [trayRestored, setTrayRestored] = useState(false);
+
+  // Phase A+2: persist section open/close state across mode switches (desktop only)
+  const [planWeekOpen, setPlanWeekOpen] = useState(() => isMobile ? false : loadWorkspaceSections().plan);
+  const [addMealsOpen, setAddMealsOpen] = useState(() => isMobile ? false : loadWorkspaceSections().addMeals);
+  const [manageOpen, setManageOpen] = useState(() => isMobile ? false : loadWorkspaceSections().manage);
+  const hasContinueItems = proposals.length > 0 || placeholderCount > 0;
+  const [continuePlanningOpen, setContinuePlanningOpen] = useState(() => isMobile ? false : loadWorkspaceSections().continuePlanning);
+
+  // Persist section state on desktop only — don't pollute saved state with mobile collapsed state
+  useEffect(() => {
+    if (!isMobile) saveWorkspaceSections({ plan: planWeekOpen, addMeals: addMealsOpen, manage: manageOpen, continuePlanning: continuePlanningOpen });
+  }, [planWeekOpen, addMealsOpen, manageOpen, continuePlanningOpen, isMobile]);
+
+  // Expand all sections when viewport crosses back to desktop
+  useEffect(() => {
+    if (!isMobile) {
+      setPlanWeekOpen(true);
+      setAddMealsOpen(true);
+      setManageOpen(true);
+      setContinuePlanningOpen(true);
+      setShoppingOpen(true);
+    }
+  }, [isMobile]);
+
+  // Phase A: restore from session on mount. Banner only fires on first mount per
+  // page load (_traySessionRestored flag) — silent on subsequent mode-switch remounts.
+  useEffect(() => {
+    const restored = loadTraySession();
+    if (restored) {
+      setProposals(restored);
+      if (!_traySessionRestored) setTrayRestored(true);
+    }
+    _traySessionRestored = true;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Phase A: persist to session whenever proposals change.
+  useEffect(() => {
+    saveTraySession(proposals);
+  }, [proposals]);
+
+  // Phase A: remove a proposal that was dragged onto the planner grid.
+  useEffect(() => {
+    if (!consumedProposalId) return;
+    setProposals(prev => prev.filter(p => p.id !== consumedProposalId));
+  }, [consumedProposalId]);
+
+  // Receive approved intents from scan-review (emitted via staging bus on individual accept).
+  useEffect(() => {
+    return subscribeStagingBus((name, mealType) => {
+      const trimmed = name.trim();
+      if (!trimmed) return;
+      setProposals(prev => {
+        if (prev.some(p => p.name.toLowerCase() === trimmed.toLowerCase() && p.mealType === mealType)) return prev;
+        return [...prev, { id: nextProposalId(), name: trimmed, mealType }];
+      });
+    });
+  }, []);
+
+  const handleSubmitIntent = async () => {
+    if (!intentName.trim() || !onCreateIntent) return;
+    setIntentSaving(true);
+    try {
+      await onCreateIntent(intentName.trim(), intentMealType);
+      setIntentName("");
+      setIntentOpen(false);
+    } finally {
+      setIntentSaving(false);
+    }
+  };
+
+  const addProposal = () => {
+    const trimmed = proposalName.trim();
+    if (!trimmed) return;
+    setProposals(prev => [...prev, { id: nextProposalId(), name: trimmed, mealType: proposalMealType }]);
+    setProposalName("");
+  };
+
+  const removeProposal = (id: string) => {
+    setProposals(prev => prev.filter(p => p.id !== id));
+  };
+
+  return (
+    <div data-testid="panel-assistant-idle">
+
+      {/* ── Section A: Plan ── */}
+      <div data-testid="section-plan-week">
+        <button
+          className="w-full flex items-center justify-between py-2.5 text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
+          onClick={() => setPlanWeekOpen(v => !v)}
+          aria-expanded={planWeekOpen}
+          data-testid="button-section-plan-week-toggle"
+        >
+          <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider" data-testid="section-plan-week-label">
+            Plan
+          </span>
+          <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/40 transition-transform duration-150 ${planWeekOpen ? "" : "-rotate-90"}`} />
+        </button>
+        <div className="grid transition-[grid-template-rows] duration-200 ease-out" style={{ gridTemplateRows: planWeekOpen ? "1fr" : "0fr" }}>
+          <div className="overflow-hidden">
+            <div className="flex gap-2 pb-2" data-testid="section-plan-week-body">
+              <button
+                className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border realm-banner-btn px-1.5 py-2.5 transition-colors"
+                onClick={() => onSetMode("smart")}
+                data-testid="button-idle-smart"
+              >
+                <Sparkles className="h-3.5 w-3.5 text-primary/70" />
+                <span className="text-[10px] font-medium leading-none">Smart</span>
+              </button>
+              <button
+                className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border realm-banner-btn px-1.5 py-2.5 transition-colors"
+                onClick={() => onSetMode("scan")}
+                data-testid="button-idle-scan"
+              >
+                <Camera className="h-3.5 w-3.5 text-primary/70" />
+                <span className="text-[10px] font-medium leading-none">Scan</span>
+              </button>
+              <button
+                className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border realm-banner-btn px-1.5 py-2.5 transition-colors"
+                onClick={() => onSetMode("templates")}
+                data-testid="button-idle-templates"
+              >
+                <LayoutGrid className="h-3.5 w-3.5 text-primary/70" />
+                <span className="text-[10px] font-medium leading-none">Templates</span>
+              </button>
+              <button
+                className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border realm-banner-btn px-1.5 py-2.5 transition-colors"
+                onClick={() => onSetMode("analyser")}
+                data-testid="button-idle-analyser"
+              >
+                <Microscope className="h-3.5 w-3.5 text-primary/70" />
+                <span className="text-[10px] font-medium leading-none">Analyse</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="w-full h-px bg-border/50" />
+
+      {/* ── Section B: Add & Import ── */}
+      <div data-testid="section-add-meals">
+        <button
+          className="w-full flex items-center justify-between py-2.5 text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
+          onClick={() => setAddMealsOpen(v => !v)}
+          aria-expanded={addMealsOpen}
+          data-testid="button-section-add-meals-toggle"
+        >
+          <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider" data-testid="section-add-meals-label">
+            Add & Import
+          </span>
+          <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/40 transition-transform duration-150 ${addMealsOpen ? "" : "-rotate-90"}`} />
+        </button>
+        <div className="grid transition-[grid-template-rows] duration-200 ease-out" style={{ gridTemplateRows: addMealsOpen ? "1fr" : "0fr" }}>
+          <div className="overflow-hidden">
+          <div className="pb-1.5" data-testid="section-add-meals-body">
+            {/* Compact 4-across grid — mirrors the Plan section above */}
+            <div className="flex gap-2 mb-2" data-testid="section-add-meals-grid">
+              {onCreateIntent && (
+                <button
+                  className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border/60 realm-banner-btn px-1.5 py-2.5 transition-colors"
+                  onClick={() => setIntentOpen(v => !v)}
+                  data-testid="button-idle-add-intent"
+                >
+                  <Plus className="h-3.5 w-3.5 text-primary/70" />
+                  <span className="text-[10px] font-medium leading-none">Idea</span>
+                </button>
+              )}
+              {onBrowseRecipes && (
+                <button
+                  className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border/60 realm-banner-btn px-1.5 py-2.5 transition-colors"
+                  onClick={onBrowseRecipes}
+                  data-testid="button-idle-browse-recipes"
+                >
+                  <Search className="h-3.5 w-3.5 text-primary/70" />
+                  <span className="text-[10px] font-medium leading-none">Search</span>
+                </button>
+              )}
+              {onBuildRecipe && (
+                <button
+                  className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border/60 realm-banner-btn px-1.5 py-2.5 transition-colors"
+                  onClick={onBuildRecipe}
+                  data-testid="button-idle-build-recipe"
+                >
+                  <Wand2 className="h-3.5 w-3.5 text-primary/70" />
+                  <span className="text-[10px] font-medium leading-none">Build</span>
+                </button>
+              )}
+              {onScanRecipe && (
+                <button
+                  className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border/60 realm-banner-btn px-1.5 py-2.5 transition-colors"
+                  onClick={onScanRecipe}
+                  data-testid="button-idle-scan-recipe"
+                >
+                  <Camera className="h-3.5 w-3.5 text-primary/70" />
+                  <span className="text-[10px] font-medium leading-none">Scan</span>
+                </button>
+              )}
+            </div>
+
+            {intentOpen && onCreateIntent && (
+              <div className="space-y-2 rounded-lg border border-border bg-muted/20 px-3 py-2.5 mb-2" data-testid="panel-intent-form">
+                {selectedDayLabel ? (
+                  <p className="text-xs text-muted-foreground">Adding to <span className="font-medium text-foreground">{selectedDayLabel}</span></p>
+                ) : (
+                  <p className="text-xs text-amber-600 dark:text-amber-400">Select a day first by clicking a day header in the grid.</p>
+                )}
+                <input
+                  type="text"
+                  placeholder="e.g. Pasta carbonara"
+                  value={intentName}
+                  onChange={e => setIntentName(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") handleSubmitIntent(); }}
+                  className="w-full h-8 px-3 text-sm rounded-md border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  autoFocus
+                  data-testid="input-intent-name"
+                />
+                <div className="flex gap-1 flex-wrap">
+                  {INTENT_MEAL_TYPES.map(({ key, label, icon: Icon }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setIntentMealType(key)}
+                      className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition-colors ${
+                        intentMealType === key
+                          ? "bg-primary/10 text-primary border-primary/40"
+                          : "border-border text-muted-foreground hover:border-foreground/40"
+                      }`}
+                      data-testid={`button-intent-type-${key}`}
+                    >
+                      <Icon className="h-3 w-3" />{label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSubmitIntent}
+                    disabled={intentSaving || !intentName.trim() || !selectedDayLabel}
+                    className="flex-1 h-8 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5"
+                    data-testid="button-intent-submit"
+                  >
+                    {intentSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                    {intentSaving ? "Adding…" : "Add"}
+                  </button>
+                  <button
+                    onClick={() => { setIntentOpen(false); setIntentName(""); }}
+                    className="h-8 px-3 rounded-md border border-border text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    data-testid="button-intent-cancel"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Phase 2: Proposal staging input only — cards live in Review & Place */}
+            <div data-testid="panel-proposal-tray">
+              <div className="flex gap-1.5 flex-wrap">
+                <input
+                  type="text"
+                  placeholder="e.g. Fish cakes"
+                  value={proposalName}
+                  onChange={e => setProposalName(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") addProposal(); }}
+                  className="flex-1 min-w-[80px] h-7 px-2.5 text-xs rounded-md border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  data-testid="input-proposal-name"
+                />
+                <select
+                  value={proposalMealType}
+                  onChange={e => setProposalMealType(e.target.value)}
+                  className="h-7 px-1.5 text-xs rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-ring shrink-0"
+                  data-testid="select-proposal-mealtype"
+                >
+                  {INTENT_MEAL_TYPES.map(({ key, label }) => (
+                    <option key={key} value={key}>{label}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={addProposal}
+                  disabled={!proposalName.trim()}
+                  className="h-7 px-2.5 rounded-md realm-banner-btn disabled:opacity-40 text-xs font-medium transition-colors flex items-center gap-1 shrink-0 whitespace-nowrap"
+                  data-testid="button-proposal-stage"
+                >
+                  <Plus className="h-3 w-3 shrink-0" />Stage
+                </button>
+              </div>
+            </div>
+          </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="w-full h-px bg-border/50" />
+
+      {/* ── Section C: Manage — hub entry for planner utilities ── */}
+      <div data-testid="section-manage">
+        <button
+          className="w-full flex items-center justify-between py-2.5 text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
+          onClick={() => setManageOpen(v => !v)}
+          aria-expanded={manageOpen}
+          data-testid="button-section-manage-toggle"
+        >
+          <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider" data-testid="section-manage-label">
+            Manage
+          </span>
+          <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/40 transition-transform duration-150 ${manageOpen ? "" : "-rotate-90"}`} />
+        </button>
+        <div className="grid transition-[grid-template-rows] duration-200 ease-out" style={{ gridTemplateRows: manageOpen ? "1fr" : "0fr" }}>
+          <div className="overflow-hidden">
+            <div className="pb-1.5" data-testid="section-manage-body">
+              {/* Compact 3-across grid */}
+              <div className="flex gap-2">
+                <button
+                  className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border/60 realm-banner-btn px-1.5 py-2.5 transition-colors"
+                  onClick={() => onSetMode("settings")}
+                  data-testid="button-idle-settings"
+                >
+                  <Settings className="h-3.5 w-3.5 text-primary/70" />
+                  <span className="text-[10px] font-medium leading-none">Options</span>
+                </button>
+                <button
+                  className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border/60 realm-banner-btn px-1.5 py-2.5 transition-colors"
+                  onClick={() => onSetMode("bulk")}
+                  data-testid="button-idle-bulk-assign"
+                >
+                  <Copy className="h-3.5 w-3.5 text-primary/70" />
+                  <span className="text-[10px] font-medium leading-none">Multi</span>
+                </button>
+                {onSharePlan && (
+                  <button
+                    className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border/60 realm-banner-btn px-1.5 py-2.5 transition-colors"
+                    onClick={onSharePlan}
+                    data-testid="button-idle-share-plan"
+                  >
+                    <Share2 className="h-3.5 w-3.5 text-primary/70" />
+                    <span className="text-[10px] font-medium leading-none">Share</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Section D: Shopping — shown when meals have been sent to shopping ── */}
+      {basketMealsCount > 0 && (
+        <>
+          <div className="w-full h-px bg-border/50" />
+          <div data-testid="section-shopping-summary">
+            <button
+              className="w-full flex items-center justify-between py-2.5 text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
+              onClick={() => setShoppingOpen(v => !v)}
+              aria-expanded={shoppingOpen}
+              data-testid="button-section-shopping-toggle"
+            >
+              <span className="flex items-center gap-1.5">
+                <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider">
+                  Shopping
+                </span>
+                <span className="text-[10px] font-medium rounded-full px-1.5 leading-4 bg-emerald-100/80 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400">
+                  {basketMealsCount} meal{basketMealsCount !== 1 ? "s" : ""}
+                </span>
+              </span>
+              <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/40 transition-transform duration-150 ${shoppingOpen ? "" : "-rotate-90"}`} />
+            </button>
+            <div className="grid transition-[grid-template-rows] duration-200 ease-out" style={{ gridTemplateRows: shoppingOpen ? "1fr" : "0fr" }}>
+              <div className="overflow-hidden">
+                <div className="pb-1.5 space-y-1.5" data-testid="section-shopping-summary-body">
+                  <p className="text-xs text-muted-foreground">
+                    Shopping generated for {basketMealsCount} meal{basketMealsCount !== 1 ? "s" : ""} this week.
+                  </p>
+                  <button
+                    onClick={() => navigate("/shopping-workspace?stage=shop&source=planned")}
+                    className="w-full flex items-center gap-2 rounded-lg border border-border realm-banner-btn px-3 py-2 text-sm transition-colors"
+                    data-testid="button-shopping-summary-view"
+                  >
+                    <ShoppingCart className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <span className="flex-1">View shopping list</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Section E: Review & Place (shown only when there's pending work) ── */}
+      {hasContinueItems && (
+        <>
+          <div className="w-full h-px bg-border/50" />
+          <div data-testid="section-continue-planning">
+            <button
+              className="w-full flex items-center justify-between py-2.5 text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
+              onClick={() => setContinuePlanningOpen(v => !v)}
+              aria-expanded={continuePlanningOpen}
+              data-testid="button-section-continue-toggle"
+            >
+              <span className="flex items-center gap-1.5">
+                <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider" data-testid="section-continue-label">
+                  Review & Place
+                </span>
+                <span className={`text-[10px] font-medium rounded-full px-1.5 leading-4 ${
+                  placeholderCount > 0
+                    ? "bg-amber-100/80 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400"
+                    : "bg-muted text-muted-foreground"
+                }`}>
+                  {proposals.length + placeholderCount}
+                </span>
+              </span>
+              <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/40 transition-transform duration-150 ${continuePlanningOpen ? "" : "-rotate-90"}`} />
+            </button>
+            <div className="grid transition-[grid-template-rows] duration-200 ease-out" style={{ gridTemplateRows: continuePlanningOpen ? "1fr" : "0fr" }}>
+              <div className="overflow-hidden">
+              <div className="space-y-2 pb-2" data-testid="section-continue-planning-body">
+
+                {/* Draggable staged meal cards — moved here from Section B for visibility */}
+                {proposals.length > 0 && (
+                  <div data-testid="list-proposal-cards">
+                    {trayRestored && (
+                      <div
+                        className="flex items-center justify-between gap-2 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/40 dark:bg-blue-950/10 px-2.5 py-1.5 mb-1.5"
+                        data-testid="banner-tray-restored"
+                      >
+                        <p className="text-[11px] text-blue-800 dark:text-blue-400 leading-snug">
+                          {proposals.length} staged meal{proposals.length !== 1 ? "s" : ""} restored
+                        </p>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            onClick={() => setTrayRestored(false)}
+                            className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                            data-testid="button-tray-banner-dismiss"
+                          >
+                            OK
+                          </button>
+                          <button
+                            onClick={() => { setProposals([]); setTrayRestored(false); }}
+                            className="text-[10px] text-destructive/70 hover:text-destructive transition-colors"
+                            data-testid="button-tray-banner-clear"
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    <p className="text-[11px] text-muted-foreground/60 leading-snug mb-1 flex items-center gap-1">
+                      <GripVertical className="h-3 w-3" />
+                      Ready to place — drag onto the planner grid
+                    </p>
+                    <div className="space-y-0.5">
+                      {proposals.map(p => (
+                        <DraggableProposalCard
+                          key={p.id}
+                          id={p.id}
+                          name={p.name}
+                          proposedMealType={p.mealType}
+                        >
+                          <div
+                            className="flex items-center gap-2 px-2 py-1.5 rounded-lg border border-dashed border-primary/30 bg-primary/5 hover:border-primary/50 hover:bg-primary/10 cursor-grab active:cursor-grabbing transition-colors group"
+                            data-testid={`card-proposal-${p.id}`}
+                          >
+                            <GripVertical className="h-3.5 w-3.5 text-primary/50 shrink-0" />
+                            <span className="flex-1 text-xs truncate text-foreground font-medium">{p.name}</span>
+                            <span className="text-[10px] text-muted-foreground/60 shrink-0 capitalize">{p.mealType}</span>
+                            <button
+                              onPointerDown={e => e.stopPropagation()}
+                              onClick={e => { e.stopPropagation(); removeProposal(p.id); }}
+                              className="hover-reveal group-hover:opacity-100 p-0.5 rounded hover:bg-accent/60 text-muted-foreground hover:text-foreground transition-opacity shrink-0"
+                              title="Remove"
+                              data-testid={`button-proposal-remove-${p.id}`}
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        </DraggableProposalCard>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Unresolved meals — planned but not yet linked to a recipe */}
+                {placeholderCount > 0 && (
+                  <button
+                    className="w-full flex items-center gap-2 rounded-lg border border-amber-400/40 bg-amber-50/30 dark:bg-amber-950/10 hover:bg-amber-50/60 dark:hover:bg-amber-950/20 px-3 py-2 text-left transition-colors"
+                    onClick={() => onSetMode("placeholder-review")}
+                    data-testid="button-idle-placeholder-review"
+                  >
+                    <BookOpen className="h-4 w-4 shrink-0 text-amber-500/70" />
+                    <span className="text-amber-700 dark:text-amber-400/80 flex-1 text-xs">
+                      {placeholderCount} planned meal{placeholderCount !== 1 ? "s" : ""} need{placeholderCount === 1 ? "s" : ""} a recipe
+                    </span>
+                    <span className="text-[11px] text-muted-foreground/60 shrink-0">Link →</span>
+                  </button>
+                )}
+              </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── Shopping Handoff Panel ────────────────────────────────────────────────────
+
+interface ShoppingHandoffPanelProps {
+  itemCount: number;
+  needsReviewCount: number;
+  freezerDeductions: FreezerDeduction[];
+}
+
+function ShoppingHandoffPanel({ itemCount, needsReviewCount, freezerDeductions }: ShoppingHandoffPanelProps) {
+  const [, navigate] = useLocation();
+  return (
+    <div className="space-y-3" data-testid="panel-shopping-ready">
+
+      {/* Status summary */}
+      <div className="flex items-start gap-2.5 rounded-lg bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-800/40 px-3 py-3">
+        <PackageCheck className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400 mt-0.5" />
+        <div className="space-y-0.5 min-w-0">
+          <p className="text-sm font-medium text-foreground">Shopping ready</p>
+          <p className="text-xs text-muted-foreground">
+            {itemCount} item{itemCount !== 1 ? "s" : ""} added to your list
+          </p>
+        </div>
+      </div>
+
+      {/* Operational callouts */}
+      <div className="space-y-1.5">
+        {needsReviewCount > 0 && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-amber-200/60 dark:border-amber-700/40 bg-amber-50/40 dark:bg-amber-950/10" data-testid="shopping-handoff-review-callout">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <p className="text-xs text-amber-700 dark:text-amber-400 flex-1">
+              {needsReviewCount} ingredient{needsReviewCount !== 1 ? "s" : ""} need{needsReviewCount === 1 ? "s" : ""} review
+            </p>
+          </div>
+        )}
+
+        {freezerDeductions.length > 0 && (
+          <div className="rounded-lg border border-sky-200/60 dark:border-sky-700/40 bg-sky-50/40 dark:bg-sky-950/10 px-3 py-2.5" data-testid="shopping-handoff-freezer-callout">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <Snowflake className="h-3.5 w-3.5 shrink-0 text-sky-500" />
+              <p className="text-xs font-medium text-sky-700 dark:text-sky-400">Freezer stock applied</p>
+            </div>
+            <ul className="space-y-0.5 pl-5">
+              {freezerDeductions.map((d) => (
+                <li key={d.mealId} className="text-xs text-muted-foreground leading-snug">
+                  {d.mealName}{d.portionsDeducted > 1 ? ` ×${d.portionsDeducted}` : ""}
+                  {d.portionsDeducted < d.portionsRequested && (
+                    <span className="text-muted-foreground/60"> (partial)</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <p className="text-[11px] text-muted-foreground/60 mt-1.5 pl-5">
+              Ingredients for these meals removed from shopping
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Action CTA */}
+      <div className="pt-1">
+        <button
+          onClick={() => navigate("/shopping-workspace?stage=shop&source=planned")}
+          className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 px-3 py-2.5 text-sm font-medium transition-colors"
+          data-testid="button-shopping-handoff-open-shopping"
+        >
+          <ShoppingCart className="h-4 w-4" />
+          View Shopping List
+        </button>
+      </div>
+
+      {/* Contextual note */}
+      <p className="text-[11px] text-muted-foreground/50 text-center leading-snug pt-1">
+        Your planner is still here — come back to adjust at any time.
+      </p>
+    </div>
+  );
+}
+
+function getPanelIcon(mode: AssistantMode) {
+  if (mode === "smart") return <Sparkles className="h-4 w-4 text-primary" />;
+  if (mode === "smart-review") return <Sparkles className="h-4 w-4 text-primary" />;
+  if (mode === "templates") return <LayoutGrid className="h-4 w-4 text-primary" />;
+  if (mode === "manual") return <Plus className="h-4 w-4 text-primary" />;
+  if (mode === "bulk") return <Calendar className="h-4 w-4 text-primary" />;
+  if (mode === "day") return <CalendarDays className="h-4 w-4 text-primary" />;
+  if (mode === "scan-review") return <ScanSearch className="h-4 w-4 text-primary" />;
+  if (mode === "settings") return <Settings className="h-4 w-4 text-primary" />;
+  if (mode === "resolve") return <BookOpen className="h-4 w-4 text-primary" />;
+  if (mode === "placeholder-review") return <ClipboardList className="h-4 w-4 text-primary" />;
+  if (mode === "analyser") return <Microscope className="h-4 w-4 text-primary" />;
+  if (mode === "shopping-ready") return <PackageCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />;
+  if (mode === "build") return <Wand2 className="h-4 w-4 text-primary" />;
+  return <ScanLine className="h-4 w-4 text-primary" />;
+}
+
+function getPanelTitle(mode: AssistantMode, dayLabel?: string) {
+  if (mode === "smart") return "Plan My Week";
+  if (mode === "smart-review") return "Proposed Week Plan";
+  if (mode === "scan") return "Scan Planner";
+  if (mode === "scan-review") return "Review Scan";
+  if (mode === "templates") return "Templates";
+  if (mode === "manual") return "Add Meal";
+  if (mode === "bulk") return "Bulk Assign";
+  if (mode === "day") return dayLabel || "Day View";
+  if (mode === "settings") return "Planner Options";
+  if (mode === "resolve") return "Link a Recipe";
+  if (mode === "placeholder-review") return "Unlinked Meals";
+  if (mode === "analyser") return "Analyse Products";
+  if (mode === "shopping-ready") return "Shopping Ready";
+  if (mode === "build") return "Build a Meal";
+  return "Planner Assistant";
+}
+
+export function PlannerAssistantPanel({
+  mode,
+  onClose,
+  reviewContent,
+  user,
+  onScanFile,
+  onUploadClick,
+  scanLoading,
+  pickerTarget,
+  meals,
+  plannerMealIdSet,
+  categoryIdForSlot,
+  onPickerSelect,
+  addingEntry,
+  onAddProduct,
+  dayViewDay,
+  dayViewLabel,
+  getMeal,
+  onPlannerInvalidate,
+  fullPlanner,
+  resolveTarget,
+  onResolveAction,
+  onResolveRecipe,
+  isResolving = false,
+  placeholderItems = [],
+  onResolveRecipeFromReview,
+  onBuildFromReview,
+  onScanFromReview,
+  onImportFromReview,
+  onSetMode,
+  onCreateIntent,
+  selectedDayLabel,
+  onBrowseRecipes,
+  onBuildRecipe,
+  onScanRecipe,
+  mobileOpen = false,
+  onBackToHub,
+  consumedProposalId,
+  freezerMeals = [],
+  onSharePlan,
+  shoppingHandoff,
+  basketMealsCount = 0,
+  buildInitialTitle,
+  onBuildCreated,
+}: PlannerAssistantPanelProps) {
+  const isMobile = useIsMobile();
+
+  // 2026-11-03 (owner) — "I would like the workspace floatable and
+  // moveable". The desktop panel is `position: fixed` (planner-physical.css,
+  // FNDFIX7 follow-up) so it floats over the page instead of squeezing the
+  // grid; this is the "moveable" half — drag from the handle bar, offset
+  // applied as a `transform: translate()` on top of that fixed position.
+  // Only wired for the ≥1024px fixed layout: the handle itself is
+  // `hidden lg:flex`, so pointerdown can never fire on the tablet-docked or
+  // mobile-drawer variants, and a resize below that drops any stored offset
+  // so returning to a docked/drawer layout never carries a stray translate.
+  const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null);
+  const dragStartRef = useRef<{ pointerId: number; mouseX: number; mouseY: number; offsetX: number; offsetY: number } | null>(null);
+
+  useEffect(() => {
+    const dropOffsetIfDocked = () => {
+      if (window.innerWidth < 1024) setDragOffset(null);
+    };
+    window.addEventListener("resize", dropOffsetIfDocked);
+    return () => window.removeEventListener("resize", dropOffsetIfDocked);
+  }, []);
+
+  const handleDragPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0 && e.pointerType === "mouse") return;
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragStartRef.current = {
+      pointerId: e.pointerId,
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      offsetX: dragOffset?.x ?? 0,
+      offsetY: dragOffset?.y ?? 0,
+    };
+  }, [dragOffset]);
+
+  const handleDragPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const start = dragStartRef.current;
+    if (!start || start.pointerId !== e.pointerId) return;
+    setDragOffset({
+      x: start.offsetX + (e.clientX - start.mouseX),
+      y: start.offsetY + (e.clientY - start.mouseY),
+    });
+  }, []);
+
+  const endDrag = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (dragStartRef.current?.pointerId !== e.pointerId) return;
+    dragStartRef.current = null;
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch {}
+  }, []);
+
+  const dragHandleProps = {
+    onPointerDown: handleDragPointerDown,
+    onPointerMove: handleDragPointerMove,
+    onPointerUp: endDrag,
+    onPointerCancel: endDrag,
+  };
+  const dragTransformStyle = dragOffset
+    ? { transform: `translate(${dragOffset.x}px, ${dragOffset.y}px)` }
+    : undefined;
+
+  const DragHandle = (
+    <div
+      className="hidden lg:flex items-center justify-center py-1 cursor-grab touch-none select-none shrink-0"
+      {...dragHandleProps}
+      data-testid="handle-workspace-drag"
+      aria-hidden="true"
+    >
+      <GripVertical className="h-3 w-3 rotate-90 opacity-35" />
+    </div>
+  );
+
+  const RESOLVE_SUBVIEW_KEY = "planner:resolve-subview";
+  const [resolveSubview, setResolveSubview] = useState<"menu" | "search">(() => {
+    if (mode !== "resolve") return "menu";
+    try {
+      if (sessionStorage.getItem(RESOLVE_SUBVIEW_KEY) === "search") return "search";
+    } catch {}
+    return "menu";
+  });
+  const [reviewSearchTarget, setReviewSearchTarget] = useState<ResolveTarget | null>(null);
+
+  useEffect(() => {
+    if (mode !== "resolve") setResolveSubview("menu");
+  }, [mode]);
+
+  // Persist resolve subview so refresh restores the in-progress search context
+  useEffect(() => {
+    try {
+      if (mode === "resolve" && resolveSubview === "search") {
+        sessionStorage.setItem(RESOLVE_SUBVIEW_KEY, "search");
+      } else {
+        sessionStorage.removeItem(RESOLVE_SUBVIEW_KEY);
+      }
+    } catch {}
+  }, [mode, resolveSubview]);
+
+  useEffect(() => {
+    if (mode !== "placeholder-review") setReviewSearchTarget(null);
+  }, [mode]);
+
+  // Compute title/icon for the active-mode states (used by both mobile Drawer and desktop aside)
+  const isSearchSubview =
+    (mode === "resolve" && resolveSubview === "search") ||
+    (mode === "placeholder-review" && reviewSearchTarget !== null);
+
+  const activeTitleLabel = isSearchSubview ? "Search Recipes" : getPanelTitle(mode, dayViewLabel);
+  const activeTitleIcon = isSearchSubview
+    ? <Search className="h-4 w-4 text-primary" />
+    : getPanelIcon(mode);
+
+  // Panel content (mode-specific; safe to compute when mode is null — all checks are mode === X)
+  const panelContent = (
+    <>
+      {mode === "scan" && (
+        <ScanContent
+          onScanFile={onScanFile}
+          scanLoading={scanLoading}
+          onUploadClick={onUploadClick}
+        />
+      )}
+      {mode === "smart" && <SmartContent />}
+      {mode === "analyser" && <PlannerAnalyserContent />}
+      {mode === "settings" && <PlannerSettingsContent />}
+      {mode === "shopping-ready" && shoppingHandoff && (
+        <ShoppingHandoffPanel
+          itemCount={shoppingHandoff.itemCount}
+          needsReviewCount={shoppingHandoff.needsReviewCount}
+          freezerDeductions={shoppingHandoff.freezerDeductions}
+        />
+      )}
+      {mode === "templates" && (
+        <TemplatesPanel inline open onClose={onClose} user={user} />
+      )}
+      {mode === "manual" && (
+        <PlannerMealPickerPanel
+          key={pickerTarget ? `${pickerTarget.dayId}-${pickerTarget.mealType}-${pickerTarget.audience}` : "empty"}
+          target={pickerTarget}
+          meals={meals}
+          plannerMealIdSet={plannerMealIdSet}
+          categoryIdForSlot={categoryIdForSlot}
+          onSelect={onPickerSelect}
+          addingEntry={addingEntry}
+          onAddProduct={onAddProduct}
+          freezerMeals={freezerMeals}
+        />
+      )}
+      {mode === "day" && (
+        <DayViewDrawer
+          inline
+          open={false}
+          onClose={onClose}
+          day={dayViewDay}
+          dayLabel={dayViewLabel}
+          getMeal={getMeal}
+          allMeals={meals}
+          onPlannerInvalidate={onPlannerInvalidate}
+        />
+      )}
+      {mode === "bulk" && (
+        <PlannerBulkAssignPanel
+          fullPlanner={fullPlanner}
+          meals={meals}
+          plannerMealIdSet={plannerMealIdSet}
+          onClose={onClose}
+        />
+      )}
+      {mode === "build" && (
+        <CreateMealContent
+          key={buildInitialTitle ?? "build-panel"}
+          initialTitle={buildInitialTitle}
+          onSaved={(mealId) => {
+            onBuildCreated?.(mealId);
+            (onBackToHub ?? onClose)();
+          }}
+          onCancel={onBackToHub ?? onClose}
+        />
+      )}
+      {(mode === "smart-review" || mode === "scan-review") && reviewContent}
+      {mode === "resolve" && resolveTarget && (
+        resolveSubview === "search" ? (
+          <ResolveSearchContent
+            mealName={resolveTarget.mealName}
+            meals={meals}
+            onSelectRecipe={(mealId) => {
+              if (onResolveRecipe) onResolveRecipe(mealId);
+            }}
+            onBack={() => setResolveSubview("menu")}
+            isResolving={isResolving}
+          />
+        ) : (
+          <ResolveContent
+            mealName={resolveTarget.mealName}
+            dayName={resolveTarget.dayName}
+            slotLabel={resolveTarget.slotLabel}
+            onSearch={() => setResolveSubview("search")}
+            onAction={(action) => {
+              if (onResolveAction) onResolveAction(action);
+            }}
+          />
+        )
+      )}
+      {mode === "placeholder-review" && (
+        reviewSearchTarget ? (
+          <ResolveSearchContent
+            mealName={reviewSearchTarget.mealName}
+            meals={meals}
+            onSelectRecipe={(mealId) => {
+              if (onResolveRecipeFromReview) onResolveRecipeFromReview(mealId, reviewSearchTarget);
+              setReviewSearchTarget(null);
+            }}
+            onBack={() => setReviewSearchTarget(null)}
+            isResolving={isResolving}
+          />
+        ) : (
+          <PlaceholderReviewContent
+            placeholderItems={placeholderItems}
+            onSearchRecipe={(item) => {
+              setReviewSearchTarget({
+                mealName: item.mealName,
+                dayName: item.dayName,
+                slotLabel: item.slotLabel,
+                entryId: item.entryId,
+                dayId: item.dayId,
+                mealType: item.mealType,
+                audience: item.audience,
+                isDrink: item.isDrink,
+                position: item.position,
+              });
+            }}
+            onBuildRecipe={(item) => {
+              if (onBuildFromReview) {
+                onBuildFromReview({
+                  mealName: item.mealName,
+                  dayName: item.dayName,
+                  slotLabel: item.slotLabel,
+                  entryId: item.entryId,
+                  dayId: item.dayId,
+                  mealType: item.mealType,
+                  audience: item.audience,
+                  isDrink: item.isDrink,
+                  position: item.position,
+                });
+              } else if (onResolveAction) {
+                onResolveAction("build");
+              }
+            }}
+            onScanRecipe={(item) => {
+              if (onScanFromReview) {
+                onScanFromReview({
+                  mealName: item.mealName,
+                  dayName: item.dayName,
+                  slotLabel: item.slotLabel,
+                  entryId: item.entryId,
+                  dayId: item.dayId,
+                  mealType: item.mealType,
+                  audience: item.audience,
+                  isDrink: item.isDrink,
+                  position: item.position,
+                });
+              } else if (onResolveAction) {
+                onResolveAction("scan");
+              }
+            }}
+            onImportRecipe={undefined}
+            isResolving={isResolving}
+          />
+        )
+      )}
+    </>
+  );
+
+  // ── Mobile: vaul Drawer replaces Radix Sheet ─────────────────────────────
+  if (isMobile) {
+    const drawerOpen = !!(mobileOpen || mode);
+    const drawerTitle = mode ? activeTitleLabel : "Planning Workspace";
+    const drawerIcon = mode
+      ? activeTitleIcon
+      : <Lightbulb className="h-4 w-4" style={{ color: "var(--realm-accent)" }} />;
+
+    const hubContent = onSetMode ? (
+      <IdlePanelContent
+        onSetMode={onSetMode}
+        onCreateIntent={onCreateIntent}
+        selectedDayLabel={selectedDayLabel}
+        placeholderCount={placeholderItems.length}
+        onBrowseRecipes={onBrowseRecipes}
+        onBuildRecipe={onBuildRecipe}
+        onScanRecipe={onScanRecipe}
+        consumedProposalId={consumedProposalId}
+        onSharePlan={onSharePlan}
+        basketMealsCount={basketMealsCount}
+        isMobile={true}
+      />
+    ) : (
+      <p className="text-xs text-muted-foreground">Select a mode to get started.</p>
+    );
+
+    return (
+      <Drawer
+        open={drawerOpen}
+        onOpenChange={(v) => { if (!v) onClose(); }}
+        shouldScaleBackground={false}
+      >
+        <DrawerContent
+          className="flex flex-col max-h-[75vh]"
+          id="planner-workspace-panel"
+          data-testid="drawer-planner-assistant"
+          data-realm="planner"
+        >
+          {/* Header — drag handle is rendered inside DrawerContent automatically above this */}
+          <div className="flex items-center justify-between px-4 pt-1 pb-3 shrink-0 realm-header-bg">
+            <div className="flex items-center gap-1.5">
+              {mode && onBackToHub && (
+                <button
+                  onClick={onBackToHub}
+                  className="rounded-md p-1 -ml-1 hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground transition-colors"
+                  aria-label="Back to hub"
+                  data-testid="button-assistant-back"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+              )}
+              <DrawerTitle className="text-sm font-semibold flex items-center gap-2">
+                {drawerIcon}
+                {drawerTitle}
+              </DrawerTitle>
+            </div>
+            <button
+              onClick={onClose}
+              className="rounded-md p-1 hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground transition-colors"
+              data-testid="button-assistant-close-mobile"
+              aria-label="Close assistant"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="w-full h-px shrink-0 bg-[var(--realm-border)]" />
+          <div
+            className="flex-1 overflow-y-auto min-h-0 px-4 pt-3"
+            style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom, 0px))" }}
+          >
+            {mode ? panelContent : hubContent}
+          </div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  // ── Desktop: idle sidebar ─────────────────────────────────────────────────
+  if (!mode) {
+    return (
+      <aside
+        className="shrink-0 w-[244px] sticky top-28 mt-4 self-start rounded-xl flex flex-col max-h-[calc(100dvh-11.5rem)] overflow-hidden"
+        style={{ border: "1px solid var(--realm-border)", background: "var(--realm-bg)", ...dragTransformStyle }}
+        id="planner-workspace-panel"
+        data-testid="panel-planner-assistant-idle"
+      >
+        {DragHandle}
+        <div className="flex-1 overflow-y-auto min-h-0 px-2.5 pb-3 pt-2.5">
+          {onSetMode ? (
+            <IdlePanelContent
+              onSetMode={onSetMode}
+              onCreateIntent={onCreateIntent}
+              selectedDayLabel={selectedDayLabel}
+              placeholderCount={placeholderItems.length}
+              onBrowseRecipes={onBrowseRecipes}
+              onBuildRecipe={onBuildRecipe}
+              onScanRecipe={onScanRecipe}
+              consumedProposalId={consumedProposalId}
+              onSharePlan={onSharePlan}
+              basketMealsCount={basketMealsCount}
+            />
+          ) : (
+            <p className="text-xs text-muted-foreground">Select a mode to get started.</p>
+          )}
+        </div>
+      </aside>
+    );
+  }
+
+  // ── Desktop: active assistant sidebar ────────────────────────────────────
+  return (
+    <aside
+      className="shrink-0 w-[244px] sticky top-28 mt-4 self-start rounded-xl flex flex-col max-h-[calc(100dvh-11.5rem)] overflow-hidden"
+      style={{ border: "1px solid var(--realm-border)", background: "var(--realm-bg)", ...dragTransformStyle }}
+      id="planner-workspace-panel"
+      data-testid="panel-planner-assistant"
+    >
+      <div className="flex items-center justify-between px-1 pt-1.5 pb-1 shrink-0">
+        <div
+          className="hidden lg:flex items-center justify-center flex-1 h-full cursor-grab touch-none select-none"
+          {...dragHandleProps}
+          data-testid="handle-workspace-drag"
+          aria-hidden="true"
+        >
+          <GripVertical className="h-3 w-3 rotate-90 opacity-35" />
+        </div>
+        <button
+          onClick={onClose}
+          className="rounded-md p-1 hover:bg-accent/40 text-muted-foreground transition-colors"
+          data-testid="button-assistant-close"
+          aria-label="Close assistant"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="w-full h-px bg-border shrink-0" />
+      <div className="flex-1 overflow-y-auto min-h-0 px-2.5 pb-3 pt-2.5">
+        {panelContent}
+      </div>
+    </aside>
+  );
+}

@@ -121,6 +121,21 @@ function PreparationClaim({ preparation }: { preparation: FoodPreparation }) {
 
 // ── The list ─────────────────────────────────────────────────────────────────
 
+// "How it's prepared" means what a cook DOES to the food — cooking and
+// processing methods. `state` (raw, fresh) and `preservation` (frozen,
+// dried, tinned...) describe the FORM it was bought in, already shown by
+// the Varieties card (food.commonForms) one section up. Rendering them
+// again here, under a heading that reads as "cooking methods", is what
+// made a food read as "prepared fresh" or "prepared frozen" — neither is
+// something you do, so neither belongs in this list.
+//
+// Exported so callers can gate their own card wrapper on the SAME scoped
+// set before FoodPreparationList ever mounts — otherwise a food with only
+// state/preservation entries shows an empty card (title + icon, no body).
+export function hasPreparationMethods(preparations: FoodPreparation[]): boolean {
+  return preparations.some((p) => p.prepType === "cooking" || p.prepType === "processing");
+}
+
 export function FoodPreparationList({
   preparations,
   className,
@@ -128,6 +143,7 @@ export function FoodPreparationList({
   preparations: FoodPreparation[];
   className?: string;
 }) {
+  preparations = preparations.filter((p) => p.prepType === "cooking" || p.prepType === "processing");
   if (preparations.length === 0) return null;
 
   // A claim exists only where the evidence gate signed one off. Today most foods

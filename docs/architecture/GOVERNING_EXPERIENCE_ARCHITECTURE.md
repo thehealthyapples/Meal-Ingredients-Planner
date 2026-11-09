@@ -263,6 +263,8 @@ It does resolve the ambiguity between "always present" and "E0", because the two
 
 > **GEA6 — The orchard is a permanent fact of the site, not a feature of a room.** A room at E0 is **shuttered, not relocated**. The house has not moved; this room simply has no window on this wall. It follows that the orchard is never *earned*, never *unlocked*, never *removed as a simplification*, and never *drawn differently* by the room that draws it — a room may only choose how much of the one orchard it admits, and that choice is a governed per-domain constant, never a per-surface or per-state decision.
 
+**HOMEEXT1, owner amendment (2026-10-27).** Colin (`tha-governance-owner-001`) approved a single Home E3 threshold view from the front garden, with the modern house on the right and the same established orchard on the left. This is a bounded exception to GEA6's prohibition on drawing a different angle *at Home only*: it changes the household's arrival vantage, not the orchard's identity, season, hour, or ownership. It admits no room-specific orchard for any other realm, no change to E0–E2, and no new reason to put text on the view. The exact composition and asset admission are owned by the Experience Blueprint § 6 and the House Register; Home's existing environment component remains the only runtime mouth. The exception is recorded because pretending that a front-garden photograph is the same image as the current orchard window would make GEA6 false by omission.
+
 The practical test: if the orchard's presence in the product could be *reduced to a single screen's decoration* by deleting a few lines, it was never a fact of the site — it was an image on the home page, and the house was never actually in an orchard.
 
 ---

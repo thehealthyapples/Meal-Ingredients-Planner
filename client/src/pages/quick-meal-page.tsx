@@ -390,13 +390,17 @@ export default function QuickMealPage() {
         /* UINORTH1 — the canonical loading owner (UIA §12 "shape before spin",
            §17): a skeleton mirroring the builder/preview columns, in place of a
            centred spinner. */
+        // FNDFIX7 (2026-11-03) — the left column loads as ONE "Add components"
+        // card, not two stacked boxes; the right column loads as a short "Meal
+        // name" card plus two separate full-width buttons, not one solid block.
         <div className="lg:grid lg:grid-cols-12 lg:gap-6 lg:items-start" aria-busy="true" aria-label="Loading this meal">
-          <div className="lg:col-span-7 space-y-4">
-            <Skeleton className="h-40 w-full rounded-xl" />
-            <Skeleton className="h-40 w-full rounded-xl" />
+          <div className="lg:col-span-7">
+            <Skeleton className="h-56 w-full rounded-xl" />
           </div>
-          <div className="lg:col-span-5 mt-4 lg:mt-0">
-            <Skeleton className="h-64 w-full rounded-xl" />
+          <div className="lg:col-span-5 mt-4 lg:mt-0 space-y-2">
+            <Skeleton className="h-20 w-full rounded-xl mb-2" />
+            <Skeleton className="h-10 w-full rounded-md" />
+            <Skeleton className="h-10 w-full rounded-md" />
           </div>
         </div>
       ) : (

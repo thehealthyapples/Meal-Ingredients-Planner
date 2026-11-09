@@ -1,0 +1,29 @@
+[{
+  "id": 3218,
+  "edge": "food-benefit",
+  "subject": "pectin → heart-health",
+  "sourceRef": {
+    "body": "European Commission / EUR-Lex",
+    "title": "Commission Regulation (EU) No 432/2012, authorised pectins health claim",
+    "url": "https://eur-lex.europa.eu/eli/reg/2012/432/oj",
+    "evidenceLevel": "emerging",
+    "lastReviewed": "",
+    "preparedBy": "Codex",
+    "preparedOn": "2026-11-07",
+    "evidenceExcerpt": "The authorised claim states that pectins contribute to maintenance of normal blood cholesterol levels only when the food provides 6 g pectins daily, and consumers are informed of that intake condition. The entry also warns of choking for people with swallowing difficulties or inadequate fluid intake and advises taking with plenty of water. This citation does not establish that an unspecified amount or serving of pectin meets the condition."
+  }
+}, {
+  "id": 916,
+  "edge": "food-benefit",
+  "subject": "anchovies → heart-health",
+  "sourceRef": {
+    "body": "Frimley Health NHS Foundation Trust",
+    "title": "Healthy Eating for a Healthy Heart",
+    "url": "https://www.fhft.nhs.uk/patients-and-visitors/patient-information-library/healthy-eating-healthy-heart",
+    "evidenceLevel": "emerging",
+    "lastReviewed": "",
+    "preparedBy": "Codex",
+    "preparedOn": "2026-11-07",
+    "evidenceExcerpt": "The NHS Trust guidance names anchovies among foods containing omega-3 fats and says omega-3 may help reduce blood clotting, lower total cholesterol, and regulate heart rhythm. This is qualified guidance, not proof that an unspecified portion treats or prevents heart disease."
+  }
+}]

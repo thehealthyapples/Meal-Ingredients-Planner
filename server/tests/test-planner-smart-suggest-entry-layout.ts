@@ -10,7 +10,13 @@ const physicalCss = readFileSync(join(root, "client/src/styles/planner-physical.
 const context = readFileSync(join(root, "client/src/contexts/PlannerContext.tsx"), "utf8");
 const smartSuggestHook = readFileSync(join(root, "client/src/hooks/use-smart-suggest.ts"), "utf8");
 
-assert.match(planner, /onClick=\{\(\) => setAssistantMode\("smart"\)\}[\s\S]*?data-testid="button-plan-my-week"/);
+// 2026-11-03 (owner) — the header's standalone "Plan" shortcut
+// (button-plan-my-week) was removed: it duplicated the Workspace panel's own
+// idle "Smart" tile one click away, two buttons opening the same assistant at
+// a different point. The Workspace tile is now the sole general entry point
+// on desktop, matching mobile (which only ever reached Smart through the
+// workspace drawer) — assert that one instead.
+assert.match(assistant, /onClick=\{\(\) => onSetMode\("smart"\)\}[\s\S]*?data-testid="button-idle-smart"/);
 assert.match(planner, /onClick=\{\(\) => setAssistantMode\("smart"\)\}[\s\S]*?data-testid="button-plan-empty-week"/);
 assert.match(assistant, /mode === "smart" && <SmartContent \/>/);
 assert.match(assistant, /<aside[\s\S]*?data-testid="panel-planner-assistant"/);

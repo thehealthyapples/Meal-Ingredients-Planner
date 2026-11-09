@@ -37,10 +37,12 @@
 
 import type { CapabilityHandler, IntelligenceContext, Intent } from "../types.js";
 import type { HouseholdReadPort } from "./household-read-port.js";
-import { requireUserId, gap, readOnlyVerbGuard } from "./_read-kit.js";
+import { requireUserId, gap, readOnlyVerbGuard, toInt } from "./_read-kit.js";
 import type { HouseholdEaterRow } from "@shared/schema";
 import type { HouseholdDietaryContext } from "../../storage.js";
 import { dbEaterToHouseholdEater } from "@shared/household-eater.js";
+import { hasCurrentHealthContextConsent } from "../../privacy/health-context-consent.js";
+import { nutritionFocusLabel } from "@shared/nutrition-focus";
 
 // ---------------------------------------------------------------------------
 // Result shapes (read projections — owned data, surfaced honestly)
@@ -82,6 +84,8 @@ export interface HouseholdEaterView {
   readonly userId: number | undefined;
   readonly defaultDietTypes: readonly string[];
   readonly hardRestrictions: readonly string[];
+  readonly reportedHealthContext?: readonly { id: string; fact: string; reportedAt: string }[];
+  readonly nutritionFocuses?: readonly { id: string; focus: string; reportedAt: string }[];
 }
 
 export interface HouseholdEatersView {
@@ -111,7 +115,7 @@ function toMemberView(row: { member: { userId: number; role: string; status: str
  * so the stored values ARE the facts; nothing is looked up, merged, or derived.
  * (The old name `enrichEater` described the retired behaviour.)
  */
-export function toEaterView(row: HouseholdEaterRow): HouseholdEaterView {
+export function toEaterView(row: HouseholdEaterRow, includeReportedHealthContext = false): HouseholdEaterView {
   const base = dbEaterToHouseholdEater(row);
   return {
     id: base.id,
@@ -120,6 +124,10 @@ export function toEaterView(row: HouseholdEaterRow): HouseholdEaterView {
     userId: base.userId,
     defaultDietTypes: base.defaultDietTypes,
     hardRestrictions: base.hardRestrictions,
+    ...(includeReportedHealthContext && base.kind === "no-account" ? {
+      reportedHealthContext: (row.reportedHealthContext ?? []).map(({ id, fact, reportedAt }) => ({ id, fact, reportedAt })),
+      nutritionFocuses: (row.nutritionFocuses ?? []).map(({ id, focus, reportedAt }) => ({ id, focus, reportedAt })),
+    } : {}),
   };
 }
 
@@ -177,7 +185,8 @@ async function handleRead(intent: Intent, userId: number, port: HouseholdReadPor
     }
     case "eaters": {
       const rows = await port.getHouseholdEaters(householdId);
-      return { scope: "eaters", eaters: rows.map(toEaterView) };
+      const consent = await hasCurrentHealthContextConsent(userId);
+      return { scope: "eaters", eaters: rows.map((row) => toEaterView(row, consent)) };
     }
   }
 }
@@ -187,23 +196,47 @@ async function handleRead(intent: Intent, userId: number, port: HouseholdReadPor
 // ---------------------------------------------------------------------------
 
 /**
- * Create the household read-only handler. `resolvePort` provides the owning-service
- * surface (production: real storage; tests: in-memory owner). The returned handler is
- * what the Capability Registry binds to the `household` capability (INT13).
+ * Create the household handler. `resolvePort` provides the owning-service surface
+ * (production: real storage; tests: in-memory owner). The returned handler is what the
+ * Capability Registry binds to the `household` capability (INT13).
  */
 export function createHouseholdReadHandler(
   resolvePort: () => Promise<HouseholdReadPort>,
 ): CapabilityHandler {
   return async (intent: Intent, context: IntelligenceContext): Promise<unknown> => {
-    // Read-only binding: only "read" executes. "explain" (no stored rationale on
-    // membership/eater records) and "add"/"delete" (writes — household creation,
-    // member invite/removal, eater create/update remain owned by the Household service)
-    // are all out of scope for this read-only binding and return an honest gap via the
-    // guard below. There is no code path here that creates, invites, removes, or edits.
-    readOnlyVerbGuard(intent, ["read"], "Household");
-
     const userId = requireUserId(context, "Household");
     const port = await resolvePort();
+
+    if (intent.verb === "add") {
+      const params = intent.parameters ?? {};
+      if (params.scope === "nutrition-focus") {
+        const eaterId = toInt(params.eaterId);
+        const focus = typeof params.focus === "string" ? params.focus : "";
+        if (eaterId === undefined || !nutritionFocusLabel(focus)) throw gap("Choose a dependent profile and one supported nutrition focus.");
+        if (!(await hasCurrentHealthContextConsent(userId))) throw gap("Review and grant the current health-data consent in Privacy Settings before saving nutrition focuses.");
+        if (!port.addHouseholdEaterNutritionFocus) throw gap("The Household owner does not expose the nutrition-focus write yet.");
+        let householdId: number;
+        try { householdId = await port.getHouseholdForUser(userId); }
+        catch { throw gap("There is no active household to update."); }
+        const entries = await port.addHouseholdEaterNutritionFocus(householdId, eaterId, focus, userId);
+        if (!entries) throw gap("That dependent is not an editable account-less profile in your active household.");
+        return { scope: "nutrition-focus", saved: true, focus, entries: entries.map(({ id, focus: entryFocus, reportedAt }) => ({ id, focus: entryFocus, reportedAt })) };
+      }
+      if (params.scope !== "reported-health-context") throw gap('Household add only accepts scope "reported-health-context".');
+      const eaterId = toInt(params.eaterId);
+      const fact = typeof params.reportedFact === "string" ? params.reportedFact.trim() : "";
+      if (eaterId === undefined || fact.length < 3 || fact.length > 180) throw gap("Choose a household child and provide the exact reported information (3–180 characters).");
+      if (!(await hasCurrentHealthContextConsent(userId))) throw gap("Review and grant the current health-data consent in Privacy Settings before saving health information.");
+      if (!port.addHouseholdEaterReportedHealthContext) throw gap("The Household owner does not expose the reported-health-context write yet.");
+      let householdId: number;
+      try { householdId = await port.getHouseholdForUser(userId); }
+      catch { throw gap("There is no active household to update."); }
+      const entries = await port.addHouseholdEaterReportedHealthContext(householdId, eaterId, fact, userId);
+      if (!entries) throw gap("That child is not an editable child record in your active household.");
+      return { scope: "reported-health-context", saved: true, status: "reported", entries: entries.map(({ id, fact: entryFact, reportedAt }) => ({ id, fact: entryFact, reportedAt })) };
+    }
+
+    readOnlyVerbGuard(intent, ["read"], "Household");
 
     return handleRead(intent, userId, port);
   };

@@ -11,19 +11,19 @@ version: 1
 
 # Diary capability
 
-> Apple can read back what the household recorded, exactly as recorded.
+> Companion can read back what the household recorded, exactly as recorded.
 
 ## What it means for the household
 
-Ask Apple what the household ate and it will read the food diary back — exactly
+Ask Companion what the household ate and it will read the food diary back — exactly
 as it was recorded, nothing added and nothing interpreted away. It is the
 household's own log, returned faithfully.
 
 ## What it will never do
 
-It will not embellish, correct or reinterpret an entry. Apple reads the diary
+It will not embellish, correct or reinterpret an entry. Companion reads the diary
 exactly as recorded and does not write to it — logging what was eaten stays with
-the household. What was recorded is what Apple reports.
+the household. What was recorded is what Companion reports.
 
 ## Where it lives
 

@@ -181,6 +181,8 @@ Each domain below is defined across the nine required dimensions. Read `VR1` fir
 
 **Relationship to future production assets.** The highest-value outstanding item in this domain is not new: it is the **two-orchard convergence** (`LIVINGHOME1` § 10.2, `EXP3` § 4.2) — `/orchard.webp` and `/orchard-bg.webp` becoming one graded responsive family. This registry adds no deadline and takes no side; it records that the convergence is this domain's first obligation and that **no third orchard sibling may exist before it**.
 
+**HOMEEXT1 admission boundary (2026-10-27).** The owner-approved Home front-garden photograph is one Home architectural composite, with house, orchard, sky and path in one fixed plate. It is admitted as `home-architectural-front-garden`, through the existing environment owner and a House Register row bound to its checksum. This is the Blueprint § 6 Home E3 exception and does not create a third *orchard-only sibling* or alter the outstanding two-orchard convergence. No additional Home angle, crop file, season, or photographic room asset follows from this admission; responsive presentation must use the one plate's existing pixels without distortion. If the plate is later replaced, retirement and approval occur through the same asset lifecycle.
+
 ---
 
 ## 5.2 Domain 2 — FURNITURE ASSETS

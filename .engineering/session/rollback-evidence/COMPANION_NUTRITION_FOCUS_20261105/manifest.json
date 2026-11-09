@@ -1,0 +1,132 @@
+{
+  "task": "Companion per-person nutrition focus",
+  "rollbackTag": "rollback/companion-household-health-write-20261105",
+  "tagTarget": "3467abad4eca8d82ffc52756fee13874e389597f",
+  "files": [
+    {
+      "file": "shared/schema.ts",
+      "backup": "shared__schema.ts",
+      "sha256": "4084B850F0549EB7308DB92AD2810076E54E8F57EEA034E35F516A78CFB261B8"
+    },
+    {
+      "file": "server/migrations/runner.ts",
+      "backup": "server__migrations__runner.ts",
+      "sha256": "481E0BF8AFC8DADEE4B28AF630DE81E94687811D8C1DD69A5A8017FC8905428A"
+    },
+    {
+      "file": "server/storage.ts",
+      "backup": "server__storage.ts",
+      "sha256": "83802B7EF019E2E80EB6B72A76493E055514A9E9BBE1F3211EE4FA078BA0AD59"
+    },
+    {
+      "file": "server/privacy/personal-data-registry.ts",
+      "backup": "server__privacy__personal-data-registry.ts",
+      "sha256": "900A5E35429CB51173C82B21E62A2C2502D1B53077AB827D368BF092B01EE358"
+    },
+    {
+      "file": "server/intelligence/handlers/profile-read-port.ts",
+      "backup": "server__intelligence__handlers__profile-read-port.ts",
+      "sha256": "4D9E3DB6E897B91BD963D2FD772D6611DAB2F870A2BA6BBB6F40A992BB757CB5"
+    },
+    {
+      "file": "server/intelligence/handlers/profile-read-handler.ts",
+      "backup": "server__intelligence__handlers__profile-read-handler.ts",
+      "sha256": "83DA56CEC447D522B07D981CC3103EBCDC3A23F048C16630B3B7F109784F858A"
+    },
+    {
+      "file": "server/intelligence/handlers/household-read-port.ts",
+      "backup": "server__intelligence__handlers__household-read-port.ts",
+      "sha256": "06073CABA88BEF39FD4B9B0B5AC6695EA15070A87C657AC8894AF8452D0BE5CC"
+    },
+    {
+      "file": "server/intelligence/handlers/household-read-handler.ts",
+      "backup": "server__intelligence__handlers__household-read-handler.ts",
+      "sha256": "4DFA164625C9784DA32C238A6C19F11BB75CF0EE4651439002F17DD512677D00"
+    },
+    {
+      "file": "server/intelligence/bindings/profile.ts",
+      "backup": "server__intelligence__bindings__profile.ts",
+      "sha256": "56512D6B0FC6418F8E4DEBB586C40ABDD2BCFE9408F1D20D39194552EABA5BFA"
+    },
+    {
+      "file": "server/intelligence/bindings/household.ts",
+      "backup": "server__intelligence__bindings__household.ts",
+      "sha256": "D5F568BAC8E4FE1EA69910D0CC883C15E915B812DD72C34790823219C18E8B23"
+    },
+    {
+      "file": "server/intelligence/capability-registry.ts",
+      "backup": "server__intelligence__capability-registry.ts",
+      "sha256": "3BBFE4AB9BF272FEE10C710A890B3B69CE098DA197DD66E06E71EEA68157A24C"
+    },
+    {
+      "file": "server/intelligence/README.md",
+      "backup": "server__intelligence__README.md",
+      "sha256": "411064D9DA39219153AC4071CE5A32D5B29AD73320F621D6F11536F6D5E798CA"
+    },
+    {
+      "file": "server/intelligence/conversation/action-language.ts",
+      "backup": "server__intelligence__conversation__action-language.ts",
+      "sha256": "E8BCD6D5CCBBA098683401F495BF1DB3A1D1724E8774CDE0E34F7B9C3B409166"
+    },
+    {
+      "file": "server/intelligence/conversation/action-resolution.ts",
+      "backup": "server__intelligence__conversation__action-resolution.ts",
+      "sha256": "2676E8B8FBD08D0909235C61C26D9BEB12004B3734A24DF73A6283C509592814"
+    },
+    {
+      "file": "server/intelligence/conversation/companion-action-store.ts",
+      "backup": "server__intelligence__conversation__companion-action-store.ts",
+      "sha256": "BA029B02E320C31D419281063BFCDCC5A9EBEC2BD2687EA39AB106CAD5C7D199"
+    },
+    {
+      "file": "server/intelligence/conversation/conversation-gateway.ts",
+      "backup": "server__intelligence__conversation__conversation-gateway.ts",
+      "sha256": "EDB59A1C6880A4CFB7D1F38E35519F57962A63372D12F884D5996B756D14BD6A"
+    },
+    {
+      "file": "server/routes.ts",
+      "backup": "server__routes.ts",
+      "sha256": "CEA35DF7143678414E11254F9FD765FFA1CE800161C79D47A20BA65B079CC234"
+    },
+    {
+      "file": "client/src/pages/profile-page.tsx",
+      "backup": "client__src__pages__profile-page.tsx",
+      "sha256": "DE2F04EBAEF28F89E5EF7B08E8C6F35953ADBB9FE67E430A6DD4C6E5BACCCD8F"
+    },
+    {
+      "file": "server/tests/test-intelligence-household-binding.ts",
+      "backup": "server__tests__test-intelligence-household-binding.ts",
+      "sha256": "B211F61C055E5302B86D52012980E21A6D1ACF06A1A31FFFE5114DFD143B8DBA"
+    },
+    {
+      "file": "client/src/components/conversation/FloatingAssistant.tsx",
+      "backup": "client__src__components__conversation__FloatingAssistant.tsx",
+      "sha256": "06D0C96A199A1BD8CBADBF8E9DDD2FC720A464CDF9CF2D5576C246FA0AD815FF"
+    },
+    {
+      "file": "docs/product/intelligence/companion-capabilities/cap-companion.md",
+      "backup": "docs__product__intelligence__companion-capabilities__cap-companion.md",
+      "sha256": "534B36EE8A972224748C8E3E365C940BD9F6506030FA3CA31B8C362C6BC81E0F"
+    },
+    {
+      "file": "docs/product/structure/pages/page-profile.md",
+      "backup": "docs__product__structure__pages__page-profile.md",
+      "sha256": "E5112AB39E1480D0B8C099856D5FF2A00D8C8F6D3A4B9F4AB29A64D900BE4CDC"
+    },
+    {
+      "file": "docs/architecture/capabilities/profile.md",
+      "backup": "docs__architecture__capabilities__profile.md",
+      "sha256": "772BE7C1F4CAD74A751767832456FA2AC351B34C1733A40D98274E2FE6998EE5"
+    },
+    {
+      "file": "docs/architecture/capabilities/household.md",
+      "backup": "docs__architecture__capabilities__household.md",
+      "sha256": "72E2131FD23F497E2F961FE5593A8552BEF5576CD9E5F3389F015D38817257C2"
+    },
+    {
+      "file": "docs/architecture/THA_SOURCE_OF_TRUTH_ARCHITECTURE_REGISTER.md",
+      "backup": "docs__architecture__THA_SOURCE_OF_TRUTH_ARCHITECTURE_REGISTER.md",
+      "sha256": "EB1762405075C058391FA3A1C7662446EBB5083939E9104E9813ABA64B7047BB"
+    }
+  ]
+}

@@ -135,9 +135,9 @@ const DIETARY_CONTEXT_10: HouseholdDietaryContext = {
 // CONV1 P4 / OWN-1: the in-memory owner stores each adult's diet ON the eater row —
 // the canonical owner (Register Domain 16) — exactly as the real storage layer now does.
 const EATERS_10: HouseholdEaterRow[] = [
-  { id: 100, householdId: 10, displayName: "Colin", userId: 1, defaultDietTypes: ["mediterranean"], hardRestrictions: ["Gluten-Free"] },
-  { id: 101, householdId: 10, displayName: "Sam", userId: 2, defaultDietTypes: [], hardRestrictions: ["dairy"] },
-  { id: 102, householdId: 10, displayName: "Toby", userId: null, defaultDietTypes: ["vegetarian"], hardRestrictions: ["nuts"] },
+  { id: 100, householdId: 10, displayName: "Colin", userId: 1, defaultDietTypes: ["mediterranean"], hardRestrictions: ["Gluten-Free"], reportedHealthContext: [], nutritionFocuses: [] },
+  { id: 101, householdId: 10, displayName: "Sam", userId: 2, defaultDietTypes: [], hardRestrictions: ["dairy"], reportedHealthContext: [], nutritionFocuses: [] },
+  { id: 102, householdId: 10, displayName: "Toby", userId: null, defaultDietTypes: ["vegetarian"], hardRestrictions: ["nuts"], reportedHealthContext: [], nutritionFocuses: [] },
 ];
 
 const calls: string[] = [];

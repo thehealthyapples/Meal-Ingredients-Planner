@@ -277,7 +277,7 @@ export default function Dashboard() {
       }
       contextBar={
         <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
-          <Link href="/my-diary">
+          <Link href="/diary">
             <button
               type="button"
               className="flex items-center gap-1.5 px-3 py-1 rounded-md text-sm font-medium realm-banner-btn shrink-0 transition-colors"

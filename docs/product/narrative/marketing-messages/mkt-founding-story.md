@@ -32,7 +32,7 @@ founder's voice.
 
 ## Related
 
-- [[page-landing]]
+- [[page-home]]
 
 ---
 

@@ -47,11 +47,13 @@ import {
 } from "../intelligence/index.js";
 import { bindNutritionDiscoveryCapability } from "../intelligence/bindings/nutrition-discovery.js";
 import type { NutritionDiscoveryPort, MealNutritionRow } from "../intelligence/handlers/nutrition-discovery-port.js";
+import { isMealSafeForHousehold, isSafetyGateActive, type HouseholdSafetyContext } from "../lib/household-dietary-safety.js";
 import {
   parseMacroText,
   parseNutritionFilter,
   satisfiesFilter,
   NUTRITION_DISCOVERY_MAX_RESULTS,
+  NutritionDiscoveryEngine,
 } from "../intelligence/services/nutrition-discovery-engine.js";
 
 let passed = 0;
@@ -142,8 +144,14 @@ const NO_NUTRITION_ROW = makeRow(4, "Mystery Stew",          false, null,  null,
 const ALL_ROWS: MealNutritionRow[] = [LOW_CAL_ROW, HIGH_PROTEIN_ROW, HIGH_CAL_ROW, NO_NUTRITION_ROW];
 
 const portCalls: string[] = [];
+const unrestrictedContext: HouseholdSafetyContext = {
+  status: "resolved", householdId: 1, requesterUserId: 1,
+  requesterDietPattern: null, members: [], hardRestrictions: [],
+  activeRestrictions: [], dietPatterns: [], preferences: { dietTypes: [], excludedIngredients: [] },
+};
 function makePort(rows: MealNutritionRow[] = ALL_ROWS): NutritionDiscoveryPort {
   return {
+    safety: { resolveHouseholdSafetyContext: async () => unrestrictedContext, isSafetyGateActive, isMealSafeForHousehold },
     getMealRows: async (userId: number) => {
       portCalls.push(`getMealRows(${userId})`);
       return rows;
@@ -485,6 +493,42 @@ assert(!intelligencePlatform.canExecute(NUTRITION_DISCOVERY_CAPABILITY_ID, "read
 // ---------------------------------------------------------------------------
 // Summary
 // ---------------------------------------------------------------------------
+
+section("Benchmark superlatives and ranking before cap");
+const highest = parseNutritionFilter("Which meals are highest in protein?");
+assert(highest?.sortBy === "protein" && highest.sortDirection === "desc", "exact CB-016 question parses as protein ranking");
+const rankedRows = Array.from({ length: 20 }, (_, i) => makeRow(500 + i, `Meal ${i}`, false, "300", String(i + 1), "20", "5"));
+const rankedEngine = new NutritionDiscoveryEngine(makePort([...rankedRows, NO_NUTRITION_ROW]));
+const ranked = await rankedEngine.discover(highest!, 1);
+assert(ranked.results[0]?.internalId === 519, "highest protein candidate beyond first 15 rows ranks first");
+assert(ranked.results.length === NUTRITION_DISCOVERY_MAX_RESULTS, "ranked results remain capped");
+assert(ranked.mealsWithNutritionCount === 20 && ranked.mealsWithoutNutritionCount === 1, "coverage counts scan complete candidate set after result cap");
+const lowest = parseNutritionFilter("Which meals have the lowest calories?");
+const ascending = await rankedEngine.discover(lowest!, 1);
+assert(lowest?.sortBy === "calories" && lowest.sortDirection === "asc", "lowest calories parses as ascending ranking");
+assert(ascending.results[0]?.internalId === 500, "equal values have deterministic meal-id ordering");
+assert(highest?.proteinMin === undefined, "highest protein does not invent a minimum threshold");
+const highestOutcome = await platform.handle(
+  { verb: "search", capabilityId: NUTRITION_DISCOVERY_CAPABILITY_ID, parameters: { query: "Which meals are highest in protein?" } },
+  user1,
+);
+assert(highestOutcome.status === "ok", "CB-016 passes through the registered capability handler instead of a parse gap");
+assert((highestOutcome.result as any)?.results[0]?.internalId === 2, "CB-016 handler returns the known highest-protein meal first");
+const noProtein = makeRow(700, "Unknown protein", false, "100", null, "10", "1");
+const partialRank = await new NutritionDiscoveryEngine(makePort([noProtein, HIGH_PROTEIN_ROW])).discover(highest!, 1);
+assert(partialRank.results.length === 1 && partialRank.results[0].internalId === 2, "protein ranking excludes missing protein instead of assuming zero");
+const vegetarianPort: NutritionDiscoveryPort = {
+  ...makePort(ALL_ROWS),
+  safety: { resolveHouseholdSafetyContext: async () => ({ ...unrestrictedContext, requesterDietPattern: "vegetarian" }), isSafetyGateActive, isMealSafeForHousehold },
+};
+const safeRank = await new NutritionDiscoveryEngine(vegetarianPort).discover(highest!, 1);
+assert(!safeRank.results.some(r => r.internalId === HIGH_PROTEIN_ROW.meal.id), "canonical vegetarian gate excludes chicken before nutrition ranking");
+const unavailablePort: NutritionDiscoveryPort = {
+  ...makePort(ALL_ROWS),
+  safety: { resolveHouseholdSafetyContext: async () => ({ ...unrestrictedContext, status: "unavailable" }), isSafetyGateActive, isMealSafeForHousehold },
+};
+const unavailableRank = await new NutritionDiscoveryEngine(unavailablePort).discover(highest!, 1);
+assert(unavailableRank.results.length === 0, "unavailable household restrictions fail closed in nutrition search");
 
 console.log(`\n══════════════════════════════════════════════`);
 console.log(`  INT27 Nutrition Discovery: ${passed} passed, ${failed} failed`);

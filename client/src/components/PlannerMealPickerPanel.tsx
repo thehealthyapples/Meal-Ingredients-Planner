@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,8 @@ import { scoreMealSearch } from "@shared/food-synonyms";
 import { usePlannerMealSearch, type WebSearchRecipe } from "@/hooks/use-planner-meal-search";
 import { MealPreviewBubble, MealPreviewInline, useMealPreview } from "@/components/MealPreviewBubble";
 import { DraggableSearchResultRow } from "@/components/PlannerDragDrop";
+import { LearningSignalBanner } from "@/components/LearningSignalBanner";
+import { useLearningSignals } from "@/hooks/use-learning-signals";
 
 // PX1-W2 (fnd-px-breakpoint-six-truths): the local useIsMobile copy is retired;
 // breakpoint truth has one owner.
@@ -96,7 +99,12 @@ export function PlannerMealPickerPanel({
   const { toast } = useToast();
   const qc = useQueryClient();
   const isMobile = useIsMobile();
+  const [, navigate] = useLocation();
   const [mealSearch, setMealSearch] = useState("");
+
+  // Query learning signals — show top signal for meals domain
+  const { data: signalsData, isDeciding, confirm, decline } = useLearningSignals();
+  const [dismissedSignalIds, setDismissedSignalIds] = useState<Set<number>>(new Set());
   const [activeSources, setActiveSources] = useState<Set<PlannerSourceKey>>(
     () => new Set<PlannerSourceKey>(["web", "cookbook", "freezer"]),
   );
@@ -351,6 +359,33 @@ export function PlannerMealPickerPanel({
           data-testid="input-meal-search"
         />
       </div>
+
+      {/* Learning Signal Banner */}
+      {signalsData?.signals && signalsData.signals.length > 0 && (
+        (() => {
+          const topSignal = signalsData.signals[0];
+          const isTopSignalDismissed = topSignal && dismissedSignalIds.has(topSignal.id);
+
+          return !isTopSignalDismissed ? (
+            <LearningSignalBanner
+              signal={topSignal}
+              onConfirm={(s) => {
+                confirm(s);
+                setDismissedSignalIds(prev => new Set([...prev, s.id]));
+              }}
+              onDecline={(s) => {
+                decline(s);
+                setDismissedSignalIds(prev => new Set([...prev, s.id]));
+              }}
+              onSkip={() => {
+                setDismissedSignalIds(prev => new Set([...prev, topSignal.id]));
+              }}
+              onViewAll={() => navigate("/settings?tab=learning-signals")}
+              isLoading={isDeciding}
+            />
+          ) : null;
+        })()
+      )}
 
       {/* Meals list */}
       <div className="overflow-y-auto space-y-0.5" data-testid="list-meal-picker">

@@ -1,0 +1,32 @@
+[
+  {
+    "path": "docs/architecture/THA_FOOD_INTELLIGENCE_PLATFORM_ARCHITECTURE.md",
+    "snapshot": ".engineering\\session\\rollback-evidence\\COMPANION_HOUSEHOLD_HEALTH_WRITE_20261105\\docs__architecture__THA_FOOD_INTELLIGENCE_PLATFORM_ARCHITECTURE.md.pre-companion-health-write",
+    "sha256": "4AC6F207153985FA646689908469AB59A7681E27C5163B662D31C06778CB712E"
+  },
+  {
+    "path": "docs/product/intelligence/companion-capabilities/cap-companion.md",
+    "snapshot": ".engineering\\session\\rollback-evidence\\COMPANION_HOUSEHOLD_HEALTH_WRITE_20261105\\docs__product__intelligence__companion-capabilities__cap-companion.md.pre-companion-health-write",
+    "sha256": "F4F43535B0D745851EE8B80916063A54398053531BFD05981B42D7CE3DD00C50"
+  },
+  {
+    "path": ".engineering/session/CURRENT.md",
+    "snapshot": ".engineering\\session\\rollback-evidence\\COMPANION_HOUSEHOLD_HEALTH_WRITE_20261105\\.engineering__session__CURRENT.md.pre-companion-health-write",
+    "sha256": "1FF8EBBF4AE14EB6F8E0FAAB4CB6ECD995120638015D703F63013B9654AD6D1D"
+  },
+  {
+    "path": "server/migrations/runner.ts",
+    "snapshot": ".engineering\\session\\rollback-evidence\\COMPANION_HOUSEHOLD_HEALTH_WRITE_20261105\\server__migrations__runner.ts.pre-companion-health-write",
+    "sha256": "694C8629AD4ED118479790DEE4A1FF10D814DC0EE4EFD4E6B141C56B966BE9FB"
+  },
+  {
+    "path": "server/routes.ts",
+    "snapshot": ".engineering\\session\\rollback-evidence\\COMPANION_HOUSEHOLD_HEALTH_WRITE_20261105\\server__routes.ts.pre-companion-health-write",
+    "sha256": "CEA1FC7AD88CFF13440A403AB74B3304B76901E8B013ED82CD66448179FA1254"
+  },
+  {
+    "path": "server/storage.ts",
+    "snapshot": ".engineering\\session\\rollback-evidence\\COMPANION_HOUSEHOLD_HEALTH_WRITE_20261105\\server__storage.ts.pre-companion-health-write",
+    "sha256": "C8D39B103CA7EBE6DA20DC83E0EB4EC77A0280F20B72093834BE61B729AAF8BE"
+  }
+]

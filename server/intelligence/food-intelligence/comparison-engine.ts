@@ -24,11 +24,23 @@
  *                          snapshot the Analyser owner (product-analysis.ts +
  *                          upf-analysis-service.ts) computed at scan time
  *                          (thaRating, upfScore, novaGroup, nutriscoreGrade,
- *                          healthScore). NEVER a live OpenFoodFacts fetch and
- *                          NEVER a recompute — the analyser Capability Card's
- *                          trust rule ("never fabricate a UPF classification…
- *                          there is no stored result") is satisfied because here
- *                          there IS a stored result, scoped to the caller.
+ *                          healthScore). Preferred over a live lookup whenever
+ *                          it exists — a stored result is the caller's OWN,
+ *                          already-trusted record.
+ *   Live product search  → server/lib/live-product-search.ts (2026-11-02,
+ *                          owner: "compare in foods should show both foods
+ *                          from analyser and THA's own library"). Tried only
+ *                          when neither the canonical seed nor the caller's
+ *                          own scan history resolves the item — the SAME live
+ *                          OpenFoodFacts fetch + real computed score
+ *                          GET /api/search-products already does for
+ *                          Analyser's own search, reused rather than
+ *                          duplicated. Subject kind "live-product", always
+ *                          cited to OWNER_LIVE_SEARCH — never presented with
+ *                          the same confidence as the caller's own scan
+ *                          history, because it isn't: nobody at THA or in
+ *                          this household verified it, it was fetched THIS
+ *                          INSTANT from a public database.
  *   Household context   → resolveHouseholdSignal (FI3, reused verbatim) +
  *                          resolveIngredientRestrictions (restriction library)
  *   Per-100g macros      → server/lib/usda-whole-food-service.ts
@@ -62,9 +74,10 @@
  * fetches from the existing owners above and calls it.
  */
 
-import type { ProductHistory } from "@shared/schema";
+import type { ProductHistory, Additive } from "@shared/schema";
 import type { FoodReportKnowledge } from "@shared/canonical/food-report-adapter";
 import type { NutrientSnapshot } from "../../lib/usda-whole-food-service.js";
+import type { LiveProductMatch } from "../../lib/live-product-search.js";
 import { resolveCanonicalFood } from "@shared/canonical/resolver.js";
 import { resolveIngredientRestrictions } from "@shared/restrictions/restriction-resolver.js";
 import { resolveHouseholdSignal, NO_HOUSEHOLD_SIGNAL, type HouseholdSignal } from "./engine.js";
@@ -82,8 +95,13 @@ const PRODUCT_HISTORY_LOOKUP_LIMIT = 50;
 // Public types
 // ---------------------------------------------------------------------------
 
-/** How an input item resolved. `unresolved` is an honest state, not an error. */
-export type ComparisonSubjectKind = "canonical-food" | "scanned-product" | "unresolved";
+/** How an input item resolved. `unresolved` is an honest state, not an error.
+ *  `live-product` (2026-11-02) is distinct from `scanned-product` on purpose:
+ *  a scanned-product subject is the caller's OWN stored record; a
+ *  live-product subject was fetched from a public database this instant,
+ *  nobody has scanned or verified it — collapsing the two into one kind
+ *  would let a live guess borrow the trust of the caller's own history. */
+export type ComparisonSubjectKind = "canonical-food" | "scanned-product" | "live-product" | "unresolved";
 
 /** The dimensions COMP1 compares. Fixed vocabulary — consumers render all of them. */
 export type ComparisonDimensionKey =
@@ -136,6 +154,18 @@ export interface ComparisonDimensionEntry {
    * dimension this engine can show a true quantitative difference on.
    */
   readonly metrics?: readonly { label: string; value: string }[];
+  /**
+   * 2026-11-02 (owner) — "apple score should be shown... with the top
+   * single apple logo... the comparison is too wordy": present only on the
+   * appleScore dimension, 1-5. The engine already had this number (a
+   * recognised whole food's 5/5 classification, or a scanned product's
+   * stored thaRating) — `summary` just turned it into a sentence with no
+   * structured number alongside it, so the view had nothing to hand
+   * AppleRating (the SAME apple-icon component the Analyser already shows a
+   * score with). Same discipline as `metrics`: a real number, not derived by
+   * parsing `summary`, so the two can never drift out of sync.
+   */
+  readonly rating?: number;
 }
 
 export interface ComparisonSubject {
@@ -215,18 +245,34 @@ export interface SubjectFacts {
   readonly product: ProductHistory | null;
   /** FOODUI12 — per-100g USDA macros (canonical foods on the curated allowlist only; null otherwise). */
   readonly usdaSnapshot: NutrientSnapshot | null;
+  /** 2026-11-02 — a live OpenFoodFacts match (live-product subjects only).
+   *  Deliberately a SEPARATE field from `product` (never squeezed into the
+   *  ProductHistory shape) — it isn't a stored record and must never be
+   *  mistaken for one; see server/lib/live-product-search.ts. */
+  readonly liveProduct: LiveProductMatch | null;
 }
 
 // ---------------------------------------------------------------------------
 // Owners (named once, cited everywhere)
 // ---------------------------------------------------------------------------
 
-const OWNER_CANONICAL = "canonical-food-seed (shared/canonical)";
-const OWNER_KNOWLEDGE = "food-knowledge-registry (WS0 knowledge_*, evidence-gated)";
-const OWNER_PRODUCT_HISTORY = "product-history (the caller's own stored scan record)";
-const OWNER_RESTRICTIONS = "restriction-library + household eaters";
-const OWNER_PLANNER = "planner-history";
-const OWNER_USDA = "usda-whole-food-service (USDA FoodData Central, curated allowlist)";
+// 2026-11-01 (owner) — "the wording... the use of canonical... not
+// simplifying some of the info": these owner labels render verbatim in the
+// "Why?" tooltip (CellSourceTooltip, client/src/components/intelligence/
+// FoodComparisonView.tsx), so a dev-internal name here was a jargon leak
+// straight into the household-facing UI, not just an internal label. Plain
+// English now; the code-level identity (which file/table this read from) is
+// unchanged — see the owner-mapping doc comment at the top of this file.
+const OWNER_CANONICAL = "THA's whole-food list";
+const OWNER_KNOWLEDGE = "THA's food knowledge library";
+const OWNER_PRODUCT_HISTORY = "your scan history";
+const OWNER_RESTRICTIONS = "your household's restrictions";
+const OWNER_PLANNER = "your planner history";
+const OWNER_USDA = "USDA FoodData Central";
+// 2026-11-02 — deliberately distinct from OWNER_PRODUCT_HISTORY ("your scan
+// history"): a live-product subject is NOT the caller's own record, and this
+// label must never let it borrow that trust.
+const OWNER_LIVE_SEARCH = "a live product search (Open Food Facts) — not something you've scanned";
 
 // ---------------------------------------------------------------------------
 // Dimension builders (pure)
@@ -234,6 +280,11 @@ const OWNER_USDA = "usda-whole-food-service (USDA FoodData Central, curated allo
 
 function evidence(summary: string, ...refs: ComparisonEvidence[]): ComparisonDimensionEntry {
   return { status: "evidence", summary, gapReason: null, evidence: refs };
+}
+
+/** Same as evidence(), plus the real 1-5 number `summary` already states in prose — appleScore only. */
+function evidenceWithRating(summary: string, rating: number, ...refs: ComparisonEvidence[]): ComparisonDimensionEntry {
+  return { status: "evidence", summary, gapReason: null, evidence: refs, rating };
 }
 
 /** FOODUI11 — same as evidence(), plus the structured list `summary` already describes in prose. */
@@ -246,7 +297,13 @@ function dimensionGap(reason: string): ComparisonDimensionEntry {
 }
 
 const GAP_UNRESOLVED =
-  "This item did not resolve to a canonical food or to a product in your scan history — no owner has evidence about it.";
+  "We couldn't match this to a known food or a product in your scan history.";
+
+// 2026-11-01 (owner) — this is the exact line the owner quoted back as too
+// technical ("cannot be compared without fabricating a price"). Shared by
+// both subject kinds below so the two can't reword independently and drift.
+const VALUE_FOR_MONEY_GAP =
+  "We don't store a price for this, so value for money can't be compared here.";
 
 function unresolvedDimensions(): Record<ComparisonDimensionKey, ComparisonDimensionEntry> {
   const entries = {} as Record<ComparisonDimensionKey, ComparisonDimensionEntry>;
@@ -254,10 +311,53 @@ function unresolvedDimensions(): Record<ComparisonDimensionKey, ComparisonDimens
   return entries;
 }
 
-/** Numeric rank used ONLY inside the deterministic verdict ladder — lower is less processed. */
+// 2026-11-02 (owner) — "cheese and cucumber so much wrong here": every
+// canonical-food subject was treated as "a whole food, unprocessed, single
+// ingredient, no additives" purely because it resolved to a named identity
+// in the canonical seed — true for cucumber, false for cheese (a cultured,
+// fermented dairy product). "THA recognises this food's identity" and "this
+// food is raw/unprocessed" are different facts; conflating them let the UI
+// assert something false (cheese has no ingredient list, no additives, is
+// unprocessed) with the exact same confident, cited presentation it uses for
+// something true. These top-level canonical-seed categories (shared/
+// canonical/foods.ts) are never raw, single-ingredient whole foods by
+// nature — they're the inherently-prepared corner of the catalogue (milk
+// cultured into cheese, soy fermented into miso, beans brewed into coffee)
+// — so a subject in one of them gets an honest gap on processing/
+// ingredientQuality/additives instead of a false claim.
+//
+// NOT exhaustive at the subcategory level: "Grains" mixes whole grains with
+// flour and pasta, "Healthy fats" mixes avocado with extracted oil, "Legumes"
+// mixes dried beans with bean flour — subcategory isn't threaded onto
+// SubjectFacts today, only the top-level category, so those residual
+// mis-claims aren't caught yet. Category is still a strict improvement over
+// no check at all.
+const INHERENTLY_PREPARED_CATEGORIES = new Set<string>([
+  "Dairy",
+  "Dairy alternatives",
+  "Fermented foods",
+  "Beverages",
+]);
+
+/** True unless the category is one we know is never a raw, single-ingredient
+ *  whole food. Unknown/missing category defaults to true (whole food) —
+ *  the existing, conservative behaviour — rather than flipping to a gap for
+ *  every food this check can't yet classify. */
+function isRawWholeFoodCategory(category: string | null): boolean {
+  if (category === null) return true;
+  return !INHERENTLY_PREPARED_CATEGORIES.has(category);
+}
+
+/** Numeric rank used ONLY inside the deterministic verdict ladder — lower is
+ *  less processed. A canonical food only ranks as "least processed" when it's
+ *  actually a raw whole food (Rule E1/E2 — never a confident number for a
+ *  fact this check can't support); everything else in the ladder correctly
+ *  treats an unranked subject as "no grounded comparison on this dimension"
+ *  rather than silently matching it against a real NOVA group. */
 function processingRank(subject: SubjectFacts): number | null {
-  if (subject.kind === "canonical-food") return 1; // whole food by canonical identity
+  if (subject.kind === "canonical-food") return isRawWholeFoodCategory(subject.category) ? 1 : null;
   if (subject.kind === "scanned-product") return subject.product?.novaGroup ?? null;
+  if (subject.kind === "live-product") return subject.liveProduct?.novaGroup ?? null;
   return null;
 }
 
@@ -273,49 +373,107 @@ function buildSubjectDimensions(
   if (subject.kind === "canonical-food") {
     const report = subject.report;
 
-    dims.appleScore = dimensionGap(
-      `${name} is a canonical whole food — THA computes numeric Apple Scores for analysed products, not whole foods; no owner stores a numeric score for it.`,
-    );
-    dims.processing = evidence(
-      `${name} is a canonical whole food (single unprocessed food by identity — preparations and packaged products are never in the canonical seed).`,
-      { owner: OWNER_CANONICAL, fact: `${name} resolves in the WS2A canonical food seed (slug: ${subject.slug}).` },
-    );
-    dims.ingredientQuality = evidence(
-      `${name} is itself a single whole ingredient — there is no manufactured ingredient list to grade.`,
-      { owner: OWNER_CANONICAL, fact: `Canonical identity: one whole food, not a formulated product.` },
-    );
-    dims.additives = evidence(
-      `Not applicable — ${name} is a single whole food with no manufactured ingredient list, so there is no additive declaration to inspect.`,
-      { owner: OWNER_CANONICAL, fact: `Canonical identity: one whole food, not a formulated product.` },
-    );
+    // 2026-11-02 (owner) — "why are we only creating apple score for
+    // scanned images and not food in catalogue... everything should have an
+    // apple score": this file had its own, stricter rule ("only a scanned
+    // product gets a score") that disagreed with an existing one elsewhere
+    // in the app. client/src/components/analyser/WholeFoodAnalysisCard.tsx
+    // already scores a recognised whole food 5/5 "by classification" — no
+    // packaged-product lookup required, because a genuinely raw, single-
+    // ingredient food has no additives or processing to penalise it on by
+    // construction. This engine now uses that exact same, already-shipped
+    // rule instead of its own stricter one. It stays a gap only for subjects
+    // this engine knows AREN'T raw whole foods (cheese, Dairy's neighbours —
+    // same isWholeFood check as processing/ingredientQuality/additives below)
+    // — giving those a 5 too would be the same false "whole food" claim this
+    // file already got corrected for once this session.
+    const isWholeFood = isRawWholeFoodCategory(subject.category);
+    if (isWholeFood) {
+      dims.appleScore = evidenceWithRating(
+        `${name} is a whole or minimally processed food — THA scores whole foods 5/5 by classification (no packaged-product lookup needed), the same rule used everywhere else in the app.`,
+        5,
+        { owner: OWNER_CANONICAL, fact: `${name} is on THA's whole-food list; recognised whole foods score 5/5 by classification, not a computed ingredient-label scan.` },
+      );
+      dims.processing = evidence(
+        `${name} is a whole food — unprocessed by definition. (A prepared or packaged version of it isn't treated as the same food here.)`,
+        { owner: OWNER_CANONICAL, fact: `${name} is on THA's whole-food list.` },
+      );
+      dims.ingredientQuality = evidence(
+        `${name} is itself a single whole ingredient — there is no manufactured ingredient list to grade.`,
+        { owner: OWNER_CANONICAL, fact: `${name} is one whole food, not a formulated product with its own ingredient list.` },
+      );
+      dims.additives = evidence(
+        `Not applicable — ${name} is a single whole food with no manufactured ingredient list, so there is no additive declaration to inspect.`,
+        { owner: OWNER_CANONICAL, fact: `${name} is one whole food, not a formulated product with its own additive declaration.` },
+      );
+    } else {
+      dims.appleScore = dimensionGap(
+        `${name} isn't a raw, single-ingredient whole food, so it doesn't qualify for THA's whole-food 5/5 classification — THA only computes an Apple Score from a packaged product's own label, and this hasn't been scanned.`,
+      );
+      dims.processing = dimensionGap(
+        `${name} isn't a raw, single-ingredient whole food — THA doesn't have a detailed processing classification for it here (that level of detail comes from a scanned product's own label).`,
+      );
+      dims.ingredientQuality = dimensionGap(
+        `${name} isn't a single raw ingredient — THA doesn't store an ingredient list for it here (only for a product you've scanned).`,
+      );
+      dims.additives = dimensionGap(
+        `${name} isn't a single raw ingredient — THA doesn't store an additive declaration for it here (only for a product you've scanned).`,
+      );
+    }
 
     const nutrients = report?.keyNutrients ?? [];
     // FOODUI12 — USDA per-100g macros, when this food is on the curated
     // allowlist. A real quantity, never derived from or blended with the
     // editorial keyNutrients list — the two are independent owners.
     const snapshot = subject.usdaSnapshot?.per100g;
-    const metrics = snapshot
+    const units = subject.usdaSnapshot?.units;
+    // 2026-10-31 — expanded from the original 6 macros to the full verified
+    // micronutrient set (see usda-whole-food-service.ts's own note on why:
+    // the USDA record always held this data, the parser just wasn't reading
+    // it). Labelled from `units` rather than a second hardcoded unit string,
+    // so the two can never drift apart.
+    const metrics = snapshot && units
       ? ([
-          snapshot.calories != null ? { label: "Calories", value: `${snapshot.calories} kcal` } : null,
-          snapshot.protein != null ? { label: "Protein", value: `${snapshot.protein} g` } : null,
-          snapshot.carbs != null ? { label: "Carbs", value: `${snapshot.carbs} g` } : null,
-          snapshot.fat != null ? { label: "Fat", value: `${snapshot.fat} g` } : null,
-          snapshot.fibre != null ? { label: "Fibre", value: `${snapshot.fibre} g` } : null,
-          snapshot.sugar != null ? { label: "Sugar", value: `${snapshot.sugar} g` } : null,
-        ].filter((m): m is { label: string; value: string } => m !== null))
+          ["Calories", snapshot.calories, units.calories],
+          ["Protein", snapshot.protein, units.protein],
+          ["Carbs", snapshot.carbs, units.carbs],
+          ["Fat", snapshot.fat, units.fat],
+          ["Fibre", snapshot.fibre, units.fibre],
+          ["Sugar", snapshot.sugar, units.sugar],
+          ["Vitamin K", snapshot.vitaminK, units.vitaminK],
+          ["Vitamin C", snapshot.vitaminC, units.vitaminC],
+          ["Vitamin A", snapshot.vitaminA, units.vitaminA],
+          ["Vitamin E", snapshot.vitaminE, units.vitaminE],
+          ["Vitamin B6", snapshot.vitaminB6, units.vitaminB6],
+          ["Folate", snapshot.folate, units.folate],
+          ["Calcium", snapshot.calcium, units.calcium],
+          ["Potassium", snapshot.potassium, units.potassium],
+          ["Iron", snapshot.iron, units.iron],
+          ["Magnesium", snapshot.magnesium, units.magnesium],
+          ["Zinc", snapshot.zinc, units.zinc],
+          ["Sodium", snapshot.sodium, units.sodium],
+          ["Phosphorus", snapshot.phosphorus, units.phosphorus],
+          ["Manganese", snapshot.manganese, units.manganese],
+          ["Copper", snapshot.copper, units.copper],
+          ["Beta-carotene", snapshot.betaCarotene, units.betaCarotene],
+          ["Lutein + zeaxanthin", snapshot.luteinZeaxanthin, units.luteinZeaxanthin],
+        ] as const)
+          .flatMap(([label, value, unit]) =>
+            value != null ? [{ label, value: `${value} ${unit}` }] : [],
+          )
       : [];
 
     if (nutrients.length === 0 && metrics.length === 0) {
       dims.nutritionalProfile = dimensionGap(
-        `The Food Knowledge Registry documents no key nutrients for ${name} yet — an honest gap, not evidence that it has none.`,
+        `We haven't documented key nutrients for ${name} yet — that's a gap in our records, not evidence it has none.`,
       );
     } else {
       const refs: ComparisonEvidence[] = [];
-      if (nutrients.length > 0) refs.push({ owner: OWNER_KNOWLEDGE, fact: `Food Knowledge Registry links ${name} to: ${nutrients.join(", ")}.` });
-      if (metrics.length > 0) refs.push({ owner: OWNER_USDA, fact: `Per 100g, raw: ${metrics.map((m) => `${m.label} ${m.value}`).join(", ")} (fdcId ${subject.usdaSnapshot!.fdcId}).` });
+      if (nutrients.length > 0) refs.push({ owner: OWNER_KNOWLEDGE, fact: `We've documented these nutrients for ${name}: ${nutrients.join(", ")}.` });
+      if (metrics.length > 0) refs.push({ owner: OWNER_USDA, fact: `Per 100g, raw: ${metrics.map((m) => `${m.label} ${m.value}`).join(", ")}.` });
       const entry = evidenceWithItems(
         nutrients.length > 0
-          ? `Documented key nutrients: ${nutrients.join(", ")}. (Documentation, not a full composition table — an undocumented nutrient is not evidence of absence.)`
+          ? `Key nutrients we've documented: ${nutrients.join(", ")}. (This isn't a full composition table — a nutrient not listed here isn't necessarily absent.)`
           : `Per 100g (raw), from USDA FoodData Central.`,
         nutrients,
         ...refs,
@@ -327,17 +485,15 @@ function buildSubjectDimensions(
     dims.healthBenefits =
       benefits.length > 0
         ? evidenceWithItems(
-            `Evidence-gated documented benefits: ${benefits.join(", ")}.`,
+            `Documented, reviewed health benefits: ${benefits.join(", ")}.`,
             benefits,
-            { owner: OWNER_KNOWLEDGE, fact: `Each listed benefit passed the Layer-2 evidence gate (valid SourceRef + human review).` },
+            { owner: OWNER_KNOWLEDGE, fact: `Each benefit listed here has been reviewed and is backed by a cited source.` },
           )
         : dimensionGap(
-            `No evidence-gated health benefit is documented for ${name} yet — an honest gap, not evidence that it has none.`,
+            `No reviewed health benefit is documented for ${name} yet — that's a gap in our records, not evidence it has none.`,
           );
 
-    dims.valueForMoney = dimensionGap(
-      "THA stores no canonical price for this item, so value for money cannot be compared without fabricating a price.",
-    );
+    dims.valueForMoney = dimensionGap(VALUE_FOR_MONEY_GAP);
 
     if (!household.resolved) {
       dims.householdSuitability = dimensionGap(
@@ -353,7 +509,7 @@ function buildSubjectDimensions(
         const names = conflicts.map((c) => c.restriction.displayName).join(", ");
         dims.householdSuitability = evidence(
           `Conflicts with an active household restriction (${names}) — not suitable for this household.`,
-          { owner: OWNER_RESTRICTIONS, fact: `${name} matches restriction rule(s): ${names}.` },
+          { owner: OWNER_RESTRICTIONS, fact: `Checked against every active restriction in your household's library; ${name} conflicts with: ${names}.` },
         );
       } else {
         const familiarity =
@@ -362,13 +518,65 @@ function buildSubjectDimensions(
             : "";
         dims.householdSuitability = evidence(
           `No conflict with any active household restriction.${familiarity}`,
-          { owner: OWNER_RESTRICTIONS, fact: `${name} matches no active restriction rule.` },
+          { owner: OWNER_RESTRICTIONS, fact: `Checked against every active restriction in your household's library; none matched ${name}.` },
           ...(appearances > 0
             ? [{ owner: OWNER_PLANNER, fact: `${name} appears ${appearances} time(s) in this household's planner history.` }]
             : []),
         );
       }
     }
+    return dims;
+  }
+
+  if (subject.kind === "live-product") {
+    // 2026-11-02 (owner) — "compare in foods should show both foods from
+    // analyser and THA's own library": fetched THIS INSTANT from Open Food
+    // Facts, not stored anywhere, never presented with scan-history's
+    // confidence — OWNER_LIVE_SEARCH names that explicitly on every citation
+    // here, distinct from OWNER_PRODUCT_HISTORY below.
+    const live = subject.liveProduct!;
+    const liveRef: ComparisonEvidence = {
+      owner: OWNER_LIVE_SEARCH,
+      fact: `"${live.name}"${live.brand ? ` (${live.brand})` : ""} — found via a live product search just now, not something you've scanned.`,
+    };
+
+    dims.appleScore =
+      live.thaRating != null
+        ? evidenceWithRating(`THA Apple Score ${live.thaRating}/5, computed just now from a live product search.`, live.thaRating, liveRef)
+        : dimensionGap(`A live search found ${name}, but didn't return enough data to compute an Apple Score.`);
+
+    const liveProcessingParts: string[] = [];
+    if (live.novaGroup != null) liveProcessingParts.push(`NOVA group ${live.novaGroup}`);
+    if (live.upfScore != null) liveProcessingParts.push(`UPF score ${live.upfScore}/100`);
+    dims.processing =
+      liveProcessingParts.length > 0
+        ? evidence(`Processing level (live search): ${liveProcessingParts.join(", ")}.`, liveRef)
+        : dimensionGap(`A live search found ${name}, but it didn't return a processing classification.`);
+
+    dims.ingredientQuality = live.ingredientsText
+      ? evidence(
+          `Has its own manufactured ingredient list — not a single raw ingredient.`,
+          liveRef,
+        )
+      : dimensionGap(`A live search found ${name}, but it didn't return an ingredient list to grade.`);
+
+    dims.additives = live.ingredientsText
+      ? live.additiveCount > 0
+        ? evidence(`${live.additiveCount} additive${live.additiveCount === 1 ? "" : "s"} detected in this live search result's ingredient list.`, liveRef)
+        : evidence(`No additives detected in this live search result's ingredient list.`, liveRef)
+      : dimensionGap(`A live search found ${name}, but it didn't return an ingredient list to check for additives.`);
+
+    dims.nutritionalProfile = dimensionGap(
+      `THA's Food Knowledge Registry documents whole foods, not branded products — outside what that registry covers.`,
+    );
+    dims.healthBenefits = dimensionGap(
+      "THA's reviewed health-benefit knowledge covers whole foods, not branded products.",
+    );
+    dims.valueForMoney = dimensionGap(VALUE_FOR_MONEY_GAP);
+    dims.householdSuitability = dimensionGap(
+      `${name} was found via a live search, not verified against your household's restrictions — check the label.`,
+    );
+
     return dims;
   }
 
@@ -381,7 +589,7 @@ function buildSubjectDimensions(
 
   dims.appleScore =
     product.thaRating != null
-      ? evidence(`THA Apple Score ${product.thaRating}/5, as recorded when this product was analysed.`, scanRef)
+      ? evidenceWithRating(`THA Apple Score ${product.thaRating}/5, as recorded when this product was analysed.`, product.thaRating, scanRef)
       : dimensionGap(
           `Your scan record for ${name} has no stored Apple Score — THA will not recompute one without the product's ingredient data.`,
         );
@@ -407,11 +615,9 @@ function buildSubjectDimensions(
       : dimensionGap(`Your scan record for ${name} has no stored nutrition grade.`);
 
   dims.healthBenefits = dimensionGap(
-    "THA's evidence-gated health-benefit knowledge covers foods in the Food Knowledge Registry, not branded products.",
+    "THA's reviewed health-benefit knowledge covers whole foods, not branded products.",
   );
-  dims.valueForMoney = dimensionGap(
-    "THA stores no canonical price for this item, so value for money cannot be compared without fabricating a price.",
-  );
+  dims.valueForMoney = dimensionGap(VALUE_FOR_MONEY_GAP);
   dims.householdSuitability = dimensionGap(
     `The ingredient list is not stored in your scan history, so ${name} cannot be verified against household restrictions — check the label.`,
   );
@@ -442,7 +648,7 @@ function buildDimensionOutcomes(
         dimension,
         comparable: false,
         outcome: null,
-        gapReason: `No owner evidence for: ${missing.join(", ")}. THA will not fabricate the missing side of a comparison.`,
+        gapReason: `We don't have this for: ${missing.join(", ")}.`,
       };
     }
 
@@ -507,7 +713,7 @@ function buildRecommendation(
     return {
       recommendation: null,
       recommendationGap:
-        "Fewer than two items resolved to owner-backed identities, so there is nothing grounded to recommend between.",
+        "Fewer than two of these matched a known food or product, so there's nothing grounded to recommend between.",
     };
   }
 
@@ -537,21 +743,31 @@ function buildRecommendation(
     };
   }
 
-  // Rung 2 — THA Apple Score: only when every safe subject has a stored rating.
-  const ratings = safe.map((s) => (s.kind === "scanned-product" ? s.product?.thaRating ?? null : null));
+  // Rung 2 — THA Apple Score: only when every safe subject has a real score —
+  // the caller's own stored scan rating, OR (2026-11-02, owner: "compare in
+  // foods should show both foods from analyser and THA's own library") a
+  // live search's freshly computed one. Per-subject provenance is named in
+  // the basis text below so a live-searched product's score is never implied
+  // to be the caller's own stored record.
+  const ratings = safe.map((s) =>
+    s.kind === "scanned-product" ? s.product?.thaRating ?? null
+    : s.kind === "live-product" ? s.liveProduct?.thaRating ?? null
+    : null,
+  );
   if (ratings.every((r): r is number => r != null)) {
     const max = Math.max(...ratings);
     const winners = safe.filter((_, i) => ratings[i] === max);
     if (winners.length === 1) {
       const winner = winners[0];
+      const ratingProvenance = (s: SubjectFacts) => (s.kind === "live-product" ? "live search" : "your scan history");
       return {
         recommendation: {
           slug: winner.slug,
           name: describeSubject(winner),
           basis: [
             `Highest recorded THA Apple Score: ${describeSubject(winner)} at ${max}/5 (${safe
-              .map((s, i) => `${describeSubject(s)}: ${ratings[i]}/5`)
-              .join(", ")}), each as stored in your own scan history.`,
+              .map((s, i) => `${describeSubject(s)}: ${ratings[i]}/5, from ${ratingProvenance(s)}`)
+              .join(", ")}).`,
             ...suitabilityCaveat(safe, dimsBySubject, household),
           ],
         },
@@ -577,7 +793,7 @@ function buildRecommendation(
           basis: [
             `Least processed: ${safe
               .map((s, i) => `${describeSubject(s)} (${rankLabel(s, ranks[i]!)})`)
-              .join(" vs ")} — whole-food identity from the canonical seed, product processing from your own scan records.`,
+              .join(" vs ")} — a whole food is unprocessed by definition; product processing comes from your own scan records or a live product search.`,
             ...suitabilityCaveat(safe, dimsBySubject, household),
           ],
         },
@@ -588,14 +804,14 @@ function buildRecommendation(
     return {
       recommendation: null,
       recommendationGap:
-        "The compared items tie on every dimension with full evidence — THA will not fabricate a difference to break the tie. (Documented nutrients and benefits are not ranked: documentation coverage is not food quality.)",
+        "These items tie on every dimension we have full evidence for — we won't invent a difference just to break the tie. (Documented nutrients and benefits aren't ranked here: how much we've documented isn't the same as food quality.)",
     };
   }
 
   return {
     recommendation: null,
     recommendationGap:
-      "No dimension has owner evidence for every compared item, so no grounded recommendation is possible. The per-item gaps above say exactly what evidence is missing.",
+      "We don't have full evidence for every compared item on any one dimension, so there's no grounded recommendation to make. The gaps above say exactly what's missing.",
   };
 }
 
@@ -629,7 +845,7 @@ export function buildComparison(
   const gaps: string[] = [];
   for (const subject of subjects) {
     if (subject.kind === "unresolved") {
-      gaps.push(`"${subject.query}" did not resolve to a canonical food or a product in your scan history.`);
+      gaps.push(`"${subject.query}" didn't match a known food or a product in your scan history.`);
     }
   }
   for (const d of dimensions) {
@@ -672,6 +888,7 @@ function matchProductHistory(query: string, history: readonly ProductHistory[]):
 async function resolveSubject(
   query: string,
   history: readonly ProductHistory[],
+  additiveDb: readonly Additive[],
 ): Promise<SubjectFacts> {
   // Identity spine first: a canonical whole food wins over a scan-history match.
   const canonical = resolveCanonicalFood(query);
@@ -691,6 +908,7 @@ async function resolveSubject(
       report,
       product: null,
       usdaSnapshot,
+      liveProduct: null,
     };
   }
 
@@ -705,10 +923,32 @@ async function resolveSubject(
       usdaSnapshot: null,
       report: null,
       product,
+      liveProduct: null,
     };
   }
 
-  return { query, kind: "unresolved", slug: null, name: null, category: null, report: null, product: null, usdaSnapshot: null };
+  // 2026-11-02 (owner) — "compare in foods should show both foods from
+  // analyser and THA's own library": tried last, only when neither the
+  // canonical identity spine nor the caller's own scan history already
+  // answered the question, so a stored/verified fact always wins over a
+  // live guess when both exist.
+  const { findLiveProductMatch } = await import("../../lib/live-product-search.js");
+  const live = await findLiveProductMatch(query, [...additiveDb]);
+  if (live) {
+    return {
+      query,
+      kind: "live-product",
+      slug: live.barcode,
+      name: live.name,
+      category: live.brand,
+      usdaSnapshot: null,
+      report: null,
+      product: null,
+      liveProduct: live,
+    };
+  }
+
+  return { query, kind: "unresolved", slug: null, name: null, category: null, report: null, product: null, usdaSnapshot: null, liveProduct: null };
 }
 
 /**
@@ -744,9 +984,20 @@ export async function assembleFoodComparison(
 
   const household = request.userId != null ? await resolveHouseholdSignal(request.userId) : NO_HOUSEHOLD_SIGNAL;
 
+  // 2026-11-02 — fetched once per comparison, used only by resolveSubject's
+  // live-search fallback (the same additive DB GET /api/search-products
+  // already reads for every Analyser search).
+  let additiveDb: Additive[] = [];
+  try {
+    const { storage } = await import("../../storage.js");
+    additiveDb = await storage.getAllAdditives();
+  } catch {
+    additiveDb = []; // an honest empty list — a live match still resolves, just unscored on additives
+  }
+
   const subjectFacts: SubjectFacts[] = [];
   for (const item of items) {
-    subjectFacts.push(await resolveSubject(item, history));
+    subjectFacts.push(await resolveSubject(item, history, additiveDb));
   }
 
   const core = buildComparison(subjectFacts, household);
@@ -758,6 +1009,7 @@ export async function assembleFoodComparison(
       sources.add("nutrition-knowledge-registry");
     }
     if (s.kind === "scanned-product") sources.add("product-history");
+    if (s.kind === "live-product") sources.add("live-product-search");
   }
   if (household.resolved) {
     sources.add("household-eaters");

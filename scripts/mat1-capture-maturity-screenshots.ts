@@ -237,7 +237,7 @@ async function main() {
       {
         id: "home-ambient-aggregate",
         name: "Home — aggregate ambient across all four registered domains",
-        route: "/home",
+        route: "/",
         toggle: "ambient-intelligence-home-toggle",
         wait: '[data-testid="ambient-intelligence-home"]',
       },
@@ -265,7 +265,7 @@ async function main() {
       {
         id: "home-companion-notices",
         name: "Home — the Companion card (the notice channel, same OD1 bundle)",
-        route: "/home",
+        route: "/",
         wait: '[data-testid="card-home-companion"]',
       },
       {

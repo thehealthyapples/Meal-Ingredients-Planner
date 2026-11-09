@@ -48,6 +48,7 @@ import {
   getPreparationsForFood,
   type PreparationView,
 } from "../services/nutrition-knowledge-registry";
+import { getWholeFoodSnapshot, type NutrientSnapshot } from "./usda-whole-food-service";
 
 // ── Lazy rule index (built once per process) ──────────────────────────────────
 
@@ -208,6 +209,14 @@ export interface FoodIntelligence {
   nutritionEnhancement: FoodNutritionEnhancement | null;
   /** FOODUI5 — reviewed pairings where this food is the suggested ingredient. Empty when none. */
   recommendedPairings: FoodRecommendedPairing[];
+  /**
+   * 2026-10-31 — real per-100g quantities from USDA FoodData Central, for the
+   * ~80 foods on the curated SLUG_TO_FDC_ID allowlist. Null when this food
+   * isn't on that allowlist or USDA returned nothing — an honest gap, never
+   * estimated. Independent of `keyNutrients` (editorial names, no amounts) —
+   * the two are never blended into one figure.
+   */
+  usdaSnapshot: NutrientSnapshot | null;
   /**
    * SURF1A — how people prepare this food, and (only where the Layer-2 evidence
    * gate signed it off) what that changes. Read verbatim from the preparation
@@ -517,6 +526,7 @@ export async function getFoodIntelligence(
       nutritionEnhancement: null,
       recommendedPairings: [],
       preparations: [],
+      usdaSnapshot: null,
       trust: { isCanonical: false, populatedSections: 0 },
       metadata: { assembledAt: now.toISOString(), sources },
     };
@@ -535,17 +545,25 @@ export async function getFoodIntelligence(
     knowledgeSlug ? getPreparationsForFood(knowledgeSlug) : Promise.resolve([]),
   ]);
 
+  // FNDFIX13 (2026-11-03) — these three were awaited one at a time even
+  // though none depends on another's result (finding 2a, 2026-11-03 backend
+  // perf audit): `mealRefs` and `usdaSnapshot` don't use `planner`'s output
+  // at all, and `planner`'s only consumers (`buildHouseholdForSlug`,
+  // `discover` below) are pure/synchronous. Folded into one Promise.all,
+  // same pattern already used for knowledgeFood/preparations above.
+  const [plannerFoods, mealRefs, usdaSnapshot] = await Promise.all([
+    householdId != null ? fetchHouseholdPlannerFoods(householdId) : Promise.resolve(null),
+    assembleMeals(foodSlug),
+    getWholeFoodSnapshot(foodSlug),
+  ]);
+
   // Household planner foods (drives both household history + discovery enjoys).
   let household: FoodHouseholdContext | null = null;
   let enjoys: string[] = [];
-  if (householdId != null) {
-    const planner = await fetchHouseholdPlannerFoods(householdId);
-    enjoys = planner.enjoys;
-    household = buildHouseholdForSlug(householdId, foodSlug, planner.bySlug);
+  if (householdId != null && plannerFoods) {
+    enjoys = plannerFoods.enjoys;
+    household = buildHouseholdForSlug(householdId, foodSlug, plannerFoods.bySlug);
   }
-
-  // Cookbook meals containing this food.
-  const mealRefs = await assembleMeals(foodSlug);
 
   // Pure sections.
   const seasonality = assembleSeasonality(
@@ -575,6 +593,11 @@ export async function getFoodIntelligence(
       : null;
   const nutritionEnhancement = assembleNutritionEnhancement(report);
   const recommendedPairings = assembleRecommendedPairings(report.overview.name);
+  // 2026-10-31 — same allowlist-keyed fetch comparison-engine.ts's own
+  // resolveSubject() already uses; getWholeFoodSnapshot returns null outright
+  // for any slug not on the curated list, so this is a no-op for foods
+  // without USDA data rather than an error. (usdaSnapshot is now fetched
+  // above, in parallel with mealRefs/plannerFoods — FNDFIX13.)
 
   if (report.healthBenefits.length > 0) sources.push("health_benefits");
   if (report.cautions.length > 0) sources.push("cautions");
@@ -624,6 +647,7 @@ export async function getFoodIntelligence(
     nutritionEnhancement,
     recommendedPairings,
     preparations,
+    usdaSnapshot,
     trust: { isCanonical: true, populatedSections },
     metadata: { assembledAt: now.toISOString(), sources },
   };

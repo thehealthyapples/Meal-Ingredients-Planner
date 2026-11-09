@@ -15,7 +15,7 @@ import {
   FlaskConical, Leaf, AlertTriangle, Home,
   CheckCircle2, ClipboardList, ShoppingCart, ShoppingBag, Clock,
   RefreshCw, Scale, Search, ScanLine, Maximize2, Minimize2,
-  Download, ExternalLink, Trash2, Columns2, Copy, Store, Check, Plus,
+  Download, ExternalLink, Trash2, Copy, Store, Check, Plus,
   Loader2, Sparkles, Mic, Camera, ImageUp, RotateCcw, X,
   // PROD1 — the mark for "a filter is hiding this", distinct from ShoppingCart's
   // "there is genuinely nothing here". The icon carries the difference too, so the
@@ -49,7 +49,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 // Adopting one without the other is what turned a server outage into a confident,
 // well-designed lie about the household's own data.
 import { LoadError } from "@/components/ui/load-error";
-import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
+import { pageContainerClass } from "@/components/workspace-header";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -292,63 +292,6 @@ function capitalizeWords(str: string): string {
   return str.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-// ── Store category grouping ────────────────────────────────────────────────────
-
-const STORE_CATEGORY_ORDER = [
-  "fruit_veg", "dairy_eggs", "meat", "fish", "bakery", "grains",
-  "pantry", "tinned", "condiments", "herbs", "oils", "nuts",
-  "legumes", "snacks", "frozen", "drinks", "ready_meals", "household", "other",
-];
-
-const STORE_CATEGORY_DISPLAY: Record<string, string> = {
-  fruit_veg:  "Fruit & Vegetables",
-  dairy_eggs: "Dairy & Eggs",
-  meat:       "Meat & Poultry",
-  fish:       "Fish & Seafood",
-  bakery:     "Bakery",
-  grains:     "Grains & Cereals",
-  pantry:     "Larder Staples",
-  tinned:     "Tinned & Canned",
-  condiments: "Condiments & Sauces",
-  herbs:      "Herbs & Spices",
-  oils:       "Oils & Vinegars",
-  nuts:       "Nuts & Seeds",
-  legumes:    "Pulses & Legumes",
-  snacks:     "Snacks",
-  frozen:     "Frozen",
-  drinks:     "Drinks",
-  ready_meals:"Ready Meals",
-  household:  "Household",
-  other:      "Other",
-};
-
-function getStoreCategoryKey(item: WorkspaceItem): string {
-  const raw = (item.category ?? "other").toLowerCase();
-  if (raw === "fruit" || raw === "produce") return "fruit_veg";
-  if (raw === "dairy" || raw === "eggs" || raw === "dairy-eggs") return "dairy_eggs";
-  return STORE_CATEGORY_DISPLAY[raw] ? raw : "other";
-}
-
-// Partition items into in-store category groups, ordered by STORE_CATEGORY_ORDER.
-// Uncategorised items fall under "other" so they always remain visible.
-function groupByStoreCategory(
-  items: WorkspaceItem[],
-): { key: string; label: string; items: WorkspaceItem[] }[] {
-  const map = new Map<string, WorkspaceItem[]>();
-  for (const item of items) {
-    const key = getStoreCategoryKey(item);
-    if (!map.has(key)) map.set(key, []);
-    map.get(key)!.push(item);
-  }
-  return STORE_CATEGORY_ORDER
-    .filter((key) => map.has(key))
-    .map((key) => ({
-      key,
-      label: STORE_CATEGORY_DISPLAY[key] ?? "Other",
-      items: map.get(key)!,
-    }));
-}
-
 function applySortOrder(items: WorkspaceItem[], order: SortOrder): WorkspaceItem[] {
   if (order === "default") return items;
   const arr = [...items];
@@ -366,8 +309,20 @@ function applySortOrder(items: WorkspaceItem[], order: SortOrder): WorkspaceItem
       if (b.matchedPrice == null) return -1;
       return a.matchedPrice - b.matchedPrice;
     });
-  } else if (order === "item" || order === "item_category") {
+  } else if (order === "item") {
     arr.sort((a, b) => a.productName.localeCompare(b.productName, undefined, { sensitivity: "base" }));
+  } else if (order === "item_category") {
+    const categoryOrder = ["fruit_veg", "dairy_eggs", "meat", "fish", "bakery", "grains", "pantry", "tinned", "condiments", "herbs", "oils", "nuts", "legumes", "snacks", "frozen", "drinks", "ready_meals", "household", "other"];
+    const categoryKey = (item: WorkspaceItem) => {
+      const raw = (item.category ?? "other").toLowerCase();
+      if (raw === "fruit" || raw === "produce") return "fruit_veg";
+      if (raw === "dairy" || raw === "eggs" || raw === "dairy-eggs") return "dairy_eggs";
+      return categoryOrder.includes(raw) ? raw : "other";
+    };
+    arr.sort((a, b) => {
+      const categoryDelta = categoryOrder.indexOf(categoryKey(a)) - categoryOrder.indexOf(categoryKey(b));
+      return categoryDelta || a.productName.localeCompare(b.productName, undefined, { sensitivity: "base" });
+    });
   }
   return arr;
 }
@@ -860,7 +815,7 @@ function WorkspaceRow({
         {/* ── Row 1, Col 2: Item name + qty chip ── */}
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-1.5 min-w-0 flex-wrap">
-            <span className={`text-sm font-semibold leading-snug ${
+            <span className={`text-sm font-medium italic leading-snug ${
               shopMode
                 ? effectiveShopState !== "need" ? "text-muted-foreground" : "text-foreground"
                 : item.checked ? "line-through text-muted-foreground" : "text-foreground"
@@ -1167,10 +1122,7 @@ function ModeSwitcher({
   onChange: (m: WorkspaceMode) => void;
 }) {
   return (
-    <div
-      className="flex items-center gap-0.5 rounded-lg bg-muted/50 p-1 shrink-0"
-      role="tablist"
-    >
+    <div className="shopping-stage-tabs flex items-center gap-0.5 shrink-0" role="tablist" aria-label="Shopping stages">
       {MODES.map(({ id, label, Icon }) => (
         <button
           key={id}
@@ -1178,87 +1130,17 @@ function ModeSwitcher({
           aria-selected={mode === id}
           onClick={() => onChange(id)}
           aria-label={label}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap shrink-0 ${
+          className={`shopping-stage-tab flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap shrink-0 border-b-2 min-h-11 ${
             mode === id
-              ? "shadow-sm realm-banner-btn"
-              : "text-muted-foreground hover:text-foreground"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
           }`}
           data-testid={`ws-mode-${id}`}
         >
           <Icon className="h-3.5 w-3.5 shrink-0" />
-          <span className="hidden sm:inline">{label}</span>
+          <span>{label}</span>
         </button>
       ))}
-    </div>
-  );
-}
-
-// ── Prep group header ─────────────────────────────────────────────────────────
-
-function PrepGroupHeader({
-  label,
-  count,
-  resolvedCount,
-}: {
-  label: string;
-  count: number;
-  resolvedCount?: number;
-}) {
-  const isComplete = resolvedCount !== undefined && resolvedCount === count;
-  return (
-    <div className="px-4 py-1.5 border-t border-border/30 bg-[hsl(26,15%,96%)] dark:bg-[hsl(26,8%,15%)] flex items-center justify-between">
-      <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium flex items-center gap-1.5">
-        {isComplete && <CheckCircle2 className="h-3 w-3 text-emerald-500" />}
-        {label}
-      </span>
-      <span
-        className={`text-[10px] font-medium tabular-nums ${
-          isComplete
-            ? "text-emerald-600 dark:text-emerald-400"
-            : "text-muted-foreground/60"
-        }`}
-      >
-        {resolvedCount !== undefined ? `${resolvedCount}/${count}` : count}
-      </span>
-    </div>
-  );
-}
-
-// ── Shop group header ─────────────────────────────────────────────────────────
-
-function ShopGroupHeader({
-  label,
-  count,
-  variant = "need",
-}: {
-  label: string;
-  count: number;
-  variant?: ShopItemState;
-}) {
-  const colorClass = SHOP_STATE_CONFIG[variant].groupClass;
-  return (
-    <div className="px-4 py-1.5 border-t border-border/30 bg-[hsl(26,15%,96%)] dark:bg-[hsl(26,8%,15%)] flex items-center justify-between">
-      <span className={`text-[10px] uppercase tracking-wide font-medium ${colorClass}`}>
-        {label}
-      </span>
-      <span className={`text-[10px] font-medium tabular-nums ${colorClass}`}>
-        {count}
-      </span>
-    </div>
-  );
-}
-
-// ── Shop category header ──────────────────────────────────────────────────────
-
-function ShopCategoryHeader({ label, count }: { label: string; count: number }) {
-  return (
-    <div className="px-4 py-1.5 border-t border-border/30 bg-[hsl(26,12%,97%)] dark:bg-[hsl(26,5%,13%)] flex items-center justify-between">
-      <span className="text-[10px] uppercase tracking-wide font-semibold text-muted-foreground/80">
-        {label}
-      </span>
-      <span className="text-[10px] font-medium tabular-nums text-muted-foreground/60">
-        {count}
-      </span>
     </div>
   );
 }
@@ -1293,7 +1175,6 @@ export default function ShoppingWorkspacePage() {
 
   // ── Parity features (ported from old Basket page) ──────────────────────────
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [splitByShop, setSplitByShop] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [exportSupermarket, setExportSupermarket] = useState("Tesco");
   const [basketDialogOpen, setBasketDialogOpen] = useState(false);
@@ -1525,7 +1406,9 @@ export default function ShoppingWorkspacePage() {
 
       setAddRawText("");
       setMode("review");
-      setSourceFilter("quick_list");
+      // Quick entry adds rows to the canonical list. Return to the complete
+      // household list so the new rows appear alongside existing items.
+      setSourceFilter("all");
 
       const addedCount = merged.size;
       toast({ title: `${addedCount} item${addedCount !== 1 ? "s" : ""} added`, description: "Switched to review" });
@@ -1747,23 +1630,6 @@ export default function ShoppingWorkspacePage() {
     const catTier = getCategoryDefault(item.category || "other").tier;
     return (item.selectedTier as PriceTier) || (catTier as PriceTier) || currentTier;
   }, [getCategoryDefault, currentTier]);
-
-  const { data: totalCostData } = useQuery<{
-    totalCheapest: number;
-    customTotal: number;
-    supermarketTotals: { supermarket: string; total: number }[];
-    currency: string;
-    preferredTier: string;
-    tierTotals: Record<string, number>;
-  }>({
-    queryKey: [api.shoppingList.totalCost.path, currentTier],
-    queryFn: async () => {
-      const res = await fetch(`${api.shoppingList.totalCost.path}?tier=${currentTier}`, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch total cost");
-      return res.json();
-    },
-    enabled: allPriceMatches.length > 0,
-  });
 
   const hasPrices = allPriceMatches.length > 0;
 
@@ -2316,7 +2182,6 @@ export default function ShoppingWorkspacePage() {
   const parsedAddItems = useMemo(() => parseAddList(addRawText), [addRawText]);
 
   const uncheckedItems = useMemo(() => items.filter((i) => !i.checked), [items]);
-  const checkedItems = useMemo(() => items.filter((i) => i.checked), [items]);
 
   const hasMatchedPrices = useMemo(() => items.some((i) => i.matchedPrice != null), [items]);
 
@@ -2346,11 +2211,12 @@ export default function ShoppingWorkspacePage() {
     [filteredItems],
   );
 
-  const sortedFilteredItems = useMemo(
-    () => applySortOrder(filteredUncheckedItems, sortOrder),
-    [filteredUncheckedItems, sortOrder],
+  // Review, Prep and Shop share the same ordered list. Stage changes add
+  // context and controls to each row without moving it to another section.
+  const stableListItems = useMemo(
+    () => applySortOrder(filteredItems, sortOrder),
+    [filteredItems, sortOrder],
   );
-
   // Shop mode groups — source-filtered items sorted then partitioned by shopStatus
   const shopGroups = useMemo(() => {
     const sorted = applySortOrder(filteredItems, sortOrder);
@@ -2368,22 +2234,6 @@ export default function ShoppingWorkspacePage() {
     return { need, found, defer, have };
   }, [filteredItems, sortOrder]);
 
-  // Shop "need" items grouped by in-store category — memoized for performance
-  const shopNeedByCategory = useMemo(
-    () => groupByStoreCategory(shopGroups.need),
-    [shopGroups.need],
-  );
-
-  // Review unchecked items: grouped by in-store category (default) or flat A–Z when splitByShop is on
-  const reviewUncheckedByCategory = useMemo(
-    () => groupByStoreCategory(sortedFilteredItems),
-    [sortedFilteredItems],
-  );
-  const reviewUncheckedAlpha = useMemo(
-    () => [...filteredUncheckedItems].sort((a, b) => a.productName.localeCompare(b.productName)),
-    [filteredUncheckedItems],
-  );
-
   const shopSummary = useMemo((): ShopSummary => ({
     needCount: shopGroups.need.length,
     foundCount: shopGroups.found.length,
@@ -2398,7 +2248,7 @@ export default function ShoppingWorkspacePage() {
     const uncertain: WorkspaceItem[] = [];
     const attention: WorkspaceItem[] = [];
     const ready: WorkspaceItem[] = [];
-    for (const item of sortedFilteredItems) {
+    for (const item of applySortOrder(filteredUncheckedItems, sortOrder)) {
       const key = (item.normalizedName ?? item.productName).toLowerCase();
       const group = getPrepGroup(item, pantryKeySet.has(key));
       if (group === "pantry") pantry.push(item);
@@ -2407,7 +2257,7 @@ export default function ShoppingWorkspacePage() {
       else ready.push(item);
     }
     return { pantry, uncertain, attention, ready };
-  }, [sortedFilteredItems, pantryKeySet]);
+  }, [filteredUncheckedItems, sortOrder, pantryKeySet]);
 
   const prepSummary = useMemo((): PrepSummary => {
     const pantryTotal = prepGroups.pantry.length;
@@ -2506,12 +2356,6 @@ export default function ShoppingWorkspacePage() {
           {lookupPrices.isPending ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Search className="h-4 w-4 mr-2" />}
           {lookupPrices.isPending ? "Matching products…" : "Match Products"}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setSplitByShop((v) => !v)} data-testid="toggle-split-by-shop">
-          <Columns2 className="h-4 w-4 mr-2" />
-          Split by shop
-          {splitByShop && <Check className="h-3.5 w-3.5 ml-auto text-primary" />}
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={() => setSlCameraOpen(true)}
           disabled={slScanLoading}
@@ -2578,9 +2422,7 @@ export default function ShoppingWorkspacePage() {
 
   // ── Compact header status text ─────────────────────────────────────────────
   let headerStatusText: string | null = null;
-  if (mode === "add" && items.length > 0 && !isLoading) {
-    headerStatusText = `${items.length} item${items.length !== 1 ? "s" : ""} in list`;
-  } else if (items.length > 0 && !isLoading) {
+  if (mode !== "add" && items.length > 0 && !isLoading) {
     if (mode === "shop" && shopSummary) {
       const { needCount, total, foundCount, haveCount } = shopSummary;
       const resolved = foundCount + haveCount;
@@ -2604,7 +2446,7 @@ export default function ShoppingWorkspacePage() {
   }
 
   // ── Workspace control bar (filters + status + sort) — hidden in add mode ──
-  const workspaceControlBar = mode !== "add" && items.length > 0 && !isLoading ? (
+  const workspaceControlBar = items.length > 0 && !isLoading ? (
     <div className="flex items-center gap-2 min-w-0">
       {/* Source filter pills — horizontally scrollable */}
       <div className="flex items-center gap-1 min-w-0 flex-1 overflow-x-auto scrollbar-hide">
@@ -2640,7 +2482,7 @@ export default function ShoppingWorkspacePage() {
       {/* Sort dropdown */}
       <div className="shrink-0 border-l border-border/30 pl-2">
         <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as SortOrder)}>
-          <SelectTrigger className="h-6 text-[11px] w-[120px] border-border/50 bg-transparent px-2" aria-label="Sort order">
+          <SelectTrigger className="h-6 text-[11px] w-[5.5rem] sm:w-[120px] border-border/50 bg-transparent px-2" aria-label="Sort order">
             <SelectValue />
           </SelectTrigger>
           <SelectContent align="end">
@@ -2657,53 +2499,26 @@ export default function ShoppingWorkspacePage() {
 
   return (
     <>
-      {!isFullscreen && (
-        <WorkspaceHeader
-          title="Shopping"
-          realm="shopping"
-          wide
-          contextBar={
-            <div className="flex items-center gap-2 w-full overflow-x-auto scrollbar-hide">
-              <ModeSwitcher mode={mode} onChange={(m) => { setMode(m); }} />
-              {workspaceControlBar && (
-                <div className="flex-1 min-w-0">
-                  {workspaceControlBar}
-                </div>
-              )}
-            </div>
-          }
-          actions={menuDropdown}
-        />
-      )}
       <div
         data-realm="shopping"
-        className={isFullscreen
-        ? "fixed inset-0 z-50 bg-background overflow-auto flex flex-col"
-        : pageContainerClass(true)}
+        className={`shopping-notepad-scene ${isFullscreen
+        ? "fixed inset-0 z-50 flex min-h-0 flex-col overflow-hidden"
+        : "flex flex-1 min-h-0 w-full flex-col overflow-hidden px-3 sm:px-5 lg:px-8 pt-3 pb-0"}`}
       >
-      {isFullscreen && (
-        <div className="border-b border-border/50 bg-background shrink-0">
-          <div className="flex items-center justify-between px-4 sm:px-6 py-3">
-            <div className="flex items-center gap-2">
-              <ShoppingCart className="h-4 w-4 text-primary" />
-              <span className="font-semibold text-sm">Shopping</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <ModeSwitcher mode={mode} onChange={(m) => { setMode(m); }} />
-              {menuDropdown}
-            </div>
-          </div>
-          {workspaceControlBar && (
-            <div className="px-4 sm:px-6 pb-2.5">
-              {workspaceControlBar}
-            </div>
-          )}
-        </div>
-      )}
       {/* PX1-W2 (fnd-px-shop-mode-row-under-nav) — fullscreen escapes `.main-safe`
           via `fixed inset-0`, so the scroller adopts the class itself: the last
           row clears the fixed BottomNav instead of sitting under it. */}
-      <div className={isFullscreen ? "flex-1 overflow-auto px-4 pt-4 sm:px-6 sm:pt-6 main-safe" : ""}>
+      <div className={isFullscreen ? "flex flex-1 min-h-0 flex-col overflow-hidden px-4 pt-4 sm:px-6 sm:pt-6 main-safe" : "flex flex-1 min-h-0 flex-col overflow-hidden"}>
+
+      <div className="shopping-stage-tools max-w-4xl mx-auto flex flex-nowrap items-center gap-2 mb-3 px-2 overflow-x-auto scrollbar-hide" data-testid="shopping-stage-tools">
+        <ModeSwitcher mode={mode} onChange={(m) => { setMode(m); }} />
+        {mode !== "add" && workspaceControlBar && (
+          <div className="shopping-toolbar-list-controls">{workspaceControlBar}</div>
+        )}
+        <div className="shopping-stage-menu shrink-0">{menuDropdown}</div>
+      </div>
+
+      <div className="shopping-paper-scroll" role="region" tabIndex={0} data-testid="shopping-paper-scroll" aria-label="Shopping content on notepad">
 
       {/* UX3 — the ambient strip and the noticed-patterns panel are the
           Companion's now. The list keeps the list. */}
@@ -2731,249 +2546,118 @@ export default function ShoppingWorkspacePage() {
         </div>
       )}
 
-      {/* ── Add mode ──────────────────────────────────────────────────── */}
+      {/* Add is a separate page on the blotter. The other stages show the
+          canonical list directly beneath the shared stage controls. */}
       {mode === "add" && (
-        <div className="flex gap-6 items-start">
-
-          {/* Main Add UI — always left/primary column */}
-          <div className="flex-1 min-w-0 space-y-4">
-
-            {/* Writing surface */}
-            {/* UX3 — E1: THE LIST BY THE DOOR HAS NO WINDOW OVER IT.
-                This surface mounted the orchard directly, washed it out under an
-                80%-white sheet, and then set the writing area on top — so the
-                product was paying to load a landscape in order to hide it, and
-                still breaking § 6.1 ("the orchard never carries text"). Shopping
-                is **E1 — light only** (Blueprint § 5.1/§ 6.2): a working room is
-                bright *because* the orchard is outside, and you do not see it
-                while working. The wash is now simply the warm surface it was
-                imitating, and the two black shadows are one warm one (UIA § 4:
-                a shadow's hue comes from the room, never from black). */}
-            <div
-              className="w-full flex flex-col relative overflow-hidden bg-card"
-              style={{
-                borderRadius: 20,
-                boxShadow: "0 4px 32px -12px hsl(28 30% 25% / 0.22), 0 1px 3px hsl(28 25% 28% / 0.05)",
-              }}
-            >
-              <div className="relative z-10 flex flex-col">
-                {/* Textarea.
-                    UX_REFINE1 (D2, accessibility) — the placeholder was
-                    `text-foreground/25`: 25% opacity over a near-white card on the
-                    orchard backdrop, which EXPERIENCE_VERIFY1 recorded as unreadable.
-                    `text-muted-foreground` is the design system's own secondary-text
-                    token, so this adopts a canonical value rather than inventing an
-                    opacity. */}
-                <div className="relative px-6 pt-6 pb-3">
-                  <textarea
-                    ref={addTextareaRef}
-                    value={addRawText}
-                    onChange={(e) => { setAddRawText(e.target.value); resizeAddTextarea(); }}
-                    placeholder={"milk, eggs\noven chips\nbananas, yoghurt"}
-                    rows={6}
-                    className="w-full resize-none bg-transparent text-[15px] leading-loose placeholder:text-muted-foreground placeholder:italic focus:outline-none text-foreground font-medium"
-                    style={{ minHeight: 140 }}
-                    aria-label="Add items"
-                    data-testid="textarea-add-items"
-                  />
-                  {addRawText.length > 0 && (
-                    <button
-                      onClick={() => { setAddRawText(""); if (addTextareaRef.current) addTextareaRef.current.style.height = "auto"; setTimeout(() => addTextareaRef.current?.focus(), 50); }}
-                      className="absolute top-6 right-6 p-1 rounded-md text-muted-foreground/35 hover:text-muted-foreground transition-colors"
-                      aria-label="Clear"
-                      data-testid="button-add-clear"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </div>
-
-                {/* Parsed item chips */}
-                {parsedAddItems.length > 0 && (
-                  <div className="px-6 pb-3 flex flex-wrap gap-1.5" data-testid="parsed-add-items">
-                    {parsedAddItems.map((item, i) => (
-                      <span key={i} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium" style={{ background: "rgba(0,0,0,0.055)", color: "hsl(var(--foreground))" }}>
-                        {parseIngredient(item).productName}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                {/* Divider */}
-                <div style={{ height: 1, background: "rgba(0,0,0,0.055)", marginInline: 24 }} />
-
-                {/* Toolbar */}
-                <div className="px-5 py-3.5 flex items-center gap-1">
-                  <button
-                    onClick={toggleAddSpeech}
-                    className={`p-2 rounded-full transition-colors ${isAddListening ? "bg-red-50 text-red-500" : "text-muted-foreground/45 hover:text-foreground hover:bg-black/[0.05]"}`}
-                    title={isAddListening ? "Stop listening" : "Speak your list"}
-                    aria-label={isAddListening ? "Stop listening" : "Speak your list"}
-                    data-testid="button-add-speech"
-                  >
-                    <Mic className={`h-4 w-4 ${isAddListening ? "animate-pulse" : ""}`} />
-                  </button>
-                  <button
-                    onClick={() => addCameraInputRef.current?.click()}
-                    disabled={isAddScanning}
-                    className="p-2 rounded-full text-muted-foreground/45 hover:text-foreground hover:bg-black/[0.05] transition-colors disabled:opacity-30"
-                    title="Scan a handwritten list"
-                    aria-label="Scan a handwritten list"
-                    data-testid="button-add-camera"
-                  >
-                    {isAddScanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
-                  </button>
-                  <label
-                    className="p-2 rounded-full text-muted-foreground/45 hover:text-foreground hover:bg-black/[0.05] transition-colors cursor-pointer"
-                    title="Upload a photo of your list"
-                    aria-label="Upload a photo of your list"
-                    data-testid="label-add-image-upload"
-                  >
-                    <ImageUp className="h-4 w-4" />
-                    <input
-                      ref={addFileInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="sr-only"
-                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAddImageCapture(f); e.target.value = ""; }}
-                      data-testid="input-add-image-upload"
-                    />
-                  </label>
+        <section className="shopping-add-page mx-auto" data-testid="shopping-add-page" aria-label="Add items">
+          <div className="shopping-add-blotter" data-testid="shopping-add-blotter">
+            <div className="relative">
+              <textarea
+                ref={addTextareaRef}
+                value={addRawText}
+                onChange={(e) => { setAddRawText(e.target.value); resizeAddTextarea(); }}
+                placeholder={"milk, eggs\noven chips\nbananas, yoghurt"}
+                rows={3}
+                className="shopping-add-input w-full resize-none bg-transparent text-[15px] leading-relaxed placeholder:text-muted-foreground placeholder:italic focus:outline-none text-foreground font-medium"
+                style={{ minHeight: "clamp(12rem, 34vh, 20rem)", maxHeight: "45vh" }}
+                aria-label="Add items"
+                data-testid="textarea-add-items"
+              />
+              {addRawText.length > 0 && (
+                <button
+                  onClick={() => { setAddRawText(""); if (addTextareaRef.current) addTextareaRef.current.style.height = "auto"; setTimeout(() => addTextareaRef.current?.focus(), 50); }}
+                  className="absolute top-1 right-1 p-1 rounded-md text-muted-foreground/50 hover:text-foreground transition-colors"
+                  aria-label="Clear"
+                  data-testid="button-add-clear"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+            <div className="shopping-add-tools flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={toggleAddSpeech}
+                  className={`p-2 rounded-full transition-colors ${isAddListening ? "bg-red-50 text-red-500" : "text-muted-foreground/55 hover:text-foreground hover:bg-black/[0.05]"}`}
+                  title={isAddListening ? "Stop listening" : "Speak your list"}
+                  aria-label={isAddListening ? "Stop listening" : "Speak your list"}
+                  data-testid="button-add-speech"
+                >
+                  <Mic className={`h-4 w-4 ${isAddListening ? "animate-pulse" : ""}`} />
+                </button>
+                <button
+                  onClick={() => addCameraInputRef.current?.click()}
+                  disabled={isAddScanning}
+                  className="p-2 rounded-full text-muted-foreground/55 hover:text-foreground hover:bg-black/[0.05] transition-colors disabled:opacity-30"
+                  title="Scan a handwritten list"
+                  aria-label="Scan a handwritten list"
+                  data-testid="button-add-camera"
+                >
+                  {isAddScanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                </button>
+                <label
+                  className="p-2 rounded-full text-muted-foreground/55 hover:text-foreground hover:bg-black/[0.05] transition-colors cursor-pointer"
+                  title="Upload a photo of your list"
+                  aria-label="Upload a photo of your list"
+                  data-testid="label-add-image-upload"
+                >
+                  <ImageUp className="h-4 w-4" />
                   <input
-                    ref={addCameraInputRef}
+                    ref={addFileInputRef}
                     type="file"
                     accept="image/*"
-                    capture="environment"
                     className="sr-only"
-                    aria-hidden="true"
-                    tabIndex={-1}
                     onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAddImageCapture(f); e.target.value = ""; }}
-                    data-testid="input-add-camera-capture"
+                    data-testid="input-add-image-upload"
                   />
-                </div>
-
-                {/* Submit section */}
+                </label>
+                <input
+                  ref={addCameraInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="sr-only"
+                  aria-hidden="true"
+                  tabIndex={-1}
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAddImageCapture(f); e.target.value = ""; }}
+                  data-testid="input-add-camera-capture"
+                />
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {addHistory.length > 0 && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" data-testid="button-add-recent-lists">
+                        <Clock className="h-3.5 w-3.5" />Recent
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-64">
+                      {addHistory.map((basket) => (
+                        <DropdownMenuItem
+                          key={basket.id}
+                          onClick={() => { setAddRawText(basket.rawText); setTimeout(resizeAddTextarea, 50); addTextareaRef.current?.focus(); }}
+                          data-testid={`add-history-${basket.id}`}
+                        >
+                          <span className="flex flex-col min-w-0">
+                            <span className="truncate">{basket.parsedItems.slice(0, 3).join(", ")}{basket.parsedItems.length > 3 ? ` +${basket.parsedItems.length - 3}` : ""}</span>
+                            <span className="text-[10px] text-muted-foreground">{basket.parsedItems.length} items · {formatRelativeTime(basket.createdAt)}</span>
+                          </span>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
                 {parsedAddItems.length > 0 && (
-                  <>
-                    <div style={{ height: 1, background: "rgba(0,0,0,0.055)", marginInline: 24 }} />
-                    <div className="px-3 pt-4 pb-3">
-                      <button
-                        onClick={processAndAddToList}
-                        disabled={isAddProcessing}
-                        className="group flex items-center gap-3 w-full rounded-xl border border-primary/30 bg-primary/[0.06] px-4 py-3 text-left hover:bg-primary/[0.12] transition-colors disabled:opacity-60"
-                        data-testid="button-add-to-list"
-                      >
-                        <div className="flex items-center justify-center h-9 w-9 rounded-full bg-primary/15 text-primary shrink-0">
-                          {isAddProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-primary leading-tight">Add to shopping list</p>
-                          <p className="text-[11px] text-muted-foreground mt-0.5">
-                            {parsedAddItems.length} item{parsedAddItems.length !== 1 ? "s" : ""} to add
-                          </p>
-                        </div>
-                      </button>
-                    </div>
-                  </>
+                  <Button variant="default" onClick={processAndAddToList} disabled={isAddProcessing} size="sm" data-testid="button-add-to-list">
+                    {isAddProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                    Add {parsedAddItems.length} item{parsedAddItems.length !== 1 ? "s" : ""}
+                  </Button>
                 )}
               </div>
             </div>
-
-            {/* Recent Lists — mobile (desktop uses sidebar) */}
-            {addHistory.length > 0 && (
-              <div className="lg:hidden">
-                <div className="flex items-center gap-1.5 mb-2 px-1">
-                  <Clock className="h-3 w-3 text-muted-foreground/40" />
-                  <span className="text-[10px] tracking-widest uppercase font-medium text-muted-foreground/40 select-none">Recent lists</span>
-                </div>
-                <Card className="rounded-2xl overflow-hidden">
-                  {addHistory.map((basket, idx) => (
-                    <button
-                      key={basket.id}
-                      onClick={() => { setAddRawText(basket.rawText); setTimeout(resizeAddTextarea, 50); addTextareaRef.current?.focus(); }}
-                      className={`flex items-start justify-between gap-3 w-full px-4 py-3.5 text-left transition-colors hover:bg-black/[0.035] ${idx > 0 ? "border-t border-black/[0.04]" : ""}`}
-                      data-testid={`add-history-mobile-${basket.id}`}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-medium truncate text-foreground/80">
-                          {basket.parsedItems.slice(0, 4).join(", ")}{basket.parsedItems.length > 4 ? ` +${basket.parsedItems.length - 4} more` : ""}
-                        </p>
-                        <p className="text-[11px] text-muted-foreground/50 mt-0.5">
-                          {basket.parsedItems.length} item{basket.parsedItems.length !== 1 ? "s" : ""} · {formatRelativeTime(basket.createdAt)}
-                        </p>
-                      </div>
-                      <RotateCcw className="h-3.5 w-3.5 shrink-0 text-muted-foreground/30 mt-0.5" />
-                    </button>
-                  ))}
-                </Card>
-              </div>
-            )}
-
-            {/* Current list count — mobile (desktop uses sidebar) */}
-            {items.length > 0 && (
-              <div className="lg:hidden">
-                <button
-                  onClick={() => setMode("review")}
-                  className="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg bg-card/60 border border-border/50 hover:bg-accent/30 transition-colors text-left"
-                >
-                  <ClipboardList className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />
-                  <span className="text-xs text-muted-foreground">
-                    {items.length} item{items.length !== 1 ? "s" : ""} in list
-                  </span>
-                  <span className="ml-auto text-[10px] text-primary font-medium">Review →</span>
-                </button>
-              </div>
-            )}
-
-          </div>{/* /main add UI */}
-
-          {/* Right sidebar — Recent Lists + list status (desktop only) */}
-          {(addHistory.length > 0 || items.length > 0) && (
-            <div className="hidden lg:flex flex-col gap-3 w-64 shrink-0">
-              {addHistory.length > 0 && (
-                <div className="rounded-xl overflow-hidden bg-card/60 border border-border/50">
-                  <div className="px-4 py-3 border-b border-border/30 flex items-center gap-2">
-                    <Clock className="h-3.5 w-3.5 text-muted-foreground/50" />
-                    <span className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-wide">Recent Lists</span>
-                  </div>
-                  {addHistory.map((basket, idx) => (
-                    <button
-                      key={basket.id}
-                      onClick={() => { setAddRawText(basket.rawText); setTimeout(resizeAddTextarea, 50); addTextareaRef.current?.focus(); }}
-                      className={`flex items-start justify-between gap-3 w-full px-4 py-3 text-left hover:bg-accent/30 transition-colors ${idx > 0 ? "border-t border-border/30" : ""}`}
-                      data-testid={`add-history-${basket.id}`}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-foreground/80 truncate">
-                          {basket.parsedItems.slice(0, 3).join(", ")}{basket.parsedItems.length > 3 ? ` +${basket.parsedItems.length - 3}` : ""}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground/50 mt-0.5">
-                          {basket.parsedItems.length} item{basket.parsedItems.length !== 1 ? "s" : ""} · {formatRelativeTime(basket.createdAt)}
-                        </p>
-                      </div>
-                      <RotateCcw className="h-3 w-3 shrink-0 text-muted-foreground/30 mt-0.5" />
-                    </button>
-                  ))}
-                </div>
-              )}
-              {items.length > 0 && (
-                <button
-                  onClick={() => setMode("review")}
-                  className="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg bg-card/60 border border-border/50 hover:bg-accent/30 transition-colors text-left"
-                >
-                  <ClipboardList className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />
-                  <span className="text-xs text-muted-foreground">
-                    {items.length} item{items.length !== 1 ? "s" : ""} in list
-                  </span>
-                  <span className="ml-auto text-[10px] text-primary font-medium">Review →</span>
-                </button>
-              )}
-            </div>
-          )}
-
-        </div>
+          </div>
+        </section>
       )}
-
       {/* ── Shopping rows ─────────────────────────────────────────────── */}
       {mode !== "add" && (isLoading ? (
         <div className="space-y-2">
@@ -3011,217 +2695,19 @@ export default function ShoppingWorkspacePage() {
       ) : (
         <>
 
-        <div className="max-w-4xl mx-auto rounded-xl border border-border/50 bg-card/60 overflow-hidden mb-6">
+        <div className="max-w-4xl mx-auto rounded-xl border border-amber-900/10 bg-[rgba(255,250,235,0.22)] overflow-hidden mb-6 shadow-sm">
 
-          {/* ── Review mode: flat list ─────────────────────────────── */}
-          {mode === "review" && (
-            <>
-              {uncheckedItems.length === 0 && checkedItems.length === 0 ? (
-                <EmptyState
-                  variant="empty"
-                  size="compact"
-                  icon={ShoppingCart}
-                  title="Your basket is empty."
-                  data-testid="empty-basket-review"
-                />
-              ) : (
-                <>
-                  {sortedFilteredItems.length === 0 && sourceFilter !== "all" ? (
-                    <EmptyState
-                      variant="filtered"
-                      icon={Filter}
-                      title="No items match this filter."
-                      description="Your list still has items — this filter is hiding them."
-                      data-testid="empty-filtered-review"
-                    />
-                  ) : sortOrder === "item"
-                    ? sortedFilteredItems.map(renderRow)
-                    : sortOrder === "item_category" || !splitByShop
-                      ? reviewUncheckedByCategory.length >= 1
-                        ? reviewUncheckedByCategory.map(({ key, label, items: catItems }) => (
-                            <div key={key}>
-                              <ShopCategoryHeader label={label} count={catItems.length} />
-                              {catItems.map(renderRow)}
-                            </div>
-                          ))
-                        : sortedFilteredItems.map(renderRow)
-                      : reviewUncheckedAlpha.map(renderRow)
-                  }
-                  {filteredCheckedItems.length > 0 && (
-                    <>
-                      <div className="px-4 py-1.5 border-t border-border/30 bg-[hsl(26,15%,96%)] dark:bg-[hsl(26,8%,15%)]">
-                        <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
-                          Checked ({filteredCheckedItems.length})
-                        </span>
-                      </div>
-                      {filteredCheckedItems.map(renderRow)}
-                    </>
-                  )}
-                </>
-              )}
-            </>
-          )}
-
-          {/* ── Shop mode: category groups + status groups ────────── */}
-          {mode === "shop" && (
-            <>
-              {items.length === 0 ? (
-                <EmptyState
-                  variant="empty"
-                  size="compact"
-                  icon={ShoppingCart}
-                  title="Your shopping list is empty."
-                  data-testid="empty-list-shop"
-                />
-              ) : filteredItems.length === 0 && sourceFilter !== "all" ? (
-                <EmptyState
-                  variant="filtered"
-                  icon={Filter}
-                  title="No items match this filter."
-                  description="Your list still has items — this filter is hiding them."
-                  data-testid="empty-filtered-shop"
-                />
-              ) : (
-                <>
-                  {/* Still need — grouped by in-store category */}
-                  {shopGroups.need.length > 0 && (
-                    <>
-                      {(shopGroups.found.length > 0 || shopGroups.defer.length > 0 || shopGroups.have.length > 0) && (
-                        <ShopGroupHeader
-                          label="Still need"
-                          count={shopGroups.need.length}
-                          variant="need"
-                        />
-                      )}
-                      {sortOrder === "item"
-                        ? shopGroups.need.map(renderRow)
-                        : shopNeedByCategory.length >= 1
-                          ? shopNeedByCategory.map(({ key, label, items: catItems }) => (
-                              <div key={key}>
-                                <ShopCategoryHeader label={label} count={catItems.length} />
-                                {catItems.map(renderRow)}
-                              </div>
-                            ))
-                          : shopGroups.need.map(renderRow)
-                      }
-                    </>
-                  )}
-
-                  {/* Found it */}
-                  {shopGroups.found.length > 0 && (
-                    <>
-                      <ShopGroupHeader
-                        label="Found it"
-                        count={shopGroups.found.length}
-                        variant="found"
-                      />
-                      {shopGroups.found.map(renderRow)}
-                    </>
-                  )}
-
-                  {/* Next shop */}
-                  {shopGroups.defer.length > 0 && (
-                    <>
-                      <ShopGroupHeader
-                        label="Next shop"
-                        count={shopGroups.defer.length}
-                        variant="defer"
-                      />
-                      {shopGroups.defer.map(renderRow)}
-                    </>
-                  )}
-
-                  {/* Already have (set via Prep stage) */}
-                  {shopGroups.have.length > 0 && (
-                    <>
-                      <ShopGroupHeader
-                        label="Already have"
-                        count={shopGroups.have.length}
-                        variant="have"
-                      />
-                      {shopGroups.have.map(renderRow)}
-                    </>
-                  )}
-
-                  {/* All accounted for */}
-                  {shopGroups.need.length === 0 && filteredItems.length > 0 && (
-                    <div className="px-4 py-4 text-center">
-                      <CheckCircle2 className="h-6 w-6 text-emerald-500 mx-auto mb-1.5" />
-                      {/* NSR1 Phase 2 (Shopping): "That's everything" is the fact and stays;
-                          the "Great shop —" subline is retired — a room reports, it does not
-                          congratulate the household on their shop (GEA21). */}
-                      <p className="text-sm font-medium text-foreground">
-                        That's everything
-                      </p>
-                    </div>
-                  )}
-                </>
-              )}
-            </>
-          )}
-
-          {/* ── Prep mode: grouped list ────────────────────────────── */}
-          {mode === "prep" && (
-            <>
-              {filteredUncheckedItems.length === 0 && filteredCheckedItems.length === 0 && sourceFilter !== "all" && (
-                <EmptyState
-                  variant="filtered"
-                  icon={Filter}
-                  title="No items match this filter."
-                  description="Your list still has items — this filter is hiding them."
-                  data-testid="empty-filtered-prep"
-                />
-              )}
-              {prepGroups.pantry.length > 0 && (
-                <>
-                  <PrepGroupHeader
-                    label="Check at home first"
-                    count={prepGroups.pantry.length}
-                    resolvedCount={prepSummary.pantryReviewed}
-                  />
-                  {prepGroups.pantry.map(renderRow)}
-                </>
-              )}
-              {prepGroups.uncertain.length > 0 && (
-                <>
-                  <PrepGroupHeader
-                    label="Quantities to confirm"
-                    count={prepGroups.uncertain.length}
-                    resolvedCount={prepSummary.uncertainResolved}
-                  />
-                  {prepGroups.uncertain.map(renderRow)}
-                </>
-              )}
-              {prepGroups.attention.length > 0 && (
-                <>
-                  <PrepGroupHeader
-                    label="Needs a closer look"
-                    count={prepGroups.attention.length}
-                  />
-                  {prepGroups.attention.map(renderRow)}
-                </>
-              )}
-              {prepGroups.ready.length > 0 && (
-                <>
-                  <PrepGroupHeader
-                    label="Ready to buy"
-                    count={prepGroups.ready.length}
-                  />
-                  {prepGroups.ready.map(renderRow)}
-                </>
-              )}
-              {filteredCheckedItems.length > 0 && (
-                <>
-                  <div className="px-4 py-1.5 border-t border-border/30 bg-muted/20">
-                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
-                      Checked ({filteredCheckedItems.length})
-                    </span>
-                  </div>
-                  {filteredCheckedItems.map(renderRow)}
-                </>
-              )}
-            </>
-          )}
+          {/* Review, Prep and Shop keep one list with stable membership and
+              order. Add is its own page and does not render list rows. */}
+          {filteredItems.length === 0 && sourceFilter !== "all" ? (
+            <EmptyState
+              variant="filtered"
+              icon={Filter}
+              title="No items match this filter."
+              description="Your list still has items — this filter is hiding them."
+              data-testid="empty-filtered-shopping"
+            />
+          ) : stableListItems.map(renderRow)}
 
           {/* ── SHOP3: basket total ──────────────────────────────────
               Cost was invisible on this surface before convergence. An
@@ -3434,6 +2920,8 @@ export default function ShoppingWorkspacePage() {
           .
         </span>
       </div>
+
+      </div>{/* /bounded notepad paper scroll area */}
 
       {/* ── In-workspace analyser sheet ─────────────────────────────────── */}
       <WorkspaceAnalyserSheet

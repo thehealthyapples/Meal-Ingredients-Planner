@@ -76,7 +76,7 @@ async function main() {
   if (!r.ok()) throw new Error(`dev-world login failed: ${r.status()}`);
 
   // ── D4: the shell logo must not vary with the contextBar branch ──────────
-  const home = await openRoom(ctx, "home", "/home");
+  const home = await openRoom(ctx, "home", "/");
   const homeLogo = await logoHeight(home);
   await home.screenshot({ path: `${OUT}/ux-refine1b-home.png`, fullPage: false });
   await home.close();

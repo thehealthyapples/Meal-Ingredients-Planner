@@ -29,6 +29,10 @@ they previously approved, or reopen a rejected one for re-examination. Every
 decision names the reviewer from their signed-in account and is written to a
 permanent audit history that can be read back per claim.
 
+The worklist filters by claim type, review status and source status. Select
+“Awaiting a source” to find claims with no attached citations, or “All source
+states” to include both cited and uncited claims.
+
 Approving a claim is what makes it visible to households — across Food, Meal,
 Pantry and Planner Intelligence, the Companion, nutrition reports and Plant
 Diversity. Nothing renders until a named human approves it.

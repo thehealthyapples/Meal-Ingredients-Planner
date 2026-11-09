@@ -295,7 +295,7 @@ export async function resolveHouseholdSignal(userId: number | undefined): Promis
       port.getHouseholdEaters(householdId),
       fetchHouseholdPlannerFoods(householdId),
     ]);
-    const eaters = eaterRows.map(toEaterView);
+    const eaters = eaterRows.map((row) => toEaterView(row));
     const allHardRestrictions = eaters.flatMap((e) => e.hardRestrictions);
     const restrictionDefs = resolveActiveRestrictions(allHardRestrictions);
 

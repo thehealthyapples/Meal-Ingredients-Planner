@@ -99,7 +99,7 @@ async function main() {
       {
         id: "home-ambient-aggregate",
         name: "Home — aggregate ambient",
-        route: "/home",
+        route: "/",
         toggle: "ambient-intelligence-home-toggle",
         wait: '[data-testid="ambient-intelligence-home"]',
       },

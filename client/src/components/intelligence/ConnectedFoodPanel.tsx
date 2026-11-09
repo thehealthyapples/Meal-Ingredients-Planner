@@ -48,20 +48,40 @@ interface ConnectedFoodIntelligence {
 
 // ── Chip renderers ─────────────────────────────────────────────────────────────
 
-function FoodChips({ items }: { items: ConnectedFoodLink[] }) {
+// FOODUI1 follow-up (2026-10-30) — when a consumer passes `onSelectFood`, a
+// linkable chip calls it instead of navigating to `/foods/:slug`, so it can be
+// shown inline (e.g. WeekFoodExplorer's "related" column) instead of leaving
+// the page. Consumers that don't pass it (the standalone food-detail-page
+// itself) keep the original navigating-Link behaviour, unchanged.
+type SelectFood = (slug: string, name: string) => void;
+
+function FoodChips({ items, onSelectFood }: { items: ConnectedFoodLink[]; onSelectFood?: SelectFood }) {
   return (
     <div className="flex flex-wrap gap-1.5">
       {items.map((s) =>
         s.linkable ? (
-          <Link
-            key={s.slug}
-            href={`/foods/${s.slug}`}
-            title={s.reason}
-            className="inline-flex items-center text-xs rounded-full border border-border/60 bg-primary/5 px-2.5 py-1 leading-none text-foreground/80 hover:bg-primary/10 hover:text-foreground transition-colors"
-            data-testid={`connected-food-link-${s.slug}`}
-          >
-            {s.name}
-          </Link>
+          onSelectFood ? (
+            <button
+              key={s.slug}
+              type="button"
+              title={s.reason}
+              onClick={() => onSelectFood(s.slug, s.name)}
+              className="inline-flex items-center text-xs rounded-full border border-border/60 bg-primary/5 px-2.5 py-1 leading-none text-foreground/80 hover:bg-primary/10 hover:text-foreground transition-colors"
+              data-testid={`connected-food-link-${s.slug}`}
+            >
+              {s.name}
+            </button>
+          ) : (
+            <Link
+              key={s.slug}
+              href={`/foods/${s.slug}`}
+              title={s.reason}
+              className="inline-flex items-center text-xs rounded-full border border-border/60 bg-primary/5 px-2.5 py-1 leading-none text-foreground/80 hover:bg-primary/10 hover:text-foreground transition-colors"
+              data-testid={`connected-food-link-${s.slug}`}
+            >
+              {s.name}
+            </Link>
+          )
         ) : (
           <span
             key={s.slug}
@@ -79,8 +99,10 @@ function FoodChips({ items }: { items: ConnectedFoodLink[] }) {
 
 function FoodRelationshipBlock({
   section,
+  onSelectFood,
 }: {
   section: FoodSection<ConnectedFoodLink> | null;
+  onSelectFood?: SelectFood;
 }) {
   if (!section || section.items.length === 0) return null;
   return (
@@ -88,14 +110,14 @@ function FoodRelationshipBlock({
       <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60 mb-1.5">
         {section.title}
       </p>
-      <FoodChips items={section.items} />
+      <FoodChips items={section.items} onSelectFood={onSelectFood} />
     </div>
   );
 }
 
 // ── Panel ───────────────────────────────────────────────────────────────────────
 
-export function ConnectedFoodPanel({ slug }: { slug: string }) {
+export function ConnectedFoodPanel({ slug, onSelectFood }: { slug: string; onSelectFood?: SelectFood }) {
   const { data } = useQuery<ConnectedFoodIntelligence>({
     queryKey: ["/api/foods", slug, "connected"],
     queryFn: async () => {
@@ -135,7 +157,7 @@ export function ConnectedFoodPanel({ slug }: { slug: string }) {
       <div className="space-y-3">
         {foodSections.map((section) =>
           section ? (
-            <FoodRelationshipBlock key={section.type} section={section} />
+            <FoodRelationshipBlock key={section.type} section={section} onSelectFood={onSelectFood} />
           ) : null,
         )}
       </div>

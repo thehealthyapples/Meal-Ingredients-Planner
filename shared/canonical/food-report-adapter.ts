@@ -114,6 +114,15 @@ export interface FoodReportKnowledge {
 // ─── Internal lookup maps (built once from seed constants) ───────────────────
 
 const nutrientDisplayName = new Map(NUTRIENT_SEED.map((n) => [n.slug, n.name]));
+// Inverted once from the same seed — purely additive, no change to the
+// existing slug→name map or FoodReportKnowledge's shape. Lets a UI that only
+// has a nutrient's display name (e.g. a Key Nutrients pill) resolve its real
+// slug to call a slug-keyed endpoint (getNutrientDetailView) without
+// FoodReportKnowledge ever needing to carry slugs through `keyNutrients`.
+const nutrientSlugByDisplayName = new Map(NUTRIENT_SEED.map((n) => [n.name, n.slug]));
+export function nutrientSlugForDisplayName(name: string): string | null {
+  return nutrientSlugByDisplayName.get(name) ?? null;
+}
 
 /** Nutrient slugs a knowledge food links, in the seed's own order. A nutrient
  *  the seed no longer defines (retired vocabulary) has no display name and is
@@ -207,7 +216,22 @@ export function isCanonicalFood(slug: string): boolean {
  * its real /foods/:slug page. Returns null when no canonical food bridges to
  * it — never guessed, since several knowledge foods have no canonical
  * identity yet (SURF1A).
+ *
+ * 2026-10-31 — also checks each food's VARIETIES, not just the top-level
+ * food itself. 15 knowledge slugs (e.g. "purple-sprouting-broccoli",
+ * "red-lentils", four mushroom forms, two cabbages, two pea forms, a pepper,
+ * a yoghurt) are bound only at the variety level in CANONICAL_SEED — this
+ * function was returning null for every one of them, which is what made
+ * "Purple Sprouting Broccoli" show as an unclickable name instead of a link:
+ * `getFoodsForNutrient`/`getFoodsForNutrients` correctly return it as a real
+ * linked food, this bridge just couldn't find where it lived. A variety has
+ * no page of its own — it resolves to its PARENT's canonical slug, since
+ * that parent's page is where the variety is actually shown.
  */
 export function canonicalSlugForKnowledgeSlug(knowledgeSlug: string): string | null {
-  return CANONICAL_SEED.find((e) => e.food.knowledgeFoodSlug === knowledgeSlug)?.food.slug ?? null;
+  for (const entry of CANONICAL_SEED) {
+    if (entry.food.knowledgeFoodSlug === knowledgeSlug) return entry.food.slug;
+    if (entry.varieties?.some((v) => v.knowledgeFoodSlug === knowledgeSlug)) return entry.food.slug;
+  }
+  return null;
 }

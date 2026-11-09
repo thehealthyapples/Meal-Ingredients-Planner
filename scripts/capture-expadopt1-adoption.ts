@@ -22,11 +22,11 @@ const ROOMS = [
   { name: "cookbook", path: "/cookbook", exposure: "E2" },
   { name: "pantry", path: "/pantry", exposure: "E2" },
   { name: "nutrition", path: "/nutrition", exposure: "E2" },
-  { name: "diary", path: "/my-diary", exposure: "E2" },
+  { name: "diary", path: "/diary", exposure: "E2" },
   { name: "orchard", path: "/orchard", exposure: "E2" },
   { name: "planner", path: "/planner", exposure: "E1 — must show NO window" },
   { name: "shopping", path: "/shopping-workspace", exposure: "E1 — must show NO window" },
-  { name: "home", path: "/home", exposure: "E3 — control, unchanged" },
+  { name: "home", path: "/", exposure: "E3 — control, unchanged" },
 ] as const;
 
 const VIEWPORTS = [

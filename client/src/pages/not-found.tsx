@@ -47,7 +47,7 @@ export default function NotFound() {
           </p>
 
           <Button asChild variant="default" className="mt-6" data-testid="button-not-found-home">
-            <Link href="/home">
+            <Link href="/">
               <Home className="w-4 h-4 mr-1.5" aria-hidden="true" />
               Take me home
             </Link>

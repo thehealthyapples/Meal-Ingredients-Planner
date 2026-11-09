@@ -34,7 +34,7 @@ account" button opens registration directly.
 ## Related
 
 - [[jrn-first-run]] — the first-run journey
-- [[page-landing]] — where its sign-up and sign-in buttons come from
+- [[page-home]] — where its sign-up and sign-in buttons come from
 
 ---
 

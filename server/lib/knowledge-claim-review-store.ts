@@ -49,10 +49,118 @@ import {
   isAllowedClaimReviewAction,
   validateClaimLifecycleState,
   validateSourceRef,
+  sourceForReview,
+  isSourceAllowedForClaim,
   type ClaimReviewAction,
   type ClaimReviewStatus,
   type KnowledgeSourceRef,
 } from "@shared/knowledge/evidence";
+import { isTrustedSourceUrl } from "@shared/knowledge/evidence";
+import { NUTRIENT_REFERENCE_CANDIDATES } from "@shared/knowledge/nutrient-reference-methods";
+
+const REFERENCE_METHOD_AUDIT_ENTITY = "nutrient-reference-method";
+const REFERENCE_METHOD_SOURCE_DETAILS: Record<string, Array<{ body: string; title: string }>> = {
+  "uk-child-protein-rni": [{
+    body: "UK Department of Health",
+    title: "Dietary Reference Values for Food Energy and Nutrients for the United Kingdom — Table 7.1",
+  }],
+  "uk-adult-protein-rni": [{
+    body: "UK Department of Health",
+    title: "Dietary Reference Values: A Guide",
+  }],
+  "efsa-adult-protein-pri": [{
+    body: "European Food Safety Authority",
+    title: "EFSA sets population reference intakes for protein",
+  }],
+  "adult-exercise-protein-range": [{
+    body: "International Society of Sports Nutrition",
+    title: "International Society of Sports Nutrition Position Stand: protein and exercise",
+  }],
+};
+
+function candidateSources(method: (typeof NUTRIENT_REFERENCE_CANDIDATES)[number]) {
+  const details = REFERENCE_METHOD_SOURCE_DETAILS[method.id] ?? [];
+  return details.flatMap((detail, index) => {
+    const url = method.candidateSourceUrls?.[index];
+    return url ? [{ ...detail, url }] : [];
+  });
+}
+
+export type ReferenceMethodReviewAction = "approve" | "reject";
+
+export function listReferenceMethodCandidates() {
+  return NUTRIENT_REFERENCE_CANDIDATES.map(method => ({
+    method,
+    sources: candidateSources(method),
+    sourceAdmission: candidateSources(method).every(source => isTrustedSourceUrl(source.url)),
+  }));
+}
+
+/**
+ * Add a named editorial decision to the existing append-only Nutrition
+ * Knowledge evidence ledger. This records review only; it does not activate a
+ * Companion consumer or mutate the candidate definition.
+ */
+export async function recordReferenceMethodDecision(args: {
+  methodId: string;
+  action: ReferenceMethodReviewAction;
+  reviewer: string;
+  reviewerUserId: number | null;
+  reason?: string | null;
+  confirmations?: { source: boolean; population: boolean; method: boolean; assumptions: boolean; notLive: boolean };
+  reviewedAt?: Date;
+}) {
+  const candidate = NUTRIENT_REFERENCE_CANDIDATES.find(method => method.id === args.methodId);
+  if (!candidate) throw new ClaimReviewError("Unknown nutrient reference method.", 404);
+  if (!args.reviewer.trim()) throw new ClaimReviewError("A named reviewer is required.");
+  const sources = candidateSources(candidate);
+  if (args.action === "approve") {
+    if (!sources.length || !sources.every(source => isTrustedSourceUrl(source.url))) {
+      throw new ClaimReviewError("This candidate's source is not admitted by the current trusted-source policy. It cannot be signed off here.");
+    }
+    const checks = args.confirmations;
+    if (!checks || !checks.source || !checks.population || !checks.method || !checks.assumptions || !checks.notLive) {
+      throw new ClaimReviewError("Confirm that you reviewed the source, population, calculation, assumptions, and that this decision does not make Companion guidance live.");
+    }
+  } else if (!args.reason?.trim()) {
+    throw new ClaimReviewError("Add a short reason so the next reviewer knows what needs changing.");
+  }
+
+  const reviewedAt = args.reviewedAt ?? new Date();
+  const sourceRefs = args.action === "approve" ? sources.map(source => ({
+    ...source,
+    evidenceLevel: "established" as const,
+    lastReviewed: reviewedAt.toISOString().slice(0, 10),
+  })) : [];
+  const after = {
+    methodId: candidate.id,
+    version: candidate.version,
+    action: args.action,
+    reviewer: args.reviewer.trim(),
+    reviewedAt: reviewedAt.toISOString(),
+    methodSnapshot: candidate,
+    sourceRefs,
+    confirmations: args.action === "approve" ? args.confirmations : null,
+    reason: args.reason?.trim() || null,
+  };
+  const [row] = await db.insert(knowledgeReviewAudit).values({
+    entity: REFERENCE_METHOD_AUDIT_ENTITY,
+    entityId: null,
+    action: args.action === "approve" ? "approved" : "rejected",
+    actorKind: "human",
+    actorUserId: args.reviewerUserId,
+    after,
+    detail: args.reason?.trim() || null,
+  }).returning();
+  return row;
+}
+
+export async function getReferenceMethodReviewHistory() {
+  const rows = await db.select().from(knowledgeReviewAudit)
+    .where(eq(knowledgeReviewAudit.entity, REFERENCE_METHOD_AUDIT_ENTITY))
+    .orderBy(desc(knowledgeReviewAudit.createdAt));
+  return rows;
+}
 
 /** Thrown for every refusal a caller is expected to surface to the reviewer. */
 export class ClaimReviewError extends Error {
@@ -171,20 +279,21 @@ function subjectOf(edge: ClaimEdge, row: any): string {
 
 function toItem(edge: ClaimEdge, row: any): ClaimReviewItem {
   const sourceRefs: KnowledgeSourceRef[] = Array.isArray(row.sourceRefs) ? row.sourceRefs : [];
+  const forReview = sourceRefs.map(ref => sourceForReview(ref, new Date().toISOString().slice(0, 10)));
   return {
     id: row.id,
     edge,
     subject: subjectOf(edge, row),
     approvedWording: edge === "preparation-effect" ? (row.approvedWording ?? null) : null,
     sourceRefs,
-    citationProblems: sourceRefs.flatMap((ref) => validateSourceRef(ref)),
+    citationProblems: forReview.flatMap((ref) => validateSourceRef(ref)),
     status: deriveClaimReviewStatus(row),
     reviewedAt: row.reviewedAt ?? null,
     reviewedBy: row.reviewedBy ?? null,
     rejectedAt: row.rejectedAt ?? null,
     rejectedBy: row.rejectedBy ?? null,
     rejectionReason: row.rejectionReason ?? null,
-    canApprove: canApproveClaim(row),
+    canApprove: canApproveClaim({ ...row, sourceRefs: forReview }),
     isActive: row.isActive,
   };
 }
@@ -194,15 +303,37 @@ function toItem(edge: ClaimEdge, row: any): ClaimReviewItem {
 export interface ListClaimsOptions {
   edge?: ClaimEdge;
   status?: ClaimReviewStatus;
+  /** Filter by whether a claim carries at least one citation. */
+  sourceStatus?: "all" | "cited" | "missing";
   /** Only claims carrying at least one citation. The publishable-now worklist. */
   citedOnly?: boolean;
   limit?: number;
+  offset?: number;
+}
+
+function claimConditions(edge: ClaimEdge, options: ListClaimsOptions) {
+  const table: any = TABLES[edge];
+  const conditions = [eq(table.isActive, true)];
+  if (options.status === "pending") {
+    conditions.push(isNull(table.reviewedAt), isNull(table.rejectedAt));
+  } else if (options.status === "approved") {
+    conditions.push(isNotNull(table.reviewedAt));
+  } else if (options.status === "rejected") {
+    conditions.push(isNotNull(table.rejectedAt));
+  }
+  const sourceStatus = options.sourceStatus ?? (options.citedOnly ? "cited" : "all");
+  if (sourceStatus === "cited") {
+    conditions.push(sql`jsonb_array_length(COALESCE(${table.sourceRefs}, '[]'::jsonb)) > 0`);
+  } else if (sourceStatus === "missing") {
+    conditions.push(sql`jsonb_array_length(COALESCE(${table.sourceRefs}, '[]'::jsonb)) = 0`);
+  }
+  return conditions;
 }
 
 /**
  * The reviewer's worklist.
  *
- * `citedOnly` separates the two backlogs KNOW1 §2.1 found were being read as
+ * `sourceStatus` separates the two backlogs KNOW1 §2.1 found were being read as
  * one: a claim with no citation needs a researcher to FIND a source, and a claim
  * with a good citation and no signature needs a reviewer to APPROVE it. Merging
  * them is what buried 64 publishable claims behind 3,299 unresearched ones.
@@ -214,23 +345,51 @@ export async function listClaims(options: ListClaimsOptions = {}): Promise<Claim
 
   for (const edge of edges) {
     const table: any = TABLES[edge];
-    const conditions = [eq(table.isActive, true)];
-
-    if (options.status === "pending") {
-      conditions.push(isNull(table.reviewedAt), isNull(table.rejectedAt));
-    } else if (options.status === "approved") {
-      conditions.push(isNotNull(table.reviewedAt));
-    } else if (options.status === "rejected") {
-      conditions.push(isNotNull(table.rejectedAt));
-    }
-    if (options.citedOnly) {
-      conditions.push(sql`jsonb_array_length(COALESCE(${table.sourceRefs}, '[]'::jsonb)) > 0`);
-    }
-
-    const rows = await db.select().from(table).where(and(...conditions)).orderBy(asc(table.id)).limit(limit);
+    const rows = await db.select().from(table).where(and(...claimConditions(edge, options))).orderBy(asc(table.id)).limit(limit);
     for (const row of rows) items.push(toItem(edge, row));
   }
   return items;
+}
+
+/** Admin worklist page across the selected edge(s), in stable edge/id order. */
+export async function listClaimsPage(options: ListClaimsOptions = {}): Promise<{
+  claims: ClaimReviewItem[];
+  total: number;
+  offset: number;
+  limit: number;
+}> {
+  const edges = options.edge ? [options.edge] : CLAIM_EDGES;
+  const limit = Math.min(Math.max(Math.trunc(options.limit ?? 50), 1), 100);
+  const requestedOffset = Math.max(Math.trunc(options.offset ?? 0), 0);
+  const counts = await Promise.all(edges.map(async (edge) => {
+    const table: any = TABLES[edge];
+    const [row] = await db.select({ count: sql<number>`count(*)::int` })
+      .from(table).where(and(...claimConditions(edge, options)));
+    return Number(row?.count ?? 0);
+  }));
+  const total = counts.reduce((sum, count) => sum + count, 0);
+  const effectiveOffset = Math.min(requestedOffset, Math.max(total - 1, 0));
+  let offset = effectiveOffset;
+  let remaining = limit;
+  const claims: ClaimReviewItem[] = [];
+
+  for (let index = 0; index < edges.length && remaining > 0; index++) {
+    const edge = edges[index];
+    const edgeCount = counts[index];
+    if (offset >= edgeCount) {
+      offset -= edgeCount;
+      continue;
+    }
+    const take = Math.min(remaining, edgeCount - offset);
+    const table: any = TABLES[edge];
+    const rows = await db.select().from(table)
+      .where(and(...claimConditions(edge, options)))
+      .orderBy(asc(table.id)).offset(offset).limit(take);
+    claims.push(...rows.map((row) => toItem(edge, row)));
+    remaining -= rows.length;
+    offset = 0;
+  }
+  return { claims, total, offset: effectiveOffset, limit };
 }
 
 /** Counts per edge per state — the Admin surface's summary, and the honest denominator. */
@@ -368,17 +527,20 @@ export async function recordClaimDecision(
         409,
       );
     }
-    if (action === "approve" && !canApproveClaim(before)) {
+    const now = new Date();
+    const sources = action === "approve" && Array.isArray(before.sourceRefs)
+      ? before.sourceRefs.map((ref: KnowledgeSourceRef) => sourceForReview(ref, now.toISOString().slice(0, 10)))
+      : before.sourceRefs;
+    if (action === "approve" && !canApproveClaim({ ...before, sourceRefs: sources })) {
       throw new ClaimReviewError(
         "This claim carries no structurally valid Layer-1 citation, so it cannot be approved. " +
           "Approval writes the column the Trust Gate reads — a reviewer may not vouch a claim past a missing source.",
       );
     }
 
-    const now = new Date();
     const patch =
       action === "approve"
-        ? { reviewedAt: now, reviewedBy: reviewer, rejectedAt: null, rejectedBy: null, rejectionReason: null }
+        ? { reviewedAt: now, reviewedBy: reviewer, sourceRefs: sources, rejectedAt: null, rejectedBy: null, rejectionReason: null }
         : action === "reject"
           ? { reviewedAt: null, reviewedBy: null, rejectedAt: now, rejectedBy: reviewer, rejectionReason: reason }
           : { reviewedAt: null, reviewedBy: null, rejectedAt: null, rejectedBy: null, rejectionReason: null };
@@ -415,6 +577,79 @@ export async function recordClaimDecision(
   };
 
   return existingTx ? apply(existingTx) : db.transaction(apply);
+}
+
+/** Attach or remove one citation on a pending claim without changing publication state. */
+export async function recordClaimSourceChange(args: {
+  edge: ClaimEdge;
+  claimId: number;
+  reviewer: string;
+  reviewerUserId?: number | null;
+  sourceRef?: KnowledgeSourceRef;
+  removeUrl?: string;
+  /** Internal research importer only. The Admin endpoint never accepts this option. */
+  preparedComposition?: { foodSlug: string; nutrientSlug: string };
+  /** Internal research importer only. Prepared non-composition evidence must bind to the exact existing claim. */
+  preparedClaim?: { edge: Exclude<ClaimEdge, "composition">; subject: string };
+}): Promise<ClaimDecisionResult> {
+  const reviewer = args.reviewer.trim();
+  if (!reviewer) throw new ClaimReviewError("A named reviewer is required to change claim evidence.");
+  const attaching = args.sourceRef !== undefined;
+  if (attaching === (args.removeUrl !== undefined)) {
+    throw new ClaimReviewError("Provide exactly one source to attach or source URL to remove.");
+  }
+  if (args.preparedComposition && args.preparedClaim) {
+    throw new ClaimReviewError("Prepared evidence must use exactly one claim identity guard.");
+  }
+  if (attaching) {
+    const ref = args.sourceRef!;
+    const prepared = Boolean(args.preparedComposition || args.preparedClaim);
+    if (args.preparedComposition && (args.edge !== "composition" || ref.preparedBy !== reviewer || ref.lastReviewed || args.reviewerUserId != null)) {
+      throw new ClaimReviewError("Prepared evidence must be an unsigned composition citation attributed to its researcher.");
+    }
+    if (args.preparedClaim && (args.edge === "composition" || args.preparedClaim.edge !== args.edge || !args.preparedClaim.subject.trim() || ref.preparedBy !== reviewer || ref.lastReviewed || args.reviewerUserId != null)) {
+      throw new ClaimReviewError("Prepared evidence must be an unsigned citation bound to its exact non-composition claim and researcher.");
+    }
+    const problems = validateSourceRef(prepared ? sourceForReview(ref, ref.preparedOn ?? "") : ref);
+    if (problems.length) throw new ClaimReviewError(`Source is invalid: ${problems.join("; ")}`);
+  }
+  const table: any = TABLES[args.edge];
+  return db.transaction(async (tx: any) => {
+    const [before] = await tx.select().from(table).where(eq(table.id, args.claimId)).limit(1).for("update");
+    if (!before) throw new ClaimReviewError(`No ${args.edge} claim with id ${args.claimId}.`, 404);
+    if (deriveClaimReviewStatus(before) !== "pending" || !before.isActive) {
+      throw new ClaimReviewError("Sources can only be changed on active claims awaiting review.", 409);
+    }
+    const refs: KnowledgeSourceRef[] = Array.isArray(before.sourceRefs) ? [...before.sourceRefs] : [];
+    if (args.preparedComposition && (!attaching || before.foodSlug !== args.preparedComposition.foodSlug || before.nutrientSlug !== args.preparedComposition.nutrientSlug || refs.length)) {
+      throw new ClaimReviewError("Composition claim has changed or already has evidence.", 409);
+    }
+    if (args.preparedClaim && (!attaching || subjectOf(args.edge, before) !== args.preparedClaim.subject || refs.length)) {
+      throw new ClaimReviewError("Prepared claim has changed or already has evidence.", 409);
+    }
+    let detail: string;
+    if (attaching) {
+      if (!isSourceAllowedForClaim(args.sourceRef, before)) {
+        throw new ClaimReviewError("USDA and Health Canada food-composition sources can only support composition claims.");
+      }
+      if (refs.some((ref) => ref.url === args.sourceRef!.url)) throw new ClaimReviewError("This source URL is already attached.");
+      refs.push(args.sourceRef!);
+      detail = `Source attached by ${reviewer}: ${args.sourceRef!.body} — ${args.sourceRef!.title}`;
+    } else {
+      const index = refs.findIndex((ref) => ref.url === args.removeUrl);
+      if (index < 0) throw new ClaimReviewError("Source is no longer attached.", 409);
+      const [removed] = refs.splice(index, 1);
+      detail = `Source removed by ${reviewer}: ${removed.body} — ${removed.title}`;
+    }
+    const [after] = await tx.update(table).set({ sourceRefs: refs }).where(eq(table.id, args.claimId)).returning();
+    const [audit] = await tx.insert(knowledgeReviewAudit).values({
+      entity: AUDIT_ENTITY[args.edge], entityId: args.claimId,
+      action: attaching ? "source-attached" : "source-removed", actorKind: args.preparedComposition || args.preparedClaim ? "llm" : "human",
+      actorUserId: args.reviewerUserId ?? null,
+      before: auditSnapshot(args.edge, before), after: auditSnapshot(args.edge, after), detail,
+    }).returning({ id: knowledgeReviewAudit.id });
+    return { claim: toItem(args.edge, after), auditId: audit.id };
+  });
 }
 
 /**

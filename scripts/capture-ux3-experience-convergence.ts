@@ -60,13 +60,13 @@ const CREDS = {
 };
 
 const ROUTES = [
-  { slug: "home", path: "/home" },
+  { slug: "home", path: "/" },
   { slug: "planner", path: "/planner" },
   { slug: "cookbook", path: "/cookbook" },
   { slug: "pantry", path: "/pantry" },
   { slug: "shopping", path: "/shopping-workspace" },
   { slug: "nutrition", path: "/nutrition" },
-  { slug: "diary", path: "/my-diary" },
+  { slug: "diary", path: "/diary" },
 ] as const;
 
 async function login(ctx: any) {
@@ -76,7 +76,7 @@ async function login(ctx: any) {
 
 async function settle(page: any) {
   await page.waitForLoadState("networkidle").catch(() => {});
-  // The Companion's arrival is deliberately withheld on /home (UXHOME1), and the
+  // The Companion's arrival is deliberately withheld on / (UXHOME1), and the
   // emblem's breath is a 4.2s cycle. Waiting past both means the capture shows the
   // settled room rather than a frame of it still arriving.
   await page.waitForTimeout(2200);
@@ -117,7 +117,7 @@ async function main() {
     // viewport on Home, because the panel is where the notices it holds are read.
     const cp = await ctx.newPage();
     try {
-      await cp.goto(`${BASE}/home`, { waitUntil: "domcontentloaded", timeout: 60_000 });
+      await cp.goto(`${BASE}/`, { waitUntil: "domcontentloaded", timeout: 60_000 });
       await settle(cp);
       await cp.click('[data-testid="button-open-assistant"]', { timeout: 10_000 });
       await cp.waitForTimeout(900);

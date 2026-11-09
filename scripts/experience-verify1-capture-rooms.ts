@@ -30,12 +30,12 @@ const LABEL = process.argv[2] ?? "verify";
  *  "the friend at the counter"), so it is verified as an overlay on Home rather
  *  than by inventing a page for it. */
 const ROOMS = [
-  { name: "home", path: "/home", landmark: "text=/./" },
+  { name: "home", path: "/", landmark: "text=/./" },
   { name: "planner", path: "/planner", landmark: "text=/./" },
   { name: "pantry", path: "/pantry", landmark: "text=/./" },
   { name: "shopping", path: "/shopping-workspace", landmark: "text=/./" },
   { name: "nutrition", path: "/plant-diversity", landmark: "text=/./" },
-  { name: "diary", path: "/my-diary", landmark: "text=/./" },
+  { name: "diary", path: "/diary", landmark: "text=/./" },
 ] as const;
 
 interface RoomResult {
@@ -141,7 +141,7 @@ async function main() {
     page.on("response", (r) => { if (r.status() >= 400) httpErrors.push(`${r.status()} ${r.url().replace(BASE, "")}`); });
 
     try {
-      await page.goto(`${BASE}/home`, { waitUntil: "networkidle", timeout: 45_000 });
+      await page.goto(`${BASE}/`, { waitUntil: "networkidle", timeout: 45_000 });
       await page.waitForTimeout(2000);
 
       // The Companion is mounted once inside ProtectedRoute as FloatingAssistant.
@@ -152,7 +152,7 @@ async function main() {
       // to Home. A click that changes nothing is not evidence.
       const trigger = page.locator('[data-testid="button-open-assistant"]');
       if ((await trigger.count()) === 0) {
-        notes.push("no button-open-assistant found on /home");
+        notes.push("no button-open-assistant found on /");
         status = "DEFECT";
       } else {
         await trigger.first().click({ timeout: 10_000 });
@@ -175,7 +175,7 @@ async function main() {
     }
 
     if (pageErrors.length > 0 && status === "PASS") status = "DEFECT";
-    results.push({ room: "companion", path: "/home (overlay)", status, httpErrors, consoleErrors, pageErrors, notes, screenshot });
+    results.push({ room: "companion", path: "/ (overlay)", status, httpErrors, consoleErrors, pageErrors, notes, screenshot });
     console.log(`${status.padEnd(6)} companion  http:${httpErrors.length} console:${consoleErrors.length} pageerr:${pageErrors.length}`);
     await page.close();
   }

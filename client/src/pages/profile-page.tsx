@@ -39,6 +39,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { normalizeIngredientKey } from "@shared/normalize";
+import { nutritionFocusLabel } from "@shared/nutrition-focus";
+import { NUTRITION_FOCUS_OPTIONS } from "@shared/nutrition-focus";
 // CP2 — the ONE closed personality set, shared verbatim with the server's
 // Personality Registry. The picker never declares a second list.
 import {
@@ -65,6 +67,8 @@ export interface ProfileData {
   isBetaUser: boolean;
   dietPattern: string | null;
   dietRestrictions: string[];
+  reportedHealthContext?: Array<{ id: string; fact: string; reportedAt: string }>;
+  nutritionFocuses?: Array<{ id: string; focus: string; reportedAt: string }>;
   eatingSchedule: string | null;
   customMetricDefs: Array<{ id: string; name: string; unit: string }>;
   diaryExtraMetrics: string[];
@@ -403,6 +407,15 @@ function ProfilePageContent() {
       />
 
       <ProfileSummary profile={profile} />
+
+      {profile.reportedHealthContext?.length ? (
+        <ReportedHealthContextCard entries={profile.reportedHealthContext} />
+      ) : null}
+      <NutritionFocusCard
+        entries={profile.nutritionFocuses ?? []}
+        onSave={(focuses) => updateMutation.mutate({ nutritionFocuses: focuses })}
+        isSaving={updateMutation.isPending}
+      />
 
       {/* ─── PERSONAL ─────────────────────────────────────────── */}
       <SectionGroup
@@ -1122,7 +1135,10 @@ function HouseholdEatersSection() {
   const [editDiets, setEditDiets] = useState<string[]>([]);
   const [editRestrictions, setEditRestrictions] = useState<string[]>([]);
 
-  const { data: eaters = [], isPending: isLoading } = useQuery<HouseholdEater[]>({
+  const { data: eaters = [], isPending: isLoading } = useQuery<Array<HouseholdEater & {
+    reportedHealthContext?: Array<{ id: string; fact: string; reportedAt: string }>;
+    nutritionFocuses?: Array<{ id: string; focus: string; reportedAt: string }>;
+  }>>({
     queryKey: ["/api/household/eaters"],
   });
 
@@ -1226,6 +1242,28 @@ function HouseholdEatersSection() {
                       ))}
                     </div>
                   )}
+                  {eater.reportedHealthContext?.length ? (
+                    <div className="mt-2 rounded-md border border-border/60 bg-muted/20 px-2.5 py-2" data-testid={`reported-health-context-${eater.id}`}>
+                      <p className="text-xs font-medium text-muted-foreground">Reported health information</p>
+                      <ul className="mt-1 space-y-1">
+                        {eater.reportedHealthContext.map((entry) => (
+                          <li key={entry.id} className="text-sm text-foreground">{entry.fact}</li>
+                        ))}
+                      </ul>
+                      <p className="mt-1 text-[11px] text-muted-foreground">Shared with Companion; not independently verified.</p>
+                    </div>
+                  ) : null}
+                  {eater.nutritionFocuses?.length ? (
+                    <div className="mt-2" data-testid={`nutrition-focuses-${eater.id}`}>
+                      <p className="text-xs font-medium text-muted-foreground">Nutrition focus</p>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {eater.nutritionFocuses.map((entry) => (
+                          <Badge key={entry.id} variant="secondary">{nutritionFocusLabel(entry.focus) ?? entry.focus}</Badge>
+                        ))}
+                      </div>
+                      <p className="mt-1 text-[11px] text-muted-foreground">A food preference, not a medical target.</p>
+                    </div>
+                  ) : null}
                 </div>
                 <div className="flex items-center gap-1 shrink-0 mt-0.5">
                   {/* CONV1 BEH-1 — this rendered the raw `kind` value ("Child" / "User").
@@ -1321,6 +1359,68 @@ function HouseholdEatersSection() {
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+function ReportedHealthContextCard({ entries }: {
+  entries: Array<{ id: string; fact: string; reportedAt: string }>;
+}) {
+  return (
+    <Card className="p-4 sm:p-5" data-testid="card-reported-health-context">
+      <div className="flex items-center gap-2 mb-2">
+        <Heart className="h-4 w-4 text-muted-foreground" />
+        <h3 className="text-sm font-medium">Health information shared with Companion</h3>
+      </div>
+      <ul className="space-y-2">
+        {entries.map((entry) => (
+          <li key={entry.id} className="text-sm text-foreground">{entry.fact}</li>
+        ))}
+      </ul>
+      <p className="mt-2 text-xs text-muted-foreground">These are details you reported; Companion has not independently verified them.</p>
+    </Card>
+  );
+}
+
+function NutritionFocusCard({ entries, onSave, isSaving }: {
+  entries: Array<{ id: string; focus: string; reportedAt: string }>;
+  onSave: (focuses: string[]) => void;
+  isSaving: boolean;
+}) {
+  const saved = entries.map((entry) => entry.focus);
+  const [selected, setSelected] = useState<string[]>(saved);
+  useEffect(() => setSelected(saved), [entries.map((entry) => `${entry.id}:${entry.focus}`).join("|")]);
+  const toggle = (id: string) => setSelected((current) => current.includes(id)
+    ? current.filter((focus) => focus !== id)
+    : [...current, id]);
+  const sameSelection = selected.length === saved.length && selected.every((focus) => saved.includes(focus));
+  return (
+    <Card className="p-4 sm:p-5" data-testid="card-nutrition-focuses">
+      <div className="flex items-center gap-2 mb-2">
+        <Sparkles className="h-4 w-4 text-muted-foreground" />
+        <h3 className="text-sm font-medium">Nutrition focuses</h3>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {NUTRITION_FOCUS_OPTIONS.map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            aria-pressed={selected.includes(option.id)}
+            onClick={() => toggle(option.id)}
+            className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${selected.includes(option.id) ? "border-primary bg-primary/10 text-foreground" : "border-border text-muted-foreground hover:bg-muted/40"}`}
+            data-testid={`toggle-nutrition-focus-${option.id}`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <p className="text-xs text-muted-foreground">Food preferences to keep in mind, not medical targets.</p>
+        <Button variant="default" size="sm" onClick={() => onSave(selected)} disabled={sameSelection || isSaving} data-testid="button-save-nutrition-focuses">
+          {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Save className="h-3.5 w-3.5 mr-1" />}
+          Save
+        </Button>
+      </div>
+    </Card>
   );
 }
 

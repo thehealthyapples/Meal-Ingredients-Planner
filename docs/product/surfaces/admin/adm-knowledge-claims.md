@@ -25,6 +25,10 @@ reviewer sees the citations as openable links, what approving that class of clai
 asserts, and — for preparation effects — the exact sentence a household would be
 shown, because the wording *is* the claim.
 
+The worklist can be filtered by claim type, review status and source status.
+“Awaiting a source” shows claims with no attached citations; “Has a source” is
+the default review queue, and “All source states” combines both.
+
 Four decisions are available, and which ones are offered depends on the claim's
 current state:
 

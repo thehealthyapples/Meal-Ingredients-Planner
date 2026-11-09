@@ -31,7 +31,7 @@
     {
       "id": "home",
       "name": "Home",
-      "route": "/home",
+      "route": "/",
       "auth": "household",
       "file": "home.png",
       "status": 200,
@@ -111,8 +111,8 @@
     },
     {
       "id": "diary",
-      "name": "My Diary",
-      "route": "/my-diary",
+      "name": "Diary",
+      "route": "/diary",
       "auth": "household",
       "file": "diary.png",
       "status": 200,

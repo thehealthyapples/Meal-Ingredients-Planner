@@ -46,7 +46,7 @@ const CARD_CONTENT_MIN_HEIGHT = 370;
 const START_AREAS = [
   {
     key: "meals",
-    route: "/meals",
+    route: "/cookbook",
     icon: BookOpen,
     title: "Cookbook",
     label: "Save and organise your meals",

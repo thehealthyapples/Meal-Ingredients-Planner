@@ -317,6 +317,19 @@ const ALIASES: Record<string, string> = {
   "free range eggs":            "eggs",
   "freerange eggs":             "eggs",
   "organic eggs":               "eggs",
+  "egg":                        "eggs",
+
+  // ── Bay leaf spelling variants (2026-10-31, owner-approved) ────────────────
+  // "bay-leaf" and "bay leaf" already collapse to the same key before this
+  // map even runs (normalizeIngredientKey deletes punctuation rather than
+  // replacing it with a space), but the no-space and plural spellings don't.
+  // resolveIngredientAlias is a whole-phrase lookup, not word-by-word, so each
+  // spelling needs its own direct entry rather than a generic "leafs"→"leaf".
+  "bayleaf":                    "bay leaf",
+  "bayleafs":                   "bay leaf",
+  "bay leafs":                  "bay leaf",
+  "bay leaves":                 "bay leaf",
+  "bayleaves":                  "bay leaf",
 
   // ── Salmon forms ──────────────────────────────────────────────────────────
   "smoked salmon":              "salmon",

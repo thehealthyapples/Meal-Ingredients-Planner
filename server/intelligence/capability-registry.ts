@@ -509,9 +509,9 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
   {
     id: "profile",
     displayName: "Profile / Preferences",
-    description: "User profile and preferences (own data only).",
-    owner: "DB user_preferences + users.* (SoT D7, D26, D27)",
-    owningService: "server/lib/sanitizeUser.ts, routes-resident profile logic",
+    description: "User profile, voluntary nutrition focuses, and preferences (own data only).",
+    owner: "DB users + user_preferences (SoT D7, D26, D27); adult reported health context and nutrition focuses delegate to household_eaters (SoT D16)",
+    owningService: "server/storage.ts Profile and Household eater owners",
     apiSurface: "/api/profile, /api/user/preferences, /api/user/*-settings",
     supportedIntents: ["read", "explain", "add"],
     executableIntents: [],
@@ -569,7 +569,7 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
   {
     id: "household",
     displayName: "Household",
-    description: "Household membership and eaters.",
+    description: "Household membership, eaters, and confirmed health context and nutrition focuses for dependent profiles.",
     owner: "DB households / household_members / household_eaters (SoT D16)",
     owningService: "server/lib/household.ts, household-meal-matcher.ts",
     apiSurface: "/api/household/*",

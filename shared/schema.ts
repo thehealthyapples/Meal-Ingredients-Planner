@@ -1268,6 +1268,20 @@ export const householdEaters = pgTable("household_eaters", {
   defaultDietTypes: text("default_diet_types").array(),
   /** Hard restrictions — always enforced, never overridable. */
   hardRestrictions: text("hard_restrictions").array(),
+  /** Explicitly user-reported food-relevant health context; never app-verified. */
+  reportedHealthContext: jsonb("reported_health_context").$type<Array<{
+    id: string;
+    fact: string;
+    reportedByUserId: number;
+    reportedAt: string;
+  }>>().notNull().default(sql`'[]'::jsonb`),
+  /** Voluntary nutrition interests; separate from restrictions and health reports. */
+  nutritionFocuses: jsonb("nutrition_focuses").$type<Array<{
+    id: string;
+    focus: string;
+    reportedByUserId: number;
+    reportedAt: string;
+  }>>().notNull().default(sql`'[]'::jsonb`),
 }, (table) => [
   // CONV1 P4 (WRITE-3): one eater row per account per household. Without this,
   // concurrent creation could duplicate a person. Account-less eaters (userId NULL)

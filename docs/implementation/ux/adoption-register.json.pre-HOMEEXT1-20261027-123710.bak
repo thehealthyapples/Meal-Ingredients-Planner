@@ -1,0 +1,1168 @@
+{
+  "$schema_note": "The Platform Experience Adoption Register (PX1-W5.1). THE single source of truth. ADOPTION_REGISTER.md is GENERATED from this file — never edit the .md by hand. Verified by scripts/ci/adoption-register-gate.ts, which fails CI when an owner loses its last consumer, a rival count rises, a retired predecessor returns, or a new orphan appears. Mandated by THA_UI_ARCHITECTURE.md §17; operational, not architectural — it creates no law.",
+  "version": "1.0.0",
+  "updated": "2026-07-22",
+  "owner": "Colin Clapson",
+  "governedBy": [
+    "[THA_UI_ARCHITECTURE.md §17](../../architecture/THA_UI_ARCHITECTURE.md) (the mandate)",
+    "[THA_EXPERIENCE_ARCHITECTURE.md](../../architecture/THA_EXPERIENCE_ARCHITECTURE.md) (EXP1/EXP2)",
+    "[ENGINEERING_WORKFLOW.md](../../architecture/ENGINEERING_WORKFLOW.md) (Adoption Register Compliance)",
+    "[PX1](./PX1_PLATFORM_EXPERIENCE_DISCOVERY_AND_ARCHITECTURE.md) §6 (the specification)"
+  ],
+  "concerns": [
+    {
+      "id": "header",
+      "concern": "Header",
+      "owner": "components/workspace-header.tsx",
+      "ownerPath": "client/src/components/workspace-header.tsx",
+      "ownerKind": "module",
+      "owns": "Realm typing, the page banner, the slot context, and the bottom nav it mounts internally",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 15,
+      "retired": [
+        {
+          "name": "components/PageHeader.tsx (a full unadopted successor, 0 importers, duplicate PageRealm type)",
+          "pattern": "@/components/PageHeader",
+          "retiredBy": "PX1-W4.7"
+        }
+      ]
+    },
+    {
+      "id": "app-shell",
+      "concern": "Application shell",
+      "owner": "components/layout/app-shell.tsx (AppShell)",
+      "ownerPath": "client/src/components/layout/app-shell.tsx",
+      "ownerKind": "module",
+      "owns": "The walls of the house: the banner region, the room content column, the contextual rail and the bottom nav, declared once for every authenticated page. NAV1 (2026-07-19) did not create the shell — it NAMED it. The structure was inline JSX inside `ProtectedRoute` in `App.tsx`, so the app's layout had no owner that could be imported, tested or pointed at; it is moved here rather than rewritten. What NAV1 genuinely adds is HEADER PERMANENCE. `WorkspaceHeader` portals into a slot, so a page only had a header if it chose to render one — measured: `/compare`, `/import-recipe` and all 13 `/admin/*` pages had none at all, and the slot was empty during every `isLoading` state, every lazy-chunk `Suspense` fallback and every caught render error, so walking between rooms transiently painted a headerless app. The shell now renders the canonical header by default and a page's own header REPLACES it, tracked by mount/unmount registration so there is exactly one header on screen and no page file had to change to gain one. It is deliberately not a second header component: the default is the SAME `WorkspaceHeader` (row 1) rendered with `role=\"shell\"`, one owner used two ways.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 1
+    },
+    {
+      "id": "shell-slots",
+      "concern": "Shell slots (contextual rail)",
+      "owner": "components/layout/shell-slots.tsx (RoomActions, useRegisterPageHeader)",
+      "ownerPath": "client/src/components/layout/shell-slots.tsx",
+      "ownerKind": "module",
+      "owns": "How a page talks to the shell: header presence registration, and `RoomActions` — the desktop contextual rail for THE ACTIONS OF THE ROOM YOU ARE STANDING IN. Separate module because `app-shell` imports `WorkspaceHeader` and `WorkspaceHeader` must register with the shell; a cycle between a component and the layout that mounts it works in dev and fails on a production build's hoisting order. ⚠️ **`RoomActions` is AUTHORED AND NOT YET ADOPTED, and that is recorded here rather than hidden (UIA §17).** No room renders it, so the rail never appears — the `<aside>` is not rendered at all while zero rooms have declared actions, so it costs a household nothing today. The shell's half of the contract is built; the rooms' half is not, because deciding what each room's contextual actions ARE is room content, which the NAV1 brief expressly placed out of bounds (\"do not redesign room content\"). This is a **declared gap, not an exemption**: it should be adopted or deleted by NAV2, and it must not sit here indefinitely looking live — that is precisely the `PageHeader.tsx` failure this register exists to end. UX1 is untouched: nothing in the rail is navigation, and `BottomNav` remains the sole primary navigation at every size (row 2).",
+      "status": "half-adopted",
+      "enforcement": "machine",
+      "adoptionFloor": 2
+    },
+    {
+      "id": "navigation",
+      "concern": "Navigation",
+      "owner": "components/nav-bar.tsx (NAV_ITEMS, roomsByHref)",
+      "ownerPath": "client/src/components/nav-bar.tsx",
+      "ownerKind": "module",
+      "owns": "The one ordered destination list feeding every navigation surface. The only surface meeting the 44px touch floor by construction. **NORTH1 (2026-07-17) gave it a third consumer and its first EXPORT.** Home's North Star puts four of the house's rooms on the counter as doors, which makes Home a navigation surface — and this row's own rule is that ONE ordered list is the single source of truth for EVERY navigation surface. Home therefore reads its doors from here through the new `roomsByHref(hrefs)` helper rather than keeping a second list; a private copy would have been a second owner of every room's href, label and glyph, and the first rename would have silently forked the house. `roomsByHref` throws on an unknown href rather than rendering a door to nowhere. **NORTH3 (2026-07-17) retired that sentence, and Home now owns nothing here at all.** This row used to read: *\"Home owns only the SENTENCE under each door, which is Home's furniture and not the walls.\"* Those four sentences (`DOOR_LINES` — \"Plan your meals with ease\", \"Discover recipes and inspiration\", \"See what you have at home\", \"Your list and reminders\") were the last strings on Home with **no owner and no source**: not facts about the household, not facts from a canonical owner, and not anything a person standing in their own hall has ever needed to be told. NORTH1 § 5.7 had already deleted the render's \"Nourishing food. Happy home.\" from this room as *a marketing line inside the product* — and then kept four more of exactly that on the doors. A door carries a NAME and a HANDLE; it does not carry a paragraph explaining the room behind it. **Home now takes the href, the label and the glyph from this owner and adds nothing**, which is a stricter reading of this row's own rule, not a looser one. **The walls themselves are untouched** (Blueprint § 14): the canonical BottomNav is still the sole primary navigation at every size, still holds all eight destinations, and the render's left sidebar is refused — UX1 retired the DesktopSidebar and NORTH1 did not revive it. **UX_NAV1 (2026-07-19) refined the shelf's LOOK and moved none of its ownership.** `NAV_ITEMS`, `roomsByHref`, the nine destinations, their order, their hrefs and their labels are byte-unchanged, and `BottomNav` remains the sole primary navigation at every size. What changed is that the shelf stopped drawing nine filled pills: `REALM_STYLES` lost its `mobileActive`/`mobileInactive` fill strings and gained the single `hue` number both were built out of, and the room you are standing in is now shown by light (`.nav-shelf-item` / `.nav-shelf-item--lit` in `index.css`) rather than by a filled rectangle. No realm changed hue, so wayfinding (UIA § 6) means exactly what it meant before and is only quieter. ⚠️ **The `dark:` count in the theme-colour-mode row below fell 737 → 693 in this change, and that is a RELOCATION, not 44 units of debt repaid.** Those 44 utilities were the `dark:bg-`/`dark:text-` halves of the eleven realms' fill strings; the dark styling still exists, as `.dark` rules in `index.css` beside the `.dark [data-realm]` blocks that already own the header's dark realm colours. The measure counts `\\bdark:` and does not match `.dark `, so the number moved without the obligation moving. Dark mode remains authored-but-unadopted platform-wide — nothing sets the `dark` class, exactly as that row records — and UX_NAV1 neither fixes that nor adds to it. The three `active`/`hover`/`inactive` strings are untouched: they belong to the `DesktopSidebar` UX1 retired, which is mounted nowhere and hard-codes these same hues a third time — a pre-existing duplication that dies with the sidebar (NAV2).",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 2,
+      "exemptions": [
+        {
+          "surface": "All pages except `/home`",
+          "why": "No page imports the nav directly — `WorkspaceHeader` mounts it. Home is the one page that imports this module, and it imports the LIST rather than the nav: it renders four rooms as doors on its counter and reads their hrefs, labels and glyphs from here. Three importers is the correct number, not a high one — the alternative was a fourth copy of the house's room list."
+        }
+      ]
+    },
+    {
+      "id": "card",
+      "concern": "Card",
+      "owner": "components/ui/card.tsx",
+      "ownerPath": "client/src/components/ui/card.tsx",
+      "ownerKind": "module",
+      "owns": "The one card surface: radius, border weight, material, shadow. `CardTitle` is a real heading on the THA type scale.\n\n**INTARCH2 (2026-07-20) — THE CARD IS NOW MADE OF THE HOUSE.** This row used to read *\"radius, border weight, translucency, shadow-none\"*, and every one of those four words named a literal this component set for itself: `rounded-xl border bg-card/82 backdrop-blur-md border-border shadow-none`. Read as material rather than as CSS, that is tinted glass with a line drawn round it, casting nothing — correct while rooms had no floor, and wrong the moment INTARCH1 gave them one, because a surface that casts no shadow onto a floor it stands on is PRINTED on that floor rather than resting on it. The probe counted **73 card surfaces across eleven rooms and 0 made of the material system**. The component now carries `.surface-primary` (index.css), which reads `--surface-primary`, `--surface-primary-border`, `--radius-primary` and `--shadow-primary` and sets no value of its own — so the radius law, the shadow definition and dark mode each have exactly one owner (UIA § 16) and this file states none of them. Blueprint § 8.2's *solidity follows importance*, finally implemented: primary is plaster, solid and lit. **`shadcn-card` is retained** as the machine hook this register and the capture probe both key on. **Retired in the same change:** the `[role=\"dialog\"] .shadcn-card` override in index.css, a local exception that forced opacity in modals to repair a translucency the card no longer has — it was setting `hsl(var(--card))`, which is the same value `--surface-primary` resolves to, and a dead rule agreeing with its successor is a second authority waiting for one of the two to move (GEA18).",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 35,
+      "retired": [
+        {
+          "name": "intelligenceSurface (a private card surface rivalling ui/card, inside intelligence-tokens)",
+          "pattern": "\\bintelligenceSurface\\b",
+          "retiredBy": "PX1-W4.4"
+        }
+      ]
+    },
+    {
+      "id": "dialog",
+      "concern": "Dialog",
+      "owner": "components/ui/dialog.tsx + ui/dialog-foundation.ts",
+      "ownerPath": "client/src/components/ui/dialog.tsx",
+      "ownerKind": "module",
+      "owns": "The modal container: Radix focus trap, focus return, Escape, `max-h` + `overflow-y-auto`, a 44px close target, and a sheet presentation that is real rather than a no-op.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 20,
+      "rivals": [
+        {
+          "what": "`<DrawerContent>` — a second overlay container chosen per-file",
+          "pattern": "<DrawerContent[\\s>]",
+          "ceiling": 10,
+          "note": "Capped. New overlays use `Overlay`, which decides sheet-vs-dialog by viewport."
+        },
+        {
+          "what": "`<SheetContent>` — a third",
+          "pattern": "<SheetContent[\\s>]",
+          "ceiling": 3,
+          "note": "Capped. `Sheet` is retired as a *choice*; it survives only as Overlay's mobile implementation."
+        }
+      ]
+    },
+    {
+      "id": "overlay",
+      "concern": "Overlay container",
+      "owner": "components/ui/overlay.tsx",
+      "ownerPath": "client/src/components/ui/overlay.tsx",
+      "ownerKind": "module",
+      "owns": "The overlay *decision*: bottom sheet on a phone, centred dialog on a desktop — by the canonical breakpoint, never by the calling file's taste.",
+      "status": "half-adopted",
+      "enforcement": "machine",
+      "adoptionFloor": 1,
+      "openMigration": {
+        "finding": "fnd-px-overlay-container-arbitrary",
+        "remaining": "The existing Dialog / Drawer / Sheet call sites migrate as touched. The ceilings in § 2 stop the population growing meanwhile.",
+        "owner": "Colin Clapson — as each overlay surface is next touched",
+        "why": "Migrating every overlay at once is a behaviour change on 80+ surfaces with no household-visible defect driving it. The ratchet makes deferral safe: the count can only fall."
+      }
+    },
+    {
+      "id": "form-field",
+      "concern": "Form field",
+      "owner": "components/ui/form.tsx",
+      "ownerPath": "client/src/components/ui/form.tsx",
+      "ownerKind": "module",
+      "owns": "The wired field: `htmlFor`, `aria-describedby`, `aria-invalid`.",
+      "status": "half-adopted",
+      "enforcement": "machine",
+      "adoptionFloor": 2,
+      "exemptions": [
+        {
+          "surface": "~20 hand-rolled `useState` forms",
+          "why": "They now carry real labels and accessible names (PX1-W4.1), so the household-visible defect is closed. `ui/form.tsx`'s RHF context is not worth forcing onto a two-field dialog; what mattered was the accessible name, and `warnIfUnlabelled` now enforces that at the primitive — see `accessible-name`."
+        }
+      ]
+    },
+    {
+      "id": "accessible-name",
+      "concern": "Accessible name enforcement",
+      "owner": "lib/a11y-dev-warnings.ts (warnIfUnlabelled)",
+      "ownerPath": "client/src/lib/a11y-dev-warnings.ts",
+      "ownerKind": "module",
+      "owns": "Making an unlabelled control loud at introduction rather than at audit. Dev-only; stripped in production.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 2,
+      "exemptions": [
+        {
+          "surface": "`ui/input.tsx`, `ui/textarea.tsx` only",
+          "why": "Two importers is the whole design: the warning belongs at the two primitives every field passes through, not at 300 call sites."
+        }
+      ]
+    },
+    {
+      "id": "empty-state",
+      "concern": "Empty state",
+      "owner": "components/ui/empty-state.tsx",
+      "ownerPath": "client/src/components/ui/empty-state.tsx",
+      "ownerKind": "module",
+      "owns": "Absence, in its three truths: `empty` | `filtered` | `unavailable`. There is deliberately **no error variant** — that sentence belongs to `LoadError`, which is how it became structurally impossible to say \"you have nothing\" when the truth is \"we could not load this\".",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 3
+    },
+    {
+      "id": "loading-state",
+      "concern": "Loading state",
+      "owner": "components/ui/skeleton.tsx",
+      "ownerPath": "client/src/components/ui/skeleton.tsx",
+      "ownerKind": "module",
+      "owns": "**Content arriving.** Waiting, as a content-shaped skeleton rather than a void. This register settles the vocabulary question the finding raised, by naming which mark owns which situation: *`Skeleton` owns content arriving; `Loader2` owns indeterminate work inside a control.* A vocabulary is not \"only one mark\" — it is one rule for which mark, and this is that rule.",
+      "status": "half-adopted",
+      "enforcement": "machine",
+      "adoptionFloor": 12,
+      "exemptions": [
+        {
+          "surface": "`Loader2` as an **inline pending mark** — the spinner inside a control that is working (140 of its 180 usages), and the route-transition fallback in `App.tsx`",
+          "why": "A skeleton answers *\"what is about to appear here\"*. A button that is saving has nothing to shape a skeleton around, and a route fallback must not paint a skeleton of a page it cannot yet know. For *work inside a control*, Loader2 is the right mark and Skeleton would be the wrong one."
+        }
+      ],
+      "rivals": [
+        {
+          "what": "Hand-rolled `animate-pulse` loading surfaces",
+          "pattern": "animate-pulse",
+          "ceiling": 9,
+          "excludePaths": [
+            "client/src/components/ui/skeleton.tsx"
+          ],
+          "note": "The owner carries the class internally; these are the copies outside it. PX1-W4.8 retired the 12 verbatim Skeleton clones."
+        },
+        {
+          "what": "`<Loader2>` usages",
+          "pattern": "<Loader2[\\s>]",
+          "ceiling": 166,
+          "note": "Capped, not banned: 140 are the exempt inline pending mark above. The population may fall, never rise. BUS1 raised 179 → 181: two `<Loader2>` marks on Privacy Settings, both INSIDE a control (the data-download button and the account-deletion confirm button) while an indeterminate request is in flight. That is the usage this concern's own rule assigns to Loader2 rather than to Skeleton — 'Skeleton owns content arriving; Loader2 owns indeterminate work inside a control' — so the ceiling is raised rather than the marks replaced. Content-arriving states on that page use Skeleton, as the rule requires."
+        }
+      ],
+      "openMigration": {
+        "finding": "fnd-px-loading-vocabulary",
+        "remaining": "**~40 standalone `Loader2` usages are *content arriving*, not work-in-a-control** — page and section-level spinners on meal-detail, food-detail, quick-meal, shared-plan, the cookbook's three search panels, and the two scan-review surfaces. By the rule above, each is a `Skeleton`. They migrate as touched.",
+        "owner": "Colin Clapson — as each surface is next touched",
+        "why": "**This row is a correction.** PX1-W4 and W4b both recorded this finding as effectively closed — *\"`Loader2` remains legitimate as an inline button-pending mark\"* — and the register's first measurement does not support that: 40 of the 180 usages are page- and section-level content placeholders, which the rule above makes drift. The verbatim Skeleton clones and the worst full-page spinner *were* converged (W4.8); the remainder was characterised more generously than the code justified. Recorded as open rather than inherited on trust, which is the whole reason the numbers in this register are measured rather than typed."
+      }
+    },
+    {
+      "id": "error-presentation",
+      "concern": "Error presentation",
+      "owner": "components/ui/load-error.tsx",
+      "ownerPath": "client/src/components/ui/load-error.tsx",
+      "ownerKind": "module",
+      "owns": "What could not be loaded, what it means for their data (*nothing is lost*), and one way forward (*Try again*). It never shows a status code.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 4
+    },
+    {
+      "id": "error-boundary",
+      "concern": "Error boundary",
+      "owner": "components/error-boundary.tsx",
+      "ownerPath": "client/src/components/error-boundary.tsx",
+      "ownerKind": "module",
+      "owns": "Render-time failure. Mounted *inside* the shell, so the header and nav survive: a broken surface is never one the household cannot leave.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 1,
+      "exemptions": [
+        {
+          "surface": "Mounted once, in `App.tsx`",
+          "why": "One importer is the correct number: a boundary is mounted at the shell, not per page."
+        }
+      ]
+    },
+    {
+      "id": "mutation-feedback",
+      "concern": "Mutation feedback",
+      "owner": "hooks/use-tracked-mutation.ts",
+      "ownerPath": "client/src/hooks/use-tracked-mutation.ts",
+      "ownerKind": "module",
+      "owns": "Feedback belongs to the mutation, never the call site. `failure` copy is **required by the type**, and `err.message` is never forwarded — the owner never receives it.",
+      "status": "half-adopted",
+      "enforcement": "machine",
+      "adoptionFloor": 10,
+      "rivals": [
+        {
+          "what": "Raw `useMutation` — feedback owned by the call site",
+          "pattern": "\\buseMutation\\s*[(<]",
+          "ceiling": 132,
+          "excludePaths": [
+            "client/src/hooks/use-tracked-mutation.ts"
+          ],
+          "note": "Not all are defects: a mutation with no household-visible outcome owes no toast. Capped so the population cannot grow."
+        }
+      ]
+    },
+    {
+      "id": "unsaved-changes",
+      "concern": "Unsaved-work guard",
+      "owner": "hooks/use-unsaved-changes.tsx",
+      "ownerPath": "client/src/hooks/use-unsaved-changes.tsx",
+      "ownerKind": "module",
+      "owns": "Sections declare dirty state; the page asks before letting the household leave.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 1,
+      "exemptions": [
+        {
+          "surface": "Profile only",
+          "why": "Profile is the only dirty→Save surface in THA; everywhere else commits on interaction. One consumer is the correct number, not a low one."
+        }
+      ]
+    },
+    {
+      "id": "panel-shell",
+      "concern": "Status presentation (panel shell)",
+      "owner": "components/intelligence/IntelligenceCard.tsx",
+      "ownerPath": "client/src/components/intelligence/IntelligenceCard.tsx",
+      "ownerKind": "module",
+      "owns": "The intelligence panel shell: header, loading, empty, progressive disclosure. It composes `ui/card` rather than rivalling it (PX1-W4.4).\n\n**UX3 (2026-07-20) — THE COACHING SURFACES ARE GONE, AND THE FLOOR CAME DOWN WITH THEM.** The owner ruled that **the Companion is the single owner of coaching, interpretation, recommendation, reminders and encouragement**; a room keeps its contextual content, its room data and its workflow controls, and nothing else. Eight surfaces were duplicate mouths for that one job and were deleted in one change — they are listed in § 4 below so the gate keeps them dead. Six of them consumed this owner, which is why `adoptionFloor` moves **8 → 5**. **This is the register's own rule being followed rather than dodged**: the floor was right when six coaching cards mounted the shell, and it is wrong the moment the duplication is removed. Re-adding a consumer to satisfy a number would be authoring a surface to make a gate green — the exact inversion this register exists to prevent — so the floor is lowered and the reason is written down instead. Five is now the honest number: `SeasonalCard`, `HouseholdInsightCard`, `LearningSignalCard`, `ConnectedFoodPanel` and the system's own `index.ts` barrel. The shell itself is **untouched and still canonical**: what died is the duplicated *voice*, never the container it happened to be poured into.",
+      "status": "half-adopted",
+      "enforcement": "review",
+      "adoptionFloor": 5,
+      "retired": [
+        {
+          "name": "`intelligence/AmbientIntelligence` — the ambient coaching strip mounted per room (a second voice interpreting the household in every room the Companion already speaks in)",
+          "pattern": "@/components/intelligence/AmbientIntelligence|<AmbientIntelligence[\\s>]",
+          "retiredBy": "UX3"
+        },
+        {
+          "name": "`intelligence/FoodOpportunityCard` — a food recommendation card outside the Companion",
+          "pattern": "@/components/intelligence/FoodOpportunityCard|<FoodOpportunityCard[\\s>]",
+          "retiredBy": "UX3"
+        },
+        {
+          "name": "`intelligence/OpportunityCard` — the generic \"here is what you could do\" card; advice is the Companion's",
+          "pattern": "@/components/intelligence/OpportunityCard|<OpportunityCard[\\s>]",
+          "retiredBy": "UX3"
+        },
+        {
+          "name": "`intelligence/SimplyBetterChoiceCard` — a recommendation card, in a room, in its own voice",
+          "pattern": "@/components/intelligence/SimplyBetterChoiceCard|<SimplyBetterChoiceCard[\\s>]",
+          "retiredBy": "UX3"
+        },
+        {
+          "name": "`intelligence/CelebrationCard` — encouragement rendered by a room rather than said by the Companion",
+          "pattern": "@/components/intelligence/CelebrationCard|<CelebrationCard[\\s>]",
+          "retiredBy": "UX3"
+        },
+        {
+          "name": "`HomeIntelligenceCompanion` — a SECOND companion on Home, with its own greeting, its own coaching and its own reminders",
+          "pattern": "@/components/HomeIntelligenceCompanion|<HomeIntelligenceCompanion[\\s>]",
+          "retiredBy": "UX3"
+        },
+        {
+          "name": "`meal-detail/SimplyBetterChoicesPanel` — the hand-rolled recommendation panel this row's own § 5 migration had been waiting to converge; UX3 deleted the concern instead of the markup",
+          "pattern": "@/components/meal-detail/SimplyBetterChoicesPanel|<SimplyBetterChoicesPanel[\\s>]",
+          "retiredBy": "UX3"
+        },
+        {
+          "name": "`first-visit-hint` — an unprompted nudge on first arrival; a hint is coaching, and coaching has one owner",
+          "pattern": "@/components/first-visit-hint|<FirstVisitHint[\\s>]",
+          "retiredBy": "UX3"
+        },
+        {
+          "name": "AmbientIntelligence — the ambient opportunity surface, mounted on 8 rooms",
+          "pattern": "AmbientIntelligence",
+          "retiredBy": "UX3"
+        },
+        {
+          "name": "FoodOpportunityCard — the coaching card AmbientIntelligence rendered",
+          "pattern": "FoodOpportunityCard",
+          "retiredBy": "UX3"
+        },
+        {
+          "name": "OpportunityCard — the \"You could\" coaching eyebrow",
+          "pattern": "OpportunityCard",
+          "retiredBy": "UX3"
+        },
+        {
+          "name": "SimplyBetterChoiceCard — the \"Simply better\" recommendation eyebrow",
+          "pattern": "SimplyBetterChoiceCard",
+          "retiredBy": "UX3"
+        },
+        {
+          "name": "CelebrationCard — unprompted encouragement",
+          "pattern": "CelebrationCard",
+          "retiredBy": "UX3"
+        },
+        {
+          "name": "HomeIntelligenceCompanion — the dashboard's rival Companion, a direct namespace collision with FloatingAssistant",
+          "pattern": "HomeIntelligenceCompanion",
+          "retiredBy": "UX3"
+        },
+        {
+          "name": "SimplyBetterChoicesPanel — meal-detail's duplicate recommendation panel (its +Add/-Remove buttons had no onClick)",
+          "pattern": "SimplyBetterChoicesPanel",
+          "retiredBy": "UX3"
+        },
+        {
+          "name": "FirstVisitHint — the six first-visit coaching banners",
+          "pattern": "FirstVisitHint",
+          "retiredBy": "UX3"
+        }
+      ],
+      "openMigration": {
+        "finding": "fnd-px-panel-shell-half-adopted",
+        "remaining": "5 panels still hand-roll a shell: `PlannerAssistantPanel` (1,946 LOC) · `templates-panel` (835) · `MealUpliftPanel` (580) · `SmartReviewPanelContent` (558) · `CookbookMealIntelligenceStrip` (204). **UX3 removed the sixth** — `meal-detail/SimplyBetterChoicesPanel` (125) — not by adopting this owner but by deleting the surface, because its content was recommendation and recommendation is the Companion's. A migration can close by the concern disappearing; it may not close by anyone forgetting.",
+        "owner": "Colin Clapson — with the next substantive change to each panel",
+        "why": "Since `IntelligenceCard` now composes `Card`, adopting it is strictly a simplification for each — but a 1,946-line panel is not refactored safely as a side-effect of a governance workstream. Enforcement is `review`, not `machine`, because no grep can honestly detect \"a hand-rolled shell\"; claiming otherwise would be the declared-vs-enforced gap this register exists to close (PKCA Rule KC8)."
+      },
+      "floorReason": "UX3 retired five duplicate coaching surfaces that composed this shell (AmbientIntelligence, FoodOpportunityCard, OpportunityCard, SimplyBetterChoiceCard, CelebrationCard). The floor fell because the DUPLICATION went, not because adoption slipped — re-adding a consumer to satisfy a number would rebuild the thing the owner ruled out."
+    },
+    {
+      "id": "rating-mark",
+      "concern": "Rating mark (the apple)",
+      "owner": "components/AppleRating.tsx",
+      "ownerPath": "client/src/components/AppleRating.tsx",
+      "ownerKind": "module",
+      "owns": "One apple, one name, one sentence. `appleScoreLabel()` is the single mouth for the score's accessible name; an unscored item renders nothing rather than announcing a fabricated \"1 out of 5\".",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 10,
+      "retired": [
+        {
+          "name": "ui/apple-rating.tsx",
+          "pattern": "@/components/ui/apple-rating",
+          "retiredBy": "PX1-W4.12"
+        },
+        {
+          "name": "ui/score-badge.tsx (an 11-line pass-through alias — the third entry point that guaranteed the next divergence)",
+          "pattern": "<ScoreBadge[\\s>]|@/components/ui/score-badge",
+          "retiredBy": "PX1-W4.12"
+        },
+        {
+          "name": "MiniAppleRating (private, KitchenToBasketVisual)",
+          "pattern": "\\bMiniAppleRating\\b",
+          "retiredBy": "PX1-W4.12"
+        }
+      ]
+    },
+    {
+      "id": "meal-presentation",
+      "concern": "Meal presentation (the core noun)",
+      "owner": "components/MealCard.tsx",
+      "ownerPath": "client/src/components/MealCard.tsx",
+      "ownerKind": "module",
+      "owns": "The meal's thumbnail-bearing faces: one radius, one fallback icon, one size scale, lazy loading; `tile` and `row` arrangements.",
+      "status": "half-adopted",
+      "enforcement": "review",
+      "adoptionFloor": 2,
+      "exemptions": [
+        {
+          "surface": "`PlannerMealCard.tsx`",
+          "why": "It owns the thumbnail-*less* planner-cell face, which is a different object with a different job. It was `MealCard`'s seed, not its rival."
+        }
+      ],
+      "openMigration": {
+        "finding": "fnd-px-no-meal-card-owner",
+        "remaining": "The cookbook grid and list, the planner picker, preview bubbles and the completion dialog still render a meal their own way (PX1 measured 16 render sites at 7 thumbnail sizes).",
+        "owner": "Colin Clapson — as each render site is next touched",
+        "why": "The owner ships adopted (Dashboard tiles, Home rows) rather than authored-and-empty, which is the failure this register exists to prevent. The remaining sites are a redesign of the cookbook grid if done at once — out of scope for governance, and PX1 forbids redesign."
+      }
+    },
+    {
+      "id": "quantity-string",
+      "concern": "Food quantity string",
+      "owner": "lib/unit-display.ts (formatQty)",
+      "ownerPath": "client/src/lib/unit-display.ts",
+      "ownerKind": "module",
+      "owns": "The one quantity string. Grams-aware and liquid-aware. `formatItemDisplay` delegates to it.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 2,
+      "openMigration": null
+    },
+    {
+      "id": "food-item-row",
+      "concern": "Food item row (layout)",
+      "owner": null,
+      "ownerKind": "none",
+      "owns": "— nothing yet owns the *row* a food item is rendered in.",
+      "status": "no-owner",
+      "enforcement": "review",
+      "openMigration": {
+        "finding": "fnd-px-food-row-no-owner",
+        "remaining": "A `FoodItemRow` component over the ≥9 row implementations (two of them rivals inside `pantry-page.tsx` alone).",
+        "owner": "Colin Clapson — deferred, with the next substantive shopping/pantry change",
+        "why": "**The household-visible half is closed**: the same basket item used to show a *different quantity string* in the Shopping List and the Shopping Workspace, and `formatQty` (above) ended that. What remains is layout duplication — real, but invisible to a household, and a component that unifies 9 dense row layouts is a redesign. Recorded here rather than claimed as done."
+      }
+    },
+    {
+      "id": "breakpoint-truth",
+      "concern": "Breakpoint truth",
+      "owner": "hooks/use-adaptive-density.tsx (MOBILE_BREAKPOINT, useIsMobile)",
+      "ownerPath": "client/src/hooks/use-adaptive-density.tsx",
+      "ownerKind": "module",
+      "owns": "One number (768), two named faces — JS here, CSS as Tailwind's `md`, paired at both definition sites so they cannot drift.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 10,
+      "retired": [
+        {
+          "name": "hooks/use-mobile.tsx (whose only consumer was the dead ui/sidebar)",
+          "pattern": "@/hooks/use-mobile",
+          "retiredBy": "PX1-W2.4"
+        },
+        {
+          "name": "Five copy-pasted local useIsMobile hooks (incl. the 1024px Cookbook outlier)",
+          "pattern": "(?:function|const)\\s+useIsMobile\\b",
+          "excludePaths": [
+            "client/src/hooks/use-adaptive-density.tsx"
+          ],
+          "retiredBy": "PX1-W2.4"
+        }
+      ]
+    },
+    {
+      "id": "page-shell",
+      "concern": "Page shell",
+      "owner": "components/workspace-header.tsx (PageContainer / pageContainerClass)",
+      "ownerPath": "client/src/components/workspace-header.tsx",
+      "ownerKind": "module",
+      "owns": "The page content column and its rhythm, keyed to the same `wide` flag as the header — so a page's content can no longer disagree with its own banner.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 15,
+      "retired": [
+        {
+          "name": "The 17 copy-pasted `max-w-screen-2xl 3xl:max-w-[1920px]` container strings",
+          "pattern": "max-w-screen-2xl",
+          "excludePaths": [
+            "client/src/components/workspace-header.tsx"
+          ],
+          "retiredBy": "PX1-W4.5"
+        }
+      ]
+    },
+    {
+      "id": "back-affordance",
+      "concern": "Back",
+      "owner": "components/workspace-header.tsx (back slot)",
+      "ownerPath": "client/src/components/workspace-header.tsx",
+      "ownerKind": "module",
+      "owns": "Back = the **hierarchy parent** (EXP §8), with a `beforeNavigate` interception point so an unsaved-changes guard can still ask first.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 15,
+      "retired": [
+        {
+          "name": "Profile's `window.location.href` Back — a full page reload that discarded the TanStack cache",
+          "pattern": "window\\.location\\.href\\s*=\\s*(?:prev|profileReturn)",
+          "retiredBy": "PX1-W4.5"
+        }
+      ],
+      "exemptions": [
+        {
+          "surface": "Pantry, Diary, Nutrition",
+          "why": "They are bottom-nav destinations, not subpages. A back affordance on a root destination is a lie about the hierarchy."
+        }
+      ]
+    },
+    {
+      "id": "density-ladder",
+      "concern": "Density ladder",
+      "owner": "lib/density-tokens.ts (densityClasses)",
+      "ownerPath": "client/src/lib/density-tokens.ts",
+      "ownerKind": "module",
+      "owns": "The adaptive-density class ladder for meal-detail surfaces. Class strings are complete literals — the file forbids interpolating fragments, which is the exact mechanism that produced `space-y-gap-2` seven times.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 3,
+      "retired": [
+        {
+          "name": "The four copy-pasted density ladders and their seven dead `space-y-${gapClass}` interpolations",
+          "pattern": "space-y-\\$\\{",
+          "retiredBy": "PX1-W1.6"
+        }
+      ],
+      "floorReason": "UX3 deleted meal-detail/SimplyBetterChoicesPanel, one of the four consumers. The ladder itself GREW in the same change (a fourth rung, `spacious`, for viewports >= 1920); only the consumer count fell."
+    },
+    {
+      "id": "meal-library-invalidation",
+      "concern": "\"The meal library changed\"",
+      "owner": "hooks/use-meals.ts (invalidateMealLibrary)",
+      "ownerPath": "client/src/hooks/use-meals.ts",
+      "ownerKind": "module",
+      "owns": "The ONE way to say the meal library changed. Invalidates the full-rows cache **and** the summary cache together, so a surface reading either can never be told stale meal names.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 10,
+      "retired": [
+        {
+          "name": "Direct invalidation of the meal-library keys outside the owner — a call that refreshes the full-rows cache while leaving the summary cache (Home, Dashboard) stale",
+          "pattern": "(?:invalidateQueries|refetchQueries)\\s*\\(\\s*\\{\\s*queryKey:\\s*\\[\\s*[\"']/api/meals(?:/summary)?[\"']\\s*\\]",
+          "excludePaths": [
+            "client/src/hooks/use-meals.ts"
+          ],
+          "retiredBy": "PX1-W3.3, completed by PX1-W5"
+        }
+      ],
+      "exemptions": [
+        {
+          "surface": "Per-meal keys — `['/api/meals', mealId, 'nutrition']` and similar",
+          "why": "These address one meal, not the library. They are correct, and the pattern above deliberately does not match them: it anchors on the closing bracket, so only the *bare library keys* are forbidden. PX1-W3's own grep looked for the double-quoted form only, which is how four single-quoted `['/api/meals']` invalidations survived a workstream that reported zero."
+        }
+      ]
+    },
+    {
+      "id": "interaction-feedback",
+      "concern": "Interaction feedback",
+      "owner": "index.css (.hover-elevate / .active-elevate-2 + the five border tokens)",
+      "ownerKind": "css",
+      "definedIn": "client/src/index.css",
+      "definedSymbols": [
+        ".hover-elevate",
+        ".active-elevate-2",
+        "--primary-border",
+        "--secondary-border",
+        "--destructive-border",
+        "--button-outline",
+        "--elevate-1"
+      ],
+      "owns": "Hover and press, for every control wearing the canonical classes. Consumed everywhere since the scaffold; **defined nowhere** until PX1-W1.1.",
+      "status": "governed",
+      "enforcement": "machine"
+    },
+    {
+      "id": "button-primitive",
+      "concern": "Button / primary action",
+      "owner": "components/ui/button.tsx",
+      "ownerPath": "client/src/components/ui/button.tsx",
+      "ownerKind": "module",
+      "owns": "Press feedback, the 44px touch floor, and — since PX1-W4.6 — a **required `variant`**, so a surface must *declare* its one primary action (EXP §7) rather than acquire it by omission.",
+      "status": "half-adopted",
+      "enforcement": "machine",
+      "adoptionFloor": 45,
+      "rivals": [
+        {
+          "what": "Raw `<button>` elements outside the design system",
+          "pattern": "<button[\\s>]",
+          "ceiling": 442,
+          "note": "Each reinvents press feedback and misses the touch floor. Capped: the population may fall, never rise."
+        }
+      ],
+      "openMigration": {
+        "finding": "fnd-px-button-primitive-minority",
+        "remaining": "The raw `<button>` population migrates to `ui/button` as each surface is touched.",
+        "owner": "Colin Clapson — as each surface is next touched",
+        "why": "The *enforceability* half is done: `variant` is required, so EXP §7 is now reviewable by grep. Converting ~535 raw buttons at once would touch every dense layout in the product — a redesign in all but name."
+      }
+    },
+    {
+      "id": "touch-floor",
+      "concern": "Touch floor",
+      "owner": "index.css (.touch-target)",
+      "ownerKind": "css",
+      "definedIn": "client/src/index.css",
+      "definedSymbols": [
+        ".touch-target"
+      ],
+      "owns": "44px hit targets on coarse pointers, via a pseudo-element that extends the hit area whatever the visual box — so a downward `className` override can no longer shrink the target. Carried by `ui/button`, `ui/checkbox`, `ui/switch` and the dialog/sheet close buttons.",
+      "status": "governed",
+      "enforcement": "machine"
+    },
+    {
+      "id": "hover-reveal",
+      "concern": "Hover-revealed row controls",
+      "owner": "index.css (.hover-reveal)",
+      "ownerKind": "css",
+      "definedIn": "client/src/index.css",
+      "definedSymbols": [
+        ".hover-reveal"
+      ],
+      "owns": "A control hidden **only where a hover exists to reveal it**. On a phone it is simply visible; keyboard focus reveals it anywhere.",
+      "status": "governed",
+      "enforcement": "machine",
+      "retired": [
+        {
+          "name": "The `opacity-0 group-hover:opacity-100` idiom — invisible but still hit-testable, so an unconfirmed delete fired on contact",
+          "pattern": "opacity-0\\s+group-hover:opacity-100",
+          "retiredBy": "PX1-W2.2"
+        }
+      ]
+    },
+    {
+      "id": "nav-clearance",
+      "concern": "Bottom-nav clearance",
+      "owner": "index.css (.main-safe)",
+      "ownerKind": "css",
+      "definedIn": "client/src/index.css",
+      "definedSymbols": [
+        ".main-safe"
+      ],
+      "owns": "One class, one owner, applied once on `<main>` — every routed page gets nav clearance for free.",
+      "status": "governed",
+      "enforcement": "machine",
+      "exemptions": [
+        {
+          "surface": "Shop mode's two fullscreen scrollers",
+          "why": "`fixed inset-0` genuinely *escapes* `<main>`, so the owner is applied at the point of escape. This is the one legitimate re-application; the six decorative duplicates were removed in PX1-W4b.5."
+        }
+      ]
+    },
+    {
+      "id": "motion",
+      "concern": "Motion vocabulary",
+      "owner": "index.css keyframes + framer-motion MotionConfig (App.tsx)",
+      "ownerKind": "css",
+      "definedIn": "client/src/index.css",
+      "definedSymbols": [
+        "prefers-reduced-motion"
+      ],
+      "owns": "Motion, and the reduced-motion **guarantee** — gated at both layers: one `@media (prefers-reduced-motion: reduce)` block for CSS, one `MotionConfig reducedMotion=\"user\"` for all framer-motion.",
+      "status": "governed",
+      "enforcement": "machine"
+    },
+    {
+      "id": "semantic-tint",
+      "concern": "Semantic surface tint",
+      "owner": "components/intelligence/intelligence-tokens.ts (semanticSurface / semanticText)",
+      "ownerPath": "client/src/components/intelligence/intelligence-tokens.ts",
+      "ownerKind": "module",
+      "owns": "What colour a *meaning* is: `notice` · `info` · `positive` — keyed by meaning, never by hue. **`destructive` is deliberately absent**: alarm is reserved for a safety event, and there is no way to reach for it through this owner.\n\n**UX3 (2026-07-20) — floor 8 → 7, because a consumer was DELETED, not because adoption slipped.** One of the eight importers was a coaching card retired under `panel-shell` § 4 (the Companion is now the single owner of coaching). The tokens are unchanged and every surviving surface still reaches its meaning through this owner; there is simply one fewer surface. Lowering the floor is the honest record. Re-tinting something to get back to eight would be colouring a meaning that nothing means.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 7,
+      "retired": [
+        {
+          "name": "The Dashboard's hard-coded light-mode-only border literal",
+          "pattern": "hsl\\(132,\\s*14%,\\s*87%\\)",
+          "retiredBy": "PX1-W4b.4"
+        }
+      ],
+      "floorReason": "UX3 retired one consumer with the coaching surfaces. `presentationFor` and the AttentionPresentation table were removed from this owner in the same change — they had no consumers left once AmbientIntelligence and FoodOpportunityCard went."
+    },
+    {
+      "id": "tone",
+      "concern": "Tone (THA's voice about food)",
+      "owner": "components/UltraProcessedNoticeModal.tsx + use-sound-effects.ts (playScanComplete)",
+      "ownerPath": "client/src/components/UltraProcessedNoticeModal.tsx",
+      "ownerKind": "module",
+      "owns": "How THA reports a processing score: the facts, without a verdict. One neutral scan tone that takes no rating parameter — there is nothing left to vary the tone by.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 1,
+      "retired": [
+        {
+          "name": "BadAppleWarningModal (a frowning apple, a destructive-red warning triangle, and an \"Add Anyway\" button)",
+          "pattern": "\\bBadAppleWarningModal\\b",
+          "retiredBy": "PX1-W4b.1"
+        },
+        {
+          "name": "playSound(rating) — the tone ladder that buzzed at a low-scoring food",
+          "pattern": "\\bplaySound\\s*\\(",
+          "retiredBy": "PX1-W4b.1"
+        },
+        {
+          "name": "The \"clean / cleaner\" vocabulary that called a household's basket dirty",
+          "pattern": "cleaner alternative|Cleaner shop option|cleaner option",
+          "retiredBy": "PX1-W4b.1"
+        },
+        {
+          "name": "\"Add Anyway\" — a label that framed the household's own choice as defiance",
+          "pattern": "Add Anyway",
+          "retiredBy": "PX1-W4b.1"
+        },
+        {
+          "name": "The shipped [BOOST-PROOF] console traces",
+          "pattern": "BOOST-PROOF",
+          "retiredBy": "PX1-W4b.6"
+        }
+      ]
+    },
+    {
+      "id": "undefined-utilities",
+      "concern": "Utility class definitions",
+      "owner": "index.css (.scrollbar-hide)",
+      "ownerKind": "css",
+      "definedIn": "client/src/index.css",
+      "definedSymbols": [
+        ".scrollbar-hide"
+      ],
+      "owns": "The scrollbar-hiding utility that was actually defined, while 14 call sites consumed two names that were not.",
+      "status": "governed",
+      "enforcement": "machine",
+      "retired": [
+        {
+          "name": "no-scrollbar (consumed 13×, defined nowhere)",
+          "pattern": "\\bno-scrollbar\\b",
+          "retiredBy": "PX1-W1.7"
+        },
+        {
+          "name": "scrollbar-none (the same defect under a second name)",
+          "pattern": "\\bscrollbar-none\\b",
+          "retiredBy": "PX1-W1.7"
+        }
+      ]
+    },
+    {
+      "id": "theme-colour-mode",
+      "concern": "Theme / colour mode",
+      "owner": null,
+      "ownerKind": "none",
+      "owns": "— nothing. THA ships a complete dark theme that **no household can reach**.",
+      "status": "no-owner",
+      "enforcement": "review",
+      "evidence": [
+        {
+          "what": "`dark:` utilities authored across the client",
+          "pattern": "\\bdark:",
+          "asAt": 665,
+          "asAtDate": "2026-07-24"
+        }
+      ],
+      "openMigration": {
+        "finding": "Carried forward from PX1-W4b §5 — discovered by that workstream, not a PX1 finding",
+        "remaining": "A theme owner: a provider, a `prefers-color-scheme` read, and a toggle. Nothing anywhere sets the `dark` class — there is no provider, no toggle, no media read — so a full `.dark` token set, `darkMode: [\"class\"]`, and every `dark:` utility above are authored, paid for in every component, and unreachable.",
+        "owner": "Colin Clapson — deferred, requires a product decision (does THA offer a theme choice, or follow the OS?)",
+        "why": "**This is the register's own thesis, in the one place PX1 never looked**: a foundation authored, paid for, and never adopted. It is recorded here rather than fixed, because shipping a theme toggle is a *product* decision and a new UX surface — which this workstream is explicitly barred from introducing. It is now impossible to hide, which is the register's job; choosing to build it is not."
+      }
+    },
+    {
+      "id": "undo",
+      "concern": "Undo",
+      "owner": null,
+      "ownerKind": "none",
+      "owns": "— nothing. THA has no undo; every destructive action is guarded by a confirmation instead.",
+      "status": "no-owner",
+      "enforcement": "review",
+      "evidence": [
+        {
+          "what": "`<ToastAction>` usages (the mechanism exists)",
+          "pattern": "<ToastAction[\\s>]",
+          "asAt": 2,
+          "asAtDate": "2026-07-24"
+        }
+      ],
+      "openMigration": {
+        "finding": "Carried forward from PX1-W4b §5",
+        "remaining": "PX1 §9's rule is that a destructive action requires *a confirm **or** an undo*. THA chose the confirm, at every destructive site (products \"Clear All\" and the profile guard in W0; pantry and recipe deletes in W2), so **the guarantee holds**. The toast-action mechanism is wired and has exactly one consumer — the planner's \"Link to planner\" follow-up — which is a next step, not an undo.",
+        "owner": "Colin Clapson — deferred, and possibly permanently",
+        "why": "Stacking an undo toast on top of a confirmation dialog would be a *second* recovery mechanism for the same action, and a new UX pattern. Recorded as a deliberate architectural choice rather than an outstanding defect: THA's answer to \"nothing irreversible as a side effect\" is the confirm."
+      }
+    },
+    {
+      "id": "brand-mark",
+      "concern": "Brand mark",
+      "owner": "FiveApplesLogo / tha-apple.png",
+      "ownerKind": "external",
+      "owns": "The THA apple, as brand rather than as rating. Compressed 65× in PX1-W3.4 (1.45 MB → 22 KB for a 48px render).",
+      "status": "governed",
+      "enforcement": "review"
+    },
+    {
+      "id": "icon-set",
+      "concern": "Icon set",
+      "owner": "lucide-react",
+      "ownerKind": "external",
+      "owns": "Every interface icon. No emoji as interface icons; no second icon library.",
+      "status": "governed",
+      "enforcement": "review"
+    },
+    {
+      "id": "signature-typography",
+      "concern": "Signature typography (the third voice)",
+      "owner": "index.css (.text-signature + --font-signature)",
+      "ownerKind": "css",
+      "definedIn": "client/src/index.css",
+      "definedSymbols": [
+        ".text-signature",
+        "--font-signature",
+        ".signature-ink"
+      ],
+      "owns": "THA in its own hand. The signature voice admitted by **UIA §8 (amended by UXHOME1)**, which replaced *\"two voices only; no third typeface, ever\"* with three named families and a hard boundary: the signature is for **emotionally significant branded moments only** and is forbidden in all functional UI — buttons, forms, navigation, tables, cards, modals, planner, shopping. `.text-signature` is the ONE entry point: no `font-signature` Tailwind utility exists, deliberately (tailwind.config.ts carries the comment saying so), because a utility would be a one-token door into the third typeface from any surface in the product. **The webfont is not loaded in production** — the token resolves, but the only surface that fetches Caveat is the dev-only prototype below, so no household downloads a font for a page they cannot reach. **Permitted surfaces — exactly three, and none is a household surface:** `pages/dev/arrival-experience.tsx` (`/dev/arrival`, ARRIVAL1), `pages/dev/arrival-a-welcome.tsx` (`/dev/arrival-a-welcome`, EXP2 exploration Prototype A — admitted by a governed edit, 2026-07-15, for the same emotionally significant moment: the arrival greeting, and nothing else), and `pages/dev/arrival-s1-quiet.tsx` (`/dev/arrival-s1-quiet`, EXP3 synthesis candidate S1 — admitted by this governed edit, 2026-07-15, carrying Prototype A's greeting forward into the synthesis: the same one moment, the arrival greeting, and nothing else). All three are `import.meta.env.DEV` only; the chunks are dropped from the production bundle, verified in the build. This surface replaced UXHOME1's `home-arrival-prototype.tsx`, which was discarded by ARRIVAL1 — the signature voice now says its one word (\"Welcome home\") inside an *arrival* rather than over an animated Home page. A second surface does not follow from the first: §8 requires a further governed decision, per surface. The failure mode this row exists to catch is not ugliness but **familiarity** — the moment the signature becomes an ordinary UI font, the identity it was admitted to carry is gone and using it more cannot bring it back.\n\n**NORTH3 (2026-07-17) — `.text-signature` moved from `@layer utilities` to `@layer components`, and that CHANGED ITS CONTRACT.** The role was declared inside `@layer utilities` at index.css:593 — *after* `@tailwind utilities` at line 10. A role and a Tailwind utility are both single-class selectors, so specificity ties and **source order decided**: the role won every contest, always, and any utility aimed at it was dead on arrival. It was not a starting point; it was a cage, and it was silent about it. **Home's own signature carried `leading-[1.02]` and measured 1.15** — this role's own line-height, to the decimal. The same defect had already killed NORTH2's `title-page font-normal` on the salutation beside it (see `type-roles` below). The role now sits in `components`, which is the relationship Tailwind's layer order (base → components → utilities) exists to express: **components name a thing, utilities adjust it.** This admits no new pattern under UIA § 17 — it applies the pattern the layer system already had to the one block that had opted out of it. `.text-signature` remains the ONE entry point to the third voice and its permitted-surface rule is **byte-unchanged**: moving a role's layer changes what a permitted surface may ADJUST, never who may USE it.",
+      "status": "governed",
+      "enforcement": "review",
+      "exemptions": [
+        {
+          "surface": "Every household-facing surface EXCEPT `/home`",
+          "why": "Not an exemption from the owner — an exemption from USING it, and it is now the rule rather than the gap. **The ADOPT ruling (Colin Clapson, 2026-07-17, recorded by ODL2) was EXECUTED by NORTH1 on the same day**: `/home` is the one permitted surface, and the one thing on it in the signature voice is the household's own name in the greeting — Home's single ornament (Blueprint § 12.1), and data-borne. Caveat is loaded from the `@import` in `client/src/index.css`, which is the first time a household downloads it. The rarity is the whole point: the voice is never a button, a label, a status, or a value a household reads in order to act. A second permitted surface is a governed decision, named here one at a time, and there is no second one."
+        }
+      ],
+      "openMigration": {
+        "finding": "NORTH1 (2026-07-17) — ADOPT is executed on `/home`, and the row **does not close**, because the eight prototypes it names are still in the tree by an explicit decision (see why). This row's own rule is that it \"closes when the prototypes are deleted, not when the decision is minuted\".",
+        "owner": "Colin Clapson — deferred by an explicit decision (2026-07-17), not by a blocker",
+        "why": "**The deletion was attempted, abandoned, and then deliberately deferred — and the reason CHANGED mid-session, which is why it is written out rather than summarised.** It was first abandoned because `pages/dev/arrival-a-welcome.tsx` and `pages/dev/arrival-s1-quiet.tsx` carried uncommitted in-flight work from the concurrent CONV1 P6 session (converging THA's four `getGreeting()` copies into `client/src/lib/greeting.ts`). Deleting them would have destroyed that work and silently changed P6's arithmetic underneath it. **P6 then landed (`8fcb3d72`) while NORTH1 was still open, and that unblocked the files and revealed the real obstacle**, which is governance rather than collision: P6's new `time-of-day-greeting` row carries `adoptionFloor: 4`, and **two of those four importers ARE two of these prototypes**. Deleting them drops `householdGreeting` to two importers and turns a just-landed, machine-enforced gate red unless that floor moves to 2 — an edit to a sibling session's row, made while CONV1 P7 is live. That floor is transiently correct and structurally wrong (it counts dev-only prototypes that always had a recorded deletion trigger as adopters), and correcting it is legitimate — but it is a governance decision, not cleanup, so it was put to the owner rather than taken. **Decision: leave them (Colin Clapson, 2026-07-17).** NORTH1 ships gated green and touches no sibling session's row. **This row therefore stays open on purpose.** An ADOPT executed on the live surface while three prototypes still reach `.text-signature` is exactly the authored-but-unadopted state this register exists to make impossible to hide — and it is now a state with a named cause, a named decision and a named next step instead of a silence. No household is affected: all eight are `import.meta.env.DEV` only.",
+        "remaining": "**Delete the eight arrival prototypes, and drop `time-of-day-greeting`'s floor 4 → 2 in the same change, with the reason recorded.** The two moves are one change and must not be separated: doing the first without the second hands another session a red gate. Files: `pages/dev/arrival-{a-welcome,b-orchard,c-workspace,d-quiet,e-restraint,experience,s1-quiet,s2-walking-home}.tsx`; `pages/dev/exp2-shared.tsx` (their shared module, including `useSignatureFont` — now dead, since index.css loads the webfont); their `App.tsx` lazy-imports and routes; and the four `scripts/capture-arrival-*.ts` / `capture-exp{2,3}-*.ts` harnesses that target them. Three of the eight (`arrival-experience`, `arrival-a-welcome`, `arrival-s1-quiet`) consume `.text-signature` and are the reason this row is open; two (`arrival-a-welcome`, `arrival-s1-quiet`) import `lib/greeting` and are the reason the floor must move with them. Best done once CONV1 P7 is also clear of the tree."
+      }
+    },
+    {
+      "id": "orchard-environment",
+      "concern": "Orchard environment (the asset)",
+      "owner": "components/layout/orchard-backdrop.tsx",
+      "ownerPath": "client/src/components/layout/orchard-backdrop.tsx",
+      "ownerKind": "module",
+      "owns": "**The orchard environment asset — the image itself.** This is the named canonical owner **THA_EXPERIENCE_BLUEPRINT.md § 6.1 requires** (\"one canonical environment, one owner, one season\"), and naming it here **closes Blueprint § 18 open item 1** (ODL2, 2026-07-17), which had blocked exposure levels from becoming governed tokens. This row stood since CONV1-P3 under the name \"Orchard exposure\" while owning the asset and expressly disclaiming the scale in its own text — so the asset read as unowned and the scale read as owned, when the truth was exactly the reverse. ODL2 renamed it to what it owns; the E0–E3 scale now has its own row below. It is an ARRIVAL surface and nothing else: /auth and /onboarding (through orchard-shell.tsx) and the unauthenticated marketing landing (home-page.tsx). Blueprint § 6.2 rule 3 expressly permits arrival to stand at E3. A ROOM may never mount it: rooms receive the orchard as governed E0–E3 exposure values (§ 6.2), never as this component. **The raw-value defect is FIXED (ODL2, 2026-07-17).** The component hardcoded `opacity: 0.90` — a raw value in a surface, which UIA § 16 calls a defect. It now resolves `--orchard-exposure-e3`, whose value IS 0.90, so arrival renders exactly as it did; what changed is that the number has one home and a name. This component is the exposure scale's first consumer, which is what made admitting the scale lawful rather than authoring a foundation to adopt later.\n\n**NORTH1 (2026-07-17) — a SECOND SHAPE, on the same owner, and a correction to this row's own text.** This row said \"a ROOM may never mount it\". That sentence was right about the SHAPE and wrong about the ASSET, and Home's E3 is what proved the difference. What Blueprint § 6.1 forbids is the wallpaper — `fixed inset-0` behind every room, uniformly, at one strength — which is what CONV1 BEH-7 retired and what this row was written to keep retired. It does not forbid Home the view its own exposure level is DEFINED by (§ 6.2: E3, \"the orchard visible as itself, generously\", Home only). Read literally, the old sentence made E3 unbuildable and left the scale with three usable levels and a fourth nobody could ever reach. So the open view was added to THIS FILE rather than to a second component: a second file rendering `/orchard-bg.webp` would be a second owner of one visual concern, which UIA § 17 forbids and which this row exists to prevent. The file now exports two shapes and owns the asset in both: `OrchardBackdrop` (arrival's full-bleed E3 — /auth, /onboarding via orchard-shell.tsx, and the unauthenticated landing, all unchanged) and `OrchardOpenView` (Home's E3 — a composed, bounded window that dissolves before the household's name and before the counter, so no type on the page ever has the image behind it). **Permitted surfaces are now: arrival, and `/home`. Nothing else. Any other room mounting either shape is still the wallpaper, and is still forbidden.**\n\n**NORTH2 (2026-07-17) — the asset is GRADED, and the grade is in the FILE.** The orchard was pale; at E3 behind a warm room it read as a haze — a background image, not a view. It is now graded (saturation 1.28, contrast 1.06) and baked into `/orchard-bg.webp` itself: 56,986 → **51,722 bytes**, so PX1-W3's performance budget is IMPROVED, not spent. It was a CSS `filter:` on this owner's three shapes first, and that was a latent SECOND ORCHARD — see the openMigration below. Grading the asset makes Blueprint §6.1's one orchard true BY CONSTRUCTION rather than by discipline, costs no runtime filter, and will not double-grade the real photograph when it lands. It adds no second light and moves no sun: a grade changes how a negative is PRINTED, never where the morning comes from. **The grade is a ceiling, not a fix** — NORTH2 established that this asset is a pale watercolour of a MEADOW (rolling hills, a path, a few generic horizon trees; no apple trees, no rows, no blossom, no fruit). All four copies in the repository are byte-identical (md5 332f82…) and the shipped webp was visually indistinguishable from the 2MB PNG it came from, so **there was never a richer version to restore**. No grade adds a tree. The real fix is a new asset, specified in NORTH2_HOME_REFINEMENT.md §5.\n\n**ARRIVAL1 (2026-07-17) — a THIRD SHAPE, the arch, and the real orchard ADOPTED.** NORTH5's definitive Home is arrival through a plaster archway. This owner gains a third governed shape, `OrchardArch` (added to this same file — not a second owner, per UIA §17), which Home now mounts INSTEAD of `OrchardOpenView` (the dissolving open view is retired from `/home`; the export remains for reference but has no consumer). It renders the REAL orchard: `/orchard.webp`, converted from the owner-supplied canonical `attached_assets/design/north_star/v2/ORCHARD.png` (apple trees, blossom, the oak gate, the mown path — the asset the NORTH2 §5 / NORTH3 openMigration called for). This is the openMigration's `what` discharged for Home: the orchard was *supplied separately* (ORCHARD.png, the owner's v2 North Star asset) and *adopted through this owner*, exactly as Colin Clapson's 2026-07-17 ruling required — not a substitute authored here, only a format/serve conversion (3.1MB PNG → 393KB webp) of the owner's own image. **The old meadow `/orchard-bg.webp` is BYTE-UNTOUCHED** and still serves arrival and the five dialog/list bypasses (the openMigration below is NOT closed — those bypasses and the two-orchards state remain, reported in ARRIVAL1_DEFINITIVE_HOME.md; converging every surface onto the real orchard is out of Home's scope). The arch's SHAPE, plaster reveal, depth, petal-light, and the wall/console/floor materials are the `.home-arrival` CSS block in index.css (ARRIVAL1) — Home-scoped so no other room changes; this owner still owns only the ASSET and its crop. Permitted surfaces unchanged: arrival, and `/home`. Nothing else.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": "Arrival (/auth, /onboarding, the unauthenticated landing) via `OrchardBackdrop`, and `/home` via `OrchardArch` (ARRIVAL1; was `OrchardOpenView`). No other surface may mount any export.",
+      "retired": [
+        {
+          "name": "the global orchard wallpaper — <OrchardBackdrop> mounted anywhere but the two arrival surfaces (it stood in App.tsx behind every room, fixed inset-0, objectFit cover, opacity 0.90)",
+          "pattern": "<OrchardBackdrop",
+          "excludePaths": [
+            "client/src/components/layout/orchard-shell.tsx",
+            "client/src/pages/home-page.tsx"
+          ],
+          "retiredBy": "CONV1-P3 (BEH-7)"
+        }
+      ],
+      "openMigration": {
+        "finding": "**This row's `adoptionFloor` says \"No other surface may mount either export\" — and it is TRUE, and it is not enough.** Five surfaces mount this asset WITHOUT this owner, straight from `url('/orchard-bg.webp')`, so they never touch an export and the machine check passes while the concern this row exists to protect is violated: `client/src/components/ui/dialog.tsx:48` · `client/src/pages/list-page.tsx:417` · `client/src/pages/shopping-list-page.tsx:3014` · `client/src/pages/onboarding-page.tsx:454` · `client/src/pages/shopping-workspace-page.tsx:2328`. The owner file's own header (\"One asset, one owner, two governed shapes\") and this row's own text (\"two permitted surfaces … nothing else\") are therefore both FALSE today, and were false before NORTH2 — `dialog.tsx` puts the orchard behind EVERY dialog in the product. **The rule is enforced on the wrong noun**: it guards the COMPONENT and the defect is in the ASSET PATH, which is why five second owners were invisible to a machine check that reported green. A pattern rule on `orchard-bg.webp` outside the owner would catch all five.",
+        "owner": "Unowned — surfaced by NORTH2 (2026-07-17), not caused by it, and not fixed by it",
+        "why": "NORTH2 was scoped to art direction, and un-forking five pages' architecture is architecture. It was found because NORTH2's first attempt graded via CSS `filter:` on this owner's three shapes — which would have shipped a visibly graded orchard on arrival and Home and an ungraded one behind every dialog, list, onboarding step and the Shopping workspace: two orchards in one house, the same defect as two suns wearing different clothes. **Baking the grade into the asset made the fork moot rather than fixed** — every consumer now gets the same morning whether it asks this owner for it or not, which is why this is reported as open rather than closed. It was found by LOOKING (the Shopping workspace capture showed an orchard NORTH2 had not graded); no gate could see it, and the register reported 76·0·2 green throughout."
+      },
+      "externalDependency": {
+        "what": "**The canonical orchard image is a THA BRAND ASSET, and it is not this repository's to author.** Ruled by Colin Clapson on 2026-07-17, during NORTH3: the orchard is recognised as a core brand asset with **its own canonical ownership, outside the engineering implementation**. It will be **supplied separately** and adopted through this owner. NORTH3 was explicitly instructed not to author a substitute, and did not: `client/public/orchard-bg.webp` is **byte-untouched** by NORTH3 (md5 unchanged from NORTH2's graded asset), and no procedural, generated, illustrated or placeholder orchard exists anywhere in the tree.",
+        "status": "OPEN — blocked on an external deliverable, not on engineering",
+        "owner": "Colin Clapson (brand) — the asset. This row's owner (`orchard-backdrop.tsx`) remains the owner of how it is MOUNTED.",
+        "evidence": "**There is no orchard in this repository and there never was.** NORTH2 established that all four copies are byte-identical (md5 332f82…). NORTH3 additionally opened the two files NORTH2 named only by path — `attached_assets/orchard_background_concept_1772752768712.png` and `…3707742.png` — and confirmed by eye that **both are the same watercolour MEADOW**, i.e. ungraded originals of the shipped asset and not orchard concepts at all despite their filename. **Nothing in the tree has ever depicted an apple orchard.**",
+        "additionalDefects": "NORTH3 found **two further breaches in the shipped asset that NORTH2 did not record**, both of which the replacement must fix and neither of which any grade can: (1) **FOG.** The bottom third of the asset is white mist. Blueprint § 16 names fog explicitly as *the second sun* (\"a room at dusk, **in fog**, in spa-light, or under drama\"), and Experience Language § 3A fixes the orchard AGAINST \"gloomy, misty, melancholy\" by name. (2) **THE SUN IS ON THE HORIZON, NOT UPPER-LEFT.** Blueprint § 7 is \"the morning sun sits upper-left, **forever**, in every room; every shadow on every surface in every domain agrees\". The asset's sun sits low and centre-left, which reads as a sunrise rather than a bright morning — and it is why `orchard-backdrop.tsx` has to crop the sun OUT of Home's window to avoid blowing it out. **So the house's one-morning law is currently kept by a crop, not by the picture.**",
+        "specification": "The full drop-in spec is `docs/implementation/NORTH2_HOME_REFINEMENT.md` § 5 (subject · dimensions ≥1536×1024 · sun upper-left · life below the horizon · readable horizon · no text/props/people · one season · ≤~90KB webp · bright, growing, optimistic), **plus NORTH3's two additions above: no fog, and the sun genuinely upper-left rather than on the horizon.**",
+        "costOfDelay": "**Home's emotional focal point is a watercolour meadow doing an orchard's job, and that is the ceiling on every other thing NORTH1, NORTH2 and NORTH3 have done to this room.** The geometry, masks, exposure tokens and both crops are already built to this spec, so the asset **drops in with no code change** — the only work that remains is the picture."
+      }
+    },
+    {
+      "id": "orchard-exposure",
+      "concern": "Orchard exposure (the E0–E3 scale)",
+      "owner": "index.css (the --orchard-exposure-e0..e3 scale)",
+      "ownerKind": "css",
+      "owns": "**The E0–E3 exposure scale, as values.** THA_EXPERIENCE_BLUEPRINT.md § 6.2 owns WHICH room stands at which level (a question about place); **UIA § 4 (amended by ODL2) owns what a level resolves to**, and this file is its one home (§ 16). Admitted by ODL2 (2026-07-17) with its first consumer, per this register's own rule that a foundation may not be authored and adopted later. **The values:** E3 = 0.90, the open view, which is exactly what arrival has always shown — orchard-backdrop.tsx hardcoded that number and now resolves the token, so nothing moved. E2 = 0.55, the window: it must read as image (so it cannot approach zero) yet never compete with the working content it frames (so it sits well below E3). E1 and E0 = 0, because neither shows the image at all — E1's \"light only\" and E0's warm canvas are `--background`, which has been live since the scaffold and needed no new token. **E2 is the one value no surface can yet verify**: no E2 room exists, so it is a reasoned decision awaiting its first window (Cookbook, Pantry, Nutrition or Diary), and it is cheap to correct in one place when one is built. **Dark mode is completely resolved** (§ 16 forbids a partial mode): E3 = 0.18, E2 = 0.12, corroborated by the retired image-opacity token, which itself carried 0.18 at night against 0.72 by day.\n\n**NORTH1 (2026-07-17): E3 has a ROOM.** Until now `--orchard-exposure-e3` was consumed only by arrival, and Home's E3 was a declared gap (App.tsx, CONV1 BEH-7). Home now resolves the same token, at the same value, through the asset's one owner — so the scale's top level is expressed by the room the Blueprint reserved it for, and E3 means the same 0.90 in both places because it is the same number in one file. **E1 and E0 are consumed by every other room by construction** (they are 0 — no image — and the warm canvas is `--background`). **E2 still has no consumer**, because no E2 room exists; that remains ODL2's declared unverifiable, unchanged and unhidden.",
+      "status": "governed",
+      "enforcement": "machine",
+      "definedIn": "client/src/index.css",
+      "definedSymbols": [
+        "--orchard-exposure-e0",
+        "--orchard-exposure-e1",
+        "--orchard-exposure-e2",
+        "--orchard-exposure-e3"
+      ],
+      "retired": [
+        {
+          "name": "the bare orchard image-opacity token — dead since the scaffold (defined in index.css light and dark, consumed by nothing), superseded by the E0-E3 exposure scale",
+          "pattern": "--orchard-opacity",
+          "retiredBy": "ODL2"
+        },
+        {
+          "name": "the orchard parallax-strength token — dead since the scaffold AND unlawful the moment UIA §4 was amended, which forbids parallax by name (\"no parallax, no ambient life, no drifting, no gloss, no stage\")",
+          "pattern": "--orchard-parallax-strength",
+          "retiredBy": "ODL2"
+        },
+        {
+          "name": "the orchard-prefixed sidebar tint token — a misnomer, never an orchard value at all: nav-bar.tsx spends it on a linear-gradient(accent -> background) wash. Renamed --sidebar-tint-opacity at identical values (0.65 light / 0.28 dark), so the sidebar is byte-identical; what died is the false claim that it belonged to the orchard",
+          "pattern": "--orchard-sidebar-opacity",
+          "retiredBy": "ODL2"
+        }
+      ]
+    },
+    {
+      "id": "depth-light-ground",
+      "concern": "Depth, warm light and materiality (the § 4 vocabulary)",
+      "owner": "index.css (the ground, light, warm-shadow, penumbra and radius tokens)",
+      "ownerKind": "css",
+      "owns": "**The § 4 depth and light vocabulary, as values** — the ground plane (materiality), warm shadow (depth), one light and the penumbra (warm light), plus the radius ladder that governs what rests on what. **The law is UIA § 4** (amended by ODL2); this file is the values' one home (§ 16). One row, not three: EXP4's central finding is that *\"depth is believable exactly when it describes ONE room — one ground, one light, one direction, every shadow explaining a distance\"*, so three owners could drift from one another, which is the exact failure the vocabulary forbids. **The values graduated from EXP4 Study A (The Warm Layered Workspace), selected by ODL2 on 2026-07-17 — and selected on LAW, not on taste.** Studies B and C set type directly on the orchard (their headings, reminders and list rows sit on the landscape in their own screenshots), and Blueprint § 6.1 gives type ground beneath it *\"without negotiation\"*; § 4 now says the same. EXP4 itself judged C *\"one step too little — support needs an anchor\"*. A was the only study with a ground plane, which is the vocabulary's central member. **B and C were DELETED in the same change** (§ 17, retire on introduction), with their routes and their capture-harness entries. **Dark mode is completely resolved** (§ 16 forbids a partial mode): every warm shadow resolves to `none` rather than to a dimmer warm shadow, because the vocabulary IS a morning sun and at night there is no sun — a warm shadow at midnight is a lie about where the light comes from, and § 4 admits depth only to describe space truthfully. Rank is carried at night by tint and border: the same hierarchy, a different instrument. Study A had independently reached that answer. This closes Blueprint § 18 open item 4 for this vocabulary. **The ambient light pool declares a ceiling, not a pairing** (`--light-ambient-ceiling`), per the § 15 rule ODL2 added: a graded surface carrying no text has no colour pairing to measure, so it names the strength it may never exceed instead — which is what EXP4 asked for when it flagged its own radial pool as needing *\"a named token with a stated ceiling\"*.\n\n**ADOPTED BY HOME'S E3 (NORTH1, 2026-07-17), and the reference is deleted.** This row's open migration is DISCHARGED, by the trigger it named rather than by anyone deciding it had waited long enough. `client/src/pages/home-experience-page.tsx` now stands on the ground plane, the warm shadows, the rim of light and the radius ladder, and it is a surface a household lands on. `pages/dev/material-a-warm-layers.tsx` and `scripts/capture-exp4-materiality-depth.ts` were deleted in that same change, which completes the disposition EXP4 § 6 set for all three studies: B and C lost the selection and died at ODL2, A won, graduated into UIA § 4, served as the vocabulary's reference implementation for exactly as long as it had no rival, and died the day a real room adopted it. No study outlived its own decision.\n\n**NORTH2 (2026-07-17) — the values were RE-VALUED, and the law was not touched.** Every surface this row owns was `hsl(0 0% 100%)` — pure white, zero hue, zero saturation — in a room whose only light is a warm morning (`--light-rim: 48 60% 98%`). That is not a material; it is the absence of a decision, and it was the single strongest reason Home read as a beautiful web application rather than a room. No natural material is pure white: plaster, linen, oak and stone all carry hue and saturation, and a surface standing in warm light takes the colour of the light that falls on it. So: `--surface-primary` and `--card` → plaster `42 46% 98%`; `--surface-support` → linen over the counter, and MORE translucent (0.65 → 0.34) so the counter shows THROUGH the doors; `--ground-plane` → warmer stone at 0.82; `--surface-primary-border` → a joint rather than a drawn ring (7 lightness points off its fill → under 4). **The value RANGE narrowed deliberately** (canvas 95→94, card 100→98, saturation 27→46 RISING toward the light): planes are now read from the shadow beneath them and the rim of light along their top edge — which is how a real counter is read against a real wall — and never from a jump to a foreign colour. **`--shadow-support` INVERTED**: support was a drop-shadowed card floating ON the counter; it is now ETCHED INTO it (inset warm shadow at the top lip only — never four-sided, which is the disabled-input tell — plus a light rim on the lower lip, which is the one edge of a groove that faces the sun and the one line a disabled control never has). Hover lifts it out of the groove to meet the hand; press seats it back. **No law changed.** UIA §7 fixes the semantic STRUCTURE (one definition source, no raw colour in a surface, one meaning per colour) and every clause still holds — same named roles, same one place, and not one surface gained a colour of its own. §7 never fixed the VALUES, and the values were what was wrong. Authorised platform-wide by Colin Clapson (2026-07-17); scoping it to Home would have forked the one visual language UIA §17 forbids forking. **Verified beyond Home**: Planner, Cookbook, Pantry, Shopping and Dashboard captured at 1440×900 and inspected — no contrast or legibility regression (`docs/ui-audit/north2-home/rooms/`). Dark mode is a separate value set (§7) and is byte-untouched: it derives `--surface-primary` from its own `--card`, and its shadows were already `none`.",
+      "status": "governed",
+      "enforcement": "machine",
+      "definedIn": "client/src/index.css",
+      "definedSymbols": [
+        "--ground-plane",
+        "--ground-plane-border",
+        "--ground-blur",
+        "--light-rim",
+        "--light-rim-soft",
+        "--light-ambient",
+        "--light-ambient-ceiling",
+        "--shadow-ground",
+        "--shadow-primary",
+        "--shadow-support",
+        "--shadow-support-hover",
+        "--shadow-support-press",
+        "--surface-primary",
+        "--surface-primary-border",
+        "--surface-support",
+        "--surface-support-border",
+        "--surface-support-hover",
+        "--surface-blur",
+        "--radius-ground",
+        "--radius-primary",
+        "--radius-support"
+      ]
+    },
+    {
+      "id": "time-of-day-greeting",
+      "concern": "Time-of-day greeting",
+      "owner": "lib/greeting.ts (householdGreeting)",
+      "ownerPath": "client/src/lib/greeting.ts",
+      "ownerKind": "module",
+      "owns": "The one time-of-day greeting: the household's phase (via shared/time/household-time.ts householdPhase) mapped to the greeting word. It owns the CLOCK, not the VOICE — the three strings are grandfathered debt owned by INT21 and scheduled as CP3 (THA_BEHAVIOUR_ENGINE_ARCHITECTURE.md §9).",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 3,
+      "definedIn": "client/src/lib/greeting.ts",
+      "definedSymbols": [
+        "householdGreeting"
+      ],
+      "retired": [
+        {
+          "name": "pages/dashboard.tsx getGreeting() — a private new Date().getHours() read, boundary 12/17",
+          "pattern": "function getGreeting",
+          "retiredBy": "CONV1-P6"
+        },
+        {
+          "name": "components/HomeIntelligenceCompanion.tsx getGreeting() — byte-identical second copy, boundary 12/17",
+          "pattern": "function getGreeting",
+          "retiredBy": "CONV1-P6"
+        }
+      ],
+      "rivals": [
+        {
+          "what": "An ambient hour read reaching a greeting word — the shape all four retired copies shared",
+          "pattern": "getHours\\(\\)[\\s\\S]{0,400}?\"Good (morning|afternoon|evening)\"",
+          "ceiling": 0,
+          "note": "Zero, and it stays zero. THA_HOUSEHOLD_TIME_ARCHITECTURE.md §16 names this gate by name: 'the gate that matters is the one that fails when someone writes a sixth getGreeting()'. Also ratcheted in the publication register (household-time / ht-no-rival-greeting), mutation-tested."
+        }
+      ],
+      "evidence": [
+        {
+          "what": "Surfaces consuming the one greeting owner (`householdGreeting`)",
+          "pattern": "householdGreeting\\(",
+          "asAt": 4,
+          "asAtDate": "2026-07-20"
+        }
+      ],
+      "openMigration": {
+        "finding": "int21-cp3-client-side-voiced-strings",
+        "remaining": "The greeting's WORDS are still client-side strings outside the Personality Registry. CONV1 P6 converged the CLOCK and collapsed four copies to one site; the voice is untouched and byte-identical to what shipped before.",
+        "owner": "INT21 (the Behaviour Engine) — THA_BEHAVIOUR_ENGINE_ARCHITECTURE.md § 9, scheduled as CP3",
+        "why": "CP3 is a separately gated workstream and § 9 states plainly that 'nothing below is authorised by this document'. P6 may not do it. The next change to client/src/lib/greeting.ts should be its deletion, by CP3 — which now has one site to retire instead of four."
+      },
+      "floorReason": "UX3 deleted HomeIntelligenceCompanion, one of the four consumers of the one household greeting. Note this floor is already scheduled to fall to 2 by the signature-typography row's required change; this drop is a different cause and does not discharge that one."
+    },
+    {
+      "id": "household-planner-week",
+      "concern": "The household's current planner week",
+      "owner": "hooks/use-current-planner-week.ts",
+      "ownerPath": "client/src/hooks/use-current-planner-week.ts",
+      "ownerKind": "hook",
+      "owns": "The one client answer to \"which planner week is this household living in?\", and the household's day-of-week that ships with it. Reads GET /api/planner/current-week, which is server/lib/household-planner-week.ts over resolvePlannerWeek (shared/time/household-time.ts). Derives nothing: the client renders household time, never derives it (HT12).",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 2,
+      "evidence": [
+        {
+          "what": "Rival client-side \"current week\" implementations (`plannerFull[0]` — the Dashboard's)",
+          "pattern": "plannerFull\\[0\\]",
+          "asAt": 0,
+          "asAtDate": "2026-07-17"
+        },
+        {
+          "what": "Files consuming the one owner (its own module, Home, the Dashboard)",
+          "pattern": "useCurrentPlannerWeek",
+          "asAt": 5,
+          "asAtDate": "2026-07-17"
+        }
+      ],
+      "rivalCeiling": 0,
+      "retired": [
+        {
+          "name": "dashboard.tsx plannerFull[0] — the household's \"This Week\" was whichever row the API returned first, i.e. always Week 1 (CONV1 READ-3 rival #4)",
+          "pattern": "plannerFull\\[0\\]",
+          "retiredBy": "CONV1 P8 / READ-3"
+        }
+      ],
+      "openMigration": {
+        "finding": "CONV1 P8 (READ-3 · OWN-6 · BEH-3). `planner:active-week` SURVIVES in weekly-planner-page.tsx, use-week-meal-entries.ts and AddToWeekModal.tsx — deliberately, and it is NOT a rival: there it means \"which week am I editing\", which is device-local VIEW state and nobody's idea of a household fact. OWN-6 retired the WRONG READING (Home treating it as THE CURRENT WEEK), not the control — so it is recorded here rather than listed as retired, because a `retired` entry is a promise a pattern never returns anywhere and this one legitimately lives on. Home's reading is gated by `verify:publication` → household-time → ht-home-door-is-the-resolvers instead, which is the instrument that can tell WHERE a pattern appears.",
+        "remaining": "192 of 195 households resolve to `anchored: false` — permanently (HT7: the anchor is written only at week creation and never back-filled, and their weeks predate it). So the unanchored state is the state almost every household sees, and it is the expected first-run experience, not an error. The only honest route out is the household DECLARING their week (TIME1 §6.2) — an offered, never-forced confirmation.",
+        "owner": "Colin Clapson — the offered anchor is a product decision (TIME1 §6.2 names it an extension point, not designed), and it is CONV1's recommended next workstream",
+        "why": "Recorded rather than fixed: inventing an anchor for an existing week is `approxDate` with a schema (CONV1 R5), and picking a fallback week is what BEH-3 forbids by name (\"do not pick a week to fix it\"). A hook whose honest answer is \"I don't know\" for 98% of households is exactly the kind of thing this register exists to make impossible to hide."
+      }
+    },
+    {
+      "id": "type-roles",
+      "concern": "Type roles (the named voices of the type scale)",
+      "owner": "index.css (.title-page, .title-section, .title-card, .text-table, .text-numeric)",
+      "ownerKind": "css",
+      "definedIn": "client/src/index.css",
+      "definedSymbols": [
+        ".title-page",
+        ".title-section",
+        ".title-card",
+        ".text-table",
+        ".text-numeric"
+      ],
+      "owns": "The named type roles of **UIA § 8**'s scale — the classes a surface uses instead of picking a size and a weight. `.title-page` (32/38, 600) · `.title-section` (22/28, 600) · `.title-card` (16/22, 500) · `.text-table` (13/18) · `.text-numeric` (18/24, 600). A surface names the ROLE; the role names the numbers, once. This is UIA § 16's *\"surfaces speak semantic only\"* applied to type, and it is why a raw `text-[22px] font-semibold` in a surface is a defect.\n\n**This row was created by NORTH3 (2026-07-17) and the owner it describes is not new — it is years old and had simply never been registered.** UIA § 17 requires every canonical building block to carry a visible register row, and five of THA's type roles did not have one; the sibling `.text-signature` (the third voice) has had a row since UXHOME1, so the scale was half-registered and nobody could see the gap. Creating this row **admits no new pattern and adds no law** — it records an owner that every surface in the product has been consuming all along. It is `review`, not `machine`: NORTH3 has not authored a machine check for it, and asserting one it had not validated would be worse than the silence it replaces.\n\n**NORTH3 MOVED THESE ROLES FROM `@layer utilities` TO `@layer components`, AND THAT IS A CONTRACT CHANGE.** They were declared inside `@layer utilities` at index.css:593 — *after* `@tailwind utilities` at line 10. A role and a Tailwind utility are both single-class selectors (0,1,0), so specificity ties and **source order decided every contest: the role always won.** Any utility aimed at a role was dead on arrival, silently, with no error, no warning, and no way to see it except by measuring the rendered page.\n\n**Two of Home's shipped, deliberate, carefully-argued intentions had already been killed by it, and both were discovered by measuring rather than by reading:**\n\n1. **NORTH2's salutation.** It re-voiced \"Welcome home,\" to `title-page font-normal` and wrote a paragraph explaining why the household's NAME must be the loudest thing in the room, quoting UIA § 8's own rule that *\"shouting in bold is spending the emphasis budget on the shout\"*. `.title-page`'s `font-weight: 600` beat `font-normal`. **The salutation shipped semibold — the exact thing the change was written to stop — and the comment describing the fix outlived the fix.**\n2. **Home's signature.** It carries `leading-[1.02]` to pull the hand tight to the name. It measured **1.15** — `.text-signature`'s own line-height, to the decimal.\n\nBoth are now live and both were verified in the **compiled production CSS**, not merely in source: `.font-normal` at byte 70923 and `.leading-\\[1\\.02\\]` at 71400 both fall after `.title-page` (18212) and `.text-signature` (18604). Measured in the browser: the salutation went 600 → **400**, and the signature's box went 101px → **90px** (88 × 1.02).\n\n**The blast radius was measured before the move, and it is one surface.** A grep of every `title-page|title-section|title-card` in `client/src` for an adjacent font-weight or font-size utility returns exactly ONE hit — home-experience-page.tsx:576, NORTH2's `font-normal`. Nothing else in the codebase attempts to override a role, so nothing else can change when overriding starts working. Verified by looking as well: the five other rooms (planner · cookbook · pantry · shopping · dashboard) were captured before and after and are **byte-identical**, except the dashboard, which was proven by isolation to have drifted from the concurrent CONV1 P9 session's Stories-engine edits and **not** from this change — with the CSS reverted the dashboard still differed from its baseline, and with the CSS applied versus reverted it was byte-identical.\n\n**What did NOT move:** `.scrollbar-hide`, `.text-premium` and `.calm-table` stayed in `@layer utilities`, because they are genuine utilities and component styles respectively. Only the six roles moved (the five here plus `.text-signature`, which keeps its own row), because only they are roles.\n\n**The rule this row exists to carry:** *a role is a starting point, not a cage.* A surface that names a role and then adjusts one property of it is using the scale correctly, and it must be able to. If a role ever needs to be un-overridable, that is a decision to state out loud in this register — never a side-effect of which `@layer` block someone happened to paste it into.",
+      "status": "governed",
+      "enforcement": "review",
+      "adoptionFloor": "Every household-facing surface that sets a heading or a table/numeric voice. A raw `text-[Npx] font-[weight]` on a heading in any surface is a rival to this owner and should be reported here."
+    },
+    {
+      "id": "household-learning-presentation",
+      "concern": "Household learning (Patterns)",
+      "owner": "components/LearningSignalsPanel.tsx",
+      "ownerPath": "client/src/components/LearningSignalsPanel.tsx",
+      "ownerKind": "module",
+      "owns": "How a household meets a Pattern THA has learned about it (EL1 `evidence-learning`, `search` verb). Owns the room-scoping (`domains`), the cap, the eyebrow and the honest-absence rule: nothing learned yet renders nothing, never an empty-state placeholder implying something is missing. HOUSE_ACT2 Door 1 moved it from one household-wide mount on Profile to five — Profile keeps the unfiltered view; Planner, Pantry, Shopping and Cookbook each show only the Patterns learned from behaviour in that room. Filtering is client-side over the ONE shared query, mirroring AmbientIntelligence: a per-room server query would fragment a cache the hook already holds in full.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 1,
+      "floorReason": "UX3 removed this panel's four ROOM mounts (cookbook, pantry, planner, shopping) as duplicate coaching surfaces, on the owner's ruling. The Profile mount is deliberately KEPT and is the floor: it is the only door through which a Pattern becomes Confirmed Understanding, so it is the capability rather than a copy of one."
+    },
+    {
+      "id": "legal-document-presentation",
+      "concern": "Legal document presentation",
+      "owner": "components/legal/legal-document-view.tsx (LegalDocumentView, LegalPlaceholderNotice)",
+      "ownerPath": "client/src/components/legal/legal-document-view.tsx",
+      "ownerKind": "module",
+      "owns": "How a policy document renders: its heading, its version line, its section anchors, and the four block kinds a clause can take (paragraph, list, definitions, table). Introduced by BUS1 with three documents — Privacy Policy, Terms of Service, Cookie Policy — which would otherwise have been three separate pieces of markup and three chances to disagree about what a legal heading looks like. It also owns the placeholder notice, which is what stops THA publishing an invented company number without saying so. It renders content it is given and owns no words: shared/legal owns every string.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 1,
+      "definedIn": "client/src/components/legal/legal-document-view.tsx",
+      "definedSymbols": [
+        "LegalDocumentView",
+        "LegalPlaceholderNotice"
+      ],
+      "exemptions": [
+        {
+          "surface": "client/src/pages/legal-page.tsx sub-processor table",
+          "why": "The sub-processor list is not a clause of the document — it is generated from shared/legal/subprocessors.ts, which is read out of the code, and it renders as cards rather than as prose blocks. Putting it through the block renderer would have required a fifth block kind that exactly one document uses."
+        }
+      ]
+    },
+    {
+      "id": "environmental-dressing",
+      "concern": "Environmental Dressing (the render mouth)",
+      "owner": "components/layout/dressing-layer.tsx",
+      "ownerPath": "client/src/components/layout/dressing-layer.tsx",
+      "ownerKind": "module",
+      "owns": "The ONE mouth that paints admitted Environmental Dressing items (LIVINGHOME2 ED1–ED12). It consumes the ED2 runtime (`client/src/lib/living-home/dressing-register.ts`) and is the single lawful importer of `client/src/assets/living-home/dressing/` (one mouth — LIVINGHOME2 § 10.3; verify:living-home-assets D7). Still, wordless, `aria-hidden`, `pointer-events-none` (ED7); renders at most ONE object per room's sill (resolveRoomDressing), only at E2 (zero-byte where there is no view). **LH1** built and mounted it (the shell's `RoomThreshold`) with the Standing Welcome (a bowl of apples); **LH2** admitted the First Seasonal Collection through it — spring flowers, summer fruit, autumn pumpkins + a folded blanket, winter evergreens — the year turning on the browsing sills. Adopting the mouth retired the `dressing-register.ts` known-orphan. Governed by `verify:living-home-assets` (dressingChecks) and LHDC1.",
+      "status": "governed",
+      "enforcement": "machine",
+      "adoptionFloor": 1
+    },
+    {
+      "id": "dressing-strength",
+      "concern": "Environmental Dressing strength ceiling",
+      "owner": "index.css (--dressing-strength)",
+      "ownerKind": "css",
+      "definedSymbols": [
+        "--dressing-strength"
+      ],
+      "owns": "The ED7 / LHDC1 § 4 opacity ceiling a dressing object may render at — one declared strength, never tuned per surface (UIA § 15/§ 16), resolved by the dressing mouth alone. Defined completely in both modes (light 0.92, dark 0.78 — § 16 forbids a partial mode). Admitted at **LH1** with its first consumer (`dressing-layer.tsx`).",
+      "status": "governed",
+      "enforcement": "machine"
+    }
+  ],
+  "orphans": {
+    "note": "A module under these roots with **zero importers** is authored-but-unadopted — the failure state UIA §17 exists to end, and the mechanism behind PX1's `PageHeader.tsx` (a full unadopted successor to `WorkspaceHeader`, sitting live-looking in the tree for a future workstream to adopt *instead of* the real owner). PX1-W4.7 deleted 26 such files. These are what the gate found **after** that sweep — none of them known to any PX1 workstream, all of them found by the register on the day it was built. They are recorded as **defects, not exemptions**: an exemption says \"this is fine\", and these are not fine. They are simply no longer hidden. The gate fails on a *new* one. This is the same shape as `typecheck:ci`'s recorded baseline of 168 known errors: a number that may fall and may never rise.",
+    "scanRoots": [
+      "client/src/components/",
+      "client/src/hooks/",
+      "client/src/lib/",
+      "client/src/contexts/",
+      "client/src/pages/"
+    ],
+    "known": [
+      {
+        "path": "client/src/components/illustrations/orchard-hero.tsx",
+        "loc": 62,
+        "disposition": "Dead illustration component, 0 importers. Survived PX1-W4.7's sweep.",
+        "owner": "Colin Clapson — delete"
+      },
+      {
+        "path": "client/src/components/ui/toggle.tsx",
+        "loc": 44,
+        "disposition": "Dead `ui/` primitive, 0 importers. Survived PX1-W4.7's sweep of 20 dead primitives (its `toggle-group` sibling was deleted; this was not).",
+        "owner": "Colin Clapson — delete"
+      },
+      {
+        "path": "client/src/lib/whole-food-fallback.ts",
+        "loc": 34,
+        "disposition": "Dead module, 0 importers.",
+        "owner": "Colin Clapson — delete"
+      },
+      {
+        "path": "client/src/pages/partners-page.tsx",
+        "loc": 596,
+        "disposition": "Orphaned DELIBERATELY by PROD2, and the only entry here that is a withdrawal rather than a discovery. All 12 partners in `client/src/data/partners.ts` are invented businesses on `example.com`, every one `isActive: true`, rendered under a genuine affiliate-disclosure notice — so THA recommended health and nutrition practitioners that do not exist, from two live menus. The route and both nav entries were withdrawn and the lazy import removed, so the page and its fabricated data no longer reach the bundle (verified: `Calm Orchard Yoga` absent from `dist/`). The page, its data file and its types are intact on disk. This is NOT the PageHeader failure mode — it is not a rival owner of anything, and nothing should adopt it while its data is invented.",
+        "owner": "Colin Clapson — restore the route when real partners exist, or delete the page and its data"
+      },
+      {
+        "path": "client/src/components/icons/ThaAppleIcon.tsx",
+        "loc": 20,
+        "disposition": "Orphaned BY PRESENCE1, deliberately and with its cause recorded. Its only two consumers were the diary's and the dashboard's five-apple Mood/Energy pickers — THA's own mark used as the unit in which a household rated how they felt that day (GEA12; identity borrowed to lend authority to a number, GOVERNING_EXPERIENCE_ARCHITECTURE.md § 11.2). Both were replaced by HowYouFeltScale, which is unbranded. The mark's two sanctioned uses are unaffected and neither goes through this component: product ratings via AppleRating, and identity positions via the tha-apple.png asset directly. So this component has no legitimate consumer left. Recorded as a DEFECT, not an exemption, per this section's own doctrine — PRESENCE1 did not delete it because retiring a brand-mark component is an owner's call, not an implementation's.",
+        "owner": "Colin Clapson — delete, or adopt for identity positions (PRESENCE1 owner decision 3)"
+      }
+    ]
+  }
+}

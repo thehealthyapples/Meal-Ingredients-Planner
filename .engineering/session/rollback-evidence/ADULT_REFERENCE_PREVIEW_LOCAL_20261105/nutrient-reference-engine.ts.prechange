@@ -1,0 +1,161 @@
+import { isEvidenceBackedClaim, isValidSourceRef, validateReviewState } from "@shared/knowledge/evidence";
+import { NUTRIENT_REFERENCE_CANDIDATES, type NutrientReferenceMethod } from "@shared/knowledge/nutrient-reference-methods";
+
+export interface AdultReferenceRequest {
+  readonly requesterUserId: number;
+  readonly personUserId: number;
+  readonly methodId: string;
+  readonly ageYears?: number;
+  readonly sourceSex?: "male" | "female";
+  /** Explicit ANR1 general-wellbeing scope confirmation; absent is unknown. */
+  readonly wellbeingScopeConfirmed?: boolean;
+  readonly exerciseConfirmed?: boolean;
+  readonly goal?: "general-wellbeing" | "muscle-strength";
+  readonly bodyMass?: { readonly value: number; readonly unit: "kg" | "lb"; readonly confirmed: boolean };
+}
+
+export type AdultReferenceResult =
+  | { readonly status: "denied" | "method-unreviewed" | "out-of-scope" | "invalid-input"; readonly reason: string }
+  | { readonly status: "missing-input"; readonly missingInputs: readonly string[] }
+  | { readonly status: "ready"; readonly personUserId: number; readonly methodId: string;
+      readonly methodVersion: string; readonly nutrientSlug: string;
+      readonly referenceType: NutrientReferenceMethod["referenceType"];
+      readonly unit: NutrientReferenceMethod["unit"]; readonly value?: number;
+      readonly range?: { readonly lower: number; readonly upper: number };
+      readonly inputsUsed: Readonly<Record<string, number | string | boolean>>;
+      readonly sourceRefs: NutrientReferenceMethod["sourceRefs"];
+      readonly reviewedAt: string; readonly reviewedBy: string;
+      readonly assumptions: readonly string[]; readonly generatedAt: string };
+
+export type AdultReferencePreview =
+  | { readonly status: "preview"; readonly methodId: string; readonly methodVersion: string;
+      readonly nutrientSlug: string; readonly referenceType: NutrientReferenceMethod["referenceType"];
+      readonly unit: NutrientReferenceMethod["unit"]; readonly value?: number;
+      readonly range?: { readonly lower: number; readonly upper: number };
+      readonly inputsUsed: Readonly<Record<string, number | string | boolean>>;
+      readonly assumptions: readonly string[]; readonly label: "UNPUBLISHED REVIEW SIMULATION" }
+  | { readonly status: "unavailable" | "invalid-input" | "out-of-scope"; readonly reason: string };
+
+const positive = (n: unknown): n is number => typeof n === "number" && Number.isFinite(n) && n > 0;
+const validAge = (n: unknown): n is number => typeof n === "number" && Number.isInteger(n) && n >= 0;
+
+/**
+ * Admin-only review aid. It runs the candidate's deterministic arithmetic for
+ * synthetic inputs, but returns a distinct preview status and never satisfies
+ * the published-reference gate used by Companion.
+ */
+export function previewAdultReferenceMethod(
+  methodId: string,
+  input: { ageYears: number; bodyMass: number; bodyMassUnit: "kg" | "lb"; exerciseConfirmed?: boolean; muscleStrengthGoal?: boolean },
+  methods: readonly NutrientReferenceMethod[] = NUTRIENT_REFERENCE_CANDIDATES,
+): AdultReferencePreview {
+  const matches = methods.filter(m => m.id === methodId);
+  if (matches.length !== 1) return { status: "unavailable", reason: "No unique candidate method exists." };
+  const method = matches[0];
+  if (!validAge(input.ageYears) || !positive(input.bodyMass) || !["kg", "lb"].includes(input.bodyMassUnit)) {
+    return { status: "invalid-input", reason: "Enter a whole-number age and positive body mass with kg or lb units." };
+  }
+  if (input.ageYears < method.minAge || (method.maxAge !== undefined && input.ageYears > method.maxAge)) {
+    return { status: "out-of-scope", reason: "The example age is outside this candidate's proposed population." };
+  }
+  if (method.requiresExercise && (input.exerciseConfirmed !== true || input.muscleStrengthGoal !== true)) {
+    return { status: "out-of-scope", reason: "This candidate requires an exercising adult and a stated muscle or strength goal." };
+  }
+  if (method.calculation.kind !== "body-mass" || (method.referenceType === "exercise-range") !== (method.calculation.upperPerKg !== undefined)) {
+    return { status: "unavailable", reason: "This preview currently supports only internally consistent body-mass methods." };
+  }
+  const massKg = input.bodyMassUnit === "lb" ? input.bodyMass * 0.45359237 : input.bodyMass;
+  const lower = massKg * method.calculation.lowerPerKg;
+  const upper = method.calculation.upperPerKg === undefined ? undefined : massKg * method.calculation.upperPerKg;
+  if (!positive(lower) || (upper !== undefined && !positive(upper))) {
+    return { status: "invalid-input", reason: "The candidate produced an invalid numeric result." };
+  }
+  const inputsUsed = {
+    ageYears: input.ageYears,
+    bodyMassKg: massKg,
+    ...(method.requiresExercise ? { exerciseConfirmed: true, muscleStrengthGoal: true } : {}),
+  };
+  return {
+    status: "preview", methodId: method.id, methodVersion: method.version,
+    nutrientSlug: method.nutrientSlug, referenceType: method.referenceType, unit: method.unit,
+    ...(upper === undefined ? { value: lower } : { range: { lower, upper } }),
+    inputsUsed, assumptions: method.assumptions, label: "UNPUBLISHED REVIEW SIMULATION",
+  };
+}
+
+/** Pure derived calculation; no I/O, profile writes, model arithmetic, or intake inference. */
+export function calculateAdultReference(
+  request: AdultReferenceRequest,
+  methods: readonly NutrientReferenceMethod[] = NUTRIENT_REFERENCE_CANDIDATES,
+  now: Date = new Date(),
+): AdultReferenceResult {
+  if (!Number.isSafeInteger(request.requesterUserId) || request.requesterUserId <= 0 ||
+      request.personUserId !== request.requesterUserId) {
+    return { status: "denied", reason: "Only the authenticated adult's own reference is supported." };
+  }
+  const matches = methods.filter(m => m.id === request.methodId);
+  if (matches.length !== 1) return { status: "method-unreviewed", reason: "No unique reviewed method is available." };
+  const method = matches[0];
+  const reviewTime = method.reviewedAt ? Date.parse(method.reviewedAt) : NaN;
+  if (method.state !== "reviewed" || validateReviewState(method).length > 0 || !method.reviewedBy?.trim() || !Number.isFinite(reviewTime) ||
+      !Number.isFinite(now.getTime()) || reviewTime > now.getTime() ||
+      !isEvidenceBackedClaim({ sourceRefs: method.sourceRefs, reviewedAt: method.reviewedAt }) ||
+      !method.sourceRefs.every(ref => isValidSourceRef(ref) && Number.isFinite(Date.parse(ref.lastReviewed)) && Date.parse(ref.lastReviewed) <= now.getTime())) {
+    return { status: "method-unreviewed", reason: "The method has not cleared the existing evidence and named-reviewer gates." };
+  }
+  if (!validAge(method.minAge) || method.minAge < 18 ||
+      (method.maxAge !== undefined && (!validAge(method.maxAge) || method.maxAge < method.minAge))) {
+    return { status: "method-unreviewed", reason: "Invalid adult method population." };
+  }
+  const missing: string[] = [];
+  if (request.sourceSex !== undefined && !["male", "female"].includes(request.sourceSex)) {
+    return { status: "invalid-input", reason: "Source category must be explicitly selected or left unknown." };
+  }
+  if (request.ageYears === undefined) missing.push("ageYears");
+  else if (!validAge(request.ageYears)) return { status: "invalid-input", reason: "Age must be a whole number of years." };
+  else if (request.ageYears < method.minAge || (method.maxAge !== undefined && request.ageYears > method.maxAge)) {
+    return { status: "out-of-scope", reason: "Age is outside this method's reviewed population." };
+  }
+  if (request.wellbeingScopeConfirmed !== true) missing.push("wellbeingScopeConfirmed");
+  if (method.requiresExercise) {
+    if (request.exerciseConfirmed !== true) missing.push("exerciseConfirmed");
+    if (request.goal !== "muscle-strength") missing.push("muscle-strength goal");
+  }
+  if (missing.length) return { status: "missing-input", missingInputs: missing };
+  const inputsUsed: Record<string, number | string | boolean> = { ageYears: request.ageYears!, wellbeingScopeConfirmed: true };
+  if (method.requiresExercise) Object.assign(inputsUsed, { exerciseConfirmed: true, goal: request.goal! });
+  let value: number | undefined;
+  let range: { lower: number; upper: number } | undefined;
+  if (method.calculation.kind === "body-mass") {
+    const mass = request.bodyMass;
+    if (!mass || mass.confirmed !== true) return { status: "missing-input", missingInputs: ["confirmed bodyMass"] };
+    if (!positive(mass.value) || !["kg", "lb"].includes(mass.unit)) return { status: "invalid-input", reason: "Body mass requires a positive finite value and explicit kg or lb units." };
+    const { lowerPerKg, upperPerKg } = method.calculation;
+    if ((method.referenceType === "exercise-range") !== (upperPerKg !== undefined)) {
+      return { status: "method-unreviewed", reason: "Reference kind and range semantics disagree." };
+    }
+    if (!positive(lowerPerKg) || (upperPerKg !== undefined && (!positive(upperPerKg) || upperPerKg < lowerPerKg)) || method.unit !== "g/day") {
+      return { status: "method-unreviewed", reason: "Invalid mass-based method coefficients or units." };
+    }
+    const kg = mass.unit === "lb" ? mass.value * 0.45359237 : mass.value;
+    inputsUsed.bodyMassKg = kg;
+    if (upperPerKg === undefined) value = kg * lowerPerKg;
+    else range = { lower: kg * lowerPerKg, upper: kg * upperPerKg };
+  } else {
+    const rows = method.calculation.rows.filter(r => request.ageYears! >= r.minAge && (r.maxAge === undefined || request.ageYears! <= r.maxAge));
+    if (!rows.length) return { status: "out-of-scope", reason: "No reviewed reference row for this age." };
+    if (rows.some(r => r.sex !== undefined) && request.sourceSex === undefined) return { status: "missing-input", missingInputs: ["sourceSex"] };
+    const selected = rows.filter(r => r.sex === undefined || r.sex === request.sourceSex);
+    if (selected.length !== 1 || !positive(selected[0]?.amount)) return { status: "method-unreviewed", reason: "Ambiguous or invalid reference table row." };
+    value = selected[0].amount;
+    if (selected[0].sex !== undefined) inputsUsed.sourceSex = request.sourceSex!;
+  }
+  if ((value !== undefined && !positive(value)) || (range && (!positive(range.lower) || !positive(range.upper)))) {
+    return { status: "invalid-input", reason: "Calculation produced a non-finite reference." };
+  }
+  return { status: "ready", personUserId: request.personUserId, methodId: method.id,
+    methodVersion: method.version, nutrientSlug: method.nutrientSlug, referenceType: method.referenceType,
+    unit: method.unit, ...(range ? { range } : { value }), inputsUsed,
+    sourceRefs: method.sourceRefs, reviewedAt: method.reviewedAt!, reviewedBy: method.reviewedBy!,
+    assumptions: method.assumptions, generatedAt: now.toISOString() };
+}

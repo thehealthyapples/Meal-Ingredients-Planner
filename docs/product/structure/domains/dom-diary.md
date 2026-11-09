@@ -5,8 +5,8 @@ section: domains
 status: live
 visibility: household
 owner: Colin Clapson
-last_verified: 2026-07-11
-version: 1
+last_verified: 2026-11-05
+version: 2
 ---
 
 # Diary
@@ -27,7 +27,7 @@ noted quickly and left as light as the household wants.
 
 | | |
 |---|---|
-| Route | `/diary` (also `/my-diary`) |
+| Route | `/diary` |
 | Source | `client/src/pages/food-diary-page.tsx` |
 
 ## Related

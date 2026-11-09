@@ -57,6 +57,9 @@ export const US_TO_UK_MAP: Record<string, string> = {
   "buckwheat groats": "buckwheat",
   "whole wheat": "wholemeal wheat",
   "whole grain": "wholegrain",
+  // USDATIGHTEN1 (2026-10-31) — "cornstarch" is USDA's own bare entry
+  // (fdcId 169698); THA's registry calls the same product "Cornflour".
+  "cornstarch": "cornflour",
 
   // Herbs & spices
   "lemon grass": "lemongrass",

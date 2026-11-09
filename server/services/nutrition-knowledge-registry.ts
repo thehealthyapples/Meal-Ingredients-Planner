@@ -40,7 +40,7 @@ import {
 import { normalizeIngredientKey } from "@shared/normalize";
 import { resolveIngredientAlias } from "@shared/ingredient-aliases";
 import { db } from "../db";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import {
   knowledgeFoods,
   knowledgeNutrients,
@@ -263,6 +263,30 @@ export async function getFoodsForNutrient(nutrientSlug: string): Promise<Knowled
     .where(and(eq(knowledgeFoodNutrients.nutrientSlug, nutrientSlug), eq(knowledgeFoodNutrients.isActive, true)))
     .orderBy(asc(knowledgeFoodNutrients.ranking));
   return foodsBySlugs(links.map((l) => l.foodSlug));
+}
+
+/**
+ * 2026-10-31 — reverse lookup for SEVERAL nutrients at once: foods that
+ * notably contribute EVERY one of `nutrientSlugs` (intersection, not union —
+ * "I want foods with vitamin C AND vitamin K AND calcium", not "any of
+ * these"). Same underlying link table and `isActive` gate as the single-
+ * nutrient version above; a food qualifies only when it has an active link
+ * to each distinct nutrient slug requested, counted via
+ * COUNT(DISTINCT nutrient_slug) rather than COUNT(*) so a food cannot
+ * satisfy the requirement twice over on one nutrient if duplicate rows ever
+ * exist. Empty input returns no foods rather than every food — there is no
+ * sensible "foods with none of these required" answer to default to.
+ */
+export async function getFoodsForNutrients(nutrientSlugs: string[]): Promise<KnowledgeFood[]> {
+  const distinct = [...new Set(nutrientSlugs)];
+  if (distinct.length === 0) return [];
+  const rows = await db
+    .select({ foodSlug: knowledgeFoodNutrients.foodSlug })
+    .from(knowledgeFoodNutrients)
+    .where(and(inArray(knowledgeFoodNutrients.nutrientSlug, distinct), eq(knowledgeFoodNutrients.isActive, true)))
+    .groupBy(knowledgeFoodNutrients.foodSlug)
+    .having(sql`count(distinct ${knowledgeFoodNutrients.nutrientSlug}) = ${distinct.length}`);
+  return foodsBySlugs(rows.map((r) => r.foodSlug));
 }
 
 /**

@@ -34,13 +34,14 @@
  */
 
 import { DAY_NAMES, type DayOfWeek } from "@shared/time/household-time";
+import { matchNutritionFocus } from "@shared/nutrition-focus";
 
 // ---------------------------------------------------------------------------
 // Public types
 // ---------------------------------------------------------------------------
 
 /** The four capabilities COMP_ACT1 made writable. No others are addressable here. */
-export type ActionCapability = "planner" | "shopping" | "pantry" | "diary";
+export type ActionCapability = "planner" | "shopping" | "pantry" | "diary" | "profile" | "household";
 
 /** The write verbs COMP_ACT1 bound. Mirrors the bindings' executableIntents. */
 export type ActionVerb = "add" | "move" | "replace" | "delete";
@@ -104,6 +105,10 @@ export interface ActionCommand {
    * instead of naming it ("move Friday dinner", "log tonight's dinner").
    */
   readonly subject?: string;
+  /** Named dependent child for a household-scoped profile update. */
+  readonly personName?: string;
+  /** Canonical nutrient slug for a voluntary food-oriented focus. */
+  readonly nutritionFocus?: string;
   /** Where the action lands (planner add/move target, diary date, pantry/shopping). */
   readonly target?: SlotRef;
   /** Where the action starts FROM — move's source entry, replace's target entry. */
@@ -472,6 +477,38 @@ export function parseActionCommand(utterance: string): ActionCommand | null {
   if (typeof utterance !== "string") return null;
   const trimmed = utterance.trim();
   if (!trimmed || trimmed.length > 300) return null;
+
+  // Capture an explicit, voluntary nutrition focus only. Questions and health
+  // diagnoses do not match these declarative forms. A focus is a food preference,
+  // never a nutrient target or a medical conclusion.
+  const childFocus = /^i\s+(?:want|would like|would love)\s+to\s+help\s+my\s+(?:child|daughter|son)(?:\s+([\p{L}][\p{L}'’ -]{0,39}))?\s+(?:eat|get|have|include)\s+more\s+(.+?)\s*$/iu.exec(trimmed);
+  if (childFocus) {
+    const focus = matchNutritionFocus(childFocus[2]);
+    if (focus) return { capability: "household", verb: "add", personName: childFocus[1]?.trim(), subject: childFocus[2].trim(), nutritionFocus: focus, utterance: trimmed };
+  }
+  const adultFocus = /^i\s+(?:want|would like|would love)\s+(?:to\s+)?(?:(?:eat|get|have|include)\s+more|focus\s+on\s+(?:more\s+)?|boost\s+(?:my\s+)?|increase\s+(?:my\s+)?|more\s+)(.+?)\s*$/iu.exec(trimmed)
+    ?? /^i(?:’|')m\s+trying\s+to\s+(?:(?:eat|get|have|include)\s+more|boost\s+(?:my\s+)?|increase\s+(?:my\s+)?)(.+?)\s*$/iu.exec(trimmed);
+  if (adultFocus) {
+    const focus = matchNutritionFocus(adultFocus[1]);
+    if (focus) return { capability: "profile", verb: "add", subject: adultFocus[1].trim(), nutritionFocus: focus, utterance: trimmed };
+  }
+
+  // A narrow, deterministic intake for health statements. It creates only a
+  // proposal; the confirmed-action endpoint remains the sole write path.
+  const adultHealth = /^\s*(?:i(?:'ve| have) been told (?:that )?i (?:have|am)\s+|i have been diagnosed with\s+|i am diagnosed with\s+)(.{3,180})\s*$/i.exec(trimmed);
+  if (adultHealth) {
+    return { capability: "profile", verb: "add", subject: cleanSubject(adultHealth[1]), utterance: trimmed };
+  }
+  const childHealth = /^\s*my\s+(?:child|daughter|son)(?:\s+([\p{L}][\p{L}'’ -]{0,39}))?\s+(?:has been told (?:that )?(?:they|he|she) (?:have|has|are|is)|has been diagnosed with|has)\s+(.{3,180})\s*$/iu.exec(trimmed);
+  if (childHealth) {
+    return {
+      capability: "household",
+      verb: "add",
+      personName: childHealth[1]?.trim(),
+      subject: cleanSubject(childHealth[2]),
+      utterance: trimmed,
+    };
+  }
 
   // An ADVISORY frame is a question, not a command — the same guard the gateway's
   // detectWriteIntent applies, for the same reason: "what should I add to the

@@ -1,0 +1,15 @@
+[{
+  "id": 4513,
+  "foodSlug": "mustard",
+  "nutrientSlug": "fibre",
+  "sourceRef": {
+    "body": "USDA FoodData Central",
+    "title": "Foundation Foods, October 2026: Mustard, prepared, yellow (FDC ID 326698)",
+    "url": "https://fdc.nal.usda.gov/download-datasets/",
+    "evidenceLevel": "emerging",
+    "lastReviewed": "",
+    "preparedBy": "Codex",
+    "preparedOn": "2026-11-07",
+    "evidenceExcerpt": "The October 29, 2026 USDA Foundation Foods JSON identifies FDC ID 326698 as 'Mustard, prepared, yellow' and reports total dietary fibre of 4.3 g with six data points (per 100 g). Scope limitation: this supports prepared yellow mustard only; it does not establish fibre content for mustard seeds, leaves, or every condiment variety, nor the amount in a serving."
+  }
+}]

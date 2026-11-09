@@ -1,4 +1,4 @@
-// ODL1 — before/after captures of the authenticated Home (/home).
+// ODL1 — before/after captures of the authenticated Home (/).
 // Usage: npx tsx scripts/capture-odl1-home.ts <label>   (label = "before" | "after")
 // Modeled on scripts/capture-exp4-materiality-depth.ts: zero-write DEV-world login,
 // desktop + mobile viewports, saved under docs/ui-audit/odl1-home-orchard/.
@@ -36,7 +36,7 @@ async function main() {
     if (!login.ok()) throw new Error(`login failed: ${login.status()}`);
 
     const page = await ctx.newPage();
-    await page.goto(`${BASE}/home`, { waitUntil: "networkidle" });
+    await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
     await page.waitForTimeout(2200); // let queries + entrance settle
     await page.screenshot({
       path: path.join(OUT, `${LABEL}-${vp.name}.png`),

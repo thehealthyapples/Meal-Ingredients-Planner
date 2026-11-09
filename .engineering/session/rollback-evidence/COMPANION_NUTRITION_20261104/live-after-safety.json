@@ -1,0 +1,143 @@
+[
+  {
+    "question": "Which meals are highest in protein?",
+    "threadId": 746,
+    "text": "The meal with the highest protein content recorded is the Cheese Quesadilla, which contains 48.3 grams of protein. Other meals with notable protein content are not specified in the context data.",
+    "entityRefCount": 16,
+    "outcomeStatus": "ok",
+    "reachedCapability": "nutrition-knowledge",
+    "invokedCapabilities": [
+      "nutrition-discovery",
+      "nutrition-knowledge",
+      "meals"
+    ],
+    "invokedCapabilitiesSource": "resolved-intent",
+    "capabilityInvocations": [
+      {
+        "capabilityId": "nutrition-knowledge",
+        "verb": "read",
+        "status": "ok",
+        "ok": true,
+        "durationMs": 136,
+        "threw": false,
+        "errorMessage": null,
+        "contribution": "grounding-data",
+        "baseline": false
+      },
+      {
+        "capabilityId": "profile",
+        "verb": "read",
+        "status": "ok",
+        "ok": true,
+        "durationMs": 140,
+        "threw": false,
+        "errorMessage": null,
+        "contribution": "context-only",
+        "baseline": true
+      },
+      {
+        "capabilityId": "meals",
+        "verb": "read",
+        "status": "ok",
+        "ok": true,
+        "durationMs": 358,
+        "threw": false,
+        "errorMessage": null,
+        "contribution": "grounding-data",
+        "baseline": false
+      },
+      {
+        "capabilityId": "nutrition-discovery",
+        "verb": "search",
+        "status": "ok",
+        "ok": true,
+        "durationMs": 3463,
+        "threw": false,
+        "errorMessage": null,
+        "contribution": "grounding-data",
+        "baseline": false
+      },
+      {
+        "capabilityId": "household",
+        "verb": "read",
+        "status": "ok",
+        "ok": true,
+        "durationMs": 157,
+        "threw": false,
+        "errorMessage": null,
+        "contribution": "context-only",
+        "baseline": true
+      }
+    ],
+    "capabilityProbeActive": true,
+    "discoveryCount": 1,
+    "guidanceCount": 2,
+    "guidanceKind": "next-step",
+    "enrichmentCount": 3,
+    "actionCount": 0,
+    "fallbackState": null,
+    "latencyMs": 6405,
+    "error": null,
+    "personality": "companion",
+    "llmProviderAvailable": true
+  },
+  {
+    "question": "Which meals have the lowest sugar?",
+    "threadId": 747,
+    "text": "I don't have specific sugar content information for the meals listed in the context. However, I can tell you about some vegetarian meals available: Palak Paneer, Vegetable Biryani, Shakshuka, Paneer Butter Masala, and Persian-style Pumpkin, Green Bean & Green Pea Seeded Muffins. If you're looking for meals with lower sugar, focusing on whole ingredients and avoiding processed foods can be helpful.",
+    "entityRefCount": 5,
+    "outcomeStatus": "ok",
+    "reachedCapability": "meals",
+    "invokedCapabilities": [
+      "meal-discovery",
+      "meals"
+    ],
+    "invokedCapabilitiesSource": "resolved-intent",
+    "capabilityInvocations": [
+      {
+        "capabilityId": "profile",
+        "verb": "read",
+        "status": "ok",
+        "ok": true,
+        "durationMs": 116,
+        "threw": false,
+        "errorMessage": null,
+        "contribution": "context-only",
+        "baseline": true
+      },
+      {
+        "capabilityId": "meals",
+        "verb": "read",
+        "status": "ok",
+        "ok": true,
+        "durationMs": 150,
+        "threw": false,
+        "errorMessage": null,
+        "contribution": "grounding-data",
+        "baseline": false
+      },
+      {
+        "capabilityId": "meal-discovery",
+        "verb": "search",
+        "status": "ok",
+        "ok": true,
+        "durationMs": 901,
+        "threw": false,
+        "errorMessage": null,
+        "contribution": "empty-result",
+        "baseline": false
+      }
+    ],
+    "capabilityProbeActive": true,
+    "discoveryCount": 0,
+    "guidanceCount": 2,
+    "guidanceKind": "next-step",
+    "enrichmentCount": 1,
+    "actionCount": 0,
+    "fallbackState": null,
+    "latencyMs": 3869,
+    "error": null,
+    "personality": "companion",
+    "llmProviderAvailable": true
+  }
+]

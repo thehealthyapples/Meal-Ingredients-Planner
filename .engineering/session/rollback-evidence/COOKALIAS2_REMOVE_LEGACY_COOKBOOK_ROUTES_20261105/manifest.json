@@ -1,0 +1,54 @@
+{
+  "task": "COOKALIAS2",
+  "repository": "G:\\The Healthy Apples\\Applications\\GitHub\\tha-integrated-dev-g-native-20261003",
+  "branch": "feat/integrated-dev",
+  "head": "3467abad4eca8d82ffc52756fee13874e389597f",
+  "dirtyEntryCount": 260,
+  "capturedAt": "2026-11-05T17:34:52.3590868+00:00",
+  "files": [
+    {
+      "path": "client/src/App.tsx",
+      "sha256": "F06C92DF347D9D56CB015C9653DC286957112A771A3D85981BA32D6D207A0F87"
+    },
+    {
+      "path": "client/src/components/layout/app-shell.tsx",
+      "sha256": "2CB359CD6ED1F9533C586A4F7F0B9C09BE894BD8DEA01B40EEB58D60EADE8621"
+    },
+    {
+      "path": "client/src/pages/weekly-planner-page.tsx",
+      "sha256": "F89270B9B7E87E8DEADB0B9E268E2448C3AD479CFFD08B328F23ABEE1B2CB1BB"
+    },
+    {
+      "path": "server/lib/routing.ts",
+      "sha256": "9C6C3AEA84E4CAE0B1D83E510881C8EFAF27492E123CA82972E619A2BAD7452E"
+    },
+    {
+      "path": "docs/product/inventory/product.yaml",
+      "sha256": "30AE45D1F106C26B403729EE3A7873185104A848551ACFE5193FFC4009CC07E6"
+    },
+    {
+      "path": "docs/product/inventory/product.json",
+      "sha256": "CF657391F998B3A5C15BFFA221A75062D7B97434AEB3CEA092A8D1C829C59374"
+    },
+    {
+      "path": "docs/product/structure/pages/page-cookbook.md",
+      "sha256": "95D5A305414DAF9EEDE75F371BEC59A4B7D8836662C6FB931DD21FBBA6017E32"
+    },
+    {
+      "path": "docs/product/structure/pages/page-cookbook-grid.md",
+      "sha256": "351555B1D199E96383CED4A35DDE4CB4C9FFEF9B2198BB37C28158B4FEA28F49"
+    },
+    {
+      "path": "docs/product/structure/routes/routes-map.md",
+      "sha256": "FAB859D39DB1F86FD4DAE232562D84D85033507EB01B5DF8089B45D359E38E58"
+    },
+    {
+      "path": "docs/investigations/ux/APP_ROUTE_INVENTORY_20261105.md",
+      "sha256": "E07A30C1CAA18580C09D05DDA0E33DB44D8361CA8801389076CEB3C58731086E"
+    },
+    {
+      "path": ".engineering/session/CURRENT.md",
+      "sha256": "9E3D5D2F6F20D8CB40F44E72453AE74F5AC696B92C202489ABF54019CF36AEFA"
+    }
+  ]
+}

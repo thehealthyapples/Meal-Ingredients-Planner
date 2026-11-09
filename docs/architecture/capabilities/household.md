@@ -39,9 +39,16 @@ Allowed scopes:         household        — id, name, members (via getHousehold
                                             is the canonical owner of EVERY member's diets and
                                             restrictions (CONV1 P4 / OWN-1, 2026-07-16); the old
                                             adult read-time enrichment from users.diet* is deleted
-                                            (READ-1) and those columns are dropped.
+                                            (READ-1) and those columns are dropped. Dependent
+                                            reported health context and nutrition focuses are
+                                            projected only with current consent; adult health and
+                                            nutrition details remain private to that adult's profile.
+                         add (eaters) — confirmed, consent-gated append of a reported dependent
+                                            health fact or supported nutrition focus; account-less
+                                            eater ids are resolved inside the active household.
 Honest gaps:            explain — no stored rationale on membership/eater records — gap
-                         add/delete — write — gap
+                         add — limited to the two explicitly supported dependent profile scopes;
+                               no arbitrary eater-field writes or delete intent
                          caller belongs to no household — getHouseholdForUser() throws; the handler
                            must translate this into gap, not a fabricated empty household
 Permission model:       req.isAuthenticated() → 401; householdId resolved only from
@@ -58,7 +65,7 @@ Handler responsibilities: resolve householdId from session once; delegate per sc
                          projection even though the human UI shows it — an AI capability is a new,
                          broader-blast-radius consumer of a join secret. This is a recommendation for
                          the implementer to confirm with a governance owner, not a decision made here.
-Binding registration:   HOUSEHOLD_EXECUTABLE_INTENTS = ["read"]
+Binding registration:   HOUSEHOLD_EXECUTABLE_INTENTS = ["read", "add"]
 Tests required:         Standard set + "caller has no household → gap, not denied" test +
                          inviteCode-exclusion trust-rule assertion (pending the open decision above).
 Documentation updates:  server/intelligence/README.md row (future binding only); the Developer

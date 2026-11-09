@@ -2,11 +2,9 @@ import { useState, useEffect } from "react";
 import { Link, useLocation, useSearch } from "wouter";
 import { BarChart3, Salad, X, Search, Scale, ArrowRight, Plus } from "lucide-react";
 import { useWeekMealEntries } from "@/hooks/use-week-meal-entries";
-import { PlantDiversityReport } from "@/components/PlantDiversityReport";
-import { HouseholdNutritionCentre } from "@/components/HouseholdNutritionCentre";
-import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
+import { WeekFoodExplorer } from "@/components/WeekFoodExplorer";
+import { pageContainerClass } from "@/components/workspace-header";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,20 +54,16 @@ interface FoodLookupResult {
 // the standalone /compare route are untouched; only this tab's own form
 // changed, and only in how many items it starts with and what its button
 // does once there are two.
-type NutritionTab = "foods" | "nutrients" | "look-up";
+type NutritionTab = "foods" | "look-up";
 
 const NUTRITION_TABS: Array<{ id: NutritionTab; label: string; icon: React.ComponentType<{ className?: string }> }> = [
   { id: "foods", label: "Foods", icon: Salad },
-  { id: "nutrients", label: "Nutrients", icon: BarChart3 },
   { id: "look-up", label: "Look up a food", icon: Search },
 ];
 
 export default function PlantDiversityPage() {
-  const { weekMeals, isLoading } = useWeekMealEntries();
-  // FOODUI6 (2026-10-29) — the household's expectation on arrival is their
-  // nutrition picture for the week, not a bare list of foods. Nutrients now
-  // opens first and itself defaults to the "This week" window.
-  const [activeTab, setActiveTab] = useState<NutritionTab>("nutrients");
+  const [selectedWeek, setSelectedWeek] = useState<string | undefined>();
+  const { weekMeals, isLoading, activeWeek, availableWeeks, currentWeekKnown } = useWeekMealEntries(selectedWeek);
   const [, navigate] = useLocation();
   const search = useSearch();
 
@@ -91,6 +85,18 @@ export default function PlantDiversityPage() {
   // query (that stays an inline lookup) — only an explicit "compare" entry
   // point does, so there is no conflict with plain single-food searching.
   const isCompareMode = compareItems.length >= 1;
+  // 2026-10-31 — the URL is the only source of truth for which tab is showing
+  // (previously a separate `useState`, which is exactly why two screenshots
+  // of the same `/food` address could show different content: the address
+  // bar never changed when the tab did). `tab=look-up` in the query string
+  // and `isCompareMode` are the only two ways to land on "look-up"; anything
+  // else is "foods". setActiveTab navigates instead of setting local state,
+  // so the URL and what's on screen can never drift apart again.
+  const activeTab: NutritionTab =
+    isCompareMode || new URLSearchParams(search).get("tab") === "look-up" ? "look-up" : "foods";
+  function setActiveTab(tab: NutritionTab) {
+    navigate(tab === "look-up" ? "/food?tab=look-up" : "/food");
+  }
 
   // FOODUI4 (2026-10-29) — a real search input, not just a link to one.
   // Submitting navigates to /analyser?q=..., which already auto-runs the
@@ -155,7 +161,7 @@ export default function PlantDiversityPage() {
 
   useEffect(() => {
     const handler = (e: Event) => {
-      if ((e as CustomEvent<{ href: string }>).detail?.href === "/nutrition") {
+      if ((e as CustomEvent<{ href: string }>).detail?.href === "/food") {
         setMobileWorkspaceOpen(true);
       }
     };
@@ -165,81 +171,48 @@ export default function PlantDiversityPage() {
 
   return (
     <>
-      <WorkspaceHeader
-        title="Food"
-        realm="nutrition"
-        wide
-        titleTestId="text-nutrition-report-title"
-        contextBar={
-          <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
-            <div className="flex items-center gap-0.5 rounded-lg bg-muted/50 p-1 border border-border/40" role="tablist">
-              {NUTRITION_TABS.map(({ id, label, icon: Icon }) => (
-                <button
-                  key={id}
-                  role="tab"
-                  aria-selected={activeTab === id}
-                  onClick={() => setActiveTab(id)}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-sm font-medium transition-all shrink-0 ${
-                    activeTab === id
-                      ? "shadow-sm realm-banner-btn"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                  data-testid={`tab-nutrition-${id}`}
-                >
-                  <Icon className="h-3.5 w-3.5" />
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-        }
-      />
+      {/* FOODBG1 (2026-10-30) — owner-supplied full-page background. Lives inside
+          this `relative` wrapper rather than `fixed`, so it scrolls with the page
+          and spans exactly the content's own height (not just one viewport).
+          Saturation/contrast boosted slightly for richness (the same grading
+          technique NORTH2 used on the orchard asset), and the scrim is light —
+          legibility comes from the translucent, blurred cards below (the same
+          `bg-card/70 backdrop-blur` treatment already used elsewhere, e.g. the
+          nav sidebar over the orchard image), not from flattening the photo. */}
+      {/* 2026-10-31 — flex-1/min-h-0 down this chain (and into WeekFoodExplorer's
+          own grid) is what lets the grid's columns use `h-full` and genuinely
+          reach the bottom of the page: this div, the content div below it, and
+          the grid all participate in the SAME flex sizing <main> already uses
+          (it's `flex-1 ... flex flex-col`, confirmed by the PX1-W2 note just
+          below), instead of each one guessing a `100vh - Nrem` offset that has
+          to be re-measured by hand every time the chrome above or below it
+          changes. */}
+      <div className="relative flex-1 min-h-0 flex flex-col">
+        <div
+          className="absolute inset-0 -z-10 bg-cover bg-center"
+          style={{
+            backgroundImage: "url(/images/food/food-variety-orbit-20261030.png)",
+            filter: "saturate(1.3) contrast(1.05)",
+          }}
+          aria-hidden="true"
+        >
+          <div className="absolute inset-0 bg-background/15" />
+        </div>
 
-      {/* PX1-W2 (fnd-px-plant-columns-unreachable): `w-full min-w-0` — as a flex
-          item of <main>, this container's min-width:auto let the report table
-          grow it past the viewport, where overflow-x-hidden clipped the columns
-          instead of letting the table's own scroller work. */}
-      <div className={`min-w-0 ${pageContainerClass(true)} pb-4 sm:pb-5`} data-realm="nutrition">
+        {/* PX1-W2 (fnd-px-plant-columns-unreachable): `w-full min-w-0` — as a flex
+            item of <main>, this container's min-width:auto let the report table
+            grow it past the viewport, where overflow-x-hidden clipped the columns
+            instead of letting the table's own scroller work. */}
+        <div className={`min-w-0 flex-1 min-h-0 flex flex-col ${pageContainerClass(true)} pb-4 sm:pb-5`} data-realm="nutrition">
 
         {activeTab === "foods" && (
-          <>
-            <Card className="mb-3 px-4 py-2.5 sm:px-5 sm:py-3">
-              <CardTitle as="h2">Foods this week</CardTitle>
-              <CardDescription className="mt-1 max-w-md text-base leading-snug">
-                Foods in meals from the <strong className="font-semibold text-foreground/90">Planner's selected week</strong>.
-              </CardDescription>
-            </Card>
-            {isLoading ? (
-              /* PROD2: adopts the canonical loading owner (UIA §17) in place of a
-                 centred spinner. A skeleton that mirrors the report's own shape
-                 tells the household what is arriving; a spinner only says "wait". */
-              <div className="space-y-3" aria-busy="true" aria-label="Loading your plant diversity report">
-                <Skeleton className="h-8 w-56" />
-                <Skeleton className="h-24 w-full rounded-lg" />
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Skeleton key={i} className="h-12 w-full rounded-lg" />
-                ))}
-              </div>
-            ) : (
-              // UX3 — the week's own plant data, and nothing interpreting it: the
-              // balance gap now reaches the household through the Companion.
-              <PlantDiversityReport weekMeals={weekMeals} />
-            )}
-          </>
+          <WeekFoodExplorer weekMeals={weekMeals} week={activeWeek} availableWeeks={availableWeeks}
+            isDefaultWeek={selectedWeek === undefined && currentWeekKnown}
+            onWeekChange={setSelectedWeek} isLoading={isLoading} />
         )}
 
-        {activeTab === "nutrients" && (
-          <>
-            <Card className="mb-3 px-4 py-2.5 sm:px-5 sm:py-3">
-              <CardTitle as="h2">Nutrient knowledge across your food history</CardTitle>
-              <CardDescription className="mt-1 max-w-md text-base leading-snug">
-                Defaults to <strong className="font-semibold text-foreground/90">this week</strong>, with <strong className="font-semibold text-foreground/90">This year</strong> and <strong className="font-semibold text-foreground/90">All time</strong> also available.
-                Counts show nutrients and benefits linked to foods, not amounts consumed.
-              </CardDescription>
-            </Card>
-            <HouseholdNutritionCentre />
-          </>
-        )}
+        {activeTab === "look-up" && <button type="button" onClick={() => setActiveTab("foods")}
+          className="mb-3 text-sm text-primary underline">Back to foods from your week</button>}
 
         {activeTab === "look-up" && isCompareMode && (
           <>
@@ -248,7 +221,7 @@ export default function PlantDiversityPage() {
                 type="button"
                 onClick={() => {
                   setLookupQueries([""]);
-                  navigate("/nutrition");
+                  navigate("/food");
                 }}
                 className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground/70 hover:text-foreground transition-colors"
                 data-testid="link-lookup-back-to-search"
@@ -263,14 +236,14 @@ export default function PlantDiversityPage() {
 
         {activeTab === "look-up" && !isCompareMode && (
           <>
-            <Card className="mb-3 px-4 py-2.5 sm:px-5 sm:py-3">
+            <Card className="mb-3 px-4 py-2.5 sm:px-5 sm:py-3 border-border/30 bg-card/70 backdrop-blur-sm shadow-sm">
               <CardTitle as="h2">Look up a food</CardTitle>
               <CardDescription className="mt-1 max-w-md text-base leading-snug">
                 Search a <strong className="font-semibold text-foreground/90">food</strong>, a <strong className="font-semibold text-foreground/90">nutrient</strong>, or a <strong className="font-semibold text-foreground/90">packaged product</strong>.
                 Add a second food to <strong className="font-semibold text-foreground/90">compare</strong> them side by side.
               </CardDescription>
             </Card>
-            <Card className="p-5 space-y-3">
+            <Card className="p-5 space-y-3 border-border/30 bg-card/70 backdrop-blur-sm shadow-sm">
               <form onSubmit={submitLookup} className="space-y-2.5" data-testid="form-nutrition-lookup">
                 <div className="space-y-2">
                   {lookupQueries.map((value, i) => (
@@ -336,7 +309,7 @@ export default function PlantDiversityPage() {
 
             {/* ── FOODUI7: nutrient or food match ──────────────────────────── */}
             {lookupResult?.nutrient && (
-              <Card className="p-5 space-y-3 mt-4" data-testid="card-lookup-nutrient-result">
+              <Card className="p-5 space-y-3 mt-4 border-border/30 bg-card/70 backdrop-blur-sm shadow-sm" data-testid="card-lookup-nutrient-result">
                 <CardTitle as="h3">{lookupResult.nutrient.name}</CardTitle>
                 <CardDescription>Foods that notably provide {lookupResult.nutrient.name.toLowerCase()}.</CardDescription>
                 {lookupResult.nutrient.foods.length > 0 ? (
@@ -369,7 +342,7 @@ export default function PlantDiversityPage() {
             )}
 
             {lookupResult?.food && (
-              <Card className="p-5 space-y-3 mt-4" data-testid="card-lookup-food-result">
+              <Card className="p-5 space-y-3 mt-4 border-border/30 bg-card/70 backdrop-blur-sm shadow-sm" data-testid="card-lookup-food-result">
                 <div className="flex items-center justify-between gap-3">
                   <CardTitle as="h3">{lookupResult.food.name}</CardTitle>
                   <div className="flex gap-2 shrink-0">
@@ -379,7 +352,7 @@ export default function PlantDiversityPage() {
                           <Link href={`/foods/${lookupResult.food.canonicalSlug}`}>View full profile</Link>
                         </Button>
                         <Button asChild variant="outline" size="sm" className="gap-1.5" data-testid="link-lookup-food-compare">
-                          <Link href={`/nutrition?items=${encodeURIComponent(lookupResult.food.canonicalSlug)}`}>
+                          <Link href={`/food?items=${encodeURIComponent(lookupResult.food.canonicalSlug)}`}>
                             <Scale className="h-3.5 w-3.5" />
                             Compare
                           </Link>
@@ -422,6 +395,7 @@ export default function PlantDiversityPage() {
           </>
         )}
 
+      </div>
       </div>
 
       {/* ── Mobile Nutrition Workspace Drawer ─────────────────────────────── */}

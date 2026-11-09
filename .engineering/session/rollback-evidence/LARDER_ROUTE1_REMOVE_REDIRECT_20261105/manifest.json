@@ -1,0 +1,33 @@
+{
+  "task": "LARDER_ROUTE1",
+  "repository": "G:\\The Healthy Apples\\Applications\\GitHub\\tha-integrated-dev-g-native-20261003",
+  "branch": "feat/integrated-dev",
+  "head": "3467abad4eca8d82ffc52756fee13874e389597f",
+  "rollbackTag": "rollback/COOKALIAS2-remove-legacy-cookbook-routes-20261105",
+  "files": [
+    {
+      "path": "client/src/App.tsx",
+      "sha256": "42F72FE1DCB90DB7A34A25B7123A236852BE66D24602FDA0DD1C03502747FEB3"
+    },
+    {
+      "path": "client/src/components/layout/app-shell.tsx",
+      "sha256": "BD55008DDF4566F818C017ED96D4417D9386B73B3D41A761CE05ADA571967175"
+    },
+    {
+      "path": "docs/product/inventory/product.yaml",
+      "sha256": "15E54BF929F2915F10889C44704BA02F7D9305B518268E08E2D2CB5F53026FED"
+    },
+    {
+      "path": "docs/product/inventory/product.json",
+      "sha256": "49C3F5908967F1D92847079190EA173018C5B27281380C1DE54C524FB8A2A591"
+    },
+    {
+      "path": "docs/product/structure/pages/page-pantry.md",
+      "sha256": "FA1144276B0E1F22AB0F8C6DF46C84E730D37CF0C5915CA3AA3763478DF7C3C3"
+    },
+    {
+      "path": "docs/investigations/ux/APP_ROUTE_INVENTORY_20261105.md",
+      "sha256": "FDFCE7996B5E43E95D15DF4164B5173EF281B869B532D3F5963656A05BD81EF4"
+    }
+  ]
+}

@@ -663,8 +663,22 @@ export default function LarderRoomPage() {
               </div>
 
               {isLoading ? (
+                // FNDFIX6 (2026-11-03) — three identical h-40 boxes stood in for
+                // .lv-elevation, which is really one tall wall section (cupboard +
+                // shelf stack + spice rack) followed by two floor bands, each made
+                // of 3 and 2 discrete side-by-side store units respectively — not
+                // three equal rectangles. Shaped to match that rhythm instead.
                 <div className="lardr-loading">
-                  {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-40 rounded-2xl" />)}
+                  <Skeleton className="h-64 rounded-2xl" />
+                  <div className="flex gap-3">
+                    <Skeleton className="h-32 flex-1 rounded-2xl" />
+                    <Skeleton className="h-32 flex-1 rounded-2xl" />
+                    <Skeleton className="h-32 flex-1 rounded-2xl" />
+                  </div>
+                  <div className="flex gap-3">
+                    <Skeleton className="h-28 flex-1 rounded-2xl" />
+                    <Skeleton className="h-28 flex-1 rounded-2xl" />
+                  </div>
                 </div>
               ) : (
                 <div className="lv-elevation">
@@ -837,7 +851,7 @@ export default function LarderRoomPage() {
                 <Sparkles className="h-5 w-5" />
                 <span>
                   <b>Smart suggestions</b>
-                  <small>Ask Apple what you can make from what you keep</small>
+                  <small>Ask Companion what you can make from what you keep</small>
                 </span>
                 <ChevronRight className="h-5 w-5" aria-hidden />
               </button>

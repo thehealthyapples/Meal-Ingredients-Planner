@@ -98,10 +98,8 @@ export async function getUserRouting(userId: number): Promise<{ route: Route }> 
 }
 
 function pathToRoute(path: string): Route | null {
-  if (path === "/list") return "quicklist";
   if (path === "/weekly-planner") return "planner";
-  if (path === "/meals") return "cookbook";
-  if (path === "/analyse-basket") return "analyser";
+  if (path === "/cookbook" || path === "/cookbook/grid") return "cookbook";
   return null;
 }
 

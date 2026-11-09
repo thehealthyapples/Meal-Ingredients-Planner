@@ -20,7 +20,7 @@ There was once an intent-based landing router: after login it chose where to sen
 a household — planner, cookbook, analyser or shopping — and a telemetry hook
 watched for the household quickly navigating away, posting a `routing_correction`
 event so future routing could learn. Home now supersedes that: after login every
-household is redirected to `/home` (`App.tsx#L103-L106`). The correction-tracking
+household is redirected to `/` (`App.tsx#L103-L106`). The correction-tracking
 hook is still wired into the router, but the landing-router that fed it is gone.
 
 ## Where it lives

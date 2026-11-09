@@ -83,7 +83,7 @@ async function main() {
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     const r = await ctx.request.post(`${BASE}/api/login`, { data: CREDS });
     if (!r.ok()) throw new Error(`login failed: ${r.status()}`);
-    const page = await open(ctx, "/home");
+    const page = await open(ctx, "/");
 
     const apple = await page.locator('[data-testid="home-pressed-apple"]').boundingBox();
     const companion = await page.locator('[data-testid="card-home-companion"]').boundingBox().catch(() => null);
@@ -119,7 +119,7 @@ async function main() {
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     const r = await ctx.request.post(`${BASE}/api/login`, { data: CREDS });
     if (!r.ok()) throw new Error(`login failed: ${r.status()}`);
-    const page = await open(ctx, "/home");
+    const page = await open(ctx, "/");
     const read = (name: string) =>
       page.evaluate(
         (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim(),
@@ -150,11 +150,11 @@ async function main() {
     const r = await ctx.request.post(`${BASE}/api/login`, { data: CREDS });
     if (!r.ok()) throw new Error(`login failed: ${r.status()}`);
     const rooms = [
-      ["home", "/home"],
+      ["home", "/"],
       ["planner", "/planner"],
       ["cookbook", "/cookbook"],
       ["pantry", "/pantry"],
-      ["diary", "/my-diary"],
+      ["diary", "/diary"],
       ["orchard", "/orchard"],
     ] as const;
     const backgrounds: Record<string, string> = {};

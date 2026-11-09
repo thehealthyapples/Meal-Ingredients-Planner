@@ -1,8 +1,8 @@
 /**
  * Household Capability Binding (INT13)
  * ======================================
- * Activates the SEVENTH live capability on the THA Intelligence Platform: it binds the
- * read-only Household handler to the `household` capability, flipping its availability
+ * Activates the Household capability on the THA Intelligence Platform by binding its
+ * read and narrowly scoped write handler, flipping its availability
  * from "registered" (metadata only) to "available" (executable). It reuses the exact
  * Port → Handler → Binding pattern proven by the Planner (INT2), Shopping (INT3),
  * Nutrition / Knowledge (INT4), Pantry (INT8), Diary (INT10), and Profile (INT12) — the
@@ -24,16 +24,15 @@ import { createStorageHouseholdReadPort, type HouseholdReadPort } from "../handl
 export const HOUSEHOLD_CAPABILITY_ID = "household";
 
 /**
- * The verbs this read-only binding actually executes. Only "read" has a live code path
- * in the handler; the other allow-listed verbs ("explain" — no stored rationale on
- * membership/eater records; "add"/"delete" — writes) return an honest gap. Declared here
- * so the registry can surface truthful executableIntents and discovery cannot
+ * The verbs this binding actually executes. `add` is restricted to confirmed,
+ * consent-gated reported health context and voluntary nutrition focuses for dependents. Declared here so
+ * discovery cannot
  * over-advertise (INT6A).
  */
-export const HOUSEHOLD_EXECUTABLE_INTENTS: readonly IntentVerb[] = ["read"];
+export const HOUSEHOLD_EXECUTABLE_INTENTS: readonly IntentVerb[] = ["read", "add"];
 
 /**
- * Bind the read-only Household handler to a platform.
+ * Bind the Household handler to a platform.
  *
  * Production: call with only `platform` — the real storage port is used by default.
  * Tests: pass an in-memory port factory as the second argument so the binding and

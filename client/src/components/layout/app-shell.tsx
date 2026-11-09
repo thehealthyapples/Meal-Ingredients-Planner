@@ -53,13 +53,13 @@ import { apiRequest } from "@/lib/queryClient";
  * tint, and the names of the authenticated surfaces that are not rooms.
  */
 const REALM_BY_HREF: Record<string, PageRealm> = {
-  "/home": "home",
+  "/": "home",
   "/planner": "planner",
   "/cookbook": "cookbook",
   "/shopping-workspace": "shopping",
   "/pantry": "pantry",
-  "/nutrition": "nutrition",
-  "/my-diary": "diary",
+  "/food": "nutrition",
+  "/diary": "diary",
   "/analyser": "analyser",
   "/orchard": "orchard",
   // EXP1 — Household and Admin joined the shelf; their realms stay `home`
@@ -96,7 +96,7 @@ const NON_ROOM_TITLES: Array<[test: (path: string) => boolean, title: string, re
  * Blueprint § 5.1 is the canonical map and this is its projection, nothing more.
  * Every value below is READ OFF that table; not one is a judgement made here.
  *
- *   Home       E3   drawn by the room itself (`OrchardWindow`) — not by this map
+ *   Home       E3   drawn by the room itself (`HomeExteriorView`) — not by this map
  *   Cookbook   E2   Pantry E2 · Nutrition E2 · Diary E2 · Orchard E2
  *   Planner    E1   Shopping E1 · Analyser E1 · Household/Profile E1
  *   Admin      E0   dialogs and overlays E0
@@ -163,15 +163,15 @@ const ROOM_GROUND: Record<string, "full" | "room" | "air" | "none"> = {
 
 /** Routes that render the same room as a canonical nav destination. */
 const ROOM_ALIASES: Record<string, string> = {
-  "/diary": "/my-diary",
-  "/meals": "/cookbook",
+  "/cookbook/grid": "/cookbook",
   "/weekly-planner": "/planner",
   "/products": "/analyser",
-  // LARDER Pass 1 — the empty Living Larder room renders at /larder while it is
-  // built (furniture-first, across passes). It IS the Larder room, so the shell
-  // draws it the same threshold, identity and ground as the nav "Larder"
-  // (/pantry): one owner of the room's identity (EXP1), never a second.
-  "/larder": "/pantry",
+  // FOODUI1 follow-up (2026-10-30) — /nutrition was renamed to /food (the nav
+  // door's own name since FOODUI1); both old paths redirect at the router, but
+  // this alias keeps the shell's own room lookups correct even in the instant
+  // before that redirect settles.
+  "/nutrition": "/food",
+  "/plant-diversity": "/food",
 };
 
 /**
@@ -187,8 +187,8 @@ const ROOM_PURPOSE: Record<string, string> = {
   "/cookbook": "Discover, create and cook meals your household will love.",
   "/shopping-workspace": "One list, ready for the shop.",
   "/pantry": "See what you keep.",
-  "/nutrition": "The variety on the household's table.",
-  "/my-diary": "A quiet record of the household's days.",
+  "/food": "The variety on the household's table.",
+  "/diary": "A quiet record of the household's days.",
   "/analyser": "A closer look at packaged food.",
   "/orchard": "The neighbourhood beyond the fence.",
   "/profile": "The people this home cooks for.",
@@ -257,10 +257,22 @@ function isLivingHomeRoom(path: string): boolean {
   return LIVING_HOME_ROUTES.has(ROOM_ALIASES[path] ?? path);
 }
 
+// Planner and Food carry their own working surfaces, so the shared threshold
+// and fallback header stand down without removing the one Companion.
+function isImmersiveRoom(path: string): boolean {
+  const canonical = ROOM_ALIASES[path] ?? path;
+  return isLivingHomeRoom(path) ||
+    canonical === "/planner" ||
+    canonical === "/" ||
+    canonical === "/food" ||
+    canonical === "/diary" ||
+    canonical === "/shopping-workspace";
+}
+
 function RoomThreshold({ path }: { path: string }) {
   const canonical = ROOM_ALIASES[path] ?? path;
-  if (canonical === "/home") return null;
-  if (isLivingHomeRoom(canonical)) return null; // the Environment Plate is the page
+  if (canonical === "/") return null;
+  if (isImmersiveRoom(canonical)) return null; // the room's working surface is the page
 
   const { title, realm } = resolveShellRoom(path);
   const exposure = path.startsWith("/admin") ? "e0" : ROOM_EXPOSURE[realm] ?? "e1";
@@ -339,7 +351,7 @@ export function AppShell({
     onError: () => setReturnError(true),
   });
   const canonical = ROOM_ALIASES[location] ?? location;
-  const isRealBookConcept = location === "/cookbook" || location === "/cookbook/concept-real-book";
+  const isRealBookConcept = location === "/cookbook";
   const shellGround = resolveShellGround(location);
   const [headerSlot, setHeaderSlot] = useState<HTMLDivElement | null>(null);
   const [railSlot, setRailSlot] = useState<HTMLDivElement | null>(null);
@@ -370,7 +382,7 @@ export function AppShell({
     ? "e0"
     : ROOM_EXPOSURE[resolveShellRoom(location).realm] ?? "e1";
   const roomIdentity =
-    canonical === "/home" ||
+    canonical === "/" ||
     (thresholdExposure !== "e0" && NAV_ITEMS.some((item) => item.href === canonical));
 
   const registerPageHeader = useCallback(() => {
@@ -465,7 +477,7 @@ export function AppShell({
                               caught error (NAV1, preserved). */}
                           <div className="sticky top-0 z-40 shrink-0" data-testid="ws-header-zone">
                             <div ref={setHeaderSlot} className="w-full" data-testid="ws-header-slot" />
-                            {pageHeaders === 0 && !isLivingHomeRoom(location) && !isRealBookConcept && <ShellHeader />}
+                            {pageHeaders === 0 && !isImmersiveRoom(location) && !isRealBookConcept && <ShellHeader />}
                           </div>
 
                           {/* INTARCH1 — the room's ground plane. Mounted ONCE, here:

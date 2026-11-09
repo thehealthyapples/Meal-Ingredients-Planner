@@ -48,11 +48,11 @@ const CREDS = {
 };
 
 const ROUTES = [
-  { slug: "home", path: "/home" },
+  { slug: "home", path: "/" },
   { slug: "planner", path: "/planner" },
   { slug: "cookbook", path: "/cookbook" },
   { slug: "pantry", path: "/pantry" },
-  { slug: "diary", path: "/my-diary" },
+  { slug: "diary", path: "/diary" },
   { slug: "orchard", path: "/orchard" },
 ] as const;
 
@@ -63,7 +63,7 @@ async function login(ctx: any) {
 
 async function settle(page: any) {
   await page.waitForLoadState("networkidle").catch(() => {});
-  // The Companion's arrival is deliberately withheld on /home (UXHOME1), and the
+  // The Companion's arrival is deliberately withheld on / (UXHOME1), and the
   // emblem's breath is a 4.2s cycle. Waiting past both means the capture shows the
   // settled room rather than a frame of it still arriving.
   await page.waitForTimeout(2200);

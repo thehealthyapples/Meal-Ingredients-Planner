@@ -13,12 +13,12 @@
  * longer needs it: CONV1 P4 (READ-1) deleted the read-time enrichment — eater rows
  * store their own diets and restrictions, being the canonical owner (OWN-1).
  *
- * No write method is exposed here (eater creation happens at membership events in
- * the owner, never in a read binding) — this binding is read-only by construction.
+ * Writes are narrowly scoped, confirmed, consent-gated additions of reported health
+ * context or voluntary nutrition focuses to dependent eaters through storage.
  *
  * GOVERNANCE: the Household service (storage) remains the authoritative owner of all
- * household data and business rules (TIP1 Principles 2 & 7). This port only *reads* what
- * the owner exposes; it has NO write methods by construction (INT13 is read-only).
+ * household data and business rules (TIP1 Principles 2 & 7). This port delegates that
+ * bounded write and introduces no second owner.
  */
 
 import type { Household, HouseholdMember, HouseholdEaterRow, User } from "@shared/schema";
@@ -43,6 +43,8 @@ export interface HouseholdReadPort {
   getHouseholdDietaryContext(userId: number): Promise<HouseholdDietaryContext>;
   /** Household-eaters owner — stored eater rows (adults + children) for a household. */
   getHouseholdEaters(householdId: number): Promise<HouseholdEaterRow[]>;
+  addHouseholdEaterReportedHealthContext?(householdId: number, eaterId: number, fact: string, reportedByUserId: number): Promise<NonNullable<HouseholdEaterRow["reportedHealthContext"]> | undefined>;
+  addHouseholdEaterNutritionFocus?(householdId: number, eaterId: number, focus: string, reportedByUserId: number): Promise<NonNullable<HouseholdEaterRow["nutritionFocuses"]> | undefined>;
   /** Profile owner — used only to enrich adult eater rows from their own profile at read time. */
   getUser(userId: number): Promise<User | undefined>;
 }
@@ -60,6 +62,8 @@ export async function createStorageHouseholdReadPort(): Promise<HouseholdReadPor
     getHouseholdWithMembers: (householdId) => storage.getHouseholdWithMembers(householdId),
     getHouseholdDietaryContext: (userId) => storage.getHouseholdDietaryContext(userId),
     getHouseholdEaters: (householdId) => storage.getHouseholdEaters(householdId),
+    addHouseholdEaterReportedHealthContext: (householdId, eaterId, fact, reporterId) => storage.addHouseholdEaterReportedHealthContext(householdId, eaterId, fact, reporterId),
+    addHouseholdEaterNutritionFocus: (householdId, eaterId, focus, reporterId) => storage.addHouseholdEaterNutritionFocus(householdId, eaterId, focus, reporterId),
     getUser: (userId) => storage.getUser(userId),
   };
 }

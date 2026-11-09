@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Home controls on exterior concepts</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 28px; background: #e9e4d9; color: #30382e; font: 15px/1.4 Arial, sans-serif; }
+  h1 { margin: 0 0 8px; font: 600 25px/1.2 Arial, sans-serif; }
+  .intro { max-width: 1050px; margin: 0 0 20px; color: #51594e; }
+  .screen { position: relative; width: 1280px; height: 720px; margin: 0 0 30px; overflow: hidden; background: #e7dfcf; box-shadow: 0 10px 32px #3228173d; }
+  .scene { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .welcome { position: absolute; left: 42%; top: 22px; width: 460px; color: #536044; text-shadow: 0 1px 10px #fff9, 0 1px 2px #fff; }
+  .welcome-label { font-size: 27px; line-height: 1.15; color: #596057; }
+  .name { margin-top: -2px; font: italic 58px/1.12 "Segoe Print", "Comic Sans MS", cursive; letter-spacing: -2px; color: #536333; }
+  .date { margin-top: 14px; font-size: 14px; color: #535a50; }
+  .today { position: absolute; left: 42%; top: 177px; color: #29322a; text-shadow: 0 1px 8px #fff, 0 0 14px #fff9; }
+  .today h2 { margin: 0 0 3px; font-size: 21px; line-height: 1.25; }
+  .today p { margin: 0; font-size: 16px; color: #536052; }
+  .cards { position: absolute; left: 8%; top: 452px; width: 52%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .card { height: 169px; padding: 11px 12px 9px; border-radius: 12px; color: #2e342e; background: rgba(255, 253, 247, .97); border: 1px solid rgba(100, 89, 65, .14); box-shadow: 0 4px 12px rgba(44, 36, 22, .17); }
+  .card-head { display: flex; align-items: center; gap: 9px; min-height: 35px; }
+  .icon { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; color: #465531; background: #eee8d6; flex: 0 0 auto; }
+  .icon svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .label { font-size: 14px; line-height: 1.15; font-weight: 600; }
+  .sub { color: #596346; font-size: 12px; margin-top: 2px; }
+  .meal { display: flex; align-items: center; gap: 7px; margin-top: 10px; font-size: 12px; }
+  .meal-thumb { width: 23px; height: 23px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 50%; background: #e7e1d0; font-size: 13px; }
+  .slot { margin-left: auto; color: #7e8376; font-size: 10px; }
+  .list { margin-top: 8px; color: #4d544c; font-size: 11px; line-height: 1.3; }
+  .number { margin-top: 11px; font-size: 20px; line-height: 1; font-weight: 650; }
+  .action { display: inline-flex; align-items: center; gap: 5px; margin-top: 8px; color: #52623a; font-size: 12px; font-weight: 600; text-decoration: none; }
+  .action span { font-size: 20px; line-height: 12px; }
+  .primary { position: absolute; left: 8.2%; top: 630px; padding: 6px 14px; border: 1px solid #394b25; border-radius: 8px; color: white; background: #596c37; box-shadow: 0 2px 6px #32281724; font-size: 12px; font-weight: 700; }
+  #mockup-b .welcome { left: 35%; top: 85px; }
+  #mockup-b .welcome-label { font-size: 22px; }
+  #mockup-b .name { font-size: 42px; }
+  #mockup-b .date { margin-top: 7px; font-size: 12px; }
+  #mockup-b .today { left: 35%; top: 188px; }
+  .bottom-nav { position: absolute; inset: auto 0 0; height: 58px; display: flex; align-items: center; justify-content: center; gap: 38px; color: #53604e; background: rgba(255, 253, 248, .98); border-top: 1px solid rgba(93, 87, 70, .18); box-shadow: 0 -3px 12px rgba(47, 39, 27, .12); }
+  .nav-item { display: flex; align-items: center; gap: 7px; font-size: 13px; white-space: nowrap; }
+  .nav-item svg { width: 18px; height: 18px; fill: none; stroke: #596a45; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  .caption { margin: -19px 0 27px; color: #414b3c; font-size: 15px; }
+  .unaccepted { margin-top: 14px; color: #704e20; font-size: 13px; }
+  @media (max-width: 1310px) { body { overflow-x: auto; } }
+</style>
+</head>
+<body>
+<h1>Where the current Home controls sit on each scene</h1>
+<p class="intro">These are screen mockups, not just backgrounds. The welcome sits in open sky; the existing Meals, Shopping and Orchard cards occupy the clear lower-left area; the house entrance and path remain visible on the right. The cards are solid live UI surfaces, not painted into the photos.</p>
+
+<main id="mockups">
+<section class="screen" id="mockup-a" aria-label="Path to the door screen concept">
+  <img class="scene" src="OWNER_SELECTED_UNACCEPTED_HOME_BACKGROUND_ONLY_20261027.png" alt="">
+  <header class="welcome"><div class="welcome-label">Welcome home,</div><div class="name">Crazy Col</div><div class="date">Tuesday 27 October</div></header>
+  <div class="today"><h2>Today</h2><p>Today is planned.</p></div>
+  <div class="cards">
+    <article class="card"><div class="card-head"><span class="icon"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16M8 14h2M14 14h2M8 17h2"/></svg></span><div><div class="label">Meals</div><div class="sub">1 planned</div></div></div><div class="meal"><span class="meal-thumb">🌯</span><span>Breakfast burrito</span><span class="slot">breakfast</span></div><a class="action">View planner <span>›</span></a></article>
+    <article class="card"><div class="card-head"><span class="icon"><svg viewBox="0 0 24 24"><path d="M3 4h2l2.2 11.1a2 2 0 0 0 2 1.6h8.9a2 2 0 0 0 1.9-1.4L22 8H6"/><circle cx="10" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg></span><div><div class="label">Shopping</div><div class="sub">58 items to buy</div></div></div><div class="list">ounces spinach - rinsed, stemmed, and dried<br>cup semolina flour<br>eggs<br>and 55 more</div><a class="action">View shopping list <span>›</span></a></article>
+    <article class="card"><div class="card-head"><span class="icon"><svg viewBox="0 0 24 24"><path d="M20 4c-7 0-13 3-14 9-.5 3.2 1.8 6 5 6 6 0 9-7 9-15Z"/><path d="M5 20c2-4 5-7 10-10"/></svg></span><div><div class="label">From the orchard</div><div class="sub">Your week's variety</div></div></div><div class="number">2</div><div class="sub">different plants this week</div><a class="action">View plant diversity <span>›</span></a></article>
+  </div>
+  <button class="primary">Check your shopping list</button>
+  <nav class="bottom-nav" aria-label="Room navigation">
+    <span class="nav-item"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg>Planner</span>
+    <span class="nav-item"><svg viewBox="0 0 24 24"><path d="M4 4.5c3-1 6-1 8 1v15c-2-2-5-2-8-1zM20 4.5c-3-1-6-1-8 1v15c2-2 5-2 8-1z"/></svg>Cookbook</span>
+    <span class="nav-item"><svg viewBox="0 0 24 24"><path d="M4 20V9l8-5 8 5v11zM8 20v-7h8v7M8 9h.01M12 9h.01M16 9h.01"/></svg>Pantry</span>
+    <span class="nav-item"><svg viewBox="0 0 24 24"><path d="M3 4h2l2.2 11.1a2 2 0 0 0 2 1.6h8.9a2 2 0 0 0 1.9-1.4L22 8H6"/><circle cx="10" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg>Shopping</span>
+  </nav>
+</section>
+<p class="caption">A · Path to the door — clear welcome area, cards grounded over the lower garden, path and front door open to the right.</p>
+
+<section class="screen" id="mockup-b" aria-label="Sheltered entry screen concept">
+  <img class="scene" src="UNACCEPTED_HOME_EXTERIOR_B_SHELTERED_ENTRY_UI_SPACE.png" alt="">
+  <header class="welcome"><div class="welcome-label">Welcome home,</div><div class="name">Crazy Col</div><div class="date">Tuesday 27 October</div></header>
+  <div class="today"><h2>Today</h2><p>Today is planned.</p></div>
+  <div class="cards">
+    <article class="card"><div class="card-head"><span class="icon"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16M8 14h2M14 14h2M8 17h2"/></svg></span><div><div class="label">Meals</div><div class="sub">1 planned</div></div></div><div class="meal"><span class="meal-thumb">🌯</span><span>Breakfast burrito</span><span class="slot">breakfast</span></div><a class="action">View planner <span>›</span></a></article>
+    <article class="card"><div class="card-head"><span class="icon"><svg viewBox="0 0 24 24"><path d="M3 4h2l2.2 11.1a2 2 0 0 0 2 1.6h8.9a2 2 0 0 0 1.9-1.4L22 8H6"/><circle cx="10" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg></span><div><div class="label">Shopping</div><div class="sub">58 items to buy</div></div></div><div class="list">ounces spinach - rinsed, stemmed, and dried<br>cup semolina flour<br>eggs<br>and 55 more</div><a class="action">View shopping list <span>›</span></a></article>
+    <article class="card"><div class="card-head"><span class="icon"><svg viewBox="0 0 24 24"><path d="M20 4c-7 0-13 3-14 9-.5 3.2 1.8 6 5 6 6 0 9-7 9-15Z"/><path d="M5 20c2-4 5-7 10-10"/></svg></span><div><div class="label">From the orchard</div><div class="sub">Your week's variety</div></div></div><div class="number">2</div><div class="sub">different plants this week</div><a class="action">View plant diversity <span>›</span></a></article>
+  </div>
+  <button class="primary">Check your shopping list</button>
+  <nav class="bottom-nav" aria-label="Room navigation">
+    <span class="nav-item"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg>Planner</span>
+    <span class="nav-item"><svg viewBox="0 0 24 24"><path d="M4 4.5c3-1 6-1 8 1v15c-2-2-5-2-8-1zM20 4.5c-3-1-6-1-8 1v15c2-2 5-2 8-1z"/></svg>Cookbook</span>
+    <span class="nav-item"><svg viewBox="0 0 24 24"><path d="M4 20V9l8-5 8 5v11zM8 20v-7h8v7M8 9h.01M12 9h.01M16 9h.01"/></svg>Pantry</span>
+    <span class="nav-item"><svg viewBox="0 0 24 24"><path d="M3 4h2l2.2 11.1a2 2 0 0 0 2 1.6h8.9a2 2 0 0 0 1.9-1.4L22 8H6"/><circle cx="10" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg>Shopping</span>
+  </nav>
+</section>
+<p class="caption">B · Sheltered entry — the card row sits low against the open lawn; the doorway remains unobstructed.</p>
+
+<section class="screen" id="mockup-c" aria-label="Wide garden screen concept">
+  <img class="scene" src="UNACCEPTED_HOME_EXTERIOR_C_WIDE_GARDEN_UI_SPACE.png" alt="">
+  <header class="welcome"><div class="welcome-label">Welcome home,</div><div class="name">Crazy Col</div><div class="date">Tuesday 27 October</div></header>
+  <div class="today"><h2>Today</h2><p>Today is planned.</p></div>
+  <div class="cards">
+    <article class="card"><div class="card-head"><span class="icon"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16M8 14h2M14 14h2M8 17h2"/></svg></span><div><div class="label">Meals</div><div class="sub">1 planned</div></div></div><div class="meal"><span class="meal-thumb">🌯</span><span>Breakfast burrito</span><span class="slot">breakfast</span></div><a class="action">View planner <span>›</span></a></article>
+    <article class="card"><div class="card-head"><span class="icon"><svg viewBox="0 0 24 24"><path d="M3 4h2l2.2 11.1a2 2 0 0 0 2 1.6h8.9a2 2 0 0 0 1.9-1.4L22 8H6"/><circle cx="10" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg></span><div><div class="label">Shopping</div><div class="sub">58 items to buy</div></div></div><div class="list">ounces spinach - rinsed, stemmed, and dried<br>cup semolina flour<br>eggs<br>and 55 more</div><a class="action">View shopping list <span>›</span></a></article>
+    <article class="card"><div class="card-head"><span class="icon"><svg viewBox="0 0 24 24"><path d="M20 4c-7 0-13 3-14 9-.5 3.2 1.8 6 5 6 6 0 9-7 9-15Z"/><path d="M5 20c2-4 5-7 10-10"/></svg></span><div><div class="label">From the orchard</div><div class="sub">Your week's variety</div></div></div><div class="number">2</div><div class="sub">different plants this week</div><a class="action">View plant diversity <span>›</span></a></article>
+  </div>
+  <button class="primary">Check your shopping list</button>
+  <nav class="bottom-nav" aria-label="Room navigation">
+    <span class="nav-item"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg>Planner</span>
+    <span class="nav-item"><svg viewBox="0 0 24 24"><path d="M4 4.5c3-1 6-1 8 1v15c-2-2-5-2-8-1zM20 4.5c-3-1-6-1-8 1v15c2-2 5-2 8-1z"/></svg>Cookbook</span>
+    <span class="nav-item"><svg viewBox="0 0 24 24"><path d="M4 20V9l8-5 8 5v11zM8 20v-7h8v7M8 9h.01M12 9h.01M16 9h.01"/></svg>Pantry</span>
+    <span class="nav-item"><svg viewBox="0 0 24 24"><path d="M3 4h2l2.2 11.1a2 2 0 0 0 2 1.6h8.9a2 2 0 0 0 1.9-1.4L22 8H6"/><circle cx="10" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg>Shopping</span>
+  </nav>
+</section>
+<p class="caption">C · Wide garden — the same UI placement over the broadest orchard view.</p>
+</main>
+<p class="unaccepted">UNACCEPTED SCREEN MOCKUPS · The UI is illustrative and the figures/text are copied from the supplied screenshot, not live household data.</p>
+</body>
+</html>

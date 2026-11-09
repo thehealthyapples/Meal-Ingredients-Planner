@@ -837,8 +837,11 @@ const MIGRATIONS: Migration[] = [
            ALTER TABLE "canonical_food" ADD CONSTRAINT "canonical_food_diversity_group_slug_fkey" FOREIGN KEY (diversity_group_slug) REFERENCES diversity_group(slug) ON DELETE SET NULL;
          END IF;
        END $$`,
+      // On a fresh database, knowledge_foods is created by a later migration. Preserve this
+      // historical baseline statement for existing schemas, but defer it when the referenced
+      // table does not exist; the final append-only repair migration adds it after table creation.
       `DO $$ BEGIN
-         IF NOT EXISTS (
+         IF to_regclass('public.knowledge_foods') IS NOT NULL AND NOT EXISTS (
            SELECT 1 FROM pg_constraint c
            JOIN pg_class r ON r.oid = c.conrelid
            WHERE c.conname = 'canonical_food_knowledge_food_slug_fkey' AND r.relname = 'canonical_food'
@@ -856,7 +859,7 @@ const MIGRATIONS: Migration[] = [
          END IF;
        END $$`,
       `DO $$ BEGIN
-         IF NOT EXISTS (
+         IF to_regclass('public.conversation_turns') IS NOT NULL AND NOT EXISTS (
            SELECT 1 FROM pg_constraint c
            JOIN pg_class r ON r.oid = c.conrelid
            WHERE c.conname = 'companion_action_proposals_conversation_turn_id_fkey' AND r.relname = 'companion_action_proposals'
@@ -865,7 +868,7 @@ const MIGRATIONS: Migration[] = [
          END IF;
        END $$`,
       `DO $$ BEGIN
-         IF NOT EXISTS (
+         IF to_regclass('public.conversation_turns') IS NOT NULL AND NOT EXISTS (
            SELECT 1 FROM pg_constraint c
            JOIN pg_class r ON r.oid = c.conrelid
            WHERE c.conname = 'companion_guidance_events_conversation_turn_id_fkey' AND r.relname = 'companion_guidance_events'
@@ -892,7 +895,7 @@ const MIGRATIONS: Migration[] = [
          END IF;
        END $$`,
       `DO $$ BEGIN
-         IF NOT EXISTS (
+         IF to_regclass('public.conversation_turns') IS NOT NULL AND NOT EXISTS (
            SELECT 1 FROM pg_constraint c
            JOIN pg_class r ON r.oid = c.conrelid
            WHERE c.conname = 'companion_response_feedback_conversation_turn_id_fkey' AND r.relname = 'companion_response_feedback'
@@ -3710,6 +3713,97 @@ const MIGRATIONS: Migration[] = [
     statements: [
       `CREATE INDEX IF NOT EXISTS planner_weeks_household_start_date_idx
          ON planner_weeks (household_id, week_start_date)`,
+    ],
+  },
+
+  // ─── Fix — fresh-database migration order (SQLSTATE 42P01) ─────────────────
+  //
+  // The baseline ("2026-07-17_conv1_p10_schema_coverage", entry [0]) used to add
+  // `canonical_food_knowledge_food_slug_fkey` — a FOREIGN KEY on canonical_food.knowledge_food_slug
+  // REFERENCING knowledge_foods(slug) — as part of its own statement list. `knowledge_foods` is not
+  // created until "2026-06-18_ws0_knowledge_registry", which sits LATER in this array. On a database
+  // that already had both tables (every real deployment, per the baseline's own "safe on every
+  // existing database" claim) that ordering was invisible. On a FRESH database — a new Neon branch,
+  // a clean CI run — the baseline runs first, as it must, and hits `relation "knowledge_foods" does
+  // not exist` (42P01) before the registry migration ever gets a chance to create it. The runner's
+  // transaction rolls back and boot fails closed: no schema is left half-built, but the server never
+  // starts either.
+  //
+  // The fix is two-part: the historical baseline statement now checks that the referenced table
+  // exists before attempting the FK, and this append-only migration retries the identical guarded
+  // constraint after "2026-06-18_ws0_knowledge_registry" has created `knowledge_foods`. This edits
+  // no migration ID and reorders nothing. Databases that already recorded the baseline never
+  // re-read its statements because `runMigrations()` tracks applied state solely by ID. On an
+  // existing schema where the constraint is already present, the pg_constraint guard makes this
+  // appended migration a no-op.
+  {
+    id: "2026-07-28_fix_canonical_food_knowledge_food_slug_fkey_order",
+    statements: [
+      `DO $$ BEGIN
+         IF NOT EXISTS (
+           SELECT 1 FROM pg_constraint c
+           JOIN pg_class r ON r.oid = c.conrelid
+           WHERE c.conname = 'canonical_food_knowledge_food_slug_fkey' AND r.relname = 'canonical_food'
+         ) THEN
+           ALTER TABLE "canonical_food" ADD CONSTRAINT "canonical_food_knowledge_food_slug_fkey" FOREIGN KEY (knowledge_food_slug) REFERENCES knowledge_foods(slug) ON DELETE SET NULL;
+         END IF;
+       END $$`,
+    ],
+  },
+
+  // ─── Fix — conversation_turn FK ordering on fresh databases ────────────────
+  // The baseline creates the three referencing companion tables, but conversation_turns is
+  // created later by the conversation-store migration. Baseline guards defer these constraints;
+  // this append-only migration adds them once both sides exist. Existing schemas no-op via the
+  // pg_constraint checks.
+  {
+    id: "2026-07-28_fix_conversation_turn_foreign_key_order",
+    statements: [
+      `DO $$ BEGIN
+         IF NOT EXISTS (
+           SELECT 1 FROM pg_constraint c
+           JOIN pg_class r ON r.oid = c.conrelid
+           WHERE c.conname = 'companion_action_proposals_conversation_turn_id_fkey' AND r.relname = 'companion_action_proposals'
+         ) THEN
+           ALTER TABLE "companion_action_proposals" ADD CONSTRAINT "companion_action_proposals_conversation_turn_id_fkey" FOREIGN KEY (conversation_turn_id) REFERENCES conversation_turns(id) ON DELETE CASCADE;
+         END IF;
+       END $$`,
+      `DO $$ BEGIN
+         IF NOT EXISTS (
+           SELECT 1 FROM pg_constraint c
+           JOIN pg_class r ON r.oid = c.conrelid
+           WHERE c.conname = 'companion_guidance_events_conversation_turn_id_fkey' AND r.relname = 'companion_guidance_events'
+         ) THEN
+           ALTER TABLE "companion_guidance_events" ADD CONSTRAINT "companion_guidance_events_conversation_turn_id_fkey" FOREIGN KEY (conversation_turn_id) REFERENCES conversation_turns(id) ON DELETE CASCADE;
+         END IF;
+       END $$`,
+      `DO $$ BEGIN
+         IF NOT EXISTS (
+           SELECT 1 FROM pg_constraint c
+           JOIN pg_class r ON r.oid = c.conrelid
+           WHERE c.conname = 'companion_response_feedback_conversation_turn_id_fkey' AND r.relname = 'companion_response_feedback'
+         ) THEN
+           ALTER TABLE "companion_response_feedback" ADD CONSTRAINT "companion_response_feedback_conversation_turn_id_fkey" FOREIGN KEY (conversation_turn_id) REFERENCES conversation_turns(id) ON DELETE CASCADE;
+         END IF;
+       END $$`,
+    ],
+  },
+
+  // Companion confirmed writes: explicitly reported health context belongs to
+  // the canonical household eater, never to chat history or a parallel memory.
+  {
+    id: "2026-11-05_add_reported_health_context_to_household_eaters",
+    statements: [
+      `ALTER TABLE household_eaters ADD COLUMN IF NOT EXISTS reported_health_context JSONB NOT NULL DEFAULT '[]'::jsonb`,
+    ],
+  },
+
+  // Voluntary nutrition priorities are per-person profile preferences, separate
+  // from hard restrictions and reported medical/health context.
+  {
+    id: "2026-11-05_add_nutrition_focuses_to_household_eaters",
+    statements: [
+      `ALTER TABLE household_eaters ADD COLUMN IF NOT EXISTS nutrition_focuses JSONB NOT NULL DEFAULT '[]'::jsonb`,
     ],
   },
 

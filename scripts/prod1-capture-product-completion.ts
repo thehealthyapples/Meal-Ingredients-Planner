@@ -196,7 +196,7 @@ async function main() {
     // ── The logo's destination ───────────────────────────────────────────────
     //
     // This probe was originally written against `nav-bar.tsx`'s TopBar, on an audit
-    // finding that the brand logo pointed at /dashboard while /home is canonical.
+    // finding that the brand logo pointed at /dashboard while / is canonical.
     // The probe returned `null` at every route and both viewports, which is how the
     // finding turned out to be a FALSE POSITIVE: `TopBar` is exported and has zero
     // consumers — it never renders. The logo a household actually taps lives in
@@ -210,17 +210,17 @@ async function main() {
     await nav.goto(`${BASE}/pantry`, { waitUntil: "networkidle", timeout: 40_000 });
     await nav.waitForTimeout(2500);
     const logo = nav.locator('header a[href], [data-testid="workspace-header"] a[href]').first();
-    const logoCount = await nav.locator('a[href="/home"]').count();
+    const logoCount = await nav.locator('a[href="/"]').count();
     const logoHref = await logo.getAttribute("href").catch(() => null);
     evidence.shipped_logo_href = logoHref;
     evidence.links_to_home_present = logoCount;
     evidence.logo_element_found = logoHref !== null;
-    const logoOk = logoHref === "/home";
+    const logoOk = logoHref === "/";
     results.push({
       id: "logo-destination", name: "The brand logo reaches the canonical home", file: null, ok: true,
       shippedLogoHref: logoHref, accepted: logoOk,
     });
-    console.log(`  ${logoOk ? "✓" : "✗"} brand logo          → ${logoHref ?? "ELEMENT NOT FOUND"} (canonical home is /home)`);
+    console.log(`  ${logoOk ? "✓" : "✗"} brand logo          → ${logoHref ?? "ELEMENT NOT FOUND"} (canonical home is /)`);
     await nav.close();
 
     // ── Document metadata (the share loop) ───────────────────────────────────

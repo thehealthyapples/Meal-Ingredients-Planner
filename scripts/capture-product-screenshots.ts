@@ -35,7 +35,7 @@ type Shot = { id: string; name: string; route: string; auth: "public" | "househo
 const SHOTS: Shot[] = [
   { id: "landing", name: "Landing", route: "/", auth: "public", full: true },
   { id: "auth", name: "Sign in", route: "/auth", auth: "public" },
-  { id: "home", name: "Home", route: "/home", auth: "household", full: true },
+  { id: "home", name: "Home", route: "/", auth: "household", full: true },
   { id: "dashboard", name: "Dashboard", route: "/dashboard", auth: "household", full: true },
   { id: "planner", name: "Planner", route: "/planner", auth: "household", full: true },
   { id: "cookbook", name: "Cookbook", route: "/cookbook", auth: "household", full: true },
@@ -43,7 +43,7 @@ const SHOTS: Shot[] = [
   { id: "shopping-workspace", name: "Shopping", route: "/shopping-workspace", auth: "household", full: true },
   { id: "pantry", name: "Pantry", route: "/pantry", auth: "household", full: true },
   { id: "nutrition", name: "Nutrition (Plant Diversity)", route: "/plant-diversity", auth: "household", full: true },
-  { id: "diary", name: "My Diary", route: "/my-diary", auth: "household", full: true },
+  { id: "diary", name: "My Diary", route: "/diary", auth: "household", full: true },
   { id: "profile", name: "Profile", route: "/profile", auth: "household", full: true },
   { id: "partners", name: "Partners", route: "/partners", auth: "household", full: true },
   { id: "supermarkets", name: "Supermarkets (hidden)", route: "/supermarkets", auth: "household", full: true },

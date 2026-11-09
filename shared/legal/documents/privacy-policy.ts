@@ -25,7 +25,7 @@ export const PRIVACY_POLICY: LegalDocument = {
   title: "Privacy Policy",
   summary:
     "What we hold about your household, why we hold it, who else sees it, and how to get it back or have it deleted.",
-  version: "1.0.0",
+  version: "1.1.0",
   effectiveDate: "2026-07-18",
   sections: [
     {
@@ -75,7 +75,7 @@ export const PRIVACY_POLICY: LegalDocument = {
             ],
             [
               "Health-related preferences",
-              "Health goals, and height and weight if you choose to enter them",
+              "Health goals, reported health conditions or nutrient concerns, and height and weight if you choose to enter them",
               "To calculate portions and nutrition guidance. Optional, and the product works without them",
             ],
             [
@@ -122,15 +122,15 @@ export const PRIVACY_POLICY: LegalDocument = {
       blocks: [
         {
           kind: "paragraph",
-          text: "Allergies, intolerances, dietary restrictions and health goals are special category data under Article 9 of the UK GDPR. That is a higher standard of protection, and it applies to some of the most important data in this product.",
+          text: "Allergies, intolerances, dietary restrictions, health goals and health conditions or nutrient concerns you report are special category data under Article 9 of the UK GDPR. We record a reported condition as your statement, never as a diagnosis or verification by the app.",
         },
         {
           kind: "paragraph",
-          text: "We hold it because a food product that does not know a household's allergies is not merely less useful — it is unsafe. We ask for it, you give it deliberately, and our lawful basis for holding it is your explicit consent under Article 9(2)(a).",
+          text: "We hold these details only with your explicit consent under Article 9(2)(a), so Companion can tailor food information and suggestions. A food suggestion is not diagnosis or treatment, and the app will not claim that food cures a condition.",
         },
         {
           kind: "paragraph",
-          text: "You can withdraw that consent at any time by removing the information in your profile or by deleting your account. If you withdraw it, the product will stop filtering food for those needs — which is exactly why we will tell you plainly before you do it, rather than letting it happen quietly.",
+          text: "You can withdraw that consent in Privacy Settings. This removes reported health context on your own profile and dependent-child entries you reported, then stops Companion using those details for you. It does not remove another adult's private profile information. You can ask for an individual correction or removal through the data-correction request in Privacy Settings.",
         },
       ],
     },
@@ -147,7 +147,7 @@ export const PRIVACY_POLICY: LegalDocument = {
               "Performance of a contract — Article 6(1)(b)",
             ],
             [
-              "Hold your allergies, dietary restrictions and health goals",
+              "Hold reported health information, allergies, dietary restrictions and health goals",
               "Your explicit consent — Article 9(2)(a)",
             ],
             [
@@ -332,7 +332,7 @@ export const PRIVACY_POLICY: LegalDocument = {
         },
         {
           kind: "paragraph",
-          text: "You can record children as members of your household — a household that cooks for children needs to say so. When you do, you are giving us information about them as the adult responsible for them, and you should tell them what you have recorded. We ask for as little as possible: a name and any dietary needs. We do not create accounts for children, and children cannot sign in.",
+          text: "You can record dependent children as household eaters. An adult household member may report food-relevant health information for a child after choosing the child and confirming the exact information. The app labels it as reported, not verified. Other active adults in that household can see the child's reported context so they can plan meals; an adult's own reported health context is private to that adult. Tell children what you record in a way appropriate to their age. Children do not have accounts and cannot sign in.",
         },
       ],
     },

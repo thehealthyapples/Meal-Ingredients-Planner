@@ -5,8 +5,8 @@ section: domains
 status: live
 visibility: household
 owner: Colin Clapson
-last_verified: 2026-07-11
-version: 1
+last_verified: 2026-11-05
+version: 2
 ---
 
 # Home
@@ -34,9 +34,9 @@ instance, is simply absent when there is nothing worth saying.
 
 | | |
 |---|---|
-| Route | `/home` |
+| Route | `/` |
 | Source | `client/src/pages/home-experience-page.tsx` |
-| Registered | `client/src/App.tsx` (line 204) |
+| Registered | `client/src/App.tsx` (`HomeRoute`) |
 
 ## Related
 

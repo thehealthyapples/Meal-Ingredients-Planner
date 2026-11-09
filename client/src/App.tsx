@@ -44,6 +44,7 @@ const AdminBehaviourWorkbenchPage = lazy(() => import("@/pages/admin-behaviour-w
 const AdminActivityMonitorPage = lazy(() => import("@/pages/admin-activity-monitor-page"));
 const AdminKnowledgeReviewPage = lazy(() => import("@/pages/admin-knowledge-review-page"));
 const AdminKnowledgeClaimsPage = lazy(() => import("@/pages/admin-knowledge-claims-page"));
+const AdminNutrientReferenceReviewPage = lazy(() => import("@/pages/admin-nutrient-reference-review-page"));
 const AdminCanonicalPublicationIntegrityPage = lazy(() => import("@/pages/admin-canonical-publication-integrity-page"));
 const SharedPlanPage = lazy(() => import("@/pages/shared-plan-page"));
 // COMM1A — the doorstep. Public and bare, like /shared/:token: the person
@@ -76,44 +77,6 @@ const FoodDiaryPage = lazy(() => import("@/pages/food-diary-page"));
 const QuickMealPage = lazy(() => import("@/pages/quick-meal-page"));
 const HomePage = lazy(() => import("@/pages/home-page"));
 const HomeExperiencePage = lazy(() => import("@/pages/home-experience-page"));
-// ARRIVAL1 — development-only Arrival Experience prototype. Live Home (`/home`) is untouched.
-//
-// The ternary is load-bearing and must not be "tidied" into a bare `lazy()` with the
-// guard left on the <Route> alone. `import.meta.env.DEV` is a compile-time constant:
-// written this way it folds to `false ? … : null`, the `import()` lands in a dead
-// branch, and Rollup drops the chunk. Guarding only the <Route> leaves the `import()`
-// live at module scope, and the prototype is still emitted into `dist/` — unreachable,
-// but shipped. That was the first version of this line, and the build proved it wrong.
-const ArrivalExperiencePage = import.meta.env.DEV
-  ? lazy(() => import("@/pages/dev/arrival-experience"))
-  : null;
-// EXP2 — five development-only Arrival Experience exploration prototypes. Same
-// load-bearing ternary as ARRIVAL1 above: each `import()` must sit inside the
-// compile-time DEV branch so Rollup drops the chunks from production entirely.
-const ArrivalAWelcomePage = import.meta.env.DEV
-  ? lazy(() => import("@/pages/dev/arrival-a-welcome"))
-  : null;
-const ArrivalBOrchardPage = import.meta.env.DEV
-  ? lazy(() => import("@/pages/dev/arrival-b-orchard"))
-  : null;
-const ArrivalCWorkspacePage = import.meta.env.DEV
-  ? lazy(() => import("@/pages/dev/arrival-c-workspace"))
-  : null;
-const ArrivalDQuietPage = import.meta.env.DEV
-  ? lazy(() => import("@/pages/dev/arrival-d-quiet"))
-  : null;
-const ArrivalERestraintPage = import.meta.env.DEV
-  ? lazy(() => import("@/pages/dev/arrival-e-restraint"))
-  : null;
-// EXP3 — two development-only Arrival SYNTHESIS prototypes: the strongest EXP2
-// ideas deliberately combined into candidate arrivals. Same load-bearing
-// ternary as ARRIVAL1 above, so nothing ships in the production bundle.
-const ArrivalS1QuietPage = import.meta.env.DEV
-  ? lazy(() => import("@/pages/dev/arrival-s1-quiet"))
-  : null;
-const ArrivalS2WalkingHomePage = import.meta.env.DEV
-  ? lazy(() => import("@/pages/dev/arrival-s2-walking-home"))
-  : null;
 // EXP4's three Materiality & Depth studies are all gone, and the disposition EXP4 §6
 // set for them is complete. B (material-b-atmosphere) and C (material-c-restraint) lost
 // ODL2's selection and were deleted then — both set type directly on the orchard, which
@@ -198,10 +161,9 @@ function HomeRoute() {
 
   if (user) {
     if (!user.onboardingCompleted) return <Redirect to="/onboarding" />;
-    // UX0 — Home is the default destination after login. The prior intent-based
-    // routing (planner/cookbook/analyser/shopping) is superseded as the landing;
-    // its telemetry (routeToPath / useRoutingCorrectionTracker) is now dormant.
-    return <Redirect to="/home" />;
+    // Home is the default destination after login. The public welcome and
+    // household Home share this one address; render the protected room in place.
+    return <ProtectedRoute component={HomeExperiencePage} />;
   }
 
   return <HomePage />;
@@ -274,6 +236,7 @@ const AdminBehaviourChrome = withAdminBanner(AdminBehaviourWorkbenchPage);
 const AdminActivityMonitorChrome = withAdminBanner(AdminActivityMonitorPage);
 const AdminCanonicalPublicationIntegrityChrome = withAdminBanner(AdminCanonicalPublicationIntegrityPage);
 const AdminKnowledgeClaimsChrome = withAdminBanner(AdminKnowledgeClaimsPage);
+const AdminNutrientReferenceReviewChrome = withAdminBanner(AdminNutrientReferenceReviewPage);
 
 function Router() {
   useRoutingCorrectionTracker();
@@ -319,80 +282,13 @@ function Router() {
       <Route path="/legal" component={LegalPage} />
 
       <Route path="/" component={HomeRoute} />
-      <Route path="/home" component={() => <ProtectedRoute component={HomeExperiencePage} />} />
-      {/* ARRIVAL1 — development only. Wrapped in ProtectedRoute so the prototype
-          inherits the ONE shell: the same orchard backdrop, header slot, bottom
-          nav, error boundary and FloatingAssistant every authenticated page gets.
-          It composes the shell; it does not copy it. */}
-      {ArrivalExperiencePage && (
-        <Route
-          path="/dev/arrival"
-          component={() => <ProtectedRoute component={ArrivalExperiencePage} />}
-        />
-      )}
-      {/* EXP2 — development only, like ARRIVAL1 above: each prototype composes
-          the ONE shell via ProtectedRoute; none copies it. */}
-      {ArrivalAWelcomePage && (
-        <Route
-          path="/dev/arrival-a-welcome"
-          component={() => <ProtectedRoute component={ArrivalAWelcomePage} />}
-        />
-      )}
-      {ArrivalBOrchardPage && (
-        <Route
-          path="/dev/arrival-b-orchard"
-          component={() => <ProtectedRoute component={ArrivalBOrchardPage} />}
-        />
-      )}
-      {ArrivalCWorkspacePage && (
-        <Route
-          path="/dev/arrival-c-workspace"
-          component={() => <ProtectedRoute component={ArrivalCWorkspacePage} />}
-        />
-      )}
-      {ArrivalDQuietPage && (
-        <Route
-          path="/dev/arrival-d-quiet"
-          component={() => <ProtectedRoute component={ArrivalDQuietPage} />}
-        />
-      )}
-      {ArrivalERestraintPage && (
-        <Route
-          path="/dev/arrival-e-restraint"
-          component={() => <ProtectedRoute component={ArrivalERestraintPage} />}
-        />
-      )}
-      {/* EXP3 — development only: the two synthesis candidates, composed from
-          the ONE shell exactly like the EXP2 prototypes above. */}
-      {ArrivalS1QuietPage && (
-        <Route
-          path="/dev/arrival-s1-quiet"
-          component={() => <ProtectedRoute component={ArrivalS1QuietPage} />}
-        />
-      )}
-      {ArrivalS2WalkingHomePage && (
-        <Route
-          path="/dev/arrival-s2-walking-home"
-          component={() => <ProtectedRoute component={ArrivalS2WalkingHomePage} />}
-        />
-      )}
       <Route path="/dashboard" component={() => <ProtectedRoute component={DashboardPage} />} />
       <Route path="/meals/:id" component={() => <ProtectedRoute component={MealDetailPage} />} />
       <Route path="/foods/:slug" component={() => <ProtectedRoute component={FoodDetailPage} />} />
       <Route path="/compare" component={() => <ProtectedRoute component={FoodComparisonPage} />} />
-      <Route path="/meals" component={() => <ProtectedRoute component={MealsPage} />} />
-      <Route path="/cookbook/concept-real-book" component={() => <ProtectedRoute component={CookbookRealBookConcept} />} />
       <Route path="/cookbook" component={() => <ProtectedRoute component={CookbookRealBookConcept} />} />
       <Route path="/cookbook/grid" component={() => <ProtectedRoute component={MealsPage} />} />
       <Route path="/import-recipe" component={() => <ProtectedRoute component={ImportRecipePage} />} />
-      {/* SHOP3 — the second Shopping door is closed. `/basket` and
-          `/analyse-basket` were a duplicate of the canonical Shopping room
-          that, critically, never mounted the ambient surface carrying
-          `shopping-restriction-conflict` — THA's only `critical` signal. A
-          household arriving on the old door now lands on the room that
-          warns them. Bookmarks are honoured by redirect, not by 404. */}
-      <Route path="/analyse-basket" component={() => <Redirect to="/shopping-workspace" />} />
-      <Route path="/basket" component={() => <Redirect to="/shopping-workspace" />} />
       <Route path="/products" component={() => <ProtectedRoute component={ProductsPage} />} />
       <Route path="/analyser" component={() => <ProtectedRoute component={ProductsPage} />} />
       <Route path="/weekly-planner" component={() => <ProtectedRoute component={PlannerPageWrapper} />} />
@@ -413,27 +309,29 @@ function Router() {
       <Route path="/admin/activity" component={() => <ProtectedRoute component={AdminActivityMonitorChrome} />} />
       <Route path="/admin/knowledge-review" component={() => <ProtectedRoute component={AdminKnowledgeReviewPage} />} />
       <Route path="/admin/knowledge-claims" component={() => <ProtectedRoute component={AdminKnowledgeClaimsChrome} />} />
+      <Route path="/admin/nutrient-reference-review" component={() => <ProtectedRoute component={AdminNutrientReferenceReviewChrome} />} />
       <Route path="/admin/canonical-publication-integrity" component={() => <ProtectedRoute component={AdminCanonicalPublicationIntegrityChrome} />} />
       <Route path="/pantry" component={() => <ProtectedRoute component={LivingHomeRoom} />} />
       <Route path="/pantry/fridge-preview" component={() => <ProtectedRoute component={FridgeInteractionPreview} />} />
       <Route path="/pantry/shelves-preview" component={() => <ProtectedRoute component={() => <PantryAreaInteractionPreview kind="shelves" />} />} />
       <Route path="/pantry/cupboard-preview" component={() => <ProtectedRoute component={() => <PantryAreaInteractionPreview kind="cupboard" />} />} />
       <Route path="/pantry/:group" component={() => <ProtectedRoute component={LarderCategoryView} />} />
-      {/* The Larder IS the pantry room (LARDER1 §2 — one room, one arrangement);
-          the old preview door is honoured by redirect, never a rival room. */}
-      <Route path="/larder"><Redirect to="/pantry" /></Route>
       {/* COMM2 — the Orchard. An invitation arrives as ?invitation=<token>;
           the room answers it and clears the token from the URL once spent. */}
       <Route path="/orchard" component={() => <ProtectedRoute component={OrchardPage} />} />
       {/* PROD4 — the room is called "Nutrition" in the one navigation list and
           was reachable only at /plant-diversity. Plant diversity is one TAB of
           this room (the other is Nutrients), so the path named a part after the
-          whole. /nutrition is now canonical and /plant-diversity redirects, so
-          every existing deep link, bookmark and shared URL still lands. */}
-      <Route path="/nutrition" component={() => <ProtectedRoute component={PlantDiversityPage} />} />
-      <Route path="/plant-diversity" component={() => <Redirect to="/nutrition" />} />
+          whole. /nutrition was made canonical and /plant-diversity redirected.
+          FOODUI1 then renamed the nav door itself to "Food" (merging in
+          Analyser's quick on-ramp and Compare); /food is now canonical for the
+          same reason /nutrition was — the path should name the door, not a
+          retired label for it. Both /nutrition and /plant-diversity redirect,
+          so every existing deep link, bookmark and shared URL still lands. */}
+      <Route path="/food" component={() => <ProtectedRoute component={PlantDiversityPage} />} />
+      <Route path="/nutrition" component={() => <Redirect to="/food" />} />
+      <Route path="/plant-diversity" component={() => <Redirect to="/food" />} />
       <Route path="/diary" component={() => <ProtectedRoute component={FoodDiaryPage} />} />
-      <Route path="/my-diary" component={() => <ProtectedRoute component={FoodDiaryPage} />} />
       <Route path="/shared/:token" component={SharedPlanPage} />
       {/* COMM1A — rendered OUTSIDE ProtectedRoute on purpose. An invitation
           reaches someone who is not signed in and may have no account; sending
@@ -447,8 +345,6 @@ function Router() {
           its data file and its types are intact and the route returns the moment
           the partners are real; until then the door is closed rather than ajar. */}
       <Route path="/quick-meal" component={() => <ProtectedRoute component={QuickMealPage} />} />
-      <Route path="/list" component={() => <Redirect to="/shopping-workspace" />} />
-      <Route path="/shopping-list" component={() => <Redirect to="/shopping-workspace" />} />
       <Route path="/shopping-workspace" component={() => <ProtectedRoute component={ShoppingWorkspacePage} />} />
 
       {/* BUS1 — the household-facing trust surfaces. All three hang off Profile,

@@ -5,8 +5,8 @@ section: domains
 status: live
 visibility: household
 owner: Colin Clapson
-last_verified: 2026-07-11
-version: 1
+last_verified: 2026-11-05
+version: 2
 ---
 
 # Cookbook
@@ -31,13 +31,14 @@ and where its honest gaps are, lives in its own card.
 
 | | |
 |---|---|
-| Route | `/cookbook` (also `/meals`) |
-| Source | `client/src/pages/meals-page.tsx` |
+| Routes | `/cookbook` (real-book view), `/cookbook/grid` (grid view) |
+| Source | `client/src/pages/cookbook-real-book-concept.tsx`, `client/src/pages/meals-page.tsx` |
 | Capability | [Meals / Cookbook](../../../architecture/capabilities/meals.md) |
 
 ## Related
 
 - [[page-cookbook]] — the page that renders this domain
+- [[page-cookbook-grid]] — the grid view of the same recipe collection
 - [[page-meal-detail]] — a single recipe in full
 - [[jrn-add-recipe]] — adding a recipe
 - [[cap-meals]] — the meals capability

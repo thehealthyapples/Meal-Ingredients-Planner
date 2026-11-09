@@ -125,11 +125,22 @@ export function PlannerMealCardContent({
   const labels = varietyCategories.slice(0, 2);
 
   return (
-    <div
-      className={`flex-1 min-w-0 flex flex-col gap-0.5 ${
-        isPlaceholder ? "border border-dashed border-muted-foreground/30 rounded px-1 py-0.5" : ""
-      }`}
-    >
+    <div className="flex w-full min-w-0 items-center gap-2">
+      {!isPlaceholder && meal.imageUrl && (
+        <img
+          src={meal.imageUrl}
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          className="h-10 w-12 shrink-0 rounded-sm object-cover"
+          onError={(event) => { event.currentTarget.style.display = "none"; }}
+        />
+      )}
+      <div
+        className={`flex-1 min-w-0 flex flex-col gap-0.5 ${
+          isPlaceholder ? "border border-dashed border-muted-foreground/30 rounded px-1 py-0.5" : ""
+        }`}
+      >
       {/* Line 1: Meal title */}
       <span className={`break-words leading-tight pr-3 ${isCooked ? "line-through" : ""}`}>
         {meal.name}
@@ -205,6 +216,7 @@ export function PlannerMealCardContent({
       {isCooked && (
         <span className="text-[9px] text-emerald-600/70 dark:text-emerald-400/70">Cooked</span>
       )}
+      </div>
     </div>
   );
 }

@@ -11,19 +11,19 @@ version: 1
 
 # Profile capability
 
-> Apple can read the household's own preferences back to them; passwords and
+> Companion can read the household's own preferences back to them; passwords and
 > tokens are never exposed to it.
 
 ## What it means for the household
 
-Ask Apple about the household's own settings and preferences and it will read
+Ask Companion about the household's own settings and preferences and it will read
 them back — diet, budget, the choices the household has already made. It is a
 plain-language mirror of what the household told THA about itself.
 
 ## What it will never do
 
 It never sees the household's secrets. Passwords and security tokens are not
-exposed to Apple at all, so it cannot read, repeat or leak them. And it reads
+exposed to Companion at all, so it cannot read, repeat or leak them. And it reads
 preferences rather than changing them — updating a setting stays with the
 person.
 

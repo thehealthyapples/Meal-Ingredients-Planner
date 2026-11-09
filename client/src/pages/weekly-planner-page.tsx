@@ -128,6 +128,13 @@ const BASE_MATRIX_ROWS: MatrixRow[] = [
   { id: "snacks",    label: "Snacks",    mealType: "snacks",    audience: "adult", isDrink: false, addMealType: "snacks",     icon: Cookie, iconColor: "text-green-500", isPrincipal: false },
 ];
 
+/** "Add {label}s to basket" — naive suffixing produced "Lunchs" and "Snackss". */
+function pluralizeMealLabel(label: string): string {
+  if (label.endsWith("Snacks")) return label;
+  if (label.endsWith("Lunch")) return `${label}es`;
+  return `${label}s`;
+}
+
 function findEntry(entries: PlannerEntry[], mealType: string, audience: string, isDrink: boolean = false): PlannerEntry | undefined {
   return entries.find(e => e.mealType === mealType && e.audience === audience && e.isDrink === isDrink);
 }
@@ -366,6 +373,7 @@ export default function WeeklyPlannerPage() {
   const [renameValue, setRenameValue] = useState("");
   const [clearWeekId, setClearWeekId] = useState<number | null>(null);
   const [mobileAssistantOpen, setMobileAssistantOpen] = useState(false);
+  const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const [pickerTarget, setPickerTarget] = useState<EntryTarget | null>(null);
   const [sharePlanOpen, setSharePlanOpen] = useState(false);
   const [saveWeekOpen, setSaveWeekOpen] = useState(false);
@@ -593,6 +601,24 @@ export default function WeeklyPlannerPage() {
 
   // ── Planner context (Phase 1A + 5B: assistant panel routing + selected day) ─
   const { assistantMode, setAssistantMode, selectedDayId, setSelectedDayId } = usePlannerContext();
+  const workspacePanelVisible = workspaceOpen || mobileAssistantOpen || assistantMode !== null;
+
+  const closePlannerWorkspace = () => {
+    if (plannerScanOpen) handlePlannerScanOpenChange(false);
+    if (assistantMode === "resolve") setResolveSession(null);
+    setAssistantMode(null);
+    setWorkspaceOpen(false);
+    setMobileAssistantOpen(false);
+  };
+
+  const togglePlannerWorkspace = () => {
+    if (workspacePanelVisible) {
+      closePlannerWorkspace();
+    } else {
+      setWorkspaceOpen(true);
+      setMobileAssistantOpen(true);
+    }
+  };
 
   // ── Shopping handoff state (Phase 3: post-generation continuity) ─────────────
   const [shoppingHandoff, setShoppingHandoff] = useState<ShoppingHandoffData | null>(null);
@@ -1514,7 +1540,7 @@ export default function WeeklyPlannerPage() {
     params.set("dayId", String(target.dayId));
     params.set("entryId", String(target.entryId));
     setAssistantMode(null);
-    navigate(`/meals?${params.toString()}`);
+    navigate(`/cookbook/grid?${params.toString()}`);
   };
 
   const handleScanFromReview = (target: ResolveTarget) => {
@@ -1820,12 +1846,19 @@ export default function WeeklyPlannerPage() {
         <WorkspaceHeader title="Planner" realm="planner" wide titleTestId="text-weekly-planner-title" />
         <div className={`${pageContainerClass(true)} pb-4 space-y-3`} data-testid="loading-planner">
           <Skeleton className="h-9 w-64" />
-          <div className="hidden sm:grid grid-cols-7 gap-2">
-            {Array.from({ length: 7 }).map((_, i) => (
-              <Skeleton key={i} className="h-64" />
-            ))}
-          </div>
-          <Skeleton className="h-64 sm:hidden" />
+          {/* FNDFIX5 (2026-11-03) — PX1-W4.8 made this content-shaped to stop
+              a full-page spinner void, but the shape it chose (a 7-column grid
+              of square cells) was never updated after the Planner's visual
+              design became one photographic wooden board hanging from a rope
+              (.planner-physical-stage, aspect-ratio 1836/856 on desktop,
+              4/3 below 1024px — see client/src/styles/planner-physical.css).
+              Loading as 7 small squares then snapping to one wide board was
+              exactly the dramatic shape-change PX1-W4.8 set out to avoid, just
+              moved from "spinner → grid" to "wrong grid → right board". One
+              skeleton now, sized to the real board's aspect ratio at each
+              breakpoint, so the shape doesn't change when data arrives. */}
+          <Skeleton className="hidden sm:block w-full rounded-xl" style={{ aspectRatio: "1836 / 856" }} />
+          <Skeleton className="sm:hidden w-full rounded-xl" style={{ aspectRatio: "4 / 3" }} />
         </div>
       </>
     );
@@ -1855,10 +1888,27 @@ export default function WeeklyPlannerPage() {
   return (
     <PlannerWorkspaceContext.Provider value={workspaceValue}>
     <>
+    <div
+      className={`${pageContainerClass(true)} planner-physical-surface`}
+      data-realm="planner"
+      data-workspace-open={workspacePanelVisible || undefined}
+    >
+    <DndContext
+      sensors={dndSensors}
+      collisionDetection={mobileFriendlyCollision}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+    >
+    <div className="planner-physical-layout">
+    <div className="planner-physical-scene-holder">
+    <div className="planner-physical-stage">
     <WorkspaceHeader
       title="Planner"
       realm="planner"
       wide
+      inline
       className="planner-workspace-header"
       titleTestId="text-weekly-planner-title"
       search={{
@@ -1868,7 +1918,7 @@ export default function WeeklyPlannerPage() {
         onSubmit: () => { navigate("/cookbook"); },
       }}
       contextBar={
-        <div className="flex items-center gap-1 flex-wrap overflow-x-auto scrollbar-hide w-full">
+        <div className="planner-week-toolbar flex items-center gap-1 overflow-x-auto scrollbar-hide w-full">
           {renameWeekId === activeWeekData?.id ? (
             <input
               value={renameValue}
@@ -1953,25 +2003,12 @@ export default function WeeklyPlannerPage() {
             </button>
           )}
           <div className="hidden md:block h-4 w-px bg-border mx-0.5" />
-          {/* Plan + Send week to basket (desktop only; mobile access via workspace drawer) */}
-          <div className="hidden md:flex items-center gap-1 rounded-md border border-[var(--realm-border)] px-1 py-0.5">
-            <Button
-              size="sm"
-              variant="outline"
-              className="border-0 hidden md:inline-flex px-2.5 text-xs realm-banner-btn"
-              onClick={() => setAssistantMode("smart")}
-              disabled={smartLoading}
-              data-testid="button-plan-my-week"
-            >
-              {smartLoading ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Sparkles className="mr-1 h-3 w-3" />}
-              {smartLoading ? "Planning…" : "Plan"}
-            </Button>
-            <div className="hidden md:block w-px h-4 bg-[var(--realm-border)]" />
-            <Button size="sm" variant="outline" className="border-0 hidden md:inline-flex px-2.5 text-xs realm-banner-btn" onClick={() => addAllToBasket(sortedDays)} disabled={addToBasketMutation.isPending} data-testid="button-add-all-basket">
-              <ShoppingBasket className="h-3 w-3 mr-1" />
-              {addToBasketMutation.isPending ? "…" : "Send week to basket"}
-            </Button>
-          </div>
+          {/* 2026-11-03 (owner) — the "Plan" shortcut here duplicated the
+              Workspace panel's own "Plan my week" tile one click away
+              (IdlePanelContent, button-idle-smart) — two buttons opening the
+              same assistant at a different point. Removed; Workspace is now
+              the one entry point on desktop, matching mobile (which only
+              ever had the workspace drawer). */}
           {placeholderItems.length > 0 && (
             <button
               onClick={() => setAssistantMode("placeholder-review")}
@@ -2000,6 +2037,19 @@ export default function WeeklyPlannerPage() {
         </div>
       }
       actions={
+        <>
+          <button
+            type="button"
+            className="planner-workspace-toggle"
+            onClick={togglePlannerWorkspace}
+            aria-label={workspacePanelVisible ? "Close planning workspace" : "Open planning workspace"}
+            aria-expanded={workspacePanelVisible}
+            aria-controls="planner-workspace-panel"
+            data-testid="button-planner-workspace-toggle"
+          >
+            <LayoutGrid className="h-4 w-4" aria-hidden="true" />
+            <span>Workspace</span>
+          </button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             {/* UX2 — THE THIRD APPLE IS RETIRED, for the same reason as the second.
@@ -2014,7 +2064,7 @@ export default function WeeklyPlannerPage() {
                 file already uses `MoreHorizontal` for exactly that, twice. */}
             <button
               className="flex items-center justify-center h-9 w-9 rounded-lg transition-colors text-muted-foreground hover:bg-accent hover:text-foreground"
-              aria-label="Planner workspace"
+              aria-label="More Planner actions"
               data-testid="button-planner-workspace-menu"
             >
               <MoreHorizontal className="h-4 w-4" />
@@ -2054,37 +2104,39 @@ export default function WeeklyPlannerPage() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        </>
       }
     />
-    <div className={`${pageContainerClass(true)} planner-physical-surface`} data-realm="planner">
-      <img
-        className="planner-physical-photo"
-        src="/images/planner/PLANNER_TARGET_BLANK_ACCEPTED.png"
-        alt=""
-        aria-hidden="true"
-      />
-      <DndContext
-        sensors={dndSensors}
-        collisionDetection={mobileFriendlyCollision}
-        onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
-        onDragEnd={handleDragEnd}
-        onDragCancel={handleDragCancel}
-      >
-      <div className="flex gap-3 items-start">
-      <div className="flex-1 min-w-0">
+      <picture>
+        <source
+          media="(min-width: 1024px)"
+          srcSet="/images/planner/PLANNER_DESKTOP_BOARD_DOMINANT.png"
+        />
+        <source
+          media="(max-width: 767px)"
+          srcSet="/images/planner/PLANNER_MOBILE_PORTRAIT.png"
+        />
+        <img
+          className="planner-physical-photo"
+          src="/images/planner/PLANNER_TARGET_BLANK_ACCEPTED.png"
+          alt=""
+          aria-hidden="true"
+        />
+      </picture>
+      <div className="planner-physical-content">
+      <div className="planner-physical-main flex-1 min-w-0">
       {/* UX3 — the first-visit tip is gone: orientation is the Companion's, and
           the empty-week state below already carries the one next action. */}
 
       {/* The grid below stays rendered — its cells ARE the affordance, so replacing
           them with a card would remove the very thing to act on. This names the
           absence above them and carries the one next action. Plan is otherwise
-          desktop-only (`button-plan-my-week` is `hidden md:inline-flex`, mobile
-          reaches it through the workspace drawer), so on a phone this is also the
-          first place the action becomes directly reachable. Same handler, no new
-          capability. */}
+          reached through the Workspace panel (desktop: its idle tile; mobile:
+          the workspace drawer), so on a phone this is also the first place the
+          action becomes directly reachable. Same handler, no new capability. */}
       {activeWeekIsEmpty && (
         <EmptyState
+          className="planner-empty-guidance"
           variant="empty"
           size="compact"
           icon={Sparkles}
@@ -2114,23 +2166,27 @@ export default function WeeklyPlannerPage() {
         {householdEaters.length > 0 && activeWeekId && (
           <div className="mb-2" data-testid="section-week-diets">
             <button
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              type="button"
+              className="planner-household-override-button flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
               onClick={() => setWeekDietsOpen(o => !o)}
+              aria-label={`Household diet overrides, ${weekOverrides.length} differences`}
+              aria-expanded={weekDietsOpen}
+              aria-controls="planner-week-diet-overrides"
+              title="Household diet overrides"
               data-testid="button-toggle-week-diets"
             >
-              <Users className="h-3.5 w-3.5" />
-              <span>This week's household diets</span>
+              <Users className="h-4 w-4" aria-hidden="true" />
+              <span className="sr-only">Household diet overrides</span>
               {weekOverrides.length > 0 && (
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 ml-1">{weekOverrides.length} override{weekOverrides.length !== 1 ? "s" : ""}</Badge>
+                <span className="planner-override-count" aria-hidden="true">{weekOverrides.length}</span>
               )}
-              {weekDietsOpen ? <ChevronUp className="h-3 w-3 ml-1" /> : <ChevronDown className="h-3 w-3 ml-1" />}
             </button>
           </div>
         )}
 
         {/* Diets dropdown — expands below the combined row; variety stays above */}
         {householdEaters.length > 0 && activeWeekId && weekDietsOpen && (
-          <Card className="p-4 space-y-3 mb-4" data-testid="card-week-diets">
+          <Card id="planner-week-diet-overrides" className="p-4 space-y-3 mb-4" data-testid="card-week-diets">
             <p className="text-[11px] text-muted-foreground leading-relaxed">
               Override a member's household adaptations for this week only. Hard restrictions are always kept.
             </p>
@@ -2196,7 +2252,7 @@ export default function WeeklyPlannerPage() {
         <PlannerIntelligenceStrip
           weekId={activeWeekId}
           weekIngredients={weekIngredients}
-          onNavigatePlantDiversity={() => navigate("/nutrition")}
+          onNavigatePlantDiversity={() => navigate("/food")}
         />
 
         {/* UX3 — the week's gaps and the noticed-patterns panel spoke about the
@@ -2207,7 +2263,7 @@ export default function WeeklyPlannerPage() {
           <TabsContent key={week.id} value={String(week.weekNumber)} className="mt-0">
 
             {/* ── Mobile: single-day view (hidden on sm+) ── */}
-            <div className="sm:hidden mb-6">
+            <div className="md:hidden mb-6">
               {/* Horizontal day row — also droppable for cross-day drag */}
               <div className="mb-3">
                 <div className="flex items-center gap-1">
@@ -2477,8 +2533,8 @@ export default function WeeklyPlannerPage() {
             </div>
 
             {/* ── Desktop Matrix Grid (hidden on mobile) ── */}
-            <div className="planner-physical-grid hidden sm:block overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 mb-6">
-              <div style={{ minWidth: "900px" }}>
+            <div className="planner-physical-grid hidden md:block overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0 mb-6">
+              <div>
                 <Card className="overflow-hidden">
                   <div
                     style={{
@@ -2536,7 +2592,6 @@ export default function WeeklyPlannerPage() {
                           <div
                             key={row.id + "-label"}
                             className={`flex flex-col justify-center px-2 border-r border-border/60 sticky left-0 z-10 group ${row.isPrincipal ? "py-2.5" : "py-1"} ${!isLastRow ? "border-b border-border/60" : ""}`}
-                            style={{ backgroundColor: "hsl(var(--background))" }}
                           >
                             <div className="flex items-center gap-1">
                               <RowIcon className={`${row.isPrincipal ? "h-3.5 w-3.5" : "h-3 w-3"} flex-shrink-0 ${row.iconColor}`} />
@@ -2549,13 +2604,13 @@ export default function WeeklyPlannerPage() {
                                     className="mt-1 rounded transition-colors text-muted-foreground hover:text-foreground self-center"
                                     onClick={() => addSlotToBasket(row.mealType!, sortedDays)}
                                     disabled={addToBasketMutation.isPending}
-                                    aria-label={`Add ${row.label}s to basket`}
+                                    aria-label={`Add ${pluralizeMealLabel(row.label)} to basket`}
                                     data-testid={`button-add-slot-${row.mealType}-basket`}
                                   >
                                     <ShoppingBasket className="h-4 w-4" />
                                   </button>
                                 </TooltipTrigger>
-                                <TooltipContent side="right"><p className="text-xs">Add {row.label}s to basket</p></TooltipContent>
+                                <TooltipContent side="right"><p className="text-xs">Add {pluralizeMealLabel(row.label)} to basket</p></TooltipContent>
                               </Tooltip>
                             )}
                           </div>
@@ -2892,12 +2947,19 @@ export default function WeeklyPlannerPage() {
             {week.weekNumber === Number(activeWeek) && activeWeekId && (
               <DroppableProvisioning weekId={activeWeekId} className="mt-4 mb-2" data-testid="section-weekly-provisioning">
                 <button
+                  type="button"
                   className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border bg-card hover:bg-muted/30 transition-colors text-left"
                   onClick={() => setProvisioningOpen(v => !v)}
+                  aria-label={`The week's provisions, ${provisioningItems.length} items`}
+                  aria-expanded={provisioningOpen}
+                  aria-controls="planner-provisioning-items"
+                  title="The week's provisions"
                   data-testid="button-toggle-provisioning"
                 >
                   <ShoppingCart className="h-4 w-4 text-emerald-600 shrink-0" />
-                  <span className="text-sm font-medium text-foreground flex-1">The week's provisions</span>
+                  <span className="text-sm font-medium text-foreground flex-1">
+                    {provisioningItems.length === 0 ? "Workspace Search · drop here" : "Provisions"}
+                  </span>
                   {provisioningItems.length > 0 && (
                     <span className="text-xs text-muted-foreground/70 mr-1">{provisioningItems.length} item{provisioningItems.length !== 1 ? "s" : ""}</span>
                   )}
@@ -2907,15 +2969,8 @@ export default function WeeklyPlannerPage() {
                 </button>
 
                 {provisioningOpen && (
-                  <div className="mt-1 px-3 py-2.5 rounded-lg border border-border bg-card/50 space-y-2" data-testid="section-provisioning-items">
-                    <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
-                      Things the household needs this week, not tied to any one day.
-                    </p>
-                    {provisioningItems.length === 0 ? (
-                      <p className="text-xs text-muted-foreground/50 py-1">
-                        Anything you add for the whole week — rather than a single day — gathers here.
-                      </p>
-                    ) : (
+                  <div id="planner-provisioning-items" className="mt-1 px-3 py-2.5 rounded-lg border border-border bg-card/50 space-y-2" data-testid="section-provisioning-items">
+                    {provisioningItems.length > 0 && (
                       <div className="space-y-1">
                         {provisioningItems.map(item => (
                           <div key={item.id} className="flex items-center gap-2 group" data-testid={`prov-item-${item.id}`}>
@@ -2945,15 +3000,13 @@ export default function WeeklyPlannerPage() {
           </TabsContent>
         ))}
       </Tabs>
-      </div>{/* end flex-1 min-w-0 */}
-      <PlannerAssistantPanel
+      </div>{/* end planner main content */}
+      </div>{/* end planner-physical-content */}
+      </div>{/* end planner-physical-stage */}
+      </div>{/* end planner-physical-scene-holder */}
+      {workspacePanelVisible && <PlannerAssistantPanel
         mode={assistantMode}
-        onClose={() => {
-          if (plannerScanOpen) handlePlannerScanOpenChange(false);
-          if (assistantMode === "resolve") setResolveSession(null);
-          setAssistantMode(null);
-          setMobileAssistantOpen(false);
-        }}
+        onClose={closePlannerWorkspace}
         reviewContent={
           assistantMode === "smart-review" ? (
             <SmartReviewPanelContent
@@ -3067,8 +3120,8 @@ export default function WeeklyPlannerPage() {
             });
           }
         }}
-      />
-      </div>{/* end flex gap-3 */}
+      />}
+      </div>{/* end planner-physical-layout */}
       <DragOverlay dropAnimation={null} modifiers={[snapOverlayToCursor]}>
         {activeDrag ? (
           <div className="flex items-center gap-2 w-[200px] bg-background border border-primary/70 rounded-lg px-3 py-2 text-sm font-medium shadow-lg opacity-90 cursor-grabbing pointer-events-none">

@@ -1,0 +1,148 @@
+import { useState } from "react";
+import { Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { ChevronLeft, ExternalLink, FlaskConical, ShieldAlert } from "lucide-react";
+
+type Candidate = {
+  method: {
+    id: string; version: string; nutrientSlug: string; referenceType: string; unit: string;
+    minAge: number; maxAge?: number; requiresExercise?: boolean; calculation: any;
+    assumptions: string[]; candidateSourceUrls?: string[];
+  };
+  sources: Array<{ body: string; title: string; url: string }>;
+  sourceAdmission: boolean;
+  latestDecision: { action: string; createdAt: string; after?: any; detail?: string | null } | null;
+};
+
+type Preview = {
+  status: string; reason?: string; value?: number; range?: { lower: number; upper: number };
+  unit?: string; label?: string; assumptions?: string[];
+};
+
+type ReviewHistoryRow = { id: number; action: string; createdAt: string; detail?: string | null; after?: any };
+
+const CHECKS = [
+  ["source", "I opened and reviewed the linked source and confirmed it supports this exact method."],
+  ["population", "I checked the intended population, age limits, exclusions, and any required inputs."],
+  ["method", "I checked the reference type, units, formula, and example calculation."],
+  ["assumptions", "I reviewed the assumptions and understand what this method does not establish."],
+  ["notLive", "I understand this records editorial review only; it does not make Companion guidance live."],
+] as const;
+
+export default function AdminNutrientReferenceReviewPage() {
+  const [ageYears, setAgeYears] = useState("35");
+  const [bodyMass, setBodyMass] = useState("70");
+  const [bodyMassUnit, setBodyMassUnit] = useState<"kg" | "lb">("kg");
+  const [exerciseConfirmed, setExerciseConfirmed] = useState(false);
+  const [muscleStrengthGoal, setMuscleStrengthGoal] = useState(false);
+  const [checks, setChecks] = useState<Record<string, boolean>>({});
+  const [reasons, setReasons] = useState<Record<string, string>>({});
+  const [previews, setPreviews] = useState<Record<string, Preview>>({});
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const { data, isPending, error } = useQuery<{ methods: Candidate[]; history: ReviewHistoryRow[] }>({
+    queryKey: ["/api/admin/nutrient-reference-review"],
+    queryFn: () => apiRequest("GET", "/api/admin/nutrient-reference-review").then(r => r.json()),
+  });
+
+  async function preview(methodId: string) {
+    setBusy(methodId);
+    setMessage("");
+    try {
+      const response = await apiRequest("POST", `/api/admin/nutrient-reference-review/${methodId}/preview`, {
+        ageYears: Number(ageYears), bodyMass: Number(bodyMass), bodyMassUnit, exerciseConfirmed, muscleStrengthGoal,
+      });
+      const result = await response.json();
+      setPreviews(current => ({ ...current, [methodId]: result }));
+    } catch (e: any) {
+      setMessage(e?.message || "The preview could not be calculated.");
+    } finally { setBusy(null); }
+  }
+
+  async function decide(methodId: string, action: "approve" | "reject") {
+    setBusy(methodId);
+    setMessage("");
+    try {
+      const response = await apiRequest("POST", `/api/admin/nutrient-reference-review/${methodId}/decision`, {
+        action,
+        reason: reasons[methodId] ?? "",
+        confirmations: Object.fromEntries(CHECKS.map(([key]) => [key, checks[`${methodId}:${key}`] === true])),
+      });
+      await response.json();
+      await queryClient.invalidateQueries({ queryKey: ["/api/admin/nutrient-reference-review"] });
+      setMessage(action === "approve" ? "Review recorded. This method is still unpublished to Companion." : "Rejection recorded with its review reason.");
+    } catch (e: any) {
+      let detail = e?.message || "The review decision could not be recorded.";
+      try { detail = JSON.parse(detail.replace(/^\d{3}:\s*/, "")).message ?? detail; } catch { /* keep response text */ }
+      setMessage(detail);
+    } finally { setBusy(null); }
+  }
+
+  return <div className="container mx-auto max-w-5xl px-4 py-8" data-testid="admin-nutrient-reference-review">
+    <Link href="/admin" className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Admin</Link>
+    <div className="mb-1 flex items-center gap-3"><FlaskConical className="h-6 w-6 text-primary" /><h1 className="text-2xl font-semibold">Adult nutrient reference review</h1></div>
+    <p className="mb-5 max-w-3xl text-sm text-muted-foreground">Inspect the cited method, population, assumptions, and a sample calculation before recording a named editorial decision.</p>
+    <div role="note" className="mb-6 flex gap-3 rounded-lg border border-amber-500/50 bg-amber-50/60 p-4 text-sm dark:bg-amber-950/20">
+      <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" /><div><strong className="block">Review preview only — not live in Companion</strong><span>A preview uses example values in this Admin page. Approval records your review in the existing evidence audit ledger; a separate release must still connect and verify the method before Companion can use it.</span></div>
+    </div>
+    {message && <div role="status" className="mb-4 rounded-md border p-3 text-sm">{message}</div>}
+    {isPending && <p>Loading candidate methods…</p>}
+    {error && <div role="alert" className="mb-4 rounded-md border border-destructive/50 bg-destructive/5 p-3 text-sm text-destructive">Could not load candidate methods.</div>}
+
+    <section className="mb-6 rounded-lg border bg-card p-4" aria-labelledby="preview-inputs-title">
+      <h2 id="preview-inputs-title" className="mb-3 font-semibold">Example inputs for the review simulation</h2>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-1.5"><Label htmlFor="preview-age">Age (years)</Label><Input id="preview-age" type="number" min="18" value={ageYears} onChange={e => setAgeYears(e.target.value)} /></div>
+        <div className="grid gap-1.5"><Label htmlFor="preview-mass">Body mass</Label><div className="flex gap-2"><Input id="preview-mass" type="number" min="1" value={bodyMass} onChange={e => setBodyMass(e.target.value)} /><select aria-label="Body mass unit" className="rounded-md border bg-background px-2" value={bodyMassUnit} onChange={e => setBodyMassUnit(e.target.value as "kg" | "lb")}><option value="kg">kg</option><option value="lb">lb</option></select></div></div>
+        <div className="flex flex-col justify-end gap-2">
+          <label className="flex items-center gap-2 text-sm"><Checkbox checked={exerciseConfirmed} onCheckedChange={v => setExerciseConfirmed(v === true)} /> Example person exercises</label>
+          <label className="flex items-center gap-2 text-sm"><Checkbox checked={muscleStrengthGoal} onCheckedChange={v => setMuscleStrengthGoal(v === true)} /> Example goal: muscle or strength</label>
+        </div>
+      </div>
+      <p className="mt-2 text-xs text-muted-foreground">These values are used only for the simulation request; they are not read from or saved to a profile.</p>
+    </section>
+
+    <div className="space-y-4">
+      {(data?.methods ?? []).map(({ method, sources, sourceAdmission, latestDecision }) => {
+        const previewResult = previews[method.id];
+        const reviewedState = latestDecision?.action === "approved" ? "Editorial review recorded — not published" : latestDecision?.action === "rejected" ? "Rejected — not published" : "Awaiting review";
+        return <article key={method.id} className="rounded-lg border bg-card p-4" data-testid={`reference-method-${method.id}`}>
+          <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+            <div><h2 className="text-lg font-semibold">{method.nutrientSlug}: {method.referenceType}</h2><p className="text-xs text-muted-foreground">{method.id} · {method.version} · proposed ages {method.minAge}{method.maxAge ? `–${method.maxAge}` : "+"}</p></div>
+            <Badge variant={latestDecision?.action === "approved" ? "default" : latestDecision?.action === "rejected" ? "destructive" : "secondary"}>{reviewedState}</Badge>
+          </div>
+          <p className="mb-3 text-sm"><strong>Proposed calculation:</strong> {method.calculation.kind === "body-mass" ? `${method.calculation.lowerPerKg} g/kg/day${method.calculation.upperPerKg ? ` to ${method.calculation.upperPerKg} g/kg/day` : ""}` : "age/sex table lookup"}</p>
+          <div className="mb-3 space-y-1 text-sm"><strong>Population and assumptions</strong><ul className="list-disc pl-5">{method.assumptions.map(item => <li key={item}>{item}</li>)}</ul></div>
+          <div className="mb-4 space-y-1 text-sm"><strong>Source to inspect</strong>{sources.map(source => <p key={source.url}><a className="inline-flex items-center gap-1 text-primary underline" href={source.url} target="_blank" rel="noreferrer">{source.body}: {source.title}<ExternalLink className="h-3 w-3" /></a></p>)}
+            {!sourceAdmission && <p className="text-sm text-destructive">Approval is blocked: this source domain is not in the current trusted-source policy.</p>}
+          </div>
+          <Button variant="outline" size="sm" disabled={busy === method.id} onClick={() => preview(method.id)}>Run review simulation</Button>
+          {previewResult && <div className="my-3 rounded-md border border-dashed p-3 text-sm" aria-live="polite">
+            <strong>{previewResult.label ?? "Simulation unavailable"}</strong>{previewResult.status === "preview" && <p className="mt-1">{previewResult.value !== undefined ? `${previewResult.value.toFixed(1)} ${previewResult.unit}` : `${previewResult.range?.lower.toFixed(1)}–${previewResult.range?.upper.toFixed(1)} ${previewResult.unit}`} · {previewResult.referenceType}</p>}
+            {previewResult.reason && <p className="mt-1">{previewResult.reason}</p>}
+            {previewResult.assumptions?.map(item => <p key={item} className="mt-1 text-muted-foreground">Assumption: {item}</p>)}
+          </div>}
+          {latestDecision?.after?.reviewer && <p className="my-2 text-xs text-muted-foreground">Last decision by {latestDecision.after.reviewer} on {new Date(latestDecision.after.reviewedAt).toLocaleString()}{latestDecision.after.reason ? ` · ${latestDecision.after.reason}` : ""}</p>}
+          <div className="mt-4 border-t pt-3">
+            <h3 className="mb-2 font-medium">Record one review decision</h3>
+            <div className="space-y-2">{CHECKS.map(([key, label]) => <label key={key} className="flex items-start gap-2 text-sm"><Checkbox checked={checks[`${method.id}:${key}`] === true} onCheckedChange={value => setChecks(current => ({ ...current, [`${method.id}:${key}`]: value === true }))} /><span>{label}</span></label>)}</div>
+            <div className="mt-3 grid gap-1.5"><Label htmlFor={`reason-${method.id}`}>Reason or review note (required when rejecting)</Label><Textarea id={`reason-${method.id}`} value={reasons[method.id] ?? ""} onChange={e => setReasons(current => ({ ...current, [method.id]: e.target.value }))} rows={2} /></div>
+            <div className="mt-3 flex flex-wrap gap-2"><Button disabled={busy === method.id || !sourceAdmission || !CHECKS.every(([key]) => checks[`${method.id}:${key}`] === true)} onClick={() => decide(method.id, "approve")}>Record editorial approval</Button><Button variant="outline" disabled={busy === method.id || !reasons[method.id]?.trim()} onClick={() => decide(method.id, "reject")}>Reject with reason</Button></div>
+          </div>
+        </article>;
+      })}
+    </div>
+    <section className="mt-6 rounded-lg border bg-card p-4" aria-labelledby="review-history-title">
+      <h2 id="review-history-title" className="mb-2 font-semibold">Review history</h2>
+      {(data?.history ?? []).length === 0 ? <p className="text-sm text-muted-foreground">No decisions recorded yet.</p> : <ul className="space-y-2">{data!.history.map(row => <li key={row.id} className="border-t pt-2 text-sm"><strong>{row.after?.methodId ?? "Nutrient method"}</strong> · {row.action} · {row.after?.reviewer ?? "Unnamed reviewer"} · {new Date(row.createdAt).toLocaleString()}{row.detail ? <p className="text-muted-foreground">{row.detail}</p> : null}</li>)}</ul>}
+    </section>
+  </div>;
+}

@@ -174,7 +174,7 @@ export const HELP_ARTICLES = [
     category: "getting-started",
     title: "What should I do in my first week?",
     summary: "A short order to work in, so the product has enough to be useful.",
-    deepLink: "/home",
+    deepLink: "/",
     body: [
       {
         kind: "paragraph",
@@ -240,7 +240,7 @@ export const HELP_ARTICLES = [
     category: "planning",
     title: "How do I add or edit a recipe?",
     summary: "Type it in, scan a photo of it, or import one — then edit it whenever.",
-    deepLink: "/meals",
+    deepLink: "/cookbook",
     body: [
       { kind: "paragraph", text: "Your cookbook holds the meals you cook. There are three ways to get one in." },
       {

@@ -5,8 +5,8 @@ section: journeys
 status: live
 visibility: household
 owner: Colin Clapson
-last_verified: 2026-07-11
-version: 1
+last_verified: 2026-11-05
+version: 2
 ---
 
 # Shop the plan
@@ -33,20 +33,6 @@ basket is handed to a supermarket.
 4. **Check prices and hand off.** The workspace shows prices and totals and hands
    the basket to a supermarket.
 
-## Where it breaks
-
-Two independent defects sit on this journey:
-
-- **A duplicate destination.** The same job is done by two surfaces — the Shopping
-  workspace (`/shopping-workspace`) and the older Basket
-  (`/basket`, `/analyse-basket`, `shopping-list-page.tsx`). A household can end up
-  doing the same work in two different interfaces.
-- **A dead link between them.** The Shopping workspace's overflow menu has a
-  "Basket" item that links to `/shopping` (`shopping-workspace-page.tsx#L2147`) —
-  a route that does not exist in `App.tsx` (only `/basket`, `/analyse-basket`, and
-  `/shopping-workspace` are registered). Following it lands the household on Not
-  Found instead of the Basket it asked for.
-
 ## Where it lives
 
 | | |
@@ -58,13 +44,6 @@ Two independent defects sit on this journey:
 
 - [[page-planner]] — where the basket is filled from the plan
 - [[page-shopping-workspace]] — the working list where products are matched
-
-## Known defects
-
-- `fnd-shopping-duplicate` — two shopping surfaces (`/shopping-workspace` and
-  `/basket`) do the same job. See PDA1.
-- `fnd-broken-shopping-link` — the workspace's "Basket" menu item points at
-  `/shopping`, which has no route, so it dead-ends on Not Found. See PDA1.
 
 ---
 

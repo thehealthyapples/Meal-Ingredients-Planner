@@ -1,0 +1,116 @@
+[
+  {
+    "path": "client/src/App.tsx",
+    "snapshot": "G:\\The Healthy Apples\\Applications\\GitHub\\tha-integrated-dev-g-native-20261003\\.engineering\\session\\rollback-evidence\\COOKALIAS1_COOKBOOK_VIEW_CANONICALIZATION_20261105\\pre-edit\\client__src__App.tsx",
+    "sha256": "68A93C61E16D0C33BB4C55690D38C8A7DEAE9248892D4C8B1F364BCF72D3ACD4",
+    "existed": true
+  },
+  {
+    "path": "client/src/components/PlannerAssistantPanel.tsx",
+    "snapshot": "G:\\The Healthy Apples\\Applications\\GitHub\\tha-integrated-dev-g-native-20261003\\.engineering\\session\\rollback-evidence\\COOKALIAS1_COOKBOOK_VIEW_CANONICALIZATION_20261105\\pre-edit\\client__src__components__PlannerAssistantPanel.tsx",
+    "sha256": "4A92C78B47F1C871AE8BB2FEBB39FF3466EB873D83096D7186647D91A9D3DD65",
+    "existed": true
+  },
+  {
+    "path": "client/src/components/layout/app-shell.tsx",
+    "snapshot": "G:\\The Healthy Apples\\Applications\\GitHub\\tha-integrated-dev-g-native-20261003\\.engineering\\session\\rollback-evidence\\COOKALIAS1_COOKBOOK_VIEW_CANONICALIZATION_20261105\\pre-edit\\client__src__components__layout__app-shell.tsx",
+    "sha256": "5D339D0A6367488AF86A0E419B3C4321B27F8036AAEAB91DE2FB1351B54F041C",
+    "existed": true
+  },
+  {
+    "path": "client/src/components/nav-bar.tsx",
+    "snapshot": "G:\\The Healthy Apples\\Applications\\GitHub\\tha-integrated-dev-g-native-20261003\\.engineering\\session\\rollback-evidence\\COOKALIAS1_COOKBOOK_VIEW_CANONICALIZATION_20261105\\pre-edit\\client__src__components__nav-bar.tsx",
+    "sha256": "6CE43F8476C83B8F69E5D451BD7F47E1771730E4068B454CF6C1BF58A7AB98DC",
+    "existed": true
+  },
+  {
+    "path": "client/src/components/PlannerScanReview.tsx",
+    "snapshot": "G:\\The Healthy Apples\\Applications\\GitHub\\tha-integrated-dev-g-native-20261003\\.engineering\\session\\rollback-evidence\\COOKALIAS1_COOKBOOK_VIEW_CANONICALIZATION_20261105\\pre-edit\\client__src__components__PlannerScanReview.tsx",
+    "sha256": "744313993CFF4549EEE0A1D1D7A2710BDCC99FDFCFEAD7AE2FCA2031161C6E10",
+    "existed": true
+  },
+  {
+    "path": "client/src/components/conversation/companion-card.ts",
+    "snapshot": "G:\\The Healthy Apples\\Applications\\GitHub\\tha-integrated-dev-g-native-20261003\\.engineering\\session\\rollback-evidence\\COOKALIAS1_COOKBOOK_VIEW_CANONICALIZATION_20261105\\pre-edit\\client__src__components__conversation__companion-card.ts",
+    "sha256": "52B2B30937816BA1EF14E3CBEFBE7A2B149E82C40E350DFD1657AB9C5D2DFC6F",
+    "existed": true
+  },
+  {
+    "path": "client/src/pages/meals-page.tsx",
+    "snapshot": "G:\\The Healthy Apples\\Applications\\GitHub\\tha-integrated-dev-g-native-20261003\\.engineering\\session\\rollback-evidence\\COOKALIAS1_COOKBOOK_VIEW_CANONICALIZATION_20261105\\pre-edit\\client__src__pages__meals-page.tsx",
+    "sha256": "09E386C2E64991208EDCA7EC5C30B7B38DFA96A30F37B7F025C9CA2011F3E338",
+    "existed": true
+  },
+  {
+    "path": "client/src/pages/onboarding-page.tsx",
+    "snapshot": "G:\\The Healthy Apples\\Applications\\GitHub\\tha-integrated-dev-g-native-20261003\\.engineering\\session\\rollback-evidence\\COOKALIAS1_COOKBOOK_VIEW_CANONICALIZATION_20261105\\pre-edit\\client__src__pages__onboarding-page.tsx",
+    "sha256": "25AC6E2AB44D9B030412A8A277882BCBD5F45FADB84EA19C117DEB6CDAC7A4A5",
+    "existed": true
+  },
+  {
+    "path": "shared/support/help-centre.ts",
+    "snapshot": "G:\\The Healthy Apples\\Applications\\GitHub\\tha-integrated-dev-g-native-20261003\\.engineering\\session\\rollback-evidence\\COOKALIAS1_COOKBOOK_VIEW_CANONICALIZATION_20261105\\pre-edit\\shared__support__help-centre.ts",
+    "sha256": "2CA13571A64F9A54815EB4801182E3B63FDF9F50F381AF7EAE096F4D0B7BFF9B",
+    "existed": true
+  },
+  {
+    "path": "server/tests/test-intelligence-companion-card.ts",
+    "snapshot": "G:\\The Healthy Apples\\Applications\\GitHub\\tha-integrated-dev-g-native-20261003\\.engineering\\session\\rollback-evidence\\COOKALIAS1_COOKBOOK_VIEW_CANONICALIZATION_20261105\\pre-edit\\server__tests__test-intelligence-companion-card.ts",
+    "sha256": "809326A6E35F8B61F5A42E6138386A9CFBFB95CF0F95CB458AE09B28A4E3A1EA",
+    "existed": true
+  },
+  {
+    "path": "docs/product/inventory/product.yaml",
+    "snapshot": "G:\\The Healthy Apples\\Applications\\GitHub\\tha-integrated-dev-g-native-20261003\\.engineering\\session\\rollback-evidence\\COOKALIAS1_COOKBOOK_VIEW_CANONICALIZATION_20261105\\pre-edit\\docs__product__inventory__product.yaml",
+    "sha256": "FE4ECB07D3D291E747DD1E279D5279A5CDA47B50127E5A01735CC0C5376F3528",
+    "existed": true
+  },
+  {
+    "path": "docs/product/inventory/product.json",
+    "snapshot": "G:\\The Healthy Apples\\Applications\\GitHub\\tha-integrated-dev-g-native-20261003\\.engineering\\session\\rollback-evidence\\COOKALIAS1_COOKBOOK_VIEW_CANONICALIZATION_20261105\\pre-edit\\docs__product__inventory__product.json",
+    "sha256": "3E00C07A8DE6CBEE5F8FCF0DC7D9FC24933F94F6A216BBCFEC65CDEE2198EDED",
+    "existed": true
+  },
+  {
+    "path": "docs/product/structure/routes/routes-map.md",
+    "snapshot": "G:\\The Healthy Apples\\Applications\\GitHub\\tha-integrated-dev-g-native-20261003\\.engineering\\session\\rollback-evidence\\COOKALIAS1_COOKBOOK_VIEW_CANONICALIZATION_20261105\\pre-edit\\docs__product__structure__routes__routes-map.md",
+    "sha256": "B0DF29A6F761C1336B8BD41FC5012A0CC7151F408CDCEE72682F821C45C11D4D",
+    "existed": true
+  },
+  {
+    "path": "docs/product/structure/pages/page-cookbook.md",
+    "snapshot": "G:\\The Healthy Apples\\Applications\\GitHub\\tha-integrated-dev-g-native-20261003\\.engineering\\session\\rollback-evidence\\COOKALIAS1_COOKBOOK_VIEW_CANONICALIZATION_20261105\\pre-edit\\docs__product__structure__pages__page-cookbook.md",
+    "sha256": "F946E4EF5FE427541F9776523C32202251397A8F4FF03DD33EF447A44B297B47",
+    "existed": true
+  },
+  {
+    "path": "docs/product/structure/domains/dom-cookbook.md",
+    "snapshot": "G:\\The Healthy Apples\\Applications\\GitHub\\tha-integrated-dev-g-native-20261003\\.engineering\\session\\rollback-evidence\\COOKALIAS1_COOKBOOK_VIEW_CANONICALIZATION_20261105\\pre-edit\\docs__product__structure__domains__dom-cookbook.md",
+    "sha256": "0B6968603E63D3ED4946857E31FA22DDADBB378FCBC8EE1BEF7AD3174FBAC6EA",
+    "existed": true
+  },
+  {
+    "path": "docs/investigations/ux/APP_ROUTE_INVENTORY_20261105.md",
+    "snapshot": "G:\\The Healthy Apples\\Applications\\GitHub\\tha-integrated-dev-g-native-20261003\\.engineering\\session\\rollback-evidence\\COOKALIAS1_COOKBOOK_VIEW_CANONICALIZATION_20261105\\pre-edit\\docs__investigations__ux__APP_ROUTE_INVENTORY_20261105.md",
+    "sha256": "F5A653EC85DA20D81BD069DE30A66C2CBDB1F00D61216DD1AFF3EC0A80C5797A",
+    "existed": true
+  },
+  {
+    "path": "docs/product/OWNERS.md",
+    "snapshot": "G:\\The Healthy Apples\\Applications\\GitHub\\tha-integrated-dev-g-native-20261003\\.engineering\\session\\rollback-evidence\\COOKALIAS1_COOKBOOK_VIEW_CANONICALIZATION_20261105\\pre-edit\\docs__product__OWNERS.md",
+    "sha256": "54A558D1C6A591973EA6707F0A63FA586D991B425C4C620FE372F424711E7E6E",
+    "existed": true
+  },
+  {
+    "path": "docs/product/VISIBILITY.md",
+    "snapshot": "G:\\The Healthy Apples\\Applications\\GitHub\\tha-integrated-dev-g-native-20261003\\.engineering\\session\\rollback-evidence\\COOKALIAS1_COOKBOOK_VIEW_CANONICALIZATION_20261105\\pre-edit\\docs__product__VISIBILITY.md",
+    "sha256": "A7D817A3A1AD9048D77B82B446F8CEA300BCA4ECA822FC8EB47E91F8ADB49F04",
+    "existed": true
+  },
+  {
+    "path": ".engineering/session/CURRENT.md",
+    "snapshot": "G:\\The Healthy Apples\\Applications\\GitHub\\tha-integrated-dev-g-native-20261003\\.engineering\\session\\rollback-evidence\\COOKALIAS1_COOKBOOK_VIEW_CANONICALIZATION_20261105\\pre-edit\\.engineering__session__CURRENT.md",
+    "sha256": "15C311EAF41C345766938D6058DF99C20B9242AA7F1B9BBC535E821ACDB6AB38",
+    "existed": true
+  }
+]

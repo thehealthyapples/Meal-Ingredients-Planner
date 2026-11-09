@@ -868,7 +868,7 @@ interface IdlePanelContentProps {
   onBrowseRecipes?: () => void;
   /** Phase 5F: open create-recipe modal from idle state */
   onBuildRecipe?: () => void;
-  /** Phase 5F: navigate to /meals with scan mode open */
+  /** Phase 5F: navigate to /cookbook/grid with scan mode open */
   onScanRecipe?: () => void;
   /** Phase A: proposal ID consumed by drag-to-planner; triggers removal from tray */
   consumedProposalId?: string | null;
@@ -1614,6 +1614,76 @@ export function PlannerAssistantPanel({
   onBuildCreated,
 }: PlannerAssistantPanelProps) {
   const isMobile = useIsMobile();
+
+  // 2026-11-03 (owner) — "I would like the workspace floatable and
+  // moveable". The desktop panel is `position: fixed` (planner-physical.css,
+  // FNDFIX7 follow-up) so it floats over the page instead of squeezing the
+  // grid; this is the "moveable" half — drag from the handle bar, offset
+  // applied as a `transform: translate()` on top of that fixed position.
+  // Only wired for the ≥1024px fixed layout: the handle itself is
+  // `hidden lg:flex`, so pointerdown can never fire on the tablet-docked or
+  // mobile-drawer variants, and a resize below that drops any stored offset
+  // so returning to a docked/drawer layout never carries a stray translate.
+  const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null);
+  const dragStartRef = useRef<{ pointerId: number; mouseX: number; mouseY: number; offsetX: number; offsetY: number } | null>(null);
+
+  useEffect(() => {
+    const dropOffsetIfDocked = () => {
+      if (window.innerWidth < 1024) setDragOffset(null);
+    };
+    window.addEventListener("resize", dropOffsetIfDocked);
+    return () => window.removeEventListener("resize", dropOffsetIfDocked);
+  }, []);
+
+  const handleDragPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0 && e.pointerType === "mouse") return;
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragStartRef.current = {
+      pointerId: e.pointerId,
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      offsetX: dragOffset?.x ?? 0,
+      offsetY: dragOffset?.y ?? 0,
+    };
+  }, [dragOffset]);
+
+  const handleDragPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const start = dragStartRef.current;
+    if (!start || start.pointerId !== e.pointerId) return;
+    setDragOffset({
+      x: start.offsetX + (e.clientX - start.mouseX),
+      y: start.offsetY + (e.clientY - start.mouseY),
+    });
+  }, []);
+
+  const endDrag = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (dragStartRef.current?.pointerId !== e.pointerId) return;
+    dragStartRef.current = null;
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch {}
+  }, []);
+
+  const dragHandleProps = {
+    onPointerDown: handleDragPointerDown,
+    onPointerMove: handleDragPointerMove,
+    onPointerUp: endDrag,
+    onPointerCancel: endDrag,
+  };
+  const dragTransformStyle = dragOffset
+    ? { transform: `translate(${dragOffset.x}px, ${dragOffset.y}px)` }
+    : undefined;
+
+  const DragHandle = (
+    <div
+      className="hidden lg:flex items-center justify-center py-1 cursor-grab touch-none select-none shrink-0"
+      {...dragHandleProps}
+      data-testid="handle-workspace-drag"
+      aria-hidden="true"
+    >
+      <GripVertical className="h-3 w-3 rotate-90 opacity-35" />
+    </div>
+  );
+
   const RESOLVE_SUBVIEW_KEY = "planner:resolve-subview";
   const [resolveSubview, setResolveSubview] = useState<"menu" | "search">(() => {
     if (mode !== "resolve") return "menu";
@@ -1848,6 +1918,7 @@ export function PlannerAssistantPanel({
       >
         <DrawerContent
           className="flex flex-col max-h-[75vh]"
+          id="planner-workspace-panel"
           data-testid="drawer-planner-assistant"
           data-realm="planner"
         >
@@ -1895,9 +1966,11 @@ export function PlannerAssistantPanel({
     return (
       <aside
         className="shrink-0 w-[244px] sticky top-28 mt-4 self-start rounded-xl flex flex-col max-h-[calc(100dvh-11.5rem)] overflow-hidden"
-        style={{ border: "1px solid var(--realm-border)", background: "var(--realm-bg)" }}
+        style={{ border: "1px solid var(--realm-border)", background: "var(--realm-bg)", ...dragTransformStyle }}
+        id="planner-workspace-panel"
         data-testid="panel-planner-assistant-idle"
       >
+        {DragHandle}
         <div className="flex-1 overflow-y-auto min-h-0 px-2.5 pb-3 pt-2.5">
           {onSetMode ? (
             <IdlePanelContent
@@ -1924,10 +1997,19 @@ export function PlannerAssistantPanel({
   return (
     <aside
       className="shrink-0 w-[244px] sticky top-28 mt-4 self-start rounded-xl flex flex-col max-h-[calc(100dvh-11.5rem)] overflow-hidden"
-      style={{ border: "1px solid var(--realm-border)", background: "var(--realm-bg)" }}
+      style={{ border: "1px solid var(--realm-border)", background: "var(--realm-bg)", ...dragTransformStyle }}
+      id="planner-workspace-panel"
       data-testid="panel-planner-assistant"
     >
-      <div className="flex items-center justify-end px-2 pt-1.5 pb-1 shrink-0">
+      <div className="flex items-center justify-between px-1 pt-1.5 pb-1 shrink-0">
+        <div
+          className="hidden lg:flex items-center justify-center flex-1 h-full cursor-grab touch-none select-none"
+          {...dragHandleProps}
+          data-testid="handle-workspace-drag"
+          aria-hidden="true"
+        >
+          <GripVertical className="h-3 w-3 rotate-90 opacity-35" />
+        </div>
         <button
           onClick={onClose}
           className="rounded-md p-1 hover:bg-accent/40 text-muted-foreground transition-colors"

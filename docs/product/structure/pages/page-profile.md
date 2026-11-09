@@ -6,8 +6,8 @@ status: live
 visibility: household
 owner: Colin Clapson
 route: /profile
-last_verified: 2026-07-11
-version: 1
+last_verified: 2026-11-05
+version: 2
 ---
 
 # Profile
@@ -18,7 +18,8 @@ version: 1
 
 Where a household tunes The Healthy Apples to itself. It gathers into three
 groups: Personal (goals, diet and preferences, and the Companion's voice),
-Household (who lives here — adults, children and babies — and how shared meals are
+Household (who lives here — adults, children and babies — their food preferences,
+voluntary nutrition focuses and reported health details, and how shared meals are
 handled, with fuller household management tucked behind a collapsed section), and
 Settings & Support (account details, measurement system, subscription standing,
 change password, re-run preferences, contact, and sign out). Changes save as they
@@ -47,4 +48,4 @@ are made and flow back through the rest of the product.
 ---
 
 _Registry entry. Present tense; if it is no longer true it is a defect, not
-history (Rule PKR15). Owner: Colin Clapson. Last verified 2026-07-11._
+history (Rule PKR15). Owner: Colin Clapson. Last verified 2026-11-05._

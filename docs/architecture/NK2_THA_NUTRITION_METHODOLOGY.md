@@ -70,7 +70,7 @@ These are the non-negotiable values that guide every nutrition guidance decision
 **The test:** "Where did this fact come from?" 
 - If the answer is "Plane 1 (sourced)" → render it as a fact.
 - If the answer is "Plane 2 (household pattern)" → render it as an observation about this household.
-- If the answer is "computed from multiple facts" → show only the component facts, never the inferred conclusion.
+- If the answer is "computed from multiple facts" → show only the component facts, never the inferred conclusion, except the deterministic, sourced adult reference/intake outputs explicitly admitted by `THA_FOOD_INTELLIGENCE_PLATFORM_ARCHITECTURE.md` §5.1 (ANR1); that section alone owns their requirements.
 - If the answer is "we guessed" or "the LLM generated it" → do not render it.
 
 **Why:**
@@ -90,7 +90,7 @@ These are the non-negotiable values that guide every nutrition guidance decision
 
 ### Principle M3 — Speak About Foods and Meals, Never Bodies or Diagnoses
 
-**The rule:** THA's subject is always food. It never speaks about bodies, symptoms, diagnoses, or medical conditions.
+**The rule:** THA's subject is food and the bounded adult general-wellbeing reference exception governed solely by `THA_FOOD_INTELLIGENCE_PLATFORM_ARCHITECTURE.md` §5.1 (ANR1, owner-approved 2026-11-04). The exception permits only that section's sourced reference/intake/comparison outputs. It does not permit diagnosis, symptom or condition interpretation, treatment, or prescribed personal targets. The banned person-directed certainty below remains banned.
 
 **The test — banned words:**
 - ❌ "prevents", "treats", "cures", "manages", "reduces risk of", "addresses"

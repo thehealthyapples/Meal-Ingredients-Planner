@@ -2764,7 +2764,7 @@ export default function MealsPage() {
       setPlannerImportDialogOpen(true);
     }
     // Replace URL to remove params without page reload
-    navigate("/meals", { replace: true } as any);
+    navigate("/cookbook/grid", { replace: true } as any);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

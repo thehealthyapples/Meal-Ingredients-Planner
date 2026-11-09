@@ -11,11 +11,11 @@ version: 1
 
 # Companion voice
 
-> How Apple speaks to the household.
+> How Companion speaks to the household.
 
 ## What it is
 
-The Companion voice is the household's choice of how Apple, the Companion,
+The Companion voice is the household's choice of how the Companion
 speaks to them. It selects a personality from THA's registry of Companion voices,
 shaping the tone of the Companion's replies. It is set on the profile page and
 read by the conversation layer.

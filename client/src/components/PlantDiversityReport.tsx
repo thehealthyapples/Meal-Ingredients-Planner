@@ -34,7 +34,7 @@ export interface WeekMealEntry {
 
 type ReportSection = "plant-based" | "meat" | "dairy" | "eggs" | "other";
 
-interface IngredientRow {
+export interface IngredientRow {
   displayKey: string;
   canonicalKey: string;
   displayName: string;
@@ -971,10 +971,7 @@ function ReportSummary({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function PlantDiversityReport({ weekMeals }: PlantDiversityReportProps) {
-  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
-  const [sortKey, setSortKey] = useState<SortKey>("category");
-
+export function useWeekFoodRows(weekMeals: WeekMealEntry[]) {
   // Collect all ingredient keys: week-meal rows + static suggestion names.
   // Single deduplicated set fed to the WS0 batch lookup.
   const allLookupKeys = useMemo(() => {
@@ -1007,6 +1004,17 @@ export function PlantDiversityReport({ weekMeals }: PlantDiversityReportProps) {
     staleTime: 10 * 60 * 1000,
   });
 
+  const result = useMemo(() => computeAllRows(weekMeals, ingredientKnowledge), [weekMeals, ingredientKnowledge]);
+  return {
+    ...result,
+    rows: [result.plantRows, result.meatRows, result.dairyRows, result.eggRows, result.otherRows].flat(),
+  };
+}
+
+export function PlantDiversityReport({ weekMeals }: PlantDiversityReportProps) {
+  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
+  const [sortKey, setSortKey] = useState<SortKey>("category");
+
   const {
     plantRows,
     meatRows,
@@ -1016,7 +1024,7 @@ export function PlantDiversityReport({ weekMeals }: PlantDiversityReportProps) {
     plantCount,
     totalIngredients,
     categoriesFound,
-  } = useMemo(() => computeAllRows(weekMeals, ingredientKnowledge), [weekMeals, ingredientKnowledge]);
+  } = useWeekFoodRows(weekMeals);
 
   // Sort within each section independently
   const sortedPlantRows  = useMemo(() => sortRows(plantRows,  sortKey), [plantRows,  sortKey]);

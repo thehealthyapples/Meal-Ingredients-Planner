@@ -36,7 +36,7 @@ deliberating.
 
 ## Related
 
-- [[page-landing]]
+- [[page-home]]
 
 ---
 

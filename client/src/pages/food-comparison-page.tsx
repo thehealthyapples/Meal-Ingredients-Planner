@@ -13,12 +13,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearch } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Scale, Plus, X } from "lucide-react";
+import { ArrowLeft, Scale, Plus, X, ScanBarcode } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+import BarcodeScanner from "@/components/BarcodeScanner";
 import { usePublishCompanionContext } from "@/components/conversation/companion-context";
 import {
   FoodComparisonView,
@@ -47,11 +49,33 @@ interface FoodComparisonPageProps {
    * are identical either way — this changes chrome only.
    */
   embedded?: boolean;
+  /**
+   * 2026-10-31 — when provided (WeekFoodExplorer's inline "Compare foods",
+   * opened directly in its own middle column), seeds the item inputs from
+   * this instead of the URL's ?items=. That embed deliberately never
+   * navigates — the owner's own words were "should never take me away from
+   * the food page" — so there is no URL to read or write here. Omit this
+   * prop for every other caller (the standalone /compare route, and the Food
+   * page's separate "Look up a food" tab) to keep the existing
+   * deep-linkable, URL-driven behaviour unchanged.
+   */
+  seedItems?: string[];
+  /**
+   * 2026-11-01 — WeekFoodExplorer's Compare tab renders the result itself,
+   * split one subject per column instead of this page's own side-by-side
+   * table (the table doesn't fit a single column). `hideResult` keeps this
+   * component the one owner of the item inputs and the /api/foods/compare
+   * fetch — it just stops rendering FoodComparisonView itself — and
+   * `onBundleChange` hands the fetched bundle up so the parent can render
+   * SubjectComparisonPanel from it instead.
+   */
+  hideResult?: boolean;
+  onBundleChange?: (bundle: FoodComparisonBundle | undefined) => void;
 }
 
-export default function FoodComparisonPage({ embedded = false }: FoodComparisonPageProps = {}) {
+export default function FoodComparisonPage({ embedded = false, seedItems, hideResult = false, onBundleChange }: FoodComparisonPageProps = {}) {
   const search = useSearch();
-  const seeded = useMemo(() => parseItems(search), [search]);
+  const seeded = useMemo(() => seedItems ?? parseItems(search), [search, seedItems]);
 
   // The items are the caller's own words. Start from the URL (deep-link) and pad
   // to at least two editable slots so the intent of the page is obvious.
@@ -66,7 +90,9 @@ export default function FoodComparisonPage({ embedded = false }: FoodComparisonP
   );
 
   // If the URL changes underneath us (e.g. a fresh deep-link), adopt it.
+  // seedItems mode never navigates, so there is no URL change to adopt here.
   useEffect(() => {
+    if (seedItems) return;
     if (seeded.length >= MIN_ITEMS) {
       const padded = [...seeded];
       while (padded.length < MIN_ITEMS) padded.push("");
@@ -74,7 +100,7 @@ export default function FoodComparisonPage({ embedded = false }: FoodComparisonP
       setSubmitted(seeded);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search]);
+  }, [search, seedItems]);
 
   // The Companion can see what this page is comparing (deixis): "which is better?"
   // arriving here points at these foods rather than at nothing.
@@ -106,6 +132,33 @@ export default function FoodComparisonPage({ embedded = false }: FoodComparisonP
   function updateItem(i: number, value: string) {
     setItems((prev) => prev.map((v, idx) => (idx === i ? value : v)));
   }
+  // 2026-11-02 (owner) — "the search and the compare fields should actually
+  // both allow the bar code scanner to be an input": same BarcodeScanner +
+  // GET /api/products/barcode/:barcode route WeekFoodExplorer's own search
+  // box now uses — a scan resolves to a real product name and fills THIS
+  // slot with it, same as typing the name would, so the rest of the compare
+  // flow (resolution, scoring) is unchanged.
+  const { toast } = useToast();
+  const [scanningIndex, setScanningIndex] = useState<number | null>(null);
+  async function handleBarcodeScan(barcode: string) {
+    const index = scanningIndex;
+    setScanningIndex(null);
+    if (index === null) return;
+    try {
+      const response = await fetch(`/api/products/barcode/${barcode}`, { credentials: "include" });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        toast({ title: "Couldn't find that product", description: body.message ?? "Try scanning again.", variant: "destructive" });
+        return;
+      }
+      const data = await response.json();
+      if (data.product?.product_name) {
+        updateItem(index, data.product.product_name);
+      }
+    } catch {
+      toast({ title: "Couldn't read that barcode", description: "Try scanning again.", variant: "destructive" });
+    }
+  }
   function addItem() {
     setItems((prev) => (prev.length < MAX_ITEMS ? [...prev, ""] : prev));
   }
@@ -120,6 +173,11 @@ export default function FoodComparisonPage({ embedded = false }: FoodComparisonP
   }
 
   const canCompare = items.filter((s) => s.trim().length > 0).length >= MIN_ITEMS;
+
+  useEffect(() => {
+    onBundleChange?.(data);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data]);
 
   return (
     <div className={embedded ? "w-full" : "mx-auto w-full max-w-3xl px-4 sm:px-6 lg:px-8 py-4 sm:py-6"}>
@@ -169,6 +227,15 @@ export default function FoodComparisonPage({ embedded = false }: FoodComparisonP
                 aria-label={`Food ${i + 1}`}
                 data-testid={`compare-input-${i}`}
               />
+              <button
+                type="button"
+                onClick={() => setScanningIndex(i)}
+                className="p-1.5 text-muted-foreground/60 hover:text-foreground transition-colors"
+                aria-label={`Scan a barcode for food ${i + 1}`}
+                data-testid={`compare-scan-${i}`}
+              >
+                <ScanBarcode className="h-4 w-4" />
+              </button>
               {items.length > MIN_ITEMS && (
                 <button
                   type="button"
@@ -215,8 +282,12 @@ export default function FoodComparisonPage({ embedded = false }: FoodComparisonP
           §17), in place of a centred spinner: a card-shaped placeholder tells the
           household a comparison is arriving; a spinner only says "wait". */}
       {enabled && isPending && (
-        <div className="py-4" aria-busy="true" aria-label="Comparing those foods">
-          <Skeleton className="h-72 w-full rounded-xl" />
+        // FNDFIX8 (2026-11-03) — the loaded result (FoodComparisonView) is a
+        // short verdict banner followed by one wide comparison table, not one
+        // undifferentiated blob — split to match that two-part shape.
+        <div className="py-4 space-y-4" aria-busy="true" aria-label="Comparing those foods">
+          <Skeleton className="h-20 w-full rounded-xl" />
+          <Skeleton className="h-56 w-full rounded-xl" />
         </div>
       )}
 
@@ -229,13 +300,15 @@ export default function FoodComparisonPage({ embedded = false }: FoodComparisonP
         </Card>
       )}
 
-      {enabled && data && <FoodComparisonView bundle={data} />}
+      {enabled && data && !hideResult && <FoodComparisonView bundle={data} />}
 
-      {!enabled && (
+      {!enabled && !hideResult && (
         <p className={cn(subtleText, "text-center py-8")} data-testid="compare-empty">
           Enter two foods to compare.
         </p>
       )}
+
+      <BarcodeScanner isOpen={scanningIndex !== null} onScan={handleBarcodeScan} onClose={() => setScanningIndex(null)} />
     </div>
   );
 }

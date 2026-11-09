@@ -11,12 +11,12 @@ version: 1
 
 # Partners capability
 
-> Apple can name the retailers THA can hand a basket to; it will not claim one
+> Companion can name the retailers THA can hand a basket to; it will not claim one
 > is cheaper than another, because it cannot prove it.
 
 ## What it means for the household
 
-Apple can name the supermarkets THA can hand a prepared basket to — the
+Companion can name the supermarkets THA can hand a prepared basket to — the
 retailers the household can actually shop with. It answers "who can I send this
 basket to?" from a settled list.
 
@@ -24,7 +24,7 @@ basket to?" from a settled list.
 
 It will not claim one retailer is cheaper than another. THA does not hold proven,
 store-by-store prices, so any such comparison would be a guess dressed as fact —
-and Apple does not make it. It names who is available; it does not rank them on
+and Companion does not make it. It names who is available; it does not rank them on
 price.
 
 ## Where it lives

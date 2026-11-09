@@ -16,6 +16,7 @@
  */
 
 import type { Meal, Nutrition } from "@shared/schema";
+import type { MealDiscoverySafety } from "../services/meal-discovery-engine.js";
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -43,6 +44,8 @@ export interface ParsedNutrition {
 
 /** The filter predicate built from the user's utterance. At least one field is non-null. */
 export interface NutritionFilter {
+  readonly sortBy?: "protein" | "calories" | "carbs" | "fat" | "sugar";
+  readonly sortDirection?: "asc" | "desc";
   readonly caloriesMax?: number;
   readonly caloriesMin?: number;
   readonly proteinMin?: number;
@@ -86,6 +89,8 @@ export interface NutritionDiscoverySearchResult {
  * uses `createProductionNutritionDiscoveryPort`.
  */
 export interface NutritionDiscoveryPort {
+  /** Injectable canonical household gate; production resolves the existing owner. */
+  readonly safety?: MealDiscoverySafety;
   /**
    * Fetch all meals the user can see (personal + system), left-joined to their
    * nutrition rows. The engine applies the threshold filter in application code.

@@ -47,6 +47,7 @@ export { FoodQuickLook } from "./FoodQuickLook";
 // pixels in exactly one place.
 export {
   FoodPreparationList,
+  hasPreparationMethods,
   type FoodPreparation,
   type PreparationSourceRef,
 } from "./FoodPreparationList";

@@ -492,7 +492,7 @@ Progressive enrichment must inherit THA's existing non-fabrication guarantees:
 - **Sourced claims only** (`SourceRef` with EFSA/NHS/NIH-ODS + `url` + `lastReviewed`)
 - **EFSA wording firewall** on all established health claims (banned: "prevents", "treats", "cures", "diagnoses"; allowed: "may support", "associated with", "contributes to")
 - **Emerging benefits tagged** (never shown as `established` without evidence progression)
-- **No diagnosis verbs** (Rule T1: THA speaks about foods and meals, never bodies, symptoms, diagnoses)
+- **No diagnosis verbs** (Rule T1 and the bounded adult reference exception in `THA_FOOD_INTELLIGENCE_PLATFORM_ARCHITECTURE.md` §5.1, ANR1, approved 2026-11-04). That section is the sole policy owner for personal reference needs, recorded intake and dietary comparisons; it introduces no clinical or deficiency inference and this document does not restate its rules.
 
 **Enforcement:**
 - Seeding refuses non-compliant data (validator catches at ingestion time)

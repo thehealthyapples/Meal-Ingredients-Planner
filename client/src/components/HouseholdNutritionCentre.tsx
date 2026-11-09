@@ -28,7 +28,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
-import { useWeekMealEntries } from "@/hooks/use-week-meal-entries";
+import { useActiveWeek } from "@/hooks/use-week-meal-entries";
 import { LoadError } from "@/components/ui/load-error";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -305,12 +305,16 @@ function CategoryProgressBlock({ categories }: { categories: CategoryProgress[] 
 
 // ── Main ───────────────────────────────────────────────────────────────────────
 
-export function HouseholdNutritionCentre() {
+export function HouseholdNutritionCentre({ week }: { week?: string } = {}) {
   const [period, setPeriod] = useState<CentreWindow>("this-week");
   // FOODUI6 — the same "active week" the Food page's Foods tab already shows,
   // so "Foods this week" and "Nutrition this week" are never two different
-  // weeks on the same page.
-  const { activeWeek } = useWeekMealEntries();
+  // weeks on the same page. FNDFIX9 (2026-11-03) — this only ever needed
+  // activeWeek; useWeekMealEntries also fired /api/planner/full and
+  // /api/meals (needed for weekMeals, which this component never read).
+  // useActiveWeek is the same resolution logic, same queryKey, narrowed to
+  // just that.
+  const { activeWeek } = useActiveWeek(week);
 
   const { data, isPending, isError, refetch } = useQuery<NutritionCentre>({
     queryKey: ["/api/nutrition-centre", period, period === "this-week" ? activeWeek : null],

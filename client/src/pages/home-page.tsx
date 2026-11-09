@@ -1,9 +1,12 @@
 import { useState, useRef } from "react";
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { ScanLine, Lightbulb, TrendingUp, Loader2, ChevronDown } from "lucide-react";
 import OrchardBackdrop from "@/components/layout/orchard-backdrop";
 import ProductFlowVisual from "@/components/KitchenToBasketVisual";
+
+type AppConfig = { registrationEnabled: boolean };
 
 const VALUE_BLOCKS = [
   {
@@ -27,6 +30,22 @@ export default function HomePage() {
   const [, setLocation] = useLocation();
   const [trialStarting, setTrialStarting] = useState(false);
   const valueSectionRef = useRef<HTMLElement>(null);
+
+  // FNDFIX2 (2026-11-03) — this landing page always showed "Create account"
+  // CTAs even while /api/config reports registrationEnabled:false (private
+  // beta). The button led to /auth?register=1, which renders a fillable
+  // signup form the server then rejects with 403 — a dead-end affordance.
+  // auth-page.tsx already reads this same flag the same way; mirrored here
+  // rather than inventing a second check.
+  const { data: config } = useQuery<AppConfig>({
+    queryKey: ["/api/config"],
+    queryFn: async () => {
+      const res = await fetch("/api/config");
+      if (!res.ok) return { registrationEnabled: false };
+      return res.json();
+    },
+  });
+  const registrationEnabled = config?.registrationEnabled ?? false;
 
   const handleTrial = async () => {
     if (trialStarting) return;
@@ -58,13 +77,15 @@ export default function HomePage() {
             >
               Sign in
             </Button>
-            <Button variant="default"
-              size="sm"
-              onClick={() => setLocation("/auth?register=1")}
-              data-testid="button-nav-create-account"
-            >
-              Create account
-            </Button>
+            {registrationEnabled && (
+              <Button variant="default"
+                size="sm"
+                onClick={() => setLocation("/auth?register=1")}
+                data-testid="button-nav-create-account"
+              >
+                Create account
+              </Button>
+            )}
           </div>
         </header>
 
@@ -98,14 +119,16 @@ export default function HomePage() {
 
                 <div className="flex flex-col items-stretch sm:items-start gap-3 mb-6 w-full sm:w-auto">
                   {/* Primary CTA */}
-                  <Button variant="default"
-                    size="lg"
-                    className="w-full sm:min-w-[280px]"
-                    onClick={() => setLocation("/auth?register=1")}
-                    data-testid="button-hero-create-account"
-                  >
-                    Create account
-                  </Button>
+                  {registrationEnabled && (
+                    <Button variant="default"
+                      size="lg"
+                      className="w-full sm:min-w-[280px]"
+                      onClick={() => setLocation("/auth?register=1")}
+                      data-testid="button-hero-create-account"
+                    >
+                      Create account
+                    </Button>
+                  )}
                   {/* Secondary CTA */}
                   <Button
                     size="lg"
@@ -217,13 +240,15 @@ export default function HomePage() {
             Join families making calmer, more confident food choices every day.
           </p>
           <div className="flex flex-wrap justify-center gap-3 mb-5">
-            <Button variant="default"
-              size="lg"
-              onClick={() => setLocation("/auth?register=1")}
-              data-testid="button-final-create-account"
-            >
-              Create account
-            </Button>
+            {registrationEnabled && (
+              <Button variant="default"
+                size="lg"
+                onClick={() => setLocation("/auth?register=1")}
+                data-testid="button-final-create-account"
+              >
+                Create account
+              </Button>
+            )}
             <Button
               size="lg"
               variant="ghost"

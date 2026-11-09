@@ -46,7 +46,7 @@ landing page that the product does not currently keep.
 
 ## Related
 
-- [[page-landing]]
+- [[page-home]]
 - [[hid-notice-engine]]
 
 ## Known defects

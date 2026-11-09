@@ -11,21 +11,21 @@ version: 1
 
 # Shopping capability
 
-> Apple can read the shopping list and prepare a basket; it can never place an
+> Companion can read the shopping list and prepare a basket; it can never place an
 > order.
 
 ## What it means for the household
 
-Ask Apple what is on the shopping list and it will read it back, and it can
+Ask Companion what is on the shopping list and it will read it back, and it can
 prepare a basket ready to hand to a supermarket. It turns the week's needs into
 something the household can act on in one step.
 
 ## What it will never do
 
-It can never place an order. Apple prepares a basket and hands it over; the
+It can never place an order. Companion prepares a basket and hands it over; the
 household completes the purchase itself. There is no checkout, no payment, and
 no order placed on anyone's behalf — buying is always a deliberate human act,
-never something Apple does.
+never something Companion does.
 
 ## Where it lives
 

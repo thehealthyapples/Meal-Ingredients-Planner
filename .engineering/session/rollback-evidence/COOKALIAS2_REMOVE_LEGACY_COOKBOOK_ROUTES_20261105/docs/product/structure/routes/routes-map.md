@@ -1,0 +1,153 @@
+---
+entry: routes-map
+name: Route Map
+section: routes
+status: live
+visibility: household
+owner: Colin Clapson
+last_verified: 2026-11-05
+version: 5
+---
+
+# Route Map
+
+> Every address THA answers, and the page each one resolves to —
+> including the aliases and redirects.
+
+## What it is
+
+THA's client routing is a single `wouter` `<Switch>` in `client/src/App.tsx`.
+This entry is the complete, exact map of every path it
+answers and the page each resolves to. Most household paths render inside
+`ProtectedRoute`, which redirects to `/auth` when signed out and to
+`/onboarding` when onboarding is incomplete; a few paths are public, and two are
+pure redirects. The first matching route wins, so the order below is the order
+in `App.tsx`.
+
+## Public routes (no protection)
+
+| Path | Resolves to | Source |
+|---|---|---|
+| `/auth` | AuthPage (in OrchardShell) | `client/src/pages/auth-page.tsx` |
+| `/onboarding` | OnboardingPage (in OrchardShell) | `client/src/pages/onboarding-page.tsx` |
+| `/shared/:token` | SharedPlanPage — rendered directly, not protected | `client/src/pages/shared-plan-page.tsx` |
+| `/legal/:slug` | LegalPage — one legal document in full, unauthenticated | `client/src/pages/legal-page.tsx` |
+| `/legal` | LegalPage — the index of published policies, unauthenticated | `client/src/pages/legal-page.tsx` |
+
+## The root
+
+| Path | Resolves to | Source |
+|---|---|---|
+| `/` | HomeRoute — signed out shows HomePage; signed in redirects to `/home` (or `/onboarding` if onboarding is incomplete) | `client/src/App.tsx` (HomeRoute), `client/src/pages/home-page.tsx` |
+
+## Household routes (protected)
+
+| Path | Resolves to | Source |
+|---|---|---|
+| `/home` | HomeExperiencePage | `client/src/pages/home-experience-page.tsx` |
+| `/dashboard` | DashboardPage | `client/src/pages/dashboard.tsx` |
+| `/meals/:id` | MealDetailPage | `client/src/pages/meal-detail-page.tsx` |
+| `/foods/:slug` | FoodDetailPage | `client/src/pages/food-detail-page.tsx` |
+| `/cookbook` | Cookbook real-book view | `client/src/pages/cookbook-real-book-concept.tsx` |
+| `/cookbook/grid` | Cookbook Grid | `client/src/pages/meals-page.tsx` |
+| `/import-recipe` | ImportRecipePage | `client/src/pages/import-recipe-page.tsx` |
+| `/analyse-basket` | *(redirect to `/shopping-workspace`)* — **SHOP3** | — |
+| `/basket` | *(redirect to `/shopping-workspace`)* — **SHOP3** | — |
+| `/products` | ProductsPage | `client/src/pages/products-page.tsx` |
+| `/analyser` | ProductsPage *(alias of `/products`)* | `client/src/pages/products-page.tsx` |
+| `/weekly-planner` | WeeklyPlannerPage (via PlannerPageWrapper) | `client/src/pages/weekly-planner-page.tsx` |
+| `/planner` | WeeklyPlannerPage *(alias of `/weekly-planner`)* | `client/src/pages/weekly-planner-page.tsx` |
+| `/supermarkets` | SupermarketsPage | `client/src/pages/supermarkets-page.tsx` |
+| `/profile` | ProfilePage | `client/src/pages/profile-page.tsx` |
+| `/pantry` | PantryPage | `client/src/pages/pantry-page.tsx` |
+| `/food` | PlantDiversityPage | `client/src/pages/plant-diversity-page.tsx` |
+| `/diary` | FoodDiaryPage | `client/src/pages/food-diary-page.tsx` |
+| `/my-diary` | FoodDiaryPage *(alias of `/diary`)* | `client/src/pages/food-diary-page.tsx` |
+| `/partners` | PartnersPage | `client/src/pages/partners-page.tsx` |
+| `/quick-meal` | QuickMealPage | `client/src/pages/quick-meal-page.tsx` |
+| `/shopping-workspace` | ShoppingWorkspacePage | `client/src/pages/shopping-workspace-page.tsx` |
+| `/privacy-settings` | PrivacySettingsPage | `client/src/pages/privacy-settings-page.tsx` |
+| `/help` | HelpCentrePage | `client/src/pages/help-centre-page.tsx` |
+| `/contact` | ContactPage | `client/src/pages/contact-page.tsx` |
+
+## Admin routes (protected)
+
+Each admin page except `/admin/knowledge-review` renders wrapped in the shared
+Admin banner (`withAdminBanner`); `/admin/knowledge-review` renders the page
+directly.
+
+| Path | Resolves to | Source |
+|---|---|---|
+| `/admin` | AdminPage (+ Admin banner) | `client/src/pages/admin-page.tsx` |
+| `/admin/users` | AdminUsersPage (+ banner) | `client/src/pages/admin-users-page.tsx` |
+| `/admin/ingredient-products` | AdminIngredientProductsPage (+ banner) | `client/src/pages/admin-ingredient-products-page.tsx` |
+| `/admin/recipe-sources` | AdminRecipeSourcesPage (+ banner) | `client/src/pages/admin-recipe-sources-page.tsx` |
+| `/admin/companion-intelligence` | AdminCompanionIntelligencePage (+ banner) | `client/src/pages/admin-companion-intelligence-page.tsx` |
+| `/admin/intelligence` | AdminIntelligencePage (+ banner) | `client/src/pages/admin-intelligence-page.tsx` |
+| `/admin/benchmark-households` | AdminBenchmarkHouseholdsPage (+ banner) | `client/src/pages/admin-benchmark-households-page.tsx` |
+| `/admin/development-world/:id` | AdminDevelopmentWorldHouseholdPage (+ banner) | `client/src/pages/admin-development-world-household-page.tsx` |
+| `/admin/development-world` | AdminDevelopmentWorldPage (+ banner) | `client/src/pages/admin-development-world-page.tsx` |
+| `/admin/observations` | AdminObservationWorkbenchPage (+ banner) | `client/src/pages/admin-observation-workbench-page.tsx` |
+| `/admin/behaviour` | AdminBehaviourWorkbenchPage (+ banner) | `client/src/pages/admin-behaviour-workbench-page.tsx` |
+| `/admin/knowledge-review` | AdminKnowledgeReviewPage *(no banner wrapper)* | `client/src/pages/admin-knowledge-review-page.tsx` |
+| `/admin/knowledge-claims` | AdminKnowledgeClaimsPage (+ banner) | `client/src/pages/admin-knowledge-claims-page.tsx` |
+
+## Redirects
+
+| Path | Redirects to |
+|---|---|
+| `/list` | `/shopping-workspace` |
+| `/shopping-list` | `/shopping-workspace` |
+| `/plant-diversity` | `/food` |
+| `/nutrition` | `/food` |
+| `/meals` | `/cookbook/grid` (query string preserved) |
+| `/cookbook/concept-real-book` | `/cookbook` (query string preserved) |
+
+## Fallback
+
+| Path | Resolves to | Source |
+|---|---|---|
+| *(no match)* | NotFound | `client/src/pages/not-found.tsx` |
+
+## Aliases and redirects — the actual count
+
+The registered routes include **eight pure redirects** (`/list`,
+`/shopping-list`, `/basket` and `/analyse-basket` to `/shopping-workspace`,
+`/plant-diversity` and `/nutrition` to `/food`, `/meals` to `/cookbook/grid`,
+and `/cookbook/concept-real-book` to `/cookbook`) and **three aliased paths**:
+`/analyser` (→ ProductsPage), `/planner` (→ WeeklyPlannerPage) and `/my-diary`
+(→ FoodDiaryPage). SHOP3 converted the `/basket` pair from an
+aliased *page* into redirects, retiring the duplicate Shopping surface: the
+household keeps its bookmarks and arrives at the one room that carries the
+`shopping-restriction-conflict` safety card.
+
+## Related
+
+- [[page-cookbook]] — the canonical real-book view at `/cookbook`
+- [[page-cookbook-grid]] — the grid view at `/cookbook/grid`; `/meals` redirects here
+- [[page-analyser]] — reachable at `/analyser` and `/products`
+- [[page-planner]] — reachable at `/planner` and `/weekly-planner`
+- [[page-diary]] — reachable at `/diary` and `/my-diary`
+- [[page-shopping-workspace]] — the canonical Shopping room; `/basket` and
+  `/analyse-basket` redirect here (**SHOP3**)
+- [[page-nutrition]] — `/food` is canonical; `/nutrition` and `/plant-diversity` redirect here
+- [[page-legal]] — reachable at `/legal` and `/legal/:slug`, both unprotected
+- [[page-privacy-settings]] — reachable at `/privacy-settings`
+- [[page-help-centre]] — reachable at `/help`
+- [[page-contact]] — reachable at `/contact`
+
+## Known defects
+
+- `fnd-alias-sprawl` — three destinations still answer directly to two paths
+  (`/products` and `/analyser`, `/planner` and `/weekly-planner`, `/diary` and
+  `/my-diary`). Eight legacy paths redirect to canonical destinations: `/meals`
+  → `/cookbook/grid`, `/cookbook/concept-real-book` → `/cookbook`, `/list`,
+  `/shopping-list`, `/basket` and `/analyse-basket` → `/shopping-workspace`, and
+  `/plant-diversity` and `/nutrition` → `/food`. See PDA1. **Partially reduced by SHOP3**, which
+  removed the `/basket` pair as a distinct destination — the sprawl that
+  remains is alias-only and no longer hides a divergent surface.
+
+---
+
+_Registry entry. Present tense; if it is no longer true it is a defect, not
+history (Rule PKR15). Owner: Colin Clapson. Last verified 2026-07-18._

@@ -38,11 +38,11 @@ const CREDS = {
 // · diary 348 · orchard 20. If the shelf reads as one surface across these, it
 // reads as one surface everywhere.
 const ROUTES = [
-  { slug: "home", path: "/home" },
+  { slug: "home", path: "/" },
   { slug: "planner", path: "/planner" },
   { slug: "cookbook", path: "/cookbook" },
   { slug: "pantry", path: "/pantry" },
-  { slug: "diary", path: "/my-diary" },
+  { slug: "diary", path: "/diary" },
   { slug: "orchard", path: "/orchard" },
 ] as const;
 

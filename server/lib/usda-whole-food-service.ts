@@ -151,14 +151,55 @@ const SLUG_TO_FDC_ID: Record<string, number> = {
   // canonical-food entry exists for either, so these keys were unreachable.
 };
 
-// USDA nutrient IDs for the fields we care about
+// USDA nutrient IDs for the fields we care about. The macro IDs were the
+// original 2026-10-29 set; the vitamin/mineral IDs below were added
+// 2026-10-31 after the owner asked why a Google search can show "Vitamin K
+// 390 mcg per 100g" for kale when THA only ever showed the nutrient's NAME.
+// The answer: a USDA record genuinely holds ~110 nutrient fields (confirmed
+// live against kale's own real record, fdcId 168421 — every ID below was
+// read from that live response, not assumed from memory), and this map was
+// only ever extracting 6 of them. This is a parsing-scope gap, not a missing
+// data source — no new integration, just reading more of what's already
+// fetched. Two deliberately NOT included: Quercetin and Kaempferol (the
+// flavonoid antioxidants Google's own answer also named) are not in USDA's
+// standard FoodData Central nutrient panel at all — confirmed absent from
+// the live kale record — so they stay an honest gap rather than a guess.
 const NUTRIENT_IDS: Record<string, number> = {
-  calories: 1008,
-  protein:  1003,
-  carbs:    1005,
-  fat:      1004,
-  fibre:    1079,
-  sugar:    2000,
+  calories:    1008,
+  protein:     1003,
+  carbs:       1005,
+  fat:         1004,
+  fibre:       1079,
+  sugar:       2000,
+  vitaminK:    1185,
+  vitaminC:    1162,
+  vitaminA:    1106,
+  vitaminE:    1109,
+  vitaminB6:   1175,
+  folate:      1177,
+  calcium:     1087,
+  potassium:   1092,
+  iron:        1089,
+  magnesium:   1090,
+  zinc:        1095,
+  sodium:      1093,
+  phosphorus:  1091,
+  manganese:   1101,
+  copper:      1098,
+  betaCarotene: 1107,
+  luteinZeaxanthin: 1123,
+};
+
+// USDA's own unit for each ID above (mirrors what the live record reports —
+// mcg for the small-quantity vitamins/carotenoids, mg for everything else).
+// Carried through so a consumer can label a number correctly without a
+// second lookup.
+const NUTRIENT_UNITS: Record<keyof typeof NUTRIENT_IDS, string> = {
+  calories: "kcal", protein: "g", carbs: "g", fat: "g", fibre: "g", sugar: "g",
+  vitaminK: "µg", vitaminC: "mg", vitaminA: "µg", vitaminE: "mg", vitaminB6: "mg",
+  folate: "µg", calcium: "mg", potassium: "mg", iron: "mg", magnesium: "mg",
+  zinc: "mg", sodium: "mg", phosphorus: "mg", manganese: "mg", copper: "mg",
+  betaCarotene: "µg", luteinZeaxanthin: "µg",
 };
 
 export interface NutrientSnapshot {
@@ -169,17 +210,42 @@ export interface NutrientSnapshot {
     fat:      number | null;
     fibre:    number | null;
     sugar:    number | null;
+    vitaminK: number | null;
+    vitaminC: number | null;
+    vitaminA: number | null;
+    vitaminE: number | null;
+    vitaminB6: number | null;
+    folate: number | null;
+    calcium: number | null;
+    potassium: number | null;
+    iron: number | null;
+    magnesium: number | null;
+    zinc: number | null;
+    sodium: number | null;
+    phosphorus: number | null;
+    manganese: number | null;
+    copper: number | null;
+    betaCarotene: number | null;
+    luteinZeaxanthin: number | null;
   };
+  /** USDA's own unit for each field above — e.g. per100g.vitaminK is in units.vitaminK ("µg"). */
+  units: typeof NUTRIENT_UNITS;
   fdcId:   number;
   source:  "usda-fdc";
 }
 
 function extractNutrients(foodNutrients: any[]): NutrientSnapshot["per100g"] {
-  const find = (id: number) => {
+  // Macros keep their original 1-decimal rounding (unchanged behaviour).
+  // Micronutrients use 2 decimals — several real values (e.g. copper,
+  // 0.053 mg) would round to 0 at 1 decimal, turning a real trace amount
+  // into a false "none detected".
+  const find = (id: number, decimals = 1) => {
     const match = foodNutrients.find(
       (n: any) => n.nutrientId === id || n.nutrient?.id === id
     );
-    return match ? Math.round((match.value ?? match.amount ?? 0) * 10) / 10 : null;
+    if (!match) return null;
+    const factor = 10 ** decimals;
+    return Math.round((match.value ?? match.amount ?? 0) * factor) / factor;
   };
   return {
     calories: find(NUTRIENT_IDS.calories),
@@ -188,6 +254,23 @@ function extractNutrients(foodNutrients: any[]): NutrientSnapshot["per100g"] {
     fat:      find(NUTRIENT_IDS.fat),
     fibre:    find(NUTRIENT_IDS.fibre),
     sugar:    find(NUTRIENT_IDS.sugar),
+    vitaminK: find(NUTRIENT_IDS.vitaminK, 2),
+    vitaminC: find(NUTRIENT_IDS.vitaminC, 2),
+    vitaminA: find(NUTRIENT_IDS.vitaminA, 2),
+    vitaminE: find(NUTRIENT_IDS.vitaminE, 2),
+    vitaminB6: find(NUTRIENT_IDS.vitaminB6, 2),
+    folate: find(NUTRIENT_IDS.folate, 2),
+    calcium: find(NUTRIENT_IDS.calcium, 2),
+    potassium: find(NUTRIENT_IDS.potassium, 2),
+    iron: find(NUTRIENT_IDS.iron, 2),
+    magnesium: find(NUTRIENT_IDS.magnesium, 2),
+    zinc: find(NUTRIENT_IDS.zinc, 2),
+    sodium: find(NUTRIENT_IDS.sodium, 2),
+    phosphorus: find(NUTRIENT_IDS.phosphorus, 2),
+    manganese: find(NUTRIENT_IDS.manganese, 2),
+    copper: find(NUTRIENT_IDS.copper, 2),
+    betaCarotene: find(NUTRIENT_IDS.betaCarotene, 2),
+    luteinZeaxanthin: find(NUTRIENT_IDS.luteinZeaxanthin, 2),
   };
 }
 
@@ -210,6 +293,7 @@ export async function getWholeFoodSnapshot(slug: string): Promise<NutrientSnapsh
 
     return {
       per100g: extractNutrients(foodNutrients),
+      units: NUTRIENT_UNITS,
       fdcId,
       source: "usda-fdc",
     };

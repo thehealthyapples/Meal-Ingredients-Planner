@@ -66,6 +66,8 @@ import {
   type SlotRef,
 } from "./action-language.js";
 import { DAY_NAMES } from "@shared/time/household-time";
+import { hasCurrentHealthContextConsent } from "../../privacy/health-context-consent.js";
+import { nutritionFocusLabel } from "@shared/nutrition-focus";
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -752,6 +754,90 @@ interface Deps {
   readonly read: ReadIntentFn;
   readonly canExecute: CanExecuteFn;
   readonly getCapability: GetCapabilityFn;
+  readonly hasCurrentHealthContextConsent: (userId: number) => Promise<boolean>;
+}
+
+async function resolveReportedHealthContext(
+  command: ActionCommand,
+  ctx: ActionResolutionContext,
+  deps: Deps,
+): Promise<ActionResolution> {
+  const fact = command.subject?.trim();
+  if (!fact) return { kind: "clarification", question: "What exact health information would you like me to remember as reported?" };
+  const userId = Number(ctx.identity.userId);
+  if (!Number.isInteger(userId) || !(await deps.hasCurrentHealthContextConsent(userId))) {
+    return {
+      kind: "clarification",
+      question: "Before I can save health information, review and grant the current health-data consent in Privacy Settings, then tell me again. You can open Privacy Settings from your Profile.",
+    };
+  }
+  if (command.capability === "profile") {
+    return draftFor("profile", "add", `Save “${fact}” as reported in your profile`, {
+      scope: "reported-health-context", reportedFact: fact,
+    }, deps.canExecute, deps.getCapability);
+  }
+
+  const result = (await readResult(deps.read, ctx.identity, "household", "read", { scope: "eaters" })) as
+    | { readonly eaters?: ReadonlyArray<{ readonly id: string; readonly displayName: string; readonly kind: string }> }
+    | null;
+  const children = (result?.eaters ?? []).filter((eater) => eater.kind === "no-account");
+  let selected: (typeof children)[number] | undefined;
+  if (command.personName) {
+    const match = matchByName(children, command.personName, (eater) => eater.displayName);
+    if ("ambiguous" in match) return { kind: "clarification", question: `Which child did you mean — ${listNames(match.ambiguous.map((eater) => eater.displayName))}?` };
+    if ("miss" in match) return { kind: "clarification", question: `I couldn't match “${command.personName}” to a child in this household. Which child's profile should I update?` };
+    selected = match.hit;
+  } else if (children.length === 1) {
+    selected = children[0];
+  } else if (children.length > 1) {
+    return { kind: "clarification", question: `Which child should I update — ${listNames(children.map((eater) => eater.displayName))}?` };
+  }
+  if (!selected) return { kind: "clarification", question: "I couldn't find a dependent child record in this household. Add the child in Household first, then tell me what to save." };
+  return draftFor("household", "add", `Save “${fact}” as reported for ${selected.displayName}`, {
+    scope: "reported-health-context", eaterId: selected.id, reportedFact: fact,
+  }, deps.canExecute, deps.getCapability);
+}
+
+async function resolveNutritionFocus(
+  command: ActionCommand,
+  ctx: ActionResolutionContext,
+  deps: Deps,
+): Promise<ActionResolution> {
+  const focusId = command.nutritionFocus;
+  const label = focusId ? nutritionFocusLabel(focusId) : undefined;
+  if (!focusId || !label) return { kind: "unresolved" };
+  const userId = Number(ctx.identity.userId);
+  if (!Number.isInteger(userId) || !(await deps.hasCurrentHealthContextConsent(userId))) {
+    return {
+      kind: "clarification",
+      question: "Before I can save a nutrition focus, review and grant the current health-data consent in Privacy Settings, then tell me again. You can open Privacy Settings from your Profile.",
+    };
+  }
+  if (command.capability === "profile") {
+    return draftFor("profile", "add", `Save “${label}” as a nutrition focus in your profile`, {
+      scope: "nutrition-focus", focus: focusId,
+    }, deps.canExecute, deps.getCapability);
+  }
+
+  const result = (await readResult(deps.read, ctx.identity, "household", "read", { scope: "eaters" })) as
+    | { readonly eaters?: ReadonlyArray<{ readonly id: string; readonly displayName: string; readonly kind: string }> }
+    | null;
+  const dependents = (result?.eaters ?? []).filter((eater) => eater.kind === "no-account");
+  let selected: (typeof dependents)[number] | undefined;
+  if (command.personName) {
+    const match = matchByName(dependents, command.personName, (eater) => eater.displayName);
+    if ("ambiguous" in match) return { kind: "clarification", question: `Which dependent did you mean — ${listNames(match.ambiguous.map((eater) => eater.displayName))}?` };
+    if ("miss" in match) return { kind: "clarification", question: `I couldn't match “${command.personName}” to a dependent profile in this household. Which profile should I update?` };
+    selected = match.hit;
+  } else if (dependents.length === 1) {
+    selected = dependents[0];
+  } else if (dependents.length > 1) {
+    return { kind: "clarification", question: `Which dependent should I update — ${listNames(dependents.map((eater) => eater.displayName))}?` };
+  }
+  if (!selected) return { kind: "clarification", question: "I couldn't find a dependent profile in this household. Add them in Profile first, then tell me what food focus to save." };
+  return draftFor("household", "add", `Save “${label}” as a nutrition focus for ${selected.displayName}`, {
+    scope: "nutrition-focus", eaterId: selected.id, focus: focusId,
+  }, deps.canExecute, deps.getCapability);
 }
 
 /**
@@ -770,6 +856,7 @@ export async function resolveActionCommand(
     read: overrides.read ?? defaultRead,
     canExecute: overrides.canExecute ?? defaultCanExecute,
     getCapability: overrides.getCapability ?? defaultGetCapability,
+    hasCurrentHealthContextConsent: overrides.hasCurrentHealthContextConsent ?? hasCurrentHealthContextConsent,
   };
 
   // A command with no identity cannot be scoped to a household, and an unscoped
@@ -777,6 +864,10 @@ export async function resolveActionCommand(
   if (!ctx.identity?.userId) return { kind: "unresolved" };
 
   switch (`${command.capability}.${command.verb}`) {
+    case "profile.add":
+    case "household.add":  return command.nutritionFocus
+      ? resolveNutritionFocus(command, ctx, deps)
+      : resolveReportedHealthContext(command, ctx, deps);
     case "planner.add":      return resolvePlannerAdd(command, ctx, deps);
     case "planner.move":     return resolvePlannerMove(command, ctx, deps);
     case "planner.replace":  return resolvePlannerReplace(command, ctx, deps);

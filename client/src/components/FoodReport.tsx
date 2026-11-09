@@ -39,6 +39,15 @@ export interface FoodReportProps {
    * When omitted, all varieties appear in "Broaden Your Variety".
    */
   eatenVarietyLabels?: readonly string[];
+  /**
+   * FOODUI1 follow-up (2026-10-30) — when provided, a Key Nutrients pill
+   * becomes clickable and calls this with the nutrient's name instead of
+   * rendering as static text, so a host page can show foods linked to that
+   * nutrient (e.g. WeekFoodExplorer's "related" column). Variety pills stay
+   * static — a variety name (e.g. "Curly") has no separate page or data of
+   * its own to show.
+   */
+  onSelectNutrient?: (name: string) => void;
 }
 
 // ─── Variety Additional Knowledge ─────────────────────────────────────────────
@@ -72,7 +81,7 @@ function VarietyAdditionalKnowledge({ variety }: { variety: FoodReportVariety })
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function FoodReport({ canonicalSlug, eatenVarietyLabels }: FoodReportProps) {
+export function FoodReport({ canonicalSlug, eatenVarietyLabels, onSelectNutrient }: FoodReportProps) {
   const report = useMemo(() => buildFoodReport(canonicalSlug), [canonicalSlug]);
 
   const { yourVarieties, broadenVarieties } = useMemo(() => {
@@ -112,14 +121,26 @@ export function FoodReport({ canonicalSlug, eatenVarietyLabels }: FoodReportProp
             Key Nutrients
           </p>
           <div className="flex flex-wrap gap-1.5">
-            {report.keyNutrients.map((n) => (
-              <span
-                key={n}
-                className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40"
-              >
-                {n}
-              </span>
-            ))}
+            {report.keyNutrients.map((n) =>
+              onSelectNutrient ? (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => onSelectNutrient(n)}
+                  className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors"
+                  data-testid={`key-nutrient-${n}`}
+                >
+                  {n}
+                </button>
+              ) : (
+                <span
+                  key={n}
+                  className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40"
+                >
+                  {n}
+                </span>
+              ),
+            )}
           </div>
         </div>
       )}

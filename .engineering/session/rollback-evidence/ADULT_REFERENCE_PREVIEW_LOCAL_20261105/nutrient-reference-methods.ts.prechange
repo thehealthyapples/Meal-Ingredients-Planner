@@ -1,0 +1,54 @@
+import type { KnowledgeSourceRef } from "./evidence";
+
+/** ANR1 knowledge candidates, not a published standard store or personal targets. */
+export interface NutrientReferenceMethod {
+  readonly id: string;
+  readonly version: string;
+  readonly nutrientSlug: string;
+  readonly referenceType: "RNI" | "PRI" | "AI" | "exercise-range";
+  readonly unit: "g/day" | "mg/day" | "microgram/day";
+  readonly minAge: number;
+  readonly maxAge?: number;
+  readonly requiresExercise?: boolean;
+  readonly sourceRefs: readonly KnowledgeSourceRef[];
+  readonly reviewedAt: string | null;
+  readonly reviewedBy: string | null;
+  readonly state: "candidate" | "reviewed" | "withdrawn";
+  readonly calculation:
+    | { readonly kind: "body-mass"; readonly lowerPerKg: number; readonly upperPerKg?: number }
+    | { readonly kind: "table"; readonly rows: readonly {
+        readonly minAge: number; readonly maxAge?: number;
+        readonly sex?: "male" | "female";
+        readonly amount: number;
+      }[] };
+  readonly assumptions: readonly string[];
+  readonly candidateSourceUrls?: readonly string[];
+}
+
+/** Research candidates intentionally carry no human review or publishable citations. */
+export const NUTRIENT_REFERENCE_CANDIDATES: readonly NutrientReferenceMethod[] = [
+  {
+    id: "uk-adult-protein-rni", version: "candidate-2026-11-05", nutrientSlug: "protein",
+    referenceType: "RNI", unit: "g/day", minAge: 19,
+    sourceRefs: [], reviewedAt: null, reviewedBy: null, state: "candidate",
+    calculation: { kind: "body-mass", lowerPerKg: 0.75 },
+    assumptions: ["General-wellbeing adults only", "Adequate energy and other nutrients", "Source protein-quality assumptions apply"],
+    candidateSourceUrls: ["https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/743790/Dietary_Reference_Values_-_A_Guide__1991_.pdf"],
+  },
+  {
+    id: "efsa-adult-protein-pri", version: "candidate-2026-11-05", nutrientSlug: "protein",
+    referenceType: "PRI", unit: "g/day", minAge: 19,
+    sourceRefs: [], reviewedAt: null, reviewedBy: null, state: "candidate",
+    calculation: { kind: "body-mass", lowerPerKg: 0.83 },
+    assumptions: ["Separately labelled EU standard", "Full scientific-opinion eligibility review required"],
+    candidateSourceUrls: ["https://www.efsa.europa.eu/en/press/news/120209"],
+  },
+  {
+    id: "adult-exercise-protein-range", version: "candidate-2026-11-05", nutrientSlug: "protein",
+    referenceType: "exercise-range", unit: "g/day", minAge: 19, maxAge: 64, requiresExercise: true,
+    sourceRefs: [], reviewedAt: null, reviewedBy: null, state: "candidate",
+    calculation: { kind: "body-mass", lowerPerKg: 1.4, upperPerKg: 2 },
+    assumptions: ["Confirmed healthy exercising adult and muscle/strength goal", "19–64 is the initial product scope, not a biological boundary", "Source-domain admission and editorial review required"],
+    candidateSourceUrls: ["https://link.springer.com/article/10.1186/s12970-017-0177-8"],
+  },
+];

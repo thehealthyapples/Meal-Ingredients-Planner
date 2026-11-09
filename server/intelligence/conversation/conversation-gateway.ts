@@ -575,7 +575,11 @@ async function buildGroundedResponse(
           ...obs,
         });
         return {
-          text: `${resolution.draft.label}? Confirm below and I'll do it.`,
+          text: resolution.draft.parameters.scope === "reported-health-context"
+            ? "I can save this as reported health information, without treating it as verified. The proposed change is shown below; confirm it to save it."
+            : resolution.draft.parameters.scope === "nutrition-focus"
+              ? "I can save that as a food preference for this profile, not as a medical target. The proposed change is shown below; confirm it to save it."
+              : `${resolution.draft.label}? Confirm below and I'll do it.`,
           entityRefs: [],
           outcome: {
             status: "confirmation_required",
@@ -1247,7 +1251,7 @@ EVERY member at the table — including children with no account of their own.`;
 
 HARD RULES — you must never break these:
 1. Answer ONLY from the CONTEXT DATA provided below. Never invent, hallucinate, or assume facts not present in the context.
-2. Nutrition and health: only state what is explicitly in the context. Never claim a food "helps with" or "is good for" any medical condition without a source. Never make medical diagnoses, treatment recommendations, or prescriptions.
+2. Nutrition and health: only state what is explicitly in the context. User-reported conditions are not verified diagnoses. You may describe a food's sourced nutrient content, but never imply that it treats, prevents, or cures a condition; never personalize condition-specific advice unless an explicitly reviewed method is present in the context. Never make diagnoses, treatment recommendations, or prescriptions.
 3. If the specific detail asked for is not in the context, do NOT guess or invent it. Instead answer honestly in a full sentence: say what you DO have that is relevant, or state plainly that it isn't recorded yet (e.g. "You don't have a diet pattern recorded in your profile yet.") — never the bare phrase "I don't have that information right now" on its own, and never a fabricated fact to fill the gap.
 4. Be practical and concise (1–4 sentences). Never judgemental about food choices.
 5. Only reference specific entities (meals, weeks, products) if they appear in the context data with real IDs — and DO include every such entity in entityRefs.
@@ -1622,10 +1626,20 @@ export class ConversationGateway {
     const frameRef = serializeFrameRef(frame);
 
     // 4. Record user turn
+    const parsedAction = parseActionCommand(utterance);
+    const reportedHealthCapture = Boolean(
+      parsedAction?.verb === "add" &&
+      (parsedAction.capability === "profile" || parsedAction.capability === "household"),
+    );
     const userTurnData: NewConversationTurn = {
       role: "user",
       surface,
-      utterance,
+      // Keep profile health details and focus values out of duplicate turn history.
+      utterance: reportedHealthCapture
+        ? parsedAction?.nutritionFocus
+          ? "[Nutrition preference shared with Companion]"
+          : "[Health update shared with Companion]"
+        : utterance,
       contextFrameRef: frameRef,
     };
     const userTurn = await this.store.appendTurn(thread.id, userTurnData);
@@ -1740,6 +1754,27 @@ export class ConversationGateway {
     if (!thread) return { turns: [], threadId: null };
     const turns = await this.store.getRecentTurns(thread.id, limit);
     return { turns, threadId: thread.id };
+  }
+
+  /**
+   * 2026-11-06 (owner) — "it remembers and I can't clear it". There was no
+   * route anywhere that ever called `store.closeThread` — `processUserTurn`'s
+   * own policy comment says "reuse the active thread… open a new thread only
+   * when there is no active thread" (Phase 1), but nothing in the client or
+   * the routes ever MADE there be no active thread. One never-closing thread
+   * also means the bounded "last 5 prior turns" fed into every prompt
+   * (CONVERSATION HISTORY, below) can never fully clear either — a wrong
+   * answer early in a long thread keeps resurfacing as the model's own
+   * stated precedent, even once the underlying data is fixed.
+   *
+   * Closing the active thread is sufficient on its own: the very next
+   * `processUserTurn` finds no active thread and opens a fresh one under the
+   * SAME existing policy above — no new thread-creation path needed here.
+   */
+  async startNewThread(userId: number): Promise<void> {
+    const conversation = await this.store.getOrCreateConversation(userId);
+    const thread = await this.store.getActiveThread(conversation.id);
+    if (thread) await this.store.closeThread(thread.id);
   }
 }
 

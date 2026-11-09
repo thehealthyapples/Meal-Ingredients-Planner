@@ -1,4 +1,4 @@
-/* NORTH1 (2026-07-17) added Caveat — the signature voice, adopted onto /home.
+/* NORTH1 (2026-07-17) added Caveat — the signature voice, adopted onto /.
    Two weights only (500/600), which is every weight `.text-signature` can reach: the
    role carries no weight scale, so a third would be a download nothing can render.
    `display=swap` keeps the greeting readable while the hand is still arriving — the
@@ -111,7 +111,7 @@
      significant branded moments only: never a button, a label, a status, or a
      value a household reads in order to act. Its rarity is the whole point.
      Permitted surfaces are named one at a time in the adoption register; today
-     there is exactly one, and it is `/home` — the household's own name in the
+     there is exactly one, and it is `/` — the household's own name in the
      greeting, which is Home's one ornament and is data-borne.
 
      ADOPTED 2026-07-17 (NORTH1), on Colin Clapson's ADOPT ruling recorded by ODL2.
@@ -568,6 +568,118 @@
   --realm-text:   hsl(190,42%,20%);
   --realm-bg:     hsl(190,28%,90%);
   --realm-border: hsl(190,22%,81%);
+}
+
+/* SHOP1 — owner-approved exact photo assets are documented in the Experience
+   Blueprint. Keep the market basket visible around one live, responsive list. */
+.shopping-notepad-scene {
+  position: relative;
+  isolation: isolate;
+  min-height: 0;
+  background: #d8c6a7;
+}
+.shopping-notepad-scene::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: url("/images/shopping/shopping-notepad-background-desktop.png");
+  background-size: cover;
+  background-position: center -28px;
+  background-repeat: no-repeat;
+}
+.shopping-notepad-scene > * {
+  position: relative;
+  z-index: 1;
+}
+.shopping-stage-tools {
+  margin-top: clamp(4rem, 7vh, 5.5rem);
+  flex: 0 0 auto;
+  scrollbar-width: none;
+}
+.shopping-stage-tools::-webkit-scrollbar {
+  display: none;
+}
+.shopping-toolbar-list-controls {
+  flex: 1 1 auto;
+  min-width: 0;
+  border-left: 1px solid hsl(var(--border) / 0.35);
+  padding-left: 0.5rem;
+}
+.shopping-paper-scroll {
+  flex: 1 1 0%;
+  min-height: 0;
+  width: min(48rem, 68vw);
+  margin-inline: auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: hsl(30 24% 48% / 0.55) transparent;
+  padding: 0 0.25rem 1rem;
+  border-inline: 1px solid hsl(36 24% 62% / 0.22);
+}
+.shopping-paper-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+.shopping-paper-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.shopping-paper-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: hsl(30 24% 48% / 0.45);
+}
+.shopping-stage-tabs {
+  min-height: 2.75rem;
+}
+.shopping-add-page {
+  width: min(48rem, 68vw);
+  min-height: clamp(22rem, 58svh, 38rem);
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+.shopping-add-blotter {
+  height: 100%;
+  min-height: inherit;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1rem 1.5rem 0.5rem;
+}
+.shopping-add-input {
+  max-height: 45vh;
+  overflow-y: auto;
+}
+.shopping-add-tools {
+  border-top: 1px solid hsl(36 24% 62% / 0.28);
+  padding-top: 0.5rem;
+}
+.shopping-stage-tab:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 3px;
+}
+.shopping-stage-menu {
+  display: flex;
+  align-items: center;
+  border-left: 1px solid hsl(var(--border) / 0.35);
+  padding-left: 0.375rem;
+}
+@media (max-width: 767px) {
+  .shopping-notepad-scene::before {
+    background-image: url("/images/shopping/shopping-notepad-background-mobile.png");
+    background-position: center -18px;
+  }
+  .shopping-add-page {
+    width: 78vw;
+    min-height: clamp(22rem, 58svh, 36rem);
+  }
+  .shopping-paper-scroll {
+    width: 78vw;
+  }
+  .shopping-add-blotter {
+    padding-inline: 0.5rem;
+  }
 }
 /* EXPADOPT1 — the Orchard, added. `orchard` has been a declared `PageRealm`
    since COMM2 admitted the room (workspace-header.tsx), and the navigation
@@ -1512,355 +1624,159 @@ a:hover > .brand-mark .bm-face { opacity: 0.86; }
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   UX2 (2026-07-19) — HOME, AS LOCKED. Concept B · The Kept House.
-
-   This block REPLACES the ARRIVAL1 archway. Nothing here is a new design: it is
-   `HOME_ARRIVAL_PRODUCTION_LOCK` § 2 built into the product — the locked, rendered,
-   collision-checked composition that has been waiting on its "gated implementation
-   step" since 2026-07-17.
-
-   WHY THE ARCH WENT. ARRIVAL1 built NORTH5's archway: a rounded plaster aperture,
-   a bounded oak console, a stone floor. NORTH4 Concept B superseded it and the
-   production lock fixed that supersession as final — *glass above · oak sill ·
-   plaster room below · doors along the floor*. The arch is the ancient form; the
-   house is the MODERN home in the ancient orchard (Experience Blueprint § 1.4), and
-   a rounded aperture with a heavy oak slab under it reads as the cottage, not as
-   the clean architecture and full glazing the Orchard House Design Blueprint states
-   as the house's character. So the aperture becomes real joinery — a head reveal
-   with wall thickness above the glass, jambs returning down each side, timber
-   mullions holding three bays, and an oak sill as the absolute boundary.
-
-   THE SILL IS LOAD-BEARING IN PERPETUITY (NORTH4's R2 defence). Everything the
-   household reads sits BELOW it; nothing is ever laid on the glass. That is what
-   stops a future hand "tidying" Home back into a hero banner with text on a photo.
-
-   The interior is The Kept House: age, never objects. The oak is darkened the way
-   timber darkens after years of the same morning; the plaster carries one faint
-   hand-troweled grain; the sill's lip is worn lighter where hands and cups have
-   rested. No prop was added — only time was let pass over the room. The feeling
-   comes from *time*, which is the one interior quality that cannot be staged.
-
-   Scope: every token below is consumed only under `.home-room`, so NO other room
-   changes. The Home-scoped orchard green (hue 74) is kept exactly as ARRIVAL1 set
-   it — the platform-wide green swap (NORTH4 D1) remains the owner's decision and is
-   not taken here.
-   ═══════════════════════════════════════════════════════════════════════════ */
+/* HOMEEXT1 — The exterior scene is the room's view. These Home-scoped
+   material roles make the readable welcome and summaries into quiet ground. */
 .home-room {
-  /* materials — The Kept House, warmed by The Warm Hour, matte per The Linen Calm */
-  --wall:        36 30% 91%;   /* chalky matte plaster */
-  --wall-sill:   42 78% 96%;   /* the wall just under the window — warmed */
-  --wall-mid:    40 58% 93%;
-  --wall-floor:  33 22% 81%;
-  --oak-lip:     41 40% 68%;   /* timber darkened by years of the same morning */
-  --oak-body:    42 42% 36%;
-  --oak-edge:    44 46% 20%;
-  --ivory:       39 64% 97%;
-  --ivory-edge:  38 32% 90%;
-  --olive:       56 40% 9%;
-  /* REBUILD1 (Room 1, 2026-07-22): ONE hairline for the whole room — the door-run's
-     top border and the dividers between the doors. It was two near-identical raw
-     HSLs authored in two places: this file's `.home-doors` border-top (38 22% 80%)
-     and the page's inline `border-[hsl(38 24% 82%/0.7)]` door dividers — one
-     conceptual line, two values, and a colour named in JSX against this room's own
-     "this page names no number, it names the token" rule (UIA §4; CRAFT1 §3). Named
-     once here, consumed by both the CSS below and the door-divider classes. */
-  --home-hairline: 38 22% 80% / 0.7;
-
-  /* UX2 — THE HOME-SCOPED GREEN IS GONE, AND THAT IS THE POINT.
-     ARRIVAL1 overrode `--primary`, `--ring` and `--primary-border` to hue 74 HERE
-     because the platform-wide swap was the owner's to make and had not been made.
-     It has now been made (`:root`, above), so Home inherits the house's green
-     instead of declaring its own. Deleting these lines is the actual completion of
-     NORTH4 D1: while they stood, Home was still the one room that knew a different
-     green, which is exactly the "nine applications wearing one navigation" shape
-     this whole brief exists to close.
-
-     `--accent` alone remains scoped, and for a different reason: at Home it is the
-     warm plaster the room is built from (hue 41), not the platform's soft green
-     wash. That is a MATERIAL, not a brand colour. */
-  --accent:         41 46% 90%;
-
-  /* The window's own height. The lock's `--sill-y` is an absolute boundary in a
-     full-viewport composition; in the product the room SCROLLS, so the same
-     boundary is expressed as the glass's height in normal flow. The architecture
-     is identical — glass, then sill, then room — and it survives a long page,
-     which a viewport-pinned sill does not. */
-  --glass-h: clamp(208px, 32vh, 372px);
-  --sill-h:  30px;
-
+  --wall-sill: 42 78% 96%;
+  --ivory: 39 64% 97%;
+  --ivory-edge: 38 32% 90%;
+  --olive: 56 40% 9%;
+  --accent: 41 46% 90%;
   position: relative;
-  /* THE ROOM LIT BY ITS OWN WINDOW — warmed a half-step at the sill (The Warm Hour),
-     falling to the floor. A wash on plaster, NEVER a second sun (Blueprint § 16).
-     The room RECEIVES the morning; no light is ever added to the orchard. */
-  background:
-    linear-gradient(to bottom,
-      hsl(var(--wall-sill)) 0,
-      hsl(var(--wall-sill)) calc(var(--glass-h) + var(--sill-h)),
-      hsl(var(--wall-mid))  calc(var(--glass-h) + var(--sill-h) + 190px),
-      hsl(var(--wall-floor)) 100%);
 }
-
-/* PLASTER TEXTURE — a hand-troweled wall, not a flat fill. The one grain of The
-   Linen Calm: matte, chalky, real material (TRANSLATION1 § 5, materials before
-   effects). Faint enough to be felt and not seen. */
-.home-room::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  opacity: 0.06;
-  mix-blend-mode: multiply;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-
-/* ── THE GLASS — the orchard, full bleed, seen through real joinery ──────────
-   The same view every morning, from the same place: the Arrival viewpoint is
-   permanent (NORTH4 § 2). Only how much of it is opened ever changes. It carries
-   no type and never animates (Blueprint § 6.1). */
-.home-window {
-  position: relative;
-  z-index: 1;
-  height: var(--glass-h);
-  overflow: hidden;
-}
-.home-window img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: 50% 22%;
-  display: block;
-}
-/* the HEAD of the window: the wall has real thickness above the glass — a reveal,
-   not an edge. This is what makes it an opening cut INTO a wall rather than a
-   hero banner, and it is the difference the whole concept rests on. */
-.home-window::before {
-  content: "";
-  position: absolute;
-  z-index: 3;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 22px;
-  background: linear-gradient(to bottom, hsl(45 42% 20% / 0.42), hsl(45 42% 20% / 0));
-}
-/* the JAMBS: the reveal returns down each side. */
-.home-window::after {
-  content: "";
-  position: absolute;
-  z-index: 3;
-  inset: 0;
-  pointer-events: none;
-  box-shadow:
-    inset  26px 0 34px -26px hsl(45 42% 20% / 0.36),
-    inset -26px 0 34px -26px hsl(45 42% 20% / 0.36);
-}
-
-/* ── THE MULLIONS — structure holding glass, not lines drawn on a photo ──────
-   A lit inner edge and a cast shadow, so they read as timber HOLDING the glass
-   up. Load-bearing in perpetuity: this is the R2 defence NORTH4 named. */
-.home-mullion {
-  position: absolute;
-  z-index: 2;
-  top: 0;
-  bottom: 0;
-  width: 8px;
-  background: linear-gradient(to right,
-    hsl(45 42% 18% / 0.58), hsl(var(--oak-body)) 38%, hsl(var(--oak-lip)) 52%, hsl(45 42% 18% / 0.58));
-  box-shadow: 0 0 14px hsl(var(--olive) / 0.24), inset 0 0 0 0.5px hsl(45 30% 80% / 0.32);
-}
-.home-mullion--one { left: 33.333%; }
-.home-mullion--two { left: 66.666%; }
-
-/* ── THE SILL — the boundary, absolute. A real oak object with thickness ─────
-   The Kept House's worn lip: a band lighter where hands and cups have rested for
-   years. Patina is the one thing a printed logo can never fake. */
-.home-sill {
-  position: relative;
-  z-index: 4;
-  height: var(--sill-h);
-  background: linear-gradient(to bottom,
-    hsl(var(--oak-lip)) 0px, hsl(43 42% 52%) 5px, hsl(var(--oak-body)) 60%, hsl(var(--oak-edge)) 100%);
-  box-shadow: 0 16px 30px -12px hsl(56 45% 9% / 0.32);
-}
-.home-sill::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 2px;
-  background: hsl(44 60% 86% / 0.78);
-}
-.home-sill::after {
-  content: "";
-  position: absolute;
-  left: 8%;
-  right: 46%;
-  top: 3px;
-  height: 5px;
-  border-radius: 3px;
-  background: radial-gradient(ellipse at center, hsl(44 54% 82% / 0.7), transparent 72%);
-}
-
-/* ── THE PRESSED APPLE — the sole brand identity, in the plaster wall ────────
-   BRAND2 § 6 "The Pressed Apple", built as the production lock § 6.1 requires:
-   from the room's own light model rather than as a placed image. A three-layer
-   intaglio masked by the canonical THA apple —
-
-     · contact shadow — the apple sits SUNK in the material, not printed on it
-     · recess face    — an interior gradient, dark at the shadowed top, the light
-                        pooling toward the lit lower lip
-     · two-rim relief — dark rim UP, lit rim DOWN, lit by the room's one morning
-
-   It holds NO pigment. It is tone-on-tone: it IS the wall, not an image on it.
-   Discovered the moment the eye leaves the orchard; after six months of mornings
-   it is no longer a brand at all but a detail of *their* wall. Never a mark the
-   light must switch on — always faintly present (T12 was refused). */
-.wall-apple {
-  position: absolute;
-  z-index: 3;
-  pointer-events: none;
-  aspect-ratio: 1 / 1;
-  /* ⚠️ PLACED BY MEASUREMENT, NOT BY EYE — and the first attempt was WRONG.
-     It was `top: calc(glass-h + sill-h + 92px); right: 7.5%`, reasoned as "open
-     plaster at eye height". Photographed, that lands squarely ON the Companion's
-     sentences, which occupy the right-hand column (`lg:grid-cols-[1fr_22rem]`)
-     starting immediately under the sill. BRAND2 § 4.7 forbids exactly this — the
-     mark presses into CLEAR wall or it does not press at all — and no test could
-     have caught it, because a mask over text is valid CSS and passing markup.
-     ODL2 § 6.3's rule again: this class of defect is found by looking at a picture.
-
-     So the mark is anchored to the BOTTOM of the room instead of the top. Content
-     in this room stacks downward from the sill and varies in height with how much
-     the household's day actually contains; the floor does not move. Low and right
-     is also where a maker's mark belongs — in the penumbra near the floor line,
-     discovered rather than presented.
-
-     The WIDTH is derived from the margin it must fit inside: the room's content is
-     `max-w-4xl` (56rem) centred, so the open wall each side is `(100vw - 56rem)/2`,
-     less a 2.5rem breathing gap. The mark can therefore never grow into the column
-     beside it at any viewport — the collision above is closed by arithmetic rather
-     than by a hand-tuned percentage that the next layout change would silently
-     invalidate. */
-  width: clamp(96px, calc((100vw - 56rem) / 2 - 2.5rem), 150px);
-  top: auto;
-  bottom: 132px;
-  right: 1.5rem;
-}
-/* ⚠️ THE MASK URL IS A PUBLIC-ROOT PATH, AND IT HAS TO BE.
-   All three reliefs in this file — the wall press, the header's `.brand-mark` and
-   the Companion's `.companion-emblem` — mask themselves with `/tha-apple.png`. A
-   CSS `url()` in this stylesheet is NOT resolved through the bundler's asset graph
-   the way `import thaAppleSrc from "@/assets/icons/tha-apple.png"` is, so the
-   canonical apple is PUBLISHED at `client/public/tha-apple.png` for these three to
-   reach.
-
-   This bit first, and it failed SILENTLY: build green, typecheck green, every gate
-   green, and all three marks invisible, because a mask whose image 404s does not
-   error — it masks everything away. The dev server made it worse by answering the
-   404 with the SPA's index.html, so the request even returned 200. Caught only by
-   opening the screenshot. If the asset is ever moved, these three go blank again
-   and nothing will tell you: check the picture. */
-.wall-apple i {
-  position: absolute;
-  inset: 0;
-  display: block;
-  -webkit-mask: url("/tha-apple.png") center / contain no-repeat;
-          mask: url("/tha-apple.png") center / contain no-repeat;
-}
-/* Layer order (back → front). The morning is lit from the top-left, so a shape
-   pressed INTO plaster shows a DARK rim at its top and a LIT rim at its bottom
-   (BRAND2 § 2). The rims sit behind and peek past the face's edge; the face,
-   drawn last, carries the recessed interior. Medium-shallow: it reads on an
-   ordinary screen and stays a whisper. */
-.wall-apple .wa-occ {
-  background: hsl(38 20% 64%);
-  filter: blur(2.5px);
-  transform: scale(1.05) translateY(1.5px);
-  opacity: 0.42;
-}
-.wall-apple .wa-rim-up {
-  background: hsl(42 26% 44%);
-  transform: translateY(-2.5px);
-  opacity: 0.78;
-}
-.wall-apple .wa-rim-lo {
-  background: hsl(44 62% 93%);
-  transform: translateY(2.5px);
-  opacity: 0.6;
-}
-.wall-apple .wa-face {
-  background: linear-gradient(to bottom,
-    hsl(35 16% 71%) 0%, hsl(37 24% 82%) 50%, hsl(41 46% 90%) 100%);
-}
-
-/* ── THE ROOM BELOW ──────────────────────────────────────────────────────────
-   The interface recedes (The Kept House). What survives from ARRIVAL1 is the
-   ivory object — a thing left on a surface, with its own contact shadow, never a
-   cell in a grid. What does NOT survive is the oak console slab it used to rest
-   on: a full oak plank under the day's facts was the arch-era furniture, and in
-   Concept B the room below the sill is plaster. The facts now rest on the wall
-   itself, with air around them. */
 .home-object {
   background: hsl(var(--ivory));
   border: 1px solid hsl(var(--ivory-edge));
   box-shadow: 0 1px 2px hsl(var(--olive) / 0.10), 0 7px 16px -9px hsl(var(--olive) / 0.22);
 }
 
-/* ── THE DOORS — a low, quiet run along the floor of the room ────────────────
-   Not feature cards and not a second navigation: BottomNav remains the sole
-   primary navigation at every size (UX1; Blueprint § 14). These are the four
-   rooms a household cooks out of, set down at the floor line in the penumbra,
-   visibly subordinate to the one lit action above. A NAME and a HANDLE — the
-   handle a small brass point that catches the morning, nothing more. */
-.home-doors {
-  border-top: 1px solid hsl(var(--home-hairline));
-  background: linear-gradient(to bottom, hsl(36 30% 88% / 0.4), hsl(34 26% 84% / 0.82));
+/* HOMEEXT1 — Home's admitted front-garden E3 threshold. The photo is a view,
+   while every readable element receives its own solid ground. */
+.home-room--exterior {
+  display: flex;
+  min-height: max(38rem, calc(100dvh - 5rem));
+  background: hsl(var(--wall-sill));
 }
-.home-door {
+.home-room--exterior::after { display: none; }
+.home-exterior-view {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.home-exterior-view img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+  object-position: 50% 53%;
+}
+.home-exterior-content {
   position: relative;
-  transition: background-color .2s ease-out;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: .8rem;
+  width: 100%;
+  min-height: inherit;
+  padding: clamp(1rem, 2vw, 2rem) clamp(1rem, 3vw, 3rem) 1rem;
 }
-.home-door:hover { background: hsl(var(--ivory) / 0.5); }
-@media (prefers-reduced-motion: reduce) { .home-door { transition: none; } }
-.home-door-handle {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: hsl(43 62% 47%);
-  opacity: 0.7;
-  box-shadow: 0 0 0 3px hsl(43 62% 47% / 0.1);
+.home-exterior-intro {
+  align-self: center;
+  width: min(28rem, 44vw);
+  margin-left: -7vw;
 }
-
-/* Tablet — the window keeps its bays; the room grows. Two bays are honest here. */
-@media (max-width: 900px) {
-  .home-mullion--two { display: none; }
-  .home-mullion--one { left: 50%; }
+.home-exterior-dashboard-link {
+  background: hsl(var(--ivory) / .62);
+  border: 1px solid hsl(var(--ivory-edge));
+  box-shadow: 0 3px 18px hsl(var(--olive) / .13);
+  transition: background-color 160ms ease;
 }
-
-/* ── WHERE THERE IS NO OPEN WALL, THERE IS NO PRESSED MARK ───────────────────
-   Below ~1100px the room's content reaches the full width of the window and the
-   plaster margin the mark presses into stops existing. The honest answer is to
-   omit it, not to shrink it until it fits somewhere it does not belong: a relief
-   laid over the household's own sentences is not a quieter brand, it is a louder
-   one, and BRAND2 § 4.7 refuses it at any size.
-
-   Nothing is lost by this. The house is still signed at every viewport — the
-   header's `.brand-mark` is the same relief at the same physics, and it is the
-   one that carries the accessible name. The wall press is the SECOND, ambient
-   signature; a phone simply has no spare wall to put it on. */
-@media (max-width: 1100px) {
-  .wall-apple { display: none; }
+.home-exterior-welcome {
+  padding: .25rem .1rem;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  text-shadow: 0 1px 10px hsl(var(--wall-sill) / .7);
 }
-
-/* Mobile — the window stands taller and portrait: the orchard stays the hero and
-   never becomes a letterbox. One bay; the sill is still the boundary. */
-@media (max-width: 520px) {
-  .home-room { --glass-h: clamp(196px, 30vh, 260px); --sill-h: 20px; }
-  .home-mullion { width: 6px; }
-  .home-window img { object-position: 50% 26%; }
+.home-exterior-welcome .text-signature {
+  font-size: clamp(3.1rem, 5vw, 4.4rem);
+  overflow-wrap: anywhere;
+}
+.home-exterior-welcome [data-testid="text-home-date"] { margin-top: .45rem; }
+.home-exterior-day {
+  width: min(56rem, 68vw);
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: .65rem;
+}
+.home-exterior-ground { display: flex; flex-direction: column; gap: .65rem; }
+.home-exterior-cards { align-items: stretch; }
+.home-exterior-cards .home-object {
+  padding: .65rem .8rem;
+  background: hsl(var(--ivory) / .62);
+  transition: background-color 160ms ease;
+}
+.home-exterior-cards .home-object:hover,
+.home-exterior-cards .home-object:focus-within,
+.home-exterior-dashboard-link:hover,
+.home-exterior-dashboard-link:focus-within {
+  background: hsl(var(--ivory));
+}
+.home-exterior-cards .home-object > :first-child { margin-bottom: .35rem; }
+/* FNDFIX5 (2026-11-03) — the three glance cards became whole-card links
+   (owner feedback: the separate in-card "View X ›" text duplicated the
+   click target). A `--compact` card has no secondary content row below
+   its header any more, so it carries no bottom margin on that header and
+   sits at roughly half its previous height; its own hover/focus brighten
+   step is softened too, since the entire card now lights up on hover
+   rather than just a small text link. */
+.home-exterior-cards .home-object--compact {
+  padding: .5rem .75rem;
+  -webkit-tap-highlight-color: transparent;
+}
+.home-exterior-cards .home-object--compact > :first-child { margin-bottom: 0; }
+.home-exterior-cards .home-object--compact:hover,
+.home-exterior-cards .home-object--compact:focus-within {
+  background: hsl(var(--ivory) / .82);
+}
+.home-exterior-cards a.home-object--compact {
+  text-decoration: none;
+  color: inherit;
+}
+.home-exterior-dashboard-link {
+  align-self: flex-end;
+  padding: .35rem .7rem;
+  border-radius: var(--radius-support);
+}
+@media (max-width: 1000px) {
+  .home-exterior-intro { width: min(27rem, 56vw); margin-left: -3vw; }
+  .home-exterior-day { width: min(100%, 52rem); }
+}
+@media (max-width: 760px) {
+  /* FNDFIX1 (2026-11-03) — .home-room--exterior was a flex-1 child of <main>'s
+     flex column, force-sized to fill main's remaining height exactly. With
+     overflow:visible, content taller than that forced box (welcome text + the
+     three feature cards + "See your full dashboard") spilled past it as ink
+     overflow — visible, but not part of <main>'s scrollable region, so no
+     scroll could ever reach it and the dashboard link sat permanently behind
+     the fixed bottom nav. flex:none lets the room size to its real content;
+     the overflow becomes normal block flow, reachable through <main>'s
+     existing overflow-y:auto and already-reserved .main-safe clearance. */
+  .home-room--exterior { display: block; min-height: 0; flex: none; }
+  .home-exterior-view {
+    position: relative;
+    inset: auto;
+    height: clamp(15rem, 42vh, 23rem);
+  }
+  .home-exterior-view img { object-position: 55% 48%; }
+  .home-exterior-content {
+    min-height: 0;
+    padding: 0 1rem 1.25rem;
+    background: hsl(var(--wall-sill));
+  }
+  .home-exterior-intro {
+    align-self: stretch;
+    width: 100%;
+    margin: -1.5rem 0 0;
+  }
+  .home-exterior-welcome { padding: .25rem .1rem; }
+  .home-exterior-day { width: 100%; margin-top: .3rem; }
+  .home-exterior-cards { grid-template-columns: 1fr; }
+  .home-exterior-dashboard-link { align-self: flex-start; }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

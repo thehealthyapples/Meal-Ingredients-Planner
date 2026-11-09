@@ -29,13 +29,13 @@ const LABEL = process.argv[2] ?? "after";
 // because it is E0 — it must prove it is still unmistakably in the house
 // (OHDB § 13.9) without gaining a view it is not entitled to.
 const ROOMS = [
-  { name: "home", path: "/home", note: "E3 — draws its own window" },
+  { name: "home", path: "/", note: "E3 — draws its own window" },
   { name: "planner", path: "/planner", note: "E1 — the family table" },
   { name: "cookbook", path: "/cookbook", note: "E2 — the book by the window" },
   { name: "shopping", path: "/shopping-workspace", note: "E1 — the list by the door" },
   { name: "pantry", path: "/pantry", note: "E2 — the pantry" },
   { name: "nutrition", path: "/nutrition", note: "E2" },
-  { name: "diary", path: "/my-diary", note: "E2 — the window seat" },
+  { name: "diary", path: "/diary", note: "E2 — the window seat" },
   { name: "analyser", path: "/analyser", note: "E1" },
   { name: "orchard", path: "/orchard", note: "E2" },
   { name: "profile", path: "/profile", note: "E1 — the family record" },

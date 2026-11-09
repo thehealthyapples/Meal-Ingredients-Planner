@@ -158,7 +158,7 @@ async function main() {
   // ─────────────────────────────────────────────────────────── SURFACES
   // Every named surface, both widths, natural state, real Development World data.
   const SURFACES: { id: string; route: string; name: string }[] = [
-    { id: "01-home", route: "/home", name: "Home" },
+    { id: "01-home", route: "/", name: "Home" },
     { id: "02-planner", route: "/planner", name: "Planner" },
     { id: "03-cookbook", route: "/cookbook", name: "Cookbook" },
     { id: "04-meal-detail", route: `/meals/${MEAL_ID}`, name: "Meal detail" },
@@ -166,7 +166,7 @@ async function main() {
     { id: "06-pantry", route: "/pantry", name: "Pantry" },
     { id: "07-nutrition", route: "/plant-diversity", name: "Nutrition (Plant Diversity)" },
     { id: "08-profile", route: "/profile", name: "Profile / Household" },
-    { id: "09-diary", route: "/my-diary", name: "My Diary" },
+    { id: "09-diary", route: "/diary", name: "My Diary" },
     { id: "10-analyser", route: "/analyser", name: "Analyser" },
     { id: "11-dashboard", route: "/dashboard", name: "Dashboard (legacy home)" },
     { id: "12-partners", route: "/partners", name: "Partners" },
@@ -224,10 +224,10 @@ async function main() {
     console.log(`\n── Components & interactions @ ${label(vp)}`);
 
     // Companion — floating assistant drawer (mounted on every authed surface).
-    await goto(page, "/home");
+    await goto(page, "/");
     await settle(page);
     await shootEl(page, "20-companion-fab", '[aria-label="Open Apple assistant"]', {
-      route: "/home",
+      route: "/",
       state: "closed (natural)",
       component: "FloatingAssistant — FAB",
       session: "household",
@@ -238,7 +238,7 @@ async function main() {
       await page.click('[aria-label="Open Apple assistant"]', { timeout: 6000 });
       await settle(page, 2000);
       await shootPage(page, "21-companion-open", {
-        route: "/home",
+        route: "/",
         state: "open (natural)",
         component: "FloatingAssistant — Companion drawer",
         session: "household",
@@ -250,7 +250,7 @@ async function main() {
     } catch {
       console.log("  ✗ companion drawer — FAB not clickable");
       records.push({
-        file: null, route: "/home", viewport: `${vp.width}x${vp.height}`,
+        file: null, route: "/", viewport: `${vp.width}x${vp.height}`,
         state: "open", component: "FloatingAssistant — Companion drawer",
         session: "household", induced: null, ok: false, note: "FAB not clickable",
       });
@@ -347,19 +347,19 @@ async function main() {
     }
 
     // Insight cards. Home's intelligence surfaces are the reminder + plant-diversity cards.
-    await goto(page, "/home");
+    await goto(page, "/");
     await settle(page);
     await shootEl(page, "26a-insight-card-reminders", '[data-testid="card-home-reminders"]', {
-      route: "/home", state: "populated (natural)", component: 'Home intelligence card — "A gentle reminder"',
+      route: "/", state: "populated (natural)", component: 'Home intelligence card — "A gentle reminder"',
       session: "household", induced: null, viewport: vp,
     });
     await shootEl(page, "26b-insight-card-plants", '[data-testid="card-home-plant-diversity"]', {
-      route: "/home", state: "populated — 0 of 30 plants (natural)", component: "Home intelligence card — Plant Diversity",
+      route: "/", state: "populated — 0 of 30 plants (natural)", component: "Home intelligence card — Plant Diversity",
       session: "household", induced: null, viewport: vp,
     });
     if (vp.width === MOBILE.width) {
       await shootEl(page, "28-bottom-nav", '[data-testid="mobile-bottom-nav"]', {
-        route: "/home", state: "default (natural)", component: "BottomNav — primary navigation (all breakpoints)",
+        route: "/", state: "default (natural)", component: "BottomNav — primary navigation (all breakpoints)",
         session: "household", induced: null, viewport: vp,
       });
     }
@@ -393,10 +393,10 @@ async function main() {
         await new Promise((r) => setTimeout(r, 15_000));
         await route.continue();
       });
-      page.goto(`${BASE}/home`, { waitUntil: "commit" }).catch(() => {});
+      page.goto(`${BASE}/`, { waitUntil: "commit" }).catch(() => {});
       await page.waitForTimeout(2500);
       await shootPage(page, "30-loading", {
-        route: "/home",
+        route: "/",
         state: "loading — Skeleton / RouteFallback",
         component: "ui/skeleton.tsx, App.tsx RouteFallback",
         session: "household",
@@ -417,10 +417,10 @@ async function main() {
       await page.route("**/api/home/intelligence**", (route) =>
         route.fulfill({ status: 500, contentType: "application/json", body: '{"error":"induced"}' }),
       );
-      await page.goto(`${BASE}/home`, { waitUntil: "domcontentloaded" }).catch(() => {});
+      await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded" }).catch(() => {});
       await settle(page, 5000);
       await shootPage(page, "31-error", {
-        route: "/home",
+        route: "/",
         state: "error — designed LoadError, one section failed, rest of page healthy",
         component: 'ui/load-error.tsx ("We couldn\'t load…" + Try again), error-boundary.tsx',
         session: "household",
@@ -443,10 +443,10 @@ async function main() {
       await page.route("**/api/**", (route) =>
         route.fulfill({ status: 500, contentType: "application/json", body: '{"error":"induced"}' }),
       );
-      await page.goto(`${BASE}/home`, { waitUntil: "domcontentloaded" }).catch(() => {});
+      await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded" }).catch(() => {});
       await settle(page, 4500);
       await shootPage(page, "31b-error-total-api-failure", {
-        route: "/home",
+        route: "/",
         state: "error — TOTAL API failure (session lost): renders a blank white page, no designed state",
         component: "(none — no owner for this state)",
         session: "household",

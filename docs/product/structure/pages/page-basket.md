@@ -2,50 +2,33 @@
 entry: page-basket
 name: Basket
 section: pages
-status: live
+status: retired
 visibility: household
 owner: Colin Clapson
-route: /basket
-aliases:
-  - /analyse-basket
-last_verified: 2026-07-11
-version: 1
+last_verified: 2026-11-05
+version: 2
 ---
 
-# Basket
+# Basket (retired)
 
-> A second, older shopping surface reached from the Dashboard, doing the same job as Shopping in a different interface.
+> Retired duplicate shopping surface. Shopping Workspace is the single current Shopping page.
 
 ## What it is
 
-An earlier take on the shopping list, still reachable from the Dashboard. It works
-over the same shopping items as the Shopping workspace — adding ingredients,
-matching them to real products with prices and Apple Scores, and sorting the
-list — but presents them through its own, table-led interface. It has not been
-retired, so a household can end up in either this Basket or the newer Shopping
-screen depending on where they tapped.
+This earlier shopping page used the same household shopping data as the Shopping
+workspace through a separate, table-led interface. It is no longer routed; the
+former `/basket` and `/analyse-basket` URLs now show the not-found page.
 
 ## Where it lives
 
 | | |
 |---|---|
-| Route | `/basket` |
 | Source | `client/src/pages/shopping-list-page.tsx` |
-
-## Aliases
-
-- `/analyse-basket` — a second address for this same page.
 
 ## Related
 
 - [[dom-shopping]] — the domain this page belongs to
-- [[page-shopping-workspace]] — the newer, primary shopping surface
-
-## Known defects
-
-- `fnd-shopping-duplicate` — this Basket and the newer Shopping workspace are two
-  surfaces over the same shopping list, each with its own interface, with no single
-  owner of the task. See PDA1.
+- [[page-shopping-workspace]] — the current Shopping page
 
 ---
 

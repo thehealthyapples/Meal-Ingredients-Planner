@@ -375,10 +375,23 @@ export default function PrivacySettingsPage() {
                           Lawful basis: {definition.lawfulBasis}
                           {consent.documentVersion ? ` · Version ${consent.documentVersion}` : ""}
                         </p>
-                        {consent.supersededByNewerVersion && (
-                          <p className="mt-1 text-xs text-amber-600 dark:text-amber-500">
-                            This policy has been updated since you agreed to it.
-                          </p>
+                        {(consent.supersededByNewerVersion || !consent.granted) && (
+                          <div className="mt-2 space-y-2">
+                            {consent.supersededByNewerVersion && (
+                              <p className="text-xs text-amber-600 dark:text-amber-500">
+                                This policy has been updated since you agreed to it. Review the current policy before consenting again.
+                              </p>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={setConsent.isPending}
+                              onClick={() => setConsent.mutate({ consentType: consent.consentType, granted: true })}
+                              data-testid={`button-reconsent-${consent.consentType}`}
+                            >
+                              I have reviewed this update and consent
+                            </Button>
+                          </div>
                         )}
                         {/* Withdrawal states its consequence BEFORE it is taken —
                             the honest inverse of a hidden opt-out. */}

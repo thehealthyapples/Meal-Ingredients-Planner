@@ -1,0 +1,103 @@
+import type { KnowledgeSourceRef } from "./evidence";
+
+/** ANR1 knowledge candidates, not a published standard store or personal targets. */
+export interface NutrientReferenceMethod {
+  readonly id: string;
+  readonly version: string;
+  readonly nutrientSlug: string;
+  readonly referenceType: "RNI" | "PRI" | "AI" | "exercise-range";
+  readonly unit: "g/day" | "mg/day" | "microgram/day";
+  readonly minAge: number;
+  readonly maxAge?: number;
+  readonly requiresExercise?: boolean;
+  readonly sourceRefs: readonly KnowledgeSourceRef[];
+  readonly reviewedAt: string | null;
+  readonly reviewedBy: string | null;
+  readonly state: "candidate" | "reviewed" | "withdrawn";
+  readonly calculation:
+    | { readonly kind: "body-mass"; readonly lowerPerKg: number; readonly upperPerKg?: number }
+    | { readonly kind: "table"; readonly rows: readonly {
+        readonly minAge: number; readonly maxAge?: number;
+        readonly sex?: "male" | "female";
+        readonly amount: number;
+      }[] };
+  readonly assumptions: readonly string[];
+  readonly candidateSourceUrls?: readonly string[];
+}
+
+/** Research candidates intentionally carry no human review or publishable citations. */
+export const NUTRIENT_REFERENCE_CANDIDATES: readonly NutrientReferenceMethod[] = [
+  {
+    id: "uk-adult-protein-rni", version: "candidate-2026-11-05", nutrientSlug: "protein",
+    referenceType: "RNI", unit: "g/day", minAge: 19,
+    sourceRefs: [], reviewedAt: null, reviewedBy: null, state: "candidate",
+    calculation: { kind: "body-mass", lowerPerKg: 0.75 },
+    assumptions: ["General-wellbeing adults only", "Adequate energy and other nutrients", "Source protein-quality assumptions apply"],
+    candidateSourceUrls: ["https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/743790/Dietary_Reference_Values_-_A_Guide__1991_.pdf"],
+  },
+  {
+    id: "efsa-adult-protein-pri", version: "candidate-2026-11-05", nutrientSlug: "protein",
+    referenceType: "PRI", unit: "g/day", minAge: 19,
+    sourceRefs: [], reviewedAt: null, reviewedBy: null, state: "candidate",
+    calculation: { kind: "body-mass", lowerPerKg: 0.83 },
+    assumptions: ["Separately labelled EU standard", "Full scientific-opinion eligibility review required"],
+    candidateSourceUrls: ["https://www.efsa.europa.eu/en/press/news/120209"],
+  },
+  {
+    id: "adult-exercise-protein-range", version: "candidate-2026-11-05", nutrientSlug: "protein",
+    referenceType: "exercise-range", unit: "g/day", minAge: 19, maxAge: 64, requiresExercise: true,
+    sourceRefs: [], reviewedAt: null, reviewedBy: null, state: "candidate",
+    calculation: { kind: "body-mass", lowerPerKg: 1.4, upperPerKg: 2 },
+    assumptions: ["Confirmed healthy exercising adult and muscle/strength goal", "19–64 is the initial product scope, not a biological boundary", "Source-domain admission and editorial review required"],
+    candidateSourceUrls: ["https://link.springer.com/article/10.1186/s12970-017-0177-8"],
+  },
+];
+
+export type AdultReferencePreview =
+  | { readonly status: "preview"; readonly methodId: string; readonly methodVersion: string;
+      readonly nutrientSlug: string; readonly referenceType: NutrientReferenceMethod["referenceType"];
+      readonly unit: NutrientReferenceMethod["unit"]; readonly value?: number;
+      readonly range?: { readonly lower: number; readonly upper: number };
+      readonly inputsUsed: Readonly<Record<string, number | string | boolean>>;
+      readonly assumptions: readonly string[]; readonly label: "UNPUBLISHED REVIEW SIMULATION" }
+  | { readonly status: "unavailable" | "invalid-input" | "out-of-scope"; readonly reason: string };
+
+const positivePreviewNumber = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value) && value > 0;
+const validPreviewAge = (value: unknown): value is number => typeof value === "number" && Number.isInteger(value) && value >= 0;
+
+/** Shared deterministic admin simulation. It is not a personal recommendation or published reference. */
+export function previewAdultReferenceMethod(
+  methodId: string,
+  input: { ageYears: number; bodyMass: number; bodyMassUnit: "kg" | "lb"; exerciseConfirmed?: boolean; muscleStrengthGoal?: boolean },
+  methods: readonly NutrientReferenceMethod[] = NUTRIENT_REFERENCE_CANDIDATES,
+): AdultReferencePreview {
+  const matches = methods.filter(method => method.id === methodId);
+  if (matches.length !== 1) return { status: "unavailable", reason: "No unique candidate method exists." };
+  const method = matches[0];
+  if (!validPreviewAge(input.ageYears) || !positivePreviewNumber(input.bodyMass) || !["kg", "lb"].includes(input.bodyMassUnit)) {
+    return { status: "invalid-input", reason: "Enter a whole-number age and positive body mass with kg or lb units." };
+  }
+  if (input.ageYears < method.minAge || (method.maxAge !== undefined && input.ageYears > method.maxAge)) {
+    return { status: "out-of-scope", reason: "The example age is outside this candidate's proposed population." };
+  }
+  if (method.requiresExercise && (input.exerciseConfirmed !== true || input.muscleStrengthGoal !== true)) {
+    return { status: "out-of-scope", reason: "This candidate requires an exercising adult and a stated muscle or strength goal." };
+  }
+  if (method.calculation.kind !== "body-mass" || (method.referenceType === "exercise-range") !== (method.calculation.upperPerKg !== undefined)) {
+    return { status: "unavailable", reason: "This preview currently supports only internally consistent body-mass methods." };
+  }
+  const massKg = input.bodyMassUnit === "lb" ? input.bodyMass * 0.45359237 : input.bodyMass;
+  const lower = massKg * method.calculation.lowerPerKg;
+  const upper = method.calculation.upperPerKg === undefined ? undefined : massKg * method.calculation.upperPerKg;
+  if (!positivePreviewNumber(lower) || (upper !== undefined && !positivePreviewNumber(upper))) {
+    return { status: "invalid-input", reason: "The candidate produced an invalid numeric result." };
+  }
+  return {
+    status: "preview", methodId: method.id, methodVersion: method.version,
+    nutrientSlug: method.nutrientSlug, referenceType: method.referenceType, unit: method.unit,
+    ...(upper === undefined ? { value: lower } : { range: { lower, upper } }),
+    inputsUsed: { ageYears: input.ageYears, bodyMassKg: massKg,
+      ...(method.requiresExercise ? { exerciseConfirmed: true, muscleStrengthGoal: true } : {}) },
+    assumptions: method.assumptions, label: "UNPUBLISHED REVIEW SIMULATION",
+  };
+}

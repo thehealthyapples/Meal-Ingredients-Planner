@@ -11,22 +11,22 @@ version: 1
 
 # Household capability
 
-> Apple can see who eats here and what each person avoids, so nothing it
+> Companion can see who eats here and what each person avoids, so nothing it
 > suggests puts them at risk.
 
 ## What it means for the household
 
-Apple can see who eats in the household and what each person avoids. That is
+Companion can see who eats in the household and what each person avoids. That is
 what lets it keep its suggestions safe: it knows an allergy or an exclusion
 belongs to a real person at this table, so nothing it proposes puts them at
 risk.
 
 ## What it will never do
 
-It reads who is in the household; it does not manage them. Apple does not add or
+It reads who is in the household; it does not manage them. Companion does not add or
 remove members or eaters, and it only ever sees this household — resolved from
 the signed-in person, never named by anyone from outside. If someone belongs to
-no household, Apple says so rather than inventing one.
+no household, Companion says so rather than inventing one.
 
 ## Where it lives
 

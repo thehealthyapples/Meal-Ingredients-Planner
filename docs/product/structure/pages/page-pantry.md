@@ -30,13 +30,13 @@ directly manipulable — drag (or use each item's menu) to add to Shopping
 take out of the larder (reversible). Search adds a new staple, resolving
 identity server-side. No quantities, fill levels or expiry are represented.
 In Explore mode (`/pantry?mode=explore`), a knowledge hub and intelligence
-panel share what THA knows about those ingredients. `/larder` redirects here.
+panel share what THA knows about those ingredients.
 
 ## Where it lives
 
 | | |
 |---|---|
-| Route | `/pantry` (alias `/larder` → redirect) |
+| Route | `/pantry` |
 | Source | `client/src/pages/larder-room.tsx` |
 
 ## Related

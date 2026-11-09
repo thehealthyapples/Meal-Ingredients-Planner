@@ -69,6 +69,8 @@ export interface ResolveProposalFields {
   readonly resultSummary?: string;
   readonly errorCode?: string;
   readonly errorMessage?: string;
+  /** Remove short-lived sensitive values after this proposal reaches a terminal state. */
+  readonly clearParameters?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -153,6 +155,8 @@ export class DatabaseCompanionActionStore implements ICompanionActionStore {
       .update(companionActionProposals)
       .set({
         status,
+        ...(fields.clearParameters ? { parameters: {} } : {}),
+        ...(fields.clearParameters ? { label: "Profile update" } : {}),
         resultSummary: fields.resultSummary ?? null,
         errorCode: fields.errorCode ?? null,
         errorMessage: fields.errorMessage ?? null,
@@ -227,6 +231,8 @@ export class InMemoryCompanionActionStore implements ICompanionActionStore {
     const updated: CompanionActionProposal = {
       ...existing,
       status,
+      ...(fields.clearParameters ? { parameters: {} } : {}),
+      ...(fields.clearParameters ? { label: "Profile update" } : {}),
       resultSummary: fields.resultSummary ?? null,
       errorCode: fields.errorCode ?? null,
       errorMessage: fields.errorMessage ?? null,

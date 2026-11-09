@@ -23,6 +23,11 @@ export interface KnowledgeSourceRef {
   evidenceLevel: "established" | "emerging";
   /** ISO date (YYYY-MM-DD) the link + content were last checked. */
   lastReviewed: string;
+  /** Present on citations prepared for a reviewer by an agent. lastReviewed is empty until verified. */
+  preparedBy?: string;
+  preparedOn?: string;
+  /** Exact passage checked by the reviewer when attaching this citation. */
+  evidenceExcerpt?: string;
 }
 
 // ── Layer 1 — source trust ────────────────────────────────────────────────────
@@ -37,6 +42,8 @@ export const TRUSTED_SOURCE_DOMAINS: readonly string[] = [
   "eur-lex.europa.eu",      // EU law (authorised-claims regulations) — tier 1
   "ods.od.nih.gov",         // NIH Office of Dietary Supplements — tier 2
   "nutrition.org.uk",       // British Nutrition Foundation — tier 2
+  "usda.gov",               // USDA FoodData Central — food composition only
+  "canada.ca",              // Health Canada / Canadian Nutrient File — food composition only
 ];
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -75,6 +82,13 @@ export function isValidSourceRef(ref: unknown): ref is KnowledgeSourceRef {
   return validateSourceRef(ref).length === 0;
 }
 
+/** Evaluate prepared citations as they would read once a reviewer verifies them. */
+export function sourceForReview(ref: KnowledgeSourceRef, date: string): KnowledgeSourceRef {
+  return ref && !ref.lastReviewed && ref.preparedBy && ISO_DATE_RE.test(ref.preparedOn ?? "") && ref.evidenceExcerpt?.trim()
+    ? { ...ref, lastReviewed: date }
+    : ref;
+}
+
 // ── Layer 2 — claim trust ─────────────────────────────────────────────────────
 
 /** The fields of a benefit-link row this gate reasons about. */
@@ -92,7 +106,18 @@ export interface ClaimEvidenceFields {
 export function isEvidenceBackedClaim(row: ClaimEvidenceFields): boolean {
   if (!row.reviewedAt) return false;
   if (!Array.isArray(row.sourceRefs) || row.sourceRefs.length === 0) return false;
-  return row.sourceRefs.some((ref) => isValidSourceRef(ref));
+  return row.sourceRefs.some((ref) => isValidSourceRef(ref) && isSourceAllowedForClaim(ref, row));
+}
+
+/** Composition databases can support what a food contains, not health benefits. */
+export function isSourceAllowedForClaim(ref: unknown, row: ClaimEvidenceFields): boolean {
+  const value = ref as Partial<KnowledgeSourceRef> | null;
+  if (!value?.url) return false;
+  let host = "";
+  try { host = new URL(value.url).hostname.toLowerCase(); } catch { return false; }
+  const compositionOnly = ["usda.gov", "canada.ca"];
+  if (!compositionOnly.some((domain) => host === domain || host.endsWith(`.${domain}`))) return true;
+  return "foodSlug" in row && "nutrientSlug" in row && !("benefitSlug" in row);
 }
 
 // ── Review-state integrity (KNOW5) ────────────────────────────────────────────
@@ -242,7 +267,7 @@ export function isAllowedClaimReviewAction(status: ClaimReviewStatus, action: Cl
 export function canApproveClaim(row: ClaimEvidenceFields & ClaimReviewLifecycleFields): boolean {
   if (deriveClaimReviewStatus(row) !== "pending") return false;
   if (!Array.isArray(row.sourceRefs) || row.sourceRefs.length === 0) return false;
-  return row.sourceRefs.some((ref) => isValidSourceRef(ref));
+  return row.sourceRefs.some((ref) => isValidSourceRef(ref) && isSourceAllowedForClaim(ref, row));
 }
 
 // ── Evidence Confidence (KNOW5) ───────────────────────────────────────────────

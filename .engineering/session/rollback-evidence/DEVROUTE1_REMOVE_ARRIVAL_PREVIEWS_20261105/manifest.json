@@ -1,0 +1,91 @@
+{
+  "task": "DEVROUTE1 remove arrival preview routes",
+  "backup": ".engineering\\session\\rollback-evidence\\DEVROUTE1_REMOVE_ARRIVAL_PREVIEWS_20261105\\App.tsx.pre-edit",
+  "source": "client\\src\\App.tsx",
+  "tagTarget": "3467abad4eca8d82ffc52756fee13874e389597f",
+  "sha256": "C40FEBDE3C4ED90EE774B2320E5890B912296D3D445522D6BA3C40A74ECF9427",
+  "note": "App.tsx had pre-existing uncommitted changes; backup preserves exact bytes before this task.",
+  "rollbackTag": "rollback/DEVROUTE1-remove-arrival-previews-20261105",
+  "additionalSnapshots": [
+    {
+      "note": "Pre-existing modified register; exact bytes preserved before updating this row.",
+      "sha256": "98819ADF669C3613C0F34823BD67753BFB4E0D5EF093C299E61FC6AD77CAA276",
+      "source": "docs\\implementation\\ux\\ADOPTION_REGISTER.md",
+      "backup": ".engineering\\session\\rollback-evidence\\DEVROUTE1_REMOVE_ARRIVAL_PREVIEWS_20261105\\ADOPTION_REGISTER.md.pre-edit"
+    },
+    {
+      "note": "Pre-existing modified machine register; exact sibling backup preserved before updating this row.",
+      "sha256": "3E7054ED1697BEDA8ACC04E1AAE400304E0FCFD46F19195902794FB48916FDA1",
+      "source": "docs\\implementation\\ux\\adoption-register.json",
+      "backup": "docs\\implementation\\ux\\adoption-register.json.pre-DEVROUTE1-20261105.bak"
+    }
+  ],
+  "previewSourceSnapshots": [
+    {
+      "source": "client/src/pages/dev/arrival-a-welcome.tsx",
+      "backup": ".engineering\\session\\rollback-evidence\\DEVROUTE1_REMOVE_ARRIVAL_PREVIEWS_20261105\\pre-delete\\client__src__pages__dev__arrival-a-welcome.tsx",
+      "sha256": "CAE366D41CC18BF6E7277C1249686B00621C0F38DB9D08E36098A507E9C8E4BD"
+    },
+    {
+      "source": "client/src/pages/dev/arrival-b-orchard.tsx",
+      "backup": ".engineering\\session\\rollback-evidence\\DEVROUTE1_REMOVE_ARRIVAL_PREVIEWS_20261105\\pre-delete\\client__src__pages__dev__arrival-b-orchard.tsx",
+      "sha256": "7F4B04877C5B2B340B922FFE075EEF01EF947AD30520B26EBB77133246158AF6"
+    },
+    {
+      "source": "client/src/pages/dev/arrival-c-workspace.tsx",
+      "backup": ".engineering\\session\\rollback-evidence\\DEVROUTE1_REMOVE_ARRIVAL_PREVIEWS_20261105\\pre-delete\\client__src__pages__dev__arrival-c-workspace.tsx",
+      "sha256": "8A0D11738611AC8361018BD0F71FFA0DD40D343F73A895EFFA6F50A97A10F74A"
+    },
+    {
+      "source": "client/src/pages/dev/arrival-d-quiet.tsx",
+      "backup": ".engineering\\session\\rollback-evidence\\DEVROUTE1_REMOVE_ARRIVAL_PREVIEWS_20261105\\pre-delete\\client__src__pages__dev__arrival-d-quiet.tsx",
+      "sha256": "00925AE8D4AC24042C456B9B98D0A4F656FB7703EC1739B626FE50AB7D621F5F"
+    },
+    {
+      "source": "client/src/pages/dev/arrival-e-restraint.tsx",
+      "backup": ".engineering\\session\\rollback-evidence\\DEVROUTE1_REMOVE_ARRIVAL_PREVIEWS_20261105\\pre-delete\\client__src__pages__dev__arrival-e-restraint.tsx",
+      "sha256": "6105243E06F8C7222635C80C86C88D3045624CDA57794D00BEC7ECD0B26F3C0A"
+    },
+    {
+      "source": "client/src/pages/dev/arrival-experience.tsx",
+      "backup": ".engineering\\session\\rollback-evidence\\DEVROUTE1_REMOVE_ARRIVAL_PREVIEWS_20261105\\pre-delete\\client__src__pages__dev__arrival-experience.tsx",
+      "sha256": "586979D3A763DBB6FD01B4DC061AD627C1BACD5E340D365510E4DF739E598FCB"
+    },
+    {
+      "source": "client/src/pages/dev/arrival-s1-quiet.tsx",
+      "backup": ".engineering\\session\\rollback-evidence\\DEVROUTE1_REMOVE_ARRIVAL_PREVIEWS_20261105\\pre-delete\\client__src__pages__dev__arrival-s1-quiet.tsx",
+      "sha256": "9B390D09EE6A580F05F941FDD898236527139024D580706C2CF6A9E8EC7627BA"
+    },
+    {
+      "source": "client/src/pages/dev/arrival-s2-walking-home.tsx",
+      "backup": ".engineering\\session\\rollback-evidence\\DEVROUTE1_REMOVE_ARRIVAL_PREVIEWS_20261105\\pre-delete\\client__src__pages__dev__arrival-s2-walking-home.tsx",
+      "sha256": "211B796232610BFFC6AB68158F04D5AFCB99D32BD8DC44FC10F3D32AD72ACD48"
+    },
+    {
+      "source": "client/src/pages/dev/exp2-shared.tsx",
+      "backup": ".engineering\\session\\rollback-evidence\\DEVROUTE1_REMOVE_ARRIVAL_PREVIEWS_20261105\\pre-delete\\client__src__pages__dev__exp2-shared.tsx",
+      "sha256": "541D53F629C6C15765FE0B54304A07B84EDD292DC108F8894B28519DD3D9917A"
+    },
+    {
+      "source": "scripts/capture-arrival-experience.ts",
+      "backup": ".engineering\\session\\rollback-evidence\\DEVROUTE1_REMOVE_ARRIVAL_PREVIEWS_20261105\\pre-delete\\scripts__capture-arrival-experience.ts",
+      "sha256": "24C5DB17816F949085591FB73C5348A7FB241A812529CEFEDAA0FC7E978E20E5"
+    },
+    {
+      "source": "scripts/capture-arrival-sheen-closeup.ts",
+      "backup": ".engineering\\session\\rollback-evidence\\DEVROUTE1_REMOVE_ARRIVAL_PREVIEWS_20261105\\pre-delete\\scripts__capture-arrival-sheen-closeup.ts",
+      "sha256": "F2A90BD019122549DA6CAF34D7C4D2E2536FC32410CE546C32186F6C22055E69"
+    },
+    {
+      "source": "scripts/capture-exp2-arrival-explorations.ts",
+      "backup": ".engineering\\session\\rollback-evidence\\DEVROUTE1_REMOVE_ARRIVAL_PREVIEWS_20261105\\pre-delete\\scripts__capture-exp2-arrival-explorations.ts",
+      "sha256": "FEF78F593DA9E342C1581DF5725177EDA4B98FE5AACBA4F4196380554E713A09"
+    },
+    {
+      "source": "scripts/capture-exp3-arrival-synthesis.ts",
+      "backup": ".engineering\\session\\rollback-evidence\\DEVROUTE1_REMOVE_ARRIVAL_PREVIEWS_20261105\\pre-delete\\scripts__capture-exp3-arrival-synthesis.ts",
+      "sha256": "025E3BC4C9E50B2FE6CFFD13A7E98C87BCFEC679644306ACC06DF57F9B529E28"
+    }
+  ],
+  "sourceDeletionStatus": "Not performed. Automatic review rejected deleting the eight page modules and four capture harnesses as broader than route retirement; snapshots are retained for review."
+}

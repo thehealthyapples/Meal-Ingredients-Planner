@@ -27,6 +27,34 @@ export interface UseWeekMealEntriesResult {
   isLoading: boolean;
   activeWeek: string;
   hasWeek: boolean;
+  availableWeeks: string[];
+  currentWeekKnown: boolean;
+}
+
+export interface UseActiveWeekResult {
+  activeWeek: string;
+  currentWeekKnown: boolean;
+  isLoading: boolean;
+}
+
+/**
+ * FNDFIX9 (2026-11-03) — just the active-week resolution `useWeekMealEntries`
+ * already did (currentWeek query → localStorage fallback → selectedWeek
+ * override), extracted so a caller that only needs `activeWeek` (e.g.
+ * HouseholdNutritionCentre, which used `useWeekMealEntries` solely to stay in
+ * sync with the Food page's active week — FOODUI6) doesn't also pay for the
+ * `/api/planner/full` and `/api/meals` queries that only `weekMeals` needs.
+ * Same resolution logic, same queryKey (shares the react-query cache with
+ * `useWeekMealEntries` below) — not a second answer to "which week," just a
+ * narrower read of the same one.
+ */
+export function useActiveWeek(selectedWeek?: string): UseActiveWeekResult {
+  const { data: currentWeek, isPending: currentWeekLoading } = useQuery<
+    { anchored: true; weekNumber: number } | { anchored: false; reason: string }
+  >({ queryKey: ["/api/planner/current-week"] });
+  const currentWeekKnown = currentWeek?.anchored === true;
+  const activeWeek = selectedWeek ?? (currentWeekKnown ? String(currentWeek.weekNumber) : loadActiveWeek());
+  return { activeWeek, currentWeekKnown, isLoading: currentWeekLoading };
 }
 
 /**
@@ -36,8 +64,8 @@ export interface UseWeekMealEntriesResult {
  * the Plant Diversity Report page deep-linkable and decoupled from planner
  * component state. Read-only; writes no data.
  */
-export function useWeekMealEntries(): UseWeekMealEntriesResult {
-  const activeWeek = loadActiveWeek();
+export function useWeekMealEntries(selectedWeek?: string): UseWeekMealEntriesResult {
+  const { activeWeek, currentWeekKnown, isLoading: currentWeekLoading } = useActiveWeek(selectedWeek);
 
   const { data: fullPlanner = [], isPending: plannerLoading } = useQuery<FullWeek[]>({
     queryKey: ["/api/planner/full"],
@@ -73,8 +101,10 @@ export function useWeekMealEntries(): UseWeekMealEntriesResult {
 
   return {
     weekMeals,
-    isLoading: plannerLoading || mealsLoading,
+    isLoading: plannerLoading || mealsLoading || currentWeekLoading,
     activeWeek,
     hasWeek: !!activeWeekData,
+    availableWeeks: fullPlanner.map((week) => String(week.weekNumber)).sort((a, b) => Number(a) - Number(b)),
+    currentWeekKnown,
   };
 }

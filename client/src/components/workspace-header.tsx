@@ -73,6 +73,8 @@ interface WorkspaceBackConfig {
 
 interface WorkspaceHeaderProps {
   title: string;
+  /** Optional room purpose, shown with the title when a page owns its threshold. */
+  description?: string;
   realm: PageRealm;
   /** The room's one search — rendered in the pill. There is no second search. */
   search?: WorkspaceSearchConfig;
@@ -92,6 +94,8 @@ interface WorkspaceHeaderProps {
   wide?: boolean;
   titleTestId?: string;
   className?: string;
+  /** Render in the page's own surface while still registering as its header. */
+  inline?: boolean;
   /**
    * NAV1 — who is rendering this header.
    *
@@ -128,6 +132,7 @@ interface WorkspaceHeaderProps {
  */
 export function WorkspaceHeader({
   title,
+  description,
   realm,
   search,
   centerContent,
@@ -137,6 +142,7 @@ export function WorkspaceHeader({
   wide = false,
   titleTestId,
   className,
+  inline = false,
   role = "page",
 }: WorkspaceHeaderProps) {
   const [, navigate] = useLocation();
@@ -152,7 +158,7 @@ export function WorkspaceHeader({
 
   // The room's name is on screen at rest (threshold band / Home's welcome), so
   // the pill holds it silently until the scroll takes the threshold away.
-  const showTitle = stuck || !roomIdentity;
+  const showTitle = inline || stuck || !roomIdentity;
 
   // A room whose pill would be empty at rest draws nothing at rest — the
   // interface is quieter where the product needs nothing. The sticky zone
@@ -199,7 +205,7 @@ export function WorkspaceHeader({
 
   const headerContent = (
     <div
-      className={cn("page-sticky-header", className)}
+      className={cn("page-sticky-header", inline && "workspace-header--inline", className)}
       data-realm={realm}
       data-stuck={stuck || undefined}
       data-testid="workspace-header"
@@ -218,28 +224,31 @@ export function WorkspaceHeader({
           ) : (
             <div className={cn(!stuck && "my-2 workspace-pill px-3 sm:px-4")}>
               {/* Row 1 — back · title · search · actions */}
-              <div className="flex items-center gap-x-2 sm:gap-x-3 min-h-[48px] py-1">
+              <div className="workspace-header-primary-row flex items-center gap-x-2 sm:gap-x-3 min-h-[48px] py-1">
                 {backButton}
-                <h1
-                  className={cn(
-                    "realm-title text-[17px] font-semibold tracking-tight leading-none truncate",
-                    showTitle ? "shrink-0 max-w-[190px] sm:max-w-none" : "sr-only",
-                  )}
-                  data-testid={titleTestId}
-                >
-                  {title}
-                </h1>
+                <div className={cn("min-w-0", description && "flex flex-col justify-center gap-1")}>
+                  <h1
+                    className={cn(
+                      "realm-title text-[17px] font-semibold tracking-tight leading-none truncate",
+                      showTitle ? "shrink-0 max-w-[190px] sm:max-w-none" : "sr-only",
+                    )}
+                    data-testid={titleTestId}
+                  >
+                    {title}
+                  </h1>
+                  {description && <p className="text-xs leading-tight text-muted-foreground truncate">{description}</p>}
+                </div>
 
                 {/* The room's one search — inline from sm up, behind its glyph below */}
                 {centerContent ? (
                   <div className="hidden sm:flex flex-1 min-w-0 justify-start items-center">{centerContent}</div>
                 ) : searchInput ? (
-                  <div className="hidden sm:flex flex-1 min-w-0 items-center">{searchInput}</div>
+                  <div className="workspace-header-search-slot hidden sm:flex flex-1 min-w-0 items-center">{searchInput}</div>
                 ) : (
                   <div className="flex-1 min-w-0" />
                 )}
 
-                <div className="flex items-center gap-1 shrink-0 ml-auto">
+                <div className="workspace-header-actions flex items-center gap-1 shrink-0 ml-auto">
                   {(search || centerContent) && (
                     <button
                       className="sm:hidden flex items-center justify-center h-9 w-9 rounded-lg text-muted-foreground hover:bg-accent transition-colors"
@@ -288,7 +297,7 @@ export function WorkspaceHeader({
 
               {/* Row 2 — the room's workspace sections */}
               {contextBar && (
-                <div className="flex items-center min-h-[40px] pb-1.5 overflow-x-auto scrollbar-hide">
+                <div className="workspace-header-context-row flex items-center min-h-[40px] pb-1.5 overflow-x-auto scrollbar-hide">
                   {contextBar}
                 </div>
               )}
@@ -302,7 +311,7 @@ export function WorkspaceHeader({
   // A page's header portals up into the shell's sticky zone so the strip spans
   // the room's full width. The shell's own default header is ALREADY rendered
   // in that position, so it renders in place.
-  return headerSlot && role === "page"
+  return headerSlot && role === "page" && !inline
     ? createPortal(headerContent, headerSlot)
     : headerContent;
 }

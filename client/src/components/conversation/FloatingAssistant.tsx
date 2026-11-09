@@ -19,9 +19,9 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  X, Send, Leaf, Loader2,
+  X, Send, Loader2,
   BookOpen, CalendarPlus, ShoppingBasket, ArrowRight, Star, Users, Clock, UtensilsCrossed,
-  ThumbsUp, ThumbsDown, CheckCircle2, XCircle,
+  ThumbsUp, ThumbsDown, CheckCircle2, XCircle, SquarePen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
@@ -86,9 +86,7 @@ type ConversationSurface =
 function useSurface(): ConversationSurface {
   const [location] = useLocation();
   if (/^\/(planner|weekly-planner)/.test(location)) return "planner";
-  // SHOP3 — `shopping` already matches `/shopping-workspace`; the retired
-  // `/basket` paths redirect there before this ever sees them.
-  if (/^\/shopping/.test(location)) return "shopping";
+  if (/^\/shopping-workspace(?:\/|$)/.test(location)) return "shopping";
   if (/^\/(analyser|products)/.test(location)) return "analyser";
   if (/^\/pantry/.test(location)) return "pantry";
   if (/^\/(diary|food-diary)/.test(location)) return "diary";
@@ -112,7 +110,7 @@ const SURFACE_LABEL: Record<ConversationSurface, string> = {
   partners: "Partners",
   analyser: "Analyser",
   orchard: "Orchard",
-  floating: "Apple",
+  floating: "Companion",
   voice: "Voice",
 };
 
@@ -289,7 +287,7 @@ function PersonaLabel({ surface }: PersonaLabelProps) {
                  bg-primary/10 text-primary text-[11px] font-semibold tracking-wide"
       data-testid="persona-label"
     >
-      <Leaf className="h-3 w-3" />
+      <span className="companion-emblem" style={{ width: 12, height: 12, flex: "none" }} aria-hidden />
       {label}
     </span>
   );
@@ -712,6 +710,7 @@ interface CompanionActionBlockProps {
  * the session; it never re-fetches the turn to pick up server state.
  */
 function CompanionActionBlock({ actions: initialActions }: CompanionActionBlockProps) {
+  const queryClient = useQueryClient();
   const [liveActions, setLiveActions] = useState<CompanionActionProposal[]>(initialActions);
   const [runningId, setRunningId] = useState<number | null>(null);
 
@@ -752,6 +751,11 @@ function CompanionActionBlock({ actions: initialActions }: CompanionActionBlockP
         errorCode: result.errorCode,
         errorMessage: result.errorMessage,
       });
+      if (result.status === "succeeded") {
+        const action = liveActions.find((item) => item.id === actionId);
+        if (action?.capabilityId === "profile") queryClient.invalidateQueries({ queryKey: ["/api/profile"] });
+        if (action?.capabilityId === "household") queryClient.invalidateQueries({ queryKey: ["/api/household/eaters"] });
+      }
     } catch {
       applyUpdate(actionId, {
         status: "failed",
@@ -975,7 +979,7 @@ function TurnBubble({ turn, discoveries, guidance, guidanceKind, enrichment, act
       {/* Avatar */}
       {!isUser && (
         <div className="flex-shrink-0 w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center self-start mt-0.5">
-          <Leaf className="h-3.5 w-3.5 text-primary" />
+          <span className="companion-emblem" aria-hidden />
         </div>
       )}
 
@@ -1042,7 +1046,7 @@ function LoadingBubble() {
   return (
     <div className="flex gap-2.5 items-end" data-testid="turn-bubble-loading">
       <div className="flex-shrink-0 w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center">
-        <Leaf className="h-3.5 w-3.5 text-primary" />
+        <span className="companion-emblem" aria-hidden />
       </div>
       <div className="px-3.5 py-3 bg-muted rounded-2xl rounded-tl-sm border border-border/30">
         {/* NSR1 Phase 2 (Companion): the three bouncing dots were the stock chat "typing"
@@ -1213,8 +1217,8 @@ function AssistantInput({ value, onChange, onSubmit, isPending, onFocusChange }:
           onKeyDown={handleKeyDown}
           onFocus={() => onFocusChange?.(true)}
           onBlur={() => onFocusChange?.(false)}
-          placeholder="Ask Apple anything…"
-          aria-label="Ask Apple anything"
+          placeholder="Ask Companion anything…"
+          aria-label="Ask Companion anything"
           rows={1}
           disabled={isPending}
           className={cn(
@@ -1249,7 +1253,7 @@ function AssistantInput({ value, onChange, onSubmit, isPending, onFocusChange }:
         </button>
       </div>
       <p className="mt-1.5 text-[10px] text-muted-foreground/40 text-center">
-        Apple can suggest a few actions — nothing changes until you confirm.
+        Companion can suggest a few actions — nothing changes until you confirm.
       </p>
     </div>
   );
@@ -1323,9 +1327,121 @@ export default function FloatingAssistant() {
     if (wasOpenRef.current && !isOpen) fabRef.current?.focus();
     wasOpenRef.current = isOpen;
   }, [isOpen]);
+
+  // 2026-11-03 (owner) — "can you also make the Companion moveable on each
+  // screen", the same request already built for the Planner's Workspace
+  // panel. The button's canonical EXP1 position (top right, every page) is
+  // untouched as the default and on every fresh page load; this only lets
+  // the household drag it elsewhere from there, same pattern as the
+  // Workspace panel — an in-memory `transform: translate()` offset on top
+  // of the existing fixed position, nothing persisted, nothing that
+  // survives a reload. A short-drag/tap distinction (the DRAG_THRESHOLD
+  // below) keeps the button's real job — opening the Companion — working:
+  // a plain tap still opens it; only a real drag suppresses that click and
+  // repositions the button instead. The result is clamped to stay within
+  // the viewport so a drag can never strand the one door off-screen.
+  const FAB_DRAG_THRESHOLD = 6;
+  const [fabOffset, setFabOffset] = useState<{ x: number; y: number } | null>(null);
+  // The button already carries `transition-all duration-200` for its open/
+  // close and entrance animations — which, left on, also animates `transform`.
+  // Every pointermove during a real drag was fighting that 200ms easing
+  // toward a constantly-moving target: it visibly caught up, then any change
+  // in direction made it overshoot and snap back rather than track the
+  // cursor. Off for the duration of an actual drag (not a plain tap, so
+  // click/open still gets its normal transition), back on the instant it ends.
+  const [isFabDragging, setIsFabDragging] = useState(false);
+  const fabDragStartRef = useRef<{
+    pointerId: number;
+    mouseX: number;
+    mouseY: number;
+    // Two different anchors, deliberately not the same number once a prior
+    // drag has already moved the button. `anchorLeft/Top` is THIS drag's own
+    // starting point — where the button actually is right now, offset and
+    // all — and every subsequent move is anchor + (cursor's own delta),
+    // so the button tracks from wherever this particular drag began.
+    // `baseLeft/Top` is the button's natural, un-offset CSS position; it
+    // exists only to convert an absolute screen position back into a
+    // `fabOffset` (which the transform always applies relative to that
+    // natural position, not to wherever the last drag happened to end).
+    // Collapsing these into one anchor was the original bug: a second drag
+    // computed its target as natural-position + this-drag's-delta instead
+    // of current-position + this-drag's-delta, so it always snapped back
+    // toward the original spot before resuming — the cursor "moved from
+    // when it clicked" while the button itself jumped elsewhere first.
+    anchorLeft: number;
+    anchorTop: number;
+    baseLeft: number;
+    baseTop: number;
+    width: number;
+    height: number;
+    moved: boolean;
+  } | null>(null);
+  const fabWasDraggedRef = useRef(false);
+
+  const handleFabPointerDown = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const curOffsetX = fabOffset?.x ?? 0;
+    const curOffsetY = fabOffset?.y ?? 0;
+    fabDragStartRef.current = {
+      pointerId: e.pointerId,
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      anchorLeft: rect.left,
+      anchorTop: rect.top,
+      baseLeft: rect.left - curOffsetX,
+      baseTop: rect.top - curOffsetY,
+      width: rect.width,
+      height: rect.height,
+      moved: false,
+    };
+    // Captured immediately (not deferred to the first threshold-crossing
+    // move) — a fast drag's very first pointermove can already land outside
+    // the button's 48px hit area, and an uncaptured pointer only delivers
+    // move events to whatever element is actually under it at that instant.
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
+  }, [fabOffset]);
+
+  const handleFabPointerMove = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+    const start = fabDragStartRef.current;
+    if (!start || start.pointerId !== e.pointerId) return;
+    const dx = e.clientX - start.mouseX;
+    const dy = e.clientY - start.mouseY;
+    if (!start.moved) {
+      if (Math.hypot(dx, dy) < FAB_DRAG_THRESHOLD) return;
+      start.moved = true;
+      fabWasDraggedRef.current = true;
+      setIsFabDragging(true);
+    }
+    const margin = 8;
+    const clampedLeft = Math.min(Math.max(start.anchorLeft + dx, margin), window.innerWidth - start.width - margin);
+    const clampedTop = Math.min(Math.max(start.anchorTop + dy, margin), window.innerHeight - start.height - margin);
+    setFabOffset({ x: clampedLeft - start.baseLeft, y: clampedTop - start.baseTop });
+  }, []);
+
+  const endFabDrag = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+    if (fabDragStartRef.current?.pointerId !== e.pointerId) return;
+    fabDragStartRef.current = null;
+    setIsFabDragging(false);
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch {}
+  }, []);
   const [inputValue, setInputValue] = useState("");
   // Optimistic turns added before the server responds
   const [optimisticTurns, setOptimisticTurns] = useState<TurnRecord[]>([]);
+  // 2026-11-06 (owner) — "it remembers and I can't clear it". Closes the
+  // active thread server-side (ConversationGateway.startNewThread) so the
+  // next message opens a fresh one, and clears this panel's own view of it
+  // immediately rather than waiting on the refetch. Past turns are not
+  // deleted — just no longer the next turn's "CONVERSATION HISTORY".
+  const newThreadMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/intelligence/conversation/new", {});
+    },
+    onSuccess: () => {
+      setOptimisticTurns([]);
+      queryClient.invalidateQueries({ queryKey: ["/api/intelligence/conversation/turns"] });
+    },
+  });
   const nextOptimisticId = useRef(-1);
   // INT37: native discovery responses, keyed by assistant turn id, rendered as
   // Companion Cards. Derived-not-stored (INT36/TIP3) — held in session memory
@@ -1586,10 +1702,22 @@ export default function FloatingAssistant() {
       {/* ── Trigger button ───────────────────────────────────────────── */}
       <button
         ref={fabRef}
-        onClick={() => setIsOpen((v) => !v)}
+        onClick={() => {
+          if (fabWasDraggedRef.current) { fabWasDraggedRef.current = false; return; }
+          setIsOpen((v) => !v);
+        }}
+        onPointerDown={handleFabPointerDown}
+        onPointerMove={handleFabPointerMove}
+        onPointerUp={endFabDrag}
+        onPointerCancel={endFabDrag}
+        style={{
+          ...(fabOffset ? { transform: `translate(${fabOffset.x}px, ${fabOffset.y}px)` } : null),
+          ...(isFabDragging ? { transition: "none" } : null),
+          touchAction: "none",
+        }}
         onDragOver={(event) => event.preventDefault()}
         onDrop={handleCompanionDrop}
-        aria-label={isOpen ? "Close Apple assistant" : "Open Apple assistant"}
+        aria-label={isOpen ? "Close Companion" : "Open Companion"}
         // While withheld, the Companion is not yet present — so it is absent from the
         // tab order and the accessibility tree too, rather than being an invisible
         // control a keyboard or screen-reader user could reach and a sighted one
@@ -1730,7 +1858,7 @@ export default function FloatingAssistant() {
               <div className="flex items-center justify-between px-4 py-3 border-b border-border/20 shrink-0">
                 <div className="flex items-center gap-2.5">
                   <div className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center">
-                    <Leaf className="h-3.5 w-3.5 text-primary" />
+                    <span className="companion-emblem" aria-hidden />
                   </div>
                   <div>
                     <DialogPrimitive.Title asChild>
@@ -1738,36 +1866,58 @@ export default function FloatingAssistant() {
                         className="text-sm font-semibold text-foreground"
                         style={{ fontFamily: "var(--font-display)" }}
                       >
-                        Apple
+                        Companion
                       </p>
                     </DialogPrimitive.Title>
                     {/* LHXP4 (Companion Presence): the badge names WHICH ROOM's
                         context the Companion is answering in — useful on every
                         room surface ("Planner", "Larder", …). On the floating
-                        surface it resolves to "Apple", merely repeating the
+                        surface it resolves to "Companion", merely repeating the
                         title above it — a stacked duplicate. Suppress it there
                         so the header reads once, cleanly; PersonaLabel still
                         renders on all 11 room surfaces (no dead code). Presentation
                         only — no label string or title word changed. */}
-                    {SURFACE_LABEL[surface] !== "Apple" && (
+                    {SURFACE_LABEL[surface] !== "Companion" && (
                       <PersonaLabel surface={surface} />
                     )}
                   </div>
                 </div>
-                <DialogPrimitive.Close asChild>
-                  <button
-                    aria-label="Close assistant"
-                    className={cn(
-                      "w-7 h-7 rounded-lg flex items-center justify-center",
-                      "text-muted-foreground hover:text-foreground hover:bg-accent",
-                      "transition-colors duration-150",
-                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    )}
-                    data-testid="button-close-assistant"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </DialogPrimitive.Close>
+                <div className="flex items-center gap-1">
+                  {hasHistory && (
+                    <button
+                      type="button"
+                      onClick={() => newThreadMutation.mutate()}
+                      disabled={newThreadMutation.isPending}
+                      aria-label="Start a new conversation"
+                      title="Start a new conversation"
+                      className={cn(
+                        "w-7 h-7 rounded-lg flex items-center justify-center",
+                        "text-muted-foreground hover:text-foreground hover:bg-accent",
+                        "transition-colors duration-150",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      )}
+                      data-testid="button-new-conversation"
+                    >
+                      {newThreadMutation.isPending
+                        ? <Loader2 className="h-4 w-4 animate-spin" />
+                        : <SquarePen className="h-4 w-4" />}
+                    </button>
+                  )}
+                  <DialogPrimitive.Close asChild>
+                    <button
+                      aria-label="Close assistant"
+                      className={cn(
+                        "w-7 h-7 rounded-lg flex items-center justify-center",
+                        "text-muted-foreground hover:text-foreground hover:bg-accent",
+                        "transition-colors duration-150",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      )}
+                      data-testid="button-close-assistant"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </DialogPrimitive.Close>
+                </div>
               </div>
 
               {/* ── WHAT THE COMPANION HAD TO SAY ──────────────────────────
@@ -1878,7 +2028,7 @@ export default function FloatingAssistant() {
                       {experience && (
                         <div className="px-4 pt-6 pb-2 text-center">
                           <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                            <Leaf className="h-6 w-6 text-primary/70" />
+                            <span className="companion-emblem" aria-hidden />
                           </div>
                           <p
                             className="text-sm font-medium text-foreground"

@@ -16,7 +16,7 @@ version: 2
 
 ## What it means for the household
 
-Ask Apple "what can you do?", "what is the Planner for?", or "does THA have a
+Ask Companion "what can you do?", "what is the Planner for?", or "does THA have a
 shopping list?" and it answers from this registry — the same entries a person can
 read here, in the same words their owner wrote.
 
@@ -28,26 +28,26 @@ itself and one that cannot.
 ## What it will never do
 
 **It will never invent a fact about THA.** If this registry does not hold an
-answer, Apple has none. A question about a surface THA does not have gets an
+answer, Companion has none. A question about a surface THA does not have gets an
 honest "I don't know" — never a plausible-sounding description of a feature that
 was never built. That failure is worse than it sounds: a household has no way to
 check a claim about the product, so an invented one is uniquely convincing.
 
 **It will never duplicate what this registry owns.** No sentence about THA is
-written into a prompt, a template, or a fallback string. If Apple needs to know
+written into a prompt, a template, or a fallback string. If Companion needs to know
 something about THA, it reads it from here (Rule PKR27). A helpful sentence typed
 into a prompt would be a second owner of a product fact — never updated when the
 product changed, wrong within a quarter, and wrong in the most authoritative
 voice THA has.
 
 **It will never tell one household something another may not hear.** Every entry
-carries a visibility, and content above the asker's tier is removed *before* Apple
+carries a visibility, and content above the asker's tier is removed *before* Companion
 is given anything to read — not shown to it with an instruction to keep quiet.
 
-**It will never explain what it is withholding.** Apple does not say "there's an
+**It will never explain what it is withholding.** Companion does not say "there's an
 admin feature I can't tell you about", because saying so would disclose the very
 thing the tier protected. To a household, an admin surface simply does not exist,
-and Apple's honest answer is that it does not know — which, at that tier, is true.
+and Companion's honest answer is that it does not know — which, at that tier, is true.
 
 ## What decides who is told what
 

@@ -21,6 +21,7 @@ import { resolvePlannerComplianceContext, isComplianceActive, isMealCompliantFor
 import { resolveHouseholdSafetyContext, HouseholdSafetyUnavailableError } from "./lib/household-dietary-safety";
 import { DIET_PATTERN_TO_DIET_TYPE, CANONICAL_DIET_TYPE_VALUES, dietPatternFromDietTypes } from "@shared/dietRules";
 import session from "express-session";
+import { randomUUID } from "node:crypto";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
 
@@ -113,6 +114,7 @@ export interface IStorage {
   getProductMatches(shoppingListItemId: number): Promise<ProductMatch[]>;
   getProductMatchesForUser(userId: number): Promise<ProductMatch[]>;
   addProductMatch(match: InsertProductMatch): Promise<ProductMatch>;
+  addProductMatches(matches: InsertProductMatch[]): Promise<ProductMatch[]>;
   clearProductMatches(shoppingListItemId: number): Promise<void>;
   clearAllProductMatchesForUser(userId: number): Promise<void>;
   clearProductMatchesForStore(userId: number, store: string): Promise<void>;
@@ -292,6 +294,14 @@ export interface IStorage {
   // Household eaters — the canonical owner of a person's diet (CONV1 P4 / OWN-1)
   ensureEaterForMember(householdId: number, userId: number): Promise<void>;
   getPersonDiet(userId: number): Promise<{ dietPattern: string | null; dietTypes: string[]; hardRestrictions: string[] }>;
+  getPersonReportedHealthContext(userId: number): Promise<NonNullable<HouseholdEaterRow["reportedHealthContext"]>>;
+  addPersonReportedHealthContext(userId: number, fact: string, reportedByUserId: number): Promise<NonNullable<HouseholdEaterRow["reportedHealthContext"]>>;
+  addHouseholdEaterReportedHealthContext(householdId: number, eaterId: number, fact: string, reportedByUserId: number): Promise<NonNullable<HouseholdEaterRow["reportedHealthContext"]> | undefined>;
+  getPersonNutritionFocuses(userId: number): Promise<NonNullable<HouseholdEaterRow["nutritionFocuses"]>>;
+  addPersonNutritionFocus(userId: number, focus: string, reportedByUserId: number): Promise<NonNullable<HouseholdEaterRow["nutritionFocuses"]>>;
+  setPersonNutritionFocuses(userId: number, focuses: string[]): Promise<NonNullable<HouseholdEaterRow["nutritionFocuses"]>>;
+  addHouseholdEaterNutritionFocus(householdId: number, eaterId: number, focus: string, reportedByUserId: number): Promise<NonNullable<HouseholdEaterRow["nutritionFocuses"]> | undefined>;
+  clearReportedHealthContextForHouseholdMember(userId: number): Promise<void>;
   updatePersonDiet(userId: number, data: { dietPattern?: string | null; hardRestrictions?: string[] }): Promise<void>;
   getHouseholdEaters(householdId: number): Promise<HouseholdEaterRow[]>;
   createHouseholdEater(householdId: number, data: { displayName: string; userId?: number; defaultDietTypes?: string[]; hardRestrictions?: string[] }): Promise<HouseholdEaterRow>;
@@ -945,6 +955,14 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
+  // FNDFIX11 (2026-11-03) — batched sibling of addProductMatch, for callers
+  // (e.g. the shopping-list price-lookup loop) inserting many rows at once;
+  // one round trip instead of one INSERT per row.
+  async addProductMatches(matches: InsertProductMatch[]): Promise<ProductMatch[]> {
+    if (matches.length === 0) return [];
+    return await db.insert(productMatches).values(matches).returning();
+  }
+
   async clearProductMatches(shoppingListItemId: number): Promise<void> {
     await db.delete(productMatches).where(eq(productMatches.shoppingListItemId, shoppingListItemId));
   }
@@ -977,14 +995,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getIngredientSourcesForUser(userId: number): Promise<IngredientSource[]> {
-    const items = await db.select().from(shoppingList).where(eq(shoppingList.userId, userId));
+    // FNDFIX10 (2026-11-03) — was one SELECT per shopping-list item (N+1);
+    // batched into a single inArray lookup, same pattern as
+    // getProductMatchesForUser / clearAllProductMatchesForUser right below.
+    const items = await db.select({ id: shoppingList.id }).from(shoppingList).where(eq(shoppingList.userId, userId));
     if (items.length === 0) return [];
-    const allSources: IngredientSource[] = [];
-    for (const item of items) {
-      const sources = await db.select().from(ingredientSources).where(eq(ingredientSources.shoppingListItemId, item.id));
-      allSources.push(...sources);
-    }
-    return allSources;
+    const itemIds = items.map(i => i.id);
+    return await db.select().from(ingredientSources).where(inArray(ingredientSources.shoppingListItemId, itemIds));
   }
 
   async addIngredientSource(source: InsertIngredientSource): Promise<IngredientSource> {
@@ -1010,11 +1027,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async clearAllIngredientSourcesForUser(userId: number): Promise<void> {
+    // FNDFIX10 (2026-11-03) — was one DELETE per shopping-list item (N+1);
+    // batched, same pattern as clearAllProductMatchesForUser above.
     const householdId = await getHouseholdForUser(userId);
-    const items = await db.select().from(shoppingList).where(eq(shoppingList.householdId, householdId));
-    for (const item of items) {
-      await db.delete(ingredientSources).where(eq(ingredientSources.shoppingListItemId, item.id));
-    }
+    const items = await db.select({ id: shoppingList.id }).from(shoppingList).where(eq(shoppingList.householdId, householdId));
+    if (items.length === 0) return;
+    const itemIds = items.map(i => i.id);
+    await db.delete(ingredientSources).where(inArray(ingredientSources.shoppingListItemId, itemIds));
   }
 
   async getOrCreateNormalizedIngredient(name: string, normalizedName: string, category: string): Promise<NormalizedIngredient> {
@@ -3322,6 +3341,116 @@ export class DatabaseStorage implements IStorage {
       // No active household — no eater row to read. An honest empty, not a guess.
       return { dietPattern: null, dietTypes: [], hardRestrictions: [] };
     }
+  }
+
+  async getPersonReportedHealthContext(userId: number): Promise<NonNullable<HouseholdEaterRow["reportedHealthContext"]>> {
+    try {
+      const householdId = await getHouseholdForUser(userId);
+      const [row] = await db.select({ reportedHealthContext: householdEaters.reportedHealthContext })
+        .from(householdEaters)
+        .where(and(eq(householdEaters.householdId, householdId), eq(householdEaters.userId, userId)));
+      return row?.reportedHealthContext ?? [];
+    } catch {
+      return [];
+    }
+  }
+
+  async addPersonReportedHealthContext(userId: number, fact: string, reportedByUserId: number): Promise<NonNullable<HouseholdEaterRow["reportedHealthContext"]>> {
+    const householdId = await getHouseholdForUser(userId);
+    await this.ensureEaterForMemberTx(db, householdId, userId);
+    const [row] = await db.select().from(householdEaters)
+      .where(and(eq(householdEaters.householdId, householdId), eq(householdEaters.userId, userId)));
+    if (!row) throw new Error("The profile's household eater record is unavailable.");
+    const previous = row.reportedHealthContext ?? [];
+    if (previous.some((entry) => entry.fact.trim().toLocaleLowerCase() === fact.trim().toLocaleLowerCase())) return previous;
+    if (previous.length >= 20) throw new Error("This profile already has the maximum number of reported health entries.");
+    const entry = { id: randomUUID(), fact, reportedByUserId, reportedAt: new Date().toISOString() };
+    const next = [...previous, entry];
+    await db.update(householdEaters).set({ reportedHealthContext: next }).where(eq(householdEaters.id, row.id));
+    return next;
+  }
+
+  async addHouseholdEaterReportedHealthContext(householdId: number, eaterId: number, fact: string, reportedByUserId: number): Promise<NonNullable<HouseholdEaterRow["reportedHealthContext"]> | undefined> {
+    const [row] = await db.select().from(householdEaters)
+      .where(and(eq(householdEaters.id, eaterId), eq(householdEaters.householdId, householdId), isNull(householdEaters.userId)));
+    if (!row) return undefined;
+    const previous = row.reportedHealthContext ?? [];
+    if (previous.some((entry) => entry.fact.trim().toLocaleLowerCase() === fact.trim().toLocaleLowerCase())) return previous;
+    if (previous.length >= 20) throw new Error("This child profile already has the maximum number of reported health entries.");
+    const entry = { id: randomUUID(), fact, reportedByUserId, reportedAt: new Date().toISOString() };
+    const next = [...previous, entry];
+    await db.update(householdEaters).set({ reportedHealthContext: next })
+      .where(and(eq(householdEaters.id, eaterId), eq(householdEaters.householdId, householdId), isNull(householdEaters.userId)));
+    return next;
+  }
+
+  async getPersonNutritionFocuses(userId: number): Promise<NonNullable<HouseholdEaterRow["nutritionFocuses"]>> {
+    const householdId = await getHouseholdForUser(userId);
+    const [row] = await db.select({ nutritionFocuses: householdEaters.nutritionFocuses })
+      .from(householdEaters)
+      .where(and(eq(householdEaters.householdId, householdId), eq(householdEaters.userId, userId)));
+    return row?.nutritionFocuses ?? [];
+  }
+
+  async addPersonNutritionFocus(userId: number, focus: string, reportedByUserId: number): Promise<NonNullable<HouseholdEaterRow["nutritionFocuses"]>> {
+    const householdId = await getHouseholdForUser(userId);
+    await this.ensureEaterForMemberTx(db, householdId, userId);
+    const [row] = await db.select().from(householdEaters)
+      .where(and(eq(householdEaters.householdId, householdId), eq(householdEaters.userId, userId)));
+    if (!row) throw new Error("The profile's household eater record is unavailable.");
+    const previous = row.nutritionFocuses ?? [];
+    if (previous.some((entry) => entry.focus === focus)) return previous;
+    if (previous.length >= 20) throw new Error("This profile already has the maximum number of nutrition focuses.");
+    const entry = { id: randomUUID(), focus, reportedByUserId, reportedAt: new Date().toISOString() };
+    const next = [...previous, entry];
+    await db.update(householdEaters).set({ nutritionFocuses: next }).where(eq(householdEaters.id, row.id));
+    return next;
+  }
+
+  async setPersonNutritionFocuses(userId: number, focuses: string[]): Promise<NonNullable<HouseholdEaterRow["nutritionFocuses"]>> {
+    const householdId = await getHouseholdForUser(userId);
+    await this.ensureEaterForMemberTx(db, householdId, userId);
+    const [row] = await db.select().from(householdEaters)
+      .where(and(eq(householdEaters.householdId, householdId), eq(householdEaters.userId, userId)));
+    if (!row) throw new Error("The profile's household eater record is unavailable.");
+    const existing = row.nutritionFocuses ?? [];
+    const next = [...new Set(focuses)].map((focus) =>
+      existing.find((entry) => entry.focus === focus) ?? {
+        id: randomUUID(), focus, reportedByUserId: userId, reportedAt: new Date().toISOString(),
+      },
+    );
+    if (next.length > 20) throw new Error("This profile already has the maximum number of nutrition focuses.");
+    await db.update(householdEaters).set({ nutritionFocuses: next }).where(eq(householdEaters.id, row.id));
+    return next;
+  }
+
+  async addHouseholdEaterNutritionFocus(householdId: number, eaterId: number, focus: string, reportedByUserId: number): Promise<NonNullable<HouseholdEaterRow["nutritionFocuses"]> | undefined> {
+    const [row] = await db.select().from(householdEaters)
+      .where(and(eq(householdEaters.id, eaterId), eq(householdEaters.householdId, householdId), isNull(householdEaters.userId)));
+    if (!row) return undefined;
+    const previous = row.nutritionFocuses ?? [];
+    if (previous.some((entry) => entry.focus === focus)) return previous;
+    if (previous.length >= 20) throw new Error("This dependent profile already has the maximum number of nutrition focuses.");
+    const entry = { id: randomUUID(), focus, reportedByUserId, reportedAt: new Date().toISOString() };
+    const next = [...previous, entry];
+    await db.update(householdEaters).set({ nutritionFocuses: next })
+      .where(and(eq(householdEaters.id, eaterId), eq(householdEaters.householdId, householdId), isNull(householdEaters.userId)));
+    return next;
+  }
+
+  async clearReportedHealthContextForHouseholdMember(userId: number): Promise<void> {
+    // Consent is per account: withdraw only this adult's own profile context and
+    // child reports they authored; never erase another adult's private context.
+    const childRows = await db.select().from(householdEaters).where(isNull(householdEaters.userId));
+    for (const row of childRows) {
+      const kept = (row.reportedHealthContext ?? []).filter((entry) => entry.reportedByUserId !== userId);
+      const keptFocuses = (row.nutritionFocuses ?? []).filter((entry) => entry.reportedByUserId !== userId);
+      if (kept.length !== (row.reportedHealthContext ?? []).length || keptFocuses.length !== (row.nutritionFocuses ?? []).length) {
+        await db.update(householdEaters).set({ reportedHealthContext: kept, nutritionFocuses: keptFocuses }).where(eq(householdEaters.id, row.id));
+      }
+    }
+    await db.update(householdEaters).set({ reportedHealthContext: [], nutritionFocuses: [] })
+      .where(eq(householdEaters.userId, userId));
   }
 
   /**

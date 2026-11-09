@@ -82,7 +82,7 @@ async function main() {
       {
         id: "home-ambient-aggregate",
         name: "Home — aggregate ambient (the new cook-once among the week's opportunities)",
-        route: "/home",
+        route: "/",
         toggle: "ambient-intelligence-home-toggle",
         wait: '[data-testid="ambient-intelligence-home"]',
       },

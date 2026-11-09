@@ -10,7 +10,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HEALTH_DISCLAIMER } from "@/lib/health-benefits-model";
 import { semanticSurface, semanticText } from "@/components/intelligence/intelligence-tokens";
-import { FoodPreparationList, type FoodPreparation } from "@/components/intelligence";
+import { FoodPreparationList, hasPreparationMethods, type FoodPreparation } from "@/components/intelligence";
 
 /**
  * WS2 — Pantry Explore V2.
@@ -743,7 +743,7 @@ function FoodDetailView({
       {/* 4b. How it's prepared (SURF1A) — the field this component's own type used
           to drop. Rendered through the one preparation owner, which holds down the
           rule that "no-change" and "unreviewed" never look alike. */}
-      {preparations.length > 0 && (
+      {hasPreparationMethods(preparations) && (
         <FoodSection title="How it's prepared">
           <FoodPreparationList preparations={preparations} />
         </FoodSection>

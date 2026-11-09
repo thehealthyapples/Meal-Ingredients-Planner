@@ -61,7 +61,7 @@
 // which it now delegates to (Principle 8 — retire on introduction).
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "../db";
 import {
   activitySummary,
@@ -348,13 +348,21 @@ export const PERSONAL_DATA_REGISTRY: readonly PersonalDataEntry[] = [
   },
   {
     id: "eater-profile",
-    label: "Your dietary needs",
+    label: "Your profile, nutrition focuses and reported household health context",
     description:
-      "The allergies, dietary restrictions and diet types recorded for you as a person in the household.",
+      "Your own dietary preferences, voluntary nutrition focuses and reported health information, plus dependent-child focus and health entries you reported.",
     group: "household",
     tables: ["household_eaters"],
-    collect: async (s) =>
-      db.select().from(householdEaters).where(eq(householdEaters.userId, s.userId)),
+    collect: async (s) => {
+      const own = await db.select().from(householdEaters).where(eq(householdEaters.userId, s.userId));
+      const children = await db.select().from(householdEaters).where(isNull(householdEaters.userId));
+      const reportedChildren = children.flatMap((row) => {
+        const reportedHealthContext = (row.reportedHealthContext ?? []).filter((entry) => entry.reportedByUserId === s.userId);
+        const nutritionFocuses = (row.nutritionFocuses ?? []).filter((entry) => entry.reportedByUserId === s.userId);
+        return reportedHealthContext.length || nutritionFocuses.length ? [{ ...row, reportedHealthContext, nutritionFocuses }] : [];
+      });
+      return [...own, ...reportedChildren];
+    },
     // ─────────────────────────────────────────────────────────────────────
     // THE MOST IMPORTANT ERASURE IN THIS FILE.
     //
@@ -369,8 +377,17 @@ export const PERSONAL_DATA_REGISTRY: readonly PersonalDataEntry[] = [
     // The right answer is neither the database's default nor a blanket
     // cascade, which is exactly why it is written out here.
     // ─────────────────────────────────────────────────────────────────────
-    erase: async (s) =>
-      affected(await db.delete(householdEaters).where(eq(householdEaters.userId, s.userId))),
+    erase: async (s) => {
+      const children = await db.select().from(householdEaters).where(isNull(householdEaters.userId));
+      for (const row of children) {
+        const kept = (row.reportedHealthContext ?? []).filter((entry) => entry.reportedByUserId !== s.userId);
+        const keptFocuses = (row.nutritionFocuses ?? []).filter((entry) => entry.reportedByUserId !== s.userId);
+        if (kept.length !== (row.reportedHealthContext ?? []).length || keptFocuses.length !== (row.nutritionFocuses ?? []).length) {
+          await db.update(householdEaters).set({ reportedHealthContext: kept, nutritionFocuses: keptFocuses }).where(eq(householdEaters.id, row.id));
+        }
+      }
+      return affected(await db.delete(householdEaters).where(eq(householdEaters.userId, s.userId)));
+    },
     erasureNote:
       "Erased explicitly. Health data must not outlive the account, and the database's own rule would have let it.",
   },

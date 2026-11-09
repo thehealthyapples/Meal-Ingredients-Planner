@@ -259,6 +259,23 @@ export function registerTrustRoutes(app: Express): void {
           granted: z.boolean(),
         })
         .parse(req.body);
+      if (parsed.consentType === "health-data-processing" && !parsed.granted) {
+        // Consent withdrawal immediately blocks reading; clear reported context too.
+        // The append-only consent record is written even if household cleanup fails.
+        await recordConsent({
+          userId: req.user!.id,
+          consentType: parsed.consentType as ConsentType,
+          granted: false,
+          source: "privacy-settings",
+          context: consentContextFrom(req),
+        });
+        try { await storage.clearReportedHealthContextForHouseholdMember(req.user!.id); }
+        catch (cleanupError) {
+          console.error("Health-context cleanup after consent withdrawal failed:", cleanupError);
+          return res.status(500).json({ message: "Consent was withdrawn, so Companion has stopped using health context. Erasure did not finish; please retry or contact support." });
+        }
+        return res.json({ consents: await currentConsents(req.user!.id) });
+      }
       await recordConsent({
         userId: req.user!.id,
         consentType: parsed.consentType as ConsentType,

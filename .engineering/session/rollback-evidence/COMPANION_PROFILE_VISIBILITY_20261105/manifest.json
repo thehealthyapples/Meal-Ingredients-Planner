@@ -1,0 +1,19 @@
+{
+  "task": "Companion Profile visibility",
+  "rollbackTag": "rollback/companion-household-health-write-20261105",
+  "tagTarget": "3467abad4eca8d82ffc52756fee13874e389597f",
+  "files": [
+    {
+      "file": "client__src__pages__profile-page.tsx",
+      "sha256": "67352FE6A0B1A911A1849BF453F77E5F44A25C5330127BBDC69D229BAAC639A0"
+    },
+    {
+      "file": "server__routes.ts",
+      "sha256": "931F5265314C0207294AFE2F95A0C9BBDD32A793C8F93DB70AD0DB87E2CACE77"
+    },
+    {
+      "file": "shared__household-eater.ts",
+      "sha256": "2D7CD607B9546CF0A36FE3BCB0473D798FCE11C59958C0BA8D585D4BCFFD0F0D"
+    }
+  ]
+}

@@ -36,6 +36,7 @@ import {
   HouseholdInsightCard,
   ConnectedFoodPanel,
   FoodPreparationList,
+  hasPreparationMethods,
   type FoodPreparation,
 } from "@/components/intelligence";
 
@@ -91,6 +92,13 @@ export interface FoodIntelligence {
   recommendedPairings: Array<{ why: string; evidenceTopic?: string }>;
   /** SURF1A — rendered through the one preparation owner, never re-worded here. */
   preparations: FoodPreparation[];
+  /** 2026-10-31 — real per-100g USDA quantities; null when this food isn't on the curated allowlist. */
+  usdaSnapshot: {
+    per100g: Record<string, number | null>;
+    units: Record<string, string>;
+    fdcId: number;
+    source: "usda-fdc";
+  } | null;
 }
 
 // ── Section: household history (careful language) ──────────────────────────────
@@ -109,9 +117,23 @@ function householdHeadline(
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-export default function FoodDetailPage() {
+// FOODUI1 follow-up (2026-10-30) — `embedded` lets this exact page render
+// inside another page's own panel (WeekFoodExplorer's "related" column)
+// instead of only at its own route: the slug comes from a prop instead of
+// the URL, the WorkspaceHeader (which assumes it owns the page) is
+// suppressed, and `onSelectFood` — when provided — makes this page's own
+// internal food-to-food links (Connected Foods, Discover) call back into the
+// host instead of navigating, so a food reached from inside an embedded view
+// stays inside it rather than jumping out to a fresh page.
+interface FoodDetailPageProps {
+  embedded?: boolean;
+  embeddedSlug?: string;
+  onSelectFood?: (slug: string, name: string) => void;
+}
+
+export default function FoodDetailPage({ embedded = false, embeddedSlug, onSelectFood }: FoodDetailPageProps = {}) {
   const [, params] = useRoute("/foods/:slug");
-  const slug = params?.slug ?? null;
+  const slug = embedded ? (embeddedSlug ?? null) : (params?.slug ?? null);
 
   // PHASE5D — the Nutrition persona's deixis. With the slug published, "is it good
   // for sleep?" on this page resolves to THIS food; without it the question arrived
@@ -150,13 +172,15 @@ export default function FoodDetailPage() {
   // reachable from five rooms is exactly the case that rule exists for.
   return (
     <>
-    <WorkspaceHeader
-      title={data?.food?.name ?? "Food"}
-      realm="nutrition"
-      back={{ href: "/nutrition", label: "Nutrition" }}
-      titleTestId="text-food-detail-title"
-    />
-    <div className={`${pageContainerClass()} pb-8`}>
+    {!embedded && (
+      <WorkspaceHeader
+        title={data?.food?.name ?? "Food"}
+        realm="nutrition"
+        back={{ href: "/food", label: "Food" }}
+        titleTestId="text-food-detail-title"
+      />
+    )}
+    <div className={embedded ? "" : `${pageContainerClass()} pb-8`}>
       {isLoading && (
         <div className="flex items-center justify-center py-24">
           <Loader2 className="h-6 w-6 animate-spin text-primary/50" />
@@ -176,11 +200,11 @@ export default function FoodDetailPage() {
           variant="empty"
           icon={Apple}
           title="We don't know this food yet"
-          description="There's nothing we can confidently tell you about it right now. Your Nutrition centre shows the foods your household is already eating."
+          description="There's nothing we can confidently tell you about it right now. The Food page shows the foods your household is already eating."
           action={
             <Button asChild variant="outline" size="sm">
-              <Link href="/nutrition" data-testid="link-food-notfound-nutrition">
-                See your Nutrition centre
+              <Link href="/food" data-testid="link-food-notfound-nutrition">
+                See your Food page
               </Link>
             </Button>
           }
@@ -189,14 +213,14 @@ export default function FoodDetailPage() {
       )}
 
       {!isLoading && data?.food && (
-        <FoodIntelligenceView data={data} />
+        <FoodIntelligenceView data={data} onSelectFood={onSelectFood} />
       )}
     </div>
     </>
   );
 }
 
-function FoodIntelligenceView({ data }: { data: FoodIntelligence }) {
+function FoodIntelligenceView({ data, onSelectFood }: { data: FoodIntelligence; onSelectFood?: (slug: string, name: string) => void }) {
   const food = data.food!;
 
   const hasWhy =
@@ -371,7 +395,7 @@ function FoodIntelligenceView({ data }: { data: FoodIntelligence }) {
           component anywhere in the platform. The list owner below holds down the
           rule that an unreviewed preparation says nothing about nutrition — the
           section is complete without a claim, and never invents one to look so. */}
-      {data.preparations.length > 0 && (
+      {hasPreparationMethods(data.preparations) && (
         <IntelligenceCard
           icon={<ChefHat className="h-4 w-4" />}
           eyebrow="How it's prepared"
@@ -434,7 +458,7 @@ function FoodIntelligenceView({ data }: { data: FoodIntelligence }) {
       )}
 
       {/* ── Connected food web (WX5) ── */}
-      <ConnectedFoodPanel slug={data.slug} />
+      <ConnectedFoodPanel slug={data.slug} onSelectFood={onSelectFood} />
 
       {/* ── Discovery ── */}
       {discoverySections.length > 0 && (
@@ -453,15 +477,28 @@ function FoodIntelligenceView({ data }: { data: FoodIntelligence }) {
                 <div className="flex flex-wrap gap-1.5">
                   {section.suggestions.map((s) =>
                     s.linkable ? (
-                      <Link
-                        key={s.slug}
-                        href={`/foods/${s.slug}`}
-                        title={s.reason}
-                        className="inline-flex items-center text-xs rounded-full border border-border/60 bg-primary/5 px-2.5 py-1 leading-none text-foreground/80 hover:bg-primary/10 hover:text-foreground transition-colors"
-                        data-testid={`food-discovery-link-${s.slug}`}
-                      >
-                        {s.name}
-                      </Link>
+                      onSelectFood ? (
+                        <button
+                          key={s.slug}
+                          type="button"
+                          title={s.reason}
+                          onClick={() => onSelectFood(s.slug, s.name)}
+                          className="inline-flex items-center text-xs rounded-full border border-border/60 bg-primary/5 px-2.5 py-1 leading-none text-foreground/80 hover:bg-primary/10 hover:text-foreground transition-colors"
+                          data-testid={`food-discovery-link-${s.slug}`}
+                        >
+                          {s.name}
+                        </button>
+                      ) : (
+                        <Link
+                          key={s.slug}
+                          href={`/foods/${s.slug}`}
+                          title={s.reason}
+                          className="inline-flex items-center text-xs rounded-full border border-border/60 bg-primary/5 px-2.5 py-1 leading-none text-foreground/80 hover:bg-primary/10 hover:text-foreground transition-colors"
+                          data-testid={`food-discovery-link-${s.slug}`}
+                        >
+                          {s.name}
+                        </Link>
+                      )
                     ) : (
                       <span
                         key={s.slug}

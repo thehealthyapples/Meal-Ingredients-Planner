@@ -106,20 +106,16 @@ So the label, the navigation, and the URL each name the same thing differently.
 
 entry: gls-apple
 
-## Apple (the Companion)
+## Companion
 
-**Definition.** The name every household sees for THA's conversational companion.
-The floating assistant surface is labelled "Apple" to the household:
-`client/src/components/conversation/FloatingAssistant.tsx#L87` (`floating: "Apple"`).
+**Definition.** The household-facing name for THA's conversational companion.
+The floating conversation surface is labelled "Companion" to the household.
 
-**Approved name:** *Apple* (household-facing).
+**Approved name:** *Companion* (household-facing).
 
-**Names kept correctly internal.** Unlike the terms above, this one does *not*
-leak. "Companion" and "Assistant" are used only in code and internal
-structures — the component file is `FloatingAssistant`, the cards it renders are
-`CompanionCard` / "Companion Cards", and the surface key is `floating` — while
-the household only ever sees "Apple." Recorded here as the correct pattern the
-other terms should follow.
+**Internal identity remains singular.** "Companion" names the same existing
+conversational capability and its registered surfaces; this change does not add
+another assistant, conversation, or workflow.
 
 ---
 

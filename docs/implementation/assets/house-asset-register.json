@@ -29,6 +29,15 @@
       "note": "The arrival/graded orchard environment image (E3). PRE-CONVERGENCE sibling of orchard.webp; see EXP3 § 4.2. The five recorded orchard-bg.webp bypasses (register row 40) are resolved at Phase 1 convergence, not here."
     },
     {
+      "id": "home-architectural-front-garden",
+      "path": "client/public/images/home/home-front-garden-20261027.png",
+      "layer": 1,
+      "ownerComponent": "client/src/components/layout/orchard-backdrop.tsx",
+      "sha256": "2716423e4e4eeddfb8b87c847e2213ca26e1dd355d87b5e3583e101ac786369b",
+      "citation": "HOMEEXT1 owner amendment 2026-10-27 · THA_EXPERIENCE_BLUEPRINT.md § 6.1 · GOVERNING_EXPERIENCE_ARCHITECTURE.md GEA6 exception · Adoption Register row 40",
+      "note": "One static Home E3 architectural composite, exact bytes selected by Colin (tha-governance-owner-001) in this conversation and admitted by the owner instruction to build the Home page. House and front garden frame the same orchard identity; /home is the sole consumer through the existing environment owner. This is not an orchard-only sibling or a generic background. No crop file or room variant is admitted."
+    },
+    {
       "id": "larder-joinery-floating-shelf-oak-wide",
       "path": "client/src/assets/living-home/larder/joinery/tha-larder-joinery-floating-shelf-oak-wide.png",
       "layer": 2,

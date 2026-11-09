@@ -3,20 +3,24 @@ entry: page-home
 name: Home
 section: pages
 status: live
-visibility: household
+visibility: public
 owner: Colin Clapson
-route: /home
-last_verified: 2026-07-16
-version: 2
+route: /
+last_verified: 2026-11-05
+version: 3
 ---
 
 # Home
 
-> The calm today screen — today's meals, the shopping that follows from them, plant diversity, and anything gently worth attention.
+> One Home address for the public welcome and the household's calm today screen.
 
 ## What it is
 
-The screen a household lands on after signing in. It opens with the date and a
+The root address shows a welcoming introduction to signed-out visitors. After
+sign-in, the same address shows the household's Home screen. If onboarding is
+incomplete, the household continues to onboarding first.
+
+The household view opens with the date and a
 two-line welcome in THA's display voice — "Welcome home," then the person's name —
 followed by a "Today at a glance" group of cards: the meals planned for today, how
 many items are still to buy, and this week's plant diversity against a target of
@@ -34,8 +38,8 @@ owns it, so nothing here is a second copy of the truth.
 
 | | |
 |---|---|
-| Route | `/home` |
-| Source | `client/src/pages/home-experience-page.tsx` |
+| Route | `/` |
+| Sources | `client/src/pages/home-page.tsx`, `client/src/pages/home-experience-page.tsx` |
 
 ## Related
 

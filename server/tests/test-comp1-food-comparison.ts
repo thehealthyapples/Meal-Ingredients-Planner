@@ -90,6 +90,7 @@ function canonicalSubject(
     report: foodReport(name, category, nutrients, benefits),
     product: null,
     usdaSnapshot: null,
+    liveProduct: null,
   };
 }
 
@@ -121,11 +122,42 @@ function productSubject(
     report: null,
     product,
     usdaSnapshot: null,
+    liveProduct: null,
+  };
+}
+
+// 2026-11-02 — fixture for the new live-search resolution tier (server/lib/
+// live-product-search.ts). Deliberately NOT a ProductHistory: a live-product
+// subject must never be constructible as if it were the caller's own stored
+// scan, which is exactly the distinction this fix exists to preserve.
+function liveProductSubject(
+  name: string,
+  fields: Partial<{ thaRating: number; upfScore: number; novaGroup: number; brand: string; ingredientsText: string; additiveCount: number }>,
+): SubjectFacts {
+  return {
+    query: name.toLowerCase(),
+    kind: "live-product",
+    slug: null,
+    name,
+    category: fields.brand ?? null,
+    report: null,
+    product: null,
+    usdaSnapshot: null,
+    liveProduct: {
+      barcode: null,
+      name,
+      brand: fields.brand ?? null,
+      ingredientsText: fields.ingredientsText ?? null,
+      novaGroup: fields.novaGroup ?? null,
+      thaRating: fields.thaRating ?? null,
+      upfScore: fields.upfScore ?? null,
+      additiveCount: fields.additiveCount ?? 0,
+    },
   };
 }
 
 function unresolvedSubject(query: string): SubjectFacts {
-  return { query, kind: "unresolved", slug: null, name: null, category: null, report: null, product: null, usdaSnapshot: null };
+  return { query, kind: "unresolved", slug: null, name: null, category: null, report: null, product: null, usdaSnapshot: null, liveProduct: null };
 }
 
 const HOUSEHOLD_NUT_FREE: HouseholdSignal = {
@@ -159,8 +191,9 @@ async function main(): Promise<void> {
     "whole food processing dimension is owner evidence (canonical identity)",
   );
   assert(
-    twoFoods.subjects[0].dimensions.appleScore.status === "gap",
-    "whole food numeric Apple Score is an honest gap (no owner stores one)",
+    twoFoods.subjects[0].dimensions.appleScore.status === "evidence" &&
+      (twoFoods.subjects[0].dimensions.appleScore.summary ?? "").includes("5/5"),
+    "whole food Apple Score is a real 5/5 by classification (2026-11-02 — matches WholeFoodAnalysisCard's existing rule), not a gap",
   );
   assert(
     twoFoods.subjects[0].dimensions.valueForMoney.status === "gap" &&
@@ -176,6 +209,52 @@ async function main(): Promise<void> {
     (twoFoods.recommendationGap ?? "").includes("tie"),
     "honest-tie recommendation gap explains the tie",
     twoFoods.recommendationGap ?? "(null)",
+  );
+
+  // 2026-11-02 (owner) — "cheese and cucumber so much wrong here": a
+  // canonical-food subject in an inherently-prepared category (Dairy,
+  // Dairy alternatives, Fermented foods, Beverages) must NOT get the
+  // "whole food, unprocessed, single ingredient, no additives" claim —
+  // that was true for cucumber and false for cheese. Regression coverage
+  // for the fix, not just the original (correct) vegetable case above.
+  const wholeVsPrepared = buildComparison(
+    [
+      canonicalSubject("Cucumber", "Vegetables", ["Vitamin K"], []),
+      canonicalSubject("Cheese", "Dairy", [], []),
+    ],
+    NO_HOUSEHOLD_SIGNAL,
+  );
+  assert(
+    wholeVsPrepared.subjects[0].dimensions.processing.status === "evidence",
+    "raw whole-food category (Vegetables) still gets the whole-food processing claim",
+  );
+  assert(
+    wholeVsPrepared.subjects[0].dimensions.appleScore.status === "evidence" &&
+      wholeVsPrepared.subjects[1].dimensions.appleScore.status === "gap",
+    "whole-food category gets a real 5/5 Apple Score; the Dairy category does not get a false one",
+  );
+  assert(
+    wholeVsPrepared.subjects[1].dimensions.processing.status === "gap",
+    "inherently-prepared category (Dairy) does NOT get a false whole-food processing claim",
+  );
+  assert(
+    wholeVsPrepared.subjects[1].dimensions.ingredientQuality.status === "gap" &&
+      wholeVsPrepared.subjects[1].dimensions.additives.status === "gap",
+    "Dairy subject's ingredient quality and additives are honest gaps, not a false 'single whole ingredient' claim",
+  );
+  assert(
+    !(wholeVsPrepared.subjects[1].dimensions.processing.gapReason ?? "").toLowerCase().includes("unprocessed by definition"),
+    "the Dairy gap text does not carry over the whole-food category's 'unprocessed by definition' claim",
+  );
+  // The old bug also corrupted the recommendation ladder: a Dairy subject
+  // used to rank as "least processed" (rank 1) purely by canonical
+  // identity, same as a true whole food — so it could win or tie a
+  // comparison on a processing claim that was never actually true.
+  assert(
+    wholeVsPrepared.recommendationGap !== null &&
+      !(wholeVsPrepared.recommendation?.basis ?? []).some((b) => b.includes("Least processed")),
+    "an inherently-prepared canonical food is never ranked via the whole-food processing rung",
+    JSON.stringify({ recommendation: wholeVsPrepared.recommendation, gap: wholeVsPrepared.recommendationGap }),
   );
 
   // Whole food vs NOVA-4 product — processing rung decides, cited.
@@ -204,10 +283,17 @@ async function main(): Promise<void> {
     foodVsProduct.subjects[1].dimensions.additives.status === "gap",
     "product additives are an honest gap (matches not stored in scan history)",
   );
+  // 2026-11-02 (owner) — "everything should have an apple score": Broccoli
+  // (a real whole food) now scores 5/5 by classification same as the
+  // product's own stored rating, so this dimension is comparable now — it
+  // used to be an honest gap only because the whole food side had none.
   const appleOutcome = foodVsProduct.dimensions.find((d) => d.dimension === "appleScore")!;
   assert(
-    !appleOutcome.comparable && (appleOutcome.gapReason ?? "").includes("Broccoli"),
-    "apple-score dimension not comparable (one side has no stored score) and names the missing side",
+    appleOutcome.comparable &&
+      (appleOutcome.outcome ?? "").includes("5/5") &&
+      (appleOutcome.outcome ?? "").includes("2/5"),
+    "apple-score dimension is now comparable: whole food's classification score vs the product's stored rating",
+    appleOutcome.outcome ?? "(null)",
   );
 
   // Two products, both with stored ratings — apple-score rung decides.
@@ -248,7 +334,7 @@ async function main(): Promise<void> {
   );
   assert(noEvidence.recommendation === null, "no stored scores anywhere → no recommendation");
   assert(
-    (noEvidence.recommendationGap ?? "").includes("No dimension has owner evidence"),
+    (noEvidence.recommendationGap ?? "").includes("don't have full evidence for every compared item"),
     "recommendation gap says exactly why",
   );
 
@@ -279,6 +365,67 @@ async function main(): Promise<void> {
   assert(JSON.stringify(again) === JSON.stringify(twoFoods), "pure core is deterministic (byte-identical)");
 
   // =========================================================================
+  section("§1b Live-product subjects — 2026-11-02, owner: \"compare in foods should show both foods from analyser and THA's own library\"");
+
+  // A live-searched product (never scanned by this caller) carries real
+  // evidence, same as a stored scan — but must never be mislabelled as one.
+  const liveProduct = liveProductSubject("Mystery Crisps", {
+    thaRating: 3,
+    upfScore: 55,
+    novaGroup: 4,
+    brand: "Snackco",
+    ingredientsText: "potato, sunflower oil, salt, flavouring, E621",
+    additiveCount: 2,
+  });
+  const liveDims = buildComparison([liveProduct, canonicalSubject("Broccoli", "Vegetables", [], [])], NO_HOUSEHOLD_SIGNAL)
+    .subjects[0].dimensions;
+  assert(
+    liveDims.appleScore.status === "evidence" && liveDims.appleScore.rating === 3,
+    "live-product Apple Score is real evidence with the structured rating, not a gap",
+  );
+  assert(
+    liveDims.processing.status === "evidence" && (liveDims.processing.summary ?? "").includes("NOVA group 4"),
+    "live-product processing dimension cites its real NOVA group",
+  );
+  assert(
+    liveDims.ingredientQuality.status === "evidence" && liveDims.additives.status === "evidence",
+    "live-product ingredient quality and additives are real evidence (the live search returned ingredient text), not a gap",
+  );
+  assert(
+    liveDims.appleScore.evidence.every((e) => e.owner.includes("live product search")) &&
+      liveDims.appleScore.evidence.every((e) => !e.owner.includes("your scan history")),
+    "live-product evidence is owned by the live-search citation, never mislabelled as the caller's own scan history",
+  );
+
+  // A product with NO scan history and NO live match at all stays an honest
+  // gap — the fallback never fabricates a match.
+  const noMatch = buildComparison(
+    [canonicalSubject("Broccoli", "Vegetables", [], []), unresolvedSubject("xyzzy not a real product")],
+    NO_HOUSEHOLD_SIGNAL,
+  );
+  assert(noMatch.subjects[1].kind === "unresolved", "no canonical, scan-history, or live match → still an honest unresolved subject");
+
+  // The recommendation ladder treats a live-product's real score the same
+  // way it treats a scanned product's — but names the provenance honestly.
+  const liveVsScanned = buildComparison(
+    [
+      liveProductSubject("Mystery Crisps", { thaRating: 2, novaGroup: 4 }),
+      productSubject("Known Snack", { thaRating: 4, novaGroup: 4 }),
+    ],
+    NO_HOUSEHOLD_SIGNAL,
+  );
+  assert(
+    liveVsScanned.recommendation?.name === "Known Snack",
+    "apple-score rung decides between a live-searched product and a scanned one by the higher real rating",
+    JSON.stringify(liveVsScanned.recommendation),
+  );
+  assert(
+    (liveVsScanned.recommendation?.basis ?? []).some((b) => b.includes("live search") && b.includes("your scan history")),
+    "the basis names each subject's real provenance (live search vs your scan history), never blurring the two",
+    JSON.stringify(liveVsScanned.recommendation?.basis),
+  );
+
+  // =========================================================================
   section("§2 Trust rules — documentation is never ranked; safety decides");
 
   // Nutrient/benefit documentation NEVER contributes to the verdict: a food
@@ -296,7 +443,7 @@ async function main(): Promise<void> {
     JSON.stringify(docsDontRank.recommendation),
   );
   assert(
-    (docsDontRank.recommendationGap ?? "").includes("Documented nutrients and benefits are not ranked"),
+    (docsDontRank.recommendationGap ?? "").includes("Documented nutrients and benefits aren't ranked"),
     "the tie explanation states the documentation-honesty rule",
   );
 

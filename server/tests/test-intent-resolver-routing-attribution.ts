@@ -296,6 +296,8 @@ async function main(): Promise<void> {
       resolveCapabilityStatus("nutrition-discovery", null), "registered-executable");
   }
 
+  check("lowest-sugar meals reaches numeric nutrition discovery", (await route("Which meals have the lowest sugar?")).includes("nutrition-discovery"));
+  check("lowest-calorie meals reaches numeric nutrition discovery", (await route("Which meals have the lowest calories?")).includes("nutrition-discovery"));
   console.log(`\n${passed} passed, ${failed} failed\n`);
   process.exit(failed === 0 ? 0 : 1);
 }

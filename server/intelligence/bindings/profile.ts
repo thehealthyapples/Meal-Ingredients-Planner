@@ -1,8 +1,8 @@
 /**
  * Profile Capability Binding (INT12)
  * ====================================
- * Activates the SIXTH live capability on the THA Intelligence Platform: it binds the
- * read-only Profile handler to the `profile` capability, flipping its availability
+ * Activates the Profile capability on the THA Intelligence Platform by binding its
+ * read and narrowly scoped, consent-gated profile-write handler, flipping its availability
  * from "registered" (metadata only) to "available" (executable). It reuses the exact
  * Port → Handler → Binding pattern proven by the Planner (INT2), Shopping (INT3),
  * Nutrition / Knowledge (INT4), Pantry (INT8), and Diary (INT10) — the platform gains a
@@ -24,15 +24,14 @@ import { createStorageProfileReadPort, type ProfileReadPort } from "../handlers/
 export const PROFILE_CAPABILITY_ID = "profile";
 
 /**
- * The verbs this read-only binding actually executes. Only "read" has a live code path
- * in the handler; the other allow-listed verbs ("explain" — no stored rationale;
- * "add" — a write) return an honest gap. Declared here so the registry can surface
+ * The verbs this binding actually executes. `add` is restricted to confirmed,
+ * consent-gated reported health context and voluntary nutrition focuses. Declared here so the registry can surface
  * truthful executableIntents and discovery cannot over-advertise (INT6A).
  */
-export const PROFILE_EXECUTABLE_INTENTS: readonly IntentVerb[] = ["read"];
+export const PROFILE_EXECUTABLE_INTENTS: readonly IntentVerb[] = ["read", "add"];
 
 /**
- * Bind the read-only Profile handler to a platform.
+ * Bind the Profile handler to a platform.
  *
  * Production: call with only `platform` — the real storage port is used by default.
  * Tests: pass an in-memory port factory as the second argument so the binding and

@@ -6,10 +6,8 @@ status: live
 visibility: household
 owner: Colin Clapson
 route: /cookbook
-aliases:
-  - /meals
-last_verified: 2026-07-11
-version: 1
+last_verified: 2026-11-05
+version: 2
 ---
 
 # Cookbook
@@ -31,15 +29,12 @@ page and offers the actions that follow from a saved recipe.
 | | |
 |---|---|
 | Route | `/cookbook` |
-| Source | `client/src/pages/meals-page.tsx` |
-
-## Aliases
-
-- `/meals` — an older address for the same page; it still resolves to the Cookbook.
+| Source | `client/src/pages/cookbook-real-book-concept.tsx` |
 
 ## Related
 
 - [[dom-cookbook]] — the domain this page belongs to
+- [[page-cookbook-grid]] — the grid view of the same recipe collection
 - [[jrn-add-recipe]] — the journey of adding a recipe
 - [[page-meal-detail]] — where a single saved recipe opens
 

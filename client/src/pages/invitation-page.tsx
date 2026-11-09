@@ -77,7 +77,7 @@ export default function InvitationPage() {
       if (data.kind === "community" && data.communityToken) {
         navigate(`/orchard?invitation=${encodeURIComponent(data.communityToken)}`);
       } else {
-        navigate("/home");
+        navigate("/");
       }
     },
     onError: (e: Error) => {

@@ -33,7 +33,7 @@ Simply Better Choice.
 
 ## Related
 
-- [[page-landing]]
+- [[page-home]]
 
 ---
 

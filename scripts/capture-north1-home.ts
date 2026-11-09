@@ -1,4 +1,4 @@
-// NORTH1 — before/after captures of the authenticated Home (/home), the North Star room.
+// NORTH1 — before/after captures of the authenticated Home (/), the North Star room.
 // Usage: npx tsx scripts/capture-north1-home.ts <label>   (label = "before" | "after")
 //
 // Modelled on the ODL1 harness it replaces in purpose: zero-write DEV-world login,
@@ -85,7 +85,7 @@ async function main() {
         route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) }),
       );
     }
-    await page.goto(`${BASE}/home`, { waitUntil: "networkidle" });
+    await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
     await page.evaluate(() => document.fonts.ready);
     await page.waitForTimeout(2500);
     await page.screenshot({ path: path.join(OUT, `quiet-day-${vp.name}.png`) });
@@ -107,7 +107,7 @@ async function main() {
     if (!login.ok()) throw new Error(`login failed: ${login.status()}`);
 
     const page = await ctx.newPage();
-    await page.goto(`${BASE}/home`, { waitUntil: "networkidle" });
+    await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
     // Let the queries land, the webfonts paint, and the Companion's held entrance settle.
     await page.waitForLoadState("networkidle");
     await page.evaluate(() => document.fonts.ready);

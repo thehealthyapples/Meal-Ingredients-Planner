@@ -16,17 +16,22 @@
 Capability ID:          profile
 Capability name:        Profile / Preferences
 Owner service:          server/storage.ts — getUser() (line 395), getUserPreferences() (line 840).
+                         The caller's reported health context and nutrition focuses are
+                         owned by its `household_eaters` row (SoT D16), written through
+                         the same storage owner after current consent and confirmation.
                          NOTE: server/lib/sanitizeUser.ts is a sanitizer, not the owner — and is not
                          actually called by any of the routes below. server/routes.ts's local
                          buildProfileResponse() (lines 851–918) is the route-layer composer, not
                          a reusable owner method.
-Source of Truth:        SoT D7, D26, D27 — `users` table (shared/schema.ts:8–41) +
-                         `user_preferences` table (shared/schema.ts:642–676)
+Source of Truth:        SoT D7, D26, D27 — `users` and `user_preferences`; the caller's
+                         reported health context and nutrition focuses are SoT D16
+                         `household_eaters` fields.
 Access scope:           own-data only (user-scoped). Enforced structurally: every existing GET route
                          derives the id exclusively from req.user!.id (session), never from a param —
                          confirmed at server/routes.ts:921–924, 5277–5278, 6905–6907, 6953–6955.
 Supported read intents: read, explain, add (per capability-registry.ts:114)
-Executable intents:     read   — explain has no stored rationale to surface; add is a write.
+Executable intents:     read, add — add is limited to consent-gated reported health context
+                         or a supported voluntary nutrition focus on the caller's own row.
 Allowed scopes:         profile   — id, username, displayName, firstName, profilePhotoUrl,
                                     measurementPreference, preferredPriceTier, onboardingCompleted,
                                     isBetaUser, emailVerified, dietPattern, dietRestrictions,
@@ -36,8 +41,12 @@ Allowed scopes:         profile   — id, username, displayName, firstName, prof
                          preferences — all 32 fields on user_preferences (diet types, exclusions,
                                     health goals, budget, stores, calorie/height/weight, household
                                     counts, feature/planner toggles) — none are sensitive
+                         person details — reported health context and nutrition focuses on the
+                                    caller's own household_eaters row, returned only under current
+                                    health-data consent; nutrition focuses are preferences, not
+                                    nutrient targets or restrictions
 Honest gaps:            explain verb — no stored rationale for any profile field — gap
-                         add verb — write — gap
+                         add verb — no update/delete operation; only the two stated add scopes
                          household eater dietary overrides (household_eaters table) — belong to
                            the household capability, not profile — gap if requested here
 Permission model:       req.isAuthenticated() → 401 if not; id always taken from req.user!.id,
@@ -46,6 +55,8 @@ Permission model:       req.isAuthenticated() → 401 if not; id always taken fr
                          else's — own-data is structural, not a runtime branch.
 Port methods:           getUser(userId)            → storage.getUser(userId)
                          getUserPreferences(userId) → storage.getUserPreferences(userId)
+                         getPersonNutritionFocuses(userId) / addPersonNutritionFocus(userId, focus)
+                         getPersonReportedHealthContext(userId) / addPersonReportedHealthContext(...)
 Handler responsibilities: read verb composes a profile projection (mirror buildProfileResponse's
                          allowlist) + a preferences projection (all 32 fields, none excluded).
                          OPEN DECISION: neither existing GET route calls sanitizeUser() — the route
@@ -53,15 +64,18 @@ Handler responsibilities: read verb composes a profile projection (mirror buildP
                          its own explicit allowlist (do not call storage.getUser() and forward the
                          raw row — it includes password, emailVerificationToken,
                          emailVerificationExpires, passwordResetToken, passwordResetExpires).
-Binding registration:   PROFILE_EXECUTABLE_INTENTS = ["read"]
+Binding registration:   PROFILE_EXECUTABLE_INTENTS = ["read", "add"]
 Tests required:         Standard INT7A Step 6 sections, plus an explicit assertion that
                          password / emailVerificationToken / emailVerificationExpires /
                          passwordResetToken / passwordResetExpires never appear in handler output.
 Documentation updates:  server/intelligence/README.md row (future binding only)
-Data impact:            Reads only — no writes, no schema change
+Data impact:            Reads profile data; confirmed writes append a caller-selected focus or
+                         user-reported health statement to the caller's canonical eater row.
 Trust rules:            Never surface another user's profile (structural, not a runtime check —
-                           still must be tested). Never surface password/token fields. Never pull
-                           household_eaters overrides into a profile read.
+                           still must be tested). Never surface password/token fields. Never allow
+                           adult cross-writes. Require current consent for health context and
+                           nutrition focuses. Do not treat a voluntary focus as a restriction,
+                           diagnosis, or numeric nutrient target.
 ```
 
 ---

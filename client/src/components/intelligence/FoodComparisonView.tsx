@@ -14,10 +14,12 @@
 // "for us" signal; this view puts them first.
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Scale, Home, Info, CheckCircle2, CircleDashed, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import AppleRating from "@/components/AppleRating";
+import { nutrientSlugForDisplayName } from "@shared/canonical/food-report-adapter";
 import {
   IntelligenceCard,
   bodyText,
@@ -56,11 +58,13 @@ export interface ComparisonDimensionEntry {
   items?: string[];
   /** FOODUI12 — real per-100g quantities (currently: USDA macros, nutritionalProfile only, covered foods only). */
   metrics?: { label: string; value: string }[];
+  /** 2026-11-02 — the real 1-5 Apple Score number, appleScore dimension only. See the server-side mirror's own note. */
+  rating?: number;
 }
 
 export interface ComparisonSubject {
   query: string;
-  kind: "canonical-food" | "scanned-product" | "unresolved";
+  kind: "canonical-food" | "scanned-product" | "live-product" | "unresolved";
   slug: string | null;
   name: string | null;
   category: string | null;
@@ -119,20 +123,35 @@ function subjectLabel(s: ComparisonSubject): string {
   return s.name ?? s.query;
 }
 
+// Shared by FoodComparisonView's own table and WeekFoodExplorer's split-column
+// Compare tab (SubjectComparisonPanel below) — one definition of dimension
+// order/filtering so the two surfaces never drift.
+export function orderedComparisonDimensions(bundle: FoodComparisonBundle): ComparisonDimensionOutcome[] {
+  return DIMENSION_ORDER.map((key) => bundle.dimensions.find((d) => d.dimension === key)).filter(
+    (d): d is ComparisonDimensionOutcome => !!d,
+  );
+}
+
 // ── Component ──────────────────────────────────────────────────────────────────
 
-export function FoodComparisonView({ bundle }: { bundle: FoodComparisonBundle }) {
-  const resolved = bundle.subjects.filter((s) => s.kind !== "unresolved");
-  const unresolved = bundle.subjects.filter((s) => s.kind === "unresolved");
-
-  const orderedDimensions = DIMENSION_ORDER.map((key) =>
-    bundle.dimensions.find((d) => d.dimension === key),
-  ).filter((d): d is ComparisonDimensionOutcome => !!d);
-
+// Split out of FoodComparisonView (which still renders it first, unchanged)
+// so WeekFoodExplorer's Compare tab can place the same verdict next to the
+// item inputs in its own column instead of stacked above a specific food's
+// panel — see WeekFoodExplorer's comment on this (2026-11-01): the verdict is
+// a comparison-level fact, not something that belongs attached to whichever
+// subject happens to render first.
+export function ComparisonVerdict({
+  recommendation,
+  recommendationGap,
+  trust,
+}: {
+  recommendation: ComparisonRecommendation | null;
+  recommendationGap: string | null;
+  trust: FoodComparisonBundle["trust"];
+}) {
   return (
-    <div className="space-y-4" data-testid="food-comparison">
-      {/* ── The verdict: the one thing a household came here to learn ── */}
-      {bundle.recommendation ? (
+    <div className="space-y-2.5" data-testid="comparison-verdict">
+      {recommendation ? (
         <Card
           role="region"
           aria-label="Better choice for your household"
@@ -144,11 +163,11 @@ export function FoodComparisonView({ bundle }: { bundle: FoodComparisonBundle })
             <p className={cn(eyebrowText)}>The better choice for you</p>
           </div>
           <p className="text-base font-semibold tracking-tight" data-testid="comparison-winner">
-            {bundle.recommendation.name}
+            {recommendation.name}
           </p>
-          {bundle.recommendation.basis.length > 0 && (
+          {recommendation.basis.length > 0 && (
             <ul className="space-y-1">
-              {bundle.recommendation.basis.map((reason) => (
+              {recommendation.basis.map((reason) => (
                 <li key={reason} className={cn(bodyText, "flex gap-2")}>
                   <span aria-hidden="true" className="text-foreground/30">•</span>
                   <span>{reason}</span>
@@ -163,22 +182,39 @@ export function FoodComparisonView({ bundle }: { bundle: FoodComparisonBundle })
           eyebrow="No clear winner"
           title="These are close — here's the honest picture"
           body={
-            bundle.recommendationGap ??
+            recommendationGap ??
             "No dimension produced a grounded, safety-cleared difference between these."
           }
           data-testid="comparison-no-recommendation"
         />
       )}
 
-      {/* ── Whose data this used ── */}
       <div className="flex items-center gap-1.5" data-testid="comparison-scope">
-        <Home className={cn("h-3 w-3", bundle.trust.householdAware ? semanticText.positive : "text-muted-foreground/50")} aria-hidden="true" />
+        <Home className={cn("h-3 w-3", trust.householdAware ? semanticText.positive : "text-muted-foreground/50")} aria-hidden="true" />
         <p className={subtleText}>
-          {bundle.trust.householdAware
+          {trust.householdAware
             ? "Weighed against your household's restrictions and what you already cook."
             : "General comparison — no household context was applied."}
         </p>
       </div>
+    </div>
+  );
+}
+
+export function FoodComparisonView({ bundle }: { bundle: FoodComparisonBundle }) {
+  const resolved = bundle.subjects.filter((s) => s.kind !== "unresolved");
+  const unresolved = bundle.subjects.filter((s) => s.kind === "unresolved");
+
+  const orderedDimensions = orderedComparisonDimensions(bundle);
+
+  return (
+    <div className="space-y-4" data-testid="food-comparison">
+      {/* ── The verdict: the one thing a household came here to learn ── */}
+      <ComparisonVerdict
+        recommendation={bundle.recommendation}
+        recommendationGap={bundle.recommendationGap}
+        trust={bundle.trust}
+      />
 
       {/* ── Side by side: every subject in one column each, every dimension a row.
             FOODUI2 (2026-10-29) — a vertical dimension-by-dimension list made a
@@ -235,29 +271,206 @@ export function FoodComparisonView({ bundle }: { bundle: FoodComparisonBundle })
 // to find the one line that actually differs between two foods.
 // FOODUI11 — the "Why?" source tooltip, shared by both the prose and the
 // badge-grid cell shapes so expanding either one reveals the same citation.
-function CellSourceTooltip({ evidence }: { evidence: ComparisonEvidence[] }) {
+// 2026-11-01 (owner) — "all the WHY dont really show much more": "Why?" used
+// to un-clamp a summary sentence that was rarely actually clamped, then hide
+// the real citation behind a SECOND interaction (hover a small icon) that,
+// even then, only named which owner it came from ("THA's whole-food list"),
+// never what that owner actually said. `evidence[].fact` — the specific
+// grounding detail — existed in the data the whole time but was never
+// rendered anywhere. This shows it directly, in the same click that reveals
+// the summary, so "Why?" is substance, not a second door to knock on.
+function EvidenceList({ evidence }: { evidence: readonly ComparisonEvidence[] }) {
   if (evidence.length === 0) return null;
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button type="button" className="text-muted-foreground/50 hover:text-muted-foreground" data-testid="comparison-cell-source">
-          <Info className="h-3.5 w-3.5" aria-hidden="true" />
-        </button>
-      </TooltipTrigger>
-      <TooltipContent className="max-w-60 text-xs">{evidence.map((e) => e.owner).join(", ")}</TooltipContent>
-    </Tooltip>
+    <ul className="mt-1.5 space-y-1 border-l-2 border-border/40 pl-2.5" data-testid="comparison-cell-evidence">
+      {evidence.map((e, i) => (
+        <li key={i} className="text-xs leading-snug text-muted-foreground/80">
+          <span className="font-medium text-muted-foreground">{e.owner}:</span> {e.fact}
+        </li>
+      ))}
+    </ul>
   );
 }
 
+// FOODUI14 — one subject's own comparison data as a standalone vertical
+// panel (header, then each dimension stacked), instead of one cell in a
+// shared table. WeekFoodExplorer's Compare tab puts every resolved subject
+// side by side in its own column (one per subject, like any other food
+// detail column on that page) rather than nesting them inside one table
+// squeezed into a single column — so this renders the SAME per-subject data
+// ComparisonTable renders, just shaped as a column instead of a table row
+// slice.
+//
+// 2026-11-01 (owner) — the verdict ("the summary") used to render at the top
+// of this panel for the first subject; the owner didn't want it stacked
+// above one food's own name, since it's a comparison-level fact, not that
+// food's. It now lives in WeekFoodExplorer's own column 1, below the item
+// inputs, as ComparisonVerdict — this panel no longer knows about it at all.
+export function SubjectComparisonPanel({
+  subject,
+  dimensions,
+  expandedDimensions,
+  onToggleDimension,
+}: {
+  subject: ComparisonSubject;
+  dimensions: ComparisonDimensionOutcome[];
+  /** Keyed by dimension, shared by every column the caller renders, so
+   *  expanding one food's "Why?" expands the same dimension for every other
+   *  food being compared too. */
+  expandedDimensions: ReadonlySet<ComparisonDimensionKey>;
+  onToggleDimension: (dimension: ComparisonDimensionKey) => void;
+}) {
+  return (
+    <div className="space-y-4" data-testid={`comparison-subject-${subject.query}`}>
+      {/* Column header — same shape as any other food column on this page. */}
+      <div>
+        <h2 className="text-xl font-semibold" data-testid="comparison-subject-name">
+          {subjectLabel(subject)}
+        </h2>
+        {subject.category && <p className="text-sm text-muted-foreground">{subject.category}</p>}
+      </div>
+
+      <div className="space-y-3">
+        {dimensions.map((d) => {
+          const entry = subject.dimensions[d.dimension];
+          const label = DIMENSION_LABEL[d.dimension];
+          return (
+            <div key={d.dimension} data-testid={`comparison-subject-${subject.query}-${d.dimension}`}>
+              <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground/70">
+                {d.dimension === "householdSuitability" ? (
+                  <Home className="h-3.5 w-3.5" aria-hidden="true" />
+                ) : (
+                  <Scale className="h-3.5 w-3.5" aria-hidden="true" />
+                )}
+                {label}
+              </p>
+              {entry ? (
+                <ComparisonCell
+                  entry={entry}
+                  dimension={d.dimension}
+                  expanded={expandedDimensions.has(d.dimension)}
+                  onToggle={() => onToggleDimension(d.dimension)}
+                />
+              ) : (
+                <p className={cn(subtleText, "italic")}>No data yet.</p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+interface NutrientPillDetail {
+  nutrient: { slug: string; name: string; description: string | null; category: string | null };
+  benefits: Array<{ slug: string; name: string; icon: string | null }>;
+}
+
+// 2026-11-01 (owner) — "nutrition should be in the pills, but clickable...
+// listed alphabetically, vertically". A nutrient name on its own doesn't say
+// anything a household can act on; this makes it a real control that reveals
+// what the nutrient actually does, using the exact same
+// GET /api/knowledge/nutrients/:slug data WeekFoodExplorer's own nutrient
+// lookup already reads — lazily, per pill, only once clicked, so comparing
+// doesn't fire a fetch for every nutrient nobody asked about. Benefit chips
+// (the dimension's other `items` use, healthBenefits) keep the plain static
+// chip below instead: there is no equivalent per-benefit detail endpoint to
+// open, and a chip that looks clickable but does nothing is worse than one
+// that doesn't.
+function NutrientPill({ name }: { name: string }) {
+  const [open, setOpen] = useState(false);
+  const slug = nutrientSlugForDisplayName(name);
+  const { data, isFetching } = useQuery<NutrientPillDetail>({
+    queryKey: ["/api/knowledge/nutrients", slug],
+    queryFn: async () => {
+      const response = await fetch(`/api/knowledge/nutrients/${encodeURIComponent(slug!)}`);
+      if (!response.ok) throw new Error("Nutrient detail unavailable");
+      return response.json() as Promise<NutrientPillDetail>;
+    },
+    enabled: open && !!slug,
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        disabled={!slug}
+        aria-expanded={open}
+        className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-xs font-medium text-foreground/80 transition-colors hover:bg-muted/70 disabled:cursor-default disabled:hover:bg-muted/40"
+        data-testid={`comparison-nutrient-pill-${name}`}
+      >
+        {name}
+        {slug && <ChevronDown className={cn("h-3 w-3 transition-transform", open && "rotate-180")} aria-hidden="true" />}
+      </button>
+      {open && (
+        <p className="mt-1 pl-1 text-xs leading-relaxed text-muted-foreground">
+          {isFetching ? "Loading…" : data?.nutrient.description ?? "No description recorded for this nutrient yet."}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// 2026-11-01 (owner) — "when expanding a why on one column the same why
+// should expand in the other": expand/collapse used to be each cell's own
+// local state, so "Why?" under Kale's "How processed" and Cucumber's "How
+// processed" — the same dimension, two columns — toggled independently.
+// Controlled now: the caller (SubjectComparisonPanel/ComparisonTable) owns
+// one expanded-set keyed by dimension and every cell for that dimension,
+// across every column, reads and toggles the SAME entry — so expanding one
+// expands the reasoning for every food being compared at once.
 function ComparisonCell({
   entry,
+  dimension,
+  expanded,
+  onToggle,
 }: {
   entry: ComparisonDimensionEntry;
+  dimension: ComparisonDimensionKey;
+  expanded: boolean;
+  onToggle: () => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
-
   if (entry.status !== "evidence") {
     return <p className={cn(subtleText, "italic")}>{entry.gapReason ?? "No data yet."}</p>;
+  }
+
+  // 2026-11-02 (owner) — "apple score should be shown... with the top
+  // single apple logo... this can have a why dropdown — but the comparison
+  // is too wordy": the score was a full sentence by default ("Cucumber is a
+  // whole food — THA scores whole foods 5/5 by classification...") with no
+  // visual at all. The Analyser already has the real mark for this exact
+  // number (AppleRating, the same apple-icon row WholeFoodAnalysisCard and
+  // every scanned product use) — this renders that instead, compact by
+  // default, with the full sentence one click away via "Why?" (same
+  // default-compact/expand-for-prose pattern as the items/metrics branch
+  // below, just for a dimension that's a rating rather than a list).
+  if (entry.rating != null) {
+    return (
+      <div>
+        <div className="flex items-center gap-2">
+          <AppleRating rating={entry.rating} size="small" showTooltip={false} animate={false} />
+          <button
+            type="button"
+            onClick={onToggle}
+            className="inline-flex items-center gap-0.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+            data-testid="comparison-cell-toggle"
+          >
+            <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", expanded && "rotate-180")} aria-hidden="true" />
+            {expanded ? "Less" : "Why?"}
+          </button>
+        </div>
+        {expanded && (
+          <>
+            <p className="mt-1 text-sm leading-relaxed text-foreground/80">{entry.summary}</p>
+            <EvidenceList evidence={entry.evidence} />
+          </>
+        )}
+      </div>
+    );
   }
 
   // FOODUI11/12 — a naturally list-shaped or quantified dimension (nutrients,
@@ -280,30 +493,42 @@ function ComparisonCell({
           </div>
         )}
         {entry.items && entry.items.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {entry.items.map((item) => (
-              <span
-                key={item}
-                className="inline-flex items-center rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-xs font-medium text-foreground/80"
-              >
-                {item}
-              </span>
-            ))}
-          </div>
+          dimension === "nutritionalProfile" ? (
+            <div className="flex flex-col items-start gap-1">
+              {[...entry.items].sort((a, b) => a.localeCompare(b)).map((item) => (
+                <NutrientPill key={item} name={item} />
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-1">
+              {[...entry.items].sort((a, b) => a.localeCompare(b)).map((item) => (
+                <span
+                  key={item}
+                  className="inline-flex items-center rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-xs font-medium text-foreground/80"
+                >
+                  {item}
+                </span>
+              ))}
+            </div>
+          )
         )}
         <div className="mt-1.5 flex items-center gap-1">
           <button
             type="button"
-            onClick={() => setExpanded((v) => !v)}
+            onClick={onToggle}
             className="inline-flex items-center gap-0.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
             data-testid="comparison-cell-toggle"
           >
             <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", expanded && "rotate-180")} aria-hidden="true" />
             {expanded ? "Less" : "Why?"}
           </button>
-          {expanded && <CellSourceTooltip evidence={entry.evidence} />}
         </div>
-        {expanded && <p className="mt-1 text-sm leading-relaxed text-foreground/80">{entry.summary}</p>}
+        {expanded && (
+          <>
+            <p className="mt-1 text-sm leading-relaxed text-foreground/80">{entry.summary}</p>
+            <EvidenceList evidence={entry.evidence} />
+          </>
+        )}
       </div>
     );
   }
@@ -314,15 +539,15 @@ function ComparisonCell({
       <div className="mt-1 flex items-center gap-1">
         <button
           type="button"
-          onClick={() => setExpanded((v) => !v)}
+          onClick={onToggle}
           className="inline-flex items-center gap-0.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
           data-testid="comparison-cell-toggle"
         >
           <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", expanded && "rotate-180")} aria-hidden="true" />
           {expanded ? "Less" : "Why?"}
         </button>
-        {expanded && <CellSourceTooltip evidence={entry.evidence} />}
       </div>
+      {expanded && <EvidenceList evidence={entry.evidence} />}
     </div>
   );
 }
@@ -334,6 +559,19 @@ function ComparisonTable({
   dimensions: ComparisonDimensionOutcome[];
   subjects: ComparisonSubject[];
 }) {
+  // Same shared, dimension-keyed expand state as SubjectComparisonPanel — a
+  // row's "Why?" already sits in one shared row across every subject's
+  // column here, so expanding one subject's cell expands the whole row.
+  const [expandedDimensions, setExpandedDimensions] = useState<Set<ComparisonDimensionKey>>(new Set());
+  const toggleDimension = (dimension: ComparisonDimensionKey) => {
+    setExpandedDimensions((prev) => {
+      const next = new Set(prev);
+      if (next.has(dimension)) next.delete(dimension);
+      else next.add(dimension);
+      return next;
+    });
+  };
+
   return (
     <div className="overflow-x-auto rounded-lg border border-border/60" data-testid="comparison-table">
       <table className="w-full text-sm">
@@ -383,7 +621,12 @@ function ComparisonTable({
                       className={cn("p-3 align-top", i === 0 && "bg-muted/40")}
                       data-testid={`comparison-cell-${d.dimension}-${s.query}`}
                     >
-                      <ComparisonCell entry={entry} />
+                      <ComparisonCell
+                        entry={entry}
+                        dimension={d.dimension}
+                        expanded={expandedDimensions.has(d.dimension)}
+                        onToggle={() => toggleDimension(d.dimension)}
+                      />
                     </td>
                   );
                 })}

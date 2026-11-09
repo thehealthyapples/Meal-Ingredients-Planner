@@ -34,7 +34,7 @@ makes hard to read — rather than leaving them to guess.
 
 ## Related
 
-- [[page-landing]]
+- [[page-home]]
 - [[dom-analyser]]
 
 ---

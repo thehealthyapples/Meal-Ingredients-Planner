@@ -209,14 +209,14 @@ async function main() {
       {
         id: "home-ambient-aggregate",
         name: "Home — aggregate ambient (all domains, incl. the new Cookbook, in one calm surface)",
-        route: "/home",
+        route: "/",
         toggle: "ambient-intelligence-home-toggle",
         wait: '[data-testid="ambient-intelligence-home"]',
       },
       {
         id: "home-companion-notices",
         name: "Home — the Companion card (AFI5: the new observations reach the household's own voice)",
-        route: "/home",
+        route: "/",
         wait: '[data-testid="card-home-companion"]',
       },
     ];

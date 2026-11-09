@@ -29,10 +29,10 @@ entries:
     visibility: household
     purpose: The calm place a household lands on every visit, telling them how today looks and what is next.
     owner: Colin Clapson
-    sources: [client/src/pages/home-experience-page.tsx, client/src/App.tsx#L204]
+    sources: [client/src/pages/home-experience-page.tsx, client/src/App.tsx]
     related: [page-home, jrn-first-run, dom-planner]
-    last_verified: 2026-07-11
-    version: 1
+    last_verified: 2026-11-05
+    version: 2
 
   - id: dom-planner
     name: Planner
@@ -53,10 +53,10 @@ entries:
     visibility: household
     purpose: The household's own collection of recipes — saved, imported, scanned or spoken — in one place.
     owner: Colin Clapson
-    sources: [client/src/pages/meals-page.tsx, docs/architecture/capabilities/meals.md]
-    related: [page-cookbook, page-meal-detail, jrn-add-recipe, cap-meals]
-    last_verified: 2026-07-11
-    version: 1
+    sources: [client/src/pages/cookbook-real-book-concept.tsx, client/src/pages/meals-page.tsx, docs/architecture/capabilities/meals.md]
+    related: [page-cookbook, page-cookbook-grid, page-meal-detail, jrn-add-recipe, cap-meals]
+    last_verified: 2026-11-05
+    version: 2
 
   - id: dom-shopping
     name: Shopping
@@ -65,11 +65,10 @@ entries:
     visibility: household
     purpose: Turning the week's plan into a shopping trip — one list, real products, ready to hand to a supermarket.
     owner: Colin Clapson
-    sources: [client/src/pages/shopping-workspace-page.tsx, client/src/pages/shopping-list-page.tsx]
-    related: [page-shopping-workspace, page-basket, jrn-shop, cap-shopping]
-    known_defects: [fnd-shopping-duplicate]
-    last_verified: 2026-07-11
-    version: 1
+    sources: [client/src/pages/shopping-workspace-page.tsx]
+    related: [page-shopping-workspace, jrn-shop, cap-shopping]
+    last_verified: 2026-11-05
+    version: 2
 
   - id: dom-pantry
     name: Pantry
@@ -104,8 +103,8 @@ entries:
     owner: Colin Clapson
     sources: [client/src/pages/food-diary-page.tsx]
     related: [page-diary, jrn-track-eaten, cap-diary]
-    last_verified: 2026-07-11
-    version: 1
+    last_verified: 2026-11-05
+    version: 2
 
   - id: dom-analyser
     name: Analyser
@@ -120,7 +119,7 @@ entries:
     version: 1
 
   - id: dom-companion
-    name: Apple
+    name: Companion
     section: domains
     status: live
     visibility: household
@@ -199,32 +198,19 @@ entries:
   # =========================================================================
   # SECTION 2 — PAGES (keyed by canonical route)
   # =========================================================================
-  - id: page-landing
-    name: Landing
-    section: pages
-    status: live
-    visibility: public
-    route: /
-    purpose: Explains to a visitor what The Healthy Apples is, and invites them to sign up or try it for twenty minutes.
-    owner: Colin Clapson
-    sources: [client/src/pages/home-page.tsx]
-    related: [mkt-hero, mkt-ethos, page-auth, jrn-first-run]
-    last_verified: 2026-07-11
-    version: 1
-
   - id: page-home
     name: Home
     section: pages
     status: live
-    visibility: household
-    route: /home
-    purpose: The calm today screen — today's meals, the shopping that follows from them, plant diversity, and anything gently worth attention.
+    visibility: public
+    route: /
+    purpose: One Home address shows the public welcome to signed-out visitors and the household's calm today screen after sign-in.
     owner: Colin Clapson
-    sources: [client/src/pages/home-experience-page.tsx]
+    sources: [client/src/pages/home-page.tsx, client/src/pages/home-experience-page.tsx, client/src/App.tsx]
     related: [dom-home, page-dashboard]
     known_defects: [fnd-derived-today]
-    last_verified: 2026-07-20
-    version: 2
+    last_verified: 2026-11-05
+    version: 3
 
   - id: page-dashboard
     name: Dashboard
@@ -246,12 +232,24 @@ entries:
     status: live
     visibility: household
     route: /cookbook
-    aliases: [/meals]
-    purpose: Where the household keeps its recipes, and adds new ones by link, photo, voice or hand.
+    purpose: The household's real-book Cookbook view of its saved recipes.
+    owner: Colin Clapson
+    sources: [client/src/pages/cookbook-real-book-concept.tsx]
+    related: [dom-cookbook, page-cookbook-grid, jrn-add-recipe, page-meal-detail]
+    last_verified: 2026-11-05
+    version: 2
+
+  - id: page-cookbook-grid
+    name: Cookbook Grid
+    section: pages
+    status: live
+    visibility: household
+    route: /cookbook/grid
+    purpose: Browse, search, filter and manage the household's recipes in a grid.
     owner: Colin Clapson
     sources: [client/src/pages/meals-page.tsx]
-    related: [dom-cookbook, jrn-add-recipe, page-meal-detail]
-    last_verified: 2026-07-11
+    related: [dom-cookbook, page-cookbook, page-meal-detail]
+    last_verified: 2026-11-05
     version: 1
 
   - id: page-meal-detail
@@ -300,29 +298,24 @@ entries:
     status: live
     visibility: household
     route: /shopping-workspace
-    aliases: [/list, /shopping-list]
     purpose: The household's working shopping list — add items, match them to real products, check prices, and hand the basket to a supermarket.
     owner: Colin Clapson
     sources: [client/src/pages/shopping-workspace-page.tsx]
-    related: [dom-shopping, page-basket, jrn-shop]
-    known_defects: [fnd-shopping-duplicate, fnd-broken-shopping-link]
-    last_verified: 2026-07-11
-    version: 1
+    related: [dom-shopping, jrn-shop]
+    last_verified: 2026-11-05
+    version: 2
 
   - id: page-basket
     name: Basket
     section: pages
-    status: live
+    status: retired
     visibility: household
-    route: /basket
-    aliases: [/analyse-basket]
-    purpose: A second, older shopping surface reached from the Dashboard, doing the same job as Shopping in a different interface.
+    purpose: RETIRED (SHOP4, 2026-11-05). The former Basket surface duplicated Shopping; Shopping Workspace is the single current page. Former route files are not registered.
     owner: Colin Clapson
     sources: [client/src/pages/shopping-list-page.tsx]
     related: [dom-shopping, page-shopping-workspace]
-    known_defects: [fnd-shopping-duplicate]
-    last_verified: 2026-07-11
-    version: 1
+    last_verified: 2026-11-05
+    version: 2
 
   - id: page-analyser
     name: Analyser
@@ -385,7 +378,7 @@ entries:
     status: live
     visibility: household
     route: /pantry
-    purpose: The household's own larder drawn as a real room — governed production artwork, real staples, drag or menu to add to Shopping (never removing the staple), reversible removal, search to add; /larder redirects here.
+    purpose: The household's own larder drawn as a real room — governed production artwork, real staples, drag or menu to add to Shopping (never removing the staple), reversible removal, search to add.
     owner: Colin Clapson
     sources: [client/src/pages/larder-room.tsx]
     related: [dom-pantry, jrn-stock-pantry, cap-pantry]
@@ -393,33 +386,32 @@ entries:
     version: 2
 
   - id: page-nutrition
-    name: Nutrition
+    name: Food
     section: pages
     status: live
     visibility: household
-    route: /nutrition
-    aliases: [/plant-diversity]
-    purpose: A household view of foods in the selected Planner week and nutrient knowledge linked to foods across available Planner history; coverage counts are not nutrient amounts consumed.
+    route: /food
+    aliases: [/nutrition, /plant-diversity]
+    purpose: A two-pane household view of foods and linked nutrients in any available Planner week, with food lookup and comparison; nutrient links are not amounts consumed.
     owner: Colin Clapson
-    sources: [client/src/pages/plant-diversity-page.tsx]
+    sources: [client/src/pages/plant-diversity-page.tsx, client/src/components/WeekFoodExplorer.tsx]
     related: [dom-nutrition, gls-plant-diversity, jrn-understand-nutrition]
-    last_verified: 2026-10-27
-    version: 2
+    last_verified: 2026-10-30
+    version: 4
 
   - id: page-diary
-    name: My Diary
+    name: Diary
     section: pages
     status: live
     visibility: household
-    route: /my-diary
-    aliases: [/diary]
+    route: /diary
     purpose: A simple daily log of what was eaten, which can be copied straight from the planner.
     owner: Colin Clapson
     sources: [client/src/pages/food-diary-page.tsx]
     related: [dom-diary, jrn-track-eaten]
     known_defects: [fnd-cooked-never-reaches-diary]
-    last_verified: 2026-07-11
-    version: 1
+    last_verified: 2026-11-05
+    version: 2
 
   - id: page-partners
     name: Partners
@@ -484,7 +476,7 @@ entries:
     purpose: Where a household signs in, registers, verifies an email, or resets a password.
     owner: Colin Clapson
     sources: [client/src/pages/auth-page.tsx, server/auth.ts]
-    related: [jrn-first-run, page-landing]
+    related: [jrn-first-run, page-home]
     last_verified: 2026-07-11
     version: 1
 
@@ -494,13 +486,12 @@ entries:
     status: live
     visibility: public
     route: "*"
-    purpose: The page a person reaches when an address does not exist — currently without navigation or a way back into the product.
+    purpose: The page a person reaches when an address does not match a registered route; it offers a way home.
     owner: Colin Clapson
     sources: [client/src/pages/not-found.tsx]
     related: []
-    known_defects: [fnd-broken-shopping-link, fnd-notfound-dead-end]
-    last_verified: 2026-07-11
-    version: 1
+    last_verified: 2026-11-05
+    version: 2
 
   # -- Admin pages -----------------------------------------------------------
   - id: page-admin-home
@@ -734,13 +725,13 @@ entries:
     section: routes
     status: live
     visibility: household
-    purpose: Every address THA answers, and the page each one resolves to — including the four aliases and five redirects.
+    purpose: Every address THA answers, and the page each one resolves to — including the three aliases and eight redirects.
     owner: Colin Clapson
     sources: [client/src/App.tsx]
-    related: [page-cookbook, page-analyser, page-planner, page-diary, page-basket, page-nutrition, page-legal, page-privacy-settings, page-help-centre, page-contact]
+    related: [page-cookbook, page-cookbook-grid, page-analyser, page-planner, page-diary, page-basket, page-nutrition, page-legal, page-privacy-settings, page-help-centre, page-contact]
     known_defects: [fnd-alias-sprawl]
-    last_verified: 2026-10-27
-    version: 3
+    last_verified: 2026-11-05
+    version: 5
 
   # =========================================================================
   # SECTION 4 — JOURNEYS
@@ -805,9 +796,8 @@ entries:
     owner: Colin Clapson
     sources: [client/src/pages/weekly-planner-page.tsx, client/src/pages/shopping-workspace-page.tsx]
     related: [page-planner, page-shopping-workspace]
-    known_defects: [fnd-shopping-duplicate, fnd-broken-shopping-link]
-    last_verified: 2026-07-11
-    version: 1
+    last_verified: 2026-11-05
+    version: 2
 
   - id: jrn-analyse-product
     name: Analyse a product
@@ -1078,17 +1068,15 @@ entries:
     version: 1
 
   - id: hid-analyse-basket
-    name: /analyse-basket (unclickable alias)
+    name: Former /analyse-basket route
     section: hidden-experiences
-    status: hidden
+    status: retired
     visibility: admin
-    route: /analyse-basket
-    purpose: A second address for the Basket page that no control in the product ever navigates to.
+    purpose: RETIRED (SHOP4, 2026-11-05). The redirect route was removed; no active page uses this address.
     owner: Colin Clapson
-    sources: [client/src/App.tsx#L211]
     related: [page-basket, routes-map]
-    last_verified: 2026-07-11
-    version: 1
+    last_verified: 2026-11-05
+    version: 2
 
   - id: hid-list-page
     name: Quick List page (dead file)
@@ -1099,8 +1087,8 @@ entries:
     owner: Colin Clapson
     sources: [client/src/pages/list-page.tsx]
     related: [page-shopping-workspace]
-    evidence: Not imported anywhere in App.tsx; /list redirects to /shopping-workspace instead.
-    last_verified: 2026-07-11
+    evidence: Not imported anywhere in App.tsx; the former /list redirect has been removed.
+    last_verified: 2026-11-05
     version: 1
 
   - id: hid-add-meal-gateway
@@ -1583,7 +1571,7 @@ entries:
     section: settings
     status: live
     visibility: household
-    purpose: How Apple speaks to the household.
+    purpose: How Companion speaks to the household.
     owner: Colin Clapson
     sources: [client/src/pages/profile-page.tsx, server/intelligence/conversation/personality-registry.ts]
     related: [dom-companion, page-profile]
@@ -1644,7 +1632,7 @@ entries:
     owner: Colin Clapson
     sources: [client/src/pages/home-page.tsx#L89]
     substantiated_by: [cap-analyser, dom-analyser]
-    related: [page-landing]
+    related: [page-home]
     last_verified: 2026-07-11
     version: 1
 
@@ -1657,7 +1645,7 @@ entries:
     owner: Colin Clapson
     sources: [client/src/pages/home-page.tsx#L8-L24]
     substantiated_by: [cap-analyser, int-openfoodfacts]
-    related: [page-landing, dom-analyser]
+    related: [page-home, dom-analyser]
     last_verified: 2026-07-11
     version: 1
 
@@ -1670,7 +1658,7 @@ entries:
     owner: Colin Clapson
     sources: [client/src/pages/home-page.tsx#L8-L24]
     substantiated_by: [gls-simply-better-choices]
-    related: [page-landing]
+    related: [page-home]
     last_verified: 2026-07-11
     version: 1
 
@@ -1683,7 +1671,7 @@ entries:
     owner: Colin Clapson
     sources: [client/src/pages/home-page.tsx#L8-L24]
     substantiated_by: []
-    related: [page-landing, hid-notice-engine]
+    related: [page-home, hid-notice-engine]
     known_defects: [fnd-unsubstantiated-habits-claim]
     substantiation_gap: The mechanism that would reinforce a habit over time — the Companion's proactive notices — is built but unreachable, so the claim outruns the product.
     last_verified: 2026-07-11
@@ -1698,7 +1686,7 @@ entries:
     owner: Colin Clapson
     sources: [client/src/pages/home-page.tsx#L190]
     substantiated_by: [dom-diary, dom-analyser]
-    related: [page-landing]
+    related: [page-home]
     last_verified: 2026-07-11
     version: 1
 
@@ -1712,7 +1700,7 @@ entries:
     sources: [client/src/pages/home-page.tsx#L133, client/src/pages/home-page.tsx#L202]
     substantiated_by: []
     substantiation_gap: A brand-narrative claim about the founders' motivation, not a product capability. It is unfalsifiable from the product and owned by the brand story, not by any feature — so it cites no substantiating entry by design. Recorded here rather than left as a silent §8s20 fabrication.
-    related: [page-landing]
+    related: [page-home]
     last_verified: 2026-07-11
     version: 1
 
@@ -1981,13 +1969,13 @@ entries:
     version: 1
 
   - id: gls-apple
-    name: Apple (the Companion)
+    name: Companion
     section: glossary
     status: live
     visibility: public
-    purpose: The name every household sees for THA's companion — used consistently, with "Companion" and "Assistant" correctly kept internal.
+    purpose: The household-facing name for THA's existing conversational companion.
     owner: Colin Clapson
-    sources: [client/src/components/conversation/FloatingAssistant.tsx#L87]
+    sources: [client/src/components/conversation/FloatingAssistant.tsx#L115]
     related: [dom-companion, gls-glossary]
     last_verified: 2026-07-11
     version: 1
@@ -1997,13 +1985,12 @@ entries:
     section: glossary
     status: live
     visibility: public
-    purpose: What a household is buying — called Basket, Shopping, Shopping List and List across four surfaces and five routes.
+    purpose: What a household plans to buy, managed in the canonical Shopping Workspace; people may call it a basket or shopping list.
     owner: Colin Clapson
-    sources: [client/src/pages/shopping-workspace-page.tsx#L2150, client/src/pages/shopping-list-page.tsx#L2860]
+    sources: [client/src/pages/shopping-workspace-page.tsx]
     related: [gls-glossary, dom-shopping]
-    known_defects: [fnd-shopping-duplicate]
-    last_verified: 2026-07-11
-    version: 1
+    last_verified: 2026-11-05
+    version: 2
 
   - id: gls-simply-better-choices
     name: Simply Better Choices
@@ -2072,7 +2059,7 @@ entries:
     section: knowledge-capabilities
     status: live
     visibility: household
-    purpose: Ask about any food, nutrient, benefit or way of preparing it, and get an answer traced to a reviewed fact — never an invented one.
+    purpose: Ask about foods, nutrients, benefits or preparations from reviewed facts, and search accessible meals by recorded nutrition thresholds or highest/lowest macro values; missing values remain unknown.
     owner: Colin Clapson
     sources: [server/intelligence/capability-registry.ts, server/services/nutrition-knowledge-registry.ts, docs/architecture/NK1_CANONICAL_NUTRITION_KNOWLEDGE_PLATFORM.md, docs/investigations/knowledge/WS5A_PREPARATION_KNOWLEDGE_ARCHITECTURE.md]
     related: [dom-nutrition, page-food-detail, cap-product-knowledge]
@@ -2083,18 +2070,18 @@ entries:
       states nothing about what it changes. That is the honest position, not a shortfall: an effect is a
       health claim and passes the same Layer-2 gate as every benefit chip (cited source + named human
       sign-off, `npm run knowledge:signoff`).
-    last_verified: 2026-07-12
-    version: 2
+    last_verified: 2026-11-04
+    version: 3
 
   # =========================================================================
   # SECTION 8 — COMPANION CAPABILITIES
   # =========================================================================
   - id: cap-companion
-    name: Apple
+    name: Companion
     section: companion-capabilities
     status: live
     visibility: household
-    purpose: Ask Apple about your food, your plan, your pantry or your list; it answers from what THA holds, proposes actions you must confirm, and says "I don't know" rather than guessing.
+    purpose: Ask Companion about your food, your plan, your pantry or your list; it answers from what THA holds, proposes actions you must confirm, and says "I don't know" rather than guessing.
     owner: Colin Clapson
     sources: [client/src/components/conversation/FloatingAssistant.tsx, server/intelligence/conversation/conversation-gateway.ts]
     related: [dom-companion, cap-product-knowledge]
@@ -2112,7 +2099,7 @@ entries:
     section: intelligence-capabilities
     status: live
     visibility: household
-    purpose: Apple can read and explain the household's week; it cannot yet change it.
+    purpose: Companion can read and explain the household's week; it cannot yet change it.
     owner: Colin Clapson
     sources: [server/intelligence/capability-registry.ts, docs/architecture/capabilities/templates.md]
     related: [dom-planner]
@@ -2124,7 +2111,7 @@ entries:
     section: intelligence-capabilities
     status: live
     visibility: household
-    purpose: Apple can find and explain the household's own recipes.
+    purpose: Companion can find and explain the household's own recipes.
     owner: Colin Clapson
     sources: [docs/architecture/capabilities/meals.md]
     related: [dom-cookbook]
@@ -2136,7 +2123,7 @@ entries:
     section: intelligence-capabilities
     status: live
     visibility: household
-    purpose: Apple can read the shopping list and prepare a basket; it can never place an order.
+    purpose: Companion can read the shopping list and prepare a basket; it can never place an order.
     owner: Colin Clapson
     sources: [server/intelligence/capability-registry.ts]
     related: [dom-shopping]
@@ -2148,7 +2135,7 @@ entries:
     section: intelligence-capabilities
     status: live
     visibility: household
-    purpose: Apple can read what is in the household's own pantry and explain those ingredients.
+    purpose: Companion can read what is in the household's own pantry and explain those ingredients.
     owner: Colin Clapson
     sources: [server/intelligence/capability-registry.ts]
     related: [dom-pantry]
@@ -2160,7 +2147,7 @@ entries:
     section: intelligence-capabilities
     status: live
     visibility: household
-    purpose: Apple can read back what the household recorded, exactly as recorded.
+    purpose: Companion can read back what the household recorded, exactly as recorded.
     owner: Colin Clapson
     sources: [server/intelligence/capability-registry.ts]
     related: [dom-diary]
@@ -2172,7 +2159,7 @@ entries:
     section: intelligence-capabilities
     status: live
     visibility: household
-    purpose: Apple can look up any additive in THA's reference list; scoring a scanned product is a live calculation, not a fact it can read.
+    purpose: Companion can look up any additive in THA's reference list; scoring a scanned product is a live calculation, not a fact it can read.
     owner: Colin Clapson
     sources: [docs/architecture/capabilities/analyser.md]
     related: [dom-analyser]
@@ -2184,7 +2171,7 @@ entries:
     section: intelligence-capabilities
     status: live
     visibility: household
-    purpose: Apple can see who eats here and what each person avoids, so nothing it suggests puts them at risk.
+    purpose: Companion can see who eats here and what each person avoids, so nothing it suggests puts them at risk.
     owner: Colin Clapson
     sources: [docs/architecture/capabilities/household.md]
     related: [dom-household]
@@ -2196,7 +2183,7 @@ entries:
     section: intelligence-capabilities
     status: live
     visibility: household
-    purpose: Apple can read the household's own preferences back to them; passwords and tokens are never exposed to it.
+    purpose: Companion can read the household's own preferences back to them; passwords and tokens are never exposed to it.
     owner: Colin Clapson
     sources: [docs/architecture/capabilities/profile.md]
     related: [dom-household, page-profile]
@@ -2208,7 +2195,7 @@ entries:
     section: intelligence-capabilities
     status: live
     visibility: household
-    purpose: Apple can name the retailers THA can hand a basket to; it will not claim one is cheaper than another, because it cannot prove it.
+    purpose: Companion can name the retailers THA can hand a basket to; it will not claim one is cheaper than another, because it cannot prove it.
     owner: Colin Clapson
     sources: [docs/architecture/capabilities/partners.md]
     related: [dom-partners, dom-shopping]

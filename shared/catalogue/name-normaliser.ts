@@ -81,6 +81,11 @@ const SUFFIX_CLASSES = new Set([
 // e.g. "Fish, haddock" → "Haddock"; "Nuts, almonds" → "Almonds".
 const DROP_CLASSES = new Set([
   "fish", "nuts", "nut", "seeds", "seed", "berries", "greens", "melons",
+  // USDATIGHTEN1 (2026-10-31) — "Spices, tarragon, dried" → "Tarragon
+  // Spices" (should be "Tarragon"): the specifier is already a complete,
+  // well-known spice/herb name on its own, same reasoning as fish/nuts
+  // above ("Fish, haddock" → "Haddock", not "Haddock Fish").
+  "spices", "spice",
 ]);
 
 // Qualifiers naming a cut or anatomical part normally follow the animal name:

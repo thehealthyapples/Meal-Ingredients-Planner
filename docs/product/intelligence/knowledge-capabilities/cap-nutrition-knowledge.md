@@ -5,8 +5,8 @@ section: knowledge-capabilities
 status: live
 visibility: household
 owner: Colin Clapson
-last_verified: 2026-07-12
-version: 2
+last_verified: 2026-11-04
+version: 3
 ---
 
 # Nutrition & Food Knowledge
@@ -16,7 +16,7 @@ version: 2
 
 ## What it means for the household
 
-Ask Apple about a food, a nutrient or a health benefit and it answers from THA's
+Ask Companion about a food, a nutrient or a health benefit and it answers from THA's
 reviewed food knowledge. The household can approach the same knowledge from any
 side — by a food's name, by a nutrient like iron, or by a benefit like gut
 health — and get back what THA actually holds about it.
@@ -24,6 +24,13 @@ health — and get back what THA actually holds about it.
 Since PHASE5A it also answers **how a food is prepared**: whether people eat it
 raw, frozen, tinned, roasted, smoked, rolled or ground — and whether that changes
 anything.
+
+Companion can also search the accessible meal library by recorded nutrition:
+for example, meals under a calorie limit or meals highest in protein. Highest
+and lowest requests order known values before selecting the result list; meals
+missing the requested value are excluded rather than treated as zero. This is
+meal nutrition discovery, not a calculation of the household's nutrient intake.
+Its existing owner is `server/intelligence/services/nutrition-discovery-engine.ts`.
 
 ## Preparation: what THA says, and what it deliberately does not
 
@@ -36,7 +43,7 @@ health claim THA makes: a citation from a trusted source, and a named human who
 signed it off.
 
 **Today, no preparation effect has been signed off.** So when a household asks
-whether roasting broccoli changes anything, Apple's honest answer is that THA does
+whether roasting broccoli changes anything, Companion's honest answer is that THA does
 not have a reviewed note on it. That is not a missing feature — it is the correct
 answer, and giving it is the whole point.
 
@@ -49,7 +56,7 @@ deserves to know which one they are hearing.
 
 It will never invent an answer. Every fact it gives traces back to a reviewed
 entry in the knowledge registry; if no reviewed fact links a food to a benefit,
-Apple has nothing to say rather than guessing. A food-to-benefit link is only
+Companion has nothing to say rather than guessing. A food-to-benefit link is only
 shown because someone reviewed and recorded it — never inferred from a nutrient
 amount alone.
 

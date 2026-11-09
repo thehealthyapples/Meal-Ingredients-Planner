@@ -36,7 +36,7 @@ import {
   Copy, Loader2, TrendingUp, Weight, Moon, Zap, BookOpen,
   Sun, Coffee, UtensilsCrossed, Droplets, Sparkles, ChefHat,
   ChevronDown, Heart, Flame, Target, Activity, Droplet,
-  Gift, ClipboardCheck, PiggyBank, Search, FileDown, Settings, SlidersHorizontal,
+  Gift, ClipboardCheck, Search, FileDown, Settings, SlidersHorizontal,
   MoreVertical,
 } from "lucide-react";
 import { computeMealVariety } from "@shared/canonical/plant-classifier";
@@ -48,6 +48,7 @@ import { HealthSnapshot, GoalsPreferences, CalorieSettings, ProfileData } from "
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { WorkspaceHeader, pageContainerClass } from "@/components/workspace-header";
+import "./food-diary-page.css";
 import { usePublishCompanionContext } from "@/components/conversation/companion-context";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
@@ -1169,88 +1170,6 @@ function DiarySettingsPanel({
   );
 }
 
-// ── Savings Card ────────────────────────────────────────────────────────────
-
-interface SavingsAggregates {
-  thisWeekTotal: number;
-  prevWeekTotal: number | null;
-  thisMonthTotal: number;
-  thisWeekCountsByType: { takeaway_avoided: number; pantry_used: number; smart_swap: number };
-}
-
-function SavingsCard({ aggregates }: { aggregates: SavingsAggregates }) {
-  const weekDiff =
-    aggregates.prevWeekTotal != null
-      ? aggregates.thisWeekTotal - aggregates.prevWeekTotal
-      : null;
-
-  const hasBreakdown =
-    aggregates.thisWeekCountsByType.takeaway_avoided > 0 ||
-    aggregates.thisWeekCountsByType.pantry_used > 0 ||
-    aggregates.thisWeekCountsByType.smart_swap > 0;
-
-  return (
-    <Card className="shadow-none border-border" data-testid="card-savings">
-      <CardContent className="px-4 py-3">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/70 font-medium mb-0.5 flex items-center gap-1">
-              <PiggyBank className="h-3 w-3" />
-              This week with THA
-            </p>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-xl font-semibold text-foreground" data-testid="savings-week-total">
-                £{aggregates.thisWeekTotal.toFixed(0)}
-              </span>
-              <span className="text-sm text-muted-foreground">likely saved</span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5" data-testid="savings-week-context">
-              {weekDiff != null
-                ? weekDiff >= 0
-                  ? `Up £${weekDiff.toFixed(0)} from last week`
-                  : `Down £${Math.abs(weekDiff).toFixed(0)} from last week`
-                : "Estimated savings based on your food habits"}
-            </p>
-          </div>
-
-          {aggregates.thisMonthTotal > 0 && (
-            <div className="text-right shrink-0">
-              <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/70">This month</p>
-              <p className="text-base font-semibold" data-testid="savings-month-total">
-                £{aggregates.thisMonthTotal.toFixed(0)}
-              </p>
-              <p className="text-[10px] text-muted-foreground">estimated saved</p>
-            </div>
-          )}
-        </div>
-
-        {hasBreakdown && (
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2.5 pt-2.5 border-t border-border/50">
-            {aggregates.thisWeekCountsByType.takeaway_avoided > 0 && (
-              <span className="text-xs text-muted-foreground" data-testid="savings-count-takeaway">
-                <span className="font-medium text-foreground">{aggregates.thisWeekCountsByType.takeaway_avoided}</span>
-                {" "}takeaway{aggregates.thisWeekCountsByType.takeaway_avoided !== 1 ? "s" : ""} avoided
-              </span>
-            )}
-            {aggregates.thisWeekCountsByType.pantry_used > 0 && (
-              <span className="text-xs text-muted-foreground" data-testid="savings-count-pantry">
-                <span className="font-medium text-foreground">{aggregates.thisWeekCountsByType.pantry_used}</span>
-                {" "}pantry item{aggregates.thisWeekCountsByType.pantry_used !== 1 ? "s" : ""} used
-              </span>
-            )}
-            {aggregates.thisWeekCountsByType.smart_swap > 0 && (
-              <span className="text-xs text-muted-foreground" data-testid="savings-count-swap">
-                <span className="font-medium text-foreground">{aggregates.thisWeekCountsByType.smart_swap}</span>
-                {" "}smarter choice{aggregates.thisWeekCountsByType.smart_swap !== 1 ? "s" : ""}
-              </span>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
 // ── Main page ───────────────────────────────────────────────────────────────
 
 export default function FoodDiaryPage() {
@@ -1446,16 +1365,6 @@ export default function FoodDiaryPage() {
     return ids;
   }, [fullPlanner]);
 
-  const { data: savingsAggregates } = useQuery<SavingsAggregates>({
-    queryKey: ["/api/savings/aggregates"],
-    queryFn: async () => {
-      const res = await fetch("/api/savings/aggregates", { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch savings");
-      return res.json();
-    },
-    enabled: activeTab === "diary",
-  });
-
   // PX1-W4b (fnd-px-success-silent-error-loud). The five mutations below spoke to the
   // household in two different voices: a hand-rolled success toast, and a hand-rolled
   // failure toast that said "Failed to copy from planner" / "Failed to log item" —
@@ -1487,7 +1396,6 @@ export default function FoodDiaryPage() {
       qc.invalidateQueries({ queryKey: diaryKey });
       qc.invalidateQueries({ queryKey: ["/api/user-items/recent"] });
       qc.invalidateQueries({ queryKey: ["/api/user-items/frequent"] });
-      qc.invalidateQueries({ queryKey: ["/api/savings/aggregates"] });
     },
     feedback: {
       success: "Logged",
@@ -1512,7 +1420,6 @@ export default function FoodDiaryPage() {
       qc.invalidateQueries({ queryKey: diaryKey });
       qc.invalidateQueries({ queryKey: ["/api/user-items/recent"] });
       qc.invalidateQueries({ queryKey: ["/api/user-items/frequent"] });
-      qc.invalidateQueries({ queryKey: ["/api/savings/aggregates"] });
     },
     feedback: {
       success: "Meal logged",
@@ -1561,6 +1468,24 @@ export default function FoodDiaryPage() {
   const nextDay = () => stepDay(1);
   const goToday = () => setSelectedDate(null);
   const isToday = date === householdTodayStr;
+  const weekDates = useMemo(() => {
+    const selected = parseCivilDate(date);
+    if (!selected) return [];
+    const weekday = new Date(Date.UTC(selected.year, selected.month - 1, selected.day)).getUTCDay();
+    const monday = addCivilDays(selected, -((weekday + 6) % 7));
+    return Array.from({ length: 7 }, (_, index) => formatCivilDate(addCivilDays(monday, index)));
+  }, [date]);
+  const selectedDateParts = parseCivilDate(date);
+  const yearOptions = useMemo(() => {
+    const today = parseCivilDate(householdTodayStr);
+    const lastYear = Math.max(2100, (today?.year ?? 2026) + 10);
+    return Array.from({ length: lastYear - 1900 + 1 }, (_, index) => lastYear - index);
+  }, [householdTodayStr]);
+  const selectMonthYear = (year: number, month: number) => {
+    if (!selectedDateParts) return;
+    const day = Math.min(selectedDateParts.day, new Date(Date.UTC(year, month, 0)).getUTCDate());
+    setSelectedDate(formatCivilDate({ year, month, day }));
+  };
 
   const entriesBySlot = useMemo<Record<MealSlot, DiaryEntry[]>>(() => {
     const base: Record<MealSlot, DiaryEntry[]> = {
@@ -1630,83 +1555,24 @@ export default function FoodDiaryPage() {
 
   return (
     <>
-      <WorkspaceHeader
-        title="My Diary"
-        realm="diary"
-        wide
-        contextBar={
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide w-full">
-            <div className="flex items-center gap-1 rounded-lg bg-muted/50 p-1 border border-border/40 shrink-0" role="tablist">
+      <WorkspaceHeader title="Diary" realm="diary" wide />
+      <div className={`${pageContainerClass(true)} diary-journal`} data-realm="diary">
+        <h1 className="sr-only">Diary</h1>
+        <div className="diary-photo-actions">
+          <div className="diary-photo-actions-row">
+            <div className="diary-view-tabs" role="tablist" aria-label="Diary views">
               {([
-                { id: "diary", label: "Daily Log", Icon: BookOpen },
+                { id: "diary", label: "Daily Log", Icon: Calendar },
                 { id: "progress", label: "Progress", Icon: TrendingUp },
               ] as const).map(({ id, label, Icon }) => (
-                <button
-                  key={id}
-                  role="tab"
-                  aria-selected={activeTab === id}
+                <button key={id} type="button" role="tab" aria-selected={activeTab === id}
                   onClick={() => setActiveTab(id)}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-sm font-medium transition-all ${
-                    activeTab === id
-                      ? "shadow-sm realm-banner-btn"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                  data-testid={`tab-${id}`}
-                >
-                  <Icon className="h-3.5 w-3.5" />
-                  {label}
+                  className={`diary-view-tab ${activeTab === id ? "diary-view-tab--selected" : ""}`}
+                  data-testid={`tab-${id}`}>
+                  <Icon className="h-3.5 w-3.5" />{label}
                 </button>
               ))}
             </div>
-            {activeTab === "diary" && (
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  type="button"
-                  className="flex items-center justify-center h-7 w-7 rounded-md border border-input bg-background hover:bg-accent text-sm"
-                  onClick={prevDay}
-                  aria-label="Previous day"
-                  data-testid="button-prev-day"
-                >
-                  <ChevronLeft className="h-3.5 w-3.5" />
-                </button>
-                <span className="text-xs font-medium px-2 min-w-[100px] text-center" data-testid="text-diary-date">
-                  {formatDisplayDate(date)}
-                </span>
-                <button
-                  type="button"
-                  className="flex items-center justify-center h-7 w-7 rounded-md border border-input bg-background hover:bg-accent text-sm"
-                  onClick={nextDay}
-                  aria-label="Next day"
-                  data-testid="button-next-day"
-                >
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </button>
-                {!isToday && (
-                  <Button variant="ghost" size="sm" className="h-7 text-xs px-2" onClick={goToday} data-testid="button-today">
-                    <Calendar className="h-3 w-3 mr-1" />Today
-                  </Button>
-                )}
-              </div>
-            )}
-            {activeTab === "progress" && (
-              <div className="flex items-center gap-1 shrink-0">
-                {(["week", "month", "year"] as ProgressRange[]).map((r) => (
-                  <Button
-                    key={r}
-                    variant={progressRange === r ? "default" : "outline"}
-                    size="sm"
-                    className="h-7 text-xs capitalize realm-banner-btn px-2.5"
-                    onClick={() => setProgressRange(r)}
-                    data-testid={`button-range-${r}`}
-                  >
-                    {r.charAt(0).toUpperCase() + r.slice(1)}
-                  </Button>
-                ))}
-              </div>
-            )}
-          </div>
-        }
-        actions={
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
@@ -1733,9 +1599,50 @@ export default function FoodDiaryPage() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        }
-      />
-      <div className={pageContainerClass(true)} data-realm="diary">
+          </div>
+          {activeTab === "progress" && (
+            <div className="diary-progress-ranges" aria-label="Progress period">
+              {(["week", "month", "year"] as ProgressRange[]).map((r) => (
+                <Button key={r} variant={progressRange === r ? "default" : "outline"} size="sm"
+                  className="h-7 text-xs capitalize realm-banner-btn px-2.5"
+                  onClick={() => setProgressRange(r)} data-testid={`button-range-${r}`}>
+                  {r.charAt(0).toUpperCase() + r.slice(1)}
+                </Button>
+              ))}
+            </div>
+          )}
+        </div>
+        {activeTab === "diary" && (
+          <div className="diary-journal-content diary-date-sheet" aria-label="Choose a diary day">
+            <div className="diary-date-heading">
+              <div className="diary-month-year">
+                <select aria-label="Diary month" data-testid="select-diary-month" value={selectedDateParts?.month ?? 1}
+                  onChange={(event) => selectMonthYear(selectedDateParts?.year ?? 2026, Number(event.target.value))}>
+                  {Array.from({ length: 12 }, (_, index) => <option key={index + 1} value={index + 1}>{new Date(Date.UTC(2020, index, 1)).toLocaleDateString("en-GB", { month: "long", timeZone: "UTC" })}</option>)}
+                </select>
+                <select aria-label="Diary year" data-testid="select-diary-year" value={selectedDateParts?.year ?? 2026}
+                  onChange={(event) => selectMonthYear(Number(event.target.value), selectedDateParts?.month ?? 1)}>
+                  {yearOptions.map((year) => <option key={year} value={year}>{year}</option>)}
+                </select>
+                {!isToday && <Button variant="ghost" size="sm" className="diary-today" onClick={goToday} data-testid="button-today">Today</Button>}
+              </div>
+              <div className="diary-week-strip">
+                <button type="button" className="diary-date-arrow" onClick={prevDay} aria-label="Previous day" data-testid="button-prev-day"><ChevronLeft className="h-4 w-4" /></button>
+                {weekDates.map((day) => {
+                  const parts = parseCivilDate(day);
+                  if (!parts) return null;
+                  const label = new Date(Date.UTC(parts.year, parts.month - 1, parts.day)).toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" });
+                  return <button key={day} type="button" className={`diary-day ${day === date ? "diary-day--selected" : ""}`} aria-current={day === date ? "date" : undefined} aria-label={formatDisplayDate(day)} onClick={() => setSelectedDate(day)}><span>{label}</span><strong>{parts.day}</strong></button>;
+                })}
+                <button type="button" className="diary-date-arrow" onClick={nextDay} aria-label="Next day" data-testid="button-next-day"><ChevronRight className="h-4 w-4" /></button>
+              </div>
+            </div>
+            {!isLoading && !diaryError && showHealthSnapshot && profile && (
+              <div className="diary-health-strip"><HealthSnapshot profile={profile} /></div>
+            )}
+            <span className="sr-only" data-testid="text-diary-date">{formatDisplayDate(date)}</span>
+          </div>
+        )}
 
         {/* PRESENCE1: a dismissible banner stood here — "Want to eat less
             processed food? Awareness beats restriction. Learn our approach →"
@@ -1778,23 +1685,10 @@ export default function FoodDiaryPage() {
           />
         ) : (
           <>
-            {/* ── Health Snapshot ──────────────────────────────── */}
-            {showHealthSnapshot && profile && (
-              <div className="mb-4">
-                <HealthSnapshot profile={profile} />
-              </div>
-            )}
-
-            {/* ── Savings Card ─────────────────────────────────── */}
-            {savingsAggregates && savingsAggregates.thisMonthTotal > 0 && (
-              <div className="mb-4">
-                <SavingsCard aggregates={savingsAggregates} />
-              </div>
-            )}
-
-            <div className="lg:gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_280px_220px]">
+            <div className="diary-journal-content diary-agenda" aria-label="Entries for the selected day">
               {/* ── Left: meal slots ──────────────────────────────── */}
-              <div className="space-y-3">
+              <div className="space-y-3 diary-meals">
+                <div className="diary-agenda-heading"><span>Meals & drinks</span><span>{formatDisplayDate(date)}</span></div>
                 {/* NSR1 Phase 2 (Diary): "Better choices today, stronger health over time."
                     removed — room-voice coaching over a family's food (GEA8/21). The diary
                     records the day; it does not counsel about it. */}
@@ -1908,7 +1802,7 @@ export default function FoodDiaryPage() {
               </div>
 
               {/* ── Middle: Daily Signals ─────────────────────────── */}
-              <div className="mt-4 lg:mt-0">
+              <div className="diary-signals">
                 <DailySignalsPanel
                   metrics={diary?.metrics ?? null}
                   date={date}
@@ -1920,10 +1814,7 @@ export default function FoodDiaryPage() {
                   onCustomDefsChange={updateCustomDefs}
                   onWeightSaved={(kg) => updateProfileMutation.mutate({ weightKg: kg })}
                 />
-              </div>
-
-              {/* ── Right: Looking Forward ────────────────────────── */}
-              <div className="mt-3 lg:mt-0">
+                {/* ── Looking Forward ────────────────────────── */}
                 <LookingForwardWidget zone={householdZone} />
               </div>
             </div>
@@ -1934,7 +1825,7 @@ export default function FoodDiaryPage() {
 
       {/* ── Progress Tab ─────────────────────────────────────────── */}
       {activeTab === "progress" && (
-        <div className="space-y-5">
+        <div className="diary-journal-content diary-progress">
           {trends.length < 2 ? (
             /* UINORTH1 — the canonical empty-state owner (UIA §17), variant "empty".
                Copy preserved verbatim (PRESENCE1); only the container is re-homed
@@ -1987,7 +1878,7 @@ export default function FoodDiaryPage() {
                     <Weight className="h-4 w-4 text-muted-foreground" />
                     Weight (kg)
                   </p>
-                  <ResponsiveContainer width="100%" height={170}>
+                  <ResponsiveContainer width="100%" height={145}>
                     <LineChart data={trendChartData} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                       <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
@@ -2005,7 +1896,7 @@ export default function FoodDiaryPage() {
                     <TrendingUp className="h-4 w-4 text-muted-foreground" />
                     BMI
                   </p>
-                  <ResponsiveContainer width="100%" height={170}>
+                  <ResponsiveContainer width="100%" height={145}>
                     <LineChart data={trendChartData} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                       <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
@@ -2023,7 +1914,7 @@ export default function FoodDiaryPage() {
                     <Zap className="h-4 w-4 text-muted-foreground" />
                     Mood, Energy & Sleep
                   </p>
-                  <ResponsiveContainer width="100%" height={190}>
+                  <ResponsiveContainer width="100%" height={160}>
                     <LineChart data={trendChartData} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                       <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />

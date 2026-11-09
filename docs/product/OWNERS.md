@@ -24,7 +24,7 @@ _Generated from `docs/product/inventory/product.yaml` by PDA1 — do not hand-ed
 | `ben-everyone-fed-safely` | Everyone in the house is accounted for | benefits | Colin Clapson |
 | `ben-know-whats-in-it` | You know what is actually in your food | benefits | Colin Clapson |
 | `ben-week-decided` | The week is decided, once | benefits | Colin Clapson |
-| `cap-companion` | Apple | companion-capabilities | Colin Clapson |
+| `cap-companion` | Companion | companion-capabilities | Colin Clapson |
 | `adv-honest-gaps` | THA says "I don't know" | competitive-advantages | Colin Clapson |
 | `adv-household-not-individual` | The unit is the household, not the dieter | competitive-advantages | Colin Clapson |
 | `adv-upf-lens` | Processing, not calories | competitive-advantages | Colin Clapson |
@@ -36,7 +36,7 @@ _Generated from `docs/product/inventory/product.yaml` by PDA1 — do not hand-ed
 | `dom-admin` | Admin | domains | Colin Clapson |
 | `dom-analyser` | Analyser | domains | Colin Clapson |
 | `dom-commerce` | Plans and Entitlements | domains | Colin Clapson |
-| `dom-companion` | Apple | domains | Colin Clapson |
+| `dom-companion` | Companion | domains | Colin Clapson |
 | `dom-cookbook` | Cookbook | domains | Colin Clapson |
 | `dom-diary` | Diary | domains | Colin Clapson |
 | `dom-home` | Home | domains | Colin Clapson |
@@ -47,7 +47,7 @@ _Generated from `docs/product/inventory/product.yaml` by PDA1 — do not hand-ed
 | `dom-planner` | Planner | domains | Colin Clapson |
 | `dom-shopping` | Shopping | domains | Colin Clapson |
 | `dom-trust-and-compliance` | Trust & Compliance | domains | Colin Clapson |
-| `gls-apple` | Apple (the Companion) | glossary | Colin Clapson |
+| `gls-apple` | Companion | glossary | Colin Clapson |
 | `gls-bad-apple` | Bad Apple | glossary | Colin Clapson |
 | `gls-basket` | Basket | glossary | Colin Clapson |
 | `gls-glossary` | Product Glossary | glossary | Colin Clapson |
@@ -61,7 +61,7 @@ _Generated from `docs/product/inventory/product.yaml` by PDA1 — do not hand-ed
 | `hlp-help-centre` | Help Centre articles | help | Colin Clapson |
 | `hlp-upf-modal` | What is UPF? | help | Colin Clapson |
 | `hid-add-meal-gateway` | Add a Recipe gateway dialog (never rendered) | hidden-experiences | Colin Clapson |
-| `hid-analyse-basket` | /analyse-basket (unclickable alias) | hidden-experiences | Colin Clapson |
+| `hid-analyse-basket` | Former /analyse-basket route | hidden-experiences | Colin Clapson |
 | `hid-devworld-prod` | Development World in production | hidden-experiences | Colin Clapson |
 | `hid-dormant-chrome` | Dormant navigation and header components | hidden-experiences | Colin Clapson |
 | `hid-import-recipe` | Import Recipe (bounce stub) | hidden-experiences | Colin Clapson |
@@ -140,19 +140,19 @@ _Generated from `docs/product/inventory/product.yaml` by PDA1 — do not hand-ed
 | `page-basket` | Basket | pages | Colin Clapson |
 | `page-contact` | Contact | pages | Colin Clapson |
 | `page-cookbook` | Cookbook | pages | Colin Clapson |
+| `page-cookbook-grid` | Cookbook Grid | pages | Colin Clapson |
 | `page-dashboard` | Dashboard | pages | Colin Clapson |
-| `page-diary` | My Diary | pages | Colin Clapson |
+| `page-diary` | Diary | pages | Colin Clapson |
 | `page-food-detail` | Food | pages | Colin Clapson |
 | `page-help-centre` | Help Centre | pages | Colin Clapson |
 | `page-home` | Home | pages | Colin Clapson |
 | `page-import-recipe` | Import Recipe | pages | Colin Clapson |
-| `page-landing` | Landing | pages | Colin Clapson |
 | `page-legal` | Policies | pages | Colin Clapson |
 | `page-meal-detail` | Meal | pages | Colin Clapson |
 | `page-not-found` | Not Found | pages | Colin Clapson |
-| `page-nutrition` | Nutrition | pages | Colin Clapson |
+| `page-nutrition` | Food | pages | Colin Clapson |
 | `page-onboarding` | Onboarding | pages | Colin Clapson |
-| `page-pantry` | Pantry | pages | Colin Clapson |
+| `page-pantry` | Pantry (the Living Larder) | pages | Colin Clapson |
 | `page-partners` | Partners | pages | Colin Clapson |
 | `page-planner` | Planner | pages | Colin Clapson |
 | `page-privacy-settings` | Privacy and your data | pages | Colin Clapson |

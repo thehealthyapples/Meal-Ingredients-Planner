@@ -1,4 +1,4 @@
-// NORTH2 — before/after captures of the authenticated Home (/home), the North Star room.
+// NORTH2 — before/after captures of the authenticated Home (/), the North Star room.
 // Usage: npx tsx scripts/capture-north2-home.ts <label>   (label = "before" | "after")
 //
 // The NORTH1 harness, repointed at docs/ui-audit/north2-home/. Its viewport choices are
@@ -80,7 +80,7 @@ async function main() {
         route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) }),
       );
     }
-    await page.goto(`${BASE}/home`, { waitUntil: "networkidle" });
+    await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
     await settle(page);
     await page.screenshot({ path: path.join(OUT, `${LABEL}-quiet-day-${vp.name}.png`) });
     await ctx.close();
@@ -94,7 +94,7 @@ async function main() {
     });
     await login(ctx);
     const page = await ctx.newPage();
-    await page.goto(`${BASE}/home`, { waitUntil: "networkidle" });
+    await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
     await settle(page);
     await page.screenshot({ path: path.join(OUT, `${LABEL}-${vp.name}.png`), fullPage: true });
     await page.screenshot({ path: path.join(OUT, `${LABEL}-${vp.name}-viewport.png`), fullPage: false });
@@ -111,7 +111,7 @@ async function main() {
     });
     await login(ctx);
     const page = await ctx.newPage();
-    await page.goto(`${BASE}/home`, { waitUntil: "networkidle" });
+    await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
     await settle(page);
     const ground = page.locator('[data-testid="ground-home"]');
     if (await ground.count()) {

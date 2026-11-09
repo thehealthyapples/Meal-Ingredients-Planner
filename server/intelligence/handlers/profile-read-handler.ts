@@ -1,17 +1,17 @@
 /**
  * Profile Read Handler (INT12 — sixth live capability binding)
  * ==============================================================
- * The SIXTH execution handler bound to the THA Intelligence Platform. It makes the
- * `profile` capability *executable* for READ-ONLY intents only, by delegating every
- * read to the existing Profile owner (storage) through a {@link ProfileReadPort}. It
+ * The Profile execution handler bound to the THA Intelligence Platform. It handles
+ * reads and narrowly scoped consent-gated, confirmed profile writes by delegating every
+ * operation to existing owners through a {@link ProfileReadPort}. It
  * proves the reusable Port → Handler → Binding pattern (first established for the
  * Planner in INT2) against a sixth, independent owner.
  *
  * HARD BOUNDARIES (the reason this binding is safe):
- *   • READ-ONLY. Only the "read" verb executes. "explain" (no stored rationale for any
- *     profile field) and "add" (a write) both fall through `readOnlyVerbGuard` and
- *     return an honest gap — there is NO code path here that changes any profile field
- *     or preference.
+ *   • NARROW WRITE. "add" is limited to explicitly reported health context and
+ *     supported voluntary nutrition focuses on the caller's own eater record, after
+ *     current consent and explicit action confirmation. No other profile write intent
+ *     is executable here.
  *   • DELEGATION ONLY. All data comes from the owning service via the port. This file
  *     contains NO profile business rule and, critically, NO recomputation of the
  *     derived fields the route layer computes inline (BMI, calculated calories,
@@ -40,6 +40,8 @@ import type { CapabilityHandler, IntelligenceContext, Intent } from "../types.js
 import type { ProfileReadPort } from "./profile-read-port.js";
 import { requireUserId, gap, readOnlyVerbGuard } from "./_read-kit.js";
 import type { User, UserPreferences } from "@shared/schema";
+import { hasCurrentHealthContextConsent } from "../../privacy/health-context-consent.js";
+import { nutritionFocusLabel } from "@shared/nutrition-focus";
 
 // ---------------------------------------------------------------------------
 // Result shapes (read projections — owned data, surfaced honestly)
@@ -77,6 +79,8 @@ export interface ProfileView {
   readonly lastSeenAt: Date | null;
   readonly customMetricDefs: ReadonlyArray<{ id: string; name: string; unit: string }> | null;
   readonly diaryExtraMetrics: readonly string[] | null;
+  readonly reportedHealthContext?: readonly { id: string; fact: string; reportedAt: string }[];
+  readonly nutritionFocuses?: readonly { id: string; focus: string; reportedAt: string }[];
 }
 
 /**
@@ -143,6 +147,8 @@ export interface ProfileReadResult {
 function toProfileView(
   user: User,
   personDiet: { dietPattern: string | null; hardRestrictions: string[] },
+  reportedHealthContext: readonly { id: string; fact: string; reportedAt: string }[],
+  nutritionFocuses: readonly { id: string; focus: string; reportedAt: string }[],
 ): ProfileView {
   return {
     id: user.id,
@@ -171,6 +177,8 @@ function toProfileView(
     lastSeenAt: user.lastSeenAt ?? null,
     customMetricDefs: user.customMetricDefs ?? null,
     diaryExtraMetrics: user.diaryExtraMetrics ?? null,
+    reportedHealthContext: reportedHealthContext.map(({ id, fact, reportedAt }) => ({ id, fact, reportedAt })),
+    nutritionFocuses: nutritionFocuses.map(({ id, focus, reportedAt }) => ({ id, focus, reportedAt })),
   };
 }
 
@@ -249,10 +257,17 @@ async function handleRead(intent: Intent, userId: number, port: ProfileReadPort)
 
   const prefs = await port.getUserPreferences(userId);
   const personDiet = await port.getPersonDiet(userId);
+  const hasConsent = await hasCurrentHealthContextConsent(userId);
+  const reportedHealthContext = hasConsent && port.getPersonReportedHealthContext
+    ? await port.getPersonReportedHealthContext(userId)
+    : [];
+  const nutritionFocuses = hasConsent && port.getPersonNutritionFocuses
+    ? await port.getPersonNutritionFocuses(userId)
+    : [];
 
   return {
     scope: "profile",
-    profile: toProfileView(user, personDiet),
+    profile: toProfileView(user, personDiet, reportedHealthContext, nutritionFocuses),
     preferences: prefs ? toPreferencesView(prefs) : null,
   };
 }
@@ -262,7 +277,7 @@ async function handleRead(intent: Intent, userId: number, port: ProfileReadPort)
 // ---------------------------------------------------------------------------
 
 /**
- * Create the profile read-only handler. `resolvePort` provides the owning-service
+ * Create the Profile handler. `resolvePort` provides the owning-service
  * surface (production: real storage; tests: in-memory owner). The returned handler is
  * what the Capability Registry binds to the `profile` capability (INT12).
  */
@@ -270,15 +285,29 @@ export function createProfileReadHandler(
   resolvePort: () => Promise<ProfileReadPort>,
 ): CapabilityHandler {
   return async (intent: Intent, context: IntelligenceContext): Promise<unknown> => {
-    // Read-only binding: only "read" executes. "explain" (no stored rationale for any
-    // profile field) and "add" (a write — profile/preference edits remain owned by the
-    // Profile service) are both out of scope for this read-only binding and return an
-    // honest gap via the guard below. There is no code path here that changes any
-    // profile field or preference.
-    readOnlyVerbGuard(intent, ["read"], "Profile");
-
     const userId = requireUserId(context, "Profile");
     const port = await resolvePort();
+
+    if (intent.verb === "add") {
+      const params = intent.parameters ?? {};
+      if (params.scope === "nutrition-focus") {
+        const focus = typeof params.focus === "string" ? params.focus : "";
+        if (!nutritionFocusLabel(focus)) throw gap("Choose one supported nutrition focus from the stated food preference.");
+        if (!(await hasCurrentHealthContextConsent(userId))) throw gap("Review and grant the current health-data consent in Privacy Settings before saving nutrition focuses.");
+        if (!port.addPersonNutritionFocus) throw gap("The Profile owner does not expose the nutrition-focus write yet.");
+        const entries = await port.addPersonNutritionFocus(userId, focus, userId);
+        return { scope: "nutrition-focus", saved: true, focus, entries: entries.map(({ id, focus: entryFocus, reportedAt }) => ({ id, focus: entryFocus, reportedAt })) };
+      }
+      if (params.scope !== "reported-health-context") throw gap('Profile add only accepts scope "reported-health-context".');
+      const fact = typeof params.reportedFact === "string" ? params.reportedFact.trim() : "";
+      if (fact.length < 3 || fact.length > 180) throw gap("The reported health information must be between 3 and 180 characters.");
+      if (!(await hasCurrentHealthContextConsent(userId))) throw gap("Review and grant the current health-data consent in Privacy Settings before saving health information.");
+      if (!port.addPersonReportedHealthContext) throw gap("The Profile owner does not expose the reported-health-context write yet.");
+      const entries = await port.addPersonReportedHealthContext(userId, fact, userId);
+      return { scope: "reported-health-context", saved: true, status: "reported", entries: entries.map(({ id, fact: entryFact, reportedAt }) => ({ id, fact: entryFact, reportedAt })) };
+    }
+
+    readOnlyVerbGuard(intent, ["read"], "Profile");
 
     return handleRead(intent, userId, port);
   };

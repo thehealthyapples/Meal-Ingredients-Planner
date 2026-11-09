@@ -1,18 +1,16 @@
 ---
 entry: page-diary
-name: My Diary
+name: Diary
 section: pages
 status: live
 visibility: household
 owner: Colin Clapson
-route: /my-diary
-aliases:
-  - /diary
-last_verified: 2026-07-11
-version: 1
+route: /diary
+last_verified: 2026-11-05
+version: 2
 ---
 
-# My Diary
+# Diary
 
 > A simple daily log of what was eaten, which can be copied straight from the planner.
 
@@ -28,12 +26,8 @@ those metrics move over time.
 
 | | |
 |---|---|
-| Route | `/my-diary` |
+| Route | `/diary` |
 | Source | `client/src/pages/food-diary-page.tsx` |
-
-## Aliases
-
-- `/diary` — a shorter address for the same page.
 
 ## Related
 

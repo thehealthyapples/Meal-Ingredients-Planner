@@ -363,7 +363,7 @@ export const PERSONALITY_REGISTRY: Readonly<Record<PersonalityId, PersonalityDef
       greetings: ["Hi, good to see you.", "Welcome back — how can I help today?"],
       invitation: "Ask me anything about your food and plans.",
       introduction:
-        "I'm Apple. I keep an eye on your food and plans, so you don't have to hold all of it in your head. I'll mention something when it's worth mentioning, and stay quiet when it isn't.",
+        "I'm your Companion. I keep an eye on your food and plans, so you don't have to hold all of it in your head. I'll mention something when it's worth mentioning, and stay quiet when it isn't.",
       celebrations: ["Nice progress — {detail}."],
     },
   },
@@ -405,7 +405,7 @@ export const PERSONALITY_REGISTRY: Readonly<Record<PersonalityId, PersonalityDef
       greetings: ["Hey, great to see you!", "Hiya — what are we up to today?"],
       invitation: "Ask me anything about your food and plans — no question's too small.",
       introduction:
-        "I'm Apple. I pay attention to your food and plans in the background, so there's less for you to keep track of. If I spot something worth saying, I'll say it — otherwise I'll leave you be.",
+        "I'm your Companion. I pay attention to your food and plans in the background, so there's less for you to keep track of. If I spot something worth saying, I'll say it — otherwise I'll leave you be.",
       celebrations: ["Love this — {detail}!"],
     },
   },
@@ -447,7 +447,7 @@ export const PERSONALITY_REGISTRY: Readonly<Record<PersonalityId, PersonalityDef
       greetings: ["Ready to make progress today?", "Let's see where we can move the needle."],
       invitation: "Ask me about your food, your plans, or where you're heading.",
       introduction:
-        "I'm Apple. I follow your food and plans so the details don't fall to you. I'll flag what's worth your attention, and nothing that isn't.",
+        "I'm your Companion. I follow your food and plans so the details don't fall to you. I'll flag what's worth your attention, and nothing that isn't.",
       celebrations: ["Target hit — {detail}."],
     },
   },
@@ -489,7 +489,7 @@ export const PERSONALITY_REGISTRY: Readonly<Record<PersonalityId, PersonalityDef
       greetings: ["What are we cooking up today?", "Good to see you back in the kitchen."],
       invitation: "Ask me about any ingredient, meal or plan you have in mind.",
       introduction:
-        "I'm Apple. I keep track of what you cook and what you're planning, so you don't have to carry it all. When something's worth a mention I'll mention it; the rest of the time I'll stay out of the way.",
+        "I'm your Companion. I keep track of what you cook and what you're planning, so you don't have to carry it all. When something's worth a mention I'll mention it; the rest of the time I'll stay out of the way.",
       celebrations: ["Delicious result — {detail}."],
     },
   },
@@ -531,7 +531,7 @@ export const PERSONALITY_REGISTRY: Readonly<Record<PersonalityId, PersonalityDef
       greetings: ["Hello — what would you like to understand today?", "Welcome back. Anything you'd like explained?"],
       invitation: "Ask me about your food or plans, and I'll explain the reasoning too.",
       introduction:
-        "I'm Apple. I watch how your food and plans come together, so that knowledge sits somewhere other than your memory. When I mention something I'll tell you what it's based on — and when there's nothing worth saying, I'll say nothing.",
+        "I'm your Companion. I watch how your food and plans come together, so that knowledge sits somewhere other than your memory. When I mention something I'll tell you what it's based on — and when there's nothing worth saying, I'll say nothing.",
       celebrations: ["Well understood — {detail}."],
     },
   },
@@ -571,7 +571,7 @@ export const PERSONALITY_REGISTRY: Readonly<Record<PersonalityId, PersonalityDef
       greetings: ["Ready. What's the task?", "Status check — what do you need?"],
       invitation: "State your question. Food, plans, pantry — anything on record.",
       introduction:
-        "I'm Apple. I track your food and plans so you don't have to. I report what's worth reporting and stay silent otherwise.",
+        "I'm your Companion. I track your food and plans so you don't have to. I report what's worth reporting and stay silent otherwise.",
       celebrations: ["Objective met — {detail}."],
     },
   },
