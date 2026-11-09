@@ -1212,24 +1212,39 @@ export const UPLIFT_RULES: UpliftRule[] = [
 // Its only reader is the `up-phantom-rules` publication check, which uses it
 // to separate its output into two buckets instead of one: rule IDs the owner
 // has explicitly examined and chosen to preserve as honest historical
-// exceptions, versus rule IDs nobody has looked at. It does NOT make the
-// check pass — an entry here still counts as a violation for as long as the
-// underlying meal_uplift_applications rows exist (owner decision 2026-11-09:
-// "keep the failure visible"). It exists only so a reader of that check's
-// output can tell the two kinds of unauthored rule_id apart without finding
-// this file.
+// exceptions, versus rule IDs the owner has not (yet) acknowledged. It does
+// NOT make the check pass — an entry here still counts as a violation for as
+// long as the underlying meal_uplift_applications rows exist (owner decision
+// 2026-11-09: "keep the failure visible"). It exists only so a reader of that
+// check's output can tell the two kinds of unauthored rule_id apart without
+// finding this file.
+//
+// PRIVACY (Codex review, 2026-11-09): this module is tracked source code —
+// its content persists in Git history indefinitely, including past any future
+// personal-data export or erasure request, which operate on database rows
+// (server/privacy/personal-data-registry.ts), not on source files. `reason`
+// below must therefore stay structural/generic: no user ID, no household
+// member's meal names, no content that identifies which household the
+// acknowledged rows belong to. Row-level evidence (which user, which meals)
+// belongs only in the governed investigation report this entry references —
+// a file outside this repository's Git tree, subject to the same retention
+// discipline as other investigation evidence — never in this module.
 //
 // Full design: Claude-Priority5-LegacyUpliftProvenance-Design-2026-11-09.md
-// (G:\The Healthy Apples\Incoming\Agent Reports\).
+// (G:\The Healthy Apples\Incoming\Agent Reports\ — outside this repository).
 //
-// Append-only in spirit: a new entry documents a newly-examined historical
+// Append-only in spirit: a new entry documents a newly-acknowledged historical
 // rule_id; nothing here is ever edited to make a row's provenance look more
 // verified than it is, and nothing here is removed while the rows it
 // describes still exist in meal_uplift_applications.
 export interface AcknowledgedLegacyRuleIdentity {
   /** Must match meal_uplift_applications.rule_id exactly. */
   readonly ruleId: string;
-  /** Why this identity exists and why it was NOT re-authored as a real rule. */
+  /**
+   * Why this identity exists and why it was NOT re-authored as a real rule.
+   * Structural/generic only — see the PRIVACY note above. No user IDs, no
+   * meal names, no content that identifies a specific household.
+   */
   readonly reason: string;
   /** ISO date the owner examined and accepted this as a documented exception. */
   readonly acknowledgedAt: string;
@@ -1244,10 +1259,10 @@ export const ACKNOWLEDGED_LEGACY_RULE_IDENTITIES: readonly AcknowledgedLegacyRul
       'Pre-SEC4 client-minted rule identity (weekly-planner-page.tsx\'s fallback deterministic-' +
       'boosts path). The server persisted the caller\'s ruleId/ruleName/explanation verbatim, ' +
       'before resolveAcceptedSuggestions() existed to gate /api/uplift/accept against UPLIFT_RULES. ' +
-      'The 8 affected rows (user 38, 5 real meals: Chicken Marengo, Algerian Flafla, Thai Feast, ' +
-      'Chorizo & Halloumi Breakfast Baguette, Provençal Omelette Cake) are genuine household-' +
-      'accepted suggestions — the event is not in dispute, only the rule citation is unverifiable. ' +
-      'Owner decision: preserve as-is; do not delete, relabel, or add a matching UPLIFT_RULES entry.',
+      'The affected rows are genuine household-accepted suggestions — the underlying event is not ' +
+      'in dispute, only the rule citation is unverifiable. Owner decision: preserve the rows as-is; ' +
+      'do not delete, relabel, or add a matching UPLIFT_RULES entry. Row-level detail (which ' +
+      'household, which meals) is kept in the governed investigation report referenced above, not here.',
     acknowledgedAt: '2026-11-09',
     acknowledgedBy: 'Colin',
   },
