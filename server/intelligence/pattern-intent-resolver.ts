@@ -1321,6 +1321,20 @@ const PROFILE_MATCHERS: Matcher[] = [
 
   // PH-009: "what gaps do you still have in my profile?" / "what's missing from my profile?"
   (u) => (/\b(?:in|from|about)\s+my\s+profile\b/i.test(u) ? profileRead(0.86) : null),
+
+  // PH-006 (Priority 7, 2026-11-09): "what supermarkets and budget preferences have I
+  // selected?" — a self-referential read of the household's OWN stored choices, not a
+  // platform-capability question. Before this matcher, the bare word "supermarkets" fell
+  // through every profile matcher above (none covered "have I selected/chosen/set/picked")
+  // and reached PARTNERS_MATCHERS' bare-keyword fallback instead — "which supermarkets does
+  // THA support?" and "what supermarkets have I selected?" are different questions and must
+  // not share a route. Placed here (PROFILE_MATCHERS is composed before PARTNERS_MATCHERS)
+  // so this fires first on the self-referential phrasing and the partners fallback never
+  // sees it.
+  (u) => (/\bwhat\s+(?:supermarkets?|retailers?|budget|preferences?)\b.*\bhave\s+i\s+(?:selected|chosen|picked|set)\b/i.test(u)
+    || /\bwhich\s+(?:supermarkets?|retailers?)\s+have\s+i\s+(?:selected|chosen|picked)\b/i.test(u)
+    ? profileRead(0.87)
+    : null),
 ];
 
 // ---------------------------------------------------------------------------
@@ -2455,10 +2469,16 @@ const DIARY_NUTRITION_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
  * `meal-discovery` carries an EMPTY query deliberately: the constraint is the household's
  * dietary profile, which the resolver may not read (HARD BOUNDARIES, top of file). The
  * household read supplies it and the answer generator composes the two.
+ *
+ * Priority 7 (CB-013, 2026-11-09) — "Show me vegetarian meals my household could use." asks
+ * the identical question in a different register: an imperative ("show/give/find me") instead
+ * of a question ("which/what"), and "my household could use" instead of "suitable for... my
+ * household". Both guards widened to admit either phrasing; neither guard alone is enough to
+ * fire (a bare "show me meals" with no household clause still falls through, as before).
  */
 const HOUSEHOLD_MEAL_SUITABILITY_COMPOUND: CompoundMatcher = (u, _lower, _hints) => {
-  if (!/\b(?:which|what)\s+(?:meals?|recipes?|dishes?)\b/i.test(u)) return null;
-  if (!/\b(?:suitable|safe|ok|okay|fine|work|suit)\s+for\s+(?:everyone|everybody|all\s+of\s+us|(?:the\s+|my\s+|our\s+)(?:whole\s+)?(?:family|household))\b/i.test(u)) return null;
+  if (!/\b(?:which|what)\s+(?:meals?|recipes?|dishes?)\b|\b(?:show|give|find)\s+me\b.*\b(?:meals?|recipes?|dishes?)\b/i.test(u)) return null;
+  if (!/\b(?:suitable|safe|ok|okay|fine|work|suit)\s+for\s+(?:everyone|everybody|all\s+of\s+us|(?:the\s+|my\s+|our\s+)(?:whole\s+)?(?:family|household))\b|\b(?:my|our)\s+household\s+(?:could|can)\s+(?:use|eat|have|manage|cook|make)\b/i.test(u)) return null;
   return [
     { capability: "meal-discovery", verb: "search", parameters: { query: "" },                confidence: 0.86 },
     { capability: "household",      verb: "read",   parameters: { scope: "household" },       confidence: 0.84 },
@@ -2491,11 +2511,40 @@ const MEAL_GOAL_FIT_COMPOUND: CompoundMatcher = (u, _lower, _hints) => {
   ];
 };
 
+/**
+ * Priority 7 (CG-085, 2026-11-09) — Nutrition Knowledge + Profile: a compound health goal
+ * closed with a planning question. "I want to build muscle but also lower cholesterol. How
+ * should I plan?"
+ *
+ * BENCHINT4 already fixed the harmful half of this question's defect (see
+ * PLANNER_FALLBACK_PATTERN and NUTRIENT_BENEFIT_VOCABULARY_PATTERN below): it no longer
+ * misroutes to the planner, and "cholesterol" now reaches `nutrition-knowledge` via the
+ * 0.49 vocabulary floor. What that floor cannot fix: `profile` only reaches this turn through
+ * the always-on BASELINE read, which is stripped from `resolvedIntent` by design
+ * (conversation-gateway.ts) — identical to the gap `MEAL_GOAL_FIT_COMPOUND` above closes for
+ * CB-021. This compound closes it the same way, at a confidence that supersedes the 0.49
+ * floor: an explicit, non-baseline `profile:read` paired with the `nutrition-knowledge:read`
+ * the question's content already earns.
+ *
+ * Guarded on BOTH a compound-goal frame ("I want to X but also Y") AND a planning question,
+ * so this does not fire on an unrelated "but" clause with no closing "how should I plan" —
+ * the vocabulary floor alone still covers a bare nutrition mention with no planning question.
+ */
+const COMPOUND_HEALTH_GOAL_PLANNING_COMPOUND: CompoundMatcher = (u, _lower, _hints) => {
+  if (!/\bi\s+want\s+to\b.*\bbut\s+(?:also\s+)?\b/i.test(u)) return null;
+  if (!/\bhow\s+should\s+i\s+plan\b/i.test(u)) return null;
+  return [
+    { capability: "nutrition-knowledge", verb: "read", parameters: { scope: "foods" },   confidence: 0.86 },
+    { capability: "profile",             verb: "read", parameters: { scope: "profile" }, confidence: 0.84 },
+  ];
+};
+
 const ALL_COMPOUND_MATCHERS: CompoundMatcher[] = [
   NUTRITION_DISCOVERY_PLANNER_COMPOUND,
   HOUSEHOLD_MEMBER_PLANNER_COMPOUND,
   HOUSEHOLD_MEAL_SUITABILITY_COMPOUND,
   MEAL_GOAL_FIT_COMPOUND,
+  COMPOUND_HEALTH_GOAL_PLANNING_COMPOUND,
   PLANNER_PANTRY_COMPOUND,
   NUTRITION_SHOPPING_PANTRY_COMPOUND,
   PANTRY_NUTRITION_COMPOUND,
