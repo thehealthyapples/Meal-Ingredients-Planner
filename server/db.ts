@@ -4,6 +4,21 @@ import * as schema from "@shared/schema";
 
 const { Pool } = pg;
 
+// Scripts and tests run directly via `tsx` (server/scripts/*, server/tests/*) don't
+// inherit DATABASE_URL unless the invoking shell happened to export it — unlike the
+// platform/container environment, which injects it before the process starts and has
+// no .env file to load. Load .env here, once, ONLY when the var is still unset, so
+// production/CI (no .env file; DATABASE_URL already present) are unaffected — this
+// never overrides an already-set value and never logs or exposes the loaded contents.
+if (!process.env.DATABASE_URL) {
+  try {
+    process.loadEnvFile();
+  } catch {
+    // No .env file at cwd — expected in production/CI, where DATABASE_URL is already
+    // set by the platform. Fall through to the explicit check below.
+  }
+}
+
 if (!process.env.DATABASE_URL) {
   throw new Error(
     "DATABASE_URL must be set. Did you forget to provision a database?",
