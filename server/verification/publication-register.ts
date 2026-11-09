@@ -24,7 +24,7 @@ import { DIVERSITY_GROUP_SEED } from "@shared/canonical/diversity-groups";
 import { KNOWLEDGE_SEED_COUNTS, NUTRIENT_SEED } from "@shared/knowledge";
 import { PREPARATION_SEED } from "@shared/knowledge/preparations";
 import { ACQUISITION_SOURCE_REGISTER } from "@shared/recipe-acquisition";
-import { UPLIFT_RULES } from "../lib/uplift-rules";
+import { UPLIFT_RULES, ACKNOWLEDGED_LEGACY_RULE_IDENTITIES } from "../lib/uplift-rules";
 import { CapabilityRegistry } from "../intelligence/capability-registry";
 import type { DomainDeclaration, PublicationCheck } from "./publication-types";
 import {
@@ -839,12 +839,33 @@ export const CANONICAL_PUBLICATION_REGISTER: DomainDeclaration[] = [
             `SELECT rule_id, count(*)::int AS n FROM meal_uplift_applications GROUP BY rule_id`,
           );
           const authored = new Set(UPLIFT_RULES.map((r) => r.id));
-          const phantoms = rows.filter((r) => !authored.has(String(r.rule_id)));
-          if (phantoms.length > 0) {
-            const total = phantoms.reduce((s, r) => s + Number(r.n), 0);
+          const acknowledged = new Set(ACKNOWLEDGED_LEGACY_RULE_IDENTITIES.map((r) => r.ruleId));
+          const unauthored = rows.filter((r) => !authored.has(String(r.rule_id)));
+          // Priority 5 (2026-11-09): an unauthored rule_id still VIOLATES this check —
+          // the ledger never clears the failure, only distinguishes WHY a given id is
+          // unauthored in the reported detail. See ACKNOWLEDGED_LEGACY_RULE_IDENTITIES'
+          // own docblock in server/lib/uplift-rules.ts for why this check must not pass
+          // on a ledger match (owner decision: "keep the failure visible").
+          if (unauthored.length > 0) {
+            const total = unauthored.reduce((s, r) => s + Number(r.n), 0);
+            const legacy = unauthored.filter((r) => acknowledged.has(String(r.rule_id)));
+            const unexamined = unauthored.filter((r) => !acknowledged.has(String(r.rule_id)));
+            const parts: string[] = [];
+            if (legacy.length > 0) {
+              const legacyTotal = legacy.reduce((s, r) => s + Number(r.n), 0);
+              parts.push(
+                `${legacyTotal} row(s) cite an OWNER-ACKNOWLEDGED legacy identity (see ACKNOWLEDGED_LEGACY_RULE_IDENTITIES in server/lib/uplift-rules.ts): ${legacy.map((r) => `${r.rule_id} ×${r.n}`).join(", ")}`,
+              );
+            }
+            if (unexamined.length > 0) {
+              const unexaminedTotal = unexamined.reduce((s, r) => s + Number(r.n), 0);
+              parts.push(
+                `${unexaminedTotal} row(s) cite an UNEXAMINED rule id the owner never authored or acknowledged: ${unexamined.map((r) => `${r.rule_id} ×${r.n}`).join(", ")}`,
+              );
+            }
             return {
               violated: true,
-              detail: `${total} application row(s) cite rule id(s) the owner never authored: ${phantoms.map((r) => `${r.rule_id} ×${r.n}`).join(", ")}.`,
+              detail: `${total} application row(s) cite rule id(s) outside the authored registry — ${parts.join("; ")}.`,
             };
           }
           return { violated: false, detail: `All ${rows.length} applied rule id(s) are owner-authored.` };
