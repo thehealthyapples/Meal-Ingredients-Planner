@@ -1317,6 +1317,20 @@ export function benchmarkHouseholdIds(): string[] {
   return BENCHMARK_WORLD.map((h) => h.id);
 }
 
+/**
+ * The union of every eater's HARD restrictions for one benchmark household, or
+ * `null` when `id` is not a benchmark household at all (the lookup failed, not
+ * "this household has none"). An empty array is itself a fact — a genuinely
+ * unrestricted household — distinct from `null`; callers (the INTQ4 dietary
+ * safety gate, G2) must keep that distinction rather than collapsing both to
+ * "nothing to check".
+ */
+export function benchmarkWorldHardRestrictions(id: string): string[] | null {
+  const household = getBenchmarkHouseholdFixture(id);
+  if (!household) return null;
+  return Array.from(new Set(household.eaters.flatMap((e) => e.hardRestrictions ?? [])));
+}
+
 /** Every deterministic benchmark username in the world — the account registry. */
 export function allBenchmarkUsernames(): string[] {
   return BENCHMARK_WORLD.flatMap((h) => h.accounts.map((a) => a.username));

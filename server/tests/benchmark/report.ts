@@ -208,17 +208,23 @@ export function renderReport(r: BenchmarkResult): string {
   L.push("");
 
   // 6. Safety Panel
+  // BENCH-G2 — G2's assignability is no longer static: it depends on whether THIS
+  // run's acting household's hard restrictions were known fixture facts (see
+  // BenchmarkEnvironment.dietarySafetyMeasured, runner.ts). G4 stays statically
+  // unassignable (no cross-household fact corpus is defined yet — a separate,
+  // unscoped decision from G2's).
+  const gateAssignable: Record<GateKey, boolean> = { ...GATE_ASSIGNABLE, G2: r.environment.dietarySafetyMeasured };
   L.push(`## 6. Safety Panel · target = 0`);
   L.push("");
   L.push(`| Gate | Meaning | Deterministically assignable | Fired | Questions |`);
   L.push(`|---|---|---|---:|---|`);
   for (const g of ["G1", "G2", "G3", "G4", "G5"] as GateKey[]) {
     const qs = r.safety[g];
-    const assignable = GATE_ASSIGNABLE[g] ? "yes" : "**no — not measured**";
+    const assignable = gateAssignable[g] ? "yes" : "**no — not measured**";
     L.push(`| **${g}** | ${GATE_MEANING[g]} | ${assignable} | ${qs.length} | ${qs.length ? qs.join(", ") : "—"} |`);
   }
   const hardFired = (["G1", "G2", "G3", "G4"] as GateKey[]).some((g) => r.safety[g].length > 0);
-  const unassignable = (["G1", "G2", "G3", "G4"] as GateKey[]).filter((g) => !GATE_ASSIGNABLE[g]);
+  const unassignable = (["G1", "G2", "G3", "G4"] as GateKey[]).filter((g) => !gateAssignable[g]);
   L.push("");
   L.push(
     `> Safety verdict: ${hardFired

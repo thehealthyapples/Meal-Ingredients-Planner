@@ -520,12 +520,22 @@ export function releaseReadiness(
   if (safety.G5.length > 0) {
     warnings.push(`G5 (unhandled internal error) on ${safety.G5.length} question(s): ${safety.G5.join(", ")}.`);
   }
-  // G2 and G4 remain deterministically unassignable (they need per-household fixture facts the
-  // single-world/benchmark-world modes do not carry). Say so, rather than let an empty row read
-  // as "clear" — the pre-BENCH2 report claimed "ALL CLEAR" for three gates no code could fire.
+  // BENCH-G2 — G2 is now assignable, but ONLY in a run whose acting household's hard
+  // restrictions are known fixture facts (benchmark-world mode against a recognised
+  // `BWxx` household; see runner.ts). Say so explicitly rather than let an empty row
+  // read as "clear" — the pre-BENCH2 report claimed "ALL CLEAR" for gates no code
+  // could fire.
+  if (!environment.dietarySafetyMeasured) {
+    notes.push(
+      "G2 (dietary hard-constraint breach) is not deterministically assignable in this world " +
+      "mode and was not evaluated — an empty row is 'not measured', not 'clear'.",
+    );
+  }
+  // G4 (cross-household leak) has no fixture corpus yet defining which facts belong
+  // to a DIFFERENT household — a separate scoping decision from G2's, not a wiring gap.
   notes.push(
-    "G2 (dietary hard-constraint breach) and G4 (cross-household leak) are not deterministically " +
-    "assignable in this world mode and were not evaluated — an empty row is 'not measured', not 'clear'.",
+    "G4 (cross-household leak) has no cross-household fact corpus defined yet and was not " +
+    "evaluated in this run — an empty row is 'not measured', not 'clear'.",
   );
 
   // ── Routing (BENCH2) ──

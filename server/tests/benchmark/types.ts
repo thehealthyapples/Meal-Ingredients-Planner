@@ -477,6 +477,14 @@ export interface BenchmarkEnvironment {
   /** False ⇒ the gateway short-circuits before routing and every answer-quality dimension is meaningless. */
   readonly llmProviderAvailable: boolean;
   readonly judgeInvoked: boolean;
+  /**
+   * BENCH-G2 — true only when this run's acting household's hard dietary restrictions
+   * were known fixture facts (benchmark-world mode against a recognised `BWxx`
+   * household today), so gate G2 could actually fire. False means G2 was not
+   * evaluated this run — an empty `safety.G2` row must read as "not measured",
+   * never "clear" (see report.ts, aggregate.ts releaseReadiness()).
+   */
+  readonly dietarySafetyMeasured: boolean;
 }
 
 /** Overall PASS / PARTIAL / FAIL verdict + release-readiness reasons. */

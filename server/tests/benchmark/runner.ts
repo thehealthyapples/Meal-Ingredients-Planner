@@ -23,8 +23,10 @@ import { selectQuestions } from "./select.js";
 import { deriveExpectation, registryExecutableCapabilityIds } from "./expectations.js";
 import {
   scoreDeterministic, buildQuestionResult, applyGateCaps,
-  JUDGE_OWNED, DIMENSION_WEIGHTS, DIMENSION_NAMES, type CapturedTurn,
+  JUDGE_OWNED, DIMENSION_WEIGHTS, DIMENSION_NAMES, type CapturedTurn, type DietarySafetyContext,
 } from "./scorer.js";
+import { benchmarkWorldHardRestrictions } from "../../benchmark/world-fixtures.js";
+import { resolveActiveRestrictions } from "@shared/restrictions/restriction-resolver.js";
 import { resolveJudge, type JudgeClient } from "./judge.js";
 import {
   rollupDimensions, rollupDomains, rollupCapabilities, rollupNonCapability, rollupHouseholds, rollupPersonalities,
@@ -79,7 +81,7 @@ function certificationFrameworkOnly(options: RunOptions): BenchmarkResult {
       score: 0, honestGapRate: 0, gatesFired: 0, questionsScored: 0, meanLatencyMs: 0,
       routingGatesFired: 0, intentResolutionAccuracy: 0, capabilityReach: 0, hallucinationRate: 0,
     },
-    environment: { llmProviderAvailable: false, judgeInvoked: false },
+    environment: { llmProviderAvailable: false, judgeInvoked: false, dietarySafetyMeasured: false },
     routing: {
       routingRequiredQuestions: 0, capabilityReachPct: 0, intentResolutionAccuracyPct: 0,
       capabilityMisses: 0, misroutes: 0, misroutesReachingSecondary: 0,
@@ -134,6 +136,15 @@ export async function runBenchmark(options: RunOptions): Promise<BenchmarkResult
   const worldMode = options.worldMode ?? "single-world";
   const householdLabel = options.householdLabel ?? "live";
 
+  // BENCH-G2 — resolved ONCE per run: a run targets exactly one household for its
+  // whole duration (worldMode + householdLabel never change mid-run), so the acting
+  // household's hard restrictions are fixed for every question scored below. `null`
+  // means this run cannot measure G2 at all (see DietarySafetyContext on scorer.ts).
+  const hardRestrictions =
+    worldMode === "benchmark-world" ? benchmarkWorldHardRestrictions(householdLabel) : null;
+  const dietarySafety: DietarySafetyContext | null =
+    hardRestrictions === null ? null : { activeRestrictions: resolveActiveRestrictions(hardRestrictions) };
+
   const selected = selectQuestions(fixture, options.mode);
   const questionResults = [];
   let anyJudge = false;
@@ -152,7 +163,7 @@ export async function runBenchmark(options: RunOptions): Promise<BenchmarkResult
     const turn = await options.runTurn(q.utterance);
     llmProviderAvailable = turn.llmProviderAvailable;
     capabilityProbeActive = turn.capabilityProbeActive;
-    const scored = scoreDeterministic(exp, turn);
+    const scored = scoreDeterministic(exp, turn, dietarySafety);
 
     // Optional judge tier — refine the degree of judge-owned dimensions only.
     if (judge.enabled) {
@@ -179,7 +190,9 @@ export async function runBenchmark(options: RunOptions): Promise<BenchmarkResult
     (options.runTurn as Partial<{ dispose(): void }>).dispose?.();
   }
 
-  const environment: BenchmarkEnvironment = { llmProviderAvailable, judgeInvoked: anyJudge };
+  const environment: BenchmarkEnvironment = {
+    llmProviderAvailable, judgeInvoked: anyJudge, dietarySafetyMeasured: dietarySafety !== null,
+  };
   const dimensions = rollupDimensions(questionResults);
   const domains = rollupDomains(questionResults);
   const capabilities = rollupCapabilities(questionResults);
