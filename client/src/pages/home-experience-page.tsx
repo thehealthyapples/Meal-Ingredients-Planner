@@ -39,6 +39,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { LoadError } from "@/components/ui/load-error";
 // HOME2 — The canonical Home Primary Action Resolver (Priority 4 repair)
 import { resolveHomePrimaryAction, type HomeState } from "@shared/home/home-primary-action";
+// FI5's own read of OD1's governed bundle — the same hook Dashboard/Planner/Cookbook/
+// Pantry already share. `FoodOpportunity` structurally satisfies `HomeCriticalCandidate`
+// (id, type, domain, priority, subject) by the same "same shape, no import" design
+// home-primary-action.ts's own docblock describes for the server-side producer — this
+// is that same structural match on the client side. Passed through verbatim; this page
+// does not filter for `isCritical` itself, since the resolver's own Tier 0 logic already does.
+import { useFoodOpportunities } from "@/hooks/use-food-opportunities";
 // MAT1 converged this file's private `= 30` onto the shared owner. PRESENCE1 went
 // one step further and removed the import entirely: Home no longer needs the target,
 // because it no longer measures anybody against it. `WEEKLY_PLANT_TARGET` remains the
@@ -175,6 +182,10 @@ export default function HomeExperiencePage() {
     enabled: !!user,
     staleTime: 5 * 60 * 1000,
   });
+  // Priority 4 follow-through — the Decision Engine's governed bundle, for HOME2's
+  // Tier 0 (safety-critical routing). Same query the Dashboard/Planner/Cookbook/Pantry
+  // already share; TanStack Query dedupes the fetch rather than this page re-deriving it.
+  const { data: foodOpportunities } = useFoodOpportunities(!!user);
 
   const fullPlanner = plannerQuery.data ?? [];
   const mealsList = mealsQuery.meals ?? [];
@@ -326,7 +337,7 @@ export default function HomeExperiencePage() {
   // when data is loading/unavailable. When week is unanchored, week data is null (the
   // designed input), and the resolver falls to the floor (→ Planner).
   const primaryActionState: HomeState = {
-    criticals: [], // TODO: Wire from Decision Engine when available
+    criticals: foodOpportunities?.opportunities ?? [],
     week: plannerWeek?.anchored ? {
       weekNumber: plannerWeek.weekNumber,
       hasEmptyDays: todaysMeals.length === 0,
