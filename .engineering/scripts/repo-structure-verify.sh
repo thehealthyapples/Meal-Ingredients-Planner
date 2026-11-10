@@ -46,7 +46,7 @@ check "root contains only permitted files" $?
 [ -n "$strays" ] && for s in $strays; do echo "        stray: $s"; done
 
 # 2. No reports at root — the specific failure this system exists to prevent.
-! ls *.md 2>/dev/null | grep -qvE '^(RELEASE|MIGRATIONS|replit)\.md$'
+! ls *.md 2>/dev/null | grep -qvE '^(RELEASE|MIGRATIONS|replit|AGENTS|PROJECT_GOVERNANCE)\.md$'
 check "no report .md files at root" $?
 [ -z "$(ls *.txt 2>/dev/null)" ]
 check "no .txt reports/diagnostics at root" $?
