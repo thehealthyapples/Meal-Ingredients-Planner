@@ -485,7 +485,14 @@ export function identifyShoppingRestrictionOpportunities(
         { source: "shopping-list", detail: `"${item.productName}" is on your current, unchecked shopping list.` },
         { source: "household-eaters", detail: `Your household has an active hard restriction: ${restrictionNames}.` },
       ],
-      suggestedAction: `Review "${item.productName}" on your shopping list before buying it.`,
+      // 2026-11-11 (owner-reported) — the voiced notice a household actually sees
+      // (behaviour-engine.ts phraseNotice() renders THIS field, never `explanation`)
+      // said only "review before buying it", with no reason — the household had to
+      // tap "Why?" to learn what was even wrong. Every other opportunity type stays
+      // terse by design; this one is the platform's sole `critical` emitter (ATTN1),
+      // so the restriction it conflicts with belongs in the sentence a household
+      // sees at a glance, not one tap away from it.
+      suggestedAction: `Review "${item.productName}" on your shopping list — it may conflict with your ${restrictionNames} restriction.`,
       subject: { entity: "shopping-item", id: item.id, label: item.productName },
     });
   }
