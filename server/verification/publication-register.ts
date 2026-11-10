@@ -1130,7 +1130,25 @@ export const CANONICAL_PUBLICATION_REGISTER: DomainDeclaration[] = [
               return { violated: true, detail: `${docsDir} is unreadable — the published capability list cannot be verified.` };
             }
           }
-          const documented = new Set(files.map((f) => f.replace(/^cap-/, "").replace(/\.md$/, "")));
+          const fileIds = new Set(files.map((f) => f.replace(/^cap-/, "").replace(/\.md$/, "")));
+          // Priority 6/8 (2026-11-10): cap-discovery-capabilities.md is ONE consolidated
+          // doc for all seven *-discovery capabilities — they share the exact same status
+          // (registered, no executable verb bound) and the exact same reason, so one honest
+          // statement of that beats seven near-duplicate files that would drift
+          // independently. "discovery-capabilities" itself is not a registered id (it would
+          // otherwise report as a phantom); the seven ids it covers count as documented.
+          const CONSOLIDATED_DOC_COVERAGE: Readonly<Record<string, readonly string[]>> = {
+            "discovery-capabilities": [
+              "meal-discovery", "nutrition-discovery", "planner-discovery", "pantry-discovery",
+              "diary-discovery", "shopping-discovery", "household-discovery",
+            ],
+          };
+          const documented = new Set(fileIds);
+          for (const [aliasId, covered] of Object.entries(CONSOLIDATED_DOC_COVERAGE)) {
+            if (!fileIds.has(aliasId)) continue;
+            documented.delete(aliasId);
+            for (const id of covered) documented.add(id);
+          }
           const registered = new CapabilityRegistry().list().map((c) => c.id);
           const undocumented = registered.filter((id) => !documented.has(id));
           // cap-companion.md documents the Companion gateway itself — the
