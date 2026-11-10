@@ -1483,7 +1483,7 @@
       "category": "Product Intelligence",
       "utterance": "Is this cereal a good choice for my family?",
       "rationale": "Tests product + household fit.",
-      "capability": "product-analysis + household",
+      "capability": "household.read + product-analysis",
       "maturityHorizons": {
         "launch": "Assess using known product data and restrictions.",
         "y1": "Compare sugar/fibre/additives if present.",
