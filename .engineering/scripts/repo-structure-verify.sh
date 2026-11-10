@@ -21,6 +21,7 @@ echo
 # 1. Root allowlist. Everything permitted at the root, per REPOSITORY_CONVENTIONS §2.
 #    Gitignored files are not the repository's business and are skipped.
 ALLOWED="package.json package-lock.json tsconfig.json vite.config.ts \
+vite.frontend-only.config.ts \
 tailwind.config.ts postcss.config.js drizzle.config.ts capacitor.config.ts \
 components.json .replit .gitignore .env.example deploy.sh \
 RELEASE.md MIGRATIONS.md replit.md eng.traineddata \
@@ -38,6 +39,12 @@ while IFS= read -r f; do
   [ "$b" = ".git" ] && continue
   git check-ignore -q "$b" 2>/dev/null && continue     # gitignored: not ours
   case " $ALLOWED " in *" $b "*) continue;; esac
+  # AGENTS.md's config-backup rule mandates a timestamped sibling backup before
+  # EVERY configuration-file write — so AGENTS.md and PROJECT_GOVERNANCE.md (both
+  # root governance entry points) will keep generating new, differently-named
+  # backup siblings over time. A single exact-match allowlist entry would need
+  # editing on every future backup; match the PREFIX instead, once, here.
+  case "$b" in AGENTS.md?*|PROJECT_GOVERNANCE.md?*) continue;; esac
   strays="$strays $b"
 done < <(find . -maxdepth 1 -type f)
 

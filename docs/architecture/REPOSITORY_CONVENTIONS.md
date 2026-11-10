@@ -57,6 +57,10 @@ Exactly these categories:
 - **Build / tool configuration** — `package.json`, `package-lock.json`,
   `tsconfig.json`, `vite.config.ts`, `tailwind.config.ts`, `postcss.config.js`,
   `drizzle.config.ts`, `capacitor.config.ts`, `components.json`
+- **Alternate dev configuration** — `vite.frontend-only.config.ts` (owner-authored
+  2026-11-02: binds the dev server to `0.0.0.0:5001` so a phone on the same LAN
+  can reach it; a deliberate sibling of `vite.config.ts`, run by hand, not by any
+  committed script)
 - **Platform / environment** — `.replit`, `.gitignore`, `.env.example`, `deploy.sh`
 - **Standard project documents** — `RELEASE.md`, `MIGRATIONS.md`, `replit.md`
 - **Runtime data assets that must resolve from the working directory** —
@@ -67,7 +71,12 @@ Exactly these categories:
   task, by both documents themselves and every governance citation across
   this repository; omitted from this list until 2026-11-09, which made
   `repo-structure-verify.sh` flag both as stray root files — a gap in this
-  document, not evidence either file was ever actually misplaced)
+  document, not evidence either file was ever actually misplaced), **plus any
+  timestamped backup sibling of either** (`PROJECT_GOVERNANCE.md20261003`,
+  `PROJECT_GOVERNANCE.md.pre-runtime-location-correction-20261102`, …) — AGENTS.md's
+  own config-backup rule mandates one before every write to either file, so new
+  ones will keep appearing; `repo-structure-verify.sh` matches the filename
+  PREFIX rather than naming each one, so this bullet never needs editing again
 
 Anything not in one of those categories does not belong at the root.
 
