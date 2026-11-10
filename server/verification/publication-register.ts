@@ -1109,20 +1109,40 @@ export const CANONICAL_PUBLICATION_REGISTER: DomainDeclaration[] = [
         severity: "warn",
         cpi1: "S2-6",
         run: async () => {
-          const docsDir = path.join(
-            REPO_ROOT,
-            "docs/product/intelligence/intelligence-capabilities",
-          );
-          let files: string[];
-          try {
-            files = fs.readdirSync(docsDir).filter((f) => f.startsWith("cap-") && f.endsWith(".md"));
-          } catch {
-            return { violated: true, detail: `${docsDir} is unreadable — the published capability list cannot be verified.` };
+          // Priority 6/8 follow-through (2026-11-10): this check originally scanned only
+          // intelligence-capabilities/, so nutrition-knowledge and product-knowledge were
+          // reported "undocumented" despite real cap-*.md entries existing in the sibling
+          // knowledge-capabilities/ directory — a check-scope bug, not a content gap. The
+          // Companion's own cap-companion.md lives in a third sibling, companion-capabilities/.
+          // All three are legitimate homes for a capability's product doc (docs/product/
+          // intelligence/*-capabilities/); scan all of them.
+          const docsSubdirs = [
+            "intelligence-capabilities",
+            "knowledge-capabilities",
+            "companion-capabilities",
+          ];
+          let files: string[] = [];
+          for (const sub of docsSubdirs) {
+            const docsDir = path.join(REPO_ROOT, "docs/product/intelligence", sub);
+            try {
+              files.push(...fs.readdirSync(docsDir).filter((f) => f.startsWith("cap-") && f.endsWith(".md")));
+            } catch {
+              return { violated: true, detail: `${docsDir} is unreadable — the published capability list cannot be verified.` };
+            }
           }
           const documented = new Set(files.map((f) => f.replace(/^cap-/, "").replace(/\.md$/, "")));
           const registered = new CapabilityRegistry().list().map((c) => c.id);
           const undocumented = registered.filter((id) => !documented.has(id));
-          const phantom = [...documented].filter((id) => !registered.includes(id));
+          // cap-companion.md documents the Companion gateway itself — the
+          // orchestrator that reads each capability's companionDomain to
+          // decide reachability (capability-registry.ts getCompanionDomain /
+          // isCompanionDestination). Companion routes TO capabilities; it is
+          // never itself a registered capability id, so it can never satisfy
+          // a 1:1 match against CapabilityRegistry().list() and is excluded
+          // from phantom detection on that basis, not left undetected.
+          const phantom = [...documented]
+            .filter((id) => !registered.includes(id))
+            .filter((id) => id !== "companion");
           if (undocumented.length === 0 && phantom.length === 0) {
             return { violated: false, detail: `All ${registered.length} registered capabilities are documented, with no phantom entries.` };
           }

@@ -4,7 +4,7 @@
   "generated_by": "scripts/build-product-inventory.ts",
   "populated_by": "PDA1_PLATFORM_DISCOVERY_AND_EXPERIENCE_AUDIT",
   "populated_on": "2026-07-11",
-  "entry_count": 165,
+  "entry_count": 171,
   "entries": [
     {
       "id": "dom-home",
@@ -3124,6 +3124,21 @@
       "version": 3
     },
     {
+      "id": "cap-evidence-learning",
+      "name": "Evidence & Learning capability",
+      "section": "knowledge-capabilities",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "Notices a repeating household pattern and asks you to confirm it as a signal before it ever changes how THA plans or suggests for your household.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/intelligence/capability-registry.ts",
+        "server/intelligence/bindings/evidence-learning.ts"
+      ],
+      "last_verified": "2026-11-10",
+      "version": 1
+    },
+    {
       "id": "cap-companion",
       "name": "Companion",
       "section": "companion-capabilities",
@@ -3318,6 +3333,83 @@
         "dom-admin"
       ],
       "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "cap-community",
+      "name": "Community capability",
+      "section": "intelligence-capabilities",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "Reads back which community your household belongs to; cannot create, join, invite, or leave a community on your behalf.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/intelligence/capability-registry.ts",
+        "server/intelligence/bindings/community.ts"
+      ],
+      "last_verified": "2026-11-10",
+      "version": 1
+    },
+    {
+      "id": "cap-food-intelligence",
+      "name": "Food Intelligence capability",
+      "section": "intelligence-capabilities",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "Recommends, explains, and compares foods using THA's own cited Food Knowledge Registry — never an invented second opinion.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/intelligence/capability-registry.ts",
+        "server/intelligence/bindings/food-intelligence.ts"
+      ],
+      "last_verified": "2026-11-10",
+      "version": 1
+    },
+    {
+      "id": "cap-opportunity-delivery",
+      "name": "Opportunity Delivery capability",
+      "section": "intelligence-capabilities",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "The one place THA's suggestions for your household, from any part of the platform, are collected, de-duplicated, and prioritised before one reaches you.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/intelligence/capability-registry.ts",
+        "server/intelligence/bindings/opportunity-delivery.ts"
+      ],
+      "last_verified": "2026-11-10",
+      "version": 1
+    },
+    {
+      "id": "cap-templates",
+      "name": "Templates capability",
+      "section": "intelligence-capabilities",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "Reads back meal shell templates and your plan templates; cannot yet search, explain, or build one for you.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/intelligence/capability-registry.ts",
+        "server/intelligence/bindings/templates.ts",
+        "docs/architecture/capabilities/templates.md"
+      ],
+      "last_verified": "2026-11-10",
+      "version": 1
+    },
+    {
+      "id": "cap-developer",
+      "name": "Developer / Platform capability",
+      "section": "intelligence-capabilities",
+      "status": "live",
+      "visibility": "developer",
+      "purpose": "Read-only Engineering Intelligence over this repository's own architecture, investigations, implementation reports, and git history — physically isolated from the household/Companion plane; aiAccess is never.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "server/intelligence/capability-registry.ts",
+        "server/services/engineering-knowledge-registry.ts",
+        "server/intelligence/developer-plane.ts"
+      ],
+      "last_verified": "2026-11-10",
       "version": 1
     }
   ]
