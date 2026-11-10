@@ -3129,11 +3129,12 @@
       "section": "companion-capabilities",
       "status": "live",
       "visibility": "household",
-      "purpose": "Ask Companion about your food, your plan, your pantry or your list; it answers from what THA holds, proposes actions you must confirm, and says \"I don't know\" rather than guessing.",
+      "purpose": "Ask Companion about your food, your plan, your pantry or your list; it answers from what THA holds, checks its understanding when a question is ambiguous, proposes actions you must confirm, and says \"I don't know\" rather than guessing.",
       "owner": "Colin Clapson",
       "sources": [
         "client/src/components/conversation/FloatingAssistant.tsx",
-        "server/intelligence/conversation/conversation-gateway.ts"
+        "server/intelligence/conversation/conversation-gateway.ts",
+        "server/intelligence/hybrid-intent-resolver.ts"
       ],
       "related": [
         "dom-companion",
@@ -3143,8 +3144,8 @@
         "fnd-pkr27-prompt-knowledge"
       ],
       "cannot": "Cannot place an order, cannot change anything without explicit confirmation, and cannot currently answer a single question about THA itself.",
-      "last_verified": "2026-07-11",
-      "version": 1
+      "last_verified": "2026-11-09",
+      "version": 2
     },
     {
       "id": "cap-planner",

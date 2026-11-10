@@ -116,6 +116,18 @@ export interface IntentResolutionHints {
    * Friday has two explanations.
    */
   readonly selectedPlannerEntryId?: number;
+  /**
+   * A bounded excerpt of the existing conversation, supplied only when the
+   * preceding assistant turn asked a clarification question. It is transient
+   * routing context, never persisted as a second conversation state.
+   */
+  readonly clarificationContext?: {
+    readonly assistantPrompt: string;
+    readonly turns: readonly {
+      readonly role: "user" | "assistant";
+      readonly utterance: string;
+    }[];
+  };
 }
 
 /**

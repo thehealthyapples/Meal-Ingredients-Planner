@@ -71,7 +71,7 @@ import type {
   IntentResolutionHints,
   ResolvedIntent,
 } from "../intent-resolver.js";
-import { patternIntentResolver } from "../pattern-intent-resolver.js";
+import { HybridIntentResolver } from "../hybrid-intent-resolver.js";
 import {
   classifyTurn,
   describeQueried,
@@ -692,6 +692,7 @@ async function buildGroundedResponse(
     // short-circuit shape as the opportunity pointer: present AND why-shaped
     // routes to `planner:explain`; otherwise inert.
     selectedPlannerEntryId: frame.selectedPlannerEntryId,
+    clarificationContext: buildClarificationContext(recentHistory),
   };
   const resolveStarted = Date.now();
   const resolvedIntents = await intentResolver.resolve(utterance, hints);
@@ -1428,6 +1429,32 @@ entityRefs must ONLY contain items that appear in the context data above with a 
 }
 
 /**
+ * Reuse a small slice of the canonical conversation only while a resolver-led
+ * clarification is active. Ordinary turns do not add history to resolver input.
+ */
+export function buildClarificationContext(
+  recentHistory: readonly Pick<ConversationTurn, "role" | "utterance" | "fallbackState">[],
+): IntentResolutionHints["clarificationContext"] {
+  const lastAssistant = [...recentHistory].reverse().find((turn) => turn.role === "assistant");
+  if (!lastAssistant || lastAssistant.fallbackState !== "no-route") return undefined;
+  const prompt = lastAssistant.utterance.trim();
+  if (!prompt.startsWith("Are you asking whether ") && prompt !== "No problem — what did you mean?") {
+    return undefined;
+  }
+
+  return {
+    assistantPrompt: prompt.slice(0, 180),
+    turns: recentHistory
+      .slice(-4)
+      .filter((turn) => turn.role === "user" || turn.role === "assistant")
+      .map((turn) => ({
+        role: turn.role as "user" | "assistant",
+        utterance: turn.utterance.slice(0, 400),
+      })),
+  };
+}
+
+/**
  * PROD3 — POST-GENERATION SAFETY VALIDATION.
  *
  * Before this, validation of the model's output was type-shape only: `text` had
@@ -1543,8 +1570,9 @@ function mergeEntityRefs(
  * Instantiated with an IConversationStore so tests can inject an in-memory store.
  * Production code imports and uses the `conversationGateway` singleton.
  *
- * INT24: constructor accepts an optional IIntentResolver. Defaults to the
- * production patternIntentResolver singleton. Tests may inject a stub.
+ * INT24 / Priority 7b: constructor accepts an optional IIntentResolver. The
+ * production default wraps the pattern resolver with a provider-backed fallback.
+ * Tests may inject a stub.
  *
  * INT35: constructor accepts an optional HandleIntentFn. Defaults to
  * intelligencePlatform.handle. Tests inject a stub to drive controlled
@@ -1571,7 +1599,7 @@ export class ConversationGateway {
     actionStore?: ICompanionActionStore,
   ) {
     this.llmProvider = llmProvider ?? createDefaultLlmProvider();
-    this.intentResolver = intentResolver ?? patternIntentResolver;
+    this.intentResolver = intentResolver ?? new HybridIntentResolver(this.llmProvider);
     this.handleIntent = handleIntent ?? defaultHandleIntent;
     this.feedbackStore = feedbackStore ?? companionFeedbackStore;
     this.actionStore = actionStore ?? companionActionStore;

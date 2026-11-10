@@ -5,8 +5,8 @@ section: companion-capabilities
 status: live
 visibility: household
 owner: Colin Clapson
-last_verified: 2026-11-05
-version: 3
+last_verified: 2026-11-09
+version: 4
 ---
 
 # Companion
@@ -28,6 +28,11 @@ Nutrition focuses are food preferences, not restrictions, nutrient targets, or
 medical conclusions. A reported concern is not a diagnosis and does not establish
 that food treats a condition. And when THA has no answer, Companion says
 "I don't know" rather than making one up.
+
+When a question could reasonably mean more than one thing, Companion checks its
+understanding with you before routing it. If you say no, it asks what you meant;
+it uses that short exchange to interpret your next reply when pattern matching
+needs help. It does not create a second conversation or guess what you meant.
 
 ## What it will never do
 
