@@ -258,7 +258,8 @@ function CapabilityUtilisationCard({ u }: { u: CapabilityUtilisationPanel | unde
         <CardTitle className="text-sm">Capability Utilisation</CardTitle>
         <CardDescription className="text-xs">
           Which registered Intelligence Capabilities actually executed during this run, observed at the platform's own
-          capability seam. Counts execution — including baseline context-only reads — so it can differ from the routing view.
+          capability seam. Counts execution — including baseline context-only reads and capability-to-capability
+          fan-out — so it can differ from the routing view.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
