@@ -295,7 +295,7 @@
       "category": "Cookbook",
       "utterance": "What chicken meals do I have?",
       "rationale": "Tests ingredient/name search.",
-      "capability": "meal-discovery.search",
+      "capability": "meals.search",
       "maturityHorizons": {
         "launch": "Return relevant chicken meals from cookbook.",
         "y1": "Rank by household fit and recent use.",
