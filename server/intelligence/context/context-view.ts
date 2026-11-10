@@ -434,6 +434,15 @@ export const CONTEXT_VIEW_SPECS: Readonly<Record<string, ContextViewSpec>> = {
     ],
   },
   "planner:read": {
+    // `scope`/`weekId`/`weekNumber`/`weekName`/`weekStartDate` PINNED (2026-11-11,
+    // owner-reported): the days/meals collection carried no week identity at all, so
+    // a household asking "is this the 9-15 November week?" got an answer with no way
+    // to confirm or deny it — the model could not even state which week it was
+    // looking at. `weekName`/`weekStartDate` are undefined on a `scope=day` result and
+    // simply omitted there (`getPath` returns undefined, nothing is pinned). Same
+    // shape of gap as the chicken/calories fixes above, for the week itself rather
+    // than a field within it.
+    pinned: ["scope", "weekId", "weekNumber", "weekName", "weekStartDate"],
     collections: [
       // No `groupBy` on either collection: an empty planner day is not evidence, and
       // a balance dimension that seats rows carrying none spends the core on nothing.

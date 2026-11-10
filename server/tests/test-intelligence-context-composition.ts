@@ -805,6 +805,16 @@ async function main(): Promise<void> {
       assert(body._context.days.groups === undefined,
         "…and emits no degenerate one-entry-per-row `groups` map");
 
+      // BENCH-PLANNER-WEEK-ID (owner-reported, 2026-11-11): the week's own identity
+      // was not pinned, so the model had no way to confirm or deny which calendar
+      // week it was looking at — "is this the 9-15 November week?" was unanswerable
+      // even when the right week's data was genuinely in context.
+      assert(view.pinned.some(f => f.path === "weekName" && f.value === "Week 6"),
+        "the week's own name is pinned — never dropped by budget or ranking");
+      assert(view.pinned.some(f => f.path === "weekId" && f.value === 6), "weekId is pinned");
+      assert(view.pinned.some(f => f.path === "weekNumber" && f.value === 6), "weekNumber is pinned");
+      assert(body.weekName === "Week 6", "…and reaches the rendered context the model actually reads");
+
       // The allowlist is what the spec does say, and it holds.
       const emptyWeek = { scope: "week", weekId: 6, weekNumber: 6, weekName: "Week 6", days: [{ dayId: 120, dayOfWeek: 0, meals: [], internalNote: "scheduler-v3" }] };
       const n = composeContext({ utterance: "what is on my plan", capabilities: [cap("planner", "read", emptyWeek, 0.9)] }).text;

@@ -132,6 +132,7 @@ import {
   isMealSafeForHousehold,
   isSafetyGateActive,
   type HouseholdSafetyContext,
+  type SafetyVerdict,
 } from "../../lib/household-dietary-safety.js";
 import {
   composeContext,
@@ -1253,7 +1254,7 @@ EVERY member at the table — including children with no account of their own.`;
 HARD RULES — you must never break these:
 1. Answer ONLY from the CONTEXT DATA provided below. Never invent, hallucinate, or assume facts not present in the context.
 2. Nutrition and health: only state what is explicitly in the context. User-reported conditions are not verified diagnoses. You may describe a food's sourced nutrient content, but never imply that it treats, prevents, or cures a condition; never personalize condition-specific advice unless an explicitly reviewed method is present in the context. Never make diagnoses, treatment recommendations, or prescriptions.
-3. If the specific detail asked for is not in the context, do NOT guess or invent it. Instead answer honestly in a full sentence: say what you DO have that is relevant, or state plainly that it isn't recorded yet (e.g. "You don't have a diet pattern recorded in your profile yet.") — never the bare phrase "I don't have that information right now" on its own, and never a fabricated fact to fill the gap.
+3. If the specific detail asked for is not in the context, do NOT guess or invent it. Instead answer honestly in a full sentence that names the ACTUAL thing that is missing — e.g. if a diet pattern is genuinely what's absent, say "You don't have a diet pattern recorded in your profile yet." That sentence is ONE EXAMPLE of the pattern for THAT specific gap; never reuse it, or any other fixed sentence, as a generic template for a DIFFERENT missing fact (a question about plant diversity, calories, or anything else not actually about diet pattern must never be answered by claiming "no diet pattern recorded" — that would itself be a fabricated reason). Never the bare phrase "I don't have that information right now" on its own, and never a fabricated fact to fill the gap.
 4. Be practical and concise (1–4 sentences). Never judgemental about food choices.
 5. Only reference specific entities (meals, weeks, products) if they appear in the context data with real IDs — and DO include every such entity in entityRefs.
 6. SAFETY OVERRIDES EVERYTHING. Never recommend, suggest, endorse or describe as suitable any food, meal, recipe or ingredient that conflicts with the HOUSEHOLD DIETARY SAFETY block below. This applies to foods you know of but were not given in the context, and to substitutions you might propose. A restriction belongs to the whole household, not only to the person typing. If the honest answer is that you have nothing safe to suggest, say so — offering nothing is always correct, and offering something unsafe never is. Never claim a specific food IS safe for them; THA verifies that, not you.
@@ -1483,6 +1484,32 @@ export function buildClarificationContext(
  * and a storage failure while loading a meal is treated as unverifiable, not as
  * safe.
  */
+/**
+ * A short, human-readable phrase naming WHY a meal breached the household's
+ * safety gate — never a raw machine slug (`diet:vegan`, `household-hard-restriction`)
+ * and never a restriction id. Reads the SAME verdict `isMealSafeForHousehold`
+ * already computed; this names nothing new and invents no reasoning of its own.
+ * Empty string when no human-readable name can be resolved (an unavailable
+ * context, or a custom restriction string with no canonical definition) — the
+ * caller then falls back to the pre-existing generic phrasing rather than
+ * stating a conflict it cannot actually name.
+ */
+function describeSafetyConflict(verdict: SafetyVerdict, safetyCtx: HouseholdSafetyContext): string {
+  if (verdict.violatedRestrictions?.length) {
+    const names = verdict.violatedRestrictions
+      .map((id) => safetyCtx.activeRestrictions.find((r) => r.id === id)?.displayName)
+      .filter((n): n is string => !!n);
+    if (names.length > 0) {
+      return `it conflicts with your household's ${names.join(", ")} restriction${names.length > 1 ? "s" : ""}`;
+    }
+  }
+  if (verdict.reason?.startsWith("diet:")) {
+    const pattern = verdict.reason.slice("diet:".length);
+    if (pattern) return `it doesn't fit the ${pattern} diet your household follows`;
+  }
+  return "";
+}
+
 async function validateResponseSafety(
   text: string,
   entityRefs: EntityRef[],
@@ -1501,6 +1528,17 @@ async function validateResponseSafety(
   if (mealRefs.length === 0) return { text, entityRefs, withheld: 0 };
 
   const unsafeKeys = new Set<string>();
+  // 2026-11-11 (owner-reported) — the withheld message named neither the meal nor
+  // the conflict, so "do I have any vegetarian meals?" (a pure lookup, not a
+  // recommendation) and a repeated "show me it" both got the identical, empty
+  // "I found something, but I can't offer it" every time. The REF is still always
+  // dropped and the text still always replaced — that part of PROD3's design is
+  // unchanged and correct (see the file-level comment above). Only what the
+  // replacement SAYS changes: naming the household's own meal and the specific
+  // restriction/pattern it breaches is not an unsafe disclosure (it is the
+  // household's own recorded data), and it is the difference between a
+  // genuinely honest refusal and a dead end that repeats itself verbatim.
+  let firstConflict: { mealName: string; description: string } | null = null;
   for (const ref of mealRefs) {
     const mealId = typeof ref.id === "number" ? ref.id : Number(ref.id);
     if (!Number.isFinite(mealId)) continue;
@@ -1512,7 +1550,12 @@ async function validateResponseSafety(
         { name: meal.name, ingredients: meal.ingredients ?? [] },
         safetyCtx,
       );
-      if (!verdict.safe) unsafeKeys.add(`${ref.type}:${ref.id}`);
+      if (!verdict.safe) {
+        unsafeKeys.add(`${ref.type}:${ref.id}`);
+        if (!firstConflict) {
+          firstConflict = { mealName: meal.name, description: describeSafetyConflict(verdict, safetyCtx) };
+        }
+      }
     } catch {
       unsafeKeys.add(`${ref.type}:${ref.id}`);
     }
@@ -1521,10 +1564,12 @@ async function validateResponseSafety(
   if (unsafeKeys.size === 0) return { text, entityRefs, withheld: 0 };
 
   const kept = entityRefs.filter((r) => !unsafeKeys.has(`${r.type}:${r.id}`));
+  const detail = firstConflict
+    ? ` "${firstConflict.mealName}" doesn't fit${firstConflict.description ? ` — ${firstConflict.description}` : " your household's dietary requirements"}.`
+    : " it doesn't fit your household's dietary requirements.";
   return {
     text:
-      "I found something, but I can't offer it — it doesn't fit your household's " +
-      "dietary requirements, so I've held it back rather than suggest it. " +
+      `I found something, but I can't offer it —${detail} I've held it back rather than suggest it. ` +
       "Ask me again and I'll look for something that does fit.",
     entityRefs: kept,
     withheld: unsafeKeys.size,

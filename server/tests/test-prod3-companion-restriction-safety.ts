@@ -298,6 +298,19 @@ section('§6  A meal ref is validated before it leaves the gateway');
     gatewaySrc.includes('isSafetyGateActive(safetyCtx)'),
     'validation short-circuits for households with nothing to gate against',
   );
+  // 2026-11-11 (owner-reported) — the withheld message named neither the meal nor
+  // the restriction it breached, so a pure "do I have a vegetarian meal?" lookup
+  // and a repeated "show me it" both got the identical, empty refusal every time.
+  // The ref is still always dropped and the text still always replaced (unchanged,
+  // and asserted above); only the REPLACEMENT text now names what it can.
+  assert(
+    gatewaySrc.includes('describeSafetyConflict('),
+    'the withheld message names the specific meal and conflict when one can be resolved',
+  );
+  assert(
+    gatewaySrc.includes('firstConflict.mealName'),
+    'the household’s own meal name reaches the withheld message (own data, not an unsafe disclosure)',
+  );
 }
 
 // ─── §7  Unrestricted households are unchanged ────────────────────────────────
