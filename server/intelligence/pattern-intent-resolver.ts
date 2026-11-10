@@ -1474,6 +1474,29 @@ const FOOD_INTELLIGENCE_MATCHERS: Matcher[] = [
     return foodOpportunityReport(0.87);
   },
 
+  // 2026-11-11 (owner-reported): "what nutrients are missing from a balanced diet
+  // this week?" had NO route at all — not even a wrong one. `opportunity-delivery`
+  // sits ABOVE this producer purely as a dedup layer with no resolver matcher of
+  // its own (INT42 "one delivery path" invariant, see the block comment above);
+  // the SAME underlying FI4 engine this file already routes uplift/healthier
+  // questions to also computes a diet-pattern-independent `nutrition-balance-gap`
+  // opportunity (opportunity-engine.ts `identifyNutritionBalanceOpportunities`) —
+  // it needed a route here, not a second delivery path through opportunity-delivery.
+  // Deliberately keyed on "nutrient(s)...missing" or "balance/balanced" paired with
+  // "diet"/"nutrition"/"week", so a bare "is this healthy?" (food-knowledge) or a
+  // bare "add more vegetables" (PL-028, the planner's own week scan) stays
+  // untouched — neither carries this specific pairing.
+  (u) => {
+    const nutrientsMissing = /\bnutrients?\b[^.?!]{0,20}\bmissing\b/i.test(u) || /\bmissing\b[^.?!]{0,20}\bnutrients?\b/i.test(u);
+    const nutritionBalanceGap =
+      /\bbalanced?\b[^.?!]{0,20}\b(?:diet|nutrition)\b/i.test(u) ||
+      /\b(?:diet|nutrition)\b[^.?!]{0,20}\bbalanced?\b/i.test(u) ||
+      /\bnutrition(?:al)?\s+(?:balance|gaps?)\b/i.test(u) ||
+      /\bnutrients?\s+gaps?\b/i.test(u);
+    if (!nutrientsMissing && !nutritionBalanceGap) return null;
+    return foodOpportunityReport(0.87);
+  },
+
   // COMP1: "compare cheddar and brie" / "compare butter with margarine"
   // Named-items form only. Demonstrative/pronoun captures ("these two products") are
   // rejected by cleanComparisonItem, leaving the analyser's PR-067 matcher to own that
