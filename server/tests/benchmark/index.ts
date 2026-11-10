@@ -29,7 +29,7 @@ export {
 export {
   routingPanel, coveragePanel, coverageByDomain, routingFailureReport,
   qualityPanel, hallucinationPanel, capabilityUtilisationPanel,
-  releaseReadiness, failedQuestionIds,
+  releaseReadiness, failedQuestionIds, compareHouseholds,
   PASS_THRESHOLD, INTENT_ACCURACY_FLOOR, CAPABILITY_REACH_FLOOR,
 } from "./aggregate.js";
 export { resolveJudge, disabledJudge, type JudgeClient } from "./judge.js";

@@ -9457,7 +9457,8 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       const { assertBenchmarkWorldAllowed, benchmarkHouseholdIds, resolveBenchmarkOwner, resetBenchmarkHousehold } =
         await import("./benchmark/index.js");
       assertBenchmarkWorldAllowed();
-      const { runBenchmark, makeCompanionTurnRunner, saveRun } = await import("./tests/benchmark/index.js");
+      const { runBenchmark, makeCompanionTurnRunner, saveRun, compareHouseholds } =
+        await import("./tests/benchmark/index.js");
 
       const mode = req.body?.mode === "full" ? "full" : "quick";
       const requested = req.body?.households;
@@ -9469,6 +9470,7 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         benchmarkHouseholdId: string; runId: string; headline: number;
         honestGapRate: number; gatesFired: number; verdict: string; questionsScored: number;
       }> = [];
+      const results: Awaited<ReturnType<typeof runBenchmark>>[] = [];
 
       for (const id of ids) {
         await resetBenchmarkHousehold(id);
@@ -9481,6 +9483,7 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
           mode, runTurn, worldMode: "benchmark-world", householdLabel: id, baseline: null,
         });
         saveRun(result);
+        results.push(result);
         runs.push({
           benchmarkHouseholdId: id,
           runId: result.runId,
@@ -9491,10 +9494,33 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
           questionsScored: result.headline.questionsScored,
         });
       }
-      res.json({ runs });
+      // BENCH-COMPARE — the SAME pure merge the standalone /compare route uses, built here
+      // for free from the results this action already produced (no second run, no extra I/O).
+      const comparison = results.length > 1 ? compareHouseholds(results) : null;
+      res.json({ runs, comparison });
     } catch (err: any) {
       console.error("[BenchmarkWorld] run-benchmark error:", err);
       res.status(500).json({ message: err?.message ?? "Benchmark run failed" });
+    }
+  });
+
+  // BENCH-COMPARE — merges already-saved run artifacts into one side-by-side view.
+  // Pure read: no household is reset and no benchmark is re-run.
+  app.get("/api/admin/benchmark-households/compare", assertAdmin, async (req, res) => {
+    try {
+      const { loadRun, compareHouseholds } = await import("./tests/benchmark/index.js");
+      const raw = req.query.runIds;
+      const runIds = (typeof raw === "string" ? raw.split(",") : Array.isArray(raw) ? raw.map(String) : [])
+        .map((id) => id.trim())
+        .filter(Boolean);
+      if (runIds.length === 0) {
+        return res.status(400).json({ message: "Provide runIds as a comma-separated query param." });
+      }
+      const results = runIds.map((id) => loadRun(id)).filter((r): r is NonNullable<typeof r> => r !== null);
+      res.json(compareHouseholds(results));
+    } catch (err: any) {
+      console.error("[BenchmarkWorld] compare error:", err);
+      res.status(500).json({ message: err?.message ?? "Failed to compare households" });
     }
   });
 

@@ -11,10 +11,12 @@
 import type {
   BenchmarkEnvironment, BenchmarkResult, BypassedQuestion, CapabilityUtilisationPanel,
   CapabilityUtilisationRow, CoverageByDomainRow, CoveragePanel, DimensionKey,
-  DimensionRollup, GateKey, GroupRollup, HallucinationPanel, InvokedCapabilitiesSource,
+  DimensionRollup, GateKey, GroupRollup, HallucinationPanel, HouseholdComparisonReport,
+  HouseholdComparisonRow, InvokedCapabilitiesSource,
   Movement, QualityPanel, QuestionResult, ReleaseReadiness, RoutingFailureRow, RoutingPanel,
 } from "./types.js";
 import { DIMENSION_NAMES, DIMENSION_WEIGHTS } from "./scorer.js";
+import { bundleVersionLabel } from "./bundle.js";
 import {
   isRegistryCapability, registryExecutableCapabilityIds,
   registryCapabilityDisplayName, registryUnboundCapabilityIds,
@@ -704,4 +706,54 @@ export function compare(
   const newlyPassing = Array.from(passNow).filter((id) => !passBase.has(id) && baseline.questions.some((q) => q.id === id)).sort();
 
   return { topImprovements, topRegressions, newlyFailing, newlyPassing };
+}
+
+/**
+ * BENCH-COMPARE — merge several already-saved, independent run artifacts (one per
+ * benchmark household, from the admin "run against multiple/all households" action)
+ * into one side-by-side comparison. Pure and I/O-free: the caller loads each
+ * `BenchmarkResult` from history (`loadRun()`); nothing here re-runs or re-scores
+ * anything. Rows are worst-first by headline score, so the household needing
+ * attention leads rather than requiring N separate dashboard visits to find it.
+ */
+export function compareHouseholds(results: readonly BenchmarkResult[]): HouseholdComparisonReport {
+  if (results.length === 0) {
+    return { rows: [], meanHeadlineScore: 0, worstHousehold: null, anyHardGateFired: false, bundleVersionMismatches: [] };
+  }
+
+  const labelCounts = new Map<string, number>();
+  for (const r of results) {
+    const label = bundleVersionLabel(r.bundle);
+    labelCounts.set(label, (labelCounts.get(label) ?? 0) + 1);
+  }
+  const majorityLabel = [...labelCounts.entries()].sort((a, b) => b[1] - a[1])[0][0];
+  const bundleVersionMismatches = results.filter((r) => bundleVersionLabel(r.bundle) !== majorityLabel).map((r) => r.runId);
+
+  const rows: HouseholdComparisonRow[] = results.map((r) => {
+    const gatesFired = Object.fromEntries(GATE_KEYS.map((g) => [g, r.safety[g]?.length ?? 0])) as Record<GateKey, number>;
+    return {
+      householdLabel: r.questions[0]?.household ?? "unknown",
+      runId: r.runId,
+      executedAt: r.subject.executedAt,
+      mode: r.mode,
+      headlineScore: r.headline.score,
+      honestGapRate: r.headline.honestGapRate,
+      questionsScored: r.headline.questionsScored,
+      verdict: r.releaseReadiness.verdict,
+      gatesFired,
+      hardGateFired: HARD_SAFETY_GATES.some((g) => gatesFired[g] > 0),
+      dietarySafetyMeasured: r.environment.dietarySafetyMeasured,
+    };
+  });
+  rows.sort((a, b) => a.headlineScore - b.headlineScore);
+
+  const meanHeadlineScore = round1(rows.reduce((s, r) => s + r.headlineScore, 0) / rows.length);
+
+  return {
+    rows,
+    meanHeadlineScore,
+    worstHousehold: rows[0]?.householdLabel ?? null,
+    anyHardGateFired: rows.some((r) => r.hardGateFired),
+    bundleVersionMismatches,
+  };
 }

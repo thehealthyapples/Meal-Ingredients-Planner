@@ -74,6 +74,22 @@ interface RunSummary {
   gatesFired: number; verdict: string; questionsScored: number;
 }
 
+type GateKey = "G1" | "G2" | "G3" | "G4" | "G5";
+const GATE_KEYS: GateKey[] = ["G1", "G2", "G3", "G4", "G5"];
+
+// BENCH-COMPARE — mirrors server HouseholdComparisonRow / HouseholdComparisonReport
+// (server/tests/benchmark/types.ts). Built from already-saved run artifacts; this page
+// never scores anything itself (see file header).
+interface ComparisonRow {
+  householdLabel: string; runId: string; executedAt: string; mode: string;
+  headlineScore: number; honestGapRate: number; questionsScored: number; verdict: string;
+  gatesFired: Record<GateKey, number>; hardGateFired: boolean; dietarySafetyMeasured: boolean;
+}
+interface HouseholdComparison {
+  rows: ComparisonRow[]; meanHeadlineScore: number; worstHousehold: string | null;
+  anyHardGateFired: boolean; bundleVersionMismatches: string[];
+}
+
 function fmtDate(val: string | null): string {
   if (!val) return "Never";
   return new Date(val).toLocaleString("en-GB", {
@@ -99,6 +115,7 @@ export default function AdminBenchmarkHouseholdsPage() {
   const [runMode, setRunMode] = useState<"quick" | "full">("quick");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [lastRuns, setLastRuns] = useState<RunSummary[] | null>(null);
+  const [comparison, setComparison] = useState<HouseholdComparison | null>(null);
   const [runOpen, setRunOpen] = useState(false);
 
   const { data, isPending, error } = useQuery<ListResponse>({
@@ -172,7 +189,7 @@ export default function AdminBenchmarkHouseholdsPage() {
   // progress → completion summary → next step. Reversible: it writes only into the deterministic
   // benchmark world (resets the targeted households and records run artefacts), never canonical
   // knowledge any real household sees.
-  const runSpec: OperationSpec<{ runs: RunSummary[] }> = {
+  const runSpec: OperationSpec<{ runs: RunSummary[]; comparison: HouseholdComparison | null }> = {
     id: "run-benchmark",
     title: "Run Intelligence Benchmark",
     purpose: `Run the Companion benchmark (${runMode === "full" ? "Full · 100 questions" : "Quick · 10 questions"}) against ${runHouseholds === "all" ? `all ${households.length} households` : `${runTargetCount} selected household${runTargetCount === 1 ? "" : "s"}`}.`,
@@ -197,25 +214,25 @@ export default function AdminBenchmarkHouseholdsPage() {
     expectedDuration: runMode === "full" ? "several minutes for a full run" : "a minute or two",
     run: () =>
       apiRequest("POST", "/api/admin/benchmark-households/run-benchmark", { mode: runMode, households: runHouseholds })
-        .then((r) => r.json() as Promise<{ runs: RunSummary[] }>),
+        .then((r) => r.json() as Promise<{ runs: RunSummary[]; comparison: HouseholdComparison | null }>),
     summarise: (res) => {
       const n = res.runs.length;
       const avg = n > 0 ? Math.round(res.runs.reduce((s, r) => s + r.headline, 0) / n) : 0;
       const ready = res.runs.filter((r) => r.verdict.toLowerCase().includes("ready") || r.verdict.toLowerCase().includes("pass")).length;
       return {
-        tone: n > 0 ? "good" : "warning",
+        tone: n > 0 ? (res.comparison?.anyHardGateFired ? "warning" : "good") : "warning",
         headline: n > 0 ? `${n} household run${n === 1 ? "" : "s"} recorded.` : "No households were run.",
         lines: n > 0
           ? [
               `Average headline score ${avg}`,
               `${ready} of ${n} verdict${n === 1 ? "" : "s"} release-ready`,
-              "Full per-household breakdown is in the run history below.",
+              res.comparison ? `Worst household: ${res.comparison.worstHousehold} — see the comparison below.` : "Full breakdown is in the run history below.",
             ]
           : ["Nothing was recorded — check the households were seeded and try again."],
       };
     },
     nextStep: () => ({ label: "View Companion Intelligence", href: "/admin/companion-intelligence" }),
-    onComplete: (res) => { setLastRuns(res.runs); invalidate(); },
+    onComplete: (res) => { setLastRuns(res.runs); setComparison(res.comparison); invalidate(); },
   };
 
   return (
@@ -355,6 +372,64 @@ export default function AdminBenchmarkHouseholdsPage() {
 
           {/* OPS1 — the canonical Operation experience for Run Benchmark. */}
           <OperationDialog spec={runSpec} open={runOpen} onOpenChange={setRunOpen} />
+
+          {/* BENCH-COMPARE — side-by-side comparison, worst household first. Built from the
+              same artifacts the run just saved; no re-run, no second source of truth. Only
+              rendered when more than one household ran (the server omits it otherwise). */}
+          {comparison && (
+            <div className="overflow-x-auto space-y-2">
+              <p className="text-sm">
+                Mean headline <span className="font-medium">{comparison.meanHeadlineScore}</span> across {comparison.rows.length} households.{" "}
+                {comparison.anyHardGateFired
+                  ? <span className="text-red-600 font-medium">A hard gate fired — see below.</span>
+                  : <span className="text-muted-foreground">No hard gate fired.</span>}
+              </p>
+              {comparison.bundleVersionMismatches.length > 0 && (
+                <p className="text-xs text-amber-600">
+                  Bundle version differs for run(s) {comparison.bundleVersionMismatches.join(", ")} — comparing across
+                  bundle versions compares two different question sets; treat with caution.
+                </p>
+              )}
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Household</TableHead>
+                    <TableHead>Score</TableHead>
+                    <TableHead>Honest-gap rate</TableHead>
+                    {GATE_KEYS.map((g) => <TableHead key={g} className="text-center">{g}</TableHead>)}
+                    <TableHead>Verdict</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {comparison.rows.map((r) => (
+                    <TableRow key={r.runId} className={r.hardGateFired ? "bg-red-50 dark:bg-red-950/30" : undefined}>
+                      <TableCell className="font-mono">{r.householdLabel}</TableCell>
+                      <TableCell className="font-medium">{r.headlineScore.toFixed(1)}</TableCell>
+                      <TableCell>{Math.round(r.honestGapRate * 100)}%</TableCell>
+                      {GATE_KEYS.map((g) => {
+                        // BENCH-G2 — a 0 for G2 means something different when it was never
+                        // measured this run (single-world/certification/unrecognised household).
+                        const notMeasured = g === "G2" && !r.dietarySafetyMeasured;
+                        const count = r.gatesFired[g];
+                        return (
+                          <TableCell key={g} className="text-center">
+                            {notMeasured
+                              ? <span className="text-muted-foreground text-xs" title="Not measured this run">—</span>
+                              : count === 0
+                                ? <Badge className="bg-green-600 hover:bg-green-600">0</Badge>
+                                : <Badge variant="destructive">{count}</Badge>}
+                          </TableCell>
+                        );
+                      })}
+                      <TableCell>
+                        <Badge variant={r.verdict === "PASS" ? "default" : r.verdict === "PARTIAL" ? "secondary" : "destructive"}>{r.verdict}</Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
 
           {lastRuns && (
             <div className="overflow-x-auto">

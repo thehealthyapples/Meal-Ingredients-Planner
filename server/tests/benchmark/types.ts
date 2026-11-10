@@ -562,6 +562,53 @@ export interface BenchmarkResult {
   readonly durationMs: number;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// BENCH-COMPARE — Household Comparison Report
+//
+// "Multi-household mode" already runs a full, independent benchmark PER targeted
+// household (admin run-benchmark route) and saves each as its own complete
+// artifact — that fan-out is not a gap. What was missing was a way to see the N
+// saved artifacts SIDE BY SIDE without opening each one individually. This is a
+// pure, post-hoc merge of already-saved result.json files (`compareHouseholds()`
+// in aggregate.ts) — no new scoring logic, no re-run.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** One household's row in a comparison across several already-saved runs. */
+export interface HouseholdComparisonRow {
+  /** Benchmark Household id ("BW04"), or "live" for a single-world run. */
+  readonly householdLabel: string;
+  readonly runId: string;
+  readonly executedAt: string;
+  readonly mode: BenchmarkMode;
+  readonly headlineScore: number;
+  readonly honestGapRate: number;
+  readonly questionsScored: number;
+  readonly verdict: ReleaseReadiness["verdict"];
+  /** Per-gate count, G1–G5 — real per-household G2 counts since BENCH-G2. */
+  readonly gatesFired: Record<GateKey, number>;
+  /** True when any of G1–G4 (Tier-A) fired for this household. */
+  readonly hardGateFired: boolean;
+  /** BENCH-G2 — whether G2 could even be measured for this household's run. A
+   *  zero in `gatesFired.G2` means something different when this is false: "not
+   *  measured", not "clear" — the comparison must never blur the two. */
+  readonly dietarySafetyMeasured: boolean;
+}
+
+/** A full cross-household comparison, built from already-saved run artifacts. */
+export interface HouseholdComparisonReport {
+  /** Worst-first by headline score — the household needing attention leads. */
+  readonly rows: HouseholdComparisonRow[];
+  readonly meanHeadlineScore: number;
+  readonly worstHousehold: string | null;
+  readonly anyHardGateFired: boolean;
+  /**
+   * runIds whose bundle version (questions component) differs from the majority
+   * in this comparison — comparing across bundle versions silently compares two
+   * different question sets, exactly the trap README §4 forbids for baselines.
+   */
+  readonly bundleVersionMismatches: string[];
+}
+
 /** Lightweight history index row (AUTOMATION §4). */
 export interface HistoryIndexEntry {
   readonly runId: string;
