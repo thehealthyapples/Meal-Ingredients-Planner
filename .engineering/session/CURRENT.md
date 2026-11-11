@@ -12,7 +12,14 @@ This is the first file to read when recovering an interrupted session.
 Find the active session, open its run file, and continue from **Next action**.
 
 | Session ID | Stage | Rollback ID | Next action | Run file |
+| `DBDEV_REPOSITORY_DATABASE_SOURCE_20261111` | DB source fix pushed; launcher and sentinel checks pass; full boot owner-reported | `rollback/DBDEV-repository-env-source-20261111` → `82f23226` | Confirm repo `.env` target and pending migration state before restarting port 5000; then verify Companion notices. | [runs/DBDEV_REPOSITORY_DATABASE_SOURCE_20261111.md](./runs/DBDEV_REPOSITORY_DATABASE_SOURCE_20261111.md) |
 |---|---|---|---|---|
+| `COMPANION_WEEKLY_FOOD_QUANTITIES_20261111` | Owner Retest | `rollback/COMPANION-weekly-food-quantities-20261111` → `82f23226` | Implement exact-unit planned ingredient totals; keep unsupported nutrient shortfalls as honest gaps. | [runs/COMPANION_WEEKLY_FOOD_QUANTITIES_20261111.md](./runs/COMPANION_WEEKLY_FOOD_QUANTITIES_20261111.md) |
+| `COMPANION_INTENT_FOCUSED_CLARIFICATION_20261111` | Waiting for User | `rollback/COMPANION-clarify-intent-20261111` → `82f23226` | Owner retest: Companion should ask which meaning was intended for “how much chicken is needed this week.” | [runs/COMPANION_INTENT_FOCUSED_CLARIFICATION_20261111.md](./runs/COMPANION_INTENT_FOCUSED_CLARIFICATION_20261111.md) |
+| `COMPANION_CIRCULAR_CLARIFICATION_20261111` | Waiting for User | `rollback/COMPANION-circular-clarification-20261111` → `82f23226` | Owner to choose whether “how much chicken is needed” means stored shopping-list quantity or an ingredient total derived from this week's planned recipes. | [runs/COMPANION_CIRCULAR_CLARIFICATION_20261111.md](./runs/COMPANION_CIRCULAR_CLARIFICATION_20261111.md) |
+| `INT_HYBRID_VERIFIED_QUERY_EXTRACTION_20261111` | Waiting for User | `rollback/INT-hybrid-verified-query-20261111` → `82f23226` | Owner retest from the Planner Companion panel; gateway integration suite requires permitted Postgres access. | [runs/INT_HYBRID_VERIFIED_QUERY_EXTRACTION_20261111.md](./runs/INT_HYBRID_VERIFIED_QUERY_EXTRACTION_20261111.md) |
+| `INT_HYBRID_WEAK_INTENT_FALLBACK_20261110` | Waiting for User | `rollback/INT-hybrid-weak-fallback-20261110` → `82f23226` | Review weak-only fallback change; gateway integration suite requires permitted Postgres access. | [runs/INT_HYBRID_WEAK_INTENT_FALLBACK_20261110.md](./runs/INT_HYBRID_WEAK_INTENT_FALLBACK_20261110.md) |
+| `INT_NUTRITION_DISCOVERY_MEAL_IMAGES_20261110` | Waiting for User | `rollback/INT-companion-meal-images-20261110` → `82f23226` | Confirm meal images in the dev browser; handle gluten reminder suppression only as its own decision. | [runs/INT_NUTRITION_DISCOVERY_MEAL_IMAGES_20261110.md](./runs/INT_NUTRITION_DISCOVERY_MEAL_IMAGES_20261110.md) |
 | `KNOW3_UNCITED_CLAIM_FILTER_20261105` | Implementation delivered — awaiting server restart authorization | `rollback/KNOW3-uncited-claim-filter-20261105` → `3467abad` | Source filter and 50-row global paging implemented; build passes. 3,299 uncited claim rows = 1,901 composition, 1,366 direct food-benefit and 32 nutrient-benefit; current process ignores new query parameters. Restart runs migrations and pantry-default sync; obtain owner approval before restart, then verify filter/paging in browser. | [runs/KNOW3_UNCITED_CLAIM_FILTER_20261105.md](./runs/KNOW3_UNCITED_CLAIM_FILTER_20261105.md) |
 | `KNOW3_SOURCE_ATTACHMENT_20261105` | Implemented — awaiting backend restart | `rollback/KNOW3-uncited-claim-filter-20261105` → `3467abad` | Per-claim attach/remove and audit implemented; 
 pm run build passes. Backend PID 15256 on port 5000 must be restarted by owner in their Windows session; then manually verify source attach/history/removal. Full 3,299-claim evidence review remains unfinished. | [runs/KNOW3_SOURCE_ATTACHMENT_20261105.md](./runs/KNOW3_SOURCE_ATTACHMENT_20261105.md) |
@@ -203,7 +210,8 @@ pm run build passes. Backend PID 15256 on port 5000 must be restarted by owner i
 | `LARDER_CATEGORY_FIRST_Living_Larder_Evolution` | Planning | `rollback/larder-category-first-20260724` | Fill in the first concrete step | [runs/LARDER_CATEGORY_FIRST_Living_Larder_Evolution.md](./runs/LARDER_CATEGORY_FIRST_Living_Larder_Evolution.md) |
 | `PLNMOB1_Planner_Mobile_Image_20261026` | Waiting for User | `rollback/planner-mobile-image-adoption-20261026` | Review desktop image and overlay fit in the running app; visual acceptance remains outstanding | [runs/PLNMOB1_Planner_Mobile_Image_20261026.md](./runs/PLNMOB1_Planner_Mobile_Image_20261026.md) |
 | `NUTRUI1_Nutrition_Presentation_20261027` | Implementation | `rollback/nutrition-implementation-plan-20261027` | Run the client typecheck, then review build and responsive presentation | [runs/NUTRUI1_Nutrition_Presentation_20261027.md](./runs/NUTRUI1_Nutrition_Presentation_20261027.md) |
-| `ANLCMP1_Analyser_Responsive_Compare_20261028` | Waiting for User | `rollback/ux-analyser-responsive-compare-20261028` | Refresh full Analyser page presentation across mobile, laptop and desktop; preserve existing workflows | [runs/ANLCMP1_Analyser_Responsive_Compare_20261028.md](./runs/ANLCMP1_Analyser_Responsive_Compare_20261028.md) |
+| `ANLCMP1_Analyser_Responsive_Compare_20261028` | Waiting for User | `rollback/ux-analyser-responsive-compare-20261028` | Refresh full Analyser page presentation across mobile, laptop and desktop; preserve existing workflows | [runs/ANLCMP1_Analyser_Responsive_Compare_20261028.md](./runs/ANLCMP1_Analyser_Responsive_Compare_20261028.md) |
+
 | `KQ1_Queue_Recommendations_20261104` | Implementation | `rollback/knowledge-queue-recommendations-20261104` → `3467abad4eca8d82ffc52756fee13874e389597f` | Apply the 24 queue notes and supported suggestions, then verify the local queue | [runs/KQ1_Queue_Recommendations_20261104.md](./runs/KQ1_Queue_Recommendations_20261104.md) |
 | `KNOW3_BENEFIT_CITATIONS_20261106` | Citation batches applied — more sourcing in progress | `rollback/KNOW3-benefit-citations-20261106` → 2df56257 | 111 source refs attached; 66 cited pending, 2,340 awaiting a source. Continue exact official-source matches; no approvals by Codex. | [runs/KNOW3_BENEFIT_CITATIONS_20261106.md](./runs/KNOW3_BENEFIT_CITATIONS_20261106.md) |
 
@@ -217,5 +225,10 @@ line to [INDEX.md](./INDEX.md) — `.engineering/scripts/session-complete.sh` do
 both. If no active sessions remain, set the top marker to `ESR:IDLE`.
 
 _Last automatic heartbeat (Stop hook): 2026-07-25T20:02:56Z UTC_
+
+
+
+
+| `COMPANION_DIET_CONFLICT_NOTICES_20261111` | Owner Retest | `rollback/COMPANION-CONCISE-DIET-CONFLICT-NOTICES-20261111` → `82f23226` | Owner retest of grouped warnings, acknowledgement and 24-hour snooze in local Companion | [runs/COMPANION_DIET_CONFLICT_NOTICES_20261111.md](./runs/COMPANION_DIET_CONFLICT_NOTICES_20261111.md) |
 
 
