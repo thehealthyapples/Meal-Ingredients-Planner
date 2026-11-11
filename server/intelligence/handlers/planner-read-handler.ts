@@ -35,6 +35,7 @@ import type {
 import { toInt, requireUserId, gap, denied, readOnlyVerbGuard } from "./_read-kit.js";
 import type { PlannerWeek } from "@shared/schema";
 import { parseCivilDate, addCivilDays, formatCivilDate } from "@shared/time/household-time";
+import { analyzePlannerIngredient, type PlannerIngredientAnalysis } from "./planner-ingredient-analysis.js";
 
 // ---------------------------------------------------------------------------
 // Result shapes (read projections — owned data, surfaced honestly)
@@ -80,6 +81,8 @@ export interface PlannerWeekReadResult {
    */
   readonly weekStartDate: string | null;
   readonly days: readonly PlannerDayView[];
+  /** Present only for an utterance-scoped ingredient quantity request. */
+  readonly ingredientAnalysis?: PlannerIngredientAnalysis;
 }
 
 export interface PlannerDayReadResult {
@@ -257,6 +260,9 @@ async function readWeek(
       meals: await mealViewsForDay(d.id, port),
     })),
   );
+  const ingredientQuery = typeof params.ingredientQuery === "string"
+    ? params.ingredientQuery.trim()
+    : "";
   return {
     scope: "week",
     weekId: week.id,
@@ -264,6 +270,9 @@ async function readWeek(
     weekName: week.weekName,
     weekStartDate: week.weekStartDate ?? null,
     days: dayViews,
+    ...(ingredientQuery
+      ? { ingredientAnalysis: analyzePlannerIngredient(dayViews, ingredientQuery) }
+      : {}),
   };
 }
 

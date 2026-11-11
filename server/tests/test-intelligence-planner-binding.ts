@@ -28,6 +28,7 @@ import {
   type PlannerMealRef,
 } from "../intelligence/index.js";
 import type { PlannerWeek, PlannerDay, PlannerEntry } from "../../shared/schema.js";
+import { analyzePlannerIngredient } from "../intelligence/handlers/planner-ingredient-analysis.js";
 
 let passed = 0;
 let failed = 0;
@@ -233,6 +234,34 @@ async function main(): Promise<void> {
   assert(wr?.days?.length === 2, "week has its two days", String(wr?.days?.length));
   assert(wr?.days?.[0]?.meals?.[0]?.mealName === "Porridge", "meal name resolved via the owner");
   assert(calls.some((c) => c.startsWith("getPlannerWeek(")) && calls.some((c) => c.startsWith("getMeal(")), "delegated to the planner/meal owner (no logic in the platform)");
+
+  const ingredientRead = await platform.handle({
+    verb: "read", capabilityId: "planner",
+    parameters: { scope: "week", weekId: 10, ingredientQuery: "chickpeas" },
+  }, user1);
+  const ingredientAnalysis = (ingredientRead.result as any)?.ingredientAnalysis;
+  assert(ingredientRead.status === "ok" && ingredientAnalysis?.status === "partial",
+    "weekly ingredient analysis reports partial when a planned recipe row is unreadable");
+  assert(ingredientAnalysis?.totals?.some((total: any) => total.formatted === "400 g"),
+    "weekly ingredient analysis sums the readable chickpea recipe line");
+
+  const eggAnalysis = analyzePlannerIngredient([
+    { dayOfWeek: 0, meals: [{ entryId: 1, mealName: "Omelette", ingredients: ["4 eggs"] }] },
+    { dayOfWeek: 1, meals: [{ entryId: 2, mealName: "Burgers", ingredients: ["2 eggs"] }] },
+  ], "eggs");
+  assert(eggAnalysis.totals.some((total) => total.formatted === "6 each"), "egg quantities sum across planned recipes");
+  assert(eggAnalysis.byDay.length === 2, "ingredient analysis retains per-day quantities");
+
+  const chickenAnalysis = analyzePlannerIngredient([
+    { dayOfWeek: 0, meals: [{ entryId: 3, mealName: "Curry", ingredients: ["500g chicken"] }] },
+    { dayOfWeek: 1, meals: [{ entryId: 4, mealName: "Roast", ingredients: ["1 kg chicken"] }] },
+  ], "chicken");
+  assert(chickenAnalysis.totals.some((total) => total.formatted === "1500 g"), "compatible chicken mass amounts convert to grams before summing");
+
+  const unavailable = analyzePlannerIngredient([
+    { dayOfWeek: 0, meals: [{ entryId: 5, mealName: null, ingredients: [] }] },
+  ], "chicken");
+  assert(unavailable.status === "unavailable", "unreadable recipes do not become a false no-match claim");
 
   // Read a week by weekNumber (delegates via household-scoped getPlannerWeeks).
   const byNumber = await platform.handle({ verb: "read", capabilityId: "planner", parameters: { scope: "week", weekNumber: 2 } }, user1);

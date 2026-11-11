@@ -2742,6 +2742,31 @@ const PREPARATION_MATCHERS: Matcher[] = [
 // All specific matchers in priority order
 // ---------------------------------------------------------------------------
 
+// A request for an ingredient amount is an analysis of recipe lines in one
+// planner week, not a meal-name search. The displayed week is the only trusted
+// week pointer; without it, planner:read reports its normal honest gap.
+const PLANNER_INGREDIENT_QUANTITY_MATCHERS: Matcher[] = [
+  (u, _l, hints) => {
+    if (!/\bthis\s+week\b/i.test(u)) return null;
+    const match = u.match(
+      /\bhow\s+(?:much|many)\s+(.+?)\s+(?:(?:is|are)\s+)?(?:needed|required|do\s+(?:i|we)\s+need|will\s+(?:i|we)\s+need)\b/i,
+    );
+    if (!match?.[1]) return null;
+    const ingredientQuery = cleanFoodTerm(match[1]);
+    if (!ingredientQuery) return null;
+    return {
+      capability: "planner",
+      verb: "read",
+      parameters: {
+        scope: "week",
+        ...(hints.activePlannerWeekId != null ? { weekId: hints.activePlannerWeekId } : {}),
+        ingredientQuery,
+      },
+      confidence: 0.97,
+    };
+  },
+];
+
 const ALL_SPECIFIC_MATCHERS: Matcher[] = [
   // PHASE5A — Product Knowledge FIRST. Every matcher requires an explicit product
   // marker ("you", "this app", "page", "feature", "setting"), which no food or
@@ -2762,6 +2787,8 @@ const ALL_SPECIFIC_MATCHERS: Matcher[] = [
   ...NUTRITION_CONCEPT_MATCHERS,           // BENCH3: food-category / concept search ("healthy fats")
   // Nutrition discovery — macro-filtered meal search (INT27)
   ...NUTRITION_DISCOVERY_MATCHERS,
+  // Planned ingredient amounts are calculated from the selected week's recipe lines.
+  ...PLANNER_INGREDIENT_QUANTITY_MATCHERS,
   // Planner discovery — search for meals within the planner (INT28)
   ...PLANNER_DISCOVERY_MATCHERS,
   // Household discovery — search members, dietary preferences, allergens (INT29)

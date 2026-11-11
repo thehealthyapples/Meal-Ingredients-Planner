@@ -442,7 +442,7 @@ export const CONTEXT_VIEW_SPECS: Readonly<Record<string, ContextViewSpec>> = {
     // simply omitted there (`getPath` returns undefined, nothing is pinned). Same
     // shape of gap as the chicken/calories fixes above, for the week itself rather
     // than a field within it.
-    pinned: ["scope", "weekId", "weekNumber", "weekName", "weekStartDate"],
+    pinned: ["scope", "weekId", "weekNumber", "weekName", "weekStartDate", "ingredientAnalysis"],
     collections: [
       // No `groupBy` on either collection: an empty planner day is not evidence, and
       // a balance dimension that seats rows carrying none spends the core on nothing.

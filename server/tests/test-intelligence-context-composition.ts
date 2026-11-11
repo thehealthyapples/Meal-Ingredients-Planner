@@ -813,6 +813,16 @@ async function main(): Promise<void> {
         "the week's own name is pinned — never dropped by budget or ranking");
       assert(view.pinned.some(f => f.path === "weekId" && f.value === 6), "weekId is pinned");
       assert(view.pinned.some(f => f.path === "weekNumber" && f.value === 6), "weekNumber is pinned");
+
+      const ingredientWeek = { ...week, ingredientAnalysis: {
+        query: "eggs", status: "complete", basis: "recipe-amounts-as-written",
+        matchingMealCount: 1, matchingLineCount: 1, unreadableMealCount: 0,
+        unquantifiedLineCount: 0, totals: [{ quantity: 6, unit: "egg", formatted: "6 egg" }],
+        byDay: [{ dayOfWeek: 1, totals: [{ quantity: 6, unit: "egg", formatted: "6 egg" }] }],
+      } };
+      const ingredientView = deriveContextView("planner", "read", ingredientWeek);
+      assert(ingredientView.pinned.some(f => f.path === "ingredientAnalysis"),
+        "the planner's utterance-scoped ingredient totals are pinned into model context");
       assert(body.weekName === "Week 6", "…and reaches the rendered context the model actually reads");
 
       // The allowlist is what the spec does say, and it holds.

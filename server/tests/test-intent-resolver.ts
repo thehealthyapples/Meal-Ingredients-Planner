@@ -682,6 +682,16 @@ async function main(): Promise<void> {
     }
   }
 
+  section("Weekly ingredient quantity routing");
+  const chicken = await resolve("how much chicken is needed this week", "planner", { activePlannerWeekId: 13 });
+  const chickenRead = firstWith(chicken, "planner");
+  assert(chickenRead?.verb === "read", "weekly chicken quantity routes to planner read");
+  assert(chickenRead?.parameters.ingredientQuery === "chicken", "weekly chicken quantity carries the ingredient query");
+  assert(chickenRead?.parameters.weekId === 13, "weekly quantity uses the active planner week");
+  assert(!hasCapability(chicken, "planner-discovery"), "weekly quantity is not sent to meal-name discovery");
+  const eggs = await resolve("how many eggs are needed this week", "planner", { activePlannerWeekId: 13 });
+  assert(firstWith(eggs, "planner")?.parameters.ingredientQuery === "eggs", "weekly eggs quantity carries its ingredient query");
+
   // ── Summary ───────────────────────────────────────────────────────────────
   console.log("\n══════════════════════════════════════════════════════");
   console.log("INT24 — Canonical Intent Resolver (PatternIntentResolver) tests");
