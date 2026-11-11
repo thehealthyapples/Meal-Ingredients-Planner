@@ -32,6 +32,8 @@ export interface OpportunityDeliveryReadPort {
     opportunityId: string,
     status: Exclude<OpportunityDeliveryStatus, "delivered">,
   ): Promise<OpportunityResolution | null>;
+  /** Apply a temporary Companion-only snooze without suppressing other opportunity surfaces. */
+  snoozeOpportunityForCompanion?(userId: number, opportunityId: string, hours: number): Promise<OpportunityResolution | null>;
 }
 
 /**
@@ -48,5 +50,7 @@ export async function createEngineOpportunityDeliveryReadPort(): Promise<Opportu
     collectOpportunities: (request) => framework.collectOpportunities(request, { store: opportunityDeliveryStore }),
     resolveOpportunity: (userId, opportunityId, status) =>
       framework.resolveOpportunity(userId, opportunityId, status, opportunityDeliveryStore),
+    snoozeOpportunityForCompanion: (userId, opportunityId, hours) =>
+      framework.snoozeOpportunityForCompanion(userId, opportunityId, hours, opportunityDeliveryStore),
   };
 }

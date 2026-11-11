@@ -329,6 +329,8 @@ export interface FoodOpportunity {
   readonly suggestedAction: string;
   /** PHASE5E — the canonical entity this opportunity is about. See {@link FoodOpportunitySubject}. */
   readonly subject: FoodOpportunitySubject;
+  /** Source-owned restriction labels for a shopping restriction conflict. */
+  readonly restrictionNames?: readonly string[];
 }
 
 export interface FoodOpportunityTrust {
@@ -494,6 +496,7 @@ export function identifyShoppingRestrictionOpportunities(
       // sees at a glance, not one tap away from it.
       suggestedAction: `Review "${item.productName}" on your shopping list — it may conflict with your ${restrictionNames} restriction.`,
       subject: { entity: "shopping-item", id: item.id, label: item.productName },
+      restrictionNames: matches.map((match) => match.restriction.displayName),
     });
   }
   return opportunities;

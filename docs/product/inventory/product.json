@@ -1749,7 +1749,7 @@
       "section": "hidden-experiences",
       "status": "internal",
       "visibility": "admin",
-      "purpose": "The engine that produces the Companion's proactive notices from facts existing owners already computed, capped by the Silence Rules and voiced per personality.",
+      "purpose": "The engine that produces the Companion's proactive notices from facts existing owners already computed, groups shopping restriction conflicts, applies acknowledgement and a 24-hour Companion-only snooze, caps notices by the Silence Rules and voices them per personality.",
       "owner": "Colin Clapson",
       "sources": [
         "server/intelligence/conversation/notice-engine.ts",
@@ -1763,9 +1763,9 @@
         "cap-companion",
         "page-home"
       ],
-      "evidence": "Corrected 2026-07-20 (PRESENCE2). Version 1 described the engine as unreachable via a client/server endpoint mismatch; PHASE5E fixed it and this entry was never corrected. Nine live categories, not seven. Home's Reminders section was removed by UX3 and the read moved to the Companion.",
-      "last_verified": "2026-07-20",
-      "version": 2
+      "evidence": "Corrected 2026-07-20 (PRESENCE2). Version 1 described the engine as unreachable via a client/server endpoint mismatch; PHASE5E fixed it and this entry was never corrected. Nine live categories, not seven. Home's Reminders section was removed by UX3 and the read moved to the Companion. Updated 2026-11-11 for grouped shopping restriction notices and Opportunity Delivery-owned acknowledgement/snooze lifecycle.",
+      "last_verified": "2026-11-11",
+      "version": 3
     },
     {
       "id": "hid-devworld-prod",

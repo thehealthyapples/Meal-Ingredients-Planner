@@ -99,6 +99,7 @@ import type {
   HouseholdObservationInput,
   HouseholdObservationResult,
 } from "../evidence-learning/household-observation.js";
+import { COMPANION_NOTICE_SNOOZE_HOURS } from "./policy.js";
 
 // ---------------------------------------------------------------------------
 // Limits — DEC1: the delivery budget pair lives once, in
@@ -152,6 +153,11 @@ export interface DeliverableOpportunity {
   readonly surface: ConversationSurface;
   /** PHASE5E — verbatim from the producer. Absent when the producer named none. */
   readonly subject?: OpportunitySubject;
+  /** Source-owned labels used by the Companion to group matching shopping warnings. */
+  readonly restrictionNames?: readonly string[];
+  /** Delivery lifecycle projection; used by the Companion notice owner only. */
+  readonly acknowledged?: boolean;
+  readonly companionSnoozedUntil?: Date | null;
 }
 
 export interface OpportunityDeliveryTrust {
@@ -202,6 +208,7 @@ export interface OpportunityResolution {
   readonly opportunityId: string;
   readonly status: OpportunityDeliveryStatus;
   readonly resolvedAt: string | null;
+  readonly companionSnoozedUntil?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -217,6 +224,7 @@ interface RawOpportunity {
   readonly evidence: readonly OpportunityEvidence[];
   readonly suggestedAction: string;
   readonly subject?: OpportunitySubject;
+  readonly restrictionNames?: readonly string[];
 }
 
 /**
@@ -272,6 +280,9 @@ function adaptFoodIntelligence(result: unknown): readonly RawOpportunity[] {
       evidence,
       suggestedAction: rec.suggestedAction,
       subject: adaptSubject(rec.subject),
+      restrictionNames: Array.isArray(rec.restrictionNames)
+        ? rec.restrictionNames.filter((name): name is string => typeof name === "string")
+        : undefined,
     });
   }
   return raw;
@@ -490,6 +501,7 @@ export function seenOpportunityIds(
 export interface ExistingDeliveryRecord {
   /** A plain `string` (not the narrow status union) so a raw DB row can be passed directly — see isTerminalDeliveryStatus. */
   readonly status: string;
+  readonly companionSnoozedUntil?: Date | null;
 }
 
 export interface DeliveryPartition {
@@ -515,7 +527,15 @@ export function partitionForDelivery(
   for (const candidate of candidates) {
     const existing = existingByOpportunityId.get(candidate.id);
     if (existing && isTerminalDeliveryStatus(existing.status)) continue;
-    deliverable.push(candidate);
+    deliverable.push(
+      existing && candidate.type === "shopping-restriction-conflict"
+        ? {
+            ...candidate,
+            acknowledged: existing.status === ACKNOWLEDGED_STATUS,
+            companionSnoozedUntil: existing.companionSnoozedUntil ?? null,
+          }
+        : candidate,
+    );
     if (!existing) toInsert.push(candidate);
   }
   return { deliverable, toInsert };
@@ -845,6 +865,7 @@ async function collectFromProducers(
           suggestedAction: raw.suggestedAction,
           surface: selectSurface(raw.domain),
           subject: raw.subject,
+          restrictionNames: raw.restrictionNames,
         });
         offered += 1;
       }
@@ -1051,5 +1072,36 @@ export async function resolveOpportunity(
     opportunityId,
     status: updated.status as OpportunityDeliveryStatus,
     resolvedAt: updated.resolvedAt ? new Date(updated.resolvedAt).toISOString() : null,
+    companionSnoozedUntil: updated.companionSnoozedUntil ? new Date(updated.companionSnoozedUntil).toISOString() : null,
+  };
+}
+
+/** Store a Companion-only snooze deadline without changing the opportunity's lifecycle status. */
+export async function snoozeOpportunityForCompanion(
+  userId: number,
+  opportunityId: string,
+  hours: number,
+  store: IOpportunityDeliveryStore,
+): Promise<OpportunityResolution | null> {
+  if (!Number.isInteger(hours) || hours !== COMPANION_NOTICE_SNOOZE_HOURS) {
+    throw new RangeError(`Companion snooze must be exactly ${COMPANION_NOTICE_SNOOZE_HOURS} hours.`);
+  }
+  const existing = await store.getRecord(userId, opportunityId);
+  if (!existing || existing.type !== "shopping-restriction-conflict") return null;
+  if (isTerminalDeliveryStatus(existing.status as OpportunityDeliveryStatus)) {
+    return {
+      opportunityId,
+      status: existing.status as OpportunityDeliveryStatus,
+      resolvedAt: existing.resolvedAt ? new Date(existing.resolvedAt).toISOString() : null,
+      companionSnoozedUntil: existing.companionSnoozedUntil ? new Date(existing.companionSnoozedUntil).toISOString() : null,
+    };
+  }
+  const until = new Date(Date.now() + hours * 60 * 60 * 1000);
+  const updated = await store.snoozeForCompanion(userId, opportunityId, until);
+  return {
+    opportunityId,
+    status: updated.status as OpportunityDeliveryStatus,
+    resolvedAt: updated.resolvedAt ? new Date(updated.resolvedAt).toISOString() : null,
+    companionSnoozedUntil: updated.companionSnoozedUntil ? new Date(updated.companionSnoozedUntil).toISOString() : null,
   };
 }

@@ -3855,6 +3855,16 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    // OD2 — Companion-only snooze for an existing opportunity delivery. The
+    // underlying opportunity remains available to Planner/Shopping surfaces;
+    // this nullable deadline only controls the Companion notice projection.
+    id: "2026-11-11_opportunity_delivery_companion_snooze",
+    statements: [
+      "ALTER TABLE opportunity_deliveries ADD COLUMN IF NOT EXISTS companion_snoozed_until TIMESTAMPTZ",
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

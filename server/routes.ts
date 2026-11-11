@@ -13345,7 +13345,7 @@ Generate a complete recipe using these as the foundation.`;
   // prioritiseAndGroup was structurally inert. The whole household-learning
   // capability was dead code behind a missing route.
   //
-  // These four routes are TRANSPORT ONLY. Every one goes through the ordinary,
+  // These routes are TRANSPORT ONLY. Every one goes through the ordinary,
   // registered Intent Engine path (intelligencePlatform.handle) — never by importing
   // the Decision Engine's framework or its store directly — so the delivery
   // lifecycle, mutedOpportunityTypes, LEARN1's re-weighting and COACH1's
@@ -13356,6 +13356,7 @@ Generate a complete recipe using these as the foundation.`;
   /** The client's action vocabulary → the platform's closed verb taxonomy. No new verb is invented. */
   const OPPORTUNITY_ACTION_VERBS = {
     acknowledge: "review",   // non-terminal — "seen" is not an opinion, and emits NO Evidence
+    snooze: "review",        // Companion-only 24-hour notice snooze; does not resolve the opportunity
     accept: "approve",       // terminal → positive Evidence
     dismiss: "delete",       // terminal → negative Evidence
   } as const;
@@ -13433,7 +13434,11 @@ Generate a complete recipe using these as the foundation.`;
 
     try {
       const outcome = await intelligencePlatform.handle(
-        { capabilityId: "opportunity-delivery", verb, parameters: { opportunityId } },
+        {
+          capabilityId: "opportunity-delivery",
+          verb,
+          parameters: { opportunityId, ...(action === "snooze" ? { companionSnooze: true } : {}) },
+        },
         intelligencePlatform.contextFor(user),
         { confirmed: true },
       );
@@ -13447,11 +13452,16 @@ Generate a complete recipe using these as the foundation.`;
         });
       }
 
-      const resolution = outcome.result as { readonly status?: string; readonly resolvedAt?: string | null } | null;
+      const resolution = outcome.result as {
+        readonly status?: string;
+        readonly resolvedAt?: string | null;
+        readonly companionSnoozedUntil?: string | null;
+      } | null;
       res.json({
         resolved: true,
         status: resolution?.status ?? null,
         resolvedAt: resolution?.resolvedAt ?? null,
+        companionSnoozedUntil: resolution?.companionSnoozedUntil ?? null,
       });
     } catch (err) {
       console.error("[PHASE5B] opportunity resolution failed:", err);

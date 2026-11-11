@@ -12,7 +12,8 @@
  *
  * WHAT THIS STORE IS: the delivery lifecycle of a Domain Intelligence opportunity —
  * delivered (default, first report) -> acknowledged (seen, non-terminal) -> dismissed
- * or accepted (terminal — never re-delivered). Unlike companion-action-store.ts's
+ * or accepted (terminal — never re-delivered), plus an optional Companion-only snooze
+ * expiry that leaves other opportunity surfaces available. Unlike companion-action-store.ts's
  * `companion_action_proposals` (scoped to a conversation turn), this store is scoped
  * directly to `userId`, because a Domain Intelligence opportunity is AMBIENT — generated
  * from a household's own existing activity, not from an assistant conversation turn.
@@ -84,6 +85,8 @@ export interface IOpportunityDeliveryStore {
    * returns the existing row unchanged (idempotent double-dismiss/double-accept).
    */
   updateStatus(userId: number, opportunityId: string, status: OpportunityDeliveryStatus): Promise<OpportunityDelivery>;
+  /** Temporarily snooze only the Companion notice; other opportunity surfaces stay unchanged. */
+  snoozeForCompanion(userId: number, opportunityId: string, until: Date): Promise<OpportunityDelivery>;
 }
 
 // ---------------------------------------------------------------------------
@@ -129,7 +132,19 @@ export class DatabaseOpportunityDeliveryStore implements IOpportunityDeliverySto
 
     const [row] = await db
       .update(opportunityDeliveries)
-      .set({ status, resolvedAt: isTerminalDeliveryStatus(status) ? new Date() : null })
+      .set({ status, resolvedAt: isTerminalDeliveryStatus(status) ? new Date() : null, companionSnoozedUntil: null })
+      .where(and(eq(opportunityDeliveries.userId, userId), eq(opportunityDeliveries.opportunityId, opportunityId)))
+      .returning();
+    return row;
+  }
+
+  async snoozeForCompanion(userId: number, opportunityId: string, until: Date): Promise<OpportunityDelivery> {
+    const existing = await this.getRecord(userId, opportunityId);
+    if (!existing) throw new Error(`No opportunity_deliveries row for user ${userId}, opportunity ${opportunityId}`);
+    if (isTerminalDeliveryStatus(existing.status as OpportunityDeliveryStatus)) return existing;
+    const [row] = await db
+      .update(opportunityDeliveries)
+      .set({ companionSnoozedUntil: until })
       .where(and(eq(opportunityDeliveries.userId, userId), eq(opportunityDeliveries.opportunityId, opportunityId)))
       .returning();
     return row;
@@ -186,6 +201,7 @@ export class InMemoryOpportunityDeliveryStore implements IOpportunityDeliverySto
         status: "delivered",
         deliveredAt: new Date(),
         resolvedAt: null,
+        companionSnoozedUntil: null,
       } as unknown as OpportunityDelivery);
     }
   }
@@ -199,7 +215,17 @@ export class InMemoryOpportunityDeliveryStore implements IOpportunityDeliverySto
       ...existing,
       status,
       resolvedAt: isTerminalDeliveryStatus(status) ? new Date() : null,
+      companionSnoozedUntil: null,
     };
+    this.rows = this.rows.map((r) => (r === existing ? updated : r));
+    return updated;
+  }
+
+  async snoozeForCompanion(userId: number, opportunityId: string, until: Date): Promise<OpportunityDelivery> {
+    const existing = this.rows.find((r) => r.userId === userId && r.opportunityId === opportunityId);
+    if (!existing) throw new Error(`No opportunity_deliveries row for user ${userId}, opportunity ${opportunityId}`);
+    if (isTerminalDeliveryStatus(existing.status as OpportunityDeliveryStatus)) return existing;
+    const updated: OpportunityDelivery = { ...existing, companionSnoozedUntil: until };
     this.rows = this.rows.map((r) => (r === existing ? updated : r));
     return updated;
   }

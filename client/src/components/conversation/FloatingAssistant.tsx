@@ -98,6 +98,57 @@ function useSurface(): ConversationSurface {
   return "floating";
 }
 
+type NoticeForDisplay = {
+  readonly id: string;
+  readonly text: string;
+  readonly fact: unknown;
+};
+
+type CompanionNoticeDisplayRow =
+  | { readonly kind: "notice"; readonly id: string; readonly notice: NoticeForDisplay }
+  | {
+      readonly kind: "restriction";
+      readonly id: string;
+      readonly restriction: string;
+      readonly items: string[];
+      readonly opportunityIds: string[];
+    };
+
+function getShoppingRestrictionFact(
+  notice: NoticeForDisplay,
+): { opportunityId: string; item: string; restrictions: string[] } | null {
+  if (!notice.fact || typeof notice.fact !== "object") return null;
+  const fact = notice.fact as { kind?: unknown; shoppingRestriction?: unknown };
+  if (fact.kind !== "opportunity" || !fact.shoppingRestriction || typeof fact.shoppingRestriction !== "object") return null;
+  const detail = fact.shoppingRestriction as { opportunityId?: unknown; item?: unknown; restrictions?: unknown };
+  if (typeof detail.opportunityId !== "string" || typeof detail.item !== "string" || !Array.isArray(detail.restrictions)) return null;
+  const restrictions = detail.restrictions.filter((value): value is string => typeof value === "string" && value.length > 0);
+  return restrictions.length > 0 ? { opportunityId: detail.opportunityId, item: detail.item, restrictions } : null;
+}
+
+function groupNoticesForDisplay(notices: readonly NoticeForDisplay[]): CompanionNoticeDisplayRow[] {
+  const rows: CompanionNoticeDisplayRow[] = [];
+  const restrictionRows = new Map<string, Extract<CompanionNoticeDisplayRow, { kind: "restriction" }>>();
+  for (const notice of notices) {
+    const restrictionFact = getShoppingRestrictionFact(notice);
+    if (!restrictionFact) {
+      rows.push({ kind: "notice", id: notice.id, notice });
+      continue;
+    }
+    for (const restriction of restrictionFact.restrictions) {
+      let row = restrictionRows.get(restriction);
+      if (!row) {
+        row = { kind: "restriction", id: `restriction:${restriction}`, restriction, items: [], opportunityIds: [] };
+        restrictionRows.set(restriction, row);
+        rows.push(row);
+      }
+      if (!row.items.includes(restrictionFact.item)) row.items.push(restrictionFact.item);
+      if (!row.opportunityIds.includes(restrictionFact.opportunityId)) row.opportunityIds.push(restrictionFact.opportunityId);
+    }
+  }
+  return rows;
+}
+
 const SURFACE_LABEL: Record<ConversationSurface, string> = {
   planner: "Planner",
   shopping: "Shopping",
@@ -1265,6 +1316,33 @@ export default function FloatingAssistant() {
   const surface = useSurface();
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
+  const noticeActionMutation = useMutation({
+    mutationFn: async (input: { readonly opportunityIds: readonly string[]; readonly action: "acknowledge" | "snooze" }) => {
+      const results = await Promise.all(
+        input.opportunityIds.map((id) =>
+          apiRequest("POST", `/api/intelligence/food-opportunities/${encodeURIComponent(id)}/${input.action}`, {})
+            .then((response) => response.json() as Promise<{ companionSnoozedUntil?: string | null }>),
+        ),
+      );
+      const snoozedUntil = results
+        .map((result) => result.companionSnoozedUntil)
+        .filter((value): value is string => typeof value === "string")
+        .sort((a, b) => Date.parse(b) - Date.parse(a))[0] ?? null;
+      return { snoozedUntil };
+    },
+    onSuccess: (result, input) => {
+      if (input.action !== "snooze" || !result.snoozedUntil) return;
+      const snoozedUntil = Date.parse(result.snoozedUntil);
+      if (!Number.isFinite(snoozedUntil)) return;
+      window.setTimeout(
+        () => queryClient.invalidateQueries({ queryKey: ["/api/intelligence/companion/notices"] }),
+        Math.max(0, snoozedUntil - Date.now()),
+      );
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/intelligence/companion/notices"] });
+    },
+  });
 
   // PHASE5D — the pointers the surface the household is actually looking at has
   // published (the planner week on screen, the meal card open, the food being
@@ -1308,6 +1386,7 @@ export default function FloatingAssistant() {
   const { user } = useUser();
   const { data: noticesData } = useCompanionNotices(!!user);
   const notices = noticesData?.notices ?? [];
+  const noticeRows = groupNoticesForDisplay(notices);
 
   // NAV1 — the permanent header carries a Companion entry. It ASKS to open
   // rather than owning the panel, so this state stays here, where it belongs:
@@ -1951,31 +2030,52 @@ export default function FloatingAssistant() {
                   className="px-4 pt-4 pb-1 space-y-3 shrink-0"
                   data-testid="list-companion-notices"
                 >
-                  {notices.map((n, i) => (
+                  {noticeRows.map((row, i) => (
                     <li
-                      key={n.id}
+                      key={row.id}
                       className="text-[15px] leading-relaxed text-foreground/85"
                       data-testid={`companion-notice-${i}`}
                     >
-                      {n.text}
-                      {/* PRESENCE2 — "why did you notice that?", per GEA16: the
-                          reasoning is available ON REQUEST, in the Companion's
-                          voice, and is never narrated unasked. It creates no
-                          surface and no capability: pressing it sends an ordinary
-                          turn down the one conversation channel, which the
-                          gateway grounds from the same owners the notice came
-                          from. The notice's own `fact` is carried alongside the
-                          sentence for exactly this reason — a notice must never
-                          become a claim whose supporting data was discarded. */}
-                      <button
-                        type="button"
-                        onClick={() => handleExplainNotice(n.text)}
-                        disabled={isPending}
-                        className="ml-2 align-baseline text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground disabled:opacity-50"
-                        data-testid={`companion-notice-why-${i}`}
-                      >
-                        Why?
-                      </button>
+                      {row.kind === "restriction" ? (
+                        <>
+                          <span className="font-medium">{row.restriction} conflict:</span> {row.items.join(", ")}
+                          <button
+                            type="button"
+                            onClick={() => noticeActionMutation.mutate({ opportunityIds: row.opportunityIds, action: "acknowledge" })}
+                            disabled={noticeActionMutation.isPending || isPending}
+                            className="ml-2 align-baseline text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground disabled:opacity-50"
+                            aria-label={`Acknowledge ${row.restriction} conflict notice`}
+                            data-testid={`companion-notice-acknowledge-${i}`}
+                          >
+                            Acknowledge
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => noticeActionMutation.mutate({ opportunityIds: row.opportunityIds, action: "snooze" })}
+                            disabled={noticeActionMutation.isPending || isPending}
+                            className="ml-2 align-baseline text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground disabled:opacity-50"
+                            aria-label={`Snooze ${row.restriction} conflict notice for 24 hours`}
+                            data-testid={`companion-notice-snooze-${i}`}
+                          >
+                            Snooze 24h
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          {row.notice.text}
+                          {/* The explanation stays available on request for notices whose
+                              voiced sentence does not already state the reason. */}
+                          <button
+                            type="button"
+                            onClick={() => handleExplainNotice(row.notice.text)}
+                            disabled={isPending}
+                            className="ml-2 align-baseline text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground disabled:opacity-50"
+                            data-testid={`companion-notice-why-${i}`}
+                          >
+                            Why?
+                          </button>
+                        </>
+                      )}
                     </li>
                   ))}
                 </ul>

@@ -2697,8 +2697,9 @@ export type InsertCompanionActionProposal = z.infer<typeof insertCompanionAction
 // planner/pantry/shopping facts remain owned exactly where they always were.
 //
 // status lifecycle: "delivered" (default, on first report) -> "acknowledged"
-// (seen, non-terminal — still eligible for future reports) -> "dismissed" or
-// "accepted" (terminal — suppressed from all future reports for this user).
+// (seen, non-terminal) -> "dismissed" or "accepted" (terminal). A separate,
+// Companion-only snooze deadline temporarily hides a notice without resolving the
+// underlying opportunity or suppressing its other delivery surfaces.
 // UNIQUE(userId, opportunityId) is what makes delivery idempotent: a second
 // `report` for an opportunity that already has a row never inserts a
 // duplicate — this IS "preventing duplicate delivery".
@@ -2715,6 +2716,7 @@ export const opportunityDeliveries = pgTable("opportunity_deliveries", {
   status: text("status").notNull().default("delivered"), // "delivered" | "acknowledged" | "dismissed" | "accepted"
   deliveredAt: timestamp("delivered_at", { withTimezone: true }).notNull().defaultNow(),
   resolvedAt: timestamp("resolved_at", { withTimezone: true }), // set on "dismissed" or "accepted"
+  companionSnoozedUntil: timestamp("companion_snoozed_until", { withTimezone: true }),
 }, (table) => ({
   userOpportunityUnique: unique("opportunity_deliveries_user_opportunity_unique").on(table.userId, table.opportunityId),
   userStatusIdx: index("opportunity_deliveries_user_status_idx").on(table.userId, table.status),

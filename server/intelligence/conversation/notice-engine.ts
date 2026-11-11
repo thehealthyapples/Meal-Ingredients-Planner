@@ -66,8 +66,9 @@
  * not a gentler score: it is `household-story`, which states a fact about what
  * this family eats and passes no verdict on it at all.
  *
- * SILENCE RULES (Stage 6) live here too — `applySilenceRules` is a pure,
- * stateless filter (no new persisted state, no new table) that:
+ * SILENCE RULES (Stage 6) live here too — `applySilenceRules` is a pure filter
+ * with no store of its own; for shopping conflicts it honors explicit delivery
+ * state supplied by OD1, and:
  *   - drops any notice whose underlying signal was thin/absent (never
  *     surfaces a guess)
  *   - caps the total number of notices returned per gather, so the
@@ -243,6 +244,13 @@ export interface Notice {
         readonly suggestedAction: string;
         /** COACH1 — the producer's own evidence, verbatim and in order. Never empty (see `noticeOpportunities`). */
         readonly evidence: readonly NoticeEvidence[];
+        readonly shoppingRestriction?: {
+          readonly opportunityId: string;
+          readonly item: string;
+          readonly restrictions: readonly string[];
+          readonly acknowledged: boolean;
+          readonly snoozedUntil: string | null;
+        };
       }
     | { readonly kind: "seasonal"; readonly headline: string }
     /**
@@ -375,6 +383,11 @@ export interface OpportunityLike {
   readonly explanation: string;
   readonly suggestedAction: string;
   readonly evidence?: readonly NoticeEvidence[];
+  readonly type?: string;
+  readonly subject?: { readonly label: string };
+  readonly restrictionNames?: readonly string[];
+  readonly acknowledged?: boolean;
+  readonly companionSnoozedUntil?: Date | string | null;
 }
 
 const DOMAIN_TO_CATEGORY: Readonly<Record<string, NoticeCategory>> = {
@@ -390,7 +403,7 @@ const DOMAIN_TO_CATEGORY: Readonly<Record<string, NoticeCategory>> = {
 };
 
 /**
- * COACH1 changes this producer in exactly two ways, and adds no reasoning to it:
+ * This adapter carries evidence and delivery state without adding reasoning:
  *
  *  1. `evidence` is carried through, verbatim and in order. Before COACH1 this
  *     adapter copied `explanation` and `suggestedAction` and silently discarded the
@@ -399,7 +412,12 @@ const DOMAIN_TO_CATEGORY: Readonly<Record<string, NoticeCategory>> = {
  *     it makes the module header's existing promise true for the whole opportunity
  *     rather than for two of its three content fields.
  *
- *  2. An opportunity carrying NO evidence is dropped, exactly as an unmapped domain
+ *  2. For shopping restriction conflicts only, item/restriction labels and the
+ *     delivery id/status/deadline are carried as structured fields. The Silence
+ *     Rules use acknowledgement and snooze state to honor the household's explicit
+ *     choice. No sentence is parsed and no business fact is derived here.
+ *
+ *  3. An opportunity carrying NO evidence is dropped, exactly as an unmapped domain
  *     already is. Both are the same honest no-op: the engine surfaces what a named
  *     owner supplied, and stays silent otherwise. This is a filter, never a
  *     judgement — no metric, threshold, cluster or ranking is introduced (the
@@ -428,6 +446,20 @@ export function noticeOpportunities(opportunities: readonly OpportunityLike[]): 
         explanation: o.explanation,
         suggestedAction: o.suggestedAction,
         evidence,
+        ...(o.type === "shopping-restriction-conflict" && o.subject && (o.restrictionNames?.length ?? 0) > 0
+          ? {
+              shoppingRestriction: {
+                opportunityId: o.id,
+                item: o.subject.label,
+                restrictions: o.restrictionNames!,
+                acknowledged: o.acknowledged === true,
+                snoozedUntil:
+                  o.companionSnoozedUntil instanceof Date
+                    ? o.companionSnoozedUntil.toISOString()
+                    : o.companionSnoozedUntil ?? null,
+              },
+            }
+          : {}),
       },
     });
   }
@@ -558,8 +590,16 @@ export const MAX_NOTICES_PER_MOMENT = 2;
 export function applySilenceRules(
   notices: readonly Notice[],
   maxCount: number = MAX_NOTICES_PER_MOMENT,
+  now: Date = new Date(),
 ): Notice[] {
-  return orderByAttention(dedupeById(notices)).slice(0, maxCount);
+  const eligible = notices.filter((notice) => {
+    if (notice.fact.kind !== "opportunity" || !notice.fact.shoppingRestriction) return true;
+    const restriction = notice.fact.shoppingRestriction;
+    if (restriction.acknowledged) return false;
+    const snoozedUntil = restriction.snoozedUntil ? Date.parse(restriction.snoozedUntil) : Number.NaN;
+    return !Number.isFinite(snoozedUntil) || snoozedUntil <= now.getTime();
+  });
+  return orderByAttention(dedupeById(eligible)).slice(0, maxCount);
 }
 
 // ---------------------------------------------------------------------------

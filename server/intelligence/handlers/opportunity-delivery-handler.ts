@@ -46,6 +46,7 @@ import type {
   OpportunityDeliveryTrust,
   OpportunityResolution,
 } from "../opportunity-delivery/framework.js";
+import { COMPANION_NOTICE_SNOOZE_HOURS } from "../opportunity-delivery/policy.js";
 import type { OpportunityDeliveryStatus } from "../opportunity-delivery/delivery-store.js";
 // DEC1 — the one canonical delivery budget. `explain` searches the FULL delivered set
 // rather than the caller's display limit, so a card is never unexplainable purely
@@ -255,6 +256,23 @@ async function handleResolve(
 
   if (!opportunityId) {
     throw gap(RESOLUTION_MISSING_ID_MESSAGE[targetStatus]);
+  }
+
+  const companionSnooze = params.companionSnooze;
+  if (companionSnooze !== undefined) {
+    if (targetStatus !== "acknowledged" || companionSnooze !== true) {
+      throw gap('Companion snooze requires { opportunityId, companionSnooze: true } with the "review" verb.');
+    }
+    if (!port.snoozeOpportunityForCompanion) {
+      throw gap("Companion snooze is unavailable from this Opportunity Delivery provider.");
+    }
+    const snoozed = await port.snoozeOpportunityForCompanion(userId, opportunityId, COMPANION_NOTICE_SNOOZE_HOURS);
+    if (!snoozed) {
+      throw gap(
+        `Honest gap: no opportunity with id ${JSON.stringify(opportunityId)} has been delivered to you — it cannot be snoozed before it has been delivered. Call "report" first.`,
+      );
+    }
+    return { ...snoozed, source: "opportunity-delivery-framework" };
   }
 
   const resolution = await port.resolveOpportunity(userId, opportunityId, targetStatus);

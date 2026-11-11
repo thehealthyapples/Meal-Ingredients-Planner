@@ -2,7 +2,7 @@
 
 > **Re-homed by OBS1 (2026-07-08):** this document was established by INT20 as "THA Observation Engine Architecture". The Observation Engine name now designates the Intelligence Platform's canonical telemetry service (`THA_OBSERVATION_ENGINE_ARCHITECTURE.md`); this ambient-notice component continues unchanged in meaning under its new name, the Notice Engine. The telemetry Observation Engine and this Notice Engine are disjoint: notices are user-facing facts about the household's own data; observations are operator-facing telemetry about platform execution.
 
-**Status:** GOVERNING ARCHITECTURE — Intelligence Governance (canonical). Established by workstream `INT20`, 2026-07-08.
+**Status:** GOVERNING ARCHITECTURE — Intelligence Governance (canonical). Established by workstream `INT20`, 2026-07-08; extended under owner approval for `OD2` Companion acknowledgement and snooze, 2026-11-11.
 **Classification:** Intelligence Governance — the single owner of what the platform proactively notices, and of the attention budget under which any notice reaches the user.
 **Governing documents:** `THA_INTELLIGENCE_PLATFORM_ARCHITECTURE.md` (TIP1), `THA_AI_CAPABILITY_REGISTRY_AND_INTENT_TAXONOMY.md` (TIP2), `THA_AI_EXPERIENCE_AND_CONVERSATION_ARCHITECTURE.md` (TIP3), `THA_COMPANION_PLATFORM_ARCHITECTURE.md` (CPA1), `THA_CONTEXT_COMPOSITION_ENGINE_ARCHITECTURE.md` (INT17), `PLATFORM_QUALITY_ARCHITECTURE.md`
 **Implementation record:** `docs/implementation/intelligence/INT20_OBSERVATION_ENGINE_ARCHITECTURE.md`
@@ -28,7 +28,7 @@ This document is the component-level architecture for the engine CPA1 names as o
 THA already has every part of a notice pipeline — built, tested, and owned in exactly one place each:
 
 - **Producers** compute the facts. The Food Opportunity Engine (FI4) identifies `planner-empty-day`, `pantry-item-unused-in-plan`, and `shopping-restriction-conflict` from a household's own data — deterministic, cited, prioritised, never persisted. Companion Growth computes the one minimum-sample-gated trend signal. Streaks, plant diversity, and seasonal highlights each have an existing owner.
-- **Delivery governance** exists. The Opportunity Delivery Framework (OD1) fans out to registered producers through `intelligencePlatform.handle()`, de-duplicates against what a user has already seen, respects `mutedOpportunityTypes`, and owns the only persistent fact in the pipeline: the delivery lifecycle (`delivered → acknowledged → dismissed | accepted`) in `opportunity_deliveries`.
+- **Delivery governance** exists. The Opportunity Delivery Framework (OD1) fans out to registered producers through `intelligencePlatform.handle()`, de-duplicates against what a user has already seen, respects `mutedOpportunityTypes`, and owns the only persistent facts in the pipeline: delivery status (`delivered → acknowledged → dismissed | accepted`) and the optional Companion-only snooze expiry in `opportunity_deliveries`.
 - **The adapter** exists. `server/intelligence/conversation/notice-engine.ts` (EWX1) wraps those already-computed facts into one `Notice` shape across seven closed categories and applies the Silence Rules — de-dupe, priority order, at most two per moment.
 - **Learning** exists. The Evidence & Learning platform (EL1) accumulates outcome evidence and derives household-confirmable signals — never from fewer than three consistent events.
 
@@ -83,7 +83,7 @@ One owner per fact, walked explicitly:
 |---|---|---|
 | The underlying business fact (an empty day, a restriction conflict, a trend) | The producing capability's own SoT (Planner D14, Shopping D15, Pantry D8–11, Household D16, trends) | The producer's existing tables — unchanged |
 | The opportunity (explanation, evidence, suggestedAction, priority, type) | The producer (FI4 today); recomputed fresh per request | **Never persisted** |
-| "Has user X seen / dismissed / accepted opportunity Y" | OD1's `delivery-store.ts`, sole owner of `opportunity_deliveries` | The pipeline's **only** persistent fact |
+| "Has user X acknowledged / dismissed / accepted opportunity Y, or snoozed its Companion notice until when?" | OD1's `delivery-store.ts`, sole owner of `opportunity_deliveries` | The pipeline's **only** persistent interaction fact; snooze is Companion-only and does not hide the opportunity on domain surfaces |
 | Which types the user has muted | `user_preferences.mutedOpportunityTypes`, read via `storage.getUserPreferences()` | Existing prefs owner |
 | The Notice itself (category, priority, verbatim fact) | **Transient.** The Notice Engine composes it per request and owns no store | **Never persisted** |
 | The attention budget (Silence Rules: de-dupe, priority order, cap 2) | **The Notice Engine — its only genuine ownership** | n/a (pure function) |
@@ -94,7 +94,7 @@ One owner per fact, walked explicitly:
 Two consequences fall straight out of this table:
 
 1. **The Notice Engine owns a decision, not data.** Its single canonical possession is the Silence Rules — the un-bypassable choke point deciding volume and order of ambient notices. Everything else it touches is someone else's, verbatim.
-2. **Statelessness is the current design, and its known cost is already named.** CPA1 §11 G6 records that without a cross-session log, a notable notice can repeat across sessions. The named (not built) fix — a small additive `companion_observation_log` (name predates the OBS1 re-home; it would be re-titled at build time) — would, if ever approved, record *delivery of a notice*, never a copy of any producer's fact, and would be owned by the Notice Engine's store exactly as `opportunity_deliveries` is owned by OD1's. That remains its own future Rule 8 review.
+2. **Notice content remains stateless.** For opportunity notices, OD1's existing delivery record additionally stores explicit acknowledgement and an optional Companion-only snooze deadline. The deadline is interaction state, never a copy of the producer's fact; the Notice Engine applies it before its own attention budget. Other notice categories remain request-scoped and may repeat across sessions, as CPA1 §11 G6 records.
 
 ---
 
@@ -118,7 +118,8 @@ A notice becomes a recommendation by **graduation, never by escalation** — eac
    │              domain surface renders it; the user may ignore it forever
    ▼
   resolution      acknowledge / dismiss / accept — OD1's review/delete/approve
-   │              verbs, strong-confirmation-gated, writing ONLY delivery status
+   │              verbs; Companion snooze uses review plus an expiry on the same
+   │              OD1 delivery record; no producer or household fact is changed
    ▼
   action          if the user acts, the suggestedAction becomes an ordinary
    │              typed intent through the Intent Engine — parse → resolve →
@@ -145,7 +146,7 @@ A notice becomes a recommendation by **graduation, never by escalation** — eac
 
 The Notice Engine sits entirely on the read side. It invokes nothing, and nothing about a notice shortcuts the intent pipeline:
 
-- Resolving a notice-backed opportunity uses OD1's registered verbs (`review`/`approve`/`delete`) — three of the closed 20, platform-wide strong-confirmation, no special case.
+- Resolving a notice-backed opportunity uses OD1's registered verbs (`review`/`approve`/`delete`) — three of the closed 20, platform-wide strong-confirmation, no special case. A Companion snooze is a parameterised `review` of the same delivered opportunity, expires after 24 hours, and is applied only to the Companion notice presentation.
 - Acting on a suggestion is a fresh `(verb × capability)` intent resolving to one existing endpoint, confirmed by its class. The Intent Engine neither knows nor cares that the intent originated from a notice.
 - No new verb, no new capability class, and no confirmation-tier exception may ever be introduced *for* notices.
 

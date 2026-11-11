@@ -751,7 +751,7 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
   {
     id: "opportunity-delivery",
     displayName: "Opportunity Delivery Framework",
-    description: "The canonical, cross-cutting framework governing how Domain Intelligence opportunities (today: FI4's ambient Food Opportunities) are prioritised, grouped, deduplicated and surfaced across the platform, and how a caller acknowledges (review), dismisses (delete) or accepts (approve) one. Owns zero business-domain data and zero producer reasoning — every opportunity's content is a verbatim projection of what a registered producer capability already returned (OD1).",
+    description: "The canonical, cross-cutting framework governing how Domain Intelligence opportunities (today: FI4's ambient Food Opportunities) are prioritised, grouped, deduplicated and surfaced across the platform, and how a caller acknowledges (review), snoozes a Companion notice for 24 hours, dismisses (delete) or accepts (approve) one. Owns zero business-domain data and zero producer reasoning — every opportunity's content is a verbatim projection of what a registered producer capability already returned (OD1).",
     owner: "server/intelligence/opportunity-delivery/framework.ts + delivery-store.ts (OD1 — the platform's own governance layer per THA_INTELLIGENCE_PLATFORM_ARCHITECTURE.md; delivery-store.ts is the sole owner of the new opportunity_deliveries table, SoT-registered under OD1)",
     owningService: "server/intelligence/opportunity-delivery/framework.ts, delivery-store.ts",
     // PHASE5C — currency correction. This registry is a DERIVED PROJECTION of the live
@@ -759,7 +759,7 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     // exists is a defect in the projection, not a stylistic quibble. PHASE5B added these
     // routes; the descriptor still said "no dedicated HTTP route". Both are transport
     // only — every one goes through intelligencePlatform.handle(), never around it.
-    apiSurface: "GET /api/intelligence/food-opportunities (report) · POST /api/intelligence/food-opportunities/:opportunityId/:action where action ∈ acknowledge→review | accept→approve | dismiss→delete (PHASE5B). Transport only: routed through the Intent Engine, never around it. Also consumed platform-internally by GET /api/intelligence/companion/notices. PHASE5E — `explain` has NO dedicated HTTP route by design: it is reached only through the one Conversation Gateway (POST /api/intelligence/conversation/turn), because explaining a suggestion is a conversation, not a second delivery channel.",
+    apiSurface: "GET /api/intelligence/food-opportunities (report) · POST /api/intelligence/food-opportunities/:opportunityId/:action where action ∈ acknowledge→review | snooze→review (Companion-only, 24 hours) | accept→approve | dismiss→delete. Transport only: routed through the Intent Engine, never around it. Also consumed platform-internally by GET /api/intelligence/companion/notices. PHASE5E — `explain` has NO dedicated HTTP route by design: it is reached only through the one Conversation Gateway (POST /api/intelligence/conversation/turn), because explaining a suggestion is a conversation, not a second delivery channel.",
     supportedIntents: ["report", "explain", "review", "approve", "delete"],
     executableIntents: [],
     permissions: { minimumRole: "user", knowledgeClass: "public", ownershipScoped: true, audited: false },

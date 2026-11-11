@@ -5,8 +5,8 @@ section: companion-capabilities
 status: live
 visibility: household
 owner: Colin Clapson
-last_verified: 2026-11-09
-version: 4
+last_verified: 2026-11-11
+version: 5
 ---
 
 # Companion
@@ -28,6 +28,10 @@ Nutrition focuses are food preferences, not restrictions, nutrient targets, or
 medical conclusions. A reported concern is not a diagnosis and does not establish
 that food treats a condition. And when THA has no answer, Companion says
 "I don't know" rather than making one up.
+
+Companion can group shopping items that conflict with the same household restriction.
+You can acknowledge that warning or snooze it for 24 hours; snoozing hides only the
+Companion notice, not the underlying item or its warning on the Shopping surface.
 
 When a question could reasonably mean more than one thing, Companion checks its
 understanding with you before routing it. If you say no, it asks what you meant;
@@ -75,4 +79,4 @@ household.
 ---
 
 _Registry entry. Present tense; if it is no longer true it is a defect, not
-history (Rule PKR15). Owner: Colin Clapson. Last verified 2026-11-05._
+history (Rule PKR15). Owner: Colin Clapson. Last verified 2026-11-11._
