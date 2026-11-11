@@ -66,10 +66,11 @@ import {
   createDefaultLlmProvider,
   type ILlmProvider,
 } from "./llm-provider.js";
-import type {
-  IIntentResolver,
-  IntentResolutionHints,
-  ResolvedIntent,
+import {
+  isResolverClarificationQuestion,
+  type IIntentResolver,
+  type IntentResolutionHints,
+  type ResolvedIntent,
 } from "../intent-resolver.js";
 import { HybridIntentResolver } from "../hybrid-intent-resolver.js";
 import {
@@ -1439,7 +1440,7 @@ export function buildClarificationContext(
   const lastAssistant = [...recentHistory].reverse().find((turn) => turn.role === "assistant");
   if (!lastAssistant || lastAssistant.fallbackState !== "no-route") return undefined;
   const prompt = lastAssistant.utterance.trim();
-  if (!prompt.startsWith("Are you asking whether ") && prompt !== "No problem — what did you mean?") {
+  if (!isResolverClarificationQuestion(prompt) && prompt !== "No problem — what did you mean?") {
     return undefined;
   }
 

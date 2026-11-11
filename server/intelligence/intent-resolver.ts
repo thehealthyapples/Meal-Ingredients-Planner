@@ -130,6 +130,13 @@ export interface IntentResolutionHints {
   };
 }
 
+/** Shared recognition for resolver clarification questions in Gateway history. */
+export function isResolverClarificationQuestion(prompt: string): boolean {
+  const normalized = prompt.trim();
+  if (normalized.startsWith("Are you asking whether ")) return true;
+  return /^(?:Do you mean\b|Which\b).*\bor\b.*\?$/i.test(normalized);
+}
+
 /**
  * The Canonical Intent Resolver contract. Provider-neutral — implementations
  * may be pattern-based (PatternIntentResolver), LLM-based, or hybrid.
@@ -146,4 +153,22 @@ export interface IIntentResolver {
    * Always returns at least one ResolvedIntent (the profile fallback).
    */
   resolve(utterance: string, hints: IntentResolutionHints): Promise<ResolvedIntent[]>;
+
+  /**
+   * Optional transient provenance used by hybrid resolvers to distinguish a
+   * strong utterance match from a weak vocabulary/generic fallback. The public
+   * resolve() result remains unchanged; provenance is never attached to intents.
+   */
+  resolveWithProvenance?(
+    utterance: string,
+    hints: IntentResolutionHints,
+  ): Promise<IntentResolutionWithProvenance>;
+}
+
+export type IntentMatcherTier = "strong" | "weak" | "none";
+
+export interface IntentResolutionWithProvenance {
+  readonly intents: ResolvedIntent[];
+  /** Strong covers compound/specific matchers; weak covers generic/keyword-only; none is context alone. */
+  readonly matcherTier: IntentMatcherTier;
 }

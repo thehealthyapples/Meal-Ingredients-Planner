@@ -39,7 +39,12 @@
  *    validates whether they exist and returns an honest gap when they do not.
  */
 
-import type { IIntentResolver, IntentResolutionHints, ResolvedIntent } from "./intent-resolver.js";
+import type {
+  IIntentResolver,
+  IntentResolutionHints,
+  IntentResolutionWithProvenance,
+  ResolvedIntent,
+} from "./intent-resolver.js";
 import type { ConversationSurface } from "./conversation/conversation-store.js";
 import { DAY_NAMES } from "@shared/time/household-time";
 
@@ -967,19 +972,6 @@ const PLANNER_MATCHERS: Matcher[] = [
     };
   },
 
-  // "show me my plan" / "my meal plan this week" / "show me my planner" / "my meal planner this week"
-  (u, _l, hints) => {
-    if (!/\b(?:show\s+(?:me\s+)?(?:my\s+)?(?:meal\s+)?plan(?:ner)?|my\s+(?:meal\s+)?plan(?:ner)?(?:\s+this\s+week)?)\b/i.test(u)) return null;
-    return {
-      capability: "planner",
-      verb: "read",
-      parameters: hints.activePlannerWeekId != null
-        ? { scope: "week", weekId: hints.activePlannerWeekId }
-        : {},
-      confidence: 0.75,
-    };
-  },
-
   // 2026-11-06 (owner) — "can you increase the protein in Saturday's meals" / "what's for
   // dinner on Saturday" / "is chicken planned for Saturday". Before this, NO matcher
   // anywhere recognised a day-of-week name — every planner question, day-named or not,
@@ -1059,6 +1051,24 @@ const PLANNER_MATCHERS: Matcher[] = [
         ? { scope: "week", weekId: hints.activePlannerWeekId }
         : {},
       confidence: 0.86,
+    };
+  },
+];
+
+// Generic planner-overview phrasing is useful context, but it does not prove
+// that the resolver understood a more specific question such as a count. Keep
+// it in a separate weak tier so HybridIntentResolver may ask its bounded model
+// fallback only when no compound or specific matcher also fired.
+const PLANNER_OVERVIEW_FALLBACKS: Matcher[] = [
+  (u, _l, hints) => {
+    if (!/\b(?:show\s+(?:me\s+)?(?:my\s+)?(?:meal\s+)?plan(?:ner)?|my\s+(?:meal\s+)?plan(?:ner)?(?:\s+this\s+week)?)\b/i.test(u)) return null;
+    return {
+      capability: "planner",
+      verb: "read",
+      parameters: hints.activePlannerWeekId != null
+        ? { scope: "week", weekId: hints.activePlannerWeekId }
+        : {},
+      confidence: 0.75,
     };
   },
 ];
@@ -3124,18 +3134,25 @@ export class PatternIntentResolver implements IIntentResolver {
     utterance: string,
     hints: IntentResolutionHints,
   ): Promise<ResolvedIntent[]> {
+    return (await this.resolveWithProvenance(utterance, hints)).intents;
+  }
+
+  async resolveWithProvenance(
+    utterance: string,
+    hints: IntentResolutionHints,
+  ): Promise<IntentResolutionWithProvenance> {
     const lower = utterance.toLowerCase();
 
     // PHASE5E — see the block comment above. This returns before every other matcher,
     // by design: one card was asked about, one card is answered about.
     const explainOpportunity = resolveOpportunityExplain(lower, hints);
-    if (explainOpportunity) return [explainOpportunity];
+    if (explainOpportunity) return { intents: [explainOpportunity], matcherTier: "strong" };
 
     // COMP4 — the planner twin, same rule: one entry was asked about, one entry
     // is answered about. Ordered after the opportunity pointer because a card
     // is the more specific thing to have clicked when both are somehow present.
     const explainPlannerEntry = resolvePlannerExplain(lower, hints);
-    if (explainPlannerEntry) return [explainPlannerEntry];
+    if (explainPlannerEntry) return { intents: [explainPlannerEntry], matcherTier: "strong" };
 
     const collected: ResolvedIntent[] = [];
 
@@ -3145,6 +3162,8 @@ export class PatternIntentResolver implements IIntentResolver {
     // marked unrecognised so the gateway can respond "did not understand"
     // instead of a generic non-answer.
     let understood = false;
+    let strongMatcherFired = false;
+    let weakMatcherFired = false;
 
     // 0. Compound matchers (INT33) — cross-domain questions, run before single-domain.
     //    Each matcher returns 2–3 intents for distinct capabilities; all enter the pool.
@@ -3155,6 +3174,7 @@ export class PatternIntentResolver implements IIntentResolver {
       const results = matcher(utterance, lower, hints);
       if (results !== null) {
         understood = true;
+        strongMatcherFired = true;
         for (const r of results) collected.push(r);
       }
     }
@@ -3164,6 +3184,19 @@ export class PatternIntentResolver implements IIntentResolver {
       const result = matcher(utterance, lower, hints);
       if (result !== null) {
         understood = true;
+        strongMatcherFired = true;
+        collected.push(result);
+      }
+    }
+
+    // Generic overview phrasing contributes a useful deterministic read but is
+    // weak evidence about the actual question. It does not prevent the model
+    // fallback unless a compound/specific matcher above also fired.
+    for (const matcher of PLANNER_OVERVIEW_FALLBACKS) {
+      const result = matcher(utterance, lower, hints);
+      if (result !== null) {
+        understood = true;
+        weakMatcherFired = true;
         collected.push(result);
       }
     }
@@ -3172,6 +3205,7 @@ export class PatternIntentResolver implements IIntentResolver {
     for (const fb of KEYWORD_FALLBACKS) {
       if (fb.pattern.test(lower)) {
         understood = true;
+        weakMatcherFired = true;
         collected.push({
           capability: fb.capability,
           verb: "read",
@@ -3224,9 +3258,13 @@ export class PatternIntentResolver implements IIntentResolver {
     });
 
     // 5. Deduplicate (keep highest confidence per capability), sort, cap
-    return dedupe(collected)
+    const intents = dedupe(collected)
       .sort((a, b) => b.confidence - a.confidence)
       .slice(0, MAX_INTENTS);
+    return {
+      intents,
+      matcherTier: strongMatcherFired ? "strong" : weakMatcherFired ? "weak" : "none",
+    };
   }
 }
 
