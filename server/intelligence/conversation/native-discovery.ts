@@ -139,7 +139,7 @@ const DISCOVERY_DOMAINS: Readonly<Record<string, DomainConfig>> = {
   "shopping-discovery":  { domain: "shopping",  refType: "shopping_item",    noun: "shopping item",    pluralNoun: "shopping items",    idField: "shoppingItemId" },
   "pantry-discovery":    { domain: "pantry",    refType: "pantry_item",      noun: "pantry item",      pluralNoun: "pantry items" },
   "diary-discovery":     { domain: "diary",     refType: "diary_entry",      noun: "diary entry",      pluralNoun: "diary entries",     idField: "diaryEntryId" },
-  "nutrition-discovery": { domain: "nutrition", refType: "food",             noun: "food",             pluralNoun: "foods",             idField: "internalId" },
+  "nutrition-discovery": { domain: "nutrition", refType: "food",             noun: "food",             pluralNoun: "foods",             idField: "internalId", mealCards: true },
   "household-discovery": { domain: "household", refType: "household_member",  noun: "household member", pluralNoun: "household members", idField: "userId" },
 };
 

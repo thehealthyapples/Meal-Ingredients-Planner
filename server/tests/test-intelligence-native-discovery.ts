@@ -317,9 +317,9 @@ const OTHER_DOMAINS: Array<{ label: string; result: unknown; refType: string; id
       source: "diary-discovery" },
   },
   {
-    label: "nutrition-discovery", refType: "food", id: 200, title: "Spinach",
+    label: "nutrition-discovery", refType: "meal", id: 200, title: "Spinach",
     result: { scope: "nutrition-filter", query: "iron", totalCount: 1,
-      results: [{ id: "system:200", name: "Spinach", sourceType: "system", sourceLabel: "THA Library", internalId: 200 }],
+      results: [{ id: "system:200", name: "Spinach", sourceType: "system", sourceLabel: "THA Library", internalId: 200, imageUrl: THA_IMAGE }],
       source: "nutrition-discovery" },
   },
   {
@@ -336,6 +336,9 @@ for (const d of OTHER_DOMAINS) {
   assert(resp.entities.length === 1, `${d.label}: one canonical entity card`);
   assert(resp.entities[0].ref.type === d.refType && resp.entities[0].ref.id === d.id, `${d.label}: card links to canonical THA page (${d.refType}:${d.id})`);
   assert(resp.entities[0].title === d.title, `${d.label}: card carries the entity title`);
+  if (d.label === "nutrition-discovery") {
+    assert(resp.entities[0].kind === "meal" && resp.entities[0].imageUrl === THA_IMAGE, "nutrition meal suggestion carries its canonical meal image");
+  }
   assert(resp.actions.some(a => a.kind === "open") && resp.actions.some(a => a.kind === "view-all"), `${d.label}: follows THA action pattern (Open + View All)`);
   // Non-meal domains do not offer meal-only actions.
   assert(!resp.actions.some(a => a.kind === "add-to-planner"), `${d.label}: no meal-only actions leak into other domains`);
