@@ -1,21 +1,45 @@
 import { drizzle } from "drizzle-orm/node-postgres";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import pg from "pg";
 import * as schema from "@shared/schema";
 
 const { Pool } = pg;
 
-// Scripts and tests run directly via `tsx` (server/scripts/*, server/tests/*) don't
-// inherit DATABASE_URL unless the invoking shell happened to export it — unlike the
-// platform/container environment, which injects it before the process starts and has
-// no .env file to load. Load .env here, once, ONLY when the var is still unset, so
-// production/CI (no .env file; DATABASE_URL already present) are unaffected — this
-// never overrides an already-set value and never logs or exposes the loaded contents.
-if (!process.env.DATABASE_URL) {
+// The integrated-dev server must always use this repository's own .env. Otherwise an
+// inherited DATABASE_URL silently wins and the same checkout can read/write a different
+// database depending on which shell (or other project) launched it. Keep this scoped to
+// development-server entry points; production, CI, tests and explicit database scripts
+// retain their existing environment-provided behavior.
+const launchedServerSource =
+  process.argv[1] !== undefined &&
+  resolve(process.argv[1]) === resolve(dirname(fileURLToPath(import.meta.url)), "index.ts");
+const isIntegratedDevServer =
+  ["dev", "dev:reset"].includes(process.env.npm_lifecycle_event ?? "") ||
+  (launchedServerSource && process.env.NODE_ENV !== "production");
+
+if (isIntegratedDevServer) {
+  process.env.NODE_ENV ??= "development";
+  const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+  const repositoryEnvFile = resolve(repositoryRoot, ".env");
+  // process.loadEnvFile does not replace existing environment values. Clear only this
+  // connection setting so the repository-owned .env is the single source for dev DB use.
+  delete process.env.DATABASE_URL;
+  try {
+    process.loadEnvFile(repositoryEnvFile);
+  } catch (error) {
+    throw new Error(
+      `The integrated-dev server requires its repository .env at ${repositoryEnvFile}.`,
+      { cause: error },
+    );
+  }
+} else if (!process.env.DATABASE_URL) {
+  // Standalone scripts/tests may load a cwd .env when no platform value was provided.
+  // Production/CI normally inject DATABASE_URL and never need a local file.
   try {
     process.loadEnvFile();
   } catch {
-    // No .env file at cwd — expected in production/CI, where DATABASE_URL is already
-    // set by the platform. Fall through to the explicit check below.
+    // No .env file at cwd — fall through to the explicit missing-value check below.
   }
 }
 

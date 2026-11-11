@@ -7,7 +7,7 @@
     "node": ">=20.19.0 <21"
   },
   "scripts": {
-    "dev": "NODE_ENV=development tsx server/index.ts",
+    "dev": "tsx scripts/start-dev.ts",
     "dev:reset": "kill -9 $(lsof -t -i:5000) 2>/dev/null || true; NODE_ENV=development tsx server/index.ts",
     "build": "tsx script/build.ts",
     "start": "NODE_ENV=production node dist/index.cjs",
