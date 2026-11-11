@@ -1,0 +1,7 @@
+# INT36 Native Discovery Image URL Assertion
+
+Date: 2026-11-11. Risk: Green. Branch: `feat/integrated-dev`. Rollback: `rollback/INT36-native-discovery-image-url-test-20261111` → `0c924c1ba931ac58f574ffc640e05559ebbc33b3`.
+
+The native discovery test previously rejected `https?://` anywhere in a serialized response. Production media storage can legitimately serve a canonical meal photo from an HTTPS URL. The native response builder exposes exactly one optional `imageUrl` per meal entity card and does not put it on generic cards. The test now masks only a string `entities[].imageUrl` on `kind: "meal"` cards before applying the original URL regex to the whole response. The title-leak regression injects an external URL into a meal title and proves the check still catches it. Existing source provenance and canonical-reference assertions are unchanged.
+
+`npm run test:intelligence-native-discovery` passed with 83 assertions and zero failures when run with development Postgres network access. The first sandboxed run stopped with `EACCES` during Gateway setup. The 83 count consists of the previous 82 plus the new regression assertion. `git diff --check` passed. No production code, app data, schema, or configuration was changed; no migration or deployment occurred. The suite connected to configured development Postgres during its Gateway section. No commit or push was made. See `.engineering/session/runs/INT36_NATIVE_DISCOVERY_IMAGE_URL_ASSERTION_20261111.md` for the preflight and exact scope.

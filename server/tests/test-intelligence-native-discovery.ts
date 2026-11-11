@@ -61,6 +61,20 @@ function section(name: string): void {
   console.log(`\n── ${name} ──────────────────────────────────────────`);
 }
 
+function hasUnexpectedAbsoluteUrl(response: NativeDiscoveryResponse): boolean {
+  // Only a canonical meal card's own image may be an absolute media URL.
+  // Keep every other response field intact so leaked third-party links fail.
+  const withoutMealImages = {
+    ...response,
+    entities: response.entities.map(card =>
+      card.kind === "meal" && typeof card.imageUrl === "string"
+        ? { ...card, imageUrl: undefined }
+        : card,
+    ),
+  };
+  return /https?:\/\//.test(JSON.stringify(withoutMealImages));
+}
+
 // ---------------------------------------------------------------------------
 // Fixtures — the real result shapes each discovery capability returns
 // ---------------------------------------------------------------------------
@@ -338,11 +352,16 @@ for (const d of OTHER_DOMAINS) {
   assert(resp.entities[0].title === d.title, `${d.label}: card carries the entity title`);
   if (d.label === "nutrition-discovery") {
     assert(resp.entities[0].kind === "meal" && resp.entities[0].imageUrl === THA_IMAGE, "nutrition meal suggestion carries its canonical meal image");
+    const leakedTitle = {
+      ...resp,
+      entities: [{ ...resp.entities[0], title: "https://outside.example/meal" }, ...resp.entities.slice(1)],
+    };
+    assert(hasUnexpectedAbsoluteUrl(leakedTitle), "nutrition-discovery: an external URL in a title is still rejected");
   }
   assert(resp.actions.some(a => a.kind === "open") && resp.actions.some(a => a.kind === "view-all"), `${d.label}: follows THA action pattern (Open + View All)`);
   // Non-meal domains do not offer meal-only actions.
   assert(!resp.actions.some(a => a.kind === "add-to-planner"), `${d.label}: no meal-only actions leak into other domains`);
-  assert(!JSON.stringify(resp).match(/https?:\/\//), `${d.label}: no external URL surfaced`);
+  assert(!hasUnexpectedAbsoluteUrl(resp), `${d.label}: no external URL surfaced outside meal images`);
 }
 
 // isDiscoveryResult guard
