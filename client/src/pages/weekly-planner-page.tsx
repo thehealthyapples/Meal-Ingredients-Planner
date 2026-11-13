@@ -34,6 +34,8 @@ import { SmartReviewPanelContent } from "@/components/SmartReviewPanelContent";
 import type { FullDay, FullWeek, SmartCandidate, MealExplanation, SmartSuggestEntry, SmartSuggestResult } from "@/lib/planner-types";
 import type { EntryTarget, PlannerProductResult } from "@/components/PlannerMealPickerPanel";
 import { SharePlanDialog } from "@/components/share-plan-dialog";
+import { PlanToShoppingReviewDialog } from "@/components/plan-to-shopping-review-dialog";
+import { buildPlanToShoppingReview } from "@/lib/plan-to-shopping-review-model";
 import { PlannerScanReview, type PlannerScanData, type PlannerDayEntry } from "@/components/PlannerScanReview";
 import { RecipeScanReview, type RecipeScanData } from "@/components/RecipeScanReview";
 import { emitStageProposal } from "@/lib/planner-staging-bus";
@@ -622,6 +624,7 @@ export default function WeeklyPlannerPage() {
 
   // ── Shopping handoff state (Phase 3: post-generation continuity) ─────────────
   const [shoppingHandoff, setShoppingHandoff] = useState<ShoppingHandoffData | null>(null);
+  const [planShoppingReviewOpen, setPlanShoppingReviewOpen] = useState(false);
 
   // Once planner data first loads, validate restored resolveSession. If the entry no longer
   // exists (deleted/stale), clear the session and exit resolve mode.
@@ -1632,6 +1635,14 @@ export default function WeeklyPlannerPage() {
     const bIdx = MONDAY_FIRST_ORDER.indexOf(b.dayOfWeek);
     return aIdx - bIdx;
   }) || [];
+  const planShoppingReviewItems = useMemo(
+    () => buildPlanToShoppingReview(sortedDays, meals, pantryNames),
+    [sortedDays, meals, pantryNames],
+  );
+  const confirmPlanShopping = () => {
+    addAllToBasket(sortedDays);
+    setPlanShoppingReviewOpen(false);
+  };
 
   // HOUSE2: the Planner had a loading branch (PX1-W4.8) and a failed-load branch
   // (PROD1) but no *empty* branch — so a household with no meals planned saw seven
@@ -2072,8 +2083,8 @@ export default function WeeklyPlannerPage() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-52">
             <DropdownMenuItem
-              onClick={() => addAllToBasket(sortedDays)}
-              disabled={addToBasketMutation.isPending}
+              onClick={() => setPlanShoppingReviewOpen(true)}
+              disabled={addToBasketMutation.isPending || planShoppingReviewItems.length === 0}
               data-testid="button-add-all-basket-overflow"
             >
               <ShoppingBasket className="h-4 w-4 mr-2" />
@@ -4468,6 +4479,15 @@ export default function WeeklyPlannerPage() {
           e.target.value = "";
         }}
         data-testid="input-planner-recipe-scan-file"
+      />
+
+      <PlanToShoppingReviewDialog
+        open={planShoppingReviewOpen}
+        weekName={activeWeekData?.weekName ?? `Week ${activeWeek}`}
+        items={planShoppingReviewItems}
+        pending={addToBasketMutation.isPending}
+        onOpenChange={setPlanShoppingReviewOpen}
+        onConfirm={confirmPlanShopping}
       />
 
       {/* ── Adaptation Review Sheet — mounted at page level to avoid Dialog z-index conflicts ── */}

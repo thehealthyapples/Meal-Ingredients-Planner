@@ -4,7 +4,7 @@
   "generated_by": "scripts/build-product-inventory.ts",
   "populated_by": "PDA1_PLATFORM_DISCOVERY_AND_EXPERIENCE_AUDIT",
   "populated_on": "2026-07-11",
-  "entry_count": 171,
+  "entry_count": 172,
   "entries": [
     {
       "id": "dom-home",
@@ -1247,18 +1247,20 @@
       "section": "journeys",
       "status": "live",
       "visibility": "household",
-      "purpose": "A household turns the week's plan into a basket, matches it to real products, and hands it to a supermarket.",
+      "purpose": "A household reviews this week's planned meals, confirms sending them to the shopping list, matches items to real products, and hands the basket to a supermarket.",
       "owner": "Colin Clapson",
       "sources": [
         "client/src/pages/weekly-planner-page.tsx",
+        "client/src/components/plan-to-shopping-review-dialog.tsx",
+        "client/src/lib/plan-to-shopping-review-model.ts",
         "client/src/pages/shopping-workspace-page.tsx"
       ],
       "related": [
         "page-planner",
         "page-shopping-workspace"
       ],
-      "last_verified": "2026-11-05",
-      "version": 2
+      "last_verified": "2026-11-12",
+      "version": 3
     },
     {
       "id": "jrn-analyse-product",
@@ -2114,6 +2116,25 @@
         "fnd-destructive-guard-inverted"
       ],
       "last_verified": "2026-07-11",
+      "version": 1
+    },
+    {
+      "id": "dlg-plan-to-shopping-review",
+      "name": "Plan to shopping review",
+      "section": "dialogs",
+      "status": "live",
+      "visibility": "household",
+      "purpose": "A household reviews the week's planned meals and exact pantry name matches before explicitly adding the meals to the shared shopping list.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/components/plan-to-shopping-review-dialog.tsx",
+        "client/src/lib/plan-to-shopping-review-model.ts"
+      ],
+      "related": [
+        "page-planner",
+        "jrn-shop"
+      ],
+      "last_verified": "2026-11-12",
       "version": 1
     },
     {

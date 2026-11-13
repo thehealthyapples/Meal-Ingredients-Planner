@@ -4,7 +4,7 @@ _The disclosure surface (PKR §18, added by PKR2). "What can a household be told
 
 **This document classifies; it never authorises.** It declares what tier a fact belongs to. It never decides what tier a *user* belongs to — identity and role are resolved exclusively by `server/lib/access.ts` (Rule PKR25). A missing or invalid label fails closed to `developer` and is served to no one (Rule PKR22).
 
-_Generated from `docs/product/inventory/product.yaml` by PDA1 — do not hand-edit. 165 entries: 28 public, 78 household, 53 admin, 6 developer._
+_Generated from `docs/product/inventory/product.yaml` by PDA1 — do not hand-edit. 172 entries: 28 public, 84 household, 53 admin, 7 developer._
 
 ### public — 28 entries
 
@@ -41,25 +41,31 @@ Anyone, signed in or not. The Companion answers households most from this tier a
 | `page-not-found` | Not Found | pages |
 | `page-shared-plan` | Shared Plan | pages |
 
-### household — 78 entries
+### household — 84 entries
 
 Any signed-in household. Everything public, plus the household-facing product itself.
 
 | id | name | section |
 |---|---|---|
 | `cap-analyser` | Analyser capability | intelligence-capabilities |
+| `cap-community` | Community capability | intelligence-capabilities |
 | `cap-companion` | Companion | companion-capabilities |
 | `cap-diary` | Diary capability | intelligence-capabilities |
+| `cap-evidence-learning` | Evidence & Learning capability | knowledge-capabilities |
+| `cap-food-intelligence` | Food Intelligence capability | intelligence-capabilities |
 | `cap-household` | Household capability | intelligence-capabilities |
 | `cap-meals` | Meals capability | intelligence-capabilities |
 | `cap-nutrition-knowledge` | Nutrition & Food Knowledge | knowledge-capabilities |
+| `cap-opportunity-delivery` | Opportunity Delivery capability | intelligence-capabilities |
 | `cap-pantry` | Pantry capability | intelligence-capabilities |
 | `cap-partners` | Partners capability | intelligence-capabilities |
 | `cap-planner` | Planner capability | intelligence-capabilities |
 | `cap-product-knowledge` | Product Knowledge | knowledge-capabilities |
 | `cap-profile` | Profile capability | intelligence-capabilities |
 | `cap-shopping` | Shopping capability | intelligence-capabilities |
+| `cap-templates` | Templates capability | intelligence-capabilities |
 | `dlg-bad-apple` | Highly Ultra-Processed warning | dialogs |
+| `dlg-plan-to-shopping-review` | Plan to shopping review | dialogs |
 | `dom-analyser` | Analyser | domains |
 | `dom-commerce` | Plans and Entitlements | domains |
 | `dom-companion` | Companion | domains |
@@ -186,13 +192,14 @@ Operators. Everything above, plus admin surfaces, hidden experiences, and positi
 | `page-admin-users` | Admin — Users | pages |
 | `shot-manifest` | Screenshot baseline manifest | screenshots |
 
-### developer — 6 entries
+### developer — 7 entries
 
 Everything. Honest gap: THA has no `developer` runtime role today — `users.role` is `user` or `admin`. Developer-tier content is reachable only by reading `docs/product/` directly, and is served to no runtime consumer until such a role exists.
 
 | id | name | section |
 |---|---|---|
 | `api-surface` | THA API surface | apis |
+| `cap-developer` | Developer / Platform capability | intelligence-capabilities |
 | `dev-benchmark-world` | Benchmark World | developer-experiences |
 | `dev-capability-registry` | Runtime Capability Registry | developer-experiences |
 | `dev-development-world` | Development World dataset | developer-experiences |

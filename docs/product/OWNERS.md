@@ -2,7 +2,7 @@
 
 _One table. Every registry entry and the single named human accountable for it (Rule PKR12: not a team, not a workstream, not "the platform"). Anyone may correct an entry; this person is accountable for it being true (Rule PKR16)._
 
-_Generated from `docs/product/inventory/product.yaml` by PDA1 — do not hand-edit. 165 entries._
+_Generated from `docs/product/inventory/product.yaml` by PDA1 — do not hand-edit. 172 entries._
 
 | id | name | section | owner |
 |---|---|---|---|
@@ -33,6 +33,7 @@ _Generated from `docs/product/inventory/product.yaml` by PDA1 — do not hand-ed
 | `dev-development-world` | Development World dataset | developer-experiences | Colin Clapson |
 | `dlg-bad-apple` | Highly Ultra-Processed warning | dialogs | Colin Clapson |
 | `dlg-inventory` | Dialog, drawer and sheet inventory | dialogs | Colin Clapson |
+| `dlg-plan-to-shopping-review` | Plan to shopping review | dialogs | Colin Clapson |
 | `dom-admin` | Admin | domains | Colin Clapson |
 | `dom-analyser` | Analyser | domains | Colin Clapson |
 | `dom-commerce` | Plans and Entitlements | domains | Colin Clapson |
@@ -81,14 +82,19 @@ _Generated from `docs/product/inventory/product.yaml` by PDA1 — do not hand-ed
 | `int-whisk` | Whisk | integrations | Colin Clapson |
 | `cap-administration` | Administration capability | intelligence-capabilities | Colin Clapson |
 | `cap-analyser` | Analyser capability | intelligence-capabilities | Colin Clapson |
+| `cap-community` | Community capability | intelligence-capabilities | Colin Clapson |
+| `cap-developer` | Developer / Platform capability | intelligence-capabilities | Colin Clapson |
 | `cap-diary` | Diary capability | intelligence-capabilities | Colin Clapson |
+| `cap-food-intelligence` | Food Intelligence capability | intelligence-capabilities | Colin Clapson |
 | `cap-household` | Household capability | intelligence-capabilities | Colin Clapson |
 | `cap-meals` | Meals capability | intelligence-capabilities | Colin Clapson |
+| `cap-opportunity-delivery` | Opportunity Delivery capability | intelligence-capabilities | Colin Clapson |
 | `cap-pantry` | Pantry capability | intelligence-capabilities | Colin Clapson |
 | `cap-partners` | Partners capability | intelligence-capabilities | Colin Clapson |
 | `cap-planner` | Planner capability | intelligence-capabilities | Colin Clapson |
 | `cap-profile` | Profile capability | intelligence-capabilities | Colin Clapson |
 | `cap-shopping` | Shopping capability | intelligence-capabilities | Colin Clapson |
+| `cap-templates` | Templates capability | intelligence-capabilities | Colin Clapson |
 | `jrn-add-recipe` | Add a recipe | journeys | Colin Clapson |
 | `jrn-analyse-product` | Analyse a product | journeys | Colin Clapson |
 | `jrn-cook-from-plan` | Cook from the plan | journeys | Colin Clapson |
@@ -99,6 +105,7 @@ _Generated from `docs/product/inventory/product.yaml` by PDA1 — do not hand-ed
 | `jrn-stock-pantry` | Stock the pantry | journeys | Colin Clapson |
 | `jrn-track-eaten` | Track what we ate | journeys | Colin Clapson |
 | `jrn-understand-nutrition` | Understand our nutrition | journeys | Colin Clapson |
+| `cap-evidence-learning` | Evidence & Learning capability | knowledge-capabilities | Colin Clapson |
 | `cap-nutrition-knowledge` | Nutrition & Food Knowledge | knowledge-capabilities | Colin Clapson |
 | `cap-product-knowledge` | Product Knowledge | knowledge-capabilities | Colin Clapson |
 | `mkt-better-choices` | Make Better Choices | marketing-messages | Colin Clapson |

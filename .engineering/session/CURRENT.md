@@ -230,5 +230,6 @@ _Last automatic heartbeat (Stop hook): 2026-07-25T20:02:56Z UTC_
 
 
 | `COMPANION_DIET_CONFLICT_NOTICES_20261111` | Owner Retest | `rollback/COMPANION-CONCISE-DIET-CONFLICT-NOTICES-20261111` → `82f23226` | Owner retest of grouped warnings, acknowledgement and 24-hour snooze in local Companion | [runs/COMPANION_DIET_CONFLICT_NOTICES_20261111.md](./runs/COMPANION_DIET_CONFLICT_NOTICES_20261111.md) |
+| `PLAN3_BEFORE_SHOPPING_REVIEW_20261112` | Waiting for User | `rollback/PLAN-before-shopping-review-20261112` | Owner acceptance of the Planner review flow; decide separately whether to adopt any archive asset from the inventory. | [runs/PLAN3_BEFORE_SHOPPING_REVIEW_20261112.md](./runs/PLAN3_BEFORE_SHOPPING_REVIEW_20261112.md) |
 
 
