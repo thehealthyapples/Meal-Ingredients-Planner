@@ -5,8 +5,8 @@ section: routes
 status: live
 visibility: household
 owner: Colin Clapson
-last_verified: 2026-11-05
-version: 8
+last_verified: 2026-11-15
+version: 9
 ---
 
 # Route Map
@@ -15,7 +15,7 @@ version: 8
 
 ## What it is
 
-The client router is the `wouter` `<Switch>` in `client/src/App.tsx`. This map mirrors all 51 declared route patterns there, including aliases, redirects, protected pages, and parameterized routes. Most household pages are protected; signed-out visitors are sent to `/auth`, and incomplete onboarding is sent to `/onboarding`.
+The client router is the `wouter` `<Switch>` in `client/src/App.tsx`. This map mirrors all 52 declared route patterns there, including aliases, redirects, protected pages, and parameterized routes. Most household pages are protected; signed-out visitors are sent to `/auth`, and incomplete onboarding is sent to `/onboarding`.
 
 ## Public routes
 
@@ -50,6 +50,7 @@ The client router is the `wouter` `<Switch>` in `client/src/App.tsx`. This map m
 | `/compare` | Food comparison |
 | `/products` | Product analyser |
 | `/analyser` | Product analyser (same page as `/products`) |
+| `/meals` | Redirects to the current Planner week |
 | `/meals/:id` | Meal detail |
 | `/cookbook` | Cookbook real-book view |
 | `/cookbook/grid` | Cookbook Grid |

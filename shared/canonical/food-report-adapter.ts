@@ -235,3 +235,10 @@ export function canonicalSlugForKnowledgeSlug(knowledgeSlug: string): string | n
   }
   return null;
 }
+
+/** Resolve a canonical food to its knowledge-owner identity without copying
+ * the image or knowledge data into the canonical adapter. */
+export function knowledgeSlugForCanonicalSlug(canonicalSlug: string): string | null {
+  const entry = CANONICAL_SEED.find((candidate) => candidate.food.slug === canonicalSlug);
+  return entry?.food.knowledgeFoodSlug ?? null;
+}

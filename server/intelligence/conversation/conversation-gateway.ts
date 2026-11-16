@@ -99,8 +99,9 @@ import { storage } from "../../storage.js";
 // INT20 — natural-language action resolution. `parseActionCommand` is pure
 // (words → symbolic command); `resolveActionCommand` turns that into a proposal
 // for an EXISTING bound capability, or one clarification question.
-import { parseActionCommand } from "./action-language.js";
-import { resolveActionCommand } from "./action-resolution.js";
+import { parseActionCommand, matchSlot, type ActionCommand, type MealSlot } from "./action-language.js";
+import { resolveActionCommand, computeMealRestrictionCheck, type PlannerMealCheck } from "./action-resolution.js";
+import { confirmationFor } from "../permissions.js";
 import {
   buildNativeDiscoveryResponse,
   type NativeDiscoveryResponse,
@@ -221,6 +222,16 @@ export interface TurnResult {
   readonly conversationId: number;
   /** The thread ID currently active. */
   readonly threadId:       number;
+  /**
+   * COMP3 — tappable quick-reply chips for THIS turn's clarification, when
+   * the resolver named a small closed set (e.g. ["Breakfast","Lunch","Dinner"],
+   * or real candidate names for an ambiguous match). Tapping one sends that
+   * EXACT text as the next turn — no new backend path. Undefined for any
+   * open-ended question, a successful proposal, or a non-INT20 (LLM
+   * conversational) response — the free-text box remains the only way to
+   * answer those, same as today.
+   */
+  readonly suggestedReplies?: readonly string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -432,6 +443,8 @@ async function buildGroundedResponse(
   resolvedIntent: { capabilities: { capabilityId: string; verb: IntentVerb; status: QueriedIntentStatus }[] } | null;
   /** INT40 — unpersisted Companion Action proposals for this turn (persisted by the caller once the assistant turn id exists). */
   actionDrafts: CompanionActionProposalDraft[];
+  /** COMP3 — tappable quick-reply chips for THIS clarification, when the resolver named a small closed set. */
+  suggestedReplies?: readonly string[];
 }> {
 
   // OBS1 — shared correlation fields for every observation this turn emits.
@@ -509,7 +522,19 @@ async function buildGroundedResponse(
   // executes nothing — the proposal is persisted by the caller exactly like every
   // COMP_ACT2 proposal, and the confirm endpoint remains the only executor.
   {
-    const command = parseActionCommand(utterance);
+    const spokenCommand = parseActionCommand(utterance);
+    // Tried FIRST and ahead of the dietary-correction check below: naming an
+    // offered candidate outright ("Chicken Pasta Bake") is a precise, exact
+    // match against a specific prior question, which must win over the
+    // dietary-correction check's much broader word list — that list matches
+    // the bare word "pasta" for an unrelated reason (a meal NAME containing
+    // it), and would otherwise hijack this reply before it is ever tried.
+    const pendingMealNameAnswer = spokenCommand ? null : recentPlannerMealNameAnswer(utterance, recentHistory);
+    const pendingCorrection = spokenCommand || pendingMealNameAnswer ? null : recentPlannerDietaryCorrection(utterance, recentHistory);
+    const pendingSlotAnswer = spokenCommand || pendingMealNameAnswer || pendingCorrection
+      ? null
+      : recentPlannerSlotAnswer(utterance, recentHistory);
+    const command = spokenCommand ?? pendingMealNameAnswer ?? pendingCorrection ?? pendingSlotAnswer;
     if (command) {
       const resolution = await resolveActionCommand(command, {
         identity:               frame.identity,
@@ -519,6 +544,7 @@ async function buildGroundedResponse(
         selectedPlannerEntryId: frame.selectedPlannerEntryId,
         selectedMealSlot:       frame.selectedMealSlot,
         selectedPantryCategory: frame.selectedPantryCategory,
+        dietaryCorrection: pendingCorrection ? utterance : undefined,
       });
 
       if (resolution.kind === "proposal" || resolution.kind === "clarification") {
@@ -564,6 +590,7 @@ async function buildGroundedResponse(
             enrichment: [],
             resolvedIntent: null,
             actionDrafts: [],
+            suggestedReplies: resolution.suggestedReplies,
           };
         }
 
@@ -1413,7 +1440,10 @@ entityRefs must ONLY contain items that appear in the context data above with a 
       guidanceKind,
       enrichment,
       resolvedIntent: resolvedIntentPayload,
-      actionDrafts,
+      // COMP_SUB1 — a withheld meal with a real curated/community fix carries
+      // its own one-tap `meals.replace` proposal alongside whatever this turn
+      // already proposed.
+      actionDrafts: validated.substitutionDraft ? [...actionDrafts, validated.substitutionDraft] : actionDrafts,
     };
   } catch {
     // PROD3 — the JSON-parse fallback previously returned `rawContent`, the
@@ -1434,9 +1464,176 @@ entityRefs must ONLY contain items that appear in the context data above with a 
       guidanceKind,
       enrichment,
       resolvedIntent: resolvedIntentPayload,
-      actionDrafts,
+      actionDrafts: validated.substitutionDraft ? [...actionDrafts, validated.substitutionDraft] : actionDrafts,
     };
   }
+}
+
+/**
+ * One-turn continuation over the existing conversation, never a second pending
+ * action store. A food-substitution reply refers only to the immediately prior
+ * planner-add request, which is re-resolved against current meal/safety data.
+ */
+/** A short affirmative reply to a Companion-offered recipe change — "yes", "go ahead", etc. */
+const AFFIRMATIVE_REPLY_RE = /^\s*(?:yes|yeah|yep|yup|sure|please do|go ahead|do it|that works|sounds good|ok|okay)\b/i;
+
+export function recentPlannerDietaryCorrection(
+  utterance: string,
+  recentHistory: readonly Pick<ConversationTurn, "role" | "utterance">[],
+): ActionCommand | null {
+  const namesASubstitution = /\b(?:gluten[\s-]*free|pasta|noodles?|alternatives?|substitutes?|swaps?)\b/i.test(utterance);
+  // A bare "yes" carries no substitution words of its own — it only ever means
+  // something as a reply to an offer the PRIOR assistant turn made, which the
+  // capability-level restricted-meal check below still re-derives fresh.
+  if (!namesASubstitution && !AFFIRMATIVE_REPLY_RE.test(utterance)) return null;
+
+  // The anchor is the nearest prior USER turn that parses as a complete
+  // planner.add command on its own. A multi-step clarification chain (slot
+  // asked → answered → meal not found → "yes" to create it as a quick meal)
+  // means that turn is NOT always the immediately prior one — a bare slot
+  // reply sits in between and does not parse as a command at all. The search
+  // walks back PAST turns like that, but stops dead at any turn that named
+  // some OTHER real request — inheriting across an unrelated command would
+  // be a worse mistake than asking again. Bounded to a few turns so an
+  // unrelated, long-past exchange is never silently adopted. Any slot
+  // answered along the way is re-applied to the anchor — finding the right
+  // original request is pointless if the one piece it was missing is lost
+  // again the moment this function hands it back.
+  const userTurns = recentHistory.filter((t) => t.role === "user");
+  const slotsAnsweredAlongTheWay: MealSlot[] = [];
+  for (let i = userTurns.length - 1; i >= 0 && i >= userTurns.length - 4; i--) {
+    const command = parseActionCommand(userTurns[i].utterance);
+    if (command) {
+      if (command.capability !== "planner" || command.verb !== "add") return null;
+      let anchor = command;
+      for (const slot of slotsAnsweredAlongTheWay) {
+        if (anchor.target?.mealSlot === undefined) {
+          anchor = { ...anchor, target: { ...anchor.target, mealSlot: slot } };
+        }
+      }
+      return anchor;
+    }
+    const trimmed = userTurns[i].utterance.trim();
+    if (AFFIRMATIVE_REPLY_RE.test(trimmed)) continue; // carries no slot info of its own
+    const slot = trimmed.length > 0 && trimmed.split(/\s+/).length <= 3 ? matchSlot(trimmed) : undefined;
+    if (slot === undefined) return null;
+    slotsAnsweredAlongTheWay.unshift(slot);
+  }
+  return null;
+}
+
+/**
+ * One-turn continuation for the single most common clarification reply of
+ * all: the household answers "which meal — breakfast, lunch or dinner?"
+ * with JUST the slot word ("dinner", "for lunch"). Without this, a bare
+ * slot-word reply parses as no command at all and falls through to the
+ * generic conversational fallback, which can describe an action in free text
+ * ("I'll move/add/replace X... is that correct?") with NO real proposal
+ * behind it — the household sees a confirm-sounding sentence that confirms
+ * nothing.
+ *
+ * All three planner write verbs ask this exact question when a slot is
+ * missing — "add" on the TARGET (where the meal is going), "move"/"replace"
+ * on the SOURCE (which existing entry is meant) — so this covers all three,
+ * merging the slot into whichever side that verb actually asked about.
+ *
+ * Deliberately narrow, mirroring `recentPlannerDietaryCorrection`: only a
+ * SHORT reply that resolves to a slot and nothing else is treated as an
+ * answer to that specific question, and only when the prior command was
+ * itself missing that exact slot already — never when the household named a
+ * longer, independently-parseable command that happens to mention a
+ * mealtime word.
+ */
+export function recentPlannerSlotAnswer(
+  utterance: string,
+  recentHistory: readonly Pick<ConversationTurn, "role" | "utterance">[],
+): ActionCommand | null {
+  const trimmed = utterance.trim();
+  if (!trimmed || trimmed.split(/\s+/).length > 3) return null;
+  const slot = matchSlot(trimmed);
+  if (!slot) return null;
+  if (recentHistory.length < 2) return null;
+  const priorUser = recentHistory[recentHistory.length - 2];
+  const priorAssistant = recentHistory[recentHistory.length - 1];
+  if (priorUser?.role !== "user" || priorAssistant?.role !== "assistant") return null;
+  const command = parseActionCommand(priorUser.utterance);
+  if (command?.capability !== "planner") return null;
+
+  if (command.verb === "add" && command.target?.mealSlot === undefined) {
+    return { ...command, target: { ...command.target, mealSlot: slot } };
+  }
+  if ((command.verb === "move" || command.verb === "replace") && command.source?.mealSlot === undefined) {
+    return { ...command, source: { ...command.source, mealSlot: slot } };
+  }
+  return null;
+}
+
+/**
+ * Reverses `listNames()` in action-resolution.ts EXACTLY — "X", "X or Y", or
+ * "X, Y or Z" — back into the individual names. The two functions are owned
+ * together: a format listNames stops producing without a matching change
+ * here would silently break this continuation, so change them together.
+ */
+function parseListNames(text: string): string[] {
+  const orIndex = text.lastIndexOf(" or ");
+  if (orIndex === -1) return [text.trim()].filter(Boolean);
+  const last = text.slice(orIndex + 4).trim();
+  const rest = text.slice(0, orIndex).split(",").map((s) => s.trim()).filter(Boolean);
+  return [...rest, last].filter(Boolean);
+}
+
+/**
+ * One-turn continuation for the ambiguous-meal-name reply: the household
+ * answers "I found more than one meal like 'pasta bake' — did you mean X, Y
+ * or Z?" by naming ONE of the offered candidates outright ("Chicken Pasta
+ * Bake"). Without this, that reply parses as no command at all (it's just a
+ * meal name, no verb) and falls through to the generic conversational
+ * fallback — which, having nothing stored to answer from, degrades further
+ * into an honest-but-useless "I don't have trusted information" refusal on
+ * the next turn. The anchor search mirrors `recentPlannerDietaryCorrection`
+ * exactly (walks back past a slot-answer turn, re-applies it) — the one
+ * addition is that the chosen candidate REPLACES the original ambiguous
+ * subject, rather than merely filling in a missing field.
+ */
+export function recentPlannerMealNameAnswer(
+  utterance: string,
+  recentHistory: readonly Pick<ConversationTurn, "role" | "utterance">[],
+): ActionCommand | null {
+  if (recentHistory.length < 1) return null;
+  const priorAssistant = recentHistory[recentHistory.length - 1];
+  if (priorAssistant?.role !== "assistant") return null;
+  const didYouMean = /did you mean (.+)\?\s*$/i.exec(priorAssistant.utterance.trim());
+  if (!didYouMean) return null;
+  const candidates = parseListNames(didYouMean[1]);
+  const trimmedReply = utterance.trim();
+  const chosen = candidates.find((name) => name.toLowerCase() === trimmedReply.toLowerCase());
+  if (!chosen) return null;
+
+  // The "did you mean" turn itself is the immediately prior one — the real
+  // anchor (and any slot answered before THAT) sits further back still.
+  const userTurns = recentHistory.filter((t) => t.role === "user");
+  const slotsAnsweredAlongTheWay: MealSlot[] = [];
+  for (let i = userTurns.length - 1; i >= 0 && i >= userTurns.length - 4; i--) {
+    const command = parseActionCommand(userTurns[i].utterance);
+    if (command) {
+      if (command.capability !== "planner") return null;
+      let anchor: ActionCommand = { ...command, subject: chosen };
+      for (const slot of slotsAnsweredAlongTheWay) {
+        if (anchor.verb === "add" && anchor.target?.mealSlot === undefined) {
+          anchor = { ...anchor, target: { ...anchor.target, mealSlot: slot } };
+        } else if ((anchor.verb === "move" || anchor.verb === "replace") && anchor.source?.mealSlot === undefined) {
+          anchor = { ...anchor, source: { ...anchor.source, mealSlot: slot } };
+        }
+      }
+      return anchor;
+    }
+    const trimmed = userTurns[i].utterance.trim();
+    if (AFFIRMATIVE_REPLY_RE.test(trimmed)) continue;
+    const slot = trimmed.length > 0 && trimmed.split(/\s+/).length <= 3 ? matchSlot(trimmed) : undefined;
+    if (slot === undefined) return null;
+    slotsAnsweredAlongTheWay.unshift(slot);
+  }
+  return null;
 }
 
 /**
@@ -1520,11 +1717,56 @@ function describeSafetyConflict(verdict: SafetyVerdict, safetyCtx: HouseholdSafe
   return "";
 }
 
-async function validateResponseSafety(
+/**
+ * COMP_SUB1 — build a `meals.replace` Companion Action draft for a restricted
+ * meal PROD3 just withheld, when the household's own saved recipe has a real
+ * curated or community-stated fix available. Mirrors the planner-add flow's
+ * own draft (action-resolution.ts `resolvePlannerAdd`'s restricted branch)
+ * exactly: same capability/verb/parameters shape, same executability gate.
+ * Returns null when the capability isn't executable (honest gap, no draft
+ * offered) or there is genuinely no alternative to propose.
+ */
+/** Exported for direct testing only (test-comp-sub1-withheld-substitution.ts) — not part of the gateway's own public API. */
+export function buildWithheldMealSubstitutionDraft(
+  mealId: number,
+  check: Extract<PlannerMealCheck, { kind: "restricted" }>,
+): { draft: CompanionActionProposalDraft; offerSentence: string } | null {
+  if (!check.ingredient) return null;
+  const curated = check.alternatives.map((o) => o.replace(/\s+\([^)]*\)$/, ""));
+  const community = check.communityAlternatives.map((o) => o.replace(/\s+\([^)]*\)$/, ""));
+  const replacement = curated[0] ?? community[0];
+  if (!replacement) return null;
+
+  if (!intelligencePlatform.canExecute("meals", "replace")) return null;
+  const capability = intelligencePlatform.getCapability("meals");
+  if (!capability) return null;
+
+  const draft: CompanionActionProposalDraft = {
+    capabilityId: "meals",
+    verb: "replace",
+    label: `Update "${check.mealName}" to use ${replacement} instead of "${check.ingredient}"`,
+    parameters: { mealId, ingredient: check.ingredient, matchedTerm: check.matchedTerm, replacement },
+    confirmationTier: confirmationFor(capability, "replace"),
+  };
+
+  // Restriction-agnostic wording — this path serves EVERY hard restriction
+  // (gluten, dairy, nuts, shellfish, …), not just the gluten case the owner
+  // happened to hit. Never name a specific diet here; `detail` (built by the
+  // caller from describeSafetyConflict) already names the real one(s).
+  const isCurated = Boolean(curated[0]);
+  const offerSentence = isCurated
+    ? ` A swap I already know works there is ${replacement} — confirm below if you'd like me to update your saved recipe to use it.`
+    : ` I couldn't verify a fix myself, but other households have mentioned ${replacement} for this — unverified, so check it yourself; confirm below if you'd like me to update your saved recipe anyway.`;
+
+  return { draft, offerSentence };
+}
+
+/** Exported for direct testing only (test-comp-sub1-withheld-substitution.ts) — not part of the gateway's own public API. */
+export async function validateResponseSafety(
   text: string,
   entityRefs: EntityRef[],
   safetyCtx: HouseholdSafetyContext,
-): Promise<{ text: string; entityRefs: EntityRef[]; withheld: number }> {
+): Promise<{ text: string; entityRefs: EntityRef[]; withheld: number; substitutionDraft?: CompanionActionProposalDraft }> {
   // A household with nothing to gate against needs no gate. `isSafetyGateActive`
   // is the canonical short-circuit (SURF1B) and is deliberately TRUE for an
   // `unavailable` context — so "we could not check" still validates, and only a
@@ -1548,7 +1790,14 @@ async function validateResponseSafety(
   // restriction/pattern it breaches is not an unsafe disclosure (it is the
   // household's own recorded data), and it is the difference between a
   // genuinely honest refusal and a dead end that repeats itself verbatim.
-  let firstConflict: { mealName: string; description: string } | null = null;
+  //
+  // COMP_SUB1 — the owner's own follow-up: a flat refusal with no substitution
+  // offer is inconsistent with the planner-add flow, which DOES offer one. The
+  // first conflicting meal's own ingredients are now put through the SAME
+  // curated/community lookup (computeMealRestrictionCheck), and when a real fix
+  // exists, it's offered as a one-tap `meals.replace` Companion Action, not just
+  // named in prose.
+  let firstConflict: { mealId: number; mealName: string; description: string; check: PlannerMealCheck } | null = null;
   for (const ref of mealRefs) {
     const mealId = typeof ref.id === "number" ? ref.id : Number(ref.id);
     if (!Number.isFinite(mealId)) continue;
@@ -1563,7 +1812,15 @@ async function validateResponseSafety(
       if (!verdict.safe) {
         unsafeKeys.add(`${ref.type}:${ref.id}`);
         if (!firstConflict) {
-          firstConflict = { mealName: meal.name, description: describeSafetyConflict(verdict, safetyCtx) };
+          const check = meal.ingredients && meal.ingredients.length > 0
+            ? await computeMealRestrictionCheck({ name: meal.name, ingredients: meal.ingredients }, safetyCtx)
+            : ({ kind: "unavailable" } as PlannerMealCheck);
+          firstConflict = {
+            mealId,
+            mealName: meal.name,
+            description: describeSafetyConflict(verdict, safetyCtx),
+            check,
+          };
         }
       }
     } catch {
@@ -1577,12 +1834,25 @@ async function validateResponseSafety(
   const detail = firstConflict
     ? ` "${firstConflict.mealName}" doesn't fit${firstConflict.description ? ` — ${firstConflict.description}` : " your household's dietary requirements"}.`
     : " it doesn't fit your household's dietary requirements.";
+
+  let offerSentence = "";
+  let substitutionDraft: CompanionActionProposalDraft | undefined;
+  if (firstConflict && firstConflict.check.kind === "restricted") {
+    const built = buildWithheldMealSubstitutionDraft(firstConflict.mealId, firstConflict.check);
+    if (built) {
+      offerSentence = built.offerSentence;
+      substitutionDraft = built.draft;
+    }
+  }
+
   return {
-    text:
-      `I found something, but I can't offer it —${detail} I've held it back rather than suggest it. ` +
-      "Ask me again and I'll look for something that does fit.",
+    text: substitutionDraft
+      ? `I found something, but can't offer it as-is —${detail}${offerSentence}`
+      : `I found something, but I can't offer it —${detail} I've held it back rather than suggest it. ` +
+        "Ask me again and I'll look for something that does fit.",
     entityRefs: kept,
     withheld: unsafeKeys.size,
+    substitutionDraft,
   };
 }
 
@@ -1730,7 +2000,7 @@ export class ConversationGateway {
     // 5. Build grounded response (using prior history, excluding just-appended user turn)
     const recentHistory = await this.store.getRecentTurns(thread.id, 7);
     const priorTurns = recentHistory.filter(t => t.id !== userTurn.id);
-    const { text, entityRefs, outcome, discoveries, guidance, guidanceKind, enrichment, fallbackState, resolvedIntent, actionDrafts } =
+    const { text, entityRefs, outcome, discoveries, guidance, guidanceKind, enrichment, fallbackState, resolvedIntent, actionDrafts, suggestedReplies } =
       await buildGroundedResponse(
         utterance,
         frame,
@@ -1814,6 +2084,7 @@ export class ConversationGateway {
       actions,
       conversationId: conversation.id,
       threadId: thread.id,
+      suggestedReplies,
     };
   }
 

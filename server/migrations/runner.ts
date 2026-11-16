@@ -3865,6 +3865,42 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  // COMP3 — Learned substitution observations. When a household names its own
+  // fix for a flagged ingredient the curated rule engine has no entry for
+  // (e.g. "I'll use a gluten-free Worcestershire sauce"), that statement is
+  // recorded here — never promoted into the curated, trusted substitution
+  // rules automatically. A later turn, for ANY household with the same
+  // conflict, may surface it back as an explicitly unverified, attributed
+  // suggestion ("other households have mentioned…") — the household still
+  // decides, and the app never claims it as a safety fact on its own
+  // authority. restriction_id/ingredient_key are free-text keys owned by this
+  // table alone (not a foreign key into the restriction library, which has no
+  // id-stable row to reference) — see server/intelligence/conversation/
+  // learned-substitution-store.ts.
+  {
+    id: "2026-11-14_comp3_learned_substitution_observations",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS learned_substitution_observations (
+         id SERIAL PRIMARY KEY,
+         restriction_id TEXT NOT NULL,
+         ingredient_key TEXT NOT NULL,
+         stated_replacement TEXT NOT NULL,
+         household_id INTEGER NOT NULL REFERENCES households(id) ON DELETE CASCADE,
+         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+       )`,
+      // One row per household per distinct thing it has said for this
+      // ingredient — repeating the same correction across turns must not
+      // accumulate duplicate rows, but two DIFFERENT households saying the
+      // same thing both count (that corroboration is the point).
+      `ALTER TABLE learned_substitution_observations DROP CONSTRAINT IF EXISTS learned_substitution_observations_unique`,
+      `ALTER TABLE learned_substitution_observations ADD CONSTRAINT learned_substitution_observations_unique
+         UNIQUE (restriction_id, ingredient_key, stated_replacement, household_id)`,
+      // Every lookup filters on exactly this pair.
+      `CREATE INDEX IF NOT EXISTS learned_substitution_observations_lookup_idx
+         ON learned_substitution_observations (restriction_id, ingredient_key)`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

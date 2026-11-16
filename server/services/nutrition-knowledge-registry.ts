@@ -636,7 +636,17 @@ export async function searchKnowledgeRegistry(rawQuery: string): Promise<Knowled
       f.aliases.some((a) => a.toLowerCase().includes(q)),
   );
   const nutrientMatches = nutrients.filter((n) => n.name.toLowerCase().includes(q) || n.slug.toLowerCase().includes(q));
-  const benefitMatches = benefits.filter((b) => b.name.toLowerCase().includes(q) || b.slug.toLowerCase().includes(q));
+  // COMP_NK1 — a household asking "foods that help with my immune system" named the
+  // benefit in different words than its own name/slug ("Immune Support"); the curated
+  // description already carries that everyday phrasing ("...immune system and immunity
+  // draw on..."), so checking it too lets common phrasings reach the benefit without
+  // inventing a new aliases table for a one-field editorial fix.
+  const benefitMatches = benefits.filter(
+    (b) =>
+      b.name.toLowerCase().includes(q) ||
+      b.slug.toLowerCase().includes(q) ||
+      (b.description?.toLowerCase().includes(q) ?? false),
+  );
 
   return {
     query: rawQuery,

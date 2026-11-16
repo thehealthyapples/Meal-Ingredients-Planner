@@ -209,7 +209,7 @@ function SlotSection({
                 data-testid={`card-day-entry-${entry.id}`}
               >
                 {meal?.imageUrl ? (
-                  <img src={meal.imageUrl} alt={meal.name} className="h-6 w-6 rounded object-cover flex-shrink-0" />
+                  <img src={meal.imageUrl} alt={meal.name} loading="lazy" decoding="async" className="h-6 w-6 rounded object-cover flex-shrink-0" />
                 ) : meal?.isReadyMeal ? (
                   <div className="h-6 w-6 rounded bg-green-500/10 flex items-center justify-center flex-shrink-0">
                     <UtensilsCrossed className="h-3 w-3 text-green-500/40" />
@@ -360,7 +360,7 @@ function SlotSection({
                     data-testid={`option-meal-${meal.id}`}
                   >
                     {meal.imageUrl ? (
-                      <img src={meal.imageUrl} alt={meal.name} className="h-4 w-4 rounded object-cover flex-shrink-0" />
+                      <img src={meal.imageUrl} alt={meal.name} loading="lazy" decoding="async" className="h-4 w-4 rounded object-cover flex-shrink-0" />
                     ) : (
                       <ChefHat className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     )}

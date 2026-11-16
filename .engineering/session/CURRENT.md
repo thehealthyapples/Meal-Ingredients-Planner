@@ -12,6 +12,9 @@ This is the first file to read when recovering an interrupted session.
 Find the active session, open its run file, and continue from **Next action**.
 
 | Session ID | Stage | Rollback ID | Next action | Run file |
+| `PLANNER_MEAL_CARD_LAYOUT_REFINEMENT_20261115` | Implementation | `rollback/UX-planner-meal-card-layout-20261115` → `834c1d46` | Retest the populated seven-day Planner after the 19:44 screenshot correction; full-screen after-capture still times out. | [runs/PLANNER_MEAL_CARD_LAYOUT_REFINEMENT_20261115.md](./runs/PLANNER_MEAL_CARD_LAYOUT_REFINEMENT_20261115.md) |
+| `COMP2_GLUTEN_ALTERNATIVES_20261114` | Implementation | `rollback/COMP2-gluten-alternatives-20261114` → `834c1d46` | Implement grounded restriction choices and follow-up; verify focused suites. | [runs/COMP2_GLUTEN_ALTERNATIVES_20261114.md](./runs/COMP2_GLUTEN_ALTERNATIVES_20261114.md) |
+| `SHOP_RECIPE_CONTEXT_POPUP_20261113` | Documentation | `rollback/shopping-recipe-context-popup-20261113` → `834c1d46` | Repository structure/session shell scripts could not run because Windows Bash returned E_ACCESSDENIED; implementation and reports are complete. | [runs/SHOP_RECIPE_CONTEXT_POPUP_20261113.md](./runs/SHOP_RECIPE_CONTEXT_POPUP_20261113.md) |
 | `DBDEV_REPOSITORY_DATABASE_SOURCE_20261111` | DB source fix pushed; launcher and sentinel checks pass; full boot owner-reported | `rollback/DBDEV-repository-env-source-20261111` → `82f23226` | Confirm repo `.env` target and pending migration state before restarting port 5000; then verify Companion notices. | [runs/DBDEV_REPOSITORY_DATABASE_SOURCE_20261111.md](./runs/DBDEV_REPOSITORY_DATABASE_SOURCE_20261111.md) |
 |---|---|---|---|---|
 | `COMPANION_WEEKLY_FOOD_QUANTITIES_20261111` | Owner Retest | `rollback/COMPANION-weekly-food-quantities-20261111` → `82f23226` | Implement exact-unit planned ingredient totals; keep unsupported nutrient shortfalls as honest gaps. | [runs/COMPANION_WEEKLY_FOOD_QUANTITIES_20261111.md](./runs/COMPANION_WEEKLY_FOOD_QUANTITIES_20261111.md) |
@@ -233,3 +236,5 @@ _Last automatic heartbeat (Stop hook): 2026-07-25T20:02:56Z UTC_
 | `PLAN3_BEFORE_SHOPPING_REVIEW_20261112` | Waiting for User | `rollback/PLAN-before-shopping-review-20261112` | Owner acceptance of the Planner review flow; decide separately whether to adopt any archive asset from the inventory. | [runs/PLAN3_BEFORE_SHOPPING_REVIEW_20261112.md](./runs/PLAN3_BEFORE_SHOPPING_REVIEW_20261112.md) |
 
 
+
+| `PLANNER_HISTORY_WINDOW_ARCHIVE_20261115` | Waiting for User | `rollback/PLANNER-recent-4-weeks-archive-20261115` | Confirm /meals current-week landing and date archive interaction in the running UI | [runs/PLANNER_HISTORY_WINDOW_ARCHIVE_20261115.md](./runs/PLANNER_HISTORY_WINDOW_ARCHIVE_20261115.md) |

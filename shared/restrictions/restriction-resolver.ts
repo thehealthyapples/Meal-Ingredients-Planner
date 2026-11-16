@@ -160,6 +160,31 @@ function substringIncludes(haystack: string, needle: string): boolean {
 }
 
 /**
+ * Remove only the library's named substitute PHRASES before testing a restriction.
+ * A substitute in one ingredient line never clears another conflicting word in
+ * that line: "rice noodles with soy sauce" must still match gluten via soy sauce.
+ * The library remains the sole owner of which phrases are substitutes.
+ */
+export function maskRestrictionSubstitutions(value: string, definition: RestrictionDefinition): string {
+  let remaining = norm(value);
+  for (const substitute of [...definition.substitutions].sort((a, b) => b.length - a.length)) {
+    const phrase = norm(substitute);
+    if (!phrase) continue;
+    const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // A plain \b anchor requires the character AT the phrase's own edge to be
+    // a word character — so a declared substitution phrase ending in
+    // punctuation (e.g. "aquafaba (3 tbsp chickpea water per egg)") would
+    // never match at all, silently leaving its trailing word ("egg") to trip
+    // the very restriction the phrase was declared safe against. Lookarounds
+    // check only the NEIGHBOURING character, not the phrase's own edge, so
+    // they match identically to \b when the phrase starts/ends with a letter
+    // or digit, and correctly ALSO match when it does not.
+    remaining = remaining.replace(new RegExp(`(?<![a-z0-9])${escaped}(?![a-z0-9])`, 'gi'), ' ');
+  }
+  return remaining.replace(/\s+/g, ' ').trim();
+}
+
+/**
  * Word-start containment for derived and hidden ingredient entries (SURF1C2).
  *
  * A term matches only when it begins at a WORD BOUNDARY (a string edge, or any
@@ -246,13 +271,17 @@ function matchIngredientAgainstDefinition(
     return { restriction: definition, matchedTerm: normIngredient, sourceType, sourceValue };
   }
 
+  // A declared substitute may contain a broad restriction word ("rice noodles").
+  // Mask that phrase only, leaving other ingredients in the same line visible.
+  const checkedIngredient = maskRestrictionSubstitutions(normIngredient, definition);
+
   // 0. Check excludedCompounds — plant-based alternatives that share a keyword
   //    with a genuine restricted ingredient must never match this definition.
   //    This is an unconditional early exit: if any excluded compound is found
   //    as a substring of the normalised ingredient, return null immediately.
   if (definition.excludedCompounds && definition.excludedCompounds.length > 0) {
     for (const compound of definition.excludedCompounds) {
-      if (substringIncludes(normIngredient, norm(compound))) {
+      if (substringIncludes(checkedIngredient, norm(compound))) {
         return null;
       }
     }
@@ -260,14 +289,14 @@ function matchIngredientAgainstDefinition(
 
   // 1. Check definition id (whole-word)
   const normId = norm(definition.id);
-  if (wordBoundaryIncludes(normIngredient, normId)) {
+  if (wordBoundaryIncludes(checkedIngredient, normId)) {
     return makeMatch('alias', definition.id);
   }
 
   // 2. Check aliases (whole-word)
   for (const alias of definition.aliases) {
     const normAlias = norm(alias);
-    if (wordBoundaryIncludes(normIngredient, normAlias)) {
+    if (wordBoundaryIncludes(checkedIngredient, normAlias)) {
       return makeMatch('alias', alias);
     }
   }
@@ -275,7 +304,7 @@ function matchIngredientAgainstDefinition(
   // 3. Check derived ingredients (boundary-aware: term at a word boundary, plural OK)
   for (const derived of definition.derivedIngredients) {
     const normDerived = norm(derived);
-    if (boundaryAwareIncludes(normIngredient, normDerived)) {
+    if (boundaryAwareIncludes(checkedIngredient, normDerived)) {
       return makeMatch('derived_ingredient', derived);
     }
   }
@@ -283,7 +312,7 @@ function matchIngredientAgainstDefinition(
   // 4. Check hidden ingredients (boundary-aware: term at a word boundary, plural OK)
   for (const hidden of definition.hiddenIngredients) {
     const normHidden = norm(hidden);
-    if (boundaryAwareIncludes(normIngredient, normHidden)) {
+    if (boundaryAwareIncludes(checkedIngredient, normHidden)) {
       return makeMatch('hidden_ingredient', hidden);
     }
   }

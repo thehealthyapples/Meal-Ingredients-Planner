@@ -30,8 +30,8 @@
  *     `companion-actions.ts` already does and for the same stated reason: the
  *     handler remains the enforcing authority and re-validates everything.
  *   • NOT a guesser. Where a fact is missing it asks; where a name is ambiguous
- *     it asks; where the planner owns no calendar mapping it asks. It never
- *     substitutes a week, a day, a slot or an item.
+ *     it asks; where a dated planner week cannot be uniquely read it asks. It
+ *     never substitutes an undated week, a day, a slot or an item.
  *
  * THE CALENDAR BOUNDARY (the one design decision worth reading)
  * ------------------------------------------------------------
@@ -39,19 +39,18 @@
  * and "tomorrow" resolve against the household's own `temporalAnchor` and are
  * honoured directly.
  *
- * The planner is NOT. It is a fixed six-slot rota whose `weekStartDate` is
- * written only at creation and never back-filled (HT7), so for the great majority
- * of households THA genuinely does not know which calendar week "Week 3" means.
- * Its own read handler says so in as many words: *"the Planner is organised by
- * week-number and day-of-week and owns no calendar mapping, so 'today' cannot be
- * resolved to a planner slot"* (planner-read-handler.ts). Picking a week anyway is
- * the defect `household-planner-week.ts` exists to retire — *"Do not pick a week
- * to fix it."*
+ * The planner stores a nullable `weekStartDate` on each week. Household Time owns
+ * the civil-date arithmetic; the Planner owns the week rows and their dates. For
+ * For bare weekday language without an explicit week number, choose the next
+ * occurrence on or after the household's temporal anchor. "This <weekday>" means
+ * that weekday in the current calendar week; "next <weekday>" means the following
+ * calendar week. Read the exact dated week containing that date. If it has no
+ * unique match, ask. HT7 remains binding: never back-fill a null date or fall back
+ * to an undated ordinal / active screen week.
  *
- * So: calendar language aimed at the PLANNER earns a clarification, not an
- * invention. A week the household NAMED ("Week 1") is used as given; a week the
- * SURFACE published (`activePlannerWeekId` — the week on screen) is used as the
- * pointer it is, exactly as COMP_ACT2 uses `selectedPlannerDayId`.
+ * A week the household NAMED ("Week 1") is still used as given, dated or not.
+ * `activePlannerWeekId` remains a surface pointer only for commands without a
+ * weekday target; it must not override an utterance's calendar weekday.
  */
 
 import type { IntentVerb, IntelligenceContext, Intent, IntentOutcome } from "../types.js";
@@ -65,7 +64,17 @@ import {
   type MealSlot,
   type SlotRef,
 } from "./action-language.js";
-import { DAY_NAMES } from "@shared/time/household-time";
+import {
+  addCivilDays,
+  formatCivilDate,
+  householdDayOfWeek,
+  householdWeekOf,
+  parseCivilDate,
+  DAY_NAMES,
+} from "@shared/time/household-time";
+import { resolveIngredientRestrictions } from "@shared/restrictions/restriction-resolver";
+import { listSubstitutionOptions } from "@shared/substitution-rules";
+import type { HouseholdSafetyContext } from "../../lib/household-dietary-safety.js";
 import { hasCurrentHealthContextConsent } from "../../privacy/health-context-consent.js";
 import { nutritionFocusLabel } from "@shared/nutrition-focus";
 
@@ -83,8 +92,49 @@ import { nutritionFocusLabel } from "@shared/nutrition-focus";
  */
 export type ActionResolution =
   | { readonly kind: "proposal"; readonly draft: CompanionActionProposalDraft }
-  | { readonly kind: "clarification"; readonly question: string }
+  | {
+      readonly kind: "clarification";
+      readonly question: string;
+      /**
+       * COMP3 — a SMALL set of exact replies that answer this question, for a
+       * tappable quick-reply chip per entry (e.g. ["Breakfast","Lunch","Dinner"],
+       * or the real candidate names for an ambiguous match). Tapping one sends
+       * that EXACT text as the next turn — no new backend path, the same as
+       * typing it. Absent for any clarification that is genuinely open-ended
+       * (e.g. "what's it called exactly?") — the free-text box remains the
+       * only way to answer those, same as today.
+       */
+      readonly suggestedReplies?: readonly string[];
+    }
   | { readonly kind: "unresolved" };
+
+export type PlannerMealCheck =
+  | { readonly kind: "safe" }
+  | { readonly kind: "unavailable" }
+  | {
+      readonly kind: "restricted";
+      readonly mealName: string;
+      readonly restrictionNames: readonly string[];
+      readonly restrictionIds: readonly string[];
+      readonly ingredient: string | null;
+      readonly alternatives: readonly string[];
+      /**
+       * COMP3 — other households' own stated fixes for this exact ingredient,
+       * most-corroborated first. NEVER a verified fact: every caller must
+       * attribute and disclaim this (see `restrictionChoiceQuestion`), never
+       * present it with the confidence `alternatives` carries.
+       */
+      readonly communityAlternatives: readonly string[];
+      readonly householdId: number | null;
+      /**
+       * COMP3 — the exact library phrase that matched within `ingredient`
+       * (e.g. "worcestershire sauce" out of "1tbsp worcestershire sauce").
+       * Lets a write swap ONLY the flagged word(s), preserving the quantity
+       * and everything else on the line — never replace the whole ingredient
+       * string, which would silently drop its measure.
+       */
+      readonly matchedTerm: string | null;
+    };
 
 /** Everything the resolver may know about the household, all of it already assembled. */
 export interface ActionResolutionContext {
@@ -99,6 +149,8 @@ export interface ActionResolutionContext {
   readonly selectedPlannerEntryId?: number;
   readonly selectedMealSlot?: string;
   readonly selectedPantryCategory?: string;
+  /** Literal follow-up text from the same conversation, never a stored recipe edit. */
+  readonly dietaryCorrection?: string;
 }
 
 /** The platform seam. Production reads through `intelligencePlatform.handle`. */
@@ -127,6 +179,9 @@ const defaultGetCapability: GetCapabilityFn = (capabilityId) =>
 const PANTRY_CATEGORIES: ReadonlySet<string> = new Set([
   "larder", "fridge", "freezer", "household", "fruit", "pet",
 ]);
+
+/** COMP3 — tappable quick-reply chips for "which meal slot?" (never "snack" — it's rarely what's meant by a bare slot question). */
+const MEAL_SLOT_REPLIES = ["Breakfast", "Lunch", "Dinner"] as const;
 
 /**
  * The two owners spell the snack slot differently — planner `snacks`, diary
@@ -170,7 +225,7 @@ async function readResult(
 
 /** Case/punctuation-insensitive comparison key for matching a spoken name to a stored one. */
 function nameKey(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  return value.toLowerCase().replace(/\bbolognaise\b/g, "bolognese").replace(/[^a-z0-9]+/g, " ").trim();
 }
 
 /**
@@ -237,16 +292,16 @@ type DayResolution =
 /**
  * Locate one planner day from what the household said.
  *
- * The week comes from: an explicitly named week number, else the week the
- * surface has in scope. Calendar language ("next week", "tomorrow") is refused
- * with a question — see the calendar boundary note at the top of this file.
+ * The day comes from an explicitly named week number, or an exact dated Planner
+ * week derived from the household's calendar language. Undated weeks never get
+ * assigned a date by this resolver; see the calendar boundary note above.
  */
 async function resolvePlannerDay(
   ref: SlotRef,
   ctx: ActionResolutionContext,
   read: ReadIntentFn,
 ): Promise<DayResolution> {
-  // Calendar language the planner cannot honour.
+  // Calendar language with no weekday remains unresolvable by the planner action.
   if (ref.dayOfWeek === undefined && (ref.dayOffset !== undefined || ref.weekRelation !== undefined)) {
     return {
       kind: "clarification",
@@ -264,27 +319,35 @@ async function resolvePlannerDay(
     };
   }
 
-  // "next week" alongside a named weekday is still calendar language about which
-  // of the six slots is meant, and it is equally unanswerable.
-  if (ref.weekRelation !== undefined && ref.weekNumber === undefined) {
-    return {
-      kind: "clarification",
-      question:
-        "Your planner uses six numbered weeks rather than calendar weeks, so I can't tell " +
-        `which one "${ref.weekRelation} week" is. Which week number should I use?`,
-    };
-  }
+  const clarifyPlannerWeek = (): Extract<DayResolution, { kind: "clarification" }> => ({
+    kind: "clarification",
+    question: ref.weekRelation
+      ? "Your planner uses six numbered weeks rather than calendar weeks, so I can't tell " +
+        `which one "${ref.weekRelation} week" is. Which week number should I use?`
+      : `Which planner week should I use for ${DAY_NAMES[ref.dayOfWeek!]}?`,
+  });
 
   const params: Record<string, unknown> = { scope: "day", dayOfWeek: ref.dayOfWeek };
   if (ref.weekNumber !== undefined) {
     params.weekNumber = ref.weekNumber;
-  } else if (ctx.activePlannerWeekId !== undefined) {
-    params.weekId = ctx.activePlannerWeekId;
   } else {
-    return {
-      kind: "clarification",
-      question: `Which planner week should I use for ${DAY_NAMES[ref.dayOfWeek]}?`,
-    };
+    const today = parseCivilDate(ctx.temporalAnchor);
+    if (today) {
+      let requestedDate = today;
+      if (ref.weekRelation === "next") {
+        requestedDate = addCivilDays(householdWeekOf(today).start, 7 + ref.dayOfWeek - 1);
+      } else if (ref.weekRelation === "this") {
+        requestedDate = addCivilDays(householdWeekOf(today).start, ref.dayOfWeek - 1);
+      } else {
+        const daysUntilOccurrence = (ref.dayOfWeek - householdDayOfWeek(today) + 7) % 7;
+        requestedDate = addCivilDays(today, daysUntilOccurrence);
+      }
+      params.weekStartDate = formatCivilDate(householdWeekOf(requestedDate).start);
+    }
+  }
+
+  if (ref.weekNumber === undefined && params.weekStartDate === undefined) {
+    return clarifyPlannerWeek();
   }
 
   const result = (await readResult(read, ctx.identity, "planner", "read", params)) as
@@ -292,6 +355,9 @@ async function resolvePlannerDay(
     | null;
 
   if (!result || typeof result.dayId !== "number") {
+    if (ref.weekNumber === undefined) {
+      return clarifyPlannerWeek();
+    }
     return {
       kind: "clarification",
       question:
@@ -322,7 +388,29 @@ function entryInSlot(
 // ---------------------------------------------------------------------------
 
 interface MealSearchResult {
-  readonly meals: ReadonlyArray<{ readonly id: number; readonly name: string }>;
+  readonly meals: ReadonlyArray<{ readonly id: number; readonly name: string; readonly isSystemMeal: boolean; readonly ingredientCount: number }>;
+}
+
+/**
+ * When the household's own saved meal and a system-library meal share the exact
+ * same name, search quite correctly returns both — but asking "did you mean X or
+ * X?" is unanswerable: the two options render identically. The household's own
+ * copy is what they mean by that name (it is the one they can actually see and
+ * cook from), so it silently wins over a same-named system entry. This is a
+ * naming collision, not a real choice: it never fires when the household has
+ * two of its OWN meals with the same name, or when no own meal shares the name —
+ * both of those remain genuine ambiguity for the household to settle.
+ */
+function preferOwnOverSystemNamesakes<T extends { readonly name: string; readonly isSystemMeal: boolean }>(
+  meals: readonly T[],
+): T[] {
+  const ownKeysWithOneOwner = new Map<string, number>();
+  for (const m of meals) {
+    if (m.isSystemMeal) continue;
+    const key = nameKey(m.name);
+    ownKeysWithOneOwner.set(key, (ownKeysWithOneOwner.get(key) ?? 0) + 1);
+  }
+  return meals.filter((m) => !m.isSystemMeal || ownKeysWithOneOwner.get(nameKey(m.name)) !== 1);
 }
 
 /**
@@ -336,25 +424,369 @@ async function resolveMealId(
   spoken: string,
   ctx: ActionResolutionContext,
   read: ReadIntentFn,
-): Promise<{ readonly mealId: number; readonly name: string } | { readonly question: string }> {
-  const result = (await readResult(read, ctx.identity, "meals", "search", {
-    query: spoken,
-  })) as MealSearchResult | null;
+): Promise<
+  | { readonly mealId: number; readonly name: string; readonly hasNoRecipe: boolean }
+  | { readonly question: string; readonly reason: "ambiguous"; readonly suggestedReplies: readonly string[] }
+  | { readonly question: string; readonly reason: "miss" }
+> {
+  const result = (await readResult(read, ctx.identity, "meals", "search", { query: spoken })) as MealSearchResult | null;
+  let meals = result?.meals ?? [];
+  // A common spelling variant must still identify the SAME stored meal, never
+  // create a new meal or let fuzzy ranking choose between several candidates.
+  if (meals.length === 0 && /\bbolognaise\b/i.test(spoken)) {
+    const variant = spoken.replace(/\bbolognaise\b/gi, "bolognese");
+    const alternate = (await readResult(read, ctx.identity, "meals", "search", { query: variant })) as MealSearchResult | null;
+    meals = alternate?.meals ?? [];
+  }
+  const match = matchByName(preferOwnOverSystemNamesakes(meals), spoken, (m) => m.name);
 
-  const meals = result?.meals ?? [];
-  const match = matchByName(meals, spoken, (m) => m.name);
-
-  if ("hit" in match) return { mealId: match.hit.id, name: match.hit.name };
+  if ("hit" in match) {
+    return { mealId: match.hit.id, name: match.hit.name, hasNoRecipe: match.hit.ingredientCount === 0 };
+  }
   if ("ambiguous" in match) {
+    const names = match.ambiguous.map((m) => m.name);
     return {
-      question: `I found more than one meal like "${spoken}" — did you mean ${listNames(
-        match.ambiguous.map((m) => m.name),
-      )}?`,
+      reason: "ambiguous",
+      question: `I found more than one meal like "${spoken}" — did you mean ${listNames(names)}?`,
+      suggestedReplies: names,
     };
   }
   return {
+    reason: "miss",
     question: `I couldn't find a meal called "${spoken}" in your meals. What's it called exactly?`,
   };
+}
+
+/**
+ * Check the actual saved meal through the permission-aware Meals read binding and
+ * the canonical household safety owner. No shopping choice changes this row.
+ */
+/**
+ * COMP_SUB1 — the conflict/alternatives computation `defaultCheckPlannerMeal`
+ * already does (which ingredient, which restriction, which curated/community
+ * replacement), lifted out so a SECOND caller — PROD3's response-safety gate
+ * in conversation-gateway.ts, which already has a resolved `HouseholdSafetyContext`
+ * and a meal with real ingredients, just via a different path (an LLM-suggested
+ * meal ref, not a parsed planner.add command) — can get the identical answer
+ * without re-implementing the ingredient/restriction matching or duplicating
+ * the curated/community lookup. Takes an ALREADY-RESOLVED safety context
+ * (never re-reads it) and a meal that already has a real ingredient list —
+ * callers own the "unavailable" / "quick meal, no ingredients" / "gate not
+ * active" decisions, which depend on things this function is not given.
+ */
+export async function computeMealRestrictionCheck(
+  meal: { readonly name: string; readonly ingredients: readonly string[] },
+  safety: HouseholdSafetyContext,
+): Promise<PlannerMealCheck> {
+  const { isMealSafeForHousehold, validateAdaptationSafety } = await import("../../lib/household-dietary-safety.js");
+  const verdict = isMealSafeForHousehold({ name: meal.name, ingredients: [...meal.ingredients] }, safety);
+  if (verdict.safe) return { kind: "safe" };
+
+  const names = new Set<string>();
+  const ids = new Set<string>();
+  const conflictingIngredients: string[] = [];
+  // The exact library phrase that matched within the FIRST conflicting
+  // ingredient — e.g. "worcestershire sauce" out of "1tbsp worcestershire
+  // sauce" — captured once, so a later write can swap only the flagged
+  // word(s) and keep the line's quantity intact.
+  let matchedTerm: string | null = null;
+  for (const ingredient of meal.ingredients) {
+    const matches = resolveIngredientRestrictions(ingredient, safety.activeRestrictions);
+    if (matches.length === 0) continue;
+    if (matchedTerm === null) matchedTerm = matches[0].sourceValue;
+    conflictingIngredients.push(ingredient);
+    for (const match of matches) {
+      names.add(match.restriction.displayName);
+      ids.add(match.restriction.id);
+    }
+  }
+  for (const match of resolveIngredientRestrictions(meal.name, safety.activeRestrictions)) {
+    names.add(match.restriction.displayName);
+    ids.add(match.restriction.id);
+  }
+  const alternatives = listSubstitutionOptions(conflictingIngredients, safety.hardRestrictions)
+    .map(option => option.replacement)
+    .filter((replacement, index, all) => all.indexOf(replacement) === index)
+    .filter(replacement => validateAdaptationSafety({ ingredients: [replacement] }, safety.hardRestrictions).safe)
+    .slice(0, 3);
+
+  const ingredient = conflictingIngredients[0] ?? null;
+  const communityAlternatives = await listCommunityAlternatives(ingredient, [...ids], alternatives);
+
+  return {
+    kind: "restricted",
+    mealName: meal.name,
+    restrictionNames: [...names],
+    restrictionIds: [...ids],
+    ingredient,
+    matchedTerm,
+    alternatives,
+    communityAlternatives,
+    householdId: safety.householdId,
+  };
+}
+
+async function defaultCheckPlannerMeal(
+  mealId: number,
+  ctx: ActionResolutionContext,
+  read: ReadIntentFn,
+): Promise<PlannerMealCheck> {
+  const {
+    resolveHouseholdSafetyContext,
+    isSafetyGateActive,
+  } = await import("../../lib/household-dietary-safety.js");
+  const safety = await resolveHouseholdSafetyContext(Number(ctx.identity.userId));
+  if (safety.status === "unavailable") return { kind: "unavailable" };
+  if (!isSafetyGateActive(safety)) return { kind: "safe" };
+
+  const detail = (await readResult(read, ctx.identity, "meals", "read", {
+    scope: "detail", mealId,
+  })) as { meal?: { name?: string; ingredients?: string[] } } | null;
+  const meal = detail?.meal;
+  if (!meal || typeof meal.name !== "string" || !Array.isArray(meal.ingredients)) {
+    return { kind: "unavailable" };
+  }
+  // A quick meal (no ingredients at all — never created via meals.add, or
+  // saved that way by hand on the Build-a-Meal page) has nothing a HARD
+  // allergen restriction could be hiding in, so one is never silently
+  // skipped by letting it through. A SOFT diet preference (keto,
+  // flexitarian, …) is advisory, not a safety gate — the household already
+  // chose to add a recipe-less meal, and that choice is theirs to make, not
+  // something this check should block on a preference that was never at
+  // genuine risk of being missed.
+  if (meal.ingredients.length === 0) {
+    return safety.hardRestrictions.length > 0 ? { kind: "unavailable" } : { kind: "safe" };
+  }
+  return computeMealRestrictionCheck({ name: meal.name, ingredients: meal.ingredients }, safety);
+}
+
+/**
+ * Other households' own stated fixes for this exact ingredient, for the
+ * restrictions actually in conflict — excluding anything already offered as
+ * a curated, trusted alternative. Best-effort: a lookup failure here must
+ * never fail the safety check itself, so it degrades to "none found".
+ */
+async function listCommunityAlternatives(
+  ingredient: string | null,
+  restrictionIds: readonly string[],
+  curatedAlternatives: readonly string[],
+): Promise<readonly string[]> {
+  if (!ingredient || restrictionIds.length === 0) return [];
+  try {
+    const { normaliseIngredientForDedupe } = await import("../../lib/uplift-persistence.js");
+    const { learnedSubstitutionStore } = await import("./learned-substitution-store.js");
+    const ingredientKey = normaliseIngredientForDedupe(ingredient);
+    if (!ingredientKey) return [];
+
+    const curatedKeys = new Set(curatedAlternatives.map(a => normaliseChoice(a)));
+    const seen = new Set<string>();
+    const merged: { replacement: string; householdCount: number }[] = [];
+    for (const restrictionId of restrictionIds) {
+      const observed = await learnedSubstitutionStore.listObservations(restrictionId, ingredientKey);
+      for (const o of observed) {
+        const key = normaliseChoice(o.statedReplacement);
+        if (curatedKeys.has(key) || seen.has(key)) continue;
+        seen.add(key);
+        merged.push({ replacement: o.statedReplacement, householdCount: o.householdCount });
+      }
+    }
+    return merged
+      .sort((a, b) => b.householdCount - a.householdCount)
+      .map(m => m.replacement)
+      .slice(0, 3);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * COMP3 — when a household names its own fix and it is genuinely new (not
+ * already curated, not already shared by another household), record it so a
+ * later household with the same conflict may see it, equally disclaimed.
+ * Best-effort: never lets a storage fault interrupt the household's turn.
+ */
+async function recordStatedReplacementIfNew(
+  check: Extract<PlannerMealCheck, { kind: "restricted" }>,
+  correction: string,
+): Promise<void> {
+  if (!check.ingredient || !check.householdId) return;
+  const stated = extractStatedReplacement(correction, check.restrictionNames);
+  if (!stated) return;
+  const key = normaliseChoice(stated);
+  const alreadyKnown = [...check.alternatives, ...check.communityAlternatives]
+    .some(option => normaliseChoice(option.replace(/\s+\([^)]*\)$/, "")) === key);
+  if (alreadyKnown) return;
+
+  try {
+    const { normaliseIngredientForDedupe } = await import("../../lib/uplift-persistence.js");
+    const { learnedSubstitutionStore } = await import("./learned-substitution-store.js");
+    const ingredientKey = normaliseIngredientForDedupe(check.ingredient);
+    if (!ingredientKey) return;
+    for (const restrictionId of check.restrictionIds) {
+      await learnedSubstitutionStore.recordObservation({
+        restrictionId,
+        ingredientKey,
+        statedReplacement: stated,
+        householdId: check.householdId,
+      });
+    }
+  } catch {
+    // Best-effort — the household's turn must not fail because learning did.
+  }
+}
+
+function normaliseChoice(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+/**
+ * A short affirmative reply to a Companion-offered recipe change — "yes", "go
+ * ahead", etc. Mirrors conversation-gateway.ts's own copy exactly; duplicated
+ * rather than imported to avoid a circular dependency (that module already
+ * imports FROM this one).
+ */
+const AFFIRMATIVE_REPLY_RE = /^\s*(?:yes|yeah|yep|yup|sure|please do|go ahead|do it|that works|sounds good|ok|okay)\b/i;
+
+/**
+ * COMP3 — pull a stated replacement out of a household's own words, e.g.
+ * "I can just buy gluten free Worcestershire sauce" → "gluten-free
+ * Worcestershire sauce". Deliberately narrow: it only recognises the
+ * explicit "<restriction>-free <product>" shape, built from the restriction
+ * names THIS check already found conflicting (never a fixed vocabulary of
+ * product names). A correction that doesn't use that shape yields nothing —
+ * a bare question like "what are some alternatives?" must never be read as
+ * the household teaching the Companion a new fact.
+ */
+function extractStatedReplacement(correction: string, restrictionNames: readonly string[]): string | null {
+  for (const name of restrictionNames) {
+    const word = name.trim();
+    if (!word) continue;
+    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(`\\b${escaped}[- ]free\\s+([a-z][a-z'-]*(?:\\s+[a-z][a-z'-]*){0,4})`, "i");
+    const match = re.exec(correction);
+    if (!match) continue;
+    const phrase = match[1].trim().replace(/\s+(?:instead|please|too|as well)$/i, "");
+    if (phrase.length >= 2 && phrase.length <= 60) return `${word.toLowerCase()}-free ${phrase}`;
+  }
+  return null;
+}
+
+function restrictionChoiceQuestion(
+  check: Extract<PlannerMealCheck, { kind: "restricted" }>,
+  correction?: string,
+): { readonly question: string; readonly suggestedReplies?: readonly string[] } {
+  const restriction = check.restrictionNames.length > 0
+    ? `your household's ${check.restrictionNames.join(" and ")} restriction${check.restrictionNames.length > 1 ? "s" : ""}`
+    : "your household's dietary requirements";
+  const issue = check.ingredient ? ` The recipe lists "${check.ingredient.slice(0, 100)}".` : "";
+  const curated = check.alternatives.map(option => option.replace(/\s+\([^)]*\)$/, ""));
+  const community = check.communityAlternatives.map(option => option.replace(/\s+\([^)]*\)$/, ""));
+
+  const selectedCurated = correction
+    ? curated.find(option => normaliseChoice(correction).includes(normaliseChoice(option)))
+    : undefined;
+  if (selectedCurated) {
+    const others = curated.filter(option => option !== selectedCurated);
+    return {
+      question: `You're right — ${selectedCurated} is a possible replacement.${others.length ? ` Other options are ${listNames(others)}.` : ""}${issue} ` +
+        `The saved recipe still conflicts with ${restriction} until its ingredients are changed and checked. ` +
+        `Save the version you choose, then ask me to add it; I'll check the whole recipe first.`,
+    };
+  }
+
+  const selectedCommunity = correction
+    ? community.find(option => normaliseChoice(correction).includes(normaliseChoice(option)))
+    : undefined;
+  if (selectedCommunity) {
+    return {
+      question: `Noted — other households have mentioned ${selectedCommunity} too, though I haven't verified that myself, so please check it before relying on it.${issue} ` +
+        `The saved recipe still conflicts with ${restriction} until its ingredients are changed and checked. ` +
+        `Save the version you choose, then ask me to add it; I'll check the whole recipe first.`,
+    };
+  }
+
+  // The household named something neither curated nor already shared by
+  // another household — acknowledged here (never claimed as verified); the
+  // caller records it so another household with the same conflict may see
+  // it, equally disclaimed, later.
+  const stated = correction ? extractStatedReplacement(correction, check.restrictionNames) : null;
+  if (stated) {
+    return {
+      question: `Thanks — I've noted ${stated} as something you're using, though I haven't verified it myself, so please double-check it.${issue} ` +
+        `The saved recipe still conflicts with ${restriction} until its ingredients are changed and checked. ` +
+        `Save the version you choose, then ask me to add it; I'll check the whole recipe first.`,
+    };
+  }
+
+  // Exactly one confident, curated option: offer to do the edit directly
+  // rather than asking "which would you prefer" of a list with one entry.
+  if (curated.length === 1) {
+    return {
+      question: `"${check.mealName}" currently conflicts with ${restriction}.${issue} ` +
+        `A possible replacement is ${curated[0]}. Do you need me to update your saved recipe to use it, so I can add it?`,
+      suggestedReplies: ["Yes", "No"],
+    };
+  }
+  if (curated.length > 1) {
+    return {
+      question: `"${check.mealName}" currently conflicts with ${restriction}.${issue} ` +
+        `Possible replacements are ${listNames(curated)}. Which would you prefer? ` +
+        `I can update your saved recipe once you choose.`,
+      suggestedReplies: curated,
+    };
+  }
+  if (community.length === 1) {
+    return {
+      question: `"${check.mealName}" currently conflicts with ${restriction}.${issue} ` +
+        `I couldn't verify a replacement myself, but other households have mentioned ${community[0]} — ` +
+        `I haven't confirmed this works for your restriction, so please check it yourself before relying on it. ` +
+        `Do you need me to update your saved recipe to use it anyway, so I can add it?`,
+      suggestedReplies: ["Yes", "No"],
+    };
+  }
+  if (community.length > 1) {
+    return {
+      question: `"${check.mealName}" currently conflicts with ${restriction}.${issue} ` +
+        `I couldn't verify a replacement myself, but other households have mentioned ${listNames(community)} — ` +
+        `I haven't confirmed this works for your restriction, so please check it yourself before relying on it. ` +
+        `Which would you prefer? I can update your saved recipe once you choose.`,
+      suggestedReplies: community,
+    };
+  }
+  return {
+    question: `"${check.mealName}" currently conflicts with ${restriction}.${issue} ` +
+      `I couldn't verify a suitable replacement for that ingredient. ` +
+      `The saved recipe needs to be updated and checked before I can offer to add it.`,
+  };
+}
+
+/**
+ * COMP3 — the one replacement the household has, right now, clearly asked for:
+ * named it outright ("I'll use gluten-free Worcestershire sauce"), or simply
+ * said yes to the one option the Companion already offered. Two or more
+ * candidates with a bare "yes" and nothing named resolves to nothing here —
+ * that ambiguity still has to be asked, never guessed.
+ */
+function resolveConfirmedReplacement(
+  check: Extract<PlannerMealCheck, { kind: "restricted" }>,
+  correction: string | undefined,
+): string | null {
+  if (!correction) return null;
+  const curated = check.alternatives.map(option => option.replace(/\s+\([^)]*\)$/, ""));
+  const community = check.communityAlternatives.map(option => option.replace(/\s+\([^)]*\)$/, ""));
+
+  const named =
+    curated.find(option => normaliseChoice(correction).includes(normaliseChoice(option))) ??
+    community.find(option => normaliseChoice(correction).includes(normaliseChoice(option)));
+  if (named) return named;
+
+  const stated = extractStatedReplacement(correction, check.restrictionNames);
+  if (stated) return stated;
+
+  const onlyCandidate = curated.length + community.length === 1 ? (curated[0] ?? community[0]) : undefined;
+  if (onlyCandidate && AFFIRMATIVE_REPLY_RE.test(correction)) return onlyCandidate;
+
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -404,19 +836,83 @@ async function resolvePlannerAdd(
     return {
       kind: "clarification",
       question: `Which meal slot should "${command.subject}" go in — breakfast, lunch or dinner?`,
+      suggestedReplies: MEAL_SLOT_REPLIES,
     };
   }
 
+  // Resolved BEFORE the meal lookup: the household never asked for a quick
+  // meal in isolation — the original command was always "add X to <day>
+  // <slot>" — so the quick-meal offer below (and its confirmation) can carry
+  // the real day/slot through to the single write that creates AND places it.
+  // Any week ambiguity surfaces here too, before offering a quick meal for a
+  // day THA might not even be able to place it on yet.
   const day = await resolvePlannerDay(target, ctx, deps.read);
   if (day.kind === "clarification") return day;
 
   const meal = await resolveMealId(command.subject, ctx, deps.read);
-  if ("question" in meal) return { kind: "clarification", question: meal.question };
+  if ("question" in meal) {
+    // A miss (never an ambiguous match — that still needs the household to
+    // disambiguate between existing meals, not create a new one) can only
+    // ever follow the quick-meal offer THIS SAME miss produces, so a bare
+    // affirmative reply at this point can only mean confirming that offer.
+    if (meal.reason === "miss" && ctx.dietaryCorrection && AFFIRMATIVE_REPLY_RE.test(ctx.dietaryCorrection)) {
+      return draftFor(
+        "meals",
+        "add",
+        `Add "${command.subject}" as a quick meal for ${DAY_NAMES[day.day.dayOfWeek]} ${slot}`,
+        { name: command.subject, dayId: day.day.dayId, mealSlot: plannerSlot(slot) },
+        deps.canExecute,
+        deps.getCapability,
+      );
+    }
+    if (meal.reason === "miss") {
+      return {
+        kind: "clarification",
+        question: `I don't have a saved recipe called "${command.subject}" in your meals. Would you like me to add it as a quick meal so I can plan it in, or tell me the correct name?`,
+        suggestedReplies: ["Yes", "No"],
+      };
+    }
+    return { kind: "clarification", question: meal.question, suggestedReplies: meal.suggestedReplies };
+  }
+
+  const safety = await deps.checkPlannerMeal(meal.mealId, ctx, deps.read);
+  if (safety.kind === "unavailable") {
+    return { kind: "clarification", question: "I can't check this saved meal against your household's dietary requirements right now, so I can't offer to add it yet." };
+  }
+  if (safety.kind === "restricted") {
+    if (ctx.dietaryCorrection) await recordStatedReplacementIfNew(safety, ctx.dietaryCorrection);
+
+    // The household has clearly asked for one specific fix — named it, or
+    // said yes to the single option on offer. Propose updating THEIR OWN
+    // saved copy; nothing is written until they confirm the proposal itself
+    // (the existing confirm-button step every other write already requires).
+    const toApply = resolveConfirmedReplacement(safety, ctx.dietaryCorrection);
+    if (toApply && safety.ingredient && safety.householdId !== null) {
+      return draftFor(
+        "meals",
+        "replace",
+        `Update "${safety.mealName}" to use ${toApply} instead of "${safety.ingredient}"`,
+        { mealId: meal.mealId, ingredient: safety.ingredient, matchedTerm: safety.matchedTerm, replacement: toApply },
+        deps.canExecute,
+        deps.getCapability,
+      );
+    }
+
+    return { kind: "clarification", ...restrictionChoiceQuestion(safety, ctx.dietaryCorrection) };
+  }
+
+  // A quick meal (created via meals.add, or any meal saved with no parts) has
+  // no recipe behind it — the household must be told THIS, up front, in the
+  // very sentence that asks them to confirm, never discovered later when they
+  // open the day expecting cooking instructions and find none.
+  const label = meal.hasNoRecipe
+    ? `Add ${meal.name} (no recipe saved — this is a quick meal) to ${DAY_NAMES[day.day.dayOfWeek]} ${slot}`
+    : `Add ${meal.name} to ${DAY_NAMES[day.day.dayOfWeek]} ${slot}`;
 
   return draftFor(
     "planner",
     "add",
-    `Add ${meal.name} to ${DAY_NAMES[day.day.dayOfWeek]} ${slot}`,
+    label,
     { dayId: day.day.dayId, mealId: meal.mealId, mealSlot: plannerSlot(slot) },
     deps.canExecute,
     deps.getCapability,
@@ -435,6 +931,7 @@ async function resolvePlannerMove(
     return {
       kind: "clarification",
       question: "Which meal should I move — breakfast, lunch or dinner?",
+      suggestedReplies: MEAL_SLOT_REPLIES,
     };
   }
 
@@ -497,6 +994,7 @@ async function resolvePlannerReplace(
     return {
       kind: "clarification",
       question: "Which meal should I replace — breakfast, lunch or dinner?",
+      suggestedReplies: MEAL_SLOT_REPLIES,
     };
   }
 
@@ -522,7 +1020,13 @@ async function resolvePlannerReplace(
   }
 
   const meal = await resolveMealId(command.subject, ctx, deps.read);
-  if ("question" in meal) return { kind: "clarification", question: meal.question };
+  if ("question" in meal) {
+    return {
+      kind: "clarification",
+      question: meal.question,
+      suggestedReplies: meal.reason === "ambiguous" ? meal.suggestedReplies : undefined,
+    };
+  }
 
   return draftFor(
     "planner",
@@ -754,6 +1258,7 @@ interface Deps {
   readonly read: ReadIntentFn;
   readonly canExecute: CanExecuteFn;
   readonly getCapability: GetCapabilityFn;
+  readonly checkPlannerMeal: (mealId: number, ctx: ActionResolutionContext, read: ReadIntentFn) => Promise<PlannerMealCheck>;
   readonly hasCurrentHealthContextConsent: (userId: number) => Promise<boolean>;
 }
 
@@ -856,6 +1361,7 @@ export async function resolveActionCommand(
     read: overrides.read ?? defaultRead,
     canExecute: overrides.canExecute ?? defaultCanExecute,
     getCapability: overrides.getCapability ?? defaultGetCapability,
+    checkPlannerMeal: overrides.checkPlannerMeal ?? defaultCheckPlannerMeal,
     hasCurrentHealthContextConsent: overrides.hasCurrentHealthContextConsent ?? hasCurrentHealthContextConsent,
   };
 

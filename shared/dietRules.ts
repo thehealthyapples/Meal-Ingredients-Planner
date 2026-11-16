@@ -39,6 +39,7 @@
 
 import {
   findRestrictionById,
+  maskRestrictionSubstitutions,
   resolveIngredientRestrictions,
 } from "./restrictions/restriction-resolver.js";
 import type { RestrictionDefinition } from "./restrictions/restriction-types.js";
@@ -471,8 +472,12 @@ export function shouldExcludeRecipe(
   // `candidateHardExcluded()`, and it implements all thirteen. These remain because
   // removing a filter is a permissive change, and every filter here must move in the
   // restrictive direction or not at all.
-  if (dietRestrictions.includes("Gluten-Free") && containsAny(lower, GLUTEN_KEYWORDS)) {
-    return true;
+  if (dietRestrictions.includes("Gluten-Free")) {
+    const gluten = findRestrictionById("gluten");
+    const text = gluten
+      ? items.map(item => maskRestrictionSubstitutions(item, gluten)).join(" ")
+      : lower;
+    if (containsAny(text, GLUTEN_KEYWORDS)) return true;
   }
 
   if (dietRestrictions.includes("Dairy-Free")) {

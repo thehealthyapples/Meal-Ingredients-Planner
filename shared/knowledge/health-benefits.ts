@@ -26,7 +26,7 @@ export const HEALTH_BENEFIT_SEED: InsertKnowledgeHealthBenefit[] = [
     slug: "immune-support",
     name: "Immune Support",
     description:
-      "Foods that contribute nutrients your immune system uses, including vitamin C, zinc and a wide range of plants.",
+      "Foods that contribute nutrients your immune system and immunity draw on, including vitamin C, zinc and a wide range of plants.",
     icon: "shield",
     displayOrder: 3,
   },

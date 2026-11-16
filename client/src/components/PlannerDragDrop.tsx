@@ -105,45 +105,47 @@ export function SortablePlannerEntry({ entry, dayId, mealType, audience, isDrink
   );
 }
 
-interface DroppablePlannerCellProps {
+interface DroppablePlannerCellProps extends React.HTMLAttributes<HTMLDivElement> {
   dayId: number;
   mealType: string;
   audience: string;
   isDrink: boolean;
   children: React.ReactNode;
-  className?: string;
-  style?: React.CSSProperties;
   idPrefix?: string;
-  "data-testid"?: string;
 }
 
-export function DroppablePlannerCell({
-  dayId,
-  mealType,
-  audience,
-  isDrink,
-  children,
-  className,
-  style,
-  idPrefix = "slot",
-  "data-testid": testId,
-}: DroppablePlannerCellProps) {
-  const { isOver, setNodeRef } = useDroppable({
-    id: `${idPrefix}-${dayId}-${mealType}-${audience}-${isDrink ? "drink" : "food"}`,
-    data: { type: "planner-slot", dayId, mealType, audience, isDrink } as DropZoneData,
-  });
+// forwardRef (COMP_UX1) so this can sit inside a ContextMenuTrigger asChild —
+// Radix's Slot clones the child and needs to attach its own ref AND its own
+// event handlers (onContextMenu, etc.) onto the same DOM node as dnd-kit's
+// setNodeRef. Spreading `...rest` is what actually lets those handlers
+// reach the real element — a fixed prop list would silently drop them.
+export const DroppablePlannerCell = React.forwardRef<HTMLDivElement, DroppablePlannerCellProps>(
+  function DroppablePlannerCell(
+    { dayId, mealType, audience, isDrink, children, className, style, idPrefix = "slot", ...rest },
+    forwardedRef,
+  ) {
+    const { isOver, setNodeRef } = useDroppable({
+      id: `${idPrefix}-${dayId}-${mealType}-${audience}-${isDrink ? "drink" : "food"}`,
+      data: { type: "planner-slot", dayId, mealType, audience, isDrink } as DropZoneData,
+    });
+    const composedRef = (node: HTMLDivElement | null) => {
+      setNodeRef(node);
+      if (typeof forwardedRef === "function") forwardedRef(node);
+      else if (forwardedRef) (forwardedRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+    };
 
-  return (
-    <div
-      ref={setNodeRef}
-      className={`${className ?? ""} transition-colors ${isOver ? "ring-1 ring-inset ring-primary/40 bg-primary/5" : ""}`}
-      style={style}
-      data-testid={testId}
-    >
-      {children}
-    </div>
-  );
-}
+    return (
+      <div
+        ref={composedRef}
+        className={`${className ?? ""} transition-colors ${isOver ? "ring-1 ring-inset ring-primary/40 bg-primary/5" : ""}`}
+        style={style}
+        {...rest}
+      >
+        {children}
+      </div>
+    );
+  },
+);
 
 // Phase 5D: draggable proposal card from the assistant panel
 interface DraggableProposalCardProps {

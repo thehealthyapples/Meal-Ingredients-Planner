@@ -557,6 +557,15 @@ export class DatabaseStorage implements IStorage {
     return meal;
   }
 
+  // PLANNERPERF2 — batched, not one-query-per-meal. Callers stitching meal details
+  // onto a prefetched list of entries (household history, week intelligence) would
+  // otherwise call getMeal() once per entry; this fetches every distinct id in one
+  // query so that cost stays flat regardless of how many entries reference meals.
+  async getMealsByIds(ids: number[]): Promise<Meal[]> {
+    if (ids.length === 0) return [];
+    return await db.select().from(meals).where(inArray(meals.id, ids));
+  }
+
   async createMeal(userId: number, insertMeal: InsertMeal): Promise<Meal> {
     // FS3: every new meal row carries acquisition provenance. Call sites that
     // don't set it explicitly get the canonical derivation from their legacy
@@ -3162,15 +3171,19 @@ export class DatabaseStorage implements IStorage {
     const items = await db.select().from(shoppingList).where(eq(shoppingList.householdId, householdId)).orderBy(shoppingList.id);
     if (items.length === 0) return [];
 
-    const allSources = await db.select().from(ingredientSources).where(
-      inArray(ingredientSources.shoppingListItemId, items.map(i => i.id))
-    );
-
+    // PLANNERPERF2 — these two queries both depend only on `items` (already
+    // resolved above), never on each other, so they run concurrently instead of
+    // paying two sequential round trips for independent data.
     const addedByIds = items.map(i => i.addedByUserId).filter((id): id is number => id != null);
-    const addedByUsers = addedByIds.length > 0
-      ? await db.select({ id: users.id, displayName: users.displayName, username: users.username })
-          .from(users).where(inArray(users.id, addedByIds))
-      : [];
+    const [allSources, addedByUsers] = await Promise.all([
+      db.select().from(ingredientSources).where(
+        inArray(ingredientSources.shoppingListItemId, items.map(i => i.id))
+      ),
+      addedByIds.length > 0
+        ? db.select({ id: users.id, displayName: users.displayName, username: users.username })
+            .from(users).where(inArray(users.id, addedByIds))
+        : Promise.resolve([]),
+    ]);
     const userMap = new Map(addedByUsers.map(u => [u.id, u.displayName || u.username]));
 
     const sourcesByItem = new Map<number, typeof allSources>();

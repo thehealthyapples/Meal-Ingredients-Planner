@@ -289,16 +289,25 @@
     margin: 0;
   }
 
+  /* COMP_UX1 (2026-11-15) — PLANNER_DESKTOP_BOARD_DOMINANT.png was cropped
+     from 1836x856 to 1620x816 (owner request: more of the photo's dead
+     margin — flat wall panel above the rope, kitchen counter/window either
+     side — trimmed away so the paper itself fills more of the board). Every
+     stage-relative top/left/width/height below is recalculated for the new
+     crop by the same linear remap: old_pct/100 * old_px (minus the crop
+     offset for top/left) / new_px * 100. Nested children positioned relative
+     to an already-remapped parent (e.g. the header's own toolbar rows) don't
+     need remapping — only values measured directly against the stage do. */
   .planner-physical-stage {
-    width: min(100cqw, calc(100cqh * 2.14486));
-    height: min(100cqh, calc(100cqw * 0.46621));
-    aspect-ratio: 1836 / 856;
+    width: min(100cqw, calc(100cqh * 1.985294));
+    height: min(100cqh, calc(100cqw * 0.503704));
+    aspect-ratio: 1620 / 816;
   }
 
   .planner-workspace-header.workspace-header--inline {
-    top: 20%;
-    left: 8%;
-    width: 84%;
+    top: 16.078%;
+    left: 13.213%;
+    width: 73.213%;
   }
 
   /* The paper's toolbar shares one 38px control row: family · search · week · actions. */
@@ -366,9 +375,9 @@
   .planner-physical-stage [data-testid="planner-intelligence-strip"] {
     position: absolute;
     z-index: 7;
-    top: 20%;
-    left: 14.5%;
-    width: 4.5%;
+    top: 16.078%;
+    left: 9.643%;
+    width: 5.1%;
     margin: 0 !important;
     border: 0;
     border-radius: 0;
@@ -418,22 +427,31 @@
   }
 
   .planner-physical-stage [data-testid="section-week-diets"] {
-    top: 20%;
+    top: 16.078%;
     width: auto;
     z-index: 8;
     pointer-events: auto;
   }
 
+  /* card-week-diets' own top is never overridden elsewhere at this
+     breakpoint, so it still inherits the BASE rule's top:38% — remapped
+     here for the new crop (base top:38% stays correct for <1024px, which
+     uses the uncropped stage). */
+  .planner-physical-stage [data-testid="card-week-diets"] {
+    top: 34.961%;
+    max-height: 35.667%;
+  }
+
   .planner-physical-stage [data-testid="section-week-diets"],
   .planner-physical-stage [data-testid="card-week-diets"] {
-    left: 9.5%;
-    width: 24%;
+    left: 3.977%;
+    width: 27.2%;
   }
 
   .planner-physical-stage [data-testid="section-weekly-provisioning"] {
-    top: 20%;
-    left: 58%;
-    width: 11.5%;
+    top: 16.078%;
+    left: 58.943%;
+    width: 13.033%;
   }
 
   .planner-physical-stage [data-testid="section-weekly-provisioning"] > button {
@@ -495,10 +513,10 @@
   }
 
   .planner-physical-grid {
-    top: 24.5%;
-    left: 13.5%;
-    width: 74.5%;
-    height: 65%;
+    top: 20.799%;
+    left: 8.51%;
+    width: 84.433%;
+    height: 68.186%;
   }
 
   /* Keep all meal rows and the summary inside the visible paper grid. */
@@ -633,38 +651,39 @@
     opacity: 1;
   }
 
-  /* FNDFIX6 (2026-11-03) — owner feedback: "too much space is dedicated to
-     the words ... the image of the meal should be bigger in the cell". The
-     card's 40×48px thumbnail (PlannerMealCard.tsx) sat beside a title, a
-     style-tag chip row and a variety-label row in a ~150px-wide paper cell,
-     so the image stayed small while three lines of text did the work. On
-     the paper grid only: the thumbnail grows, the style-tag chips and
-     variety text labels (still shown elsewhere, e.g. the mobile single-day
-     view) drop, and the boost-idea / boosted indicators go icon-only —
-     the dots stay, since they're the compact signal, not the words. */
-  .planner-physical-grid [data-testid^="button-meal-"] img {
-    width: 4.5rem;
-    height: 3.75rem;
+  /* COMP_UX1 (2026-11-15) superseded FNDFIX6's side-by-side thumbnail+text
+     overrides above: PlannerMealCard.tsx now renders the photo full-width
+     above the name by default, so the paper grid no longer needs to hide
+     chip/variety-dot rows — those are gone from the component entirely. */
+
+  /* COMP_UX1 follow-up (2026-11-15) — owner feedback: "the planner is not
+     showing everything". The component's 44px default image height (tuned
+     for the roomier mobile single-day list) made a full week's rows taller
+     than the paper board's fixed-height photographic frame, so Dinner and
+     everything after it now needed an undiscoverable internal scroll that
+     never used to be necessary. Shrunk back down specifically on the paper
+     grid, and the title clamps to one line here (still 2 elsewhere), so a
+     typical week of entries fits the board's frame without scrolling again —
+     exactly the density tuning FNDFIX6 did for the old side-by-side layout. */
+  .planner-physical-grid [data-testid^="button-meal-"] .planner-card-photo-frame,
+  .planner-physical-grid [data-testid^="button-meal-"] .planner-card-photo {
+    height: 60px;
   }
 
-  /* FNDFIX6 follow-up (2026-11-03) — owner feedback on the real household's
-     data: a longer meal name ("Thai green chicken curry") still wrapped to
-     3 lines beside the enlarged image, re-dominating the cell by height even
-     though the width balance was fixed. Clamped to 2 lines — the name stays
-     readable, it just stops growing the cell indefinitely. */
-  .planner-physical-grid [data-testid^="button-meal-"] .break-words.leading-tight {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+  .planner-physical-grid [data-testid^="button-meal-"] .planner-card-root {
+    gap: 0.125rem;
   }
 
-  .planner-physical-grid [data-testid^="button-meal-"] [class*="rounded-full"][class*="border-"] {
-    display: none;
+  .planner-physical-grid [data-testid^="button-meal-"] .planner-card-title {
+    -webkit-line-clamp: 1;
   }
 
-  .planner-physical-grid [data-testid^="variety-dots-"] span.truncate {
-    display: none;
+  /* Cell padding and the add/boost rows were tuned for the old single-line
+     entries; a little tighter here keeps the taller image-led card from
+     compounding across a week's worth of rows. */
+  .planner-physical-grid [data-testid^="cell-"] {
+    padding: 0.25rem !important;
+    gap: 0.125rem !important;
   }
 
   .planner-physical-grid [data-testid="uplift-card-indicator"] span,

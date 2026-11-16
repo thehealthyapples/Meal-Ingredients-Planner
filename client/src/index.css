@@ -594,6 +594,14 @@
   z-index: 1;
 }
 .shopping-stage-tools {
+  /* PLANNERPERF7 — must match .shopping-add-page / .shopping-paper-scroll's
+     own width exactly (same formula, both places). It previously relied on
+     the Tailwind `max-w-4xl` (56rem) utility in the JSX instead, 8rem (128px)
+     wider than the paper itself — enough that the leftmost tab ("+ Add")
+     spilled past the paper's actual left edge onto the basket artwork behind
+     it. An explicit `width` here takes priority over that now-redundant
+     max-width utility, so the tabs stay within the paper's real bounds. */
+  width: min(48rem, 68vw);
   margin-top: clamp(4rem, 7vh, 5.5rem);
   flex: 0 0 auto;
   scrollbar-width: none;
@@ -675,6 +683,9 @@
     min-height: clamp(22rem, 58svh, 36rem);
   }
   .shopping-paper-scroll {
+    width: 78vw;
+  }
+  .shopping-stage-tools {
     width: 78vw;
   }
   .shopping-add-blotter {

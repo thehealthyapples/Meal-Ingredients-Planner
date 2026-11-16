@@ -39,7 +39,9 @@ export type DietTrigger =
   | "mustard_free"   // Phase 3B
   | "shellfish_free" // Phase 3B
   | "egg_free"       // Phase 3B
-  | "coconut_free";  // Phase 3B
+  | "coconut_free"   // Phase 3B
+  | "fish_free"      // COMP_SUB2
+  | "honey_free";    // COMP_SUB2
 
 // ─── Core output types ────────────────────────────────────────────────────────
 
@@ -562,8 +564,213 @@ const SUBSTITUTION_RULES: SubstitutionRule[] = [
           "Check pasta for doneness 2 minutes earlier than the package time",
         ],
       },
+      {
+        replacement: "rice noodles",
+        cookingNotes: ["Check the package ingredients and cooking time before using with the sauce"],
+        prohibitedPhrases: [],
+      },
+      {
+        replacement: "courgette noodles",
+        cookingNotes: ["Cook briefly so the courgette does not become watery"],
+        prohibitedPhrases: [],
+      },
     ],
     reasonTemplate: (r) => `${r} — gluten-free pasta substituted`,
+  },
+
+  // ── 8a. Worcestershire sauce ──────────────────────────────────────────────
+  // Traditionally contains gluten from barley malt vinegar — the restriction
+  // library already flags it as a hidden gluten source (hiddenIngredients).
+  // Several mainstream brands sell a certified gluten-free version, so unlike
+  // malt vinegar there is a direct like-for-like replacement, not just a
+  // different condiment entirely.
+  {
+    id: "worcestershire_sauce",
+    version: 1,
+    ingredientPatterns: [
+      /\bworcestershire\s+sauce\b/i,
+      /\bworcester\s+sauce\b/i,
+    ],
+    triggers: ["gluten_free"],
+    strategies: [
+      {
+        replacement: "gluten-free Worcestershire sauce",
+        cookingNotes: [
+          "Check the label — not every brand's standard recipe is gluten-free, but several mainstream brands sell a certified gluten-free version",
+          "Use as a 1:1 substitute; the flavour is designed to match the standard version",
+        ],
+        prohibitedPhrases: [
+          "worcestershire sauce",
+          "worcester sauce",
+        ],
+      },
+    ],
+    reasonTemplate: (r) => `${r} — gluten-free Worcestershire sauce substituted`,
+  },
+
+  // ── 8b. Malt vinegar ───────────────────────────────────────────────────────
+  // Made from barley, so it is a genuine gluten source — not the same case as
+  // Worcestershire sauce, where a direct gluten-free version of the SAME
+  // product exists. The household's safest, most common swap is a different
+  // vinegar that is naturally gluten-free, not a "gluten-free malt vinegar".
+  {
+    id: "malt_vinegar",
+    version: 1,
+    ingredientPatterns: [
+      /\bmalt\s+vinegar\b/i,
+    ],
+    triggers: ["gluten_free"],
+    strategies: [
+      {
+        replacement: "cider vinegar",
+        cookingNotes: [
+          "Use as a 1:1 substitute by volume",
+          "Naturally gluten-free — no label-checking needed, unlike malt vinegar",
+        ],
+        prohibitedPhrases: [
+          "malt vinegar",
+        ],
+      },
+      {
+        replacement: "white wine vinegar",
+        cookingNotes: [
+          "Use as a 1:1 substitute by volume; slightly sharper than malt vinegar, so taste and adjust sweetness if needed",
+        ],
+        prohibitedPhrases: [
+          "malt vinegar",
+        ],
+      },
+    ],
+    reasonTemplate: (r) => `${r} — malt vinegar substituted`,
+  },
+
+  // ── 8c. Beer (as a cooking ingredient) ─────────────────────────────────────
+  {
+    id: "beer_cooking",
+    version: 1,
+    ingredientPatterns: [
+      /\bbeer\b/i,
+      /\bale\b/i,
+      /\blager\b/i,
+      /\bstout\b/i,
+    ],
+    triggers: ["gluten_free"],
+    strategies: [
+      {
+        replacement: "gluten-free beer",
+        cookingNotes: [
+          "Check the label — several mainstream brands brew a certified gluten-free version in the same style (lager, ale, stout)",
+          "Use as a 1:1 substitute; brew style affects the final flavour the same way it would with standard beer",
+        ],
+        prohibitedPhrases: [
+          "beer",
+          "ale",
+          "lager",
+          "stout",
+        ],
+      },
+      {
+        replacement: "stock with a splash of cider vinegar",
+        cookingNotes: [
+          "Use the same volume of stock, plus a small splash of cider vinegar for the acidity and depth beer would add",
+        ],
+        prohibitedPhrases: [
+          "beer",
+          "ale",
+          "lager",
+          "stout",
+        ],
+      },
+    ],
+    reasonTemplate: (r) => `${r} — gluten-free beer substituted`,
+  },
+
+  // ── 8d. Barley malt / malt extract (as a baking/sweetening ingredient) ────
+  // Unlike Worcestershire sauce or beer, there is no "gluten-free barley malt"
+  // — barley malt IS the gluten source by definition. Coeliac dietary
+  // guidance's standard swap is a different sweetener entirely, not a
+  // reformulated version of the same product.
+  {
+    id: "barley_malt_extract",
+    version: 1,
+    ingredientPatterns: [
+      /\bbarley\s+malt\b/i,
+      /\bmalt\s+extract\b/i,
+      /\bmalt\s+syrup\b/i,
+    ],
+    triggers: ["gluten_free"],
+    strategies: [
+      {
+        replacement: "rice malt syrup",
+        cookingNotes: [
+          "Use as a 1:1 substitute by volume for sweetening and browning",
+          "Naturally gluten-free — made from rice, not barley",
+        ],
+        prohibitedPhrases: [
+          "barley malt",
+          "malt extract",
+          "malt syrup",
+        ],
+      },
+      {
+        replacement: "golden syrup",
+        cookingNotes: [
+          "Use as a 1:1 substitute by volume; slightly sweeter than malt extract, so taste and adjust if needed",
+        ],
+        prohibitedPhrases: [
+          "barley malt",
+          "malt extract",
+          "malt syrup",
+        ],
+      },
+    ],
+    reasonTemplate: (r) => `${r} — gluten-free sweetener substituted`,
+  },
+
+  // ── 8e. Hoisin sauce ───────────────────────────────────────────────────────
+  {
+    id: "hoisin_sauce",
+    version: 1,
+    ingredientPatterns: [
+      /\bhoisin\s+sauce\b/i,
+    ],
+    triggers: ["gluten_free"],
+    strategies: [
+      {
+        replacement: "gluten-free hoisin sauce",
+        cookingNotes: [
+          "Check the label — several brands sell a certified gluten-free version made without wheat",
+          "Use as a 1:1 substitute; the flavour is designed to match the standard version",
+        ],
+        prohibitedPhrases: [
+          "hoisin sauce",
+        ],
+      },
+    ],
+    reasonTemplate: (r) => `${r} — gluten-free hoisin sauce substituted`,
+  },
+
+  // ── 8f. Teriyaki sauce ─────────────────────────────────────────────────────
+  {
+    id: "teriyaki_sauce",
+    version: 1,
+    ingredientPatterns: [
+      /\bteriyaki\s+sauce\b/i,
+    ],
+    triggers: ["gluten_free"],
+    strategies: [
+      {
+        replacement: "gluten-free teriyaki sauce",
+        cookingNotes: [
+          "Check the label — several brands make a certified gluten-free version using tamari instead of standard soy sauce",
+          "Use as a 1:1 substitute; the flavour is designed to match the standard version",
+        ],
+        prohibitedPhrases: [
+          "teriyaki sauce",
+        ],
+      },
+    ],
+    reasonTemplate: (r) => `${r} — gluten-free teriyaki sauce substituted`,
   },
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -872,8 +1079,25 @@ const SUBSTITUTION_RULES: SubstitutionRule[] = [
       /\blight\s+soy\s+sauce\b/i,
       /\bdark\s+soy\s+sauce\b/i,
     ],
-    triggers: ["soy_free"],
+    // Standard soy sauce usually contains wheat, so gluten_free also fires
+    // this rule — tamari (brewed without wheat) is the mainstream, direct
+    // like-for-like swap and is tried first; it is skipped for a soy
+    // restriction (tamari IS soy sauce) and falls through to the existing
+    // soy-free strategies below.
+    triggers: ["soy_free", "gluten_free"],
     strategies: [
+      {
+        replacement: "tamari (gluten-free soy sauce)",
+        conflictsWithRestrictions: ["soy"],
+        cookingNotes: [
+          "Use as a 1:1 substitute by volume — tamari is brewed without wheat, unlike standard soy sauce",
+          "Check the label: most tamari is gluten-free, but a few brands blend in some wheat, so confirm the specific bottle",
+        ],
+        prohibitedPhrases: [
+          "soy sauce",
+          "soya sauce",
+        ],
+      },
       {
         replacement: "coconut aminos",
         // Coconut aminos conflict when coconut is also restricted
@@ -1363,6 +1587,155 @@ const SUBSTITUTION_RULES: SubstitutionRule[] = [
     reasonTemplate: (r) => `${r} — coconut yoghurt substituted`,
   },
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // COMP_SUB2 — Fish + Honey (owner-reported: zero prior coverage for either)
+  // ══════════════════════════════════════════════════════════════════════════
+  //
+  // SCOPE, matching the discipline every rule above already follows: these
+  // target fish/honey as a SAUCE, STOCK or SWEETENER ingredient — never as the
+  // main named protein of a dish (a whole salmon fillet or cod steak has no
+  // single honest like-for-like swap the way a condiment does; THA does not
+  // fabricate one, same as every rule above never tries to swap "a steak").
+
+  // ── 31. Fish sauce ────────────────────────────────────────────────────────
+  // restriction-library.ts's own `fish.substitutions` entry already names this
+  // exact pair ("tamari or coconut aminos in place of fish sauce") for masking
+  // purposes — reused here, now as an ACTIVE offer, not just a mask.
+  {
+    id: "fish_sauce",
+    version: 1,
+    ingredientPatterns: [
+      /\bfish\s+sauce\b/i,
+      /\bnam\s+pla\b/i,
+      /\bnuoc\s+mam\b/i,
+    ],
+    triggers: ["fish_free"],
+    strategies: [
+      {
+        replacement: "tamari",
+        // Tamari is a soy sauce — unsafe if soy is ALSO restricted.
+        conflictsWithRestrictions: ["soy"],
+        cookingNotes: [
+          "Use a smaller amount to start (tamari is saltier, less funky) and add a squeeze of lime to approach fish sauce's sourness",
+        ],
+        prohibitedPhrases: ["fish sauce", "nam pla", "nuoc mam"],
+      },
+      {
+        replacement: "coconut aminos",
+        // Made from coconut sap — unsafe if coconut is ALSO restricted.
+        conflictsWithRestrictions: ["coconut"],
+        cookingNotes: [
+          "Slightly sweeter than fish sauce — add a pinch of salt to balance",
+        ],
+        prohibitedPhrases: ["fish sauce", "nam pla", "nuoc mam"],
+      },
+    ],
+    reasonTemplate: (r) => `${r} — fish-free sauce substituted`,
+  },
+
+  // ── 32. Fish stock / broth ────────────────────────────────────────────────
+  {
+    id: "fish_stock",
+    version: 1,
+    ingredientPatterns: [
+      /\bfish\s+stock\b/i,
+      /\bfish\s+broth\b/i,
+      /\bfish\s+fumet\b/i,
+    ],
+    triggers: ["fish_free"],
+    strategies: [
+      {
+        replacement: "vegetable stock",
+        cookingNotes: [
+          "Use as a 1:1 substitute by volume",
+          "For a closer flavour match to a seafood dish, add a sheet of nori or kombu while it simmers, then remove before serving",
+        ],
+        prohibitedPhrases: ["fish stock", "fish broth", "fish fumet"],
+      },
+    ],
+    reasonTemplate: (r) => `${r} — vegetable stock substituted`,
+  },
+
+  // ── 33. Anchovies (as a dressing/sauce umami ingredient) ──────────────────
+  // restriction-library.ts's own `hiddenIngredients` for fish name exactly
+  // this context (caesar dressing, puttanesca) — capers are the standard
+  // culinary swap for the salty, savoury note anchovies add there.
+  {
+    id: "anchovies_umami",
+    version: 1,
+    ingredientPatterns: [
+      /\banchov(?:y|ies)(?:\s+(?:fillets?|paste))?\b/i,
+    ],
+    triggers: ["fish_free"],
+    strategies: [
+      {
+        replacement: "capers, finely chopped",
+        cookingNotes: [
+          "Use roughly the same quantity; capers bring a similar salty, savoury note in a dressing or sauce",
+          "For a stronger umami match, mash the capers with a little extra olive oil before mixing in",
+        ],
+        prohibitedPhrases: ["anchovy", "anchovies", "anchovy paste"],
+      },
+    ],
+    reasonTemplate: (r) => `${r} — capers substituted for the anchovy's umami`,
+  },
+
+  // ── 34. Worcestershire sauce — the fish-safe case ─────────────────────────
+  // Separate from rule 8a's gluten-free version above: a "gluten-free
+  // Worcestershire sauce" is not necessarily anchovy-free, and a household
+  // restricted on FISH (not gluten) needs its own dedicated swap. Both rules
+  // can surface together for a household declaring both restrictions — the
+  // same "which would you prefer" choice the resolver already offers whenever
+  // more than one curated option exists for one ingredient.
+  {
+    id: "worcestershire_sauce_fish_safe",
+    version: 1,
+    ingredientPatterns: [
+      /\bworcestershire\s+sauce\b/i,
+      /\bworcester\s+sauce\b/i,
+    ],
+    triggers: ["fish_free"],
+    strategies: [
+      {
+        replacement: "vegan Worcestershire sauce",
+        cookingNotes: [
+          "Check the label — several brands sell a version made without anchovies",
+          "Use as a 1:1 substitute; the flavour is designed to match the standard version",
+        ],
+        prohibitedPhrases: ["worcestershire sauce", "worcester sauce"],
+      },
+    ],
+    reasonTemplate: (r) => `${r} — anchovy-free Worcestershire sauce substituted`,
+  },
+
+  // ── 35. Honey ──────────────────────────────────────────────────────────────
+  {
+    id: "honey",
+    version: 1,
+    ingredientPatterns: [
+      /\bhoney\b/i,
+    ],
+    triggers: ["honey_free"],
+    strategies: [
+      {
+        replacement: "maple syrup",
+        cookingNotes: [
+          "Use as a 1:1 substitute by volume",
+          "Slightly thinner than honey — if the recipe depends on honey's thickness (e.g. a glaze), simmer briefly to reduce",
+        ],
+        prohibitedPhrases: ["honey"],
+      },
+      {
+        replacement: "agave syrup",
+        cookingNotes: [
+          "Sweeter than honey — start with about 3/4 of the quantity and adjust to taste",
+        ],
+        prohibitedPhrases: ["honey"],
+      },
+    ],
+    reasonTemplate: (r) => `${r} — honey-free sweetener substituted`,
+  },
+
 ];
 
 // ─── Diet trigger detection ────────────────────────────────────────────────────
@@ -1416,6 +1789,17 @@ export function detectActiveTriggers(restrictions: string[]): Set<DietTrigger> {
       case 'shellfish': active.add('shellfish_free'); break;
       case 'eggs':      active.add('egg_free'); break;
       case 'coconut':   active.add('coconut_free'); break;
+      // COMP_SUB2 — a household-reported gap: `fish` and `honey` are both real,
+      // declarable hard restrictions (restriction-library.ts; `fish` is one of
+      // the onboarding page's own example allergies), but neither activated ANY
+      // trigger here, so `listSubstitutionOptions` could never offer a single
+      // replacement for either — confirmed empty by direct test before this fix.
+      // `meat` remains deliberately uncovered: a household's actual meat-free
+      // need is served through the separate vegan/vegetarian diet-pattern path
+      // above, not this canonical-restriction-id switch (see restriction-library.ts's
+      // own MEAT comment on why `meat` is kept apart from `fish`/vegan there too).
+      case 'fish':      active.add('fish_free'); break;
+      case 'honey':     active.add('honey_free'); break;
     }
   }
 
@@ -1573,6 +1957,35 @@ export function matchSubstitutionRulesWithConflicts(
 }
 
 /**
+ * All declared strategies that do not conflict with another canonical restriction.
+ * This is a read view of the same ranked rules used by the first-choice engine;
+ * it does not assert that a whole recipe or retail product is safe.
+ */
+export function listSubstitutionOptions(
+  ingredients: string[],
+  activeRestrictions: string[],
+): Array<{ ruleId: string; matchedIngredient: string; replacement: string }> {
+  const triggers = detectActiveTriggers(activeRestrictions);
+  const activeIds = resolveActiveRestrictionIds(activeRestrictions);
+  const options: Array<{ ruleId: string; matchedIngredient: string; replacement: string }> = [];
+  const seen = new Set<string>();
+  for (const ingredient of ingredients) {
+    for (const rule of SUBSTITUTION_RULES) {
+      if (!rule.triggers.some(trigger => triggers.has(trigger))) continue;
+      if (!rule.ingredientPatterns.some(pattern => pattern.test(ingredient))) continue;
+      for (const strategy of rule.strategies) {
+        if (strategy.conflictsWithRestrictions?.some(id => activeIds.has(id))) continue;
+        const key = `${rule.id}:${strategy.replacement}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        options.push({ ruleId: rule.id, matchedIngredient: ingredient, replacement: strategy.replacement });
+      }
+    }
+  }
+  return options;
+}
+
+/**
  * Runs the substitution rule engine against a recipe's ingredient list.
  *
  * @param ingredients - Raw ingredient strings from the recipe
@@ -1592,4 +2005,32 @@ export function matchSubstitutionRules(
  */
 export function collectProhibitedPhrases(adjustments: CookingAdjustment[]): string[] {
   return Array.from(new Set(adjustments.flatMap(a => a.prohibitedPhrases)));
+}
+
+/**
+ * Introspection only — every curated (trigger, replacement) pair this rule
+ * library can hand out, flattened for audit/testing. Exists so a test can
+ * assert, for every single entry, that the replacement text would not get
+ * silently rejected by `household-dietary-safety.ts`'s own re-check for the
+ * SAME restriction it was offered to satisfy — the exact, easy-to-repeat
+ * mistake of suggesting "gluten-free Worcestershire sauce" as a fix while
+ * forgetting restriction-library.ts's masking list still treats the literal
+ * phrase "Worcestershire sauce" as a live gluten source. Never used by
+ * production code.
+ */
+export function listAllCuratedReplacements(): ReadonlyArray<{
+  readonly ruleId: string;
+  readonly trigger: DietTrigger;
+  readonly replacement: string;
+  readonly conflictsWithRestrictions: readonly string[];
+}> {
+  const out: Array<{ ruleId: string; trigger: DietTrigger; replacement: string; conflictsWithRestrictions: readonly string[] }> = [];
+  for (const rule of SUBSTITUTION_RULES) {
+    for (const trigger of rule.triggers) {
+      for (const strategy of rule.strategies) {
+        out.push({ ruleId: rule.id, trigger, replacement: strategy.replacement, conflictsWithRestrictions: strategy.conflictsWithRestrictions ?? [] });
+      }
+    }
+  }
+  return out;
 }

@@ -85,17 +85,44 @@ export async function buildHouseholdHistory(userId: number): Promise<HouseholdHi
   const weeks = await storage.getPlannerWeeks(userId);
   if (!weeks.length) return { entries: [] };
 
+  // PLANNERPERF2 — batched, not one-query-per-week-per-day-per-entry. A household's
+  // planner weeks accrue indefinitely (no history is pruned), so the original
+  // triple-nested loop issued one DB round trip per week, another per day, and
+  // another per meal entry — a cost that grew without bound as a household's
+  // history grew. Days, entries and meals are each fetched in one batched query
+  // and stitched in memory, in exactly the same week → day → entry → ingredient
+  // order the original nested loops produced, so output order and content are
+  // unchanged.
+  const weekIds = weeks.map((w) => w.id);
+  const allDays = await storage.getPlannerDaysByWeekIds(weekIds);
+  const allEntries = await storage.getPlannerEntriesByDayIds(allDays.map((d) => d.id));
+  const allMeals = await storage.getMealsByIds([...new Set(allEntries.map((e) => e.mealId))]);
+
+  const daysByWeek = new Map<number, typeof allDays>();
+  for (const day of allDays) {
+    const list = daysByWeek.get(day.weekId) ?? [];
+    list.push(day);
+    daysByWeek.set(day.weekId, list);
+  }
+  const entriesByDay = new Map<number, typeof allEntries>();
+  for (const entry of allEntries) {
+    const list = entriesByDay.get(entry.dayId) ?? [];
+    list.push(entry);
+    entriesByDay.set(entry.dayId, list);
+  }
+  const mealById = new Map(allMeals.map((m) => [m.id, m]));
+
   const entries: MealEntry[] = [];
 
   for (const week of weeks) {
-    const days = await storage.getPlannerDays(week.id);
+    const days = daysByWeek.get(week.id) ?? [];
 
     for (const day of days) {
-      const dayEntries = await storage.getPlannerEntriesForDay(day.id);
+      const dayEntries = entriesByDay.get(day.id) ?? [];
       const entryDate = plannerEntryDate(week.weekStartDate, day.dayOfWeek);
 
       for (const entry of dayEntries) {
-        const meal = await storage.getMeal(entry.mealId);
+        const meal = mealById.get(entry.mealId);
         if (!meal) continue;
         const slot =
           entry.mealType === "snacks"

@@ -73,6 +73,7 @@ const days: PlannerDay[] = [
   { id: 1000, weekId: 10, dayOfWeek: 0 },
   { id: 1001, weekId: 10, dayOfWeek: 1 },
   { id: 2000, weekId: 20, dayOfWeek: 0 },
+  { id: 1002, weekId: 13, dayOfWeek: 4 },
 ];
 
 const entries: PlannerEntry[] = [
@@ -276,6 +277,37 @@ async function main(): Promise<void> {
   const dayByWeekDow = await platform.handle({ verb: "read", capabilityId: "planner", parameters: { scope: "day", weekNumber: 1, dayOfWeek: 1 } }, user1);
   assert(dayByWeekDow.status === "ok" && (dayByWeekDow.result as any)?.dayId === 1001, "read day by weekNumber + dayOfWeek resolves", dayByWeekDow.status);
 
+  const dayByDatedWeek = await platform.handle({
+    verb: "read", capabilityId: "planner",
+    parameters: { scope: "day", weekStartDate: "2026-11-09", dayOfWeek: 4 },
+  }, user1);
+  assert(
+    dayByDatedWeek.status === "ok" && (dayByDatedWeek.result as any)?.weekNumber === 40 &&
+      (dayByDatedWeek.result as any)?.dayId === 1002,
+    "read day by an exact dated week start resolves through the household-scoped Planner owner",
+    dayByDatedWeek.status,
+  );
+
+  const noDatedWeek = await platform.handle({
+    verb: "read", capabilityId: "planner",
+    parameters: { scope: "day", weekStartDate: "2026-11-16", dayOfWeek: 3 },
+  }, user1);
+  assert(
+    noDatedWeek.status === "gap",
+    "read with no dated week returns an honest gap rather than selecting a null-dated ordinal",
+    noDatedWeek.status,
+  );
+
+  const allNullHousehold = await platform.handle({
+    verb: "read", capabilityId: "planner",
+    parameters: { scope: "day", weekStartDate: "2026-11-09", dayOfWeek: 4 },
+  }, user2);
+  assert(
+    allNullHousehold.status === "gap",
+    "household whose only Planner week is null-dated gets an honest gap, not an ordinal fallback",
+    allNullHousehold.status,
+  );
+
   // -------------------------------------------------------------------------
   section("Permission validation — authenticated, own-data only");
   const anonRead = await platform.handle({ verb: "read", capabilityId: "planner", parameters: { scope: "week", weekId: 10 } }, anon);
@@ -341,7 +373,7 @@ async function main(): Promise<void> {
   section("Honest gaps (no fabrication)");
   const today = await platform.handle({ verb: "read", capabilityId: "planner", parameters: { scope: "today" } }, user1);
   assert(today.status === "gap", "read 'today' → honest gap (planner owns no calendar mapping)", today.status);
-  assert(/no calendar mapping/.test(today.message), "today gap message explains why honestly");
+  assert(/no dated Planner week was supplied/.test(today.message), "today gap message explains that a dated Planner week is required");
 
   const noScope = await platform.handle({ verb: "read", capabilityId: "planner", parameters: {} }, user1);
   assert(noScope.status === "gap", "read with no scope → honest gap", noScope.status);

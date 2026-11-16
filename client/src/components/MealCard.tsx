@@ -23,6 +23,7 @@ import { Link } from "wouter";
 import { UtensilsCrossed } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { ThrottledMealImage } from "@/components/ThrottledMealImage";
 
 export interface MealCardMeal {
   id: number | string;
@@ -62,16 +63,7 @@ export function MealThumbnail({
       )}
     >
       {meal.imageUrl ? (
-        <img
-          src={meal.imageUrl}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          className="w-full h-full object-cover"
-          onError={(e) => {
-            (e.target as HTMLImageElement).style.display = "none";
-          }}
-        />
+        <ThrottledMealImage src={meal.imageUrl} alt="" className="w-full h-full object-cover" />
       ) : (
         <UtensilsCrossed className={cn("text-muted-foreground/40", THUMB_ICON[size])} aria-hidden="true" />
       )}
@@ -115,15 +107,10 @@ export function MealCard({
       >
         <div className="w-full aspect-[4/3] overflow-hidden bg-muted flex items-center justify-center">
           {meal.imageUrl ? (
-            <img
+            <ThrottledMealImage
               src={meal.imageUrl}
               alt=""
-              loading="lazy"
-              decoding="async"
               className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = "none";
-              }}
             />
           ) : (
             <UtensilsCrossed className="h-8 w-8 text-muted-foreground/40" aria-hidden="true" />

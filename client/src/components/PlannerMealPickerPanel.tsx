@@ -430,7 +430,7 @@ export function PlannerMealPickerPanel({
                         <UtensilsCrossed className="h-4 w-4 text-green-500/40" />
                       </div>
                     ) : meal.imageUrl ? (
-                      <img src={meal.imageUrl} alt={meal.name} className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
+                      <img src={meal.imageUrl} alt={meal.name} loading="lazy" decoding="async" className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
                     ) : (
                       <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
                         <ChefHat className="h-4 w-4 text-muted-foreground" />
@@ -535,7 +535,7 @@ export function PlannerMealPickerPanel({
                         data-testid={`button-select-web-${recipe.id}`}
                       >
                         {recipe.image ? (
-                          <img src={recipe.image} alt={recipe.name} className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
+                          <img src={recipe.image} alt={recipe.name} loading="lazy" decoding="async" className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
                         ) : (
                           <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
                             <ChefHat className="h-4 w-4 text-muted-foreground" />
@@ -595,7 +595,7 @@ export function PlannerMealPickerPanel({
                     data-testid={`button-select-web-${recipe.id}`}
                   >
                     {recipe.image ? (
-                      <img src={recipe.image} alt={recipe.name} className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
+                      <img src={recipe.image} alt={recipe.name} loading="lazy" decoding="async" className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
                     ) : (
                       <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
                         <Globe className="h-4 w-4 text-muted-foreground/40" />
@@ -678,7 +678,7 @@ export function PlannerMealPickerPanel({
                 data-testid={`button-ready-meal-library-${item.id}`}
               >
                 {item.imageUrl ? (
-                  <img src={item.imageUrl} alt={item.name} className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
+                  <img src={item.imageUrl} alt={item.name} loading="lazy" decoding="async" className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
                 ) : (
                   <div className="h-9 w-9 rounded-md bg-green-500/10 flex items-center justify-center flex-shrink-0">
                     <UtensilsCrossed className="h-4 w-4 text-green-500/40" />
@@ -791,7 +791,7 @@ export function PlannerMealPickerPanel({
                     data-testid={`button-select-product-${i}`}
                   >
                     {product.image_url ? (
-                      <img src={product.image_url} alt={displayName} className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
+                      <img src={product.image_url} alt={displayName} loading="lazy" decoding="async" className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
                     ) : (
                       <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
                         <Package className="h-4 w-4 text-muted-foreground/40" />

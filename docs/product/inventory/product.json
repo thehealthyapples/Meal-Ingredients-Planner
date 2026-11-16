@@ -317,7 +317,7 @@
       "status": "live",
       "visibility": "public",
       "route": "/",
-      "purpose": "One Home address shows the public welcome to signed-out visitors and the household's calm today screen after sign-in.",
+      "purpose": "One Home address shows the public welcome to signed-out visitors and the household's calm today screen after sign-in; the Meals glance card always opens the current Planner week.",
       "owner": "Colin Clapson",
       "sources": [
         "client/src/pages/home-page.tsx",
@@ -331,8 +331,8 @@
       "known_defects": [
         "fnd-derived-today"
       ],
-      "last_verified": "2026-11-05",
-      "version": 3
+      "last_verified": "2026-11-15",
+      "version": 4
     },
     {
       "id": "page-dashboard",
@@ -464,7 +464,7 @@
       "status": "live",
       "visibility": "household",
       "route": "/shopping-workspace",
-      "purpose": "The household's working shopping list — add items, match them to real products, check prices, and hand the basket to a supermarket.",
+      "purpose": "The household's working shopping list — add items, see which meals need planned ingredients, match items to real products, check prices, and hand the basket to a supermarket.",
       "owner": "Colin Clapson",
       "sources": [
         "client/src/pages/shopping-workspace-page.tsx"
@@ -473,8 +473,8 @@
         "dom-shopping",
         "jrn-shop"
       ],
-      "last_verified": "2026-11-05",
-      "version": 2
+      "last_verified": "2026-11-13",
+      "version": 3
     },
     {
       "id": "page-basket",
@@ -544,9 +544,10 @@
       "visibility": "household",
       "route": "/planner",
       "aliases": [
-        "/weekly-planner"
+        "/weekly-planner",
+        "/meals"
       ],
-      "purpose": "The week laid out day by day, where the household assigns meals, says who is eating, and sends the whole week to the basket.",
+      "purpose": "The current week and three preceding weeks laid out day by day, where the household assigns meals, says who is eating, and sends the whole week to the basket; older weeks remain available from the date archive menu.",
       "owner": "Colin Clapson",
       "sources": [
         "client/src/pages/weekly-planner-page.tsx"
@@ -557,8 +558,8 @@
         "jrn-shop",
         "jrn-share-plan"
       ],
-      "last_verified": "2026-07-11",
-      "version": 1
+      "last_verified": "2026-11-15",
+      "version": 2
     },
     {
       "id": "page-profile",

@@ -115,12 +115,25 @@ export const RESTRICTION_DEFINITIONS: RestrictionDefinition[] = [
     ],
     substitutions: [
       'gluten-free pasta',
+      'gluten-free spaghetti',
       'gluten-free bread',
       'rice flour',
       'cornflour',
       'rice noodles',
+      'courgette noodles',
       'buckwheat',
       'quinoa',
+      // COMP3 — matching shared/substitution-rules.ts's gluten strategies for
+      // the other hidden sources below. Without an exact-phrase entry here,
+      // the Companion's own suggested fix would re-trip the very
+      // hiddenIngredient it was suggesting a replacement for (e.g.
+      // "gluten-free Worcestershire sauce" contains the literal hidden phrase
+      // "Worcestershire sauce") and get silently rejected as unsafe.
+      'gluten-free worcestershire sauce',
+      'gluten-free beer',
+      'gluten-free hoisin sauce',
+      'gluten-free teriyaki sauce',
+      'gluten-free soy sauce',
     ],
     prohibitedPhrases: [
       'wheat flour',
@@ -351,6 +364,10 @@ export const RESTRICTION_DEFINITIONS: RestrictionDefinition[] = [
       'sunflower seed butter',
       'tahini (check sesame restriction)',
       'seed butter',
+      // Matches shared/substitution-rules.ts's satay_sauce_peanut strategy
+      // exactly — without this, "satay" (a declared hiddenIngredient) still
+      // matches inside the household's OWN peanut-free replacement.
+      'sunflower seed satay-style sauce',
     ],
     prohibitedPhrases: [
       'peanut',
@@ -622,6 +639,13 @@ export const RESTRICTION_DEFINITIONS: RestrictionDefinition[] = [
       'mushrooms',
       'white fish (check fish restriction)',
       'tofu (check soy restriction)',
+      // King oyster mushroom is a fungus, not a mollusc — but "oyster" is a
+      // declared derivedIngredient, so without this exact phrase the
+      // household's own shellfish-free replacement re-trips its own
+      // restriction. Matches shared/substitution-rules.ts's strategy exactly.
+      'king oyster mushrooms (torn into strips)',
+      'king oyster mushrooms',
+      'king oyster mushroom',
     ],
     prohibitedPhrases: [
       'prawn',
@@ -672,6 +696,13 @@ export const RESTRICTION_DEFINITIONS: RestrictionDefinition[] = [
       'chia egg (1 tbsp chia seeds + 3 tbsp water)',
       'yoghurt (check dairy restriction)',
       'mashed banana for baking',
+      // These two match shared/substitution-rules.ts's egg strategies
+      // exactly. The bare word "aquafaba" above does not fully mask either:
+      // "...per egg" still carries the declared "egg" alias, and "aquafaba
+      // meringue" still carries the declared "meringue" derivedIngredient —
+      // both describing the egg-free swap being made, not an actual egg.
+      'aquafaba (3 tbsp chickpea water per egg)',
+      'aquafaba meringue (whipped chickpea water)',
     ],
     prohibitedPhrases: [
       'egg',
@@ -854,6 +885,14 @@ export const RESTRICTION_DEFINITIONS: RestrictionDefinition[] = [
       'jackfruit',
       'hearts of palm',
       'tamari or coconut aminos in place of fish sauce',
+      // COMP_SUB2 — matching shared/substitution-rules.ts's fish strategies.
+      // Without an exact-phrase entry here, the Companion's own suggested fix
+      // would re-trip the very hiddenIngredient/prohibitedPhrase it was
+      // suggesting a replacement for ("vegan Worcestershire sauce" contains
+      // the literal prohibited phrase "worcestershire sauce") and get
+      // silently rejected as unsafe — the same masking bug class COMP3 fixed
+      // for gluten's own Worcestershire sauce replacement above.
+      'vegan worcestershire sauce',
     ],
     prohibitedPhrases: [
       'fish',

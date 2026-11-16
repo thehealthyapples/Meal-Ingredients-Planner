@@ -14,9 +14,10 @@
  *     its own. It orchestrates reads; the Planner remains the owner (TIP1 Principles 2 & 7).
  *   • PERMISSION-AWARE / OWN DATA ONLY. The caller must be an authenticated user, and
  *     every read is scoped to that user's household. Cross-household reads are denied.
- *   • HONEST GAPS. Requests the planner does not own an answer for (e.g. "today's
- *     meals" — the planner has no calendar mapping; a meal with no recorded selection
- *     rationale) return a structured gap, never a fabricated answer (Principle 6).
+ *   • HONEST GAPS. Calendar reads need an exact dated week anchor; old null-dated
+ *     weeks cannot be assigned calendar meaning. Requests without a usable anchor
+ *     (or a meal with no recorded selection rationale) return a structured gap,
+ *     never a fabricated answer (Principle 6).
  *
  * The handler is built by {@link createPlannerReadHandler} with a port provider, so the
  * production binding injects the real owning services and tests inject an in-memory owner.
@@ -182,6 +183,7 @@ async function resolveOwnedWeek(
 
   const weekId = toInt(params.weekId);
   const weekNumber = toInt(params.weekNumber);
+  const requestedWeekStartDate = parseCivilDate(params.weekStartDate);
   const direction = params.direction === "previous" || params.direction === "next" ? params.direction : undefined;
 
   if (direction) {
@@ -201,6 +203,17 @@ async function resolveOwnedWeek(
     // getPlannerWeeks is already household-scoped by the owner.
     const weeks = await port.getPlannerWeeks(userId);
     week = weeks.find((w) => w.weekNumber === weekNumber);
+  } else if (requestedWeekStartDate) {
+    const requestedDate = formatCivilDate(requestedWeekStartDate);
+    const weeks = await port.getPlannerWeeks(userId);
+    const matches = weeks.filter((candidate) => candidate.weekStartDate === requestedDate);
+    if (matches.length !== 1) {
+      throw gap(
+        `Honest gap: expected one dated planner week starting ${requestedDate}, found ${matches.length}. ` +
+          "THA will not select an undated or ambiguous week.",
+      );
+    }
+    week = matches[0];
   } else {
     throw gap(
       'Reading a planner week needs an identifier: pass { scope: "week", weekId } or ' +
@@ -292,7 +305,7 @@ async function readDay(
     if (dayOfWeek === undefined) {
       throw gap(
         'Reading a planner day needs { scope: "day", dayId } or ' +
-          '{ scope: "day", weekId|weekNumber, dayOfWeek }.',
+          '{ scope: "day", weekId|weekNumber|weekStartDate, dayOfWeek }.',
       );
     }
     const week = await resolveOwnedWeek(params, userId, port);
@@ -422,19 +435,20 @@ async function handleRead(
     case "day":
       return readDay(params, userId, port);
     case "today":
-      // The planner is organised by week-number × day-of-week and owns NO calendar
-      // mapping, so "today" cannot be resolved to a planner slot. Honest gap (Principle 6).
+      // A raw "today" intent has no verified dated Planner week attached. Callers with
+      // an authoritative civil date may use scope "day" + weekStartDate; this scope
+      // remains an honest gap instead of inferring an ordinal week.
       throw gap(
-        'Honest gap: the Planner is organised by week-number and day-of-week and owns no ' +
-          'calendar mapping, so "today" cannot be resolved to a planner slot. Read an ' +
+        'Honest gap: no dated Planner week was supplied, so "today" cannot be resolved ' +
+          'to a planner slot. Read an ' +
           'explicit week or day instead: { scope: "week", weekNumber|weekId } or ' +
-          '{ scope: "day", weekId|weekNumber, dayOfWeek }.',
+          '{ scope: "day", weekId|weekNumber|weekStartDate, dayOfWeek }.',
       );
     default:
       throw gap(
         `Unsupported planner read scope ${JSON.stringify(scope)}. Supported read scopes: ` +
-          '"week" (weekId|weekNumber) and "day" (dayId, or weekId|weekNumber + dayOfWeek). ' +
-          '"today" is an honest gap (the planner owns no calendar mapping).',
+          '"week" (weekId|weekNumber) and "day" (dayId, or weekId|weekNumber|weekStartDate + dayOfWeek). ' +
+          '"today" requires a dated weekStartDate in a "day" read; no ordinal fallback is made.',
       );
   }
 }

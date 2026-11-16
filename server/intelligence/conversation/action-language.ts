@@ -143,6 +143,11 @@ const WEEKDAY_WORDS: readonly string[] = [
 ].sort((a, b) => b.length - a.length);
 
 const WEEKDAY_RE = new RegExp(`\\b(${WEEKDAY_WORDS.join("|")})\\b`, "i");
+// A missing apostrophe in "Thursdays dinner" is a meal-slot possessive, not
+// a request for every Thursday. Accept it only when a slot word follows.
+const WEEKDAY_SLOT_POSSESSIVE_RE = new RegExp(
+  `\\b(${WEEKDAY_WORDS.join("|")})s\\b(?=\\s+(?:breakfast|lunch|dinner|tea|supper|snack))`, "i",
+);
 
 /**
  * Slot words → canonical slot. "tea" and "supper" are British English for the
@@ -151,7 +156,7 @@ const WEEKDAY_RE = new RegExp(`\\b(${WEEKDAY_WORDS.join("|")})\\b`, "i");
 const SLOT_WORDS: ReadonlyArray<readonly [RegExp, MealSlot]> = [
   [/\bbreakfasts?\b|\bbrekkie\b/i, "breakfast"],
   [/\blunch(?:es|time)?\b/i, "lunch"],
-  [/\bdinners?\b|\bteas?\b|\bsuppers?\b|\bevening\s+meals?\b/i, "dinner"],
+  [/\bdinners?\b|\bteas?\b|\bsuppers?\b|\bevening\s+meals?\b|\bnights?\b/i, "dinner"],
   [/\bsnacks?\b/i, "snack"],
 ];
 
@@ -184,13 +189,13 @@ const DIARY_TARGET_RE = /\b(?:diary|food\s*diary|log|journal)\b/i;
 // ---------------------------------------------------------------------------
 
 function matchWeekday(text: string): DayOfWeek | undefined {
-  const m = WEEKDAY_RE.exec(text);
+  const m = WEEKDAY_RE.exec(text) ?? WEEKDAY_SLOT_POSSESSIVE_RE.exec(text);
   if (!m) return undefined;
   const word = m[1].toLowerCase();
   return WEEKDAY_INDEX.get(word) ?? WEEKDAY_ABBREV.get(word);
 }
 
-function matchSlot(text: string): MealSlot | undefined {
+export function matchSlot(text: string): MealSlot | undefined {
   for (const [re, slot] of SLOT_WORDS) if (re.test(text)) return slot;
   return undefined;
 }
@@ -210,7 +215,9 @@ function matchWeekNumber(text: string): number | undefined {
 
 function matchWeekRelation(text: string): "this" | "next" | undefined {
   if (/\bnext\s+week\b/i.test(text)) return "next";
+  if (/\bnext\s+(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\b/i.test(text)) return "next";
   if (/\bthis\s+week\b/i.test(text)) return "this";
+  if (/\bthis\s+(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\b/i.test(text)) return "this";
   return undefined;
 }
 
@@ -303,7 +310,7 @@ type CommandMatcher = (utterance: string) => ActionCommand | null;
  */
 const ADD_COMMAND: CommandMatcher = (utterance) => {
   const m =
-    /^\s*(?:please\s+)?(?:can\s+you\s+|could\s+you\s+)?(?:add|put|stick|pop|throw)\s+(.+?)\s+(?:to|onto|on|into|in)\s+(.+?)\s*$/i.exec(
+    /^\s*(?:please\s+)?(?:can\s+you\s+|could\s+you\s+|i\s+(?:need|want)\s+to\s+|i(?:'d|\s+would)\s+like\s+to\s+)?(?:add|put|stick|pop|throw)\s+(.+?)\s+(?:to|onto|on|into|in|as)\s+(.+?)\s*$/i.exec(
       utterance,
     );
   if (!m) return null;
@@ -341,7 +348,7 @@ const ADD_COMMAND: CommandMatcher = (utterance) => {
  */
 const REMOVE_COMMAND: CommandMatcher = (utterance) => {
   const m =
-    /^\s*(?:please\s+)?(?:can\s+you\s+|could\s+you\s+)?(?:remove|delete|take|drop|get\s+rid\s+of)\s+(.+?)\s+(?:from|out\s+of|off)\s+(.+?)\s*$/i.exec(
+    /^\s*(?:please\s+)?(?:can\s+you\s+|could\s+you\s+|i\s+(?:need|want)\s+to\s+|i(?:'d|\s+would)\s+like\s+to\s+)?(?:remove|delete|take|drop|get\s+rid\s+of)\s+(.+?)\s+(?:from|out\s+of|off)\s+(.+?)\s*$/i.exec(
       utterance,
     );
   if (!m) return null;
@@ -363,7 +370,7 @@ const REMOVE_COMMAND: CommandMatcher = (utterance) => {
  */
 const MOVE_COMMAND: CommandMatcher = (utterance) => {
   const m =
-    /^\s*(?:please\s+)?(?:can\s+you\s+|could\s+you\s+)?(?:move|shift|reschedule|switch)\s+(.+?)\s+(?:to|onto|into|over\s+to)\s+(.+?)\s*$/i.exec(
+    /^\s*(?:please\s+)?(?:can\s+you\s+|could\s+you\s+|i\s+(?:need|want)\s+to\s+|i(?:'d|\s+would)\s+like\s+to\s+)?(?:move|shift|reschedule|switch)\s+(.+?)\s+(?:to|onto|into|over\s+to)\s+(.+?)\s*$/i.exec(
       utterance,
     );
   if (!m) return null;
@@ -389,7 +396,7 @@ const MOVE_COMMAND: CommandMatcher = (utterance) => {
  */
 const REPLACE_COMMAND: CommandMatcher = (utterance) => {
   const m =
-    /^\s*(?:please\s+)?(?:can\s+you\s+|could\s+you\s+)?(?:replace|swap|substitute|change)\s+(.+?)\s+(?:with|for|to)\s+(.+?)\s*$/i.exec(
+    /^\s*(?:please\s+)?(?:can\s+you\s+|could\s+you\s+|i\s+(?:need|want)\s+to\s+|i(?:'d|\s+would)\s+like\s+to\s+)?(?:replace|swap|substitute|change)\s+(.+?)\s+(?:with|for|to)\s+(.+?)\s*$/i.exec(
       utterance,
     );
   if (!m) return null;
@@ -412,7 +419,7 @@ const REPLACE_COMMAND: CommandMatcher = (utterance) => {
 const LOG_COMMAND: CommandMatcher = (utterance) => {
   // "Log <something>" / "Record <something>" / "Add <something> to my diary"
   const diaryAdd =
-    /^\s*(?:please\s+)?(?:can\s+you\s+|could\s+you\s+)?(?:add|put)\s+(.+?)\s+(?:to|into|in)\s+(?:my\s+|the\s+)?(?:food\s+)?(?:diary|log|journal)\s*$/i.exec(
+    /^\s*(?:please\s+)?(?:can\s+you\s+|could\s+you\s+|i\s+(?:need|want)\s+to\s+|i(?:'d|\s+would)\s+like\s+to\s+)?(?:add|put)\s+(.+?)\s+(?:to|into|in)\s+(?:my\s+|the\s+)?(?:food\s+)?(?:diary|log|journal)\s*$/i.exec(
       utterance,
     );
   if (diaryAdd) {
@@ -427,7 +434,7 @@ const LOG_COMMAND: CommandMatcher = (utterance) => {
   }
 
   const m =
-    /^\s*(?:please\s+)?(?:can\s+you\s+|could\s+you\s+)?(?:log|record|note)\s+(.+?)\s*$/i.exec(
+    /^\s*(?:please\s+)?(?:can\s+you\s+|could\s+you\s+|i\s+(?:need|want)\s+to\s+|i(?:'d|\s+would)\s+like\s+to\s+)?(?:log|record|note)\s+(.+?)\s*$/i.exec(
       utterance,
     );
   if (!m) return null;

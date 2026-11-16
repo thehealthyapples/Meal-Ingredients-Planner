@@ -58,6 +58,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import RetailerLogo from "@/components/RetailerLogo";
 import { CameraModal } from "@/components/camera-modal";
 import { ShoppingListScanReview, type ShoppingListScanData } from "@/components/ShoppingListScanReview";
@@ -110,6 +111,10 @@ const SHOPPING_UNITS: { value: string; label: string }[] = [
 type WorkspaceMode = "add" | "review" | "prep" | "shop";
 
 type WorkspaceItem = ShoppingListItem & {
+  /** Underlying shopping rows represented by one visible ingredient row. */
+  duplicateItemIds?: number[];
+  /** Preserves distinct quantities when the stored measures cannot be converted safely. */
+  groupedQuantityLabel?: string;
   addedByDisplayName?: string | null;
   sources?: Array<{
     mealId: number;
@@ -667,6 +672,31 @@ function WorkspaceRow({
   const [qtyEditMode, setQtyEditMode] = useState(false);
   const [qtyEditQty, setQtyEditQty] = useState("");
   const [qtyEditUnit, setQtyEditUnit] = useState("");
+  const [recipeContextOpen, setRecipeContextOpen] = useState(false);
+  const recipeContextCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (recipeContextCloseTimer.current) clearTimeout(recipeContextCloseTimer.current);
+  }, []);
+
+  const sourceMealNames = Array.from(
+    new Map(
+      sources
+        .filter((source) => source.mealName.trim())
+        .map((source) => [source.mealId, source.mealName.trim()] as const),
+    ).values(),
+  );
+
+  function keepRecipeContextOpen() {
+    if (recipeContextCloseTimer.current) clearTimeout(recipeContextCloseTimer.current);
+    recipeContextCloseTimer.current = null;
+    setRecipeContextOpen(true);
+  }
+
+  function scheduleRecipeContextClose() {
+    if (recipeContextCloseTimer.current) clearTimeout(recipeContextCloseTimer.current);
+    recipeContextCloseTimer.current = setTimeout(() => setRecipeContextOpen(false), 120);
+  }
 
   // Parse suggestions once at component scope — used by both inline strip and expanded pane
   const isAmbiguous = item.reviewReason === "ambiguous_term";
@@ -735,6 +765,7 @@ function WorkspaceRow({
   const effectiveShopState = shopState ?? "need";
   const shopConfig = SHOP_STATE_CONFIG[effectiveShopState];
   const qtyLabel = (() => {
+    if (item.groupedQuantityLabel) return item.groupedQuantityLabel;
     // Primary path: structured quantity + unit → canonical formatter
     if (item.quantityValue != null && item.unit && item.unit !== "descriptive") {
       const display = formatItemDisplay(item.productName, item.quantityValue, item.unit, measurementPref, item.quantityInGrams);
@@ -815,13 +846,51 @@ function WorkspaceRow({
         {/* ── Row 1, Col 2: Item name + qty chip ── */}
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-1.5 min-w-0 flex-wrap">
-            <span className={`text-sm font-medium italic leading-snug ${
-              shopMode
-                ? effectiveShopState !== "need" ? "text-muted-foreground" : "text-foreground"
-                : item.checked ? "line-through text-muted-foreground" : "text-foreground"
-            }`}>
-              {capitalizeWords(item.productName)}
-            </span>
+            {sourceMealNames.length > 0 ? (
+              <Popover open={recipeContextOpen} onOpenChange={setRecipeContextOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    onMouseEnter={keepRecipeContextOpen}
+                    onMouseLeave={scheduleRecipeContextClose}
+                    className={`text-sm font-medium italic leading-snug text-left rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 hover:underline decoration-dotted underline-offset-2 ${
+                      shopMode
+                        ? effectiveShopState !== "need" ? "text-muted-foreground" : "text-foreground"
+                        : item.checked ? "line-through text-muted-foreground" : "text-foreground"
+                    }`}
+                    aria-label={`Show meals that need ${item.productName}`}
+                    data-testid={`recipe-context-trigger-${item.id}`}
+                  >
+                    {capitalizeWords(item.productName)}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent
+                  align="start"
+                  side="bottom"
+                  sideOffset={0}
+                  onMouseEnter={keepRecipeContextOpen}
+                  onMouseLeave={scheduleRecipeContextClose}
+                  className="w-64 p-3"
+                  aria-label={`Meals that need ${item.productName}`}
+                  data-testid={`recipe-context-popup-${item.id}`}
+                >
+                  <p className="mb-1.5 text-xs font-semibold text-foreground">Needed for</p>
+                  <ul className="space-y-1 text-sm text-muted-foreground">
+                    {sourceMealNames.map((mealName, index) => (
+                      <li key={`${mealName}-${index}`}>{mealName}</li>
+                    ))}
+                  </ul>
+                </PopoverContent>
+              </Popover>
+            ) : (
+              <span className={`text-sm font-medium italic leading-snug ${
+                shopMode
+                  ? effectiveShopState !== "need" ? "text-muted-foreground" : "text-foreground"
+                  : item.checked ? "line-through text-muted-foreground" : "text-foreground"
+              }`}>
+                {capitalizeWords(item.productName)}
+              </span>
+            )}
             {/* Qty — edit controls inline when editing, chip when not */}
             {qtyEditMode && !item.checked ? (
               <>
@@ -2201,6 +2270,62 @@ export default function ShoppingWorkspacePage() {
     [items, sourceFilter, pantryKeySet, sourcesByItem],
   );
 
+  // Shop is a household-facing view of ingredients, so repeated canonical names
+  // occupy one row even when their source rows use different measures. Matching
+  // units are summed; unlike units remain visible together instead of being
+  // silently converted without an approved ingredient-specific conversion.
+  const shopDisplayItems = useMemo(() => {
+    const groups = new Map<string, WorkspaceItem[]>();
+    for (const item of filteredItems) {
+      const key = (item.normalizedName ?? item.productName).trim().toLocaleLowerCase();
+      const group = groups.get(key) ?? [];
+      group.push(item);
+      groups.set(key, group);
+    }
+    return Array.from(groups.values()).map((group) => {
+      if (group.length === 1) return group[0];
+      const primary = group[0];
+      const sameUnit = group.every((item) => item.unit === primary.unit);
+      let groupedQuantityLabel = "";
+      const canSumAsGrams = group.every((item) => item.quantityInGrams != null)
+        && group.every((item) => item.unit === "g" || item.unit === "ml");
+      if (sameUnit && group.every((item) => item.quantityValue != null)) {
+        const total = group.reduce((sum, item) => sum + (item.quantityValue ?? 0), 0);
+        const totalGrams = group.every((item) => item.quantityInGrams != null)
+          ? group.reduce((sum, item) => sum + (item.quantityInGrams ?? 0), 0)
+          : primary.quantityInGrams;
+        const display = formatItemDisplay(primary.productName, total, primary.unit ?? "", measurementPref, totalGrams);
+        groupedQuantityLabel = display.split("—").slice(1).join("—").trim();
+      } else if (canSumAsGrams) {
+        const totalGrams = group.reduce((sum, item) => sum + (item.quantityInGrams ?? 0), 0);
+        const display = formatItemDisplay(primary.productName, totalGrams, "g", measurementPref, totalGrams);
+        groupedQuantityLabel = display.split("—").slice(1).join("—").trim();
+      } else {
+        groupedQuantityLabel = Array.from(new Set(group.map((item) => {
+          if (item.quantityValue != null && item.unit && item.unit !== "descriptive") {
+            const display = formatItemDisplay(item.productName, item.quantityValue, item.unit, measurementPref, item.quantityInGrams);
+            return display.split("—").slice(1).join("—").trim();
+          }
+          if (item.quantityInGrams != null && item.quantityInGrams > 0) {
+            return measurementPref === "metric"
+              ? formatQuantityMetric(item.quantityInGrams, "g")
+              : formatQuantityImperial(item.quantityInGrams, "g");
+          }
+          return "";
+        }).filter(Boolean))).join(" + ");
+      }
+      const shopPriority: ShopItemState[] = ["need", "defer", "found", "have"];
+      const groupShopState = shopPriority.find((state) => group.some((item) => getShopState(item) === state)) ?? "need";
+      return {
+        ...primary,
+        checked: group.every((item) => item.checked),
+        shopStatus: toServerShopStatus(groupShopState) as WorkspaceItem["shopStatus"],
+        duplicateItemIds: group.map((item) => item.id),
+        groupedQuantityLabel,
+      };
+    });
+  }, [filteredItems, measurementPref]);
+
   const filteredUncheckedItems = useMemo(
     () => filteredItems.filter((i) => !i.checked),
     [filteredItems],
@@ -2214,12 +2339,12 @@ export default function ShoppingWorkspacePage() {
   // Review, Prep and Shop share the same ordered list. Stage changes add
   // context and controls to each row without moving it to another section.
   const stableListItems = useMemo(
-    () => applySortOrder(filteredItems, sortOrder),
-    [filteredItems, sortOrder],
+    () => applySortOrder(mode === "shop" ? shopDisplayItems : filteredItems, sortOrder),
+    [mode, shopDisplayItems, filteredItems, sortOrder],
   );
   // Shop mode groups — source-filtered items sorted then partitioned by shopStatus
   const shopGroups = useMemo(() => {
-    const sorted = applySortOrder(filteredItems, sortOrder);
+    const sorted = applySortOrder(shopDisplayItems, sortOrder);
     const need: WorkspaceItem[] = [];
     const found: WorkspaceItem[] = [];
     const defer: WorkspaceItem[] = [];
@@ -2232,15 +2357,15 @@ export default function ShoppingWorkspacePage() {
       else need.push(item);
     }
     return { need, found, defer, have };
-  }, [filteredItems, sortOrder]);
+  }, [shopDisplayItems, sortOrder]);
 
   const shopSummary = useMemo((): ShopSummary => ({
     needCount: shopGroups.need.length,
     foundCount: shopGroups.found.length,
     deferCount: shopGroups.defer.length,
     haveCount: shopGroups.have.length,
-    total: filteredItems.length,
-  }), [shopGroups, filteredItems]);
+    total: shopDisplayItems.length,
+  }), [shopGroups, shopDisplayItems]);
 
   // Prep mode grouping — source-filtered unchecked items
   const prepGroups = useMemo(() => {
@@ -2287,13 +2412,15 @@ export default function ShoppingWorkspacePage() {
       <WorkspaceRow
         key={item.id}
         item={item}
-        sources={sourcesByItem.get(item.id) ?? []}
+        sources={item.duplicateItemIds
+          ? item.duplicateItemIds.flatMap((id) => sourcesByItem.get(id) ?? [])
+          : sourcesByItem.get(item.id) ?? []}
         pantryKeySet={pantryKeySet}
         measurementPref={measurementPref}
-        onToggleChecked={(checked) => toggleChecked.mutate({ id: item.id, checked })}
+        onToggleChecked={(checked) => (item.duplicateItemIds ?? [item.id]).forEach((id) => toggleChecked.mutate({ id, checked }))}
         shopMode={isShopMode}
         shopState={isShopMode ? getShopState(item) : undefined}
-        onShopStateChange={isShopMode ? (state) => handleShopStateChange(item.id, state) : undefined}
+        onShopStateChange={isShopMode ? (state) => (item.duplicateItemIds ?? [item.id]).forEach((id) => handleShopStateChange(id, state)) : undefined}
         prepMode={isPrepMode}
         prepState={isPrepMode ? (prepStates.get(item.id) ?? {}) : undefined}
         onPrepAction={isPrepMode ? (action) => handlePrepAction(item.id, action) : undefined}
@@ -2302,7 +2429,7 @@ export default function ShoppingWorkspacePage() {
         onAddItem={!isShopMode && !isPrepMode ? (name) => addShoppingItem.mutate({ productName: name }) : undefined}
         onUpdateMeasurement={!item.checked ? (qty, unit) => updateMeasurement.mutate({ id: item.id, qty, unit }) : undefined}
         onRemoveItem={!isShopMode && !isPrepMode ? () => removeItem.mutate(item.id) : undefined}
-        priceInfo={hasPrices || estimatedExtra > 0 ? { ...resolveItemPrice(item), onCompare: () => setComparisonItem(item) } : undefined}
+        priceInfo={!item.duplicateItemIds && (hasPrices || estimatedExtra > 0) ? { ...resolveItemPrice(item), onCompare: () => setComparisonItem(item) } : undefined}
         onConfirmSuggestions={!isShopMode && !isPrepMode ? async (picks) => {
           if (picks.length === 0) return;
           // Carry qty/unit from the parent ambiguous item to all derived items
@@ -2510,11 +2637,21 @@ export default function ShoppingWorkspacePage() {
           row clears the fixed BottomNav instead of sitting under it. */}
       <div className={isFullscreen ? "flex flex-1 min-h-0 flex-col overflow-hidden px-4 pt-4 sm:px-6 sm:pt-6 main-safe" : "flex flex-1 min-h-0 flex-col overflow-hidden"}>
 
-      <div className="shopping-stage-tools max-w-4xl mx-auto flex flex-nowrap items-center gap-2 mb-3 px-2 overflow-x-auto scrollbar-hide" data-testid="shopping-stage-tools">
+      {/* PLANNERPERF5 — one row, not two: splitting the filters onto their own
+          row below the tabs fixed the tabs' position but cost real vertical
+          space from the list. Instead, the tabs (shrink-0, always their own
+          natural width) and the menu trigger (shrink-0, a fixed-size icon
+          button — its open dropdown is positioned absolutely and doesn't
+          affect this row) sit at the two ends; the filters/status/sort — the
+          one thing that actually varies in width stage to stage — live in a
+          flex-1 min-w-0 middle slot that is ALWAYS present (empty on Add,
+          which has no list to filter) so it, not the tabs, absorbs every
+          width change and scrolls internally if it ever runs out of room. */}
+      <div className="shopping-stage-tools w-full max-w-4xl mx-auto flex items-center gap-2 mb-3 px-2" data-testid="shopping-stage-tools">
         <ModeSwitcher mode={mode} onChange={(m) => { setMode(m); }} />
-        {mode !== "add" && workspaceControlBar && (
-          <div className="shopping-toolbar-list-controls">{workspaceControlBar}</div>
-        )}
+        <div className="flex-1 min-w-0 overflow-x-auto scrollbar-hide" data-testid="shopping-toolbar-list-controls-row">
+          {mode !== "add" && workspaceControlBar}
+        </div>
         <div className="shopping-stage-menu shrink-0">{menuDropdown}</div>
       </div>
 

@@ -283,6 +283,7 @@ function Router() {
 
       <Route path="/" component={HomeRoute} />
       <Route path="/dashboard" component={() => <ProtectedRoute component={DashboardPage} />} />
+      <Route path="/meals" component={() => <Redirect to="/planner" />} />
       <Route path="/meals/:id" component={() => <ProtectedRoute component={MealDetailPage} />} />
       <Route path="/foods/:slug" component={() => <ProtectedRoute component={FoodDetailPage} />} />
       <Route path="/compare" component={() => <ProtectedRoute component={FoodComparisonPage} />} />

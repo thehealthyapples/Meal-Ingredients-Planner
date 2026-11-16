@@ -25,6 +25,7 @@
 import { useMemo } from "react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { fetchPlannerFull } from "@/lib/queryClient";
 import type { FullWeek } from "@/lib/planner-types";
 import { api } from "@shared/routes";
 import { useUser } from "@/hooks/use-user";
@@ -164,7 +165,8 @@ export default function HomeExperiencePage() {
   const { data: plannerWeek } = useCurrentPlannerWeek(!!user);
 
   const plannerQuery = useQuery<FullWeek[]>({
-    queryKey: ["/api/planner/full"],
+    queryKey: ["/api/planner/full", "current"],
+    queryFn: () => fetchPlannerFull<FullWeek>("current"),
     enabled: !!user,
   });
   // PX1-W3 (fnd-px-home-fetches-whole-cookbook): Home used to fetch the full

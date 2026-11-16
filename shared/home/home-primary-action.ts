@@ -370,7 +370,10 @@ export function resolveHomePrimaryAction(state: HomeState): HomePrimaryAction {
   // unreadable planner cannot satisfy "the week has no empty days", so it falls
   // through to the floor rather than guessing (Core Principle 6).
   if (state.week !== null && !state.week.hasEmptyDays && state.shopping !== null && state.shopping.uncheckedCount > 0) {
-    return { tier: 2, destination: "shopping", provenance: "signal" };
+    // The Home Meals card is the stable door into the plan. The separate Shopping
+    // card already owns the route to the basket, so pending shopping must not
+    // retarget this meal-planning link away from the current Planner week.
+    return { tier: 2, destination: "planner", provenance: "signal" };
   }
 
   // -- Tier 3: the floor ----------------------------------------------------

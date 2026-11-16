@@ -119,6 +119,13 @@ export interface MealSearchView {
   readonly dietTypes: readonly string[];
   readonly mealFormat: string;
   readonly kind: string;
+  /**
+   * COMP3 — a count only, never the ingredient text itself (search stays a
+   * name/ingredient-content FILTER, not a content leak). Lets a caller tell
+   * a real recipe apart from a bare "quick meal" (e.g. one created via
+   * meals.add) without a second read.
+   */
+  readonly ingredientCount: number;
 }
 
 export interface MealsListReadResult {
@@ -233,6 +240,7 @@ function toMealSearchView(m: Meal): MealSearchView {
     dietTypes: m.dietTypes,
     mealFormat: m.mealFormat,
     kind: m.kind,
+    ingredientCount: Array.isArray(m.ingredients) ? m.ingredients.length : 0,
   };
 }
 

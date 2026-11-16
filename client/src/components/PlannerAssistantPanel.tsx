@@ -571,7 +571,7 @@ function ResolveSearchContent({ mealName, meals, onSelectRecipe, onBack, isResol
                 data-testid={`button-resolve-select-${meal.id}`}
               >
                 {meal.imageUrl ? (
-                  <img src={meal.imageUrl} alt={meal.name} className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
+                  <img src={meal.imageUrl} alt={meal.name} loading="lazy" decoding="async" className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
                 ) : (
                   <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
                     <ChefHat className="h-4 w-4 text-muted-foreground/40" />
@@ -630,7 +630,7 @@ function ResolveSearchContent({ mealName, meals, onSelectRecipe, onBack, isResol
                   data-testid={`button-resolve-web-${recipe.id}`}
                 >
                   {recipe.image ? (
-                    <img src={recipe.image} alt={recipe.name} className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
+                    <img src={recipe.image} alt={recipe.name} loading="lazy" decoding="async" className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
                   ) : (
                     <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
                       <Globe className="h-4 w-4 text-muted-foreground/40" />

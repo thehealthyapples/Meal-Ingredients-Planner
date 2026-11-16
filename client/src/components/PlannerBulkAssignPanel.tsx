@@ -153,7 +153,7 @@ export function PlannerBulkAssignPanel({
                       <UtensilsCrossed className="h-4 w-4 text-green-500/40" />
                     </div>
                   ) : meal.imageUrl ? (
-                    <img src={meal.imageUrl} alt={meal.name} className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
+                    <img src={meal.imageUrl} alt={meal.name} loading="lazy" decoding="async" className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
                   ) : (
                     <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
                       <ChefHat className="h-4 w-4 text-muted-foreground" />
@@ -174,7 +174,7 @@ export function PlannerBulkAssignPanel({
         <div className="space-y-4">
           <div className="flex items-center gap-3 p-3 rounded-md bg-muted/50">
             {bulkMeal?.imageUrl ? (
-              <img src={bulkMeal.imageUrl} alt={bulkMeal.name} className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
+              <img src={bulkMeal.imageUrl} alt={bulkMeal.name} loading="lazy" decoding="async" className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
             ) : (
               <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
                 <ChefHat className="h-4 w-4 text-muted-foreground" />

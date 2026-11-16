@@ -47,6 +47,8 @@ function PartnerAvatar({ partner }: { partner: Partner }) {
       <img
         src={partner.imageUrl}
         alt={partner.name}
+        loading="lazy"
+        decoding="async"
         className="w-14 h-14 rounded-xl object-cover"
       />
     );

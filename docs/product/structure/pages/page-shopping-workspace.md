@@ -6,8 +6,8 @@ status: live
 visibility: household
 owner: Colin Clapson
 route: /shopping-workspace
-last_verified: 2026-11-05
-version: 2
+last_verified: 2026-11-13
+version: 3
 ---
 
 # Shopping
@@ -21,7 +21,8 @@ a written list, or arrive from the planner and pantry. With a tap, THA matches t
 plain items to real grocery products across supermarkets and brings back prices, so
 the list can be sorted by price or by Apple Score. When the household is ready, the
 basket can be exported to a chosen supermarket to carry on shopping there. This is
-the current, primary shopping surface, reached from the main navigation.
+the current, primary shopping surface, reached from the main navigation. On the
+review list, planned ingredients can reveal which meals need them.
 
 ## Where it lives
 

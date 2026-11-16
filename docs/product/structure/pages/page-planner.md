@@ -8,8 +8,9 @@ owner: Colin Clapson
 route: /planner
 aliases:
   - /weekly-planner
-last_verified: 2026-07-11
-version: 1
+  - /meals
+last_verified: 2026-11-15
+version: 2
 ---
 
 # Planner
@@ -18,7 +19,7 @@ version: 1
 
 ## What it is
 
-The week at a glance, day by day. A household adds meals to each day's breakfast,
+The current week and three preceding weeks at a glance, day by day. Older saved weeks remain available from the date archive menu. A household adds meals to each day's breakfast,
 lunch and dinner slots — from the cookbook, a template, or by asking THA to plan —
 and can say which household members are eating each meal. Days and meals can be
 copied forward, and a meal can be marked as cooked. When the plan is set, the whole
@@ -35,6 +36,7 @@ saved and shared with another household.
 ## Aliases
 
 - `/weekly-planner` — an older address for the same page.
+- `/meals` — compatibility address that opens the Planner.
 
 ## Related
 
@@ -46,4 +48,4 @@ saved and shared with another household.
 ---
 
 _Registry entry. Present tense; if it is no longer true it is a defect, not
-history (Rule PKR15). Owner: Colin Clapson. Last verified 2026-07-11._
+history (Rule PKR15). Owner: Colin Clapson. Last verified 2026-11-15._

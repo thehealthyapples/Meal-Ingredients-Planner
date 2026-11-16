@@ -36,6 +36,7 @@ import {
 } from '../../shared/restrictions/restriction-library.js';
 
 import type { RestrictionDefinition } from '../../shared/restrictions/restriction-types.js';
+import { shouldExcludeRecipe } from '../../shared/dietRules.js';
 
 // ─── Test infrastructure ──────────────────────────────────────────────────────
 
@@ -409,6 +410,20 @@ assert(couscousResult.length === 1 && couscousResult[0].restriction.id === 'glut
 
 const soySauceGlutenResult = resolveIngredientRestrictions('soy sauce', [glutenDef]);
 assert(soySauceGlutenResult.length === 1 && soySauceGlutenResult[0].sourceType === 'hidden_ingredient', '"soy sauce" resolves gluten via hidden_ingredient (preserved)');
+
+for (const substitute of ['gluten-free pasta', 'gluten-free spaghetti', 'rice noodles', 'courgette noodles', 'rice flour']) {
+  assertEqual(resolveIngredientRestrictions(substitute, [glutenDef]), [], `declared substitute "${substitute}" is not itself a gluten match`);
+  assert(!shouldExcludeRecipe({ name: 'Bolognese', ingredients: [substitute] },
+    { dietPattern: null, dietRestrictions: ['Gluten-Free'] }),
+  `diet-rule legacy filter also accepts declared substitute "${substitute}"`);
+}
+assert(resolveIngredientRestrictions('rice noodles with soy sauce', [glutenDef]).length === 1,
+  'a named substitute does not hide soy sauce in the same ingredient line');
+assert(resolveIngredientRestrictions('gluten-free pasta with wheat flour', [glutenDef]).length === 1,
+  'a named substitute does not hide wheat flour in the same ingredient line');
+assert(shouldExcludeRecipe({ name: 'Bolognese', ingredients: ['rice noodles with soy sauce'] },
+  { dietPattern: null, dietRestrictions: ['Gluten-Free'] }),
+'diet-rule legacy filter still catches a separate gluten source');
 
 // ─── 19. Dairy existing behaviour preserved ───────────────────────────────────
 

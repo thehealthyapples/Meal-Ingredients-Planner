@@ -25,8 +25,8 @@ export const PRIVACY_POLICY: LegalDocument = {
   title: "Privacy Policy",
   summary:
     "What we hold about your household, why we hold it, who else sees it, and how to get it back or have it deleted.",
-  version: "1.1.0",
-  effectiveDate: "2026-07-18",
+  version: "1.2.0",
+  effectiveDate: "2026-11-14",
   sections: [
     {
       id: "who-we-are",
@@ -95,7 +95,7 @@ export const PRIVACY_POLICY: LegalDocument = {
             ],
             [
               "Conversations with the Companion",
-              "What you type to the Companion and what it replied",
+              "What you type or say to the Companion, and what it replied. Spoken input is converted to text by our Companion provider and is not stored as an audio recording",
               "So a conversation can continue, and so we can tell when the Companion is unhelpful",
             ],
             [

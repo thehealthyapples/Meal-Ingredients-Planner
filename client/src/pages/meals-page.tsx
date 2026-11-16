@@ -1137,7 +1137,7 @@ function MobileMealActionSheet({
           {/* ── Recipe context header ── */}
           <div className="flex items-center gap-3 px-4 pt-1 pb-3 shrink-0 realm-header-bg">
             {meal.imageUrl ? (
-              <img src={meal.imageUrl} alt={meal.name} className="h-14 w-14 rounded-xl object-cover shrink-0" />
+              <img src={meal.imageUrl} alt={meal.name} loading="lazy" decoding="async" className="h-14 w-14 rounded-xl object-cover shrink-0" />
             ) : (
               <div className="h-14 w-14 rounded-xl bg-muted flex items-center justify-center shrink-0">
                 <ChefHat className="h-6 w-6 text-muted-foreground/40" />
@@ -4297,7 +4297,7 @@ export default function MealsPage() {
                     {/* Image / placeholder */}
                     <div className="relative w-full h-28 bg-teal-50 dark:bg-teal-950/30 flex flex-col items-center justify-center gap-1">
                       {variant.imageUrl ? (
-                        <img src={variant.imageUrl} alt={variant.name} className="w-full h-full object-cover" />
+                        <img src={variant.imageUrl} alt={variant.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                       ) : (
                         <>
                           <Shield className="h-8 w-8 text-teal-400/60" />
@@ -4436,7 +4436,7 @@ export default function MealsPage() {
                     <Card className={`h-full flex flex-col overflow-hidden ${isExpired ? 'border-red-400/50' : 'border-border'}`} data-testid={`card-freezer-${frozen.id}`}>
                       <div className="relative w-full h-28 overflow-hidden rounded-t-md bg-accent/30">
                         {meal?.imageUrl ? (
-                          <img src={meal.imageUrl} alt={meal.name} className="w-full h-full object-cover opacity-70" />
+                          <img src={meal.imageUrl} alt={meal.name} loading="lazy" decoding="async" className="w-full h-full object-cover opacity-70" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
                             <Snowflake className="h-12 w-12 text-muted-foreground/40" />
@@ -5486,6 +5486,8 @@ export default function MealsPage() {
                   <img
                     src={barcodeProduct.image_url}
                     alt={barcodeProduct.product_name}
+                    loading="lazy"
+                    decoding="async"
                     className="h-28 w-auto object-contain rounded-md"
                   />
                 </div>
@@ -7017,6 +7019,8 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
                               <img
                                 src={currentImageUrl}
                                 alt="Recipe photo"
+                                loading="lazy"
+                                decoding="async"
                                 className="w-14 h-14 object-cover rounded-md border border-border shrink-0"
                                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                               />

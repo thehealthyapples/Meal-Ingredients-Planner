@@ -2626,6 +2626,47 @@ export const insertCompanionGuidanceEventSchema = createInsertSchema(companionGu
 export type CompanionGuidanceEvent = typeof companionGuidanceEvents.$inferSelect;
 export type InsertCompanionGuidanceEvent = z.infer<typeof insertCompanionGuidanceEventSchema>;
 
+/**
+ * COMP3 — Learned Substitution Observations.
+ * Single canonical owner: server/intelligence/conversation/learned-substitution-store.ts.
+ *
+ * When a household names its own fix for a flagged ingredient the curated
+ * substitution rule engine (shared/substitution-rules.ts) has no entry for,
+ * that statement is recorded here. It is NEVER promoted into the curated,
+ * trusted rules automatically — a row here is one household's unverified
+ * claim, not a safety fact the app vouches for. A later turn, for any
+ * household hitting the same conflict, may surface it back as an explicitly
+ * attributed, unverified suggestion ("other households have mentioned…");
+ * the household still decides and still has to confirm before anything is
+ * added to their plan, exactly as an uncorroborated suggestion always does.
+ *
+ * `restrictionId`/`ingredientKey` are free-text keys this table owns itself —
+ * there is no id-stable row in the restriction library to foreign-key to.
+ */
+export const learnedSubstitutionObservations = pgTable("learned_substitution_observations", {
+  id: serial("id").primaryKey(),
+  restrictionId: text("restriction_id").notNull(),
+  ingredientKey: text("ingredient_key").notNull(),
+  statedReplacement: text("stated_replacement").notNull(),
+  householdId: integer("household_id").notNull().references(() => households.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  // The same household repeating the same correction across turns must not
+  // accumulate duplicate rows; two DIFFERENT households saying the same thing
+  // both count — that corroboration is the whole point of this table.
+  unique("learned_substitution_observations_unique").on(
+    table.restrictionId, table.ingredientKey, table.statedReplacement, table.householdId,
+  ),
+]);
+
+export const insertLearnedSubstitutionObservationSchema = createInsertSchema(learnedSubstitutionObservations).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type LearnedSubstitutionObservation = typeof learnedSubstitutionObservations.$inferSelect;
+export type InsertLearnedSubstitutionObservation = z.infer<typeof insertLearnedSubstitutionObservationSchema>;
+
 // ─── Companion Task Delegation & Assisted Actions (INT40) ──────────────────────
 // Single canonical owner: server/intelligence/conversation/companion-action-store.ts
 // (see docs/architecture/THA_SOURCE_OF_TRUTH_ARCHITECTURE_REGISTER.md).

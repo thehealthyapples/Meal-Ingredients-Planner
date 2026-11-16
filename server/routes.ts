@@ -34,6 +34,7 @@ import {
   getSimilarFoodsByNutrients,
   findBestFoodMatch,
 } from "./services/nutrition-knowledge-registry";
+import { searchPixabayFoodImage } from "./services/food-image-search";
 // BENCHINT2 — meal derivation (nutrition + allergens) and the recipe-page extraction helpers it
 // uses were route-local functions in this file. They are now services, so the ONE derivation path
 // is reachable by every producer of a meal — this route, and the Benchmark World seeder — instead
@@ -6900,6 +6901,10 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
       const userId = req.user!.id;
+      const windowMode = typeof req.query.window === "string" ? req.query.window : "all";
+      if (!["all", "current", "recent"].includes(windowMode)) {
+        return res.status(400).json({ message: "window must be all, current, or recent" });
+      }
       let weeks = await storage.getPlannerWeeks(userId);
       if (weeks.length === 0) {
         weeks = await storage.createPlannerWeeks(userId);
@@ -6908,8 +6913,42 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       // always has a present to land on and the six-slot window can never silently expire
       // (created on demand, an observation of now — never a back-fill; HT7). Idempotent: a
       // household whose current week already exists gets it back unchanged.
-      await storage.getCurrentDatedPlannerWeek(userId);
+      const currentWeek = await storage.getCurrentDatedPlannerWeek(userId);
       weeks = await storage.getPlannerWeeks(userId);
+
+      if (windowMode === "current") {
+        weeks = [currentWeek];
+      } else if (windowMode === "recent") {
+        // The Planner's default view contains the current dated week and its three
+        // latest predecessors. Older and undated weeks remain stored and are loaded
+        // on demand from the archive menu; no planner state is pruned.
+        const currentStart = currentWeek.weekStartDate ?? "";
+        weeks = weeks
+          .filter((week) => !!week.weekStartDate && week.weekStartDate <= currentStart)
+          .sort((a, b) =>
+            (b.weekStartDate ?? "").localeCompare(a.weekStartDate ?? "") || b.weekNumber - a.weekNumber,
+          )
+          .slice(0, 4)
+          .sort((a, b) =>
+            (a.weekStartDate ?? "").localeCompare(b.weekStartDate ?? "") || a.weekNumber - b.weekNumber,
+          );
+
+        if (!weeks.some((week) => week.id === currentWeek.id)) weeks.push(currentWeek);
+
+        const includeWeekIdRaw = req.query.includeWeekId;
+        if (includeWeekIdRaw !== undefined) {
+          const includeWeekId = Number(includeWeekIdRaw);
+          if (!Number.isSafeInteger(includeWeekId) || includeWeekId <= 0) {
+            return res.status(400).json({ message: "includeWeekId must be a positive integer" });
+          }
+          const requestedWeek = await storage.getPlannerWeek(includeWeekId);
+          const householdId = await getHouseholdForUser(userId);
+          if (!requestedWeek || requestedWeek.householdId !== householdId) {
+            return res.status(404).json({ message: "Week not found" });
+          }
+          if (!weeks.some((week) => week.id === requestedWeek.id)) weeks.push(requestedWeek);
+        }
+      }
 
       // PLANNER1 — batched, not one-query-per-week. A household's weeks now accrue
       // indefinitely (no history is pruned), so days + entries are fetched in two queries
@@ -11830,6 +11869,30 @@ Keep each string short and concrete. Return [] for any array with no entries.`;
     }
   });
 
+  // Resolve the existing image from the knowledge owner first. Only selected
+  // foods without a canonical image fall through to transient Unsplash search.
+  app.get("/api/foods/:canonicalSlug/image", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const canonicalSlug = req.params.canonicalSlug;
+    try {
+      const { knowledgeSlugForCanonicalSlug } = await import("@shared/canonical/food-report-adapter");
+      const knowledgeSlug = knowledgeSlugForCanonicalSlug(canonicalSlug);
+      if (knowledgeSlug) {
+        const detail = await getFoodDetailView(knowledgeSlug);
+        if (detail?.food.imageUrl) {
+          res.setHeader("Cache-Control", "private, max-age=3600");
+          return res.json({ image: { imageUrl: detail.food.imageUrl, alt: detail.food.name, source: "knowledge" } });
+        }
+      }
+      const searchName = typeof req.query.q === "string" ? req.query.q.trim() : "";
+      if (searchName.length < 2 || searchName.length > 100) return res.json({ image: null });
+      res.setHeader("Cache-Control", "private, max-age=3600");
+      return res.json({ image: await searchPixabayFoodImage(searchName) });
+    } catch {
+      return res.json({ image: null });
+    }
+  });
+
   app.get("/api/knowledge/nutrients/:slug", async (req, res) => {
     try {
       const detail = await getNutrientDetailView(req.params.slug);
@@ -13017,18 +13080,31 @@ Generate a complete recipe using these as the foundation.`;
         // NUTPLAN2 — counted by the canonical owner. This loop and the one in
         // /api/planner/weeks/:weekId/intelligence were written out identically;
         // both now call `plantGroupsForIngredientLines`, so they cannot drift.
+        // PLANNERPERF2 — both are also now batched identically (one entries query,
+        // one meals query) instead of one getPlannerEntriesForDay/getMeal round
+        // trip per day/entry.
+        const homeIntelEntries = await storage.getPlannerEntriesByDayIds(days.map((d) => d.id));
+        const homeIntelMeals = await storage.getMealsByIds([...new Set(homeIntelEntries.map((e) => e.mealId))]);
+        const homeIntelMealById = new Map(homeIntelMeals.map((m) => [m.id, m]));
+        const homeIntelEntriesByDayId = new Map<number, typeof homeIntelEntries>();
+        for (const entry of homeIntelEntries) {
+          const list = homeIntelEntriesByDayId.get(entry.dayId) ?? [];
+          list.push(entry);
+          homeIntelEntriesByDayId.set(entry.dayId, list);
+        }
+
         const plantGroups = new Set<string>();
         let mealsPlanned = 0;
         let daysWithMeals = 0;
 
         for (const day of days) {
-          const entries = await storage.getPlannerEntriesForDay(day.id);
+          const entries = homeIntelEntriesByDayId.get(day.id) ?? [];
           if (entries.length > 0) {
             daysWithMeals++;
             mealsPlanned += entries.length;
           }
           for (const entry of entries) {
-            const meal = await storage.getMeal(entry.mealId);
+            const meal = homeIntelMealById.get(entry.mealId);
             if (!meal) continue;
             for (const group of Array.from(plantGroupsForIngredientLines(meal.ingredients))) {
               plantGroups.add(group);
@@ -13092,20 +13168,33 @@ Generate a complete recipe using these as the foundation.`;
       }
 
       // ── 1. Weekly progress — scoped to THIS week ────────────────────────────
+      // PLANNERPERF2 — batched, not one-query-per-day-per-entry. Entries for every
+      // day in the week are fetched in one query, and their meals in one more,
+      // instead of one getPlannerEntriesForDay/getMeal round trip per day/entry.
       const days = await storage.getPlannerDays(weekId);
+      const weekEntries = await storage.getPlannerEntriesByDayIds(days.map((d) => d.id));
+      const weekMeals = await storage.getMealsByIds([...new Set(weekEntries.map((e) => e.mealId))]);
+      const weekMealById = new Map(weekMeals.map((m) => [m.id, m]));
+      const entriesByDayId = new Map<number, typeof weekEntries>();
+      for (const entry of weekEntries) {
+        const list = entriesByDayId.get(entry.dayId) ?? [];
+        list.push(entry);
+        entriesByDayId.set(entry.dayId, list);
+      }
+
       // Same counter, same owner as /api/home/intelligence above (NUTPLAN2).
       const plantGroups = new Set<string>();
       let mealsPlanned = 0;
       let daysWithMeals = 0;
 
       for (const day of days) {
-        const entries = await storage.getPlannerEntriesForDay(day.id);
+        const entries = entriesByDayId.get(day.id) ?? [];
         if (entries.length > 0) {
           daysWithMeals++;
           mealsPlanned += entries.length;
         }
         for (const entry of entries) {
-          const meal = await storage.getMeal(entry.mealId);
+          const meal = weekMealById.get(entry.mealId);
           if (!meal) continue;
           for (const group of Array.from(plantGroupsForIngredientLines(meal.ingredients))) {
             plantGroups.add(group);
@@ -13175,37 +13264,40 @@ Generate a complete recipe using these as the foundation.`;
     const gathered: Notice[] = [];
     const sources: string[] = [];
 
-    // 1. Planner gaps, pantry usage and shopping opportunities — through the
-    //    registered `opportunity-delivery` capability, on the ordinary Intent Engine
-    //    path. Never by importing OD1's framework or its store directly, so the
-    //    delivery lifecycle, `mutedOpportunityTypes`, LEARN1's household learning and
-    //    COACH1's seen-yields-to-unseen ordering all apply exactly once, where they live.
-    try {
-      const outcome = await intelligencePlatform.handle(
-        { capabilityId: "opportunity-delivery", verb: "report" },
-        intelligencePlatform.contextFor(user),
-      );
-      if (outcome.status === "ok") {
-        const opportunities =
-          (outcome.result as { opportunities?: readonly OpportunityLike[] } | null | undefined)?.opportunities ?? [];
-        gathered.push(...noticeOpportunities(opportunities));
-        sources.push("opportunity-delivery");
-      }
-    } catch (err) {
-      console.error("[COACH1] opportunity-delivery unavailable:", err);
-    }
+    // PLANNERPERF2 — these four producers were already documented and implemented
+    // as independently-degrading ("each producer degrades independently... it never
+    // blocks the others"), but were awaited one after another, so their latencies
+    // summed instead of overlapping. Running them concurrently changes no producer's
+    // own try/catch semantics or error message, and gathered/sources below are filled
+    // in the same fixed 1→4 order every time, regardless of which promise settles
+    // first — so output order and content are unchanged, only wall-clock time.
+    const [opportunityResult, healthTrendResult, householdStoryResult, learningResult] = await Promise.allSettled([
+      // 1. Planner gaps, pantry usage and shopping opportunities — through the
+      //    registered `opportunity-delivery` capability, on the ordinary Intent Engine
+      //    path. Never by importing OD1's framework or its store directly, so the
+      //    delivery lifecycle, `mutedOpportunityTypes`, LEARN1's household learning and
+      //    COACH1's seen-yields-to-unseen ordering all apply exactly once, where they live.
+      (async () => {
+        const outcome = await intelligencePlatform.handle(
+          { capabilityId: "opportunity-delivery", verb: "report" },
+          intelligencePlatform.contextFor(user),
+        );
+        if (outcome.status === "ok") {
+          const opportunities =
+            (outcome.result as { opportunities?: readonly OpportunityLike[] } | null | undefined)?.opportunities ?? [];
+          return { notices: noticeOpportunities(opportunities), sources: ["opportunity-delivery"] };
+        }
+        return { notices: [] as Notice[], sources: [] as string[] };
+      })(),
 
-    // 2. Nutrition trend — the honest signal THA actually owns. NOT a "nutrition gap":
-    //    no reference intake, RDA or target value is stored anywhere in this codebase,
-    //    so no gap against a target can be computed without fabricating the target.
-    //    See docs/implementation/intelligence/COACH1_PROACTIVE_COACHING.md §2.
-    try {
-      const trends = await storage.getUserHealthTrends(userId, 90);
-      gathered.push(...noticeNutritionTrend(trends));
-      sources.push("user_health_trends");
-    } catch (err) {
-      console.error("[COACH1] health trends unavailable:", err);
-    }
+      // 2. Nutrition trend — the honest signal THA actually owns. NOT a "nutrition gap":
+      //    no reference intake, RDA or target value is stored anywhere in this codebase,
+      //    so no gap against a target can be computed without fabricating the target.
+      //    See docs/implementation/intelligence/COACH1_PROACTIVE_COACHING.md §2.
+      (async () => {
+        const trends = await storage.getUserHealthTrends(userId, 90);
+        return { notices: noticeNutritionTrend(trends), sources: ["user_health_trends"] };
+      })(),
 
     // 3. PRESENCE2 — WHAT THIS HOUSEHOLD'S OWN EATING LOOKS LIKE, plus the seasonal
     //    highlight, from ONE derivation.
@@ -13238,14 +13330,14 @@ Generate a complete recipe using these as the foundation.`;
     //        derived, serialised and discarded ever since. The Companion is the
     //        owner GEA8 names, and this is where it collects them.
     //
-    //    The caller derives; the engine only shapes. Same discipline as before.
-    try {
-      const history = await buildHouseholdHistory(userId);
-      if (history.entries.length > 0) {
+      //    The caller derives; the engine only shapes. Same discipline as before.
+      (async () => {
+        const history = await buildHouseholdHistory(userId);
+        if (history.entries.length === 0) return { notices: [] as Notice[], sources: [] as string[] };
         const fields = deriveHouseholdCompanionFields(history);
 
-        gathered.push(...noticeSeasonal(fields.seasonalHighlight?.headline ?? null));
-        sources.push("seasonal-stories");
+        const notices: Notice[] = [...noticeSeasonal(fields.seasonalHighlight?.headline ?? null)];
+        const blockSources: string[] = ["seasonal-stories"];
 
         // Two observations at most, and both `low` priority — so they can never
         // displace a safety signal or an actionable gap from the attention budget
@@ -13256,41 +13348,53 @@ Generate a complete recipe using these as the foundation.`;
         // a headline like "Tomatoes became a household favourite." — a statement
         // about what this family eats, carrying no praise and no verdict. It is
         // surfaced here as an observation, which is what it always was.
-        const before = gathered.length;
-        gathered.push(
+        const storyNotices = [
           ...noticeHouseholdStory(fields.celebration?.headline ?? null, "favourite", "favourite"),
           ...noticeHouseholdStory(fields.householdInsight?.headline ?? null, "pattern", "pattern"),
-        );
-        if (gathered.length > before) sources.push("household-stories");
-      }
-    } catch (err) {
-      console.error("[PRESENCE2] household stories unavailable:", err);
-    }
+        ];
+        if (storyNotices.length > 0) blockSources.push("household-stories");
+        notices.push(...storyNotices);
+        return { notices, sources: blockSources };
+      })(),
 
-    // 6. PHASE5E (NTC-P4) — what the household has CONFIRMED about itself.
-    //
-    //    The Notice Engine Architecture §2.2 names this as the natural eighth source and
-    //    fixes its shape: "a registered capability (`evidence-learning`) read via the
-    //    platform, adapted verbatim — and only for signals with `status = confirmed`. A
-    //    `pending_confirmation` signal is a question for the household, not a notice."
-    //
-    //    So this asks EL1 for CONFIRMED signals only. A pending signal stays where it
-    //    belongs: on the Profile's learning panel, where the household can answer it.
-    //    THA does not tell a household what it has learned about them until they have
-    //    agreed it is true.
-    try {
-      const outcome = await intelligencePlatform.handle(
-        { capabilityId: "evidence-learning", verb: "search", parameters: { status: "confirmed" } },
-        intelligencePlatform.contextFor(user),
-      );
-      if (outcome.status === "ok") {
-        const signals =
-          (outcome.result as { signals?: readonly ConfirmedLearningLike[] } | null | undefined)?.signals ?? [];
-        gathered.push(...noticeLearning(signals));
-        sources.push("household-learning");
+      // 6. PHASE5E (NTC-P4) — what the household has CONFIRMED about itself.
+      //
+      //    The Notice Engine Architecture §2.2 names this as the natural eighth source and
+      //    fixes its shape: "a registered capability (`evidence-learning`) read via the
+      //    platform, adapted verbatim — and only for signals with `status = confirmed`. A
+      //    `pending_confirmation` signal is a question for the household, not a notice."
+      //
+      //    So this asks EL1 for CONFIRMED signals only. A pending signal stays where it
+      //    belongs: on the Profile's learning panel, where the household can answer it.
+      //    THA does not tell a household what it has learned about them until they have
+      //    agreed it is true.
+      (async () => {
+        const outcome = await intelligencePlatform.handle(
+          { capabilityId: "evidence-learning", verb: "search", parameters: { status: "confirmed" } },
+          intelligencePlatform.contextFor(user),
+        );
+        if (outcome.status === "ok") {
+          const signals =
+            (outcome.result as { signals?: readonly ConfirmedLearningLike[] } | null | undefined)?.signals ?? [];
+          return { notices: noticeLearning(signals), sources: ["household-learning"] };
+        }
+        return { notices: [] as Notice[], sources: [] as string[] };
+      })(),
+    ]);
+
+    const settledResults = [
+      { label: "[COACH1] opportunity-delivery unavailable:", result: opportunityResult },
+      { label: "[COACH1] health trends unavailable:", result: healthTrendResult },
+      { label: "[PRESENCE2] household stories unavailable:", result: householdStoryResult },
+      { label: "[PHASE5E] evidence-learning unavailable:", result: learningResult },
+    ] as const;
+    for (const { label, result } of settledResults) {
+      if (result.status === "fulfilled") {
+        gathered.push(...result.value.notices);
+        sources.push(...result.value.sources);
+      } else {
+        console.error(label, result.reason);
       }
-    } catch (err) {
-      console.error("[PHASE5E] evidence-learning unavailable:", err);
     }
 
     // The Silence Rules are the ONLY place order and volume are decided.
@@ -13651,6 +13755,11 @@ Generate a complete recipe using these as the foundation.`;
         // Companion identify fallback turns consistently. Derived, never persisted.
         ...(result.fallbackState ? { fallbackState: result.fallbackState } : {}),
         ...(result.outcome ? { outcome: { status: result.outcome.status, message: result.outcome.message } } : {}),
+        // COMP3: tappable quick-reply chips for this clarification (e.g.
+        // ["Breakfast","Lunch","Dinner"], or real candidate names). Omitted
+        // entirely for any open-ended question — the free-text box is the
+        // only way to answer those, same as today.
+        ...(result.suggestedReplies && result.suggestedReplies.length > 0 ? { suggestedReplies: result.suggestedReplies } : {}),
       });
     } catch (err) {
       console.error("[ConversationGateway] POST /turn error:", err);

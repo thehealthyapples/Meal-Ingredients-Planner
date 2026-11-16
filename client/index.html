@@ -53,6 +53,15 @@
     <meta name="twitter:image" content="/logo-long.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- PLANNERPERF3 — recipe meal photos are hosted on their original external
+         source (TheMealDB, BBC Good Food/Immediate, AllRecipes, OpenFoodFacts,
+         etc.), never copied to our own origin. Two hosts alone cover the large
+         majority of meal images in practice (images.immediate.co.uk,
+         www.themealdb.com). Preconnecting overlaps each host's DNS+TLS handshake
+         with the rest of page load instead of paying it only when the browser
+         first parses that <img> tag; it does not change file size or resolution. -->
+    <link rel="preconnect" href="https://images.immediate.co.uk" crossorigin>
+    <link rel="preconnect" href="https://www.themealdb.com" crossorigin>
     <!-- PX1-W3 (fnd-px-oversized-assets): this render-blocking request used to
          name ~25 font families from the original scaffold. THA's type system
          defines exactly two (index.css --font-sans: Inter, --font-display:

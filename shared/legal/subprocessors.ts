@@ -58,15 +58,15 @@ export const SUB_PROCESSORS: readonly SubProcessor[] = [
     id: "openai",
     name: "OpenAI",
     purpose:
-      "Powers the Companion's replies, and helps classify and describe food and recipe items you add.",
+      "Powers the Companion's replies, transcribes spoken Companion input into text, and helps classify and describe food and recipe items you add.",
     dataReceived: [
-      "What you type to the Companion",
+      "What you type or say to the Companion — spoken audio is sent for transcription into text and is not retained by us as a recording",
       "The household context assembled for that specific question — for example your dietary restrictions, so the Companion does not suggest something you cannot eat",
       "Names of food or recipe items being classified",
     ],
     location: "United States",
     activeWhen:
-      "When you talk to the Companion, or when an item you add needs classifying. If no key is configured the Companion degrades gracefully and nothing is sent.",
+      "When you talk or speak to the Companion, or when an item you add needs classifying. If no key is configured the Companion degrades gracefully and nothing is sent.",
   },
   {
     id: "object-storage",

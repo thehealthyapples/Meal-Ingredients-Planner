@@ -24,8 +24,8 @@ The household view opens with the date and a
 two-line welcome in THA's display voice — "Welcome home," then the person's name —
 followed by a "Today at a glance" group of cards: the meals planned for today, how
 many items are still to buy, and this week's plant diversity against a target of
-thirty. Each card is a doorway — tapping through goes to the planner, the shopping
-list, or the nutrition screen. When there is nothing to say, a card shows a calm
+thirty. The Meals card always opens the current Planner week; the separate Shopping
+card opens the shopping list, and the nutrition card opens its screen. When there is nothing to say, a card shows a calm
 empty state rather than inventing anything — including plant diversity, which says
 so honestly when the week has no picture yet rather than showing a zero. The
 Companion holds its entrance until the room has settled, then appears in its usual
@@ -60,4 +60,4 @@ owns it, so nothing here is a second copy of the truth.
 ---
 
 _Registry entry. Present tense; if it is no longer true it is a defect, not
-history (Rule PKR15). Owner: Colin Clapson. Last verified 2026-07-16._
+history (Rule PKR15). Owner: Colin Clapson. Last verified 2026-11-15._

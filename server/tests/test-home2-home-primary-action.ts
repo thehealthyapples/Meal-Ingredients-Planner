@@ -149,7 +149,7 @@ async function main(): Promise<void> {
 
   // -- Tier 2: the trip is pending -----------------------------------------
   const t2 = resolveHomePrimaryAction(state({ week: { weekNumber: 6, hasEmptyDays: false }, shopping: { uncheckedCount: 3 } }));
-  assert(t2.tier === 2 && t2.destination === "shopping", "Tier 2 fires on a full week + unchecked items → Shopping");
+  assert(t2.tier === 2 && t2.destination === "planner", "Tier 2 keeps the Home Meals door on Planner when shopping items are unchecked");
 
   // -- Tier 1 BEFORE Tier 2 — plan before shop ------------------------------
   const planBeforeShop = resolveHomePrimaryAction(

@@ -287,6 +287,8 @@ export default function AnalyserDetailV2({
               <img
                 src={vm.product.imageUrl}
                 alt={vm.product.name}
+                loading="lazy"
+                decoding="async"
                 className="h-full object-contain"
                 onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
               />

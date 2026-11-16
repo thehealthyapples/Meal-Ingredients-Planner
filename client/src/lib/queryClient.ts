@@ -32,6 +32,21 @@ export async function apiRequest(
   return res;
 }
 
+export type PlannerFullWindow = "current" | "recent";
+
+export async function fetchPlannerFull<T = unknown>(
+  window: PlannerFullWindow,
+  includeWeekId?: number | null,
+): Promise<T[]> {
+  const params = new URLSearchParams({ window });
+  if (includeWeekId != null) params.set("includeWeekId", String(includeWeekId));
+  const res = await fetch(`/api/planner/full?${params.toString()}`, {
+    credentials: "include",
+  });
+  await throwIfResNotOk(res);
+  return await res.json();
+}
+
 type UnauthorizedBehavior = "returnNull" | "throw";
 export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;

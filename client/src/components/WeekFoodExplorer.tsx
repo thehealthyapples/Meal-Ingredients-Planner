@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Search, ScanBarcode } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
@@ -24,7 +24,7 @@ import FoodComparisonPage from "@/pages/food-comparison-page";
 import { useWeekFoodRows, type IngredientRow, type WeekMealEntry } from "@/components/PlantDiversityReport";
 import { getCategoryEmoji, getIngredientImage } from "@/lib/ingredient-imagery";
 import { buildRowVarietyDisplays } from "@shared/canonical/variety";
-import { buildFoodReport, nutrientSlugForDisplayName } from "@shared/canonical/food-report-adapter";
+import { buildFoodReport, knowledgeSlugForCanonicalSlug, nutrientSlugForDisplayName } from "@shared/canonical/food-report-adapter";
 
 type Mode = "foods" | "nutrients";
 type LookupResult = {
@@ -78,13 +78,169 @@ function mealContext(row: IngredientRow): string {
   ).join(" · ");
 }
 
-function FoodImage({ row, large = false }: { row: IngredientRow; large?: boolean }) {
-  const image = getIngredientImage(row.displayName);
+type FoodImageResult = { imageUrl: string; alt: string; photographer?: string; photographerUrl?: string; photoUrl?: string; provider?: string; licenseName?: string; licenseUrl?: string; source?: string };
+
+type CommonsSearchPage = {
+  title?: string;
+  index?: number;
+  imageinfo?: Array<{
+    thumburl?: string;
+    descriptionurl?: string;
+    extmetadata?: Record<string, { value?: string }>;
+  }>;
+};
+
+function plainMetadata(value?: string): string | undefined {
+  if (!value) return undefined;
+  const text = new DOMParser().parseFromString(value, "text/html").body.textContent?.trim();
+  return text || undefined;
+}
+
+function foodSearchTerms(name: string): string[] {
+  const ignored = new Set(["a", "and", "or", "to", "taste", "fresh", "freshly", "finely", "chopped", "sliced", "diced", "roughly", "peeled", "large", "small", "goodquality"]);
+  return name.toLocaleLowerCase().split(/[^a-z0-9]+/)
+    .filter((word) => word.length > 1 && !ignored.has(word))
+    .map((word) => word.replace(/ies$/, "y").replace(/oes$/, "o").replace(/s$/, ""));
+}
+
+async function searchWikimediaFoodImage(foodName: string): Promise<FoodImageResult | null> {
+  const url = new URL("https://commons.wikimedia.org/w/api.php");
+  url.searchParams.set("action", "query");
+  url.searchParams.set("generator", "search");
+  url.searchParams.set("gsrsearch", `${foodName} food ingredient`);
+  url.searchParams.set("gsrnamespace", "6");
+  url.searchParams.set("gsrlimit", "6");
+  url.searchParams.set("prop", "imageinfo");
+  url.searchParams.set("iiprop", "url|extmetadata");
+  url.searchParams.set("iiurlwidth", "480");
+  url.searchParams.set("format", "json");
+  url.searchParams.set("origin", "*");
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 7000);
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    if (!response.ok) return null;
+    const payload = await response.json() as { query?: { pages?: Record<string, CommonsSearchPage> } };
+    const pages = Object.values(payload.query?.pages ?? {}).sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
+    const terms = foodSearchTerms(foodName);
+    const preparedFoodTerms = new Set(["burger", "pizza", "lasagna", "casserole", "sandwich", "soup", "curry", "pasta", "salad", "recipe", "dish", "cake", "cheese", "seed", "powder", "dried"]);
+    for (const page of pages) {
+      const info = page.imageinfo?.[0];
+      const metadata = info?.extmetadata;
+      const imageUrl = info?.thumburl;
+      const photoUrl = info?.descriptionurl;
+      const licenseName = plainMetadata(metadata?.LicenseShortName?.value);
+      const licenseUrl = plainMetadata(metadata?.LicenseUrl?.value);
+      if (!imageUrl || !photoUrl || !licenseName || !licenseUrl) continue;
+      const evidence = `${page.title ?? ""} ${plainMetadata(metadata?.ImageDescription?.value) ?? ""} ${plainMetadata(metadata?.Categories?.value) ?? ""}`
+        .toLocaleLowerCase().replace(/[^a-z0-9]+/g, " ");
+      const evidenceTerms = foodSearchTerms(evidence);
+      if (!terms.every((term) => evidenceTerms.includes(term))) continue;
+      const requestedTerms = new Set(terms);
+      if (evidenceTerms.some((term) => preparedFoodTerms.has(term) && !requestedTerms.has(term))) continue;
+      return {
+        imageUrl,
+        alt: foodName,
+        photographer: plainMetadata(metadata?.Artist?.value),
+        photoUrl,
+        provider: "Wikimedia Commons",
+        licenseName,
+        licenseUrl,
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function loadFoodImage(foodName: string, canonicalSlug: string | null): Promise<{ image: FoodImageResult | null }> {
+  const knowledgeSlug = canonicalSlug ? knowledgeSlugForCanonicalSlug(canonicalSlug) : null;
+  if (knowledgeSlug) {
+    try {
+      const response = await fetch(`/api/knowledge/foods/${encodeURIComponent(knowledgeSlug)}`);
+      if (response.ok) {
+        const detail = await response.json() as { food?: { name?: string; imageUrl?: string | null } };
+        if (detail.food?.imageUrl) {
+          return { image: { imageUrl: detail.food.imageUrl, alt: detail.food.name ?? foodName, source: "knowledge" } };
+        }
+      }
+    } catch {
+      // Continue to transient image search if the knowledge service is unavailable.
+    }
+  }
+
+  // Prefer the authenticated server adapter when its route is available.
+  // Older dev servers return the frontend shell for this unknown /api path.
+  try {
+    const slug = canonicalSlug ?? "unmapped";
+    const response = await fetch(`/api/foods/${encodeURIComponent(slug)}/image?q=${encodeURIComponent(foodName)}`, { credentials: "include" });
+    if (response.ok && response.headers.get("content-type")?.includes("application/json")) {
+      const payload = await response.json() as { image?: FoodImageResult | null };
+      if (payload.image) return { image: payload.image };
+    }
+  } catch {
+    // Use the public attributed search below while the server route is unavailable.
+  }
+
+  return { image: await searchWikimediaFoodImage(foodName) };
+}
+
+function FoodImageAttribution({ image }: { image: FoodImageResult }) {
+  if (!image.photoUrl) return null;
+  return <span className="w-full text-[10px] leading-tight text-muted-foreground">
+    {image.photographer && <>Photo by {image.photographer} · </>}
+    {image.licenseName && image.licenseUrl && <><a className="underline" href={image.licenseUrl} target="_blank" rel="noreferrer">{image.licenseName}</a> · </>}
+    via <a className="underline" href={image.photoUrl} target="_blank" rel="noreferrer">{image.provider ?? "image source"}</a>
+  </span>;
+}
+
+function FoodImage({ row, large = false, image: remoteImage }: { row: IngredientRow; large?: boolean; image?: FoodImageResult | null }) {
+  const curatedImage = getIngredientImage(row.displayName);
+  const containerRef = useRef<HTMLSpanElement>(null);
+  const [nearViewport, setNearViewport] = useState(large);
+  useEffect(() => {
+    if (large || curatedImage || remoteImage) {
+      setNearViewport(true);
+      return;
+    }
+    const target = containerRef.current;
+    if (!target) return;
+    if (typeof IntersectionObserver === "undefined") {
+      setNearViewport(true);
+      return;
+    }
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setNearViewport(true);
+        observer.disconnect();
+      }
+    }, { rootMargin: "240px" });
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [large, curatedImage?.src, remoteImage, row.displayKey]);
+  const { data: searchedImage } = useQuery<{ image: FoodImageResult | null }>({
+    queryKey: ["/api/foods/image", row.canonicalKey ?? null, row.displayName],
+    queryFn: () => loadFoodImage(row.displayName, row.canonicalKey ?? null),
+    enabled: !curatedImage && !remoteImage && nearViewport,
+    retry: false,
+    staleTime: 12 * 60 * 60 * 1000,
+  });
+  const resolvedImage = remoteImage ?? searchedImage?.image;
   const size = large ? "h-24 w-24" : "h-9 w-9";
-  return image ? <img src={image.src} alt={image.alt} className={`${size} shrink-0 rounded-lg object-cover`} />
-    : <span className={`flex ${size} shrink-0 items-center justify-center rounded-lg bg-muted text-2xl`} aria-hidden="true">
-        {getCategoryEmoji(row.plantCategory ?? row.reportCategory)}
-      </span>;
+  const sourceUrl = resolvedImage?.source === "knowledge"
+    ? resolvedImage.imageUrl
+    : curatedImage?.src ?? resolvedImage?.imageUrl;
+  return <span ref={containerRef} className={`flex shrink-0 flex-col items-start gap-1 ${large ? "w-24" : ""}`}>
+    {sourceUrl ? <img src={sourceUrl} alt={resolvedImage?.alt ?? curatedImage?.alt ?? row.displayName} className={`${size} rounded-lg object-cover`} />
+      : <span className={`flex ${size} items-center justify-center rounded-lg bg-muted text-2xl`} aria-hidden="true">
+          {getCategoryEmoji(row.plantCategory ?? row.reportCategory)}
+        </span>}
+    {large && resolvedImage && <FoodImageAttribution image={resolvedImage} />}
+  </span>;
 }
 
 // Real, governed "what does this nutrient do" data (description + the
@@ -333,6 +489,18 @@ export function WeekFoodExplorer({ weekMeals, week, availableWeeks, onWeekChange
     ? buildRowVarietyDisplays(weekMeals.flatMap((meal) => meal.ingredients), [{ key: selected.displayKey, representative: selected.canonicalKey }]).get(selected.displayKey)?.canonicalSlug ?? selected.canonicalKey
     : selected?.canonicalKey ?? null;
   const hasFoodProfile = selectedCanonicalSlug ? !!buildFoodReport(selectedCanonicalSlug) : false;
+  const activeImageFood = lookupSelectedFood ?? (selected ? { name: selected.displayName, canonicalSlug: selectedCanonicalSlug } : null);
+  const { data: activeFoodImage } = useQuery<{ image: FoodImageResult | null }>({
+    queryKey: ["/api/foods/image", activeImageFood?.canonicalSlug ?? null, activeImageFood?.name ?? null],
+    queryFn: () => loadFoodImage(activeImageFood!.name, activeImageFood!.canonicalSlug),
+    enabled: !!activeImageFood && !getIngredientImage(activeImageFood.name),
+    retry: false,
+    staleTime: 12 * 60 * 60 * 1000,
+  });
+  const lookupCuratedImage = lookupSelectedFood ? getIngredientImage(lookupSelectedFood.name) : null;
+  const lookupDisplayImage = activeFoodImage?.image?.source === "knowledge"
+    ? activeFoodImage.image
+    : lookupCuratedImage ?? activeFoodImage?.image;
 
   const { data: lookup, isFetching: lookupPending } = useQuery<LookupResult>({
     queryKey: ["/api/foods/lookup", submittedQuery],
@@ -488,7 +656,7 @@ export function WeekFoodExplorer({ weekMeals, week, availableWeeks, onWeekChange
                 <button key={row.displayKey} type="button" onClick={() => { setSelectedKey(row.displayKey); setLookupSelectedFood(null); setLookupSelectedNutrient(null); setSelectedLiveProduct(null); setRelatedSlug(null); setRelatedNutrientName(null); setRelatedNutrientSlug(null); setComparing(false); }}
                   className={`flex w-full items-center gap-3 rounded-lg border p-2.5 text-left transition-colors ${selected?.displayKey === row.displayKey ? "border-primary/50 bg-card shadow-sm" : "border-border/60 hover:bg-muted/40"}`}
                   data-testid={`week-food-${row.displayKey}`}>
-                  <FoodImage row={row} />
+                  <FoodImage row={row} image={!lookupSelectedFood && selected?.displayKey === row.displayKey ? activeFoodImage?.image : null} />
                   <span className="min-w-0 flex-1"><strong className="block text-sm truncate">{row.displayName}</strong><span className="mt-0.5 block text-xs text-muted-foreground truncate">{mealContext(row)}</span></span>
                   <span aria-hidden="true" className="shrink-0 text-muted-foreground">›</span>
                 </button>
@@ -729,8 +897,10 @@ export function WeekFoodExplorer({ weekMeals, week, availableWeeks, onWeekChange
           {/* Sticky header — stays pinned while FoodReport/FoodQuickLook's
               own content scrolls beneath it inside this box. */}
           <div className="sticky top-0 z-10 px-4 sm:px-5 pt-4 sm:pt-5 pb-4 flex items-start justify-between gap-3 border-b border-border/50 bg-card">
+            {lookupDisplayImage && <img src={"imageUrl" in lookupDisplayImage ? lookupDisplayImage.imageUrl : lookupDisplayImage.src} alt={lookupDisplayImage.alt} className="h-16 w-16 shrink-0 rounded-lg object-cover" />}
             <div>
               <h2 className="text-xl font-semibold">{lookupSelectedFood.name}</h2>
+              {activeFoodImage?.image && <FoodImageAttribution image={activeFoodImage.image} />}
               <p className="mt-1 text-sm text-muted-foreground">
                 {rows.some((row) => row.displayName.toLocaleLowerCase() === lookupSelectedFood.name.toLocaleLowerCase())
                   ? "In this week’s meals" : "Not eaten in selected week"}
@@ -777,8 +947,8 @@ export function WeekFoodExplorer({ weekMeals, week, availableWeeks, onWeekChange
           </div>
           </div>
         </> : selected && mode === "foods" ? <>
-          <div className="sticky top-0 z-10 px-4 sm:px-5 pt-4 sm:pt-5 pb-4 flex items-start gap-4 border-b border-border/50 bg-card"><FoodImage row={selected} large />
-            <div><h2 className="text-xl font-semibold">{selected.displayName}</h2><p className="mt-1 text-sm text-muted-foreground">{selected.reportCategory}</p><p className="mt-2 text-xs text-muted-foreground">{mealContext(selected)}</p></div></div>
+          <div className="sticky top-0 z-10 px-4 sm:px-5 pt-4 sm:pt-5 pb-4 flex items-start gap-4 border-b border-border/50 bg-card"><FoodImage row={selected} large image={activeFoodImage?.image} />
+            <div className="min-w-0 flex-1"><h2 className="text-xl font-semibold">{selected.displayName}</h2><p className="mt-1 text-sm text-muted-foreground">{selected.reportCategory}</p><p className="mt-2 text-xs text-muted-foreground">{mealContext(selected)}</p></div></div>
           <div className="px-4 sm:px-5 pb-4 sm:pb-5 pt-5">
           <h3 className="text-sm font-semibold">Nutrients linked to this food</h3>
           <p className="mt-2 text-sm text-muted-foreground">{selected.keyNutrients.length ? selected.keyNutrients.join(" · ") : "No linked nutrient information available yet."}</p>

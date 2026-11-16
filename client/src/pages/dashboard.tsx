@@ -26,7 +26,7 @@ import {
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { api } from "@shared/routes";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, fetchPlannerFull } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import AppleRating from "@/components/AppleRating";
 import { MealCard } from "@/components/MealCard";
@@ -114,7 +114,8 @@ export default function Dashboard() {
   });
 
   const plannerQuery = useQuery<any[]>({
-    queryKey: ["/api/planner/full"],
+    queryKey: ["/api/planner/full", "current"],
+    queryFn: () => fetchPlannerFull("current"),
     enabled: !!user,
   });
   // CONV1 P8 / READ-3 — the household's week comes from the one owner, never from

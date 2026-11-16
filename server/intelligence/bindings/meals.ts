@@ -17,9 +17,11 @@
  */
 
 import type { IntelligencePlatform } from "../intelligence-platform.js";
-import type { IntentVerb } from "../types.js";
+import type { CapabilityHandler, Intent, IntelligenceContext, IntentVerb } from "../types.js";
 import { createMealsReadHandler } from "../handlers/meals-read-handler.js";
 import { createStorageMealsReadPort, type MealsReadPort } from "../handlers/meals-read-port.js";
+import { createMealsWriteHandler } from "../handlers/meals-write-handler.js";
+import { createStorageMealsWritePort, type MealsWritePort } from "../handlers/meals-write-port.js";
 
 /** The capability id this binding activates. */
 export const MEALS_CAPABILITY_ID = "meals";
@@ -30,26 +32,50 @@ export const MEALS_CAPABILITY_ID = "meals";
  * INT25 resolves the INT15 open decision by using the already-scoped `getMeals` /
  * `getSystemMeals` port methods rather than the unsafe `lookupMeals`). "explain" (no
  * stored rationale on a meal), "recommend" (ranking lives inline at the route layer),
- * and every write verb remain allow-listed on the capability but return an honest gap.
- * Declared here so the registry can surface truthful executableIntents and discovery
- * cannot over-advertise (INT6A).
+ * and "generate"/"delete"/"import"/"share" remain allow-listed on the capability
+ * but return an honest gap. "replace" (COMP3 — the FIRST write verb this capability
+ * executes) persists a Companion-offered dietary substitution to the caller's own
+ * saved copy of a recipe. "add" (COMP3 — quick meals) creates a bare, caller-owned
+ * meal from just a name when the Companion couldn't find one by that name, through
+ * the exact same owning-service call the existing "Build a Meal" page already uses.
+ * Both are confirmed exactly like every other write proposal. Declared here so the
+ * registry can surface truthful executableIntents and discovery cannot over-advertise
+ * (INT6A).
  */
-export const MEALS_EXECUTABLE_INTENTS: readonly IntentVerb[] = ["read", "search"];
+export const MEALS_EXECUTABLE_INTENTS: readonly IntentVerb[] = ["read", "search", "replace", "add"];
+
+/** The write verbs the write handler owns (COMP3: replace + add). */
+const MEALS_WRITE_VERBS: ReadonlySet<IntentVerb> = new Set<IntentVerb>(["replace", "add"]);
+
+/** Compose the read and write handlers into one capability-level dispatcher. */
+function composeMealsHandler(
+  readHandler: CapabilityHandler,
+  writeHandler: CapabilityHandler,
+): CapabilityHandler {
+  return (intent: Intent, context: IntelligenceContext): Promise<unknown> => {
+    if (MEALS_WRITE_VERBS.has(intent.verb)) return writeHandler(intent, context);
+    return readHandler(intent, context);
+  };
+}
 
 /**
- * Bind the read-only Meals handler to a platform.
+ * Bind the composed (read + COMP3 write) Meals handler to a platform.
  *
- * Production: call with only `platform` — the real storage port is used by default.
- * Tests: pass an in-memory port factory as the second argument so the binding and
- * test share the same registration entry point (INT6B recommendation C4).
+ * Production: call with only `platform` — the real storage ports are used by default.
+ * Tests: pass in-memory port factories so the binding and test share the same
+ * registration entry point (INT6B recommendation C4).
  */
 export function bindMealsReadCapability(
   platform: IntelligencePlatform,
-  resolvePort: () => Promise<MealsReadPort> = createStorageMealsReadPort,
+  resolveReadPort: () => Promise<MealsReadPort> = createStorageMealsReadPort,
+  resolveWritePort: () => Promise<MealsWritePort> = createStorageMealsWritePort,
 ): void {
   platform.registerHandler(
     MEALS_CAPABILITY_ID,
-    createMealsReadHandler(resolvePort),
+    composeMealsHandler(
+      createMealsReadHandler(resolveReadPort),
+      createMealsWriteHandler(resolveWritePort),
+    ),
     MEALS_EXECUTABLE_INTENTS,
   );
 }

@@ -81,7 +81,7 @@ function RecipePage({ meal, onPlanner }: { meal: Meal | null; onPlanner: () => v
   };
   return <article aria-label={`Recipe: ${meal.name}`} className="rb-recipe">
     <p className="rb-kicker">{SHELF_LABELS[shelfForMeal(meal)]}</p><h2>{meal.name}</h2>
-    {meal.imageUrl ? <img src={meal.imageUrl} alt="" className="rb-recipe-photo" /> : <p className="rb-photo-note">A family recipe · photograph not added yet</p>}
+    {meal.imageUrl ? <img src={meal.imageUrl} alt="" loading="lazy" decoding="async" className="rb-recipe-photo" /> : <p className="rb-photo-note">A family recipe · photograph not added yet</p>}
     <p className="rb-meta">Serves {meal.servings || 4}</p>
     {shelfForMeal(meal) === "web" && meal.sourceUrl && <p className="rb-recipe-reference"><a href={meal.sourceUrl} target="_blank" rel="noopener noreferrer">Reference</a></p>}
     <div className="rb-recipe-tabs" role="tablist" aria-label="Recipe details">
@@ -103,7 +103,7 @@ function WebPreview({ recipe, details, onAdd, saving }: { recipe: WebSearchRecip
   if (!recipe) return <section aria-label="Recipe preview" className="rb-web-preview"><h2>Preview recipe</h2><p>Search, then choose an internet recipe to see its ingredients and method.</p></section>;  const ingredients = details?.ingredients ?? recipe.ingredients;
   const instructions = details?.instructions ?? recipe.instructions ?? [];
   return <section aria-label={`Preview recipe: ${recipe.name}`} className="rb-web-preview"><p className="rb-kicker">{recipe.source || "Trusted recipe source"}</p><h2>{recipe.name}</h2>
-    {recipe.image && <img src={recipe.image} alt="" className="rb-recipe-photo" />}
+    {recipe.image && <img src={recipe.image} alt="" loading="lazy" decoding="async" className="rb-recipe-photo" />}
     {details?.loading && <p role="status">Loading recipe details…</p>}
     {details?.error && <p role="alert">Couldn’t load recipe details. You can still read the original source.</p>}
     {!details?.loading && <><h3>Ingredients</h3><ul>{ingredients.map((item, i) => <li key={`${item}-${i}`}>{item}</li>)}</ul><h3>Method</h3><ol>{instructions.map((item, i) => <li key={`${item}-${i}`}>{item}</li>)}</ol></>}

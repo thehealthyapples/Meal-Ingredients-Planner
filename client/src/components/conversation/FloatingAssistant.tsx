@@ -13,13 +13,13 @@
 // Design: Calm Orchard palette, DM Sans headings, shadow-none border-border.
 // The panel slides in from the right on all viewports.
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  X, Send, Loader2,
+  X, Send, Loader2, Mic, MicOff, Square,
   BookOpen, CalendarPlus, ShoppingBasket, ArrowRight, Star, Users, Clock, UtensilsCrossed,
   ThumbsUp, ThumbsDown, CheckCircle2, XCircle, SquarePen,
 } from "lucide-react";
@@ -281,6 +281,12 @@ interface TurnApiResponse {
   // state-specific copy is already in `text`; this field lets the Companion treat
   // fallback turns consistently.
   fallbackState?: "no-route" | "no-knowledge" | "no-results" | "internal-error";
+  // COMP3: tappable quick-reply chips for THIS clarification (e.g.
+  // ["Breakfast","Lunch","Dinner"], or real candidate names for an
+  // ambiguous match). Tapping one sends that EXACT text as the next turn —
+  // the same `sendTurn` mutation a typed message already uses. Present only
+  // when the resolver named a small, closed set of exact replies.
+  suggestedReplies?: string[];
 }
 
 /**
@@ -755,6 +761,47 @@ interface CompanionActionBlockProps {
 }
 
 /**
+ * Refresh the owning capability's client data after a confirmed Companion write.
+ * Keep this list aligned with write verbs in server/intelligence/bindings/*.ts.
+ * Unknown future capabilities invalidate the full cache so they cannot silently
+ * leave stale data behind.
+ */
+const COMPANION_ACTION_QUERY_KEYS: Readonly<Record<string, readonly (readonly unknown[])[]>> = {
+  planner: [["/api/planner/full"]],
+  // "add" (COMP3 quick meals) can also place the new meal straight onto the
+  // planner in the same write — see meals-write-handler.ts handleAdd — so the
+  // planner view must be refreshed here too, not just the meal library.
+  meals: [["/api/meals"], ["/api/meals/summary"], ["/api/planner/ready-meal-library"], ["/api/planner/full"]],
+  shopping: [
+    ["/api/shopping-list"],
+    ["/api/shopping-list/sources"],
+    ["/api/shopping-list/prices"],
+    ["/api/shopping-list/total-cost"],
+  ],
+  pantry: [["/api/pantry"]],
+  diary: [
+    ["/api/food-diary"],
+    ["/api/food-diary/metrics/trends"],
+    ["/api/user-items/recent"],
+    ["/api/user-items/frequent"],
+  ],
+  profile: [["/api/profile"]],
+  household: [["/api/household/eaters"]],
+};
+
+async function invalidateCompanionActionData(
+  queryClient: ReturnType<typeof useQueryClient>,
+  capabilityId: string | undefined,
+): Promise<void> {
+  const queryKeys = capabilityId ? COMPANION_ACTION_QUERY_KEYS[capabilityId] : undefined;
+  if (!queryKeys) {
+    await queryClient.invalidateQueries();
+    return;
+  }
+  await Promise.all(queryKeys.map((queryKey) => queryClient.invalidateQueries({ queryKey })));
+}
+
+/**
  * One turn's Companion Action proposals, grouped into workflows (a single
  * proposal is a length-1 workflow). Confirming/cancelling updates LOCAL state
  * only — this block owns the live status of its own proposals for the rest of
@@ -804,8 +851,7 @@ function CompanionActionBlock({ actions: initialActions }: CompanionActionBlockP
       });
       if (result.status === "succeeded") {
         const action = liveActions.find((item) => item.id === actionId);
-        if (action?.capabilityId === "profile") queryClient.invalidateQueries({ queryKey: ["/api/profile"] });
-        if (action?.capabilityId === "household") queryClient.invalidateQueries({ queryKey: ["/api/household/eaters"] });
+        await invalidateCompanionActionData(queryClient, action?.capabilityId);
       }
     } catch {
       applyUpdate(actionId, {
@@ -1006,15 +1052,24 @@ interface TurnBubbleProps {
   enrichment?: CompanionEnrichmentItem[];
   /** INT40 Companion Action proposals for this assistant turn. */
   actions?: CompanionActionProposal[];
+  /** COMP3 — tappable quick-reply chips for this clarification turn. Only ever shown on the LATEST turn. */
+  suggestedReplies?: string[];
+  /** COMP3 — only the latest assistant turn's suggestedReplies render as chips (an answer to an old question is out of context). */
+  isLatestTurn?: boolean;
+  /** COMP3 — tap a suggested reply: sends that EXACT text as the next turn, same as typing it. */
+  onSuggestedReply?: (text: string) => void;
+  /** COMP3 — "Something else…" chip: focuses the free-text box, submits nothing. */
+  onRequestFreeText?: () => void;
   onNavigate: (href: string) => void;
 }
 
-function TurnBubble({ turn, discoveries, guidance, guidanceKind, enrichment, actions, onNavigate }: TurnBubbleProps) {
+function TurnBubble({ turn, discoveries, guidance, guidanceKind, enrichment, actions, suggestedReplies, isLatestTurn, onSuggestedReply, onRequestFreeText, onNavigate }: TurnBubbleProps) {
   const isUser = turn.role === "user";
   const hasDiscoveries = !isUser && Array.isArray(discoveries) && discoveries.length > 0;
   const hasGuidance = !isUser && Array.isArray(guidance) && guidance.length > 0;
   const hasEnrichment = !isUser && Array.isArray(enrichment) && enrichment.length > 0;
   const hasActions = !isUser && Array.isArray(actions) && actions.length > 0;
+  const hasSuggestedReplies = !isUser && !!isLatestTurn && Array.isArray(suggestedReplies) && suggestedReplies.length > 0;
   // Only a real, server-persisted assistant turn (positive id) can carry
   // feedback — optimistic transport-error bubbles use negative placeholder ids.
   const isRealAssistantTurn = !isUser && turn.id > 0;
@@ -1067,6 +1122,37 @@ function TurnBubble({ turn, discoveries, guidance, guidanceKind, enrichment, act
               </div>
             )}
         </div>
+
+        {/* COMP3 — tappable quick-reply chips for this clarification, plus an
+            explicit "something else" affordance that just focuses the
+            free-text box (never submits anything on its own). */}
+        {hasSuggestedReplies && (
+          <div className="flex flex-wrap gap-1.5 mt-2" role="group" aria-label="Suggested replies">
+            {suggestedReplies!.map((reply) => (
+              <button
+                key={reply}
+                type="button"
+                onClick={() => onSuggestedReply?.(reply)}
+                className="px-3 py-1.5 rounded-full text-xs font-medium border border-primary/30
+                           bg-primary/5 text-primary hover:bg-primary/10 transition-colors duration-150
+                           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                data-testid={`button-suggested-reply-${reply.toLowerCase().replace(/\s+/g, "-")}`}
+              >
+                {reply}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => onRequestFreeText?.()}
+              className="px-3 py-1.5 rounded-full text-xs font-medium border border-border/40
+                         bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors duration-150
+                         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              data-testid="button-suggested-reply-discuss"
+            >
+              Something else…
+            </button>
+          </div>
+        )}
 
         {/* Companion Cards + Next Steps */}
         {hasDiscoveries &&
@@ -1131,6 +1217,12 @@ interface ConversationThreadProps {
   enrichmentByTurn: Record<number, CompanionEnrichmentItem[]>;
   /** INT40 Companion Action proposals keyed by assistant turn id. */
   actionsByTurn: Record<number, CompanionActionProposal[]>;
+  /** COMP3 tappable quick-reply chips keyed by assistant turn id. */
+  suggestedRepliesByTurn: Record<number, string[]>;
+  /** COMP3 — tap a suggested reply: sends that EXACT text as the next turn. */
+  onSuggestedReply: (text: string) => void;
+  /** COMP3 — "Something else…" chip: focuses the free-text box. */
+  onRequestFreeText: () => void;
   onNavigate: (href: string) => void;
 }
 
@@ -1143,6 +1235,9 @@ function ConversationThread({
   guidanceKindByTurn,
   enrichmentByTurn,
   actionsByTurn,
+  suggestedRepliesByTurn,
+  onSuggestedReply,
+  onRequestFreeText,
   onNavigate,
 }: ConversationThreadProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -1168,7 +1263,7 @@ function ConversationThread({
       aria-live="polite"
       data-testid="conversation-thread"
     >
-      {turns.map((turn) => (
+      {turns.map((turn, i) => (
         <TurnBubble
           key={turn.id}
           turn={turn}
@@ -1177,6 +1272,10 @@ function ConversationThread({
           guidanceKind={guidanceKindByTurn[turn.id]}
           enrichment={enrichmentByTurn[turn.id]}
           actions={actionsByTurn[turn.id]}
+          suggestedReplies={suggestedRepliesByTurn[turn.id]}
+          isLatestTurn={i === turns.length - 1}
+          onSuggestedReply={onSuggestedReply}
+          onRequestFreeText={onRequestFreeText}
           onNavigate={onNavigate}
         />
       ))}
@@ -1235,10 +1334,96 @@ interface AssistantInputProps {
    * state only: it changes nothing about what is sent, when, or to whom.
    */
   onFocusChange?: (focused: boolean) => void;
+  /**
+   * VOICE1 (dev prototype) — fires with the FINAL recognised transcript once
+   * speech recognition completes a turn. Deliberately bypasses `value`/
+   * `onSubmit`: calling `onChange(transcript)` then `onSubmit()` in the same
+   * tick would read the stale pre-update `value` closure in the parent's
+   * `handleSubmit`, since React has not yet re-rendered with the new value.
+   * The parent sends this utterance through the exact same `sendTurn`
+   * mutation a typed message uses — no new backend path.
+   *
+   * DEV-ONLY NOTE: this prototype uses the browser's built-in
+   * SpeechRecognition, which sends audio to the browser vendor's own speech
+   * service (commonly Google's in Chrome/Edge) — a DIFFERENT provider than
+   * the OpenAI transcription disclosed in the privacy policy. Do not ship
+   * this build beyond a private dev test until the transcription call is
+   * moved to the approved provider (see
+   * Agent Reports/VOICE1-privacy-disclosure-and-consent-readiness-20261114.md).
+   */
+  onVoiceFinal?: (transcript: string) => void;
+  /**
+   * VOICE1 — whether the household currently holds a granted, non-superseded
+   * `health-data-processing` consent. Voice is gated on the SAME consent as
+   * reported health context elsewhere (`hasCurrentHealthContextConsent()`
+   * server-side), because a spoken utterance can just as easily disclose
+   * health/allergy information as a typed one — there is no reason for voice
+   * to need a lighter gate than typing already has for that data.
+   */
+  hasVoiceConsent?: boolean;
+  /** Navigates to Privacy Settings so the household can grant or renew consent. */
+  onRequestVoiceConsent?: () => void;
 }
 
-function AssistantInput({ value, onChange, onSubmit, isPending, onFocusChange }: AssistantInputProps) {
+/** Minimal shape of the browser's SpeechRecognition API — not in TS lib.dom by default. */
+interface MinimalSpeechRecognition {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  start(): void;
+  stop(): void;
+  onresult: ((event: any) => void) | null;
+  onerror: ((event: any) => void) | null;
+  onend: (() => void) | null;
+}
+
+function getSpeechRecognitionCtor(): (new () => MinimalSpeechRecognition) | null {
+  if (typeof window === "undefined") return null;
+  const w = window as any;
+  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
+}
+
+function AssistantInput({ value, onChange, onSubmit, isPending, onFocusChange, onVoiceFinal, hasVoiceConsent, onRequestVoiceConsent }: AssistantInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const recognitionRef = useRef<MinimalSpeechRecognition | null>(null);
+  const [isListening, setIsListening] = useState(false);
+  const speechSupported = useMemo(() => getSpeechRecognitionCtor() !== null, []);
+
+  const stopListening = useCallback(() => {
+    recognitionRef.current?.stop();
+    recognitionRef.current = null;
+    setIsListening(false);
+  }, []);
+
+  const startListening = useCallback(() => {
+    const Ctor = getSpeechRecognitionCtor();
+    if (!Ctor || isPending) return;
+    const recognition = new Ctor();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = "en-GB";
+    recognition.onresult = (event: any) => {
+      let finalTranscript = "";
+      let interimTranscript = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        if (result.isFinal) finalTranscript += result[0].transcript;
+        else interimTranscript += result[0].transcript;
+      }
+      if (finalTranscript.trim()) {
+        onVoiceFinal?.(finalTranscript.trim());
+      } else if (interimTranscript) {
+        onChange(interimTranscript);
+      }
+    };
+    recognition.onerror = () => stopListening();
+    recognition.onend = () => setIsListening(false);
+    recognitionRef.current = recognition;
+    setIsListening(true);
+    recognition.start();
+  }, [isPending, onChange, onVoiceFinal, stopListening]);
+
+  useEffect(() => () => { recognitionRef.current?.stop(); }, []);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -1282,6 +1467,43 @@ function AssistantInput({ value, onChange, onSubmit, isPending, onFocusChange }:
           )}
           data-testid="input-assistant-message"
         />
+        {speechSupported && !hasVoiceConsent && (
+          <button
+            type="button"
+            onClick={onRequestVoiceConsent}
+            aria-label="Voice needs your consent first — open Privacy Settings"
+            title="Voice needs your consent first — tap to review Privacy Settings"
+            className={cn(
+              "flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-150",
+              "border border-border/40 bg-muted/40 text-muted-foreground/60 hover:bg-muted hover:text-foreground",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            )}
+            data-testid="button-voice-assistant-consent-needed"
+          >
+            <MicOff className="h-4 w-4" />
+          </button>
+        )}
+        {speechSupported && hasVoiceConsent && (
+          <button
+            type="button"
+            onClick={() => (isListening ? stopListening() : startListening())}
+            disabled={isPending}
+            aria-label={isListening ? "Stop voice input" : "Speak to Companion"}
+            aria-pressed={isListening}
+            className={cn(
+              "flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-150",
+              "border border-border/40",
+              isListening
+                ? "bg-destructive/10 text-destructive border-destructive/30 animate-pulse"
+                : "bg-muted/60 text-foreground hover:bg-muted",
+              "disabled:opacity-40 disabled:cursor-not-allowed",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            )}
+            data-testid="button-voice-assistant"
+          >
+            {isListening ? <Square className="h-3.5 w-3.5" /> : <Mic className="h-4 w-4" />}
+          </button>
+        )}
         <button
           onClick={onSubmit}
           disabled={!value.trim() || isPending}
@@ -1549,6 +1771,12 @@ export default function FloatingAssistant() {
   const [actionsByTurn, setActionsByTurn] = useState<
     Record<number, CompanionActionProposal[]>
   >({});
+  // COMP3: tappable quick-reply chips for a clarification turn, keyed by
+  // assistant turn id, same ephemeral session-memory discipline as the
+  // other *ByTurn state above.
+  const [suggestedRepliesByTurn, setSuggestedRepliesByTurn] = useState<
+    Record<number, string[]>
+  >({});
 
   // Navigate to a canonical THA page and close the assistant panel.
   const handleNavigate = useCallback(
@@ -1565,6 +1793,20 @@ export default function FloatingAssistant() {
     enabled: isOpen,
     staleTime: 0,
   });
+
+  // VOICE1 — voice is a route INTO the same health-context-adjacent conversation
+  // every typed message already goes through, so it is gated by the SAME consent
+  // record (`health-data-processing`) rather than a new one. Reuses the existing
+  // Privacy Settings endpoint; no new consent machinery.
+  const { data: consentsData } = useQuery<{ consents: Array<{ consentType: string; granted: boolean; supersededByNewerVersion: boolean }> }>({
+    queryKey: ["/api/privacy/summary"],
+    enabled: isOpen,
+    staleTime: 60_000,
+  });
+  const hasVoiceConsent = (() => {
+    const entry = consentsData?.consents.find((c) => c.consentType === "health-data-processing");
+    return Boolean(entry?.granted && !entry.supersededByNewerVersion);
+  })();
 
   // CP2: the Companion's own words for this panel, in the user's chosen voice.
   // Every string below comes from the Personality Registry via the Behaviour
@@ -1657,6 +1899,13 @@ export default function FloatingAssistant() {
           [data.assistantTurnId]: data.actions!,
         }));
       }
+      // COMP3: capture this turn's tappable quick-reply chips the same way.
+      if (data.assistantTurnId != null && Array.isArray(data.suggestedReplies) && data.suggestedReplies.length > 0) {
+        setSuggestedRepliesByTurn((prev) => ({
+          ...prev,
+          [data.assistantTurnId]: data.suggestedReplies!,
+        }));
+      }
       // Refresh from server — clears optimistic turns cleanly
       queryClient.invalidateQueries({
         queryKey: ["/api/intelligence/conversation/turns"],
@@ -1727,6 +1976,25 @@ export default function FloatingAssistant() {
     },
     [isPending, sendTurn],
   );
+
+  /**
+   * COMP3 — tap a suggested-reply chip: sends that EXACT text as the next
+   * turn, the SAME `sendTurn` path a typed message already uses. No new
+   * backend path, no special-casing — the resolver sees this exactly as if
+   * the household had typed it.
+   */
+  const handleSuggestedReply = useCallback(
+    (text: string) => {
+      if (isPending) return;
+      sendTurn({ utterance: text });
+    },
+    [isPending, sendTurn],
+  );
+
+  /** COMP3 — "Something else…" chip: focuses the free-text box, submits nothing. */
+  const handleRequestFreeText = useCallback(() => {
+    document.querySelector<HTMLTextAreaElement>('[data-testid="input-assistant-message"]')?.focus();
+  }, []);
 
   const handleCompanionDrop = useCallback((event: React.DragEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -2092,6 +2360,9 @@ export default function FloatingAssistant() {
                   guidanceKindByTurn={guidanceKindByTurn}
                   enrichmentByTurn={enrichmentByTurn}
                   actionsByTurn={actionsByTurn}
+                  suggestedRepliesByTurn={suggestedRepliesByTurn}
+                  onSuggestedReply={handleSuggestedReply}
+                  onRequestFreeText={handleRequestFreeText}
                   onNavigate={handleNavigate}
                 />
               ) : (
@@ -2178,6 +2449,12 @@ export default function FloatingAssistant() {
                 onSubmit={handleSubmit}
                 isPending={isPending}
                 onFocusChange={setInputFocused}
+                onVoiceFinal={(transcript) => {
+                  setInputValue("");
+                  sendTurn({ utterance: transcript });
+                }}
+                hasVoiceConsent={hasVoiceConsent}
+                onRequestVoiceConsent={() => navigate("/privacy-settings")}
               />
                 </motion.div>
               </DialogPrimitive.Content>

@@ -47,6 +47,7 @@ import type {
 } from "./intent-resolver.js";
 import type { ConversationSurface } from "./conversation/conversation-store.js";
 import { DAY_NAMES } from "@shared/time/household-time";
+import { correctUtteranceForIntentMatching } from "./intent-spellcheck.js";
 
 // Maximum intents returned per turn (INT18 per-turn latency budget).
 const MAX_INTENTS = 4;
@@ -304,6 +305,30 @@ const NUTRITION_BENEFIT_FOODS_MATCHERS: Matcher[] = [
     if (/^(?:me|you|this|that|it|my)$/.test(term)) return null;
     if (NOT_A_BENEFIT.test(term)) return null;
     return benefitSearch(term, 0.80);
+  },
+
+  // COMP_NK1 — "can you advise on a meal to have for breakfast that will boost
+  // my immune system" / "a lunch to help with digestion" / "a dinner that
+  // supports my sleep". The household asked for a MEAL, but named no specific
+  // food or saved recipe (meal-discovery's `search` needs a non-empty query it
+  // cannot honestly invent here), so the grounded answer this turn can give is
+  // the same one "foods that help with X" already gives: the real foods the
+  // knowledge base links to that benefit — not a fabricated single "recommended
+  // meal". Anchored on a meal-slot word so it doesn't fire on an unrelated
+  // "that will help/boost ..." sentence with no meal framing at all.
+  //
+  // COMP_NK1 follow-up — the owner's own literal wording was "boot my immune
+  // system" (a typo for "boost"), which a strict word list silently dropped
+  // the whole match for, falling through to the generic no-knowledge fallback.
+  // "boot" is accepted alongside "boost" here for exactly that reason; the
+  // meal-slot anchor plus the NOT_A_BENEFIT guard below keep this from ever
+  // firing on an unrelated sentence that happens to contain the word "boot".
+  (u) => {
+    const m = u.match(/\b(?:meal|breakfast|lunch|dinner|snack)\b[\s\S]*?\b(?:that\s+(?:will\s+|can\s+|could\s+)?|to\s+)?(?:boost|boot|help|support|strengthen|improve)s?\s+(?:with\s+)?(?:my\s+|our\s+|your\s+)?(.+?)[\?.,]?\s*$/i);
+    if (!m?.[1]) return null;
+    const term = m[1].trim();
+    if (!term || NOT_A_BENEFIT.test(term)) return null;
+    return benefitSearch(term, 0.83);
   },
 ];
 
@@ -3165,9 +3190,16 @@ export class PatternIntentResolver implements IIntentResolver {
   }
 
   async resolveWithProvenance(
-    utterance: string,
+    rawUtterance: string,
     hints: IntentResolutionHints,
   ): Promise<IntentResolutionWithProvenance> {
+    // COMP_SC1 — deterministic typo correction against the verb/benefit/nutrient
+    // vocabulary the matchers below key off (e.g. "boot" → "boost"), applied once
+    // here so every matcher in this file benefits without being touched individually.
+    // See intent-spellcheck.ts for why this exists and why it is NOT the food
+    // spellchecker. Everything downstream in this function uses the corrected text;
+    // callers outside this method still hold their own original utterance.
+    const utterance = correctUtteranceForIntentMatching(rawUtterance);
     const lower = utterance.toLowerCase();
 
     // PHASE5E — see the block comment above. This returns before every other matcher,

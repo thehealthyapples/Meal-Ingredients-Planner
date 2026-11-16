@@ -695,6 +695,8 @@ export default function MealDetailPage() {
             <img
               src={meal.imageUrl}
               alt={meal.name}
+              loading="lazy"
+              decoding="async"
               className="w-full rounded-md object-cover aspect-[4/3]"
               data-testid="img-meal"
             />

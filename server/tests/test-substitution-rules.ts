@@ -19,12 +19,16 @@
 import {
   matchSubstitutionRules,
   matchSubstitutionRulesWithConflicts,
+  listSubstitutionOptions,
   detectActiveTriggers,
   collectProhibitedPhrases,
+  listAllCuratedReplacements,
   RULE_LIBRARY_VERSION,
   type CookingAdjustment,
   type ConflictReport,
+  type DietTrigger,
 } from '../../shared/substitution-rules.js';
+import { validateAdaptationSafety } from '../lib/household-dietary-safety.js';
 
 // ─── Test infrastructure ──────────────────────────────────────────────────────
 
@@ -417,6 +421,10 @@ assert(pastaResult[0]!.cookingNotes.length > 0, 'cooking notes present');
 
 const coeliacResult = matchSubstitutionRules(['200g penne'], ['coeliac']);
 assert(coeliacResult.length === 1, 'pasta rule fires for coeliac');
+const pastaChoices = listSubstitutionOptions(['200g spaghetti'], ['Gluten-Free'])
+  .filter(option => option.ruleId === 'wheat_pasta').map(option => option.replacement);
+assertEqual(pastaChoices, ['gluten-free pasta (rice or corn-based)', 'rice noodles', 'courgette noodles'],
+  'pasta has three ranked, declared choices while the legacy first choice stays unchanged');
 
 // ─── 19. Regression — dairy_free still works ──────────────────────────────────
 
@@ -506,6 +514,190 @@ const noTriggerResult = matchSubstitutionRules(
   [],
 );
 assertEqual(noTriggerResult.length, 0, 'empty restrictions → no adjustments');
+
+// ─── 25. COMP3 — widened gluten substitution coverage ────────────────────────
+// The restriction library flags soy sauce, Worcestershire sauce, beer, malt
+// vinegar, barley malt/extract, hoisin and teriyaki sauce as HIDDEN gluten
+// sources (shared/restrictions/restriction-library.ts), but until now only
+// pasta had a matching substitution rule — every other flagged ingredient
+// dead-ended with "I couldn't verify a suitable replacement" even though a
+// real, direct gluten-free equivalent exists commercially for most of them.
+
+section('25. COMP3 — widened gluten substitution coverage');
+
+const worcesterResult = matchSubstitutionRules(['1tbsp worcestershire sauce'], ['gluten-free']);
+assert(worcesterResult.length === 1, 'worcestershire sauce rule fires for gluten-free');
+assert(worcesterResult[0]!.replacement.includes('gluten-free Worcestershire sauce'), 'worcestershire sauce → GF worcestershire sauce, not a different condiment');
+
+const maltVinegarResult = matchSubstitutionRules(['2 tbsp malt vinegar'], ['gluten-free']);
+assert(maltVinegarResult.length === 1, 'malt vinegar rule fires for gluten-free');
+assert(
+  maltVinegarResult[0]!.replacement.includes('cider vinegar'),
+  'malt vinegar → a naturally gluten-free vinegar (no "gluten-free malt vinegar" product claim)',
+);
+
+const beerResult = matchSubstitutionRules(['330ml beer'], ['gluten-free']);
+assert(beerResult.length === 1, 'beer rule fires for gluten-free');
+assert(beerResult[0]!.replacement.includes('gluten-free beer'), 'beer → GF beer');
+
+const maltExtractResult = matchSubstitutionRules(['1 tbsp malt extract'], ['gluten-free']);
+assert(maltExtractResult.length === 1, 'malt extract rule fires for gluten-free');
+assert(
+  maltExtractResult[0]!.replacement.includes('rice malt syrup'),
+  'malt extract → a genuinely barley-free sweetener, never a "gluten-free barley malt" claim',
+);
+
+const hoisinResult = matchSubstitutionRules(['2 tbsp hoisin sauce'], ['gluten-free']);
+assert(hoisinResult.length === 1, 'hoisin sauce rule fires for gluten-free');
+assert(hoisinResult[0]!.replacement.includes('gluten-free hoisin sauce'), 'hoisin sauce → GF hoisin sauce');
+
+const teriyakiResult = matchSubstitutionRules(['2 tbsp teriyaki sauce'], ['gluten-free']);
+assert(teriyakiResult.length === 1, 'teriyaki sauce rule fires for gluten-free');
+assert(teriyakiResult[0]!.replacement.includes('gluten-free teriyaki sauce'), 'teriyaki sauce → GF teriyaki sauce');
+
+// soy_sauce: gluten-only household gets tamari first; a household ALSO
+// restricted on soy must never be offered tamari (it IS soy sauce).
+const soySauceGlutenOnly = matchSubstitutionRules(['1 tbsp soy sauce'], ['gluten-free']);
+assert(soySauceGlutenOnly.length === 1, 'soy sauce rule fires for gluten-free alone');
+assert(soySauceGlutenOnly[0]!.replacement.includes('tamari'), 'gluten-only household → tamari offered first');
+
+const soySauceGlutenAndSoy = matchSubstitutionRules(['1 tbsp soy sauce'], ['gluten-free', 'soy']);
+assert(soySauceGlutenAndSoy.length === 1, 'soy sauce rule still fires when soy is ALSO restricted');
+assert(!soySauceGlutenAndSoy[0]!.replacement.includes('tamari'), 'tamari never offered when soy is restricted (tamari is soy sauce)');
+
+// The existing soy-free-only behaviour (no gluten restriction) must be
+// unchanged by adding the gluten_free trigger to this rule.
+const soySauceSoyOnly = matchSubstitutionRules(['1 tbsp soy sauce'], ['soy']);
+assert(soySauceSoyOnly.length === 1, 'soy sauce rule fires for soy-free alone, unchanged');
+assert(!soySauceSoyOnly[0]!.replacement.includes('tamari'), 'soy-only household (no gluten restriction) is never offered tamari');
+
+// ─── 26. Every curated replacement survives the REAL safety re-check ────────
+// INT20/COMP3's `defaultCheckPlannerMeal` doesn't trust this engine's own
+// word — it re-checks every suggested replacement through
+// `household-dietary-safety.ts`'s `validateAdaptationSafety`, the same gate
+// a recommendation must clear. A curated fix that fails its own restriction's
+// re-check is silently dropped and the household sees "I couldn't verify a
+// suitable replacement" — exactly the bug found live on 2026-11-14, where
+// "gluten-free Worcestershire sauce" tripped the very hiddenIngredient
+// ("Worcestershire sauce") it was suggested to replace, because the phrase
+// was missing from restriction-library.ts's masking list. This section
+// checks EVERY curated replacement this file can ever hand out, for every
+// restriction it is declared to satisfy, so the next rule added here fails
+// loudly in CI rather than silently in production.
+
+section('26. Every curated replacement survives the REAL safety re-check');
+
+// Only restrictions `household-dietary-safety.ts` actually gates on via the
+// canonical library, keyed by the library's own restriction id (not a
+// display alias) so it lines up exactly with `conflictsWithRestrictions`
+// below. vegetarian/vegan are diet PATTERNS (a different mechanism
+// entirely) and nut_free is a legacy alias that expands to two restrictions
+// — neither is what this trigger-by-trigger check is for.
+const TRIGGER_TO_RESTRICTION_ID: Partial<Record<DietTrigger, string>> = {
+  gluten_free: 'gluten',
+  dairy_free: 'dairy',
+  peanut_free: 'peanut',
+  tree_nut_free: 'tree_nut',
+  sesame_free: 'sesame',
+  soy_free: 'soy',
+  mustard_free: 'mustard',
+  shellfish_free: 'shellfish',
+  egg_free: 'eggs',
+  coconut_free: 'coconut',
+  fish_free: 'fish',
+  honey_free: 'honey',
+};
+
+let selfCheckFailures = 0;
+for (const { ruleId, trigger, replacement, conflictsWithRestrictions } of listAllCuratedReplacements()) {
+  const restrictionId = TRIGGER_TO_RESTRICTION_ID[trigger];
+  if (!restrictionId) continue; // vegetarian/vegan/nut_free — not this check's concern
+  // A strategy that ALREADY declares it conflicts with this restriction is
+  // correctly rejected — that is the cross-restriction-conflict feature
+  // working, not the bug this section exists to catch.
+  if (conflictsWithRestrictions.includes(restrictionId)) continue;
+  const verdict = validateAdaptationSafety({ ingredients: [replacement] }, [restrictionId]);
+  if (!verdict.safe) {
+    selfCheckFailures++;
+    console.error(`  ✗ [${ruleId}] "${replacement}" is rejected by its own restriction's safety re-check (${restrictionId}): ${JSON.stringify(verdict.violations)}`);
+  }
+}
+assertEqual(selfCheckFailures, 0, 'no curated replacement is rejected by the safety re-check for the restriction it was offered to satisfy (unless it is a declared cross-restriction conflict)');
+
+// ─── 27. COMP_SUB2 — fish and honey substitution coverage ───────────────────
+// Deep-dive after COMP_SUB1 found that `detectActiveTriggers` had no cases
+// for the `fish` or `honey` canonical restrictions, so `listSubstitutionOptions`
+// silently offered ZERO curated fixes for either — every fish-sauce,
+// fish-stock, anchovy or honey conflict dead-ended with "I couldn't verify a
+// suitable replacement" even though direct, real substitutes exist. This
+// section exercises each new rule directly.
+
+section('27. COMP_SUB2 — fish and honey substitution coverage');
+
+// fish_sauce: fish-only household gets tamari first; a household ALSO
+// restricted on soy must never be offered tamari (it IS soy sauce), and
+// should fall through to coconut aminos instead.
+const fishSauceFishOnly = matchSubstitutionRules(['1 tbsp fish sauce'], ['fish']);
+assert(fishSauceFishOnly.length === 1, 'fish sauce rule fires for fish-free alone');
+assert(fishSauceFishOnly[0]!.replacement.includes('tamari'), 'fish-only household → tamari offered first');
+
+const fishSauceFishAndSoy = matchSubstitutionRules(['1 tbsp fish sauce'], ['fish', 'soy']);
+assert(fishSauceFishAndSoy.length === 1, 'fish sauce rule still fires when soy is ALSO restricted');
+assert(
+  fishSauceFishAndSoy[0]!.replacement.includes('coconut aminos'),
+  'tamari never offered when soy is restricted → falls through to coconut aminos',
+);
+
+const fishSauceFishAndCoconut = matchSubstitutionRules(['1 tbsp fish sauce'], ['fish', 'coconut']);
+assert(fishSauceFishAndCoconut.length === 1, 'fish sauce rule still fires when coconut is ALSO restricted');
+assert(
+  fishSauceFishAndCoconut[0]!.replacement.includes('tamari'),
+  'coconut aminos never offered when coconut is restricted → falls back to tamari',
+);
+
+// fish_stock → vegetable stock
+const fishStockResult = matchSubstitutionRules(['500ml fish stock'], ['fish']);
+assert(fishStockResult.length === 1, 'fish stock rule fires for fish-free');
+assert(fishStockResult[0]!.replacement.includes('vegetable stock'), 'fish stock → vegetable stock');
+
+// anchovies_umami → capers
+const anchoviesResult = matchSubstitutionRules(['4 anchovy fillets'], ['fish']);
+assert(anchoviesResult.length === 1, 'anchovies rule fires for fish-free');
+assert(anchoviesResult[0]!.replacement.includes('capers'), 'anchovy fillets → capers');
+
+// worcestershire_sauce_fish_safe → vegan Worcestershire sauce, distinct from
+// (and coexisting with) the existing gluten-side Worcestershire rule.
+const worcesterFishResult = matchSubstitutionRules(['1tbsp worcestershire sauce'], ['fish']);
+assert(worcesterFishResult.length === 1, 'worcestershire sauce rule fires for fish-free');
+assert(
+  worcesterFishResult[0]!.replacement.includes('vegan Worcestershire sauce'),
+  'worcestershire sauce → vegan (anchovy-free) Worcestershire sauce for a fish restriction',
+);
+
+const worcesterFishAndGlutenResult = matchSubstitutionRules(['1tbsp worcestershire sauce'], ['fish', 'gluten-free']);
+assert(
+  worcesterFishAndGlutenResult.length === 2,
+  'a household restricted on BOTH fish and gluten gets both Worcestershire fixes offered',
+  JSON.stringify(worcesterFishAndGlutenResult),
+);
+
+// honey → maple syrup first, agave syrup as the listed fallback
+const honeyResult = matchSubstitutionRules(['2 tbsp honey'], ['honey']);
+assert(honeyResult.length === 1, 'honey rule fires for honey-free');
+assert(honeyResult[0]!.replacement.includes('maple syrup'), 'honey → maple syrup offered first');
+
+const honeyOptions = listSubstitutionOptions(['2 tbsp honey'], ['honey']);
+assert(
+  honeyOptions.some((o) => o.replacement.includes('agave syrup')),
+  'agave syrup is present as a listed fallback option for honey',
+  JSON.stringify(honeyOptions),
+);
+
+// A plain "fish" dish ingredient (e.g. "cod fillet") deliberately has NO
+// rule — this file only targets sauces/condiments/stocks/garnishes, never a
+// dish's central named protein, matching every other restriction's scope.
+const codFilletResult = matchSubstitutionRules(['2 cod fillets'], ['fish']);
+assertEqual(codFilletResult.length, 0, 'a main-protein fish ingredient is deliberately out of scope, same as every other restriction');
 
 // ─── Summary ──────────────────────────────────────────────────────────────────
 

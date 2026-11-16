@@ -16,11 +16,12 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingBasket, Copy, Calendar, CalendarDays, UtensilsCrossed, Snowflake, Baby, PersonStanding, Wine, LayoutGrid, Share2, LayoutList, Flame, Pencil, ExternalLink, AlertTriangle, ShoppingCart, ChevronLeft, ChevronRight, Trash2, Sparkles, Lock, DollarSign, Shield, ShieldAlert, Fish, Beef, Salad, HelpCircle, ChevronDown, ChevronUp, RefreshCw, Microscope, Wheat, Droplets, Droplet, Globe, Package, Store, Users, Wand2, Camera, BookOpen, MoreHorizontal, Check, GripVertical } from "lucide-react";
+import { X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingBasket, Copy, Calendar, CalendarDays, UtensilsCrossed, Snowflake, Baby, PersonStanding, Wine, LayoutGrid, Share2, LayoutList, Flame, Pencil, ExternalLink, AlertTriangle, ShoppingCart, ChevronLeft, ChevronRight, Trash2, Sparkles, Lock, DollarSign, Shield, ShieldAlert, Fish, Beef, Salad, HelpCircle, ChevronDown, ChevronUp, RefreshCw, Microscope, Wheat, Droplets, Droplet, Globe, Package, Store, Users, Wand2, Camera, BookOpen, MoreHorizontal, Check, GripVertical, Zap, Leaf } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuSub, ContextMenuSubContent, ContextMenuSubTrigger } from "@/components/ui/context-menu";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { usePlannerContext } from "@/contexts/PlannerContext";
 import { PlannerWorkspaceContext } from "@/contexts/PlannerWorkspaceContext";
@@ -49,8 +50,8 @@ import { emitStageProposal } from "@/lib/planner-staging-bus";
 import PlannerIntelligenceStrip from "@/components/PlannerIntelligenceStrip";
 import { CookbookMealIntelligenceStrip } from "@/components/CookbookMealIntelligenceStrip";
 import { useUser } from "@/hooks/use-user";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { MealUpliftPanel, UpliftCardIndicator, SHOPPING_LIST_KEYS, selectVisibleBoosts } from "@/components/MealUpliftPanel";
+import { apiRequest, fetchPlannerFull, queryClient } from "@/lib/queryClient";
+import { MealUpliftPanel, SHOPPING_LIST_KEYS, selectVisibleBoosts } from "@/components/MealUpliftPanel";
 import type { UpliftMatchResult } from "@/components/MealUpliftPanel";
 import { buildWeeklyReuseMap } from "@/lib/ingredient-reuse";
 import { useToast } from "@/hooks/use-toast";
@@ -371,6 +372,8 @@ export default function WeeklyPlannerPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [activeWeek, setActiveWeek] = useState<string>(() => loadActiveWeek());
+  const [archiveWeekId, setArchiveWeekId] = useState<number | null>(null);
+  const [archiveMenuOpen, setArchiveMenuOpen] = useState(false);
   const [renameWeekId, setRenameWeekId] = useState<number | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [clearWeekId, setClearWeekId] = useState<number | null>(null);
@@ -545,7 +548,13 @@ export default function WeeklyPlannerPage() {
   // concludes their week's planning has been wiped. Nothing was lost; the request
   // failed. Those are different sentences and the room must be able to say both.
   const { data: fullPlanner = [], isPending: isLoading, isError: plannerError, refetch: refetchPlanner } = useQuery<FullWeek[]>({
-    queryKey: ["/api/planner/full"],
+    queryKey: ["/api/planner/full", "recent", archiveWeekId],
+    queryFn: () => fetchPlannerFull<FullWeek>("recent", archiveWeekId),
+  });
+
+  const { data: archiveWeekOptions = [], isLoading: archiveWeeksLoading } = useQuery<Pick<PlannerWeek, "id" | "weekNumber" | "weekName" | "weekStartDate">[]>({
+    queryKey: ["/api/planner/weeks"],
+    enabled: archiveMenuOpen,
   });
 
   // PLANNER1 — the household's real current dated week (created on demand server-side). The
@@ -555,6 +564,11 @@ export default function WeeklyPlannerPage() {
   const { data: currentWeek } = useQuery<{ weekId: number; weekNumber: number; weekName: string; weekStartDate: string | null }>({
     queryKey: ["/api/planner/timeline/current"],
   });
+
+  const recentWeekIds = new Set(fullPlanner.filter((week) => week.id !== archiveWeekId).map((week) => week.id));
+  const archivedWeeks = archiveWeekOptions
+    .filter((week) => !recentWeekIds.has(week.id) && (!week.weekStartDate || (currentWeek?.weekStartDate && week.weekStartDate < currentWeek.weekStartDate)))
+    .sort((a, b) => (b.weekStartDate ?? "").localeCompare(a.weekStartDate ?? "") || b.weekNumber - a.weekNumber);
 
   const { data: meals = [] } = useQuery<Meal[]>({
     queryKey: ["/api/meals"],
@@ -678,19 +692,21 @@ export default function WeeklyPlannerPage() {
     const targetMonday = shiftIsoDays(anchor, direction * 7);
     const existing = fullPlanner.find(w => w.weekStartDate === targetMonday);
     if (existing) {
+      const isDefaultWeek = fullPlanner.some((week) => week.id === existing.id && week.id !== archiveWeekId);
+      setArchiveWeekId(isDefaultWeek ? null : existing.id);
       setActiveWeek(String(existing.weekNumber));
       return;
     }
     setNavigatingWeek(true);
     try {
       const res = await apiRequest("POST", "/api/planner/timeline/week", { weekStartDate: targetMonday });
-      const week = (await res.json()) as { weekNumber: number };
-      await qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
+      const week = (await res.json()) as { weekId: number; weekNumber: number };
+      setArchiveWeekId(week.weekId);
       setActiveWeek(String(week.weekNumber));
     } finally {
       setNavigatingWeek(false);
     }
-  }, [activeWeekData, fullPlanner, navigatingWeek, qc]);
+  }, [activeWeekData, archiveWeekId, fullPlanner, navigatingWeek]);
 
   // ── Smart Suggest domain ──────────────────────────────────────────────────
   const {
@@ -890,7 +906,15 @@ export default function WeeklyPlannerPage() {
   // ── Week eater overrides (Phase 4) ───────────────────────────────────────────
   const [weekDietsOpen, setWeekDietsOpen] = useState(false);
 
-  const activeWeekId = fullPlanner.find((w) => w.weekNumber === Number(activeWeek))?.id;
+  // PLANNERPERF1 — prefer the already-resolved id from the lightweight
+  // /api/planner/timeline/current payload when it names the same week, so
+  // provisioning and eater-overrides don't have to wait on the much heavier
+  // /api/planner/full response just to learn a number they can get sooner.
+  // Converges to the identical value once fullPlanner resolves (the ?? never
+  // wins once activeWeekData exists), so no UI reads a different week id.
+  const activeWeekId =
+    fullPlanner.find((w) => w.weekNumber === Number(activeWeek))?.id ??
+    (currentWeek && currentWeek.weekNumber === Number(activeWeek) ? currentWeek.weekId : undefined);
 
   // ── Weekly provisioning (Phase 5) ─────────────────────────────────────────────
   const [provisioningOpen, setProvisioningOpen] = useState(false);
@@ -1970,21 +1994,57 @@ export default function WeeklyPlannerPage() {
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
               )}
-              <Select value={activeWeek} onValueChange={setActiveWeek}>
-                <SelectTrigger className="w-36 sm:w-48 h-7 text-xs" aria-label="Select week" data-testid="tabs-weeks">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {fullPlanner
-                    .slice()
-                    .sort((a, b) => (a.weekStartDate ?? "").localeCompare(b.weekStartDate ?? "") || a.weekNumber - b.weekNumber)
-                    .map((week) => (
-                      <SelectItem key={week.id} value={String(week.weekNumber)} data-testid={`tab-week-${week.weekNumber}`}>
-                        {weekLabel(week)}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+              <ContextMenu onOpenChange={setArchiveMenuOpen}>
+                <ContextMenuTrigger asChild>
+                  <div className="inline-flex" data-testid="planner-week-date-context-trigger">
+                    <Select
+                      value={activeWeek}
+                      onValueChange={(value) => {
+                        const selected = fullPlanner.find((week) => week.weekNumber === Number(value));
+                        if (selected && selected.id !== archiveWeekId) setArchiveWeekId(null);
+                        setActiveWeek(value);
+                      }}
+                    >
+                      <SelectTrigger className="w-36 sm:w-48 h-7 text-xs" aria-label="Select week" data-testid="tabs-weeks">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {fullPlanner
+                          .slice()
+                          .sort((a, b) => (a.weekStartDate ?? "").localeCompare(b.weekStartDate ?? "") || a.weekNumber - b.weekNumber)
+                          .map((week) => (
+                            <SelectItem key={week.id} value={String(week.weekNumber)} data-testid={`tab-week-${week.weekNumber}`}>
+                              {weekLabel(week)}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </ContextMenuTrigger>
+                <ContextMenuContent className="w-56">
+                  <ContextMenuSub>
+                    <ContextMenuSubTrigger>Archive</ContextMenuSubTrigger>
+                    <ContextMenuSubContent className="max-h-72 overflow-y-auto">
+                      {archiveWeeksLoading ? (
+                        <ContextMenuItem disabled>Loading saved weeks…</ContextMenuItem>
+                      ) : archivedWeeks.length === 0 ? (
+                        <ContextMenuItem disabled>No earlier weeks</ContextMenuItem>
+                      ) : archivedWeeks.map((week) => (
+                        <ContextMenuItem
+                          key={week.id}
+                          onSelect={() => {
+                            setArchiveWeekId(week.id);
+                            setActiveWeek(String(week.weekNumber));
+                          }}
+                          data-testid={`archive-week-${week.weekNumber}`}
+                        >
+                          {weekLabel(week)}
+                        </ContextMenuItem>
+                      ))}
+                    </ContextMenuSubContent>
+                  </ContextMenuSub>
+                </ContextMenuContent>
+              </ContextMenu>
               {/* PLANNER1 — step forward one week (unbounded; creates the week on demand). */}
               {activeWeekData?.weekStartDate && (
                 <Button
@@ -2118,22 +2178,21 @@ export default function WeeklyPlannerPage() {
         </>
       }
     />
-      <picture>
-        <source
-          media="(min-width: 1024px)"
-          srcSet="/images/planner/PLANNER_DESKTOP_BOARD_DOMINANT.png"
-        />
-        <source
-          media="(max-width: 767px)"
-          srcSet="/images/planner/PLANNER_MOBILE_PORTRAIT.png"
-        />
-        <img
-          className="planner-physical-photo"
-          src="/images/planner/PLANNER_TARGET_BLANK_ACCEPTED.png"
-          alt=""
-          aria-hidden="true"
-        />
-      </picture>
+      {/* COMP_UX1 (2026-11-15) — one photo at every width, not three swapped by
+          viewport-width media query. Browser zoom changes the effective CSS
+          viewport width exactly like a resize does, so the old <picture>
+          (desktop/tablet-fallback/mobile sources) would visibly swap the
+          background mid-zoom on the same device — jarring, and not something
+          a media query can distinguish from an actual device-width change.
+          The most recently produced board photo is used everywhere; the
+          responsive aspect-ratio/object-fit rules below still adapt how it's
+          cropped per breakpoint, only the source image itself no longer changes. */}
+      <img
+        className="planner-physical-photo"
+        src="/images/planner/PLANNER_DESKTOP_BOARD_DOMINANT_V2.png"
+        alt=""
+        aria-hidden="true"
+      />
       <div className="planner-physical-content">
       <div className="planner-physical-main flex-1 min-w-0">
       {/* UX3 — the first-visit tip is gone: orientation is the Companion's, and
@@ -2355,7 +2414,7 @@ export default function WeeklyPlannerPage() {
                                 >
                                   <>
                                     <button
-                                      className={`w-full text-left text-sm transition-colors flex items-start gap-1.5 select-none ${isCooked ? "opacity-50" : ""} ${isPlaceholder ? "text-muted-foreground/70" : "text-foreground hover:text-primary"}`}
+                                      className={`w-full text-left text-sm transition-colors select-none ${isCooked ? "opacity-50" : ""} ${isPlaceholder ? "text-muted-foreground/70" : "text-foreground hover:text-primary"}`}
                                       onClick={() => {
                                         if (isPlaceholder) {
                                           setResolveSession({
@@ -2407,36 +2466,9 @@ export default function WeeklyPlannerPage() {
                                         entryId={entry.id}
                                         isPlaceholder={isPlaceholder}
                                         isCooked={isCooked}
+                                        showImage={cellEntries.length <= 1}
                                       />
-                                      {isFrozen && !isCooked && <Snowflake className="h-3 w-3 text-blue-400 flex-shrink-0 mt-0.5" />}
-                                      {basketMealIdSet.has(meal.id) && !isCooked && <ShoppingCart className="h-3 w-3 text-emerald-500/70 flex-shrink-0 mt-0.5" />}
-                                      {isCooked && <Check className="h-3 w-3 text-emerald-500/70 flex-shrink-0 mt-0.5" />}
                                     </button>
-                                    {/* Mobile boost indicator */}
-                                    {!isPlaceholder && !isCooked && (() => {
-                                      const isBoosted = boostedMealIds.has(meal.id);
-                                      const serverMatches = upliftByMealId.get(meal.id) ?? [];
-                                                                            const suggestionCount = selectVisibleBoosts(serverMatches, weeklyReuseMap, meal.name).length;
-                                      if (isBoosted) {
-                                        return (
-                                          <button
-                                            className="flex items-center gap-0.5 text-[10px] text-emerald-600/70 leading-none mt-0.5"
-                                            onClick={(e) => { e.stopPropagation(); setMealDetail({ entry, meal, dayId: mobileDay.id, mealType: row.mealType ?? row.addMealType, audience: row.audience, isDrink: row.isDrink, dayName: DAY_NAMES[mobileDay.dayOfWeek], slotLabel: row.label }); }}
-                                            title="Nutrition boost applied"
-                                          >
-                                            <Check className="h-2.5 w-2.5 shrink-0" />
-                                            <span>Boosted</span>
-                                          </button>
-                                        );
-                                      }
-                                      if (suggestionCount === 0) return null;
-                                      return (
-                                        <UpliftCardIndicator
-                                          suggestionCount={suggestionCount}
-                                          onClick={() => setMealDetail({ entry, meal, dayId: mobileDay.id, mealType: row.mealType ?? row.addMealType, audience: row.audience, isDrink: row.isDrink, dayName: DAY_NAMES[mobileDay.dayOfWeek], slotLabel: row.label })}
-                                        />
-                                      );
-                                    })()}
                                   </>
                                 </MobileSortableMealEntry>
                               );
@@ -2550,7 +2582,7 @@ export default function WeeklyPlannerPage() {
                   <div
                     style={{
                       display: "grid",
-                      gridTemplateColumns: "var(--ws-col-label) repeat(7, 1fr)",
+                      gridTemplateColumns: "var(--ws-col-label) repeat(7, minmax(0, 1fr))",
                     }}
                   >
                     {/* ── Header row: corner + day names ── */}
@@ -2633,13 +2665,14 @@ export default function WeeklyPlannerPage() {
                             const isUpdating = upsertEntryMutation.isPending || addEntryMutation.isPending;
 
                             return (
+                              <ContextMenu key={day.id + row.id}>
+                              <ContextMenuTrigger asChild>
                               <DroppablePlannerCell
-                                key={day.id + row.id}
                                 dayId={day.id}
                                 mealType={row.mealType ?? row.addMealType}
                                 audience={row.audience}
                                 isDrink={row.isDrink}
-                                className={`relative p-2 flex flex-col gap-0.5 border-l border-border/60 ${row.isPrincipal ? "min-h-[68px]" : "min-h-[40px]"} ${!isLastRow ? "border-b border-border/60" : ""}`}
+                                className={`relative min-w-0 p-2 flex flex-col gap-0.5 border-l border-border/60 ${row.isPrincipal ? "min-h-[68px]" : "min-h-[40px]"} ${!isLastRow ? "border-b border-border/60" : ""}`}
                                 data-testid={`cell-${row.id}-${day.dayOfWeek}`}
                               >
                                 {/* Meal name pills — each slot is its own sortable context for within-slot reorder */}
@@ -2653,6 +2686,17 @@ export default function WeeklyPlannerPage() {
                                   const isPlaceholder = meal.mealSourceType === "planner-placeholder";
                                   const isFrozen = freezerMeals.some(f => f.mealId === meal.id && f.remainingPortions > 0);
                                   const isCooked = cookedEntryIds.has(entry.id);
+                                  // COMP_UX1 — the boost-idea/boosted indicator used to render as its own
+                                  // always-visible row under the card ("blotter clutter" per owner feedback);
+                                  // it's now a context-menu item like everything else that isn't the photo/name.
+                                  const isBoosted = boostedMealIds.has(meal.id);
+                                  const boostSuggestionCount = isPlaceholder
+                                    ? 0
+                                    : selectVisibleBoosts(upliftByMealId.get(meal.id) ?? [], weeklyReuseMap, meal.name).length;
+                                  const openBoostDetail = () => setMealDetail({
+                                    entry, meal, dayId: day.id, mealType: row.mealType ?? row.addMealType,
+                                    audience: row.audience, isDrink: row.isDrink, dayName: DAY_NAMES[day.dayOfWeek], slotLabel: row.label,
+                                  });
                                   return (
                                     <SortablePlannerEntry
                                       key={entry.id}
@@ -2662,9 +2706,11 @@ export default function WeeklyPlannerPage() {
                                       audience={row.audience}
                                       isDrink={row.isDrink}
                                     >
-                                      <div className={`relative group/entry w-full transition-opacity ${isCooked ? "opacity-50" : ""}`}>
+                                      <ContextMenu>
+                                      <ContextMenuTrigger asChild>
+                                      <div className={`relative w-full min-w-0 transition-opacity ${isCooked ? "opacity-50" : ""}`}>
                                         <button
-                                          className={`w-full text-left text-sm leading-snug transition-colors flex items-start gap-0.5 ${isPlaceholder ? "text-muted-foreground/70 hover:text-muted-foreground" : "text-foreground hover:text-primary"}`}
+                                          className={`w-full min-w-0 text-left text-sm leading-snug transition-colors ${isPlaceholder ? "text-muted-foreground/70 hover:text-muted-foreground" : "text-foreground hover:text-primary"}`}
                                           onClick={() => {
                                             if (isPlaceholder) {
                                               setResolveSession({
@@ -2701,167 +2747,130 @@ export default function WeeklyPlannerPage() {
                                             entryId={entry.id}
                                             isPlaceholder={isPlaceholder}
                                             isCooked={isCooked}
+                                            showImage={cellEntries.length <= 1}
                                           />
-                                          {isFrozen && !isCooked && <Snowflake className="h-3 w-3 text-blue-400 flex-shrink-0 mt-0.5" />}
-                                          {basketMealIdSet.has(meal.id) && !isCooked && (
-                                            <ShoppingCart className="h-3 w-3 text-emerald-500/70 flex-shrink-0 mt-0.5" data-testid={`icon-in-basket-${meal.id}`} />
-                                          )}
-                                          {isCooked && <Check className="h-3 w-3 text-emerald-500/70 flex-shrink-0 mt-0.5" />}
                                         </button>
-                                        {/* Nutrition Boost indicator — subtle, async, non-blocking */}
-                                        {!isPlaceholder && (() => {
-                                          const isBoosted = boostedMealIds.has(meal.id);
-                                          const serverMatches = upliftByMealId.get(meal.id) ?? [];
-                                                                                    const suggestionCount = selectVisibleBoosts(serverMatches, weeklyReuseMap, meal.name).length;
-                                          if (isBoosted) {
-                                            return (
-                                              <button
-                                                className="flex items-center gap-0.5 text-[10px] text-emerald-600/70 leading-none mt-0.5"
-                                                onClick={(e) => { e.stopPropagation(); setMealDetail({ entry, meal, dayId: day.id, mealType: row.mealType ?? row.addMealType, audience: row.audience, isDrink: row.isDrink, dayName: DAY_NAMES[day.dayOfWeek], slotLabel: row.label }); }}
-                                                title="Nutrition boost applied"
-                                                data-testid={`uplift-boosted-${meal.id}`}
-                                              >
-                                                <Check className="h-2.5 w-2.5 shrink-0" />
-                                                <span>Boosted</span>
-                                              </button>
-                                            );
-                                          }
-                                          if (suggestionCount === 0) return null;
-                                          return (
-                                            <UpliftCardIndicator
-                                              suggestionCount={suggestionCount}
-                                              onClick={() => setMealDetail({
-                                                entry,
-                                                meal,
-                                                dayId: day.id,
-                                                mealType: row.mealType ?? row.addMealType,
-                                                audience: row.audience,
-                                                isDrink: row.isDrink,
-                                                dayName: DAY_NAMES[day.dayOfWeek],
-                                                slotLabel: row.label,
-                                              })}
-                                            />
-                                          );
-                                        })()}
-                                        {/* Phase 5A + Phase 1 execution: entry operations menu */}
-                                        <DropdownMenu>
-                                          <DropdownMenuTrigger asChild>
-                                            <button
-                                              className="absolute top-0 right-0 h-4 w-4 flex items-center justify-center rounded hover-reveal group-hover/entry:opacity-60 hover:!opacity-100 hover:bg-accent/60 transition-opacity"
-                                              onClick={(e) => e.stopPropagation()}
-                                              data-testid={`button-entry-ops-${entry.id}`}
-                                              title="Entry actions"
-                                              aria-label="Entry actions"
-                                            >
-                                              <MoreHorizontal className="h-2.5 w-2.5" />
-                                            </button>
-                                          </DropdownMenuTrigger>
-                                          <DropdownMenuContent align="end" className="w-52">
-                                            {/* Phase 1A: Mark cooked */}
-                                            {!isPlaceholder && (
-                                              <DropdownMenuItem
-                                                onClick={() => toggleCooked(entry.id)}
-                                                data-testid={`mi-cooked-${entry.id}`}
-                                              >
-                                                <Check className={`h-3.5 w-3.5 mr-2 ${isCooked ? "text-emerald-500" : "text-muted-foreground"}`} />
-                                                {isCooked ? "Unmark cooked" : "Mark as cooked"}
-                                              </DropdownMenuItem>
-                                            )}
-                                            {!isPlaceholder && <DropdownMenuSeparator />}
-                                            {!isPlaceholder && (
-                                              <DropdownMenuItem onClick={() => duplicateEntryMutation.mutate({ entryId: entry.id })} data-testid={`mi-dup-${entry.id}`}>
-                                                <Copy className="h-3.5 w-3.5 mr-2" />
-                                                Duplicate here
-                                              </DropdownMenuItem>
-                                            )}
-                                            {!isPlaceholder && getNextDay(day.id) && (
-                                              <DropdownMenuItem onClick={() => handleRepeatTomorrow(entry, day.id, sortedDays)} data-testid={`mi-repeat-${entry.id}`}>
-                                                <RefreshCw className="h-3.5 w-3.5 mr-2" />
-                                                Repeat tomorrow
-                                              </DropdownMenuItem>
-                                            )}
-                                            {/* Phase 1C: Duplicate next week */}
-                                            {!isPlaceholder && (
-                                              <DropdownMenuItem onClick={() => handleDuplicateNextWeek(entry)} data-testid={`mi-next-week-${entry.id}`}>
-                                                <CalendarDays className="h-3.5 w-3.5 mr-2" />
-                                                Duplicate next week
-                                              </DropdownMenuItem>
-                                            )}
-                                            {isPlaceholder && (
-                                              <DropdownMenuItem onClick={() => duplicateEntryMutation.mutate({ entryId: entry.id })}>
-                                                <Copy className="h-3.5 w-3.5 mr-2" />
-                                                Duplicate meal idea
-                                              </DropdownMenuItem>
-                                            )}
-                                            {/* Phase 1B: Move to another day */}
-                                            <DropdownMenuSub>
-                                              <DropdownMenuSubTrigger data-testid={`mi-move-day-${entry.id}`}>
-                                                <Calendar className="h-3.5 w-3.5 mr-2" />
-                                                Move to day
-                                              </DropdownMenuSubTrigger>
-                                              <DropdownMenuSubContent className="w-48 max-h-64 overflow-y-auto">
-                                                {allPlannerDays
-                                                  .filter(({ day: d }) => d.id !== day.id)
-                                                  .map(({ week, day: d }) => (
-                                                    <DropdownMenuItem
-                                                      key={d.id}
-                                                      onClick={() => handleMoveToDay(entry, d.id, row.mealType ?? row.addMealType)}
-                                                      data-testid={`mi-move-to-${entry.id}-${d.id}`}
-                                                    >
-                                                      <span className="text-[10px] text-muted-foreground mr-1.5 shrink-0">{week.weekName}</span>
-                                                      {DAY_NAMES[d.dayOfWeek]}
-                                                    </DropdownMenuItem>
-                                                  ))
-                                                }
-                                              </DropdownMenuSubContent>
-                                            </DropdownMenuSub>
-                                            <DropdownMenuSeparator />
-                                            {/* Phase 1D: Send to shopping */}
-                                            {!isPlaceholder && (
-                                              <DropdownMenuItem
-                                                onClick={() => addToBasketMutation.mutate([{ mealId: meal.id, count: 1 }])}
-                                                data-testid={`mi-shopping-${entry.id}`}
-                                              >
-                                                <ShoppingCart className="h-3.5 w-3.5 mr-2" />
-                                                Send to shopping
-                                              </DropdownMenuItem>
-                                            )}
-                                            {meal.isFreezerEligible && !isPlaceholder && (
-                                              <DropdownMenuItem onClick={() => addToFreezerMutation.mutate(meal.id)} data-testid={`mi-freeze-${entry.id}`}>
-                                                <Snowflake className="h-3.5 w-3.5 mr-2" />
-                                                Add to freezer
-                                              </DropdownMenuItem>
-                                            )}
-                                            <DropdownMenuSeparator />
-                                            <DropdownMenuItem
-                                              className="text-muted-foreground focus:text-foreground"
-                                              onClick={() => { setExpandedDayId(day.id); setExpandedDayLabel(DAY_NAMES[day.dayOfWeek]); setAssistantMode("day"); }}
-                                              data-testid={`mi-open-day-${day.dayOfWeek}`}
-                                            >
-                                              <LayoutList className="h-3.5 w-3.5 mr-2" />
-                                              View day
-                                            </DropdownMenuItem>
-                                            <DropdownMenuSeparator />
-                                            <DropdownMenuItem
-                                              className="text-muted-foreground focus:text-foreground"
-                                              onClick={() => setClearSlotConfirm({ dayId: day.id, mealType: row.mealType, audience: row.audience, isDrink: row.isDrink, dayName: DAY_NAMES[day.dayOfWeek], slotLabel: row.label })}
-                                              data-testid={`mi-clear-slot-${row.id}-${day.dayOfWeek}`}
-                                            >
-                                              <Trash2 className="h-3.5 w-3.5 mr-2" />
-                                              Clear this slot
-                                            </DropdownMenuItem>
-                                            <DropdownMenuSeparator />
-                                            <DropdownMenuItem
-                                              className="text-destructive focus:text-destructive"
-                                              onClick={() => deleteEntryMutation.mutate(entry.id)}
-                                              data-testid={`mi-remove-${entry.id}`}
-                                            >
-                                              <X className="h-3.5 w-3.5 mr-2" />
-                                              Remove
-                                            </DropdownMenuItem>
-                                          </DropdownMenuContent>
-                                        </DropdownMenu>
                                       </div>
+                                      </ContextMenuTrigger>
+                                      {/* Phase 5A + Phase 1 execution: entry operations menu — right-click/long-press
+                                          triggered (COMP_UX1) rather than a hover-only corner button, which was
+                                          undiscoverable on touch and easy to miss on desktop. */}
+                                      <ContextMenuContent className="w-52">
+                                        {/* Nutrition boost — used to be an always-visible leaf-icon row under the
+                                            card; now a menu item like every other non-photo/name affordance. */}
+                                        {!isPlaceholder && (isBoosted || boostSuggestionCount > 0) && (
+                                          <>
+                                            <ContextMenuItem onClick={openBoostDetail} data-testid={`mi-boost-${entry.id}`}>
+                                              <Leaf className={`h-3.5 w-3.5 mr-2 ${isBoosted ? "text-emerald-500" : "text-muted-foreground"}`} />
+                                              {isBoosted ? "Nutrition boost applied" : `${boostSuggestionCount} nutrition boost idea${boostSuggestionCount === 1 ? "" : "s"}`}
+                                            </ContextMenuItem>
+                                            <ContextMenuSeparator />
+                                          </>
+                                        )}
+                                        {/* Phase 1A: Mark cooked */}
+                                        {!isPlaceholder && (
+                                          <ContextMenuItem
+                                            onClick={() => toggleCooked(entry.id)}
+                                            data-testid={`mi-cooked-${entry.id}`}
+                                          >
+                                            <Check className={`h-3.5 w-3.5 mr-2 ${isCooked ? "text-emerald-500" : "text-muted-foreground"}`} />
+                                            {isCooked ? "Unmark cooked" : "Mark as cooked"}
+                                          </ContextMenuItem>
+                                        )}
+                                        {!isPlaceholder && <ContextMenuSeparator />}
+                                        {!isPlaceholder && (
+                                          <ContextMenuItem onClick={() => duplicateEntryMutation.mutate({ entryId: entry.id })} data-testid={`mi-dup-${entry.id}`}>
+                                            <Copy className="h-3.5 w-3.5 mr-2" />
+                                            Duplicate here
+                                          </ContextMenuItem>
+                                        )}
+                                        {!isPlaceholder && getNextDay(day.id) && (
+                                          <ContextMenuItem onClick={() => handleRepeatTomorrow(entry, day.id, sortedDays)} data-testid={`mi-repeat-${entry.id}`}>
+                                            <RefreshCw className="h-3.5 w-3.5 mr-2" />
+                                            Repeat tomorrow
+                                          </ContextMenuItem>
+                                        )}
+                                        {/* Phase 1C: Duplicate next week */}
+                                        {!isPlaceholder && (
+                                          <ContextMenuItem onClick={() => handleDuplicateNextWeek(entry)} data-testid={`mi-next-week-${entry.id}`}>
+                                            <CalendarDays className="h-3.5 w-3.5 mr-2" />
+                                            Duplicate next week
+                                          </ContextMenuItem>
+                                        )}
+                                        {isPlaceholder && (
+                                          <ContextMenuItem onClick={() => duplicateEntryMutation.mutate({ entryId: entry.id })}>
+                                            <Copy className="h-3.5 w-3.5 mr-2" />
+                                            Duplicate meal idea
+                                          </ContextMenuItem>
+                                        )}
+                                        {/* Phase 1B: Move to another day */}
+                                        <ContextMenuSub>
+                                          <ContextMenuSubTrigger data-testid={`mi-move-day-${entry.id}`}>
+                                            <Calendar className="h-3.5 w-3.5 mr-2" />
+                                            Move to day
+                                          </ContextMenuSubTrigger>
+                                          <ContextMenuSubContent className="w-48 max-h-64 overflow-y-auto">
+                                            {allPlannerDays
+                                              .filter(({ day: d }) => d.id !== day.id)
+                                              .map(({ week, day: d }) => (
+                                                <ContextMenuItem
+                                                  key={d.id}
+                                                  onClick={() => handleMoveToDay(entry, d.id, row.mealType ?? row.addMealType)}
+                                                  data-testid={`mi-move-to-${entry.id}-${d.id}`}
+                                                >
+                                                  <span className="text-[10px] text-muted-foreground mr-1.5 shrink-0">{week.weekName}</span>
+                                                  {DAY_NAMES[d.dayOfWeek]}
+                                                </ContextMenuItem>
+                                              ))
+                                            }
+                                          </ContextMenuSubContent>
+                                        </ContextMenuSub>
+                                        <ContextMenuSeparator />
+                                        {/* Phase 1D: Send to shopping */}
+                                        {!isPlaceholder && (
+                                          <ContextMenuItem
+                                            onClick={() => addToBasketMutation.mutate([{ mealId: meal.id, count: 1 }])}
+                                            data-testid={`mi-shopping-${entry.id}`}
+                                          >
+                                            <ShoppingCart className={`h-3.5 w-3.5 mr-2 ${basketMealIdSet.has(meal.id) ? "text-emerald-500" : ""}`} />
+                                            {basketMealIdSet.has(meal.id) ? "In shopping list — send again" : "Send to shopping"}
+                                          </ContextMenuItem>
+                                        )}
+                                        {meal.isFreezerEligible && !isPlaceholder && (
+                                          <ContextMenuItem onClick={() => addToFreezerMutation.mutate(meal.id)} data-testid={`mi-freeze-${entry.id}`}>
+                                            <Snowflake className={`h-3.5 w-3.5 mr-2 ${isFrozen ? "text-blue-400" : ""}`} />
+                                            {isFrozen ? "Already in freezer" : "Add to freezer"}
+                                          </ContextMenuItem>
+                                        )}
+                                        <ContextMenuSeparator />
+                                        <ContextMenuItem
+                                          className="text-muted-foreground focus:text-foreground"
+                                          onClick={() => { setExpandedDayId(day.id); setExpandedDayLabel(DAY_NAMES[day.dayOfWeek]); setAssistantMode("day"); }}
+                                          data-testid={`mi-open-day-${day.dayOfWeek}`}
+                                        >
+                                          <LayoutList className="h-3.5 w-3.5 mr-2" />
+                                          View day
+                                        </ContextMenuItem>
+                                        <ContextMenuSeparator />
+                                        <ContextMenuItem
+                                          className="text-muted-foreground focus:text-foreground"
+                                          onClick={() => setClearSlotConfirm({ dayId: day.id, mealType: row.mealType, audience: row.audience, isDrink: row.isDrink, dayName: DAY_NAMES[day.dayOfWeek], slotLabel: row.label })}
+                                          data-testid={`mi-clear-slot-${row.id}-${day.dayOfWeek}`}
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5 mr-2" />
+                                          Clear this slot
+                                        </ContextMenuItem>
+                                        <ContextMenuSeparator />
+                                        <ContextMenuItem
+                                          className="text-destructive focus:text-destructive"
+                                          onClick={() => deleteEntryMutation.mutate(entry.id)}
+                                          data-testid={`mi-remove-${entry.id}`}
+                                        >
+                                          <X className="h-3.5 w-3.5 mr-2" />
+                                          Remove
+                                        </ContextMenuItem>
+                                      </ContextMenuContent>
+                                      </ContextMenu>
                                     </SortablePlannerEntry>
                                   );
                                 })}
@@ -2870,9 +2879,13 @@ export default function WeeklyPlannerPage() {
                                 {cellEntries.length > 2 && (
                                   <span className="text-[10px] text-muted-foreground">+{cellEntries.length - 2} more</span>
                                 )}
-                                {/* Add button */}
-                                <button
-                                  className="mt-auto text-muted-foreground/40 hover:text-primary transition-colors self-start leading-none"
+                              </DroppablePlannerCell>
+                              </ContextMenuTrigger>
+                              {/* COMP_UX1 — the always-visible "+" add button was removed from the
+                                  cell (owner feedback: it's clutter on the blotter); adding a meal to
+                                  this slot is now a right-click item, same as every other cell action. */}
+                              <ContextMenuContent>
+                                <ContextMenuItem
                                   onClick={() => openPicker({
                                     dayId: day.id,
                                     mealType: row.addMealType,
@@ -2881,13 +2894,12 @@ export default function WeeklyPlannerPage() {
                                   })}
                                   disabled={isUpdating}
                                   data-testid={`button-add-${row.id}-${day.dayOfWeek}`}
-                                  title={`Add ${row.label}`}
-                                  aria-label={`Add ${row.label}`}
                                 >
-                                  <Plus className="h-3 w-3" />
-                                </button>
-
-                              </DroppablePlannerCell>
+                                  <Plus className="h-3.5 w-3.5 mr-2" />
+                                  Add {row.label}
+                                </ContextMenuItem>
+                              </ContextMenuContent>
+                              </ContextMenu>
                             );
                           })}
                         </Fragment>
@@ -3155,6 +3167,10 @@ export default function WeeklyPlannerPage() {
           {contextEntry && (() => {
             const isPlaceholder = contextEntry.meal.mealSourceType === "planner-placeholder";
             const isCooked = cookedEntryIds.has(contextEntry.entry.id);
+            const isBoosted = boostedMealIds.has(contextEntry.meal.id);
+            const boostSuggestionCount = isPlaceholder
+              ? 0
+              : selectVisibleBoosts(upliftByMealId.get(contextEntry.meal.id) ?? [], weeklyReuseMap, contextEntry.meal.name).length;
             return (
               <>
                 <div className="px-4 pt-5 pb-3 border-b border-border">
@@ -3163,6 +3179,14 @@ export default function WeeklyPlannerPage() {
                   {isCooked && <p className="text-xs text-emerald-600/80 dark:text-emerald-400/80 mt-0.5">Cooked</p>}
                 </div>
                 <div className="flex flex-col py-1" role="menu">
+                  {/* Nutrition boost — same relocation as the desktop context menu */}
+                  {!isPlaceholder && (isBoosted || boostSuggestionCount > 0) && (
+                    <button className="flex items-center gap-3 px-4 py-3.5 text-sm text-foreground active:bg-accent/60 text-left w-full border-b border-border/60" role="menuitem" data-testid="button-ctx-boost"
+                      onClick={() => { setContextEntry(null); setMealDetail({ entry: contextEntry.entry, meal: contextEntry.meal, dayId: contextEntry.dayId, mealType: contextEntry.mealType, audience: contextEntry.audience, isDrink: contextEntry.isDrink, dayName: contextEntry.dayName, slotLabel: contextEntry.slotLabel }); }}>
+                      <Leaf className={`h-4 w-4 shrink-0 ${isBoosted ? "text-emerald-500" : "text-muted-foreground"}`} />
+                      {isBoosted ? "Nutrition boost applied" : `${boostSuggestionCount} nutrition boost idea${boostSuggestionCount === 1 ? "" : "s"}`}
+                    </button>
+                  )}
                   {/* Phase 1A: Mark cooked */}
                   {!isPlaceholder && (
                     <button className="flex items-center gap-3 px-4 py-3.5 text-sm text-foreground active:bg-accent/60 text-left w-full" role="menuitem" data-testid="button-ctx-cooked"
@@ -3201,13 +3225,15 @@ export default function WeeklyPlannerPage() {
                   {!isPlaceholder && (
                     <button className="flex items-center gap-3 px-4 py-3.5 text-sm text-foreground active:bg-accent/60 text-left w-full" role="menuitem" data-testid="button-ctx-shopping"
                       onClick={() => { addToBasketMutation.mutate([{ mealId: contextEntry.meal.id, count: 1 }]); setContextEntry(null); }}>
-                      <ShoppingCart className="h-4 w-4 text-muted-foreground shrink-0" />Send to shopping
+                      <ShoppingCart className={`h-4 w-4 shrink-0 ${basketMealIdSet.has(contextEntry.meal.id) ? "text-emerald-500" : "text-muted-foreground"}`} />
+                      {basketMealIdSet.has(contextEntry.meal.id) ? "In shopping list — send again" : "Send to shopping"}
                     </button>
                   )}
                   {contextEntry.meal.isFreezerEligible && !isPlaceholder && (
                     <button className="flex items-center gap-3 px-4 py-3.5 text-sm text-foreground active:bg-accent/60 text-left w-full" role="menuitem" data-testid="button-ctx-freeze"
                       onClick={() => { addToFreezerMutation.mutate(contextEntry.meal.id); setContextEntry(null); }}>
-                      <Snowflake className="h-4 w-4 text-muted-foreground shrink-0" />Add to freezer
+                      <Snowflake className={`h-4 w-4 shrink-0 ${freezerMeals.some(f => f.mealId === contextEntry.meal.id && f.remainingPortions > 0) ? "text-blue-400" : "text-muted-foreground"}`} />
+                      {freezerMeals.some(f => f.mealId === contextEntry.meal.id && f.remainingPortions > 0) ? "Already in freezer" : "Add to freezer"}
                     </button>
                   )}
                   <div className="h-px bg-border/60 mx-4 my-1" aria-hidden="true" />
@@ -3378,6 +3404,11 @@ export default function WeeklyPlannerPage() {
                     {meal.isReadyMeal && (
                       <Badge variant="outline" className="text-xs">
                         <UtensilsCrossed className="h-3 w-3 mr-1" />Ready Meal
+                      </Badge>
+                    )}
+                    {!meal.isReadyMeal && (meal.ingredients?.length ?? 0) === 0 && (
+                      <Badge variant="outline" className="text-xs border-sky-400/40 text-sky-500">
+                        <Zap className="h-3 w-3 mr-1" />Quick Meal
                       </Badge>
                     )}
                     {isFrozen && (
@@ -3972,7 +4003,7 @@ export default function WeeklyPlannerPage() {
                         onMealForked={(newMealId) => {
                           // Synchronously update planner cache so entry.mealId points to
                           // the fork — prevents close/reopen from re-targeting the original
-                          qc.setQueryData<FullWeek[]>(["/api/planner/full"], (prev) => {
+                          qc.setQueryData<FullWeek[]>(["/api/planner/full", "recent", archiveWeekId], (prev) => {
                             if (!prev) return prev;
                             return prev.map((week) => ({
                               ...week,
