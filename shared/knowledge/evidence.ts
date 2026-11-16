@@ -44,6 +44,9 @@ export const TRUSTED_SOURCE_DOMAINS: readonly string[] = [
   "nutrition.org.uk",       // British Nutrition Foundation — tier 2
   "usda.gov",               // USDA FoodData Central — food composition only
   "canada.ca",              // Health Canada / Canadian Nutrient File — food composition only
+  "matvaretabellen.no",     // Norwegian Food Composition Table — food composition only
+  "pubmed.ncbi.nlm.nih.gov", // PubMed index — peer-reviewed scientific literature; secondary to official guidance
+  "pmc.ncbi.nlm.nih.gov",   // PubMed Central full text — peer-reviewed scientific literature; secondary to official guidance
 ];
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -115,7 +118,7 @@ export function isSourceAllowedForClaim(ref: unknown, row: ClaimEvidenceFields):
   if (!value?.url) return false;
   let host = "";
   try { host = new URL(value.url).hostname.toLowerCase(); } catch { return false; }
-  const compositionOnly = ["usda.gov", "canada.ca"];
+  const compositionOnly = ["usda.gov", "canada.ca", "matvaretabellen.no"];
   if (!compositionOnly.some((domain) => host === domain || host.endsWith(`.${domain}`))) return true;
   return "foodSlug" in row && "nutrientSlug" in row && !("benefitSlug" in row);
 }

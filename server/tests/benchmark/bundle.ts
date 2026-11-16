@@ -48,12 +48,27 @@ export const HISTORY_DIR = resolve(REPO_ROOT, "docs/intelligence/benchmark/histo
 export const FRAMEWORK_VERSION = "v2.1.0";
 export const HOUSEHOLDS_VERSION = "v1.0.0";
 export const RUBRIC_VERSION = "v2.0.0";
-export const JUDGE_VERSION = "v1.0.0";
+/**
+ * JUDGE_LIVE1 bumps JUDGE_VERSION to v2.0.0 — a **MAJOR** change, exactly the event
+ * SCORING_FRAMEWORK §5 reserves this bump for: "the judge changed." Until now every
+ * run was honestly stamped `judge.invoked = false` — `claude-opus-4-8` was never a
+ * real, callable model (it predates the current model lineup), and no
+ * ANTHROPIC_API_KEY exists in this environment to call a real Claude judge with.
+ * Wiring a live judge tier (user-approved 2026-11-16) therefore also means picking a
+ * REAL model, and the only live LLM credential already configured here is
+ * OPENAI_API_KEY (the same gpt-4o-mini provider the Companion's own conversational
+ * fallback uses — server/intelligence/conversation/llm-provider.ts). Switching
+ * provider family (Anthropic-shaped spec → OpenAI) is a bigger change than a model-id
+ * string swap, which is exactly why this is MAJOR rather than invisible: no run from
+ * before this version can be compared against one after it on the judge-owned
+ * dimensions (D1/D2/D5/D6), the same discipline BENCH2 applied to its rubric bump.
+ */
+export const JUDGE_VERSION = "v2.0.0";
 /** Additive result fields (BENCH2 panels; BENCH2C `capabilityUtilisation` + per-question invocations) — MINOR. */
 export const RESULT_SCHEMA_VERSION = "1.2.0";
 
-/** SCORING_FRAMEWORK §5 — the pinned judge model at rubric/judge v1.0.0. */
-export const JUDGE_MODEL = "claude-opus-4-8";
+/** JUDGE_LIVE1 — the pinned judge model at rubric v2.0.0 / judge v2.0.0. See JUDGE_VERSION above. */
+export const JUDGE_MODEL = "gpt-4o-mini";
 
 /**
  * The clock a run actually had.

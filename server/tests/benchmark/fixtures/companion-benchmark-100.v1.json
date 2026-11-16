@@ -1,11 +1,35 @@
 {
   "bundleComponent": "questions",
-  "version": "v1.0.0",
+  "version": "v1.1.0",
   "frozen": true,
   "source": "docs/intelligence/benchmark/questions/THA_COMPANION_BENCHMARK_100_V1.md",
   "importedBy": "INTQ3",
   "importedOn": "2026-07-04",
-  "note": "Faithful executable import of the THA Companion Benchmark 100 v1.0. Wording is preserved verbatim from the source document; no benchmark meaning was changed. Questions run through the one Companion seam (conversationGateway.processUserTurn) only — see docs/intelligence/benchmark/BENCHMARK_AUTOMATION.md. Per-question household assignment, correctAnswerType, and scoring expectation records are intentionally NOT authored here (out of INTQ3 scope; owned by the execution/scoring workstreams).",
+  "note": "Faithful executable import of the THA Companion Benchmark 100 v1.0. Wording is preserved verbatim from the source document; no benchmark meaning was changed. Questions run through the one Companion seam (conversationGateway.processUserTurn) only — see docs/intelligence/benchmark/BENCHMARK_AUTOMATION.md. Per-question household assignment, correctAnswerType, and scoring expectation records are intentionally NOT authored here (out of INTQ3 scope; owned by the execution/scoring workstreams). v1.0.1 (2026-11-16) corrects 4 authored 'capability' fields that named the wrong owning capability — see 'corrections' below; question wording itself is untouched. v1.1.0 (2026-11-16) ADDS a new 'Dietary Substitution' category (DS-101..103, 3 questions, 100->103 total) covering the COMP_SUB2 fish/honey substitution offer and the intent-spellcheck/benefit-search fixes — the first new content this bundle has ever carried, hence MINOR not PATCH. Comparison-safe: no existing question's wording, capability, or category changed by this bump.",
+  "corrections": [
+    {
+      "date": "2026-11-16",
+      "reason": "Live full benchmark run 2026-11-16T21-37-09Z__9dda305 flagged CB-017, ND-054, ND-060 and PR-066 as R2 misroutes. Checked each against capability-registry.ts's own owningService/description (the single source of truth): in all 4 cases the Companion's actual routing already reached the capability that genuinely owns the data/engine the question needs — the authored 'capability' field was a fixture-authoring error, not a Companion routing defect.",
+      "items": [
+        { "id": "CB-017", "before": "meals.read + upf/nutrition", "after": "meal-discovery.search + upf/nutrition", "why": "Ranking/filtering across many meals by a derived attribute (UPF/processing level) is meal-discovery's cross-source search domain, not meals' single-recipe CRUD domain. The Companion correctly reaches meal-discovery; UPF-ranking data does not exist in either capability yet — an honest content gap (reflected in D1/D5), not a routing failure." },
+        { "id": "ND-054", "before": "nutrition-report.read", "after": "planner.read + diary-discovery.search + nutrition-report", "why": "\"How many plants have I eaten this week\" asks about the household's own logged consumption (SoT D14 planner history), which nutrition-knowledge's read verb cannot answer — it only covers static food/nutrient facts, never a household's personal history." },
+        { "id": "ND-060", "before": "nutrition-history", "after": "food-intelligence.compare + nutrition-report", "why": "Week-over-week trend comparison is comparison-engine.ts's job, owned by food-intelligence (an executable 'compare' verb). nutrition-knowledge has no comparison capability at all." },
+        { "id": "PR-066", "before": "household.read + product-analysis", "after": "product-analysis + household", "why": "The canonical source document (docs/intelligence/benchmark/questions/THA_COMPANION_BENCHMARK_100_V1.md) has always said \"product-analysis + household\" — product-analysis primary. The fixture's \"household.read + product-analysis\" was an import-time drift from that source (household became primary), unrelated to the question's own intent. This restores the fixture to its own source rather than re-authoring anything; no markdown change needed." }
+      ]
+    }
+  ],
+  "additions": [
+    {
+      "date": "2026-11-16",
+      "version": "v1.1.0",
+      "reason": "COMP_SUB2 (fish/honey curated substitution rules) and the intent-spellcheck/benefit-search widening fix had zero benchmark coverage — a correct fix in an unsampled path cannot move the score. 3 new questions added in a new 'Dietary Substitution' category (DS-101..103), append-only (no existing ID/category renumbered).",
+      "items": [
+        { "id": "DS-101", "covers": "COMP_SUB2 planner-add substitution offer", "note": "Requires --user=183 (a seeded test household with a honey restriction, hard_restrictions=['meat','fish','dairy','eggs','honey']) and its test cookbook meal id 5862 ('BENCH Honey Granola', ingredients include '3 tbsp honey') to actually exercise the path — a generic household with no restriction cannot trigger this code. Live-verified before authoring." },
+        { "id": "DS-102", "covers": "intent-spellcheck.ts — the exact live-reported 'boot'/'boost' typo", "note": "Household-independent; live-verified against user 1 before authoring." },
+        { "id": "DS-103", "covers": "the possessive-pronoun benefit-search gap found but NOT fixed alongside DS-102", "note": "Deliberately authored as a currently-failing honest gap (live-verified), not a bug in the question — tracks this known, still-open issue so its eventual fix is visible as a score delta." }
+      ]
+    }
+  ],
   "gradeScale": {
     "A": "Excellent now. Complete, useful, grounded, and human-satisfactory.",
     "B": "Good now. Minor gaps or polish needed.",
@@ -32,7 +56,8 @@
     "Product Intelligence",
     "Food Knowledge",
     "Companion Guidance",
-    "Trust & Safety"
+    "Trust & Safety",
+    "Dietary Substitution"
   ],
   "categoryCounts": {
     "Profile & Household": 10,
@@ -44,9 +69,10 @@
     "Product Intelligence": 10,
     "Food Knowledge": 10,
     "Companion Guidance": 8,
-    "Trust & Safety": 10
+    "Trust & Safety": 10,
+    "Dietary Substitution": 3
   },
-  "totalQuestions": 100,
+  "totalQuestions": 103,
   "questions": [
     {
       "id": "PH-001",
@@ -405,7 +431,7 @@
       "category": "Cookbook",
       "utterance": "Which meals are the least processed or most whole-food based?",
       "rationale": "Tests UPF/whole-food cookbook scoring.",
-      "capability": "meals.read + upf/nutrition",
+      "capability": "meal-discovery.search + upf/nutrition",
       "maturityHorizons": {
         "launch": "Rank meals by whole-food/UPF indicators where known.",
         "y1": "Show why top meals score well.",
@@ -1219,7 +1245,7 @@
       "category": "Nutrition & Diary",
       "utterance": "How many plants have I eaten this week?",
       "rationale": "Tests plant diversity metric.",
-      "capability": "nutrition-report.read",
+      "capability": "planner.read + diary-discovery.search + nutrition-report",
       "maturityHorizons": {
         "launch": "Return weekly plant count if available.",
         "y1": "Show categories and examples.",
@@ -1351,7 +1377,7 @@
       "category": "Nutrition & Diary",
       "utterance": "How has my nutrition improved compared with last week?",
       "rationale": "Tests trend comparison.",
-      "capability": "nutrition-history",
+      "capability": "food-intelligence.compare + nutrition-report",
       "maturityHorizons": {
         "launch": "Compare metrics if history exists; otherwise explain need for more data.",
         "y1": "Show plant count/protein/UPF trends.",
@@ -1483,7 +1509,7 @@
       "category": "Product Intelligence",
       "utterance": "Is this cereal a good choice for my family?",
       "rationale": "Tests product + household fit.",
-      "capability": "household.read + product-analysis",
+      "capability": "product-analysis + household",
       "maturityHorizons": {
         "launch": "Assess using known product data and restrictions.",
         "y1": "Compare sugar/fibre/additives if present.",
@@ -2244,6 +2270,72 @@
       "trustConcern": "Do not advertise capabilities that don't exist.",
       "grades": {
         "chatgptPredicted": "B",
+        "claudePredicted": "TBC",
+        "actual": "TBC"
+      }
+    },
+    {
+      "id": "DS-101",
+      "category": "Dietary Substitution",
+      "utterance": "Add BENCH Honey Granola to my planner for Monday breakfast.",
+      "rationale": "Tests COMP_SUB2: a household with a honey restriction asks to add an existing cookbook recipe that contains honey — the correct answer is a refusal-with-substitution-offer, never a silent write or a flat dead-end.",
+      "capability": "meals.replace",
+      "maturityHorizons": {
+        "launch": "Detect the conflict, name the conflicting ingredient, and offer a real curated substitute before writing anything.",
+        "y1": "One-tap confirm to apply the substitution.",
+        "y2": "Offer a community-learned alternative when no curated one exists.",
+        "y3": "Learn the household's preferred substitute over repeated asks.",
+        "y5": "Adapt the whole recipe (quantities, method) around the swap.",
+        "y10": "Household-trusted recipe adaptation, zero manual editing."
+      },
+      "evidenceExpected": "Household hard restrictions + the recipe's own ingredient list + the curated substitution rule library.",
+      "trustConcern": "Never claim the recipe was updated before the household confirms; never suggest a replacement that itself conflicts with the restriction.",
+      "grades": {
+        "chatgptPredicted": "TBC",
+        "claudePredicted": "TBC",
+        "actual": "TBC"
+      }
+    },
+    {
+      "id": "DS-102",
+      "category": "Dietary Substitution",
+      "utterance": "Can you suggest a breakfast that will boot my immune system?",
+      "rationale": "Regression lock for a live-reported bug: the literal typo \"boot\" (meant \"boost\") previously missed the immune-support benefit entirely and fell through to a generic non-answer. Tests the deterministic intent-spellcheck layer, not an LLM guess.",
+      "capability": "nutrition-knowledge.search",
+      "maturityHorizons": {
+        "launch": "Correct the obvious typo and still surface the immune-support benefit and example foods.",
+        "y1": "Suggest an actual breakfast meal grounded in those foods.",
+        "y2": "Personalise to the household's own cookbook.",
+        "y3": "Track which immune-supportive foods the household already eats.",
+        "y5": "Proactively flag a gap in immune-supportive foods before being asked.",
+        "y10": "Longitudinal immune-nutrition coaching, still honest about its limits."
+      },
+      "evidenceExpected": "knowledge_health_benefits (immune-support) + nutrient/food seed data.",
+      "trustConcern": "Never overstate what food can do for immunity; no medical claims.",
+      "grades": {
+        "chatgptPredicted": "TBC",
+        "claudePredicted": "TBC",
+        "actual": "TBC"
+      }
+    },
+    {
+      "id": "DS-103",
+      "category": "Dietary Substitution",
+      "utterance": "What foods can help my immunity?",
+      "rationale": "Regression lock for a KNOWN, still-open gap found while fixing DS-102: this exact possessive phrasing (\"my immunity\") is not yet matched by the benefit-search widening, and correctly dead-ends honestly today rather than fabricating an answer. Authored deliberately failing so the eventual fix is visible as a score change, not silent.",
+      "capability": "nutrition-knowledge.search",
+      "maturityHorizons": {
+        "launch": "Strip the possessive/pronoun framing and still match the immune-support benefit.",
+        "y1": "Suggest example foods and a meal.",
+        "y2": "Personalise to the household's own cookbook.",
+        "y3": "Track household immune-supportive food intake.",
+        "y5": "Proactively flag a gap before being asked.",
+        "y10": "Longitudinal immune-nutrition coaching, still honest about its limits."
+      },
+      "evidenceExpected": "knowledge_health_benefits (immune-support) + nutrient/food seed data.",
+      "trustConcern": "An honest \"I don't have that\" is correct here today; the risk is a future fix overcorrecting into a fabricated answer.",
+      "grades": {
+        "chatgptPredicted": "TBC",
         "claudePredicted": "TBC",
         "actual": "TBC"
       }

@@ -49,8 +49,11 @@ const CANONICAL_CATEGORIES: Array<{ name: string; prefix: string; first: number;
   { name: "Food Knowledge", prefix: "FK", first: 73, count: 10 },
   { name: "Companion Guidance", prefix: "CG", first: 83, count: 8 },
   { name: "Trust & Safety", prefix: "TS", first: 91, count: 10 },
+  // v1.1.0 (2026-11-16) — appended, not part of the original Benchmark 100. Covers
+  // COMP_SUB2 (fish/honey substitution) and the intent-spellcheck/benefit-search fix.
+  { name: "Dietary Substitution", prefix: "DS", first: 101, count: 3 },
 ];
-const EXPECTED_TOTAL = 100;
+const EXPECTED_TOTAL = 103;
 const HORIZONS = ["launch", "y1", "y2", "y3", "y5", "y10"] as const;
 
 const failures: string[] = [];
@@ -93,7 +96,11 @@ try {
 }
 
 if (fixture.bundleComponent !== "questions") fail("§1", `bundleComponent should be "questions", got ${JSON.stringify(fixture.bundleComponent)}`);
-if (fixture.version !== "v1.0.0") fail("§1", `version should be "v1.0.0", got ${JSON.stringify(fixture.version)}`);
+// v1.0.1 (2026-11-16) — 4 authored "capability" fields corrected; see the fixture's own
+// "corrections" field for what changed and why. Question wording is still untouched.
+// v1.1.0 (2026-11-16) — 3 new questions appended (DS-101..103, a new category); see the
+// fixture's own "additions" field. No existing question's wording/capability/category changed.
+if (fixture.version !== "v1.1.0") fail("§1", `version should be "v1.1.0", got ${JSON.stringify(fixture.version)}`);
 if (!Array.isArray(fixture.questions)) {
   fail("§1", "fixture.questions is not an array");
 }
