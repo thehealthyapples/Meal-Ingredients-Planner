@@ -1,5 +1,37 @@
 [
   {
+    "runId": "2026-11-17T23-48-19Z__e245a5c",
+    "mode": "certification",
+    "status": "framework-only",
+    "executedAt": "2026-11-17T23:48:19.116Z",
+    "commit": "e245a5c629783d6e2ab515393dd85679525a576d",
+    "branch": "feat/integrated-dev",
+    "bundleVersion": "v1.0.1 (mixed)",
+    "rubricVersion": "v2.0.0",
+    "headlineScore": 0,
+    "honestGapRate": 0,
+    "gatesFired": 0,
+    "routingGatesFired": 0,
+    "intentResolutionAccuracy": 0,
+    "verdict": "PARTIAL"
+  },
+  {
+    "runId": "2026-11-17T23-50-17Z__e245a5c",
+    "mode": "full",
+    "status": "scored",
+    "executedAt": "2026-11-17T23:39:13.697Z",
+    "commit": "e245a5c629783d6e2ab515393dd85679525a576d",
+    "branch": "feat/integrated-dev",
+    "bundleVersion": "v1.0.1 (mixed)",
+    "rubricVersion": "v2.0.0",
+    "headlineScore": 71,
+    "honestGapRate": 0.429,
+    "gatesFired": 0,
+    "routingGatesFired": 0,
+    "intentResolutionAccuracy": 1,
+    "verdict": "PARTIAL"
+  },
+  {
     "runId": "2026-11-17T22-24-48Z__fdfaef0",
     "mode": "quick",
     "status": "scored",

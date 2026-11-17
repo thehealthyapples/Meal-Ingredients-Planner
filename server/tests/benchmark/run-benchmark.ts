@@ -21,6 +21,7 @@ import { makeCompanionTurnRunner } from "./companion-turn.js";
 import { saveRun, selectBaseline } from "./history.js";
 import { resolveBundle, bundleVersionLabel } from "./bundle.js";
 import { buildHouseholdGroundTruth } from "./ground-truth.js";
+import { benchmarkProgress } from "../../intelligence/observation/benchmark-progress.js";
 import type { BenchmarkMode } from "./types.js";
 
 function arg(name: string, envKey: string, fallback: string): string {
@@ -63,6 +64,9 @@ async function main(): Promise<void> {
   // query fails, ground-truth.ts degrades that slice to empty/null rather than guess.
   const groundTruth = await buildHouseholdGroundTruth(userId);
 
+  // Start progress tracking
+  benchmarkProgress.start(mode, mode === "quick" ? 10 : mode === "full" ? 100 : 0);
+
   const result = await runBenchmark({
     mode,
     runTurn,
@@ -70,8 +74,14 @@ async function main(): Promise<void> {
     householdLabel: `user-${userId}`,
     baseline,
     groundTruth,
-    onProgress: (done, total, id) => process.stdout.write(`\r  ${done}/${total}  ${id.padEnd(8)}`),
+    onProgress: (done, total, id) => {
+      process.stdout.write(`\r  ${done}/${total}  ${id.padEnd(8)}`);
+      benchmarkProgress.updateCurrent(id, "");
+      benchmarkProgress.updateProgress(done);
+    },
   });
+
+  benchmarkProgress.finish();
 
   const { jsonPath, reportPath } = saveRun(result);
   console.log(`\n\nOverall Intelligence Score: ${result.headline.score}/100  ·  ${result.releaseReadiness.verdict}`);

@@ -1,0 +1,229 @@
+{
+  "schemaVersion": "1.2.0",
+  "runId": "2026-11-17T23-48-19Z__e245a5c",
+  "mode": "certification",
+  "status": "framework-only",
+  "abortReason": "Certification requires the STRICT preconditions (EXECUTION_PROCESS §2): the six deterministic households seeded to fixed IDs into a disposable database (households.v1.json seed contract), and the pinned temperature-0 judge reachable. INTQ4 ships the certification framework only; run Quick or Full for an executable deterministic-tier score.",
+  "bundle": {
+    "questions": "v1.0.1",
+    "households": "v1.0.0",
+    "rubric": "v2.0.0",
+    "judge": "v2.0.0",
+    "framework": "v2.1.0",
+    "fixtureChecksum": "sha256:49bc1f596745ab0b9715830564c11472"
+  },
+  "subject": {
+    "commit": "e245a5c629783d6e2ab515393dd85679525a576d",
+    "branch": "feat/integrated-dev",
+    "dirty": false,
+    "capabilityRegistryVersion": "sha256:263a19e393fe927c5e9748ddd275dda4",
+    "knowledgeVersion": "sha256:afc756fe4ea895d956c6fce4a36ec64f",
+    "clock": "wall",
+    "executedAt": "2026-11-17T23:48:19.116Z"
+  },
+  "judge": {
+    "model": "gpt-4o-mini",
+    "temperature": 0,
+    "promptHash": "sha256:0376a83082b72d58196d528714146a73",
+    "invoked": false
+  },
+  "repeats": 1,
+  "worldMode": "deterministic-households",
+  "headline": {
+    "score": 0,
+    "honestGapRate": 0,
+    "gatesFired": 0,
+    "questionsScored": 0,
+    "meanLatencyMs": 0,
+    "routingGatesFired": 0,
+    "intentResolutionAccuracy": 0,
+    "capabilityReach": 0,
+    "hallucinationRate": 0
+  },
+  "environment": {
+    "llmProviderAvailable": false,
+    "judgeInvoked": false,
+    "dietarySafetyMeasured": false
+  },
+  "routing": {
+    "routingRequiredQuestions": 0,
+    "capabilityReachPct": 0,
+    "intentResolutionAccuracyPct": 0,
+    "capabilityMisses": 0,
+    "misroutes": 0,
+    "misroutesReachingSecondary": 0,
+    "unreachableCapabilities": [],
+    "unreachableCapabilityCount": 0,
+    "failureReasons": {},
+    "validHonestGaps": 0,
+    "invokedCapabilitiesSource": "none"
+  },
+  "coverage": {
+    "intendedCapabilities": [],
+    "invokedCapabilities": [],
+    "intendedCoveragePct": 0,
+    "registryExecutableCapabilities": [
+      "analyser",
+      "community",
+      "diary",
+      "diary-discovery",
+      "evidence-learning",
+      "food-intelligence",
+      "household",
+      "household-discovery",
+      "meal-discovery",
+      "meals",
+      "nutrition-discovery",
+      "nutrition-knowledge",
+      "opportunity-delivery",
+      "pantry",
+      "pantry-discovery",
+      "partners",
+      "planner",
+      "planner-discovery",
+      "product-knowledge",
+      "profile",
+      "shopping",
+      "shopping-discovery",
+      "templates"
+    ],
+    "registryCoveragePct": 0,
+    "untestedCapabilities": [
+      "analyser",
+      "community",
+      "diary",
+      "diary-discovery",
+      "evidence-learning",
+      "food-intelligence",
+      "household",
+      "household-discovery",
+      "meal-discovery",
+      "meals",
+      "nutrition-discovery",
+      "nutrition-knowledge",
+      "opportunity-delivery",
+      "pantry",
+      "pantry-discovery",
+      "partners",
+      "planner",
+      "planner-discovery",
+      "product-knowledge",
+      "profile",
+      "shopping",
+      "shopping-discovery",
+      "templates"
+    ]
+  },
+  "coverageByDomain": [],
+  "routingFailures": [],
+  "quality": {
+    "questionsScored": 0,
+    "meanComposite": 0,
+    "meanD1Band": 0,
+    "meanD5Band": 0,
+    "meanD7Band": 0,
+    "reachedButEmpty": 0,
+    "judgeInvoked": false
+  },
+  "hallucination": {
+    "count": 0,
+    "rate": 0,
+    "questionIds": [],
+    "basis": "Not scored — certification is framework-only."
+  },
+  "capabilityUtilisation": {
+    "probeActive": false,
+    "exercised": [],
+    "neverExercised": [],
+    "neverExercisedCount": 0,
+    "registeredUnbound": [],
+    "bypassedQuestions": [],
+    "bypassedStructural": 0,
+    "bypassedDefect": 0,
+    "totalInvocations": 0,
+    "totalCapabilityTimeMs": 0,
+    "capabilityTimeShareOfRun": 0,
+    "utilisationPct": 0
+  },
+  "dimensions": [
+    {
+      "key": "D1",
+      "name": "Factual Correctness",
+      "weight": 30,
+      "points": 0,
+      "bandPct": 0
+    },
+    {
+      "key": "D2",
+      "name": "Honesty / Honest-Gap",
+      "weight": 20,
+      "points": 0,
+      "bandPct": 0
+    },
+    {
+      "key": "D3",
+      "name": "Safety & Permission",
+      "weight": 15,
+      "points": 0,
+      "bandPct": 0
+    },
+    {
+      "key": "D4",
+      "name": "Capability Routing",
+      "weight": 12,
+      "points": 0,
+      "bandPct": 0
+    },
+    {
+      "key": "D5",
+      "name": "Relevance & Completeness",
+      "weight": 13,
+      "points": 0,
+      "bandPct": 0
+    },
+    {
+      "key": "D6",
+      "name": "Voice & Companion Tone",
+      "weight": 5,
+      "points": 0,
+      "bandPct": 0
+    },
+    {
+      "key": "D7",
+      "name": "Presentation & Structure",
+      "weight": 5,
+      "points": 0,
+      "bandPct": 0
+    }
+  ],
+  "domains": [],
+  "capabilities": [],
+  "capabilitiesCrossCutting": [],
+  "households": [],
+  "personalities": [],
+  "safety": {
+    "G1": [],
+    "G2": [],
+    "G3": [],
+    "G4": [],
+    "G5": []
+  },
+  "topImprovements": [],
+  "topRegressions": [],
+  "failedQuestions": [],
+  "newlyFailing": [],
+  "newlyPassing": [],
+  "releaseReadiness": {
+    "verdict": "PARTIAL",
+    "blockers": [],
+    "warnings": [
+      "Certification not executed — framework only (see abortReason)."
+    ],
+    "notes": [
+      "Bundle v1.0.1 (mixed) resolved and ready; preconditions pending."
+    ]
+  },
+  "questions": [],
+  "baselineRunId": null,
+  "durationMs": 0
+}

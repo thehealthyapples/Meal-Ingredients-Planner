@@ -9563,6 +9563,23 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     }
   });
 
+  // BENCH-PROGRESS — real-time progress tracking for running benchmarks
+  app.get("/api/admin/benchmark-progress", assertAdmin, async (_req, res) => {
+    try {
+      const { benchmarkProgress } = await import("./intelligence/observation/benchmark-progress.js");
+      const progress = benchmarkProgress.getProgress();
+      res.json({
+        ...progress,
+        estimatedCompletionTime: progress.startTime && progress.isRunning
+          ? new Date(Date.now() + progress.estimatedRemainingMs).toISOString()
+          : null,
+      });
+    } catch (err: any) {
+      console.error("[BenchmarkProgress] read error:", err);
+      res.status(500).json({ message: err?.message ?? "Failed to read benchmark progress" });
+    }
+  });
+
   app.post("/api/admin/benchmark-households/:id/reset", assertAdmin, async (req, res) => {
     try {
       const { assertBenchmarkWorldAllowed, resetBenchmarkHousehold } = await import("./benchmark/index.js");
