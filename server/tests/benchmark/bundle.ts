@@ -103,7 +103,7 @@ export const RESULT_SCHEMA_VERSION = "1.2.0";
  *  `SIMPLE_CAPABILITY_FAMILIES`/`selectJudgeModel` for the actual routing rule
  *  this string summarises. See JUDGE_VERSION above for why this is still "pinned".
  *  Updated 2026-11-17: gpt-4.1 → gpt-6-luna for cost efficiency. */
-export const JUDGE_MODEL = "gpt-4o-mini (profile/household) / gpt-6-luna (everything else)";
+export const JUDGE_MODEL = "gpt-6-luna (all questions)";
 
 /**
  * The clock a run actually had.
