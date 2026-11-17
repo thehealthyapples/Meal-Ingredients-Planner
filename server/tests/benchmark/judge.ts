@@ -81,7 +81,7 @@ export interface JudgeClient {
 const SIMPLE_CAPABILITY_FAMILIES: ReadonlySet<string> = new Set(["profile", "household"]);
 
 const SIMPLE_JUDGE_MODEL = "gpt-4o-mini";
-const COMPLEX_JUDGE_MODEL = "gpt-4.1";
+const COMPLEX_JUDGE_MODEL = "gpt-6-luna";
 
 /** Mechanical, deterministic model pick — never an LLM call. */
 function selectJudgeModel(exp: ExpectationRecord): string {

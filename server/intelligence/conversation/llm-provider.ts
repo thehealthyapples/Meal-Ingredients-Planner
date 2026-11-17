@@ -28,6 +28,15 @@ export interface LlmRequest {
   maxTokens?: number;
   /** When true, the provider MUST return valid JSON. */
   jsonMode?: boolean;
+  /**
+   * COMP_TIER1 — override the provider's default model for this one call.
+   * Omit for the provider's normal model (`gpt-4o-mini`). The gateway uses
+   * this to route a turn needing real cross-referencing (multiple shopping/
+   * pantry/meal/household records, not a single scalar fact) to a stronger
+   * model — see conversation-gateway.ts's `selectCompanionModel`. Ignored by
+   * providers that have only one model (e.g. NoOpProvider).
+   */
+  model?: string;
 }
 
 export interface LlmResponse {
@@ -62,8 +71,9 @@ export class OpenAIProvider implements ILlmProvider {
     const { default: OpenAI } = await import("openai");
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+    const model = request.model ?? this.modelName;
     const completion = await client.chat.completions.create({
-      model: this.modelName,
+      model,
       messages: request.messages,
       temperature: request.temperature ?? 0.3,
       max_tokens: request.maxTokens ?? 400,
@@ -74,7 +84,7 @@ export class OpenAIProvider implements ILlmProvider {
 
     return {
       content: completion.choices[0]?.message?.content?.trim() ?? "",
-      model: this.modelName,
+      model,
     };
   }
 }

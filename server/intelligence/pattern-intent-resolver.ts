@@ -1292,6 +1292,28 @@ const HOUSEHOLD_MATCHERS: Matcher[] = [
       confidence: 0.85,
     };
   },
+
+  // BENCH4 (PH-005): "is everyone in my household eating the same diet?" / "does everyone
+  // have the same restrictions?" — a PER-MEMBER diet/restriction COMPARISON, which
+  // household-read-handler.ts's "dietary-context" scope exists for (each member's own
+  // dietPattern/dietRestrictions + the aggregated union) but had no matcher routing to it
+  // at all: the generic "household"/"everyone in" catch-all below routes here instead,
+  // whose result carries only membership rows (id/role/status) — no diet data per member.
+  // Live-confirmed: with no per-member diet data in its context, the Companion still
+  // confidently answered "yes, everyone... Keto... gluten-free" — a hallucination the
+  // "dietary-context" scope's real per-member breakdown lets it actually check instead.
+  (u) => {
+    const asksComparison = /\b(?:everyone|everybody|all\s+of\s+us|we\s+all)\b/i.test(u) &&
+      /\b(?:same|different)\b/i.test(u) &&
+      /\b(?:diet|restriction|allerg|eating)\b/i.test(u);
+    if (!asksComparison) return null;
+    return {
+      capability: "household",
+      verb: "read",
+      parameters: { scope: "dietary-context" },
+      confidence: 0.87,
+    };
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -2215,6 +2237,24 @@ const MEALS_MATCHERS: Matcher[] = [
   // with the planner matcher ("what meals do I have this week").
   (u) => {
     if (!/\b(?:what|which)\s+(?:meals?|recipes?|dishes?)\s+(?:have\s+i\s+got|do\s+i\s+have)\b/i.test(u)) return null;
+    if (/\b(?:this|next|last)\s+week\b|\bplanned\b/i.test(u)) return null;
+    return {
+      capability: "meals",
+      verb: "read",
+      parameters: { scope: "summary" },
+      confidence: 0.86,
+    };
+  },
+
+  // BENCH4 (CB-011): "how many meals are in my cookbook?" / "how many recipes do I have?"
+  // A COUNT of the whole library — meals-read-handler.ts's "summary" projection already
+  // carries `mealCount` for exactly this, but with no deterministic matcher for "how
+  // many" phrasing the utterance fell through to the bounded LLM fallback, which named
+  // the right capability/verb but supplied no `scope` at all — an honest gap
+  // ("Unsupported meals read scope undefined"), live-confirmed, even though the cookbook
+  // was fully populated. Week-scoped phrasings stay with the planner matcher.
+  (u) => {
+    if (!/\bhow\s+many\s+(?:meals?|recipes?|dishes?)\b/i.test(u)) return null;
     if (/\b(?:this|next|last)\s+week\b|\bplanned\b/i.test(u)) return null;
     return {
       capability: "meals",

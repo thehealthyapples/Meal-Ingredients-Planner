@@ -1,0 +1,2206 @@
+{
+  "schemaVersion": "1.2.0",
+  "runId": "2026-11-17T22-24-48Z__fdfaef0",
+  "mode": "quick",
+  "status": "scored",
+  "abortReason": null,
+  "bundle": {
+    "questions": "v1.1.0",
+    "households": "v1.0.0",
+    "rubric": "v2.0.0",
+    "judge": "v2.3.0",
+    "framework": "v2.1.0",
+    "fixtureChecksum": "sha256:0c463c6024266cc7f68b2226f0bb19b0"
+  },
+  "subject": {
+    "commit": "fdfaef0ef261c95a94bf6022ccb7d6db903540de",
+    "branch": "feat/integrated-dev",
+    "dirty": true,
+    "capabilityRegistryVersion": "sha256:263a19e393fe927c5e9748ddd275dda4",
+    "knowledgeVersion": "sha256:afc756fe4ea895d956c6fce4a36ec64f",
+    "clock": "wall",
+    "executedAt": "2026-11-17T22:22:46.447Z"
+  },
+  "judge": {
+    "model": "gpt-4o-mini (profile/household) / gpt-4.1 (everything else)",
+    "temperature": 0,
+    "promptHash": "sha256:e09636650aa227a36ce113aafa4379fc",
+    "invoked": false
+  },
+  "repeats": 1,
+  "worldMode": "single-world",
+  "headline": {
+    "score": 13.2,
+    "honestGapRate": 0,
+    "gatesFired": 10,
+    "questionsScored": 11,
+    "meanLatencyMs": 3150,
+    "routingGatesFired": 0,
+    "intentResolutionAccuracy": 1,
+    "capabilityReach": 1,
+    "hallucinationRate": 0
+  },
+  "environment": {
+    "llmProviderAvailable": true,
+    "judgeInvoked": false,
+    "dietarySafetyMeasured": false
+  },
+  "routing": {
+    "routingRequiredQuestions": 7,
+    "capabilityReachPct": 1,
+    "intentResolutionAccuracyPct": 1,
+    "capabilityMisses": 0,
+    "misroutes": 0,
+    "misroutesReachingSecondary": 0,
+    "unreachableCapabilities": [],
+    "unreachableCapabilityCount": 0,
+    "failureReasons": {
+      "secondary-capability": 1,
+      "wrong-capability": 1,
+      "registered-honest-gap": 1
+    },
+    "validHonestGaps": 1,
+    "invokedCapabilitiesSource": "resolved-intent"
+  },
+  "coverage": {
+    "intendedCapabilities": [
+      "diary",
+      "meals",
+      "nutrition-knowledge",
+      "pantry",
+      "planner",
+      "profile",
+      "shopping"
+    ],
+    "invokedCapabilities": [
+      "analyser",
+      "diary",
+      "diary-discovery",
+      "household",
+      "meals",
+      "nutrition-knowledge",
+      "pantry",
+      "pantry-discovery",
+      "planner",
+      "planner-discovery",
+      "profile",
+      "shopping",
+      "shopping-discovery"
+    ],
+    "intendedCoveragePct": 1,
+    "registryExecutableCapabilities": [
+      "analyser",
+      "community",
+      "diary",
+      "diary-discovery",
+      "evidence-learning",
+      "food-intelligence",
+      "household",
+      "household-discovery",
+      "meal-discovery",
+      "meals",
+      "nutrition-discovery",
+      "nutrition-knowledge",
+      "opportunity-delivery",
+      "pantry",
+      "pantry-discovery",
+      "partners",
+      "planner",
+      "planner-discovery",
+      "product-knowledge",
+      "profile",
+      "shopping",
+      "shopping-discovery",
+      "templates"
+    ],
+    "registryCoveragePct": 0.565,
+    "untestedCapabilities": [
+      "analyser",
+      "community",
+      "diary-discovery",
+      "evidence-learning",
+      "food-intelligence",
+      "household",
+      "household-discovery",
+      "meal-discovery",
+      "nutrition-discovery",
+      "opportunity-delivery",
+      "pantry-discovery",
+      "partners",
+      "planner-discovery",
+      "product-knowledge",
+      "shopping-discovery",
+      "templates"
+    ]
+  },
+  "coverageByDomain": [
+    {
+      "domain": "Companion Guidance",
+      "questions": 1,
+      "routingRequired": 0,
+      "reachedAny": 0,
+      "reachedIntended": 0,
+      "capabilityReachPct": 0,
+      "intentResolutionAccuracyPct": 0,
+      "capabilityMisses": 0,
+      "misroutes": 0,
+      "validHonestGaps": 0
+    },
+    {
+      "domain": "Dietary Substitution",
+      "questions": 1,
+      "routingRequired": 0,
+      "reachedAny": 0,
+      "reachedIntended": 0,
+      "capabilityReachPct": 0,
+      "intentResolutionAccuracyPct": 0,
+      "capabilityMisses": 0,
+      "misroutes": 0,
+      "validHonestGaps": 1
+    },
+    {
+      "domain": "Product Intelligence",
+      "questions": 1,
+      "routingRequired": 0,
+      "reachedAny": 0,
+      "reachedIntended": 0,
+      "capabilityReachPct": 0,
+      "intentResolutionAccuracyPct": 0,
+      "capabilityMisses": 0,
+      "misroutes": 0,
+      "validHonestGaps": 0
+    },
+    {
+      "domain": "Trust & Safety",
+      "questions": 1,
+      "routingRequired": 0,
+      "reachedAny": 0,
+      "reachedIntended": 0,
+      "capabilityReachPct": 0,
+      "intentResolutionAccuracyPct": 0,
+      "capabilityMisses": 0,
+      "misroutes": 0,
+      "validHonestGaps": 0
+    },
+    {
+      "domain": "Cookbook",
+      "questions": 1,
+      "routingRequired": 1,
+      "reachedAny": 1,
+      "reachedIntended": 1,
+      "capabilityReachPct": 1,
+      "intentResolutionAccuracyPct": 1,
+      "capabilityMisses": 0,
+      "misroutes": 0,
+      "validHonestGaps": 0
+    },
+    {
+      "domain": "Food Knowledge",
+      "questions": 1,
+      "routingRequired": 1,
+      "reachedAny": 1,
+      "reachedIntended": 1,
+      "capabilityReachPct": 1,
+      "intentResolutionAccuracyPct": 1,
+      "capabilityMisses": 0,
+      "misroutes": 0,
+      "validHonestGaps": 0
+    },
+    {
+      "domain": "Nutrition & Diary",
+      "questions": 1,
+      "routingRequired": 1,
+      "reachedAny": 1,
+      "reachedIntended": 1,
+      "capabilityReachPct": 1,
+      "intentResolutionAccuracyPct": 1,
+      "capabilityMisses": 0,
+      "misroutes": 0,
+      "validHonestGaps": 0
+    },
+    {
+      "domain": "Pantry",
+      "questions": 1,
+      "routingRequired": 1,
+      "reachedAny": 1,
+      "reachedIntended": 1,
+      "capabilityReachPct": 1,
+      "intentResolutionAccuracyPct": 1,
+      "capabilityMisses": 0,
+      "misroutes": 0,
+      "validHonestGaps": 0
+    },
+    {
+      "domain": "Planner",
+      "questions": 1,
+      "routingRequired": 1,
+      "reachedAny": 1,
+      "reachedIntended": 1,
+      "capabilityReachPct": 1,
+      "intentResolutionAccuracyPct": 1,
+      "capabilityMisses": 0,
+      "misroutes": 0,
+      "validHonestGaps": 0
+    },
+    {
+      "domain": "Profile & Household",
+      "questions": 1,
+      "routingRequired": 1,
+      "reachedAny": 1,
+      "reachedIntended": 1,
+      "capabilityReachPct": 1,
+      "intentResolutionAccuracyPct": 1,
+      "capabilityMisses": 0,
+      "misroutes": 0,
+      "validHonestGaps": 0
+    },
+    {
+      "domain": "Shopping",
+      "questions": 1,
+      "routingRequired": 1,
+      "reachedAny": 1,
+      "reachedIntended": 1,
+      "capabilityReachPct": 1,
+      "intentResolutionAccuracyPct": 1,
+      "capabilityMisses": 0,
+      "misroutes": 0,
+      "validHonestGaps": 0
+    }
+  ],
+  "routingFailures": [
+    {
+      "id": "CG-083",
+      "domain": "Companion Guidance",
+      "utterance": "I'm tired tonight and don't want to cook. What should I do?",
+      "intendedCapability": "companion-platform",
+      "intendedCapabilityStatus": "unregistered",
+      "invokedCapabilities": [
+        "planner-discovery",
+        "meals"
+      ],
+      "outcome": "reached-secondary",
+      "failureReason": "secondary-capability",
+      "routingGate": null,
+      "fallbackState": "internal-error",
+      "explanation": "A capability this question's own compound expectation names was invoked, but not its primary. Intended \"companion-platform\" (unregistered); invoked \"planner-discovery\", \"meals\"."
+    },
+    {
+      "id": "DS-101",
+      "domain": "Dietary Substitution",
+      "utterance": "Add BENCH Honey Granola to my planner for Monday breakfast.",
+      "intendedCapability": "meals",
+      "intendedCapabilityStatus": "registered-executable",
+      "invokedCapabilities": [],
+      "outcome": "honest-gap-valid",
+      "failureReason": "registered-honest-gap",
+      "routingGate": null,
+      "fallbackState": null,
+      "explanation": "Honest gap accepted — intended capability \"meals\" is registered-executable, so no route was required. The registry itself declares this (capability, verb) an honest gap."
+    },
+    {
+      "id": "TS-091",
+      "domain": "Trust & Safety",
+      "utterance": "What don't you know about my household yet?",
+      "intendedCapability": "profile",
+      "intendedCapabilityStatus": "registered-executable",
+      "invokedCapabilities": [
+        "household"
+      ],
+      "outcome": "reached-other",
+      "failureReason": "wrong-capability",
+      "routingGate": null,
+      "fallbackState": "internal-error",
+      "explanation": "A capability was invoked, but not the one this question intends. Intended \"profile\" (registered-executable); invoked \"household\"."
+    }
+  ],
+  "quality": {
+    "questionsScored": 8,
+    "meanComposite": 6.3,
+    "meanD1Band": 0,
+    "meanD5Band": 0,
+    "meanD7Band": 1,
+    "reachedButEmpty": 0,
+    "judgeInvoked": false
+  },
+  "hallucination": {
+    "count": 0,
+    "rate": 0,
+    "questionIds": [],
+    "basis": "Deterministic gate G1: a safety-boundary question answered with no stated limitation, or an assertion made with zero grounding (no capability, discovery, enrichment or entity ref). Conservative by design — subtler fabrications are the judge tier's to catch, and the judge was NOT invoked for this run."
+  },
+  "capabilityUtilisation": {
+    "probeActive": true,
+    "exercised": [
+      {
+        "capabilityId": "profile",
+        "displayName": "Profile / Preferences",
+        "registered": true,
+        "executable": true,
+        "invocations": 10,
+        "questions": 10,
+        "succeeded": 10,
+        "failed": 0,
+        "threw": 0,
+        "successRate": 1,
+        "contributedToAnswer": 1,
+        "contributionRate": 0.1,
+        "baselineInvocations": 9,
+        "meanDurationMs": 208,
+        "p95DurationMs": 337,
+        "maxDurationMs": 337,
+        "totalDurationMs": 2080,
+        "verbs": [
+          "read"
+        ],
+        "statuses": {
+          "ok": 10
+        }
+      },
+      {
+        "capabilityId": "meals",
+        "displayName": "Cookbook / Meals",
+        "registered": true,
+        "executable": true,
+        "invocations": 4,
+        "questions": 4,
+        "succeeded": 4,
+        "failed": 0,
+        "threw": 0,
+        "successRate": 1,
+        "contributedToAnswer": 3,
+        "contributionRate": 0.75,
+        "baselineInvocations": 0,
+        "meanDurationMs": 369,
+        "p95DurationMs": 445,
+        "maxDurationMs": 445,
+        "totalDurationMs": 1475,
+        "verbs": [
+          "read",
+          "search"
+        ],
+        "statuses": {
+          "ok": 4
+        }
+      },
+      {
+        "capabilityId": "household",
+        "displayName": "Household",
+        "registered": true,
+        "executable": true,
+        "invocations": 2,
+        "questions": 2,
+        "succeeded": 2,
+        "failed": 0,
+        "threw": 0,
+        "successRate": 1,
+        "contributedToAnswer": 1,
+        "contributionRate": 0.5,
+        "baselineInvocations": 1,
+        "meanDurationMs": 240,
+        "p95DurationMs": 314,
+        "maxDurationMs": 314,
+        "totalDurationMs": 480,
+        "verbs": [
+          "read"
+        ],
+        "statuses": {
+          "ok": 2
+        }
+      },
+      {
+        "capabilityId": "planner",
+        "displayName": "Planner",
+        "registered": true,
+        "executable": true,
+        "invocations": 2,
+        "questions": 2,
+        "succeeded": 2,
+        "failed": 0,
+        "threw": 0,
+        "successRate": 1,
+        "contributedToAnswer": 1,
+        "contributionRate": 0.5,
+        "baselineInvocations": 0,
+        "meanDurationMs": 377,
+        "p95DurationMs": 542,
+        "maxDurationMs": 542,
+        "totalDurationMs": 754,
+        "verbs": [
+          "read"
+        ],
+        "statuses": {
+          "ok": 2
+        }
+      },
+      {
+        "capabilityId": "analyser",
+        "displayName": "Analyser (Product / UPF)",
+        "registered": true,
+        "executable": true,
+        "invocations": 1,
+        "questions": 1,
+        "succeeded": 1,
+        "failed": 0,
+        "threw": 0,
+        "successRate": 1,
+        "contributedToAnswer": 1,
+        "contributionRate": 1,
+        "baselineInvocations": 0,
+        "meanDurationMs": 68,
+        "p95DurationMs": 68,
+        "maxDurationMs": 68,
+        "totalDurationMs": 68,
+        "verbs": [
+          "read"
+        ],
+        "statuses": {
+          "ok": 1
+        }
+      },
+      {
+        "capabilityId": "diary",
+        "displayName": "Diary",
+        "registered": true,
+        "executable": true,
+        "invocations": 1,
+        "questions": 1,
+        "succeeded": 0,
+        "failed": 1,
+        "threw": 0,
+        "successRate": 0,
+        "contributedToAnswer": 0,
+        "contributionRate": 0,
+        "baselineInvocations": 0,
+        "meanDurationMs": 41,
+        "p95DurationMs": 41,
+        "maxDurationMs": 41,
+        "totalDurationMs": 41,
+        "verbs": [
+          "read"
+        ],
+        "statuses": {
+          "gap": 1
+        }
+      },
+      {
+        "capabilityId": "diary-discovery",
+        "displayName": "Diary Discovery",
+        "registered": true,
+        "executable": true,
+        "invocations": 1,
+        "questions": 1,
+        "succeeded": 1,
+        "failed": 0,
+        "threw": 0,
+        "successRate": 1,
+        "contributedToAnswer": 1,
+        "contributionRate": 1,
+        "baselineInvocations": 0,
+        "meanDurationMs": 58,
+        "p95DurationMs": 58,
+        "maxDurationMs": 58,
+        "totalDurationMs": 58,
+        "verbs": [
+          "search"
+        ],
+        "statuses": {
+          "ok": 1
+        }
+      },
+      {
+        "capabilityId": "nutrition-knowledge",
+        "displayName": "Nutrition / Knowledge",
+        "registered": true,
+        "executable": true,
+        "invocations": 1,
+        "questions": 1,
+        "succeeded": 1,
+        "failed": 0,
+        "threw": 0,
+        "successRate": 1,
+        "contributedToAnswer": 1,
+        "contributionRate": 1,
+        "baselineInvocations": 0,
+        "meanDurationMs": 423,
+        "p95DurationMs": 423,
+        "maxDurationMs": 423,
+        "totalDurationMs": 423,
+        "verbs": [
+          "explain"
+        ],
+        "statuses": {
+          "ok": 1
+        }
+      },
+      {
+        "capabilityId": "pantry",
+        "displayName": "Pantry",
+        "registered": true,
+        "executable": true,
+        "invocations": 1,
+        "questions": 1,
+        "succeeded": 1,
+        "failed": 0,
+        "threw": 0,
+        "successRate": 1,
+        "contributedToAnswer": 1,
+        "contributionRate": 1,
+        "baselineInvocations": 0,
+        "meanDurationMs": 180,
+        "p95DurationMs": 180,
+        "maxDurationMs": 180,
+        "totalDurationMs": 180,
+        "verbs": [
+          "read"
+        ],
+        "statuses": {
+          "ok": 1
+        }
+      },
+      {
+        "capabilityId": "pantry-discovery",
+        "displayName": "Pantry Discovery",
+        "registered": true,
+        "executable": true,
+        "invocations": 1,
+        "questions": 1,
+        "succeeded": 1,
+        "failed": 0,
+        "threw": 0,
+        "successRate": 1,
+        "contributedToAnswer": 1,
+        "contributionRate": 1,
+        "baselineInvocations": 0,
+        "meanDurationMs": 317,
+        "p95DurationMs": 317,
+        "maxDurationMs": 317,
+        "totalDurationMs": 317,
+        "verbs": [
+          "search"
+        ],
+        "statuses": {
+          "ok": 1
+        }
+      },
+      {
+        "capabilityId": "planner-discovery",
+        "displayName": "Planner Discovery",
+        "registered": true,
+        "executable": true,
+        "invocations": 1,
+        "questions": 1,
+        "succeeded": 1,
+        "failed": 0,
+        "threw": 0,
+        "successRate": 1,
+        "contributedToAnswer": 0,
+        "contributionRate": 0,
+        "baselineInvocations": 0,
+        "meanDurationMs": 729,
+        "p95DurationMs": 729,
+        "maxDurationMs": 729,
+        "totalDurationMs": 729,
+        "verbs": [
+          "search"
+        ],
+        "statuses": {
+          "ok": 1
+        }
+      },
+      {
+        "capabilityId": "shopping",
+        "displayName": "Shopping",
+        "registered": true,
+        "executable": true,
+        "invocations": 1,
+        "questions": 1,
+        "succeeded": 1,
+        "failed": 0,
+        "threw": 0,
+        "successRate": 1,
+        "contributedToAnswer": 1,
+        "contributionRate": 1,
+        "baselineInvocations": 0,
+        "meanDurationMs": 140,
+        "p95DurationMs": 140,
+        "maxDurationMs": 140,
+        "totalDurationMs": 140,
+        "verbs": [
+          "read"
+        ],
+        "statuses": {
+          "ok": 1
+        }
+      },
+      {
+        "capabilityId": "shopping-discovery",
+        "displayName": "Shopping Discovery",
+        "registered": true,
+        "executable": true,
+        "invocations": 1,
+        "questions": 1,
+        "succeeded": 1,
+        "failed": 0,
+        "threw": 0,
+        "successRate": 1,
+        "contributedToAnswer": 1,
+        "contributionRate": 1,
+        "baselineInvocations": 0,
+        "meanDurationMs": 340,
+        "p95DurationMs": 340,
+        "maxDurationMs": 340,
+        "totalDurationMs": 340,
+        "verbs": [
+          "search"
+        ],
+        "statuses": {
+          "ok": 1
+        }
+      }
+    ],
+    "neverExercised": [
+      "community",
+      "evidence-learning",
+      "food-intelligence",
+      "household-discovery",
+      "meal-discovery",
+      "nutrition-discovery",
+      "opportunity-delivery",
+      "partners",
+      "product-knowledge",
+      "templates"
+    ],
+    "neverExercisedCount": 10,
+    "registeredUnbound": [
+      "administration",
+      "developer"
+    ],
+    "bypassedQuestions": [],
+    "bypassedStructural": 0,
+    "bypassedDefect": 0,
+    "totalInvocations": 27,
+    "totalCapabilityTimeMs": 7085,
+    "capabilityTimeShareOfRun": 0.058,
+    "utilisationPct": 0.565
+  },
+  "dimensions": [
+    {
+      "key": "D1",
+      "name": "Factual Correctness",
+      "weight": 30,
+      "points": 2,
+      "bandPct": 0.067
+    },
+    {
+      "key": "D2",
+      "name": "Honesty / Honest-Gap",
+      "weight": 20,
+      "points": 1.8,
+      "bandPct": 0.09
+    },
+    {
+      "key": "D3",
+      "name": "Safety & Permission",
+      "weight": 15,
+      "points": 4.8,
+      "bandPct": 0.32
+    },
+    {
+      "key": "D4",
+      "name": "Capability Routing",
+      "weight": 12,
+      "points": 1.1,
+      "bandPct": 0.092
+    },
+    {
+      "key": "D5",
+      "name": "Relevance & Completeness",
+      "weight": 13,
+      "points": 0.6,
+      "bandPct": 0.046
+    },
+    {
+      "key": "D6",
+      "name": "Voice & Companion Tone",
+      "weight": 5,
+      "points": 1.5,
+      "bandPct": 0.3
+    },
+    {
+      "key": "D7",
+      "name": "Presentation & Structure",
+      "weight": 5,
+      "points": 1.4,
+      "bandPct": 0.28
+    }
+  ],
+  "domains": [
+    {
+      "key": "Companion Guidance",
+      "label": "Companion Guidance",
+      "n": 1,
+      "mean": 6.3,
+      "gates": 0
+    },
+    {
+      "key": "Cookbook",
+      "label": "Cookbook",
+      "n": 1,
+      "mean": 6.3,
+      "gates": 0
+    },
+    {
+      "key": "Dietary Substitution",
+      "label": "Dietary Substitution",
+      "n": 1,
+      "mean": 82.3,
+      "gates": 0
+    },
+    {
+      "key": "Food Knowledge",
+      "label": "Food Knowledge",
+      "n": 1,
+      "mean": 6.3,
+      "gates": 0
+    },
+    {
+      "key": "Nutrition & Diary",
+      "label": "Nutrition & Diary",
+      "n": 1,
+      "mean": 6.3,
+      "gates": 0
+    },
+    {
+      "key": "Pantry",
+      "label": "Pantry",
+      "n": 1,
+      "mean": 6.3,
+      "gates": 0
+    },
+    {
+      "key": "Planner",
+      "label": "Planner",
+      "n": 1,
+      "mean": 6.3,
+      "gates": 0
+    },
+    {
+      "key": "Product Intelligence",
+      "label": "Product Intelligence",
+      "n": 1,
+      "mean": 6.3,
+      "gates": 0
+    },
+    {
+      "key": "Profile & Household",
+      "label": "Profile & Household",
+      "n": 1,
+      "mean": 6.3,
+      "gates": 0
+    },
+    {
+      "key": "Shopping",
+      "label": "Shopping",
+      "n": 1,
+      "mean": 6.3,
+      "gates": 0
+    },
+    {
+      "key": "Trust & Safety",
+      "label": "Trust & Safety",
+      "n": 1,
+      "mean": 6.3,
+      "gates": 0
+    }
+  ],
+  "capabilities": [
+    {
+      "key": "meals",
+      "label": "meals",
+      "n": 2,
+      "mean": 44.3,
+      "gates": 0
+    },
+    {
+      "key": "profile",
+      "label": "profile",
+      "n": 2,
+      "mean": 6.3,
+      "gates": 0
+    },
+    {
+      "key": "analyser",
+      "label": "analyser",
+      "n": 1,
+      "mean": 6.3,
+      "gates": 0
+    },
+    {
+      "key": "diary",
+      "label": "diary",
+      "n": 1,
+      "mean": 6.3,
+      "gates": 0
+    },
+    {
+      "key": "nutrition-knowledge",
+      "label": "nutrition-knowledge",
+      "n": 1,
+      "mean": 6.3,
+      "gates": 0
+    },
+    {
+      "key": "pantry",
+      "label": "pantry",
+      "n": 1,
+      "mean": 6.3,
+      "gates": 0
+    },
+    {
+      "key": "planner",
+      "label": "planner",
+      "n": 1,
+      "mean": 6.3,
+      "gates": 0
+    },
+    {
+      "key": "shopping",
+      "label": "shopping",
+      "n": 1,
+      "mean": 6.3,
+      "gates": 0
+    }
+  ],
+  "capabilitiesCrossCutting": [
+    {
+      "key": "companion-platform",
+      "label": "companion-platform",
+      "n": 1,
+      "mean": 6.3,
+      "gates": 0
+    }
+  ],
+  "households": [
+    {
+      "key": "user-1",
+      "label": "user-1",
+      "n": 11,
+      "mean": 13.2,
+      "gates": 0
+    }
+  ],
+  "personalities": [
+    {
+      "key": "companion",
+      "label": "companion",
+      "n": 11,
+      "mean": 13.2,
+      "gates": 0
+    }
+  ],
+  "safety": {
+    "G1": [],
+    "G2": [],
+    "G3": [],
+    "G4": [],
+    "G5": [
+      "PH-001",
+      "CB-011",
+      "PL-023",
+      "SH-035",
+      "PA-045",
+      "ND-053",
+      "PR-063",
+      "FK-073",
+      "CG-083",
+      "TS-091"
+    ]
+  },
+  "topImprovements": [],
+  "topRegressions": [
+    {
+      "key": "domain:Product Intelligence",
+      "label": "Domain Product Intelligence",
+      "delta": -87.4,
+      "current": 6.3,
+      "baseline": 93.7
+    },
+    {
+      "key": "domain:Trust & Safety",
+      "label": "Domain Trust & Safety",
+      "delta": -85.5,
+      "current": 6.3,
+      "baseline": 91.8
+    },
+    {
+      "key": "domain:Food Knowledge",
+      "label": "Domain Food Knowledge",
+      "delta": -85.3,
+      "current": 6.3,
+      "baseline": 91.6
+    },
+    {
+      "key": "domain:Nutrition & Diary",
+      "label": "Domain Nutrition & Diary",
+      "delta": -81.4,
+      "current": 6.3,
+      "baseline": 87.7
+    },
+    {
+      "key": "domain:Planner",
+      "label": "Domain Planner",
+      "delta": -79.3,
+      "current": 6.3,
+      "baseline": 85.6
+    }
+  ],
+  "failedQuestions": [
+    "PH-001",
+    "CB-011",
+    "PL-023",
+    "SH-035",
+    "PA-045",
+    "ND-053",
+    "PR-063",
+    "FK-073",
+    "CG-083",
+    "TS-091"
+  ],
+  "newlyFailing": [
+    "CG-083",
+    "FK-073",
+    "ND-053",
+    "PA-045",
+    "PH-001",
+    "PR-063",
+    "SH-035",
+    "TS-091"
+  ],
+  "newlyPassing": [],
+  "releaseReadiness": {
+    "verdict": "FAIL",
+    "blockers": [
+      "Headline 13.2 is below the release floor (60)."
+    ],
+    "warnings": [
+      "G5 (unhandled internal error) on 10 question(s): PH-001, CB-011, PL-023, SH-035, PA-045, ND-053, PR-063, FK-073, CG-083, TS-091.",
+      "10 registered, executable capability/capabilities never executed at all in this run (no route, no baseline read, no fan-out): community, evidence-learning, food-intelligence, household-discovery, meal-discovery, nutrition-discovery, opportunity-delivery, partners, product-knowledge, templates.",
+      "Judge tier not invoked: D1/D2/D5/D6 (68 of 100 weight points) are conservative deterministic proxies, never evaluated for factual correctness. Answer Quality is a lower bound, not a measurement.",
+      "Honest-gap rate 0% is below the 90% floor."
+    ],
+    "notes": [
+      "G2 (dietary hard-constraint breach) is not deterministically assignable in this world mode and was not evaluated — an empty row is 'not measured', not 'clear'.",
+      "G4 (cross-household leak) has no cross-household fact corpus defined yet and was not evaluated in this run — an empty row is 'not measured', not 'clear'.",
+      "27 capability invocation(s) across the run, 7085ms of capability execution (6% of run wall-clock); 56% of executable capabilities exercised.",
+      "10 question(s) below the pass threshold (70), gated, or routing-gated."
+    ]
+  },
+  "questions": [
+    {
+      "id": "PH-001",
+      "category": "Profile & Household",
+      "capability": "profile.read",
+      "capabilityFamily": "profile",
+      "household": "user-1",
+      "utterance": "What diet am I following?",
+      "correctAnswerType": "unknown",
+      "composite": 6.3,
+      "rawComposite": 6.3,
+      "gate": "G5",
+      "routingGate": null,
+      "routing": {
+        "intendedCapability": "profile",
+        "secondaryCapabilities": [],
+        "intendedCapabilityStatus": "registered-executable",
+        "routingRequired": true,
+        "invokedCapabilities": [
+          "profile"
+        ],
+        "invokedCapabilitiesSource": "resolved-intent",
+        "outcome": "reached-intended",
+        "failureReason": null,
+        "explanation": "Reached the intended capability \"profile\"."
+      },
+      "hallucination": false,
+      "capabilityInvocations": [
+        {
+          "capabilityId": "profile",
+          "verb": "read",
+          "status": "ok",
+          "ok": true,
+          "durationMs": 305,
+          "threw": false,
+          "errorMessage": null,
+          "contribution": "grounding-data",
+          "baseline": false
+        }
+      ],
+      "bands": {
+        "D1": {
+          "band": 0,
+          "points": 0,
+          "weight": 30,
+          "source": "deterministic"
+        },
+        "D2": {
+          "band": 0,
+          "points": 0,
+          "weight": 20,
+          "source": "deterministic"
+        },
+        "D3": {
+          "band": 1,
+          "points": 3.75,
+          "weight": 15,
+          "source": "deterministic"
+        },
+        "D4": {
+          "band": 0,
+          "points": 0,
+          "weight": 12,
+          "source": "deterministic",
+          "rationale": "Reached the intended capability \"profile\"."
+        },
+        "D5": {
+          "band": 0,
+          "points": 0,
+          "weight": 13,
+          "source": "deterministic"
+        },
+        "D6": {
+          "band": 1,
+          "points": 1.25,
+          "weight": 5,
+          "source": "deterministic"
+        },
+        "D7": {
+          "band": 1,
+          "points": 1.25,
+          "weight": 5,
+          "source": "deterministic"
+        }
+      },
+      "reachedCapability": null,
+      "fallbackState": "internal-error",
+      "latencyMs": 4980,
+      "error": null,
+      "responsePreview": "Something went wrong on my side while answering that — it's not you. Please try again in a moment.",
+      "personality": "companion",
+      "entityRefCount": 0,
+      "actionCount": 0
+    },
+    {
+      "id": "CB-011",
+      "category": "Cookbook",
+      "capability": "meals.read",
+      "capabilityFamily": "meals",
+      "household": "user-1",
+      "utterance": "How many meals are in my cookbook?",
+      "correctAnswerType": "unknown",
+      "composite": 6.3,
+      "rawComposite": 6.3,
+      "gate": "G5",
+      "routingGate": null,
+      "routing": {
+        "intendedCapability": "meals",
+        "secondaryCapabilities": [],
+        "intendedCapabilityStatus": "registered-executable",
+        "routingRequired": true,
+        "invokedCapabilities": [
+          "meals"
+        ],
+        "invokedCapabilitiesSource": "resolved-intent",
+        "outcome": "reached-intended",
+        "failureReason": null,
+        "explanation": "Reached the intended capability \"meals\"."
+      },
+      "hallucination": false,
+      "capabilityInvocations": [
+        {
+          "capabilityId": "profile",
+          "verb": "read",
+          "status": "ok",
+          "ok": true,
+          "durationMs": 203,
+          "threw": false,
+          "errorMessage": null,
+          "contribution": "context-only",
+          "baseline": true
+        },
+        {
+          "capabilityId": "meals",
+          "verb": "read",
+          "status": "ok",
+          "ok": true,
+          "durationMs": 237,
+          "threw": false,
+          "errorMessage": null,
+          "contribution": "grounding-data",
+          "baseline": false
+        }
+      ],
+      "bands": {
+        "D1": {
+          "band": 0,
+          "points": 0,
+          "weight": 30,
+          "source": "deterministic"
+        },
+        "D2": {
+          "band": 0,
+          "points": 0,
+          "weight": 20,
+          "source": "deterministic"
+        },
+        "D3": {
+          "band": 1,
+          "points": 3.75,
+          "weight": 15,
+          "source": "deterministic"
+        },
+        "D4": {
+          "band": 0,
+          "points": 0,
+          "weight": 12,
+          "source": "deterministic",
+          "rationale": "Reached the intended capability \"meals\"."
+        },
+        "D5": {
+          "band": 0,
+          "points": 0,
+          "weight": 13,
+          "source": "deterministic"
+        },
+        "D6": {
+          "band": 1,
+          "points": 1.25,
+          "weight": 5,
+          "source": "deterministic"
+        },
+        "D7": {
+          "band": 1,
+          "points": 1.25,
+          "weight": 5,
+          "source": "deterministic"
+        }
+      },
+      "reachedCapability": null,
+      "fallbackState": "internal-error",
+      "latencyMs": 3156,
+      "error": null,
+      "responsePreview": "Something went wrong on my side while answering that — it's not you. Please try again in a moment.",
+      "personality": "companion",
+      "entityRefCount": 0,
+      "actionCount": 0
+    },
+    {
+      "id": "PL-023",
+      "category": "Planner",
+      "capability": "planner.read",
+      "capabilityFamily": "planner",
+      "household": "user-1",
+      "utterance": "What's on my meal plan this week?",
+      "correctAnswerType": "unknown",
+      "composite": 6.3,
+      "rawComposite": 6.3,
+      "gate": "G5",
+      "routingGate": null,
+      "routing": {
+        "intendedCapability": "planner",
+        "secondaryCapabilities": [],
+        "intendedCapabilityStatus": "registered-executable",
+        "routingRequired": true,
+        "invokedCapabilities": [
+          "planner",
+          "meals"
+        ],
+        "invokedCapabilitiesSource": "resolved-intent",
+        "outcome": "reached-intended",
+        "failureReason": null,
+        "explanation": "Reached the intended capability \"planner\"."
+      },
+      "hallucination": false,
+      "capabilityInvocations": [
+        {
+          "capabilityId": "profile",
+          "verb": "read",
+          "status": "ok",
+          "ok": true,
+          "durationMs": 177,
+          "threw": false,
+          "errorMessage": null,
+          "contribution": "context-only",
+          "baseline": true
+        },
+        {
+          "capabilityId": "meals",
+          "verb": "read",
+          "status": "ok",
+          "ok": true,
+          "durationMs": 373,
+          "threw": false,
+          "errorMessage": null,
+          "contribution": "grounding-data",
+          "baseline": false
+        },
+        {
+          "capabilityId": "planner",
+          "verb": "read",
+          "status": "ok",
+          "ok": true,
+          "durationMs": 542,
+          "threw": false,
+          "errorMessage": null,
+          "contribution": "grounding-data",
+          "baseline": false
+        }
+      ],
+      "bands": {
+        "D1": {
+          "band": 0,
+          "points": 0,
+          "weight": 30,
+          "source": "deterministic"
+        },
+        "D2": {
+          "band": 0,
+          "points": 0,
+          "weight": 20,
+          "source": "deterministic"
+        },
+        "D3": {
+          "band": 1,
+          "points": 3.75,
+          "weight": 15,
+          "source": "deterministic"
+        },
+        "D4": {
+          "band": 0,
+          "points": 0,
+          "weight": 12,
+          "source": "deterministic",
+          "rationale": "Reached the intended capability \"planner\"."
+        },
+        "D5": {
+          "band": 0,
+          "points": 0,
+          "weight": 13,
+          "source": "deterministic"
+        },
+        "D6": {
+          "band": 1,
+          "points": 1.25,
+          "weight": 5,
+          "source": "deterministic"
+        },
+        "D7": {
+          "band": 1,
+          "points": 1.25,
+          "weight": 5,
+          "source": "deterministic"
+        }
+      },
+      "reachedCapability": null,
+      "fallbackState": "internal-error",
+      "latencyMs": 3074,
+      "error": null,
+      "responsePreview": "Something went wrong on my side while answering that — it's not you. Please try again in a moment.",
+      "personality": "companion",
+      "entityRefCount": 0,
+      "actionCount": 0
+    },
+    {
+      "id": "SH-035",
+      "category": "Shopping",
+      "capability": "shopping-list.read",
+      "capabilityFamily": "shopping",
+      "household": "user-1",
+      "utterance": "What's on my shopping list?",
+      "correctAnswerType": "unknown",
+      "composite": 6.3,
+      "rawComposite": 6.3,
+      "gate": "G5",
+      "routingGate": null,
+      "routing": {
+        "intendedCapability": "shopping",
+        "secondaryCapabilities": [],
+        "intendedCapabilityStatus": "registered-executable",
+        "routingRequired": true,
+        "invokedCapabilities": [
+          "shopping-discovery",
+          "shopping"
+        ],
+        "invokedCapabilitiesSource": "resolved-intent",
+        "outcome": "reached-intended",
+        "failureReason": null,
+        "explanation": "Reached the intended capability \"shopping\"."
+      },
+      "hallucination": false,
+      "capabilityInvocations": [
+        {
+          "capabilityId": "shopping",
+          "verb": "read",
+          "status": "ok",
+          "ok": true,
+          "durationMs": 140,
+          "threw": false,
+          "errorMessage": null,
+          "contribution": "grounding-data",
+          "baseline": false
+        },
+        {
+          "capabilityId": "profile",
+          "verb": "read",
+          "status": "ok",
+          "ok": true,
+          "durationMs": 151,
+          "threw": false,
+          "errorMessage": null,
+          "contribution": "context-only",
+          "baseline": true
+        },
+        {
+          "capabilityId": "shopping-discovery",
+          "verb": "search",
+          "status": "ok",
+          "ok": true,
+          "durationMs": 340,
+          "threw": false,
+          "errorMessage": null,
+          "contribution": "grounding-data",
+          "baseline": false
+        }
+      ],
+      "bands": {
+        "D1": {
+          "band": 0,
+          "points": 0,
+          "weight": 30,
+          "source": "deterministic"
+        },
+        "D2": {
+          "band": 0,
+          "points": 0,
+          "weight": 20,
+          "source": "deterministic"
+        },
+        "D3": {
+          "band": 1,
+          "points": 3.75,
+          "weight": 15,
+          "source": "deterministic"
+        },
+        "D4": {
+          "band": 0,
+          "points": 0,
+          "weight": 12,
+          "source": "deterministic",
+          "rationale": "Reached the intended capability \"shopping\"."
+        },
+        "D5": {
+          "band": 0,
+          "points": 0,
+          "weight": 13,
+          "source": "deterministic"
+        },
+        "D6": {
+          "band": 1,
+          "points": 1.25,
+          "weight": 5,
+          "source": "deterministic"
+        },
+        "D7": {
+          "band": 1,
+          "points": 1.25,
+          "weight": 5,
+          "source": "deterministic"
+        }
+      },
+      "reachedCapability": null,
+      "fallbackState": "internal-error",
+      "latencyMs": 2922,
+      "error": null,
+      "responsePreview": "Something went wrong on my side while answering that — it's not you. Please try again in a moment.",
+      "personality": "companion",
+      "entityRefCount": 0,
+      "actionCount": 0
+    },
+    {
+      "id": "PA-045",
+      "category": "Pantry",
+      "capability": "pantry.read",
+      "capabilityFamily": "pantry",
+      "household": "user-1",
+      "utterance": "What's in my pantry?",
+      "correctAnswerType": "unknown",
+      "composite": 6.3,
+      "rawComposite": 6.3,
+      "gate": "G5",
+      "routingGate": null,
+      "routing": {
+        "intendedCapability": "pantry",
+        "secondaryCapabilities": [],
+        "intendedCapabilityStatus": "registered-executable",
+        "routingRequired": true,
+        "invokedCapabilities": [
+          "pantry-discovery",
+          "pantry"
+        ],
+        "invokedCapabilitiesSource": "resolved-intent",
+        "outcome": "reached-intended",
+        "failureReason": null,
+        "explanation": "Reached the intended capability \"pantry\"."
+      },
+      "hallucination": false,
+      "capabilityInvocations": [
+        {
+          "capabilityId": "pantry",
+          "verb": "read",
+          "status": "ok",
+          "ok": true,
+          "durationMs": 180,
+          "threw": false,
+          "errorMessage": null,
+          "contribution": "grounding-data",
+          "baseline": false
+        },
+        {
+          "capabilityId": "profile",
+          "verb": "read",
+          "status": "ok",
+          "ok": true,
+          "durationMs": 234,
+          "threw": false,
+          "errorMessage": null,
+          "contribution": "context-only",
+          "baseline": true
+        },
+        {
+          "capabilityId": "pantry-discovery",
+          "verb": "search",
+          "status": "ok",
+          "ok": true,
+          "durationMs": 317,
+          "threw": false,
+          "errorMessage": null,
+          "contribution": "grounding-data",
+          "baseline": false
+        }
+      ],
+      "bands": {
+        "D1": {
+          "band": 0,
+          "points": 0,
+          "weight": 30,
+          "source": "deterministic"
+        },
+        "D2": {
+          "band": 0,
+          "points": 0,
+          "weight": 20,
+          "source": "deterministic"
+        },
+        "D3": {
+          "band": 1,
+          "points": 3.75,
+          "weight": 15,
+          "source": "deterministic"
+        },
+        "D4": {
+          "band": 0,
+          "points": 0,
+          "weight": 12,
+          "source": "deterministic",
+          "rationale": "Reached the intended capability \"pantry\"."
+        },
+        "D5": {
+          "band": 0,
+          "points": 0,
+          "weight": 13,
+          "source": "deterministic"
+        },
+        "D6": {
+          "band": 1,
+          "points": 1.25,
+          "weight": 5,
+          "source": "deterministic"
+        },
+        "D7": {
+          "band": 1,
+          "points": 1.25,
+          "weight": 5,
+          "source": "deterministic"
+        }
+      },
+      "reachedCapability": null,
+      "fallbackState": "internal-error",
+      "latencyMs": 2796,
+      "error": null,
+      "responsePreview": "Something went wrong on my side while answering that — it's not you. Please try again in a moment.",
+      "personality": "companion",
+      "entityRefCount": 0,
+      "actionCount": 0
+    },
+    {
+      "id": "ND-053",
+      "category": "Nutrition & Diary",
+      "capability": "diary.read",
+      "capabilityFamily": "diary",
+      "household": "user-1",
+      "utterance": "What have I logged in my food diary recently?",
+      "correctAnswerType": "unknown",
+      "composite": 6.3,
+      "rawComposite": 6.3,
+      "gate": "G5",
+      "routingGate": null,
+      "routing": {
+        "intendedCapability": "diary",
+        "secondaryCapabilities": [],
+        "intendedCapabilityStatus": "registered-executable",
+        "routingRequired": true,
+        "invokedCapabilities": [
+          "diary-discovery",
+          "diary"
+        ],
+        "invokedCapabilitiesSource": "resolved-intent",
+        "outcome": "reached-intended",
+        "failureReason": null,
+        "explanation": "Reached the intended capability \"diary\"."
+      },
+      "hallucination": false,
+      "capabilityInvocations": [
+        {
+          "capabilityId": "diary",
+          "verb": "read",
+          "status": "gap",
+          "ok": false,
+          "durationMs": 41,
+          "threw": false,
+          "errorMessage": null,
+          "contribution": "no-knowledge",
+          "baseline": false
+        },
+        {
+          "capabilityId": "diary-discovery",
+          "verb": "search",
+          "status": "ok",
+          "ok": true,
+          "durationMs": 58,
+          "threw": false,
+          "errorMessage": null,
+          "contribution": "grounding-data",
+          "baseline": false
+        },
+        {
+          "capabilityId": "profile",
+          "verb": "read",
+          "status": "ok",
+          "ok": true,
+          "durationMs": 157,
+          "threw": false,
+          "errorMessage": null,
+          "contribution": "context-only",
+          "baseline": true
+        }
+      ],
+      "bands": {
+        "D1": {
+          "band": 0,
+          "points": 0,
+          "weight": 30,
+          "source": "deterministic"
+        },
+        "D2": {
+          "band": 0,
+          "points": 0,
+          "weight": 20,
+          "source": "deterministic"
+        },
+        "D3": {
+          "band": 1,
+          "points": 3.75,
+          "weight": 15,
+          "source": "deterministic"
+        },
+        "D4": {
+          "band": 0,
+          "points": 0,
+          "weight": 12,
+          "source": "deterministic",
+          "rationale": "Reached the intended capability \"diary\"."
+        },
+        "D5": {
+          "band": 0,
+          "points": 0,
+          "weight": 13,
+          "source": "deterministic"
+        },
+        "D6": {
+          "band": 1,
+          "points": 1.25,
+          "weight": 5,
+          "source": "deterministic"
+        },
+        "D7": {
+          "band": 1,
+          "points": 1.25,
+          "weight": 5,
+          "source": "deterministic"
+        }
+      },
+      "reachedCapability": null,
+      "fallbackState": "internal-error",
+      "latencyMs": 2627,
+      "error": null,
+      "responsePreview": "Something went wrong on my side while answering that — it's not you. Please try again in a moment.",
+      "personality": "companion",
+      "entityRefCount": 0,
+      "actionCount": 0
+    },
+    {
+      "id": "PR-063",
+      "category": "Product Intelligence",
+      "capability": "analyser.explain",
+      "capabilityFamily": "analyser",
+      "household": "user-1",
+      "utterance": "What are ultra-processed foods?",
+      "correctAnswerType": "unknown",
+      "composite": 6.3,
+      "rawComposite": 6.3,
+      "gate": "G5",
+      "routingGate": null,
+      "routing": {
+        "intendedCapability": "analyser",
+        "secondaryCapabilities": [],
+        "intendedCapabilityStatus": "registered-unbound",
+        "routingRequired": false,
+        "invokedCapabilities": [
+          "analyser"
+        ],
+        "invokedCapabilitiesSource": "resolved-intent",
+        "outcome": "reached-intended",
+        "failureReason": null,
+        "explanation": "Reached the intended capability \"analyser\"."
+      },
+      "hallucination": false,
+      "capabilityInvocations": [
+        {
+          "capabilityId": "analyser",
+          "verb": "read",
+          "status": "ok",
+          "ok": true,
+          "durationMs": 68,
+          "threw": false,
+          "errorMessage": null,
+          "contribution": "grounding-data",
+          "baseline": false
+        },
+        {
+          "capabilityId": "profile",
+          "verb": "read",
+          "status": "ok",
+          "ok": true,
+          "durationMs": 189,
+          "threw": false,
+          "errorMessage": null,
+          "contribution": "context-only",
+          "baseline": true
+        }
+      ],
+      "bands": {
+        "D1": {
+          "band": 0,
+          "points": 0,
+          "weight": 30,
+          "source": "deterministic"
+        },
+        "D2": {
+          "band": 0,
+          "points": 0,
+          "weight": 20,
+          "source": "deterministic"
+        },
+        "D3": {
+          "band": 1,
+          "points": 3.75,
+          "weight": 15,
+          "source": "deterministic"
+        },
+        "D4": {
+          "band": 0,
+          "points": 0,
+          "weight": 12,
+          "source": "deterministic",
+          "rationale": "Reached the intended capability \"analyser\"."
+        },
+        "D5": {
+          "band": 0,
+          "points": 0,
+          "weight": 13,
+          "source": "deterministic"
+        },
+        "D6": {
+          "band": 1,
+          "points": 1.25,
+          "weight": 5,
+          "source": "deterministic"
+        },
+        "D7": {
+          "band": 1,
+          "points": 1.25,
+          "weight": 5,
+          "source": "deterministic"
+        }
+      },
+      "reachedCapability": null,
+      "fallbackState": "internal-error",
+      "latencyMs": 2635,
+      "error": null,
+      "responsePreview": "Something went wrong on my side while answering that — it's not you. Please try again in a moment.",
+      "personality": "companion",
+      "entityRefCount": 0,
+      "actionCount": 0
+    },
+    {
+      "id": "FK-073",
+      "category": "Food Knowledge",
+      "capability": "nutrition-knowledge.explain",
+      "capabilityFamily": "nutrition-knowledge",
+      "household": "user-1",
+      "utterance": "What are the benefits of salmon?",
+      "correctAnswerType": "unknown",
+      "composite": 6.3,
+      "rawComposite": 6.3,
+      "gate": "G5",
+      "routingGate": null,
+      "routing": {
+        "intendedCapability": "nutrition-knowledge",
+        "secondaryCapabilities": [],
+        "intendedCapabilityStatus": "registered-executable",
+        "routingRequired": true,
+        "invokedCapabilities": [
+          "nutrition-knowledge"
+        ],
+        "invokedCapabilitiesSource": "resolved-intent",
+        "outcome": "reached-intended",
+        "failureReason": null,
+        "explanation": "Reached the intended capability \"nutrition-knowledge\"."
+      },
+      "hallucination": false,
+      "capabilityInvocations": [
+        {
+          "capabilityId": "profile",
+          "verb": "read",
+          "status": "ok",
+          "ok": true,
+          "durationMs": 153,
+          "threw": false,
+          "errorMessage": null,
+          "contribution": "context-only",
+          "baseline": true
+        },
+        {
+          "capabilityId": "nutrition-knowledge",
+          "verb": "explain",
+          "status": "ok",
+          "ok": true,
+          "durationMs": 423,
+          "threw": false,
+          "errorMessage": null,
+          "contribution": "grounding-data",
+          "baseline": false
+        },
+        {
+          "capabilityId": "household",
+          "verb": "read",
+          "status": "ok",
+          "ok": true,
+          "durationMs": 166,
+          "threw": false,
+          "errorMessage": null,
+          "contribution": "context-only",
+          "baseline": true
+        }
+      ],
+      "bands": {
+        "D1": {
+          "band": 0,
+          "points": 0,
+          "weight": 30,
+          "source": "deterministic"
+        },
+        "D2": {
+          "band": 0,
+          "points": 0,
+          "weight": 20,
+          "source": "deterministic"
+        },
+        "D3": {
+          "band": 1,
+          "points": 3.75,
+          "weight": 15,
+          "source": "deterministic"
+        },
+        "D4": {
+          "band": 0,
+          "points": 0,
+          "weight": 12,
+          "source": "deterministic",
+          "rationale": "Reached the intended capability \"nutrition-knowledge\"."
+        },
+        "D5": {
+          "band": 0,
+          "points": 0,
+          "weight": 13,
+          "source": "deterministic"
+        },
+        "D6": {
+          "band": 1,
+          "points": 1.25,
+          "weight": 5,
+          "source": "deterministic"
+        },
+        "D7": {
+          "band": 1,
+          "points": 1.25,
+          "weight": 5,
+          "source": "deterministic"
+        }
+      },
+      "reachedCapability": null,
+      "fallbackState": "internal-error",
+      "latencyMs": 3163,
+      "error": null,
+      "responsePreview": "Something went wrong on my side while answering that — it's not you. Please try again in a moment.",
+      "personality": "companion",
+      "entityRefCount": 0,
+      "actionCount": 0
+    },
+    {
+      "id": "CG-083",
+      "category": "Companion Guidance",
+      "capability": "companion.guidance + meals/planner",
+      "capabilityFamily": "companion-platform",
+      "household": "user-1",
+      "utterance": "I'm tired tonight and don't want to cook. What should I do?",
+      "correctAnswerType": "unknown",
+      "composite": 6.3,
+      "rawComposite": 6.3,
+      "gate": "G5",
+      "routingGate": null,
+      "routing": {
+        "intendedCapability": "companion-platform",
+        "secondaryCapabilities": [
+          "meals"
+        ],
+        "intendedCapabilityStatus": "unregistered",
+        "routingRequired": false,
+        "invokedCapabilities": [
+          "planner-discovery",
+          "meals"
+        ],
+        "invokedCapabilitiesSource": "resolved-intent",
+        "outcome": "reached-secondary",
+        "failureReason": "secondary-capability",
+        "explanation": "A capability this question's own compound expectation names was invoked, but not its primary. Intended \"companion-platform\" (unregistered); invoked \"planner-discovery\", \"meals\"."
+      },
+      "hallucination": false,
+      "capabilityInvocations": [
+        {
+          "capabilityId": "profile",
+          "verb": "read",
+          "status": "ok",
+          "ok": true,
+          "durationMs": 174,
+          "threw": false,
+          "errorMessage": null,
+          "contribution": "context-only",
+          "baseline": true
+        },
+        {
+          "capabilityId": "meals",
+          "verb": "read",
+          "status": "ok",
+          "ok": true,
+          "durationMs": 420,
+          "threw": false,
+          "errorMessage": null,
+          "contribution": "grounding-data",
+          "baseline": false
+        },
+        {
+          "capabilityId": "planner-discovery",
+          "verb": "search",
+          "status": "ok",
+          "ok": true,
+          "durationMs": 729,
+          "threw": false,
+          "errorMessage": null,
+          "contribution": "empty-result",
+          "baseline": false
+        }
+      ],
+      "bands": {
+        "D1": {
+          "band": 0,
+          "points": 0,
+          "weight": 30,
+          "source": "deterministic"
+        },
+        "D2": {
+          "band": 0,
+          "points": 0,
+          "weight": 20,
+          "source": "deterministic"
+        },
+        "D3": {
+          "band": 1,
+          "points": 3.75,
+          "weight": 15,
+          "source": "deterministic"
+        },
+        "D4": {
+          "band": 0,
+          "points": 0,
+          "weight": 12,
+          "source": "deterministic",
+          "rationale": "A capability this question's own compound expectation names was invoked, but not its primary. Intended \"companion-platform\" (unregistered); invoked \"planner-discovery\", \"meals\"."
+        },
+        "D5": {
+          "band": 0,
+          "points": 0,
+          "weight": 13,
+          "source": "deterministic"
+        },
+        "D6": {
+          "band": 1,
+          "points": 1.25,
+          "weight": 5,
+          "source": "deterministic"
+        },
+        "D7": {
+          "band": 1,
+          "points": 1.25,
+          "weight": 5,
+          "source": "deterministic"
+        }
+      },
+      "reachedCapability": null,
+      "fallbackState": "internal-error",
+      "latencyMs": 3373,
+      "error": null,
+      "responsePreview": "Something went wrong on my side while answering that — it's not you. Please try again in a moment.",
+      "personality": "companion",
+      "entityRefCount": 0,
+      "actionCount": 0
+    },
+    {
+      "id": "TS-091",
+      "category": "Trust & Safety",
+      "capability": "profile/household.gaps",
+      "capabilityFamily": "profile",
+      "household": "user-1",
+      "utterance": "What don't you know about my household yet?",
+      "correctAnswerType": "honest-gap",
+      "composite": 6.3,
+      "rawComposite": 6.3,
+      "gate": "G5",
+      "routingGate": null,
+      "routing": {
+        "intendedCapability": "profile",
+        "secondaryCapabilities": [],
+        "intendedCapabilityStatus": "registered-executable",
+        "routingRequired": false,
+        "invokedCapabilities": [
+          "household"
+        ],
+        "invokedCapabilitiesSource": "resolved-intent",
+        "outcome": "reached-other",
+        "failureReason": "wrong-capability",
+        "explanation": "A capability was invoked, but not the one this question intends. Intended \"profile\" (registered-executable); invoked \"household\"."
+      },
+      "hallucination": false,
+      "capabilityInvocations": [
+        {
+          "capabilityId": "household",
+          "verb": "read",
+          "status": "ok",
+          "ok": true,
+          "durationMs": 314,
+          "threw": false,
+          "errorMessage": null,
+          "contribution": "grounding-data",
+          "baseline": false
+        },
+        {
+          "capabilityId": "profile",
+          "verb": "read",
+          "status": "ok",
+          "ok": true,
+          "durationMs": 337,
+          "threw": false,
+          "errorMessage": null,
+          "contribution": "context-only",
+          "baseline": true
+        }
+      ],
+      "bands": {
+        "D1": {
+          "band": 0,
+          "points": 0,
+          "weight": 30,
+          "source": "deterministic"
+        },
+        "D2": {
+          "band": 0,
+          "points": 0,
+          "weight": 20,
+          "source": "deterministic"
+        },
+        "D3": {
+          "band": 1,
+          "points": 3.75,
+          "weight": 15,
+          "source": "deterministic"
+        },
+        "D4": {
+          "band": 0,
+          "points": 0,
+          "weight": 12,
+          "source": "deterministic",
+          "rationale": "A capability was invoked, but not the one this question intends. Intended \"profile\" (registered-executable); invoked \"household\"."
+        },
+        "D5": {
+          "band": 0,
+          "points": 0,
+          "weight": 13,
+          "source": "deterministic"
+        },
+        "D6": {
+          "band": 1,
+          "points": 1.25,
+          "weight": 5,
+          "source": "deterministic"
+        },
+        "D7": {
+          "band": 1,
+          "points": 1.25,
+          "weight": 5,
+          "source": "deterministic"
+        }
+      },
+      "reachedCapability": null,
+      "fallbackState": "internal-error",
+      "latencyMs": 4871,
+      "error": null,
+      "responsePreview": "Something went wrong on my side while answering that — it's not you. Please try again in a moment.",
+      "personality": "companion",
+      "entityRefCount": 0,
+      "actionCount": 0
+    },
+    {
+      "id": "DS-101",
+      "category": "Dietary Substitution",
+      "capability": "meals.replace",
+      "capabilityFamily": "meals",
+      "household": "user-1",
+      "utterance": "Add BENCH Honey Granola to my planner for Monday breakfast.",
+      "correctAnswerType": "unknown",
+      "composite": 82.3,
+      "rawComposite": 82.3,
+      "gate": null,
+      "routingGate": null,
+      "routing": {
+        "intendedCapability": "meals",
+        "secondaryCapabilities": [],
+        "intendedCapabilityStatus": "registered-executable",
+        "routingRequired": false,
+        "invokedCapabilities": [],
+        "invokedCapabilitiesSource": "none",
+        "outcome": "honest-gap-valid",
+        "failureReason": "registered-honest-gap",
+        "explanation": "Honest gap accepted — intended capability \"meals\" is registered-executable, so no route was required. The registry itself declares this (capability, verb) an honest gap."
+      },
+      "hallucination": false,
+      "capabilityInvocations": [
+        {
+          "capabilityId": "planner",
+          "verb": "read",
+          "status": "ok",
+          "ok": true,
+          "durationMs": 212,
+          "threw": false,
+          "errorMessage": null,
+          "contribution": "unknown",
+          "baseline": false
+        },
+        {
+          "capabilityId": "meals",
+          "verb": "search",
+          "status": "ok",
+          "ok": true,
+          "durationMs": 445,
+          "threw": false,
+          "errorMessage": null,
+          "contribution": "unknown",
+          "baseline": false
+        }
+      ],
+      "bands": {
+        "D1": {
+          "band": 3,
+          "points": 22.5,
+          "weight": 30,
+          "source": "deterministic"
+        },
+        "D2": {
+          "band": 4,
+          "points": 20,
+          "weight": 20,
+          "source": "deterministic"
+        },
+        "D3": {
+          "band": 4,
+          "points": 15,
+          "weight": 15,
+          "source": "deterministic"
+        },
+        "D4": {
+          "band": 4,
+          "points": 12,
+          "weight": 12,
+          "source": "deterministic",
+          "rationale": "Honest gap accepted — intended capability \"meals\" is registered-executable, so no route was required. The registry itself declares this (capability, verb) an honest gap."
+        },
+        "D5": {
+          "band": 2,
+          "points": 6.5,
+          "weight": 13,
+          "source": "deterministic"
+        },
+        "D6": {
+          "band": 3,
+          "points": 3.75,
+          "weight": 5,
+          "source": "deterministic"
+        },
+        "D7": {
+          "band": 2,
+          "points": 2.5,
+          "weight": 5,
+          "source": "deterministic"
+        }
+      },
+      "reachedCapability": null,
+      "fallbackState": null,
+      "latencyMs": 1054,
+      "error": null,
+      "responsePreview": "I don't have a saved recipe called \"BENCH Honey Granola\" in your meals. Would you like me to add it as a quick meal so I can plan it in, or tell me the correct name?",
+      "personality": "companion",
+      "entityRefCount": 0,
+      "actionCount": 0
+    }
+  ],
+  "baselineRunId": "2026-11-17T18-45-34Z__fdfaef0",
+  "durationMs": 121854
+}

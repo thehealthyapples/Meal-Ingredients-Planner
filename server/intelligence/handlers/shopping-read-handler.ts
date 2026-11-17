@@ -171,7 +171,13 @@ function toItemView(item: ShoppingListItem): ShoppingItemView {
   return {
     id: item.id,
     name: item.productName,
-    quantity: item.quantity,
+    // BENCH4 (SH-039): `quantity` is the line-ITEM counter (integer, NOT NULL, DEFAULT 1 —
+    // "how many of this list row"), not the parsed amount. `quantityValue` (a real, e.g.
+    // 5 for "5 ounces spinach") is what the ingredient's actual amount is — live-confirmed
+    // the Companion was reporting "1 ounce spinach" for a real 5-ounce line, a genuine
+    // field-mapping bug, not an LLM error. Falls back to `quantity` only when
+    // `quantityValue` was never parsed (kept at the historical default rather than null).
+    quantity: item.quantityValue ?? item.quantity,
     unit: item.unit ?? null,
     category: item.category ?? null,
     checked: item.checked,

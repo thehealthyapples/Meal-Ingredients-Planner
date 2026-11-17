@@ -47,10 +47,16 @@ export const TRUSTED_SOURCE_DOMAINS: readonly string[] = [
   "matvaretabellen.no",     // Norwegian Food Composition Table — food composition only
   "tbca.net.br",            // Brazilian Food Composition Table (USP/FoRC) — food composition only
   "foodstandards.gov.au",   // FSANZ / Australian Food Composition Database — food composition only
+  "doae.go.th",             // Thailand Department of Agriculture — food composition only
   "nin.res.in",             // ICMR–National Institute of Nutrition Indian Food Composition Tables — food composition only
   "mext.go.jp",             // Japan Ministry of Education, Culture, Sports, Science and Technology Food Composition Database — composition only
   "pubmed.ncbi.nlm.nih.gov", // PubMed index — peer-reviewed scientific literature; secondary to official guidance
   "pmc.ncbi.nlm.nih.gov",   // PubMed Central full text — peer-reviewed scientific literature; secondary to official guidance
+  "sciencedirect.com",      // Elsevier-hosted peer-reviewed research — composition only
+  "czasopisma.up.lublin.pl", // University of Life Sciences in Lublin peer-reviewed research — composition only
+  "thaiscience.info",        // Peer-reviewed Thai science journal hosting — composition only
+  "ema.europa.eu",           // European Medicines Agency monographs — official medicinal evidence; scope/use limits must be explicit
+  "journals.lww.com",        // Wolters Kluwer peer-reviewed journal publisher — secondary scientific evidence, not official guidance
 ];
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -122,7 +128,7 @@ export function isSourceAllowedForClaim(ref: unknown, row: ClaimEvidenceFields):
   if (!value?.url) return false;
   let host = "";
   try { host = new URL(value.url).hostname.toLowerCase(); } catch { return false; }
-  const compositionOnly = ["usda.gov", "canada.ca", "matvaretabellen.no", "tbca.net.br", "foodstandards.gov.au", "nin.res.in", "mext.go.jp"];
+  const compositionOnly = ["usda.gov", "canada.ca", "matvaretabellen.no", "tbca.net.br", "foodstandards.gov.au", "doae.go.th", "nin.res.in", "mext.go.jp", "sciencedirect.com", "czasopisma.up.lublin.pl", "thaiscience.info"];
   if (!compositionOnly.some((domain) => host === domain || host.endsWith(`.${domain}`))) return true;
   return "foodSlug" in row && "nutrientSlug" in row && !("benefitSlug" in row);
 }

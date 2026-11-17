@@ -438,6 +438,37 @@ async function queryCapability(
 }
 
 // ---------------------------------------------------------------------------
+// COMP_TIER1 — model tiering for the live Companion's own generation
+// ---------------------------------------------------------------------------
+
+/**
+ * Capabilities whose context is a single scalar/object fact a cheap model can
+ * reliably read back verbatim (the requester's own profile). Everything else
+ * — shopping, pantry, meals, household, planner, nutrition-knowledge, and so
+ * on — hands the model MULTIPLE records it must correctly cross-reference,
+ * compare, or aggregate, which is exactly where gpt-4o-mini was live-caught
+ * producing confident wrong answers despite complete, correct context (see
+ * the call site below for the specific cases). Broad by design
+ * (user-approved 2026-11-17): most real turns route to the stronger model
+ * rather than risk more of the same failure class in an untested capability.
+ */
+const SIMPLE_CAPABILITY_IDS: ReadonlySet<string> = new Set(["profile"]);
+
+const COMPANION_SIMPLE_MODEL = "gpt-4o-mini";
+const COMPANION_COMPLEX_MODEL = "gpt-6-luna";
+
+/**
+ * Mechanical, deterministic model pick — never an LLM call. A turn with no
+ * routed capability (a pure no-route/baseline-only turn) has nothing to
+ * cross-reference, so it stays on the cheap model.
+ */
+function selectCompanionModel(routedCapabilityIds: readonly string[]): string {
+  if (routedCapabilityIds.length === 0) return COMPANION_SIMPLE_MODEL;
+  const allSimple = routedCapabilityIds.every((id) => SIMPLE_CAPABILITY_IDS.has(id));
+  return allSimple ? COMPANION_SIMPLE_MODEL : COMPANION_COMPLEX_MODEL;
+}
+
+// ---------------------------------------------------------------------------
 // LLM grounded response
 // ---------------------------------------------------------------------------
 
@@ -1424,6 +1455,18 @@ entityRefs must ONLY contain items that appear in the context data above with a 
       temperature: 0.3,
       maxTokens: 400,
       jsonMode: true,
+      // COMP_TIER1 — same tiering fix applied to the benchmark judge, now applied to
+      // the live Companion itself (user-approved 2026-11-17). Live-confirmed: given
+      // CORRECT, complete context — every household member's own diet pattern, a
+      // food's real benefit record, a real shopping list — gpt-4o-mini still produced
+      // confident wrong answers (PH-005: "everyone... Keto" despite one member having
+      // none recorded; CG-084: misattributed the household's diet to a child with no
+      // diet of her own; FK-073: invented "salmon contains fiber" from a benefit
+      // category's generic description; SH-039: invented two items — "Toilet roll",
+      // "Balsamic vinegar" — that are not in the shopping data at all). Not a data
+      // bug, not a prompt-wording bug (rule 1 above already says never to do this) —
+      // a model-capability ceiling at cross-referencing/synthesising multiple records.
+      model: selectCompanionModel(routedQueried.map((q) => q.capability)),
     });
     rawContent = response.content;
     // OBS1: observe the successful generation (model + wall time; no content).
