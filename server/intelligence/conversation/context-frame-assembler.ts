@@ -23,6 +23,7 @@ import {
   DECLARED_DEFAULT_ZONE,
   formatCivilDate,
   householdToday,
+  householdWeekOf,
   type IANAZone,
 } from "../../../shared/time/household-time.js";
 import type { IntelligenceContext } from "../types.js";
@@ -208,6 +209,24 @@ export async function assembleContextFrame(
   );
 
   // ── Active planner week (pointer only) ─────────────────────────────────
+  //
+  // BUGFIX (2026-11-17, PL-024 investigation): the third fallback used to be
+  // `(await storage.getPlannerWeeks(userId))[0]` — ordered by `weekNumber`
+  // ASCENDING, so it reliably resolved to the household's OLDEST week (a
+  // legacy, pre-dated-system week with no `weekStartDate` at all) rather than
+  // anything close to "now". Every conversational planner question asked
+  // outside the Planner UI (no client-supplied week, no prior entity ref —
+  // i.e. the common case: a fresh floating-chat question) was silently
+  // grounded in stale data. Live-confirmed: "what am I having for dinner
+  // tonight?" answered from a year-old week's dinner entry while the real,
+  // current week's dinner went unread. Resolving "today's actual week" is
+  // exactly `getCurrentDatedPlannerWeek`'s job, but that function CREATES the
+  // week if none exists yet (`ensureDatedPlannerWeek`) — a write this
+  // pointer-only, degrade-gracefully assembler must not perform as a side
+  // effect of a passive read. So: compute the same civil "this Monday" that
+  // function would, and look it up read-only; if truly nothing exists yet,
+  // `activePlannerWeekId` stays undefined and the planner capability's own
+  // honest-gap path handles it — never an old week standing in as a guess.
   let activePlannerWeekId: number | undefined;
   if (surfaceHints.activePlannerWeekId != null) {
     activePlannerWeekId = surfaceHints.activePlannerWeekId;
@@ -217,8 +236,9 @@ export async function assembleContextFrame(
       activePlannerWeekId = Number(weekRef.id);
     } else {
       try {
-        const weeks = await storage.getPlannerWeeks(userId);
-        if (weeks.length > 0) activePlannerWeekId = weeks[0].id;
+        const thisMonday = formatCivilDate(householdWeekOf(householdToday(new Date(), householdZone ?? DECLARED_DEFAULT_ZONE)).start);
+        const currentWeek = await storage.getPlannerWeekByStartDate(userId, thisMonday);
+        if (currentWeek != null) activePlannerWeekId = currentWeek.id;
       } catch { /* non-critical */ }
     }
   }

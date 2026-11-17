@@ -21,6 +21,18 @@
 import { storage } from "../../storage.js";
 
 export interface HouseholdGroundTruth {
+  /**
+   * JUDGE_LIVE5 — the two facts a judge otherwise has to guess and gets wrong:
+   * WHICH person is asking (a question phrased "do I have..." is about this
+   * user, not necessarily every household member — live-caught on PH-002,
+   * where the judge flagged a correct personal answer as wrong because a
+   * DIFFERENT household member carries the restriction), and WHAT "today" is
+   * (a planner question needs a real calendar date, not a bare 0-6 index the
+   * judge has to assume — live-caught on PL-024, where the judge's own
+   * rationale said "assuming today is Monday").
+   */
+  readonly requesterUserId: number;
+  readonly todayDate: string;
   readonly dietary: Awaited<ReturnType<typeof storage.getHouseholdDietaryContext>> | null;
   readonly cookbookMeals: ReadonlyArray<{
     readonly id: number;
@@ -37,13 +49,25 @@ export interface HouseholdGroundTruth {
   }>;
   readonly pantryItems: ReadonlyArray<{ readonly name: string }>;
   readonly recentDiaryEntries: ReadonlyArray<{ readonly date: string; readonly mealSlot: string; readonly name: string }>;
-  readonly plannerThisWeek: ReadonlyArray<{ readonly dayOfWeek: number; readonly mealType: string; readonly mealName: string | null }>;
+  readonly plannerThisWeek: ReadonlyArray<{ readonly date: string; readonly dayOfWeek: number; readonly mealType: string; readonly mealName: string | null }>;
 }
 
 const MAX_MEALS = 60;
 const MAX_SHOPPING = 60;
 const MAX_PANTRY = 80;
 const MAX_DIARY = 40;
+
+/** Pure civil-date math on plain "YYYY-MM-DD" strings — no timezone involved,
+ *  matching how `weekStartDate` is itself stored. */
+function addIsoDays(iso: string, days: number): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function todayIsoDate(): string {
+  return new Date().toISOString().slice(0, 10);
+}
 
 /** Build one real, read-only ground-truth snapshot for `userId`. Never throws —
  *  each source degrades to empty/null independently so one failing query never
@@ -66,14 +90,20 @@ export async function buildHouseholdGroundTruth(userId: number): Promise<Househo
     ]);
     const dayOfWeekById = new Map(days.map((d) => [d.id, d.dayOfWeek]));
     const mealNameById = new Map(meals.map((m) => [m.id, m.name]));
-    plannerThisWeek = entries.map((e) => ({
-      dayOfWeek: dayOfWeekById.get(e.dayId) ?? -1,
-      mealType: e.mealType,
-      mealName: e.mealId != null ? mealNameById.get(e.mealId) ?? null : null,
-    }));
+    plannerThisWeek = entries.map((e) => {
+      const dayOfWeek = dayOfWeekById.get(e.dayId) ?? -1;
+      return {
+        date: dayOfWeek >= 0 && week.weekStartDate ? addIsoDays(week.weekStartDate, dayOfWeek) : "unknown",
+        dayOfWeek,
+        mealType: e.mealType,
+        mealName: e.mealId != null ? mealNameById.get(e.mealId) ?? null : null,
+      };
+    });
   }
 
   return {
+    requesterUserId: userId,
+    todayDate: todayIsoDate(),
     dietary,
     cookbookMeals: meals.slice(0, MAX_MEALS).map((m) => ({
       id: m.id, name: m.name, isReadyMeal: m.isReadyMeal, isSystemMeal: m.isSystemMeal, suitableSlots: m.suitableSlots,

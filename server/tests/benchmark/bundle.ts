@@ -81,8 +81,21 @@ export const RUBRIC_VERSION = "v2.0.0";
  * is pinned," the same way `v1.0.1`'s fixture corrections didn't change which rule
  * governs the fixture, only what it says. Runs before this version used one model
  * for every question; they are not directly comparable to one after it.
+ *
+ * JUDGE_LIVE5 (2026-11-17) bumps JUDGE_VERSION again, to v2.3.0 — the tiered judge's
+ * OWN run (79.2) surfaced two more concrete judge-side gaps rather than real
+ * Companion bugs: (1) PH-002's turn correctly answered "no restrictions" for the
+ * REQUESTING user, but the judge flagged it wrong because a DIFFERENT household
+ * member carries one — "household.dietary.members" was never scoped to who was
+ * actually asking; (2) PL-024's own judge rationale said "assuming today is
+ * Monday" — planner entries carried only a bare 0-6 day index, so the judge had to
+ * guess which one was "tonight." ground-truth.ts now carries `requesterUserId` and
+ * `todayDate`, and every planner entry a real `date`; the prompt explicitly names
+ * both traps. Runs before this version may show false D1/D2 failures on
+ * personal-scope or "today"-relative questions that this version will score
+ * correctly on the same Companion content — not comparable on those questions.
  */
-export const JUDGE_VERSION = "v2.2.0";
+export const JUDGE_VERSION = "v2.3.0";
 /** Additive result fields (BENCH2 panels; BENCH2C `capabilityUtilisation` + per-question invocations) — MINOR. */
 export const RESULT_SCHEMA_VERSION = "1.2.0";
 
@@ -203,6 +216,10 @@ Dimension-specific guidance for the dimension you are asked to grade:
 A deterministic hard-gate or routing gate may already have been applied to this question elsewhere in the pipeline. Do not try to re-derive or second-guess a gate here — you are grading only the one dimension you are asked for, in isolation, exactly as asked.
 
 You are given the dimension to grade, the question's utterance and expectation record, the captured turn, and — when available — the acting household's own real stored data (profile diet pattern, cookbook, shopping list, pantry, recent food diary, this week's planner) as "household" in the input. USE IT: when the turn makes a specific, checkable claim, look it up in "household" before judging D1/D5. A claim that matches the household's real data is correct, not a guess. Only treat a specific claim as unsupported or fabricated if it actively CONTRADICTS the household data, or if "household" is null/absent and you genuinely have no way to check. Never penalise a correct claim just because you were not shown its source elsewhere in the context — the "household" field IS that source.
+
+Two specific traps to avoid when reading "household":
+- SCOPE: "household.dietary.members" lists EVERY person in the household, each with their OWN separate diet/restrictions — they are not shared. A question phrased in the first person ("do I have...", "my profile", "am I following...") is about "household.requesterUserId" specifically, never the whole household, UNLESS the question explicitly says "we"/"my family"/"household". A different member carrying a restriction the requester does not have does NOT make the requester's own "I have none" answer wrong.
+- TIME: "household.todayDate" is the real current date. "household.plannerThisWeek" entries each carry a real "date" (YYYY-MM-DD) — use it to find which entry is actually "today"/"tonight"/"tomorrow" rather than guessing from a bare day-of-week number. "household.recentDiaryEntries" is what was actually EATEN (past); "household.plannerThisWeek" is what is PLANNED (may be future, not yet eaten) — a question asking what the household has EATEN is answered by the diary, not by a planner entry for a day that has not happened yet.
 
 Output strict JSON: {"band": <integer 0-4>, "rationale": "<one sentence explaining WHY you chose this band — never a bare quote of the turn>"}.`;
 
