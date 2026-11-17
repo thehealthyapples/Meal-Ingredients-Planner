@@ -183,7 +183,7 @@ export async function enrichIngredient(
   let raw: unknown;
   try {
     const response = await client.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-6-luna",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user",   content: userPrompt(ingredientKey) },

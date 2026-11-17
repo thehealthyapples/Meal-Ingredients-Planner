@@ -2967,7 +2967,7 @@ Rules:
 
       irtLog('sending openai request');
       const completion = await client.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: 'gpt-6-luna',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: text },
@@ -3214,7 +3214,7 @@ Example input: ["cheeky chicken breast","some greek yoghurt","a bit of olive oil
 Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"productName":"Greek yoghurt","quantity":null,"unit":null},{"productName":"Olive oil","quantity":null,"unit":null}]`;
 
         const response = await client.chat.completions.create({
-          model: 'gpt-4o-mini',
+          model: 'gpt-6-luna',
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: JSON.stringify(ambiguousLines) },
@@ -12140,7 +12140,7 @@ Rules:
 - Return exactly 3 suggestions, no duplicates
 - No markdown, no explanation, no extra keys${restrictionBlock}${preferenceBlock}`;
       const completion = await client.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: 'gpt-6-luna',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Ingredients I have: ${ingredients}` },
@@ -12264,7 +12264,7 @@ Rules:
 Base ingredients the user has: ${ingredients}
 Generate a complete recipe using these as the foundation.`;
       const completion = await client.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: 'gpt-6-luna',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userMsg },

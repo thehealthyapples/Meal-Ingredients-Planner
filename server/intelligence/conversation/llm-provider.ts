@@ -60,7 +60,7 @@ export interface ILlmProvider {
 // ---------------------------------------------------------------------------
 
 export class OpenAIProvider implements ILlmProvider {
-  readonly modelName = "gpt-4o-mini";
+  readonly modelName = "gpt-6-luna";
 
   get isAvailable(): boolean {
     return Boolean(process.env.OPENAI_API_KEY);

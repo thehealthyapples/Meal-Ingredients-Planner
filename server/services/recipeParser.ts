@@ -401,7 +401,7 @@ async function extractWithTextAI(text: string, mode: ScanMode): Promise<Destinat
 
     const t0 = Date.now();
     const response = await client.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-6-luna",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: text },
@@ -868,7 +868,7 @@ Return only the JSON, no markdown, no explanation.`;
 
     const t0 = Date.now();
     const response = await client.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-6-luna",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: text },
