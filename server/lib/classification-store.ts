@@ -172,7 +172,7 @@ export async function classifyAndEnrich(itemId: number, normalizedKey: string): 
     aliases:        JSON.stringify(result.aliases),
     source:         'ai',
     aiConfidence:   result.confidence.toFixed(2),
-    aiModel:        'gpt-4o-mini',
+    aiModel:        'gpt-6-luna',
     reviewStatus:   'pending',
     notes:          result.notes || null,
   });

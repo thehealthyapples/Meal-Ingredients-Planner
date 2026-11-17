@@ -138,7 +138,7 @@ export async function runBackfill(options: BackfillOptions = {}): Promise<Backfi
           aliases:        JSON.stringify(aiResult.aliases),
           source:         'ai',
           aiConfidence:   aiResult.confidence.toFixed(2),
-          aiModel:        'gpt-4o-mini',
+          aiModel:        'gpt-6-luna',
           reviewStatus:   'pending',
           notes:          aiResult.notes || null,
         });
