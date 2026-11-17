@@ -74,12 +74,13 @@ import {
   type FallbackPhraseInputs,
   type GrowthPhraseInputs,
   type EscalationPhraseInputs,
+  type SafetyBoundaryPhraseInputs,
 } from "./personality-registry.js";
 import type { UnsuccessfulTurnState } from "./turn-fallback.js";
 import type { GuidanceSuggestion } from "./companion-guidance.js";
 import { toGrowthPhraseInputs, type Notice } from "./notice-engine.js";
 
-export type { PersonalityId, BehaviourProfile } from "./personality-registry.js";
+export type { PersonalityId, BehaviourProfile, SafetyBoundaryKind } from "./personality-registry.js";
 export { normalizePersonalityId, DEFAULT_PERSONALITY_ID, PERSONALITY_IDS } from "./personality-registry.js";
 
 // ---------------------------------------------------------------------------
@@ -128,6 +129,17 @@ export function voiceFallback(
  */
 export function voiceEscalation(personalityId: PersonalityId, inputs: EscalationPhraseInputs): string {
   return getPersonality(personalityId).escalationTemplate(inputs);
+}
+
+/**
+ * SAFE1 — voices the safety-boundary refusal. `inputs.kind` is
+ * `detectSafetyBoundary()`'s own closed-set description of which boundary the
+ * utterance crossed — never model output. The refusal + redirect clauses
+ * (personality-registry.ts's `safetyBoundaryRefusal`/`safetyBoundaryRedirect`)
+ * are identical in all six voices; this only changes the sentence around them.
+ */
+export function voiceSafetyBoundary(personalityId: PersonalityId, inputs: SafetyBoundaryPhraseInputs): string {
+  return getPersonality(personalityId).safetyBoundaryTemplate(inputs);
 }
 
 /** Voices the provider-unavailable degradation. Takes no facts — see `notConfigured`. */

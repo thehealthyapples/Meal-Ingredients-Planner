@@ -45,6 +45,9 @@ export const TRUSTED_SOURCE_DOMAINS: readonly string[] = [
   "usda.gov",               // USDA FoodData Central — food composition only
   "canada.ca",              // Health Canada / Canadian Nutrient File — food composition only
   "matvaretabellen.no",     // Norwegian Food Composition Table — food composition only
+  "tbca.net.br",            // Brazilian Food Composition Table (USP/FoRC) — food composition only
+  "foodstandards.gov.au",   // FSANZ / Australian Food Composition Database — food composition only
+  "nin.res.in",             // ICMR–National Institute of Nutrition Indian Food Composition Tables — food composition only
   "pubmed.ncbi.nlm.nih.gov", // PubMed index — peer-reviewed scientific literature; secondary to official guidance
   "pmc.ncbi.nlm.nih.gov",   // PubMed Central full text — peer-reviewed scientific literature; secondary to official guidance
 ];
@@ -118,7 +121,7 @@ export function isSourceAllowedForClaim(ref: unknown, row: ClaimEvidenceFields):
   if (!value?.url) return false;
   let host = "";
   try { host = new URL(value.url).hostname.toLowerCase(); } catch { return false; }
-  const compositionOnly = ["usda.gov", "canada.ca", "matvaretabellen.no"];
+  const compositionOnly = ["usda.gov", "canada.ca", "matvaretabellen.no", "tbca.net.br", "foodstandards.gov.au", "nin.res.in"];
   if (!compositionOnly.some((domain) => host === domain || host.endsWith(`.${domain}`))) return true;
   return "foodSlug" in row && "nutrientSlug" in row && !("benefitSlug" in row);
 }

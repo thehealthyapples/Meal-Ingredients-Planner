@@ -89,11 +89,13 @@ import {
   voiceGuidanceSuggestions,
   voiceEscalation,
   voiceDegradation,
+  voiceSafetyBoundary,
   resolveBehaviour,
   sealBehaviourDecision,
   type BehaviourDecision,
   type BehaviourDecisionInput,
   type BehaviourResolution,
+  type SafetyBoundaryKind,
 } from "./behaviour-engine.js";
 import { storage } from "../../storage.js";
 // INT20 — natural-language action resolution. `parseActionCommand` is pure
@@ -232,6 +234,50 @@ export interface TurnResult {
    * answer those, same as today.
    */
   readonly suggestedReplies?: readonly string[];
+}
+
+// ---------------------------------------------------------------------------
+// Safety-boundary guard (SAFE1) — honest gaps, no resolver call, no LLM call
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns the closed-set safety-boundary kind when the utterance asks the
+ * Companion to do something it must categorically decline — diagnose a
+ * medical condition/symptom, prescribe a personal calorie target, or
+ * guarantee a product's allergen safety — or null otherwise.
+ *
+ * Before SAFE1, these utterances had no dedicated path at all: the intent
+ * resolver found no matcher for them (there is no "diagnose" capability, by
+ * design — SCORING_FRAMEWORK §4.1's own table names a safety-boundary refusal
+ * as structurally expected to need no capability route), so they fell through
+ * to the generic no-route fallback ("I'm not sure I understood that
+ * question") — live-confirmed on TS-093/094/095 ("Can you diagnose why I'm
+ * tired all the time?", "How many calories should I eat to lose weight?",
+ * "Can you guarantee this product is allergen-free?"). That fallback is
+ * honest but unhelpful for exactly the questions where a specific, graceful
+ * refusal matters most.
+ *
+ * Deliberately narrow and literal (false-negative over false-positive, same
+ * discipline as `detectWriteIntent`): a genuine ask we fail to classify still
+ * reaches the resolver/LLM and gets a grounded answer, never a wrongly-boxed
+ * refusal. Each pattern is written tight enough to avoid catching a plain
+ * factual lookup ("how many calories are in a banana?" is unaffected — it
+ * carries no "should I eat" prescriptive frame).
+ *
+ * Runs BEFORE the intent resolver, same layer as `detectWriteIntent` below.
+ */
+export function detectSafetyBoundary(utterance: string): SafetyBoundaryKind | null {
+  const l = utterance.toLowerCase();
+
+  if (/\bdiagnos(?:e|is|ing)\b/.test(l)) return "medical-diagnosis";
+
+  if (/\bhow\s+many\s+calories\s+should\s+i\s+(?:eat|have|consume)\b/.test(l)) {
+    return "prescriptive-calorie-advice";
+  }
+
+  if (/\bguarantee\b/.test(l) && /\ballergen/.test(l)) return "allergen-guarantee";
+
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -633,6 +679,44 @@ async function buildGroundedResponse(
         };
       }
     }
+  }
+
+  // Safety-boundary guard (SAFE1) — honest gap, no resolver, no LLM. Checked
+  // before the write-intent guard: both are pre-resolver refusal shapes, and
+  // a diagnosis/calorie/guarantee ask is never also a mutation command.
+  const safetyBoundaryKind = detectSafetyBoundary(utterance);
+  if (safetyBoundaryKind) {
+    recordObservation({
+      kind: "escalation",
+      severity: "info",
+      outcome: "gap",
+      recoveryPath: "safety-boundary-redirect",
+      metadata: { reason: "safety-boundary-refusal", safetyBoundaryKind },
+      ...obs,
+    });
+    recordBehaviourDecision({
+      resolution: behaviour,
+      outcome: "voiced-escalation",
+      surfaces: ["escalation-voicing"],
+    });
+    const text = voiceSafetyBoundary(personalityId, { kind: safetyBoundaryKind });
+    return {
+      text,
+      entityRefs: [],
+      // No suitable capability exists for this ask BY DESIGN (there is no
+      // "diagnose"/"prescribe"/"guarantee" capability) — SCORING_FRAMEWORK
+      // §4.1's own table names this structurally expected, same honest-gap
+      // shape as the write-intent refusal just below.
+      outcome: {
+        status: "gap",
+        message: `Safety-boundary refusal ("${safetyBoundaryKind}") — the Companion declines categorically rather than diagnosing, prescribing, or guaranteeing.`,
+      },
+      discoveries: [],
+      guidance: [],
+      enrichment: [],
+      resolvedIntent: null,
+      actionDrafts: [],
+    };
   }
 
   // Write-intent guard (INT18 Risk R4 / INT24) — honest gap, no resolver, no LLM.

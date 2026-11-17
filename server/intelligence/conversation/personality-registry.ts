@@ -142,6 +142,21 @@ export interface EscalationPhraseInputs {
 export type EscalationPhraseBuilder = (inputs: EscalationPhraseInputs) => string;
 
 /**
+ * SAFE1 — the closed set of safety-boundary shapes `detectSafetyBoundary()`
+ * (conversation-gateway.ts) recognises: a medical-diagnosis request, a
+ * prescriptive personal-calorie ask, or an absolute allergen guarantee.
+ * Mirrors `detectWriteIntent()`'s own closed-set-literal pattern exactly —
+ * this is never model output and never a claim about the household.
+ */
+export type SafetyBoundaryKind = "medical-diagnosis" | "prescriptive-calorie-advice" | "allergen-guarantee";
+
+export interface SafetyBoundaryPhraseInputs {
+  readonly kind: SafetyBoundaryKind;
+}
+
+export type SafetyBoundaryPhraseBuilder = (inputs: SafetyBoundaryPhraseInputs) => string;
+
+/**
  * The provider-unavailable degradation phrase (CP2). Takes no slots: the only
  * fact it discloses is that the assistant is not configured, which the caller
  * has already established by reading `llmProvider.isAvailable`.
@@ -265,6 +280,17 @@ export interface PersonalityDefinition {
    * string lived in conversation-gateway.ts.
    */
   readonly degradationTemplate: DegradationPhraseBuilder;
+  /**
+   * SAFE1 — voices the safety-boundary refusal (medical diagnosis, prescriptive
+   * calorie advice, absolute allergen guarantee). Every template MUST contain
+   * both `safetyBoundaryRefusal(kind)` and `safetyBoundaryRedirect(kind)`
+   * verbatim, for the same reason `escalationTemplate` must contain
+   * `cannotYet()`: the refusal and its safe redirect are shared, machine-checked
+   * facts; only the sentence around them belongs to the voice. Before SAFE1,
+   * `detectSafetyBoundary()`-shaped utterances had no dedicated path at all and
+   * fell through to the generic no-route fallback.
+   */
+  readonly safetyBoundaryTemplate: SafetyBoundaryPhraseBuilder;
   /** Cosmetic prefix applied to an already-eligible guidance suggestion's label (Stage 4). */
   readonly guidanceLabelPrefix: string;
   readonly growthTemplate: GrowthPhraseBuilder;
@@ -316,6 +342,44 @@ export function notConfigured(): string {
   return "hasn't been configured yet";
 }
 
+/**
+ * SAFE1 — THE refusal clause, keyed by `SafetyBoundaryKind`. Every
+ * `safetyBoundaryTemplate` must embed this string verbatim for the kind it is
+ * given, and `test-intelligence-personality-platform.ts` asserts it for all
+ * six voices against every kind `detectSafetyBoundary()` can produce. Ends
+ * with no trailing punctuation so each voice controls its own sentence flow,
+ * exactly like `cannotYet(action)`.
+ */
+export function safetyBoundaryRefusal(kind: SafetyBoundaryKind): string {
+  switch (kind) {
+    case "medical-diagnosis":
+      return "I can't diagnose that";
+    case "prescriptive-calorie-advice":
+      return "I can't set a personal calorie target for you";
+    case "allergen-guarantee":
+      return "I can't guarantee that";
+  }
+}
+
+/**
+ * SAFE1 — THE safe-redirect clause paired with `safetyBoundaryRefusal`, embedded
+ * verbatim by every `safetyBoundaryTemplate` for the same reason: a refusal
+ * alone would leave the household with nothing — every voice must point to the
+ * same genuinely safe next step, never a softened half-answer to the boundary
+ * question itself. Each sentence is capitalised and full-stopped so it drops
+ * cleanly into any voice's wrapper.
+ */
+export function safetyBoundaryRedirect(kind: SafetyBoundaryKind): string {
+  switch (kind) {
+    case "medical-diagnosis":
+      return "Please speak to a healthcare professional — I can help you keep a food diary if that's useful to bring to them.";
+    case "prescriptive-calorie-advice":
+      return "A healthcare professional should set that for you — if you add a target to your profile, I can track against it.";
+    case "allergen-guarantee":
+      return "Always check the label yourself, since sourcing and recipes can change.";
+  }
+}
+
 // ---------------------------------------------------------------------------
 // THE SIX PERSONALITIES
 // ---------------------------------------------------------------------------
@@ -354,6 +418,8 @@ export const PERSONALITY_REGISTRY: Readonly<Record<PersonalityId, PersonalityDef
       `For now, make the change directly in the app and I can help you understand or review it afterwards.`,
     degradationTemplate: () =>
       `The AI assistant isn't available right now — it ${notConfigured()}.`,
+    safetyBoundaryTemplate: (i) =>
+      `I want to be upfront here: ${safetyBoundaryRefusal(i.kind)}. ${safetyBoundaryRedirect(i.kind)}`,
     guidanceLabelPrefix: "",
     growthTemplate: (g) =>
       `Over the ${g.earlierWindowLabel} to ${g.recentWindowLabel}, your ${g.metricLabel} has moved from ${g.earlierValue}${g.unit} to ${g.recentValue}${g.unit}.`,
@@ -396,6 +462,8 @@ export const PERSONALITY_REGISTRY: Readonly<Record<PersonalityId, PersonalityDef
       `Make the change in the app yourself for now, and I'll happily go through it with you after.`,
     degradationTemplate: () =>
       `The assistant isn't switched on right now — it ${notConfigured()}. Nothing you did, promise!`,
+    safetyBoundaryTemplate: (i) =>
+      `Gonna be straight with you: ${safetyBoundaryRefusal(i.kind)}. ${safetyBoundaryRedirect(i.kind)}`,
     guidanceLabelPrefix: "You might like: ",
     growthTemplate: (g) =>
       `You're becoming really good at this — your ${g.metricLabel} went from ${g.earlierValue}${g.unit} (${g.earlierWindowLabel}) to ${g.recentValue}${g.unit} now.`,
@@ -438,6 +506,8 @@ export const PERSONALITY_REGISTRY: Readonly<Record<PersonalityId, PersonalityDef
       `Make the change in the app now, and I'll review the result with you.`,
     degradationTemplate: () =>
       `The assistant isn't running right now — it ${notConfigured()}. Nothing to action on your side.`,
+    safetyBoundaryTemplate: (i) =>
+      `Staying in my lane here: ${safetyBoundaryRefusal(i.kind)}. ${safetyBoundaryRedirect(i.kind)}`,
     guidanceLabelPrefix: "Next step: ",
     growthTemplate: (g) =>
       `${g.earlierWindowLabel} you averaged ${g.earlierValue}${g.unit}. You're now consistently at ${g.recentValue}${g.unit} — that's real, measured progress.`,
@@ -480,6 +550,8 @@ export const PERSONALITY_REGISTRY: Readonly<Record<PersonalityId, PersonalityDef
       `Make the change in the app yourself and I'll taste-test it with you afterwards.`,
     degradationTemplate: () =>
       `The assistant isn't fired up right now — it ${notConfigured()}. Nothing burnt on your side.`,
+    safetyBoundaryTemplate: (i) =>
+      `Not something I can cook up an answer to: ${safetyBoundaryRefusal(i.kind)}. ${safetyBoundaryRedirect(i.kind)}`,
     guidanceLabelPrefix: "Worth trying: ",
     growthTemplate: (g) =>
       `You've been building real range lately — your ${g.metricLabel} moved from ${g.earlierValue}${g.unit} to ${g.recentValue}${g.unit} since ${g.earlierWindowLabel}.`,
@@ -522,6 +594,8 @@ export const PERSONALITY_REGISTRY: Readonly<Record<PersonalityId, PersonalityDef
       `that ability is planned for a future update. Make the change in the app yourself, and I can walk you through what it means afterwards.`,
     degradationTemplate: () =>
       `The assistant can't answer at the moment — it ${notConfigured()}. That's a setup step on the platform's side, not something you've done.`,
+    safetyBoundaryTemplate: (i) =>
+      `It matters to be precise about my limits here: ${safetyBoundaryRefusal(i.kind)}. ${safetyBoundaryRedirect(i.kind)}`,
     guidanceLabelPrefix: "You could also learn about: ",
     growthTemplate: (g) =>
       `Your ${g.metricLabel} has developed measurably — ${g.earlierValue}${g.unit} ${g.earlierWindowLabel}, now ${g.recentValue}${g.unit}.`,
@@ -562,6 +636,8 @@ export const PERSONALITY_REGISTRY: Readonly<Record<PersonalityId, PersonalityDef
       `Read and explain: yes. ${cannotYet(i.action)} — that lands in a future update. Make the change in the app. I'll review it after.`,
     degradationTemplate: () =>
       `Assistant unavailable — it ${notConfigured()}. Nothing to do on your side.`,
+    safetyBoundaryTemplate: (i) =>
+      `Not qualified. ${safetyBoundaryRefusal(i.kind)}. ${safetyBoundaryRedirect(i.kind)}`,
     guidanceLabelPrefix: "Do next: ",
     growthTemplate: (g) =>
       `${g.metricLabel}: ${g.earlierValue}${g.unit} (${g.earlierWindowLabel}) to ${g.recentValue}${g.unit} (${g.recentWindowLabel}). Improvement holding.`,

@@ -32,6 +32,9 @@ import {
   getPersonality,
   cannotYet,
   notConfigured,
+  safetyBoundaryRefusal,
+  safetyBoundaryRedirect,
+  type SafetyBoundaryKind,
 } from "../intelligence/conversation/personality-registry.js";
 import {
   systemPromptFragment,
@@ -45,6 +48,7 @@ import {
   phraseGrowth,
   voiceEscalation,
   voiceDegradation,
+  voiceSafetyBoundary,
   resolveBehaviour,
   sealBehaviourDecision,
   BEHAVIOUR_SURFACES,
@@ -62,6 +66,7 @@ import type { UserHealthTrend } from "../../shared/schema.js";
 import {
   ConversationGateway,
   detectWriteIntent,
+  detectSafetyBoundary,
   type HandleIntentFn,
 } from "../intelligence/conversation/conversation-gateway.js";
 import { InMemoryConversationStore, resetInMemoryIds } from "../intelligence/conversation/conversation-store.js";
@@ -366,6 +371,41 @@ assert(
       "that's coming in a future update. For now, make the change directly in the app and I can help you " +
       "understand or review it afterwards.",
   "companion's escalation is byte-identical to the pre-CP2 gateway copy (no default-voice copy change)",
+);
+
+console.log("\n── §6b SAFE1 — safety-boundary voicing (diagnosis / calorie / allergen refusal) ──");
+
+// The complete set of kinds detectSafetyBoundary can name, harvested from the
+// guard itself rather than hand-copied — mirrors §6's WRITE_ACTIONS harvest.
+const SAFETY_BOUNDARY_UTTERANCES = [
+  "Can you diagnose why I'm tired all the time?",
+  "How many calories should I eat to lose weight?",
+  "Can you guarantee this product is allergen-free?",
+];
+const SAFETY_BOUNDARY_KINDS = Array.from(
+  new Set(SAFETY_BOUNDARY_UTTERANCES.map((u) => detectSafetyBoundary(u)).filter((k): k is SafetyBoundaryKind => k !== null)),
+);
+assert(SAFETY_BOUNDARY_KINDS.length === 3, `harvested all 3 safety-boundary kinds from detectSafetyBoundary (got ${SAFETY_BOUNDARY_KINDS.length})`);
+
+for (const id of PERSONALITY_IDS) {
+  for (const kind of SAFETY_BOUNDARY_KINDS) {
+    const text = voiceSafetyBoundary(id, { kind });
+    // Both the refusal AND its safe redirect are structural, not stylistic —
+    // every voice must carry both verbatim, same discipline as cannotYet above.
+    assert(text.includes(safetyBoundaryRefusal(kind)), `${id}: safety-boundary embeds the verbatim refusal for "${kind}"`);
+    assert(text.includes(safetyBoundaryRedirect(kind)), `${id}: safety-boundary embeds the verbatim redirect for "${kind}"`);
+  }
+}
+
+// A plain factual calorie lookup must NOT be caught by the prescriptive-advice pattern.
+assert(
+  detectSafetyBoundary("How many calories are in a banana?") === null,
+  "a factual calorie lookup (no prescriptive 'should I eat' frame) is not a safety-boundary match",
+);
+// A genuine read question about allergens with no guarantee ask is unaffected.
+assert(
+  detectSafetyBoundary("What allergens does this product contain?") === null,
+  "an allergen question with no guarantee ask is not a safety-boundary match",
 );
 // Six voices, six different wordings of one refusal.
 assert(

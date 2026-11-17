@@ -28,6 +28,7 @@ import {
 import { benchmarkWorldHardRestrictions } from "../../benchmark/world-fixtures.js";
 import { resolveActiveRestrictions } from "@shared/restrictions/restriction-resolver.js";
 import { resolveJudge, type JudgeClient } from "./judge.js";
+import type { HouseholdGroundTruth } from "./ground-truth.js";
 import {
   rollupDimensions, rollupDomains, rollupCapabilities, rollupNonCapability, rollupHouseholds, rollupPersonalities,
   safetyPanel, honestGapRate, headlineScore, failedQuestionIds, releaseReadiness, compare,
@@ -47,6 +48,10 @@ export interface RunOptions {
   /** The household label questions are attributed to (e.g. "BW03" in benchmark-world mode). */
   readonly householdLabel?: string;
   readonly judge?: JudgeClient;
+  /** JUDGE_LIVE3 — the acting household's own real data, resolved once by the
+   *  caller (run-benchmark.ts has the userId; this module stays on the one-seam
+   *  side of storage access) and handed to every judge call this run makes. */
+  readonly groundTruth?: HouseholdGroundTruth | null;
   readonly baseline?: BenchmarkResult | null;
   /** Optional caller hook for progress reporting (e.g. server logs). */
   readonly onProgress?: (done: number, total: number, id: string) => void;
@@ -168,7 +173,7 @@ export async function runBenchmark(options: RunOptions): Promise<BenchmarkResult
     // Optional judge tier — refine the degree of judge-owned dimensions only.
     if (judge.enabled) {
       for (const dim of JUDGE_OWNED) {
-        const verdict = await judge.score(dim, exp, turn);
+        const verdict = await judge.score(dim, exp, turn, options.groundTruth);
         if (verdict) {
           anyJudge = true;
           const weight = DIMENSION_WEIGHTS[dim];

@@ -20,6 +20,7 @@ import { runBenchmark } from "./runner.js";
 import { makeCompanionTurnRunner } from "./companion-turn.js";
 import { saveRun, selectBaseline } from "./history.js";
 import { resolveBundle, bundleVersionLabel } from "./bundle.js";
+import { buildHouseholdGroundTruth } from "./ground-truth.js";
 import type { BenchmarkMode } from "./types.js";
 
 function arg(name: string, envKey: string, fallback: string): string {
@@ -57,6 +58,10 @@ async function main(): Promise<void> {
   const bundle = resolveBundle();
   const baseline = selectBaseline(bundleVersionLabel(bundle));
   const runTurn = makeCompanionTurnRunner(user, personality);
+  // JUDGE_LIVE3 — resolved once, outside the one-seam adapter, from the SAME real
+  // household this run is actually acting as. Never fabricated: if any source
+  // query fails, ground-truth.ts degrades that slice to empty/null rather than guess.
+  const groundTruth = await buildHouseholdGroundTruth(userId);
 
   const result = await runBenchmark({
     mode,
@@ -64,6 +69,7 @@ async function main(): Promise<void> {
     worldMode: "single-world",
     householdLabel: `user-${userId}`,
     baseline,
+    groundTruth,
     onProgress: (done, total, id) => process.stdout.write(`\r  ${done}/${total}  ${id.padEnd(8)}`),
   });
 

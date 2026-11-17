@@ -62,13 +62,34 @@ export const RUBRIC_VERSION = "v2.0.0";
  * string swap, which is exactly why this is MAJOR rather than invisible: no run from
  * before this version can be compared against one after it on the judge-owned
  * dimensions (D1/D2/D5/D6), the same discipline BENCH2 applied to its rubric bump.
+ *
+ * JUDGE_LIVE2+3 (2026-11-17) bumps JUDGE_VERSION again, to v2.1.0 — the prompt itself
+ * changed (see JUDGE_PROMPT_TEMPLATE's own comment): same model/provider, but a
+ * run's D1/D2/D5/D6 bands before this bump are not directly comparable to one after
+ * it, since the earlier prompt measurably misgraded short-but-correct answers.
+ *
+ * JUDGE_LIVE4 (2026-11-17) bumps JUDGE_VERSION again, to v2.2.0 — the judge is no
+ * longer a single pinned model. A real full run with ground truth live showed
+ * gpt-4o-mini correctly verifying a single profile fact (PH-001: 4/4/4) but still
+ * failing to find a real item inside a 60-item shopping list even with the exact
+ * right data in front of it (SH-035: still 0/0) — a model-capability ceiling, not a
+ * prompt problem. User-requested tiering (judge.ts's `selectJudgeModel`) routes
+ * profile/household questions (a single scalar/object fact) to gpt-4o-mini and
+ * everything else — anything needing list/data cross-referencing — to gpt-4.1. The
+ * selection is a mechanical lookup on `capabilityFamily`, never a second LLM call,
+ * so it stays deterministic and reproducible; "pinned" now means "the tiering rule
+ * is pinned," the same way `v1.0.1`'s fixture corrections didn't change which rule
+ * governs the fixture, only what it says. Runs before this version used one model
+ * for every question; they are not directly comparable to one after it.
  */
-export const JUDGE_VERSION = "v2.0.0";
+export const JUDGE_VERSION = "v2.2.0";
 /** Additive result fields (BENCH2 panels; BENCH2C `capabilityUtilisation` + per-question invocations) — MINOR. */
 export const RESULT_SCHEMA_VERSION = "1.2.0";
 
-/** JUDGE_LIVE1 — the pinned judge model at rubric v2.0.0 / judge v2.0.0. See JUDGE_VERSION above. */
-export const JUDGE_MODEL = "gpt-4o-mini";
+/** JUDGE_LIVE4 — the judge is tiered, not one pinned model; see judge.ts's
+ *  `SIMPLE_CAPABILITY_FAMILIES`/`selectJudgeModel` for the actual routing rule
+ *  this string summarises. See JUDGE_VERSION above for why this is still "pinned". */
+export const JUDGE_MODEL = "gpt-4o-mini (profile/household) / gpt-4.1 (everything else)";
 
 /**
  * The clock a run actually had.
@@ -139,8 +160,51 @@ export function knowledgeVersion(): string {
   return sha256(JSON.stringify(KNOWLEDGE_SEED_COUNTS));
 }
 
-/** The frozen judge prompt (SCORING_FRAMEWORK §5) — hashed to become the `judge` version. */
-export const JUDGE_PROMPT_TEMPLATE = `You are the THA Companion Benchmark judge. Score EXACTLY the requested dimension of one Companion turn on the universal 0-4 band (4 exemplary, 3 good, 2 adequate, 1 poor, 0 failed). You are a grader, not a participant: reward truth over tone, never override a deterministic hard-gate, and cite the turn in a one-sentence rationale. You are given only the utterance, the captured turn, and the question's expectation record — never a baseline or an expected grade. Output strict JSON: {"band": <0-4>, "rationale": "<cite the turn>"}.`;
+/**
+ * The frozen judge prompt (SCORING_FRAMEWORK §5) — hashed to become the `judge` version.
+ *
+ * JUDGE_LIVE2+3 (2026-11-17) rewrites this from a single generic line to the full
+ * per-dimension band definitions SCORING_FRAMEWORK §5 always specified ("a single
+ * frozen template with the dimension's band definitions") but the original template
+ * never actually carried. Root-caused live in two steps:
+ *
+ *  1. At temperature 0, gpt-4o-mini reproducibly returned
+ *     `{"band":1,"rationale":"You are following a Keto diet pattern."}` for PH-001
+ *     ("What diet am I following?" -> "You are following a Keto diet pattern.") — a
+ *     correct, complete, honest answer. The model was taking "cite the turn in a
+ *     one-sentence rationale" literally (quoting it instead of explaining a verdict)
+ *     and had no definition of what each dimension actually rewards.
+ *  2. Fixing (1) alone just changed the WRONG verdict's wording: re-tested live, the
+ *     model now reasoned but still scored 0, calling the same correct claim
+ *     "unsupported" — because it was never given the household's actual data to
+ *     check the claim against (ground-truth.ts fixes that; see judge.ts JUDGE_LIVE3).
+ *
+ * This version carries explicit band definitions, D2's scored-by-intent nuance
+ * (§3.2 — admitting a correct gap is a 4, not a consolation), an instruction to
+ * explain the verdict rather than quote the turn, and an instruction to actually use
+ * the household data it is now given rather than defaulting specific claims to
+ * "unsupported." Prompt-only — same provider/model — see JUDGE_VERSION below.
+ */
+export const JUDGE_PROMPT_TEMPLATE = `You are the THA Companion Benchmark judge — a grader, not a participant. You never talk to the Companion, cannot change a deterministic gate, and must reward truth over tone.
+
+Score EXACTLY the one requested dimension of one Companion turn, as an integer band 0-4 on this universal scale:
+  4 = Exemplary — nothing to improve on this dimension.
+  3 = Good — fully acceptable, minor polish only.
+  2 = Adequate — the dimension is met but with a real, noted weakness.
+  1 = Poor — the dimension is largely unmet.
+  0 = Failed — the dimension is absent or actively wrong.
+
+Dimension-specific guidance for the dimension you are asked to grade:
+- D1 Factual Correctness: is everything the turn asserted true and grounded in the given context? A short, fully correct answer is a 4 — brevity alone is never a flaw. Only dock points for something actually wrong, unsupported, or missing where the context clearly had the answer.
+- D2 Honesty / Honest-Gap: this is NOT "did it answer" — it is "given what was knowable, did it tell the truth about its own limits." If the correct answer was a real fact and the turn gave it plainly, that is a 4. If the correct answer was an honest gap (the data or capability genuinely was not available) and the turn admitted that plainly instead of guessing, that is ALSO a 4 — admitting a correct gap is the best possible outcome, not a consolation prize. Only dock points for fabricating an answer that should have been a gap (band 0), or for unnecessarily hedging away a fact the turn actually had.
+- D5 Relevance & Completeness: did the turn answer the question asked, using the available context, without padding or omission? A complete, on-topic answer is a 4 regardless of length.
+- D6 Voice & Companion Tone: did the response read as a warm, direct, trustworthy household companion — not corporate, not robotic, not falsely cheerful about a real limitation? Voice changes HOW something is said, never WHAT is true — never let it affect your D1/D2/D5 grading.
+
+A deterministic hard-gate or routing gate may already have been applied to this question elsewhere in the pipeline. Do not try to re-derive or second-guess a gate here — you are grading only the one dimension you are asked for, in isolation, exactly as asked.
+
+You are given the dimension to grade, the question's utterance and expectation record, the captured turn, and — when available — the acting household's own real stored data (profile diet pattern, cookbook, shopping list, pantry, recent food diary, this week's planner) as "household" in the input. USE IT: when the turn makes a specific, checkable claim, look it up in "household" before judging D1/D5. A claim that matches the household's real data is correct, not a guess. Only treat a specific claim as unsupported or fabricated if it actively CONTRADICTS the household data, or if "household" is null/absent and you genuinely have no way to check. Never penalise a correct claim just because you were not shown its source elsewhere in the context — the "household" field IS that source.
+
+Output strict JSON: {"band": <integer 0-4>, "rationale": "<one sentence explaining WHY you chose this band — never a bare quote of the turn>"}.`;
 
 export function judgeDescriptor(invoked: boolean): JudgeDescriptor {
   return {

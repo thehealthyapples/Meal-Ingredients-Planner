@@ -43,3 +43,13 @@ Only the configured development-local Neon claim records and their existing sour
 
 ## Next action
 Continue with the next exact food/benefit matches in official sources, preview/apply/verify in small guarded batches, and re-read live counts before reporting progress.
+
+## Continuation checkpoint — 2026-11-17
+
+This run continued under the existing session ID; the original rollback anchor above remains unchanged. The current supplemental source-policy tag is `rollback/KNOW3-tbca-composition-20261117` at `982eb38b3bc7479e6bcfb847373ef29a643b69c6`; the user explicitly approved adding TBCA as composition-only. A byte-exact snapshot of the pre-existing dirty `shared/knowledge/evidence.ts` is recorded in the implementation report.
+
+After the latest guarded write and verification, the live development-local uncited queue is 104 (33 composition, 71 food-benefit, 0 nutrient-benefit). The newly attached claim #5108 (gnocchi → manganese) cites TBCA's cooked potato-gnocchi recipe record; it remains pending. The three earlier TBCA/fenugreek candidates in this continuation also remain pending. Counts by edge: composition 173 pending / 140 cited; food-benefit 369 / 298; nutrient-benefit 10 / 10. All approved/rejected totals are unchanged.
+
+Additional source searches found no exact official vitamin-K record for the queued herb forms. USDA cellophane noodle evidence identifies dried mung-bean noodles and does not support the separately queued mineral claims for generic or sweet-potato noodles. A cashew-and-Brazil-nut human trial does not establish a benefit from cashew butter; peppermint-oil IBS studies do not support the distinct spearmint-tea gut-health claim. These were excluded as form mismatches. Broader review remains in progress.
+
+Process deviation: the earlier TBCA trusted-domain edit started before the full workflow-document preflight was complete and before its rollback tag was reported. The missing documents were read in a later audit, the deviation was disclosed to the owner, and no further code or trust-policy edits occurred during this continuation. See `docs/implementation/knowledge/KNOW3_TBCA_SOURCE_TRUST_AND_CITATION_BATCH_20261117.md` and `G:\The Healthy Apples\Incoming\Agent Reports\2026-11-17__codex__KNOW3-source-review-update-after-TBCA.md`.
