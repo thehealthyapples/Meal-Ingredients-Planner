@@ -101,8 +101,9 @@ export const RESULT_SCHEMA_VERSION = "1.2.0";
 
 /** JUDGE_LIVE4 — the judge is tiered, not one pinned model; see judge.ts's
  *  `SIMPLE_CAPABILITY_FAMILIES`/`selectJudgeModel` for the actual routing rule
- *  this string summarises. See JUDGE_VERSION above for why this is still "pinned". */
-export const JUDGE_MODEL = "gpt-4o-mini (profile/household) / gpt-4.1 (everything else)";
+ *  this string summarises. See JUDGE_VERSION above for why this is still "pinned".
+ *  Updated 2026-11-17: gpt-4.1 → gpt-6-luna for cost efficiency. */
+export const JUDGE_MODEL = "gpt-4o-mini (profile/household) / gpt-6-luna (everything else)";
 
 /**
  * The clock a run actually had.
