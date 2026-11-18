@@ -53,6 +53,7 @@ export const TRUSTED_SOURCE_DOMAINS: readonly string[] = [
   "pubmed.ncbi.nlm.nih.gov", // PubMed index — peer-reviewed scientific literature; secondary to official guidance
   "pmc.ncbi.nlm.nih.gov",   // PubMed Central full text — peer-reviewed scientific literature; secondary to official guidance
   "sciencedirect.com",      // Elsevier-hosted peer-reviewed research — composition only
+  "springer.com",            // Springer peer-reviewed journal publisher — secondary scientific evidence for nutrition/health research
   "czasopisma.up.lublin.pl", // University of Life Sciences in Lublin peer-reviewed research — composition only
   "thaiscience.info",        // Peer-reviewed Thai science journal hosting — composition only
   "ema.europa.eu",           // European Medicines Agency monographs — official medicinal evidence; scope/use limits must be explicit
