@@ -1491,7 +1491,15 @@ entityRefs must ONLY contain items that appear in the context data above with a 
       guidanceCount: guidance.length,
     });
   } catch (err) {
-    console.error("[ConversationGateway] LLM call failed:", err);
+    const errInfo = err instanceof Error ? {
+      name: err.name,
+      message: err.message.slice(0, 200),
+      status: (err as any).status,
+      code: (err as any).code,
+      type: (err as any).type,
+      error_code: (err as any).error?.code,
+    } : { raw: String(err).slice(0, 200) };
+    console.error(`[ConversationGateway] LLM call failed for model '${llmProvider.modelName}':`, JSON.stringify(errInfo));
     logUnsuccessfulQuery({
       stage:     "turn-fallback",
       state:     "internal-error",

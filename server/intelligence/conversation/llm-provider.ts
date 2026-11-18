@@ -72,11 +72,16 @@ export class OpenAIProvider implements ILlmProvider {
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
     const model = request.model ?? this.modelName;
+    const isLunaModel = model === "gpt-6-luna";
     const completion = await client.chat.completions.create({
       model,
       messages: request.messages,
-      temperature: request.temperature ?? 0.3,
-      max_tokens: request.maxTokens ?? 400,
+      ...(isLunaModel
+        ? { temperature: 1 }
+        : { temperature: request.temperature ?? 0.3 }),
+      ...(isLunaModel
+        ? { max_completion_tokens: request.maxTokens ?? 400 }
+        : { max_tokens: request.maxTokens ?? 400 }),
       ...(request.jsonMode
         ? { response_format: { type: "json_object" as const } }
         : {}),
