@@ -56,3 +56,7 @@ This change distinguishes the two current sources of uncertainty. It does not ye
 ## MyNetDiary source-audit tranche
 
 **Verified:** All 30 tasks were reviewed against MyNetDiary's official help pages on 2026-11-19. The row now captures seven-day planning, custom plan reuse, recipe creation/import, meal-photo logging, offline limits, custom mood tracking, nutrient reports, and Premium Plus meal suggestions. It distinguishes subscription sharing from shared meal planning and reflects the shopping-list evidence conflict by using the newer free-tier guide for standalone lists while retaining Premium for planner integration. Reviewed cells link to a source and show the review date in the evidence detail. No competitor No ratings were added. Full mapping: `docs/investigations/ux/CMP_MYNETDIARY_EVIDENCE_AUDIT_2026-11-19.md`.
+
+## Real Plans source-audit tranche
+
+**Verified:** Official Real Plans product and support sources were reviewed across all 30 comparison tasks on 2026-11-19. The row now distinguishes household-size planning from individual eater profiles, documents recipe URL/manual import and the plan-to-list/cooking flow, and calls out subscription separation for nutrition/macro tracking. Image-format hints do not establish recipe OCR, so image scanning is limited; silent features stay grey. No cells were marked No. Full claim map: `docs/investigations/ux/CMP_REALPLANS_EVIDENCE_AUDIT_2026-11-19.md`.
