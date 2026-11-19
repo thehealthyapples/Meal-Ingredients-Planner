@@ -62,25 +62,20 @@ The list intentionally keeps planning/recipe, nutrition/diary, scanner and condi
 | 39 | Eat This Much | Automated meal plans and nutrition targets | Active UK App Store listing; UK rank not established in this pass | Direct automated planning comparator; verify current UK usage signal before final ranking. |
 | 40 | HelloFresh | Weekly meal selection and grocery-kit delivery | Google Play Food & Drink free #33; estimated 18M installs | Adjacent rather than like-for-like: useful benchmark for weekly choice, household portions and execution. |
 
-## Top-20 selection is the next research gate
+## Top-20 selection and remaining evidence limits
 
-The current comparison has 21 active rows, but its competitor evidence is uneven: only a subset has recently been audited across every task. A top-20 selected by the number of currently green cells would reward better-researched rows and mis-rank unknowns. That would recreate the exact evidence problem the comparison work is trying to solve.
+The source review has now selected a 20-app, highest-overlap benchmark set and identified internal THA gap priorities. See `docs/investigations/ux/CMP_TOP20_OVERLAP_AND_THA_GAPS_2026-11-19.md` for the selection, competitor strengths/limits, evidence sources and the THA comparison.
 
-Before naming the final 20:
+The selection is **not** a top-20 by downloads or monthly active users, and it is not a claim that every one of the 30 public matrix cells for every candidate has undergone a fresh, app-version-specific audit. The 13 existing detailed audits and claim-level matrix were used where available; the new candidates were assessed against official product descriptions, help pages and current UK chart/store evidence. For public page updates, continue to keep silent or unreviewed claims grey and apply the complete per-task evidence process before changing any competitor cell or color.
 
-1. Apply the same 30-task feature taxonomy to the 19 added candidates, beginning with the 12 direct recipe/plan apps and the six nutrition/scanner apps most likely to overlap.
-2. Audit official product pages, help sources and UK store listings; record tier, region, restrictions, source date and confidence. Keep “not reported” grey and reserve red for an evidenced absence.
-3. Score *overlap* separately from *evidence confidence* and *popularity signal*. Weight core household-to-meal-to-shop workflows more heavily than adjacent publisher content or one-purpose scanners.
-4. Select the 20 with highest verified task overlap; retain a few high-popularity adjacent apps as challenge benchmarks only if they teach a clearly relevant capability.
-5. Recalculate shared-feature frequency and compare it to the THA implementation audit. Only then rank possible improvements. A competitor feature is a discovery input, not an automatic THA requirement.
-
-**First audit tranche recommended:** mise, Mob, MealPrepPro, Recipe Keeper, Nutracheck, Foodvisor, Ivy, WW, Eat This Much and HelloFresh. They span direct planning plus high-reach diary/scanner workflows and will help check whether the present comparison is too recipe-centric. Continue with the remaining candidates after that tranche.
+The final prioritization keeps **overlap**, **popularity** and **evidence depth** as separate measures. A popular, narrow product such as Yuka remains a challenge benchmark; it is not counted as a broad household-planning substitute. A competitor feature is a discovery input, not an automatic THA requirement.
 
 ## Exclusions and caveats
 
 - **Mealime** remains in the current page as a clearly historical comparator, but is excluded from the active 40 and any current top-20. The current service-status audit records the official announced shutdown date as 21 October 2026, which has passed; hands-on service availability was not checked.
 - Some existing active competitors have no popularity rank captured here. Their inclusion is because the current comparison already contains them and they appear relevant by task overlap, not because a rank was inferred.
 - The inventory is not a review of all 40 apps' complete functions. Public-page text, store ranks and app marketing are not substitutes for hands-on testing, and feature status varies by platform, country and subscription.
+- The top-20 work is a source-based workflow overlap review, not hands-on testing or a fresh 30-cell audit for each of all 40 candidates. See the top-20 report for exact use and limits.
 - Store chart snapshots can move materially day to day. Re-check before external publication or strategic investment decisions.
 
 ## Sources consulted
