@@ -33,3 +33,7 @@ This change distinguishes the two current sources of uncertainty. It does not ye
 ## Route and build integration finding
 
 **Verified:** before this task, `features-compare-page.tsx` had no import or route in `client/src/App.tsx`, no top-level link in `client/src/pages/home-page.tsx`, and its component was absent from the production bundle. The product page record already named these routes and the Home navigation as consumers. This was an implementation-to-census drift, not a conflict in governing architecture. The shared page is now registered at `/features-and-compare` and `/features&compare`, and Home links to the canonical route.
+
+## Samsung Food source-audit tranche
+
+**Verified:** Official Samsung Food help pages were reviewed on 2026-11-19. The existing row now includes claim-specific URLs, tier caveats and explicit “not reported” reasons for eater profiles, external plan import and paper-plan scanning. Weekly intake was corrected from Yes to Some limits because reviewed nutrition sources describe daily targets and detailed recipe nutrition but not consumed weekly totals across diary days. No cell was marked No. Full task mapping and source URLs: `docs/investigations/ux/CMP_SAMSUNG_FOOD_EVIDENCE_AUDIT_2026-11-19.md`.

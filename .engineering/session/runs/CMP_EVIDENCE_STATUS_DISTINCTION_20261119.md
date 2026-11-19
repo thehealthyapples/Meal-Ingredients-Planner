@@ -18,9 +18,13 @@ Distinguish an explicitly reviewed cell whose developer sources do not report a 
 - `docs/product/structure/pages/page-features-compare.md`: record the evidence detail behavior.
 - `docs/investigations/ux/CMP_EVIDENCE_STATUS_DISTINCTION_2026-11-19.md`: evidence baseline and status rules.
 
+## Samsung Food audit
+
+Reviewed Samsung Food official support pages for its row of 30 tasks. Added claim-specific sources, tier notes, and three “Not reported” reasons; corrected Weekly intake from Yes to Some limits. No No ratings were added. Full record: `docs/investigations/ux/CMP_SAMSUNG_FOOD_EVIDENCE_AUDIT_2026-11-19.md`.
+
 ## Next action
 
-Re-review explicit “not reported” and high-priority missing cells against claim-specific official sources. Record source URL, title, checked date, and region/tier when known. Keep cells grey where sources do not support a conclusion; do not mark a feature No from silence.
+Continue with other high-overlap apps: re-review “not reported” and high-priority missing cells against claim-specific official sources. Record source URL, title, checked date, and region/tier when known. Keep cells grey where sources do not support a conclusion; do not mark a feature No from silence.
 
 ## Preservation
 

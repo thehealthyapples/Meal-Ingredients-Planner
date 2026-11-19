@@ -20,7 +20,7 @@ Audit all cells and replace ambiguous absence with a structured internal reason.
 
 **Next action:** define a lightweight source record per assessed claim (claim/task, status and reason, exact source URL, source title, checked date, and applicable region/tier where known). Then re-review the matrix, prioritizing highest-overlap tasks and Samsung Food. Do not change public claim colors until the review supports them.
 
-**Progress (19 November 2026):** missing matrix entries now resolve to **Not assessed yet**; explicit unknown entries resolve to **Not reported in reviewed sources**. Both remain grey and explicitly avoid claiming absence. The comparison component was also found unrouted and absent from the build; its documented public route, alias and Home link have now been restored. Claim-specific URLs, dates and tier/region metadata still need a separate source audit.
+**Progress (19 November 2026):** missing matrix entries now resolve to **Not assessed yet**; explicit unknown entries resolve to **Not reported in reviewed sources**. Both remain grey and explicitly avoid claiming absence. The comparison component was also found unrouted and absent from the build; its documented public route, alias and Home link have now been restored. Samsung Food is the first competitor row reviewed against official sources; its claim URLs and Food+ limits are recorded in `docs/investigations/ux/CMP_SAMSUNG_FOOD_EVIDENCE_AUDIT_2026-11-19.md`. Remaining competitor rows and per-cell review dates still need a source audit.
 
 ### P2 — Establish the fundamentals used by the most-used overlapping apps
 
