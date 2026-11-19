@@ -1499,7 +1499,7 @@ entityRefs must ONLY contain items that appear in the context data above with a 
       type: (err as any).type,
       error_code: (err as any).error?.code,
     } : { raw: String(err).slice(0, 200) };
-    console.error(`[ConversationGateway] LLM call failed for model '${llmProvider.modelName}':`, JSON.stringify(errInfo));
+    console.error(`[ConversationGateway] LLM call failed for model '${llmProvider.modelName}' on utterance "${utterance.slice(0, 100)}":`, JSON.stringify(errInfo));
     logUnsuccessfulQuery({
       stage:     "turn-fallback",
       state:     "internal-error",

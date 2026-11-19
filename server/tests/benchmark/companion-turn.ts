@@ -290,6 +290,8 @@ export function makeCompanionTurnRunner(user: User, personality: string): Benchm
       // A throw is a scored outcome: the platform failed to convert an internal
       // error into an honest gap (gate G5). Capture it, never crash the run.
       // Whatever the probe saw before the throw is still true, and is kept.
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      console.error(`[Benchmark] Turn failed for utterance "${utterance.slice(0, 100)}": ${errorMsg}`);
       return {
         threadId: null,
         text: "",
@@ -307,7 +309,7 @@ export function makeCompanionTurnRunner(user: User, personality: string): Benchm
         actionCount: 0,
         fallbackState: "internal-error",
         latencyMs: Date.now() - startedAt,
-        error: err instanceof Error ? err.message : String(err),
+        error: errorMsg,
         personality,
         llmProviderAvailable,
       };
