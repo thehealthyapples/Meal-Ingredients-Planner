@@ -48,3 +48,7 @@ This change distinguishes the two current sources of uncertainty. It does not ye
 ## Mealia source-audit tranche
 
 **Verified from official product and App Store descriptions:** Mealia documents household-sized personalized meal plans, UK supermarket basket building, website recipe import and a budget-first weekly shop. The user reviews the basket and checks out with the retailer. Household preferences are described, but individual eater profiles, diary/nutrition tools and a safety-specific allergen workflow are not established in reviewed sources. The feature row preserves these as grey or limited, not No. Full 30-task mapping and source links: `docs/investigations/ux/CMP_MEALIA_EVIDENCE_AUDIT_2026-11-19.md`.
+
+## Yuka source-audit tranche
+
+**Verified:** Official Yuka app/help pages were reviewed on 2026-11-19 across all 30 matrix tasks. The row distinguishes barcode-based product analysis, product-level nutrition/additive ratings, recommendation alternatives and Premium offline scanning from meal/plan features. Offline availability is limited to the 100,000 most frequently scanned products; dietary preference alerts do not account for ingredient traces and do not replace label checks. Unsupported app capabilities remain neutral grey; no No ratings were added. Full matrix: `docs/investigations/ux/CMP_YUKA_EVIDENCE_AUDIT_2026-11-19.md`.

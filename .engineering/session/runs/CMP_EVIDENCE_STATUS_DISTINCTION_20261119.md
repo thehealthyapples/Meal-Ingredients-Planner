@@ -55,3 +55,11 @@ Governance read for this tranche: `AGENTS.md`, `PROJECT_GOVERNANCE.md`, `docs/ar
 Reviewed Mealia against all 30 tasks using official UK product pages and its UK App Store listing. Updated only its existing competitor row and audit records. Its budget-led UK retailer basket is a strong documented differentiator; household preferences do not establish distinct eater profiles. Website and marketplace descriptions differ in supermarket coverage, recorded as a limitation. Unsupported areas stay grey; no No ratings. Full source map: `docs/investigations/ux/CMP_MEALIA_EVIDENCE_AUDIT_2026-11-19.md`.
 
 `npm run build` completed successfully with existing toolchain/bundle warnings. No tests or typecheck run. No database, live service, scheduled task or configuration touched. Next: continue with the next close-overlap competitor, retaining neutral uncertainty where documentation is silent.
+
+## Yuka source-audit tranche — 19 November 2026
+
+Governance read for this tranche: `AGENTS.md`, `PROJECT_GOVERNANCE.md`, `docs/architecture/README.md`, `docs/architecture/GOVERNING_EXPERIENCE_ARCHITECTURE.md`, and task-routed AI operating-model implementation documents listed above. Verified repo/branch/base HEAD: `feat/integrated-dev` / `900a75daba03d36c3ee17a16b666323e9b0aefc7`; user continuation and standing dev authority authorize this Amber scope. Pre-edit rollback tag: `rollback/CMP-Yuka-evidence-20261119` → `900a75daba03d36c3ee17a16b666323e9b0aefc7`.
+
+Reviewed all 30 comparison tasks using Yuka official app/help pages and UK App Store listing. Updated the existing Yuka row: documented barcode/product score, nutrient/additive details, alternative recommendations, Premium dietary-alert limits and offline database limit. Meal/plan and diary functions not established by sources remain grey; no No ratings. Internal opportunity note stays in the investigation, not public page. Full source map: `docs/investigations/ux/CMP_YUKA_EVIDENCE_AUDIT_2026-11-19.md`.
+
+`npm run build` completed successfully with existing toolchain/bundle warnings. No tests or typecheck run. No database, live service, scheduled task or configuration touched. Next: continue audit with another close-overlap competitor.
