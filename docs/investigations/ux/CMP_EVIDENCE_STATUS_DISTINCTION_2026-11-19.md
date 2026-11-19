@@ -60,3 +60,7 @@ This change distinguishes the two current sources of uncertainty. It does not ye
 ## Real Plans source-audit tranche
 
 **Verified:** Official Real Plans product and support sources were reviewed across all 30 comparison tasks on 2026-11-19. The row now distinguishes household-size planning from individual eater profiles, documents recipe URL/manual import and the plan-to-list/cooking flow, and calls out subscription separation for nutrition/macro tracking. Image-format hints do not establish recipe OCR, so image scanning is limited; silent features stay grey. No cells were marked No. Full claim map: `docs/investigations/ux/CMP_REALPLANS_EVIDENCE_AUDIT_2026-11-19.md`.
+
+## Lifesum source-audit tranche
+
+**Verified:** Lifesum official product/help pages were reviewed across all 30 tasks on 2026-11-19. The row now captures Premium multi-modal AI food logging, barcode product comparison, weight/body measurements, 7–21 day program plans and their shopping-list/export limits, meal creation and nutrition detail, and weekly Life Score feedback. It does not conflate food-photo logging with recipe scanning, or Life Score with weekly consumed-nutrient totals. Family planning and unsupported import/pantry/cooking capabilities remain grey. Full mapping: `docs/investigations/ux/CMP_LIFESUM_EVIDENCE_AUDIT_2026-11-19.md`.
