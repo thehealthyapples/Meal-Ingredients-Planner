@@ -80,3 +80,7 @@ This change distinguishes the two current sources of uncertainty. It does not ye
 ## Plan to Eat source-audit tranche
 
 **Verified:** Plan to Eat's official documentation was reviewed across all 30 tasks on 2026-11-19. The row captures recipe URL/social/photo import and OCR, planning, Menus, grocery delivery, freezer batch cooking with quantities/thaw reminders, nutrition, its Beta Food Logger and AI substitutions. The review distinguishes family-size portions from separate eater profiles, recipe scans from paper-plan scans, and pantry suggestions from inventory sync. Unknown diary/scan cells remain grey; no No ratings were added. Full map: `docs/investigations/ux/CMP_PLAN_TO_EAT_EVIDENCE_AUDIT_2026-11-19.md`.
+
+## SideChef source-audit tranche
+
+**Verified:** Official SideChef consumer and product materials were reviewed across all 30 tasks on 2026-11-19. The row captures family-size/diet-aware planning, grocery handoff, recipe nutrition and creation, My Pantry suggestions, guided cook and qualified AI substitution/photo/scanner evidence. It also preserves SideChef's explicit no-sharing statement for plans/lists and the lack of reported food diary/weight/mood workflows. Beta/availability ambiguity remains visible; no No ratings were inferred from silence. Full map: `docs/investigations/ux/CMP_SIDECHEF_EVIDENCE_AUDIT_2026-11-19.md`.
