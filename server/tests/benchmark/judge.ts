@@ -152,10 +152,11 @@ class OpenAiJudge implements JudgeClient {
       });
 
       const model = selectJudgeModel(exp);
+      const isLunaModel = model === "gpt-6-luna";
       const completion = await client.chat.completions.create({
         model,
-        temperature: 0,
-        max_tokens: 200,
+        temperature: isLunaModel ? 1 : 0,
+        ...(isLunaModel ? { max_completion_tokens: 200 } : { max_tokens: 200 }),
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: JUDGE_PROMPT_TEMPLATE },
