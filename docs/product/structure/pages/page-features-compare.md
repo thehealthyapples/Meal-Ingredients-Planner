@@ -8,7 +8,7 @@ owner: Colin Clapson
 route: /features-and-compare
 aliases: ["/features&compare"]
 last_verified: 2026-11-19
-version: 3
+version: 4
 ---
 
 # Features & compare
@@ -21,7 +21,7 @@ The page describes THA's household-first meal, restriction, recipe, planning, nu
 
 The comparison includes app availability and tier limits where the reviewed developer sources state them. Evidence was checked on 2026-11-19; app features can change by region, device and subscription tier.
 
-The closing opportunity cards translate competitor capabilities into possible THA improvements. They are exploratory ideas, not product commitments or current feature claims.
+Competitor development suggestions are kept in internal planning notes and are not shown on this public page.
 
 ## Where it lives
 
