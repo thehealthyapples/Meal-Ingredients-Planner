@@ -39,3 +39,11 @@ Reviewed 30 matrix tasks against official MyFitnessPal help articles. Planner of
 `npm run build` completed successfully (existing Browserslist/PostCSS/chunk/server-bundling warnings). No tests were run. No live service, database, scheduled task, or configuration touched. Next: audit the next high-overlap competitor, preserving source-specific unknowns and tier/region limits.
 
 Typecheck note for the MyFitnessPal tranche: repository-wide `npm run typecheck` exits 1 with TypeScript diagnostics in unrelated files (including server scripts/tests and other UI components). A filtered rerun showed no diagnostics in `client/src/pages/features-compare-page.tsx`. The successful production build remains recorded above.
+
+## Mealime source-audit tranche — 19 November 2026
+
+Governance was freshly read: `AGENTS.md`, `PROJECT_GOVERNANCE.md`, `docs/architecture/README.md`, `docs/architecture/GOVERNING_EXPERIENCE_ARCHITECTURE.md`, and task-routed `docs/ai-operating-model/{principles,risk-and-approval,rollback-and-output,evidence-and-architecture,implementation-and-compliance}.md`. Verified repository/branch/base HEAD `feat/integrated-dev` / `14acbc557a9b9f5a1db17b9d650ec70ec3a75199`; standing dev authority plus user instruction authorized this Amber scope. Pre-edit rollback tag: `rollback/CMP-Mealime-evidence-20261119` → `14acbc557a9b9f5a1db17b9d650ec70ec3a75199`.
+
+Reviewed all 30 matrix tasks using official Mealime support/product documentation. Updated its existing row with supported claims and caveats for dietary filters, URL recipe import, planning, categorized shopping lists, Pro nutrition and pantry filters, account-sharing limits and hands-free cooking. Unreported features remain grey. No confirmed No ratings. Research: `docs/investigations/ux/CMP_MEALIME_EVIDENCE_AUDIT_2026-11-19.md`.
+
+`npm run build` completed successfully with existing toolchain/bundle warnings. Typecheck was not rerun for this row; the prior tranche's full-project typecheck remains known to fail on unrelated files. No tests run. No database, live service, scheduled task, or configuration touched. Next: continue the audit with the next high-overlap app.

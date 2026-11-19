@@ -40,3 +40,7 @@ This change distinguishes the two current sources of uncertainty. It does not ye
 ## MyFitnessPal source-audit tranche
 
 **Verified:** Official MyFitnessPal support pages were reviewed on 2026-11-19 across all 30 comparison tasks. The row now accounts for Premium and Premium+ feature tiers, household-size planning, and regional restrictions on grocery-app handoff. It distinguishes documented weekly intake reports from a linked weekly food explorer, and preserves neutral unknowns for unreported features. No No ratings were added. Full task mapping and sources: `docs/investigations/ux/CMP_MYFITNESSPAL_EVIDENCE_AUDIT_2026-11-19.md`.
+
+## Mealime source-audit tranche
+
+**Verified:** Official Mealime support/product sources were reviewed on 2026-11-19 across all 30 matrix tasks. The row records URL recipe import, meal planning, grocery lists, Pro nutrition, pantry-item planning and guided cooking, alongside family-size, shared-account, and subscription limits. Paper-plan scanning, plan import and other unreported items remain grey; no No ratings were added. Full mapping: `docs/investigations/ux/CMP_MEALIME_EVIDENCE_AUDIT_2026-11-19.md`.
