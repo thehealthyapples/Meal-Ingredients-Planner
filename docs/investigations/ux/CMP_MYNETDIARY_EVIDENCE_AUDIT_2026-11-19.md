@@ -1,0 +1,46 @@
+# MyNetDiary comparison evidence audit
+
+**Checked:** 19 November 2026
+**Scope:** All 30 tasks in the existing THA comparison matrix. This is a review of MyNetDiary's official help pages, not hands-on testing. The app's official material distinguishes Free, Premium and Premium Plus; where relevant, tier and platform limits are stated.
+**Legend:** Yes = the task is documented; Some limits = documented with scope or tier limits; Not reported = reviewed sources did not establish the capability and this is not proof of absence.
+
+## Task-by-task findings
+
+| Task | Status | Evidence and qualification |
+|---|---|---|
+| One household plan | Not reported | Apple Family Sharing shares only an eligible iOS Premium subscription. The reviewed source does not establish one shared household meal plan. [Family sharing](https://mynetdiary.com/help/plans-billing-and-subscriptions/family-sharing-of-mynetdiary-subscriptions) |
+| Eater profiles | Not reported | Subscription sharing does not establish separate saved eater profiles or per-person restrictions. [Family sharing](https://mynetdiary.com/help/plans-billing-and-subscriptions/family-sharing-of-mynetdiary-subscriptions) |
+| Food restrictions | Some limits | Premium Plus meal suggestions let a user add foods to avoid, including allergens. This is not evidence of allergen safety screening or individual eater profiles. [AI Suggest Meals](https://www.mynetdiary.com/help/ai-features/ai-suggest-meals-premium-plus-feature) |
+| Adapt for each eater | Some limits | Premium Plus can tailor suggestions around one person's preferences and foods to avoid; adaptations for different eaters sharing one meal are not established. [AI Suggest Meals](https://www.mynetdiary.com/help/ai-features/ai-suggest-meals-premium-plus-feature) |
+| Create meals | Yes | Custom recipes can be created, edited, copied and saved from logged foods; custom meals can be assembled from foods. [Custom recipes and meals](https://www.mynetdiary.com/help/logging-food/creating-custom-recipes-and-custom-meals) |
+| Import recipes | Some limits | Premium imports supported recipe URLs or pasted text; ingredient matches must be reviewed and corrected as needed. [Recipe import](https://www.mynetdiary.com/help/logging-food/importing-recipes-from-web-browser-and-recipe-apps) |
+| Social recipe import | Not reported | Supported recipe URLs and pasted text are documented; import directly from social-media posts is not established. [Recipe import](https://www.mynetdiary.com/help/logging-food/importing-recipes-from-web-browser-and-recipe-apps) |
+| Scan recipes | Not reported | Meal Scan recognizes consumed food from a photo for diary logging; scanning a recipe image into a saved recipe is not established. [Meal Scan](https://www.mynetdiary.com/help/ai-features/meal-scan) |
+| Create weekly plans | Yes | Premium Meal Planner supports seven-day plans with nutrient and macro analysis. [Meal Planner](https://www.mynetdiary.com/help/logging-food/meal-planner) |
+| Import a plan | Not reported | The reviewed Meal Planner source explains building plans in the app but does not report external plan import. [Meal Planner](https://www.mynetdiary.com/help/logging-food/meal-planner) |
+| Scan a paper plan | Not reported | Paper meal-plan scanning was not established in the reviewed planner documentation. [Meal Planner](https://www.mynetdiary.com/help/logging-food/meal-planner) |
+| Reuse plan templates | Yes | Users can save several plans and switch between them; Premium Menus also include seven-day meal sets. [Meal Planner](https://www.mynetdiary.com/help/logging-food/meal-planner) |
+| Shopping list | Some limits | The free tier guide lists a shopping list. Planned-meal integration requires the Premium Meal Planner; availability differs across older help articles. [Free features](https://www.mynetdiary.com/help/plans-billing-and-subscriptions/which-features-available-in-free-tier), [Meal Planner](https://www.mynetdiary.com/help/logging-food/meal-planner) |
+| Shared household | Some limits | The list can be shared by message, email or print, but lists do not sync across devices on the same account; collaborative editing is not established. [Shopping List](https://www.mynetdiary.com/help/logging-food/shopping-list) |
+| Budget and store costs | Not reported | Shopping lists are documented, but grocery price comparison, retailer baskets and budget-led basket planning were not established. [Shopping List](https://www.mynetdiary.com/help/logging-food/shopping-list) |
+| Meal nutrition | Yes | Food and recipe entries provide nutrient information, with up to 108 tracked nutrients per entry. [Logging Food](https://www.mynetdiary.com/help/logging-food/) |
+| Add nutrition | Not reported | Premium Plus can suggest meals around preferences and a calorie budget, but adding useful nutrients to an existing meal is not established. [AI Suggest Meals](https://www.mynetdiary.com/help/ai-features/ai-suggest-meals-premium-plus-feature) |
+| Weekly intake | Some limits | The Premium planner shows nutrients and macros for the planned week, and weekly diary summaries are available; exact logged-week nutrient totals are not clear in the reviewed reports. [Meal Planner](https://www.mynetdiary.com/help/logging-food/meal-planner), [Free features](https://www.mynetdiary.com/help/plans-billing-and-subscriptions/which-features-available-in-free-tier) |
+| Explore the week | Not reported | Weekly summaries are available, but linked exploration of foods consumed in a selected week and their nutrients was not established. [Weekly reports](https://www.mynetdiary.com/help/logging-food/how-do-i-download-my-log) |
+| Food diary | Yes | The app supports food logging through search, barcode, meal photo, voice, saved recipes/meals and other methods. [Logging Food](https://www.mynetdiary.com/help/logging-food/) |
+| Photo meal logging | Some limits | Premium Meal Scan identifies foods and estimates portions from a meal photo; the user reviews and corrects results before logging. [Meal Scan](https://www.mynetdiary.com/help/ai-features/meal-scan) |
+| Weight in diary | Yes | Weight plan and weigh-in tracking are included in the free feature set. [Free features](https://www.mynetdiary.com/help/plans-billing-and-subscriptions/which-features-available-in-free-tier) |
+| Mood and energy | Some limits | Subscription custom trackers can record mood and other personal measures; a built-in energy or ability diary is not established. [Custom trackers](https://www.mynetdiary.com/help/health-tracking/more-body-measurements-and-custom-trackers) |
+| Barcode scan | Yes | Barcode food scanning is included in the free feature set. [Free features](https://www.mynetdiary.com/help/plans-billing-and-subscriptions/which-features-available-in-free-tier) |
+| Offline scan | Some limits | Previously logged and saved foods are available offline, but new barcode lookups and full database search need an internet connection. [Offline use](https://www.mynetdiary.com/help/troubleshooting-and-known-issues/using-the-app-without-internet-connection) |
+| Cook from pantry | Not reported | The reviewed planner and recipe sources do not establish recipe discovery from live pantry stock. [Meal Planner](https://www.mynetdiary.com/help/logging-food/meal-planner) |
+| Scan pantry items | Not reported | Visual recognition of pantry ingredients was not established in the reviewed sources. [Logging Food](https://www.mynetdiary.com/help/logging-food/) |
+| Pantry sync | Not reported | Pantry inventory updates from shopping or cooking were not established in the reviewed sources. [Shopping List](https://www.mynetdiary.com/help/logging-food/shopping-list) |
+| AI recipe tailoring | Some limits | Premium Plus AI Coach uses entered goals, diet plan, food logs and weigh-ins from the last seven days; meal suggestions use stated preferences and foods to avoid. Suggestions require review. [AI Coach](https://www.mynetdiary.com/help/ai-features/ai-coach-premium-plus-feature), [AI Suggest Meals](https://www.mynetdiary.com/help/ai-features/ai-suggest-meals-premium-plus-feature) |
+| Guided cooking | Not reported | Recipe instructions are documented, but an interactive step-by-step cook mode was not established. [Custom recipes and meals](https://www.mynetdiary.com/help/logging-food/creating-custom-recipes-and-custom-meals) |
+
+## Overall observation
+
+**Verified:** MyNetDiary has broad individual food tracking: free barcode logging, weight and up to 108 nutrients; Premium adds a seven-day planner, recipe import, meal-photo logging and richer planning; Premium Plus adds personalized meal suggestions and an AI Coach. Its key overlap gap against THA's household model is that subscription family sharing does not establish a shared plan with per-eater profiles. Shopping lists are useful but have synchronization limitations.
+
+**Evidence quality:** Official help pages were consulted on 19 November 2026; no account or device testing was performed. The Shopping List help page labels the feature Premium, while the newer Free feature guide lists it as free. The row follows the newer free-tier guide for standalone lists and states that planner-to-list integration requires Premium. Availability and limits can change by version, region, platform and subscription.

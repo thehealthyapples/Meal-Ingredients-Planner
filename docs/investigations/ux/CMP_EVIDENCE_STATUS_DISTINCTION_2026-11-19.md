@@ -52,3 +52,7 @@ This change distinguishes the two current sources of uncertainty. It does not ye
 ## Yuka source-audit tranche
 
 **Verified:** Official Yuka app/help pages were reviewed on 2026-11-19 across all 30 matrix tasks. The row distinguishes barcode-based product analysis, product-level nutrition/additive ratings, recommendation alternatives and Premium offline scanning from meal/plan features. Offline availability is limited to the 100,000 most frequently scanned products; dietary preference alerts do not account for ingredient traces and do not replace label checks. Unsupported app capabilities remain neutral grey; no No ratings were added. Full matrix: `docs/investigations/ux/CMP_YUKA_EVIDENCE_AUDIT_2026-11-19.md`.
+
+## MyNetDiary source-audit tranche
+
+**Verified:** All 30 tasks were reviewed against MyNetDiary's official help pages on 2026-11-19. The row now captures seven-day planning, custom plan reuse, recipe creation/import, meal-photo logging, offline limits, custom mood tracking, nutrient reports, and Premium Plus meal suggestions. It distinguishes subscription sharing from shared meal planning and reflects the shopping-list evidence conflict by using the newer free-tier guide for standalone lists while retaining Premium for planner integration. Reviewed cells link to a source and show the review date in the evidence detail. No competitor No ratings were added. Full mapping: `docs/investigations/ux/CMP_MYNETDIARY_EVIDENCE_AUDIT_2026-11-19.md`.
