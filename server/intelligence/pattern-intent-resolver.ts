@@ -544,6 +544,21 @@ const NUTRITION_GENERAL_EXPLAIN_MATCHERS: Matcher[] = [
 // ---------------------------------------------------------------------------
 
 const NUTRITION_KNOWLEDGE_SEARCH_MATCHERS: Matcher[] = [
+  // ND-055: "Which foods contributed most to my nutrition this week?" — nutrition contribution analysis.
+  // Routes to nutrition-knowledge.analyze (not diary). Requires BOTH "contributed"/"impact" AND "nutrition".
+  // Guard: exclude specific nutrient names to avoid catching nutrient-specific questions.
+  (u) => {
+    if (!/\b(?:which|what)\s+foods?\s+(?:contributed|had\s+(?:the\s+)?(?:most|greatest)\s+(?:impact|influence))\s+(?:on\s+)?(?:my\s+)?nutrition/i.test(u)) return null;
+    // Exclude specific nutrient terms (protein, vitamin, iron, etc.)
+    if (/\b(?:protein|vitamin|mineral|calor|fat|carb|fiber|sodium|potassium|iron|calcium|zinc|magnesium)\b/i.test(u)) return null;
+    return {
+      capability: "nutrition-knowledge",
+      verb: "analyze",
+      parameters: { query: "nutrition-contribution" },
+      confidence: 0.85,
+    };
+  },
+
   // "search for vitamin C / immunity" — requires nutrient or benefit signal
   (u) => {
     const m = u.match(/\bsearch\s+(?:(?:nutrition|knowledge|food)\s+(?:knowledge\s+)?)?for\s+(.+?)[\?.]?\s*$/i);
@@ -2179,6 +2194,20 @@ const MEAL_DISCOVERY_MATCHERS: Matcher[] = [
       verb: "search",
       parameters: { query: query.toLowerCase() },
       confidence: 0.84,
+    };
+  },
+
+  // CB-017: "Which meals are the least processed?" / "Which meals are the most whole-food based?"
+  // Quality ranking questions route to meal-discovery, not meals (personal cookbook).
+  // Guard: exclude nutrition vocabulary to avoid catching nutrient-analysis questions.
+  (u) => {
+    if (!/\bwhich\s+meals?\s+are\s+the\s+(?:least|most)\s+(?:processed|whole[\s-]?food)/i.test(u)) return null;
+    if (/\b(?:nutrition|nutrient|protein|vitamin|calor|fat|carb)\b/i.test(u)) return null;
+    return {
+      capability: "meal-discovery",
+      verb: "search",
+      parameters: { query: "whole-food ranking" },
+      confidence: 0.86,
     };
   },
 ];
