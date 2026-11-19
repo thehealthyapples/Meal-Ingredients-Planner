@@ -68,3 +68,7 @@ This change distinguishes the two current sources of uncertainty. It does not ye
 ## Yazio source-audit tranche
 
 **Verified:** Official Yazio help pages were reviewed across all 30 tasks on 2026-11-19. The row now captures Pro future meal planning, grocery lists, advanced nutrients and weekly analysis, photo-based AI food logging with estimate limits, body measures, barcode product comparison, mood/symptom/reflection diary tools, and personalized post-meal tips. It also notes that user-created recipes may be local and that current custom-recipe issues are reported by Yazio. THA opportunities are internal only. Unknown household/import/pantry functions remain grey. Full task map: `docs/investigations/ux/CMP_YAZIO_EVIDENCE_AUDIT_2026-11-19.md`.
+
+## Carb Manager source-audit tranche
+
+**Verified:** Official Carb Manager product/help sources were reviewed across all 30 tasks on 2026-11-19. The row captures Premium plans up to 30 days, custom/curated reuse, URL recipe import from some websites, cookbook QR recipes, per-person shopping-list scaling and printing, weekly nutrition totals, photo logging, weight/body measures, and macro-driven add-food suggestions. It distinguishes QR recipes from paper-plan OCR and sharing daily logs/favorites from collaborative household planning. Silent capabilities remain grey. Full map: `docs/investigations/ux/CMP_CARBMANAGER_EVIDENCE_AUDIT_2026-11-19.md`.
