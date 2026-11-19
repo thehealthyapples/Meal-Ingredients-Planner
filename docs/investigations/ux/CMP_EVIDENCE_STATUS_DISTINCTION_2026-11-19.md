@@ -84,3 +84,7 @@ This change distinguishes the two current sources of uncertainty. It does not ye
 ## SideChef source-audit tranche
 
 **Verified:** Official SideChef consumer and product materials were reviewed across all 30 tasks on 2026-11-19. The row captures family-size/diet-aware planning, grocery handoff, recipe nutrition and creation, My Pantry suggestions, guided cook and qualified AI substitution/photo/scanner evidence. It also preserves SideChef's explicit no-sharing statement for plans/lists and the lack of reported food diary/weight/mood workflows. Beta/availability ambiguity remains visible; no No ratings were inferred from silence. Full map: `docs/investigations/ux/CMP_SIDECHEF_EVIDENCE_AUDIT_2026-11-19.md`.
+
+## Mealime service-status correction
+
+**Verified:** Mealime's official homepage and App Store release history state a shutdown date of 21 October 2026, which has passed. The public comparison now labels Mealime as a historical row and states that its capabilities are historical evidence, not an active service comparison. The app was not independently launched or account-tested after the date. Audit: `docs/investigations/ux/CMP_MEALIME_SERVICE_STATUS_2026-11-19.md`.

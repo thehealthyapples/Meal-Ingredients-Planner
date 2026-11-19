@@ -115,3 +115,7 @@ Data impact: static public evidence and Markdown records only; no personal data,
 ## SideChef source-audit tranche
 
 **Verified:** Official SideChef pages and help/product materials reviewed all 30 tasks on 2026-11-19. Updated family planning, restrictions, shopping, My Pantry, recipe nutrition/cooking and qualified AI/Beta inputs. Explicitly documented plan/list sharing unsupported by FAQ; unsupported diary claims remain not reported. Audit: `docs/investigations/ux/CMP_SIDECHEF_EVIDENCE_AUDIT_2026-11-19.md`. Rollback: `rollback/CMP-SideChef-evidence-20261119` → `a28eb93c5d45223f0b2b1d9a4a1739905a256a18`.
+
+## Mealime status tranche
+
+**Verified:** Official homepage and App Store release-history notices give a shutdown date of 21 October 2026, now past. Added visible historical-only context; current technical service availability was not tested. Keep the row outside active-popularity selection. Audit: `docs/investigations/ux/CMP_MEALIME_SERVICE_STATUS_2026-11-19.md`. Rollback: `rollback/CMP-Mealime-status-20261119` → `c3cbba878bc47b5f343366dc5db1437b09b89f19`.

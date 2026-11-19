@@ -147,7 +147,7 @@ const products: Product[] = [
     id: "mealime",
     name: "Mealime",
     href: "https://support.mealime.com/article/151-getting-started-guide",
-    broad: "Personalized meal planning, organized groceries and guided cooking",
+    broad: "Discontinued 21 October 2026; row retains historical feature evidence only",
     topics: {
       family: partial("Meal plans can set household size and servings, but the reviewed sources do not establish distinct restriction profiles for each eater; recipes scale to six servings.", "https://support.mealime.com/article/98-can-i-scale-servings-greater-than-4"),
       "eater-profiles": { ...unknown, note: "Mealime describes one set of eating preferences and household size; separate saved restriction profiles for individual eaters are not established.", href: "https://support.mealime.com/article/59-choose-your-allergies-and-restrictions" },
@@ -717,6 +717,7 @@ export default function FeaturesComparePage() {
             <h2 className="mt-4 max-w-3xl text-3xl font-semibold tracking-tight sm:text-4xl">What matters most to your household?</h2>
             <p className="mt-4 max-w-3xl leading-relaxed text-muted-foreground">Compare THA with 21 competitor food apps across household needs, recipe capture, planning, nutrition, diaries, shopping and pantry tools. Choose priorities to bring the most relevant apps forward, or click an app name above its column to order features by its evidence. Select a dot to inspect the details.</p>
             <p className="mt-2 text-xs text-muted-foreground">Evidence checked 19 November 2026 against THA source code and app developers' own help pages. Availability can vary by country, device and subscription tier.</p>
+            <p className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-sm text-muted-foreground"><strong className="text-foreground">Historical entry:</strong> Mealime announced a shutdown for 21 October 2026. That date has passed; its column preserves previously documented features and should not be read as an active service comparison.</p>
             <div className="mt-7 flex flex-wrap gap-2">
               {topics.map((topic) => {
                 const active = selectedTopics.includes(topic.id);
