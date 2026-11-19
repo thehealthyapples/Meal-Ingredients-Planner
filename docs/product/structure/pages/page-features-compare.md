@@ -8,7 +8,7 @@ owner: Colin Clapson
 route: /features-and-compare
 aliases: ["/features&compare"]
 last_verified: 2026-11-19
-version: 2
+version: 3
 ---
 
 # Features & compare
@@ -17,7 +17,7 @@ version: 2
 
 ## What it is
 
-The page describes THA's household-first meal, restriction, recipe, planning, nutrition, diary, pantry and shopping capabilities. A single grid compares twenty-one competitor apps across granular tasks. Each coloured dot opens the evidence note and the relevant official developer source. Green means Yes, amber means Some limits, red means No, and grey means Not verified. Missing information stays unknown; no overall winner or aggregate score is published.
+The page describes THA's household-first meal, restriction, recipe, planning, nutrition, diary, pantry and shopping capabilities. A single grid compares twenty-one competitor apps across granular tasks. Click any competitor name in the table header to order feature rows by that app's evidence (Yes, Some limits, No, then Not verified); click it again to return to priority order. The selected app is highlighted beside THA. Each coloured dot opens the evidence note and relevant official developer source. Green means Yes, amber means Some limits, red means No, and grey means Not verified. Missing information stays unknown; no overall winner or aggregate score is published.
 
 The comparison includes app availability and tier limits where the reviewed developer sources state them. Evidence was checked on 2026-11-19; app features can change by region, device and subscription tier.
 

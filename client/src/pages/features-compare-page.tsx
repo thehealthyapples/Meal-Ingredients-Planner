@@ -179,18 +179,34 @@ function evidenceLabel(level: Evidence["level"]) {
 
 export default function FeaturesComparePage() {
   const [selectedTopics, setSelectedTopics] = useState<TopicId[]>([]);
+  const [selectedComparatorId, setSelectedComparatorId] = useState("");
   const [detail, setDetail] = useState<{ product: Product; topic: (typeof topics)[number] } | null>(null);
   const visibleTopics = useMemo(() => [
-    ...topics.filter((topic) => selectedTopics.includes(topic.id)),
-    ...topics.filter((topic) => !selectedTopics.includes(topic.id)),
-  ], [selectedTopics]);
+    ...(selectedComparatorId
+      ? [...topics].sort((a, b) => {
+          const selectedComparator = products.find((product) => product.id === selectedComparatorId);
+          const levelOrder: Record<Evidence["level"], number> = { yes: 0, partial: 1, no: 2, unknown: 3 };
+          const evidenceDifference = levelOrder[evidenceFor(selectedComparator!, a.id).level] - levelOrder[evidenceFor(selectedComparator!, b.id).level];
+          if (evidenceDifference !== 0) return evidenceDifference;
+          const priorityDifference = Number(selectedTopics.includes(b.id)) - Number(selectedTopics.includes(a.id));
+          return priorityDifference || topics.indexOf(a) - topics.indexOf(b);
+        })
+      : [
+          ...topics.filter((topic) => selectedTopics.includes(topic.id)),
+          ...topics.filter((topic) => !selectedTopics.includes(topic.id)),
+        ]),
+  ], [selectedTopics, selectedComparatorId]);
   const visibleProducts = useMemo(() => {
-    if (!selectedTopics.length) return products;
+    if (!selectedTopics.length && !selectedComparatorId) return products;
     return [...products].sort((a, b) => {
+      if (a.id === "tha") return -1;
+      if (b.id === "tha") return 1;
+      if (a.id === selectedComparatorId) return -1;
+      if (b.id === selectedComparatorId) return 1;
       const score = (p: Product) => selectedTopics.reduce((n, topic) => n + (evidenceFor(p, topic).level === "yes" ? 1 : evidenceFor(p, topic).level === "partial" ? 0.5 : 0), 0);
       return score(b) - score(a);
     });
-  }, [selectedTopics]);
+  }, [selectedTopics, selectedComparatorId]);
 
   const toggleTopic = (id: TopicId) => setSelectedTopics((current) => current.includes(id) ? current.filter((x) => x !== id) : [...current, id]);
   useEffect(() => {
@@ -263,7 +279,7 @@ export default function FeaturesComparePage() {
           <section id="compare-apps" className="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-20">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">Build your comparison</p>
             <h2 className="mt-4 max-w-3xl text-3xl font-semibold tracking-tight sm:text-4xl">What matters most to your household?</h2>
-            <p className="mt-4 max-w-3xl leading-relaxed text-muted-foreground">Compare THA with 20 shortlisted food apps across household needs, recipe capture, planning, nutrition, diaries, shopping and pantry tools. Choose priorities to bring the most relevant apps forward, then select a dot to inspect the evidence.</p>
+            <p className="mt-4 max-w-3xl leading-relaxed text-muted-foreground">Compare THA with 21 competitor food apps across household needs, recipe capture, planning, nutrition, diaries, shopping and pantry tools. Choose priorities to bring the most relevant apps forward, or click an app name above its column to order features by its evidence. Select a dot to inspect the details.</p>
             <p className="mt-2 text-xs text-muted-foreground">Evidence checked 19 November 2026 against THA source code and app developers' own help pages. Availability can vary by country, device and subscription tier.</p>
             <div className="mt-7 flex flex-wrap gap-2">
               {topics.map((topic) => {
@@ -272,17 +288,17 @@ export default function FeaturesComparePage() {
               })}
               <button type="button" onClick={() => setSelectedTopics([])} className="inline-flex items-center gap-1 rounded-full px-3 py-2 text-sm text-muted-foreground hover:text-primary"><RotateCcw className="h-3.5 w-3.5"/> Clear priorities</button>
             </div>
-            {selectedTopics.length > 0 && <p className="mt-3 text-sm text-muted-foreground" aria-live="polite">Selected priorities move to the top of the grid. Apps are ordered by documented support for those priorities; unknown cells do not count against an app.</p>}
+            <p className="mt-3 text-sm text-muted-foreground" aria-live="polite">{selectedComparatorId ? `${products.find((product) => product.id === selectedComparatorId)?.name} is selected. Features are ordered Yes, Some limits, No, then Not verified; selected priorities are highlighted within each group. Click the selected name again to return to priority order.` : selectedTopics.length > 0 ? "Selected priorities move to the top of the grid. Apps are ordered by documented support for those priorities; unknown cells do not count against an app." : "Click a competitor name in the table header to order features by its evidence. Click the selected name again to return to priority order."}</p>
 
             <div className="mt-7 overflow-x-auto rounded-2xl border border-border bg-card">
               <div role="table" aria-label="Feature evidence by app" className="min-w-[1080px]">
                 <div role="row" className="grid bg-accent" style={{ gridTemplateColumns: `minmax(240px, 260px) repeat(${visibleProducts.length}, minmax(40px, 1fr))` }}>
                   <div role="columnheader" className="flex h-32 items-end px-4 pb-3 text-sm font-semibold">What it needs to do</div>
-                  {visibleProducts.map((product) => <div role="columnheader" key={product.id} className="relative h-32 border-l border-border/70" title={product.broad}><a href={product.href} target={product.id === "tha" ? undefined : "_blank"} rel={product.id === "tha" ? undefined : "noopener noreferrer"} className="absolute bottom-3 left-1/2 origin-bottom-left -rotate-[55deg] whitespace-nowrap text-[11px] font-semibold text-primary underline-offset-4 hover:underline">{product.name}</a></div>)}
+                  {visibleProducts.map((product) => <div role="columnheader" key={product.id} className={`relative h-32 border-l border-border/70 ${product.id === selectedComparatorId ? "bg-primary/10" : ""}`} title={product.broad}>{product.id === "tha" ? <a href={product.href} className="absolute bottom-3 left-1/2 origin-bottom-left -rotate-[55deg] whitespace-nowrap text-[11px] font-semibold text-primary underline-offset-4 hover:underline">{product.name}</a> : <button type="button" aria-pressed={product.id === selectedComparatorId} aria-label={product.id === selectedComparatorId ? `${product.name} selected for feature order. Click to clear.` : `Order features by ${product.name}`} onClick={() => setSelectedComparatorId((current) => current === product.id ? "" : product.id)} className={`absolute bottom-3 left-1/2 origin-bottom-left -rotate-[55deg] whitespace-nowrap rounded px-1 text-[11px] font-semibold underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 ${product.id === selectedComparatorId ? "bg-primary text-primary-foreground" : "text-primary"}`}>{product.name}</button>}</div>)}
                 </div>
                 {visibleTopics.map((topic) => <div role="row" key={topic.id} className={`grid min-h-10 border-t border-border ${selectedTopics.includes(topic.id) ? "bg-accent/40" : ""}`} style={{ gridTemplateColumns: `minmax(240px, 260px) repeat(${visibleProducts.length}, minmax(40px, 1fr))` }}>
                   <div role="rowheader" className="flex items-center px-4 py-2 text-xs font-medium leading-tight">{topic.question}{selectedTopics.includes(topic.id) && <span className="ml-2 shrink-0 text-[10px] font-semibold text-primary">Priority</span>}</div>
-                  {visibleProducts.map((product) => {const evidence = evidenceFor(product, topic.id); const dot = evidence.level === "yes" ? "bg-emerald-700" : evidence.level === "partial" ? "bg-amber-500" : evidence.level === "no" ? "bg-red-700" : "bg-muted-foreground/35"; return <div role="cell" key={product.id} className="flex items-center justify-center border-l border-border/50"><button type="button" onClick={() => setDetail({ product, topic })} title={`${product.name}: ${evidenceLabel(evidence.level)}`} aria-label={`${product.name}, ${topic.question}: ${evidenceLabel(evidence.level)}. Open evidence.`} className={`h-3.5 w-3.5 rounded-full ${dot} ring-offset-2 transition-transform hover:scale-125 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2`} /></div>;})}
+                  {visibleProducts.map((product) => {const evidence = evidenceFor(product, topic.id); const dot = evidence.level === "yes" ? "bg-emerald-700" : evidence.level === "partial" ? "bg-amber-500" : evidence.level === "no" ? "bg-red-700" : "bg-muted-foreground/35"; return <div role="cell" key={product.id} className={`flex items-center justify-center border-l border-border/50 ${product.id === selectedComparatorId ? "bg-primary/5" : ""}`}><button type="button" onClick={() => setDetail({ product, topic })} title={`${product.name}: ${evidenceLabel(evidence.level)}`} aria-label={`${product.name}, ${topic.question}: ${evidenceLabel(evidence.level)}. Open evidence.`} className={`h-3.5 w-3.5 rounded-full ${dot} ring-offset-2 transition-transform hover:scale-125 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2`} /></div>;})}
                 </div>)}
               </div>
             </div>
