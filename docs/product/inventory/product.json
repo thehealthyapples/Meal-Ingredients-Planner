@@ -4,7 +4,7 @@
   "generated_by": "scripts/build-product-inventory.ts",
   "populated_by": "PDA1_PLATFORM_DISCOVERY_AND_EXPERIENCE_AUDIT",
   "populated_on": "2026-07-11",
-  "entry_count": 172,
+  "entry_count": 173,
   "entries": [
     {
       "id": "dom-home",
@@ -333,6 +333,36 @@
       ],
       "last_verified": "2026-11-15",
       "version": 4
+    },
+    {
+      "id": "page-features-compare",
+      "name": "Features & compare",
+      "section": "pages",
+      "status": "live",
+      "visibility": "public",
+      "route": "/features-and-compare",
+      "aliases": [
+        "/features&compare"
+      ],
+      "purpose": "Introduce THA's household-first food tools and let visitors inspect an evidence-backed feature matrix against twenty food apps, with clear uncertainty and possible lessons for future product work.",
+      "owner": "Colin Clapson",
+      "sources": [
+        "client/src/pages/features-compare-page.tsx",
+        "client/src/App.tsx",
+        "client/src/pages/home-page.tsx"
+      ],
+      "related": [
+        "page-home",
+        "dom-planner",
+        "dom-cookbook",
+        "dom-shopping",
+        "dom-pantry",
+        "dom-nutrition",
+        "dom-diary",
+        "dom-analyser"
+      ],
+      "last_verified": "2026-11-19",
+      "version": 2
     },
     {
       "id": "page-dashboard",
