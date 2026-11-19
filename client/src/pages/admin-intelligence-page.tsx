@@ -17,7 +17,7 @@
  * and it does not change benchmark scoring meaning.
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -460,6 +460,33 @@ function ScoreBarCard({
 // ---------------------------------------------------------------------------
 function RunControls({ onRun, running }: { onRun: (mode: string) => void; running: string | null }) {
   const { data: bundle } = useQuery<BundleInfo>({ queryKey: ["/api/intelligence/benchmark/bundle"] });
+  const [progress, setProgress] = useState<{ completed: number; total: number } | null>(null);
+
+  useEffect(() => {
+    if (!running) {
+      setProgress(null);
+      return;
+    }
+
+    const poll = async () => {
+      try {
+        const res = await fetch("/api/intelligence/benchmark/progress");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.completed > 0) {
+            setProgress({ completed: data.completed, total: data.total });
+          }
+        }
+      } catch (e) {
+        // Silently fail on polling errors
+      }
+    };
+
+    poll();
+    const interval = setInterval(poll, 1000);
+    return () => clearInterval(interval);
+  }, [running]);
+
   return (
     <Card data-testid="card-run-controls">
       <CardHeader className="pb-2">
@@ -472,10 +499,12 @@ function RunControls({ onRun, running }: { onRun: (mode: string) => void; runnin
       <CardContent className="space-y-4">
         <div className="flex flex-wrap gap-2">
           <Button variant="default" onClick={() => onRun("quick")} disabled={running !== null} data-testid="button-run-quick">
-            <Gauge className="w-4 h-4 mr-1.5" />{running === "quick" ? "Running Quick…" : "Quick (10)"}
+            <Gauge className="w-4 h-4 mr-1.5" />
+            {running === "quick" && progress ? `Running… ${progress.completed}/${progress.total}` : running === "quick" ? "Running Quick…" : "Quick (10)"}
           </Button>
           <Button onClick={() => onRun("full")} disabled={running !== null} variant="secondary" data-testid="button-run-full">
-            <Activity className="w-4 h-4 mr-1.5" />{running === "full" ? "Running Full…" : "Full (100)"}
+            <Activity className="w-4 h-4 mr-1.5" />
+            {running === "full" && progress ? `Running… ${progress.completed}/${progress.total}` : running === "full" ? "Running Full…" : "Full (100)"}
           </Button>
           <Button onClick={() => onRun("certification")} disabled={running !== null} variant="outline" data-testid="button-run-certification">
             <Award className="w-4 h-4 mr-1.5" />Certification (framework)

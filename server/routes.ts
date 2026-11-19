@@ -9766,6 +9766,11 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     }
   });
 
+  app.get("/api/intelligence/benchmark/progress", assertAdmin, async (_req, res) => {
+    const { benchmarkProgress } = await import("./intelligence/observation/benchmark-progress.js");
+    res.json(benchmarkProgress.getProgress());
+  });
+
   // ── Scan (OCR + Parse) ───────────────────────────────────────────────────────
 
   const scanUpload = multer({
