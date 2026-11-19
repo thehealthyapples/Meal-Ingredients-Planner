@@ -96,14 +96,16 @@ The set is grouped by strongest use in the review, not ranked from 1 to 20. Limi
 
 This is a product recommendation, not implementation approval. The first change should be decided and scoped as one Amber decision at a time.
 
-### P1 — Add an optional guided cooking mode to existing recipes
+### P1 — Add an optional step-focus view to existing recipes
 
 **Why first:** it is a clear THA gap against several broad recipe/meal-planning apps, while the existing recipe instructions are already the source. A restrained cook mode could reduce missed steps during a family meal without creating another recipe system.
-**Possible scope:** full-screen step display, next/back, optional per-step timers, screen-awake behavior and easy exit; no tracking, streaks, or automatic diary writes.
+**Possible scope:** an in-place, calm reading view that shows one existing instruction at a time, a simple “step N of M” position, previous/next controls and an easy return to the full recipe. Keep the current step in tab-session state so leaving and returning can resume; clear that view state on explicit exit or session close. Do not add timers or countdowns: the Experience Language says nothing should count down or hurry the person. Do not add tracking, streaks, completion records or automatic diary writes. If a recipe has no stored instructions, keep the current unavailable state and do not invent steps.  
 **Risk:** 🟡 Amber — new interactive cooking workflow.
-**Architecture/data:** extend the existing Cookbook/recipe owner; transient view state only unless a later decision approves persistence. No new recipe entity or copy of ingredient/step data.
-**Trust:** recipe data remains user-reviewed; timer values are explicit recipe instructions or user-set, never guessed.
-**Rollback:** remove the new mode and return to the current recipe instruction view.
+**Architecture/data:** `meals.instructions` remains the one recipe-step owner; the mode is a view over `client/src/pages/meal-detail-page.tsx`. No new entity, API, database record, recipe copy or diary write. The proposed resume marker is local to the browser tab session and contains only meal id and current step; it is removed on explicit exit/session close. Recipe-acquisition lane and attribution rules remain in force.  
+**Trust:** display only stored recipe instructions; do not infer missing steps or timing. Preserve the full instruction list and an obvious exit. A user can leave at any time without marking the recipe cooked.  
+**Definition of done / manual acceptance:** (1) open a recipe that has instructions and start the focus view; (2) confirm it shows the first step and correct total; (3) move forward and back without losing text or changing the recipe; (4) leave the view and return to the full instructions; (5) navigate away and back within the same tab session and confirm the selected step resumes; (6) explicitly exit and confirm the resume marker clears; (7) confirm a recipe without stored instructions cannot enter the mode; (8) confirm no countdown, recipe mutation, pantry change or diary entry occurs.  
+**Data impact:** reads existing meal instructions and id; writes a short-lived browser-tab view marker only; no server/database writes, schema change, backfill or change to existing meaning.  
+**Rollback:** remove the view and tab-session marker logic; return to the existing recipe instruction list. No household data cleanup is needed.  
 **Approval status:** not yet specifically approved. The owner's broad request to enhance after comparison does not define this behavior's exact scope.
 
 ### P2 — Improve social and video recipe import reliability
@@ -138,7 +140,7 @@ This is a product recommendation, not implementation approval. The first change 
 
 ## Before product implementation
 
-The next user decision is **whether to approve the narrow P1 guided-cooking scope**. It should be implemented only after the one-decision approval required by `docs/change-control.md`, the Cookbook ownership and experience checks, and a focused definition of done/manual acceptance steps. No enhancement code has been changed by this comparison report.
+The next user decision is **whether to approve the narrow P1 step-focus scope**. It should be implemented only after the one-decision approval required by `docs/change-control.md`; the definition of done, data impact, trust constraints and rollback are stated above. No enhancement code has been changed by this comparison report.
 
 ## THA implementation evidence
 
@@ -184,7 +186,8 @@ Existing full competitor audits consulted:
 ## Architecture and evidence boundaries
 
 **Verified:** the feature comparison belongs to the existing `features-compare-page.tsx` evidence source; this investigation adds no runtime capability registry, database, score service or new product owner. The THA audit names the current planner, Cookbook, Larder, diary, shopping, Analyser and Nutrition Boost owners.
-**Inferred:** a guided mode can likely extend existing recipe instructions without persistent state, but this must be verified against Cookbook architecture before approval or implementation.
+**Verified:** `client/src/pages/meal-detail-page.tsx` renders `meal.instructions` as an ordered list; the route is `/meals/:id`. The reviewed source contains no dedicated interactive cook mode. `docs/architecture/THA_EXPERIENCE_LANGUAGE.md` Principle 2 says nothing should count down or hurry the person; the proposed scope therefore excludes timers. `docs/architecture/THA_EXPERIENCE_ARCHITECTURE.md` requires journeys to be interruptible and resumable.  
+**Inferred:** a focus view can extend the existing recipe detail page without duplicating recipe content. The tab-session resume marker is a proposal and needs implementation review against current state/route conventions before work begins.  
 **Assumed:** none of the unreported competitor functions are treated as absent. Where claim-specific documentation did not establish a capability, it stays “not established” and should remain grey on the public page.
 **Data impact:** none from this research. Live services, databases, configuration and production were not touched.
 **Rollback:** this investigation and the inventory/priority-note updates can be reverted as documentation only; the rollback tag below anchors committed pre-review state and does not restore unrelated dirty files.
