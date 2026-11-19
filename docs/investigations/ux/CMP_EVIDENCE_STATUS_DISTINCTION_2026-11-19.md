@@ -44,3 +44,7 @@ This change distinguishes the two current sources of uncertainty. It does not ye
 ## Mealime source-audit tranche
 
 **Verified:** Official Mealime support/product sources were reviewed on 2026-11-19 across all 30 matrix tasks. The row records URL recipe import, meal planning, grocery lists, Pro nutrition, pantry-item planning and guided cooking, alongside family-size, shared-account, and subscription limits. Paper-plan scanning, plan import and other unreported items remain grey; no No ratings were added. Full mapping: `docs/investigations/ux/CMP_MEALIME_EVIDENCE_AUDIT_2026-11-19.md`.
+
+## Mealia source-audit tranche
+
+**Verified from official product and App Store descriptions:** Mealia documents household-sized personalized meal plans, UK supermarket basket building, website recipe import and a budget-first weekly shop. The user reviews the basket and checks out with the retailer. Household preferences are described, but individual eater profiles, diary/nutrition tools and a safety-specific allergen workflow are not established in reviewed sources. The feature row preserves these as grey or limited, not No. Full 30-task mapping and source links: `docs/investigations/ux/CMP_MEALIA_EVIDENCE_AUDIT_2026-11-19.md`.

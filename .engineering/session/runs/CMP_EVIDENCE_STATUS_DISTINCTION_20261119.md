@@ -47,3 +47,11 @@ Governance was freshly read: `AGENTS.md`, `PROJECT_GOVERNANCE.md`, `docs/archite
 Reviewed all 30 matrix tasks using official Mealime support/product documentation. Updated its existing row with supported claims and caveats for dietary filters, URL recipe import, planning, categorized shopping lists, Pro nutrition and pantry filters, account-sharing limits and hands-free cooking. Unreported features remain grey. No confirmed No ratings. Research: `docs/investigations/ux/CMP_MEALIME_EVIDENCE_AUDIT_2026-11-19.md`.
 
 `npm run build` completed successfully with existing toolchain/bundle warnings. Typecheck was not rerun for this row; the prior tranche's full-project typecheck remains known to fail on unrelated files. No tests run. No database, live service, scheduled task, or configuration touched. Next: continue the audit with the next high-overlap app.
+
+## Mealia source-audit tranche — 19 November 2026
+
+Governance read for this tranche: `AGENTS.md`, `PROJECT_GOVERNANCE.md`, `docs/architecture/README.md`, `docs/architecture/GOVERNING_EXPERIENCE_ARCHITECTURE.md`, and task-routed AI operating-model implementation documents listed in the prior tranche. Verified repo/branch/base HEAD: `feat/integrated-dev` / `a4af11122c592787fe8a1e92d9cd012d65b29712`; user's instruction to continue and standing dev authority authorize this Amber scope. Pre-edit rollback tag: `rollback/CMP-Mealime-evidence-20261119` → `a4af11122c592787fe8a1e92d9cd012d65b29712`.
+
+Reviewed Mealia against all 30 tasks using official UK product pages and its UK App Store listing. Updated only its existing competitor row and audit records. Its budget-led UK retailer basket is a strong documented differentiator; household preferences do not establish distinct eater profiles. Website and marketplace descriptions differ in supermarket coverage, recorded as a limitation. Unsupported areas stay grey; no No ratings. Full source map: `docs/investigations/ux/CMP_MEALIA_EVIDENCE_AUDIT_2026-11-19.md`.
+
+`npm run build` completed successfully with existing toolchain/bundle warnings. No tests or typecheck run. No database, live service, scheduled task or configuration touched. Next: continue with the next close-overlap competitor, retaining neutral uncertainty where documentation is silent.
