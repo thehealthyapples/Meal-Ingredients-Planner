@@ -76,3 +76,7 @@ This change distinguishes the two current sources of uncertainty. It does not ye
 ## Cronometer source-audit tranche
 
 **Verified:** Official Cronometer help pages were reviewed across all 30 tasks on 2026-11-19. The row captures recipe creation and Gold URL import, editable food suggestions for remaining nutrient targets, daily diary nutrients, weekly/period-average reports, barcode/photo logging and Gold Crono Coach. It distinguishes individual tracking and practitioner/client tools from family meal planning, shopping lists and household profiles, which remain unestablished. No competitor No ratings were added. Full map: `docs/investigations/ux/CMP_CRONOMETER_EVIDENCE_AUDIT_2026-11-19.md`.
+
+## Plan to Eat source-audit tranche
+
+**Verified:** Plan to Eat's official documentation was reviewed across all 30 tasks on 2026-11-19. The row captures recipe URL/social/photo import and OCR, planning, Menus, grocery delivery, freezer batch cooking with quantities/thaw reminders, nutrition, its Beta Food Logger and AI substitutions. The review distinguishes family-size portions from separate eater profiles, recipe scans from paper-plan scans, and pantry suggestions from inventory sync. Unknown diary/scan cells remain grey; no No ratings were added. Full map: `docs/investigations/ux/CMP_PLAN_TO_EAT_EVIDENCE_AUDIT_2026-11-19.md`.

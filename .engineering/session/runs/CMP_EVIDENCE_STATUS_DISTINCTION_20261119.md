@@ -107,3 +107,7 @@ Data impact: static public evidence and Markdown records only; no personal data,
 ## Cronometer source-audit tranche
 
 **Verified:** Official Cronometer support pages were reviewed across all 30 tasks on 2026-11-19. The row records recipe URL import (Gold), nutrient targets and suggestions, period-average nutrition reports, barcode/photo food logging and Crono Coach; it separates those documented personal-tracking capabilities from unreported household plans and shopping lists. No No ratings were added. Research audit: `docs/investigations/ux/CMP_CRONOMETER_EVIDENCE_AUDIT_2026-11-19.md`. Rollback: `rollback/CMP-Cronometer-evidence-20261119` → `49815a9fb2350b465b45fec269931f5b484b12a8`.
+
+## Plan to Eat source-audit tranche
+
+**Verified:** Official Plan to Eat help/release sources reviewed all 30 tasks on 2026-11-19, including new Food Logger docs and Freezer instructions. Captured social/paper recipe import, planning, grocery list, cooking, calculated recipe nutrition, Beta weekly macro tracking and AI ingredient substitutions. Unreported features remain grey. Audit: `docs/investigations/ux/CMP_PLAN_TO_EAT_EVIDENCE_AUDIT_2026-11-19.md`. Rollback: `rollback/CMP-PlanToEat-evidence-20261119` → `2087dc835b2916c3116f4632a425d1abeb82c55d`.
