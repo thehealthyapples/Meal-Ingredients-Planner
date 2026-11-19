@@ -66,9 +66,12 @@ const comparisons = [
 ];
 
 type TopicId = "family" | "eater-profiles" | "allergen-preferences" | "meal-adapt" | "meal-create" | "meal-import" | "social-import" | "meal-scan" | "plan-create" | "plan-import" | "plan-scan" | "plan-templates" | "shopping" | "collaboration" | "budget-basket" | "meal-nutrition" | "nutrition-uplift" | "week-nutrition" | "weekly-food-explorer" | "food-diary" | "photo-diary" | "weight" | "mood-energy" | "barcode" | "offline-scan" | "pantry-recipes" | "pantry-visual" | "pantry-sync" | "ai-tailor" | "guided-cook";
-type Evidence = { level: "yes" | "partial" | "no" | "unknown"; note: string; href?: string };
+type Evidence =
+  | { level: "yes" | "partial" | "no"; note: string; href?: string }
+  | { level: "unknown"; note: string; href?: string; unknownReason: "not_reported" | "not_assessed" };
 type Product = { id: string; name: string; href: string; broad: string; topics: Partial<Record<TopicId, Evidence>> };
-const unknown: Evidence = { level: "unknown", note: "Not established in the official sources reviewed for this comparison. This is not a No." };
+const unknown: Evidence = { level: "unknown", unknownReason: "not_reported", note: "The developer sources reviewed for this comparison do not report this capability. This does not confirm that the app lacks it." };
+const notAssessed: Evidence = { level: "unknown", unknownReason: "not_assessed", note: "This app and capability have not yet been assessed in the comparison. This is not a No." };
 const yes = (note: string, href?: string): Evidence => ({ level: "yes", note, ...(href ? { href } : {}) });
 const partial = (note: string, href?: string): Evidence => ({ level: "partial", note, ...(href ? { href } : {}) });
 const no = (note: string, href?: string): Evidence => ({ level: "no", note, ...(href ? { href } : {}) });
@@ -163,7 +166,7 @@ const products: Product[] = [
 ];
 
 function evidenceFor(product: Product, topicId: TopicId): Evidence {
-  return product.topics[topicId] ?? unknown;
+  return product.topics[topicId] ?? notAssessed;
 }
 
 function evidenceStyle(level: Evidence["level"]) {
@@ -175,6 +178,11 @@ function evidenceStyle(level: Evidence["level"]) {
 
 function evidenceLabel(level: Evidence["level"]) {
   return level === "yes" ? "Yes" : level === "partial" ? "Some limits" : level === "no" ? "No" : "Not verified";
+}
+
+function evidenceAssessmentLabel(evidence: Evidence) {
+  if (evidence.level !== "unknown") return null;
+  return evidence.unknownReason === "not_assessed" ? "Not assessed yet" : "Not reported in reviewed sources";
 }
 
 export default function FeaturesComparePage() {
@@ -302,8 +310,8 @@ export default function FeaturesComparePage() {
                 </div>)}
               </div>
             </div>
-            {detail && <div role="dialog" aria-modal="true" aria-labelledby="evidence-title" className="mt-5 rounded-2xl border border-primary/30 bg-card p-6 shadow-sm"><div className="flex items-start justify-between gap-4"><div><p className={`inline-flex rounded-md border px-2.5 py-1 text-xs font-bold ${evidenceStyle(evidenceFor(detail.product, detail.topic.id).level)}`}>{evidenceLabel(evidenceFor(detail.product, detail.topic.id).level)}</p><h3 id="evidence-title" className="mt-2 text-lg font-semibold">{detail.product.name}: {detail.topic.question}</h3></div><button type="button" onClick={() => setDetail(null)} className="rounded-lg border border-border px-3 py-1 text-sm hover:border-primary/50">Close</button></div><p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">{evidenceFor(detail.product, detail.topic.id).note}</p>{detail.product.id !== "tha" && <a className="mt-4 inline-block text-sm font-medium text-primary underline underline-offset-4" href={evidenceFor(detail.product, detail.topic.id).href ?? detail.product.href} target="_blank" rel="noopener noreferrer">Open the developer source</a>}</div>}
-            <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl bg-background/80 p-5 text-sm text-muted-foreground"><strong className="text-foreground">Evidence key</strong><span className="inline-flex items-center gap-2"><i className="h-3 w-3 rounded-full bg-emerald-700"/>Yes</span><span className="inline-flex items-center gap-2"><i className="h-3 w-3 rounded-full bg-amber-500"/>Some limits</span><span className="inline-flex items-center gap-2"><i className="h-3 w-3 rounded-full bg-red-700"/>No</span><span className="inline-flex items-center gap-2"><i className="h-3 w-3 rounded-full bg-muted-foreground/35"/>Not verified</span><span className="basis-full pt-1">A red dot means the reviewed app does not offer that capability; missing evidence stays grey as Not verified. Select a dot to read the evidence and open the relevant developer source. No overall winner or total score is published.</span></div>
+            {detail && <div role="dialog" aria-modal="true" aria-labelledby="evidence-title" className="mt-5 rounded-2xl border border-primary/30 bg-card p-6 shadow-sm"><div className="flex items-start justify-between gap-4"><div><p className={`inline-flex rounded-md border px-2.5 py-1 text-xs font-bold ${evidenceStyle(evidenceFor(detail.product, detail.topic.id).level)}`}>{evidenceLabel(evidenceFor(detail.product, detail.topic.id).level)}</p><h3 id="evidence-title" className="mt-2 text-lg font-semibold">{detail.product.name}: {detail.topic.question}</h3></div><button type="button" onClick={() => setDetail(null)} className="rounded-lg border border-border px-3 py-1 text-sm hover:border-primary/50">Close</button></div>{evidenceAssessmentLabel(evidenceFor(detail.product, detail.topic.id)) && <p className="mt-2 text-xs font-medium text-muted-foreground">{evidenceAssessmentLabel(evidenceFor(detail.product, detail.topic.id))}</p>}<p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">{evidenceFor(detail.product, detail.topic.id).note}</p>{detail.product.id !== "tha" && <a className="mt-4 inline-block text-sm font-medium text-primary underline underline-offset-4" href={evidenceFor(detail.product, detail.topic.id).href ?? detail.product.href} target="_blank" rel="noopener noreferrer">Open the developer source</a>}</div>}
+            <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl bg-background/80 p-5 text-sm text-muted-foreground"><strong className="text-foreground">Evidence key</strong><span className="inline-flex items-center gap-2"><i className="h-3 w-3 rounded-full bg-emerald-700"/>Yes</span><span className="inline-flex items-center gap-2"><i className="h-3 w-3 rounded-full bg-amber-500"/>Some limits</span><span className="inline-flex items-center gap-2"><i className="h-3 w-3 rounded-full bg-red-700"/>No</span><span className="inline-flex items-center gap-2"><i className="h-3 w-3 rounded-full bg-muted-foreground/35"/>Not verified</span><span className="basis-full pt-1">Grey means Not verified. Details distinguish a cell not assessed yet from a feature not reported in reviewed developer sources; neither confirms absence. Red is reserved for evidence that confirms a capability is not offered. Select a dot to read the evidence and open the relevant developer source. No overall winner or total score is published.</span></div>
 
           </section>
 

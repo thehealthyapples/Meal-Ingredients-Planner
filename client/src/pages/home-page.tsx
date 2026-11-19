@@ -72,6 +72,14 @@ export default function HomePage() {
             <Button
               variant="ghost"
               size="sm"
+              onClick={() => setLocation("/features-and-compare")}
+              data-testid="button-nav-compare-apps"
+            >
+              Compare apps
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setLocation("/auth")}
               data-testid="button-nav-signin"
             >

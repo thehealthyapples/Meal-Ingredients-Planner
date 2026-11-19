@@ -20,6 +20,8 @@ Audit all cells and replace ambiguous absence with a structured internal reason.
 
 **Next action:** define a lightweight source record per assessed claim (claim/task, status and reason, exact source URL, source title, checked date, and applicable region/tier where known). Then re-review the matrix, prioritizing highest-overlap tasks and Samsung Food. Do not change public claim colors until the review supports them.
 
+**Progress (19 November 2026):** missing matrix entries now resolve to **Not assessed yet**; explicit unknown entries resolve to **Not reported in reviewed sources**. Both remain grey and explicitly avoid claiming absence. The comparison component was also found unrouted and absent from the build; its documented public route, alias and Home link have now been restored. Claim-specific URLs, dates and tier/region metadata still need a separate source audit.
+
 ### P2 — Establish the fundamentals used by the most-used overlapping apps
 
 Build a defensible top-20 set from current, dated market/app-store evidence and the existing 21-app competitor set. Define region, platforms, timeframe and “popular” before ranking. Find the workflows most often shared by those apps and test the comparison against them. Treat popularity as a selection method, not proof that THA should copy a feature.

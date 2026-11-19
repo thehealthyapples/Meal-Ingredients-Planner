@@ -77,6 +77,7 @@ const FoodDiaryPage = lazy(() => import("@/pages/food-diary-page"));
 const QuickMealPage = lazy(() => import("@/pages/quick-meal-page"));
 const HomePage = lazy(() => import("@/pages/home-page"));
 const HomeExperiencePage = lazy(() => import("@/pages/home-experience-page"));
+const FeaturesComparePage = lazy(() => import("@/pages/features-compare-page"));
 // EXP4's three Materiality & Depth studies are all gone, and the disposition EXP4 §6
 // set for them is complete. B (material-b-atmosphere) and C (material-c-restraint) lost
 // ODL2's selection and were deleted then — both set type directly on the orchard, which
@@ -281,6 +282,8 @@ function Router() {
       <Route path="/legal/:slug" component={LegalPage} />
       <Route path="/legal" component={LegalPage} />
 
+      <Route path="/features-and-compare" component={FeaturesComparePage} />
+      <Route path="/features&compare" component={FeaturesComparePage} />
       <Route path="/" component={HomeRoute} />
       <Route path="/dashboard" component={() => <ProtectedRoute component={DashboardPage} />} />
       <Route path="/meals" component={() => <Redirect to="/planner" />} />
