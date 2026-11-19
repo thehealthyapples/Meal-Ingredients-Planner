@@ -64,3 +64,7 @@ This change distinguishes the two current sources of uncertainty. It does not ye
 ## Lifesum source-audit tranche
 
 **Verified:** Lifesum official product/help pages were reviewed across all 30 tasks on 2026-11-19. The row now captures Premium multi-modal AI food logging, barcode product comparison, weight/body measurements, 7–21 day program plans and their shopping-list/export limits, meal creation and nutrition detail, and weekly Life Score feedback. It does not conflate food-photo logging with recipe scanning, or Life Score with weekly consumed-nutrient totals. Family planning and unsupported import/pantry/cooking capabilities remain grey. Full mapping: `docs/investigations/ux/CMP_LIFESUM_EVIDENCE_AUDIT_2026-11-19.md`.
+
+## Yazio source-audit tranche
+
+**Verified:** Official Yazio help pages were reviewed across all 30 tasks on 2026-11-19. The row now captures Pro future meal planning, grocery lists, advanced nutrients and weekly analysis, photo-based AI food logging with estimate limits, body measures, barcode product comparison, mood/symptom/reflection diary tools, and personalized post-meal tips. It also notes that user-created recipes may be local and that current custom-recipe issues are reported by Yazio. THA opportunities are internal only. Unknown household/import/pantry functions remain grey. Full task map: `docs/investigations/ux/CMP_YAZIO_EVIDENCE_AUDIT_2026-11-19.md`.
