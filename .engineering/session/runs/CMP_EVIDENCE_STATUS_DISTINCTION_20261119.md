@@ -29,3 +29,13 @@ Continue with other high-overlap apps: re-review “not reported” and high-pri
 ## Preservation
 
 53 unrelated dirty worktree entries existed before this task and remain untouched. No database, live service, configuration, push or deployment touched.
+
+## MyFitnessPal source-audit tranche — 19 November 2026
+
+**Governance preflight for this tranche:** Verified repository `G:\The Healthy Apples\Applications\GitHub\tha-integrated-dev-g-native-20261003`, branch `feat/integrated-dev`, starting HEAD `9b93b18b426f533e8043e888850c020c9c333303`; confirmed and preserved pre-existing unrelated dirty paths. Read `AGENTS.md`, `PROJECT_GOVERNANCE.md`, `docs/architecture/README.md`, mandatory UX architecture `docs/architecture/GOVERNING_EXPERIENCE_ARCHITECTURE.md`, and operating-model `principles.md`, `risk-and-approval.md`, `rollback-and-output.md`, `evidence-and-architecture.md`, `implementation-and-compliance.md`. Standing dev authority and direct user instruction: **Implementation permitted: YES**, scoped to the MyFitnessPal competitor row and its research/session records. Risk 🟡 Amber. Rollback tag created before edits: `rollback/CMP-MFP-evidence-20261119` → `9b93b18b426f533e8043e888850c020c9c333303`.
+
+Reviewed 30 matrix tasks against official MyFitnessPal help articles. Planner offers Premium+ household-sized plans, allergy/restriction settings, and meal sharing; retailer delivery links are limited to US/Canada. Premium supports barcode and meal-photo logging, and weekly reporting is documented. Individual eater profiles, external plan import, paper-plan scan, mood/energy logging, offline barcode lookup and AI tailoring remain unreported rather than marked No. Full task mapping and source links: `docs/investigations/ux/CMP_MYFITNESSPAL_EVIDENCE_AUDIT_2026-11-19.md`. Scoped source update: `client/src/pages/features-compare-page.tsx`.
+
+`npm run build` completed successfully (existing Browserslist/PostCSS/chunk/server-bundling warnings). No tests were run. No live service, database, scheduled task, or configuration touched. Next: audit the next high-overlap competitor, preserving source-specific unknowns and tier/region limits.
+
+Typecheck note for the MyFitnessPal tranche: repository-wide `npm run typecheck` exits 1 with TypeScript diagnostics in unrelated files (including server scripts/tests and other UI components). A filtered rerun showed no diagnostics in `client/src/pages/features-compare-page.tsx`. The successful production build remains recorded above.

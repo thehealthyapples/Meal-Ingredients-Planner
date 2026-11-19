@@ -37,3 +37,6 @@ This change distinguishes the two current sources of uncertainty. It does not ye
 ## Samsung Food source-audit tranche
 
 **Verified:** Official Samsung Food help pages were reviewed on 2026-11-19. The existing row now includes claim-specific URLs, tier caveats and explicit “not reported” reasons for eater profiles, external plan import and paper-plan scanning. Weekly intake was corrected from Yes to Some limits because reviewed nutrition sources describe daily targets and detailed recipe nutrition but not consumed weekly totals across diary days. No cell was marked No. Full task mapping and source URLs: `docs/investigations/ux/CMP_SAMSUNG_FOOD_EVIDENCE_AUDIT_2026-11-19.md`.
+## MyFitnessPal source-audit tranche
+
+**Verified:** Official MyFitnessPal support pages were reviewed on 2026-11-19 across all 30 comparison tasks. The row now accounts for Premium and Premium+ feature tiers, household-size planning, and regional restrictions on grocery-app handoff. It distinguishes documented weekly intake reports from a linked weekly food explorer, and preserves neutral unknowns for unreported features. No No ratings were added. Full task mapping and sources: `docs/investigations/ux/CMP_MYFITNESSPAL_EVIDENCE_AUDIT_2026-11-19.md`.

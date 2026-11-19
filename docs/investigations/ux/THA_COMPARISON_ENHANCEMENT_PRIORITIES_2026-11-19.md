@@ -49,3 +49,5 @@ Create work items only after P1–P4 provide evidence and ownership. Improve rel
 ## Scope and non-goals
 
 This note is internal planning, not a public page, customer promise, approved product commitment, or change to competitor capability data. It does not assert current market rankings or re-verify competitor claims. Promotion, deployment, schema, persistence, AI behavior and competitor evidence edits are outside this work.
+
+**Progress (19 November 2026 — MyFitnessPal):** The second high-overlap competitor row has now been audited across all 30 tasks. Its Premium+ household planning, allergy settings and grocery list are represented alongside plan/region restrictions; weekly reporting and diary/scan tools have source-specific coverage. Undocumented tasks remain grey. Detailed official-source record: `docs/investigations/ux/CMP_MYFITNESSPAL_EVIDENCE_AUDIT_2026-11-19.md`. Continue with the next high-overlap competitor; do not infer absence from silence.
