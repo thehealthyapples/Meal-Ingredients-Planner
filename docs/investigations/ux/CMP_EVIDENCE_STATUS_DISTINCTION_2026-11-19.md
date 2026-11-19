@@ -72,3 +72,7 @@ This change distinguishes the two current sources of uncertainty. It does not ye
 ## Carb Manager source-audit tranche
 
 **Verified:** Official Carb Manager product/help sources were reviewed across all 30 tasks on 2026-11-19. The row captures Premium plans up to 30 days, custom/curated reuse, URL recipe import from some websites, cookbook QR recipes, per-person shopping-list scaling and printing, weekly nutrition totals, photo logging, weight/body measures, and macro-driven add-food suggestions. It distinguishes QR recipes from paper-plan OCR and sharing daily logs/favorites from collaborative household planning. Silent capabilities remain grey. Full map: `docs/investigations/ux/CMP_CARBMANAGER_EVIDENCE_AUDIT_2026-11-19.md`.
+
+## Cronometer source-audit tranche
+
+**Verified:** Official Cronometer help pages were reviewed across all 30 tasks on 2026-11-19. The row captures recipe creation and Gold URL import, editable food suggestions for remaining nutrient targets, daily diary nutrients, weekly/period-average reports, barcode/photo logging and Gold Crono Coach. It distinguishes individual tracking and practitioner/client tools from family meal planning, shopping lists and household profiles, which remain unestablished. No competitor No ratings were added. Full map: `docs/investigations/ux/CMP_CRONOMETER_EVIDENCE_AUDIT_2026-11-19.md`.
