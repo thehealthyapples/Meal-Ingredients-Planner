@@ -19,6 +19,7 @@
  */
 
 import { storage } from "../../storage.js";
+import type { MealSummary } from "@shared/schema";
 
 export interface HouseholdGroundTruth {
   /**
@@ -34,6 +35,23 @@ export interface HouseholdGroundTruth {
   readonly requesterUserId: number;
   readonly todayDate: string;
   readonly dietary: Awaited<ReturnType<typeof storage.getHouseholdDietaryContext>> | null;
+  /**
+   * JUDGE_LIVE6 — real, UNCAPPED totals alongside the (necessarily capped,
+   * below) sample arrays. Without these, a judge asked to verify a "how many
+   * X do I have" claim only ever sees up to the slice limit and has no way
+   * to confirm a true count above it — a fully correct answer ("you have
+   * 1,021 meals") was reproducibly scored as fabricated (D2=0) because the
+   * capped `cookbookMeals` sample (and, before this fix, ITS OWN-MEALS-ONLY
+   * query) could never contain more than a fraction of the real total.
+   * These totals are exact counts straight from storage, own + system
+   * deduplicated by id exactly as the live meals capability does.
+   */
+  readonly cookbookMealTotal: number;
+  readonly ownCookbookMealTotal: number;
+  readonly systemCookbookMealTotal: number;
+  readonly shoppingListTotal: number;
+  readonly pantryItemTotal: number;
+  readonly recentDiaryEntryTotal: number;
   readonly cookbookMeals: ReadonlyArray<{
     readonly id: number;
     readonly name: string;
@@ -73,14 +91,29 @@ function todayIsoDate(): string {
  *  each source degrades to empty/null independently so one failing query never
  *  blanks out the whole snapshot. */
 export async function buildHouseholdGroundTruth(userId: number): Promise<HouseholdGroundTruth> {
-  const [dietary, meals, shopping, pantry, diary, week] = await Promise.all([
+  const [dietary, ownMeals, systemMeals, shopping, pantry, diary, week] = await Promise.all([
     storage.getHouseholdDietaryContext(userId).catch(() => null),
     storage.getMealsSummary(userId).catch(() => []),
+    storage.getSystemMealsSummary().catch(() => []),
     storage.getShoppingListItems(userId).catch(() => []),
     storage.getPantryItems(userId).catch(() => []),
     storage.getDiaryEntriesForDiscovery(userId).catch(() => []),
     storage.getCurrentDatedPlannerWeek(userId).catch(() => null),
   ]);
+
+  // Own + system, deduplicated by id — mirrors how the live meals capability merges them
+  // (meals-read-handler.ts) so the ground-truth total matches what the Companion can see.
+  const seenMealIds = new Set<number>();
+  let ownCookbookMealTotal = 0;
+  let systemCookbookMealTotal = 0;
+  const meals: MealSummary[] = [];
+  for (const m of [...ownMeals, ...systemMeals]) {
+    if (seenMealIds.has(m.id)) continue;
+    seenMealIds.add(m.id);
+    meals.push(m);
+    if (m.isSystemMeal) systemCookbookMealTotal++;
+    else ownCookbookMealTotal++;
+  }
 
   let plannerThisWeek: HouseholdGroundTruth["plannerThisWeek"] = [];
   if (week) {
@@ -105,6 +138,12 @@ export async function buildHouseholdGroundTruth(userId: number): Promise<Househo
     requesterUserId: userId,
     todayDate: todayIsoDate(),
     dietary,
+    cookbookMealTotal: ownCookbookMealTotal + systemCookbookMealTotal,
+    ownCookbookMealTotal,
+    systemCookbookMealTotal,
+    shoppingListTotal: shopping.length,
+    pantryItemTotal: pantry.length,
+    recentDiaryEntryTotal: diary.length,
     cookbookMeals: meals.slice(0, MAX_MEALS).map((m) => ({
       id: m.id, name: m.name, isReadyMeal: m.isReadyMeal, isSystemMeal: m.isSystemMeal, suitableSlots: m.suitableSlots,
     })),

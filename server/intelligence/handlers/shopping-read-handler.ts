@@ -83,6 +83,14 @@ export interface ShoppingListReadResult {
   readonly itemCount: number;
   readonly items: readonly ShoppingItemView[];
   readonly extras: readonly ShoppingExtraView[];
+  /**
+   * COMP-DET1 (2026-11-20) — a full item listing is a fact code can render exactly
+   * once, correctly, from the owner's own stored rows; it should never be
+   * re-derived (or dropped/invented) by an LLM. When present, conversation-gateway.ts's
+   * deterministic-answer short-circuit uses this text verbatim and skips full
+   * generation for single-capability turns.
+   */
+  readonly deterministicAnswer: string;
 }
 
 export interface ShoppingUnresolvedItemView extends ShoppingItemView {
@@ -210,12 +218,48 @@ async function readList(userId: number, port: ShoppingReadPort): Promise<Shoppin
     port.getShoppingListItems(userId),
     port.getShoppingListExtras(userId),
   ]);
+  const views = items.map(toItemView);
   return {
     scope: "list",
-    itemCount: items.length,
-    items: items.map(toItemView),
+    itemCount: views.length,
+    items: views,
     extras: extras.map(toExtraView),
+    deterministicAnswer: buildShoppingDeterministicAnswer(views),
   };
+}
+
+// COMP-DET1 — live-caught testing this against real data: real shopping lists
+// in this dataset ran to 150+ lines, and naming every one produces an
+// unreadable wall of text, not a useful answer. Below the threshold, name
+// every item (full detail is the more useful answer when short enough to
+// read). At/above it, switch to a category-count breakdown — still a
+// deterministic, fully-accurate fact, just shaped for readability.
+const SHOPPING_PREVIEW_THRESHOLD = 15;
+
+function buildShoppingDeterministicAnswer(items: readonly ShoppingItemView[]): string {
+  if (items.length === 0) return "Your shopping list is empty.";
+
+  if (items.length <= SHOPPING_PREVIEW_THRESHOLD) {
+    const lines = items.map((item) => {
+      const qty = item.quantity && item.unit
+        ? ` (${item.quantity} ${item.unit})`
+        : item.quantity
+          ? ` (${item.quantity})`
+          : "";
+      const checkedMark = item.checked ? " [checked]" : "";
+      return `${item.name}${qty}${checkedMark}`;
+    });
+    return `Your shopping list has ${items.length} item${items.length === 1 ? "" : "s"}: ${lines.join(", ")}.`;
+  }
+
+  const counts = new Map<string, number>();
+  for (const item of items) {
+    const cat = item.category ?? "uncategorised";
+    counts.set(cat, (counts.get(cat) ?? 0) + 1);
+  }
+  const checkedCount = items.filter((i) => i.checked).length;
+  const parts = Array.from(counts.entries()).map(([cat, n]) => `${cat} (${n})`);
+  return `Your shopping list has ${items.length} items (${checkedCount} already checked off) across: ${parts.join(", ")}.`;
 }
 
 async function readUnresolved(

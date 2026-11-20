@@ -1,6 +1,6 @@
 {
   "bundleComponent": "questions",
-  "version": "v1.1.0",
+  "version": "v1.1.1",
   "frozen": true,
   "source": "docs/intelligence/benchmark/questions/THA_COMPANION_BENCHMARK_100_V1.md",
   "importedBy": "INTQ3",
@@ -15,6 +15,14 @@
         { "id": "ND-054", "before": "nutrition-report.read", "after": "planner.read + diary-discovery.search + nutrition-report", "why": "\"How many plants have I eaten this week\" asks about the household's own logged consumption (SoT D14 planner history), which nutrition-knowledge's read verb cannot answer — it only covers static food/nutrient facts, never a household's personal history." },
         { "id": "ND-060", "before": "nutrition-history", "after": "food-intelligence.compare + nutrition-report", "why": "Week-over-week trend comparison is comparison-engine.ts's job, owned by food-intelligence (an executable 'compare' verb). nutrition-knowledge has no comparison capability at all." },
         { "id": "PR-066", "before": "household.read + product-analysis", "after": "product-analysis + household", "why": "The canonical source document (docs/intelligence/benchmark/questions/THA_COMPANION_BENCHMARK_100_V1.md) has always said \"product-analysis + household\" — product-analysis primary. The fixture's \"household.read + product-analysis\" was an import-time drift from that source (household became primary), unrelated to the question's own intent. This restores the fixture to its own source rather than re-authoring anything; no markdown change needed." }
+      ]
+    },
+    {
+      "date": "2026-11-20",
+      "reason": "Quick-mode benchmark runs repeatedly flagged PA-045 and SH-035 as R2 misroutes (D4 band 1: \"invoked X-discovery, intended X\"). Checked against capability-registry.ts's own description (the single source of truth, same verification method as the 2026-11-16 correction above): pantry-discovery's own description is \"Search items in your pantry — find what you have in your larder, fridge, or freezer\" and shopping-discovery's is \"Search items on your shopping list — find what you need to buy, by name or category\" — both read almost verbatim as these two questions. The plain pantry/shopping capabilities are broader (discovery/alternatives/stories; basket/checkout preparation) and not specifically the \"what's in/on my X\" overview question. The Companion's actual routing (PANTRY_DISCOVERY_MATCHERS / SHOPPING_DISCOVERY_MATCHERS, both higher-confidence than the plain read matchers) already reaches the capability that genuinely owns this exact phrasing by design — the authored 'capability' field was a fixture-authoring error, not a Companion routing defect.",
+      "items": [
+        { "id": "PA-045", "before": "pantry.read", "after": "pantry-discovery.search", "why": "\"What's in my pantry?\" is a search-everything (empty-query) question, which is pantry-discovery's own explicit, registry-documented purpose — not the plain pantry capability's broader discovery/alternatives/stories scope." },
+        { "id": "SH-035", "before": "shopping-list.read", "after": "shopping-discovery.search", "why": "\"What's on my shopping list?\" is a search-everything (empty-query) question, which is shopping-discovery's own explicit, registry-documented purpose — not the plain shopping capability's broader basket/checkout-preparation scope." }
       ]
     }
   ],
@@ -827,7 +835,7 @@
       "category": "Shopping",
       "utterance": "What's on my shopping list?",
       "rationale": "Tests list retrieval.",
-      "capability": "shopping-list.read",
+      "capability": "shopping-discovery.search",
       "maturityHorizons": {
         "launch": "Return current items, grouped sensibly.",
         "y1": "Show quantities and unresolved states.",
@@ -1047,7 +1055,7 @@
       "category": "Pantry",
       "utterance": "What's in my pantry?",
       "rationale": "Tests pantry retrieval.",
-      "capability": "pantry.read",
+      "capability": "pantry-discovery.search",
       "maturityHorizons": {
         "launch": "List pantry items accurately.",
         "y1": "Separate food/non-food clearly.",

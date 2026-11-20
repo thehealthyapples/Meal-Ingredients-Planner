@@ -13,12 +13,63 @@
 
 import type { CapabilityHandler, IntelligenceContext, Intent } from "../types.js";
 import type {
+  PantryDiscoveryItem,
   PantryDiscoveryPort,
   PantryDiscoverySearchResult,
 } from "./pantry-discovery-port.js";
 import { requireUserId, readOnlyVerbGuard } from "./_read-kit.js";
 
 export const PANTRY_DISCOVERY_EXECUTABLE_INTENTS = ["search"] as const;
+
+// COMP-DET1 — same shape as pantry-read-handler.ts's list answer: full detail
+// below the threshold, a category-count breakdown above it (a wall of 100+
+// item names is not a useful answer; live-caught against real data).
+const PANTRY_SEARCH_PREVIEW_THRESHOLD = 15;
+
+// COMP-DET1 (2026-11-20) — `totalCount` is now the engine's real, uncapped
+// match count (PantryDiscoverySearchPage), not `items.length` — fixes a real
+// bug live-caught via the benchmark (PA-045): the engine caps its returned
+// `items` array, so stating `items.length` as the total was confidently wrong
+// once a real household's data (138 items) exceeded the cap (100), the same
+// "wrong number stated as fact" failure this whole feature exists to
+// eliminate. `items.length < totalCount` now means "sample, not everything" —
+// no hardcoded cap constant needed here at all.
+function buildPantrySearchDeterministicAnswer(
+  query: string,
+  items: readonly PantryDiscoveryItem[],
+  totalCount: number,
+): string {
+  const scoped = query ? ` matching "${query}"` : "";
+  if (totalCount === 0) {
+    return query ? `Nothing in your pantry matches "${query}".` : "Your pantry is empty — nothing logged yet.";
+  }
+
+  const countPhrase = `${totalCount} item${totalCount === 1 ? "" : "s"}`;
+
+  if (items.length < totalCount) {
+    // The returned sample is capped below the true total — a per-location
+    // breakdown from just the sample would undercount locations near the
+    // cutoff, so ground this in real example names instead of a guessed
+    // breakdown. The total itself stays exact (computed before capping).
+    const examples = items.slice(0, 5).map((i) => i.name).join(", ");
+    return `Your pantry has ${countPhrase}${scoped}, including ${examples} and more.`;
+  }
+
+  const byLocation = new Map<string, string[]>();
+  for (const item of items) {
+    const list = byLocation.get(item.location) ?? [];
+    list.push(item.name);
+    byLocation.set(item.location, list);
+  }
+
+  if (items.length <= PANTRY_SEARCH_PREVIEW_THRESHOLD) {
+    const parts = Array.from(byLocation.entries()).map(([loc, names]) => `${loc}: ${names.join(", ")}`);
+    return `Your pantry has ${countPhrase}${scoped} — ${parts.join("; ")}.`;
+  }
+
+  const counts = Array.from(byLocation.entries()).map(([loc, names]) => `${loc} (${names.length})`);
+  return `Your pantry has ${countPhrase}${scoped} across these locations: ${counts.join(", ")}.`;
+}
 
 async function handleSearch(
   intent: Intent,
@@ -28,14 +79,15 @@ async function handleSearch(
   const params = intent.parameters ?? {};
   const rawQuery = typeof params.query === "string" ? params.query.trim() : "";
 
-  const items = await port.discover(rawQuery, userId);
+  const { items, totalCount } = await port.discover(rawQuery, userId);
 
   return {
     scope: "pantry-search",
     query: rawQuery,
-    totalCount: items.length,
+    totalCount,
     results: items,
     source: "pantry-discovery",
+    deterministicAnswer: buildPantrySearchDeterministicAnswer(rawQuery, items, totalCount),
   };
 }
 

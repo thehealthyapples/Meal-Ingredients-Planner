@@ -161,10 +161,31 @@ export interface MealsSearchResult {
   readonly source: "meals";
 }
 
+export interface MealsCountReadResult {
+  readonly scope: "count";
+  /** Total distinct meals the caller currently has access to (own + system, deduplicated by id). */
+  readonly mealCount: number;
+  /** The caller's own saved/created meals — never includes shared system meals. */
+  readonly ownMealCount: number;
+  /** Shared system meals available to every household — never the caller's own. */
+  readonly systemMealCount: number;
+  /**
+   * COMP-DET1 (2026-11-20) — a pure count is a fact code can state exactly once,
+   * correctly, forever; it should never be re-derived by an LLM. When present,
+   * conversation-gateway.ts's deterministic-answer short-circuit uses this text
+   * verbatim and skips full generation entirely for single-capability turns.
+   * Live-caught this session (CB-011): even with the correct count handed to it
+   * as context, generation occasionally mis-stated it anyway.
+   */
+  readonly deterministicAnswer: string;
+  readonly source: "meals";
+}
+
 export type MealsReadResult =
   | MealsListReadResult
   | MealsSummaryReadResult
   | MealsDetailReadResult
+  | MealsCountReadResult
   | MealsSearchResult;
 
 // ---------------------------------------------------------------------------
@@ -347,6 +368,34 @@ async function handleRead(
     };
   }
 
+  if (scope === "count") {
+    const [own, system] = await Promise.all([port.getMeals(userId), port.getSystemMeals()]);
+    // Deduplicate by id the same way list/summary merge, in case a meal appears in both sets.
+    const seen = new Set<number>();
+    let ownMealCount = 0;
+    let systemMealCount = 0;
+    for (const meal of [...own, ...system]) {
+      if (seen.has(meal.id)) continue;
+      seen.add(meal.id);
+      if (meal.isSystemMeal) systemMealCount++;
+      else ownMealCount++;
+    }
+    const mealCount = ownMealCount + systemMealCount;
+    const fmt = (n: number) => n.toLocaleString("en-US");
+    const deterministicAnswer =
+      systemMealCount > 0
+        ? `You have ${fmt(ownMealCount)} meal${ownMealCount === 1 ? "" : "s"} of your own, plus ${fmt(systemMealCount)} shared system meal${systemMealCount === 1 ? "" : "s"} — ${fmt(mealCount)} in total.`
+        : `You have ${fmt(mealCount)} meal${mealCount === 1 ? "" : "s"} in your cookbook.`;
+    return {
+      scope: "count",
+      mealCount,
+      ownMealCount,
+      systemMealCount,
+      deterministicAnswer,
+      source: "meals",
+    };
+  }
+
   if (scope === "detail") {
     const mealId = toInt(params.mealId);
     if (mealId === undefined) {
@@ -373,7 +422,8 @@ async function handleRead(
   throw gap(
     `Unsupported meals read scope ${JSON.stringify(scope)}. ` +
       'Supported scopes: "list" (the caller\'s meals + system meals), "summary" ' +
-      '(the same, as a lighter projection), "detail" (a single meal + its items, requires { mealId }).',
+      '(the same, as a lighter projection), "count" (meal count + breakdown by kind), ' +
+      '"detail" (a single meal + its items, requires { mealId }).',
   );
 }
 

@@ -20,6 +20,7 @@
 import type {
   ShoppingDiscoveryItem,
   ShoppingDiscoveryPort,
+  ShoppingDiscoverySearchPage,
 } from "../handlers/shopping-discovery-port.js";
 
 /** Maximum discovery results returned per query. */
@@ -48,11 +49,11 @@ export interface ShoppingDiscoveryStorage {
 export class ShoppingDiscoveryEngine implements ShoppingDiscoveryPort {
   constructor(private readonly storage: ShoppingDiscoveryStorage) {}
 
-  async discover(query: string, userId: number): Promise<ShoppingDiscoveryItem[]> {
+  async discover(query: string, userId: number): Promise<ShoppingDiscoverySearchPage> {
     const lowerQuery = query.toLowerCase().trim();
 
     const items = await this.storage.getShoppingListItems(userId).catch(() => []);
-    if (items.length === 0) return [];
+    if (items.length === 0) return { items: [], totalCount: 0 };
 
     const results: ShoppingDiscoveryItem[] = [];
 
@@ -83,7 +84,10 @@ export class ShoppingDiscoveryEngine implements ShoppingDiscoveryPort {
       });
     }
 
-    return results.slice(0, SHOPPING_DISCOVERY_MAX_RESULTS);
+    return {
+      items: results.slice(0, SHOPPING_DISCOVERY_MAX_RESULTS),
+      totalCount: results.length,
+    };
   }
 }
 

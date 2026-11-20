@@ -72,14 +72,22 @@ export class OpenAIProvider implements ILlmProvider {
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
     const model = request.model ?? this.modelName;
-    const isLunaModel = model === "gpt-6-luna";
+    // JUDGE_LIVE6 (2026-11-20) — live-caught in the benchmark judge that
+    // `gpt-6.1-terra` shares BOTH of Luna's API quirks (rejects `max_tokens`,
+    // requires `temperature: 1`), not just Luna specifically. The only model in
+    // this codebase that does NOT need them is the legacy `gpt-4o-mini`; every
+    // other model currently selectable (COMPANION_COMPLEX_MODEL in
+    // conversation-gateway.ts, SIMPLE/COMPLEX_JUDGE_MODEL in judge.ts) is from
+    // the newer gpt-5.6/6.x generation and needs the modern params. Revisit this
+    // condition if a new legacy-style model is ever added.
+    const needsModernParams = model !== "gpt-4o-mini";
     const completion = await client.chat.completions.create({
       model,
       messages: request.messages,
-      ...(isLunaModel
+      ...(needsModernParams
         ? { temperature: 1 }
         : { temperature: request.temperature ?? 0.3 }),
-      ...(isLunaModel
+      ...(needsModernParams
         ? { max_completion_tokens: request.maxTokens ?? 400 }
         : { max_tokens: request.maxTokens ?? 400 }),
       ...(request.jsonMode

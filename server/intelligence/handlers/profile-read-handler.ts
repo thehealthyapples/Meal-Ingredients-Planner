@@ -56,10 +56,15 @@ import { nutritionFocusLabel } from "@shared/nutrition-focus";
  */
 export interface ProfileView {
   readonly id: number;
-  readonly username: string;
-  readonly displayName: string | null;
-  readonly firstName: string | null;
-  readonly profilePhotoUrl: string | null;
+  // JUDGE_LIVE6 (2026-11-20) — username/displayName/firstName/profilePhotoUrl were
+  // removed from this view. This result feeds the Companion's own LLM prompt
+  // (verified: nothing downstream in conversation-gateway.ts or behaviour-engine.ts
+  // reads the user's OWN identity fields for personalization — only OTHER entities'
+  // displayName, e.g. restrictions/personalities/household eaters). Sending a real
+  // name to a third-party LLM provider with zero functional benefit is unnecessary
+  // data exposure. `id` stays — it's the same opaque internal join key already
+  // treated as safe everywhere else in this codebase (ground-truth.ts's
+  // `requesterUserId`, etc.), never a human-readable identifier.
   readonly measurementPreference: string;
   readonly preferredPriceTier: string;
   readonly onboardingCompleted: boolean;
@@ -134,10 +139,19 @@ export interface ProfilePreferencesView {
 }
 
 export interface ProfileReadResult {
-  readonly scope: "profile";
+  readonly scope: "profile" | "diet" | "restrictions" | "store-preferences" | "goals";
   readonly profile: ProfileView;
   /** null when the owner has no stored preferences row yet (e.g. a new user) — never a fabricated default. */
   readonly preferences: ProfilePreferencesView | null;
+  /**
+   * COMP-DET1 (2026-11-20) — populated ONLY for the four narrow single-fact
+   * scopes ("diet", "restrictions", "store-preferences", "goals"), never for
+   * the generic "profile" scope (PH-008/PH-009-style compound questions still
+   * need the full view for real synthesis). Each of those four questions has
+   * exactly one correct answer already sitting in already-fetched fields —
+   * the LLM should restate it, never re-derive it.
+   */
+  readonly deterministicAnswer?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -152,10 +166,6 @@ function toProfileView(
 ): ProfileView {
   return {
     id: user.id,
-    username: user.username,
-    displayName: user.displayName ?? null,
-    firstName: user.firstName ?? null,
-    profilePhotoUrl: user.profilePhotoUrl ?? null,
     measurementPreference: user.measurementPreference,
     preferredPriceTier: user.preferredPriceTier,
     onboardingCompleted: user.onboardingCompleted,
@@ -230,11 +240,59 @@ function toPreferencesView(prefs: UserPreferences): ProfilePreferencesView {
  * param (e.g. household eater overrides) is an honest gap pointing at the right
  * capability rather than silently ignored or fabricated.
  */
+const NARROW_PROFILE_SCOPES = ["diet", "restrictions", "store-preferences", "goals"] as const;
+type NarrowProfileScope = (typeof NARROW_PROFILE_SCOPES)[number];
+
+/**
+ * COMP-DET1 — one correct, already-fetched answer per narrow scope. Never
+ * reads anything not already in `profile`/`preferences`; never invents a
+ * default for a field the owner has not recorded.
+ */
+function buildProfileDeterministicAnswer(
+  scope: NarrowProfileScope,
+  profile: ProfileView,
+  preferences: ProfilePreferencesView | null,
+): string {
+  switch (scope) {
+    case "diet": {
+      if (!profile.dietPattern) return "You don't have a diet pattern recorded yet.";
+      const restrictions = profile.dietRestrictions && profile.dietRestrictions.length > 0
+        ? ` (with ${profile.dietRestrictions.join(", ")} as recorded restrictions)`
+        : "";
+      return `You're following a ${profile.dietPattern} diet pattern${restrictions}.`;
+    }
+    case "restrictions": {
+      if (!profile.dietRestrictions || profile.dietRestrictions.length === 0) {
+        return "No, you don't have any dietary restrictions or allergies recorded.";
+      }
+      return `Yes — your recorded restrictions are: ${profile.dietRestrictions.join(", ")}.`;
+    }
+    case "store-preferences": {
+      const stores = preferences?.preferredStores ?? [];
+      const budget = preferences?.budgetLevel ? `${preferences.budgetLevel} budget level` : null;
+      const priceTier = `${profile.preferredPriceTier} price tier`;
+      if (stores.length === 0) {
+        return `You don't have any preferred supermarkets recorded. Your current settings are a ${[budget, priceTier].filter(Boolean).join(" and a ")}.`;
+      }
+      return `You've selected ${stores.join(", ")} as your preferred supermarkets, with a ${[budget, priceTier].filter(Boolean).join(" and a ")}.`;
+    }
+    case "goals": {
+      const goals = preferences?.healthGoals ?? [];
+      if (goals.length === 0) return "You don't have any health goals recorded yet.";
+      return `Your recorded health goals are: ${goals.join(", ")}.`;
+    }
+  }
+}
+
+function isNarrowProfileScope(scope: string | undefined): scope is NarrowProfileScope {
+  return (NARROW_PROFILE_SCOPES as readonly string[]).includes(scope ?? "");
+}
+
 async function handleRead(intent: Intent, userId: number, port: ProfileReadPort): Promise<ProfileReadResult> {
   const params = intent.parameters ?? {};
   const scope = params.scope as string | undefined;
 
-  if (scope !== undefined && scope !== "profile") {
+  if (scope !== undefined && scope !== "profile" && !isNarrowProfileScope(scope)) {
     if (scope === "household-eaters" || scope === "eaters") {
       throw gap(
         `Household eater dietary overrides are not part of the Profile capability — ` +
@@ -243,7 +301,8 @@ async function handleRead(intent: Intent, userId: number, port: ProfileReadPort)
     }
     throw gap(
       `Unsupported profile read scope ${JSON.stringify(scope)}. ` +
-        'Supported scope: "profile" (the caller\'s own profile + preferences).',
+        'Supported scopes: "profile" (the caller\'s own profile + preferences), "diet", ' +
+        '"restrictions", "store-preferences", "goals" (single-fact reads).',
     );
   }
 
@@ -265,10 +324,16 @@ async function handleRead(intent: Intent, userId: number, port: ProfileReadPort)
     ? await port.getPersonNutritionFocuses(userId)
     : [];
 
+  const profileView = toProfileView(user, personDiet, reportedHealthContext, nutritionFocuses);
+  const preferencesView = prefs ? toPreferencesView(prefs) : null;
+
   return {
-    scope: "profile",
-    profile: toProfileView(user, personDiet, reportedHealthContext, nutritionFocuses),
-    preferences: prefs ? toPreferencesView(prefs) : null,
+    scope: isNarrowProfileScope(scope) ? scope : "profile",
+    profile: profileView,
+    preferences: preferencesView,
+    ...(isNarrowProfileScope(scope)
+      ? { deterministicAnswer: buildProfileDeterministicAnswer(scope, profileView, preferencesView) }
+      : {}),
   };
 }
 

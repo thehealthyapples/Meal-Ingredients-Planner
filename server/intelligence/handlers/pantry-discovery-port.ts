@@ -33,6 +33,28 @@ export interface PantryDiscoverySearchResult {
   readonly totalCount: number;
   readonly results: readonly PantryDiscoveryItem[];
   readonly source: "pantry-discovery";
+  /**
+   * COMP-DET1 (2026-11-20) — "what's in my pantry?" routes HERE (empty-query
+   * search, confidence 0.93), not the plain pantry read handler — live-caught
+   * after the pantry/pantry-discovery duplicate-routing bug was fixed and the
+   * single surviving route turned out to be this one. A search/list result is
+   * still a pure data lookup; the LLM should never re-derive or paraphrase it
+   * into a possibly-wrong count or item list.
+   */
+  readonly deterministicAnswer: string;
+}
+
+/**
+ * COMP-DET1 (2026-11-20) — `items` stays capped at the engine's own result
+ * limit (unbounded prompt/response payloads are their own problem), but
+ * `totalCount` is the REAL, uncapped match count. Live-caught: before this,
+ * callers had only the capped array and used `.length` as if it were the
+ * total — confidently wrong once a real household's data exceeded the cap
+ * (138 real pantry items reported as "100").
+ */
+export interface PantryDiscoverySearchPage {
+  readonly items: readonly PantryDiscoveryItem[];
+  readonly totalCount: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -40,7 +62,7 @@ export interface PantryDiscoverySearchResult {
 // ---------------------------------------------------------------------------
 
 export interface PantryDiscoveryPort {
-  discover(query: string, userId: number): Promise<PantryDiscoveryItem[]>;
+  discover(query: string, userId: number): Promise<PantryDiscoverySearchPage>;
 }
 
 // ---------------------------------------------------------------------------

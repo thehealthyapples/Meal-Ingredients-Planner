@@ -275,7 +275,27 @@ export function detectSafetyBoundary(utterance: string): SafetyBoundaryKind | nu
     return "prescriptive-calorie-advice";
   }
 
-  if (/\bguarantee\b/.test(l) && /\ballergen/.test(l)) return "allergen-guarantee";
+  // JUDGE_LIVE6 (2026-11-20) — live-caught on TS-092 ("Are you sure this meal is
+  // safe for my allergy?"): the literal "guarantee"+"allergen" pair never matched
+  // this phrasing (it says "sure"/"safe" and "allergy"), so the question fell
+  // through to normal capability routing, got routed to "meals", and produced an
+  // under-grounded answer (hard safety gate G1). Broadened the confidence-phrase
+  // side to common synonyms ("are you sure", "can you guarantee/confirm", "is
+  // this/it safe") while keeping the AND with an allergy/allergen mention — same
+  // closed-set discipline as the other two patterns. Verified against every one
+  // of the 103 benchmark fixture utterances: matches ONLY TS-092 (new) and TS-095
+  // "Can you guarantee this product is allergen-free?" (already matched before,
+  // unchanged). Two other allergy-mentioning questions — PH-002 "Do I have any
+  // dietary restrictions or allergies recorded?" and SH-042 "Which items should I
+  // check for allergens or additives?" — correctly do NOT match (plain reads, not
+  // safety-confirmation asks), and no other question in the fixture contains the
+  // confidence phrase at all.
+  if (
+    /\b(?:are\s+you\s+sure|can\s+you\s+(?:guarantee|confirm)|is\s+(?:this|it)\s+(?:definitely\s+)?safe)\b/.test(l) &&
+    /\ballerg(?:y|ies|en|ens)\b/.test(l)
+  ) {
+    return "allergen-guarantee";
+  }
 
   return null;
 }
@@ -455,7 +475,15 @@ async function queryCapability(
 const SIMPLE_CAPABILITY_IDS: ReadonlySet<string> = new Set(["profile"]);
 
 const COMPANION_SIMPLE_MODEL = "gpt-4o-mini";
-const COMPANION_COMPLEX_MODEL = "gpt-6-luna";
+// JUDGE_LIVE6 cross-reference (2026-11-20) — live-tested tonight in the benchmark
+// judge: given the EXACT correct ground-truth field, Luna still claimed the data
+// "didn't exist" (CB-011 — a controlled test, not a one-off), while gpt-6.1-terra
+// read the same field correctly and scored it 4/4 with an accurate rationale.
+// Luna is specifically weak at cross-referencing multiple records — exactly the
+// failure mode this constant was introduced to avoid by routing complex turns
+// AWAY from gpt-4o-mini. Routing them to Luna instead does not avoid that failure
+// mode; it is the same failure mode. Trying gpt-6.1-terra for complex turns.
+const COMPANION_COMPLEX_MODEL = "gpt-6.1-terra";
 
 /**
  * Mechanical, deterministic model pick — never an LLM call. A turn with no
@@ -995,6 +1023,62 @@ async function buildGroundedResponse(
     }
   }
 
+  // COMP-DET1 (2026-11-20) — deterministic-answer short-circuit. Intent routing
+  // already has a cheap/smart path (HybridIntentResolver: regex first, bounded
+  // LLM classification fallback) — but until now, EVERY resolved intent still
+  // went through full context composition + full generation regardless, even
+  // when the handler itself already computed a complete, exact answer. CB-011
+  // ("how many meals in my cookbook?") was a pure `COUNT(*)` that the live
+  // generation step still occasionally mis-stated despite the correct count
+  // being handed to it as data (live-caught this session). When exactly ONE
+  // routed capability succeeded and its own handler result carries a
+  // `deterministicAnswer` string, that string IS the answer — skip composition
+  // and generation entirely rather than risk an LLM re-deriving (and possibly
+  // getting wrong) a value that was never in question. Deliberately restricted
+  // to `routedQueried.length === 1`: a compound/multi-capability question still
+  // needs real synthesis and must never take this path.
+  if (routedQueried.length === 1) {
+    const only = routedQueried[0];
+    const queryResult = queryResults.get(only.capability);
+    const resultPayload = queryResult?.outcome?.result;
+    const deterministicAnswer =
+      queryResult?.status === "ok-data" &&
+      resultPayload !== null &&
+      typeof resultPayload === "object" &&
+      "deterministicAnswer" in resultPayload &&
+      typeof (resultPayload as { deterministicAnswer: unknown }).deterministicAnswer === "string"
+        ? (resultPayload as { deterministicAnswer: string }).deterministicAnswer
+        : null;
+    if (deterministicAnswer) {
+      recordObservation({
+        kind: "response-generation",
+        severity: "info",
+        outcome: "ok",
+        metadata: { model: "deterministic-short-circuit", personalityId, capability: only.capability },
+        ...obs,
+      });
+      recordBehaviourDecision({
+        resolution: behaviour,
+        outcome: "not-voiced",
+        surfaces: [],
+        notVoicedReason: "deterministic-answer-short-circuit",
+      });
+      return {
+        text: deterministicAnswer,
+        entityRefs: [],
+        outcome: {
+          status: "ok",
+          message: `Deterministic answer from "${only.capability}" — handler-computed, not LLM-generated.`,
+        },
+        discoveries: [],
+        guidance: [],
+        enrichment: [],
+        resolvedIntent: resolvedIntentPayload,
+        actionDrafts: [],
+      };
+    }
+  }
+
   // INT38/INT39: cross-domain "Next Step" guidance — build early so it's available
   // for both success and failure paths (guidance is used on recovery path too).
   const successCapabilityIds: string[] = [];
@@ -1453,7 +1537,14 @@ entityRefs must ONLY contain items that appear in the context data above with a 
     const response = await llmProvider.complete({
       messages,
       temperature: 0.3,
-      maxTokens: 400,
+      // JUDGE_LIVE6 cross-reference — live-caught the SAME failure mode here as in
+      // the benchmark judge (judge.ts): Luna burns hidden reasoning tokens before
+      // emitting its JSON, so 400 regularly truncated mid-response ("max_tokens or
+      // model output limit was reached"), landing the user on the generic "I
+      // couldn't generate a response" fallback — reproducibly ~30-45% of benchmark
+      // turns, almost certainly affecting real production turns the same way.
+      // 800 gives a full {text, entityRefs} JSON response real headroom.
+      maxTokens: 800,
       jsonMode: true,
       // COMP_TIER1 — same tiering fix applied to the benchmark judge, now applied to
       // the live Companion itself (user-approved 2026-11-17). Live-confirmed: given

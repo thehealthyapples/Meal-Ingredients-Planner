@@ -1103,9 +1103,32 @@ const PLANNER_OVERVIEW_FALLBACKS: Matcher[] = [
 // ---------------------------------------------------------------------------
 
 const SHOPPING_MATCHERS: Matcher[] = [
-  // "show me my shopping list" / "what's in my basket?"
+  // "what's in my shopping list" / "what's in/on my basket or groceries" / bare
+  // "my shopping list".
+  // COMP-DET1 (2026-11-20) — live-caught TWO separate overlaps with
+  // SHOPPING_DISCOVERY_MATCHERS, not one: its own "what's/is ON my shopping
+  // list" matcher (confidence 0.92) AND its own separate "show me my shopping
+  // list" / "list my shopping items" matcher (confidence 0.88) both matched
+  // utterances this pattern also matched. Deduplication only resolves
+  // conflicts within the SAME capability id — "shopping" and
+  // "shopping-discovery" are different ids, so neither duplicate was dropped,
+  // and both were routed as a false two-capability compound. Bailing out on
+  // BOTH of discovery's exact owned patterns explicitly, before the broader
+  // alternation below, rather than trying to carve the overlap out of one
+  // dense regex — a first attempt at the carve-out silently let the bare "my
+  // shopping list" catch-all re-admit the very phrasing it was meant to
+  // exclude, because "what's on my shopping list" also contains "my shopping
+  // list" as a substring.
   (u) => {
-    if (!/\b(?:(?:show|what'?s?\s+(?:in|on))\s+(?:my\s+)?(?:shopping\s+list|basket|groceries)|my\s+shopping\s+list)\b/i.test(u)) return null;
+    if (/\bwhat(?:'s|\s+is)\s+on\s+(?:my\s+)?shopping\s+list\b/i.test(u)) return null;
+    if (/\b(?:show\s+(?:me\s+)?(?:my\s+)?shopping\s+list|list\s+(?:my\s+)?shopping\s+items?)\b/i.test(u)) return null;
+    if (
+      !(
+        /\b(?:show|what'?s?\s+(?:in|on))\s+(?:my\s+)?(?:basket|groceries)\b/i.test(u) ||
+        /\bwhat'?s?\s+in\s+(?:my\s+)?shopping\s+list\b/i.test(u) ||
+        /\bmy\s+shopping\s+list\b/i.test(u)
+      )
+    ) return null;
     return {
       capability: "shopping",
       verb: "read",
@@ -1201,9 +1224,22 @@ const SHOPPING_MATCHERS: Matcher[] = [
 // ---------------------------------------------------------------------------
 
 const PANTRY_MATCHERS: Matcher[] = [
-  // "what's in my pantry?" / "what's in my fridge?"
+  // "what's in my fridge?" / "what's in my freezer/larder/cupboard?"
+  // COMP-DET1 (2026-11-20) — "pantry" was DELIBERATELY removed from this
+  // alternation. Live-caught: this pattern and PANTRY_DISCOVERY_MATCHERS'
+  // dedicated "what's in my pantry?" matcher (capability "pantry-discovery",
+  // confidence 0.93) both matched the exact same utterance. Deduplication
+  // (resolveWithProvenance step 5) only keeps the highest-confidence match
+  // PER CAPABILITY — "pantry" and "pantry-discovery" are different capability
+  // ids, so neither was dropped, and BOTH were routed as if this were a
+  // genuine two-capability compound question. It never was: pantry-discovery
+  // already owns "what's in my X" phrasing by design (see its own module
+  // comment, and the STATEMENT_START guard's "a question owned by
+  // pantry-discovery" note). The fridge/freezer/larder/cupboard synonyms stay
+  // here because pantry-discovery's matcher covers only the literal word
+  // "pantry" — there is no overlap for those words anywhere else.
   (u) => {
-    if (!/\bwhat'?s?\s+in\s+(?:my\s+)?(?:pantry|fridge|freezer|larder|cupboard)\b/i.test(u)) return null;
+    if (!/\bwhat'?s?\s+in\s+(?:my\s+)?(?:fridge|freezer|larder|cupboard)\b/i.test(u)) return null;
     return {
       capability: "pantry",
       verb: "read",
@@ -1346,13 +1382,28 @@ function profileRead(confidence: number): ResolvedIntent {
   };
 }
 
+// COMP-DET1 (2026-11-20) — a narrow-scope counterpart to profileRead(). Each
+// of these four questions has exactly one correct answer already sitting in
+// a field the profile read already fetches; routing to a dedicated scope
+// lets the handler compute that answer in code and skip full generation
+// entirely, instead of handing the LLM the whole profile and hoping it
+// restates the one relevant field correctly.
+function profileReadScoped(scope: "diet" | "restrictions" | "store-preferences" | "goals", confidence: number): ResolvedIntent {
+  return {
+    capability: "profile",
+    verb: "read",
+    parameters: { scope },
+    confidence,
+  };
+}
+
 const PROFILE_MATCHERS: Matcher[] = [
   // PH-001: "what diet am I following?" / "what diet am I on?"
-  (u) => (/\bwhat\s+diet\s+am\s+i\s+(?:following|on|eating)\b/i.test(u) ? profileRead(0.88) : null),
+  (u) => (/\bwhat\s+diet\s+am\s+i\s+(?:following|on|eating)\b/i.test(u) ? profileReadScoped("diet", 0.88) : null),
 
   // PH-002: "do I have any dietary restrictions or allergies recorded?"
   (u) => (/\bdo\s+i\s+have\s+any\s+(?:dietary\s+)?(?:restrictions?|allergies|allergens?|intolerances?)\b/i.test(u)
-    ? profileRead(0.88)
+    ? profileReadScoped("restrictions", 0.88)
     : null),
 
   // PH-007: "what are my health goals?" / "what are my goals?"
@@ -1368,7 +1419,7 @@ const PROFILE_MATCHERS: Matcher[] = [
   // exactly: a *bare* goals mention still earns no profile route on its own.
   (u) => (/\bwhat\s+(?:are\s+)?my\s+(?:health\s+|nutrition\s+|dietary\s+)?goals\b/i.test(u)
     || /\bmy\s+(?:health|nutrition)\s+goals\b/i.test(u)
-    ? profileRead(0.87)
+    ? profileReadScoped("goals", 0.87)
     : null),
 
   // PH-008: "what does THA know about my family's food preferences?"
@@ -1390,8 +1441,22 @@ const PROFILE_MATCHERS: Matcher[] = [
   // sees it.
   (u) => (/\bwhat\s+(?:supermarkets?|retailers?|budget|preferences?)\b.*\bhave\s+i\s+(?:selected|chosen|picked|set)\b/i.test(u)
     || /\bwhich\s+(?:supermarkets?|retailers?)\s+have\s+i\s+(?:selected|chosen|picked)\b/i.test(u)
-    ? profileRead(0.87)
+    ? profileReadScoped("store-preferences", 0.87)
     : null),
+
+  // TS-091: "what don't you know about my household yet?" — a transparency/gaps
+  // question whose own fixture entry names "profile" as the intended capability,
+  // not "household". No deterministic matcher existed for this utterance before,
+  // so it fell through to the bounded LLM routing fallback, which non-deterministically
+  // picked "household" — whose read verb has NO "yet"/gaps scope at all and throws a
+  // generic "Unsupported household read scope undefined" gap on anything unscoped
+  // (household-read-handler.ts), a dead end rather than a real answer. Routing to the
+  // existing "profile" scope instead surfaces the requester's real stored diet pattern
+  // and preferences, the data this question needs to answer honestly. Negated polarity
+  // ("don't you know") keeps this distinct from PH-008's affirmative "what do you know
+  // about my..." pattern above. Verified against all 103 benchmark fixture utterances:
+  // matches ONLY TS-091.
+  (u) => (/\bwhat\s+don.t\s+you\s+know\s+about\s+(?:my|our)\s+household\b/i.test(u) ? profileRead(0.87) : null),
 ];
 
 // ---------------------------------------------------------------------------
@@ -2261,19 +2326,16 @@ const MEALS_MATCHERS: Matcher[] = [
   },
 
   // BENCH4 (CB-011): "how many meals are in my cookbook?" / "how many recipes do I have?"
-  // A COUNT of the whole library — meals-read-handler.ts's "summary" projection already
-  // carries `mealCount` for exactly this, but with no deterministic matcher for "how
-  // many" phrasing the utterance fell through to the bounded LLM fallback, which named
-  // the right capability/verb but supplied no `scope` at all — an honest gap
-  // ("Unsupported meals read scope undefined"), live-confirmed, even though the cookbook
-  // was fully populated. Week-scoped phrasings stay with the planner matcher.
+  // Uses the "count" scope (mealCount + breakdown by kind) instead of full "summary"
+  // with all meal objects — avoids context-budget truncation on large cookbooks.
+  // Week-scoped phrasings stay with the planner matcher.
   (u) => {
     if (!/\bhow\s+many\s+(?:meals?|recipes?|dishes?)\b/i.test(u)) return null;
     if (/\b(?:this|next|last)\s+week\b|\bplanned\b/i.test(u)) return null;
     return {
       capability: "meals",
       verb: "read",
-      parameters: { scope: "summary" },
+      parameters: { scope: "count" },
       confidence: 0.86,
     };
   },
@@ -2421,8 +2483,20 @@ const ANALYSER_MATCHERS: Matcher[] = [
 
 const PARTNERS_MATCHERS: Matcher[] = [
   // "which supermarkets does THA support?" / "what retailers can I export to?"
+  // COMP-DET1 (2026-11-20) — the self-referential "have I selected/chosen/picked/set"
+  // phrasing is explicitly EXCLUDED here. PROFILE_MATCHERS' own PH-006 matcher
+  // comment claimed being composed before this group meant "the partners
+  // fallback never sees it" — that assumption was wrong: every matcher group
+  // independently tests the same utterance and ALL matches are collected
+  // (per-capability dedup only resolves conflicts within one capability id),
+  // so this bare keyword match fired alongside profile's PH-006 match too,
+  // the same false-compound bug already found and fixed for pantry/shopping.
+  // "what supermarkets does THA support?" (platform capability question) and
+  // "what supermarkets have I selected?" (self-referential profile read,
+  // owned by PH-006) are different questions and must not share a route.
   (u) => {
     if (!/\b(?:retailers?|supermarkets?)\b/i.test(u)) return null;
+    if (/\bhave\s+i\s+(?:selected|chosen|picked|set)\b/i.test(u)) return null;
     return {
       capability: "partners",
       verb: "read",
@@ -2624,7 +2698,7 @@ const MEAL_GOAL_FIT_COMPOUND: CompoundMatcher = (u, _lower, _hints) => {
 };
 
 /**
- * Priority 7 (CG-085, 2026-11-09) — Nutrition Knowledge + Profile: a compound health goal
+ * Priority 7 (CG-085, 2026-11-09) — Nutrition Knowledge + Profile + Planner: a compound health goal
  * closed with a planning question. "I want to build muscle but also lower cholesterol. How
  * should I plan?"
  *
@@ -2636,7 +2710,8 @@ const MEAL_GOAL_FIT_COMPOUND: CompoundMatcher = (u, _lower, _hints) => {
  * (conversation-gateway.ts) — identical to the gap `MEAL_GOAL_FIT_COMPOUND` above closes for
  * CB-021. This compound closes it the same way, at a confidence that supersedes the 0.49
  * floor: an explicit, non-baseline `profile:read` paired with the `nutrition-knowledge:read`
- * the question's content already earns.
+ * the question's content already earns. The question explicitly asks "How should I plan?" so
+ * `planner` is also a genuine secondary here (CG-085).
  *
  * Guarded on BOTH a compound-goal frame ("I want to X but also Y") AND a planning question,
  * so this does not fire on an unrelated "but" clause with no closing "how should I plan" —
@@ -2647,9 +2722,184 @@ const COMPOUND_HEALTH_GOAL_PLANNING_COMPOUND: CompoundMatcher = (u, _lower, _hin
   if (!/\bhow\s+should\s+i\s+plan\b/i.test(u)) return null;
   return [
     { capability: "nutrition-knowledge", verb: "read", parameters: { scope: "foods" },   confidence: 0.86 },
-    { capability: "profile",             verb: "read", parameters: { scope: "profile" }, confidence: 0.84 },
+    { capability: "profile",             verb: "read", parameters: { scope: "profile" }, confidence: 0.85 },
+    { capability: "planner",             verb: "read", parameters: { scope: "week" },    confidence: 0.84 },
   ];
 };
+
+/** SH-038: Planner + Shopping: "What do I need to buy for this week's plan?" */
+const PLANNER_SHOPPING_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
+  const hasPlannerSignal = /\b(?:plan(?:ned|ner)?|this\s+week|my\s+(?:meal\s+)?plan|week'?s?\s+meals?|scheduled)\b/.test(lower);
+  const hasBuySignal     = /\b(?:buy|shop(?:ping)?|need\s+to\s+(?:get|buy)|should\s+(?:i\s+)?get|what\s+(?:do\s+i\s+need|to\s+buy|to\s+get))\b/.test(lower);
+  if (!hasPlannerSignal || !hasBuySignal) return null;
+  return [
+    { capability: "planner",   verb: "read",   parameters: { scope: "week" },   confidence: 0.86 },
+    { capability: "shopping",  verb: "search", parameters: { query: lower },   confidence: 0.84 },
+  ];
+};
+
+/** PL-026: Planner + Nutrition Knowledge: "How balanced is this week's plan?" */
+const PLANNER_NUTRITION_BALANCE_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
+  const hasPlannerSignal = /\b(?:plan(?:ned|ner)?|this\s+week|my\s+(?:meal\s+)?plan|week'?s?\s+meals?|scheduled)\b/.test(lower);
+  const hasBalanceSignal = /\b(?:balanced?|nutrition(?:al)?|healthy|nutritious|macro|nutrient|diet(?:ary)?|adequate)\b/.test(lower);
+  if (!hasPlannerSignal || !hasBalanceSignal) return null;
+  return [
+    { capability: "planner",             verb: "read", parameters: { scope: "week" },   confidence: 0.86 },
+    { capability: "nutrition-knowledge", verb: "read", parameters: { scope: "summary" }, confidence: 0.84 },
+  ];
+};
+
+/** PL-028: Planner + Food Intelligence: "Where can I add more vegetables, legumes, or fermented foods this week?" */
+const PLANNER_FOOD_INTELLIGENCE_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
+  const hasPlannerSignal  = /\b(?:plan(?:ned|ner)?|this\s+week|my\s+(?:meal\s+)?plan|week'?s?\s+meals?)\b/.test(lower);
+  const hasImprovementSignal = /\b(?:add|more|increase|include|vegetables?|legumes?|fermented|foods?)\b/.test(lower);
+  if (!hasPlannerSignal || !hasImprovementSignal) return null;
+  return [
+    { capability: "planner",             verb: "read",      parameters: { scope: "week" }, confidence: 0.86 },
+    { capability: "food-intelligence",   verb: "recommend", parameters: { scope: "foods" }, confidence: 0.84 },
+  ];
+};
+
+/** PL-033: Household + Planner: "What adaptations are needed for each household member?" */
+const HOUSEHOLD_PLANNER_ADAPTATIONS_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
+  const hasPerMemberSignal  = /\b(?:each|every|per)\s+.*\bmembers?\b|\bhousehold\s+members?\b/i.test(lower);
+  const hasAdaptationSignal = /\b(?:adaptation|adapt|change|adjust(?:ment)?|modify|personali[sz]e|tailor|fit|suitable|needed)\b/.test(lower);
+  if (!hasPerMemberSignal || !hasAdaptationSignal) return null;
+  return [
+    { capability: "household", verb: "read", parameters: { scope: "household" }, confidence: 0.86 },
+    { capability: "planner",   verb: "read", parameters: { scope: "week" },      confidence: 0.84 },
+  ];
+};
+
+/** PL-034: Planner + Nutrition Knowledge + Shopping: "What are the top three opportunities in my planner?" */
+const PLANNER_NUTRITION_SHOPPING_OPPORTUNITIES_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
+  const hasPlannerSignal     = /\b(?:plan(?:ned|ner)?|my\s+(?:meal\s+)?plan)\b/.test(lower);
+  const hasOpportunitiesSignal = /\b(?:opportunities|top\s+(?:three|suggestions?)|best|improve|optimize|enhance)\b/.test(lower);
+  if (!hasPlannerSignal || !hasOpportunitiesSignal) return null;
+  return [
+    { capability: "planner",             verb: "read",    parameters: { scope: "week" },   confidence: 0.86 },
+    { capability: "nutrition-knowledge", verb: "read",    parameters: { scope: "summary" }, confidence: 0.85 },
+    { capability: "shopping",            verb: "search",  parameters: { query: "" },       confidence: 0.83 },
+  ];
+};
+
+/** SH-040: Shopping + Analyser: "Which items are whole foods and which are more processed?" */
+const SHOPPING_ANALYSER_PROCESSING_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
+  // COMP-DET1 (2026-11-20) — live-caught regression: "products?" here matched
+  // PR-071 ("suggest a less processed swap for this product") too, since
+  // "processed" + "product" both appear there — but PR-071 is a single-product
+  // analysis question, not a shopping-list one, and has nothing to do with
+  // this compound. SH-040 itself never says "product" at all (just "items"),
+  // so "products?" was never needed for the intended match — removed.
+  const hasShoppingSignal = /\b(?:items?|basket|list|shop(?:ping)?)\b/.test(lower);
+  const hasProcessingSignal = /\b(?:whole\s+foods?|processed|ultra-processed|upf|processing|additives?|ingredients?|natural)\b/.test(lower);
+  if (!hasShoppingSignal || !hasProcessingSignal) return null;
+  return [
+    { capability: "shopping", verb: "search", parameters: { query: lower },    confidence: 0.86 },
+    { capability: "analyser", verb: "read",   parameters: { scope: "summary" }, confidence: 0.84 },
+  ];
+};
+
+/** PA-047: Pantry + Meal Discovery: "What can I cook with what I have in my pantry?" */
+const PANTRY_MEAL_DISCOVERY_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
+  // Must explicitly mention pantry/fridge/freezer OR a phrase about ingredients/items on hand
+  const hasPantrySignal = /\b(?:pantry|fridge|freezer|larder|cupboard|(?:ingredient|item|food)s?\s+(?:in|on\s+hand|at\s+home|i\s+have|(?:i\s+)?(?:have|got)))\b/.test(lower);
+  const hasCookingSignal = /\b(?:cook|make|prep(?:are)?|create)\b/.test(lower);
+  if (!hasPantrySignal || !hasCookingSignal) return null;
+  return [
+    { capability: "pantry",          verb: "search", parameters: { query: "" },    confidence: 0.86 },
+    { capability: "meal-discovery",  verb: "search", parameters: { query: lower }, confidence: 0.84 },
+  ];
+};
+
+/** ND-056: Nutrition Knowledge + Profile: "Am I getting enough protein?" */
+const NUTRITION_PROFILE_GOALS_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
+  const hasNutritionSignal = /\b(?:protein|calor(?:ie)?s?|carbs?|fats?|fiber|fibre|vitamin|mineral|nutrient)\b/.test(lower);
+  const hasPersonalGoalSignal = /\b(?:enough|getting|reaching|meeting|my\s+(?:goal|target|intake|needs?))\b/.test(lower);
+  if (!hasNutritionSignal || !hasPersonalGoalSignal) return null;
+  return [
+    { capability: "nutrition-knowledge", verb: "read", parameters: { scope: "nutrients" }, confidence: 0.86 },
+    { capability: "profile",             verb: "read", parameters: { scope: "profile" },   confidence: 0.84 },
+  ];
+};
+
+/** ND-061: Diary + Nutrition Knowledge: "What did I eat yesterday and was it balanced?" */
+const DIARY_NUTRITION_ANALYSIS_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
+  const hasDiarySignal = /\b(?:eat|ate|yesterday|today|(?:did|have)\s+i\s+(?:eat|eat|consume|log))\b/.test(lower);
+  const hasAnalysisSignal = /\b(?:balanced?|healthy|nutritious|nutrition|good|well)\b/.test(lower);
+  if (!hasDiarySignal || !hasAnalysisSignal) return null;
+  return [
+    { capability: "diary",               verb: "search", parameters: { query: "" },    confidence: 0.86 },
+    { capability: "nutrition-knowledge", verb: "read",   parameters: { scope: "summary" }, confidence: 0.84 },
+  ];
+};
+
+/** PA-048: Pantry + Nutrition Knowledge: "Which pantry foods help my plant diversity?" */
+const PANTRY_NUTRITION_DIVERSITY_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
+  const hasPantrySignal = /\b(?:pantry|fridge|freezer|stock|have|what\s+(?:i\s+)?(?:have|got))\b/.test(lower);
+  const hasDiversitySignal = /\b(?:plant|diversity|variety|different|colorful|variety|nutrient(?:s)?)\b/.test(lower);
+  if (!hasPantrySignal || !hasDiversitySignal) return null;
+  return [
+    { capability: "pantry",              verb: "search", parameters: { query: "" },    confidence: 0.86 },
+    { capability: "nutrition-knowledge", verb: "read",   parameters: { scope: "summary" }, confidence: 0.84 },
+  ];
+};
+
+/** ND-054: Diary + Nutrition Knowledge (supplement): "How many plants have I eaten this week?" */
+const DIARY_NUTRITION_PLANTS_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
+  const hasDiarySignal = /\b(?:eaten|this\s+week|this\s+past\s+week|how\s+many)\b/.test(lower);
+  const hasPlantsSignal = /\bplants?\b/.test(lower);
+  if (!hasDiarySignal || !hasPlantsSignal) return null;
+  return [
+    { capability: "diary",               verb: "search", parameters: { query: "" },       confidence: 0.85 },
+    { capability: "nutrition-knowledge", verb: "read",   parameters: { scope: "summary" }, confidence: 0.84 },
+  ];
+};
+
+/** ND-060: Food Intelligence + Nutrition Knowledge: "How has my nutrition improved compared with last week?" */
+const FOOD_INTELLIGENCE_NUTRITION_COMPARISON_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
+  const hasComparisonSignal = /\b(?:compared|vs|versus|last\s+week|week\s+ago|changed?|improved?|progress|trend)\b/.test(lower);
+  const hasNutritionSignal = /\b(?:nutrition|nutrition\s+(?:improved?|changed?)|improved?.*nutrition)\b/.test(lower);
+  if (!hasComparisonSignal || !hasNutritionSignal) return null;
+  return [
+    { capability: "food-intelligence",   verb: "compare", parameters: { scope: "nutrition" }, confidence: 0.86 },
+    { capability: "nutrition-knowledge", verb: "read",    parameters: { scope: "summary" },   confidence: 0.84 },
+  ];
+};
+
+/** CB-020: Meal Discovery + Planner: "What can I cook tonight from meals I already have?" */
+const MEAL_DISCOVERY_PLANNER_TONIGHT_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
+  const hasTonightSignal = /\b(?:tonight|today|this\s+evening|dinner\s+(?:tonight|today))\b/.test(lower);
+  const hasMealSignal = /\b(?:meals?|cook|make|prep(?:are)?|recipe|dish)\b/.test(lower);
+  if (!hasTonightSignal || !hasMealSignal) return null;
+  return [
+    { capability: "meal-discovery", verb: "search", parameters: { query: lower },      confidence: 0.86 },
+    { capability: "planner",        verb: "read",   parameters: { scope: "today" },    confidence: 0.84 },
+  ];
+};
+
+/** PR-066: Analyser + Household: "Is this cereal a good choice for my family?" */
+const ANALYSER_HOUSEHOLD_SUITABILITY_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
+  const hasProductSignal = /\b(?:this|product|item|food|cereal|ingredient|brand)\b/.test(lower);
+  const hasHouseholdSignal = /\b(?:my\s+family|my\s+household|(?:everyone|my\s+(?:kids|children|members?)))\b/.test(lower);
+  if (!hasProductSignal || !hasHouseholdSignal) return null;
+  return [
+    { capability: "analyser",  verb: "read", parameters: { scope: "summary" },   confidence: 0.86 },
+    { capability: "household", verb: "read", parameters: { scope: "household" }, confidence: 0.84 },
+  ];
+};
+
+/** PR-070: Household + Analyser: "Does this product fit my household restrictions?" */
+const HOUSEHOLD_ANALYSER_RESTRICTIONS_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
+  const hasHouseholdSignal = /\b(?:household|family|restrictions?|allergies?|preferences?|diet(?:ary)?)\b/.test(lower);
+  const hasProductSignal = /\b(?:product|item|ingredient|this|food|cereal|brand)\b/.test(lower);
+  if (!hasHouseholdSignal || !hasProductSignal) return null;
+  return [
+    { capability: "household", verb: "read", parameters: { scope: "household" }, confidence: 0.86 },
+    { capability: "analyser",  verb: "read", parameters: { scope: "summary" },   confidence: 0.84 },
+  ];
+};
+
 
 const ALL_COMPOUND_MATCHERS: CompoundMatcher[] = [
   NUTRITION_DISCOVERY_PLANNER_COMPOUND,
@@ -2658,6 +2908,21 @@ const ALL_COMPOUND_MATCHERS: CompoundMatcher[] = [
   MEAL_GOAL_FIT_COMPOUND,
   COMPOUND_HEALTH_GOAL_PLANNING_COMPOUND,
   PLANNER_PANTRY_COMPOUND,
+  PLANNER_SHOPPING_COMPOUND,
+  PLANNER_NUTRITION_BALANCE_COMPOUND,
+  PLANNER_FOOD_INTELLIGENCE_COMPOUND,
+  HOUSEHOLD_PLANNER_ADAPTATIONS_COMPOUND,
+  PLANNER_NUTRITION_SHOPPING_OPPORTUNITIES_COMPOUND,
+  MEAL_DISCOVERY_PLANNER_TONIGHT_COMPOUND,
+  SHOPPING_ANALYSER_PROCESSING_COMPOUND,
+  PANTRY_MEAL_DISCOVERY_COMPOUND,
+  NUTRITION_PROFILE_GOALS_COMPOUND,
+  DIARY_NUTRITION_ANALYSIS_COMPOUND,
+  PANTRY_NUTRITION_DIVERSITY_COMPOUND,
+  DIARY_NUTRITION_PLANTS_COMPOUND,
+  FOOD_INTELLIGENCE_NUTRITION_COMPARISON_COMPOUND,
+  ANALYSER_HOUSEHOLD_SUITABILITY_COMPOUND,
+  HOUSEHOLD_ANALYSER_RESTRICTIONS_COMPOUND,
   NUTRITION_SHOPPING_PANTRY_COMPOUND,
   PANTRY_NUTRITION_COMPOUND,
   DIARY_NUTRITION_COMPOUND,
@@ -3003,13 +3268,29 @@ const KEYWORD_FALLBACKS: KeywordFallback[] = [
     confidence: 0.60,
   },
   {
-    pattern: /\b(?:shopping\s+list|basket|grocery|groceries)\b/i,
+    // COMP-DET1 (2026-11-20) — "shopping\s+list" DELIBERATELY removed from
+    // this alternation (same bug/fix as the pantry keyword fallback below).
+    // shopping-discovery's own dedicated matchers already own every "shopping
+    // list" phrasing at higher confidence (0.88-0.92); this fallback firing
+    // too, unconditionally, created the same false two-capability duplicate.
+    // basket/grocery/groceries stay — shopping-discovery's matchers don't use
+    // those words, so there is no equivalent overlap for them.
+    pattern: /\b(?:basket|grocery|groceries)\b/i,
     capability: "shopping",
     parameters: { scope: "list" },
     confidence: 0.62,
   },
+  // COMP-DET1 (2026-11-20) — "pantry" DELIBERATELY removed from this keyword
+  // fallback's alternation (third duplicate-match source found, same bug as
+  // PANTRY_MATCHERS/PANTRY_DISCOVERY_MATCHERS above). Keyword fallbacks run
+  // unconditionally regardless of whether a higher-confidence specific
+  // matcher already fired for this utterance, and per-capability dedup never
+  // catches it because "pantry" (this fallback) and "pantry-discovery" (the
+  // specific matcher) are different capability ids. fridge/freezer/larder/
+  // cupboard/food-stock stay — pantry-discovery's matchers only ever use the
+  // literal word "pantry", so there is no equivalent overlap for those words.
   {
-    pattern: /\b(?:pantry|fridge|freezer|larder|cupboard|food\s+stock)\b/i,
+    pattern: /\b(?:fridge|freezer|larder|cupboard|food\s+stock)\b/i,
     capability: "pantry",
     parameters: { scope: "list" },
     confidence: 0.60,
@@ -3052,8 +3333,16 @@ const KEYWORD_FALLBACKS: KeywordFallback[] = [
     parameters: { scope: "additives" },
     confidence: 0.62,
   },
+  // COMP-DET1 (2026-11-20) — fourth instance tonight of the same duplicate-
+  // match bug (pantry/shopping, then PARTNERS_MATCHERS' own specific matcher
+  // just above, now this keyword fallback too): a bare "retailers|supermarkets"
+  // keyword fires unconditionally alongside PH-006's profile match for the
+  // self-referential "what supermarkets have I selected?" phrasing. Keyword
+  // fallbacks are plain {pattern} objects, not functions, so the exclusion has
+  // to live inside the regex itself — a negative lookahead checking the whole
+  // utterance for PH-006's owned phrasing before allowing the keyword match.
   {
-    pattern: /\b(?:retailers?|supermarkets?)\b/i,
+    pattern: /^(?!.*\bhave\s+i\s+(?:selected|chosen|picked|set)\b).*\b(?:retailers?|supermarkets?)\b/i,
     capability: "partners",
     parameters: { scope: "retailers" },
     confidence: 0.62,

@@ -55,6 +55,14 @@ export interface PantryListReadResult {
   readonly scope: "list";
   readonly itemCount: number;
   readonly items: readonly PantryItemView[];
+  /**
+   * COMP-DET1 (2026-11-20) — a full item listing is a fact code can render exactly
+   * once, correctly, from the owner's own stored rows; it should never be
+   * re-derived (or dropped/invented) by an LLM. When present, conversation-gateway.ts's
+   * deterministic-answer short-circuit uses this text verbatim and skips full
+   * generation for single-capability turns.
+   */
+  readonly deterministicAnswer: string;
 }
 
 /** Stored ingredient knowledge as the read binding surfaces it — display-safe fields only. */
@@ -131,11 +139,42 @@ async function handleRead(intent: Intent, userId: number, port: PantryReadPort):
   }
 
   const items = await port.getPantryItems(userId);
+  const views = items.map(toItemView);
   return {
     scope: "list",
-    itemCount: items.length,
-    items: items.map(toItemView),
+    itemCount: views.length,
+    items: views,
+    deterministicAnswer: buildPantryDeterministicAnswer(views),
   };
+}
+
+// COMP-DET1 — live-caught testing this against real data: a flat enumeration is
+// a readable, useful answer for a short list, but a genuinely bad one once the
+// pantry has 100+ items (a wall of names, not an answer). Below the threshold,
+// name every item (full detail is the more useful answer when it's short enough
+// to read). At/above it, switch to a category-count breakdown instead — still
+// a deterministic, fully-accurate fact (every count comes straight from the
+// data), just shaped for readability instead of exhaustive enumeration.
+const PANTRY_PREVIEW_THRESHOLD = 15;
+
+function buildPantryDeterministicAnswer(items: readonly PantryItemView[]): string {
+  if (items.length === 0) return "Your pantry is empty — nothing logged yet.";
+
+  const byCategory = new Map<string, string[]>();
+  for (const item of items) {
+    const name = item.displayName ?? item.ingredientKey;
+    const list = byCategory.get(item.category) ?? [];
+    list.push(name);
+    byCategory.set(item.category, list);
+  }
+
+  if (items.length <= PANTRY_PREVIEW_THRESHOLD) {
+    const parts = Array.from(byCategory.entries()).map(([cat, names]) => `${cat}: ${names.join(", ")}`);
+    return `Your pantry has ${items.length} item${items.length === 1 ? "" : "s"} — ${parts.join("; ")}.`;
+  }
+
+  const counts = Array.from(byCategory.entries()).map(([cat, names]) => `${cat} (${names.length})`);
+  return `Your pantry has ${items.length} items across these categories: ${counts.join(", ")}.`;
 }
 
 /**

@@ -92,47 +92,50 @@ const engine = new ShoppingDiscoveryEngine(makeStorage() as any);
 
 // Empty query — all items
 const allResult = await engine.discover("", 1);
-assert(allResult.length === 5, "empty query returns all 5 items");
+assert(allResult.items.length === 5, "empty query returns all 5 items");
+assert(allResult.totalCount === 5, "totalCount matches items.length when under the cap");
 
 // Match by productName
 const chickenResult = await engine.discover("chicken", 1);
-assert(chickenResult.length === 1, "query 'chicken' matches 1 item");
-assert(chickenResult[0].name === "Free-Range Chicken Breast", "matched item is Chicken Breast");
-assert(chickenResult[0].source === "shopping-discovery", "result carries source='shopping-discovery'");
-assert(chickenResult[0].id.startsWith("shopping-item:"), "result id prefixed 'shopping-item:'");
-assert(chickenResult[0].shoppingItemId === 1, "shoppingItemId is 1");
-assert(chickenResult[0].quantityValue === 500, "quantityValue is the real numeric amount (500), not a string");
+assert(chickenResult.items.length === 1, "query 'chicken' matches 1 item");
+assert(chickenResult.items[0].name === "Free-Range Chicken Breast", "matched item is Chicken Breast");
+assert(chickenResult.items[0].source === "shopping-discovery", "result carries source='shopping-discovery'");
+assert(chickenResult.items[0].id.startsWith("shopping-item:"), "result id prefixed 'shopping-item:'");
+assert(chickenResult.items[0].shoppingItemId === 1, "shoppingItemId is 1");
+assert(chickenResult.items[0].quantityValue === 500, "quantityValue is the real numeric amount (500), not a string");
 
 // Item with no stored amount — honest null, never fabricated
 const breadResult = await engine.discover("bread", 1);
-assert(breadResult.length === 1, "query 'bread' matches 1 item");
-assert(breadResult[0].quantityValue === null, "quantityValue is null when no amount was ever specified (not coerced to 0)");
+assert(breadResult.items.length === 1, "query 'bread' matches 1 item");
+assert(breadResult.items[0].quantityValue === null, "quantityValue is null when no amount was ever specified (not coerced to 0)");
 
 // Match by normalizedName
 const pastaResult = await engine.discover("pasta", 1);
-assert(pastaResult.length === 1, "query 'pasta' matches 1 item");
-assert(pastaResult[0].normalizedName === "pasta", "normalizedName correct");
+assert(pastaResult.items.length === 1, "query 'pasta' matches 1 item");
+assert(pastaResult.items[0].normalizedName === "pasta", "normalizedName correct");
 
 // Case-insensitive match
 const upperResult = await engine.discover("MILK", 1);
-assert(upperResult.length === 1, "UPPERCASE query matches milk");
-assert(upperResult[0].checked === true, "checked=true is preserved on milk item");
+assert(upperResult.items.length === 1, "UPPERCASE query matches milk");
+assert(upperResult.items[0].checked === true, "checked=true is preserved on milk item");
 
 // Match null productName using normalizedName
 const oilResult = await engine.discover("olive", 1);
-assert(oilResult.length === 1, "query 'olive' matches item with null productName via normalizedName");
-assert(oilResult[0].name === "olive oil", "name falls back to normalizedName when productName is null");
+assert(oilResult.items.length === 1, "query 'olive' matches item with null productName via normalizedName");
+assert(oilResult.items[0].name === "olive oil", "name falls back to normalizedName when productName is null");
 
 // No match
 const noMatchResult = await engine.discover("tofu", 1);
-assert(noMatchResult.length === 0, "query 'tofu' → empty (not an error)");
+assert(noMatchResult.items.length === 0, "query 'tofu' → empty (not an error)");
 
 // Empty list
 const emptyEngine = new ShoppingDiscoveryEngine(makeEmptyStorage() as any);
 const emptyResult = await emptyEngine.discover("", 1);
-assert(emptyResult.length === 0, "empty list → empty results");
+assert(emptyResult.items.length === 0, "empty list → empty results");
+assert(emptyResult.totalCount === 0, "totalCount is 0 for an empty list");
 
-// Capping
+// Capping — items is capped, but totalCount (COMP-DET1) stays the real,
+// uncapped match count so callers never state a false exact total.
 const bigStorage = {
   getShoppingListItems: async () =>
     Array.from({ length: SHOPPING_DISCOVERY_MAX_RESULTS + 10 }, (_, i) => ({
@@ -147,7 +150,8 @@ const bigStorage = {
 };
 const bigEngine = new ShoppingDiscoveryEngine(bigStorage as any);
 const bigResult = await bigEngine.discover("", 1);
-assert(bigResult.length === SHOPPING_DISCOVERY_MAX_RESULTS, `capping: ${bigResult.length} ≤ ${SHOPPING_DISCOVERY_MAX_RESULTS}`);
+assert(bigResult.items.length === SHOPPING_DISCOVERY_MAX_RESULTS, `capping: items.length ${bigResult.items.length} === ${SHOPPING_DISCOVERY_MAX_RESULTS}`);
+assert(bigResult.totalCount === SHOPPING_DISCOVERY_MAX_RESULTS + 10, `totalCount stays the real uncapped count: ${bigResult.totalCount} === ${SHOPPING_DISCOVERY_MAX_RESULTS + 10}`);
 
 // ---------------------------------------------------------------------------
 // Handler + binding tests
@@ -161,9 +165,9 @@ const preBind = platform.registry.get(SHOPPING_DISCOVERY_CAPABILITY_ID);
 assert(preBind?.availability !== "available", "shopping-discovery NOT available before binding (seed registers it but handler not yet bound)");
 
 const stubPort: ShoppingDiscoveryPort = {
-  discover: async (query: string, _userId: number): Promise<ShoppingDiscoveryItem[]> => {
+  discover: async (query: string, _userId: number) => {
     if (query.toLowerCase().includes("chicken")) {
-      return [{
+      const items: ShoppingDiscoveryItem[] = [{
         id: "shopping-item:1",
         shoppingItemId: 1,
         name: "Free-Range Chicken Breast",
@@ -174,14 +178,16 @@ const stubPort: ShoppingDiscoveryPort = {
         checked: false,
         source: "shopping-discovery",
       }];
+      return { items, totalCount: items.length };
     }
     if (query === "") {
-      return [
+      const items: ShoppingDiscoveryItem[] = [
         { id: "shopping-item:1", shoppingItemId: 1, name: "Chicken Breast", normalizedName: "chicken breast", quantityValue: 500, unit: "g", category: "Meat", checked: false, source: "shopping-discovery" },
         { id: "shopping-item:2", shoppingItemId: 2, name: "Pasta", normalizedName: "pasta", quantityValue: 400, unit: "g", category: "Dry Goods", checked: false, source: "shopping-discovery" },
       ];
+      return { items, totalCount: items.length };
     }
-    return [];
+    return { items: [], totalCount: 0 };
   },
 };
 

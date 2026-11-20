@@ -94,16 +94,47 @@ export const RUBRIC_VERSION = "v2.0.0";
  * both traps. Runs before this version may show false D1/D2 failures on
  * personal-scope or "today"-relative questions that this version will score
  * correctly on the same Companion content — not comparable on those questions.
+ *
+ * JUDGE_LIVE6 (2026-11-19) bumps JUDGE_VERSION to v2.4.0 — live-caught on CB-011
+ * ("how many meals are in my cookbook?"): the Companion correctly answered 1,021
+ * (213 own + 808 shared system meals, verified directly against storage), but the
+ * judge scored D2 = 0, rationale "the supplied cookbook data lists far fewer than
+ * 1,021 entries... provides no support." Root cause was TWO compounding
+ * ground-truth gaps, not a Companion bug or a judge-model quality gap: (1)
+ * `cookbookMeals` was built from `getMealsSummary(userId)` alone — it never
+ * queried system meals at all, so the judge had zero visibility into most of a
+ * real household's accessible cookbook; (2) even for the source it did query, the
+ * capped sample array (MAX_MEALS=60) carried no separate TRUE total, so the judge
+ * had no way to confirm a count beyond the sample without treating "bigger than
+ * what I can see" as fabrication. ground-truth.ts now merges own + system meals
+ * (deduplicated by id, mirroring the live meals capability's own merge) and
+ * exposes uncapped `cookbookMealTotal` / `ownCookbookMealTotal` /
+ * `systemCookbookMealTotal` fields alongside the still-capped sample array, with
+ * the same uncapped-total treatment for shopping/pantry/diary; the prompt names a
+ * third trap pointing the judge at these totals instead of counting sample rows.
+ * This generalises beyond CB-011 — ANY "how many X" question whose true count
+ * exceeds the relevant sample cap (60/60/80/40) was structurally unscoreable
+ * before this fix, regardless of which judge model graded it. Runs before this
+ * version may show false D1/D2 failures on large-count questions that this
+ * version will score correctly on the same Companion content — not comparable on
+ * those questions.
  */
-export const JUDGE_VERSION = "v2.3.0";
+export const JUDGE_VERSION = "v2.4.0";
 /** Additive result fields (BENCH2 panels; BENCH2C `capabilityUtilisation` + per-question invocations) — MINOR. */
 export const RESULT_SCHEMA_VERSION = "1.2.0";
 
 /** JUDGE_LIVE4 — the judge is tiered, not one pinned model; see judge.ts's
  *  `SIMPLE_CAPABILITY_FAMILIES`/`selectJudgeModel` for the actual routing rule
  *  this string summarises. See JUDGE_VERSION above for why this is still "pinned".
- *  Updated 2026-11-17: gpt-4.1 → gpt-6-luna for cost efficiency. */
-export const JUDGE_MODEL = "gpt-6-luna (all questions)";
+ *  This is a plain documentation string — it is NOT derived from
+ *  `SIMPLE_JUDGE_MODEL`/`COMPLEX_JUDGE_MODEL` in judge.ts, so it must be kept in
+ *  sync by hand whenever those change (JUDGE_LIVE6 found it silently stale after
+ *  a prior edit collapsed both tiers to Luna without updating this label).
+ *  Updated 2026-11-19 (JUDGE_LIVE6): gpt-6-luna stays for simple (profile/household)
+ *  dimensions; complex dimensions moved to gpt-6.1-terra after live-testing showed
+ *  Luna could not reliably verify factual claims against ground-truth data even
+ *  when pointed at the exact right field (see JUDGE_LIVE6's note above). */
+export const JUDGE_MODEL = "gpt-6-luna (profile/household) / gpt-6.1-terra (everything else)";
 
 /**
  * The clock a run actually had.
@@ -209,18 +240,19 @@ Score EXACTLY the one requested dimension of one Companion turn, as an integer b
   0 = Failed — the dimension is absent or actively wrong.
 
 Dimension-specific guidance for the dimension you are asked to grade:
-- D1 Factual Correctness: is everything the turn asserted true and grounded in the given context? A short, fully correct answer is a 4 — brevity alone is never a flaw. Only dock points for something actually wrong, unsupported, or missing where the context clearly had the answer.
+- D1 Factual Correctness: is everything the turn asserted true and grounded in the given context? Cross-reference any specific claims (names, numbers, lists) against the household data first. A short, fully correct answer is a 4 — brevity alone is never a flaw. Only dock points for something actually wrong, unsupported, or missing where the context clearly had the answer.
 - D2 Honesty / Honest-Gap: this is NOT "did it answer" — it is "given what was knowable, did it tell the truth about its own limits." If the correct answer was a real fact and the turn gave it plainly, that is a 4. If the correct answer was an honest gap (the data or capability genuinely was not available) and the turn admitted that plainly instead of guessing, that is ALSO a 4 — admitting a correct gap is the best possible outcome, not a consolation prize. Only dock points for fabricating an answer that should have been a gap (band 0), or for unnecessarily hedging away a fact the turn actually had.
-- D5 Relevance & Completeness: did the turn answer the question asked, using the available context, without padding or omission? A complete, on-topic answer is a 4 regardless of length.
+- D5 Relevance & Completeness: did the turn answer the question asked, using the available context, without padding or omission? Check: Does it directly address what was asked? Does it include all key information available in the context? A complete, on-topic answer is a 4 regardless of length.
 - D6 Voice & Companion Tone: did the response read as a warm, direct, trustworthy household companion — not corporate, not robotic, not falsely cheerful about a real limitation? Voice changes HOW something is said, never WHAT is true — never let it affect your D1/D2/D5 grading.
 
 A deterministic hard-gate or routing gate may already have been applied to this question elsewhere in the pipeline. Do not try to re-derive or second-guess a gate here — you are grading only the one dimension you are asked for, in isolation, exactly as asked.
 
-You are given the dimension to grade, the question's utterance and expectation record, the captured turn, and — when available — the acting household's own real stored data (profile diet pattern, cookbook, shopping list, pantry, recent food diary, this week's planner) as "household" in the input. USE IT: when the turn makes a specific, checkable claim, look it up in "household" before judging D1/D5. A claim that matches the household's real data is correct, not a guess. Only treat a specific claim as unsupported or fabricated if it actively CONTRADICTS the household data, or if "household" is null/absent and you genuinely have no way to check. Never penalise a correct claim just because you were not shown its source elsewhere in the context — the "household" field IS that source.
+You are given the dimension to grade, the question's utterance and expectation record, the captured turn, and — when available — the acting household's own real stored data (profile diet pattern, cookbook, shopping list, pantry, recent food diary, this week's planner) as "household" in the input. USE IT: when the turn makes a specific, checkable claim, cross-reference it against "household" before judging D1/D5. A claim that matches the household's real data is correct, not a guess. Only treat a specific claim as unsupported or fabricated if it actively CONTRADICTS the household data, or if "household" is null/absent and you genuinely have no way to check. Never penalise a correct claim just because you were not shown its source elsewhere in the context — the "household" field IS that source.
 
-Two specific traps to avoid when reading "household":
+Three specific traps to avoid when reading "household":
 - SCOPE: "household.dietary.members" lists EVERY person in the household, each with their OWN separate diet/restrictions — they are not shared. A question phrased in the first person ("do I have...", "my profile", "am I following...") is about "household.requesterUserId" specifically, never the whole household, UNLESS the question explicitly says "we"/"my family"/"household". A different member carrying a restriction the requester does not have does NOT make the requester's own "I have none" answer wrong.
 - TIME: "household.todayDate" is the real current date. "household.plannerThisWeek" entries each carry a real "date" (YYYY-MM-DD) — use it to find which entry is actually "today"/"tonight"/"tomorrow" rather than guessing from a bare day-of-week number. "household.recentDiaryEntries" is what was actually EATEN (past); "household.plannerThisWeek" is what is PLANNED (may be future, not yet eaten) — a question asking what the household has EATEN is answered by the diary, not by a planner entry for a day that has not happened yet.
+- COUNTS: the sample arrays ("household.cookbookMeals", "household.shoppingList", "household.pantryItems", "household.recentDiaryEntries") are capped at a fixed size for token cost and may NOT list every item a real household has. For any "how many X" claim, verify it against the matching TOTAL field instead of counting array entries — "household.cookbookMealTotal" (= "household.ownCookbookMealTotal" + "household.systemCookbookMealTotal", i.e. the caller's own saved meals plus shared system meals), "household.shoppingListTotal", "household.pantryItemTotal", "household.recentDiaryEntryTotal". A count that matches the relevant total field is correct, even if it is far larger than the sample array shown to you — do NOT treat "the array only shows 60 rows" as evidence a larger total is fabricated.
 
 Output strict JSON: {"band": <integer 0-4>, "rationale": "<one sentence explaining WHY you chose this band — never a bare quote of the turn>"}.`;
 

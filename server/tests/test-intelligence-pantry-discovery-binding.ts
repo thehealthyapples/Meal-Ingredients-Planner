@@ -75,37 +75,39 @@ const engine = new PantryDiscoveryEngine(makeStorage() as any);
 
 // Empty query — all non-deleted items
 const allResult = await engine.discover("", 1);
-assert(allResult.length === 3, "empty query returns 3 non-deleted items (stale-bread excluded)");
+assert(allResult.items.length === 3, "empty query returns 3 non-deleted items (stale-bread excluded)");
+assert(allResult.totalCount === 3, "totalCount matches items.length when under the cap");
 
 // Match by displayName
 const flourResult = await engine.discover("flour", 1);
-assert(flourResult.length === 1, "query 'flour' matches 1 item");
-assert(flourResult[0].name === "Plain Flour", "matched item is Plain Flour");
-assert(flourResult[0].ingredientKey === "plain-flour", "ingredientKey correct");
-assert(flourResult[0].location === "larder", "location is 'larder'");
-assert(flourResult[0].quantity === 500, "quantity is 500");
-assert(flourResult[0].unit === "g", "unit is 'g'");
-assert(flourResult[0].source === "pantry-discovery", "source is 'pantry-discovery'");
-assert(flourResult[0].id.startsWith("pantry-item:"), "id prefixed 'pantry-item:'");
+assert(flourResult.items.length === 1, "query 'flour' matches 1 item");
+assert(flourResult.items[0].name === "Plain Flour", "matched item is Plain Flour");
+assert(flourResult.items[0].ingredientKey === "plain-flour", "ingredientKey correct");
+assert(flourResult.items[0].location === "larder", "location is 'larder'");
+assert(flourResult.items[0].quantity === 500, "quantity is 500");
+assert(flourResult.items[0].unit === "g", "unit is 'g'");
+assert(flourResult.items[0].source === "pantry-discovery", "source is 'pantry-discovery'");
+assert(flourResult.items[0].id.startsWith("pantry-item:"), "id prefixed 'pantry-item:'");
 
 // Match by ingredientKey when displayName is null
 const milkResult = await engine.discover("whole", 1);
-assert(milkResult.length === 1, "query 'whole' matches milk via ingredientKey");
-assert(milkResult[0].name === "whole-milk", "name falls back to ingredientKey");
+assert(milkResult.items.length === 1, "query 'whole' matches milk via ingredientKey");
+assert(milkResult.items[0].name === "whole-milk", "name falls back to ingredientKey");
 
 // Deleted items excluded
 const deletedResult = await engine.discover("stale", 1);
-assert(deletedResult.length === 0, "deleted items are excluded");
+assert(deletedResult.items.length === 0, "deleted items are excluded");
 
 // Case-insensitive
 const upperResult = await engine.discover("OIL", 1);
-assert(upperResult.length === 1, "UPPERCASE query matches Olive Oil");
+assert(upperResult.items.length === 1, "UPPERCASE query matches Olive Oil");
 
 // No match
 const noMatchResult = await engine.discover("tofu", 1);
-assert(noMatchResult.length === 0, "query 'tofu' → empty (not an error)");
+assert(noMatchResult.items.length === 0, "query 'tofu' → empty (not an error)");
 
-// Capping
+// Capping — items is capped, but totalCount (COMP-DET1) stays the real,
+// uncapped match count so callers never state a false exact total.
 const bigStorage = {
   getPantryItems: async () =>
     Array.from({ length: PANTRY_DISCOVERY_MAX_RESULTS + 10 }, (_, i) => ({
@@ -120,7 +122,8 @@ const bigStorage = {
 };
 const bigEngine = new PantryDiscoveryEngine(bigStorage as any);
 const bigResult = await bigEngine.discover("", 1);
-assert(bigResult.length === PANTRY_DISCOVERY_MAX_RESULTS, `capping: ${bigResult.length} ≤ ${PANTRY_DISCOVERY_MAX_RESULTS}`);
+assert(bigResult.items.length === PANTRY_DISCOVERY_MAX_RESULTS, `capping: items.length ${bigResult.items.length} === ${PANTRY_DISCOVERY_MAX_RESULTS}`);
+assert(bigResult.totalCount === PANTRY_DISCOVERY_MAX_RESULTS + 10, `totalCount stays the real uncapped count: ${bigResult.totalCount} === ${PANTRY_DISCOVERY_MAX_RESULTS + 10}`);
 
 // ---------------------------------------------------------------------------
 // Handler + binding tests
@@ -133,17 +136,19 @@ const preBind = platform.registry.get(PANTRY_DISCOVERY_CAPABILITY_ID);
 assert(preBind?.availability !== "available", "pantry-discovery NOT available before binding");
 
 const stubPort: PantryDiscoveryPort = {
-  discover: async (query: string, _userId: number): Promise<PantryDiscoveryItem[]> => {
+  discover: async (query: string, _userId: number) => {
     if (query.toLowerCase().includes("flour")) {
-      return [{ id: "pantry-item:1", pantryItemId: 1, name: "Plain Flour", ingredientKey: "plain-flour", quantity: 500, unit: "g", location: "larder", source: "pantry-discovery" }];
+      const items: PantryDiscoveryItem[] = [{ id: "pantry-item:1", pantryItemId: 1, name: "Plain Flour", ingredientKey: "plain-flour", quantity: 500, unit: "g", location: "larder", source: "pantry-discovery" }];
+      return { items, totalCount: items.length };
     }
     if (query === "") {
-      return [
+      const items: PantryDiscoveryItem[] = [
         { id: "pantry-item:1", pantryItemId: 1, name: "Plain Flour", ingredientKey: "plain-flour", quantity: 500, unit: "g", location: "larder", source: "pantry-discovery" },
         { id: "pantry-item:2", pantryItemId: 2, name: "Olive Oil", ingredientKey: "olive-oil", quantity: 0, unit: "", location: "larder", source: "pantry-discovery" },
       ];
+      return { items, totalCount: items.length };
     }
-    return [];
+    return { items: [], totalCount: 0 };
   },
 };
 

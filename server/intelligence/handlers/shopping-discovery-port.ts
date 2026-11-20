@@ -44,6 +44,29 @@ export interface ShoppingDiscoverySearchResult {
   readonly totalCount: number;
   readonly results: readonly ShoppingDiscoveryItem[];
   readonly source: "shopping-discovery";
+  /**
+   * COMP-DET1 (2026-11-20) — "what's on my shopping list?" routes HERE
+   * (empty-query search, confidence 0.92), not the plain shopping read
+   * handler — live-caught after the shopping/shopping-discovery
+   * duplicate-routing bug was fixed and the single surviving route turned
+   * out to be this one. A search/list result is still a pure data lookup;
+   * the LLM should never re-derive or paraphrase it into a possibly-wrong
+   * count or item list.
+   */
+  readonly deterministicAnswer: string;
+}
+
+/**
+ * COMP-DET1 (2026-11-20) — `items` stays capped at the engine's own result
+ * limit (unbounded prompt/response payloads are their own problem), but
+ * `totalCount` is the REAL, uncapped match count. Live-caught: before this,
+ * callers had only the capped array and used `.length` as if it were the
+ * total — confidently wrong once a real household's data exceeded the cap
+ * (154 real shopping items reported as "50").
+ */
+export interface ShoppingDiscoverySearchPage {
+  readonly items: readonly ShoppingDiscoveryItem[];
+  readonly totalCount: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -59,9 +82,10 @@ export interface ShoppingDiscoveryPort {
   /**
    * Search the caller's shopping list. An empty query returns all items.
    * Filtering is by ingredient name (productName / normalizedName).
-   * Returns an empty array when the list is empty or no items match.
+   * `items` is empty when the list is empty or no items match; `totalCount`
+   * is always the real match count, even when `items` is capped below it.
    */
-  discover(query: string, userId: number): Promise<ShoppingDiscoveryItem[]>;
+  discover(query: string, userId: number): Promise<ShoppingDiscoverySearchPage>;
 }
 
 // ---------------------------------------------------------------------------

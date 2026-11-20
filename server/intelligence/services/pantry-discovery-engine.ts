@@ -13,7 +13,7 @@
  *   • Deleted items (isDeleted = true) are excluded.
  */
 
-import type { PantryDiscoveryItem, PantryDiscoveryPort } from "../handlers/pantry-discovery-port.js";
+import type { PantryDiscoveryItem, PantryDiscoveryPort, PantryDiscoverySearchPage } from "../handlers/pantry-discovery-port.js";
 
 const PANTRY_DISCOVERY_MAX_RESULTS = 100;
 
@@ -32,7 +32,7 @@ export interface PantryDiscoveryStorage {
 export class PantryDiscoveryEngine implements PantryDiscoveryPort {
   constructor(private readonly storage: PantryDiscoveryStorage) {}
 
-  async discover(query: string, userId: number): Promise<PantryDiscoveryItem[]> {
+  async discover(query: string, userId: number): Promise<PantryDiscoverySearchPage> {
     const lowerQuery = query.toLowerCase().trim();
 
     const items = await this.storage.getPantryItems(userId).catch(() => []);
@@ -64,7 +64,10 @@ export class PantryDiscoveryEngine implements PantryDiscoveryPort {
       });
     }
 
-    return results.slice(0, PANTRY_DISCOVERY_MAX_RESULTS);
+    return {
+      items: results.slice(0, PANTRY_DISCOVERY_MAX_RESULTS),
+      totalCount: results.length,
+    };
   }
 }
 
