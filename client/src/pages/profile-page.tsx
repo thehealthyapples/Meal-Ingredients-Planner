@@ -2559,14 +2559,14 @@ function HouseholdMembersRelationships() {
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{member.displayName}</p>
-                  {(member.dietTypes.length > 0 || member.hardRestrictions.length > 0) && (
+                  {((member.dietTypes?.length ?? 0) > 0 || (member.hardRestrictions?.length ?? 0) > 0) && (
                     <div className="flex gap-1 mt-0.5 flex-wrap">
-                      {member.dietTypes.map(dt => (
+                      {(member.dietTypes ?? []).map(dt => (
                         <Badge key={dt} variant="secondary" className="text-xs">
                           {dt}
                         </Badge>
                       ))}
-                      {member.hardRestrictions.map(hr => (
+                      {(member.hardRestrictions ?? []).map(hr => (
                         <Badge key={hr} variant="destructive" className="text-xs">
                           {hr}
                         </Badge>
