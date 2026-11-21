@@ -30,6 +30,7 @@ const MealDetailPage = lazy(() => import("@/pages/meal-detail-page"));
 const FoodComparisonPage = lazy(() => import("@/pages/food-comparison-page"));
 const WeeklyPlannerPage = lazy(() => import("@/pages/weekly-planner-page"));
 const ProfilePage = lazy(() => import("@/pages/profile-page"));
+const HouseholdMembersPage = lazy(() => import("@/pages/household-members-page"));
 const AdminPage = lazy(() => import("@/pages/admin-page"));
 const AdminUsersPage = lazy(() => import("@/pages/admin-users-page"));
 const AdminIngredientProductsPage = lazy(() => import("@/pages/admin-ingredient-products-page"));
@@ -299,6 +300,7 @@ function Router() {
       <Route path="/planner" component={() => <ProtectedRoute component={PlannerPageWrapper} />} />
       <Route path="/supermarkets" component={() => <ProtectedRoute component={SupermarketsPage} />} />
       <Route path="/profile" component={() => <ProtectedRoute component={ProfilePage} />} />
+      <Route path="/family-members" component={() => <ProtectedRoute component={HouseholdMembersPage} />} />
       <Route path="/admin" component={() => <ProtectedRoute component={AdminHomeChrome} />} />
       <Route path="/admin/users" component={() => <ProtectedRoute component={AdminUsersChrome} />} />
       <Route path="/admin/ingredient-products" component={() => <ProtectedRoute component={AdminIngredientProductsChrome} />} />

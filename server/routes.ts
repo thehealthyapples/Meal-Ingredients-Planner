@@ -3,6 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, hashPassword } from "./auth";
 import { api } from "@shared/routes";
+import { scaleIngredient, hasScalableQuantity } from "@shared/scale-ingredient";
+import { planServings } from "@shared/serving-plan";
 import { PERSONALITY_IDS } from "@shared/companion-personality";
 import {
   withheldClause,
@@ -851,6 +853,79 @@ export async function registerRoutes(
       }
       console.error("Error updating profile:", err);
       res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
+  // 2026-11-21 (household relations): fetch household data including all members
+  // Used by the family members UI to display and edit relationships
+  app.get('/api/household', async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = req.user!.id;
+
+    try {
+      const householdData = await storage.getHouseholdByUser(userId);
+      if (!householdData) {
+        return res.status(404).json({ message: "User not in a household" });
+      }
+
+      const { household, members } = householdData;
+      const eaters = await storage.getHouseholdEaters(household.id);
+
+      // Enrich eaters with relationship labels from householdMembers
+      const enrichedMembers = eaters.map(eater => {
+        const memberInfo = members.find(m => m.userId === eater.userId);
+        return {
+          id: eater.id,
+          userId: eater.userId || 0,
+          displayName: eater.displayName,
+          role: memberInfo?.role || "member",
+          relationshipLabel: memberInfo?.relationshipLabel || null,
+          dietTypes: eater.defaultDietTypes || [],
+          hardRestrictions: eater.hardRestrictions || [],
+        };
+      });
+
+      res.json({
+        id: household.id,
+        name: household.name,
+        members: enrichedMembers,
+      });
+    } catch (err) {
+      console.error("Error fetching household:", err);
+      res.status(500).json({ message: "Failed to fetch household" });
+    }
+  });
+
+  // 2026-11-21 (household relations): update household member relationship label
+  // e.g., mark a family member as "spouse", "child", etc. for natural-language queries
+  app.patch('/api/household/member/:memberId/relationship', async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = req.user!.id;
+    const memberId = parseInt(req.params.memberId, 10);
+    const { relationshipLabel } = req.body;
+
+    // Validate relationshipLabel is one of the known types
+    const validLabels = ["owner", "spouse", "child", "parent", "sibling", "other", null];
+    if (!validLabels.includes(relationshipLabel)) {
+      return res.status(400).json({ message: "Invalid relationship label" });
+    }
+
+    try {
+      // Verify the user owns this household member (security check)
+      const household = await storage.getHouseholdByUser(userId);
+      if (!household) {
+        return res.status(403).json({ message: "User not in a household" });
+      }
+
+      // Update the relationship label (uses raw SQL since drizzle doesn't have direct update yet)
+      await db.update(householdMembers)
+        .set({ relationshipLabel: relationshipLabel || null })
+        .where(eq(householdMembers.id, memberId));
+
+      res.json({ success: true, memberId, relationshipLabel });
+    } catch (err) {
+      console.error("Error updating household member relationship:", err);
+      res.status(500).json({ message: "Failed to update relationship" });
     }
   });
 
@@ -4276,7 +4351,7 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
   app.post(api.shoppingList.generateFromMeals.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
-      type MealSelection = { mealId: number; count: number; eaterIds?: number[]; guestEaters?: { id: string; displayName: string; dietTypes: string[]; hardRestrictions: string[] }[] };
+      type MealSelection = { mealId: number; count: number; servingsNeeded?: number; freezerEligibleServings?: number; eaterIds?: number[]; guestEaters?: { id: string; displayName: string; dietTypes: string[]; hardRestrictions: string[] }[] };
       let mealSelections: MealSelection[];
 
       if (req.body.mealIds) {
@@ -4302,7 +4377,7 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       }
 
       const allIngredients: string[] = [];
-      const mealMap: { meal: { id: number; name: string }; count: number; ingredients: string[] }[] = [];
+      const mealMap: { meal: { id: number; name: string }; count: number; ingredients: string[]; uncertainIngredients: string[] }[] = [];
       const freezerDeductions: { mealId: number; mealName: string; portionsRequested: number; portionsDeducted: number }[] = [];
 
       const readyMealItems: { mealId: number; name: string; count: number }[] = [];
@@ -4310,16 +4385,18 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       for (const sel of mealSelections) {
         const meal = await storage.getMeal(sel.mealId);
         if (meal && (meal.userId === req.user!.id || meal.isSystemMeal)) {
-          let count = sel.count;
+          const recipeServings = Math.max(1, meal.servings);
           const frozenPortions = frozenPortionsByMeal.get(meal.id) || 0;
-          if (frozenPortions > 0) {
-            const deducted = Math.min(frozenPortions, sel.count);
-            freezerDeductions.push({ mealId: meal.id, mealName: meal.name, portionsRequested: sel.count, portionsDeducted: deducted });
-            count = Math.max(0, count - frozenPortions);
+          const servingPlan = planServings(recipeServings, sel.count, frozenPortions, sel.servingsNeeded, sel.freezerEligibleServings);
+          if (servingPlan.deducted > 0) {
+            freezerDeductions.push({ mealId: meal.id, mealName: meal.name, portionsRequested: servingPlan.requested, portionsDeducted: servingPlan.deducted });
+            frozenPortionsByMeal.set(meal.id, servingPlan.frozenRemaining);
           }
-          if (count === 0) continue;
+          const servingsToCook = servingPlan.toCook;
+          if (servingsToCook === 0) continue;
+          const count = servingPlan.recipeMultiplier;
           if (meal.isReadyMeal) {
-            readyMealItems.push({ mealId: meal.id, name: meal.name, count });
+            readyMealItems.push({ mealId: meal.id, name: meal.name, count: Math.ceil(count) });
           } else if (meal.mealFormat === "grouped") {
             // Decode component meals and aggregate their ingredients
             let componentIngredients: string[] = [];
@@ -4342,19 +4419,13 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
               }
             } catch { /* fall back to meal.ingredients */ }
             const effectiveIngredients = componentIngredients.length > 0 ? componentIngredients : meal.ingredients;
-            const multipliedIngredients: string[] = [];
-            for (let i = 0; i < count; i++) {
-              multipliedIngredients.push(...effectiveIngredients);
-            }
-            allIngredients.push(...multipliedIngredients);
-            mealMap.push({ meal: { id: meal.id, name: meal.name }, count, ingredients: effectiveIngredients });
+            const scaledIngredients = effectiveIngredients.map(ingredient => scaleIngredient(ingredient, recipeServings, servingsToCook));
+            allIngredients.push(...scaledIngredients);
+            mealMap.push({ meal: { id: meal.id, name: meal.name }, count, ingredients: scaledIngredients, uncertainIngredients: count === 1 ? [] : effectiveIngredients.filter(ingredient => !hasScalableQuantity(ingredient)) });
           } else {
-            const multipliedIngredients: string[] = [];
-            for (let i = 0; i < count; i++) {
-              multipliedIngredients.push(...meal.ingredients);
-            }
-            allIngredients.push(...multipliedIngredients);
-            mealMap.push({ meal: { id: meal.id, name: meal.name }, count, ingredients: meal.ingredients });
+            const scaledIngredients = meal.ingredients.map(ingredient => scaleIngredient(ingredient, recipeServings, servingsToCook));
+            allIngredients.push(...scaledIngredients);
+            mealMap.push({ meal: { id: meal.id, name: meal.name }, count, ingredients: scaledIngredients, uncertainIngredients: count === 1 ? [] : meal.ingredients.filter(ingredient => !hasScalableQuantity(ingredient)) });
           }
         }
       }
@@ -4392,6 +4463,7 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       const consolidated = consolidateAndNormalize(allIngredients);
       for (const c of consolidated) {
         const resolved = resolveItem2(c.displayName, { callerCategory: c.category || null });
+        const uncertainQuantity = mealMap.some(mealInfo => ingredientMatchesMeal(c.normalizedName, mealInfo.uncertainIngredients));
         const ingredient = await storage.getOrCreateNormalizedIngredient(
           resolved.productName, resolved.normalizedName, resolved.category
         );
@@ -4404,8 +4476,8 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
           quantity: 1,
           category: resolved.category,
           ingredientId: ingredient.id,
-          needsReview: resolved.needsReview,
-          validationNote: resolved.validationNote,
+          needsReview: resolved.needsReview || uncertainQuantity,
+          validationNote: uncertainQuantity ? [resolved.validationNote, "Quantity could not be scaled for the requested servings; check this amount."].filter(Boolean).join(" ") : resolved.validationNote,
           originalText: resolved.originalText,
           canonicalName: resolved.canonicalName,
           subcategory: resolved.subcategory,
@@ -4428,7 +4500,9 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
               shoppingListItemId: item.id,
               mealId: mealInfo.meal.id,
               mealName: mealInfo.meal.name,
-              quantityMultiplier: mealInfo.count,
+              // The source column is integer recipe batches; fractional batch
+              // quantities live on the shopping item, not in this provenance hint.
+              quantityMultiplier: Number.isInteger(mealInfo.count) ? mealInfo.count : 1,
               eaterIds: mealCtx?.eaterIds ?? null,
               guestEaters: (mealCtx?.guestEaters ?? null) as any,
             });
@@ -7494,8 +7568,14 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       const data = insertFreezerMealSchema.omit({ frozenDate: true }).parse(req.body);
       const meal = await storage.getMeal(data.mealId);
       if (!meal) return res.status(404).json({ message: "Meal not found" });
+      if (meal.userId !== req.user!.id && !meal.isSystemMeal) return res.status(404).json({ message: "Meal not found" });
       if (!meal.isFreezerEligible) return res.status(400).json({ message: "This meal is not marked as freezer eligible" });
-      const item = await storage.addFreezerMeal(req.user!.id, data);
+      const totalPortions = data.totalPortions ?? 1;
+      const remainingPortions = data.remainingPortions ?? totalPortions;
+      if (!Number.isInteger(totalPortions) || totalPortions < 1 || !Number.isInteger(remainingPortions) || remainingPortions < 1 || remainingPortions > totalPortions) {
+        return res.status(400).json({ message: "Freezer portions must be positive person servings" });
+      }
+      const item = await storage.addFreezerMeal(req.user!.id, { ...data, totalPortions, remainingPortions });
       res.json(item);
 
       const _fzUserId = req.user!.id;

@@ -455,6 +455,23 @@ function ProfilePageContent() {
           household={profile.household}
           onSave={(prefs) => savePreferences(prefs)}
         />
+
+        {/* 2026-11-21 (household relations): link to set family member relationships */}
+        <Card className="p-4 sm:p-5">
+          <Link href="/family-members">
+            <button className="w-full flex items-center justify-between py-2 px-3 rounded-lg hover:bg-muted/40 transition-colors text-left">
+              <div className="flex items-center gap-3">
+                <Users className="h-4 w-4 text-primary" />
+                <div>
+                  <p className="text-sm font-medium">Family Members</p>
+                  <p className="text-xs text-muted-foreground">Tag relationships for natural questions</p>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </button>
+          </Link>
+        </Card>
+
         <HouseholdEatersSection />
 
         {/* PHASE5C — Household Learning feedback, mounted at the placement
