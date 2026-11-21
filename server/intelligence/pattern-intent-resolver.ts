@@ -2501,11 +2501,16 @@ const ANALYSER_MATCHERS: Matcher[] = [
   // the original utterance so a lowercase "e" in prose ("vitamin e 400") cannot fire it.
   // This is the additives table's own subject: executable, and it answers with real data.
   (u) => {
-    if (!/\bE[-. ]?\d{3,4}[a-z]?\b/.test(u)) return null;
+    const m = /\bE[-. ]?(\d{3,4}[a-z]?)\b/.exec(u);
+    if (!m) return null;
+    // COMP-DET7 (2026-11-21) — live-caught: the code was detected but never passed
+    // through, so this always dumped the full 300-row additives table and left the LLM
+    // to find the one named code itself. Captured and normalised ("E-621"/"e 621" -> "E621")
+    // so the handler can filter to the one real row instead of handing over everything.
     return {
       capability: "analyser",
       verb: "read",
-      parameters: { scope: "additives" },
+      parameters: { scope: "additives", code: `E${m[1].toUpperCase()}` },
       confidence: 0.90,
     };
   },

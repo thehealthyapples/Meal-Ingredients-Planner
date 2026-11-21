@@ -57,6 +57,11 @@ export interface AnalyserAdditivesReadResult {
   readonly additiveCount: number;
   readonly additives: readonly AdditiveView[];
   readonly source: "additives-reference";
+  /** COMP-DET7 (2026-11-21) — live-caught (PR-064): "what is E621?" detected the code
+   *  but never passed it through, so this handler always returned the full 300-row
+   *  table and left the LLM to find the one named additive itself. When `code` is
+   *  given and matches, state the real row directly instead of a 300-item dump. */
+  readonly deterministicAnswer?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -99,6 +104,24 @@ async function handleRead(intent: Intent, port: AnalyserReadPort): Promise<Analy
   }
 
   const additives = await port.getAllAdditives();
+  const code = typeof params.code === "string" ? params.code.trim().toUpperCase() : undefined;
+
+  if (code) {
+    const match = additives.find((a) => a.name.toUpperCase() === code || (a.aliases ?? []).some((al) => al.toUpperCase() === code));
+    if (match) {
+      const view = toAdditiveView(match);
+      return {
+        scope: "additives",
+        additiveCount: 1,
+        additives: [view],
+        source: "additives-reference",
+        deterministicAnswer: `${view.name}${view.description ? ` — ${view.description}` : ""}${view.riskLevel ? ` (risk level: ${view.riskLevel})` : ""}.`,
+      };
+    }
+    // Named code not in the reference table — fall through to the full table rather
+    // than gapping, exactly as before this fix (unchanged behaviour for a miss).
+  }
+
   return {
     scope: "additives",
     additiveCount: additives.length,

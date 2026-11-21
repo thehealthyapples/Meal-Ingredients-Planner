@@ -161,6 +161,9 @@ export interface NutritionSearchResult {
   readonly nutrients: readonly { readonly slug: string; readonly name: string }[];
   readonly benefits: readonly { readonly slug: string; readonly name: string }[];
   readonly source: "nutrition-knowledge-registry";
+  /** COMP-DET7 (2026-11-21) — same rationale as COMP-DET2/6: state the real match list in
+   *  code rather than handing the LLM a bare JSON array and hoping it enumerates correctly. */
+  readonly deterministicAnswer: string;
 }
 
 export interface NutritionExplainResult {
@@ -295,11 +298,20 @@ function buildFoodBenefitDeterministicAnswer(
  *  the deterministicAnswer from up to 3 real matches' own stored descriptions — no
  *  invented content, same source-gating as every other path in this handler. */
 function buildCategorySearchExplainResult(term: string, foods: readonly { slug: string; name: string; description: string | null }[]): NutritionExplainResult {
-  const shown = foods.slice(0, 3);
+  // COMP-DET7 (2026-11-21) — live-caught (FK-080 "is white bread always bad?"): the
+  // first 3 raw matches can all have `description: null` (most registry rows do — only
+  // the curated subset is annotated), producing a "found" answer that names a food and
+  // says nothing else — technically not a gap, but no more useful than one. Prefer
+  // matches that actually HAVE a description; only fall back to bare names, and say so
+  // honestly, when truly none of the matches carry one.
+  const withDescription = foods.filter((f) => f.description);
+  const shown = (withDescription.length > 0 ? withDescription : foods).slice(0, 3);
   const deterministicAnswer =
-    shown.length > 0
-      ? shown.map((f) => (f.description ? `${f.name}: ${f.description}` : f.name)).join(" ")
-      : `The Nutrition / Knowledge owner has no foods recorded matching "${term}".`;
+    shown.length === 0
+      ? `The Nutrition / Knowledge owner has no foods recorded matching "${term}".`
+      : withDescription.length > 0
+        ? shown.map((f) => `${f.name}: ${f.description}`).join(" ")
+        : `The Nutrition / Knowledge owner recognises ${shown.map((f) => f.name).join(", ")} as matching "${term}", but has no further detail recorded for any of them.`;
   return {
     scope: "food-category-search",
     foodName: term,
@@ -539,6 +551,50 @@ async function handleRead(intent: Intent, port: NutritionKnowledgeReadPort): Pro
 // Search (delegated unified search)
 // ---------------------------------------------------------------------------
 
+/** COMP-DET7 (2026-11-21) — words too generic to search by on their own (would either
+ *  match nothing useful or everything). Dropped only from the WORD-RETRY fallback below;
+ *  the full phrase is always tried first, unfiltered. */
+const SEARCH_RETRY_STOPWORDS = new Set([
+  "a", "an", "the", "is", "are", "what", "which", "good", "best", "some", "any", "for",
+  "of", "to", "me", "my", "i", "should", "try", "do", "does", "it", "that", "this",
+]);
+
+/** COMP-DET7 — live-caught (FK-081): "what is a good keto-friendly whole-food snack?"
+ *  resolved to a search for the ENTIRE captured phrase ("keto-friendly whole-food snack"),
+ *  which matched nothing (the registry's own text match needs a real substring, not a
+ *  5-word phrase) and returned a bare empty result — same "whole utterance as query"
+ *  bug class as several pattern-intent-resolver matchers fixed earlier tonight, just
+ *  surfacing here in the handler instead. Retrying word-by-word on an empty result lets
+ *  "snack" or "keto" still find something real instead of a silent, total miss. */
+async function searchWithWordFallback(
+  query: string,
+  port: NutritionKnowledgeReadPort,
+): Promise<Awaited<ReturnType<NutritionKnowledgeReadPort["searchKnowledgeRegistry"]>>> {
+  const first = await port.searchKnowledgeRegistry(query);
+  if (first.foods.length > 0 || first.nutrients.length > 0 || first.benefits.length > 0) return first;
+
+  const words = query.split(/\s+/).filter((w) => w.length > 2 && !SEARCH_RETRY_STOPWORDS.has(w));
+  for (const word of words) {
+    const retry = await port.searchKnowledgeRegistry(word);
+    if (retry.foods.length > 0 || retry.nutrients.length > 0 || retry.benefits.length > 0) {
+      return { ...retry, query };
+    }
+  }
+  return first;
+}
+
+function buildSearchDeterministicAnswer(result: { query: string; foods: readonly { name: string }[]; nutrients: readonly { name: string }[]; benefits: readonly { name: string }[] }): string {
+  const foodNames = result.foods.slice(0, 6).map((f) => f.name);
+  const benefitNames = result.benefits.slice(0, 3).map((b) => b.name);
+  if (foodNames.length === 0 && benefitNames.length === 0) {
+    return `No foods, nutrients or health benefits matched "${result.query}" in the Nutrition / Knowledge registry.`;
+  }
+  const parts: string[] = [];
+  if (foodNames.length > 0) parts.push(`Foods: ${foodNames.join(", ")}${result.foods.length > foodNames.length ? ", and more" : ""}.`);
+  if (benefitNames.length > 0) parts.push(`Related benefits: ${benefitNames.join(", ")}.`);
+  return parts.join(" ");
+}
+
 async function handleSearch(
   intent: Intent,
   port: NutritionKnowledgeReadPort,
@@ -547,13 +603,14 @@ async function handleSearch(
   if (!query) {
     throw gap('Searching nutrition knowledge needs a non-empty { query } string.');
   }
-  const result = await port.searchKnowledgeRegistry(query);
+  const result = await searchWithWordFallback(query, port);
   return {
     query: result.query,
     foods: result.foods.map((f) => ({ slug: f.slug, name: f.name })),
     nutrients: result.nutrients.map((n) => ({ slug: n.slug, name: n.name })),
     benefits: result.benefits.map((b) => ({ slug: b.slug, name: b.name })),
     source: "nutrition-knowledge-registry",
+    deterministicAnswer: buildSearchDeterministicAnswer(result),
   };
 }
 
