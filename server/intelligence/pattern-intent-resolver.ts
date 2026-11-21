@@ -2995,13 +2995,22 @@ const FOOD_INTELLIGENCE_NUTRITION_COMPARISON_COMPOUND: CompoundMatcher = (_u, lo
 };
 
 /** CB-020: Meal Discovery + Planner: "What can I cook tonight from meals I already have?" */
-const MEAL_DISCOVERY_PLANNER_TONIGHT_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
+const MEAL_DISCOVERY_PLANNER_TONIGHT_COMPOUND: CompoundMatcher = (_u, lower, hints) => {
   const hasTonightSignal = /\b(?:tonight|today|this\s+evening|dinner\s+(?:tonight|today))\b/.test(lower);
   const hasMealSignal = /\b(?:meals?|cook|make|prep(?:are)?|recipe|dish)\b/.test(lower);
   if (!hasTonightSignal || !hasMealSignal) return null;
   return [
-    { capability: "meal-discovery", verb: "search", parameters: { query: lower },      confidence: 0.86 },
-    { capability: "planner",        verb: "read",   parameters: { scope: "today" },    confidence: 0.84 },
+    // COMP-DET5 (2026-11-21) — live-caught (CG-088): "from meals I already have"/"tonight"
+    // names no specific food, so the whole utterance (including an unrelated "Answer as
+    // Chef, Coach, Friend..." preamble on CG-088) was being passed as a literal search
+    // term — always 0 matches. browseAll surfaces real, safety-filtered candidates.
+    { capability: "meal-discovery", verb: "search", parameters: { query: "", browseAll: true }, confidence: 0.86 },
+    // COMP-DET5 — scope "today" ALWAYS gaps by explicit, correct design (planner-read-
+    // handler.ts: no ordinal "today" inference without a dated anchor — Principle 6). That
+    // is honest, not a bug, but when a real active week IS known this question's "tonight"
+    // falls inside it, so give the real week instead of a guaranteed gap; only fall back to
+    // the (correctly gapping) "today" scope when there is truly no week to anchor to.
+    { capability: "planner",        verb: "read",   parameters: hints.activePlannerWeekId != null ? { scope: "week", weekId: hints.activePlannerWeekId } : { scope: "today" }, confidence: 0.84 },
   ];
 };
 
