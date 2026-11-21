@@ -1,6 +1,6 @@
 {
   "bundleComponent": "questions",
-  "version": "v1.1.1",
+  "version": "v1.1.2",
   "frozen": true,
   "source": "docs/intelligence/benchmark/questions/THA_COMPANION_BENCHMARK_100_V1.md",
   "importedBy": "INTQ3",
@@ -23,6 +23,13 @@
       "items": [
         { "id": "PA-045", "before": "pantry.read", "after": "pantry-discovery.search", "why": "\"What's in my pantry?\" is a search-everything (empty-query) question, which is pantry-discovery's own explicit, registry-documented purpose — not the plain pantry capability's broader discovery/alternatives/stories scope." },
         { "id": "SH-035", "before": "shopping-list.read", "after": "shopping-discovery.search", "why": "\"What's on my shopping list?\" is a search-everything (empty-query) question, which is shopping-discovery's own explicit, registry-documented purpose — not the plain shopping capability's broader basket/checkout-preparation scope." }
+      ]
+    },
+    {
+      "date": "2026-11-21",
+      "reason": "Investigation of the remaining Haiku compound-routing backlog flagged PA-052 as needing a fixture correction rather than a matcher fix, consistent with the PA-045/SH-035 pattern above. Checked against capability-registry.ts's own descriptions (same verification method as both corrections above): meal-discovery is \"Cross-source recipe and meal discovery — personal cookbook, THA library, meal templates\" and nutrition-discovery is \"Discover meals matching a nutritional criterion — calorie ceiling, protein floor, macro balance\" — both read as the search/ranking operation this question needs, not the plain meals (single-recipe CRUD) or nutrition-knowledge (static food/nutrient facts) capabilities the fixture named. The Companion's actual routing (PANTRY_DISCOVERY_MATCHERS / MEAL_DISCOVERY_MATCHERS / NUTRITION_DISCOVERY_MATCHERS) already reaches the three capabilities that genuinely own this cross-referencing question — the authored 'capability' field was a fixture-authoring error, not a Companion routing defect.",
+      "items": [
+        { "id": "PA-052", "before": "pantry + meals + nutrition", "after": "pantry-discovery + meal-discovery + nutrition-discovery", "why": "\"What pantry gaps stop me making quick healthy meals?\" is a cross-referencing search across the pantry's own contents, a ranked search for quick meals, and a search filtered by a nutritional criterion (\"healthy\") — each the -discovery capability's own registry-documented purpose, not the plain capabilities' narrower CRUD/static-knowledge scope." }
       ]
     }
   ],
@@ -1209,7 +1216,7 @@
       "category": "Pantry",
       "utterance": "What pantry gaps stop me making quick healthy meals?",
       "rationale": "Tests strategic pantry advice.",
-      "capability": "pantry + meals + nutrition",
+      "capability": "pantry-discovery + meal-discovery + nutrition-discovery",
       "maturityHorizons": {
         "launch": "Identify missing staples if data supports it.",
         "y1": "Connect gaps to favourite quick meals.",
