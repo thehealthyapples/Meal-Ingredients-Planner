@@ -192,8 +192,8 @@ async function main(): Promise<void> {
   );
   const live = intelligencePlatform.listCapabilities().filter((c) => c.availability === "available");
   assert(
-    live.length === 23,
-    "exactly TWENTY-THREE capabilities are live (planner + shopping + nutrition-knowledge + pantry + diary + profile + household + partners + meals + templates + analyser + meal-discovery + nutrition-discovery + planner-discovery + household-discovery + shopping-discovery + pantry-discovery + diary-discovery + food-intelligence + opportunity-delivery + evidence-learning + product-knowledge) — scope lock (updated by PHASE5A)",
+    live.length === 24,
+    "exactly TWENTY-FOUR capabilities are live (planner + shopping + nutrition-knowledge + pantry + diary + profile + household + partners + meals + templates + analyser + meal-discovery + nutrition-discovery + planner-discovery + household-discovery + shopping-discovery + pantry-discovery + diary-discovery + food-intelligence + opportunity-delivery + evidence-learning + product-knowledge + nutrition-report) — scope lock (updated by PHASE5A)",
     String(live.length),
   );
   assert(
@@ -215,9 +215,12 @@ async function main(): Promise<void> {
   );
   assert(
     !intelligencePlatform.getCapability("household")!.executableIntents.includes("explain") &&
-      !intelligencePlatform.getCapability("household")!.executableIntents.includes("add") &&
       !intelligencePlatform.getCapability("household")!.executableIntents.includes("delete"),
-    "explain / add / delete are NOT in executableIntents (no live code path — INT6A)",
+    "explain / delete are NOT in executableIntents (no live code path — INT6A)",
+  );
+  assert(
+    intelligencePlatform.getCapability("household")!.executableIntents.includes("add"),
+    "add IS in executableIntents — a real, narrow write path exists (reported health context / nutrition focuses), added after this assertion was first written",
   );
 
   const platform = platformWithFakeHousehold();

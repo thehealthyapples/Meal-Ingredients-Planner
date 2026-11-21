@@ -131,7 +131,7 @@ async function main(): Promise<void> {
   );
 
   const live = intelligencePlatform.listCapabilities().filter((c) => c.availability === "available");
-  assert(live.length === 23, "exactly TWENTY-THREE capabilities are live — scope lock (PHASE5A adds product-knowledge)", String(live.length));
+  assert(live.length === 24, "exactly TWENTY-FOUR capabilities are live — scope lock (PHASE5A adds product-knowledge)", String(live.length));
 
   const cap = intelligencePlatform.getCapability("product-knowledge")!;
   assert(

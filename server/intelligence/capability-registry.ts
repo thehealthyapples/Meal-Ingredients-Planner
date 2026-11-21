@@ -419,6 +419,35 @@ const SEED_CAPABILITIES_BASE: readonly Capability[] = [
     companionDomain: "nutrition",
   },
   {
+    // COMP-DET8 (2026-11-21) — live-caught: nutrition-centre-assembler.ts was named
+    // only as an owningService STRING on the nutrition-knowledge entry above for as
+    // long as that entry has existed, and never actually called by any handler.
+    // nutrition-knowledge's own `report` verb has always honest-gapped specifically
+    // because a household's own progress is USER-SPECIFIC, diary-linked data, and
+    // that capability's port explicitly declares "GENERAL KNOWLEDGE ONLY" as a
+    // boundary. This is its own capability for exactly that reason, not a bolt-on —
+    // matching the Companion Benchmark fixture's own "nutrition-report" name
+    // (ND-054/058/060/062, CG-090, PL-026/034).
+    id: "nutrition-report",
+    displayName: "Nutrition Report",
+    description:
+      "The household's own Nutrition Centre progress — plant/food diversity, food-category " +
+      "coverage, and health-benefit coverage, computed from the household's own planner and " +
+      "diary history over a window (this week / this year / all time). User-specific and " +
+      "diary-linked; a different owner from the general-knowledge Nutrition / Knowledge " +
+      "capability above, which never reaches a household's own history.",
+    owner: "Planner/diary history (SoT D14) joined against WS0 knowledge_* via the canonical resolver",
+    owningService: "server/lib/nutrition-centre-assembler.ts (assembleNutritionCentre)",
+    apiSurface: "/api/nutrition-centre",
+    supportedIntents: ["read"],
+    executableIntents: [],
+    permissions: { minimumRole: "user", knowledgeClass: "public", ownershipScoped: true, audited: false },
+    capabilityClass: "read-only",
+    aiAccess: "R",
+    availability: "registered",
+    companionDomain: "nutrition",
+  },
+  {
     // PHASE5A — the knowledge of what THA ITSELF is. The platform's fifth
     // knowledge domain (PKCA §9) and its first SELF-DESCRIBING one: the subject
     // and the source are the same system.

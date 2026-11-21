@@ -173,8 +173,8 @@ async function main(): Promise<void> {
   );
   const live = intelligencePlatform.listCapabilities().filter((c) => c.availability === "available");
   assert(
-    live.length === 23,
-    "exactly TWENTY-THREE capabilities are live (planner + shopping + nutrition-knowledge + pantry + diary + profile + household + partners + meals + templates + analyser + meal-discovery + nutrition-discovery + planner-discovery + household-discovery + shopping-discovery + pantry-discovery + diary-discovery + food-intelligence + opportunity-delivery + evidence-learning + product-knowledge) — scope lock (updated by PHASE5A)",
+    live.length === 24,
+    "exactly TWENTY-FOUR capabilities are live (planner + shopping + nutrition-knowledge + pantry + diary + profile + household + partners + meals + templates + analyser + meal-discovery + nutrition-discovery + planner-discovery + household-discovery + shopping-discovery + pantry-discovery + diary-discovery + food-intelligence + opportunity-delivery + evidence-learning + product-knowledge + nutrition-report) — scope lock (updated by PHASE5A)",
     String(live.length),
   );
   assert(
@@ -195,9 +195,12 @@ async function main(): Promise<void> {
     "executableIntents declares read (truthful registry — INT6A)",
   );
   assert(
-    !intelligencePlatform.getCapability("profile")!.executableIntents.includes("explain") &&
-      !intelligencePlatform.getCapability("profile")!.executableIntents.includes("add"),
-    "explain / add are NOT in executableIntents (no live code path — INT6A)",
+    !intelligencePlatform.getCapability("profile")!.executableIntents.includes("explain"),
+    "explain is NOT in executableIntents (no live code path — INT6A)",
+  );
+  assert(
+    intelligencePlatform.getCapability("profile")!.executableIntents.includes("add"),
+    "add IS in executableIntents — a real, narrow write path exists (explicitly reported health context only), added after this assertion was first written",
   );
 
   const platform = platformWithFakeProfile();
@@ -223,8 +226,13 @@ async function main(): Promise<void> {
   const r = read.result as any;
   assert(r?.scope === "profile", "result scope is 'profile'", String(r?.scope));
   assert(r?.profile?.id === 1, "profile.id matches the caller", String(r?.profile?.id));
-  assert(r?.profile?.username === "colin", "profile.username surfaced from owner", String(r?.profile?.username));
-  assert(r?.profile?.displayName === "Colin", "profile.displayName surfaced from owner");
+  // PII hardening (2026-11-20) — username/displayName/firstName/profilePhotoUrl were
+  // deliberately removed from ProfileView: nothing downstream reads the caller's OWN
+  // identity fields for personalisation (only OTHER entities' displayName, e.g.
+  // household eaters, which are untouched). This assertion was never updated to match
+  // until now — it was asserting the opposite of the current, intentional design.
+  assert(!("username" in (r?.profile ?? {})), "profile.username is NOT surfaced (PII hardening)", JSON.stringify(r?.profile));
+  assert(!("displayName" in (r?.profile ?? {})), "profile.displayName is NOT surfaced (PII hardening)");
   assert(r?.profile?.dietPattern === "Mediterranean", "profile.dietPattern surfaced from the canonical diet owner via getPersonDiet (CONV1 P4 / OWN-1)");
   assert(
     JSON.stringify(r?.profile?.dietRestrictions) === JSON.stringify(["Gluten-Free"]),

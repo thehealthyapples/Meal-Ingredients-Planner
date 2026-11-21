@@ -103,6 +103,27 @@ export {
   type ProductKnowledgeReadPort,
 } from "./handlers/product-knowledge-read-port.js";
 
+// COMP-DET8 (2026-11-21) — Nutrition Report: the household's own Nutrition Centre
+// progress (plant/food diversity, category/benefit coverage), twenty-fourth live
+// capability binding. Separate from the general-knowledge `nutrition-knowledge`
+// capability above, which deliberately never reaches user-specific history.
+export {
+  bindNutritionReportReadCapability,
+  NUTRITION_REPORT_CAPABILITY_ID,
+  NUTRITION_REPORT_BINDING_EXECUTABLE_INTENTS,
+} from "./bindings/nutrition-report.js";
+export {
+  createNutritionReportReadHandler,
+  NUTRITION_REPORT_EXECUTABLE_INTENTS,
+  type NutritionReportReadResult,
+} from "./handlers/nutrition-report-read-handler.js";
+export {
+  createNutritionReportReadPort,
+  type NutritionReportPort,
+  type NutritionCentre,
+  type NutritionCentreWindow,
+} from "./handlers/nutrition-report-read-port.js";
+
 // ENGINT1 — Engineering Intelligence: the read path onto THA's own engineering
 // record, activating the `developer` capability TIP1 declared.
 //

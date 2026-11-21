@@ -2858,12 +2858,16 @@ const PLANNER_NUTRITION_BALANCE_COMPOUND: CompoundMatcher = (_u, lower, hints) =
   return [
     // COMP-DET5 — weekId threaded (see COMPOUND_HEALTH_GOAL_PLANNING_COMPOUND above).
     { capability: "planner",             verb: "read", parameters: hints.activePlannerWeekId != null ? { scope: "week", weekId: hints.activePlannerWeekId } : { scope: "week" }, confidence: 0.86 },
-    // COMP-DET5 — "summary" was never a valid nutrition-knowledge read scope (the
-    // handler only supports food/nutrient/benefit/preparations/categories/foods — see
-    // nutrition-knowledge-read-handler.ts's handleRead) and always gapped. "categories"
-    // is the closest valid, genuinely-grounded fallback with no single food/benefit to
-    // anchor on; it stands in as weak supporting context, not the primary answer.
-    { capability: "nutrition-knowledge", verb: "read", parameters: { scope: "categories" }, confidence: 0.84 },
+    // COMP-DET8 (2026-11-21) — "summary" then "categories" were both stand-ins for data
+    // that genuinely didn't exist as a reachable capability yet. It now does:
+    // nutrition-report (wired tonight) computes the household's REAL category/nutrient/
+    // benefit coverage from its own planner history — exactly "how balanced" asks for,
+    // not a generic food-category listing with no connection to this household at all.
+    {
+      capability: "nutrition-report", verb: "read",
+      parameters: hints.activePlannerWeekId != null ? { window: "this-week", weekId: hints.activePlannerWeekId } : { window: "all-time" },
+      confidence: 0.84,
+    },
   ];
 };
 
@@ -2875,12 +2879,16 @@ const PLANNER_FOOD_INTELLIGENCE_COMPOUND: CompoundMatcher = (_u, lower, hints) =
   return [
     // COMP-DET5 — weekId threaded.
     { capability: "planner", verb: "read", parameters: hints.activePlannerWeekId != null ? { scope: "week", weekId: hints.activePlannerWeekId } : { scope: "week" }, confidence: 0.86 },
-    // COMP-DET5 — food-intelligence's `recommend` verb needs { scope: "benefit"|"nutrient",
-    // slug } (a specific entity to recommend around); "foods" was never a valid scope and
-    // always gapped. There is no single slug this open-ended question names, so this falls
-    // back to nutrition-knowledge's general food-category listing — valid, grounded, weak
-    // context — rather than a call engineered to gap every time.
-    { capability: "nutrition-knowledge", verb: "read", parameters: { scope: "categories" }, confidence: 0.84 },
+    // COMP-DET8 — "where can I add more X" is asking exactly what nutrition-report's
+    // `categories` array answers (enjoyed < total = real room to grow), computed from
+    // the household's own history — not food-intelligence's single-entity `recommend`
+    // (needs one named benefit/nutrient slug this open-ended question has none of) nor
+    // nutrition-knowledge's generic, household-blind category listing.
+    {
+      capability: "nutrition-report", verb: "read",
+      parameters: hints.activePlannerWeekId != null ? { window: "this-week", weekId: hints.activePlannerWeekId } : { window: "all-time" },
+      confidence: 0.84,
+    },
   ];
 };
 
@@ -2904,8 +2912,14 @@ const PLANNER_NUTRITION_SHOPPING_OPPORTUNITIES_COMPOUND: CompoundMatcher = (_u, 
   return [
     // COMP-DET5 — weekId threaded.
     { capability: "planner",             verb: "read",    parameters: hints.activePlannerWeekId != null ? { scope: "week", weekId: hints.activePlannerWeekId } : { scope: "week" }, confidence: 0.86 },
-    // COMP-DET5 — "summary" fixed to "categories" (see PLANNER_NUTRITION_BALANCE_COMPOUND).
-    { capability: "nutrition-knowledge", verb: "read",    parameters: { scope: "categories" }, confidence: 0.85 },
+    // COMP-DET8 — "top three opportunities" is nutrition-report's `categories` (room to
+    // grow) and `benefits` (coverage gaps) arrays, computed from real household history —
+    // see PLANNER_NUTRITION_BALANCE_COMPOUND above for why this replaced nutrition-knowledge.
+    {
+      capability: "nutrition-report", verb: "read",
+      parameters: hints.activePlannerWeekId != null ? { window: "this-week", weekId: hints.activePlannerWeekId } : { window: "all-time" },
+      confidence: 0.85,
+    },
     // COMP-DET5 — plain "shopping" does not support a "search" verb at all (only
     // read/explain/add/delete/generate — "search" belongs to shopping-discovery); this
     // always hit unsupported_intent. "read scope:list" is shopping's own real read op.
@@ -2977,7 +2991,7 @@ const DIARY_NUTRITION_ANALYSIS_COMPOUND: CompoundMatcher = (_u, lower, _hints) =
   ];
 };
 
-/** PA-048: Pantry + Nutrition Knowledge: "Which pantry foods help my plant diversity?" */
+/** PA-048: Pantry + Nutrition Report: "Which pantry foods help my plant diversity?" */
 const PANTRY_NUTRITION_DIVERSITY_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
   const hasPantrySignal = /\b(?:pantry|fridge|freezer|stock|have|what\s+(?:i\s+)?(?:have|got))\b/.test(lower);
   const hasDiversitySignal = /\b(?:plant|diversity|variety|different|colorful|variety|nutrient(?:s)?)\b/.test(lower);
@@ -2985,19 +2999,31 @@ const PANTRY_NUTRITION_DIVERSITY_COMPOUND: CompoundMatcher = (_u, lower, _hints)
   return [
     // COMP-DET5 — see PANTRY_MEAL_DISCOVERY_COMPOUND above.
     { capability: "pantry",              verb: "read", parameters: { scope: "list" },    confidence: 0.86 },
-    { capability: "nutrition-knowledge", verb: "read",   parameters: { scope: "categories" }, confidence: 0.84 },
+    // COMP-DET8 (2026-11-21) — "diversity" is nutrition-report's own overview.
+    // plantDiversity figure plus the categories the household is lacking, computed
+    // from real history — not nutrition-knowledge's generic, household-blind listing.
+    // "all-time" (not this-week): a long-term diversity GAP is the question, not one
+    // week's snapshot.
+    { capability: "nutrition-report", verb: "read",   parameters: { window: "all-time" }, confidence: 0.84 },
   ];
 };
 
-/** ND-054: Diary + Nutrition Knowledge (supplement): "How many plants have I eaten this week?" */
-const DIARY_NUTRITION_PLANTS_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
+/** ND-054: Diary + Nutrition Report (supplement): "How many plants have I eaten this week?" */
+const DIARY_NUTRITION_PLANTS_COMPOUND: CompoundMatcher = (_u, lower, hints) => {
   const hasDiarySignal = /\b(?:eaten|this\s+week|this\s+past\s+week|how\s+many)\b/.test(lower);
   const hasPlantsSignal = /\bplants?\b/.test(lower);
   if (!hasDiarySignal || !hasPlantsSignal) return null;
   return [
     // COMP-DET5 — see DIARY_NUTRITION_ANALYSIS_COMPOUND above.
     { capability: "diary-discovery",     verb: "search", parameters: { query: "" },       confidence: 0.85 },
-    { capability: "nutrition-knowledge", verb: "read",   parameters: { scope: "categories" }, confidence: 0.84 },
+    // COMP-DET8 — "how many plants have I eaten THIS WEEK" is, word for word,
+    // nutrition-report's own overview.plantDiversity for window "this-week" — not a
+    // generic category listing with no connection to what the household actually ate.
+    {
+      capability: "nutrition-report", verb: "read",
+      parameters: hints.activePlannerWeekId != null ? { window: "this-week", weekId: hints.activePlannerWeekId } : { window: "all-time" },
+      confidence: 0.84,
+    },
   ];
 };
 

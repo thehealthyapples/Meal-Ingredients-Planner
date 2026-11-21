@@ -185,8 +185,8 @@ async function main(): Promise<void> {
   );
   const live = intelligencePlatform.listCapabilities().filter((c) => c.availability === "available");
   assert(
-    live.length === 23,
-    "exactly TWENTY-THREE capabilities are live (the previous eighteen + food-intelligence + opportunity-delivery + evidence-learning) — scope lock (EL1)",
+    live.length === 24,
+    "exactly TWENTY-FOUR capabilities are live (the previous eighteen + food-intelligence + opportunity-delivery + evidence-learning) — scope lock (EL1)",
     String(live.length),
   );
   assert(
