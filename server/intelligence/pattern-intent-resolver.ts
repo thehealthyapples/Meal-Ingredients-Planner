@@ -2359,6 +2359,58 @@ const TEMPLATES_MATCHERS: Matcher[] = [
 ];
 
 // ---------------------------------------------------------------------------
+// Nutrition Knowledge (generic food concepts, NOT product-specific)
+// ---------------------------------------------------------------------------
+
+// Generic food-knowledge concept questions ("What are ultra-processed foods?",
+// "Which additives should I pay attention to?") belong with nutrition-knowledge
+// (which now has COMP-DET2: encyclopedia fallback + citation-grounded answers), NOT
+// analyser (which is scoped to product-specific analysis and score explainability only).
+// These matchers route generic concepts to nutrition-knowledge at 0.82 so they beat
+// the analyser's generic fallback at 0.78.
+//
+// Product-specific analyser questions still route to analyser: PR-064 (E621 code),
+// PR-065 (why this product scores N), PR-066/070/071 (product assessment), PR-067
+// (product comparison). Those remain below, unchanged.
+
+const NUTRITION_KNOWLEDGE_CONCEPT_MATCHERS: Matcher[] = [
+  // PR-063: "What are ultra-processed foods?" — generic UPF concept, not a product assessment.
+  // Excludes product-specific "is this product UPF" or "this cereal is ultra-processed" by
+  // checking that it's NOT demonstrative-anchored ("this"/"that"/"the" + product name).
+  (u) => {
+    if (!/\b(?:ultra[-. ]?processed|upf)\b/i.test(u)) return null;
+    if (/\b(?:this|that|the)\s+(?:product|item|cereal|food|bread|drink|item|brand)\b/i.test(u)) return null;
+    return { capability: "nutrition-knowledge", verb: "explain", parameters: {}, confidence: 0.82 };
+  },
+
+  // PR-068: "Which additives should I pay attention to?" — generic additive guidance.
+  // Not "what additives does this product have" (that's analyser territory).
+  (u) => {
+    if (!/\b(?:which|what)\s+(?:additives?|e[-. ]?numbers?|ingredients?)\b/i.test(u)) return null;
+    if (!/\b(?:should|must|ought|need|important|watch|avoid|focus|attention|pay|look)\b/i.test(u)) return null;
+    if (/\b(?:this|that|the)\s+(?:product|item|cereal|food|drink|brand)\b/i.test(u)) return null;
+    return { capability: "nutrition-knowledge", verb: "explain", parameters: {}, confidence: 0.82 };
+  },
+
+  // PR-069: "Are all E-numbers bad?" — generic concept question, not product analysis.
+  // The bare E-number code matcher (E621, E322) stays on analyser at 0.90 for specific lookups.
+  (u) => {
+    if (!/\b(?:e[-. ]?numbers?|additives?)\b/i.test(u)) return null;
+    if (!/\b(?:all|every|any|bad|harmful|safe|okay|dangerous|risky)\b/i.test(u)) return null;
+    return { capability: "nutrition-knowledge", verb: "explain", parameters: {}, confidence: 0.82 };
+  },
+
+  // PR-072: "What's the difference between NOVA and the THA apple score?" — concept comparison,
+  // not a product score. Excludes "why did THIS product get a score" (product-specific analyser).
+  (u) => {
+    if (!/\b(?:nova|apple\s+score)\b/i.test(u)) return null;
+    if (!/\b(?:difference|distinguish|different|separate|compare|versus)\b/i.test(u)) return null;
+    if (/\b(?:this|that|the)\s+(?:product|item|cereal|food|drink)\b.*\b(?:score|apple|rating)\b/i.test(u)) return null;
+    return { capability: "nutrition-knowledge", verb: "explain", parameters: {}, confidence: 0.82 };
+  },
+];
+
+// ---------------------------------------------------------------------------
 // Analyser
 // ---------------------------------------------------------------------------
 
@@ -3155,6 +3207,7 @@ const ALL_SPECIFIC_MATCHERS: Matcher[] = [
   ...MEAL_DISCOVERY_MATCHERS,
   ...MEALS_MATCHERS,
   ...TEMPLATES_MATCHERS,
+  ...NUTRITION_KNOWLEDGE_CONCEPT_MATCHERS,  // COMP-DET2 (2026-11-20) — generic food concepts
   ...ANALYSER_MATCHERS,
   ...PARTNERS_MATCHERS,
 ];

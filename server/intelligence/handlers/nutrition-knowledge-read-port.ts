@@ -34,6 +34,27 @@ import type {
 } from "../../services/nutrition-knowledge-registry.js";
 
 /**
+ * COMP-DET2 (2026-11-20) — a THA Food Knowledge Encyclopedia entry
+ * (`food_knowledge` table, authored by `seed-food-knowledge.ts`, served directly
+ * at `/api/food-knowledge/*` for the standalone encyclopedia page). This is a
+ * SEPARATE owner from the evidence-linked `knowledge_*` graph above — editorial,
+ * general, non-personalized, and reviewed (gated on `isActive`) but without a
+ * per-claim citation chain. The handler uses it ONLY as a fallback when the
+ * evidence-linked benefit graph has nothing recorded for a food, so a caller
+ * never gets a bare honest gap when THA's own encyclopedia already has an
+ * answer sitting unused.
+ */
+export interface FoodKnowledgeEncyclopediaEntry {
+  readonly slug: string;
+  readonly title: string;
+  readonly type: string;
+  readonly shortSummary: string | null;
+  readonly whatToKnow: string | null;
+  readonly whyThaHighlightsThis: string | null;
+  readonly simplerAlternatives: string | null;
+}
+
+/**
  * The read-only owning-service surface. Each method forwards to an existing,
  * display-safe Nutrition / Knowledge owner helper. No method mutates anything and no
  * method reaches user-specific data.
@@ -53,6 +74,9 @@ export interface NutritionKnowledgeReadPort {
   listFoodCategories(): Promise<{ category: string; count: number }[]>;
   /** Owner — active foods, optionally filtered to one category, as display-safe cards. */
   listFoodCards(category?: string): Promise<FoodCard[]>;
+  /** COMP-DET2 — the Food Knowledge Encyclopedia's entry for a slug (food or
+   *  additive-concept), or undefined if it has none. Fallback source only. */
+  getEncyclopediaEntry(slug: string): Promise<FoodKnowledgeEncyclopediaEntry | undefined>;
 }
 
 /**
@@ -71,5 +95,19 @@ export async function createRegistryNutritionKnowledgeReadPort(): Promise<Nutrit
     searchKnowledgeRegistry: (query) => registry.searchKnowledgeRegistry(query),
     listFoodCategories: () => registry.listFoodCategories(),
     listFoodCards: (category) => registry.listFoodCards(category),
+    getEncyclopediaEntry: async (slug) => {
+      const { storage } = await import("../../storage.js");
+      const row = await storage.getFoodKnowledgeBySlug(slug);
+      if (!row) return undefined;
+      return {
+        slug: row.slug,
+        title: row.title,
+        type: row.type,
+        shortSummary: row.shortSummary,
+        whatToKnow: row.whatToKnow,
+        whyThaHighlightsThis: row.whyThaHighlightsThis,
+        simplerAlternatives: row.simplerAlternatives,
+      };
+    },
   };
 }

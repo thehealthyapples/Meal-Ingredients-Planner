@@ -35,19 +35,40 @@ import {
   type IntelligenceContext,
   type Intent,
 } from "../types.js";
-import type { NutritionKnowledgeReadPort } from "./nutrition-knowledge-read-port.js";
+import type { NutritionKnowledgeReadPort, FoodKnowledgeEncyclopediaEntry } from "./nutrition-knowledge-read-port.js";
+import type { EvidenceConfidence } from "@shared/knowledge/evidence";
 import { gap } from "./_read-kit.js";
 
 // ---------------------------------------------------------------------------
 // Result shapes (read projections — the owner's source-gated, display-safe data)
 // ---------------------------------------------------------------------------
 
-/** A grounded benefit as the read binding surfaces it — owner editorial wording only. */
+/** A citation as the read binding surfaces it — a direct passthrough of the owner's fields. */
+export interface KnowledgeCitationView {
+  readonly body: string;
+  readonly title: string;
+  readonly url: string;
+}
+
+/** A grounded benefit as the read binding surfaces it — owner editorial wording only.
+ *
+ *  COMP-DET2 (2026-11-20) — `confidence` and `sourceRefs` were added because the owner
+ *  (`getFoodBenefitsForDisplay`) already computes and display-gates both: `confidence` is
+ *  derived from the whole evidence chain and `under-review` rows are already excluded before
+ *  this point, and `sourceRefs` are the citations that earned THIS food↔benefit chip the
+ *  right to render (per-chip, not the generic benefit-catalog row). Previously the handler
+ *  discarded both and kept only the generic catalog `description` — the same shared sentence
+ *  for every food linked to a benefit — which is why an explain answer sounded thin even when
+ *  the admin claim-review queue (knowledge_food_benefits / knowledge_food_nutrients) held a
+ *  specific, human-signed-off citation for this exact food. Absent (not null) for the
+ *  "benefit alone" path, which has no per-food evidence chain to carry. */
 export interface KnowledgeBenefitView {
   readonly slug: string;
   readonly name: string;
   /** The owner's editorial description (source-gated). May be null if the owner stored none. */
   readonly description: string | null;
+  readonly confidence?: "established" | "strong" | "emerging";
+  readonly sourceRefs?: readonly KnowledgeCitationView[];
 }
 
 /**
@@ -143,15 +164,30 @@ export interface NutritionSearchResult {
 }
 
 export interface NutritionExplainResult {
-  /** "food-benefits" = a food's grounded benefits; "food-benefit" = one (food, benefit); "benefit" = a benefit alone. */
-  readonly scope: "food-benefits" | "food-benefit" | "benefit";
+  /** "food-benefits" = a food's grounded benefits; "food-benefit" = one (food, benefit);
+   *  "benefit" = a benefit alone; "food-encyclopedia" (COMP-DET2) = the Food Knowledge
+   *  Encyclopedia fallback, used only when the evidence-linked graph has nothing for this food. */
+  readonly scope: "food-benefits" | "food-benefit" | "benefit" | "food-encyclopedia";
   readonly foodSlug?: string;
   readonly foodName?: string;
   readonly benefits: readonly KnowledgeBenefitView[];
   /** For scope "benefit": the foods the owner says support this benefit. */
   readonly foods?: readonly { readonly slug: string; readonly name: string }[];
-  readonly source: "nutrition-knowledge-registry";
+  readonly source: "nutrition-knowledge-registry" | "food-knowledge-encyclopedia";
   readonly note: string;
+  /** COMP-DET2 — a handler-computed, citation-grounded answer. When present, the Companion
+   *  may speak it verbatim instead of generating from context (conversation-gateway.ts's
+   *  deterministic-answer short-circuit) — safer than an LLM paraphrase for citation text. */
+  readonly deterministicAnswer?: string;
+  /** COMP-DET2 — present only for scope "food-encyclopedia": the owner's encyclopedia fields,
+   *  passed through unmodified (editorial, not evidence-graph; see FoodKnowledgeEncyclopediaEntry). */
+  readonly encyclopedia?: {
+    readonly title: string;
+    readonly shortSummary: string | null;
+    readonly whatToKnow: string | null;
+    readonly whyThaHighlightsThis: string | null;
+    readonly simplerAlternatives: string | null;
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -168,6 +204,109 @@ function toSlug(value: unknown): string | undefined {
 const GROUNDED_NOTE =
   "Grounded in the source-gated Nutrition / Knowledge owner. No nutrition fact or health " +
   "benefit was authored here; nothing the owner does not record is shown.";
+
+const ENCYCLOPEDIA_NOTE =
+  "Grounded in THA's own Food Knowledge Encyclopedia (editorial, general, non-personalized). " +
+  "This is a DIFFERENT source from the cited evidence graph above — shown only because that " +
+  "graph has no evidence-linked benefit recorded for this food, not instead of it.";
+
+/** COMP-DET2 — phrasing for the owner's derived Evidence Confidence. Never upgraded or
+ *  downgraded here; the words only name what the owner already computed. `under-review` is
+ *  handled defensively only — the owner's display-safe helpers (`isRenderableConfidence`)
+ *  already exclude it before a `DisplayBenefit` ever reaches this handler. */
+function confidencePhrase(confidence: EvidenceConfidence): string {
+  switch (confidence) {
+    case "established":
+      return "well-established";
+    case "strong":
+      return "well-supported";
+    case "emerging":
+    case "under-review":
+    default:
+      return "emerging evidence";
+  }
+}
+
+/** Narrow the owner's full Evidence Confidence to the three values that are ever actually
+ *  renderable (`under-review` rows never reach this handler) — for the public view's type. */
+function toDisplayConfidence(confidence: EvidenceConfidence): "established" | "strong" | "emerging" {
+  return confidence === "under-review" ? "emerging" : confidence;
+}
+
+function toCitationView(ref: { body: string; title: string; url: string }): KnowledgeCitationView {
+  return { body: ref.body, title: ref.title, url: ref.url };
+}
+
+/** Dedup citations by publisher (`body`) — the real title/url stays on `sourceRefs` for any
+ *  consumer that wants the detail; the spoken sentence names only who said it, not the full
+ *  legal citation text, so it reads like a sentence and not a bibliography. */
+function dedupCitationLabels(refs: readonly { body: string }[], max = 4): string[] {
+  const seen = new Set<string>();
+  const labels: string[] = [];
+  for (const r of refs) {
+    if (seen.has(r.body)) continue;
+    seen.add(r.body);
+    labels.push(r.body);
+    if (labels.length >= max) break;
+  }
+  return labels;
+}
+
+/** COMP-DET2 — build a spoken, citation-grounded answer for a food's full benefit list.
+ *  Every clause names only what the owner's evidence chain already supports; no benefit,
+ *  confidence or citation is invented here. */
+function buildFoodBenefitsDeterministicAnswer(
+  foodName: string,
+  linked: readonly { benefit: { name: string }; confidence: EvidenceConfidence; sourceRefs: readonly { body: string; title: string; url: string }[] }[],
+): string {
+  const clauses = linked.map((b) => `${b.benefit.name.toLowerCase()} (${confidencePhrase(b.confidence)})`);
+  const benefitsText =
+    clauses.length === 1
+      ? clauses[0]
+      : `${clauses.slice(0, -1).join(", ")} and ${clauses[clauses.length - 1]}`;
+  const citationLabels = dedupCitationLabels(linked.flatMap((b) => b.sourceRefs));
+  const sourcesText = citationLabels.length > 0 ? ` Source: ${citationLabels.join(", ")}.` : "";
+  return `${foodName} is linked to ${benefitsText}.${sourcesText}`;
+}
+
+/** COMP-DET2 — the single-(food, benefit) counterpart of the above. */
+function buildFoodBenefitDeterministicAnswer(
+  foodName: string,
+  benefitName: string,
+  confidence: EvidenceConfidence,
+  sourceRefs: readonly { body: string; title: string; url: string }[],
+): string {
+  const citationLabels = dedupCitationLabels(sourceRefs);
+  const sourcesText = citationLabels.length > 0 ? ` Source: ${citationLabels.join(", ")}.` : "";
+  return `${foodName}'s link to ${benefitName.toLowerCase()} is ${confidencePhrase(confidence)}.${sourcesText}`;
+}
+
+/** COMP-DET2 — the Food Knowledge Encyclopedia fallback result. Used only when the
+ *  evidence-linked graph (above) has nothing recorded for this food; a different, editorial
+ *  source, so `scope`/`source` say so plainly rather than blending it into the cited result. */
+function buildEncyclopediaExplainResult(entry: FoodKnowledgeEncyclopediaEntry): NutritionExplainResult {
+  const pieces = [entry.shortSummary, entry.whatToKnow].filter((p): p is string => Boolean(p && p.trim()));
+  const deterministicAnswer =
+    pieces.length > 0
+      ? pieces.join(" ")
+      : `THA's Food Knowledge Encyclopedia has an entry for "${entry.title}" but no further detail recorded.`;
+  return {
+    scope: "food-encyclopedia",
+    foodSlug: entry.slug,
+    foodName: entry.title,
+    benefits: [],
+    source: "food-knowledge-encyclopedia",
+    note: ENCYCLOPEDIA_NOTE,
+    deterministicAnswer,
+    encyclopedia: {
+      title: entry.title,
+      shortSummary: entry.shortSummary,
+      whatToKnow: entry.whatToKnow,
+      whyThaHighlightsThis: entry.whyThaHighlightsThis,
+      simplerAlternatives: entry.simplerAlternatives,
+    },
+  };
+}
 
 const PREPARATION_NOTE =
   "A preparation is shown because the owner records that people prepare this food that way. " +
@@ -433,6 +572,12 @@ async function handleExplain(
   // Food present → confirm it exists, then surface ONLY its owner-linked benefits.
   const food = await port.getFoodDetailView(foodSlug);
   if (!food) {
+    // COMP-DET2 — the evidence-linked graph has never heard of this food, but THA's own
+    // Food Knowledge Encyclopedia might (it is a separate owner, keyed by the same slugs).
+    // Checked BEFORE the honest gap so a caller never gets "I don't know" when THA's own
+    // editorial content already answers the question.
+    const encyclopedia = await port.getEncyclopediaEntry(foodSlug);
+    if (encyclopedia) return buildEncyclopediaExplainResult(encyclopedia);
     throw gap(
       `Honest gap: the Nutrition / Knowledge owner has no food recorded for slug ${JSON.stringify(foodSlug)}. ` +
         "The Intelligence Platform will not fabricate benefits for an unknown food.",
@@ -455,14 +600,31 @@ async function handleExplain(
       scope: "food-benefit",
       foodSlug: food.food.slug,
       foodName: food.food.name,
-      benefits: [{ slug: match.benefit.slug, name: match.benefit.name, description: match.benefit.description }],
+      benefits: [{
+        slug: match.benefit.slug,
+        name: match.benefit.name,
+        description: match.benefit.description,
+        confidence: toDisplayConfidence(match.confidence),
+        sourceRefs: match.sourceRefs.map(toCitationView),
+      }],
       source: "nutrition-knowledge-registry",
       note: GROUNDED_NOTE,
+      deterministicAnswer: buildFoodBenefitDeterministicAnswer(
+        food.food.name,
+        match.benefit.name,
+        match.confidence,
+        match.sourceRefs,
+      ),
     };
   }
 
-  // Food alone → all its owner-linked benefits with grounded descriptions.
+  // Food alone → all its owner-linked benefits with grounded descriptions + citations.
   if (linked.length === 0) {
+    // COMP-DET2 — same encyclopedia fallback: the food exists in the registry but the
+    // evidence-linked benefit chain is empty for it (an honest gap in THAT owner, not
+    // necessarily in THA's knowledge as a whole).
+    const encyclopedia = await port.getEncyclopediaEntry(foodSlug);
+    if (encyclopedia) return buildEncyclopediaExplainResult(encyclopedia);
     throw gap(
       `Honest gap: the Nutrition / Knowledge owner records no health benefits for "${food.food.name}". ` +
         "The Intelligence Platform will not invent one.",
@@ -472,9 +634,16 @@ async function handleExplain(
     scope: "food-benefits",
     foodSlug: food.food.slug,
     foodName: food.food.name,
-    benefits: linked.map((b) => ({ slug: b.benefit.slug, name: b.benefit.name, description: b.benefit.description })),
+    benefits: linked.map((b) => ({
+      slug: b.benefit.slug,
+      name: b.benefit.name,
+      description: b.benefit.description,
+      confidence: toDisplayConfidence(b.confidence),
+      sourceRefs: b.sourceRefs.map(toCitationView),
+    })),
     source: "nutrition-knowledge-registry",
     note: GROUNDED_NOTE,
+    deterministicAnswer: buildFoodBenefitsDeterministicAnswer(food.food.name, linked),
   };
 }
 

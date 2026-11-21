@@ -61,6 +61,19 @@ function makePort(): NutritionKnowledgeReadPort {
   return {
     getFoodDetailView: async (slug) => {
       calls.push(`getFoodDetailView(${slug})`);
+      // COMP-DET2 — "oats" is KNOWN to the registry but has no linked benefits
+      // (getFoodBenefitsForDisplay below returns [] for anything but "broccoli"),
+      // which exercises the "food exists, evidence graph empty" encyclopedia fallback.
+      if (slug === "oats") {
+        return {
+          food: {
+            slug: "oats", name: "Oats", category: "grains", subcategory: null,
+            description: "A whole grain.", aliases: [], commonForms: ["rolled"],
+            storageGuidance: null, seasonality: null, imageUrl: null,
+          },
+          benefits: [], cautions: [], nutrients: [], preparations: [],
+        };
+      }
       if (slug !== "broccoli") return undefined; // unknown food → owner returns undefined
       return {
         food: {
@@ -154,6 +167,35 @@ function makePort(): NutritionKnowledgeReadPort {
       calls.push(`listFoodCards(${category ?? ""})`);
       return [{ slug: "broccoli", name: "Broccoli", category: "vegetables", subcategory: "brassica", description: null }];
     },
+    // COMP-DET2 — the Food Knowledge Encyclopedia fallback. "salmon" stands in for a food the
+    // evidence-linked graph has never heard of; "oats" stands in for a food the graph KNOWS
+    // but has zero linked benefits for. "unobtainium" has neither — still an honest gap.
+    getEncyclopediaEntry: async (slug) => {
+      calls.push(`getEncyclopediaEntry(${slug})`);
+      if (slug === "salmon") {
+        return {
+          slug: "salmon",
+          title: "Salmon",
+          type: "food",
+          shortSummary: "An oily fish rich in omega-3 fatty acids.",
+          whatToKnow: "Aim for 2 portions of oily fish per week as per NHS guidance.",
+          whyThaHighlightsThis: "Provides long-chain omega-3s difficult to obtain from plant sources alone.",
+          simplerAlternatives: null,
+        };
+      }
+      if (slug === "oats") {
+        return {
+          slug: "oats",
+          title: "Oats",
+          type: "food",
+          shortSummary: "A whole grain high in soluble fibre.",
+          whatToKnow: null,
+          whyThaHighlightsThis: null,
+          simplerAlternatives: null,
+        };
+      }
+      return undefined;
+    },
   };
 }
 
@@ -233,6 +275,28 @@ async function main(): Promise<void> {
 
   const explainBenefit = await platform.handle({ verb: "explain", capabilityId: "nutrition-knowledge", parameters: { benefitSlug: "heart-health" } }, user);
   assert(explainBenefit.status === "ok" && (explainBenefit.result as any)?.scope === "benefit", "explain a benefit alone → ok", explainBenefit.status);
+
+  // -------------------------------------------------------------------------
+  section("COMP-DET2 — citations + confidence surfaced, not discarded");
+  const efb = explainFood.result as any;
+  assert(efb?.benefits?.[0]?.confidence === "strong", "food-benefits view carries the owner's derived confidence", efb?.benefits?.[0]?.confidence);
+  assert(efb?.benefits?.[0]?.sourceRefs?.[0]?.body === "EFSA", "food-benefits view carries the per-chip citation, not just the generic catalog description", JSON.stringify(efb?.benefits?.[0]?.sourceRefs));
+  assert(typeof efb?.deterministicAnswer === "string" && efb.deterministicAnswer.includes("EFSA"), "food-benefits deterministicAnswer cites the real source", efb?.deterministicAnswer);
+  assert(ep?.benefits?.[0]?.confidence === "strong" && typeof ep?.deterministicAnswer === "string", "food-benefit (single) view also carries confidence + a citation-grounded deterministicAnswer");
+
+  // -------------------------------------------------------------------------
+  section("COMP-DET2 — Food Knowledge Encyclopedia fallback (never a bare gap if THA has an entry)");
+  const salmonUnknownToRegistry = await platform.handle({ verb: "explain", capabilityId: "nutrition-knowledge", parameters: { foodSlug: "salmon" } }, user);
+  assert(salmonUnknownToRegistry.status === "ok", "food unknown to the evidence-linked registry, but known to the encyclopedia → ok, not a gap", salmonUnknownToRegistry.status);
+  const salmonResult = salmonUnknownToRegistry.result as any;
+  assert(salmonResult?.scope === "food-encyclopedia" && salmonResult?.source === "food-knowledge-encyclopedia", "encyclopedia fallback is clearly labelled as a DIFFERENT source, not blended into the cited result", JSON.stringify(salmonResult));
+  assert(typeof salmonResult?.deterministicAnswer === "string" && salmonResult.deterministicAnswer.includes("NHS"), "encyclopedia deterministicAnswer uses THA's own editorial whatToKnow text", salmonResult?.deterministicAnswer);
+
+  const oatsEmptyGraph = await platform.handle({ verb: "explain", capabilityId: "nutrition-knowledge", parameters: { foodSlug: "oats" } }, user);
+  assert(oatsEmptyGraph.status === "ok" && (oatsEmptyGraph.result as any)?.scope === "food-encyclopedia", "food known to the registry but with an EMPTY evidence graph also falls back to the encyclopedia, not a gap", oatsEmptyGraph.status);
+
+  const neitherSource = await platform.handle({ verb: "explain", capabilityId: "nutrition-knowledge", parameters: { foodSlug: "unobtainium" } }, user);
+  assert(neitherSource.status === "gap", "food in NEITHER the registry nor the encyclopedia → still an honest gap (no fabrication)", neitherSource.status);
 
   // -------------------------------------------------------------------------
   section("No fabricated benefits — unlinked (food, benefit) → honest gap");
