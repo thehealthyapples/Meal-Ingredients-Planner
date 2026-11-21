@@ -2820,7 +2820,9 @@ const PLANNER_SHOPPING_COMPOUND: CompoundMatcher = (_u, lower, hints) => {
   return [
     // COMP-DET5 — see COMPOUND_HEALTH_GOAL_PLANNING_COMPOUND above.
     { capability: "planner",   verb: "read",   parameters: hints.activePlannerWeekId != null ? { scope: "week", weekId: hints.activePlannerWeekId } : { scope: "week" }, confidence: 0.86 },
-    { capability: "shopping",  verb: "search", parameters: { query: lower },   confidence: 0.84 },
+    // COMP-DET5 — plain "shopping" has no "search" verb at all (that's shopping-
+    // discovery's); this always hit unsupported_intent. "read scope:list" is real.
+    { capability: "shopping",  verb: "read",   parameters: { scope: "list" },   confidence: 0.84 },
   ];
 };
 
@@ -2899,7 +2901,9 @@ const SHOPPING_ANALYSER_PROCESSING_COMPOUND: CompoundMatcher = (_u, lower, _hint
   const hasProcessingSignal = /\b(?:whole\s+foods?|processed|ultra-processed|upf|processing|additives?|ingredients?|natural)\b/.test(lower);
   if (!hasShoppingSignal || !hasProcessingSignal) return null;
   return [
-    { capability: "shopping", verb: "search", parameters: { query: lower },    confidence: 0.86 },
+    // COMP-DET5 (2026-11-21) — "shopping" has no "search" verb; always hit
+    // unsupported_intent. "read scope:list" is shopping's own real read op.
+    { capability: "shopping", verb: "read",   parameters: { scope: "list" },    confidence: 0.86 },
     { capability: "analyser", verb: "read",   parameters: { scope: "additives" }, confidence: 0.84 },
   ];
 };
