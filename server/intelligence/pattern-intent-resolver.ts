@@ -3072,6 +3072,17 @@ const MEAL_DISCOVERY_PLANNER_TONIGHT_COMPOUND: CompoundMatcher = (_u, lower, hin
     // falls inside it, so give the real week instead of a guaranteed gap; only fall back to
     // the (correctly gapping) "today" scope when there is truly no week to anchor to.
     { capability: "planner",        verb: "read",   parameters: hints.activePlannerWeekId != null ? { scope: "week", weekId: hints.activePlannerWeekId } : { scope: "today" }, confidence: 0.84 },
+    // COMP-DET9 (2026-11-21) — live-caught (CG-083): the drink-exclusion fix above fixed
+    // the wrong-recommendation problem, but exposed a separate one underneath it — the
+    // response asserted "your household's gluten-free and keto restrictions" even though
+    // NO capability this turn actually supplied that fact (meal-discovery's own safety
+    // gate resolves it internally for filtering, but never surfaces WHICH restriction to
+    // the LLM, by design — household-withholding.ts deliberately never names one). The
+    // model was asserting a real-world-true fact it was never actually given this turn,
+    // which is exactly the "sounds right, isn't grounded" failure Principle 6 exists to
+    // catch. household's own "dietary-context" scope (same one PH-004/005 use) gives it
+    // the real, per-member data to ground the answer in instead of guessing.
+    { capability: "household",      verb: "read",   parameters: { scope: "dietary-context" }, confidence: 0.82 },
   ];
 };
 
