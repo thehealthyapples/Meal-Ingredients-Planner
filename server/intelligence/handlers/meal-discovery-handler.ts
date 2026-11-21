@@ -22,12 +22,51 @@
  */
 
 import type { CapabilityHandler, IntelligenceContext, Intent } from "../types.js";
-import type { MealDiscoveryPort, MealDiscoverySearchResult } from "./meal-discovery-port.js";
+import type { MealDiscoveryPort, MealDiscoverySearchResult, DiscoveryItem } from "./meal-discovery-port.js";
 import { requireUserId, gap, readOnlyVerbGuard } from "./_read-kit.js";
-import { getSourcesQueried } from "../services/meal-discovery-engine.js";
+import { getSourcesQueried, getSafetyExclusion } from "../services/meal-discovery-engine.js";
+import { withheldNote, nothingSuitableNote, safetyUnavailableNote } from "@shared/explanations/household-withholding";
 
 /** Maximum results the handler passes through from the port. */
 const DISCOVERY_MAX_RESULTS = 15;
+
+/**
+ * COMP-DET4 (2026-11-21) — built from fields the engine already computes
+ * (`getSafetyExclusion`) and the canonical withholding wording (the same
+ * sentences the planner's smart-suggest toast already uses), instead of
+ * leaving the LLM to improvise its own ad-hoc explanation and, as live-caught
+ * in the CB-012/013/014/018/020/021 cluster, sometimes assert an unverified
+ * per-meal dietary conflict the engine never actually told it about.
+ */
+function buildMealDiscoveryDeterministicAnswer(
+  query: string,
+  results: readonly DiscoveryItem[],
+  excludedForSafety: number,
+  safetyStatus: "resolved" | "unavailable" | "unknown",
+): string {
+  if (safetyStatus === "unavailable") {
+    return safetyUnavailableNote({
+      subject: "these meals",
+      consequence: "no results are shown",
+      retryable: true,
+    });
+  }
+
+  if (results.length === 0) {
+    if (excludedForSafety > 0) {
+      return nothingSuitableNote({
+        attempt: `find a meal matching "${query}"`,
+        consequence: `${excludedForSafety} candidate${excludedForSafety === 1 ? "" : "s"} matched the search but ${excludedForSafety === 1 ? "was" : "were"} excluded on dietary-safety grounds`,
+      });
+    }
+    return `No meals matched "${query}".`;
+  }
+
+  const shown = results.slice(0, 5).map((r) => r.name);
+  const namesText = results.length > shown.length ? `${shown.join(", ")}, and more` : shown.join(", ");
+  const base = `Found ${results.length} meal${results.length === 1 ? "" : "s"} matching "${query}": ${namesText}.`;
+  return excludedForSafety > 0 ? `${base} ${withheldNote({ count: excludedForSafety, noun: "meal" })}` : base;
+}
 
 // ---------------------------------------------------------------------------
 // Search verb implementation
@@ -40,8 +79,16 @@ async function handleSearch(
 ): Promise<MealDiscoverySearchResult> {
   const params = intent.parameters ?? {};
   const rawQuery = typeof params.query === "string" ? params.query.trim() : "";
+  // COMP-DET4 — "browse everything, safety-filtered" is a deliberate, narrow opt-in
+  // for matchers that genuinely mean "show me what's suitable" with no name/ingredient
+  // term to search by (HOUSEHOLD_MEAL_SUITABILITY_COMPOUND, MEAL_GOAL_FIT_COMPOUND in
+  // pattern-intent-resolver.ts). An empty query naturally matches every candidate in
+  // the engine's own text filter (`"x".includes("")` is always true), so the gate below
+  // only widens for an utterance that explicitly asked for exactly that — an ACCIDENTAL
+  // blank query from anywhere else still gaps, per this handler's original design.
+  const browseAll = params.browseAll === true;
 
-  if (!rawQuery) {
+  if (!rawQuery && !browseAll) {
     throw gap(
       "Meal discovery needs a non-empty { query } string — e.g. { query: \"chicken curry\" }.",
     );
@@ -49,6 +96,7 @@ async function handleSearch(
 
   const items = await port.discover(rawQuery, userId);
   const capped = items.slice(0, DISCOVERY_MAX_RESULTS);
+  const { excludedForSafety, status } = getSafetyExclusion(items);
 
   return {
     scope: "discovery",
@@ -57,6 +105,9 @@ async function handleSearch(
     results: capped,
     sourcesQueried: getSourcesQueried(items),
     source: "meal-discovery",
+    excludedForSafety,
+    safetyStatus: status,
+    deterministicAnswer: buildMealDiscoveryDeterministicAnswer(rawQuery || "everything", capped, excludedForSafety, status),
   };
 }
 

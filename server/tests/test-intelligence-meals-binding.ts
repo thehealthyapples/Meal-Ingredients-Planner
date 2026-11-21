@@ -140,6 +140,25 @@ function makePort(): MealsReadPort {
       calls.push(`getMealItems(${mealId})`);
       return mealId === 100 ? ITEMS_100 : [];
     },
+    // COMP-DET4 (2026-11-21) — permissive stub (gate never active): this port's own
+    // tests exercise search/read projections, not the dietary-safety gate itself
+    // (that gate's own behaviour is already proven against a real database by
+    // meal-discovery-engine.ts and household-dietary-safety.ts's own test suites).
+    // A real stub matching `HouseholdSafetyContext`'s shape kept the two capabilities'
+    // contracts visibly identical rather than faking the type away.
+    resolveHouseholdSafetyContext: async (userId) => ({
+      status: "resolved",
+      householdId: 1,
+      requesterUserId: userId,
+      requesterDietPattern: null,
+      members: [],
+      hardRestrictions: [],
+      activeRestrictions: [],
+      dietPatterns: [],
+      preferences: { dietTypes: [], excludedIngredients: [] },
+    }),
+    isSafetyGateActive: () => false,
+    isMealSafeForHousehold: () => ({ safe: true }),
   };
 }
 

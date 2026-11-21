@@ -2674,12 +2674,33 @@ const NUTRITION_SHOPPING_PANTRY_COMPOUND: CompoundMatcher = (_u, lower, _hints) 
 
 /** Pantry + Nutrition: "what high-protein foods do I have in my fridge?" */
 const PANTRY_NUTRITION_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
+  // PA-050 (2026-11-21) — live-caught misroute. "What should I add to the pantry for
+  // healthy backup meals?" is a RECOMMENDATION question (what's missing), not a
+  // "what do I have" search — but the bare word "pantry" plus "healthy" satisfied both
+  // signals below, so this search-everything compound fired anyway. The fixture's own
+  // expectation is "pantry + food knowledge", not the discovery pair. Bailing out here
+  // on "add" framing so PANTRY_ADD_RECOMMENDATION_MATCHER (below) owns it instead.
+  if (/\b(?:should\s+i\s+add|what\s+(?:should|could|would)\s+i\s+add|add\s+to\s+(?:my\s+)?pantry)\b/i.test(lower)) return null;
   const hasPantry    = /\b(?:pantry|fridge|freezer|larder|cupboard|in\s+my\s+(?:pantry|fridge|freezer)|what\s+(?:do\s+i\s+have|have\s+i\s+got))\b/.test(lower);
   const hasNutrition = /\b(?:high[\s-]protein|low[\s-]carb|low[\s-]fat|low[\s-]sugar|healthy|nutritious|protein|carbs?|under\s+\d+\s*(?:kcal|cal(?:orie)?s?))\b/.test(lower);
   if (!hasPantry || !hasNutrition) return null;
   return [
     { capability: "pantry-discovery",    verb: "search", parameters: { query: lower }, confidence: 0.84 },
     { capability: "nutrition-discovery", verb: "search", parameters: { query: lower }, confidence: 0.82 },
+  ];
+};
+
+/** PA-050: "What should I add to the pantry for healthy backup meals?" — a recommendation
+ *  (what's missing), not a search (what's there). Routes to pantry's own "list" read (the
+ *  one thing it can actually do — see PantryReadHandler's read-only scope) so the LLM
+ *  reasons from the real current contents, plus nutrition-knowledge for general healthy-
+ *  eating grounding, matching the fixture's own "pantry + food knowledge" expectation. */
+const PANTRY_ADD_RECOMMENDATION_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
+  if (!/\bpantry\b/.test(lower)) return null;
+  if (!/\b(?:should\s+i\s+add|what\s+(?:should|could|would)\s+i\s+add|add\s+to\s+(?:my\s+)?pantry)\b/i.test(lower)) return null;
+  return [
+    { capability: "pantry",              verb: "read",   parameters: { scope: "list" },         confidence: 0.87 },
+    { capability: "nutrition-knowledge", verb: "search", parameters: { query: "healthy" },       confidence: 0.80 },
   ];
 };
 
@@ -2718,7 +2739,12 @@ const HOUSEHOLD_MEAL_SUITABILITY_COMPOUND: CompoundMatcher = (u, _lower, _hints)
   if (!/\b(?:which|what)\s+(?:meals?|recipes?|dishes?)\b|\b(?:show|give|find)\s+me\b.*\b(?:meals?|recipes?|dishes?)\b/i.test(u)) return null;
   if (!/\b(?:suitable|safe|ok|okay|fine|work|suit)\s+for\s+(?:everyone|everybody|all\s+of\s+us|(?:the\s+|my\s+|our\s+)(?:whole\s+)?(?:family|household))\b|\b(?:my|our)\s+household\s+(?:could|can)\s+(?:use|eat|have|manage|cook|make)\b/i.test(u)) return null;
   return [
-    { capability: "meal-discovery", verb: "search", parameters: { query: "" },                confidence: 0.86 },
+    // COMP-DET4 (2026-11-21) — live-caught: meal-discovery's handler always gapped on an
+    // empty query (by explicit design, to stop an ACCIDENTAL blank query dumping the whole
+    // cookbook), so this compound — written specifically for "browse what's suitable" —
+    // never actually executed since the day it was added. `browseAll: true` is the
+    // deliberate opt-in the handler now recognises for exactly this phrasing.
+    { capability: "meal-discovery", verb: "search", parameters: { query: "", browseAll: true }, confidence: 0.86 },
     { capability: "household",      verb: "read",   parameters: { scope: "household" },       confidence: 0.84 },
   ];
 };
@@ -2744,7 +2770,8 @@ const MEAL_GOAL_FIT_COMPOUND: CompoundMatcher = (u, _lower, _hints) => {
   if (!/\b(?:meals?|recipes?|dish(?:es)?)\b/i.test(u)) return null;
   if (!/\b(?:fits?|matches?|suits?|aligns?\s+with)\s+(?:my|our)\s+(?:health\s+|nutrition\s+|dietary\s+)?goals?\b/i.test(u)) return null;
   return [
-    { capability: "meal-discovery", verb: "search", parameters: { query: "" },          confidence: 0.86 },
+    // COMP-DET4 — same browseAll opt-in as HOUSEHOLD_MEAL_SUITABILITY_COMPOUND above.
+    { capability: "meal-discovery", verb: "search", parameters: { query: "", browseAll: true }, confidence: 0.86 },
     { capability: "profile",        verb: "read",   parameters: { scope: "profile" },   confidence: 0.84 },
   ];
 };
@@ -2977,6 +3004,7 @@ const ALL_COMPOUND_MATCHERS: CompoundMatcher[] = [
   HOUSEHOLD_ANALYSER_RESTRICTIONS_COMPOUND,
   NUTRITION_SHOPPING_PANTRY_COMPOUND,
   PANTRY_NUTRITION_COMPOUND,
+  PANTRY_ADD_RECOMMENDATION_COMPOUND,
   DIARY_NUTRITION_COMPOUND,
   // COMP2 — conversational statements. Each is anchored to a statement frame or a
   // money/dislike signal no question-shaped matcher above claims, so none of them

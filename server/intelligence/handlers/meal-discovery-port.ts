@@ -92,6 +92,25 @@ export interface MealDiscoverySearchResult {
    */
   readonly sourcesQueried: string;
   readonly source: "meal-discovery";
+  /**
+   * COMP-DET4 (2026-11-21) — the engine (meal-discovery-engine.ts's `discover()`)
+   * already computes this via `getSafetyExclusion()`, but it was never read by this
+   * handler before — surfaced now so a caller can be told "N results, M left out
+   * because they don't suit your household's dietary needs" instead of just seeing
+   * a possibly-shorter-than-expected list with no explanation (PROD6).
+   */
+  readonly excludedForSafety: number;
+  /** "unavailable" means the gate fired closed (couldn't check, so nothing was risked) —
+   *  a different, more honest statement than "no meals matched". */
+  readonly safetyStatus: "resolved" | "unavailable" | "unknown";
+  /**
+   * COMP-DET4 — a citation-grounded, honest summary built from the fields above and
+   * `household-withholding.ts`'s canonical wording (the same sentences the planner's
+   * smart-suggest toast already uses) — so the Companion's conversational surface
+   * stops improvising its own ad-hoc withholding language and stating unsupported
+   * per-meal conflicts the engine never actually checked meal-by-meal for the LLM.
+   */
+  readonly deterministicAnswer: string;
 }
 
 // ---------------------------------------------------------------------------

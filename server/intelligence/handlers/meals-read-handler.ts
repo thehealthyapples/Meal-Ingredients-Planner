@@ -45,6 +45,7 @@ import type { CapabilityHandler, IntelligenceContext, Intent } from "../types.js
 import type { MealsReadPort } from "./meals-read-port.js";
 import { toInt, requireUserId, gap, denied, readOnlyVerbGuard } from "./_read-kit.js";
 import type { Meal, MealSummary, MealItem } from "@shared/schema";
+import { withheldNote, nothingSuitableNote, safetyUnavailableNote } from "@shared/explanations/household-withholding";
 
 // ---------------------------------------------------------------------------
 // Result shapes (read projections — owned data, surfaced honestly)
@@ -159,6 +160,23 @@ export interface MealsSearchResult {
   readonly mealCount: number;
   readonly meals: readonly MealSearchView[];
   readonly source: "meals";
+  /**
+   * COMP-DET4 (2026-11-21) — live-caught: this search had NO restriction awareness at
+   * all — `matchesMealQuery` is a bare name/ingredient text match, so a caller asking
+   * "what chicken meals do I have?" got back every chicken meal regardless of the
+   * household's recorded restrictions, forcing the LLM to judge safety itself from a
+   * search view that (by design, COMP3) doesn't even carry ingredient text. The LLM's
+   * own judgment was inconsistent — sometimes right (flagging a genuinely non-keto
+   * dish), sometimes inventing an unsupported conflict for one result while silently
+   * ignoring the rest. The engine (meal-discovery-engine.ts) already solved exactly
+   * this with `household-dietary-safety.ts`; this search now runs the SAME gate.
+   */
+  readonly excludedForSafety: number;
+  /** Always "resolved" or "unavailable" — this handler calls
+   *  `resolveHouseholdSafetyContext` directly, which only ever returns one of the two
+   *  (never the "unknown" a lost-carrier-property case would imply elsewhere). */
+  readonly safetyStatus: "resolved" | "unavailable";
+  readonly deterministicAnswer: string;
 }
 
 export interface MealsCountReadResult {
@@ -292,6 +310,40 @@ function matchesMealQuery(meal: Meal, lowerQuery: string): boolean {
  *   - Deduplication by id prevents a system meal that also appears in own from doubling.
  *   - Capped at SEARCH_MAX_RESULTS (20) to keep the grounding payload manageable.
  */
+/** COMP-DET4 — mirrors buildMealDiscoveryDeterministicAnswer (meal-discovery-handler.ts);
+ *  kept as a separate copy because the two capabilities project different view types
+ *  (MealSearchView here vs. DiscoveryItem there) and have no shared base to factor into
+ *  without adding coupling neither owner asked for. */
+function buildMealsSearchDeterministicAnswer(
+  query: string,
+  matches: readonly MealSearchView[],
+  excludedForSafety: number,
+  safetyStatus: "resolved" | "unavailable",
+): string {
+  if (safetyStatus === "unavailable") {
+    return safetyUnavailableNote({
+      subject: "these meals",
+      consequence: "no results are shown",
+      retryable: true,
+    });
+  }
+
+  if (matches.length === 0) {
+    if (excludedForSafety > 0) {
+      return nothingSuitableNote({
+        attempt: `find a meal matching "${query}"`,
+        consequence: `${excludedForSafety} candidate${excludedForSafety === 1 ? "" : "s"} matched the search but ${excludedForSafety === 1 ? "was" : "were"} excluded on dietary-safety grounds`,
+      });
+    }
+    return `No meals matched "${query}".`;
+  }
+
+  const shown = matches.slice(0, 5).map((m) => m.name);
+  const namesText = matches.length > shown.length ? `${shown.join(", ")}, and more` : shown.join(", ");
+  const base = `Found ${matches.length} meal${matches.length === 1 ? "" : "s"} matching "${query}": ${namesText}.`;
+  return excludedForSafety > 0 ? `${base} ${withheldNote({ count: excludedForSafety, noun: "meal" })}` : base;
+}
+
 async function handleSearch(
   intent: Intent,
   userId: number,
@@ -316,16 +368,33 @@ async function handleSearch(
     }
   }
 
-  const matches = merged
-    .filter((m) => matchesMealQuery(m, lowerQuery))
-    .slice(0, SEARCH_MAX_RESULTS);
+  const candidates = merged.filter((m) => matchesMealQuery(m, lowerQuery));
+
+  // COMP-DET4 (2026-11-21) — same gate meal-discovery-engine.ts already runs: resolved
+  // BEFORE any candidate is admitted, and fails closed (an unavailable context makes
+  // the gate active and every verdict unsafe, never an unfiltered fallback).
+  const safetyCtx = await port.resolveHouseholdSafetyContext(userId);
+  const gateActive = port.isSafetyGateActive(safetyCtx);
+
+  let excludedForSafety = 0;
+  const safe = candidates.filter((m) => {
+    if (!gateActive) return true;
+    const verdict = port.isMealSafeForHousehold({ name: m.name, ingredients: m.ingredients }, safetyCtx);
+    if (!verdict.safe) excludedForSafety++;
+    return verdict.safe;
+  });
+
+  const matches = safe.slice(0, SEARCH_MAX_RESULTS).map(toMealSearchView);
 
   return {
     scope: "search",
     query: rawQuery,
     mealCount: matches.length,
-    meals: matches.map(toMealSearchView),
+    meals: matches,
     source: "meals",
+    excludedForSafety,
+    safetyStatus: safetyCtx.status,
+    deterministicAnswer: buildMealsSearchDeterministicAnswer(rawQuery, matches, excludedForSafety, safetyCtx.status),
   };
 }
 

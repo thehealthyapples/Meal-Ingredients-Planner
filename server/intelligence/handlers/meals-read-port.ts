@@ -38,6 +38,7 @@
  */
 
 import type { Meal, MealSummary, MealItem } from "@shared/schema";
+import type { HouseholdSafetyContext, SafetyCheckableMeal, SafetyVerdict } from "../../lib/household-dietary-safety.js";
 
 /**
  * The read-only owning-service surface. List/summary methods are user-scoped by the
@@ -57,6 +58,17 @@ export interface MealsReadPort {
   getMeal(id: number): Promise<Meal | undefined>;
   /** Meals owner — typed builder items for a meal. NOT ownership-scoped. */
   getMealItems(mealId: number): Promise<MealItem[]>;
+  /**
+   * COMP-DET4 (2026-11-21) — the SAME canonical dietary-safety gate
+   * meal-discovery-engine.ts already runs (`household-dietary-safety.ts`; the one
+   * the planner, Smart Suggest and the starter cookbook also serve through), exposed
+   * here as three injectable primitives so `search` can filter candidates before they
+   * ever reach the LLM, instead of handing over an unfiltered list and leaving the
+   * model to judge safety for itself (which it did, inconsistently — see handleSearch).
+   */
+  resolveHouseholdSafetyContext(userId: number): Promise<HouseholdSafetyContext>;
+  isSafetyGateActive(ctx: HouseholdSafetyContext): boolean;
+  isMealSafeForHousehold(meal: SafetyCheckableMeal, ctx: HouseholdSafetyContext): SafetyVerdict;
 }
 
 /**
@@ -66,6 +78,7 @@ export interface MealsReadPort {
  */
 export async function createStorageMealsReadPort(): Promise<MealsReadPort> {
   const { storage } = await import("../../storage.js");
+  const safety = await import("../../lib/household-dietary-safety.js");
   return {
     getMeals: (userId) => storage.getMeals(userId),
     getSystemMeals: () => storage.getSystemMeals(),
@@ -73,5 +86,8 @@ export async function createStorageMealsReadPort(): Promise<MealsReadPort> {
     getSystemMealsSummary: () => storage.getSystemMealsSummary(),
     getMeal: (id) => storage.getMeal(id),
     getMealItems: (mealId) => storage.getMealItems(mealId),
+    resolveHouseholdSafetyContext: (userId) => safety.resolveHouseholdSafetyContext(userId),
+    isSafetyGateActive: (ctx) => safety.isSafetyGateActive(ctx),
+    isMealSafeForHousehold: (meal, ctx) => safety.isMealSafeForHousehold(meal, ctx),
   };
 }
