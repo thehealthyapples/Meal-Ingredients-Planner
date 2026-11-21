@@ -33,7 +33,7 @@ import {
   Volume2, Scan, Loader2, Check, Store,
   Sparkles, Mail, Trash2,
   Copy, LogOut, UserMinus, Pencil, X, RefreshCw,
-  ChevronDown, MessageSquare,
+  ChevronDown, MessageSquare, AlertCircle,
   // BUS1 — Help Centre, Contact and Privacy Settings doors.
   LifeBuoy, ShieldCheck, ChevronRight,
 } from "lucide-react";
@@ -455,24 +455,10 @@ function ProfilePageContent() {
           household={profile.household}
           onSave={(prefs) => savePreferences(prefs)}
         />
-
-        {/* 2026-11-21 (household relations): link to set family member relationships */}
-        <Card className="p-4 sm:p-5">
-          <Link href="/family-members">
-            <button className="w-full flex items-center justify-between py-2 px-3 rounded-lg hover:bg-muted/40 transition-colors text-left">
-              <div className="flex items-center gap-3">
-                <Users className="h-4 w-4 text-primary" />
-                <div>
-                  <p className="text-sm font-medium">Family Members</p>
-                  <p className="text-xs text-muted-foreground">Tag relationships for natural questions</p>
-                </div>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </button>
-          </Link>
-        </Card>
-
         <HouseholdEatersSection />
+
+        {/* 2026-11-21 (household relations): set family member relationships */}
+        <HouseholdMembersRelationships />
 
         {/* PHASE5C — Household Learning feedback, mounted at the placement
             LearningSignalsPanel itself declares: the Household section of Profile.
@@ -2465,6 +2451,180 @@ function AccountSettings({ profile }: { profile: ProfileData }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </Card>
+  );
+}
+
+/**
+ * 2026-11-21 (household relations): Inline relationship editor for family members.
+ * Lets users set relationships (spouse, child, etc.) for each household member,
+ * enabling Companion to understand natural-language queries like "what can't my wife eat?"
+ */
+function HouseholdMembersRelationships() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [changes, setChanges] = useState<Record<number, string | null>>({});
+
+  type RelationshipLabel = "owner" | "spouse" | "child" | "parent" | "sibling" | "other" | null;
+  const RELATIONSHIP_LABELS: Array<{ value: RelationshipLabel; label: string }> = [
+    { value: null, label: "Not specified" },
+    { value: "owner", label: "Me (Account owner)" },
+    { value: "spouse", label: "Spouse / Partner" },
+    { value: "child", label: "Child" },
+    { value: "parent", label: "Parent" },
+    { value: "sibling", label: "Sibling" },
+    { value: "other", label: "Other family member" },
+  ];
+
+  const { data: household, isLoading } = useQuery({
+    queryKey: ["/api/household"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/household");
+      return response.json() as Promise<{
+        id: number;
+        name: string;
+        members: Array<{
+          id: number;
+          userId: number;
+          displayName: string;
+          role: string;
+          relationshipLabel: RelationshipLabel;
+          dietTypes: string[];
+          hardRestrictions: string[];
+        }>;
+      }>;
+    },
+  });
+
+  const updateRelationshipMutation = useMutation({
+    mutationFn: async ({ memberId, relationshipLabel }: { memberId: number; relationshipLabel: RelationshipLabel }) => {
+      return apiRequest("PATCH", `/api/household/member/${memberId}/relationship`, { relationshipLabel });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/household"] });
+      setChanges({});
+      toast({
+        title: "Success",
+        description: "Relationship updated",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleRelationshipChange = (memberId: number, value: RelationshipLabel) => {
+    setChanges(prev => ({ ...prev, [memberId]: value }));
+  };
+
+  const handleSaveChanges = async () => {
+    for (const [memberId, relationshipLabel] of Object.entries(changes)) {
+      await updateRelationshipMutation.mutateAsync({
+        memberId: parseInt(memberId, 10),
+        relationshipLabel: relationshipLabel as RelationshipLabel,
+      });
+    }
+  };
+
+  if (isLoading || !household || household.members.length === 0) return null;
+
+  const hasChanges = Object.keys(changes).length > 0;
+
+  return (
+    <Card className="p-4 sm:p-5">
+      <div className="space-y-3">
+        <div className="flex items-start gap-2 mb-4">
+          <AlertCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+          <div className="text-xs text-muted-foreground">
+            <p className="font-medium text-gray-900">Tag family members</p>
+            <p className="text-gray-600 mt-0.5">Help Companion understand "what can't my wife eat?" by marking relationships</p>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          {household.members.map(member => {
+            const selectedRelationship = changes[member.id] ?? member.relationshipLabel;
+            const isChanged = changes[member.id] !== undefined;
+
+            return (
+              <div key={member.id} className={`flex items-center gap-3 p-2 rounded-lg ${isChanged ? "bg-blue-50" : ""}`}>
+                <Avatar className="w-8 h-8">
+                  <AvatarFallback className="text-xs">
+                    {member.displayName.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{member.displayName}</p>
+                  {(member.dietTypes.length > 0 || member.hardRestrictions.length > 0) && (
+                    <div className="flex gap-1 mt-0.5 flex-wrap">
+                      {member.dietTypes.map(dt => (
+                        <Badge key={dt} variant="secondary" className="text-xs">
+                          {dt}
+                        </Badge>
+                      ))}
+                      {member.hardRestrictions.map(hr => (
+                        <Badge key={hr} variant="destructive" className="text-xs">
+                          {hr}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <Select
+                  value={selectedRelationship ?? ""}
+                  onValueChange={(value: string) => {
+                    const val = value === "" ? null : (value as RelationshipLabel);
+                    handleRelationshipChange(member.id, val);
+                  }}
+                >
+                  <SelectTrigger className="w-32 h-8">
+                    <SelectValue placeholder="Select" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {RELATIONSHIP_LABELS.map(opt => (
+                      <SelectItem
+                        key={opt.value ?? "_null_"}
+                        value={opt.value ?? "_null_"}
+                      >
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            );
+          })}
+        </div>
+
+        {hasChanges && (
+          <div className="flex gap-2 pt-2 border-t">
+            <Button
+              onClick={handleSaveChanges}
+              disabled={updateRelationshipMutation.isPending}
+              variant="default"
+              size="sm"
+            >
+              {updateRelationshipMutation.isPending ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <Save className="w-3 h-3" />
+              )}
+              <span className="ml-1">Save</span>
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setChanges({})}
+              size="sm"
+            >
+              Discard
+            </Button>
+          </div>
+        )}
+      </div>
     </Card>
   );
 }
