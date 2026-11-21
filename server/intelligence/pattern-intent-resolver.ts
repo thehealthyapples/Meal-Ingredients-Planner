@@ -1350,6 +1350,25 @@ const HOUSEHOLD_MATCHERS: Matcher[] = [
       confidence: 0.87,
     };
   },
+
+  // COMP-DET5 (2026-11-21) — PH-004: "which family member has the most dietary
+  // restrictions?" is the SAME gap as PH-005 above, in superlative form rather than a
+  // same/different comparison — the generic "family member"/"household" keyword floor
+  // (0.60) was the only match, routing to bare membership with no restriction data at
+  // all per member, so the Companion correctly refused to guess rather than confidently
+  // (and wrongly) picking one. "dietary-context" is the real per-member breakdown.
+  (u) => {
+    const asksSuperlative = /\b(?:most|fewest|least|more|fewer)\b/i.test(u) &&
+      /\b(?:restriction|allerg|diet)/i.test(u) &&
+      /\b(?:member|person|people|family|household|child|children|kid)/i.test(u);
+    if (!asksSuperlative) return null;
+    return {
+      capability: "household",
+      verb: "read",
+      parameters: { scope: "dietary-context" },
+      confidence: 0.86,
+    };
+  },
 ];
 
 // ---------------------------------------------------------------------------
