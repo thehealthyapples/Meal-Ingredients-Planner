@@ -3406,7 +3406,21 @@ const KEYWORD_FALLBACKS: KeywordFallback[] = [
     // Confidence sits BELOW the profile always-on (0.50): this entry is a coverage
     // floor for otherwise-unmatched meal queries, and must never displace the
     // personalisation baseline from the MAX_INTENTS cap when specific matchers fired.
-    pattern: /\b(?:recipes?|meals?|cook|dish(?:es)?|ingredients?)\b/i,
+    //
+    // COMP-DET3 (2026-11-21) — the comment above always SAID this must defer to a
+    // specific matcher that already fired, but the regex never actually enforced
+    // that: the bare word "meal(s)" in "what's on my meal plan this week?" (PL-023)
+    // or "what meals are missing from my plan?" (PL-025) matched unconditionally,
+    // adding a second (noise) "meals" capability alongside PLANNER_MATCHERS' own
+    // high-confidence match of the exact same utterance (same duplicate-routing
+    // bug pattern as PA-045/SH-035/PH-006 — dedup is per-capability-id only, so a
+    // different capability's lower-confidence match is never caught). PL-023's own
+    // fixture expectation is "planner.read" alone. Fixed by excluding PLANNER_
+    // MATCHERS' own first-entry phrasing (verbatim) before the bare keyword test —
+    // every other "recipe/cook/dish/ingredient" phrasing this floor exists for is
+    // untouched. This ALSO re-enables the single-capability deterministic-answer
+    // short-circuit for the planner "week" read (see planner-read-handler.ts).
+    pattern: /^(?!.*\b(?:what(?:'s|\s+is)\s+on\s+(?:my\s+)?(?:meal\s+)?plan(?:ner)?|what\s+meals?\s+do\s+(?:I|we)\s+have|what\s+do\s+(?:I|we)\s+have\s+planned)\b).*\b(?:recipes?|meals?|cook|dish(?:es)?|ingredients?)\b/i,
     capability: "meals",
     parameters: { scope: "summary" },
     confidence: 0.48,

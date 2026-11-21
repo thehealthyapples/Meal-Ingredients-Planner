@@ -35,7 +35,7 @@ import type {
 } from "./planner-read-port.js";
 import { toInt, requireUserId, gap, denied, readOnlyVerbGuard } from "./_read-kit.js";
 import type { PlannerWeek } from "@shared/schema";
-import { parseCivilDate, addCivilDays, formatCivilDate } from "@shared/time/household-time";
+import { parseCivilDate, addCivilDays, formatCivilDate, DAY_NAMES, householdDayOfWeek } from "@shared/time/household-time";
 import { analyzePlannerIngredient, type PlannerIngredientAnalysis } from "./planner-ingredient-analysis.js";
 
 // ---------------------------------------------------------------------------
@@ -84,6 +84,75 @@ export interface PlannerWeekReadResult {
   readonly days: readonly PlannerDayView[];
   /** Present only for an utterance-scoped ingredient quantity request. */
   readonly ingredientAnalysis?: PlannerIngredientAnalysis;
+  /**
+   * Absent when `ingredientAnalysis` is present — an ingredient-quantity question ("how
+   * much chicken is on my planner this week?") needs THAT answer, not a day-by-day meal
+   * listing; the conversation gateway's short-circuit would otherwise speak whichever
+   * field it finds first and ignore the one the caller actually asked about.
+   *
+   * COMP-DET3 (2026-11-21) — PL-023 ("What's on my meal plan this week?") live-caught a
+   * real generation failure: the LLM was handed the complete, correct week data (every
+   * day, including a day with a planned dinner) and still only reported one day's meal,
+   * claiming it "can't see the meals for other days" — a model-synthesis miss, not a data
+   * or truncation bug (verified: the full JSON was well under the per-capability context
+   * budget). The week's day/meal list is fully enumerable and already source-gated by the
+   * owner, so — same as meals/pantry/shopping/profile before it — build the answer in code
+   * and let the conversation gateway's short-circuit speak it verbatim instead of trusting
+   * the model to enumerate a short list correctly.
+   */
+  readonly deterministicAnswer?: string;
+}
+
+/**
+ * COMP-DET3 — `PlannerDayView.dayOfWeek` is WEEK-RELATIVE (0 = the week's own first day,
+ * per `WEEK_STARTS_ON` = Monday in household-time.ts), NOT an absolute Sun=0..Sat=6
+ * calendar index. Live-caught by the judge on the very first run of this feature: with
+ * `weekStartDate` a Monday, `dayOfWeek: 0` is that Monday and `dayOfWeek: 1` is Tuesday —
+ * indexing `DAY_NAMES` directly by the raw `dayOfWeek` (treating 0 as Sunday) mislabelled
+ * every single day. Anchor to the real calendar date instead: `weekStartDate` IS day 0,
+ * so `addCivilDays(weekStartDate, dayOfWeek)` gives the day's true date, and ONLY that
+ * date's `householdDayOfWeek()` may index `DAY_NAMES`. Undated (legacy) weeks have no
+ * real date to anchor to, so they get an honest ordinal ("Day 1", "Day 2"...) instead of
+ * a guessed calendar name.
+ */
+function plannerDayLabel(weekStartDate: string | null, dayOfWeek: number): string {
+  if (weekStartDate == null) return `Day ${dayOfWeek + 1}`;
+  const anchor = parseCivilDate(weekStartDate);
+  if (anchor == null) return `Day ${dayOfWeek + 1}`;
+  const realDate = addCivilDays(anchor, dayOfWeek);
+  return DAY_NAMES[householdDayOfWeek(realDate)] ?? `Day ${dayOfWeek + 1}`;
+}
+
+/** COMP-DET3 — every day with at least one meal, in order; days with none are omitted
+ *  rather than listed as "nothing planned" (keeps the answer to what's actually there). */
+function buildPlannerWeekDeterministicAnswer(week: {
+  weekName: string;
+  weekStartDate: string | null;
+  days: readonly PlannerDayView[];
+}): string {
+  const weekLabel = week.weekStartDate ? `${week.weekName} (starting ${week.weekStartDate})` : week.weekName;
+  const daysWithMeals = week.days.filter((d) => d.meals.length > 0);
+
+  if (daysWithMeals.length === 0) {
+    return `${weekLabel} has no meals planned yet.`;
+  }
+
+  const dayLines = daysWithMeals.map((d) => {
+    const dayName = plannerDayLabel(week.weekStartDate, d.dayOfWeek);
+    const meals = d.meals
+      .map((m) => `${m.mealType}${m.mealName ? ` – ${m.mealName}` : " (unnamed meal)"}`)
+      .join(", ");
+    return `${dayName}: ${meals}`;
+  });
+
+  const plannedCount = daysWithMeals.length;
+  const totalDays = week.days.length;
+  const coverageNote =
+    plannedCount < totalDays
+      ? ` No meals are planned for the other ${totalDays - plannedCount} day${totalDays - plannedCount === 1 ? "" : "s"} this week.`
+      : "";
+
+  return `For ${weekLabel}: ${dayLines.join("; ")}.${coverageNote}`;
 }
 
 export interface PlannerDayReadResult {
@@ -285,7 +354,13 @@ async function readWeek(
     days: dayViews,
     ...(ingredientQuery
       ? { ingredientAnalysis: analyzePlannerIngredient(dayViews, ingredientQuery) }
-      : {}),
+      : {
+          deterministicAnswer: buildPlannerWeekDeterministicAnswer({
+            weekName: week.weekName,
+            weekStartDate: week.weekStartDate ?? null,
+            days: dayViews,
+          }),
+        }),
   };
 }
 
