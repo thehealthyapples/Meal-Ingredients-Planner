@@ -268,10 +268,54 @@ function benefitSearch(entity: string, confidence = 0.86): ResolvedIntent | null
 // Guard: reject terms that are clearly not health benefit concepts.
 const NOT_A_BENEFIT = /^(?:dinner|lunch|breakfast|tea|supper|snack|tonight|today|tomorrow|me|you|myself|us|them)$/i;
 
-const NUTRITION_BENEFIT_FOODS_MATCHERS: Matcher[] = [
-  // "foods that help with sleep" / "foods that help with immunity"
+// ---------------------------------------------------------------------------
+// Nutrition: dietary attributes (vegan, gluten-free, keto, dairy-free, etc.)
+// ---------------------------------------------------------------------------
+
+// 2026-11-21 (stress-test): "what's gluten-free?" / "what foods are dairy-free?"
+// A dietary attribute query — asking for foods that possess a particular property
+// rather than a nutritional benefit. Routes to nutrition-knowledge/search to find
+// foods tagged with that attribute.
+const NUTRITION_DIETARY_ATTRIBUTE_MATCHERS: Matcher[] = [
   (u) => {
-    const m = u.match(/\bfoods?\s+(?:that\s+)?(?:help|good|great)\s+(?:with|for)\s+(.+?)[\?.,]?\s*$/i);
+    const m = u.match(/\b(?:what(?:'s|\s+(?:foods?\s+)?are)|which\s+foods?)\s+(?:are\s+)?(.+?)(?:-free|compliant|suitable)\b/i);
+    if (!m?.[1]) return null;
+    const attr = m[1].trim().toLowerCase();
+    if (!attr || attr.length < 2) return null;
+    return {
+      capability: "nutrition-knowledge",
+      verb: "search",
+      parameters: { query: attr },
+      confidence: 0.84,
+      termQuery: attr,
+    };
+  },
+  // "is X vegan?" / "is X gluten-free?" (bare attribute without "-free" suffix)
+  (u) => {
+    const m = u.match(/\b(?:is|are)\s+.+?\s+(?:vegan|vegetarian|dairy-free|gluten-free|keto|paleo|organic)\b/i);
+    if (!m) return null;
+    const attr = u.match(/(?:vegan|vegetarian|dairy-free|gluten-free|keto|paleo|organic)/i)?.[0]?.toLowerCase();
+    if (!attr) return null;
+    return {
+      capability: "nutrition-knowledge",
+      verb: "search",
+      parameters: { query: attr },
+      confidence: 0.82,
+      termQuery: attr,
+    };
+  },
+];
+
+const NUTRITION_BENEFIT_FOODS_MATCHERS: Matcher[] = [
+  // "foods that help with sleep" / "foods that help with immunity" / "what foods ARE
+  // good for my immune system?" — 2026-11-21 (owner-reported): the plain statement form
+  // ("foods that help...") worked, but the extremely common "foods ARE good/great for X"
+  // shape did not — neither this matcher nor the "foods good for X" one below accounted
+  // for "are"/"is" sitting between "foods" and "good"/"great"/"help", so it fell through
+  // to the LLM fallback, which guessed an under-specified food-intelligence/recommend
+  // intent with no slug it could ever supply — a guaranteed gap every time.
+  (u) => {
+    const m = u.match(/\bfoods?\s+(?:are|is)?\s*(?:that\s+)?(?:help|good|great)\s+(?:with|for)\s+(?:my\s+|our\s+|your\s+)?(.+?)[\?.,]?\s*$/i);
     if (!m?.[1] || NOT_A_BENEFIT.test(m[1].trim())) return null;
     return benefitSearch(m[1], 0.88);
   },
@@ -290,9 +334,9 @@ const NUTRITION_BENEFIT_FOODS_MATCHERS: Matcher[] = [
     return benefitSearch(m[1], 0.88);
   },
 
-  // "foods good for sleep" / "foods for better immunity"
+  // "foods good for sleep" / "foods for better immunity" / "foods are good for my sleep"
   (u) => {
-    const m = u.match(/\bfoods?\s+(?:good\s+)?for\s+(?:better\s+)?(.+?)[\?.,]?\s*$/i);
+    const m = u.match(/\bfoods?\s+(?:are|is)?\s*(?:good\s+)?for\s+(?:better\s+)?(?:my\s+|our\s+|your\s+)?(.+?)[\?.,]?\s*$/i);
     if (!m?.[1] || NOT_A_BENEFIT.test(m[1].trim())) return null;
     return benefitSearch(m[1], 0.82);
   },
@@ -305,6 +349,18 @@ const NUTRITION_BENEFIT_FOODS_MATCHERS: Matcher[] = [
     if (/^(?:me|you|this|that|it|my)$/.test(term)) return null;
     if (NOT_A_BENEFIT.test(term)) return null;
     return benefitSearch(term, 0.80);
+  },
+
+  // "what's good for my bones?" / "what is good for digestion?" / "what are the
+  // best foods for sleep?" — 2026-11-21 (stress-test): the "is/are" verb form of
+  // "what X is/are good for Y". This was entirely missed because "what's" is a
+  // contraction where the apostrophe is attached, not space-separated.
+  (u) => {
+    const m = u.match(/\bwhat(?:'s|\s+(?:is|are))\s+(?:(?:the\s+)?(?:best|good|great)\s+)?(?:foods?\s+)?(?:for|good|great)\s+(?:my\s+|our\s+)?(.+?)[\?.,]?\s*$/i);
+    if (!m?.[1]) return null;
+    const term = m[1].trim();
+    if (!term || NOT_A_BENEFIT.test(term)) return null;
+    return benefitSearch(term, 0.78);
   },
 
   // COMP_NK1 — "can you advise on a meal to have for breakfast that will boost
@@ -850,6 +906,16 @@ const PANTRY_DISCOVERY_MATCHERS: Matcher[] = [
     if (!/\b(?:show\s+(?:me\s+)?(?:my\s+)?pantry|list\s+(?:my\s+)?pantry\s+items?)\b/i.test(u)) return null;
     return { capability: "pantry-discovery", verb: "search", parameters: { query: "" }, confidence: 0.87 };
   },
+
+  // 2026-11-21 (stress-test): "where's the olive oil?" / "where is the milk?" — a
+  // location-aware pantry search. Matches the specific location query format.
+  (u) => {
+    const m = u.match(/\bwhere(?:'s|\s+is)\s+(?:the\s+)?(.+?)[\?.,]?\s*$/i);
+    if (!m?.[1]) return null;
+    const item = m[1].trim();
+    if (!item || item.length < 2) return null;
+    return { capability: "pantry-discovery", verb: "search", parameters: { query: item }, confidence: 0.88 };
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -954,27 +1020,62 @@ const HOUSEHOLD_DISCOVERY_MATCHERS: Matcher[] = [
   },
 
   // "search my household for dairy allergy" / "find vegan members in my household"
+  // 2026-11-21 (owner-reported): all four matchers below were anchored to the literal
+  // word "household" and never accepted "family" — even though "family" is already an
+  // established household synonym everywhere else in this file (see "who's in my
+  // family?" and the PH-004/PR-066 household-signal matchers). A real, organically-
+  // phrased question ("what food restrictions does my family have?") fell through with
+  // no route at all.
   (u) => {
-    if (!/\b(?:search|find)\s+(?:my\s+)?household\s+(?:for|members?\s+with)\b/i.test(u)) return null;
+    if (!/\b(?:search|find)\s+(?:my\s+)?(?:household|family)\s+(?:for|members?\s+with)\b/i.test(u)) return null;
     return { capability: "household-discovery", verb: "search", parameters: { query: u.trim() }, confidence: 0.90 };
   },
 
   // "find members with gluten allergy in my household"
   (u) => {
-    if (!/\bfind\s+members?\s+with\s+.+\s+in\s+(?:my\s+)?household\b/i.test(u)) return null;
+    if (!/\bfind\s+members?\s+with\s+.+\s+in\s+(?:my\s+)?(?:household|family)\b/i.test(u)) return null;
     return { capability: "household-discovery", verb: "search", parameters: { query: u.trim() }, confidence: 0.88 };
   },
 
-  // "what dietary restrictions does my household have?"
+  // "what dietary restrictions does my household/family have?"
   (u) => {
-    if (!/\bwhat\s+(?:dietary|diet|food)\s+(?:restrictions?|requirements?|preferences?)\s+does\s+(?:my\s+)?household\s+have\b/i.test(u)) return null;
+    if (!/\bwhat\s+(?:dietary|diet|food)\s+(?:restrictions?|requirements?|preferences?)\s+does\s+(?:my\s+)?(?:household|family)\s+have\b/i.test(u)) return null;
     return { capability: "household-discovery", verb: "search", parameters: { query: "" }, confidence: 0.88 };
   },
 
-  // "does anyone in my household have a nut allergy?"
+  // "does anyone in my household/family have a nut allergy?"
   (u) => {
-    if (!/\bdoes\s+anyone\s+in\s+(?:my\s+)?household\b/i.test(u)) return null;
+    if (!/\bdoes\s+anyone\s+in\s+(?:my\s+)?(?:household|family)\b/i.test(u)) return null;
     return { capability: "household-discovery", verb: "search", parameters: { query: u.trim() }, confidence: 0.86 };
+  },
+
+  // 2026-11-21 (owner-reported): "does my family have any allergies?" — the same
+  // question as the matcher above, just worded WITHOUT "anyone in" (the household/family
+  // itself is the subject, not an unnamed member within it). Fell through to the generic
+  // no-route fallback before this.
+  (u) => {
+    if (!/\bdoes\s+(?:my\s+)?(?:household|family)\s+have\s+any\b/i.test(u)) return null;
+    return { capability: "household-discovery", verb: "search", parameters: { query: "" }, confidence: 0.86 };
+  },
+
+  // 2026-11-21 (owner-reported): "what can't my wife eat?" / "what can my husband not
+  // have?" / "what allergies does my son have?" / "what does my partner avoid?" — a NEGATIVE
+  // or relation-anchored framing naming a specific family member by relation
+  // (wife/husband/partner/son/daughter/kids/child/children) rather than the generic
+  // "household"/"family" noun the matchers above require. This resolver-unmatched entirely
+  // before — no route at all, not even a wrong one — because none of the household matchers
+  // accept a bare relation word as the household signal.
+  (u) => {
+    const relation = /\b(?:wife|husband|partner|spouse|son|daughter|kids?|child(?:ren)?)\b/i;
+    const negativeFrame = /\bcan'?t\b|\bcan\s+(?:my\s+\w+\s+)?not\b/i;
+    // Match: "what [anything] allergy/avoid/etc" OR "what can't ...". Allows arbitrary text between what and keyword.
+    const askingFrame = /\b(?:what\s+.*?\b(?:allerg(?:y|ies)|restrictions?|can'?t\s+eat|avoid(?:s)?)\b|allerg(?:y|ies)\s+does\b)/i;
+    if (!relation.test(u)) return null;
+    if (!negativeFrame.test(u) && !askingFrame.test(u)) return null;
+    // 2026-11-21 (live-caught): the whole utterance as a literal search query ALWAYS
+    // returns zero matches here (the same COMP-DET5 whole-utterance-as-query bug class
+    // fixed elsewhere tonight) — a browse-all query lets the real per-member data answer.
+    return { capability: "household-discovery", verb: "search", parameters: { query: "" }, confidence: 0.85 };
   },
 ];
 
@@ -1286,18 +1387,118 @@ const PANTRY_MATCHERS: Matcher[] = [
 ];
 
 // ---------------------------------------------------------------------------
+// Nutrition Report (standalone) — 2026-11-21 (owner-reported)
+// ---------------------------------------------------------------------------
+// nutrition-report (COMP-DET8, wired the same night as these matchers) was previously
+// only reachable through multi-capability compounds — a plain, single-domain "how is
+// our nutrition looking this week?" or "is my family eating enough fibre?" had NO route
+// to it at all, so it fell back to `planner`/`profile`, which cannot answer a quantified
+// nutrient/category question and said so honestly but unhelpfully. These give the exact
+// capability built for this question a direct, simple route.
+
+const NUTRITION_REPORT_MATCHERS: Matcher[] = [
+  // "how is our nutrition looking this week?" / "how's my nutrition this week?"
+  // Confidence 0.87 — deliberately above the planner week-scan matcher's 0.86 (this
+  // exact phrasing also loosely matches "this week"), so nutrition-report's real,
+  // quantified category/benefit coverage wins as the PRIMARY route instead of the
+  // planner's bare meal list, which cannot answer a nutrition question at all.
+  (u, _l, hints) => {
+    if (!/\bhow\s+(?:is|'s|are)\s+(?:our|my|the)\s+nutrition\b/i.test(u)) return null;
+    return {
+      capability: "nutrition-report",
+      verb: "read",
+      parameters: hints.activePlannerWeekId != null
+        ? { window: "this-week", weekId: hints.activePlannerWeekId }
+        : { window: "all-time" },
+      confidence: 0.87,
+    };
+  },
+
+  // "is my family eating enough fibre/protein/vegetables?" / "are we getting enough fibre?"
+  // Confidence 0.87 — deliberately above nutrition-knowledge's bare nutrient-lookup
+  // matcher (0.86), which otherwise won the primary slot with a nutrient DEFINITION
+  // instead of this household's own, real intake-coverage data (live-caught: this
+  // exact question stayed on "profile" / "can't compare" wording until the bump).
+  (u, _l, hints) => {
+    const possessiveFrame = /\b(?:is|are)\s+(?:my|our)\s+(?:family|household)\s+(?:eating|getting|having)\s+enough\b/i.test(u);
+    const weFrame = /\bare\s+we\s+(?:eating|getting|having)\s+enough\b/i.test(u);
+    if (!possessiveFrame && !weFrame) return null;
+    return {
+      capability: "nutrition-report",
+      verb: "read",
+      parameters: hints.activePlannerWeekId != null
+        ? { window: "this-week", weekId: hints.activePlannerWeekId }
+        : { window: "all-time" },
+      confidence: 0.87,
+    };
+  },
+
+  // "what vegetables should I eat more of?" / "what should I eat more of?" — a generic
+  // category-gap question with no specific benefit/nutrient named; nutrition-report's
+  // own category coverage ("categories with room to grow") answers exactly this.
+  (u, _l, hints) => {
+    if (!/\bwhat\s+(?:\w+\s+)?should\s+(?:I|we)\s+(?:eat|have)\s+more\s+of\b/i.test(u)) return null;
+    return {
+      capability: "nutrition-report",
+      verb: "read",
+      parameters: hints.activePlannerWeekId != null
+        ? { window: "this-week", weekId: hints.activePlannerWeekId }
+        : { window: "all-time" },
+      confidence: 0.84,
+    };
+  },
+];
+
+// ---------------------------------------------------------------------------
 // Diary
 // ---------------------------------------------------------------------------
 
+/**
+ * 2026-11-21 (owner-reported) — "yesterday" was recognised by the regex below but
+ * silently ignored: every match used `hints.temporalAnchor` (always TODAY) regardless
+ * of which day the utterance actually named, so "what did I eat yesterday?" quietly
+ * answered for today instead. This computes the real calendar date one day back from
+ * the anchor, in the same YYYY-MM-DD shape `temporalAnchor` already carries.
+ */
+function diaryDateFor(utterance: string, temporalAnchor: string): string {
+  if (!/\byesterday\b/i.test(utterance)) return temporalAnchor;
+  const anchor = new Date(`${temporalAnchor}T00:00:00Z`);
+  if (Number.isNaN(anchor.getTime())) return temporalAnchor;
+  anchor.setUTCDate(anchor.getUTCDate() - 1);
+  return anchor.toISOString().slice(0, 10);
+}
+
 const DIARY_MATCHERS: Matcher[] = [
-  // "what did I eat today?" / "what have I had today?"
+  // "what did I eat today?" / "what have I had today?" / "what did I eat yesterday?"
   (u, _l, hints) => {
     if (!/\bwhat\s+(?:did\s+I\s+(?:eat|have|log|track)|have\s+I\s+(?:eaten|had))\s*(?:today|yesterday|this\s+week)?\b/i.test(u)) return null;
     return {
       capability: "diary",
       verb: "read",
-      parameters: { scope: "day", date: hints.temporalAnchor },
+      parameters: { scope: "day", date: diaryDateFor(u, hints.temporalAnchor) },
       confidence: 0.85,
+    };
+  },
+
+  // 2026-11-21 (owner-reported): "show me what I've eaten today" / "how much sugar did
+  // I eat yesterday?" both fell through the matcher above — it only recognised the
+  // INVERTED question order ("what have I had"/"what did I eat"), not a statement-order
+  // "I've eaten X" or a "how much [thing] did I eat/have [when]" quantity question.
+  // Both are real diary day-reads; neither names anything but a date.
+  (u, _l, hints) => {
+    const statementOrder = /\b(?:what\s+)?I(?:'ve|\s+have)\s+(?:eaten|had|consumed|logged|tracked)\b.*?\b(?:today|yesterday)?\b/i.test(u);
+    const howMuchOrder = /\bhow\s+(?:much|many)\s+.+?\s+(?:did\s+I\s+(?:eat|have|consume)|have\s+I\s+(?:eaten|had|consumed))\b/i.test(u);
+    if (!statementOrder && !howMuchOrder) return null;
+    return {
+      capability: "diary",
+      verb: "read",
+      parameters: { scope: "day", date: diaryDateFor(u, hints.temporalAnchor) },
+      // 2026-11-21 (live-caught): deliberately ABOVE diary-discovery's whole-utterance
+      // literal-text search (~0.85) for this exact phrasing — a dated diary read (even
+      // an honest "nothing logged that day") is strictly more informative than
+      // diary-discovery's "couldn't find matches, check your spelling" dead end, which
+      // otherwise won the primary-outcome slot and buried the better answer.
+      confidence: 0.91,
     };
   },
 
@@ -1307,7 +1508,7 @@ const DIARY_MATCHERS: Matcher[] = [
     return {
       capability: "diary",
       verb: "read",
-      parameters: { scope: "day", date: hints.temporalAnchor },
+      parameters: { scope: "day", date: diaryDateFor(u, hints.temporalAnchor) },
       confidence: 0.78,
     };
   },
@@ -1531,11 +1732,11 @@ const PROFILE_MATCHERS: Matcher[] = [
 // planner route untouched.
 // ---------------------------------------------------------------------------
 
-function foodOpportunityReport(confidence: number): ResolvedIntent {
+function foodOpportunityReport(confidence: number, mealName?: string): ResolvedIntent {
   return {
     capability: "food-intelligence",
     verb: "report",
-    parameters: {},
+    parameters: mealName ? { mealName } : {},
     confidence,
   };
 }
@@ -1595,6 +1796,17 @@ function foodComparison(rawA: string, rawB: string, confidence: number): Resolve
 }
 
 const FOOD_INTELLIGENCE_MATCHERS: Matcher[] = [
+  // 2026-11-21 (owner-reported): "how can I reduce processed food in our diet?" — a
+  // real question with no specific food/benefit slug, routed instead to
+  // nutrition-knowledge/explain (which needs one) and gapped. food-intelligence/report
+  // already surfaces exactly this signal (opportunity-engine.ts's
+  // `identifyShoppingLessProcessedOpportunities`, the WS9-curated less-processed-option
+  // generator) from the household's OWN shopping list — not a generic lecture.
+  (u) => {
+    if (!/\b(?:reduce|less|fewer|cut\s+(?:down\s+on|out)|eat\s+less)\s+(?:processed|ultra-?processed)\b/i.test(u)) return null;
+    return foodOpportunityReport(0.86);
+  },
+
   // BENCH4 (ND-059): "what simple nutrition boosts can I add this week?"
   // Requires an uplift NOUN (boost/uplift/upgrade/win) qualified by nutrition, or the
   // verb form "boost my nutrition". A bare "add more vegetables" (PL-028) carries no
@@ -1613,6 +1825,38 @@ const FOOD_INTELLIGENCE_MATCHERS: Matcher[] = [
   (u) => {
     if (!/\bmak(?:e|ing)\s+(?:this|that|the|my|our|it)\s+(?:meal|dish|recipe|dinner|lunch|breakfast|supper)?\s*(?:healthier|more\s+nutritious|more\s+balanced)\b/i.test(u)) return null;
     return foodOpportunityReport(0.87);
+  },
+
+  // AFI-NAMED (2026-11-21, owner-reported): the matcher above only fires for a GENERIC
+  // possessive ("make my meal/dish/dinner healthier") — it requires the noun after
+  // my/our/this/that to be one of that fixed list, so it never captures the actual words.
+  // A caller naming a specific recipe ("make my lasagne healthier", "how do I make our
+  // mac and cheese more nutritious") fell through with NO route at all, because the
+  // literal food name sits exactly where that matcher expects nothing or one of its fixed
+  // nouns. This captures that name and passes it through so the handler can look it up
+  // against the household's OWN cookbook (opportunity-engine.ts
+  // `identifyNamedMealUpliftOpportunity`) instead of the ambient week scan — same engine,
+  // same evidence discipline, now addressable by name.
+  (u) => {
+    const m = u.match(
+      /\bmak(?:e|ing)\s+(?:my|our|this|that|the)\s+([a-z][a-z'\- ]{1,40}?)\s+(?:healthier|more\s+nutritious|more\s+balanced|better)\b/i,
+    );
+    if (!m) return null;
+    const name = m[1].trim();
+    // The generic nouns are already owned by the matcher above — only a REAL name reaches here.
+    if (/^(?:meal|dish|recipe|dinner|lunch|breakfast|supper)$/i.test(name)) return null;
+    return foodOpportunityReport(0.86, name);
+  },
+
+  // AFI-NAMED (2026-11-21): "any healthier swap for my lasagne?" / "simply better choices
+  // for our fish pie" — the "swap/boost for X" frame, distinct from the "make X healthier"
+  // frame above. Same named-cookbook-lookup destination.
+  (u) => {
+    const m = u.match(
+      /\b(?:healthier|better)\s+swap\s+for\s+(?:my|our|the)\s+([a-z][a-z'\- ]{1,40}?)[?.!]?\s*$/i,
+    ) ?? u.match(/\bsimply\s+better\s+(?:choice|choices)\s+for\s+(?:my|our|the)?\s*([a-z][a-z'\- ]{1,40}?)[?.!]?\s*$/i);
+    if (!m) return null;
+    return foodOpportunityReport(0.86, m[1].trim());
   },
 
   // 2026-11-11 (owner-reported): "what nutrients are missing from a balanced diet
@@ -3088,7 +3332,13 @@ const MEAL_DISCOVERY_PLANNER_TONIGHT_COMPOUND: CompoundMatcher = (_u, lower, hin
 
 /** PR-066: Analyser + Household: "Is this cereal a good choice for my family?" */
 const ANALYSER_HOUSEHOLD_SUITABILITY_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
-  const hasProductSignal = /\b(?:this|product|item|food|cereal|ingredient|brand)\b/.test(lower);
+  // 2026-11-21 (owner-reported): bare "food" used to sit in this alternation and matched
+  // ANY question containing that extremely common word (e.g. "what food restrictions does
+  // my family have?" — no product in sight), spuriously invoking the analyser alongside
+  // the correct household route. Neither benchmark question this compound targets
+  // (PR-066 "cereal", PR-070 "product") ever needed it — both are already covered by a
+  // real product noun or the demonstrative "this".
+  const hasProductSignal = /\b(?:this|product|item|cereal|ingredient|brand)\b/.test(lower);
   const hasHouseholdSignal = /\b(?:my\s+family|my\s+household|(?:everyone|my\s+(?:kids|children|members?)))\b/.test(lower);
   if (!hasProductSignal || !hasHouseholdSignal) return null;
   return [
@@ -3100,7 +3350,11 @@ const ANALYSER_HOUSEHOLD_SUITABILITY_COMPOUND: CompoundMatcher = (_u, lower, _hi
 /** PR-070: Household + Analyser: "Does this product fit my household restrictions?" */
 const HOUSEHOLD_ANALYSER_RESTRICTIONS_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
   const hasHouseholdSignal = /\b(?:household|family|restrictions?|allergies?|preferences?|diet(?:ary)?)\b/.test(lower);
-  const hasProductSignal = /\b(?:product|item|ingredient|this|food|cereal|brand)\b/.test(lower);
+  // 2026-11-21 (owner-reported) — same fix as ANALYSER_HOUSEHOLD_SUITABILITY_COMPOUND
+  // above: bare "food" spuriously matched "what food restrictions does my family have?",
+  // which names no product at all. The PR-070 fixture it targets says "product", already
+  // covered below.
+  const hasProductSignal = /\b(?:product|item|ingredient|this|cereal|brand)\b/.test(lower);
   if (!hasHouseholdSignal || !hasProductSignal) return null;
   return [
     { capability: "household", verb: "read", parameters: { scope: "household" }, confidence: 0.86 },
@@ -3333,6 +3587,7 @@ const ALL_SPECIFIC_MATCHERS: Matcher[] = [
   ...NUTRITION_NUTRIENT_MATCHERS,          // INT26: nutrient-named queries (read/search)
   ...NUTRITION_BENEFIT_EXPLAIN_MATCHERS,   // INT26: benefit concept queries (explain {benefitSlug})
   ...NUTRITION_EXPLAIN_MATCHERS,           // existing: food-benefit explain (explain {foodSlug})
+  ...NUTRITION_DIETARY_ATTRIBUTE_MATCHERS, // 2026-11-21: dietary attr (vegan, gluten-free, etc.)
   ...NUTRITION_BENEFIT_FOODS_MATCHERS,     // existing: benefit→foods search
   ...NUTRITION_FOOD_DETAIL_MATCHERS,       // existing: food detail read (scope:food)
   ...NUTRITION_GENERAL_EXPLAIN_MATCHERS,   // INT26: generic "tell me about food" (lowest confidence)
@@ -3356,6 +3611,7 @@ const ALL_SPECIFIC_MATCHERS: Matcher[] = [
   ...PLANNER_MATCHERS,
   ...SHOPPING_MATCHERS,
   ...PANTRY_MATCHERS,
+  ...NUTRITION_REPORT_MATCHERS,
   ...DIARY_MATCHERS,
   ...HOUSEHOLD_MATCHERS,
   ...PROFILE_MATCHERS,                     // BENCH3: first utterance-derived route to profile

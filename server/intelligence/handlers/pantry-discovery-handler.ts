@@ -51,7 +51,21 @@ function buildPantrySearchDeterministicAnswer(
     // breakdown from just the sample would undercount locations near the
     // cutoff, so ground this in real example names instead of a guessed
     // breakdown. The total itself stays exact (computed before capping).
-    const examples = items.slice(0, 5).map((i) => i.name).join(", ");
+    //
+    // 2026-11-21 (owner-reported): an unscoped browse ("what's in my pantry?") picked
+    // its 5 examples by raw item order, which is insertion/id order — on a real
+    // household this meant Shampoo, Sponges, Aluminium Foil, Fabric Conditioner and
+    // Toilet Roll (the seeded "household" category, lowest ids) led every answer, even
+    // though 115 of this household's 138 items are actual food. THA is a food app;
+    // food-location examples (fridge/freezer/larder/fruit — anything but the generic
+    // "household" catch-all) are what a "what's in my pantry" question means in
+    // practice. Only fall back to a household item if fewer than 5 food items exist.
+    const foodFirst = [...items].sort((a, b) => {
+      const aHousehold = a.location === "household" ? 1 : 0;
+      const bHousehold = b.location === "household" ? 1 : 0;
+      return aHousehold - bHousehold;
+    });
+    const examples = foodFirst.slice(0, 5).map((i) => i.name).join(", ");
     return `Your pantry has ${countPhrase}${scoped}, including ${examples} and more.`;
   }
 
