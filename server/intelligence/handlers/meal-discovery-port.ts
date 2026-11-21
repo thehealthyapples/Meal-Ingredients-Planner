@@ -75,6 +75,17 @@ export interface DiscoveryItem {
    * The LLM can use this to produce entity refs (type: "meal", id: internalId).
    */
   readonly internalId?: number;
+
+  /**
+   * COMP-DET9 (2026-11-21) — live-caught (CG-083): browseAll's own "what can I cook /
+   * what should I do tonight" questions got a real cookbook item back — a beer
+   * ("American pale ale") — as a top, unordered "something to cook" suggestion. False
+   * for all template results (MealTemplate carries no drink flag; templates are
+   * recipes by construction). Used by the handler to exclude drinks from browseAll's
+   * results — a specific name/ingredient SEARCH for a drink ("what cocktail should I
+   * make?") is untouched; this only filters the no-named-food "browse everything" path.
+   */
+  readonly isDrink: boolean;
 }
 
 /**
@@ -155,6 +166,7 @@ export function templateToDiscoveryItem(t: MealTemplate): DiscoveryItem {
     isAlreadySaved: false,
     importable: false,
     internalId: undefined,
+    isDrink: false,
   };
 }
 

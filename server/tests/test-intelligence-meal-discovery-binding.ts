@@ -80,6 +80,27 @@ const PERSONAL_ITEM: DiscoveryItem = {
   isAlreadySaved: true,
   importable: false,
   internalId: 42,
+  isDrink: false,
+};
+
+// COMP-DET9 (2026-11-21) — a drink fixture, so browseAll's drink-exclusion has something
+// real to exclude rather than a filter that's never actually exercised.
+const DRINK_ITEM: DiscoveryItem = {
+  id: "personal:55",
+  // Deliberately no letter "c" — the existing "search 'c' matches exactly the three
+  // non-drink fixtures" test below relies on this fixture NOT incidentally matching.
+  name: "Ginger Beer",
+  description: undefined,
+  servings: 1,
+  mealFormat: "recipe",
+  dietTypes: [],
+  sourceType: "personal",
+  sourceLabel: "Your Cookbook",
+  imageUrl: undefined,
+  isAlreadySaved: true,
+  importable: false,
+  internalId: 55,
+  isDrink: true,
 };
 
 const SYSTEM_ITEM: DiscoveryItem = {
@@ -95,6 +116,7 @@ const SYSTEM_ITEM: DiscoveryItem = {
   isAlreadySaved: true,
   importable: false,
   internalId: 100,
+  isDrink: false,
 };
 
 const TEMPLATE_ITEM: DiscoveryItem = {
@@ -110,6 +132,7 @@ const TEMPLATE_ITEM: DiscoveryItem = {
   isAlreadySaved: false,
   importable: false,
   internalId: undefined,
+  isDrink: false,
 };
 
 const portCalls: string[] = [];
@@ -129,6 +152,9 @@ function makePort(): MealDiscoveryPort {
       }
       if (TEMPLATE_ITEM.name.toLowerCase().includes(lower) || lower === "chicken") {
         results.push(TEMPLATE_ITEM);
+      }
+      if (DRINK_ITEM.name.toLowerCase().includes(lower)) {
+        results.push(DRINK_ITEM);
       }
       return results;
     },
@@ -339,6 +365,44 @@ async function main(): Promise<void> {
     user1,
   );
   assert(searchWhitespace.status === "gap", "whitespace-only query → honest gap (trim → empty)", searchWhitespace.status);
+
+  // -------------------------------------------------------------------------
+  section("COMP-DET4 — browseAll: an empty query is a gap UNLESS browseAll opts in");
+  // -------------------------------------------------------------------------
+  const emptyNoOptIn = await platform.handle(
+    { verb: "search", capabilityId: MEAL_DISCOVERY_CAPABILITY_ID, parameters: { query: "" } },
+    user1,
+  );
+  assert(emptyNoOptIn.status === "gap", "empty query WITHOUT browseAll → still an honest gap (accidental-blank protection intact)", emptyNoOptIn.status);
+
+  const emptyWithOptIn = await platform.handle(
+    { verb: "search", capabilityId: MEAL_DISCOVERY_CAPABILITY_ID, parameters: { query: "", browseAll: true } },
+    user1,
+  );
+  assert(emptyWithOptIn.status === "ok", "empty query WITH browseAll:true → ok, browses every candidate", emptyWithOptIn.status);
+
+  // -------------------------------------------------------------------------
+  section("COMP-DET9 — browseAll excludes drinks (a specific drink search does not)");
+  // -------------------------------------------------------------------------
+  const browseResults = (emptyWithOptIn.result as any)?.results ?? [];
+  assert(
+    browseResults.every((r: any) => r.id !== DRINK_ITEM.id),
+    "browseAll's results never include a drink — 'what can I cook/eat' should not surface a beer",
+    JSON.stringify(browseResults.map((r: any) => r.id)),
+  );
+  assert(
+    browseResults.some((r: any) => r.id === PERSONAL_ITEM.id),
+    "browseAll still surfaces real, non-drink candidates (the filter removes drinks only, not everything)",
+  );
+
+  const specificDrinkSearch = await platform.handle(
+    { verb: "search", capabilityId: MEAL_DISCOVERY_CAPABILITY_ID, parameters: { query: "ginger" } },
+    user1,
+  );
+  assert(
+    (specificDrinkSearch.result as any)?.results?.some((r: any) => r.id === DRINK_ITEM.id),
+    "a SPECIFIC name search for a drink ('ginger') still finds it — the exclusion is browseAll-only, never a blanket drink ban",
+  );
 
   // -------------------------------------------------------------------------
   section("Result capping — more than 15 items → handler caps to 15");

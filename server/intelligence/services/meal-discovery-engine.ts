@@ -140,6 +140,7 @@ function mealToDiscoveryItem(
     isAlreadySaved: true,
     importable: false,
     internalId: m.id,
+    isDrink: m.isDrink,
   };
 }
 

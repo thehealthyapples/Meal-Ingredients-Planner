@@ -2709,7 +2709,18 @@ const PANTRY_NUTRITION_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
   const hasNutrition = /\b(?:high[\s-]protein|low[\s-]carb|low[\s-]fat|low[\s-]sugar|healthy|nutritious|protein|carbs?|under\s+\d+\s*(?:kcal|cal(?:orie)?s?))\b/.test(lower);
   if (!hasPantry || !hasNutrition) return null;
   return [
-    { capability: "pantry-discovery",    verb: "search", parameters: { query: lower }, confidence: 0.84 },
+    // COMP-DET9 (2026-11-21) — live-caught (PA-052): the whole utterance ("what pantry
+    // gaps stop me making quick healthy meals?") was the literal pantry-discovery
+    // search term — a name/ingredient text match against a multi-word SENTENCE, which
+    // matches nothing. Pantry-discovery's own dedicated "what's in my pantry?" matcher
+    // already uses an empty query to browse everything (PANTRY_DISCOVERY_MATCHERS,
+    // confidence 0.93) with no special flag needed — same here.
+    { capability: "pantry-discovery",    verb: "search", parameters: { query: "" },    confidence: 0.84 },
+    // nutrition-discovery is left on the full utterance deliberately: it parses a real
+    // NUMERIC/keyword threshold ("under 400 calories", "high protein") out of the text,
+    // which an empty query could never supply. Gapping honestly when no such threshold
+    // is literally present (as PA-052's "quick healthy meals" has none) is correct,
+    // not a bug — there is nothing for it to filter by.
     { capability: "nutrition-discovery", verb: "search", parameters: { query: lower }, confidence: 0.82 },
   ];
 };

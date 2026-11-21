@@ -95,7 +95,14 @@ async function handleSearch(
   }
 
   const items = await port.discover(rawQuery, userId);
-  const capped = items.slice(0, DISCOVERY_MAX_RESULTS);
+  // COMP-DET9 (2026-11-21) — live-caught (CG-083): browseAll's whole point is "what can
+  // I eat/cook with no named food", so a drink surfacing as a top, unordered "something
+  // to cook" suggestion ("American pale ale" for "I don't want to cook, what should I
+  // do?") is a straightforward mismatch — read on the ORIGINAL `items` array first so
+  // getSafetyExclusion/getSourcesQueried still see their non-enumerable carrier
+  // properties; a specific name/ingredient search (e.g. "cocktail") is untouched.
+  const eligible = browseAll ? items.filter((i) => !i.isDrink) : items;
+  const capped = eligible.slice(0, DISCOVERY_MAX_RESULTS);
   const { excludedForSafety, status } = getSafetyExclusion(items);
 
   return {
