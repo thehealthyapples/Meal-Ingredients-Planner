@@ -166,8 +166,10 @@ export interface NutritionSearchResult {
 export interface NutritionExplainResult {
   /** "food-benefits" = a food's grounded benefits; "food-benefit" = one (food, benefit);
    *  "benefit" = a benefit alone; "food-encyclopedia" (COMP-DET2) = the Food Knowledge
-   *  Encyclopedia fallback, used only when the evidence-linked graph has nothing for this food. */
-  readonly scope: "food-benefits" | "food-benefit" | "benefit" | "food-encyclopedia";
+   *  Encyclopedia fallback, used only when the evidence-linked graph has nothing for this
+   *  food; "food-category-search" (COMP-DET6) = a registry SEARCH fallback for a category/
+   *  plural term ("legumes", not any single food's own slug) that has no row of its own. */
+  readonly scope: "food-benefits" | "food-benefit" | "benefit" | "food-encyclopedia" | "food-category-search";
   readonly foodSlug?: string;
   readonly foodName?: string;
   readonly benefits: readonly KnowledgeBenefitView[];
@@ -188,6 +190,10 @@ export interface NutritionExplainResult {
     readonly whyThaHighlightsThis: string | null;
     readonly simplerAlternatives: string | null;
   };
+  /** COMP-DET6 — present only for scope "food-category-search": the real registry foods a
+   *  unified search found for the category/plural term, each with its own stored
+   *  description (source-gated, not fabricated — the registry's own editorial text). */
+  readonly categoryMatches?: readonly { readonly slug: string; readonly name: string; readonly description: string | null }[];
 }
 
 // ---------------------------------------------------------------------------
@@ -279,6 +285,30 @@ function buildFoodBenefitDeterministicAnswer(
   const citationLabels = dedupCitationLabels(sourceRefs);
   const sourcesText = citationLabels.length > 0 ? ` Source: ${citationLabels.join(", ")}.` : "";
   return `${foodName}'s link to ${benefitName.toLowerCase()} is ${confidencePhrase(confidence)}.${sourcesText}`;
+}
+
+/** COMP-DET6 (2026-11-21) — live-caught (FK-077): "why are legumes good for us?" resolves
+ *  to `explain { foodSlug: "legumes" }`, but the registry has no food literally slugged
+ *  "legumes" — it has 17 individual legumes (lentils, chickpeas, black beans...) each with
+ *  their own real, editorial description. A plural/category term in the question is not
+ *  the same as an unknown food; a unified search over the SAME registry finds them. Builds
+ *  the deterministicAnswer from up to 3 real matches' own stored descriptions — no
+ *  invented content, same source-gating as every other path in this handler. */
+function buildCategorySearchExplainResult(term: string, foods: readonly { slug: string; name: string; description: string | null }[]): NutritionExplainResult {
+  const shown = foods.slice(0, 3);
+  const deterministicAnswer =
+    shown.length > 0
+      ? shown.map((f) => (f.description ? `${f.name}: ${f.description}` : f.name)).join(" ")
+      : `The Nutrition / Knowledge owner has no foods recorded matching "${term}".`;
+  return {
+    scope: "food-category-search",
+    foodName: term,
+    benefits: [],
+    source: "nutrition-knowledge-registry",
+    note: GROUNDED_NOTE,
+    deterministicAnswer,
+    categoryMatches: shown,
+  };
 }
 
 /** COMP-DET2 — the Food Knowledge Encyclopedia fallback result. Used only when the
@@ -578,6 +608,11 @@ async function handleExplain(
     // editorial content already answers the question.
     const encyclopedia = await port.getEncyclopediaEntry(foodSlug);
     if (encyclopedia) return buildEncyclopediaExplainResult(encyclopedia);
+    // COMP-DET6 — the slug itself may be a category/plural term ("legumes") rather than
+    // any single food's own slug; a unified search over the SAME registry can still find
+    // real individual foods it belongs to. Tried last, after the two more specific owners.
+    const searched = await port.searchKnowledgeRegistry(foodSlug.replace(/-/g, " "));
+    if (searched.foods.length > 0) return buildCategorySearchExplainResult(foodSlug.replace(/-/g, " "), searched.foods);
     throw gap(
       `Honest gap: the Nutrition / Knowledge owner has no food recorded for slug ${JSON.stringify(foodSlug)}. ` +
         "The Intelligence Platform will not fabricate benefits for an unknown food.",

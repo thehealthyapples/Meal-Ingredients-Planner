@@ -150,11 +150,17 @@ function makePort(): NutritionKnowledgeReadPort {
         confidence: "strong" as const,
       }];
     },
+    // COMP-DET6 (2026-11-21) — filters by query (unlike a stub that always returns the
+    // same result regardless of input), so a test asserting "truly unknown everywhere"
+    // (e.g. "unobtainium") isn't given a false match purely because the mock ignores
+    // what it was asked — matches the real registry's own query-filtered behaviour.
     searchKnowledgeRegistry: async (query) => {
       calls.push(`searchKnowledgeRegistry(${query})`);
+      const q = query.toLowerCase();
+      const matches = "broccoli".includes(q) || q.includes("broccoli");
       return {
         query,
-        foods: [{ slug: "broccoli", name: "Broccoli", category: "vegetables", subcategory: "brassica", description: null }],
+        foods: matches ? [{ slug: "broccoli", name: "Broccoli", category: "vegetables", subcategory: "brassica", description: null }] : [],
         nutrients: [],
         benefits: [],
       };
@@ -297,6 +303,14 @@ async function main(): Promise<void> {
 
   const neitherSource = await platform.handle({ verb: "explain", capabilityId: "nutrition-knowledge", parameters: { foodSlug: "unobtainium" } }, user);
   assert(neitherSource.status === "gap", "food in NEITHER the registry nor the encyclopedia → still an honest gap (no fabrication)", neitherSource.status);
+
+  // -------------------------------------------------------------------------
+  section("COMP-DET6 — category/plural term with no own slug falls back to a real registry search");
+  const categoryTerm = await platform.handle({ verb: "explain", capabilityId: "nutrition-knowledge", parameters: { foodSlug: "broccoli-family" } }, user);
+  assert(categoryTerm.status === "ok", "a category/plural term with no food slug of its own → ok via search fallback, not a gap", categoryTerm.status);
+  const categoryResult = categoryTerm.result as any;
+  assert(categoryResult?.scope === "food-category-search" && categoryResult?.source === "nutrition-knowledge-registry", "category-search fallback is clearly scoped and attributed to the real registry (not fabricated)", JSON.stringify(categoryResult));
+  assert(Array.isArray(categoryResult?.categoryMatches) && categoryResult.categoryMatches[0]?.slug === "broccoli", "surfaces the real matched food(s), not an invented category summary", JSON.stringify(categoryResult?.categoryMatches));
 
   // -------------------------------------------------------------------------
   section("No fabricated benefits — unlinked (food, benefit) → honest gap");
