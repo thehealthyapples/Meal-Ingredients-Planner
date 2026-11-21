@@ -1250,6 +1250,13 @@ export const householdMembers = pgTable("household_members", {
   joinedAt: timestamp("joined_at", { withTimezone: true }),
   invitedByUserId: integer("invited_by_user_id"),
   leftAt: timestamp("left_at", { withTimezone: true }),
+  /**
+   * 2026-11-21 (household relations): describes how this member relates to the household.
+   * Common values: "owner" (account holder), "spouse", "child", "parent", "sibling", "other".
+   * Null means undefined/not yet configured. Used to resolve questions like "what can't
+   * my wife eat?" by matching the relation word to this member's label.
+   */
+  relationshipLabel: text("relationship_label"),
 }, (table) => [
   unique("household_members_household_user_unique").on(table.householdId, table.userId),
 ]);

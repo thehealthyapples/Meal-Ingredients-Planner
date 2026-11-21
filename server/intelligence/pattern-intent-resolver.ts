@@ -1065,17 +1065,20 @@ const HOUSEHOLD_DISCOVERY_MATCHERS: Matcher[] = [
   // "household"/"family" noun the matchers above require. This resolver-unmatched entirely
   // before — no route at all, not even a wrong one — because none of the household matchers
   // accept a bare relation word as the household signal.
+  //
+  // UPDATED 2026-11-21 (household relations schema): now extracts the relation word
+  // (wife/husband/partner/etc.) and passes it as the query so the handler can look up
+  // the specific household member with that relationshipLabel and return their data.
   (u) => {
-    const relation = /\b(?:wife|husband|partner|spouse|son|daughter|kids?|child(?:ren)?)\b/i;
+    const relationMatch = u.match(/\b(wife|husband|partner|spouse|son|daughter|kids?|child(?:ren)?)\b/i);
+    if (!relationMatch) return null;
     const negativeFrame = /\bcan'?t\b|\bcan\s+(?:my\s+\w+\s+)?not\b/i;
     // Match: "what [anything] allergy/avoid/etc" OR "what can't ...". Allows arbitrary text between what and keyword.
     const askingFrame = /\b(?:what\s+.*?\b(?:allerg(?:y|ies)|restrictions?|can'?t\s+eat|avoid(?:s)?)\b|allerg(?:y|ies)\s+does\b)/i;
-    if (!relation.test(u)) return null;
     if (!negativeFrame.test(u) && !askingFrame.test(u)) return null;
-    // 2026-11-21 (live-caught): the whole utterance as a literal search query ALWAYS
-    // returns zero matches here (the same COMP-DET5 whole-utterance-as-query bug class
-    // fixed elsewhere tonight) — a browse-all query lets the real per-member data answer.
-    return { capability: "household-discovery", verb: "search", parameters: { query: "" }, confidence: 0.85 };
+    // Pass the singular relation word (wife→wife, kids→child, children→child) so handler can query relationshipLabel
+    const relationWord = relationMatch[1].toLowerCase().replace(/s$/, "").replace(/ren$/, "");
+    return { capability: "household-discovery", verb: "search", parameters: { query: relationWord }, confidence: 0.85 };
   },
 ];
 

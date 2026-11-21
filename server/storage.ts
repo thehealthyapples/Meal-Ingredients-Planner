@@ -12,7 +12,7 @@ import {
 } from "@shared/time/household-time";
 import { deriveAcquisitionFromLegacy } from "@shared/recipe-acquisition";
 import { db } from "./db";
-import { eq, and, ilike, or, sql, inArray, isNull, isNotNull, desc } from "drizzle-orm";
+import { eq, and, ilike, or, sql, inArray, isNull, isNotNull, desc, getTableColumns } from "drizzle-orm";
 
 /** `db` or an open transaction — the two executors a storage helper may run on. */
 type DbExecutor = typeof db | Parameters<Parameters<(typeof db)["transaction"]>[0]>[0];
@@ -3537,7 +3537,17 @@ export class DatabaseStorage implements IStorage {
         eq(householdMembers.status, "active"),
       ));
 
-    return db.select().from(householdEaters)
+    // 2026-11-21 (household relations): join with householdMembers to get relationshipLabel
+    // for natural-language relation queries ("what can't my wife eat?")
+    const eaters = await db.select({
+      ...getTableColumns(householdEaters),
+      relationshipLabel: householdMembers.relationshipLabel,
+    }).from(householdEaters)
+      .leftJoin(householdMembers, and(
+        eq(householdMembers.householdId, householdId),
+        eq(householdMembers.userId, householdEaters.userId),
+        eq(householdMembers.status, "active"),
+      ))
       .where(and(
         eq(householdEaters.householdId, householdId),
         or(
@@ -3546,6 +3556,20 @@ export class DatabaseStorage implements IStorage {
         ),
       ))
       .orderBy(householdEaters.id);
+
+    // Map the extended result back to HouseholdEaterRow format
+    return eaters.map(r => ({
+      ...r,
+      id: r.id,
+      householdId: r.householdId,
+      displayName: r.displayName,
+      userId: r.userId,
+      defaultDietTypes: r.defaultDietTypes,
+      hardRestrictions: r.hardRestrictions,
+      reportedHealthContext: r.reportedHealthContext,
+      nutritionFocuses: r.nutritionFocuses,
+      relationshipLabel: r.relationshipLabel,
+    } as any));
   }
 
   async createHouseholdEater(

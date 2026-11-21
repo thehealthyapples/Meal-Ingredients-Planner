@@ -30,6 +30,8 @@ export interface HouseholdDiscoveryItem {
   readonly dietTypes: readonly string[];
   /** Hard restriction allergens from the member's household eater record. */
   readonly hardRestrictions: readonly string[];
+  /** 2026-11-21: Relationship label (spouse, child, etc.) for natural-language queries. */
+  readonly relationshipLabel?: string | null;
   readonly source: "household-discovery";
 }
 

@@ -37,7 +37,7 @@ const HOUSEHOLD_DISCOVERY_MAX_RESULTS = 50;
 export interface HouseholdDiscoveryStorage {
   getHouseholdByUser(userId: number): Promise<{
     household: { id: number; name: string };
-    members: Array<{ userId: number; role: string }>;
+    members: Array<{ userId: number; role: string; relationshipLabel?: string | null }>;
   } | null>;
   getHouseholdEaters(householdId: number): Promise<Array<{
     id: number;
@@ -45,6 +45,7 @@ export interface HouseholdDiscoveryStorage {
     displayName: string;
     defaultDietTypes?: string[] | null;
     hardRestrictions?: string[] | null;
+    relationshipLabel?: string | null;
   }>>;
 }
 
@@ -77,13 +78,17 @@ export class HouseholdDiscoveryEngine implements HouseholdDiscoveryPort {
       const dietTypes = (eater.defaultDietTypes ?? []).map((d) => d.toLowerCase());
       const restrictions = (eater.hardRestrictions ?? []).map((r) => r.toLowerCase());
       const nameLower = eater.displayName.toLowerCase();
+      const relationshipLower = (eater.relationshipLabel ?? "").toLowerCase();
 
       // Empty query → include all; otherwise filter
+      // 2026-11-21 (household relations): also match on relationshipLabel for
+      // "what can't my wife eat?" queries where "wife" is passed as the query
       const matches =
         !lowerQuery ||
         nameLower.includes(lowerQuery) ||
         dietTypes.some((d) => d.includes(lowerQuery)) ||
-        restrictions.some((r) => r.includes(lowerQuery));
+        restrictions.some((r) => r.includes(lowerQuery)) ||
+        relationshipLower.includes(lowerQuery);
 
       if (!matches) continue;
 
@@ -101,6 +106,7 @@ export class HouseholdDiscoveryEngine implements HouseholdDiscoveryPort {
         role: uid ? (roleMap.get(uid) ?? "member") : "no-account",
         dietTypes: eater.defaultDietTypes ?? [],
         hardRestrictions: eater.hardRestrictions ?? [],
+        relationshipLabel: eater.relationshipLabel ?? null,
         source: "household-discovery",
       });
     }
