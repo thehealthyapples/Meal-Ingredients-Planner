@@ -2796,69 +2796,94 @@ const MEAL_GOAL_FIT_COMPOUND: CompoundMatcher = (u, _lower, _hints) => {
  * so this does not fire on an unrelated "but" clause with no closing "how should I plan" —
  * the vocabulary floor alone still covers a bare nutrition mention with no planning question.
  */
-const COMPOUND_HEALTH_GOAL_PLANNING_COMPOUND: CompoundMatcher = (u, _lower, _hints) => {
+const COMPOUND_HEALTH_GOAL_PLANNING_COMPOUND: CompoundMatcher = (u, _lower, hints) => {
   if (!/\bi\s+want\s+to\b.*\bbut\s+(?:also\s+)?\b/i.test(u)) return null;
   if (!/\bhow\s+should\s+i\s+plan\b/i.test(u)) return null;
   return [
     { capability: "nutrition-knowledge", verb: "read", parameters: { scope: "foods" },   confidence: 0.86 },
     { capability: "profile",             verb: "read", parameters: { scope: "profile" }, confidence: 0.85 },
-    { capability: "planner",             verb: "read", parameters: { scope: "week" },    confidence: 0.84 },
+    // COMP-DET5 (2026-11-21) — live-caught: every planner compound matcher below this
+    // point emitted a bare { scope: "week" } with no weekId, which planner-read-handler.ts
+    // ALWAYS gaps on ("needs an identifier"). The original PLANNER_MATCHERS (PL-023/024
+    // style) thread hints.activePlannerWeekId through for exactly this reason; none of
+    // these newer compounds ever did, so every one of them has gapped unconditionally
+    // since the day it was added, regardless of whether a real active week exists.
+    { capability: "planner", verb: "read", parameters: hints.activePlannerWeekId != null ? { scope: "week", weekId: hints.activePlannerWeekId } : { scope: "week" }, confidence: 0.84 },
   ];
 };
 
 /** SH-038: Planner + Shopping: "What do I need to buy for this week's plan?" */
-const PLANNER_SHOPPING_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
+const PLANNER_SHOPPING_COMPOUND: CompoundMatcher = (_u, lower, hints) => {
   const hasPlannerSignal = /\b(?:plan(?:ned|ner)?|this\s+week|my\s+(?:meal\s+)?plan|week'?s?\s+meals?|scheduled)\b/.test(lower);
   const hasBuySignal     = /\b(?:buy|shop(?:ping)?|need\s+to\s+(?:get|buy)|should\s+(?:i\s+)?get|what\s+(?:do\s+i\s+need|to\s+buy|to\s+get))\b/.test(lower);
   if (!hasPlannerSignal || !hasBuySignal) return null;
   return [
-    { capability: "planner",   verb: "read",   parameters: { scope: "week" },   confidence: 0.86 },
+    // COMP-DET5 — see COMPOUND_HEALTH_GOAL_PLANNING_COMPOUND above.
+    { capability: "planner",   verb: "read",   parameters: hints.activePlannerWeekId != null ? { scope: "week", weekId: hints.activePlannerWeekId } : { scope: "week" }, confidence: 0.86 },
     { capability: "shopping",  verb: "search", parameters: { query: lower },   confidence: 0.84 },
   ];
 };
 
 /** PL-026: Planner + Nutrition Knowledge: "How balanced is this week's plan?" */
-const PLANNER_NUTRITION_BALANCE_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
+const PLANNER_NUTRITION_BALANCE_COMPOUND: CompoundMatcher = (_u, lower, hints) => {
   const hasPlannerSignal = /\b(?:plan(?:ned|ner)?|this\s+week|my\s+(?:meal\s+)?plan|week'?s?\s+meals?|scheduled)\b/.test(lower);
   const hasBalanceSignal = /\b(?:balanced?|nutrition(?:al)?|healthy|nutritious|macro|nutrient|diet(?:ary)?|adequate)\b/.test(lower);
   if (!hasPlannerSignal || !hasBalanceSignal) return null;
   return [
-    { capability: "planner",             verb: "read", parameters: { scope: "week" },   confidence: 0.86 },
-    { capability: "nutrition-knowledge", verb: "read", parameters: { scope: "summary" }, confidence: 0.84 },
+    // COMP-DET5 — weekId threaded (see COMPOUND_HEALTH_GOAL_PLANNING_COMPOUND above).
+    { capability: "planner",             verb: "read", parameters: hints.activePlannerWeekId != null ? { scope: "week", weekId: hints.activePlannerWeekId } : { scope: "week" }, confidence: 0.86 },
+    // COMP-DET5 — "summary" was never a valid nutrition-knowledge read scope (the
+    // handler only supports food/nutrient/benefit/preparations/categories/foods — see
+    // nutrition-knowledge-read-handler.ts's handleRead) and always gapped. "categories"
+    // is the closest valid, genuinely-grounded fallback with no single food/benefit to
+    // anchor on; it stands in as weak supporting context, not the primary answer.
+    { capability: "nutrition-knowledge", verb: "read", parameters: { scope: "categories" }, confidence: 0.84 },
   ];
 };
 
 /** PL-028: Planner + Food Intelligence: "Where can I add more vegetables, legumes, or fermented foods this week?" */
-const PLANNER_FOOD_INTELLIGENCE_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
+const PLANNER_FOOD_INTELLIGENCE_COMPOUND: CompoundMatcher = (_u, lower, hints) => {
   const hasPlannerSignal  = /\b(?:plan(?:ned|ner)?|this\s+week|my\s+(?:meal\s+)?plan|week'?s?\s+meals?)\b/.test(lower);
   const hasImprovementSignal = /\b(?:add|more|increase|include|vegetables?|legumes?|fermented|foods?)\b/.test(lower);
   if (!hasPlannerSignal || !hasImprovementSignal) return null;
   return [
-    { capability: "planner",             verb: "read",      parameters: { scope: "week" }, confidence: 0.86 },
-    { capability: "food-intelligence",   verb: "recommend", parameters: { scope: "foods" }, confidence: 0.84 },
+    // COMP-DET5 — weekId threaded.
+    { capability: "planner", verb: "read", parameters: hints.activePlannerWeekId != null ? { scope: "week", weekId: hints.activePlannerWeekId } : { scope: "week" }, confidence: 0.86 },
+    // COMP-DET5 — food-intelligence's `recommend` verb needs { scope: "benefit"|"nutrient",
+    // slug } (a specific entity to recommend around); "foods" was never a valid scope and
+    // always gapped. There is no single slug this open-ended question names, so this falls
+    // back to nutrition-knowledge's general food-category listing — valid, grounded, weak
+    // context — rather than a call engineered to gap every time.
+    { capability: "nutrition-knowledge", verb: "read", parameters: { scope: "categories" }, confidence: 0.84 },
   ];
 };
 
 /** PL-033: Household + Planner: "What adaptations are needed for each household member?" */
-const HOUSEHOLD_PLANNER_ADAPTATIONS_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
+const HOUSEHOLD_PLANNER_ADAPTATIONS_COMPOUND: CompoundMatcher = (_u, lower, hints) => {
   const hasPerMemberSignal  = /\b(?:each|every|per)\s+.*\bmembers?\b|\bhousehold\s+members?\b/i.test(lower);
   const hasAdaptationSignal = /\b(?:adaptation|adapt|change|adjust(?:ment)?|modify|personali[sz]e|tailor|fit|suitable|needed)\b/.test(lower);
   if (!hasPerMemberSignal || !hasAdaptationSignal) return null;
   return [
     { capability: "household", verb: "read", parameters: { scope: "household" }, confidence: 0.86 },
-    { capability: "planner",   verb: "read", parameters: { scope: "week" },      confidence: 0.84 },
+    // COMP-DET5 — weekId threaded.
+    { capability: "planner",   verb: "read", parameters: hints.activePlannerWeekId != null ? { scope: "week", weekId: hints.activePlannerWeekId } : { scope: "week" }, confidence: 0.84 },
   ];
 };
 
 /** PL-034: Planner + Nutrition Knowledge + Shopping: "What are the top three opportunities in my planner?" */
-const PLANNER_NUTRITION_SHOPPING_OPPORTUNITIES_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
+const PLANNER_NUTRITION_SHOPPING_OPPORTUNITIES_COMPOUND: CompoundMatcher = (_u, lower, hints) => {
   const hasPlannerSignal     = /\b(?:plan(?:ned|ner)?|my\s+(?:meal\s+)?plan)\b/.test(lower);
   const hasOpportunitiesSignal = /\b(?:opportunities|top\s+(?:three|suggestions?)|best|improve|optimize|enhance)\b/.test(lower);
   if (!hasPlannerSignal || !hasOpportunitiesSignal) return null;
   return [
-    { capability: "planner",             verb: "read",    parameters: { scope: "week" },   confidence: 0.86 },
-    { capability: "nutrition-knowledge", verb: "read",    parameters: { scope: "summary" }, confidence: 0.85 },
-    { capability: "shopping",            verb: "search",  parameters: { query: "" },       confidence: 0.83 },
+    // COMP-DET5 — weekId threaded.
+    { capability: "planner",             verb: "read",    parameters: hints.activePlannerWeekId != null ? { scope: "week", weekId: hints.activePlannerWeekId } : { scope: "week" }, confidence: 0.86 },
+    // COMP-DET5 — "summary" fixed to "categories" (see PLANNER_NUTRITION_BALANCE_COMPOUND).
+    { capability: "nutrition-knowledge", verb: "read",    parameters: { scope: "categories" }, confidence: 0.85 },
+    // COMP-DET5 — plain "shopping" does not support a "search" verb at all (only
+    // read/explain/add/delete/generate — "search" belongs to shopping-discovery); this
+    // always hit unsupported_intent. "read scope:list" is shopping's own real read op.
+    { capability: "shopping",            verb: "read",    parameters: { scope: "list" },   confidence: 0.83 },
   ];
 };
 
@@ -2875,7 +2900,7 @@ const SHOPPING_ANALYSER_PROCESSING_COMPOUND: CompoundMatcher = (_u, lower, _hint
   if (!hasShoppingSignal || !hasProcessingSignal) return null;
   return [
     { capability: "shopping", verb: "search", parameters: { query: lower },    confidence: 0.86 },
-    { capability: "analyser", verb: "read",   parameters: { scope: "summary" }, confidence: 0.84 },
+    { capability: "analyser", verb: "read",   parameters: { scope: "additives" }, confidence: 0.84 },
   ];
 };
 
@@ -2909,7 +2934,7 @@ const DIARY_NUTRITION_ANALYSIS_COMPOUND: CompoundMatcher = (_u, lower, _hints) =
   if (!hasDiarySignal || !hasAnalysisSignal) return null;
   return [
     { capability: "diary",               verb: "search", parameters: { query: "" },    confidence: 0.86 },
-    { capability: "nutrition-knowledge", verb: "read",   parameters: { scope: "summary" }, confidence: 0.84 },
+    { capability: "nutrition-knowledge", verb: "read",   parameters: { scope: "categories" }, confidence: 0.84 },
   ];
 };
 
@@ -2920,7 +2945,7 @@ const PANTRY_NUTRITION_DIVERSITY_COMPOUND: CompoundMatcher = (_u, lower, _hints)
   if (!hasPantrySignal || !hasDiversitySignal) return null;
   return [
     { capability: "pantry",              verb: "search", parameters: { query: "" },    confidence: 0.86 },
-    { capability: "nutrition-knowledge", verb: "read",   parameters: { scope: "summary" }, confidence: 0.84 },
+    { capability: "nutrition-knowledge", verb: "read",   parameters: { scope: "categories" }, confidence: 0.84 },
   ];
 };
 
@@ -2931,18 +2956,24 @@ const DIARY_NUTRITION_PLANTS_COMPOUND: CompoundMatcher = (_u, lower, _hints) => 
   if (!hasDiarySignal || !hasPlantsSignal) return null;
   return [
     { capability: "diary",               verb: "search", parameters: { query: "" },       confidence: 0.85 },
-    { capability: "nutrition-knowledge", verb: "read",   parameters: { scope: "summary" }, confidence: 0.84 },
+    { capability: "nutrition-knowledge", verb: "read",   parameters: { scope: "categories" }, confidence: 0.84 },
   ];
 };
 
 /** ND-060: Food Intelligence + Nutrition Knowledge: "How has my nutrition improved compared with last week?" */
 const FOOD_INTELLIGENCE_NUTRITION_COMPARISON_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
-  const hasComparisonSignal = /\b(?:compared|vs|versus|last\s+week|week\s+ago|changed?|improved?|progress|trend)\b/.test(lower);
+  // COMP-DET5 (2026-11-21) — live-caught misfire: "changed?|improved?|progress|trend" alone
+  // (no actual time-comparison term) also matched PL-032 ("which meal should I swap to
+  // improve nutrition this week?") — a recommendation question, not a week-over-week
+  // comparison, so food-intelligence's `compare` verb correctly gapped ("needs { items }").
+  // Narrowed to require an explicit comparison anchor; ND-060 itself keeps "compared" AND
+  // "last week" either way, so this costs it nothing.
+  const hasComparisonSignal = /\b(?:compared|vs\.?|versus|last\s+week|week\s+ago)\b/.test(lower);
   const hasNutritionSignal = /\b(?:nutrition|nutrition\s+(?:improved?|changed?)|improved?.*nutrition)\b/.test(lower);
   if (!hasComparisonSignal || !hasNutritionSignal) return null;
   return [
     { capability: "food-intelligence",   verb: "compare", parameters: { scope: "nutrition" }, confidence: 0.86 },
-    { capability: "nutrition-knowledge", verb: "read",    parameters: { scope: "summary" },   confidence: 0.84 },
+    { capability: "nutrition-knowledge", verb: "read",    parameters: { scope: "categories" },   confidence: 0.84 },
   ];
 };
 
@@ -2963,7 +2994,7 @@ const ANALYSER_HOUSEHOLD_SUITABILITY_COMPOUND: CompoundMatcher = (_u, lower, _hi
   const hasHouseholdSignal = /\b(?:my\s+family|my\s+household|(?:everyone|my\s+(?:kids|children|members?)))\b/.test(lower);
   if (!hasProductSignal || !hasHouseholdSignal) return null;
   return [
-    { capability: "analyser",  verb: "read", parameters: { scope: "summary" },   confidence: 0.86 },
+    { capability: "analyser",  verb: "read", parameters: { scope: "additives" },   confidence: 0.86 },
     { capability: "household", verb: "read", parameters: { scope: "household" }, confidence: 0.84 },
   ];
 };
@@ -2975,7 +3006,7 @@ const HOUSEHOLD_ANALYSER_RESTRICTIONS_COMPOUND: CompoundMatcher = (_u, lower, _h
   if (!hasHouseholdSignal || !hasProductSignal) return null;
   return [
     { capability: "household", verb: "read", parameters: { scope: "household" }, confidence: 0.86 },
-    { capability: "analyser",  verb: "read", parameters: { scope: "summary" },   confidence: 0.84 },
+    { capability: "analyser",  verb: "read", parameters: { scope: "additives" },   confidence: 0.84 },
   ];
 };
 
