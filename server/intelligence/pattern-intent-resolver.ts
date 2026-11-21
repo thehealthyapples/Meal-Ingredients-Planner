@@ -2915,8 +2915,15 @@ const PANTRY_MEAL_DISCOVERY_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
   const hasCookingSignal = /\b(?:cook|make|prep(?:are)?|create)\b/.test(lower);
   if (!hasPantrySignal || !hasCookingSignal) return null;
   return [
-    { capability: "pantry",          verb: "search", parameters: { query: "" },    confidence: 0.86 },
-    { capability: "meal-discovery",  verb: "search", parameters: { query: lower }, confidence: 0.84 },
+    // COMP-DET5 (2026-11-21) — plain "pantry" has no "search" verb (read-only: read/explain
+    // only, per pantry-read-handler.ts's own readOnlyVerbGuard); always hit a gap. "read
+    // scope:list" is pantry's real read op (the only pantry-discovery is "search").
+    { capability: "pantry",          verb: "read", parameters: { scope: "list" },    confidence: 0.86 },
+    // COMP-DET5 — "what can I cook with what I have" names no specific food, so the whole
+    // utterance was being passed as a literal name/ingredient-text search (matchesMeal),
+    // which matches nothing and always returned 0 results. browseAll surfaces real,
+    // safety-filtered candidates instead of a guaranteed-empty search.
+    { capability: "meal-discovery",  verb: "search", parameters: { query: "", browseAll: true }, confidence: 0.84 },
   ];
 };
 
@@ -2937,7 +2944,11 @@ const DIARY_NUTRITION_ANALYSIS_COMPOUND: CompoundMatcher = (_u, lower, _hints) =
   const hasAnalysisSignal = /\b(?:balanced?|healthy|nutritious|nutrition|good|well)\b/.test(lower);
   if (!hasDiarySignal || !hasAnalysisSignal) return null;
   return [
-    { capability: "diary",               verb: "search", parameters: { query: "" },    confidence: 0.86 },
+    // COMP-DET5 (2026-11-21) — plain "diary" has no "search" verb (only
+    // read/explain/add/delete/import, and "read" needs a specific { scope: "day" }
+    // date this matcher has no date to supply) — always hit unsupported_intent.
+    // diary-discovery owns "search" by design; empty query = browse everything.
+    { capability: "diary-discovery",     verb: "search", parameters: { query: "" },    confidence: 0.86 },
     { capability: "nutrition-knowledge", verb: "read",   parameters: { scope: "categories" }, confidence: 0.84 },
   ];
 };
@@ -2948,7 +2959,8 @@ const PANTRY_NUTRITION_DIVERSITY_COMPOUND: CompoundMatcher = (_u, lower, _hints)
   const hasDiversitySignal = /\b(?:plant|diversity|variety|different|colorful|variety|nutrient(?:s)?)\b/.test(lower);
   if (!hasPantrySignal || !hasDiversitySignal) return null;
   return [
-    { capability: "pantry",              verb: "search", parameters: { query: "" },    confidence: 0.86 },
+    // COMP-DET5 — see PANTRY_MEAL_DISCOVERY_COMPOUND above.
+    { capability: "pantry",              verb: "read", parameters: { scope: "list" },    confidence: 0.86 },
     { capability: "nutrition-knowledge", verb: "read",   parameters: { scope: "categories" }, confidence: 0.84 },
   ];
 };
@@ -2959,7 +2971,8 @@ const DIARY_NUTRITION_PLANTS_COMPOUND: CompoundMatcher = (_u, lower, _hints) => 
   const hasPlantsSignal = /\bplants?\b/.test(lower);
   if (!hasDiarySignal || !hasPlantsSignal) return null;
   return [
-    { capability: "diary",               verb: "search", parameters: { query: "" },       confidence: 0.85 },
+    // COMP-DET5 — see DIARY_NUTRITION_ANALYSIS_COMPOUND above.
+    { capability: "diary-discovery",     verb: "search", parameters: { query: "" },       confidence: 0.85 },
     { capability: "nutrition-knowledge", verb: "read",   parameters: { scope: "categories" }, confidence: 0.84 },
   ];
 };
