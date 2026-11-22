@@ -25,7 +25,6 @@
  *   npm run seed:knowledge -- --dry-run   # report what WOULD change; write nothing
  *   npm run seed:knowledge -- --no-reconcile   # upsert only (pre-KNOW5 behaviour)
  */
-import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { eq, inArray, sql } from "drizzle-orm";
@@ -357,7 +356,7 @@ function sqlExcluded(column: string) {
 // exported so test-know5-evidence-contract.ts can drive them through a real
 // deactivate → reactivate round-trip inside a rolled-back transaction; importing
 // this module must never seed the database as a side effect.
-const isMain = process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1]);
+const isMain = process.argv[1] && resolve(process.cwd(), "server/seeds/seed-knowledge-registry.ts") === resolve(process.argv[1]);
 if (isMain) {
   run().catch((err) => {
     console.error("Knowledge seed failed:", err);

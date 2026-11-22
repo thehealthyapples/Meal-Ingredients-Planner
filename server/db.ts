@@ -1,6 +1,5 @@
 import { drizzle } from "drizzle-orm/node-postgres";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 import pg from "pg";
 import * as schema from "@shared/schema";
 
@@ -13,14 +12,14 @@ const { Pool } = pg;
 // retain their existing environment-provided behavior.
 const launchedServerSource =
   process.argv[1] !== undefined &&
-  resolve(process.argv[1]) === resolve(dirname(fileURLToPath(import.meta.url)), "index.ts");
+  resolve(process.argv[1]) === resolve(process.cwd(), "server/index.ts");
 const isIntegratedDevServer =
   ["dev", "dev:reset"].includes(process.env.npm_lifecycle_event ?? "") ||
   (launchedServerSource && process.env.NODE_ENV !== "production");
 
 if (isIntegratedDevServer) {
   process.env.NODE_ENV ??= "development";
-  const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+  const repositoryRoot = process.cwd();
   const repositoryEnvFile = resolve(repositoryRoot, ".env");
   // process.loadEnvFile does not replace existing environment values. Clear only this
   // connection setting so the repository-owned .env is the single source for dev DB use.

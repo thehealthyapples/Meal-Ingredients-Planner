@@ -266,20 +266,31 @@ export async function searchMealDB(filters: {
       rawQueries.push("chicken", "pasta", "salad", "curry", "soup", "fish", "steak", "vegetable");
     }
 
-    // When a dietary prefix is active, also queue breakfast concept queries WITHOUT
-    // the prefix. TheMealDB is a name-indexed database with no diet-labelled recipes
+    // When a dietary prefix is active, also queue concept queries WITHOUT the
+    // prefix. TheMealDB is a name-indexed database with no diet-labelled recipes
     // ("keto omelette" returns 0 results), but "omelette" returns real recipes that
     // dietRules then validates as compliant post-enrichment. Concept queries run
     // alongside the prefixed queries in the same iteration — deduplication in
     // fetchExternalCandidates removes any overlaps before enrichment.
+    //
+    // 2026-11-22 (owner-reported) — this list only ever covered BREAKFAST concepts.
+    // A household on two or more simultaneous hard patterns (e.g. Keto AND
+    // Vegetarian AND Dairy-Free) already has a thin compliant pool; skewing the one
+    // source of extra variety entirely toward breakfast meant lunch/dinner got NONE
+    // of this supplementation at all — live-caught: a real run returned "0 compliant
+    // meals" for lunch while breakfast and dinner each had exactly 1 (the same meal,
+    // reused by Tier-3, for every slot all week). Lunch and dinner now get their own
+    // equivalent concept lists, so the shared external pool is no longer breakfast-only.
     const BREAKFAST_CONCEPT_QUERIES = ["omelette", "frittata", "smoothie", "porridge", "shakshuka"];
+    const LUNCH_CONCEPT_QUERIES = ["salad", "soup", "veggie bowl", "stuffed peppers", "zucchini noodles"];
+    const DINNER_CONCEPT_QUERIES = ["vegetable curry", "stir fry", "vegetable bake", "cauliflower rice", "vegetable soup"];
 
     const labelledQueries = filters.dietaryPrefix
       ? rawQueries.slice(0, 3).map(q => `${filters.dietaryPrefix} ${q}`)
       : rawQueries.slice(0, 5);
 
     const queries = filters.dietaryPrefix
-      ? [...labelledQueries, ...BREAKFAST_CONCEPT_QUERIES]
+      ? [...labelledQueries, ...BREAKFAST_CONCEPT_QUERIES, ...LUNCH_CONCEPT_QUERIES, ...DINNER_CONCEPT_QUERIES]
       : labelledQueries;
 
     const seen = new Set<string>();
@@ -435,11 +446,16 @@ function buildSearchQueries(filters: { query?: string; cuisine?: string; dietary
 
   if (filters.dietaryPrefix) {
     const labelledTerms = terms.map(q => `${filters.dietaryPrefix} ${q}`);
-    // Supplement labelled queries with breakfast concept terms. Scraping sites
-    // (BBC GoodFood, AllRecipes) carry these as real recipes and return compliant
-    // content — dietRules validates compliance after ingredient enrichment.
-    const conceptTerms = ["omelette", "overnight oats", "smoothie bowl"];
-    return [...labelledTerms, ...conceptTerms].slice(0, 5);
+    // Supplement labelled queries with concept terms. Scraping sites (BBC GoodFood,
+    // AllRecipes) carry these as real recipes and return compliant content —
+    // dietRules validates compliance after ingredient enrichment.
+    // 2026-11-22 (owner-reported) — same fix as searchMealDB's concept queries: this
+    // list only ever covered breakfast, so lunch/dinner got no supplementation when
+    // the labelled (dietary-prefixed) search came back thin. See that fix's comment
+    // for the live-caught symptom (0 compliant lunch candidates, same meal repeated
+    // for every other slot all week).
+    const conceptTerms = ["omelette", "overnight oats", "smoothie bowl", "salad", "veggie bowl", "vegetable curry", "stir fry"];
+    return [...labelledTerms, ...conceptTerms].slice(0, 8);
   }
   return terms;
 }

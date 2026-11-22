@@ -23,7 +23,6 @@
 
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
 import { eq, and, inArray } from "drizzle-orm";
 
 import { db } from "../db.js";
@@ -137,8 +136,7 @@ interface ValidationManifest {
   validatedHouseholds: number;
 }
 
-const HERE = path.dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = path.resolve(HERE, "../../data/development_world");
+const DATA_DIR = path.resolve(process.cwd(), "data/development_world");
 const SOURCE = path.join(DATA_DIR, "development_world_foundation_50.v1.json");
 const VALIDATION_MANIFEST = path.join(DATA_DIR, "manifests", "validation_manifest.json");
 

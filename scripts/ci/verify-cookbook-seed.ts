@@ -29,11 +29,10 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { Pool } from "pg";
 import { classifyDatabaseTarget } from "../db/database-target";
 
-const HERE = path.dirname(fileURLToPath(import.meta.url));
+const HERE = path.resolve(process.cwd(), "scripts/ci");
 const SOURCE = path.resolve(
   HERE,
   "../../data/cookbook/tha_original_founding_cookbook_500/tha_original_founding_cookbook_500.json",
@@ -216,7 +215,7 @@ export async function verifyCookbookSeed(pool: Pool): Promise<Check[]> {
 }
 
 // ── CLI ──────────────────────────────────────────────────────────────────────
-const isDirectRun = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+const isDirectRun = process.argv[1] && path.resolve(process.argv[1]) === path.resolve(process.cwd(), "scripts/ci/verify-cookbook-seed.ts");
 
 if (isDirectRun) {
   const url = process.env.DATABASE_URL;

@@ -8,15 +8,14 @@
  */
 
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { dirname, resolve } from "node:path";
+import { resolve } from "node:path";
 import { createHash } from "node:crypto";
 import { execSync } from "node:child_process";
 import { intelligencePlatform } from "../../intelligence/intelligence-platform.js";
 import { KNOWLEDGE_SEED_COUNTS } from "../../../shared/knowledge/index.js";
 import type { BenchmarkBundle, BenchmarkProvenance, JudgeDescriptor } from "./types.js";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const __dirname = resolve(process.cwd(), "server/tests/benchmark");
 export const REPO_ROOT = resolve(__dirname, "../../..");
 export const FIXTURE_PATH = resolve(__dirname, "fixtures/companion-benchmark-100.v1.json");
 export const HISTORY_DIR = resolve(REPO_ROOT, "docs/intelligence/benchmark/history");
