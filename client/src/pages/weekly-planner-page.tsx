@@ -636,6 +636,33 @@ export default function WeeklyPlannerPage() {
     return buildWeeklyReuseMap(mealsThisWeek);
   }, [activeWeekData, mealById]);
 
+  // ── Batch-cook label: a meal repeated across lunch/dinner this week ──────────
+  // 2026-11-22 (owner-requested) — "this needs to be displayed as such to make
+  // it a feature". Purely derived from whatever is actually on the week, so it
+  // labels a repeat honestly regardless of how it got there (the wizard's
+  // "batch cook lunches & dinners" toggle, or a household manually repeating a
+  // meal) — never breakfast, matching the owner's own framing that breakfast
+  // repetition doesn't need a feature, it's just breakfast.
+  const batchCookLabelByEntryId = useMemo<Map<number, string>>(() => {
+    const result = new Map<number, string>();
+    if (!activeWeekData) return result;
+    const occurrencesByMealId = new Map<number, number>();
+    for (const day of activeWeekData.days) {
+      for (const entry of day.entries) {
+        if (entry.mealType !== "lunch" && entry.mealType !== "dinner") continue;
+        occurrencesByMealId.set(entry.mealId, (occurrencesByMealId.get(entry.mealId) ?? 0) + 1);
+      }
+    }
+    for (const day of activeWeekData.days) {
+      for (const entry of day.entries) {
+        if (entry.mealType !== "lunch" && entry.mealType !== "dinner") continue;
+        const count = occurrencesByMealId.get(entry.mealId) ?? 0;
+        if (count >= 2) result.set(entry.id, `Batch cook ×${count}`);
+      }
+    }
+    return result;
+  }, [activeWeekData]);
+
   // ── Planner context (Phase 1A + 5B: assistant panel routing + selected day) ─
   const { assistantMode, setAssistantMode, selectedDayId, setSelectedDayId } = usePlannerContext();
   const workspacePanelVisible = workspaceOpen || mobileAssistantOpen || assistantMode !== null;
@@ -2505,6 +2532,7 @@ export default function WeeklyPlannerPage() {
                                         isPlaceholder={isPlaceholder}
                                         isCooked={isCooked}
                                         showImage={cellEntries.length <= 1}
+                                        batchCookLabel={batchCookLabelByEntryId.get(entry.id)}
                                       />
                                     </button>
                                   </>

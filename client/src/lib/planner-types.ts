@@ -62,6 +62,11 @@ export interface SmartSuggestEntry {
   candidate: SmartCandidate;
   locked: boolean;
   explanation?: MealExplanation;
+  /** 2026-11-22 — "batch cook lunches & dinners" (includeLeftovers). Set when
+   *  this entry is a deliberate reuse of an earlier dinner, not a fresh pick —
+   *  names the dinner it's leftovers FROM so the UI can label it honestly
+   *  rather than presenting a repeat as if it were a coincidence. */
+  batchLeftoverOf?: { dayOfWeek: number; day: string; slot: string };
 }
 
 export interface SmartSuggestResult {

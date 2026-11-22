@@ -10,7 +10,7 @@ import {
 } from "./planner-explanation-context";
 import { resolveActiveRestrictions, resolveIngredientRestrictions } from "@shared/restrictions/restriction-resolver.js";
 import type { RestrictionDefinition } from "@shared/restrictions/restriction-types.js";
-import { shouldExcludeRecipe } from "@shared/dietRules";
+import { shouldExcludeRecipe, shouldExcludeRecipeForAnyPattern, ADAPTABLE_DIET_PATTERNS, ADAPTABLE_DIET_RESTRICTIONS } from "@shared/dietRules";
 import { matchMealsForHousehold, buildHouseholdContext, scoreMealCompatibility, type MealMatch, type HouseholdContext } from "./household-meal-matcher";
 
 export interface LockedEntry {
@@ -42,7 +42,12 @@ export interface SmartSuggestSettings {
   // Profile dietary requirements — enforced as a HARD exclusion via the shared
   // dietRules engine (the same single source of truth used by recipe search).
   // A Vegan/Vegetarian profile, for example, excludes meat/fish/etc. before scoring.
+  // `dietPattern` (singular) is kept for callers that only ever handled one;
+  // `dietPatterns` (2026-11-22, plural) is now authoritative — a requester can
+  // hold more than one simultaneous hard pattern (Vegetarian AND Keto), and
+  // generation/scoring must exclude on EITHER, not just the first one named.
   dietPattern?: string | null;
+  dietPatterns?: string[];
   dietRestrictions?: string[];
   // Household strict diet enforcement — Vegetarian/Vegan diet patterns
   // contributed by household eaters (non-request-user adults and children).
@@ -64,6 +69,11 @@ export interface SmartSuggestEntry {
   candidate: ScoredCandidate;
   locked: boolean;
   explanation?: MealExplanation;
+  /** 2026-11-22 — "batch cook lunches & dinners" (includeLeftovers). Set when
+   *  this entry is a deliberate reuse of an earlier dinner, not a fresh pick —
+   *  names the dinner it's leftovers FROM so the client can label it honestly
+   *  rather than presenting a repeat as if it were a coincidence. */
+  batchLeftoverOf?: { dayOfWeek: number; day: string; slot: string };
 }
 
 export interface SmartSuggestResult {
@@ -103,12 +113,26 @@ const DIETARY_SEARCH_PREFIXES: [string, string][] = [
   ["Mediterranean", "mediterranean"],
 ];
 
+// 2026-11-22 (owner-reported) — this returned on the FIRST matching diet type,
+// so a household holding BOTH Keto AND Vegetarian got an external search for
+// "keto" alone (or "vegetarian" alone, whichever the table lists first) —
+// never "keto vegetarian". A generic single-pattern search pulls back recipes
+// that often fail the OTHER pattern once the real exclusion gate runs (a
+// "keto" search returns plenty of meat dishes; a "vegetarian" search returns
+// plenty of high-carb ones), so the post-filter external pool was much
+// thinner than it needed to be — and live-caught: Smart Suggest fell back so
+// hard on the small surviving user-meal pool that "Vegetarian Shakshuka" was
+// suggested for nearly every slot in the week. Combining every matching
+// pattern into one search term ("keto vegetarian") asks the search engines
+// for recipes that already aim at BOTH constraints, which is a far better
+// hit rate than hoping generic single-pattern results happen to satisfy the
+// other pattern too.
 function getDietarySearchPrefix(dietTypes: string[]): string | undefined {
   const lower = dietTypes.map(d => d.toLowerCase().trim());
-  for (const [dietType, prefix] of DIETARY_SEARCH_PREFIXES) {
-    if (lower.includes(dietType.toLowerCase())) return prefix;
-  }
-  return undefined;
+  const matches = DIETARY_SEARCH_PREFIXES
+    .filter(([dietType]) => lower.includes(dietType.toLowerCase()))
+    .map(([, prefix]) => prefix);
+  return matches.length > 0 ? matches.join(" ") : undefined;
 }
 
 // Returns true if a candidate contains any hard-excluded ingredient.
@@ -256,6 +280,34 @@ export function candidateDietExcluded(
   );
 }
 
+/**
+ * 2026-11-22 — the multi-pattern counterpart of `candidateDietExcluded`, for a
+ * requester who holds more than one simultaneous hard pattern (e.g. Keto AND
+ * Vegetarian). Excludes if ANY pattern would exclude on its own — OR, never AND,
+ * same reasoning as `dietRules.shouldExcludeRecipeForAnyPattern`, which this
+ * delegates to directly rather than re-looping over `candidateDietExcluded` with
+ * its own copy of the OR logic.
+ */
+export function candidateDietExcludedForAnyPattern(
+  candidate: Pick<ScoredCandidate, "name" | "ingredients"> & {
+    category?: string | null;
+    cuisine?: string | null;
+  },
+  dietPatterns: string[],
+  dietRestrictions: string[],
+): boolean {
+  if (dietPatterns.length === 0) return candidateDietExcluded(candidate, null, dietRestrictions);
+  return shouldExcludeRecipeForAnyPattern(
+    {
+      name: candidate.name,
+      category: candidate.category,
+      cuisine: candidate.cuisine,
+      ingredients: candidate.ingredients,
+    },
+    { dietPatterns, dietRestrictions },
+  );
+}
+
 // P0: "drink" removed from breakfast — generic drinks must not appear as breakfast meals.
 // Breakfast slot only accepts explicit breakfast and smoothie categories.
 const SLOT_CATEGORY_MAPPING: Record<string, string[]> = {
@@ -388,7 +440,7 @@ export function selectShellRecoveryCandidate(
   matches: MealMatch[],
   slot: string,
   hardExcluded: string[],
-  dietPattern: string | null,
+  dietPatterns: string[],
   dietRestrictions: string[],
   householdStrictDiets?: string[],
 ): ScoredCandidate | null {
@@ -418,16 +470,16 @@ export function selectShellRecoveryCandidate(
     ];
     const compliantIngredients = allSlotIngredients.filter(ing =>
       !candidateHardExcluded(ing, [ing], hardExcluded) &&
-      !candidateDietExcluded({ name: ing, ingredients: [ing] }, dietPattern, dietRestrictions) &&
+      !candidateDietExcludedForAnyPattern({ name: ing, ingredients: [ing] }, dietPatterns, dietRestrictions) &&
       !hsd.some(diet => candidateDietExcluded({ name: ing, ingredients: [ing] }, diet, []))
     );
     if (compliantIngredients.length === 0) continue;
 
     // Gate 4: assembled shell must pass whole-candidate gates (matches apply-time compliance).
     if (candidateHardExcluded(template.name, compliantIngredients, hardExcluded)) continue;
-    if (candidateDietExcluded(
+    if (candidateDietExcludedForAnyPattern(
       { name: template.name, ingredients: compliantIngredients, category: template.category, cuisine: template.cuisine },
-      dietPattern,
+      dietPatterns,
       dietRestrictions,
     )) continue;
     if (hsd.some(diet => candidateDietExcluded(
@@ -553,10 +605,42 @@ export async function generateSmartSuggestion(
   // the gate that excludes e.g. anchovy/fish/meat/dairy/egg recipes for a Vegan
   // profile before scoring, ranking, or selection. Only active when a pattern or a
   // restriction is set, so non-restricted users see no pool change.
+  // 2026-11-22 — `dietPatterns` (plural) is now authoritative: a requester can
+  // hold more than one simultaneous hard pattern (Vegetarian AND Keto), and
+  // every one of them must exclude, not just whichever was named first.
+  // `dietPattern` (singular) is kept as the seed when a caller only ever sends
+  // that — never silently dropped.
   const dietPattern = settings.dietPattern ?? null;
+  const dietPatterns = settings.dietPatterns ?? (dietPattern ? [dietPattern] : []);
   const dietRestrictions = settings.dietRestrictions ?? [];
+
+  // 2026-11-22 (owner-reported) — THA's core premise: a household eats the SAME
+  // meal together, with each person's own requirement swapped in, never a meal
+  // dropped from suggestions entirely because it conflicts with ONE person's
+  // diet (live-caught: "Spaghetti Bolognese" never even got suggested, though
+  // THA already has a real courgette-noodle substitute for Keto and a real
+  // dairy-free-cheese substitute for Dairy-Free). ADAPTABLE_* names the diet
+  // patterns/restrictions that now have a genuine, curated substitution path
+  // (see shared/substitution-rules.ts's "pasta_keto"/"rice_keto"/"potato_keto"
+  // rules, and the pre-existing "cheese" rule's dairy_free strategies) — those
+  // are excluded from the HARD pool filter below and instead surface as a
+  // needed adaptation via household-meal-matcher.ts's per-member scoring
+  // (`householdFit.memberChanges`), which the review UI now speaks honestly
+  // ("Full abidance" vs "Needs changes: courgetti instead of pasta for Colin").
+  //
+  // Deliberately NOT extended to Vegan/Vegetarian/Paleo/Carnivore/Gluten-Free
+  // here: those remain a hard pool exclusion exactly as before. Vegetarian and
+  // Vegan in particular are often an ethical commitment, not a nutrition
+  // preference — "serve the meat dish, just remove the meat for them" is not
+  // the same kind of adaptation as a low-carb swap, and THA does not yet have
+  // curated, reviewed substitution rules for meat/fish at all. Widening this
+  // set to another pattern/restriction later means adding its own curated
+  // substitution rules first, the same way Keto's were — never by just adding
+  // its name here.
+  const hardDietPatterns = dietPatterns.filter((p) => !ADAPTABLE_DIET_PATTERNS.has(p));
+  const hardDietRestrictions = dietRestrictions.filter((r) => !ADAPTABLE_DIET_RESTRICTIONS.has(r));
   const isDietExcluded = (candidate: ScoredCandidate): boolean =>
-    candidateDietExcluded(candidate, dietPattern, dietRestrictions);
+    candidateDietExcludedForAnyPattern(candidate, hardDietPatterns, hardDietRestrictions);
 
   // Household strict diet hard filter — Vegetarian/Vegan contributed by household
   // eaters. Applied as an independent additional exclusion gate after the request-user
@@ -650,7 +734,7 @@ export async function generateSmartSuggestion(
     // external-candidate gate added in commit 0644578.  Unrestricted profiles are
     // unaffected so existing behaviour is preserved for those users.
     const profileRestricted =
-      (dietPattern !== null && dietPattern !== "") ||
+      dietPatterns.length > 0 ||
       dietRestrictions.length > 0 ||
       hardExcluded.length > 0;
     if (profileRestricted && meal.ingredients.length === 0) {
@@ -659,7 +743,7 @@ export async function generateSmartSuggestion(
     }
     // Profile dietary hard filter — shared dietRules engine (single source of truth).
     if (isDietExcluded(candidate)) {
-      if (DEBUG) console.debug(`[SmartSuggest] Diet-excluded user meal (${dietPattern ?? dietRestrictions.join('/')}): "${candidate.name}"`);
+      if (DEBUG) console.debug(`[SmartSuggest] Diet-excluded user meal (${hardDietPatterns.join('/') || hardDietRestrictions.join('/')}): "${candidate.name}"`);
       continue;
     }
     // Household strict diet hard filter (Vegetarian/Vegan from household eaters)
@@ -723,7 +807,7 @@ export async function generateSmartSuggestion(
     // At this point ingredients are guaranteed to be present, so the filter operates
     // on actual ingredient data rather than falling back to title-only heuristics.
     if (isDietExcluded(candidate)) {
-      if (DEBUG) console.debug(`[SmartSuggest] Diet-excluded external meal (${dietPattern ?? dietRestrictions.join('/')}): "${candidate.name}"`);
+      if (DEBUG) console.debug(`[SmartSuggest] Diet-excluded external meal (${hardDietPatterns.join('/') || hardDietRestrictions.join('/')}): "${candidate.name}"`);
       continue;
     }
     // Household strict diet hard filter (Vegetarian/Vegan from household eaters)
@@ -801,6 +885,44 @@ export async function generateSmartSuggestion(
         }
       }
 
+      // 2026-11-22 (owner-requested) — "batch cook lunches & dinners". Wires up
+      // `includeLeftovers`, which was declared on this interface but never read
+      // anywhere. Deliberately scoped to lunch following the PREVIOUS day's
+      // dinner only — breakfast is excluded (the owner's own framing: breakfast
+      // repetition doesn't need a feature, it's just breakfast), and this is the
+      // realistic batch-cooking shape ("cook dinner, eat it for lunch tomorrow"),
+      // not an arbitrary same-week repeat. The reused candidate already passed
+      // every exclusion gate when IT was chosen (as yesterday's dinner), so it
+      // needs no re-filtering — only the bookkeeping a normal pick would do.
+      if (settings.includeLeftovers && slot === "lunch" && dayIdx > 0) {
+        const previousDinner = entries.find(e => e.dayOfWeek === dayIdx - 1 && e.slot === "dinner");
+        if (previousDinner) {
+          const leftoverCandidate = previousDinner.candidate;
+          entries.push({
+            dayOfWeek: dayIdx,
+            day: DAYS[dayIdx],
+            slot,
+            candidate: leftoverCandidate,
+            locked: false,
+            batchLeftoverOf: { dayOfWeek: dayIdx - 1, day: DAYS[dayIdx - 1], slot: "dinner" },
+          });
+          usedIds.add(leftoverCandidate.id);
+          if (leftoverCandidate.primaryProtein) {
+            usedProteins.set(leftoverCandidate.primaryProtein, (usedProteins.get(leftoverCandidate.primaryProtein) || 0) + 1);
+          }
+          usedIngredients.push(...leftoverCandidate.ingredients);
+          totalCost += leftoverCandidate.estimatedCost || 4;
+          totalUPF += leftoverCandidate.estimatedUPFScore || 0;
+          mealCount++;
+          for (const group of Array.from(mealPlantGroups(leftoverCandidate.ingredients).keys())) {
+            weekPlantGroups.add(group);
+          }
+          if (leftoverCandidate.primaryProtein === "fish" || leftoverCandidate.primaryProtein === "seafood") fishCount++;
+          if (leftoverCandidate.primaryProtein === "beef" || leftoverCandidate.primaryProtein === "lamb" || leftoverCandidate.primaryProtein === "pork") redMeatCount++;
+          continue;
+        }
+      }
+
       // P0: slot-appropriate candidates only — no universal dinner bypass.
       let slotCandidates = allCandidates.filter(c => {
         if (usedIds.has(c.id)) return false;
@@ -831,7 +953,7 @@ export async function generateSmartSuggestion(
           // only enforces the planner's hard gates (slot fit, member diet
           // compatibility, hard restrictions, profile diet pattern).
           const shellCandidate = selectShellRecoveryCandidate(
-            await getShellMatches(), slot, hardExcluded, dietPattern, dietRestrictions, householdStrictDiets,
+            await getShellMatches(), slot, hardExcluded, hardDietPatterns, hardDietRestrictions, householdStrictDiets,
           );
           if (shellCandidate) {
             slotCandidates = [shellCandidate];

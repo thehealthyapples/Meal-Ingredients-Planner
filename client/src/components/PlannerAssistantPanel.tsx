@@ -326,14 +326,20 @@ function SmartContent() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 pt-1">
+        <div className="flex items-start gap-2 pt-1">
           <Switch
             id="panel-smart-leftovers"
             checked={smartLeftovers}
             onCheckedChange={c => setSmartLeftovers(!!c)}
             data-testid="toggle-smart-leftovers"
+            className="mt-0.5"
           />
-          <label htmlFor="panel-smart-leftovers" className="text-xs cursor-pointer">Include leftovers</label>
+          <label htmlFor="panel-smart-leftovers" className="text-xs cursor-pointer">
+            Batch cook lunches &amp; dinners
+            <span className="block text-[11px] text-muted-foreground font-normal">
+              Cook once, eat the leftovers for lunch the next day — breakfast stays separate.
+            </span>
+          </label>
         </div>
       </div>
 

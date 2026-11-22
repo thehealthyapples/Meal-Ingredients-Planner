@@ -13,7 +13,7 @@ import {
 import {
   Loader2, Lock, Sparkles, DollarSign, HelpCircle, RefreshCw,
   ShoppingBasket, Pencil, Globe, Snowflake, Microscope, UtensilsCrossed,
-  Flame, Beef, Cookie, Droplets, Droplet, Wheat,
+  Flame, Beef, Cookie, Droplets, Droplet, Wheat, Repeat,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -149,6 +149,11 @@ function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, 
               <span className="text-xs font-medium text-muted-foreground capitalize">{entry.slot}</span>
               <span className="text-muted-foreground/40">·</span>
               <span className="text-xs text-muted-foreground">{sourceName}</span>
+              {entry.batchLeftoverOf && (
+                <Badge variant="outline" className="text-[10px] h-4 px-1 gap-0.5 border-blue-500/50 text-blue-600 dark:text-blue-400">
+                  <Repeat className="h-2.5 w-2.5" />Batch cook — {entry.batchLeftoverOf.day} dinner
+                </Badge>
+              )}
               {dietTypes.includes('vegetarian') && <Badge variant="outline" className="text-[10px] h-4 px-1 border-green-500/50 text-green-600 dark:text-green-400">Vegetarian</Badge>}
               {dietTypes.includes('vegan') && <Badge variant="outline" className="text-[10px] h-4 px-1 border-green-500/50 text-green-600 dark:text-green-400">Vegan</Badge>}
               {dietTypes.includes('gluten-free') && <Badge variant="outline" className="text-[10px] h-4 px-1 border-amber-500/50 text-amber-600 dark:text-amber-400">GF</Badge>}

@@ -21,7 +21,7 @@
 
 import type { Meal } from "@shared/schema";
 import { ThrottledMealImage } from "@/components/ThrottledMealImage";
-import { Zap } from "lucide-react";
+import { Zap, Repeat } from "lucide-react";
 
 interface PlannerMealCardContentProps {
   meal: Meal;
@@ -37,6 +37,10 @@ interface PlannerMealCardContentProps {
    * keep their photo).
    */
   showImage?: boolean;
+  /** 2026-11-22 — e.g. "Batch cook ×3" when this meal repeats across lunch/
+   *  dinner this week (weekly-planner-page.tsx's batchCookLabelByEntryId).
+   *  Undefined for a one-off meal, or for breakfast, which is never labelled. */
+  batchCookLabel?: string;
 }
 
 export function PlannerMealCardContent({
@@ -45,6 +49,7 @@ export function PlannerMealCardContent({
   isPlaceholder,
   isCooked,
   showImage = true,
+  batchCookLabel,
 }: PlannerMealCardContentProps) {
   // A quick meal is a real (non-placeholder) meal saved with no ingredient list —
   // e.g. "steak and chips" added via Build a Meal or the Companion.
@@ -102,6 +107,16 @@ export function PlannerMealCardContent({
       {/* Cooked state */}
       {isCooked && (
         <span className="text-[9px] text-emerald-600/70 dark:text-emerald-400/70">Cooked</span>
+      )}
+
+      {/* Batch-cook label — never shown for a placeholder (nothing to cook yet) */}
+      {!isPlaceholder && batchCookLabel && (
+        <span
+          className="inline-flex items-center gap-0.5 text-[9px] text-blue-600/70 dark:text-blue-400/70"
+          data-testid={`label-batch-cook-${entryId}`}
+        >
+          <Repeat className="h-2.5 w-2.5" />{batchCookLabel}
+        </span>
       )}
     </div>
   );
