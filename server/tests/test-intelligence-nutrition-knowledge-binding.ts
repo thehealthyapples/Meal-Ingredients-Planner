@@ -165,6 +165,22 @@ function makePort(): NutritionKnowledgeReadPort {
         benefits: [],
       };
     },
+    // FOODUI7 — mirrors the registry's exact-name/exact-alias-first ranking; this
+    // mock only ever knows "broccoli", so it's equivalent to the search above.
+    //
+    // 2026-11-22 — one direction only: `foodName.includes(query)`, exactly like the
+    // real findBestFoodMatch's substring tier (nutrition-knowledge-registry.ts:687,
+    // `f.name.toLowerCase().includes(q)`). The reverse (`query.includes(foodName)`)
+    // is NOT part of the real contract and was a bug in this mock: it let a longer,
+    // category-shaped query like "broccoli family" "find" broccoli via alias-fallback
+    // BEFORE resolveFoodDetail ever reached the real registry's category-search path
+    // — a false pass the real `findBestFoodMatch` could never produce, since no real
+    // food's name is a substring of "broccoli family".
+    findBestFoodMatch: async (query) => {
+      calls.push(`findBestFoodMatch(${query})`);
+      const q = query.toLowerCase();
+      return "broccoli".includes(q) ? { slug: "broccoli" } : null;
+    },
     listFoodCategories: async () => {
       calls.push("listFoodCategories()");
       return [{ category: "vegetables", count: 1 }];

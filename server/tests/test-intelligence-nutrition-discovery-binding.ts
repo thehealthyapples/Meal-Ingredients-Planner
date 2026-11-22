@@ -146,7 +146,7 @@ const ALL_ROWS: MealNutritionRow[] = [LOW_CAL_ROW, HIGH_PROTEIN_ROW, HIGH_CAL_RO
 const portCalls: string[] = [];
 const unrestrictedContext: HouseholdSafetyContext = {
   status: "resolved", householdId: 1, requesterUserId: 1,
-  requesterDietPattern: null, members: [], hardRestrictions: [],
+  requesterDietPattern: null, requesterDietPatterns: [], members: [], hardRestrictions: [],
   activeRestrictions: [], dietPatterns: [], preferences: { dietTypes: [], excludedIngredients: [] },
 };
 function makePort(rows: MealNutritionRow[] = ALL_ROWS): NutritionDiscoveryPort {
@@ -519,7 +519,11 @@ const partialRank = await new NutritionDiscoveryEngine(makePort([noProtein, HIGH
 assert(partialRank.results.length === 1 && partialRank.results[0].internalId === 2, "protein ranking excludes missing protein instead of assuming zero");
 const vegetarianPort: NutritionDiscoveryPort = {
   ...makePort(ALL_ROWS),
-  safety: { resolveHouseholdSafetyContext: async () => ({ ...unrestrictedContext, requesterDietPattern: "vegetarian" }), isSafetyGateActive, isMealSafeForHousehold },
+  // 2026-11-22 — isMealSafeForHousehold reads the PLURAL requesterDietPatterns,
+  // not the singular field alone (household-dietary-safety.ts:387). The real
+  // resolver always sets both together; only a hand-built mock could leave
+  // them out of sync, which is exactly what silently broke this assertion.
+  safety: { resolveHouseholdSafetyContext: async () => ({ ...unrestrictedContext, requesterDietPattern: "vegetarian", requesterDietPatterns: ["Vegetarian"] }), isSafetyGateActive, isMealSafeForHousehold },
 };
 const safeRank = await new NutritionDiscoveryEngine(vegetarianPort).discover(highest!, 1);
 assert(!safeRank.results.some(r => r.internalId === HIGH_PROTEIN_ROW.meal.id), "canonical vegetarian gate excludes chicken before nutrition ranking");

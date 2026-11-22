@@ -591,7 +591,7 @@ export async function registerRoutes(
   function buildProfileResponse(
     user: any,
     prefs: any,
-    personDiet: { dietPattern: string | null; hardRestrictions: string[] },
+    personDiet: { dietPattern: string | null; dietPatterns?: string[]; hardRestrictions: string[] },
     reportedHealthContext: readonly { id: string; fact: string; reportedAt: string }[] = [],
     nutritionFocuses: readonly { id: string; focus: string; reportedAt: string }[] = [],
   ) {
@@ -644,6 +644,7 @@ export async function registerRoutes(
       subscriptionTier: user.subscriptionTier ?? "free",
       hasPremiumAccess: hasPremiumAccess(user),
       dietPattern: personDiet.dietPattern,
+      dietPatterns: personDiet.dietPatterns ?? (personDiet.dietPattern ? [personDiet.dietPattern] : []),
       dietRestrictions: personDiet.hardRestrictions,
       // This is the caller's own reported information only. The household
       // projection below deliberately excludes account-backed adult records.
@@ -715,6 +716,10 @@ export async function registerRoutes(
     displayName: z.string().optional(),
     profilePhotoUrl: z.string().nullable().optional(),
     dietPattern: z.enum(ALLOWED_DIET_PATTERNS).nullable().optional(),
+    // 2026-11-22 — plural counterpart: a person may hold more than one simultaneous
+    // hard pattern (Vegetarian AND Keto). Takes priority over `dietPattern` when both
+    // are sent; `dietPattern` stays for callers that only ever handled one.
+    dietPatterns: z.array(z.enum(ALLOWED_DIET_PATTERNS)).max(ALLOWED_DIET_PATTERNS.length).optional(),
     dietRestrictions: hardRestrictionsSchema.optional(),
     nutritionFocuses: z.array(z.string().refine((focus) => Boolean(nutritionFocusLabel(focus)))).max(20).optional(),
     eatingSchedule: z.enum(ALLOWED_EATING_SCHEDULES).nullable().optional(),
@@ -769,12 +774,14 @@ export async function registerRoutes(
         await storage.updateUserProfile(req.user!.id, profileFields);
       }
 
-      // CONV1 P4 (WRITE-2) — the diet write door. A person's diet pattern and hard
+      // CONV1 P4 (WRITE-2) — the diet write door. A person's diet pattern(s) and hard
       // restrictions are written to their eater row, the canonical owner (Register
       // Domain 16; Principle 2) — never to the retired users.diet* shadow columns.
-      if (parsed.dietPattern !== undefined || parsed.dietRestrictions !== undefined) {
+      // `dietPatterns` (plural) takes priority when sent — see storage.updatePersonDiet.
+      if (parsed.dietPattern !== undefined || parsed.dietPatterns !== undefined || parsed.dietRestrictions !== undefined) {
         await storage.updatePersonDiet(req.user!.id, {
           ...(parsed.dietPattern !== undefined ? { dietPattern: parsed.dietPattern } : {}),
+          ...(parsed.dietPatterns !== undefined ? { dietPatterns: parsed.dietPatterns } : {}),
           ...(parsed.dietRestrictions !== undefined ? { hardRestrictions: parsed.dietRestrictions } : {}),
         });
       }
@@ -871,24 +878,40 @@ export async function registerRoutes(
       const { household, members } = householdData;
       const eaters = await storage.getHouseholdEaters(household.id);
 
-      // Enrich eaters with relationship labels from householdMembers
-      const enrichedMembers = eaters.map(eater => {
-        const memberInfo = members.find(m => m.userId === eater.userId);
+      // Map eaters by userId for quick lookup
+      const eatersByUserId = new Map();
+      eaters.forEach(eater => {
+        if (eater.userId) eatersByUserId.set(eater.userId, eater);
+      });
+
+      // Include all household members, with eater data where available
+      const enrichedMembers = members.map(async (member) => {
+        const eater = eatersByUserId.get(member.userId);
+        let displayName = eater?.displayName;
+
+        if (!displayName) {
+          // Fetch user's username as fallback
+          const user = await db.select({ username: users.username }).from(users).where(eq(users.id, member.userId)).limit(1);
+          displayName = user[0]?.username || `User ${member.userId}`;
+        }
+
         return {
-          id: eater.id,
-          userId: eater.userId || 0,
-          displayName: eater.displayName,
-          role: memberInfo?.role || "member",
-          relationshipLabel: memberInfo?.relationshipLabel || null,
-          dietTypes: eater.defaultDietTypes || [],
-          hardRestrictions: eater.hardRestrictions || [],
+          id: member.id,
+          userId: member.userId,
+          displayName,
+          role: member.role,
+          relationshipLabel: member.relationshipLabel || null,
+          dietTypes: eater?.defaultDietTypes || [],
+          hardRestrictions: eater?.hardRestrictions || [],
         };
       });
+
+      const members_resolved = await Promise.all(enrichedMembers);
 
       res.json({
         id: household.id,
         name: household.name,
-        members: enrichedMembers,
+        members: members_resolved,
       });
     } catch (err) {
       console.error("Error fetching household:", err);
@@ -911,13 +934,21 @@ export async function registerRoutes(
     }
 
     try {
-      // Verify the user owns this household member (security check)
+      // Verify the user is in this household member's household
       const household = await storage.getHouseholdByUser(userId);
       if (!household) {
         return res.status(403).json({ message: "User not in a household" });
       }
 
-      // Update the relationship label (uses raw SQL since drizzle doesn't have direct update yet)
+      // Verify the memberId is in the same household
+      const member = await db.query.householdMembers.findFirst({
+        where: eq(householdMembers.id, memberId),
+      });
+      if (!member || member.householdId !== household.household.id) {
+        return res.status(403).json({ message: "Member not in your household" });
+      }
+
+      // Update the relationship label
       await db.update(householdMembers)
         .set({ relationshipLabel: relationshipLabel || null })
         .where(eq(householdMembers.id, memberId));
@@ -4893,9 +4924,15 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         calorieTarget: body.calorieTarget ? Number(body.calorieTarget) : undefined,
         peopleCount: body.peopleCount ? Number(body.peopleCount) : 1,
         lockedEntries: parsedLocked,
-        // The requester's declared diet — enforced as a hard filter by the shared
+        // The requester's declared diet(s) — enforced as a hard filter by the shared
         // dietRules engine inside the planner (same source of truth as recipe search).
+        // 2026-11-22 — `dietPatterns` (plural) is authoritative: a requester holding
+        // BOTH Vegetarian and Keto needs every suggested meal to satisfy both, not
+        // just whichever pattern happened to be first. `dietPattern` (singular) is
+        // still sent too — the shared service derives `dietPatterns` from it when a
+        // caller sends only that, so this is additive, not a breaking change.
         dietPattern: requesterDiet.dietPattern,
+        dietPatterns: requesterDiet.dietPatterns,
         dietRestrictions: requesterDiet.hardRestrictions.filter(Boolean),
         // Tier-4 meal shell recovery — the matcher needs the generating user to
         // resolve the household; weekId (when supplied) applies weekly eater
@@ -5064,14 +5101,20 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       settings.hardExcludedIngredients = mergedExcludedIngredients;
 
       // Household strict diet enforcement — remove any diet already covered by the
-      // request user's own dietPattern (isDietExcluded already handles those), then
+      // request user's own dietPattern(s) (isDietExcluded already handles those), then
       // pass the remainder to the generator so it applies them as additional hard gates.
       // Vegan subsumes Vegetarian, so a Vegan request-user removes both from the set.
-      const userDietNorm = (settings.dietPattern ?? "").toLowerCase();
-      if (userDietNorm === "vegan") {
+      // 2026-11-22 — scans EVERY pattern the requester holds, not just the first
+      // (singular `dietPattern`): a requester who is Vegetarian AND Keto must still
+      // dedupe the Vegetarian household-strict-diet gate, even though "Vegetarian"
+      // is not necessarily the first entry in their pattern list.
+      const userDietNorms = new Set(
+        (settings.dietPatterns ?? (settings.dietPattern ? [settings.dietPattern] : [])).map((p) => p.toLowerCase()),
+      );
+      if (userDietNorms.has("vegan")) {
         householdEaterStrictDiets.delete("Vegan");
         householdEaterStrictDiets.delete("Vegetarian");
-      } else if (userDietNorm === "vegetarian") {
+      } else if (userDietNorms.has("vegetarian")) {
         householdEaterStrictDiets.delete("Vegetarian");
       }
       if (householdEaterStrictDiets.size > 0) {

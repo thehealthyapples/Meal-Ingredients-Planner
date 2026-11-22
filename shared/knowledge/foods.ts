@@ -1008,7 +1008,7 @@ export const EDITORIAL_FOOD_SEED: InsertKnowledgeFood[] = [
     // NK6R Amendment 3 — this record is the fact owner for WHEAT pasta (canonical
     // `wheat-pasta` links to it). Shapes stay: they are formats of this pasta type.
     // Wholemeal strings removed: wholewheat pasta is a separate type with more fibre.
-    subcategory: "Wheat products", aliases: ["spaghetti", "penne", "fusilli", "tagliatelle", "rigatoni", "macaroni"],
+    subcategory: "Wheat products", aliases: ["spaghetti", "penne", "fusilli", "tagliatelle", "rigatoni", "macaroni", "lasagne", "lasagna", "lasagne sheets"],
     description: "A versatile durum wheat staple, sold dried in every shape; what a pasta is made from decides its fibre and protein.",
     commonForms: ["spaghetti", "penne", "fusilli", "tagliatelle", "lasagne sheets"],
     storageGuidance: "Store dried pasta in a sealed container; refrigerate fresh pasta.",
