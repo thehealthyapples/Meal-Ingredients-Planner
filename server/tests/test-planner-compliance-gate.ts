@@ -46,6 +46,7 @@ function ctx(
 ): PlannerComplianceContext {
   return {
     dietPattern,
+    dietPatterns: dietPattern ? [dietPattern] : [],
     dietRestrictions,
     hardExcludedIngredients,
     safetyUnavailable: false,
@@ -132,9 +133,15 @@ section('Bonus — dietRestrictions (Gluten-Free / Dairy-Free) applied independe
   const gf = ctx(null, ['Gluten-Free'], []);
   assert(!compliant(meal('Spaghetti Bolognese', ['wheat pasta', 'beef']), gf),
     'gluten skipped for Gluten-Free restriction');
+  // 2026-11-22 (owner-reported) — Dairy-Free is one of the ADAPTABLE restrictions
+  // (shared/dietRules.ts ADAPTABLE_DIET_RESTRICTIONS): generation deliberately lets
+  // a dairy conflict through so the household gets the meal WITH a swap, rather than
+  // the meal dropped outright. This gate must agree with generation, not be stricter
+  // than it — the bug this replaces was exactly that disagreement: smart-apply
+  // withheld candidates generation had already decided were fine to adapt.
   const df = ctx(null, ['Dairy-Free'], []);
-  assert(!compliant(meal('Mac & Cheese', ['macaroni', 'cheddar cheese', 'milk']), df),
-    'dairy skipped for Dairy-Free restriction');
+  assert(compliant(meal('Mac & Cheese', ['macaroni', 'cheddar cheese', 'milk']), df),
+    'dairy ALLOWED for Dairy-Free restriction — adaptable, not hard-excluded, matching the generation gate');
 }
 
 // ─── SSoT consistency — gate agrees with dietRules.shouldExcludeRecipe directly ──

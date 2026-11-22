@@ -36,7 +36,7 @@ import type { FullDay, FullWeek, SmartCandidate, MealExplanation, SmartSuggestEn
 import type { EntryTarget, PlannerProductResult } from "@/components/PlannerMealPickerPanel";
 import { SharePlanDialog } from "@/components/share-plan-dialog";
 import { PlanToShoppingReviewDialog } from "@/components/plan-to-shopping-review-dialog";
-import { buildPlanToShoppingReview } from "@/lib/plan-to-shopping-review-model";
+import { buildPlanToShoppingReview, type PlanToShoppingReviewItem, type PlanShoppingSelection } from "@/lib/plan-to-shopping-review-model";
 import { PlannerScanReview, type PlannerScanData, type PlannerDayEntry } from "@/components/PlannerScanReview";
 import { RecipeScanReview, type RecipeScanData } from "@/components/RecipeScanReview";
 import { emitStageProposal } from "@/lib/planner-staging-bus";
@@ -570,6 +570,27 @@ export default function WeeklyPlannerPage() {
     .filter((week) => !recentWeekIds.has(week.id) && (!week.weekStartDate || (currentWeek?.weekStartDate && week.weekStartDate < currentWeek.weekStartDate)))
     .sort((a, b) => (b.weekStartDate ?? "").localeCompare(a.weekStartDate ?? "") || b.weekNumber - a.weekNumber);
 
+  // 2026-11-22 (owner-reported) — the Smart Suggest wizard's "Apply" button read
+  // "Apply to Week 23", a raw internal ordinal (PLANNER1 §; see plannerWeeks.weekNumber's
+  // own doc comment — "NOT a time coordinate") that appears NOWHERE else in the planner's
+  // own UI: every other week picker here already speaks through `weekLabel()` (the dated
+  // range, or the week's name when undated). "This week" / "next week" is friendlier still
+  // when the household IS anchored to a calendar (the common case once a week has a real
+  // start date) — computed from the SAME `currentWeek` resolution this page already reads
+  // for its own "today" landing, never re-derived.
+  const activeWeekObj = fullPlanner.find((week) => week.weekNumber === Number(activeWeek));
+  const activeWeekFriendlyLabel = (() => {
+    if (!activeWeekObj) return activeWeek ? `Week ${activeWeek}` : "this week";
+    if (currentWeek?.weekStartDate && activeWeekObj.weekStartDate) {
+      if (activeWeekObj.weekStartDate === currentWeek.weekStartDate) return "this week";
+      if (activeWeekObj.weekStartDate === shiftIsoDays(currentWeek.weekStartDate, 7)) return "next week";
+      if (activeWeekObj.weekStartDate === shiftIsoDays(currentWeek.weekStartDate, -7)) return "last week";
+    } else if (currentWeek?.weekNumber === activeWeekObj.weekNumber) {
+      return "this week";
+    }
+    return weekLabel(activeWeekObj);
+  })();
+
   const { data: meals = [] } = useQuery<Meal[]>({
     queryKey: ["/api/meals"],
   });
@@ -639,6 +660,9 @@ export default function WeeklyPlannerPage() {
   // ── Shopping handoff state (Phase 3: post-generation continuity) ─────────────
   const [shoppingHandoff, setShoppingHandoff] = useState<ShoppingHandoffData | null>(null);
   const [planShoppingReviewOpen, setPlanShoppingReviewOpen] = useState(false);
+  const [shoppingReviewItems, setShoppingReviewItems] = useState<PlanToShoppingReviewItem[]>([]);
+  const [freezerCandidate, setFreezerCandidate] = useState<Meal | null>(null);
+  const [frozenServings, setFrozenServings] = useState("");
 
   // Once planner data first loads, validate restored resolveSession. If the entry no longer
   // exists (deleted/stale), clear the session and exit resolve mode.
@@ -729,6 +753,7 @@ export default function WeeklyPlannerPage() {
     clearSmartResult,
   } = useSmartSuggest({
     meals, fullPlanner, activeWeek, activeWeekData,
+    activeWeekLabel: activeWeekFriendlyLabel,
     onReviewReady: () => setAssistantMode("smart-review"),
     onApplied: () => setAssistantMode(null),
   });
@@ -1151,9 +1176,6 @@ export default function WeeklyPlannerPage() {
     addToFreezerMutation,
     createPlannerIntent,
     handleRepeatTomorrow,
-    addDayToBasket,
-    addSlotToBasket,
-    addAllToBasket,
   } = usePlannerOperations({
     fullPlanner,
     selectedDayId,
@@ -1663,9 +1685,25 @@ export default function WeeklyPlannerPage() {
     () => buildPlanToShoppingReview(sortedDays, meals, pantryNames),
     [sortedDays, meals, pantryNames],
   );
-  const confirmPlanShopping = () => {
-    addAllToBasket(sortedDays);
-    setPlanShoppingReviewOpen(false);
+  const openShoppingReview = (days: FullDay[], mealType?: string, entryId?: number) => {
+    const selectedDays = days.map(day => ({
+      ...day,
+      entries: day.entries.filter(entry => (!mealType || entry.mealType === mealType) && (entryId === undefined || entry.id === entryId)),
+    }));
+    const reviewItems = buildPlanToShoppingReview(selectedDays, meals, pantryNames);
+    if (reviewItems.length === 0) {
+      toast({ title: "No meals to add for this selection" });
+      return;
+    }
+    setShoppingReviewItems(reviewItems);
+    setPlanShoppingReviewOpen(true);
+  };
+  const confirmPlanShopping = (selections: PlanShoppingSelection[]) => {
+    addToBasketMutation.mutate(selections, { onSuccess: () => setPlanShoppingReviewOpen(false) });
+  };
+  const openFreezerConfirmation = (meal: Meal) => {
+    setFreezerCandidate(meal);
+    setFrozenServings("");
   };
 
   // HOUSE2: the Planner had a loading branch (PX1-W4.8) and a failed-load branch
@@ -2143,7 +2181,7 @@ export default function WeeklyPlannerPage() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-52">
             <DropdownMenuItem
-              onClick={() => setPlanShoppingReviewOpen(true)}
+              onClick={() => openShoppingReview(sortedDays)}
               disabled={addToBasketMutation.isPending || planShoppingReviewItems.length === 0}
               data-testid="button-add-all-basket-overflow"
             >
@@ -2562,7 +2600,7 @@ export default function WeeklyPlannerPage() {
                         size="sm"
                         variant="outline"
                         className="w-full h-8 text-xs"
-                        onClick={() => addDayToBasket(mobileDay)}
+                        onClick={() => openShoppingReview([mobileDay])}
                         disabled={addToBasketMutation.isPending}
                         data-testid="button-mobile-add-day-basket"
                       >
@@ -2645,7 +2683,7 @@ export default function WeeklyPlannerPage() {
                                 <TooltipTrigger asChild>
                                   <button
                                     className="mt-1 rounded transition-colors text-muted-foreground hover:text-foreground self-center"
-                                    onClick={() => addSlotToBasket(row.mealType!, sortedDays)}
+                                    onClick={() => openShoppingReview(sortedDays, row.mealType!)}
                                     disabled={addToBasketMutation.isPending}
                                     aria-label={`Add ${pluralizeMealLabel(row.label)} to basket`}
                                     data-testid={`button-add-slot-${row.mealType}-basket`}
@@ -2829,7 +2867,7 @@ export default function WeeklyPlannerPage() {
                                         {/* Phase 1D: Send to shopping */}
                                         {!isPlaceholder && (
                                           <ContextMenuItem
-                                            onClick={() => addToBasketMutation.mutate([{ mealId: meal.id, count: 1 }])}
+                                            onClick={() => openShoppingReview([day], undefined, entry.id)}
                                             data-testid={`mi-shopping-${entry.id}`}
                                           >
                                             <ShoppingCart className={`h-3.5 w-3.5 mr-2 ${basketMealIdSet.has(meal.id) ? "text-emerald-500" : ""}`} />
@@ -2837,7 +2875,7 @@ export default function WeeklyPlannerPage() {
                                           </ContextMenuItem>
                                         )}
                                         {meal.isFreezerEligible && !isPlaceholder && (
-                                          <ContextMenuItem onClick={() => addToFreezerMutation.mutate(meal.id)} data-testid={`mi-freeze-${entry.id}`}>
+                                          <ContextMenuItem onClick={() => openFreezerConfirmation(meal)} data-testid={`mi-freeze-${entry.id}`}>
                                             <Snowflake className={`h-3.5 w-3.5 mr-2 ${isFrozen ? "text-blue-400" : ""}`} />
                                             {isFrozen ? "Already in freezer" : "Add to freezer"}
                                           </ContextMenuItem>
@@ -3043,6 +3081,7 @@ export default function WeeklyPlannerPage() {
               smartLoading={smartLoading}
               mealById={mealById}
               activeWeek={activeWeek}
+              activeWeekLabel={activeWeekFriendlyLabel}
               toggleLockEntry={toggleLockEntry}
               regenerateSingleEntry={regenerateSingleEntry}
               applySmartSuggestion={applySmartSuggestion}
@@ -3224,14 +3263,14 @@ export default function WeeklyPlannerPage() {
                   {/* Phase 1D: Send to shopping */}
                   {!isPlaceholder && (
                     <button className="flex items-center gap-3 px-4 py-3.5 text-sm text-foreground active:bg-accent/60 text-left w-full" role="menuitem" data-testid="button-ctx-shopping"
-                      onClick={() => { addToBasketMutation.mutate([{ mealId: contextEntry.meal.id, count: 1 }]); setContextEntry(null); }}>
+                      onClick={() => { openShoppingReview(sortedDays, undefined, contextEntry.entry.id); setContextEntry(null); }}>
                       <ShoppingCart className={`h-4 w-4 shrink-0 ${basketMealIdSet.has(contextEntry.meal.id) ? "text-emerald-500" : "text-muted-foreground"}`} />
                       {basketMealIdSet.has(contextEntry.meal.id) ? "In shopping list — send again" : "Send to shopping"}
                     </button>
                   )}
                   {contextEntry.meal.isFreezerEligible && !isPlaceholder && (
                     <button className="flex items-center gap-3 px-4 py-3.5 text-sm text-foreground active:bg-accent/60 text-left w-full" role="menuitem" data-testid="button-ctx-freeze"
-                      onClick={() => { addToFreezerMutation.mutate(contextEntry.meal.id); setContextEntry(null); }}>
+                      onClick={() => { openFreezerConfirmation(contextEntry.meal); setContextEntry(null); }}>
                       <Snowflake className={`h-4 w-4 shrink-0 ${freezerMeals.some(f => f.mealId === contextEntry.meal.id && f.remainingPortions > 0) ? "text-blue-400" : "text-muted-foreground"}`} />
                       {freezerMeals.some(f => f.mealId === contextEntry.meal.id && f.remainingPortions > 0) ? "Already in freezer" : "Add to freezer"}
                     </button>
@@ -4515,11 +4554,37 @@ export default function WeeklyPlannerPage() {
       <PlanToShoppingReviewDialog
         open={planShoppingReviewOpen}
         weekName={activeWeekData?.weekName ?? `Week ${activeWeek}`}
-        items={planShoppingReviewItems}
+        items={shoppingReviewItems}
         pending={addToBasketMutation.isPending}
         onOpenChange={setPlanShoppingReviewOpen}
         onConfirm={confirmPlanShopping}
       />
+
+      <Dialog open={!!freezerCandidate} onOpenChange={open => { if (!open) setFreezerCandidate(null); }}>
+        <DialogContent className="max-w-md" data-testid="dialog-confirm-frozen-servings">
+          <DialogHeader>
+            <DialogTitle>Record cooked food in your freezer</DialogTitle>
+            <DialogDescription>
+              One freezer portion feeds one person. Record only the servings of {freezerCandidate?.name} you have cooked and actually frozen. A recipe normally serves {freezerCandidate?.servings ?? 1}.
+            </DialogDescription>
+          </DialogHeader>
+          <label className="text-sm">Person servings frozen
+            <Input type="number" min="1" step="1" value={frozenServings} onChange={event => setFrozenServings(event.target.value)} className="mt-1" data-testid="input-frozen-servings" />
+          </label>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFreezerCandidate(null)} disabled={addToFreezerMutation.isPending}>Cancel</Button>
+            <Button
+              variant="default"
+              disabled={!freezerCandidate || !Number.isInteger(Number(frozenServings)) || Number(frozenServings) < 1 || addToFreezerMutation.isPending}
+              onClick={() => {
+                if (!freezerCandidate) return;
+                addToFreezerMutation.mutate({ mealId: freezerCandidate.id, servings: Number(frozenServings) }, { onSuccess: () => setFreezerCandidate(null) });
+              }}
+              data-testid="button-confirm-frozen-servings"
+            >{addToFreezerMutation.isPending ? "Recording…" : "Record frozen servings"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Adaptation Review Sheet — mounted at page level to avoid Dialog z-index conflicts ── */}
       {mealDetail && (() => {

@@ -7,6 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Loader2, Lock, Sparkles, DollarSign, HelpCircle, RefreshCw,
   ShoppingBasket, Pencil, Globe, Snowflake, Microscope, UtensilsCrossed,
   Flame, Beef, Cookie, Droplets, Droplet, Wheat,
@@ -153,16 +157,24 @@ function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, 
             <NutritionVarietyDots score={varietyScore} />
             <MealNutrientTags nutrients={nutrientTags} />
             {entry.candidate.householdFit && (() => {
-              const { compatibleCount, totalCount, memberChanges } = entry.candidate.householdFit;
-              const allFit = compatibleCount === totalCount;
+              const { memberChanges } = entry.candidate.householdFit;
+              // 2026-11-22 (owner-reported) — "Fits 0 of 2 household members" read
+              // as "neither of them can eat this" for a meal BOTH of them genuinely
+              // can eat, once a real substitution exists (courgetti for pasta,
+              // omit the cheese) — THA's core premise is the household eating the
+              // SAME meal together with individual swaps, not a compatibility
+              // headcount that makes an adaptable meal sound like a failed one.
+              // "Full abidance" / "Needs changes" names what's actually true:
+              // nothing to change, or exactly what to change and for whom (the
+              // expandable detail below already names it per person).
               const hasAdaptations = memberChanges.length > 0;
               return (
                 <div className="mt-0.5">
                   <div className="flex items-center gap-1 text-xs">
-                    {allFit ? (
-                      <span className="text-green-600 dark:text-green-400">✓ Fits all household members</span>
+                    {!hasAdaptations ? (
+                      <span className="text-green-600 dark:text-green-400">✓ Full abidance to your diet</span>
                     ) : (
-                      <span className="text-muted-foreground">⚠ Fits {compatibleCount} of {totalCount} household members</span>
+                      <span className="text-amber-600 dark:text-amber-400">⚠ Needs changes</span>
                     )}
                     {hasAdaptations && (
                       <button
@@ -174,9 +186,6 @@ function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, 
                       </button>
                     )}
                   </div>
-                  {hasAdaptations && (
-                    <p className="text-xs text-amber-600 dark:text-amber-400">Needs household adaptations</p>
-                  )}
                 </div>
               );
             })()}
@@ -404,9 +413,12 @@ export interface SmartReviewPanelContentProps {
   smartLoading: boolean;
   mealById: Map<number, Meal>;
   activeWeek: string;
+  /** 2026-11-22 — "this week" / "next week" / the dated range, never the raw
+   *  internal week ordinal (see weekly-planner-page.tsx's computation). */
+  activeWeekLabel: string;
   toggleLockEntry: (key: string) => void;
   regenerateSingleEntry: (entry: SmartSuggestEntry) => void;
-  applySmartSuggestion: () => void;
+  applySmartSuggestion: (mode: "add" | "replace") => void;
   runSmartSuggest: (preserveLocks?: boolean) => void;
   setNutritionFetchTick: React.Dispatch<React.SetStateAction<number>>;
   onCancel: () => void;
@@ -425,6 +437,7 @@ export function SmartReviewPanelContent({
   smartLoading,
   mealById,
   activeWeek,
+  activeWeekLabel,
   toggleLockEntry,
   regenerateSingleEntry,
   applySmartSuggestion,
@@ -434,6 +447,11 @@ export function SmartReviewPanelContent({
   restoredFromSession,
   onDismissRestoreBanner,
 }: SmartReviewPanelContentProps) {
+  // 2026-11-22 — apply used to fire immediately and stack onto whatever was
+  // already on the week (the planner allows multiple items per slot), which is
+  // why a second "Apply" could look like nothing happened. Ask first.
+  const [applyConfirmOpen, setApplyConfirmOpen] = useState(false);
+
   if (!smartResult) return null;
 
   const dayNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
@@ -531,12 +549,12 @@ export function SmartReviewPanelContent({
         <Button variant="default"
           size="sm"
           className="w-full"
-          onClick={applySmartSuggestion}
+          onClick={() => setApplyConfirmOpen(true)}
           disabled={applyingSmartPlan}
           data-testid="button-smart-apply"
         >
           {applyingSmartPlan ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : null}
-          Apply to Week {activeWeek}
+          Apply to {activeWeekLabel}
         </Button>
         <Button
           variant="ghost"
@@ -548,6 +566,35 @@ export function SmartReviewPanelContent({
           Cancel
         </Button>
       </div>
+
+      <AlertDialog open={applyConfirmOpen} onOpenChange={setApplyConfirmOpen}>
+        <AlertDialogContent data-testid="dialog-smart-apply-mode">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Apply to {activeWeekLabel}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {activeWeekLabel} may already have meals planned. Add these suggestions
+              alongside what's already there, or clear {activeWeekLabel} first so only
+              this new plan remains?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel data-testid="button-smart-apply-mode-cancel">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { setApplyConfirmOpen(false); applySmartSuggestion("add"); }}
+              data-testid="button-smart-apply-mode-add"
+            >
+              Add alongside existing
+            </AlertDialogAction>
+            <AlertDialogAction
+              onClick={() => { setApplyConfirmOpen(false); applySmartSuggestion("replace"); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-smart-apply-mode-replace"
+            >
+              Clear {activeWeekLabel} first
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
     </div>
   );

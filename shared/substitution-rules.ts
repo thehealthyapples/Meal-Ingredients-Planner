@@ -41,7 +41,11 @@ export type DietTrigger =
   | "egg_free"       // Phase 3B
   | "coconut_free"   // Phase 3B
   | "fish_free"      // COMP_SUB2
-  | "honey_free";    // COMP_SUB2
+  | "honey_free"     // COMP_SUB2
+  | "keto";          // 2026-11-22 — low-carb substitutes for THA's core premise:
+                      // a household eats the SAME meal together, each person's
+                      // own requirement swapped in, rather than the meal being
+                      // dropped from suggestions entirely for one person's diet.
 
 // ─── Core output types ────────────────────────────────────────────────────────
 
@@ -1736,6 +1740,155 @@ const SUBSTITUTION_RULES: SubstitutionRule[] = [
     reasonTemplate: (r) => `${r} — honey-free sweetener substituted`,
   },
 
+  // 2026-11-22 — Keto / Low-Carb substitutes. THA's premise: a household eats
+  // the SAME meal together, with each person's own requirement swapped in —
+  // not a meal dropped from suggestions entirely because it conflicts with
+  // ONE person's pattern. These are new, independent rules (not added to the
+  // existing "wheat_pasta"/gluten-free rule above) because strategy selection
+  // is not trigger-aware — a shared rule would let a Gluten-Free household
+  // get offered ordinary GF pasta (still high-carb) for a Keto conflict.
+  // Keeping Keto's own rule with its own strategies guarantees a Keto
+  // conflict always gets a genuinely low-carb answer.
+
+  // ── Keto 1. Pasta / noodles ───────────────────────────────────────────────
+  {
+    id: "pasta_keto",
+    version: 1,
+    ingredientPatterns: [
+      /\bspaghetti\b/i,
+      /\bpenne\b/i,
+      /\brigatoni\b/i,
+      /\bfusilli\b/i,
+      /\bfarfalle\b/i,
+      /\btagliatelle\b/i,
+      /\blinguine\b/i,
+      /\bfettuccine\b/i,
+      /\borzo\b/i,
+      /\blasagne\s+sheets?\b/i,
+      /\blasagna\s+sheets?\b/i,
+      /\bconchiglie\b/i,
+      /\bmacaroni\b/i,
+      /\bpasta\b/i,
+      /\bnoodles?\b/i,
+      /\budon\b/i,
+    ],
+    triggers: ["keto"],
+    strategies: [
+      {
+        replacement: "courgette noodles (courgetti)",
+        cookingNotes: [
+          "Spiralise courgette (zucchini) into noodle-width strips",
+          "Courgette noodles release water as they cook — sauté briefly (2–3 minutes) over high heat, or serve raw/warmed through with a hot sauce, never boiled",
+          "Salt and leave to drain for 10 minutes first to reduce excess water, then pat dry",
+        ],
+        prohibitedPhrases: ["boil the pasta", "al dente", "pasta water"],
+      },
+      {
+        replacement: "spaghetti squash",
+        cookingNotes: [
+          "Roast halved and deseeded at 200°C for 35–40 minutes, then scrape out the strands with a fork",
+          "Strands hold more water than wheat pasta — let drain briefly before adding sauce",
+        ],
+        prohibitedPhrases: ["boil the pasta", "al dente"],
+      },
+      {
+        replacement: "shirataki (konjac) noodles",
+        cookingNotes: [
+          "Rinse thoroughly and dry-fry for 2–3 minutes before adding sauce — they carry a strong odour straight from the pack that cooking off removes",
+        ],
+        prohibitedPhrases: ["boil the pasta", "al dente"],
+      },
+    ],
+    reasonTemplate: (r) => `${r} — low-carb substitute for the Keto pattern`,
+  },
+
+  // ── Keto 2. Rice ──────────────────────────────────────────────────────────
+  {
+    id: "rice_keto",
+    version: 1,
+    ingredientPatterns: [
+      /\brice\b/i,
+    ],
+    triggers: ["keto"],
+    strategies: [
+      {
+        replacement: "cauliflower rice",
+        cookingNotes: [
+          "Grate or food-process raw cauliflower florets to a rice-like texture",
+          "Sauté in a dry pan for 4–5 minutes only — it releases water and turns mushy if overcooked or boiled",
+          "Season after cooking, not before, to stop it going watery",
+        ],
+        prohibitedPhrases: ["boil the rice", "simmer the rice", "rice water"],
+      },
+    ],
+    reasonTemplate: (r) => `${r} — low-carb substitute for the Keto pattern`,
+  },
+
+  // ── Keto 3. Bread / toast ─────────────────────────────────────────────────
+  // 2026-11-22 (owner-reported) — "Vegetarian Shakshuka" (2 sliced Toast)
+  // read as keto-compliant because DICT_BAKERY only had "bread", not "toast",
+  // and no substitution rule existed to offer a swap once it was detected.
+  {
+    id: "bread_keto",
+    version: 1,
+    ingredientPatterns: [
+      /\btoast(?:ed)?\b/i,
+      /\bbread\b/i,
+      /\bsandwich\s+bread\b/i,
+      /\bbagel\b/i,
+    ],
+    triggers: ["keto"],
+    strategies: [
+      {
+        replacement: "low-carb / seeded bread",
+        cookingNotes: [
+          "Use a low-carb or seed-and-nut-based bread in the same quantity — many supermarkets stock a dedicated low-carb loaf",
+          "Toast as normal; texture browns faster than wheat bread, so watch it under the grill",
+        ],
+        prohibitedPhrases: ["slice of bread", "wheat bread", "white bread"],
+      },
+      {
+        replacement: "griddled aubergine slices (no bread)",
+        cookingNotes: [
+          "Serve the dish open, spooned over thick griddled aubergine slices instead of on toast",
+          "Griddle 1–2 minutes per side until lightly charred",
+        ],
+        prohibitedPhrases: ["slice of bread", "toast"],
+      },
+    ],
+    reasonTemplate: (r) => `${r} — low-carb substitute for the Keto pattern`,
+  },
+
+  // ── Keto 4. Potato ────────────────────────────────────────────────────────
+  {
+    id: "potato_keto",
+    version: 1,
+    ingredientPatterns: [
+      /\bpotato(?:es)?\b/i,
+      /\bmash(?:ed\s+potato(?:es)?)?\b/i,
+    ],
+    triggers: ["keto"],
+    strategies: [
+      {
+        replacement: "cauliflower mash",
+        cookingNotes: [
+          "Steam or boil cauliflower florets until very soft (12–15 minutes), then drain well and blend or mash with butter/cream as the original recipe would",
+          "Cauliflower holds more water than potato — drain thoroughly and let stand a few minutes before mashing to avoid a watery result",
+        ],
+        prohibitedPhrases: ["mash the potatoes", "potato mash"],
+      },
+      {
+        replacement: "celeriac mash",
+        cookingNotes: [
+          "Peel and chop celeriac into even chunks, boil 15–20 minutes until soft, then mash or blend",
+          "Celeriac has a mild, slightly nutty flavour — unlike potato, no need to drain as thoroughly",
+        ],
+        prohibitedPhrases: ["mash the potatoes", "potato mash"],
+      },
+    ],
+    reasonTemplate: (r) => `${r} — low-carb substitute for the Keto pattern`,
+  },
+
 ];
 
 // ─── Diet trigger detection ────────────────────────────────────────────────────
@@ -1770,6 +1923,12 @@ export function detectActiveTriggers(restrictions: string[]): Set<DietTrigger> {
     }
     if (/\bnut[\s-]?free\b|\btree\s+nuts?\b|\bpeanut\b/.test(lower)) {
       active.add("nut_free");
+    }
+    // 2026-11-22 — "Keto" and "Low-Carb" (shared/dietRules.ts's own canonical
+    // pattern spellings) both exclude the same carb-heavy staples, so both
+    // activate the same substitution trigger.
+    if (/\bketo\b|\blow[\s-]?carb\b/.test(lower)) {
+      active.add("keto");
     }
   }
 

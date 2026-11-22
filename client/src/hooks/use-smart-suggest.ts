@@ -55,6 +55,9 @@ interface UseSmartSuggestOptions {
   fullPlanner: FullWeek[];
   activeWeek: string;
   activeWeekData: FullWeek | undefined;
+  /** 2026-11-22 — "this week" / "next week" / the dated range, never the raw
+   *  internal week ordinal. Falls back to `Week {activeWeek}` when omitted. */
+  activeWeekLabel?: string;
   onReviewReady?: () => void;
   onApplied?: () => void;
 }
@@ -64,6 +67,7 @@ export function useSmartSuggest({
   fullPlanner,
   activeWeek,
   activeWeekData,
+  activeWeekLabel,
   onReviewReady,
   onApplied,
 }: UseSmartSuggestOptions) {
@@ -156,26 +160,21 @@ export function useSmartSuggest({
     }
   }, [smartResult, lockedEntries]);
 
+  // 2026-11-22 (owner-reported) — this used to ALSO pre-populate `locked` with
+  // every entry already sitting in the active week's planner, unconditionally,
+  // on every call including the very first "Generate Suggestions". That is a
+  // second, invisible lock mechanism with no UI of its own, completely separate
+  // from the explicit 🔒 icon the review panel shows — and it meant that once a
+  // week had any meals in it at all, the wizard could never again propose
+  // anything different for those slots: "regenerate" just handed back what was
+  // already there. The explicit per-entry lock (`lockedEntries`, below) is the
+  // only mechanism that should survive a regenerate; what currently exists on
+  // the planner is no longer the wizard's concern at generation time — the
+  // Add-alongside-existing/Clear-first choice at Apply is where that now lives.
   const runSmartSuggest = async (preserveLocks = false) => {
     setSmartLoading(true);
     try {
       const locked: { dayOfWeek: number; slot: string; candidateId: string | number; candidateName: string }[] = [];
-
-      const mealNameById = new Map(meals.map(m => [m.id, m.name]));
-      const currentWeek = fullPlanner.find(w => String(w.weekNumber) === activeWeek);
-      if (currentWeek) {
-        for (const day of currentWeek.days) {
-          for (const entry of day.entries) {
-            const slot = entry.mealType === 'snacks' ? 'snack' : entry.mealType;
-            locked.push({
-              dayOfWeek: day.dayOfWeek,
-              slot,
-              candidateId: entry.mealId,
-              candidateName: mealNameById.get(entry.mealId) ?? '',
-            });
-          }
-        }
-      }
 
       if (preserveLocks && smartResult) {
         for (const entry of smartResult.entries) {
@@ -220,7 +219,14 @@ export function useSmartSuggest({
     });
   };
 
-  const applySmartSuggestion = async () => {
+  // 2026-11-22 (owner-reported) — applying used to be purely additive: every slot
+  // that already held a meal (e.g. from a previous apply) got a SECOND meal
+  // stacked into it, invisibly, because the planner allows multiple items per
+  // slot by design. Combined with the wizard's own locking of pre-existing
+  // entries, this is why a second "Apply" ever looked like "nothing changed" —
+  // the household needs to say up front whether this run should sit ALONGSIDE
+  // what's already on the week, or REPLACE it outright.
+  const applySmartSuggestion = async (mode: "add" | "replace" = "add") => {
     if (!smartResult || !activeWeekData) return;
     setApplyingSmartPlan(true);
     let importedCount = 0;
@@ -231,6 +237,9 @@ export function useSmartSuggest({
     let withheldCount = 0;
     const withheldReasons = new Set<string>();
     try {
+      if (mode === "replace") {
+        await apiRequest('DELETE', `/api/planner/weeks/${activeWeekData.id}/entries`);
+      }
       for (const entry of smartResult.entries) {
         const day = activeWeekData.days.find(d => d.dayOfWeek === entry.dayOfWeek);
         if (!day) continue;
@@ -292,7 +301,7 @@ export function useSmartSuggest({
       // answer is the defect, not the filtering.
       const addedCount = smartResult.entries.length - failedCount - withheldCount;
       const parts = [
-        `${addedCount} meals added to Week ${activeWeek}.`,
+        `${addedCount} meals added to ${activeWeekLabel ?? `Week ${activeWeek}`}.`,
         importedCount > 0 ? `${importedCount} recipes auto-imported.` : "",
         // The clause after the dash is the SERVER's sentence, rendered verbatim — the
         // client composes only the count and the connective, never a claim about the

@@ -11,7 +11,7 @@
  * rules engine, does NOT carry its own keyword lists, and (since SURF1B) does NOT
  * resolve diet itself. It delegates entirely:
  *   - resolveHouseholdSafetyContext() → canonical household safety resolver (who)
- *   - candidateDietExcluded()  → dietRules.shouldExcludeRecipe()  (Profile diet)
+ *   - candidateDietExcludedForAnyPattern() → dietRules.shouldExcludeRecipeForAnyPattern() (Profile diet)
  *   - candidateHardExcluded()  → canonical restriction resolver    (household hard)
  *
  * Scope: gate SYSTEM-controlled write paths only (template apply / week-template
@@ -19,13 +19,18 @@
  * user-manual placement is intentionally NOT gated here.
  */
 import type { Meal, User, UserPreferences } from "@shared/schema";
-import { candidateDietExcluded, candidateHardExcluded } from "./smart-suggest-service";
+import { candidateDietExcludedForAnyPattern, candidateHardExcluded } from "./smart-suggest-service";
 import { resolveHouseholdSafetyContext } from "./household-dietary-safety";
+import { ADAPTABLE_DIET_PATTERNS, ADAPTABLE_DIET_RESTRICTIONS } from "@shared/dietRules";
 
 /** Resolved, reusable compliance context for one user. Build once, reuse per item. */
 export interface PlannerComplianceContext {
-  /** HARD for the requesting user — their own diet pattern. Not unioned household-wide. */
+  /** HARD for the requesting user — the FIRST of `dietPatterns`. Not unioned
+   *  household-wide. Kept for callers that only ever handled one pattern. */
   dietPattern: string | null;
+  /** HARD for the requesting user — EVERY diet pattern they hold (2026-11-22;
+   *  e.g. Vegetarian AND Keto). Not unioned household-wide. */
+  dietPatterns: string[];
   /**
    * HARD, household-wide (SURF1B). Every active member's `users.diet_restrictions`
    * plus every eater's `hard_restrictions` — including children, who have no account
@@ -111,6 +116,7 @@ export async function resolvePlannerComplianceContext(
 
   return {
     dietPattern: safety.requesterDietPattern,
+    dietPatterns: safety.requesterDietPatterns,
     dietRestrictions: safety.hardRestrictions,
     hardExcludedIngredients: Array.from(hardSet),
     safetyUnavailable: safety.status === "unavailable",
@@ -129,7 +135,7 @@ export function isComplianceActive(ctx: PlannerComplianceContext): boolean {
   if (ctx.safetyUnavailable) return true;
 
   return (
-    !!ctx.dietPattern ||
+    ctx.dietPatterns.length > 0 ||
     ctx.dietRestrictions.length > 0 ||
     ctx.hardExcludedIngredients.length > 0
   );
@@ -164,10 +170,24 @@ export function isMealCompliantForUser(
   };
 
   // Profile dietary hard filter — shared dietRules engine (single source of truth).
-  if (candidateDietExcluded(candidate, ctx.dietPattern, ctx.dietRestrictions)) {
+  // Excludes if ANY of the requester's patterns excludes (2026-11-22) — a strict
+  // widening of the single-pattern check this replaces, never a narrowing.
+  //
+  // 2026-11-22 (owner-reported) — ADAPTABLE_DIET_PATTERNS/RESTRICTIONS (Keto,
+  // Low-Carb, Dairy-Free) must be excluded from THIS check the same way
+  // smart-suggest-service.ts's generation gate already excludes them. Generation
+  // deliberately lets a Keto conflict (toast, chickpeas, a bean soup) THROUGH —
+  // that's the whole point of "adapt the meal, don't drop it" — but this
+  // defense-in-depth re-check ran on the FULL pattern/restriction list, so it
+  // hard-withheld every one of those candidates at smart-apply time, silently
+  // undoing what generation had just decided. Two gates disagreeing on the same
+  // candidate is the defect: this one must match generation's, not be stricter.
+  const hardDietPatterns = ctx.dietPatterns.filter((p) => !ADAPTABLE_DIET_PATTERNS.has(p));
+  const hardDietRestrictions = ctx.dietRestrictions.filter((r) => !ADAPTABLE_DIET_RESTRICTIONS.has(r));
+  if (candidateDietExcludedForAnyPattern(candidate, hardDietPatterns, hardDietRestrictions)) {
     return {
       compliant: false,
-      reason: `diet:${ctx.dietPattern ?? ctx.dietRestrictions.join("/")}`,
+      reason: `diet:${hardDietPatterns.join("+") || hardDietRestrictions.join("/")}`,
     };
   }
 

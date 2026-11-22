@@ -98,10 +98,32 @@ export const RESTRICTION_DEFINITIONS: RestrictionDefinition[] = [
       'kamut',
       'flour',
       'bread',
+      'toast',
       'pasta',
       'noodles',
+      'noodle',
       'tortilla',
       'panko',
+      // 2026-11-22 (owner-reported gap audit) — a real ingredient line almost
+      // always names the pasta SHAPE ("500g spaghetti", "penne") rather than the
+      // bare category word "pasta", exactly the gap found and fixed for Keto
+      // (shared/dietRules.ts DICT_GRAINS). This is the one place that list reads
+      // its wheat-pasta vocabulary from (shared/substitution-rules.ts's
+      // "wheat_pasta" strategy keys off these same shapes) — fixed once, here.
+      'spaghetti',
+      'penne',
+      'rigatoni',
+      'fusilli',
+      'farfalle',
+      'tagliatelle',
+      'linguine',
+      'fettuccine',
+      'orzo',
+      'lasagne sheets',
+      'lasagna sheets',
+      'conchiglie',
+      'macaroni',
+      'udon',
     ],
     hiddenIngredients: [
       'soy sauce',

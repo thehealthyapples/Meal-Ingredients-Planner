@@ -22,7 +22,21 @@
  *   · the diet PATTERN vocabulary (Vegan, Keto, Paleo, …) and its canonical spelling
  *   · the carbohydrate/grain/legume dictionaries of Keto, Low-Carb, Paleo, Carnivore
  *   · preference SCORING (boosts and penalties) — never a gate
- *   · the Gluten-Free and Dairy-Free restriction filters it has always applied
+ *
+ * 2026-11-22 (owner-reported gap audit) — the Gluten-Free and Dairy-Free restriction
+ * filters used to hold their OWN keyword lists (GLUTEN_KEYWORDS, DAIRY_KEYWORDS),
+ * written before SURF1B4 and never folded into it. They had drifted from the
+ * canonical `gluten`/`dairy` definitions exactly the way the retired MEAT_KEYWORDS
+ * list had: GLUTEN_KEYWORDS never matched a pasta SHAPE ("spaghetti", "penne") or
+ * "toast", so a Gluten-Free household's own "glaring" bug (a slice of toast read as
+ * compliant) was waiting to happen on this restriction too — gluten is a coeliac
+ * safety issue, not a preference, which makes that worse than the Keto case that
+ * surfaced it. DAIRY_KEYWORDS ran a bare `\bbutter\b`/`\bcream\b` scan with none of
+ * the canonical definition's excludedCompounds, so "butter bean", "peanut butter"
+ * and "coconut cream" (handled only by a separate, narrower plant-milk strip) were
+ * live false EXCLUSIONS for every Dairy-Free household. Both filters now delegate
+ * to the same canonical library Vegan/Vegetarian already use — one owner, so a gap
+ * fixed once is fixed for every pattern and restriction that reads it.
  *
  * ── Text versus items ────────────────────────────────────────────────────────
  * `shouldExcludeRecipe` accepts either a recipe's FIELDS or a single string.
@@ -39,7 +53,6 @@
 
 import {
   findRestrictionById,
-  maskRestrictionSubstitutions,
   resolveIngredientRestrictions,
 } from "./restrictions/restriction-resolver.js";
 import type { RestrictionDefinition } from "./restrictions/restriction-types.js";
@@ -86,6 +99,30 @@ export const DIET_PATTERNS = [
   "Vegan", "Vegetarian", "Keto", "Low-Carb", "Paleo", "Carnivore",
   "Mediterranean", "DASH", "MIND", "Flexitarian",
 ] as const;
+
+/**
+ * 2026-11-22 — THA's core premise: a household eats the SAME meal together,
+ * with each person's own requirement swapped in, never a meal dropped from
+ * suggestions entirely because it conflicts with ONE person's diet. That is
+ * only honest when a REAL, curated substitution exists (shared/substitution-
+ * rules.ts) — so this is the single, shared list of which patterns and
+ * restrictions currently have one, used by BOTH the Smart Suggest generation
+ * gate (smart-suggest-service.ts) and the per-member compatibility scorer
+ * (household-meal-matcher.ts) so the two can never disagree about which
+ * conflicts are "adapt this" versus "exclude the meal outright".
+ *
+ * Deliberately NOT every pattern/restriction dietRules.ts knows how to
+ * exclude on: Vegan/Vegetarian/Paleo/Carnivore/Gluten-Free stay a hard
+ * exclusion. Vegan and Vegetarian in particular are often an ethical
+ * commitment, not a nutrition preference — "serve the meat dish, just
+ * remove the meat for them" is not the same kind of adaptation as a
+ * low-carb swap, and THA has no curated, reviewed meat/fish substitution
+ * rules at all yet. Widening either set means adding real substitution
+ * rules for that pattern/restriction FIRST, the same way Keto's were —
+ * never by just adding its name here.
+ */
+export const ADAPTABLE_DIET_PATTERNS: ReadonlySet<string> = new Set(["Keto", "Low-Carb"]);
+export const ADAPTABLE_DIET_RESTRICTIONS: ReadonlySet<string> = new Set(["Dairy-Free"]);
 
 const DIET_PATTERN_BY_LOWER = new Map<string, string>(
   DIET_PATTERNS.map(p => [p.toLowerCase(), p]),
@@ -144,29 +181,36 @@ export const CANONICAL_DIET_TYPE_VALUES: ReadonlySet<string> = new Set(
 export function dietPatternFromDietTypes(
   dietTypes: readonly string[] | null | undefined,
 ): string | null {
+  return dietPatternsFromDietTypes(dietTypes)[0] ?? null;
+}
+
+/**
+ * 2026-11-22 — the plural counterpart of `dietPatternFromDietTypes`. A person can
+ * hold more than one simultaneous hard pattern (a vegetarian who also eats
+ * keto-style is a real, common combination) — `defaultDietTypes` was always an
+ * array capable of storing both, but every consumer of "this person's diet
+ * pattern" only ever read the first canonical entry, so a second declared
+ * pattern was silently dropped from every exclusion check. Returns every
+ * canonical match, in `DIET_PATTERNS` order, deduped — never invented, never
+ * dropped. `dietPatternFromDietTypes` above is now a thin derived view of this
+ * (its first element) so the two can never drift apart again.
+ */
+export function dietPatternsFromDietTypes(
+  dietTypes: readonly string[] | null | undefined,
+): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
   for (const t of dietTypes ?? []) {
     const canonical = DIET_PATTERN_BY_LOWER.get(t.trim().toLowerCase());
-    if (canonical) return canonical;
+    if (canonical && !seen.has(canonical)) {
+      seen.add(canonical);
+      result.push(canonical);
+    }
   }
-  return null;
+  return result;
 }
 
 // ─── Keyword Sets ────────────────────────────────────────────────────────────
-
-const GLUTEN_KEYWORDS = [
-  "wheat", "flour", "bread", "breadcrumb", "breadcrumbs", "pasta", "noodle", "noodles",
-  "couscous", "barley", "rye", "spelt", "bulgur", "bulgur wheat", "semolina",
-  "seitan", "gluten", "tortilla", "pita", "pitta", "crouton", "croutons",
-  "soy sauce", "teriyaki", "hoisin", "panko",
-];
-
-const DAIRY_KEYWORDS = [
-  "milk", "cream", "butter", "cheese", "yogurt", "yoghurt", "parmesan", "mozzarella",
-  "cheddar", "brie", "camembert", "ricotta", "mascarpone", "gouda", "feta",
-  "gruyere", "gruyère", "stilton", "halloumi", "paneer", "ghee", "whey",
-  "casein", "lactose", "kefir", "creme fraiche", "crème fraîche", "sour cream",
-  "double cream", "single cream", "clotted cream", "ice cream", "custard",
-];
 
 // ─── Vegan / Vegetarian — the canonical delegation (SURF1B4) ─────────────────
 //
@@ -213,6 +257,14 @@ function definitionsFor(ids: readonly string[]): RestrictionDefinition[] {
 const VEGETARIAN_DEFINITIONS = definitionsFor(VEGETARIAN_RESTRICTION_IDS);
 const VEGAN_DEFINITIONS = definitionsFor(VEGAN_RESTRICTION_IDS);
 
+// 2026-11-22 — Gluten-Free and Dairy-Free resolve through the same canonical
+// library, for the same reason Vegan/Vegetarian do: one owner of "what is gluten"
+// and "what is dairy", so a gap found and fixed here (a pasta shape, a hidden malt
+// source, a "butter bean" false positive) is fixed for every pattern and
+// restriction that reads it, not just the one that happened to get bug-reported.
+const GLUTEN_DEFINITIONS = definitionsFor(["gluten"]);
+const DAIRY_DEFINITIONS = definitionsFor(["dairy"]);
+
 /**
  * True when any item conflicts with any of the given canonical restrictions.
  *
@@ -244,8 +296,8 @@ const DICT_SUGARS = [
 
 // 2. Breads and bakery products
 const DICT_BAKERY = [
-  "bread", "sandwich bread", "sourdough", "bagel", "muffin",
-  "doughnut", "crumpet", "english muffin", "pancake", "waffle", "croissant",
+  "bread", "sandwich bread", "sourdough", "bagel", "muffin", "toast",
+  "sliced toast", "doughnut", "crumpet", "english muffin", "pancake", "waffle", "croissant",
 ];
 
 // 3. Doughs and pastry (composite carb ingredients — catches "pizza dough", etc.)
@@ -255,8 +307,22 @@ const DICT_DOUGHS = [
 ];
 
 // 4. Grain products
+//
+// 2026-11-22 (owner-reported) — the bare word "pasta" never matches a real
+// recipe ingredient, which almost always names the SHAPE ("500g spaghetti",
+// "penne", "linguine") rather than the category word. "Vegetarian Spaghetti
+// Bolognese" read as keto-compliant purely because dietRules never looked
+// for "spaghetti" at all — the household-adaptation feature (Path A2,
+// household-meal-matcher.ts) that this list now also feeds depends on these
+// matching real ingredient text, not just a generic category noun. Shape
+// names added below are the exact, already-curated list shared/substitution-
+// rules.ts's own "wheat_pasta" (Gluten-Free) and new "pasta_keto" rules
+// already key off — one vocabulary, not a second copy that could drift.
 const DICT_GRAINS = [
   "wheat", "flour", "rice", "pasta", "noodle", "noodles",
+  "spaghetti", "penne", "rigatoni", "fusilli", "farfalle", "tagliatelle",
+  "linguine", "fettuccine", "orzo", "lasagne sheets", "lasagna sheets",
+  "conchiglie", "macaroni", "udon",
   "couscous", "bulgur", "barley", "oats", "oat", "oatmeal",
   "quinoa", "polenta", "cornmeal", "corn", "cereal", "granola", "muesli",
   "rye", "spelt", "semolina",
@@ -382,36 +448,6 @@ const FLEXITARIAN_PENALTY = [
   "red meat", "beef", "lamb", "pork", "steak", "brisket", "mince",
 ];
 
-// ─── Plant-milk whitelist ─────────────────────────────────────────────────────
-// Plant-based milk alternatives are vegan and dairy-free by definition.
-// The standalone word "milk" they contain would otherwise match DAIRY_KEYWORDS
-// via the word-boundary regex. These compound phrases are stripped from the text
-// before dairy keyword scanning so the residual "milk" does not false-positive.
-//
-// Scope: the Dairy-Free restriction filter only. The Vegan pattern no longer needs
-// it — since SURF1B4 that path resolves through the canonical restriction library,
-// whose `dairy` definition carries the same plant milks as `excludedCompounds` and
-// far more besides. Not applied to Paleo, where all milks (including coconut) are
-// excluded by that diet's own rules.
-const PLANT_MILK_PHRASES = [
-  "almond milk", "oat milk", "soy milk", "soya milk", "coconut milk",
-  "plant milk", "plant-based milk", "rice milk", "hemp milk", "cashew milk",
-  "hazelnut milk", "pea milk", "macadamia milk", "oat mylk",
-  // Plant creams — contain "cream" keyword but are dairy-free by definition
-  "coconut cream", "oat cream", "soya cream", "soy cream",
-  "almond cream", "cashew cream", "rice cream",
-];
-
-// Replaces all PLANT_MILK_PHRASES with a space so surrounding keyword boundaries
-// are preserved for other checks. "coconut milk" → "coconut " (not "coconutmilk").
-function removePlantMilkPhrases(text: string): string {
-  let result = text;
-  for (const phrase of PLANT_MILK_PHRASES) {
-    result = result.split(phrase).join(" ");
-  }
-  return result;
-}
-
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 // Strips diacritical marks so keywords match regardless of accent variant.
@@ -471,19 +507,14 @@ export function shouldExcludeRecipe(
   // the platform's restriction enforcement — the canonical library is, via
   // `candidateHardExcluded()`, and it implements all thirteen. These remain because
   // removing a filter is a permissive change, and every filter here must move in the
-  // restrictive direction or not at all.
-  if (dietRestrictions.includes("Gluten-Free")) {
-    const gluten = findRestrictionById("gluten");
-    const text = gluten
-      ? items.map(item => maskRestrictionSubstitutions(item, gluten)).join(" ")
-      : lower;
-    if (containsAny(text, GLUTEN_KEYWORDS)) return true;
+  // restrictive direction or not at all. Per-ITEM, never a joined blob — see the
+  // header — so each item's excludedCompound stays scoped to that item.
+  if (dietRestrictions.includes("Gluten-Free") && conflictsWithCanonical(items, GLUTEN_DEFINITIONS)) {
+    return true;
   }
 
-  if (dietRestrictions.includes("Dairy-Free")) {
-    // Strip plant-based milk phrases before dairy scan — almond/oat/soy/coconut
-    // milk are dairy-free by definition and must not trigger this restriction.
-    if (containsAny(removePlantMilkPhrases(lower), DAIRY_KEYWORDS)) return true;
+  if (dietRestrictions.includes("Dairy-Free") && conflictsWithCanonical(items, DAIRY_DEFINITIONS)) {
+    return true;
   }
 
   // ── Pattern-based hard filters ────────────────────────────────────────────
@@ -516,6 +547,25 @@ export function shouldExcludeRecipe(
     default:
       return false;
   }
+}
+
+/**
+ * 2026-11-22 — the multi-pattern counterpart of `shouldExcludeRecipe`, for a
+ * person who holds more than one simultaneous hard pattern (e.g. Keto AND
+ * Vegetarian). Excludes if ANY pattern would exclude on its own — OR, never
+ * AND: a vegetarian-keto household member cannot eat something keto admits but
+ * vegetarian forbids, or vice versa, so the gate must fail closed on either.
+ * `dietRestrictions` (Gluten-Free/Dairy-Free) is still evaluated once, not
+ * once per pattern — it is not pattern-scoped.
+ */
+export function shouldExcludeRecipeForAnyPattern(
+  input: DietCheckable,
+  { dietPatterns, dietRestrictions }: { dietPatterns: readonly string[]; dietRestrictions: string[] },
+): boolean {
+  if (dietPatterns.length === 0) {
+    return shouldExcludeRecipe(input, { dietPattern: null, dietRestrictions });
+  }
+  return dietPatterns.some((p) => shouldExcludeRecipe(input, { dietPattern: p, dietRestrictions }));
 }
 
 // ─── Diet LABEL classification (SURF1C1) ─────────────────────────────────────
