@@ -80,7 +80,7 @@ import { eq, and, inArray } from "drizzle-orm";
 import { users, userPreferences, householdMembers, householdEaters } from "@shared/schema";
 import { getHouseholdForUser } from "./household";
 import { candidateHardExcluded } from "./smart-suggest-service";
-import { shouldExcludeRecipe, dietPatternFromDietTypes } from "@shared/dietRules";
+import { shouldExcludeRecipeForAnyPattern, dietPatternFromDietTypes, dietPatternsFromDietTypes } from "@shared/dietRules";
 import {
   resolveActiveRestrictions,
   resolveIngredientRestrictions,
@@ -100,8 +100,15 @@ export interface HouseholdMemberSafety {
   displayName: string;
   /** HARD. Declared restrictions/allergens. Unioned household-wide. */
   hardRestrictions: string[];
-  /** HARD for this member only — never unioned across the household. */
+  /** HARD for this member only — never unioned across the household. The FIRST
+   *  of `dietPatterns`, kept for callers that only ever handled one pattern;
+   *  the two can never drift apart since this is now a derived view. */
   dietPattern: string | null;
+  /** HARD for this member only — EVERY declared pattern (2026-11-22), e.g. a
+   *  vegetarian who also eats keto-style holds both simultaneously. A meal must
+   *  satisfy ALL of them (see `shouldExcludeRecipeForAnyPattern` — excluded if
+   *  ANY pattern excludes). Still never unioned across the household. */
+  dietPatterns: string[];
   /** PREFERENCE. Soft. */
   dietTypes: string[];
   /** PREFERENCE. Soft. */
@@ -111,9 +118,15 @@ export interface HouseholdMemberSafety {
 export interface HouseholdSafetyContext {
   status: SafetyStatus;
   householdId: number | null;
-  /** The user whose request this is. Their diet pattern gates their recommendations. */
+  /** The user whose request this is. Their diet pattern(s) gate their recommendations. */
   requesterUserId: number;
+  /** The FIRST of `requesterDietPatterns` — kept for callers that only ever
+   *  handled one pattern; now a derived view, so it cannot drift from it. */
   requesterDietPattern: string | null;
+  /** EVERY diet pattern the requester holds (2026-11-22) — see
+   *  `HouseholdMemberSafety.dietPatterns`. The meal gate (`isMealSafeForHousehold`)
+   *  excludes a meal that conflicts with ANY of these. */
+  requesterDietPatterns: string[];
   members: HouseholdMemberSafety[];
   /** HARD — union of every member's declared restrictions, as declared. */
   hardRestrictions: string[];
@@ -124,7 +137,9 @@ export interface HouseholdSafetyContext {
    * `hardRestrictions`, where the conservative substring fallback still catches them.
    */
   activeRestrictions: RestrictionDefinition[];
-  /** HARD, per member — carried for the AI, not unioned into the meal gate. */
+  /** HARD — union of EVERY member's EVERY declared pattern (2026-11-22; was
+   *  one-per-member, first-entry-only), carried for the AI, not unioned into
+   *  the meal gate (which stays scoped to the requester alone, below). */
   dietPatterns: string[];
   /** PREFERENCE — soft, advisory, never a gate. */
   preferences: {
@@ -174,6 +189,7 @@ export async function resolveHouseholdSafetyContext(
     householdId: null,
     requesterUserId: userId,
     requesterDietPattern: null,
+    requesterDietPatterns: [],
     members: [],
     hardRestrictions: [],
     activeRestrictions: [],
@@ -246,6 +262,7 @@ export async function resolveHouseholdSafetyContext(
         displayName: row.displayName || row.username,
         hardRestrictions: dedupe(eater?.hardRestrictions ?? []),
         dietPattern: dietPatternFromDietTypes(eater?.defaultDietTypes),
+        dietPatterns: dietPatternsFromDietTypes(eater?.defaultDietTypes),
         // Soft preferences: the eater row's declared diet types, plus the account's
         // own soft preference list (Domain 27's fact — never a gate).
         dietTypes: dedupe([
@@ -264,6 +281,7 @@ export async function resolveHouseholdSafetyContext(
         displayName: eater.displayName,
         hardRestrictions: dedupe(eater.hardRestrictions ?? []),
         dietPattern: null,
+        dietPatterns: [],
         dietTypes: dedupe(eater.defaultDietTypes ?? []),
         excludedIngredients: [],
       });
@@ -277,10 +295,11 @@ export async function resolveHouseholdSafetyContext(
       householdId,
       requesterUserId: userId,
       requesterDietPattern: requester?.dietPattern ?? null,
+      requesterDietPatterns: requester?.dietPatterns ?? [],
       members,
       hardRestrictions,
       activeRestrictions: resolveActiveRestrictions(hardRestrictions),
-      dietPatterns: dedupe(members.map((m) => m.dietPattern)),
+      dietPatterns: dedupe(members.flatMap((m) => m.dietPatterns)),
       preferences: {
         dietTypes: dedupe(members.flatMap((m) => m.dietTypes)),
         excludedIngredients: dedupe(members.flatMap((m) => m.excludedIngredients)),
@@ -343,15 +362,20 @@ export function isMealSafeForHousehold(
     };
   }
 
-  // 2. The requester's diet pattern — the shared dietRules engine, which since
-  //    SURF1B4 resolves Vegan and Vegetarian through the same canonical library as
-  //    step 1. The two steps now agree about what meat is; before, the restriction
-  //    knew prosciutto and the pattern did not.
+  // 2. EVERY diet pattern the requester holds (2026-11-22) — the shared dietRules
+  //    engine, which since SURF1B4 resolves Vegan and Vegetarian through the same
+  //    canonical library as step 1. The two steps now agree about what meat is;
+  //    before, the restriction knew prosciutto and the pattern did not.
+  //    `shouldExcludeRecipeForAnyPattern` excludes if ANY of the requester's
+  //    patterns excludes (a vegetarian-keto member cannot eat something keto
+  //    admits but vegetarian forbids, or vice versa) — a strict widening of the
+  //    single-pattern check this replaces, never a narrowing: a requester with
+  //    exactly one pattern behaves identically to before.
   //    `dietRestrictions` is passed too so Gluten-Free / Dairy-Free keep their
   //    existing dietRules treatment in addition to the canonical library's.
   //    Fields, not a joined blob — see `dietRules`' header.
   if (
-    shouldExcludeRecipe(
+    shouldExcludeRecipeForAnyPattern(
       {
         name,
         category: meal.category,
@@ -360,14 +384,14 @@ export function isMealSafeForHousehold(
         ingredients,
       },
       {
-        dietPattern: ctx.requesterDietPattern,
+        dietPatterns: ctx.requesterDietPatterns,
         dietRestrictions: ctx.hardRestrictions,
       },
     )
   ) {
     return {
       safe: false,
-      reason: `diet:${ctx.requesterDietPattern ?? ctx.hardRestrictions.join("/")}`,
+      reason: `diet:${ctx.requesterDietPatterns.join("+") || ctx.hardRestrictions.join("/")}`,
     };
   }
 

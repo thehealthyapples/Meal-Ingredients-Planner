@@ -226,6 +226,9 @@ async function handleReport(
   const params = intent.parameters ?? {};
   const limit = toInt(params.limit);
   const userId = toInt(context.userId);
+  // AFI-NAMED — an optional named-meal lookup ("what would make my lasagne healthier?"),
+  // resolved against the caller's own cookbook instead of the ambient week scan.
+  const mealName = toSlug(params.mealName);
 
   if (userId == null) {
     throw gap(
@@ -235,7 +238,7 @@ async function handleReport(
     );
   }
 
-  const bundle = await port.identifyOpportunities({ userId, limit });
+  const bundle = await port.identifyOpportunities({ userId, limit, mealName });
 
   if (!bundle.trust.householdAware) {
     throw gap(

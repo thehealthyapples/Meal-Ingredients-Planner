@@ -27,6 +27,7 @@ import {
   identifyPantryUnusedOpportunities,
   identifyShoppingRestrictionOpportunities,
   identifyPlannerMealUpliftOpportunities,
+  identifyNamedMealUpliftOpportunity,
   identifyPlannerBatchCookOpportunities,
   // AFI3/AFI4 — the generators specified by PANTRY1 and CBK2, whose own suites cannot
   // load (see the note at their sections below).
@@ -229,6 +230,75 @@ async function main(): Promise<void> {
     surfaced.length > 0 && (safe.length === 0 || safeIngredient !== surfaced),
     "a suggested ingredient conflicting with a household hard restriction is never surfaced (reuses the exact Rule T0 matcher)",
     `surfaced="${surfaced}" safeIngredient="${safeIngredient}"`,
+  );
+
+  section("§1 identifyNamedMealUpliftOpportunity (AFI-NAMED) — direct cookbook lookup by name, independent of the planner");
+
+  const cookbookMeals = [
+    { id: 700, name: "Spaghetti Bolognese", ingredients: ["spaghetti", "beef mince", "tomato sauce"] },
+    // Matches ONLY via ingredientPattern (chicken-turmeric-marinade) — the name itself
+    // carries no trigger word, proving the named lookup's real-ingredient advantage over
+    // the planner generator above, which only ever has a bare name to go on.
+    { id: 701, name: "Tuesday Night Dinner", ingredients: ["chicken breast", "rice", "broccoli"] },
+  ];
+
+  const namedExact = identifyNamedMealUpliftOpportunity("Spaghetti Bolognese", cookbookMeals, []);
+  assert(namedExact.length === 1, "an exact-name cookbook match → exactly ONE lift", String(namedExact.length));
+  assert(namedExact[0].type === "named-meal-uplift", "type is 'named-meal-uplift'");
+  assert(namedExact[0].owningDomain === "cookbook", "owning domain is 'cookbook' (never 'planner' — this meal need not be planned)");
+  assert(namedExact[0].priority === "low", "an uplift is CALM — low priority, never urgent");
+  assert(namedExact[0].subject.entity === "meal" && namedExact[0].subject.id === 700, "subject is the REAL cookbook meal, keyed on its own id — never a synthetic one");
+  assert(
+    namedExact[0].evidence.some((e) => e.source === "meals-cookbook") && namedExact[0].evidence.some((e) => e.source === "nutrition-enhancement"),
+    "evidence cites BOTH the cookbook entry and the uplift rule's own approved 'why' (Rule E1)",
+  );
+
+  const namedCaseInsensitive = identifyNamedMealUpliftOpportunity("SPAGHETTI bolognese", cookbookMeals, []);
+  assert(namedCaseInsensitive.length === 1 && namedCaseInsensitive[0].subject.id === 700, "resolution is case-insensitive");
+
+  const namedSubstring = identifyNamedMealUpliftOpportunity("bolognese", cookbookMeals, []);
+  assert(namedSubstring.length === 1 && namedSubstring[0].subject.id === 700, "a partial name (substring either direction) still resolves — 'bolognese' finds 'Spaghetti Bolognese'");
+
+  // Several chicken-breast-ingredient rules compete here (chicken-dinner-greens,
+  // chicken-turmeric-marinade); which one wins by priority is an UPLIFT_RULES authoring
+  // detail, not this function's contract — the assertion only needs ANY real ingredient
+  // suggestion to prove the match came from `ingredients`, since the meal's NAME alone
+  // ("Tuesday Night Dinner") triggers nothing in UPLIFT_RULES.
+  const namedByIngredientOnly = identifyNamedMealUpliftOpportunity("Tuesday Night Dinner", cookbookMeals, []);
+  assert(
+    namedByIngredientOnly.length === 1 && /broccoli|kale|turmeric/.test(namedByIngredientOnly[0].suggestedAction),
+    "a meal whose NAME carries no trigger still matches via its REAL ingredients — the named lookup's advantage over the planner generator, which never has ingredients",
+    namedByIngredientOnly[0]?.suggestedAction,
+  );
+
+  const namedUnknown = identifyNamedMealUpliftOpportunity("a dish that does not exist in this cookbook", cookbookMeals, []);
+  assert(namedUnknown.length === 0, "a name matching no cookbook entry → honest empty result, never a fabricated identity");
+
+  assert(identifyNamedMealUpliftOpportunity("Spaghetti Bolognese", [], []).length === 0, "an empty cookbook → honest empty result");
+  assert(identifyNamedMealUpliftOpportunity("", cookbookMeals, []).length === 0, "a blank name → honest empty result, never the first cookbook entry by default");
+
+  const runN1 = identifyNamedMealUpliftOpportunity("Spaghetti Bolognese", cookbookMeals, []);
+  const runN2 = identifyNamedMealUpliftOpportunity("Spaghetti Bolognese", cookbookMeals, []);
+  assert(JSON.stringify(runN1) === JSON.stringify(runN2), "deterministic: identical input yields byte-identical output (Rule LT3)");
+
+  // SAFETY (Rule T0, reused): the same ingredient-restriction filter as AFI1, proven the same way.
+  const namedSurfaced = namedExact[0].suggestedAction.match(/(?:swap in|add more|add) (.+)\.$/)?.[1] ?? "";
+  const NAMED_RESTRICT: RestrictionDefinition = {
+    id: "named_restrict_surfaced",
+    displayName: namedSurfaced,
+    tier: "major_allergen",
+    aliases: [namedSurfaced],
+    derivedIngredients: [],
+    hiddenIngredients: [],
+    substitutions: [],
+    prohibitedPhrases: [],
+  };
+  const namedSafe = identifyNamedMealUpliftOpportunity("Spaghetti Bolognese", cookbookMeals, [NAMED_RESTRICT]);
+  const namedSafeIngredient = namedSafe[0]?.suggestedAction.match(/(?:swap in|add more|add) (.+)\.$/)?.[1] ?? "";
+  assert(
+    namedSurfaced.length > 0 && (namedSafe.length === 0 || namedSafeIngredient !== namedSurfaced),
+    "a suggested ingredient conflicting with a household hard restriction is never surfaced (reuses the exact Rule T0 matcher)",
+    `surfaced="${namedSurfaced}" safeIngredient="${namedSafeIngredient}"`,
   );
 
   section("§1 identifyPlannerBatchCookOpportunities (AFI2) — cook-once for a meal repeated across the week; one excellent, distinct-days, cited");
@@ -528,7 +598,7 @@ async function main(): Promise<void> {
         throw new Error("report tests must not call assembleFoodComparison");
       },
       identifyOpportunities: async (request) => {
-        calls.push(`identifyOpportunities(${request.userId})`);
+        calls.push(`identifyOpportunities(${request.userId}${request.mealName ? `,${request.mealName}` : ""})`);
         if (request.userId === 999) {
           return { opportunities: [], trust: { householdAware: false }, metadata: { assembledAt: new Date().toISOString(), sources: [] } };
         }
@@ -566,6 +636,16 @@ async function main(): Promise<void> {
   assert(okResult.source === "food-opportunity-engine", "result is attributed to the food-opportunity-engine source");
   assert(okResult.opportunities.length === 1 && okResult.opportunities[0].owningDomain === "planner", "opportunities surfaced from the port");
   assert(calls.includes("identifyOpportunities(1)"), "delegated to the opportunity engine port with the caller's own numeric userId");
+
+  section("§2 report — AFI-NAMED mealName parameter passes through to the port");
+  calls.length = 0;
+  const namedReport = await platform.handle({ verb: "report", capabilityId: "food-intelligence", parameters: { mealName: "Lasagne" } }, user1);
+  assert(namedReport.status === "ok", "a named-meal report → ok", namedReport.status);
+  assert(calls.includes("identifyOpportunities(1,Lasagne)"), "the mealName parameter reaches the port verbatim, alongside the caller's own numeric userId");
+
+  const blankNamedReport = await platform.handle({ verb: "report", capabilityId: "food-intelligence", parameters: { mealName: "   " } }, user1);
+  assert(blankNamedReport.status === "ok", "a blank mealName → ok (treated as absent, not a gap)", blankNamedReport.status);
+  assert(calls.includes("identifyOpportunities(1)"), "a blank mealName is normalised away before reaching the port — the ambient scan runs instead");
 
   section("§2 Unsupported intent — verbs outside the extended allow-list still rejected");
   const searchIntent = await platform.handle({ verb: "search", capabilityId: "food-intelligence", parameters: {} }, user1);

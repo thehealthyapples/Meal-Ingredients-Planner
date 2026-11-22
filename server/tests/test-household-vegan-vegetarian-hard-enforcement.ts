@@ -473,7 +473,7 @@ section('Test 8 — Tier-4 shell recovery: Vegetarian and Vegan rules enforced')
     [chickenMatch, veggieMatch],
     'dinner',
     [],
-    null,
+    [],
     [],
     ['Vegetarian'],
   );
@@ -542,7 +542,7 @@ section('Test 8 — Tier-4 shell recovery: Vegetarian and Vegan rules enforced')
     [fishMatch, cheeseMatch, veggieMatch],
     'dinner',
     [],
-    null,
+    [],
     [],
     ['Vegan'],
   );
@@ -557,7 +557,7 @@ section('Test 8 — Tier-4 shell recovery: Vegetarian and Vegan rules enforced')
     [chickenMatch, veggieMatch],
     'dinner',
     [],
-    null,
+    [],
     [],
     undefined,
   );
@@ -572,7 +572,7 @@ section('Test 8 — Tier-4 shell recovery: Vegetarian and Vegan rules enforced')
     [chickenMatch, veggieMatch],
     'dinner',
     [],
-    'Vegetarian',
+    ['Vegetarian'],
     [],
     undefined,
   );

@@ -176,15 +176,15 @@ section('1. primarySlot: shell eligible for its primarySlot only when suitableSl
     styleTags: ['fresh'],
   });
 
-  const result = selectShellRecoveryCandidate([makeMatch(breakfastShell)], 'breakfast', [], null, []);
+  const result = selectShellRecoveryCandidate([makeMatch(breakfastShell)], 'breakfast', [], [], []);
   assert(result?.name === 'Morning Bowl',
     'primarySlot=breakfast is eligible for breakfast slot');
 
-  const dinnerResult = selectShellRecoveryCandidate([makeMatch(breakfastShell)], 'dinner', [], null, []);
+  const dinnerResult = selectShellRecoveryCandidate([makeMatch(breakfastShell)], 'dinner', [], [], []);
   assert(dinnerResult === null,
     'primarySlot=breakfast NOT eligible for dinner (suitableSlots=[])');
 
-  const lunchResult = selectShellRecoveryCandidate([makeMatch(breakfastShell)], 'lunch', [], null, []);
+  const lunchResult = selectShellRecoveryCandidate([makeMatch(breakfastShell)], 'lunch', [], [], []);
   assert(lunchResult === null,
     'primarySlot=breakfast NOT eligible for lunch (suitableSlots=[])');
 }
@@ -204,15 +204,15 @@ section('2. suitableSlots: cross-slot eligibility when suitableSlots includes ta
     styleTags: ['comfort', 'one-pot'],
   });
 
-  const lunchResult = selectShellRecoveryCandidate([makeMatch(soupShell)], 'lunch', [], null, []);
+  const lunchResult = selectShellRecoveryCandidate([makeMatch(soupShell)], 'lunch', [], [], []);
   assert(lunchResult?.name === 'Soup & Side',
     'Soup & Side eligible for lunch (primarySlot=lunch)');
 
-  const dinnerResult = selectShellRecoveryCandidate([makeMatch(soupShell)], 'dinner', [], null, []);
+  const dinnerResult = selectShellRecoveryCandidate([makeMatch(soupShell)], 'dinner', [], [], []);
   assert(dinnerResult?.name === 'Soup & Side',
     'Soup & Side eligible for dinner (suitableSlots includes dinner)');
 
-  const breakfastResult = selectShellRecoveryCandidate([makeMatch(soupShell)], 'breakfast', [], null, []);
+  const breakfastResult = selectShellRecoveryCandidate([makeMatch(soupShell)], 'breakfast', [], [], []);
   assert(breakfastResult === null,
     'Soup & Side NOT eligible for breakfast (not in primarySlot or suitableSlots)');
 }
@@ -232,11 +232,11 @@ section('3. Scenario 5 — "Cooked Breakfast"-style shell with suitableSlots=[br
     styleTags: ['comfort', 'shared-meal'],
   });
 
-  const dinnerResult = selectShellRecoveryCandidate([makeMatch(crossSlotShell)], 'dinner', [], null, []);
+  const dinnerResult = selectShellRecoveryCandidate([makeMatch(crossSlotShell)], 'dinner', [], [], []);
   assert(dinnerResult?.name === 'Full English Style',
     'Breakfast-primary shell eligible for dinner when suitableSlots includes dinner');
 
-  const lunchResult = selectShellRecoveryCandidate([makeMatch(crossSlotShell)], 'lunch', [], null, []);
+  const lunchResult = selectShellRecoveryCandidate([makeMatch(crossSlotShell)], 'lunch', [], [], []);
   assert(lunchResult?.name === 'Full English Style',
     'Breakfast-primary shell eligible for lunch when suitableSlots includes lunch');
 }
@@ -272,7 +272,7 @@ section('4. Tie-breaking A: primarySlot exact match preferred over suitableSlots
     makeMatch(primaryDinner, 80),
   ];
 
-  const result = selectShellRecoveryCandidate(matches, 'dinner', [], null, []);
+  const result = selectShellRecoveryCandidate(matches, 'dinner', [], [], []);
   assert(result?.name === 'Dinner Primary Shell',
     `Tie-breaking A: primarySlot=dinner preferred over suitableSlots-only (got: ${result?.name ?? 'null'})`);
 }
@@ -309,7 +309,7 @@ section('5. Tie-breaking B: energyBand preference per slot');
     makeMatch(heartyDinner, 80),
   ];
 
-  const result = selectShellRecoveryCandidate(matches, 'dinner', [], null, []);
+  const result = selectShellRecoveryCandidate(matches, 'dinner', [], [], []);
   assert(result?.name === 'Hearty Dinner',
     `Tie-breaking B: hearty preferred for dinner over light (got: ${result?.name ?? 'null'})`);
 
@@ -339,7 +339,7 @@ section('5. Tie-breaking B: energyBand preference per slot');
     makeMatch(breakfastLight, 80),
   ];
 
-  const bResult = selectShellRecoveryCandidate(bMatches, 'breakfast', [], null, []);
+  const bResult = selectShellRecoveryCandidate(bMatches, 'breakfast', [], [], []);
   assert(bResult?.name === 'Light Breakfast',
     `Tie-breaking B: light preferred for breakfast over hearty (got: ${bResult?.name ?? 'null'})`);
 }
@@ -375,7 +375,7 @@ section('6. Tie-breaking C: more styleTags preferred when A and B are equal');
     makeMatch(moreTags, 80),
   ];
 
-  const result = selectShellRecoveryCandidate(matches, 'dinner', [], null, []);
+  const result = selectShellRecoveryCandidate(matches, 'dinner', [], [], []);
   assert(result?.name === 'More Tags Shell',
     `Tie-breaking C: more styleTags wins over fewer (got: ${result?.name ?? 'null'})`);
 }
@@ -413,7 +413,7 @@ section('7. Scenario 6: Vegetarian household never receives non-compatible shell
     [makeMatch(chickenShell, 90), makeMatch(vegShell, 80)],
     'dinner',
     [],
-    null,
+    [],
     [],
     ['Vegetarian'],
   );
@@ -455,7 +455,7 @@ section('8. Vegan household: egg/dairy shells rejected');
     [makeMatch(eggShell, 90), makeMatch(veganBreakfast, 80)],
     'breakfast',
     [],
-    null,
+    [],
     [],
     ['Vegan'],
   );
@@ -480,11 +480,11 @@ section('9. Scenario 7: legacy templates (no primarySlot/suitableSlots) use cate
     styleTags: [],
   });
 
-  const dinnerResult = selectShellRecoveryCandidate([makeMatch(legacyDinner)], 'dinner', [], null, []);
+  const dinnerResult = selectShellRecoveryCandidate([makeMatch(legacyDinner)], 'dinner', [], [], []);
   assert(dinnerResult?.name === 'Legacy Curry Shell',
     'Legacy template with category=dinner still eligible for dinner slot via category fallback');
 
-  const breakfastResult = selectShellRecoveryCandidate([makeMatch(legacyDinner)], 'breakfast', [], null, []);
+  const breakfastResult = selectShellRecoveryCandidate([makeMatch(legacyDinner)], 'breakfast', [], [], []);
   assert(breakfastResult === null,
     'Legacy template with category=dinner NOT eligible for breakfast slot');
 
@@ -497,7 +497,7 @@ section('9. Scenario 7: legacy templates (no primarySlot/suitableSlots) use cate
     suitableSlots: [],
   });
 
-  const mainResult = selectShellRecoveryCandidate([makeMatch(legacyMain)], 'dinner', [], null, []);
+  const mainResult = selectShellRecoveryCandidate([makeMatch(legacyMain)], 'dinner', [], [], []);
   assert(mainResult?.name === 'Legacy Main Shell',
     'Legacy template with category=main eligible for dinner slot via category fallback');
 }
@@ -543,7 +543,7 @@ section('10. Scenario 3: lunch slot selects appropriate lunch shells');
     makeMatch(wrapBar, 80),
   ];
 
-  const result = selectShellRecoveryCandidate(matches, 'lunch', [], null, []);
+  const result = selectShellRecoveryCandidate(matches, 'lunch', [], [], []);
   assert(
     result !== null,
     'Lunch slot: at least one shell selected',
@@ -595,7 +595,7 @@ section('11. Scenario 4: breakfast slot selects appropriate breakfast shells');
     makeMatch(overnightOats, 90),
   ];
 
-  const result = selectShellRecoveryCandidate(matches, 'breakfast', [], null, []);
+  const result = selectShellRecoveryCandidate(matches, 'breakfast', [], [], []);
   assert(
     result !== null,
     'Breakfast slot: at least one shell selected',
@@ -640,7 +640,7 @@ section('12. Scenario 8: Tier-4 not triggered when userId absent (test harness p
 section('13. Empty matches list → null (graceful degradation)');
 
 {
-  const result = selectShellRecoveryCandidate([], 'dinner', [], null, []);
+  const result = selectShellRecoveryCandidate([], 'dinner', [], [], []);
   assert(result === null, 'Empty matches returns null (no crash)');
 }
 
@@ -662,7 +662,7 @@ section('14. Compatibility gate: shell with partial compatibility rejected');
     scoreBreakdown: { ...FULL_SCORE, compatibility: 0.5 },
   };
 
-  const result = selectShellRecoveryCandidate([partialMatchObj], 'dinner', [], null, []);
+  const result = selectShellRecoveryCandidate([partialMatchObj], 'dinner', [], [], []);
   assert(result === null,
     'Shell with compatibility < 1 rejected (diet conflicts present)');
 }
@@ -702,7 +702,7 @@ section('15. Hard exclusion gate: shell ingredient in exclusion list rejected');
     [makeMatch(nutShell, 95), makeMatch(safeShell, 80)],
     'dinner',
     ['peanut'],
-    null,
+    [],
     [],
   );
 

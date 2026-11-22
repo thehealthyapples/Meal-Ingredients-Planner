@@ -520,6 +520,7 @@ async function main(): Promise<void> {
     householdId: null,
     requesterUserId: -1,
     requesterDietPattern: null,
+    requesterDietPatterns: [],
     members: [],
     hardRestrictions: [],
     activeRestrictions: [],

@@ -81,12 +81,14 @@ function household(opts: {
     householdId: 1,
     requesterUserId: 1,
     requesterDietPattern: opts.requesterDietPattern ?? null,
+    requesterDietPatterns: opts.requesterDietPattern ? [opts.requesterDietPattern] : [],
     members: opts.members ?? [
       {
         userId: 1,
         displayName: 'Requester',
         hardRestrictions: hard,
         dietPattern: opts.requesterDietPattern ?? null,
+        dietPatterns: opts.requesterDietPattern ? [opts.requesterDietPattern] : [],
         dietTypes: opts.dietTypes ?? [],
         excludedIngredients: opts.excludedIngredients ?? [],
       },
@@ -106,6 +108,7 @@ const UNAVAILABLE: HouseholdSafetyContext = {
   householdId: null,
   requesterUserId: 1,
   requesterDietPattern: null,
+  requesterDietPatterns: [],
   members: [],
   hardRestrictions: [],
   activeRestrictions: [],
@@ -224,8 +227,8 @@ async function run(): Promise<void> {
   const twoAdults = household({
     hardRestrictions: ['Nuts'],
     members: [
-      { userId: 1, displayName: 'Colin', hardRestrictions: [], dietPattern: null, dietTypes: [], excludedIngredients: [] },
-      { userId: 2, displayName: 'Sam', hardRestrictions: ['Nuts'], dietPattern: null, dietTypes: [], excludedIngredients: [] },
+      { userId: 1, displayName: 'Colin', hardRestrictions: [], dietPattern: null, dietPatterns: [], dietTypes: [], excludedIngredients: [] },
+      { userId: 2, displayName: 'Sam', hardRestrictions: ['Nuts'], dietPattern: null, dietPatterns: [], dietTypes: [], excludedIngredients: [] },
     ],
   });
   assert(
@@ -237,8 +240,8 @@ async function run(): Promise<void> {
   const withChild = household({
     hardRestrictions: ['Sesame'],
     members: [
-      { userId: 1, displayName: 'Colin', hardRestrictions: [], dietPattern: null, dietTypes: [], excludedIngredients: [] },
-      { userId: null, displayName: 'Ella', hardRestrictions: ['Sesame'], dietPattern: null, dietTypes: [], excludedIngredients: [] },
+      { userId: 1, displayName: 'Colin', hardRestrictions: [], dietPattern: null, dietPatterns: [], dietTypes: [], excludedIngredients: [] },
+      { userId: null, displayName: 'Ella', hardRestrictions: ['Sesame'], dietPattern: null, dietPatterns: [], dietTypes: [], excludedIngredients: [] },
     ],
   });
   assert(
@@ -250,8 +253,8 @@ async function run(): Promise<void> {
   const conflicting = household({
     hardRestrictions: ['Gluten-Free', 'Shellfish'],
     members: [
-      { userId: 1, displayName: 'A', hardRestrictions: ['Gluten-Free'], dietPattern: null, dietTypes: [], excludedIngredients: [] },
-      { userId: 2, displayName: 'B', hardRestrictions: ['Shellfish'], dietPattern: null, dietTypes: [], excludedIngredients: [] },
+      { userId: 1, displayName: 'A', hardRestrictions: ['Gluten-Free'], dietPattern: null, dietPatterns: [], dietTypes: [], excludedIngredients: [] },
+      { userId: 2, displayName: 'B', hardRestrictions: ['Shellfish'], dietPattern: null, dietPatterns: [], dietTypes: [], excludedIngredients: [] },
     ],
   });
   assert(

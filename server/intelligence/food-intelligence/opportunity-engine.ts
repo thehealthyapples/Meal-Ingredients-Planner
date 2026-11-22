@@ -182,6 +182,11 @@ export type FoodOpportunityType =
   // already planned this week (the fourth opportunity type FI4 named as its own
   // next milestone). Reuses the Uplift Rules knowledge; adds no new fact.
   | "planner-meal-uplift"
+  // AFI-NAMED — a direct, conversational counterpart to `planner-meal-uplift`: the household
+  // names ONE meal explicitly ("what would make my lasagne healthier?") instead of asking about
+  // their week. Looked up against the household's own COOKBOOK (never the planner), using the
+  // meal's real ingredients. Only ever returned when the name resolves to a real cookbook entry.
+  | "named-meal-uplift"
   // AFI2 — the fifth opportunity type: a calm "cook once, cover the week" observation
   // for a meal the household has planned on MULTIPLE days of this week. Pure planner
   // reasoning (ingredient reuse / leftovers, brief's own list) — reuses the planned
@@ -348,6 +353,9 @@ export interface FoodOpportunityRequest {
   /** The caller's own authenticated user id — never a client-supplied household id (mirrors engine.ts's own discipline). */
   readonly userId?: number;
   readonly limit?: number;
+  // AFI-NAMED — when the caller names a specific meal ("what would make my lasagne
+  // healthier?"), the direct cookbook lookup below runs INSTEAD of the ambient week scan.
+  readonly mealName?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -592,6 +600,86 @@ export function identifyPlannerMealUpliftOpportunities(
       ],
       suggestedAction: `When you make "${meal.mealName}", ${verb} ${suggestion.ingredient}.`,
       subject: { entity: "planner-meal" as const, id: meal.entryId, label: meal.mealName },
+    },
+  ];
+}
+
+/**
+ * AFI-NAMED — a direct, conversational counterpart to {@link identifyPlannerMealUpliftOpportunities}:
+ * the household names ONE meal explicitly ("what would make my lasagne healthier?") instead of
+ * asking about their week. Looked up against the household's OWN cookbook (never the planner),
+ * using the meal's REAL ingredients when resolved — richer matching than the planner generator
+ * gets, which only ever has a bare name to go on. Resolves case-insensitively, then by substring
+ * either direction, so "lasagne" finds a cookbook entry named "Beef Lasagne".
+ *
+ * GROUNDING: only ever returns an opportunity when the name resolves to a REAL cookbook meal —
+ * its `subject.id` is that meal's own id, never a synthetic one (PHASE5E discipline). A name
+ * that matches nothing in the household's cookbook is an honest empty result (Rule T0/Principle
+ * 6): THA will not invent an identity, or a suggestion, for a meal it cannot show its owner.
+ *
+ * SAFETY (Rule T0, reused not re-implemented): a suggestion whose ingredient conflicts with a
+ * stored household hard restriction is dropped via the SAME `resolveIngredientRestrictions`
+ * matcher every other generator in this file uses.
+ *
+ * EVIDENCE (Rule E1): the cited `why` is the uplift rule's own approved, user-facing explanation
+ * — never a phrase this engine invents.
+ */
+export function identifyNamedMealUpliftOpportunity(
+  mealName: string,
+  meals: readonly { id: number; name: string; ingredients: readonly string[] }[],
+  restrictionDefs: readonly RestrictionDefinition[],
+): FoodOpportunity[] {
+  const query = mealName.trim().toLowerCase();
+  if (!query) return [];
+
+  const resolved =
+    meals.find((m) => m.name.trim().toLowerCase() === query) ??
+    meals.find((m) => {
+      const name = m.name.trim().toLowerCase();
+      return name.includes(query) || query.includes(name);
+    });
+  if (!resolved) return [];
+
+  const idx = upliftRuleIndex();
+  const defs = [...restrictionDefs];
+  const matches = matchUpliftRules(
+    { mealName: resolved.name, ingredients: [...resolved.ingredients], dietTypes: [] },
+    idx,
+  );
+
+  let best: { suggestion: UpliftSuggestion; rulePriority: number } | null = null;
+  for (const match of matches) {
+    const safe = match.suggestions.find(
+      (s) => defs.length === 0 || resolveIngredientRestrictions(s.ingredient, defs).length === 0,
+    );
+    if (!safe) continue;
+    if (best === null || match.priority < best.rulePriority) {
+      best = { suggestion: safe, rulePriority: match.priority };
+    }
+  }
+  if (!best) return [];
+
+  const { suggestion } = best;
+  const verb =
+    suggestion.action === "swap" ? "swap in" : suggestion.action === "boost" ? "add more" : "add";
+
+  return [
+    {
+      id: `named-meal-uplift:${resolved.id}`,
+      type: "named-meal-uplift" as const,
+      owningDomain: "cookbook" as const,
+      priority: "low",
+      explanation: `"${resolved.name}" could have a small lift — ${verb} ${suggestion.ingredient}.`,
+      evidence: [
+        {
+          source: "meals-cookbook",
+          detail: `"${resolved.name}" is a meal in your own cookbook.`,
+        },
+        // The uplift rule's own approved, user-facing reason — cited verbatim (Rule E1).
+        { source: "nutrition-enhancement", detail: suggestion.why },
+      ],
+      suggestedAction: `When you make "${resolved.name}", ${verb} ${suggestion.ingredient}.`,
+      subject: { entity: "meal" as const, id: resolved.id, label: resolved.name },
     },
   ];
 }
@@ -1258,6 +1346,25 @@ export async function identifyOpportunities(request: FoodOpportunityRequest): Pr
     // nutrition observations below simply go quiet; nothing else is affected.
   }
   const mealsById = new Map(meals.map((m) => [m.id, m]));
+
+  // AFI-NAMED — a caller who names a specific meal ("what would make my lasagne healthier?")
+  // gets looked up directly against their OWN cookbook, independent of whether it is on this
+  // week's plan or planned at all. This runs INSTEAD of the ambient week scan below — the
+  // caller asked about ONE thing, not "generate my whole week's opportunities" — and only ever
+  // returns a suggestion when the named meal resolves to a REAL cookbook entry (subject.id must
+  // be a real owned record, never a synthetic one): an unrecognised name is an honest empty
+  // result, never a fabricated identity.
+  const namedMealQuery = request.mealName?.trim();
+  if (namedMealQuery) {
+    return {
+      opportunities: identifyNamedMealUpliftOpportunity(namedMealQuery, meals, household.restrictionDefs),
+      trust: { householdAware: true },
+      metadata: {
+        assembledAt: now.toISOString(),
+        sources: mealsRead ? ["household-eaters", "meals-cookbook"] : ["household-eaters"],
+      },
+    };
+  }
 
   try {
     const plannerPort = await createStoragePlannerReadPort();

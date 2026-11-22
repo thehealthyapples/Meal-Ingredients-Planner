@@ -132,12 +132,26 @@ function buildHouseholdSafetyInsight(
 // ---------------------------------------------------------------------------
 // Pure composition — testable with a fabricated HouseholdSignal, no database
 // ---------------------------------------------------------------------------
+//
+// 2026-11-22 — a diet-pattern insight (`buildDietPatternCompatibilityInsight`)
+// used to run here, reading `household.eaters.flatMap(...)` to derive diet
+// patterns. `HouseholdSignal` (food-intelligence/engine.ts) has never carried
+// an `eaters` field — it resolves `restrictionDefs` only — so that read was
+// always `undefined.flatMap`, a guaranteed crash on every call where
+// `household.resolved` was true. It happened not to be exercised until a diet-
+// pattern query ("can I eat lasagne?") reached this path, live-caught as a 500.
+// Diet-pattern compatibility is now computed correctly by
+// `checkFoodCompatibility()` (nutrition-diet-compatibility.ts), which reads the
+// canonical `resolveHouseholdSafetyContext()` resolver and is wired directly
+// into the nutrition-knowledge handler's own result — this enrichment layer
+// does not need to (and structurally cannot, from this signal type) duplicate it.
 
 export function composeHouseholdNutritionEnrichment(
   food: FoodRef,
   household: HouseholdSignal,
 ): CompanionEnrichmentItem[] {
   if (!household.resolved) return [];
+
   return [
     ...buildVarietyInsight(food, household.familiarAppearances),
     ...buildHouseholdSafetyInsight(food, household.restrictionDefs),

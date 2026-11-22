@@ -36,8 +36,10 @@ import {
   type Intent,
 } from "../types.js";
 import type { NutritionKnowledgeReadPort, FoodKnowledgeEncyclopediaEntry } from "./nutrition-knowledge-read-port.js";
+import type { FoodDetailView } from "../../services/nutrition-knowledge-registry.js";
 import type { EvidenceConfidence } from "@shared/knowledge/evidence";
 import { gap } from "./_read-kit.js";
+import { checkFoodCompatibility } from "./nutrition-diet-compatibility.js";
 
 // ---------------------------------------------------------------------------
 // Result shapes (read projections — the owner's source-gated, display-safe data)
@@ -100,6 +102,22 @@ export interface KnowledgePreparationView {
   readonly sources: readonly { readonly body: string; readonly title: string; readonly url: string }[];
 }
 
+export interface DietCompatibilityMemberInfo {
+  readonly displayName: string;
+  readonly compatible: boolean;
+  readonly conflictingDietPatterns: readonly string[];
+}
+
+export interface DietCompatibilityInfo {
+  readonly compatible: boolean;
+  readonly restrictions: readonly string[];
+  readonly dietPatterns: readonly string[];
+  readonly conflictingRestrictions: readonly string[];
+  readonly conflictingDietPatterns: readonly string[];
+  readonly members: readonly DietCompatibilityMemberInfo[];
+  readonly explanation: string;
+}
+
 export interface NutritionFoodReadResult {
   readonly scope: "food";
   readonly slug: string;
@@ -111,6 +129,17 @@ export interface NutritionFoodReadResult {
   readonly nutrients: readonly { readonly slug: string; readonly name: string; readonly amount: string | null }[];
   readonly preparations: readonly KnowledgePreparationView[];
   readonly source: "nutrition-knowledge-registry";
+  readonly dietCompatibility?: DietCompatibilityInfo;
+  /** 2026-11-22 — without this, "can I eat X" / "can my family eat X" (verb
+   *  "read", scope "food") never qualified for the single-capability
+   *  deterministic-answer short-circuit (conversation-gateway.ts COMP-DET1),
+   *  so EVERY such answer went through full LLM generation — and the LLM,
+   *  given per-member diet data, anonymised real household member names into
+   *  "one household member" / "another member" (live-caught). The handler's
+   *  own `dietCompatibility.explanation` already names them correctly; this
+   *  surfaces it as the verbatim spoken answer instead of material an LLM
+   *  paraphrases. */
+  readonly deterministicAnswer?: string;
 }
 
 export interface NutritionPreparationsReadResult {
@@ -171,8 +200,12 @@ export interface NutritionExplainResult {
    *  "benefit" = a benefit alone; "food-encyclopedia" (COMP-DET2) = the Food Knowledge
    *  Encyclopedia fallback, used only when the evidence-linked graph has nothing for this
    *  food; "food-category-search" (COMP-DET6) = a registry SEARCH fallback for a category/
-   *  plural term ("legumes", not any single food's own slug) that has no row of its own. */
-  readonly scope: "food-benefits" | "food-benefit" | "benefit" | "food-encyclopedia" | "food-category-search";
+   *  plural term ("legumes", not any single food's own slug) that has no row of its own;
+   *  "food-description" = the food's own registry description (knowledge_foods.description),
+   *  used only when the food exists but has NO evidence-linked benefit claim and NO
+   *  encyclopedia entry — the last honest source before a gap, not a fabrication: this text
+   *  is the owner's own stored editorial copy for the food row itself. */
+  readonly scope: "food-benefits" | "food-benefit" | "benefit" | "food-encyclopedia" | "food-category-search" | "food-description";
   readonly foodSlug?: string;
   readonly foodName?: string;
   readonly benefits: readonly KnowledgeBenefitView[];
@@ -197,6 +230,8 @@ export interface NutritionExplainResult {
    *  unified search found for the category/plural term, each with its own stored
    *  description (source-gated, not fabricated — the registry's own editorial text). */
   readonly categoryMatches?: readonly { readonly slug: string; readonly name: string; readonly description: string | null }[];
+  /** Diet compatibility info for food scopes when a user has dietary constraints. */
+  readonly dietCompatibility?: DietCompatibilityInfo;
 }
 
 // ---------------------------------------------------------------------------
@@ -350,6 +385,79 @@ function buildEncyclopediaExplainResult(entry: FoodKnowledgeEncyclopediaEntry): 
   };
 }
 
+const FOOD_DESCRIPTION_NOTE =
+  "Grounded in the Nutrition / Knowledge owner's own registry description for this food. No " +
+  "evidence-linked health benefit or encyclopedia entry is recorded for it yet, so no benefit " +
+  "claim is made here — this is the food's own stored editorial copy, not a fabricated summary.";
+
+/** Live-caught (2026-11-21): "tell me about pasta" / "tell me about lasagne" — the food EXISTS
+ *  in the registry (610-row FOOD_SEED, slug "pasta") but has no evidence-linked health-benefit
+ *  claim and no separate encyclopedia entry, so the two fallbacks above both came back empty
+ *  and the handler fell straight to an honest gap — even though `knowledge_foods.description`
+ *  itself holds real, source-seeded editorial text for exactly this food
+ *  ("A versatile durum wheat staple, sold dried in every shape..."). That text was being read
+ *  into every OTHER result shape (readFood's NutritionFoodReadResult.description) but never
+ *  surfaced here, the one path an "explain" / "tell me about" utterance actually takes. This
+ *  is the last honest source before a gap, not a new claim: the row's own stored description,
+ *  same source-gating as everywhere else in this handler. */
+function buildFoodDescriptionExplainResult(
+  food: { slug: string; name: string; description: string | null },
+  dietCompatibility: DietCompatibilityInfo | undefined,
+): NutritionExplainResult {
+  const base = food.description ?? `${food.name} is recorded in the Nutrition / Knowledge registry, but no further detail is recorded for it yet.`;
+  const deterministicAnswer = dietCompatibility && !dietCompatibility.compatible
+    ? `${base} However, ${dietCompatibility.explanation}`
+    : dietCompatibility && dietCompatibility.compatible
+    ? `${base} ${dietCompatibility.explanation}`
+    : base;
+  return {
+    scope: "food-description",
+    foodSlug: food.slug,
+    foodName: food.name,
+    benefits: [],
+    source: "nutrition-knowledge-registry",
+    note: FOOD_DESCRIPTION_NOTE,
+    deterministicAnswer,
+    ...(dietCompatibility && { dietCompatibility }),
+  };
+}
+
+/**
+ * 2026-11-22 (live-caught) — "can I eat lasagne?" / "tell me about lasagne" both
+ * resolve to slug "lasagne", but `getFoodDetailView` is an EXACT slug lookup —
+ * it has no knowledge that "lasagne" is a registered ALIAS of the food actually
+ * recorded (slug "pasta", `aliases: [..., "lasagne", "lasagne sheets"]`). The
+ * explain path already had a search-based fallback for the unknown-food case,
+ * but it only built a bare category-list summary, never resurfaced the real
+ * food so diet compatibility, benefits, etc. could be checked against it — and
+ * the read path (used by "can I eat X") had no fallback at all, so "lasagne",
+ * "spaghetti", "penne" and every other pasta alias gapped outright despite
+ * being registered aliases of a food THA does know.
+ *
+ * This resolves slug → EXACT match first (unchanged, zero behaviour change for
+ * every food that already worked), then falls back to `findBestFoodMatch`
+ * (FOODUI7's exact-name > exact-alias > starts-with > substring ranking) rather
+ * than a raw unified search: a plain substring search for "lasagne" also
+ * returns the separate pantry-catalogue row "Lasagne Sheets" (a different food,
+ * no description, from a different seed) ALONGSIDE "Pasta" — two results, and
+ * a naive "only act on exactly one match" rule would gap on exactly the query
+ * this fix exists for. `findBestFoodMatch`'s exact-alias tier picks "Pasta"
+ * correctly because "lasagne" is a registered EXACT alias of it, while "Lasagne
+ * Sheets" only matches by substring/name — the same priority order the
+ * Pantry Explore one-box lookup already trusts for this exact ambiguity.
+ */
+async function resolveFoodDetail(
+  slug: string,
+  port: NutritionKnowledgeReadPort,
+): Promise<FoodDetailView | undefined> {
+  const direct = await port.getFoodDetailView(slug);
+  if (direct) return direct;
+
+  const best = await port.findBestFoodMatch(slug.replace(/-/g, " "));
+  if (!best) return undefined;
+  return port.getFoodDetailView(best.slug);
+}
+
 const PREPARATION_NOTE =
   "A preparation is shown because the owner records that people prepare this food that way. " +
   'A preparation NOTE is shown only where the owner holds a cited, human-signed-off claim. Where ' +
@@ -388,17 +496,27 @@ type ReadScope = "food" | "nutrient" | "benefit" | "categories" | "foods" | "pre
 async function readFood(
   intent: Intent,
   port: NutritionKnowledgeReadPort,
+  userId?: number,
 ): Promise<NutritionFoodReadResult> {
   const slug = toSlug(intent.parameters?.slug);
   if (!slug) throw gap('Reading a food needs { slug } — the food\'s canonical key.');
 
-  const detail = await port.getFoodDetailView(slug);
+  const detail = await resolveFoodDetail(slug, port);
   if (!detail) {
     throw gap(
       `Honest gap: the Nutrition / Knowledge owner has no food recorded for slug ${JSON.stringify(slug)}. ` +
         "The Intelligence Platform will not infer or fabricate nutrition facts for an unknown food.",
     );
   }
+
+  // Check diet compatibility (reusable across all domains)
+  const dietCompatibility = userId ? await checkFoodCompatibility(detail.food.name, userId) : undefined;
+
+  const base = detail.food.description ?? `${detail.food.name} is recorded in the Nutrition / Knowledge registry.`;
+  const deterministicAnswer = dietCompatibility
+    ? `${base} ${dietCompatibility.explanation}`
+    : base;
+
   return {
     scope: "food",
     slug: detail.food.slug,
@@ -410,6 +528,8 @@ async function readFood(
     nutrients: detail.nutrients.map((n) => ({ slug: n.slug, name: n.name, amount: n.amount })),
     preparations: detail.preparations.map(toPreparationView),
     source: "nutrition-knowledge-registry",
+    deterministicAnswer,
+    ...(dietCompatibility && { dietCompatibility }),
   };
 }
 
@@ -523,11 +643,11 @@ async function readFoods(
   };
 }
 
-async function handleRead(intent: Intent, port: NutritionKnowledgeReadPort): Promise<unknown> {
+async function handleRead(intent: Intent, port: NutritionKnowledgeReadPort, userId?: number): Promise<unknown> {
   const scope = intent.parameters?.scope as ReadScope | undefined;
   switch (scope) {
     case "food":
-      return readFood(intent, port);
+      return readFood(intent, port, userId);
     case "nutrient":
       return readNutrient(intent, port);
     case "benefit":
@@ -598,12 +718,26 @@ function buildSearchDeterministicAnswer(result: { query: string; foods: readonly
 async function handleSearch(
   intent: Intent,
   port: NutritionKnowledgeReadPort,
+  userId?: number,
 ): Promise<NutritionSearchResult> {
   const query = toSlug(intent.parameters?.query);
+  if (process.env.NODE_ENV === 'development') {
+    console.debug(`[NUTRITION-SEARCH] Query input: "${intent.parameters?.query}" → slug: "${query}"`);
+  }
   if (!query) {
     throw gap('Searching nutrition knowledge needs a non-empty { query } string.');
   }
   const result = await searchWithWordFallback(query, port);
+  if (process.env.NODE_ENV === 'development') {
+    console.debug(`[NUTRITION-SEARCH] Search results: ${result.foods.length} foods, ${result.nutrients.length} nutrients, ${result.benefits.length} benefits`);
+  }
+
+  // For search results, check compatibility on first food result if user has dietary constraints
+  let dietCompatibility: DietCompatibilityInfo | undefined;
+  if (userId && result.foods.length > 0) {
+    dietCompatibility = await checkFoodCompatibility(result.foods[0].name, userId);
+  }
+
   return {
     query: result.query,
     foods: result.foods.map((f) => ({ slug: f.slug, name: f.name })),
@@ -611,6 +745,7 @@ async function handleSearch(
     benefits: result.benefits.map((b) => ({ slug: b.slug, name: b.name })),
     source: "nutrition-knowledge-registry",
     deterministicAnswer: buildSearchDeterministicAnswer(result),
+    ...(dietCompatibility && { dietCompatibility }),
   };
 }
 
@@ -626,9 +761,10 @@ async function handleSearch(
 async function handleExplain(
   intent: Intent,
   port: NutritionKnowledgeReadPort,
+  userId?: number,
 ): Promise<NutritionExplainResult> {
   const params = intent.parameters ?? {};
-  const foodSlug = toSlug(params.foodSlug);
+  let foodSlug = toSlug(params.foodSlug);
   const benefitSlug = toSlug(params.benefitSlug);
 
   if (!foodSlug && !benefitSlug) {
@@ -657,7 +793,10 @@ async function handleExplain(
   }
 
   // Food present → confirm it exists, then surface ONLY its owner-linked benefits.
-  const food = await port.getFoodDetailView(foodSlug);
+  // resolveFoodDetail tries the exact slug first, then (2026-11-22) a single alias
+  // match — "lasagne" resolving to the registered food "pasta" (aliases: [...,
+  // "lasagne", "lasagne sheets"]) — before any fallback below runs.
+  const food = await resolveFoodDetail(foodSlug, port);
   if (!food) {
     // COMP-DET2 — the evidence-linked graph has never heard of this food, but THA's own
     // Food Knowledge Encyclopedia might (it is a separate owner, keyed by the same slugs).
@@ -675,9 +814,16 @@ async function handleExplain(
         "The Intelligence Platform will not fabricate benefits for an unknown food.",
     );
   }
+  // Resolved via alias (e.g. "lasagne" → "pasta") — every lookup below must use the
+  // food's OWN slug, not the caller's search term, or getFoodBenefitsForDisplay etc.
+  // would look up benefits for a slug that was never the real key.
+  foodSlug = food.food.slug;
 
   // The owner's source-gated benefit descriptions for this food (evidence signal already stripped).
   const linked = await port.getFoodBenefitsForDisplay(foodSlug);
+
+  // Check diet compatibility for food-based results
+  const dietCompatibility = userId ? await checkFoodCompatibility(food.food.name, userId) : undefined;
 
   if (benefitSlug != null) {
     const match = linked.find((b) => b.benefit.slug === benefitSlug);
@@ -688,6 +834,19 @@ async function handleExplain(
           "unsupported food↔benefit claim.",
       );
     }
+    // Build deterministicAnswer including diet compatibility info if present
+    const baseBenefitAnswer = buildFoodBenefitDeterministicAnswer(
+      food.food.name,
+      match.benefit.name,
+      match.confidence,
+      match.sourceRefs,
+    );
+    const benefitDeterministicAnswer = dietCompatibility && !dietCompatibility.compatible
+      ? `${baseBenefitAnswer} However, ${dietCompatibility.explanation}`
+      : dietCompatibility && dietCompatibility.compatible
+      ? `${baseBenefitAnswer} ${dietCompatibility.explanation}`
+      : baseBenefitAnswer;
+
     return {
       scope: "food-benefit",
       foodSlug: food.food.slug,
@@ -701,12 +860,8 @@ async function handleExplain(
       }],
       source: "nutrition-knowledge-registry",
       note: GROUNDED_NOTE,
-      deterministicAnswer: buildFoodBenefitDeterministicAnswer(
-        food.food.name,
-        match.benefit.name,
-        match.confidence,
-        match.sourceRefs,
-      ),
+      deterministicAnswer: benefitDeterministicAnswer,
+      ...(dietCompatibility && { dietCompatibility }),
     };
   }
 
@@ -717,11 +872,29 @@ async function handleExplain(
     // necessarily in THA's knowledge as a whole).
     const encyclopedia = await port.getEncyclopediaEntry(foodSlug);
     if (encyclopedia) return buildEncyclopediaExplainResult(encyclopedia);
+    // 2026-11-21 — last honest fallback before a gap: the food's OWN registry description
+    // (see buildFoodDescriptionExplainResult doc comment). Only used when it actually holds
+    // text; an empty/null description is still an honest gap, not a fabricated summary.
+    if (food.food.description) {
+      return buildFoodDescriptionExplainResult(
+        { slug: food.food.slug, name: food.food.name, description: food.food.description },
+        dietCompatibility,
+      );
+    }
     throw gap(
       `Honest gap: the Nutrition / Knowledge owner records no health benefits for "${food.food.name}". ` +
         "The Intelligence Platform will not invent one.",
     );
   }
+
+  // Build deterministicAnswer including diet compatibility info if present
+  const baseBenefitsAnswer = buildFoodBenefitsDeterministicAnswer(food.food.name, linked);
+  const deterministicAnswer = dietCompatibility && !dietCompatibility.compatible
+    ? `${baseBenefitsAnswer} However, ${dietCompatibility.explanation}`
+    : dietCompatibility && dietCompatibility.compatible
+    ? `${baseBenefitsAnswer} ${dietCompatibility.explanation}`
+    : baseBenefitsAnswer;
+
   return {
     scope: "food-benefits",
     foodSlug: food.food.slug,
@@ -735,7 +908,8 @@ async function handleExplain(
     })),
     source: "nutrition-knowledge-registry",
     note: GROUNDED_NOTE,
-    deterministicAnswer: buildFoodBenefitsDeterministicAnswer(food.food.name, linked),
+    deterministicAnswer,
+    ...(dietCompatibility && { dietCompatibility }),
   };
 }
 
@@ -751,7 +925,7 @@ async function handleExplain(
 export function createNutritionKnowledgeReadHandler(
   resolvePort: () => Promise<NutritionKnowledgeReadPort>,
 ): CapabilityHandler {
-  return async (intent: Intent, _context: IntelligenceContext): Promise<unknown> => {
+  return async (intent: Intent, context: IntelligenceContext): Promise<unknown> => {
     // Read-only binding. `read`, `explain` and `search` delegate to the owner. The remaining
     // allow-listed verbs (`analyse`, `compare`, `report`) have NO safe grounded owner read in
     // this binding's scope, so they are honest gaps — the platform never fabricates an
@@ -759,13 +933,14 @@ export function createNutritionKnowledgeReadHandler(
     //
     // Port is resolved inside each executable verb case only (not for gap-returning verbs),
     // preserving the original behaviour that gap verbs never trigger owner resolution.
+    const userId = context.userId ? parseInt(context.userId, 10) : undefined;
     switch (intent.verb) {
       case "read":
-        return handleRead(intent, await resolvePort());
+        return handleRead(intent, await resolvePort(), userId);
       case "search":
-        return handleSearch(intent, await resolvePort());
+        return handleSearch(intent, await resolvePort(), userId);
       case "explain":
-        return handleExplain(intent, await resolvePort());
+        return handleExplain(intent, await resolvePort(), userId);
       case "analyse":
         throw new CapabilityExecutionError(
           "gap",

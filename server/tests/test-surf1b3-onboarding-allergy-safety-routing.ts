@@ -90,19 +90,21 @@ function household(opts: {
     householdId: 1,
     requesterUserId: 1,
     requesterDietPattern: opts.pattern ?? null,
+    requesterDietPatterns: opts.pattern ? [opts.pattern] : [],
     members: [
       {
         userId: 1,
         displayName: 'Test',
         hardRestrictions: hard,
         dietPattern: opts.pattern ?? null,
+        dietPatterns: opts.pattern ? [opts.pattern] : [],
         dietTypes: [],
         excludedIngredients: opts.soft ?? [],
       },
     ],
     hardRestrictions: hard,
     activeRestrictions: [] as any,
-    dietPatterns: [opts.pattern ?? null],
+    dietPatterns: opts.pattern ? [opts.pattern] : [],
     preferences: { dietTypes: [], excludedIngredients: opts.soft ?? [] },
   } as HouseholdSafetyContext;
 }
@@ -529,6 +531,7 @@ async function main() {
     householdId: null,
     requesterUserId: 1,
     requesterDietPattern: null,
+    requesterDietPatterns: [],
     members: [],
     hardRestrictions: [],
     activeRestrictions: [],

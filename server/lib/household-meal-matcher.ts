@@ -11,6 +11,8 @@ import type { MealTemplate, Meal } from "@shared/schema";
 import { getHouseholdForUser } from "./household";
 import { dbEaterToHouseholdEater, getEffectiveDietProfile } from "@shared/household-eater.js";
 import { resolveActiveRestrictions, resolveIngredientRestrictions } from "@shared/restrictions/restriction-resolver.js";
+import { shouldExcludeRecipe, ADAPTABLE_DIET_PATTERNS, dietPatternsFromDietTypes } from "@shared/dietRules.js";
+import { matchSubstitutionRulesWithConflicts } from "@shared/substitution-rules.js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -312,12 +314,43 @@ function computeIngredientCompatibility(
   for (const member of members) {
     const swaps: string[] = [];
 
-    // Path A: diet type check
+    // Path A: diet type check — only ever fires for Shell templates, which
+    // pre-declare which patterns they already satisfy via `compatibleDiets`.
     if (compatibleDiets.length > 0 && member.dietTypes.length > 0) {
       for (const diet of member.dietTypes) {
         if (!compatibleDiets.includes(diet)) {
           totalDietConflicts++;
           swaps.push(`${diet} diet not covered`);
+        }
+      }
+    }
+
+    // Path A2 (2026-11-22, owner-reported) — a REGULAR meal (no `compatibleDiets`
+    // tag at all — true of almost every Cookbook/external meal) never had its
+    // ingredients checked against a member's diet PATTERN at all: Path A above
+    // only runs when the meal carries that tag, so "Spaghetti Bolognese" read
+    // as compatible for a Keto member purely because nothing ever looked. This
+    // checks the member's own ADAPTABLE patterns (Keto/Low-Carb — see
+    // ADAPTABLE_DIET_PATTERNS's own doc comment for why only these two) against
+    // each real ingredient, and looks up a genuine curated substitute
+    // (shared/substitution-rules.ts) for each conflict — "courgette noodles"
+    // for pasta, not just a bare "not covered" note. Falls back to the same
+    // "remove X" convention Path B already uses when no curated swap exists,
+    // so this never fabricates a substitute that isn't real.
+    const memberPatterns = dietPatternsFromDietTypes(member.dietTypes).filter((p) =>
+      ADAPTABLE_DIET_PATTERNS.has(p),
+    );
+    if (memberPatterns.length > 0) {
+      const conflicting = ingredientList.filter((ing) =>
+        memberPatterns.some((pattern) => shouldExcludeRecipe(ing, { dietPattern: pattern, dietRestrictions: [] })),
+      );
+      if (conflicting.length > 0) {
+        totalDietConflicts++;
+        const { adjustments } = matchSubstitutionRulesWithConflicts(conflicting, memberPatterns);
+        const byIngredient = new Map(adjustments.map((a) => [a.matchedIngredient, a.replacement]));
+        for (const ing of conflicting) {
+          const replacement = byIngredient.get(ing);
+          swaps.push(replacement ? `${ing} → ${replacement}` : `remove ${ing}`);
         }
       }
     }

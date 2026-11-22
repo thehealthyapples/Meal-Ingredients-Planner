@@ -364,6 +364,274 @@ async function readWeek(
   };
 }
 
+/**
+ * 2026-11-22 — `resolveOwnedWeek` requires an explicit identifier (weekId,
+ * weekNumber, weekStartDate, or a direction to step from an anchor) and gaps
+ * honestly when given none — correct for every OTHER read scope, which always
+ * carries one (surface hints supply `activePlannerWeekId` when a Planner
+ * screen is open). The diet audit is the first scope a household can
+ * reasonably ask about with NO identifier at all ("is there anything on this
+ * week's planner that conflicts with our diet?" from the floating Companion,
+ * no Planner screen open). Falls back to the ONE canonical "which week is
+ * 'this week'?" resolver (household-planner-week.ts, CONV1 P8 / HT1) rather
+ * than guessing a week itself — an unanchored household still gets an honest
+ * gap, never a fabricated "current" week (HT6).
+ */
+async function resolveWeekForAuditDiet(
+  params: Readonly<Record<string, unknown>>,
+  userId: number,
+  port: PlannerReadPort,
+): Promise<PlannerWeek> {
+  const hasExplicitIdentifier =
+    toInt(params.weekId) !== undefined ||
+    toInt(params.weekNumber) !== undefined ||
+    parseCivilDate(params.weekStartDate) != null ||
+    params.direction === "previous" ||
+    params.direction === "next";
+
+  if (hasExplicitIdentifier) {
+    return resolveOwnedWeek(params, userId, port);
+  }
+
+  const weeks = await port.getPlannerWeeks(userId);
+  const { resolveHouseholdPlannerWeek } = await import("../../lib/household-planner-week.js");
+  const resolution = await resolveHouseholdPlannerWeek(userId, weeks);
+  if (!resolution.anchored) {
+    throw gap(
+      `Honest gap: THA cannot tell which planner week is "this week" for your household yet ` +
+        `(reason: ${resolution.reason}). Open the Planner and ask about a specific week, or ask ` +
+        'again with { scope: "diet-audit", weekNumber } once you know which one you mean.',
+    );
+  }
+  return resolution.week;
+}
+
+export interface PlannerDietConflictItem {
+  /** The meal name OR a single ingredient line that conflicted. */
+  readonly item: string;
+  readonly explanation: string;
+}
+
+export interface PlannerDietConflict {
+  readonly dayOfWeek: number;
+  readonly dayLabel: string;
+  readonly mealType: string;
+  readonly mealId: number;
+  readonly mealName: string | null;
+  /** Every conflicting item (meal name and/or individual ingredients), each
+   *  with its own full explanation — for a UI that wants the detail. */
+  readonly conflicts: readonly PlannerDietConflictItem[];
+  /** 2026-11-22 — ONE sentence for this meal, aggregated across every
+   *  conflicting item rather than repeating the same "conflicts with Colin's
+   *  Vegetarian diet" sentence once per ingredient (live-caught: a 7-
+   *  ingredient meal produced 7 near-duplicate sentences, unreadable as a
+   *  spoken answer). This is what `deterministicAnswer` is built from. */
+  readonly summary: string;
+}
+
+export interface PlannerDietAuditResult {
+  readonly scope: "diet-audit";
+  readonly weekId: number;
+  readonly weekNumber: number;
+  readonly weekName: string;
+  readonly weekStartDate: string | null;
+  readonly totalMeals: number;
+  readonly conflictCount: number;
+  readonly conflicts: readonly PlannerDietConflict[];
+  readonly deterministicAnswer: string;
+}
+
+/**
+ * Check every meal (name + ingredients) in a planner week against the
+ * household's declared diet patterns and hard restrictions — the Planner
+ * counterpart of nutrition-knowledge's "can I eat X" check, reusing the SAME
+ * reusable service (`nutrition-diet-compatibility.ts`) rather than a second
+ * implementation. Drinks are skipped: a drink's "ingredients" are a drink
+ * type, not a food composition this check can reason about.
+ *
+ * Resolves the household dietary context ONCE (not per meal/ingredient) —
+ * see nutrition-diet-compatibility.ts's file header for why.
+ */
+async function auditWeekDiet(
+  params: Readonly<Record<string, unknown>>,
+  userId: number,
+  port: PlannerReadPort,
+): Promise<PlannerDietAuditResult> {
+  const week = await resolveWeekForAuditDiet(params, userId, port);
+  const days = await port.getPlannerDays(week.id);
+  const dayOfWeekById = new Map(days.map((d) => [d.id, d.dayOfWeek]));
+
+  const entries = await port.getPlannerEntriesForWeek(week.id);
+
+  const { resolveHouseholdDietContext, checkFoodCompatibilityWithContext } =
+    await import("./nutrition-diet-compatibility.js");
+  const dietContext = await resolveHouseholdDietContext(userId);
+
+  const conflicts: PlannerDietConflict[] = [];
+  // See the grouping step below `conflicts.push(...)` for why this is keyed
+  // by name + reason rather than reusing `conflicts` or `mealId` directly.
+  const spokenGroupKeys: { key: string; mealName: string | null; dayLabel: string; mealType: string; reasonTail: string; culpritNote: string }[] = [];
+  let totalMeals = 0;
+
+  for (const entry of entries) {
+    if (entry.isDrink) continue;
+    totalMeals++;
+
+    let mealRef: PlannerMealRef | undefined;
+    try {
+      mealRef = await port.getMeal(entry.mealId);
+    } catch {
+      mealRef = undefined;
+    }
+    // Honest gap per-item: a meal row that cannot be read is silently excluded
+    // from the audit rather than reported as either conflicting or clear —
+    // neither would be true.
+    if (!mealRef) continue;
+
+    const seen = new Set<string>();
+    const conflictItems: PlannerDietConflictItem[] = [];
+    // Aggregated across every conflicting item in this meal, so the meal gets
+    // ONE summary sentence rather than one near-duplicate per ingredient.
+    const patternsByMember = new Map<string, Set<string>>();
+    const restrictionNames = new Set<string>();
+    const culprits: string[] = [];
+
+    for (const item of [mealRef.name, ...mealRef.ingredients]) {
+      const key = item?.trim().toLowerCase();
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      const compat = checkFoodCompatibilityWithContext(item, dietContext);
+      if (compat.compatible) continue;
+
+      conflictItems.push({ item, explanation: compat.explanation });
+      culprits.push(item);
+      for (const r of compat.conflictingRestrictions) restrictionNames.add(r);
+      for (const m of compat.members) {
+        if (m.conflictingDietPatterns.length === 0) continue;
+        const patterns = patternsByMember.get(m.displayName) ?? new Set<string>();
+        for (const p of m.conflictingDietPatterns) patterns.add(p);
+        patternsByMember.set(m.displayName, patterns);
+      }
+    }
+
+    if (conflictItems.length > 0) {
+      const dayOfWeek = dayOfWeekById.get(entry.dayId) ?? -1;
+      const dayLabel = plannerDayLabel(week.weekStartDate ?? null, dayOfWeek);
+      const dayMeal = `${dayLabel} ${entry.mealType}${mealRef.name ? ` (${mealRef.name})` : ""}`;
+
+      const clauses: string[] = [];
+      if (restrictionNames.size > 0) {
+        clauses.push(`your household's ${Array.from(restrictionNames).join(", ")} requirements`);
+      }
+      const memberClauses = Array.from(patternsByMember.entries()).map(
+        ([name, patterns]) => `${name}'s ${Array.from(patterns).join(", ")} diet`,
+      );
+      if (memberClauses.length > 0) clauses.push(memberClauses.join(" and "));
+      const reasonTail = clauses.join(" and ");
+
+      const culpritNote =
+        culprits.length > 0 ? ` (${culprits.slice(0, 3).join(", ")}${culprits.length > 3 ? ", …" : ""})` : "";
+      const summary = `${dayMeal} conflicts with ${reasonTail}${culpritNote}.`;
+
+      conflicts.push({
+        dayOfWeek,
+        dayLabel,
+        mealType: entry.mealType,
+        mealId: entry.mealId,
+        mealName: mealRef.name,
+        conflicts: conflictItems,
+        summary,
+      });
+      // Grouping key for the SPOKEN answer only — see below. A different planner
+      // entry pointing at a DIFFERENT mealId (a duplicated copy of the same
+      // recipe, live-caught: "My Big Fat Greek Salad" planned five separate
+      // times, five different mealIds) still reads as "the same meal" to a
+      // household asking this question; `mealId` alone under-merged it.
+      spokenGroupKeys.push({
+        key: `${mealRef.name ?? ""}\0${reasonTail}`,
+        mealName: mealRef.name,
+        dayLabel,
+        mealType: entry.mealType,
+        reasonTail,
+        culpritNote,
+      });
+    }
+  }
+
+  const weekLabel = week.weekStartDate ? `${week.weekName} (starting ${week.weekStartDate})` : week.weekName;
+  // 2026-11-22 (owner-reported, twice) — a meal planned on more than one day
+  // produced one near-identical summary sentence per OCCURRENCE. First fix
+  // grouped by `mealId`, which under-merges duplicated planner entries (same
+  // recipe, re-added as a new row each time rather than reusing one entry) —
+  // "My Big Fat Greek Salad" planned on five different days stayed five
+  // separate sentences because each had its own mealId. Grouping by NAME +
+  // the reason it conflicts (what a household actually perceives as "the same
+  // thing", not an internal foreign key) merges both cases correctly: the same
+  // mealId reused across days, AND the same recipe duplicated as separate rows.
+  // `conflicts` (the structured, per-day list) is unaffected either way — this
+  // only changes the SPOKEN sentence.
+  const bySpokenMeal = new Map<
+    string,
+    { mealName: string | null; occurrences: { dayLabel: string; mealType: string }[]; reasonTail: string; culpritNote: string }
+  >();
+  for (const g of spokenGroupKeys) {
+    const existing = bySpokenMeal.get(g.key);
+    if (existing) {
+      existing.occurrences.push({ dayLabel: g.dayLabel, mealType: g.mealType });
+    } else {
+      bySpokenMeal.set(g.key, {
+        mealName: g.mealName,
+        occurrences: [{ dayLabel: g.dayLabel, mealType: g.mealType }],
+        reasonTail: g.reasonTail,
+        culpritNote: g.culpritNote,
+      });
+    }
+  }
+  // 2026-11-22 (owner-reported) — "every day this week" (7 occurrences) still
+  // enumerated "Monday lunch and Tuesday lunch and Wednesday lunch and…" —
+  // technically one sentence per the fix above, but unreadable at that length.
+  // Past a small count, collapse to a frequency phrase instead of listing each
+  // occurrence; naming every single day only helps when there are few of them.
+  const OCCURRENCE_LIST_LIMIT = 3;
+  const groupedSummaries = Array.from(bySpokenMeal.values()).map((g) => {
+    let when: string;
+    if (g.occurrences.length <= OCCURRENCE_LIST_LIMIT) {
+      when = g.occurrences.map((o) => `${o.dayLabel} ${o.mealType}`).join(" and ");
+    } else {
+      const mealTypes = new Set(g.occurrences.map((o) => o.mealType));
+      when =
+        mealTypes.size === 1
+          ? `${[...mealTypes][0]} on ${g.occurrences.length} days this week`
+          : `${g.occurrences.length} times this week`;
+    }
+    return `${when}${g.mealName ? ` (${g.mealName})` : ""} conflicts with ${g.reasonTail}${g.culpritNote}.`;
+  });
+
+  // Cap the SPOKEN sentence at a readable length; `conflicts` (the full structured
+  // list) is unaffected — a UI that wants every meal still gets all of them.
+  const SPOKEN_CONFLICT_LIMIT = 5;
+  const shown = groupedSummaries.slice(0, SPOKEN_CONFLICT_LIMIT);
+  const remaining = groupedSummaries.length - shown.length;
+  const deterministicAnswer =
+    conflicts.length === 0
+      ? `No dietary conflicts found on ${weekLabel}'s planner — all ${totalMeals} meal${totalMeals === 1 ? "" : "s"} fit your household's declared diets and restrictions.`
+      : `${groupedSummaries.length} meal${groupedSummaries.length === 1 ? "" : "s"} on ${weekLabel} may conflict with your household's dietary requirements. ` +
+        shown.join(" ") +
+        (remaining > 0 ? ` …and ${remaining} more meal${remaining === 1 ? "" : "s"} this week.` : "");
+
+  return {
+    scope: "diet-audit",
+    weekId: week.id,
+    weekNumber: week.weekNumber,
+    weekName: week.weekName,
+    weekStartDate: week.weekStartDate ?? null,
+    totalMeals,
+    conflictCount: conflicts.length,
+    conflicts,
+    deterministicAnswer,
+  };
+}
+
 async function readDay(
   params: Readonly<Record<string, unknown>>,
   userId: number,
@@ -494,7 +762,7 @@ async function explainSelection(
 // ---------------------------------------------------------------------------
 
 /** The read scopes the planner read binding understands. */
-type ReadScope = "today" | "week" | "day";
+type ReadScope = "today" | "week" | "day" | "diet-audit";
 
 async function handleRead(
   intent: Intent,
@@ -509,6 +777,8 @@ async function handleRead(
       return readWeek(params, userId, port);
     case "day":
       return readDay(params, userId, port);
+    case "diet-audit":
+      return auditWeekDiet(params, userId, port);
     case "today":
       // A raw "today" intent has no verified dated Planner week attached. Callers with
       // an authoritative civil date may use scope "day" + weekStartDate; this scope
@@ -522,7 +792,8 @@ async function handleRead(
     default:
       throw gap(
         `Unsupported planner read scope ${JSON.stringify(scope)}. Supported read scopes: ` +
-          '"week" (weekId|weekNumber) and "day" (dayId, or weekId|weekNumber|weekStartDate + dayOfWeek). ' +
+          '"week" (weekId|weekNumber) and "day" (dayId, or weekId|weekNumber|weekStartDate + dayOfWeek), ' +
+          '"diet-audit" (optional weekId|weekNumber; defaults to "this week" when resolvable). ' +
           '"today" requires a dated weekStartDate in a "day" read; no ordinal fallback is made.',
       );
   }

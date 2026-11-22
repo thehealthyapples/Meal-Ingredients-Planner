@@ -48,6 +48,7 @@ import type {
 import type { ConversationSurface } from "./conversation/conversation-store.js";
 import { DAY_NAMES } from "@shared/time/household-time";
 import { correctUtteranceForIntentMatching } from "./intent-spellcheck.js";
+import { DIET_PATTERNS } from "@shared/dietRules.js";
 
 // Maximum intents returned per turn (INT18 per-turn latency budget).
 const MAX_INTENTS = 4;
@@ -107,6 +108,50 @@ function toSlug(raw: string): string {
     .replace(/[^a-z0-9-]/g, "")
     .replace(/-{2,}/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+// ---------------------------------------------------------------------------
+// "Can I eat X [on my diet]?" — ONE extraction rule, not per-caller duplicates
+// ---------------------------------------------------------------------------
+//
+// 2026-11-22 (live-caught) — "can I eat chicken ON MY DIET?" / "... on keto?":
+// the food capture is naturally greedy (no "?"/"." to anchor on, so it runs to
+// the end of the string), and swallows the trailing clause that names WHOSE
+// diet to check against into the "food name" itself ("chicken on my diet" —
+// no such food, honest gap on a food THA knows perfectly well). That trailing
+// clause is never a second food; the diet itself is already resolved from the
+// household by `checkFoodCompatibility`, so it is dropped here.
+//
+// This used to be fixed in TWO separate places with two different regexes —
+// a "specific pattern" matcher (which can never win: compound matchers run
+// first in the resolution pipeline, so a specific matcher for the same frame
+// is unreachable dead code) and `DIET_COMPATIBILITY_COMPOUND` (the one that
+// actually resolves the intent). Only the dead one was fixed, so the bug
+// shipped unchanged. There is now exactly one extraction rule, and the
+// diet-pattern vocabulary it strips is `dietRules.ts`'s own canonical, closed
+// `DIET_PATTERNS` list — not a second hand-written copy that could drift from
+// it — so a diet pattern added there is stripped here automatically.
+const CAN_EAT_PATTERN = /\b(?:can|could|may)\s+(?:i|we|my\s+family|my\s+kids?|my\s+household)?\s*eat\s+(.+?)[\?.]?\s*$/i;
+
+const TRAILING_DIET_CLAUSE = new RegExp(
+  `\\s+(?:on|for|with|given|under)\\s+(?:a\\s+|the\\s+|my\\s+|our\\s+|his\\s+|her\\s+|their\\s+)?` +
+    `(?:${DIET_PATTERNS.map((p) => p.toLowerCase().replace(/-/g, "[\\s-]")).join("|")}` +
+    `|diet|household|family|restrictions?|allerg(?:y|ies))\\b.*$`,
+  "i",
+);
+
+/**
+ * Extract the food term from a "can I eat X?" utterance, stripping a trailing
+ * clause that names whose diet/restrictions to check against rather than a
+ * second food. Returns null when the utterance does not match the frame at
+ * all, or captures nothing concrete.
+ */
+function extractCanEatFood(utterance: string): string | null {
+  const m = utterance.match(CAN_EAT_PATTERN);
+  const raw = m?.[1]?.trim().replace(/[\?\#\s\n]+$/, "").trim();
+  if (!raw) return null;
+  const stripped = raw.replace(TRAILING_DIET_CLAUSE, "").trim();
+  return stripped || raw;
 }
 
 // ---------------------------------------------------------------------------
@@ -428,6 +473,12 @@ const NUTRITION_FOOD_DETAIL_MATCHERS: Matcher[] = [
     const m = u.match(/\bwhat'?s?\s+in\s+(.+?)\s+nutritionally\b/i);
     return m?.[1] ? foodRead(m[1], 0.82) : null;
   },
+
+  // NOTE: "can I eat X?" is NOT handled here. A compound matcher
+  // (DIET_COMPATIBILITY_COMPOUND, below in this file) matches the identical
+  // frame and compound matchers run FIRST in the resolution pipeline (see this
+  // file's header) — a specific matcher for the same frame is unreachable dead
+  // code. `extractCanEatFood()` is the one place that extraction rule lives.
 ];
 
 // ---------------------------------------------------------------------------
@@ -3031,6 +3082,61 @@ const HOUSEHOLD_MEAL_SUITABILITY_COMPOUND: CompoundMatcher = (u, _lower, _hints)
   ];
 };
 
+/** Diet compatibility check: "can I eat lasagne?" / "can my family eat cheese?" /
+ *  "can I eat chicken on my diet?" — see `extractCanEatFood()`'s doc comment for
+ *  why the trailing-clause stripping lives there and nowhere else. */
+const DIET_COMPATIBILITY_COMPOUND: CompoundMatcher = (u, _lower, _hints) => {
+  const entity = extractCanEatFood(u);
+  if (!entity) return null;
+  const slug = toSlug(entity);
+  if (!slug) return null;
+  // Route to nutrition-knowledge read with the food slug
+  // The handler will search if exact slug doesn't match, and household enrichment will add dietary context
+  return [
+    { capability: "nutrition-knowledge", verb: "read", parameters: { scope: "food", slug }, confidence: 0.82 },
+  ];
+};
+
+/**
+ * 2026-11-22 — Planner diet audit: "is there anything on this week's planner
+ * that conflicts with our household dietary requirements?" / "does next
+ * week's plan work for my diet?" / "any allergy issues on my meal plan?"
+ *
+ * Requires BOTH a planner-ish term (planner/plan/meal plan/week's) AND a
+ * diet/conflict-ish term, so a bare "what's on my planner this week?" (no
+ * diet framing at all) keeps routing to the existing week-read matchers
+ * instead of this one.
+ *
+ * "next week" steps from the active Planner week when a surface hint names
+ * one (hints.activePlannerWeekId — same convention every other "this/next
+ * week" matcher in this file already uses); with no hint at all (asked from
+ * the floating Companion, no Planner screen open), the handler itself falls
+ * back to the ONE canonical "this week" resolver (household-planner-week.ts)
+ * — "next week" specifically still needs an anchor to step from, so it stays
+ * an honest gap without one rather than guessing.
+ */
+const PLANNER_DIET_AUDIT_COMPOUND: CompoundMatcher = (_u, lower, hints) => {
+  const hasPlannerSignal = /\b(?:planner|meal\s+plan|plan(?:ned)?|this\s+week'?s?|next\s+week'?s?)\b/.test(lower);
+  const hasDietSignal = /\b(?:diet(?:ary)?|conflict|suitable|allerg(?:y|ies)|restrictions?|requirements?|keto|vegan|vegetarian|paleo|carnivore)\b/.test(lower);
+  if (!hasPlannerSignal || !hasDietSignal) return null;
+
+  const wantsNextWeek = /\bnext\s+week\b/.test(lower);
+  const parameters: Record<string, unknown> = { scope: "diet-audit" };
+  if (hints.activePlannerWeekId != null) {
+    parameters.weekId = hints.activePlannerWeekId;
+    if (wantsNextWeek) parameters.direction = "next";
+  }
+  // No active surface hint at all: leave weekId/weekNumber unset. The handler
+  // (auditWeekDiet → resolveWeekForAuditDiet) falls back to the household's
+  // resolved "this week" — honest gap if that household is unanchored, never
+  // a guessed week. "Next week" with no hint to step from stays unsupported
+  // here (the same constraint resolveOwnedWeek's own direction branch has).
+
+  return [
+    { capability: "planner", verb: "read", parameters, confidence: 0.85 },
+  ];
+};
+
 /**
  * BENCHINT4 (RC1, T2.6) — Meal Discovery + Profile: a meal recommended against stored goals.
  * "Recommend one meal that fits my goals and explain why." (CB-021).
@@ -3113,6 +3219,21 @@ const PLANNER_NUTRITION_BALANCE_COMPOUND: CompoundMatcher = (_u, lower, hints) =
   const hasPlannerSignal = /\b(?:plan(?:ned|ner)?|this\s+week|my\s+(?:meal\s+)?plan|week'?s?\s+meals?|scheduled)\b/.test(lower);
   const hasBalanceSignal = /\b(?:balanced?|nutrition(?:al)?|healthy|nutritious|macro|nutrient|diet(?:ary)?|adequate)\b/.test(lower);
   if (!hasPlannerSignal || !hasBalanceSignal) return null;
+  // 2026-11-22 (live-caught) — "is there anything on this week's planner that
+  // CONFLICTS WITH our DIETARY requirements?" matched here too (bare "dietary"
+  // is in the balance signal above) and WON the "planner" capability slot over
+  // PLANNER_DIET_AUDIT_COMPOUND's more specific match (0.86 beat 0.85 by 0.01),
+  // so the household's actual diet-audit answer never ran — the question went
+  // to full LLM synthesis instead, over "how balanced is this week nutritionally"
+  // data that doesn't even contain restriction/pattern info, and the model
+  // fabricated a wrong answer ("no restrictions recorded") a 400ms deterministic
+  // DB read would have answered correctly. "Dietary" alone is genuinely
+  // ambiguous between "nutritionally balanced" (this matcher's real target,
+  // PL-026: "how balanced is this week's plan?") and "respects dietary
+  // RESTRICTIONS" (PLANNER_DIET_AUDIT_COMPOUND's territory) — defer to the more
+  // specific matcher whenever conflict/restriction framing is present, which
+  // "how balanced..." never uses.
+  if (/\b(?:conflict|suitable|allerg(?:y|ies)|restrictions?|requirements?)\b/.test(lower)) return null;
   return [
     // COMP-DET5 — weekId threaded (see COMPOUND_HEALTH_GOAL_PLANNING_COMPOUND above).
     { capability: "planner",             verb: "read", parameters: hints.activePlannerWeekId != null ? { scope: "week", weekId: hints.activePlannerWeekId } : { scope: "week" }, confidence: 0.86 },
@@ -3341,7 +3462,15 @@ const ANALYSER_HOUSEHOLD_SUITABILITY_COMPOUND: CompoundMatcher = (_u, lower, _hi
   // the correct household route. Neither benchmark question this compound targets
   // (PR-066 "cereal", PR-070 "product") ever needed it — both are already covered by a
   // real product noun or the demonstrative "this".
-  const hasProductSignal = /\b(?:this|product|item|cereal|ingredient|brand)\b/.test(lower);
+  //
+  // 2026-11-22 (live-caught) — bare "this" had the SAME over-matching defect "food" did:
+  // "is there anything on THIS week's planner..." names no product at all, but "this"
+  // alone satisfied the alternation and spuriously fired this compound (alongside
+  // PLANNER_DIET_AUDIT_COMPOUND's genuine route) for a question about a WEEK, not a
+  // product. Narrowed the demonstrative to "this" immediately followed by a product
+  // noun — both benchmark fixtures ("this cereal", "this product") still match exactly;
+  // "this week" no longer does.
+  const hasProductSignal = /\b(?:this\s+(?:product|item|cereal|ingredient|brand)|product|item|cereal|ingredient|brand)\b/.test(lower);
   const hasHouseholdSignal = /\b(?:my\s+family|my\s+household|(?:everyone|my\s+(?:kids|children|members?)))\b/.test(lower);
   if (!hasProductSignal || !hasHouseholdSignal) return null;
   return [
@@ -3357,7 +3486,15 @@ const HOUSEHOLD_ANALYSER_RESTRICTIONS_COMPOUND: CompoundMatcher = (_u, lower, _h
   // above: bare "food" spuriously matched "what food restrictions does my family have?",
   // which names no product at all. The PR-070 fixture it targets says "product", already
   // covered below.
-  const hasProductSignal = /\b(?:product|item|ingredient|this|cereal|brand)\b/.test(lower);
+  //
+  // 2026-11-22 (live-caught) — same defect, bare "this": "is there anything on THIS
+  // week's planner that conflicts with our dietary requirements?" has `hasHouseholdSignal`
+  // true (via "dietary") and bare "this" satisfied this guard too, spuriously firing
+  // alongside the real route (PLANNER_DIET_AUDIT_COMPOUND) for a week question, not a
+  // product. Narrowed exactly as the sibling compound above — "this" only counts when
+  // immediately followed by a product noun, which the PR-070 fixture ("this product")
+  // already is.
+  const hasProductSignal = /\b(?:this\s+(?:product|item|cereal|ingredient|brand)|product|item|ingredient|cereal|brand)\b/.test(lower);
   if (!hasHouseholdSignal || !hasProductSignal) return null;
   return [
     { capability: "household", verb: "read", parameters: { scope: "household" }, confidence: 0.86 },
@@ -3367,6 +3504,8 @@ const HOUSEHOLD_ANALYSER_RESTRICTIONS_COMPOUND: CompoundMatcher = (_u, lower, _h
 
 
 const ALL_COMPOUND_MATCHERS: CompoundMatcher[] = [
+  DIET_COMPATIBILITY_COMPOUND,
+  PLANNER_DIET_AUDIT_COMPOUND,
   NUTRITION_DISCOVERY_PLANNER_COMPOUND,
   HOUSEHOLD_MEMBER_PLANNER_COMPOUND,
   HOUSEHOLD_MEAL_SUITABILITY_COMPOUND,

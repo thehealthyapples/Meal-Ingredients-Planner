@@ -112,6 +112,7 @@ async function run() {
     hardRestrictions: ["peanut"],
     activeRestrictions: [{ id: "peanut" } as any],
     requesterDietPattern: null,
+    requesterDietPatterns: [],
     members: [],
     softDietTypes: [],
     excludedIngredients: [],

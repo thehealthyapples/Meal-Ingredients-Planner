@@ -151,6 +151,7 @@ function makePort(): MealsReadPort {
       householdId: 1,
       requesterUserId: userId,
       requesterDietPattern: null,
+      requesterDietPatterns: [],
       members: [],
       hardRestrictions: [],
       activeRestrictions: [],

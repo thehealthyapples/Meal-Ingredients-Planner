@@ -77,6 +77,11 @@ export interface NutritionKnowledgeReadPort {
   /** COMP-DET2 — the Food Knowledge Encyclopedia's entry for a slug (food or
    *  additive-concept), or undefined if it has none. Fallback source only. */
   getEncyclopediaEntry(slug: string): Promise<FoodKnowledgeEncyclopediaEntry | undefined>;
+  /** FOODUI7 — the single best food match for free text, ranked exact-name > exact-alias
+   *  > name-starts-with > alias-starts-with > substring (never the first SUBSTRING match
+   *  `searchKnowledgeRegistry` would return, which is right for a results list but wrong
+   *  for resolving "the one food a slug alias means" — see its own doc comment). */
+  findBestFoodMatch(query: string): Promise<{ slug: string } | null>;
 }
 
 /**
@@ -95,6 +100,7 @@ export async function createRegistryNutritionKnowledgeReadPort(): Promise<Nutrit
     searchKnowledgeRegistry: (query) => registry.searchKnowledgeRegistry(query),
     listFoodCategories: () => registry.listFoodCategories(),
     listFoodCards: (category) => registry.listFoodCards(category),
+    findBestFoodMatch: (query) => registry.findBestFoodMatch(query),
     getEncyclopediaEntry: async (slug) => {
       const { storage } = await import("../../storage.js");
       const row = await storage.getFoodKnowledgeBySlug(slug);

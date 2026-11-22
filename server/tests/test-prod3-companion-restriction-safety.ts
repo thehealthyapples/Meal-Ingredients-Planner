@@ -112,12 +112,14 @@ const PEANUT_HOUSEHOLD: HouseholdSafetyContext = {
   householdId: 9001,
   requesterUserId: 9001,
   requesterDietPattern: null,
+  requesterDietPatterns: [],
   members: [
     {
       userId: 9001,
       displayName: 'Ava',
       hardRestrictions: ['peanut'],
       dietPattern: null,
+      dietPatterns: [],
       dietTypes: [],
       excludedIngredients: [],
     },
@@ -134,6 +136,7 @@ const UNAVAILABLE_HOUSEHOLD: HouseholdSafetyContext = {
   householdId: null,
   requesterUserId: 9002,
   requesterDietPattern: null,
+  requesterDietPatterns: [],
   members: [],
   hardRestrictions: [],
   activeRestrictions: [],
