@@ -112,17 +112,31 @@ export const DIET_PATTERNS = [
  * conflicts are "adapt this" versus "exclude the meal outright".
  *
  * Deliberately NOT every pattern/restriction dietRules.ts knows how to
- * exclude on: Vegan/Vegetarian/Paleo/Carnivore/Gluten-Free stay a hard
- * exclusion. Vegan and Vegetarian in particular are often an ethical
- * commitment, not a nutrition preference — "serve the meat dish, just
- * remove the meat for them" is not the same kind of adaptation as a
- * low-carb swap, and THA has no curated, reviewed meat/fish substitution
- * rules at all yet. Widening either set means adding real substitution
- * rules for that pattern/restriction FIRST, the same way Keto's were —
- * never by just adding its name here.
+ * exclude on: Vegan/Vegetarian/Paleo/Carnivore stay a hard exclusion.
+ *
+ * 2026-11-26 — Gluten-Free joins Dairy-Free here: it already has 8 curated
+ * substitution rules (shared/substitution-rules.ts's `wheat_pasta`,
+ * `worcestershire_sauce`, `malt_vinegar`, `beer_cooking`,
+ * `barley_malt_extract`, `hoisin_sauce`, `teriyaki_sauce`, `soy_sauce`), and
+ * it is a health restriction (coeliac/intolerance) in the same category as
+ * Dairy-Free, not an ethical commitment — the reasoning that keeps Vegan/
+ * Vegetarian hard-excluded does not apply to it.
+ *
+ * This correction matters: the previous note here claimed "THA has no
+ * curated, reviewed meat/fish substitution rules at all yet" — that was
+ * stale even for Vegan/Vegetarian. substitution-rules.ts already has real
+ * rules for beef, pork, chicken, bacon, and shellfish keyed on the
+ * vegetarian/vegan triggers (`beef_mince`, `pork_mince`, `chicken_breast`,
+ * `bacon`, `shellfish`). Vegan/Vegetarian stay hard exclusions anyway, by
+ * deliberate product decision (owner-confirmed, 2026-11-26): "serve the
+ * meat dish, just swap it for lentils" is not the same kind of adaptation
+ * as a low-carb swap when the pattern is an ethical commitment rather than
+ * a nutrition preference — rule availability doesn't change that judgment.
+ * Widening EITHER further means revisiting that decision, not just adding
+ * a name here.
  */
 export const ADAPTABLE_DIET_PATTERNS: ReadonlySet<string> = new Set(["Keto", "Low-Carb"]);
-export const ADAPTABLE_DIET_RESTRICTIONS: ReadonlySet<string> = new Set(["Dairy-Free"]);
+export const ADAPTABLE_DIET_RESTRICTIONS: ReadonlySet<string> = new Set(["Dairy-Free", "Gluten-Free"]);
 
 const DIET_PATTERN_BY_LOWER = new Map<string, string>(
   DIET_PATTERNS.map(p => [p.toLowerCase(), p]),

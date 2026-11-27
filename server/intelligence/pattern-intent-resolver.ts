@@ -3138,6 +3138,72 @@ const PLANNER_DIET_AUDIT_COMPOUND: CompoundMatcher = (_u, lower, hints) => {
 };
 
 /**
+ * 2026-11-26 — Journal diet audit: "is there anything I've eaten today that
+ * conflicts with my diet?" / "did I log anything today that breaks my restrictions?"
+ *
+ * Requires BOTH a diary-ish term (same vocabulary DIARY_NUTRITION_COMPOUND already
+ * uses) AND a diet/conflict-ish term, so a bare "what did I eat today?" (no diet
+ * framing at all) keeps routing to the existing diary day-read matchers instead of
+ * this one — the same two-signal shape as PLANNER_DIET_AUDIT_COMPOUND above.
+ *
+ * Diary has no "this week" concept (the handler scope takes a single `date`, never
+ * a range) — the date resolves via the same `diaryDateFor()` helper every other
+ * diary matcher uses, which recognises "yesterday" and otherwise defaults to today
+ * (`hints.temporalAnchor`).
+ */
+const JOURNAL_DIET_AUDIT_COMPOUND: CompoundMatcher = (u, lower, hints) => {
+  const hasDiarySignal = /\b(?:diary|logged|tracked|eaten|had\s+today|my\s+(?:food\s+)?diary|intake)\b/.test(lower);
+  const hasDietSignal = /\b(?:diet(?:ary)?|conflict|suitable|allerg(?:y|ies)|restrictions?|requirements?|keto|vegan|vegetarian|paleo|carnivore)\b/.test(lower);
+  if (!hasDiarySignal || !hasDietSignal) return null;
+
+  return [
+    {
+      capability: "diary",
+      verb: "read",
+      parameters: { scope: "diet-audit", date: diaryDateFor(u, hints.temporalAnchor) },
+      confidence: 0.85,
+    },
+  ];
+};
+
+/**
+ * 2026-11-26 — Shopping diet audit: "is anything on my shopping list incompatible
+ * with my diet?" / "are there any allergy items I'm about to buy?"
+ *
+ * Requires BOTH a shopping-ish term AND a diet/conflict-ish term — same two-signal
+ * shape as PLANNER_DIET_AUDIT_COMPOUND/JOURNAL_DIET_AUDIT_COMPOUND above, so a bare
+ * "what's on my shopping list?" (no diet framing) keeps routing to the plain list-read.
+ */
+const SHOPPING_DIET_AUDIT_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
+  const hasShoppingSignal = /\b(?:shopping\s+list|groceries|basket|buy(?:ing)?|shop(?:ping)?)\b/.test(lower);
+  const hasDietSignal = /\b(?:diet(?:ary)?|conflict|suitable|allerg(?:y|ies)|restrictions?|requirements?|keto|vegan|vegetarian|paleo|carnivore)\b/.test(lower);
+  if (!hasShoppingSignal || !hasDietSignal) return null;
+
+  return [
+    { capability: "shopping", verb: "read", parameters: { scope: "diet-audit" }, confidence: 0.85 },
+  ];
+};
+
+/**
+ * 2026-11-26 — Cookbook diet audit: "which recipes in my cookbook work for a vegan
+ * household?" / "are any of my recipes not keto-friendly?"
+ *
+ * Requires BOTH a cookbook-ish term (same "my meals/cookbook/recipes" vocabulary
+ * MEALS_MATCHERS already uses) AND a diet/conflict-ish term — same two-signal shape
+ * as the Planner/Journal/Shopping diet-audits above, so a bare "what's in my
+ * cookbook?" (no diet framing) keeps routing to the plain meals search/list.
+ */
+const COOKBOOK_DIET_AUDIT_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
+  const hasCookbookSignal = /\bmy\s+(?:meals?|cookbook|recipes?)\b/.test(lower);
+  const hasDietSignal = /\b(?:diet(?:ary)?|conflict|suitable|allerg(?:y|ies)|restrictions?|requirements?|keto|vegan|vegetarian|paleo|carnivore|friendly)\b/.test(lower);
+  if (!hasCookbookSignal || !hasDietSignal) return null;
+
+  return [
+    { capability: "meals", verb: "read", parameters: { scope: "diet-audit" }, confidence: 0.85 },
+  ];
+};
+
+/**
  * BENCHINT4 (RC1, T2.6) — Meal Discovery + Profile: a meal recommended against stored goals.
  * "Recommend one meal that fits my goals and explain why." (CB-021).
  *
@@ -3506,6 +3572,9 @@ const HOUSEHOLD_ANALYSER_RESTRICTIONS_COMPOUND: CompoundMatcher = (_u, lower, _h
 const ALL_COMPOUND_MATCHERS: CompoundMatcher[] = [
   DIET_COMPATIBILITY_COMPOUND,
   PLANNER_DIET_AUDIT_COMPOUND,
+  JOURNAL_DIET_AUDIT_COMPOUND,
+  SHOPPING_DIET_AUDIT_COMPOUND,
+  COOKBOOK_DIET_AUDIT_COMPOUND,
   NUTRITION_DISCOVERY_PLANNER_COMPOUND,
   HOUSEHOLD_MEMBER_PLANNER_COMPOUND,
   HOUSEHOLD_MEAL_SUITABILITY_COMPOUND,

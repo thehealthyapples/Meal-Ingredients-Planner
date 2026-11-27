@@ -199,12 +199,41 @@ export interface MealsCountReadResult {
   readonly source: "meals";
 }
 
+/**
+ * 2026-11-26 — the Cookbook counterpart of the Planner/Journal/Shopping diet-audits,
+ * reusing the SAME reusable service (nutrition-diet-compatibility.ts). Unlike Journal/
+ * Shopping, a meal here carries a full `ingredients` array, so it gets the SAME
+ * per-ingredient depth the Planner audit has, not the name-only check those two use.
+ */
+export interface MealsDietConflictItem {
+  readonly item: string;
+  readonly explanation: string;
+}
+
+export interface MealsDietConflict {
+  readonly mealId: number;
+  readonly mealName: string;
+  readonly conflicts: readonly MealsDietConflictItem[];
+  /** One aggregated sentence for this meal, not one per conflicting ingredient. */
+  readonly summary: string;
+}
+
+export interface MealsDietAuditResult {
+  readonly scope: "diet-audit";
+  readonly totalMeals: number;
+  readonly conflictCount: number;
+  readonly conflicts: readonly MealsDietConflict[];
+  readonly deterministicAnswer: string;
+  readonly source: "meals";
+}
+
 export type MealsReadResult =
   | MealsListReadResult
   | MealsSummaryReadResult
   | MealsDetailReadResult
   | MealsCountReadResult
-  | MealsSearchResult;
+  | MealsSearchResult
+  | MealsDietAuditResult;
 
 // ---------------------------------------------------------------------------
 // Read projections (stored fields only — no fabrication)
@@ -399,6 +428,99 @@ async function handleSearch(
 }
 
 // ---------------------------------------------------------------------------
+// Diet audit (reuses nutrition-diet-compatibility.ts — no second rules engine)
+// ---------------------------------------------------------------------------
+
+/**
+ * Check every cookbook meal (name + every ingredient) against the household's diet
+ * patterns and hard restrictions — the Cookbook counterpart of the Planner/Journal/
+ * Shopping diet-audits, reusing the SAME service. Resolves the household context
+ * ONCE, not per meal (the household doesn't change between meals in one audit).
+ * Own + system meals, merged and deduplicated by id, exactly as the "list" scope
+ * above already does — the household's full browsable cookbook, not just saved rows.
+ * An empty cookbook is a clean (zero-conflict) answer, not a gap.
+ */
+async function auditCookbookDiet(userId: number, port: MealsReadPort): Promise<MealsDietAuditResult> {
+  const [own, system] = await Promise.all([port.getMeals(userId), port.getSystemMeals()]);
+  const seen = new Set<number>();
+  const meals: Meal[] = [];
+  for (const m of [...own, ...system]) {
+    if (seen.has(m.id)) continue;
+    seen.add(m.id);
+    meals.push(m);
+  }
+
+  const { resolveHouseholdDietContext, checkFoodCompatibilityWithContext } =
+    await import("./nutrition-diet-compatibility.js");
+  const dietContext = await resolveHouseholdDietContext(userId);
+
+  const conflicts: MealsDietConflict[] = [];
+  for (const meal of meals) {
+    const seenItems = new Set<string>();
+    const conflictItems: MealsDietConflictItem[] = [];
+    const patternsByMember = new Map<string, Set<string>>();
+    const restrictionNames = new Set<string>();
+
+    for (const item of [meal.name, ...meal.ingredients]) {
+      const key = item?.trim().toLowerCase();
+      if (!key || seenItems.has(key)) continue;
+      seenItems.add(key);
+      const compat = checkFoodCompatibilityWithContext(item, dietContext);
+      if (compat.compatible) continue;
+
+      conflictItems.push({ item, explanation: compat.explanation });
+      for (const r of compat.conflictingRestrictions) restrictionNames.add(r);
+      for (const m of compat.members) {
+        if (m.conflictingDietPatterns.length === 0) continue;
+        const patterns = patternsByMember.get(m.displayName) ?? new Set<string>();
+        for (const p of m.conflictingDietPatterns) patterns.add(p);
+        patternsByMember.set(m.displayName, patterns);
+      }
+    }
+
+    if (conflictItems.length === 0) continue;
+
+    const clauses: string[] = [];
+    if (restrictionNames.size > 0) {
+      clauses.push(`your household's ${Array.from(restrictionNames).join(", ")} requirements`);
+    }
+    const memberClauses = Array.from(patternsByMember.entries()).map(
+      ([name, patterns]) => `${name}'s ${Array.from(patterns).join(", ")} diet`,
+    );
+    if (memberClauses.length > 0) clauses.push(memberClauses.join(" and "));
+    const reasonTail = clauses.join(" and ");
+    const culprits = conflictItems.map((c) => c.item);
+    const culpritNote = ` (${culprits.slice(0, 3).join(", ")}${culprits.length > 3 ? ", …" : ""})`;
+
+    conflicts.push({
+      mealId: meal.id,
+      mealName: meal.name,
+      conflicts: conflictItems,
+      summary: `"${meal.name}" conflicts with ${reasonTail}${culpritNote}.`,
+    });
+  }
+
+  const SPOKEN_CONFLICT_LIMIT = 5;
+  const shown = conflicts.slice(0, SPOKEN_CONFLICT_LIMIT);
+  const remaining = conflicts.length - shown.length;
+  const deterministicAnswer =
+    conflicts.length === 0
+      ? `No dietary conflicts found in your cookbook — all ${meals.length} meal${meals.length === 1 ? "" : "s"} fit your household's declared diets and restrictions.`
+      : `${conflicts.length} meal${conflicts.length === 1 ? "" : "s"} in your cookbook may conflict with your household's dietary requirements. ` +
+        shown.map((c) => c.summary).join(" ") +
+        (remaining > 0 ? ` …and ${remaining} more meal${remaining === 1 ? "" : "s"}.` : "");
+
+  return {
+    scope: "diet-audit",
+    totalMeals: meals.length,
+    conflictCount: conflicts.length,
+    conflicts,
+    deterministicAnswer,
+    source: "meals",
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Verb implementations — read
 // ---------------------------------------------------------------------------
 
@@ -488,11 +610,16 @@ async function handleRead(
     };
   }
 
+  if (scope === "diet-audit") {
+    return auditCookbookDiet(userId, port);
+  }
+
   throw gap(
     `Unsupported meals read scope ${JSON.stringify(scope)}. ` +
       'Supported scopes: "list" (the caller\'s meals + system meals), "summary" ' +
       '(the same, as a lighter projection), "count" (meal count + breakdown by kind), ' +
-      '"detail" (a single meal + its items, requires { mealId }).',
+      '"detail" (a single meal + its items, requires { mealId }), "diet-audit" ' +
+      '(every meal checked against household diet).',
   );
 }
 

@@ -130,9 +130,14 @@ section('Test 4 — Unrestricted user: behaviour preserved (everything compliant
 // ─── Restriction stacking (dietRestrictions independent of pattern) ──────────────
 section('Bonus — dietRestrictions (Gluten-Free / Dairy-Free) applied independently');
 {
+  // 2026-11-26 (owner-directed) — Gluten-Free joined ADAPTABLE_DIET_RESTRICTIONS
+  // (8 curated substitution rules already exist, and it's a health restriction in
+  // the same category as Dairy-Free, not an ethical commitment like Vegan/Vegetarian).
+  // This gate must agree with generation, which deliberately lets a Gluten-Free
+  // conflict through so the household gets the meal WITH a swap.
   const gf = ctx(null, ['Gluten-Free'], []);
-  assert(!compliant(meal('Spaghetti Bolognese', ['wheat pasta', 'beef']), gf),
-    'gluten skipped for Gluten-Free restriction');
+  assert(compliant(meal('Spaghetti Bolognese', ['wheat pasta', 'beef']), gf),
+    'gluten ALLOWED for Gluten-Free restriction — adaptable, not hard-excluded, matching the generation gate');
   // 2026-11-22 (owner-reported) — Dairy-Free is one of the ADAPTABLE restrictions
   // (shared/dietRules.ts ADAPTABLE_DIET_RESTRICTIONS): generation deliberately lets
   // a dairy conflict through so the household gets the meal WITH a swap, rather than

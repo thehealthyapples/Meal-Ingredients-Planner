@@ -73,6 +73,30 @@ export interface DiaryExplainResult {
   readonly metrics: DiaryMetricsView;
 }
 
+/**
+ * 2026-11-26 — the Journal counterpart of the Planner's diet-audit scope, reusing
+ * the SAME reusable service (nutrition-diet-compatibility.ts) rather than a second
+ * implementation. NAME-ONLY: unlike a planner meal, FoodDiaryEntry carries only a
+ * free-text `name` — no ingredients array — so a logged entry is checked as a single
+ * food term, the same granularity nutrition-knowledge's food-read already uses.
+ */
+export interface DiaryDietConflict {
+  readonly entryId: number;
+  readonly mealSlot: string;
+  readonly name: string;
+  readonly explanation: string;
+}
+
+export interface DiaryDietAuditResult {
+  readonly scope: "diet-audit";
+  readonly date: string;
+  readonly totalEntries: number;
+  readonly conflictCount: number;
+  readonly conflicts: readonly DiaryDietConflict[];
+  readonly deterministicAnswer: string;
+  readonly source: "food-diary";
+}
+
 // ---------------------------------------------------------------------------
 // Read projections (stored fields only — no fabrication)
 // ---------------------------------------------------------------------------
@@ -110,7 +134,11 @@ function toMetricsView(m: FoodDiaryMetrics): DiaryMetricsView {
  * date. Requires a `date` parameter (YYYY-MM-DD). Gap if no diary day has been
  * logged for the requested date — never a fabricated empty record.
  */
-async function handleRead(intent: Intent, userId: number, port: DiaryReadPort): Promise<DiaryDayReadResult> {
+async function handleRead(
+  intent: Intent,
+  userId: number,
+  port: DiaryReadPort,
+): Promise<DiaryDayReadResult | DiaryDietAuditResult> {
   const params = intent.parameters ?? {};
   const scope = params.scope as string | undefined;
   const date = typeof params.date === "string" ? params.date.trim() : "";
@@ -121,10 +149,15 @@ async function handleRead(intent: Intent, userId: number, port: DiaryReadPort): 
     );
   }
 
+  if (scope === "diet-audit") {
+    return auditDayDiet(date, userId, port);
+  }
+
   if (scope !== "day") {
     throw gap(
       `Unsupported diary read scope ${JSON.stringify(scope)}. ` +
-        'Supported scope: "day" (diary day header + all logged entries for a date).',
+        'Supported scopes: "day" (diary day header + all logged entries for a date), ' +
+        '"diet-audit" (logged entries checked against household diet).',
     );
   }
 
@@ -143,6 +176,61 @@ async function handleRead(intent: Intent, userId: number, port: DiaryReadPort): 
     notes: day.notes ?? null,
     entryCount: entries.length,
     entries: entries.map(toEntryView),
+    source: "food-diary",
+  };
+}
+
+/**
+ * Check every entry logged on a day against the household's diet patterns and hard
+ * restrictions — the Journal counterpart of the Planner's diet-audit, reusing the
+ * SAME service (nutrition-diet-compatibility.ts). Resolves the household context
+ * ONCE, not per entry (the household doesn't change between entries in one audit).
+ * A day with no logged entries is a clean (zero-conflict) answer, not a gap — an
+ * empty diary day is a real, honest state, unlike a day that was never created.
+ */
+async function auditDayDiet(
+  date: string,
+  userId: number,
+  port: DiaryReadPort,
+): Promise<DiaryDietAuditResult> {
+  const entries = await port.getFoodDiaryEntries(userId, date);
+
+  const { resolveHouseholdDietContext, checkFoodCompatibilityWithContext } =
+    await import("./nutrition-diet-compatibility.js");
+  const dietContext = await resolveHouseholdDietContext(userId);
+
+  const conflicts: DiaryDietConflict[] = [];
+  for (const entry of entries) {
+    const compat = checkFoodCompatibilityWithContext(entry.name, dietContext);
+    if (compat.compatible) continue;
+    conflicts.push({
+      entryId: entry.id,
+      mealSlot: entry.mealSlot,
+      name: entry.name,
+      explanation: compat.explanation,
+    });
+  }
+
+  // 2026-11-26 — same cap as the Planner/Shopping audits: naming every conflicting
+  // entry becomes unreadable past a few. `conflicts` (the full structured list) is
+  // unaffected — a UI that wants every entry still gets all of them.
+  const SPOKEN_CONFLICT_LIMIT = 5;
+  const shown = conflicts.slice(0, SPOKEN_CONFLICT_LIMIT);
+  const remaining = conflicts.length - shown.length;
+  const deterministicAnswer =
+    conflicts.length === 0
+      ? `No dietary conflicts found on ${date} — all ${entries.length} logged entr${entries.length === 1 ? "y" : "ies"} fit your household's declared diets and restrictions.`
+      : `${conflicts.length} logged entr${conflicts.length === 1 ? "y" : "ies"} on ${date} may conflict with your household's dietary requirements. ` +
+        shown.map((c) => `${c.mealSlot} (${c.name}): ${c.explanation}`).join(" ") +
+        (remaining > 0 ? ` …and ${remaining} more entr${remaining === 1 ? "y" : "ies"}.` : "");
+
+  return {
+    scope: "diet-audit",
+    date,
+    totalEntries: entries.length,
+    conflictCount: conflicts.length,
+    conflicts,
+    deterministicAnswer,
     source: "food-diary",
   };
 }

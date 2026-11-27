@@ -132,6 +132,26 @@ export interface ShoppingBasketSummaryResult {
   readonly note: string;
 }
 
+/**
+ * 2026-11-26 — the Shopping counterpart of the Planner/Journal diet-audits, reusing
+ * the SAME reusable service (nutrition-diet-compatibility.ts). NAME-ONLY: a shopping
+ * line has no ingredient breakdown (`item.productName` is the only food term stored),
+ * so it is checked as a single food term, the same granularity Journal's audit uses.
+ */
+export interface ShoppingDietConflict {
+  readonly itemId: number;
+  readonly name: string;
+  readonly explanation: string;
+}
+
+export interface ShoppingDietAuditResult {
+  readonly scope: "diet-audit";
+  readonly totalItems: number;
+  readonly conflictCount: number;
+  readonly conflicts: readonly ShoppingDietConflict[];
+  readonly deterministicAnswer: string;
+}
+
 export interface ShoppingStatusExplainResult {
   readonly itemId: number;
   readonly name: string;
@@ -335,6 +355,58 @@ async function readBasketSummary(
   };
 }
 
+/**
+ * Check every item on the shopping list against the household's diet patterns and
+ * hard restrictions — the Shopping counterpart of the Planner/Journal diet-audits,
+ * reusing the SAME service (nutrition-diet-compatibility.ts). Resolves the household
+ * context ONCE, not per item (the household doesn't change between items in one audit).
+ * An empty list is a clean (zero-conflict) answer, not a gap.
+ */
+async function auditShoppingListDiet(
+  userId: number,
+  port: ShoppingReadPort,
+): Promise<ShoppingDietAuditResult> {
+  const items = await port.getShoppingListItems(userId);
+
+  const { resolveHouseholdDietContext, checkFoodCompatibilityWithContext } =
+    await import("./nutrition-diet-compatibility.js");
+  const dietContext = await resolveHouseholdDietContext(userId);
+
+  const conflicts: ShoppingDietConflict[] = [];
+  for (const item of items) {
+    const compat = checkFoodCompatibilityWithContext(item.productName, dietContext);
+    if (compat.compatible) continue;
+    conflicts.push({
+      itemId: item.id,
+      name: item.productName,
+      explanation: compat.explanation,
+    });
+  }
+
+  // 2026-11-26 — cap the SPOKEN sentence at a readable length, same as the Planner
+  // audit's SPOKEN_CONFLICT_LIMIT: a real shopping list ran to 54 conflicts, and
+  // naming every one produces an unreadable wall of text, not a useful answer.
+  // `conflicts` (the full structured list) is unaffected — a UI that wants every
+  // item still gets all of them.
+  const SPOKEN_CONFLICT_LIMIT = 5;
+  const shown = conflicts.slice(0, SPOKEN_CONFLICT_LIMIT);
+  const remaining = conflicts.length - shown.length;
+  const deterministicAnswer =
+    conflicts.length === 0
+      ? `No dietary conflicts found on your shopping list — all ${items.length} item${items.length === 1 ? "" : "s"} fit your household's declared diets and restrictions.`
+      : `${conflicts.length} item${conflicts.length === 1 ? "" : "s"} on your shopping list may conflict with your household's dietary requirements. ` +
+        shown.map((c) => `${c.name}: ${c.explanation}`).join(" ") +
+        (remaining > 0 ? ` …and ${remaining} more item${remaining === 1 ? "" : "s"}.` : "");
+
+  return {
+    scope: "diet-audit",
+    totalItems: items.length,
+    conflictCount: conflicts.length,
+    conflicts,
+    deterministicAnswer,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Explain (existing stored/derived shopping state only)
 // ---------------------------------------------------------------------------
@@ -409,7 +481,7 @@ async function explainStatus(
 // ---------------------------------------------------------------------------
 
 /** The read scopes the shopping read binding understands. */
-type ReadScope = "list" | "unresolved" | "basket";
+type ReadScope = "list" | "unresolved" | "basket" | "diet-audit";
 
 async function handleRead(
   intent: Intent,
@@ -426,11 +498,14 @@ async function handleRead(
       return readUnresolved(userId, port);
     case "basket":
       return readBasketSummary(userId, port);
+    case "diet-audit":
+      return auditShoppingListDiet(userId, port);
     default:
       throw gap(
         `Unsupported shopping read scope ${JSON.stringify(scope)}. Supported read scopes: ` +
           '"list" (current shopping list + extras), "unresolved" (items the owner has ' +
-          'flagged for review), and "basket" (pricing summary from stored prices only).',
+          'flagged for review), "basket" (pricing summary from stored prices only), and ' +
+          '"diet-audit" (list items checked against household diet).',
       );
   }
 }
