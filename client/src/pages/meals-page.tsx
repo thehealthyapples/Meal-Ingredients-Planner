@@ -2683,6 +2683,12 @@ export default function MealsPage() {
   const [freezerLabel, setFreezerLabel] = useState("");
   const [freezerNotes, setFreezerNotes] = useState("");
 
+  useEffect(() => {
+    if (addToFreezerMealId == null) return;
+    const target = meals?.find(m => m.id === addToFreezerMealId);
+    setFreezerPortions(Math.max(1, target?.servings ?? 1));
+  }, [addToFreezerMealId, meals]);
+
   const isFromList = useMemo(() => new URLSearchParams(searchStr).get("from") === "list", [searchStr]);
 
   // Called by MealImageWidget when any image operation completes (upload/generate/remove).

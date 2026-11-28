@@ -335,7 +335,7 @@ export default function MealDetailPage() {
   const addToListMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest('POST', api.shoppingList.generateFromMeals.path, {
-        mealSelections: [{ mealId: mealId!, count: 1 }],
+        mealSelections: [{ mealId: mealId!, count: 1, servingsNeeded: viewServings }],
       });
       return res.json();
     },

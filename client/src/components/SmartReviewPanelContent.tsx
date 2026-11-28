@@ -77,6 +77,17 @@ function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, 
     onError: () => toast({ title: "Couldn't add that", description: "Try again in a moment.", variant: "destructive" }),
   });
 
+  const addToFreezerMutation = useMutation({
+    mutationFn: async () => {
+      if (!mealId) throw new Error('No meal id');
+      const totalPortions = qty || meal?.servings || 1;
+      const res = await apiRequest('POST', '/api/freezer', { mealId, totalPortions, remainingPortions: totalPortions });
+      return res.json();
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['/api/freezer'] }); toast({ title: "Added to freezer" }); },
+    onError: () => toast({ title: "Couldn't add that to the freezer", description: "Try again in a moment.", variant: "destructive" }),
+  });
+
   const analyzeMutation = useMutation({
     mutationFn: async () => {
       if (!mealId) throw new Error('No meal id');
@@ -329,8 +340,8 @@ function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, 
           {isFreezerEligible && mealId && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button size="icon" variant="ghost" className="h-7 w-7 text-blue-400" aria-label="Add to freezer" data-testid={`button-freeze-${key}`}>
-                  <Snowflake className="h-4 w-4" />
+                <Button size="icon" variant="ghost" className="h-7 w-7 text-blue-400" aria-label="Add to freezer" onClick={() => addToFreezerMutation.mutate()} disabled={addToFreezerMutation.isPending} data-testid={`button-freeze-${key}`}>
+                  {addToFreezerMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Snowflake className="h-4 w-4" />}
                 </Button>
               </TooltipTrigger>
               <TooltipContent><p className="text-xs">Add to freezer</p></TooltipContent>
